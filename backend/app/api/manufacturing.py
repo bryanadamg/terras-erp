@@ -4,7 +4,7 @@ from sqlalchemy import select, func, or_
 from sqlalchemy.orm import joinedload
 from app.db.session import get_async_db
 from app.models.manufacturing import WorkOrder
-from app.models.bom import BOM
+from app.models.bom import BOM, BOMLine
 from app.models.location import Location
 from app.services import stock_service, audit_service
 from app.schemas import WorkOrderCreate, WorkOrderResponse, PaginatedWorkOrderResponse

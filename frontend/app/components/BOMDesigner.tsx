@@ -426,7 +426,7 @@ export default function BOMDesigner({
                                     </div>
                                 </div>
                                 {selectedNodeId === 'root' && (
-                                    <button className="btn btn-sm btn-info shadow-sm" onClick={() => setIsAutomatorOpen(true)}>
+                                    <button data-testid="automate-levels-btn" className="btn btn-sm btn-info shadow-sm" onClick={() => setIsAutomatorOpen(true)}>
                                         <i className="bi bi-magic me-1"></i>Automate All Levels
                                     </button>
                                 )}
@@ -438,7 +438,7 @@ export default function BOMDesigner({
                                         BOM Code
                                         {selectedNodeId === 'root' && <i className="bi bi-gear-fill cursor-pointer" onClick={() => setIsConfigOpen(true)}></i>}
                                     </label>
-                                    <input className="form-control" value={selectedNode.code} onChange={e => updateSelectedNode({ code: e.target.value })} />
+                                    <input data-testid="bom-code-input" className="form-control" value={selectedNode.code} onChange={e => updateSelectedNode({ code: e.target.value })} />
                                 </div>
                                 <div className="col-md-5">
                                     <label className="form-label small text-muted">Finished Item</label>
@@ -455,6 +455,7 @@ export default function BOMDesigner({
                                                 }));
                                             }}
                                             placeholder="Select Item..."
+                                            testId="root-item-select"
                                         />
                                     ) : (
                                         <div className="form-control bg-light">{getItemName(selectedNode.item_code)}</div>
@@ -462,12 +463,12 @@ export default function BOMDesigner({
                                 </div>
                                 <div className="col-md-3">
                                     <label className="form-label small text-muted">Batch Size</label>
-                                    <input type="number" className="form-control" value={selectedNode.qty} onChange={e => updateSelectedNode({ qty: parseFloat(e.target.value) })} />
+                                    <input data-testid="batch-size-input" type="number" className="form-control" value={selectedNode.qty} onChange={e => updateSelectedNode({ qty: parseFloat(e.target.value) })} />
                                 </div>
                                 <div className="col-md-2">
                                     <label className="form-label small text-muted text-nowrap">Tolerance %</label>
                                     <div className="input-group">
-                                        <input type="number" className="form-control" value={selectedNode.tolerance_percentage} onChange={e => updateSelectedNode({ tolerance_percentage: parseFloat(e.target.value) })} />
+                                        <input data-testid="tolerance-input" type="number" className="form-control" value={selectedNode.tolerance_percentage} onChange={e => updateSelectedNode({ tolerance_percentage: parseFloat(e.target.value) })} />
                                         <span className="input-group-text px-2">%</span>
                                     </div>
                                 </div>
@@ -546,6 +547,7 @@ export default function BOMDesigner({
                                                         value={pendingItemCode}
                                                         onChange={setPendingItemCode}
                                                         placeholder="Component..."
+                                                        testId="component-select"
                                                     />
                                                 </div>
                                                 <div style={{ flex: 1 }}>
@@ -556,6 +558,7 @@ export default function BOMDesigner({
                                                             placeholder="Qty" 
                                                             value={pendingQty}
                                                             onChange={e => setPendingQty(e.target.value)}
+                                                            data-testid="component-qty-input"
                                                         />
                                                         <button 
                                                             className={`btn btn-sm ${pendingIsPercentage ? 'btn-warning' : 'btn-outline-secondary'}`}
@@ -588,6 +591,7 @@ export default function BOMDesigner({
                                                             setPendingIsPercentage(false);
                                                         }
                                                     }}
+                                                    data-testid="add-component-btn"
                                                 >
                                                     <i className="bi bi-plus-lg"></i>
                                                 </button>
@@ -638,7 +642,7 @@ export default function BOMDesigner({
                     {/* FOOTER */}
                     <div className="mt-auto p-3 border-top bg-light d-flex justify-content-end gap-2">
                         <button className="btn btn-secondary" onClick={onCancel}>{t('cancel')}</button>
-                        <button className="btn btn-success fw-bold px-4" onClick={handleGlobalSave} disabled={isSaving}>
+                        <button data-testid="save-bom-tree-btn" className="btn btn-success fw-bold px-4" onClick={handleGlobalSave} disabled={isSaving}>
                             {isSaving ? 'Processing...' : 'Finish & Save Tree'}
                         </button>
                     </div>

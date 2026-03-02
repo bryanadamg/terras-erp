@@ -203,7 +203,7 @@ const BOMAutomatorModal = memo(({ isOpen, onClose, onApply }: BOMAutomatorModalP
     if (!isOpen) return null;
 
     return (
-        <div className="modal d-block" style={{ backgroundColor: 'rgba(0,0,0,0.5)', zIndex: 20100, position: 'fixed', inset: 0 }}>
+        <div className="modal d-block" data-testid="bom-automator-modal" style={{ backgroundColor: 'rgba(0,0,0,0.5)', zIndex: 20100, position: 'fixed', inset: 0 }}>
             <div className={`modal-dialog modal-lg modal-dialog-centered ui-style-${currentStyle}`}>
                 <div className="modal-content border-0 shadow-lg overflow-hidden" style={{ borderRadius: currentStyle === 'classic' ? '0' : '8px' }}>
                     <div className="modal-header bg-dark text-white border-0 py-2">
@@ -283,7 +283,7 @@ const BOMAutomatorModal = memo(({ isOpen, onClose, onApply }: BOMAutomatorModalP
                     
                     <div className="modal-footer bg-light border-top p-2 px-3">
                         <button type="button" className="btn btn-sm btn-link text-muted text-decoration-none" onClick={onClose}>{t('cancel')}</button>
-                        <button type="button" className="btn btn-sm btn-primary px-4 fw-bold shadow-sm" onClick={handleSaveAndApply}>
+                        <button data-testid="generate-structure-btn" type="button" className="btn btn-sm btn-primary px-4 fw-bold shadow-sm" onClick={handleSaveAndApply}>
                             <i className="bi bi-lightning-charge-fill me-1"></i>GENERATE STRUCTURE
                         </button>
                     </div>

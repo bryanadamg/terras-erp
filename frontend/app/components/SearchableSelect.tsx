@@ -16,9 +16,10 @@ interface SearchableSelectProps {
     className?: string;
     required?: boolean;
     categories?: string[]; // Optional list of categories to filter by
+    testId?: string;
 }
 
-export default function SearchableSelect({ options, value, onChange, placeholder, disabled, className, required, categories }: SearchableSelectProps) {
+export default function SearchableSelect({ options, value, onChange, placeholder, disabled, className, required, categories, testId }: SearchableSelectProps) {
     const [isOpen, setIsOpen] = useState(false);
     const [searchTerm, setSearchTerm] = useState('');
     const [activeCategory, setActiveCategory] = useState<string | null>(null);
@@ -67,11 +68,12 @@ export default function SearchableSelect({ options, value, onChange, placeholder
     };
 
     return (
-        <div className={`position-relative ${className || ''}`} ref={containerRef}>
+        <div className={`position-relative ${className || ''}`} ref={containerRef} data-testid={testId}>
             <div 
                 className={`form-control d-flex align-items-center justify-content-between ${disabled ? 'bg-light' : 'bg-white'} ${isOpen ? 'border-primary ring-2' : ''}`}
                 style={{ cursor: disabled ? 'not-allowed' : 'pointer', minHeight: '38px', paddingRight: '30px' }}
                 onClick={() => !disabled && setIsOpen(!isOpen)}
+                data-testid={testId ? `${testId}-trigger` : undefined}
             >
                 <div className="text-truncate w-100">
                     {selectedOption ? (
@@ -97,7 +99,7 @@ export default function SearchableSelect({ options, value, onChange, placeholder
             />
 
             {isOpen && (
-                <div className="position-absolute top-100 start-0 w-100 bg-white border rounded shadow-sm mt-1 z-3" style={{maxHeight: '300px', overflowY: 'auto'}}>
+                <div className="position-absolute top-100 start-0 w-100 bg-white border rounded shadow-sm mt-1 z-3" style={{maxHeight: '300px', overflowY: 'auto'}} data-testid={testId ? `${testId}-dropdown` : undefined}>
                     {/* Search & Filter Header */}
                     <div className="p-2 border-bottom sticky-top bg-white d-flex gap-2 align-items-center">
                         {/* Filter Button (Only if categories exist) */}
@@ -155,6 +157,7 @@ export default function SearchableSelect({ options, value, onChange, placeholder
                                 value={searchTerm}
                                 onChange={(e) => setSearchTerm(e.target.value)}
                                 onClick={(e) => e.stopPropagation()}
+                                data-testid={testId ? `${testId}-search` : undefined}
                             />
                         </div>
                     </div>
@@ -166,6 +169,7 @@ export default function SearchableSelect({ options, value, onChange, placeholder
                                 className={`px-3 py-2 cursor-pointer ${option.value === value ? 'bg-primary text-white' : 'hover-bg-light text-dark'}`}
                                 onClick={() => handleSelect(option.value)}
                                 style={{cursor: 'pointer'}}
+                                data-testid={testId ? `${testId}-option-${option.value}` : undefined}
                             >
                                 <div className="fw-medium">{option.label}</div>
                                 <div className="d-flex justify-content-between small">

@@ -4,7 +4,6 @@ test('Full ERP Lifecycle: Buy, Make, Sell', async ({ page }) => {
   // 1. LOGIN
   await page.goto('/login');
   
-  // Wait for the initial "SYSTEM_CHECK..." loading state to disappear
   await page.waitForSelector('text=SYSTEM_CHECK...', { state: 'hidden', timeout: 15000 });
 
   await page.getByTestId('username-input').fill('admin');
@@ -19,6 +18,7 @@ test('Full ERP Lifecycle: Buy, Make, Sell', async ({ page }) => {
   const rmA = `RM-A-${timestamp}`;
   const rmB = `RM-B-${timestamp}`;
   const fgX = `FG-X-${timestamp}`;
+  const wipItem = `WIP CBG ${fgX}`; 
   const poNum = `PO-${timestamp}`;
   const soNum = `SO-${timestamp}`;
 
@@ -41,39 +41,32 @@ test('Full ERP Lifecycle: Buy, Make, Sell', async ({ page }) => {
   // Create RM-A
   await page.getByTestId('create-item-btn').click();
   await expect(page.getByTestId('create-item-modal')).toBeVisible();
-  
   await page.getByTestId('item-code-input').fill(rmA);
   await page.getByTestId('item-name-input').fill('Raw Material A');
-  // Use new reliable testids
   await page.getByTestId('category-select').selectOption({ label: 'Raw Material' }); 
   await page.getByTestId('uom-select').selectOption({ label: 'kg' });
-  
   await page.getByTestId('submit-create-item').click();
   await expect(page.getByTestId('create-item-modal')).toBeHidden();
 
   // Create RM-B
   await page.getByTestId('create-item-btn').click();
   await expect(page.getByTestId('create-item-modal')).toBeVisible();
-  
   await page.getByTestId('item-code-input').fill(rmB);
   await page.getByTestId('item-name-input').fill('Raw Material B');
   await page.getByTestId('category-select').selectOption({ label: 'Raw Material' });
   await page.getByTestId('uom-select').selectOption({ label: 'kg' });
-  
   await page.getByTestId('submit-create-item').click();
   await expect(page.getByTestId('create-item-modal')).toBeHidden();
 
   // Create FG-X
   await page.getByTestId('create-item-btn').click();
   await expect(page.getByTestId('create-item-modal')).toBeVisible();
-  
   await page.getByTestId('item-code-input').fill(fgX);
   await page.getByTestId('item-name-input').fill('Finished Good X');
-  
   await page.getByTestId('category-select').selectOption({ label: 'Finished Goods' });
   await page.getByTestId('uom-select').selectOption({ label: 'kg' });
-
-  // Select all attributes (check all checkboxes in the attributes section)
+  
+  // Select all attributes
   const attributeCheckboxes = page.locator('.modal-body .form-check-input');
   const count = await attributeCheckboxes.count();
   for (let i = 0; i < count; ++i) {
@@ -85,28 +78,40 @@ test('Full ERP Lifecycle: Buy, Make, Sell', async ({ page }) => {
 
   // 4. ENGINEERING (BOM)
   await page.goto('/bom');
-  await page.click('button:has-text("Create BOM")');
   
-  // Select FG-X
-  await page.click('text=Select Item...'); 
-  await page.fill('input[placeholder="Search..."]', fgX);
-  await page.click(`text=${fgX}`);
+  // Wait for page to be ready before clicking create
+  await expect(page.getByTestId('create-bom-btn')).toBeVisible();
+  await page.getByTestId('create-bom-btn').click();
   
-  // Add RM-A (0.5)
-  await page.click('text=Select Material...');
-  await page.fill('input[placeholder="Search..."]', rmA);
-  await page.click(`text=${rmA}`);
-  await page.fill('input[type="number"]', '0.5');
-  await page.click('button:has-text("Add Line")');
+  // Ensure Designer is open by checking for root item select visibility
+  await expect(page.getByTestId('root-item-select-trigger')).toBeVisible({ timeout: 10000 });
+  
+  // Select FG-X as Root
+  await page.getByTestId('root-item-select-trigger').click();
+  await page.getByTestId('root-item-select-search').fill(fgX);
+  await page.getByTestId(`root-item-select-option-${fgX}`).click();
+  
+  // Automate Structure
+  await page.getByTestId('automate-levels-btn').click();
+  await page.getByTestId('generate-structure-btn').click();
+  
+  // Add RM-A
+  await page.getByTestId('component-select-trigger').click();
+  await page.getByTestId('component-select-search').fill(rmA);
+  await page.getByTestId(`component-select-option-${rmA}`).click();
+  await page.getByTestId('component-qty-input').fill('0.5');
+  await page.getByTestId('add-component-btn').click();
 
-  // Add RM-B (0.5)
-  await page.click('text=Select Material...'); 
-  await page.fill('input[placeholder="Search..."]', rmB);
-  await page.click(`text=${rmB}`);
-  await page.fill('input[type="number"]', '0.5');
-  await page.click('button:has-text("Add Line")');
+  // Add RM-B
+  await page.getByTestId('component-select-trigger').click();
+  await page.getByTestId('component-select-search').fill(rmB);
+  await page.getByTestId(`component-select-option-${rmB}`).click();
+  await page.getByTestId('component-qty-input').fill('0.5');
+  await page.getByTestId('add-component-btn').click();
 
-  await page.click('button:has-text("Save Recipe")');
+  // Save Full Tree
+  await page.getByTestId('save-bom-tree-btn').click();
+  await expect(page.locator('.modal')).toBeHidden({ timeout: 10000 });
 
   // 5. PROCUREMENT (Purchase Order)
   await page.goto('/purchase-orders');
@@ -136,6 +141,13 @@ test('Full ERP Lifecycle: Buy, Make, Sell', async ({ page }) => {
   await page.fill('input[placeholder="0"]', '100');
   await page.click('button:has-text("Add")');
 
+  // Add Line: WIP Item
+  await page.click('text=Select Item...');
+  await page.fill('input[placeholder="Search..."]', wipItem);
+  await page.click(`text=${wipItem}`);
+  await page.fill('input[placeholder="0"]', '100');
+  await page.click('button:has-text("Add")');
+
   await page.click('button:has-text("Save PO")');
 
   // Receive PO
@@ -157,7 +169,7 @@ test('Full ERP Lifecycle: Buy, Make, Sell', async ({ page }) => {
   await page.fill('input[placeholder="Search..."]', fgX);
   await page.click(`text=${fgX}`);
   
-  // Select attributes for FG-X if prompted (handle dynamic attribute dropdowns)
+  // Select attributes
   const attributeSelects = page.locator('.bg-light.p-3 select.form-select-sm');
   const attrCount = await attributeSelects.count();
   for (let i = 0; i < attrCount; ++i) {

@@ -145,7 +145,7 @@ export default function BOMView({ items, boms, locations, attributes, workCenter
           <div className="card h-100 shadow-sm border-0">
              <div className="card-header bg-white d-flex justify-content-between align-items-center">
                  <h5 className="card-title mb-0">{t('active_boms')}</h5>
-                 <button className="btn btn-sm btn-primary" onClick={() => setIsDesignerOpen(true)}>
+                 <button data-testid="create-bom-btn" className="btn btn-sm btn-primary" onClick={() => setIsDesignerOpen(true)}>
                      <i className="bi bi-plus-lg me-2"></i>{t('create_recipe')}
                  </button>
              </div>
