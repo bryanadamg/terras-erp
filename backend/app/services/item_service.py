@@ -1,6 +1,6 @@
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func, or_
-from sqlalchemy.orm import joinedload
+from sqlalchemy.orm import joinedload, selectinload
 from app.models.item import Item
 from app.models.variant import Variant
 from app.schemas import VariantCreate
@@ -23,6 +23,7 @@ async def create_item(
         source_sample_id=source_sample_id
     )
     
+    # Pre-fetch attributes to associate them
     if attribute_ids:
         result = await db.execute(select(Attribute).filter(Attribute.id.in_(attribute_ids)))
         attrs = result.scalars().all()
@@ -30,8 +31,16 @@ async def create_item(
 
     db.add(item)
     await db.commit()
-    await db.refresh(item)
-    return item
+    
+    # Re-fetch the item with eager loading to avoid MissingGreenlet errors during serialization
+    # selectinload is often better for many-to-many or one-to-many in async
+    result = await db.execute(
+        select(Item)
+        .options(selectinload(Item.attributes))
+        .filter(Item.id == item.id)
+    )
+    refresh_item = result.scalars().first()
+    return refresh_item
 
 
 async def update_item(
@@ -39,7 +48,12 @@ async def update_item(
     item_id: str,
     data: dict
 ) -> Item | None:
-    result = await db.execute(select(Item).filter(Item.id == item_id))
+    # Use selectinload to ensure attributes are loaded if we need to modify them
+    result = await db.execute(
+        select(Item)
+        .options(selectinload(Item.attributes))
+        .filter(Item.id == item_id)
+    )
     item = result.scalars().first()
     if not item:
         return None
@@ -56,12 +70,24 @@ async def update_item(
         item.attributes = attrs
             
     await db.commit()
-    await db.refresh(item)
-    return item
+    
+    # Re-fetch for return
+    result = await db.execute(
+        select(Item)
+        .options(selectinload(Item.attributes))
+        .filter(Item.id == item.id)
+    )
+    refresh_item = result.scalars().first()
+    return refresh_item
 
 
 async def get_item_by_code(db: AsyncSession, code: str) -> Item | None:
-    result = await db.execute(select(Item).filter(Item.code == code))
+    # Add eager loading here too just in case
+    result = await db.execute(
+        select(Item)
+        .options(selectinload(Item.attributes))
+        .filter(Item.code == code)
+    )
     return result.scalars().first()
 
 
@@ -89,7 +115,8 @@ async def get_items(db: AsyncSession, skip: int = 0, limit: int = 100, user=None
     total = total_result.scalar()
     
     # Get paginated results
-    query = query.options(joinedload(Item.attributes)).offset(skip).limit(limit)
+    # Use selectinload for async compatibility with collections
+    query = query.options(selectinload(Item.attributes)).offset(skip).limit(limit)
     result = await db.execute(query)
     items = result.unique().scalars().all()
     

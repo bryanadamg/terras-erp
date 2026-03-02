@@ -39,39 +39,39 @@ test('Full ERP Lifecycle: Buy, Make, Sell', async ({ page }) => {
   await page.goto('/inventory');
   
   // Create RM-A
-  await page.click('button:has-text("Create")');
-  // Wait for modal
-  await expect(page.locator('.modal-title')).toContainText('Create Item Inventory');
+  await page.getByTestId('create-item-btn').click();
+  await expect(page.getByTestId('create-item-modal')).toBeVisible();
   
-  await page.fill('input[placeholder="ITM-001"]', rmA);
-  await page.fill('input[placeholder="Product Name"]', 'Raw Material A');
-  // Select Category
-  await page.locator('.modal-body select').first().selectOption({ label: 'Raw Material' }); // Assuming 'Raw Material' exists, otherwise use index
-  // Select UOM (Kg) - target specifically inside modal body to avoid ambiguity
-  await page.locator('.modal-body select').last().selectOption({ label: 'kg' });
+  await page.getByTestId('item-code-input').fill(rmA);
+  await page.getByTestId('item-name-input').fill('Raw Material A');
+  // Use new reliable testids
+  await page.getByTestId('category-select').selectOption({ label: 'Raw Material' }); 
+  await page.getByTestId('uom-select').selectOption({ label: 'kg' });
   
-  await page.click('button:has-text("Create")');
+  await page.getByTestId('submit-create-item').click();
+  await expect(page.getByTestId('create-item-modal')).toBeHidden();
 
   // Create RM-B
-  await page.click('button:has-text("Create")');
-  await expect(page.locator('.modal-title')).toContainText('Create Item Inventory');
-  await page.fill('input[placeholder="ITM-001"]', rmB);
-  await page.fill('input[placeholder="Product Name"]', 'Raw Material B');
-  await page.locator('.modal-body select').first().selectOption({ label: 'Raw Material' });
-  await page.locator('.modal-body select').last().selectOption({ label: 'kg' });
-  await page.click('button:has-text("Create")');
+  await page.getByTestId('create-item-btn').click();
+  await expect(page.getByTestId('create-item-modal')).toBeVisible();
+  
+  await page.getByTestId('item-code-input').fill(rmB);
+  await page.getByTestId('item-name-input').fill('Raw Material B');
+  await page.getByTestId('category-select').selectOption({ label: 'Raw Material' });
+  await page.getByTestId('uom-select').selectOption({ label: 'kg' });
+  
+  await page.getByTestId('submit-create-item').click();
+  await expect(page.getByTestId('create-item-modal')).toBeHidden();
 
   // Create FG-X
-  await page.click('button:has-text("Create")');
-  await expect(page.locator('.modal-title')).toContainText('Create Item Inventory');
-  await page.fill('input[placeholder="ITM-001"]', fgX);
-  await page.fill('input[placeholder="Product Name"]', 'Finished Good X');
+  await page.getByTestId('create-item-btn').click();
+  await expect(page.getByTestId('create-item-modal')).toBeVisible();
   
-  // Select Finished Goods category
-  await page.locator('.modal-body select').first().selectOption({ label: 'Finished Goods' });
+  await page.getByTestId('item-code-input').fill(fgX);
+  await page.getByTestId('item-name-input').fill('Finished Good X');
   
-  // Select kg UOM
-  await page.locator('.modal-body select').last().selectOption({ label: 'kg' });
+  await page.getByTestId('category-select').selectOption({ label: 'Finished Goods' });
+  await page.getByTestId('uom-select').selectOption({ label: 'kg' });
 
   // Select all attributes (check all checkboxes in the attributes section)
   const attributeCheckboxes = page.locator('.modal-body .form-check-input');
@@ -80,7 +80,8 @@ test('Full ERP Lifecycle: Buy, Make, Sell', async ({ page }) => {
     await attributeCheckboxes.nth(i).check();
   }
 
-  await page.click('button:has-text("Create")');
+  await page.getByTestId('submit-create-item').click();
+  await expect(page.getByTestId('create-item-modal')).toBeHidden();
 
   // 4. ENGINEERING (BOM)
   await page.goto('/bom');
@@ -157,11 +158,10 @@ test('Full ERP Lifecycle: Buy, Make, Sell', async ({ page }) => {
   await page.click(`text=${fgX}`);
   
   // Select attributes for FG-X if prompted (handle dynamic attribute dropdowns)
-  // We'll try to select the first available option for any visible attribute dropdowns
   const attributeSelects = page.locator('.bg-light.p-3 select.form-select-sm');
   const attrCount = await attributeSelects.count();
   for (let i = 0; i < attrCount; ++i) {
-      await attributeSelects.nth(i).selectOption({ index: 1 }); // Select first non-placeholder option
+      await attributeSelects.nth(i).selectOption({ index: 1 });
   }
 
   await page.fill('input[placeholder="0"]', '10');

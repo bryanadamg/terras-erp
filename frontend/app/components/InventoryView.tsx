@@ -285,11 +285,11 @@ export default function InventoryView({
 
       {/* Create Modal */}
       {isCreateOpen && (
-       <div className="modal d-block" style={{ backgroundColor: 'rgba(0,0,0,0.5)', zIndex: 20000, position: 'fixed', inset: 0 }}>
+       <div className="modal d-block" data-testid="create-item-modal" style={{ backgroundColor: 'rgba(0,0,0,0.5)', zIndex: 20000, position: 'fixed', inset: 0 }}>
             <div className={`modal-dialog modal-dialog-centered ui-style-${currentStyle}`}>
                 <div className="modal-content shadow">
                     <div className="modal-header bg-primary bg-opacity-10 text-primary-emphasis">
-                        <h5 className="modal-title"><i className="bi bi-box-seam me-2"></i>{t('create')} {forcedCategory ? t('sample_masters') : t('item_inventory')}</h5>
+                        <h5 className="modal-title" data-testid="modal-title"><i className="bi bi-box-seam me-2"></i>{t('create')} {forcedCategory ? t('sample_masters') : t('item_inventory')}</h5>
                         <button type="button" className="btn-close" onClick={() => setIsCreateOpen(false)}></button>
                     </div>
                     <div className="modal-body">
@@ -304,11 +304,11 @@ export default function InventoryView({
                                       title="Configure Auto-Suggestion"
                                   ></i>
                               </label>
-                              <input className="form-control" placeholder="ITM-001" value={newItem.code} onChange={e => setNewItem({...newItem, code: e.target.value})} required />
+                              <input data-testid="item-code-input" className="form-control" placeholder="ITM-001" value={newItem.code} onChange={e => setNewItem({...newItem, code: e.target.value})} required />
                           </div>
                           <div className="mb-3">
                               <label className="form-label small text-muted">{t('item_name')}</label>
-                              <input className="form-control" placeholder="Product Name" value={newItem.name} onChange={e => setNewItem({...newItem, name: e.target.value})} required />
+                              <input data-testid="item-name-input" className="form-control" placeholder="Product Name" value={newItem.name} onChange={e => setNewItem({...newItem, name: e.target.value})} required />
                           </div>
                           <div className="row g-2 mb-3">
                               <div className="col-7">
@@ -324,7 +324,7 @@ export default function InventoryView({
                                           <button type="button" className="btn btn-primary" onClick={handleAddCategory}><i className="bi bi-check"></i></button>
                                       </div>
                                   ) : (
-                                      <select className="form-select" value={newItem.category} onChange={e => setNewItem({...newItem, category: e.target.value})}>
+                                      <select data-testid="category-select" className="form-select" value={newItem.category} onChange={e => setNewItem({...newItem, category: e.target.value})}>
                                           <option value="">Select...</option>
                                           {categories.map((c: any) => <option key={c.id} value={c.name}>{c.name}</option>)}
                                       </select>
@@ -332,7 +332,7 @@ export default function InventoryView({
                               </div>
                               <div className="col-5">
                                   <label className="form-label small text-muted">{t('uom')}</label>
-                                  <select className="form-select" value={newItem.uom} onChange={e => setNewItem({...newItem, uom: e.target.value})} required>
+                                  <select data-testid="uom-select" className="form-select" value={newItem.uom} onChange={e => setNewItem({...newItem, uom: e.target.value})} required>
                                       <option value="">Unit...</option>
                                       {(uoms || []).map((u: any) => <option key={u.id} value={u.name}>{u.name}</option>)}
                                   </select>
@@ -372,7 +372,7 @@ export default function InventoryView({
                           
                           <div className="d-flex justify-content-end gap-2 mt-3">
                               <button type="button" className="btn btn-secondary" onClick={() => setIsCreateOpen(false)}>{t('cancel')}</button>
-                              <button type="submit" className="btn btn-primary fw-bold px-4">{t('create')}</button>
+                              <button data-testid="submit-create-item" type="submit" className="btn btn-primary fw-bold px-4">{t('create')}</button>
                           </div>
                         </form>
                     </div>
@@ -396,7 +396,7 @@ export default function InventoryView({
                     <button className="btn btn-light btn-sm border" onClick={() => setIsImportOpen(true)}>
                         <i className="bi bi-upload me-2"></i>Import
                     </button>
-                    <button className="btn btn-primary btn-sm" onClick={openCreateModal}>
+                    <button data-testid="create-item-btn" className="btn btn-primary btn-sm" onClick={openCreateModal}>
                         <i className="bi bi-plus-lg me-2"></i>{t('create')}
                     </button>
                 </div>

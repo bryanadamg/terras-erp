@@ -147,7 +147,7 @@ class DatabaseManager:
                 
                 self._engine = create_engine(
                     database_url,
-                    pool_pre_ping=True,
+                    pool_pre_ping=False, # Disabled to prevent shared-state Greenlet errors
                     pool_size=20,
                     max_overflow=10,
                     pool_recycle=3600,
@@ -165,7 +165,7 @@ class DatabaseManager:
                     async_url = database_url.replace("postgresql+psycopg2://", "postgresql+asyncpg://")
                     self._async_engine = create_async_engine(
                         async_url,
-                        pool_pre_ping=True,
+                        pool_pre_ping=False, # Disabled to prevent asyncpg do_ping Greenlet errors
                         pool_size=20,
                         max_overflow=10,
                         pool_recycle=3600
@@ -173,6 +173,7 @@ class DatabaseManager:
                     self._async_session_factory = async_sessionmaker(
                         autocommit=False,
                         autoflush=False,
+                        expire_on_commit=False, # Critical for Pydantic serialization
                         bind=self._async_engine,
                         class_=AsyncSession
                     )
