@@ -109,7 +109,7 @@ class WorkOrderCreate(BaseModel):
     bom_id: UUID
     location_code: str
     source_location_code: str | None = None
-    sales_order_id: UUID | None = None # Link to SO
+    sales_order_id: UUID | None = None
     qty: float
     target_start_date: datetime | None = None
     target_end_date: datetime | None = None

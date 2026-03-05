@@ -188,7 +188,16 @@ export default function ManufacturingView({
 
   const handleSubmit = async (e: React.FormEvent) => {
       e.preventDefault();
-      const res = await onCreateWO(newWO);
+      
+      // Clean dates: convert empty strings to null for Pydantic
+      const payload = {
+          ...newWO,
+          target_start_date: newWO.target_start_date || null,
+          target_end_date: newWO.target_end_date || null,
+          sales_order_id: newWO.sales_order_id || null
+      };
+
+      const res = await onCreateWO(payload);
       if (res && res.status === 400) {
           let baseCode = newWO.code;
           const baseMatch = baseCode.match(/^(.*)-(\d+)$/);
