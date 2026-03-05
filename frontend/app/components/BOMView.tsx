@@ -126,7 +126,7 @@ export default function BOMView({ items, boms, locations, attributes, workCenter
                     <BOMDesigner 
                         rootItemCode=""
                         items={items}
-                        locations={locations}
+                        locations={locations || []}
                         attributes={attributes}
                         workCenters={workCenters}
                         operations={operations}
@@ -134,6 +134,7 @@ export default function BOMView({ items, boms, locations, attributes, workCenter
                         onSave={handleCreateBOMWrapper}
                         onCreateItem={onCreateItem}
                         onCancel={() => setIsDesignerOpen(false)}
+                        onSearchItem={onSearchItem}
                     />
                 </div>
             </div>

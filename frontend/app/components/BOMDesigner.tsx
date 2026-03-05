@@ -50,11 +50,12 @@ const TreeView = memo(({
     const hasLocalDef = node.lines.length > 0 || node.operations.length > 0;
 
     return (
-        <div className="tree-node">
+        <div className="tree-node" data-testid={`tree-node-${node.item_code}`}>
             <div 
                 className={`d-flex align-items-center p-2 rounded mb-1 cursor-pointer ${selectedNodeId === node.id ? 'bg-primary text-white shadow-sm' : 'hover-bg-light'}`}
                 style={{ paddingLeft: `${level * 16 + 8}px`, cursor: 'pointer' }}
                 onClick={() => onSelect(node.id)}
+                data-testid={`tree-node-clickable-${node.item_code}`}
             >
                 <i className={`bi ${level === 0 ? 'bi-box-seam-fill' : 'bi-diagram-3'} me-2`}></i>
                 <span className="text-truncate small fw-bold">{node.item_code || 'Unnamed'}</span>
@@ -92,7 +93,8 @@ export default function BOMDesigner({
     onSave, 
     onCreateItem,
     onCancel,
-    existingBOMs 
+    existingBOMs,
+    onSearchItem
 }: any) {
     const { t } = useLanguage();
     
@@ -228,7 +230,7 @@ export default function BOMDesigner({
             return matches;
         };
 
-        const constructTreeRecursive = (parentItemCode: string, parentAttrs: string[], levelIdx: number): any[] => {
+        const constructTreeRecursive = (parentAttrs: string[], levelIdx: number): any[] => {
             if (levelIdx >= levels.length) return [];
             
             const currentLevelPatterns = levels[levelIdx];
@@ -236,19 +238,18 @@ export default function BOMDesigner({
 
             for (const pattern of currentLevelPatterns) {
                 if (!pattern) continue;
-                const expectedChildCode = pattern.replace('{CODE}', parentItemCode);
+                // FIX: Always use rootBOM.item_code for naming patterns
+                const expectedChildCode = pattern.replace('{CODE}', rootBOM.item_code);
                 
                 const childItem = items.find((i: any) => 
                     (i.code || '').trim().toLowerCase() === (expectedChildCode || '').trim().toLowerCase()
                 );
                 
                 const isNewItem = !childItem;
-                const existingBOM = childItem ? existingBOMs.find((b: any) => b.item_id === childItem.id) : null;
-                
                 const matchingAttrs = isNewItem ? parentAttrs : findMatchingAttributeIds(expectedChildCode, parentAttrs);
                 
-                // Construct next level for this specific pattern
-                const subLines = constructTreeRecursive(expectedChildCode, matchingAttrs, levelIdx + 1);
+                // Construct next level
+                const subLines = constructTreeRecursive(matchingAttrs, levelIdx + 1);
                 
                 const subBOM: BOMNodeData = {
                     id: Math.random().toString(36).substr(2, 9),
@@ -269,7 +270,7 @@ export default function BOMDesigner({
                     qty: 1.0,
                     is_percentage: false,
                     source_location_code: '',
-                    subBOM: existingBOM ? undefined : subBOM, // Link existing BOM if found, otherwise draft subBOM
+                    subBOM: subBOM, // Always generate draft subBOM for automation
                     isExpanded: true,
                     isNewItem: isNewItem
                 });
@@ -278,7 +279,7 @@ export default function BOMDesigner({
             return levelLines;
         };
 
-        const newLines = constructTreeRecursive(rootBOM.item_code, rootBOM.attribute_value_ids, 0);
+        const newLines = constructTreeRecursive(rootBOM.attribute_value_ids, 0);
         setRootBOM(prev => ({ ...prev, lines: newLines }));
     }, [rootBOM.item_code, rootBOM.attribute_value_ids, items, attributes, existingBOMs, suggestBOMCode]);
 
@@ -456,6 +457,7 @@ export default function BOMDesigner({
                                             }}
                                             placeholder="Select Item..."
                                             testId="root-item-select"
+                                            onSearch={onSearchItem}
                                         />
                                     ) : (
                                         <div className="form-control bg-light">{getItemName(selectedNode.item_code)}</div>
@@ -551,6 +553,7 @@ export default function BOMDesigner({
                                                         onChange={setPendingItemCode}
                                                         placeholder="Component..."
                                                         testId="component-select"
+                                                        onSearch={onSearchItem}
                                                     />
                                                 </div>
                                                 <div style={{ flex: 1 }}>

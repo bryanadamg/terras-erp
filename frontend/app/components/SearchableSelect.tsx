@@ -19,7 +19,7 @@ interface SearchableSelectProps {
     testId?: string;
 }
 
-export default function SearchableSelect({ options, value, onChange, placeholder, disabled, className, required, categories, testId }: SearchableSelectProps) {
+export default function SearchableSelect({ options, value, onChange, placeholder, disabled, className, required, categories, testId, onSearch }: SearchableSelectProps) {
     const [isOpen, setIsOpen] = useState(false);
     const [searchTerm, setSearchTerm] = useState('');
     const [activeCategory, setActiveCategory] = useState<string | null>(null);

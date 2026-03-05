@@ -1,7 +1,9 @@
 from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.exc import IntegrityError
-from app.db.session import get_db
+from sqlalchemy import select
+from sqlalchemy.orm import selectinload
+from app.db.session import get_async_db
 from app.models.bom import BOM, BOMLine, BOMOperation
 from app.models.item import Item
 from app.models.location import Location
@@ -10,20 +12,21 @@ from app.schemas import BOMCreate, BOMResponse
 from app.models.auth import User
 from app.api.auth import get_current_user
 from app.services import audit_service
+from app.models.attribute import AttributeValue
 
 router = APIRouter()
 
-from app.models.attribute import AttributeValue
-
 @router.post("/boms", response_model=BOMResponse)
-def create_bom(payload: BOMCreate, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+async def create_bom(payload: BOMCreate, db: AsyncSession = Depends(get_async_db), current_user: User = Depends(get_current_user)):
     # 1. Resolve Produced Item
-    item = db.query(Item).filter(Item.code == payload.item_code).first()
+    result = await db.execute(select(Item).filter(Item.code == payload.item_code))
+    item = result.scalars().first()
     if not item:
         raise HTTPException(status_code=404, detail=f"Produced item '{payload.item_code}' not found")
     
     # 2. Check if BOM code exists
-    if db.query(BOM).filter(BOM.code == payload.code).first():
+    result = await db.execute(select(BOM).filter(BOM.code == payload.code))
+    if result.scalars().first():
         raise HTTPException(status_code=400, detail="BOM Code already exists")
 
     # 3. Create BOM Header
@@ -35,16 +38,17 @@ def create_bom(payload: BOMCreate, db: Session = Depends(get_db), current_user: 
     )
     
     if payload.attribute_value_ids:
-        vals = db.query(AttributeValue).filter(AttributeValue.id.in_(payload.attribute_value_ids)).all()
+        result = await db.execute(select(AttributeValue).filter(AttributeValue.id.in_(payload.attribute_value_ids)))
+        vals = result.scalars().all()
         bom.attribute_values = vals
 
     db.add(bom)
-    db.commit()
-    db.refresh(bom)
+    await db.commit()
 
     # 4. Create BOM Lines
     for line in payload.lines:
-        material = db.query(Item).filter(Item.code == line.item_code).first()
+        result = await db.execute(select(Item).filter(Item.code == line.item_code))
+        material = result.scalars().first()
         if not material:
             raise HTTPException(status_code=404, detail=f"Material item '{line.item_code}' not found")
         
@@ -56,84 +60,111 @@ def create_bom(payload: BOMCreate, db: Session = Depends(get_db), current_user: 
         
         # Resolve source location if provided
         if line.source_location_code:
-            loc = db.query(Location).filter(Location.code == line.source_location_code).first()
+            result = await db.execute(select(Location).filter(Location.code == line.source_location_code))
+            loc = result.scalars().first()
             if not loc:
                 raise HTTPException(status_code=404, detail=f"Source Location '{line.source_location_code}' not found")
             bom_line.source_location_id = loc.id
         
         if line.attribute_value_ids:
-            vals = db.query(AttributeValue).filter(AttributeValue.id.in_(line.attribute_value_ids)).all()
+            result = await db.execute(select(AttributeValue).filter(AttributeValue.id.in_(line.attribute_value_ids)))
+            vals = result.scalars().all()
             bom_line.attribute_values = vals
 
         db.add(bom_line)
     
-    db.commit()
-    db.refresh(bom)
+    await db.commit()
     
-    audit_service.log_activity(
+    # Re-fetch with FULL eager loading for serialization (Crucial: Added selectinload(BOM.operations))
+    result = await db.execute(
+        select(BOM)
+        .options(
+            selectinload(BOM.attribute_values), 
+            selectinload(BOM.lines).selectinload(BOMLine.attribute_values),
+            selectinload(BOM.operations)
+        )
+        .filter(BOM.id == bom.id)
+    )
+    refresh_bom = result.scalars().first()
+    
+    await audit_service.log_activity(
         db,
         user_id=current_user.id,
         action="CREATE",
         entity_type="BOM",
-        entity_id=str(bom.id),
-        details=f"Created BOM {bom.code} for {item.code}",
+        entity_id=str(refresh_bom.id),
+        details=f"Created BOM {refresh_bom.code} for {item.code}",
         changes=payload.dict()
     )
     
     # Populate IDs for schema response
-    bom.attribute_value_ids = [v.id for v in bom.attribute_values]
-    for line in bom.lines:
-        line.attribute_value_ids = [v.id for v in line.attribute_values]
+    refresh_bom.attribute_value_ids = [v.id for v in refresh_bom.attribute_values]
+    for bl in refresh_bom.lines:
+        bl.attribute_value_ids = [v.id for v in bl.attribute_values]
     
-    return bom
+    return refresh_bom
 
 @router.get("/boms", response_model=list[BOMResponse])
-def get_boms(skip: int = 0, limit: int = 100, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
-    query = db.query(BOM)
+async def get_boms(skip: int = 0, limit: int = 100, db: AsyncSession = Depends(get_async_db), current_user: User = Depends(get_current_user)):
+    query = select(BOM).options(
+        selectinload(BOM.attribute_values), 
+        selectinload(BOM.lines).selectinload(BOMLine.attribute_values),
+        selectinload(BOM.operations)
+    )
     
     if current_user.allowed_categories:
-        # Join with Item to check category
         query = query.join(Item, BOM.item_id == Item.id).filter(Item.category.in_(current_user.allowed_categories))
         
-    items = query.offset(skip).limit(limit).all()
+    result = await db.execute(query.offset(skip).limit(limit))
+    items = result.unique().scalars().all()
+    
     for item in items:
-        # Populate IDs for schema
         item.attribute_value_ids = [v.id for v in item.attribute_values]
-        for line in item.lines:
-            line.attribute_value_ids = [v.id for v in line.attribute_values]
+        for bl in item.lines:
+            bl.attribute_value_ids = [v.id for v in bl.attribute_values]
     return items
 
 @router.get("/boms/{bom_id}", response_model=BOMResponse)
-def get_bom(bom_id: str, db: Session = Depends(get_db)):
-    bom = db.query(BOM).filter(BOM.id == bom_id).first()
+async def get_bom(bom_id: str, db: AsyncSession = Depends(get_async_db)):
+    result = await db.execute(
+        select(BOM)
+        .options(
+            selectinload(BOM.attribute_values), 
+            selectinload(BOM.lines).selectinload(BOMLine.attribute_values),
+            selectinload(BOM.operations)
+        )
+        .filter(BOM.id == bom_id)
+    )
+    bom = result.scalars().first()
     if not bom:
         raise HTTPException(status_code=404, detail="BOM not found")
     
     bom.attribute_value_ids = [v.id for v in bom.attribute_values]
-    for line in bom.lines:
-        line.attribute_value_ids = [v.id for v in line.attribute_values]
+    for bl in bom.lines:
+        bl.attribute_value_ids = [v.id for v in bl.attribute_values]
         
     return bom
 
 @router.delete("/boms/{bom_id}")
-def delete_bom(bom_id: str, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
-    bom = db.query(BOM).filter(BOM.id == bom_id).first()
+async def delete_bom(bom_id: str, db: AsyncSession = Depends(get_async_db), current_user: User = Depends(get_current_user)):
+    result = await db.execute(select(BOM).filter(BOM.id == bom_id))
+    bom = result.scalars().first()
     if not bom:
         raise HTTPException(status_code=404, detail="BOM not found")
     
     details = f"Deleted BOM {bom.code}"
     
     try:
-        db.delete(bom)
-        db.commit()
+        await db.delete(bom)
+        await db.commit()
     except IntegrityError:
-        db.rollback()
+        await db.rollback()
         raise HTTPException(
             status_code=400, 
             detail="Cannot delete BOM because it is currently used by one or more Work Orders. Please delete or complete the associated Work Orders first."
         )
     
-    audit_service.log_activity(
+    await audit_service.log_activity(
         db,
         user_id=current_user.id,
         action="DELETE",

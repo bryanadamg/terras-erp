@@ -12,6 +12,13 @@ export default function BOMPage() {
     const handleCreateBOM = async (p: any) => {
         const res = await authFetch(`${API_BASE}/boms`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(p) });
         if (res.ok) fetchData();
+        return res;
+    };
+
+    const handleCreateItem = async (p: any) => {
+        const res = await authFetch(`${API_BASE}/items`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(p) });
+        if (res.ok) fetchData();
+        return res;
     };
 
     return (
@@ -24,6 +31,8 @@ export default function BOMPage() {
                 workCenters={workCenters} 
                 onCreateBOM={handleCreateBOM} 
                 onSearchItem={filters.setItemSearch}
+                onCreateItem={handleCreateItem}
+                locations={[]} 
             />
         </MainLayout>
     );

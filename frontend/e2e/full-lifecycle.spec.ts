@@ -91,13 +91,14 @@ test('Full ERP Lifecycle: Buy, Make, Sell', async ({ page }) => {
   // Wait for dropdown to open
   await expect(page.getByTestId('root-item-select-dropdown')).toBeVisible();
   
-  await page.getByTestId('root-item-select-search').fill(fgX);
-  // Wait for the option to appear after filtering
-  await expect(page.getByTestId(`root-item-select-option-${fgX}`)).toBeVisible({ timeout: 5000 });
+  // Type search term and wait for it to be registered
+  await page.getByTestId('root-item-select-search').pressSequentially(fgX, { delay: 100 });
+  
+  // Wait for the option to appear after filtering (increased timeout for server roundtrip)
+  await expect(page.getByTestId(`root-item-select-option-${fgX}`)).toBeVisible({ timeout: 15000 });
   await page.getByTestId(`root-item-select-option-${fgX}`).click();
   
   // SELECT ALL ATTRIBUTES (Color, SubColor, SubSubColor, etc.)
-  // Iterate through all visible attribute selectors in the BOM Designer
   const attrSelects = page.locator('select[data-testid^="bom-attribute-select-"]');
   const attrCount = await attrSelects.count();
   for (let i = 0; i < attrCount; ++i) {
@@ -114,15 +115,19 @@ test('Full ERP Lifecycle: Buy, Make, Sell', async ({ page }) => {
   
   // Add RM-A
   await page.getByTestId('component-select-trigger').click();
-  await page.getByTestId('component-select-search').fill(rmA);
+  await page.getByTestId('component-select-search').pressSequentially(rmA, { delay: 100 });
+  await expect(page.getByTestId(`component-select-option-${rmA}`)).toBeVisible({ timeout: 15000 });
   await page.getByTestId(`component-select-option-${rmA}`).click();
+  
   await page.getByTestId('component-qty-input').fill('0.5');
   await page.getByTestId('add-component-btn').click();
 
   // Add RM-B
   await page.getByTestId('component-select-trigger').click();
-  await page.getByTestId('component-select-search').fill(rmB);
+  await page.getByTestId('component-select-search').pressSequentially(rmB, { delay: 100 });
+  await expect(page.getByTestId(`component-select-option-${rmB}`)).toBeVisible({ timeout: 15000 });
   await page.getByTestId(`component-select-option-${rmB}`).click();
+  
   await page.getByTestId('component-qty-input').fill('0.5');
   await page.getByTestId('add-component-btn').click();
 
