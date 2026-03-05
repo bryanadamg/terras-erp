@@ -119,6 +119,8 @@ class WorkOrderResponse(BaseModel):
     code: str
     bom_id: UUID
     item_id: UUID
+    item_code: str | None = None
+    item_name: str | None = None
     sales_order_id: UUID | None = None
     attribute_value_ids: list[UUID] = [] # We'll populate this in the API
     location_id: UUID
@@ -132,6 +134,9 @@ class WorkOrderResponse(BaseModel):
     created_at: datetime
     is_material_available: bool = True # Calculated field
     
+    # We need to include BOM data for expansion
+    bom: Optional[BOMResponse] = None
+
     class Config:
         from_attributes = True
 

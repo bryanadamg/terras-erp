@@ -40,8 +40,17 @@ class BOM(Base):
     # Relationships
     item = relationship("Item")
     attribute_values = relationship("AttributeValue", secondary=bom_values)
-    lines = relationship("BOMLine", backref="bom", cascade="all, delete-orphan")
-    operations = relationship("BOMOperation", backref="bom", cascade="all, delete-orphan")
+    lines = relationship("BOMLine", back_populates="bom", cascade="all, delete-orphan")
+    operations = relationship("BOMOperation", back_populates="bom", cascade="all, delete-orphan")
+    work_orders = relationship("WorkOrder", back_populates="bom")
+
+    @property
+    def item_code(self) -> str | None:
+        return self.item.code if self.item else None
+
+    @property
+    def item_name(self) -> str | None:
+        return self.item.name if self.item else None
 
 
 class BOMLine(Base):
@@ -68,8 +77,17 @@ class BOMLine(Base):
     is_percentage: Mapped[bool] = mapped_column(Boolean, default=False)
 
     # Relationships
+    bom = relationship("BOM", back_populates="lines")
     item = relationship("Item")
     attribute_values = relationship("AttributeValue", secondary=bom_line_values)
+
+    @property
+    def item_code(self) -> str | None:
+        return self.item.code if self.item else None
+
+    @property
+    def item_name(self) -> str | None:
+        return self.item.name if self.item else None
 
 
 class BOMOperation(Base):
@@ -81,6 +99,10 @@ class BOMOperation(Base):
     bom_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), ForeignKey("boms.id"), index=True
     )
+    
+    # Relationships
+    bom = relationship("BOM", back_populates="operations")
+    
     operation_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), ForeignKey("operations.id")
     )

@@ -319,12 +319,12 @@ export default function ManufacturingView({
                   <>
                       <tr key={line.id}>
                           <td style={{paddingLeft: `${level * 12 + 8}px`}}>
-                              <span className="font-monospace extra-small">{getItemCode(line.item_id)}</span>
+                              <span className="font-monospace extra-small">{line.item_code || getItemCode(line.item_id)}</span>
                           </td>
                           <td>
                               <div style={{fontSize: '9pt'}}>
                                   {level > 0 && <span className="text-muted me-1 small">↳</span>}
-                                  {getItemName(line.item_id)}
+                                  {line.item_name || getItemName(line.item_id)}
                               </div>
                           </td>
                           <td className="extra-small fst-italic">
@@ -592,7 +592,10 @@ export default function ManufacturingView({
                                                                                         const { available, isEnough } = checkStockAvailability(line.item_id, line.source_location_id || wo.source_location_id || wo.location_id, [], req);
                                                                                         return (
                                                                                             <tr key={line.id}>
-                                                                                                <td>{getItemName(line.item_id)}</td>
+                                                                                                <td>
+                                                                                                    <div className="fw-bold">{line.item_name || getItemName(line.item_id)}</div>
+                                                                                                    <div className="extra-small text-muted font-monospace">{line.item_code || getItemCode(line.item_id)}</div>
+                                                                                                </td>
                                                                                                 <td className="fw-bold">{req.toFixed(2)}</td>
                                                                                                 <td className={isEnough ? 'text-success' : 'text-danger'}>{available.toFixed(2)}</td>
                                                                                                 <td>{isEnough ? <i className="bi bi-check-circle-fill text-success"></i> : <i className="bi bi-x-circle-fill text-danger"></i>}</td>

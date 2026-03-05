@@ -58,5 +58,14 @@ class WorkOrder(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
 
     # Relationships
-    bom = relationship("BOM", backref="work_orders")
+    bom = relationship("BOM", back_populates="work_orders")
+    item = relationship("Item")
     attribute_values = relationship("AttributeValue", secondary=work_order_values)
+
+    @property
+    def item_code(self) -> str | None:
+        return self.item.code if self.item else None
+
+    @property
+    def item_name(self) -> str | None:
+        return self.item.name if self.item else None

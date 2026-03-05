@@ -99,13 +99,9 @@ async def create_bom(payload: BOMCreate, db: AsyncSession = Depends(get_async_db
         changes=payload.dict()
     )
     
-    # Populate fields for schema response
-    refresh_bom.item_code = refresh_bom.item.code
-    refresh_bom.item_name = refresh_bom.item.name
+    # Pydantic picks up @property fields automatically via from_attributes
     refresh_bom.attribute_value_ids = [v.id for v in refresh_bom.attribute_values]
     for bl in refresh_bom.lines:
-        bl.item_code = bl.item.code
-        bl.item_name = bl.item.name
         bl.attribute_value_ids = [v.id for v in bl.attribute_values]
     
     return refresh_bom
@@ -127,12 +123,8 @@ async def get_boms(skip: int = 0, limit: int = 100, db: AsyncSession = Depends(g
     items_list = result.unique().scalars().all()
     
     for item in items_list:
-        item.item_code = item.item.code
-        item.item_name = item.item.name
         item.attribute_value_ids = [v.id for v in item.attribute_values]
         for bl in item.lines:
-            bl.item_code = bl.item.code
-            bl.item_name = bl.item.name
             bl.attribute_value_ids = [v.id for v in bl.attribute_values]
     return items_list
 
@@ -153,12 +145,8 @@ async def get_bom(bom_id: str, db: AsyncSession = Depends(get_async_db)):
     if not bom:
         raise HTTPException(status_code=404, detail="BOM not found")
     
-    bom.item_code = bom.item.code
-    bom.item_name = bom.item.name
     bom.attribute_value_ids = [v.id for v in bom.attribute_values]
     for bl in bom.lines:
-        bl.item_code = bl.item.code
-        bl.item_name = bl.item.name
         bl.attribute_value_ids = [v.id for v in bl.attribute_values]
         
     return bom
