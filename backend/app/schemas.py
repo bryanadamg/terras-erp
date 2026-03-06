@@ -113,6 +113,7 @@ class WorkOrderCreate(BaseModel):
     qty: float
     target_start_date: datetime | None = None
     target_end_date: datetime | None = None
+    create_nested: bool = False # Prompt user to create child WOs
 
 class WorkOrderResponse(BaseModel):
     id: UUID
@@ -122,6 +123,7 @@ class WorkOrderResponse(BaseModel):
     item_code: str | None = None
     item_name: str | None = None
     sales_order_id: UUID | None = None
+    parent_wo_id: UUID | None = None
     attribute_value_ids: list[UUID] = [] # We'll populate this in the API
     location_id: UUID
     source_location_id: UUID | None = None

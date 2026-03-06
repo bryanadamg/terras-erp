@@ -26,6 +26,7 @@ def run_migrations():
                 ("work_orders", "actual_end_date", "TIMESTAMP WITHOUT TIME ZONE"),
                 ("work_orders", "completed_at", "TIMESTAMP WITHOUT TIME ZONE"),
                 ("work_orders", "sales_order_id", "UUID REFERENCES sales_orders(id)"),
+                ("work_orders", "parent_wo_id", "UUID REFERENCES work_orders(id)"),
                 ("bom_lines", "source_location_id", "UUID REFERENCES locations(id)"),
                 ("bom_lines", "is_percentage", "BOOLEAN DEFAULT FALSE"),
                 ("boms", "tolerance_percentage", "NUMERIC(5,2) DEFAULT 0.0"),

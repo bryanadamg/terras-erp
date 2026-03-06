@@ -45,6 +45,10 @@ class WorkOrder(Base):
     sales_order_id: Mapped[uuid.UUID | None] = mapped_column(
         UUID(as_uuid=True), ForeignKey("sales_orders.id"), nullable=True
     )
+    
+    parent_wo_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("work_orders.id"), nullable=True
+    )
 
     qty: Mapped[float] = mapped_column(Numeric(14, 4))
     status: Mapped[str] = mapped_column(String(32), default="PENDING")
@@ -61,6 +65,7 @@ class WorkOrder(Base):
     bom = relationship("BOM", back_populates="work_orders")
     item = relationship("Item")
     attribute_values = relationship("AttributeValue", secondary=work_order_values)
+    parent_wo = relationship("WorkOrder", remote_side=[id], backref="child_wos")
 
     @property
     def item_code(self) -> str | None:

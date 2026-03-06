@@ -44,7 +44,8 @@ export default function ManufacturingView({
       qty: 1.0, 
       target_start_date: '',
       target_end_date: '',
-      sales_order_id: '' // Added for SO linking
+      sales_order_id: '',
+      create_nested: false // Default to false
   });
   
   const [startDate, setStartDate] = useState('');
@@ -473,7 +474,7 @@ export default function ManufacturingView({
                   </div>
               </div>
 
-              <div className="row g-2">
+              <div className="row g-2 mb-3">
                   <div className="col-6">
                       <label className="form-label extra-small fw-bold text-muted uppercase">Output Target Location</label>
                       <select className="form-select form-select-sm" value={newWO.location_code} onChange={e => setNewWO({...newWO, location_code: e.target.value})} required>
@@ -487,6 +488,25 @@ export default function ManufacturingView({
                           <option value="">Same as Production</option>
                           {locations.map((loc: any) => <option key={loc.id} value={loc.code}>{loc.name}</option>)}
                       </select>
+                  </div>
+              </div>
+
+              <div className="mb-3 p-2 bg-info bg-opacity-10 border border-info border-opacity-25 rounded">
+                  <div className="form-check form-switch">
+                      <input 
+                          className="form-check-input" 
+                          type="checkbox" 
+                          id="nested-wo-switch"
+                          checked={newWO.create_nested}
+                          onChange={e => setNewWO({...newWO, create_nested: e.target.checked})}
+                      />
+                      <label className="form-check-label small fw-bold text-info-emphasis" htmlFor="nested-wo-switch">
+                          <i className="bi bi-diagram-3-fill me-2"></i>
+                          Create child Work Orders for all nested BOMs
+                      </label>
+                  </div>
+                  <div className="extra-small text-muted mt-1 ms-4 ps-1">
+                      Automatically generate production runs for every sub-assembly in the recipe.
                   </div>
               </div>
           </ModalWrapper>

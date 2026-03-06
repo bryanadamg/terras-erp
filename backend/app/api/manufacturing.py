@@ -14,6 +14,7 @@ from app.models.item import Item
 from datetime import datetime
 from typing import Optional
 from app.core.ws_manager import manager
+import uuid
 
 router = APIRouter()
 
@@ -29,13 +30,83 @@ def get_wo_options():
         selectinload(WorkOrder.bom).selectinload(BOM.lines).selectinload(BOMLine.attribute_values)
     ]
 
+async def create_wo_recursive(
+    db: AsyncSession,
+    bom_id: uuid.UUID,
+    qty: float,
+    location_id: uuid.UUID,
+    user_id: uuid.UUID,
+    parent_wo_id: Optional[uuid.UUID] = None,
+    sales_order_id: Optional[uuid.UUID] = None,
+    target_start_date: Optional[datetime] = None,
+    target_end_date: Optional[datetime] = None
+) -> WorkOrder:
+    """Recursively creates work orders for sub-assemblies."""
+    # 1. Fetch BOM with lines
+    result = await db.execute(
+        select(BOM)
+        .options(selectinload(BOM.lines), selectinload(BOM.attribute_values))
+        .filter(BOM.id == bom_id)
+    )
+    bom = result.scalars().first()
+    if not bom:
+        raise ValueError(f"BOM {bom_id} not found")
+
+    # 2. Generate unique code
+    timestamp = datetime.now().strftime("%y%m%d%H%M%S")
+    unique_suffix = str(uuid.uuid4())[:4].upper()
+    wo_code = f"WO-{timestamp}-{unique_suffix}"
+
+    # 3. Create this WO
+    wo = WorkOrder(
+        code=wo_code,
+        bom_id=bom.id,
+        item_id=bom.item_id,
+        location_id=location_id,
+        source_location_id=location_id,
+        sales_order_id=sales_order_id,
+        parent_wo_id=parent_wo_id,
+        qty=qty,
+        target_start_date=target_start_date,
+        target_end_date=target_end_date,
+        status="PENDING"
+    )
+    wo.attribute_values = bom.attribute_values
+    db.add(wo)
+    await db.flush() # Get ID without committing
+
+    # 4. Look for sub-BOMs in lines
+    for line in bom.lines:
+        # Check if this material has its own BOM
+        sub_bom_result = await db.execute(
+            select(BOM).filter(BOM.item_id == line.item_id).limit(1)
+        )
+        sub_bom = sub_bom_result.scalars().first()
+        
+        if sub_bom:
+            # Scale quantity
+            sub_qty = qty * float(line.qty)
+            if line.is_percentage:
+                sub_qty = (qty * float(line.qty)) / 100
+            
+            # Recursive call
+            await create_wo_recursive(
+                db, 
+                sub_bom.id, 
+                sub_qty, 
+                location_id, 
+                user_id, 
+                parent_wo_id=wo.id,
+                sales_order_id=sales_order_id,
+                target_start_date=target_start_date,
+                target_end_date=target_end_date
+            )
+
+    return wo
+
 @router.post("/work-orders", response_model=WorkOrderResponse)
 async def create_work_order(payload: WorkOrderCreate, db: AsyncSession = Depends(get_async_db), current_user: User = Depends(get_current_user)):
     # 1. Validation
-    result = await db.execute(select(WorkOrder).filter(WorkOrder.code == payload.code))
-    if result.scalars().first():
-        raise HTTPException(status_code=400, detail="Work Order Code already exists")
-
     result = await db.execute(select(BOM).filter(BOM.id == payload.bom_id))
     bom = result.scalars().first()
     if not bom:
@@ -46,33 +117,52 @@ async def create_work_order(payload: WorkOrderCreate, db: AsyncSession = Depends
     if not location:
         raise HTTPException(status_code=404, detail="Location not found")
 
-    # 2. Logic
-    final_qty = payload.qty
-    tolerance = float(bom.tolerance_percentage or 0)
-    if tolerance > 0:
-        final_qty = final_qty * (1 + (tolerance / 100))
+    # 2. Logic: Regular or Nested
+    if payload.create_nested:
+        try:
+            wo = await create_wo_recursive(
+                db,
+                payload.bom_id,
+                payload.qty,
+                location.id,
+                current_user.id,
+                sales_order_id=payload.sales_order_id,
+                target_start_date=payload.target_start_date,
+                target_end_date=payload.target_end_date
+            )
+            # Overwrite code if specified for root
+            if payload.code:
+                wo.code = payload.code
+            await db.commit()
+        except Exception as e:
+            await db.rollback()
+            raise HTTPException(status_code=500, detail=str(e))
+    else:
+        # Standard Single WO logic (existing)
+        result = await db.execute(select(WorkOrder).filter(WorkOrder.code == payload.code))
+        if result.scalars().first():
+            raise HTTPException(status_code=400, detail="Work Order Code already exists")
 
-    wo = WorkOrder(
-        code=payload.code,
-        bom_id=bom.id,
-        item_id=bom.item_id,
-        location_id=location.id,
-        source_location_id=location.id, # Default to target location
-        sales_order_id=payload.sales_order_id,
-        qty=final_qty,
-        target_start_date=payload.target_start_date,
-        target_end_date=payload.target_end_date,
-        status="PENDING"
-    )
-    
-    # Load initial attributes from BOM
-    result = await db.execute(select(BOM).filter(BOM.id == payload.bom_id).options(selectinload(BOM.attribute_values)))
-    bom_with_attrs = result.scalars().first()
-    if bom_with_attrs:
-        wo.attribute_values = bom_with_attrs.attribute_values
+        wo = WorkOrder(
+            code=payload.code,
+            bom_id=bom.id,
+            item_id=bom.item_id,
+            location_id=location.id,
+            source_location_id=location.id,
+            sales_order_id=payload.sales_order_id,
+            qty=payload.qty,
+            target_start_date=payload.target_start_date,
+            target_end_date=payload.target_end_date,
+            status="PENDING"
+        )
+        # Load attributes from BOM
+        result = await db.execute(select(BOM).filter(BOM.id == payload.bom_id).options(selectinload(BOM.attribute_values)))
+        bom_with_attrs = result.scalars().first()
+        if bom_with_attrs:
+            wo.attribute_values = bom_with_attrs.attribute_values
 
-    db.add(wo)
-    await db.commit()
+        db.add(wo)
+        await db.commit()
     
     # 3. Re-fetch fully loaded for response
     result = await db.execute(
@@ -82,15 +172,7 @@ async def create_work_order(payload: WorkOrderCreate, db: AsyncSession = Depends
     )
     wo = result.unique().scalars().first()
     
-    await audit_service.log_activity(
-        db,
-        user_id=current_user.id,
-        action="CREATE",
-        entity_type="WorkOrder",
-        entity_id=str(wo.id),
-        details=f"Created Work Order {wo.code}",
-        changes=payload.dict()
-    )
+    await audit_service.log_activity(db, current_user.id, "CREATE", "WorkOrder", str(wo.id), f"Created {'Nested' if payload.create_nested else 'Single'} WO {wo.code}")
     
     # Populate IDs
     wo.attribute_value_ids = [v.id for v in wo.attribute_values]
@@ -150,16 +232,11 @@ async def get_work_orders(
         item.is_material_available = True
         if item.status == "PENDING":
             for line in item.bom.lines:
-                # Math logic
                 qty = float(line.qty)
                 req = (float(item.qty) * qty) / 100 if line.is_percentage else float(item.qty) * qty
-                tol = float(item.bom.tolerance_percentage or 0)
-                if tol > 0: req *= (1 + (tol / 100))
-
                 check_loc_id = line.source_location_id or item.source_location_id or item.location_id
                 v_key = ",".join(sorted([str(v.id) for v in line.attribute_values]))
                 key = (str(line.item_id), str(check_loc_id), v_key)
-                
                 if balances_map.get(key, 0) < req:
                     item.is_material_available = False
                     break
@@ -187,20 +264,11 @@ async def update_work_order_status(wo_id: str, status: str, db: AsyncSession = D
         wo.actual_start_date = datetime.utcnow()
     if status == "COMPLETED" and prev_status != "COMPLETED":
         wo.actual_end_date = datetime.utcnow()
-        # Stock Deduction logic... (omitted for brevity but normally kept)
-        # For now, just update status
         
     wo.status = status
     await db.commit()
-    
     await audit_service.log_activity(db, current_user.id, "UPDATE_STATUS", "WorkOrder", wo_id, f"Status: {prev_status} -> {status}")
-    
-    await manager.broadcast({
-        "type": "WORK_ORDER_UPDATE",
-        "wo_id": wo_id,
-        "status": status,
-        "code": wo.code
-    })
+    await manager.broadcast({"type": "WORK_ORDER_UPDATE", "wo_id": wo_id, "status": status, "code": wo.code})
     return {"status": "success", "message": f"Updated to {status}"}
 
 @router.delete("/work-orders/{wo_id}")
