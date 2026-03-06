@@ -138,7 +138,7 @@ async def create_work_order(payload: WorkOrderCreate, db: AsyncSession = Depends
             await db.rollback()
             raise HTTPException(status_code=500, detail=str(e))
     else:
-        # Standard Single WO logic (existing)
+        # Standard Single WO logic
         result = await db.execute(select(WorkOrder).filter(WorkOrder.code == payload.code))
         if result.scalars().first():
             raise HTTPException(status_code=400, detail="Work Order Code already exists")
@@ -232,6 +232,7 @@ async def get_work_orders(
         item.is_material_available = True
         if item.status == "PENDING":
             for line in item.bom.lines:
+                # Math logic
                 qty = float(line.qty)
                 req = (float(item.qty) * qty) / 100 if line.is_percentage else float(item.qty) * qty
                 check_loc_id = line.source_location_id or item.source_location_id or item.location_id
@@ -259,16 +260,82 @@ async def update_work_order_status(wo_id: str, status: str, db: AsyncSession = D
     if not wo:
         raise HTTPException(status_code=404, detail="Work Order not found")
     
-    prev_status = wo.status
-    if status == "IN_PROGRESS" and prev_status != "IN_PROGRESS":
+    previous_status = wo.status
+    valid_statuses = ["PENDING", "IN_PROGRESS", "COMPLETED", "CANCELLED"]
+    if status not in valid_statuses:
+        raise HTTPException(status_code=400, detail="Invalid status")
+    
+    if status == "IN_PROGRESS" and previous_status != "IN_PROGRESS":
+        # Ensure stock availability before starting
+        for line in wo.bom.lines:
+            required_qty = float(line.qty)
+            if line.is_percentage:
+                required_qty = (float(wo.qty) * required_qty) / 100
+            else:
+                required_qty = float(wo.qty) * required_qty
+            
+            tolerance = float(wo.bom.tolerance_percentage or 0)
+            if tolerance > 0:
+                required_qty = required_qty * (1 + (tolerance / 100))
+            
+            check_location_id = line.source_location_id or wo.source_location_id or wo.location_id
+            current_stock = await stock_service.get_stock_balance(db, line.item_id, check_location_id, [v.id for v in line.attribute_values])
+            
+            if current_stock < required_qty:
+                raise HTTPException(status_code=400, detail=f"Insufficient stock for {line.item_id}")
+        
         wo.actual_start_date = datetime.utcnow()
-    if status == "COMPLETED" and prev_status != "COMPLETED":
+
+    if status == "COMPLETED" and previous_status != "COMPLETED":
         wo.actual_end_date = datetime.utcnow()
         
+        # 1. DEDUCT Raw Materials
+        for line in wo.bom.lines:
+            qty_to_deduct = float(line.qty)
+            if line.is_percentage:
+                qty_to_deduct = (float(wo.qty) * qty_to_deduct) / 100
+            else:
+                qty_to_deduct = float(wo.qty) * qty_to_deduct
+            
+            tolerance = float(wo.bom.tolerance_percentage or 0)
+            if tolerance > 0:
+                qty_to_deduct = qty_to_deduct * (1 + (tolerance / 100))
+            
+            deduct_location_id = line.source_location_id or wo.source_location_id or wo.location_id
+            await stock_service.add_stock_entry(
+                db, 
+                item_id=line.item_id, 
+                location_id=deduct_location_id, 
+                qty_change=-qty_to_deduct, 
+                reference_type="Work Order", 
+                reference_id=wo.code, 
+                attribute_value_ids=[v.id for v in line.attribute_values]
+            )
+        
+        # 2. ADD Finished Goods
+        await stock_service.add_stock_entry(
+            db, 
+            item_id=wo.item_id, 
+            location_id=wo.location_id, 
+            qty_change=wo.qty, 
+            reference_type="Work Order", 
+            reference_id=wo.code, 
+            attribute_value_ids=[v.id for v in wo.attribute_values]
+        )
+
     wo.status = status
     await db.commit()
-    await audit_service.log_activity(db, current_user.id, "UPDATE_STATUS", "WorkOrder", wo_id, f"Status: {prev_status} -> {status}")
-    await manager.broadcast({"type": "WORK_ORDER_UPDATE", "wo_id": wo_id, "status": status, "code": wo.code})
+    
+    await audit_service.log_activity(db, current_user.id, "UPDATE_STATUS", "WorkOrder", wo_id, f"Status: {previous_status} -> {status}")
+    
+    await manager.broadcast({
+        "type": "WORK_ORDER_UPDATE",
+        "wo_id": wo_id,
+        "status": status,
+        "code": wo.code,
+        "actual_start_date": wo.actual_start_date.isoformat() if wo.actual_start_date else None,
+        "actual_end_date": wo.actual_end_date.isoformat() if wo.actual_end_date else None
+    })
     return {"status": "success", "message": f"Updated to {status}"}
 
 @router.delete("/work-orders/{wo_id}")
