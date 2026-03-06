@@ -559,7 +559,7 @@ export default function ManufacturingView({
                                                         <div className="d-flex align-items-center gap-2">
                                                             <i className={`bi bi-chevron-${isExpanded ? 'down' : 'right'} text-muted`}></i>
                                                             <div>
-                                                                <div className="fw-bold text-dark" style={{fontSize: '9pt'}}>{getItemName(wo.item_id)}</div>
+                                                                <div className="fw-bold text-dark" style={{fontSize: '9pt'}}>{wo.item_name || getItemName(wo.item_id)}</div>
                                                                 <div className="extra-small text-muted">
                                                                     BOM: {getBOMCode(wo.bom_id)}
                                                                     {wo.sales_order_id && <span className="ms-2 text-primary fw-bold">From SO</span>}

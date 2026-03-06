@@ -1,21 +1,23 @@
 from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy.orm import Session
-from app.db.session import get_db
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import select
+from sqlalchemy.orm import selectinload
+from app.db.session import get_async_db
 from app.schemas import PurchaseOrderCreate, PurchaseOrderResponse
 from app.models.purchase import PurchaseOrder, PurchaseOrderLine
 from app.models.attribute import AttributeValue
 from app.api.auth import get_current_user
 from app.models.auth import User
+from app.services import stock_service, audit_service
 import uuid
 
 router = APIRouter(prefix="/purchase-orders", tags=["purchase"])
 
-from app.services import stock_service, audit_service
-
 @router.post("", response_model=PurchaseOrderResponse)
-def create_purchase_order(payload: PurchaseOrderCreate, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+async def create_purchase_order(payload: PurchaseOrderCreate, db: AsyncSession = Depends(get_async_db), current_user: User = Depends(get_current_user)):
     # Check duplicate PO number
-    if db.query(PurchaseOrder).filter(PurchaseOrder.po_number == payload.po_number).first():
+    result = await db.execute(select(PurchaseOrder).filter(PurchaseOrder.po_number == payload.po_number))
+    if result.scalars().first():
         raise HTTPException(status_code=400, detail="PO Number already exists")
 
     po = PurchaseOrder(
@@ -25,8 +27,7 @@ def create_purchase_order(payload: PurchaseOrderCreate, db: Session = Depends(ge
         order_date=payload.order_date
     )
     db.add(po)
-    db.commit()
-    db.refresh(po)
+    await db.commit()
 
     for line in payload.lines:
         db_line = PurchaseOrderLine(
@@ -36,22 +37,32 @@ def create_purchase_order(payload: PurchaseOrderCreate, db: Session = Depends(ge
             unit_price=line.unit_price,
             due_date=line.due_date
         )
-        db.add(db_line)
-        db.commit()
-        db.refresh(db_line)
-        
         if line.attribute_value_ids:
-            for val_id in line.attribute_value_ids:
-                val = db.query(AttributeValue).filter(AttributeValue.id == val_id).first()
-                if val:
-                    db_line.attribute_values.append(val)
-            db.commit()
+            # Load attributes
+            attr_result = await db.execute(select(AttributeValue).filter(AttributeValue.id.in_(line.attribute_value_ids)))
+            db_line.attribute_values = attr_result.scalars().all()
+            
+        db.add(db_line)
+    
+    await db.commit()
+    
+    # Refresh with eager loading
+    final_result = await db.execute(
+        select(PurchaseOrder)
+        .options(selectinload(PurchaseOrder.lines).selectinload(PurchaseOrderLine.attribute_values))
+        .filter(PurchaseOrder.id == po.id)
+    )
+    return final_result.scalars().first()
 
-    return po
-
-@router.post("/{po_id}/receive", response_model=PurchaseOrderResponse)
-def receive_purchase_order(po_id: uuid.UUID, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
-    po = db.query(PurchaseOrder).filter(PurchaseOrder.id == po_id).first()
+@router.put("/{po_id}/receive", response_model=PurchaseOrderResponse)
+async def receive_purchase_order(po_id: uuid.UUID, db: AsyncSession = Depends(get_async_db), current_user: User = Depends(get_current_user)):
+    result = await db.execute(
+        select(PurchaseOrder)
+        .options(selectinload(PurchaseOrder.lines).selectinload(PurchaseOrderLine.attribute_values))
+        .filter(PurchaseOrder.id == po_id)
+    )
+    po = result.scalars().first()
+    
     if not po:
         raise HTTPException(status_code=404, detail="PO not found")
     
@@ -63,7 +74,7 @@ def receive_purchase_order(po_id: uuid.UUID, db: Session = Depends(get_db), curr
 
     # Process each line into stock
     for line in po.lines:
-        stock_service.add_stock_entry(
+        await stock_service.add_stock_entry(
             db,
             item_id=line.item_id,
             location_id=po.target_location_id,
@@ -74,10 +85,9 @@ def receive_purchase_order(po_id: uuid.UUID, db: Session = Depends(get_db), curr
         )
 
     po.status = "RECEIVED"
-    db.commit()
-    db.refresh(po)
+    await db.commit()
 
-    audit_service.log_activity(
+    await audit_service.log_activity(
         db,
         user_id=current_user.id,
         action="STATUS_CHANGE",
@@ -89,15 +99,21 @@ def receive_purchase_order(po_id: uuid.UUID, db: Session = Depends(get_db), curr
     return po
 
 @router.get("", response_model=list[PurchaseOrderResponse])
-def get_purchase_orders(db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
-    return db.query(PurchaseOrder).order_by(PurchaseOrder.created_at.desc()).all()
+async def get_purchase_orders(db: AsyncSession = Depends(get_async_db), current_user: User = Depends(get_current_user)):
+    result = await db.execute(
+        select(PurchaseOrder)
+        .options(selectinload(PurchaseOrder.lines).selectinload(PurchaseOrderLine.attribute_values))
+        .order_by(PurchaseOrder.created_at.desc())
+    )
+    return result.scalars().all()
 
 @router.delete("/{po_id}")
-def delete_purchase_order(po_id: uuid.UUID, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
-    po = db.query(PurchaseOrder).filter(PurchaseOrder.id == po_id).first()
+async def delete_purchase_order(po_id: uuid.UUID, db: AsyncSession = Depends(get_async_db), current_user: User = Depends(get_current_user)):
+    result = await db.execute(select(PurchaseOrder).filter(PurchaseOrder.id == po_id))
+    po = result.scalars().first()
     if not po:
         raise HTTPException(status_code=404, detail="PO not found")
     
-    db.delete(po)
-    db.commit()
+    await db.delete(po)
+    await db.commit()
     return {"status": "success"}
