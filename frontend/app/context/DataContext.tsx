@@ -25,6 +25,7 @@ interface DataContextType {
     auditLogs: any[];
     partners: any[];
     dashboardKPIs: any;
+    companyProfile: any;
     
     // Pagination & Search State
     pagination: {
@@ -70,6 +71,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
     const [auditLogs, setAuditLogs] = useState([]);
     const [partners, setPartners] = useState([]);
     const [dashboardKPIs, setDashboardKPIs] = useState<any>({});
+    const [companyProfile, setCompanyProfile] = useState<any>(null);
 
     // UI & Sync State
     const [itemPage, setItemPage] = useState(1);
@@ -128,6 +130,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
                 requests.push(fetch(`${API_BASE}/work-centers`, { headers })); requestTypes.push('work-centers');
                 requests.push(fetch(`${API_BASE}/operations`, { headers })); requestTypes.push('operations');
                 requests.push(fetch(`${API_BASE}/partners`, { headers })); requestTypes.push('partners');
+                requests.push(fetch(`${API_BASE}/settings/company`, { headers })); requestTypes.push('company-profile');
             }
 
             // 2. DOMAIN DATA (Inventory, Orders, etc.)
@@ -211,6 +214,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
                     case 'work-centers': setWorkCenters(data); newMasterData.workCenters = data; break;
                     case 'operations': setOperations(data); newMasterData.operations = data; break;
                     case 'partners': setPartners(data); newMasterData.partners = data; break;
+                    case 'company-profile': setCompanyProfile(data); newMasterData.companyProfile = data; break;
                     case 'items': setItems(data.items); setItemTotal(data.total); break;
                     case 'kpis': setDashboardKPIs(data); break;
                     case 'boms': setBoms(data); break;
@@ -269,12 +273,14 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
     const value = React.useMemo(() => ({
         items, locations, attributes, categories, uoms, boms, workOrders, stockEntries, stockBalance,
         workCenters, operations, salesOrders, purchaseOrders, samples, auditLogs, partners, dashboardKPIs,
+        companyProfile,
         pagination: { itemPage, setItemPage, itemTotal, woPage, setWoPage, woTotal, auditPage, setAuditPage, auditTotal, reportPage, setReportPage, reportTotal, pageSize },
         filters: { itemSearch, setItemSearch, itemCategory, setItemCategory, auditType, setAuditType },
         fetchData, handleTabHover, authFetch
     }), [
         items, locations, attributes, categories, uoms, boms, workOrders, stockEntries, stockBalance,
         workCenters, operations, salesOrders, purchaseOrders, samples, auditLogs, partners, dashboardKPIs,
+        companyProfile,
         itemPage, itemTotal, woPage, woTotal, auditPage, auditTotal, reportPage, reportTotal, pageSize,
         itemSearch, itemCategory, auditType, fetchData, handleTabHover, authFetch
     ]);

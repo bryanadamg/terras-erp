@@ -7,6 +7,7 @@ import QRScannerView from './QRScannerView';
 import { useToast } from './Toast';
 import { useLanguage } from '../context/LanguageContext';
 import ModalWrapper from './ModalWrapper';
+import PrintHeader from './PrintHeader';
 
 export default function ManufacturingView({ 
     items, 
@@ -346,19 +347,24 @@ export default function ManufacturingView({
 
       return (
           <div className="bg-white p-4 h-100 position-fixed top-0 start-0 w-100 print-container" style={{zIndex: 2000, overflowY: 'auto'}}>
-              <div className="d-flex justify-content-between border-bottom pb-2 mb-3">
+              <PrintHeader title="Work Order" />
+
+              <div className="d-flex justify-content-between border-bottom pb-2 mb-3 mt-4">
                   <div className="d-flex gap-3">
                       <div className="bg-white border p-1 rounded">
                           <img src={qrDataUrl} alt="WO QR" style={{ width: '100px', height: '100px' }} />
                       </div>
                       <div>
-                          <h3 className="fw-bold mb-0">WORK ORDER</h3>
-                          <div className="text-muted extra-small">Terras ERP Manufacturing Management</div>
+                          <h4 className="font-monospace mb-0 fw-bold text-primary">{wo.code}</h4>
+                          <div className={`badge ${getStatusBadge(wo.status)} small mt-1`}>{wo.status}</div>
                       </div>
                   </div>
                   <div className="text-end">
-                      <h4 className="font-monospace mb-0 fw-bold">{wo.code}</h4>
-                      <div className={`badge ${getStatusBadge(wo.status)} small`}>{wo.status}</div>
+                      <div className="extra-small text-muted mb-1">Production Timeline</div>
+                      <div className="extra-small d-flex justify-content-end gap-2">
+                          <span className="text-muted">Target:</span> 
+                          <strong>{formatDate(wo.target_start_date)} - {formatDate(wo.target_end_date)}</strong>
+                      </div>
                   </div>
               </div>
 

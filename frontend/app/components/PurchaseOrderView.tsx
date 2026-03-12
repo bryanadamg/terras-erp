@@ -3,6 +3,7 @@ import CodeConfigModal, { CodeConfig } from './CodeConfigModal';
 import { useToast } from './Toast';
 import { useLanguage } from '../context/LanguageContext';
 import SearchableSelect from './SearchableSelect';
+import PrintHeader from './PrintHeader';
 
 export default function PurchaseOrderView({ items, attributes, purchaseOrders, partners, locations, onCreatePO, onDeletePO, onReceivePO }: any) {
   const { showToast } = useToast();
@@ -148,15 +149,16 @@ export default function PurchaseOrderView({ items, attributes, purchaseOrders, p
   // --- Print Template ---
   const PurchaseOrderPrintTemplate = ({ po }: { po: any }) => (
       <div className="bg-white p-5 h-100 position-fixed top-0 start-0 w-100 print-container" style={{zIndex: 2000, overflowY: 'auto'}}>
-          <div className="d-flex justify-content-between border-bottom pb-3 mb-4 text-dark">
-              <div>
-                  <h2 className="fw-bold mb-0">PURCHASE ORDER</h2>
-                  <div className="text-muted small">Terras ERP Procurement System</div>
-              </div>
-              <div className="text-end">
+          <PrintHeader title="Purchase Order" />
+
+          <div className="row mb-3 mt-4 text-dark">
+              <div className="col-8">
                   <div className="small text-muted fw-bold uppercase">PO Number</div>
                   <h4 className="font-monospace mb-0 fw-bold text-success">{po.po_number}</h4>
                   <div className="small text-muted mt-1">Date: {new Date(po.order_date).toLocaleDateString()}</div>
+              </div>
+              <div className="col-4 text-end">
+                   <div className="badge bg-secondary mb-3">Status: {po.status}</div>
               </div>
           </div>
 

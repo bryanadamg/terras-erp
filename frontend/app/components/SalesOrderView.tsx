@@ -3,6 +3,7 @@ import CodeConfigModal, { CodeConfig } from './CodeConfigModal';
 import { useToast } from './Toast';
 import { useLanguage } from '../context/LanguageContext';
 import SearchableSelect from './SearchableSelect';
+import PrintHeader from './PrintHeader';
 
 export default function SalesOrderView({ items, attributes, salesOrders, partners, onCreateSO, onDeleteSO, onUpdateSOStatus, onGenerateWO }: any) {
   const { showToast } = useToast();
@@ -182,15 +183,16 @@ export default function SalesOrderView({ items, attributes, salesOrders, partner
   // --- Print Template ---
   const SalesOrderPrintTemplate = ({ so }: { so: any }) => (
       <div className="bg-white p-5 h-100 position-fixed top-0 start-0 w-100 print-container" style={{zIndex: 2000, overflowY: 'auto'}}>
-          <div className="d-flex justify-content-between border-bottom pb-3 mb-4">
-              <div>
-                  <h2 className="fw-bold mb-0">SALES ORDER</h2>
-                  <div className="text-muted small">Terras ERP Enterprise System</div>
-              </div>
-              <div className="text-end">
+          <PrintHeader title="Sales Order" />
+
+          <div className="row mb-3 mt-4">
+              <div className="col-8">
                   <div className="small text-muted fw-bold uppercase">Order Reference</div>
                   <h4 className="font-monospace mb-0 fw-bold text-primary">{so.po_number}</h4>
                   <div className="small text-muted mt-1">Date: {new Date(so.order_date).toLocaleDateString()}</div>
+              </div>
+              <div className="col-4 text-end">
+                   <div className="badge bg-secondary mb-3">{so.status}</div>
               </div>
           </div>
 

@@ -8,11 +8,10 @@ from sqlalchemy import text
 import os
 from contextlib import asynccontextmanager
 
+from fastapi.staticfiles import StaticFiles
 from app.db.session import engine
 from app.db.base import Base
-from app.api import items, locations, stock, attributes, boms, manufacturing, categories, routing, auth, uoms, sales, samples, audit, admin, dashboard, partners, purchase
-from app.db.init_db import init_db
-from app.core.ws_manager import manager 
+from app.api import items, locations, stock, attributes, boms, manufacturing, categories, routing, auth, uoms, sales, samples, audit, admin, dashboard, partners, purchase, settings
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -27,6 +26,11 @@ app = FastAPI(
     default_response_class=ORJSONResponse,
     lifespan=lifespan
 )
+
+# Mount Static Files
+static_path = Path("static")
+static_path.mkdir(exist_ok=True)
+app.mount("/static", StaticFiles(directory="static"), name="static")
 
 # --- Router Configuration ---
 api_router = APIRouter()
@@ -48,6 +52,7 @@ api_router.include_router(admin.router)
 api_router.include_router(dashboard.router)
 api_router.include_router(partners.router)
 api_router.include_router(purchase.router)
+api_router.include_router(settings.router)
 
 @api_router.websocket("/ws/events")
 async def websocket_endpoint(websocket: WebSocket):

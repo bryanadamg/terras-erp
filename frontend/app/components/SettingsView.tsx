@@ -1,8 +1,12 @@
 import { useState, useEffect } from 'react';
 import { useToast } from './Toast';
 import { useUser, User } from '../context/UserContext';
+import CompanyProfileView from './CompanyProfileView';
 
-export default function SettingsView({ appName, onUpdateAppName, uiStyle, onUpdateUIStyle, requestConfirm }: any) {
+export default function SettingsView({ 
+    appName, onUpdateAppName, uiStyle, onUpdateUIStyle, requestConfirm,
+    companyProfile, onUpdateCompanyProfile, onUploadLogo
+}: any) {
   const { showToast } = useToast();
   const { currentUser, users, setCurrentUser, hasPermission, refreshUsers } = useUser();
   
@@ -332,6 +336,15 @@ export default function SettingsView({ appName, onUpdateAppName, uiStyle, onUpda
              </form>
           </div>
         </div>
+
+        {/* Company Profile (Admin Only) */}
+        {hasPermission('admin.access') && (
+            <CompanyProfileView 
+                profile={companyProfile} 
+                onUpdate={onUpdateCompanyProfile} 
+                onUploadLogo={onUploadLogo} 
+            />
+        )}
 
         {/* Self-Service Account Security */}
         <div className="card shadow-sm border-0 mb-4">

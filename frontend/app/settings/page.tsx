@@ -6,9 +6,12 @@ import SettingsView from '../components/SettingsView';
 import { useData } from '../context/DataContext';
 
 export default function SettingsPage() {
-    const { fetchData } = useData();
+    const { fetchData, companyProfile, authFetch } = useData();
     const [appName, setAppName] = useState('Terras ERP');
     const [uiStyle, setUiStyle] = useState('classic');
+
+    const envBase = process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:8000/api';
+    const API_BASE = envBase.endsWith('/api') ? envBase : `${envBase}/api`;
 
     useEffect(() => {
         const savedName = localStorage.getItem('app_name'); if (savedName) setAppName(savedName);
@@ -26,6 +29,23 @@ export default function SettingsPage() {
         window.location.reload(); // Apply globally
     };
 
+    const handleUpdateCompanyProfile = async (profile: any) => {
+        const res = await authFetch(`${API_BASE}/settings/company`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(profile)
+        });
+        if (res.ok) fetchData('settings');
+    };
+
+    const handleUploadLogo = async (formData: FormData) => {
+        const res = await authFetch(`${API_BASE}/settings/company/logo`, {
+            method: 'POST',
+            body: formData // No Content-Type header for FormData
+        });
+        if (res.ok) fetchData('settings');
+    };
+
     return (
         <MainLayout>
             <SettingsView 
@@ -33,6 +53,9 @@ export default function SettingsPage() {
                 onUpdateAppName={handleUpdateAppName} 
                 uiStyle={uiStyle} 
                 onUpdateUIStyle={handleUpdateUIStyle} 
+                companyProfile={companyProfile}
+                onUpdateCompanyProfile={handleUpdateCompanyProfile}
+                onUploadLogo={handleUploadLogo}
                 onClearCache={() => { localStorage.removeItem('terras_master_cache'); fetchData(); }} 
             />
         </MainLayout>
