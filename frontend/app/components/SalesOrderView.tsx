@@ -4,7 +4,7 @@ import { useToast } from './Toast';
 import { useLanguage } from '../context/LanguageContext';
 import SearchableSelect from './SearchableSelect';
 
-export default function SalesOrderView({ items, attributes, salesOrders, partners, onCreateSO, onDeleteSO, onGenerateWO }: any) {
+export default function SalesOrderView({ items, attributes, salesOrders, partners, onCreateSO, onDeleteSO, onUpdateSOStatus, onGenerateWO }: any) {
   const { showToast } = useToast();
   const { t } = useLanguage();
   const [isCreateOpen, setIsCreateOpen] = useState(false);
@@ -97,7 +97,7 @@ export default function SalesOrderView({ items, attributes, salesOrders, partner
       setNewLine({...newLine, attribute_value_ids: newValues});
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
       e.preventDefault();
       
       const payload = {
@@ -109,14 +109,51 @@ export default function SalesOrderView({ items, attributes, salesOrders, partner
           }))
       };
 
-      onCreateSO(payload);
-      setNewSO({ po_number: '', customer_name: '', order_date: new Date().toISOString().split('T')[0], lines: [] });
-      setIsCreateOpen(false);
+      const res = await onCreateSO(payload);
+      
+      if (res && res.status === 400) {
+          // Handle Duplicate PO Number
+          let basePO = newSO.po_number;
+          // Strip existing suffix if any (e.g. -1, -2)
+          const baseMatch = basePO.match(/^(.*)-(\d+)$/);
+          if (baseMatch) basePO = baseMatch[1];
+
+          let counter = 1;
+          let suggestedPO = `${basePO}-${counter}`;
+          
+          while (salesOrders.some((s: any) => s.po_number === suggestedPO)) {
+              counter++;
+              suggestedPO = `${basePO}-${counter}`;
+          }
+
+          showToast(`PO Number "${newSO.po_number}" already exists. Suggesting: ${suggestedPO}`, 'warning');
+          setNewSO({ ...newSO, po_number: suggestedPO });
+      } else if (res && res.ok) {
+          setNewSO({ po_number: '', customer_name: '', order_date: new Date().toISOString().split('T')[0], lines: [] });
+          setIsCreateOpen(false);
+          showToast('Sales Order created successfully', 'success');
+      }
   };
 
   const getItemName = (id: string) => items.find((i: any) => i.id === id)?.name || id;
   const getItemCode = (id: string) => items.find((i: any) => i.id === id)?.code || id;
   const isSample = (id: string) => items.find((i: any) => i.id === id)?.category === 'Sample';
+
+  const getStatusBadge = (status: string) => {
+      switch(status) {
+          case 'READY': return 'bg-info text-white';
+          case 'SENT': return 'bg-warning text-dark';
+          case 'DELIVERED': return 'bg-success';
+          case 'CANCELLED': return 'bg-danger';
+          case 'READY_TO_SHIP': return 'bg-info text-white'; // Alias if needed
+          default: return 'bg-secondary';
+      }
+  };
+
+  const formatDate = (date: string | null) => {
+      if (!date) return '-';
+      return new Date(date).toLocaleDateString();
+  };
 
   const getBoundAttributes = (itemId: string) => {
       const item = items.find((i: any) => i.id === itemId);
@@ -419,9 +456,26 @@ export default function SalesOrderView({ items, attributes, salesOrders, partner
                                             ))}
                                         </div>
                                     </td>
-                                    <td><span className="badge bg-secondary">{so.status}</span></td>
+                                    <td>
+                                        <div className="d-flex flex-column gap-1">
+                                            <span className={`badge ${getStatusBadge(so.status)}`}>{so.status}</span>
+                                            {so.delivered_at && <div className="extra-small text-muted mt-1">Delivered: {formatDate(so.delivered_at)}</div>}
+                                        </div>
+                                    </td>
                                     <td className="pe-4 text-end">
-                                        <div className="d-flex justify-content-end gap-2">
+                                        <div className="d-flex justify-content-end align-items-center gap-2">
+                                            {/* Action Buttons based on Status */}
+                                            {so.status === 'READY' && (
+                                                <button className="btn btn-sm btn-primary py-0 px-2 extra-small" onClick={() => onUpdateSOStatus(so.id, 'SENT')}>
+                                                    SENT
+                                                </button>
+                                            )}
+                                            {so.status === 'SENT' && (
+                                                <button className="btn btn-sm btn-success py-0 px-2 extra-small" onClick={() => onUpdateSOStatus(so.id, 'DELIVERED')}>
+                                                    DELIVERED
+                                                </button>
+                                            )}
+
                                             <button className="btn btn-sm btn-link text-primary p-0" title="Print Order" onClick={() => handlePrintSO(so)}>
                                                 <i className="bi bi-printer fs-5"></i>
                                             </button>

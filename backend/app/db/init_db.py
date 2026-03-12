@@ -33,6 +33,7 @@ def run_migrations():
                 ("purchase_orders", "target_location_id", "UUID REFERENCES locations(id)"),
                 ("users", "hashed_password", "VARCHAR(255)"),
                 ("users", "allowed_categories", "JSON"),
+                ("sales_orders", "delivered_at", "TIMESTAMP WITHOUT TIME ZONE"),
             ]
 
             for table, col, col_type in migrations:

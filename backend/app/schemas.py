@@ -320,7 +320,7 @@ class SalesOrderLineCreate(BaseModel):
 
 class SalesOrderLineResponse(SalesOrderLineCreate):
     id: UUID
-    attribute_value_ids: list[UUID] = [] # To be populated
+    attribute_value_ids: list[UUID] = []
     class Config:
         from_attributes = True
 
@@ -330,9 +330,13 @@ class SalesOrderCreate(BaseModel):
     order_date: datetime | None = None
     lines: list[SalesOrderLineCreate]
 
-class SalesOrderResponse(SalesOrderCreate):
+class SalesOrderResponse(BaseModel):
     id: UUID
+    po_number: str
+    customer_name: str
+    order_date: datetime
     status: str
+    delivered_at: datetime | None = None
     lines: list[SalesOrderLineResponse]
     created_at: datetime
     class Config:

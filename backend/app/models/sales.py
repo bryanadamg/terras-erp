@@ -22,9 +22,10 @@ class SalesOrder(Base):
     po_number: Mapped[str] = mapped_column(String(64), unique=True, index=True) # The Customer's PO Number
     customer_name: Mapped[str] = mapped_column(String(255))
     order_date: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
-    status: Mapped[str] = mapped_column(String(32), default="PENDING") # PENDING, SHIPPED, CANCELLED
+    status: Mapped[str] = mapped_column(String(32), default="PENDING") # PENDING, READY, SENT, DELIVERED, CANCELLED
     notes: Mapped[str | None] = mapped_column(Text, nullable=True)
     
+    delivered_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
 
     # Relationships

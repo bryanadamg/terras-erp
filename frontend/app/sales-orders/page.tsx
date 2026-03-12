@@ -4,9 +4,11 @@ import MainLayout from '../components/MainLayout';
 import SalesOrderView from '../components/SalesOrderView';
 import { useData } from '../context/DataContext';
 import { useRouter } from 'next/navigation';
+import { useToast } from '../components/Toast';
 
 export default function SalesOrdersPage() {
     const { items, attributes, salesOrders, partners, fetchData, authFetch } = useData();
+    const { showToast } = useToast();
     const router = useRouter();
     const envBase = process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:8000/api';
     const API_BASE = envBase.endsWith('/api') ? envBase : `${envBase}/api`;
@@ -33,17 +35,28 @@ export default function SalesOrdersPage() {
         router.push(`/manufacturing?${params.toString()}`);
     };
 
+    const handleUpdateSOStatus = async (soId: string, status: string) => {
+        const res = await authFetch(`${API_BASE}/sales-orders/${soId}/status?status=${status}`, { method: 'PUT' });
+        if (res.ok) {
+            fetchData();
+            showToast(`Order status updated to ${status}`, 'success');
+        } else {
+            const err = await res.json();
+            showToast(`Error: ${err.detail}`, 'danger');
+        }
+    };
+
     return (
         <MainLayout>
             <SalesOrderView 
                 items={items} 
                 attributes={attributes} 
                 salesOrders={salesOrders} 
-                partners={partners} 
-                onCreateSO={handleCreateSO} 
+                partners={partners}
+                onCreateSO={handleCreateSO}
                 onDeleteSO={handleDeleteSO}
+                onUpdateSOStatus={handleUpdateSOStatus}
                 onGenerateWO={handleGenerateWO}
             />
         </MainLayout>
-    );
-}
+    );}
