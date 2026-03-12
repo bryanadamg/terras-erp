@@ -1,10 +1,23 @@
 import logging
+import os
+from pathlib import Path
 from sqlalchemy import text
 from app.db.session import engine
 from app.db.base import Base
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
+
+def ensure_static_dirs():
+    """Ensure required static directories exist."""
+    try:
+        # We use relative path 'static/logos' as the app usually runs from the backend root
+        log_dir = Path("static/logos")
+        if not log_dir.exists():
+            log_dir.mkdir(parents=True, exist_ok=True)
+            logger.info(f"Created directory: {log_dir}")
+    except Exception as e:
+        logger.warning(f"Static directory creation skipped: {e}")
 
 def run_migrations():
     """
@@ -291,6 +304,9 @@ def sync_stock_balances(db):
 
 def init_db() -> None:
     logger.info("Initializing Database...")
+    # 0. Ensure static directories exist
+    ensure_static_dirs()
+    
     # 1. Create all tables (including association tables registered in base.py)
     Base.metadata.create_all(bind=engine)
     

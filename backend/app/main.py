@@ -12,6 +12,7 @@ from fastapi.staticfiles import StaticFiles
 from app.db.session import engine
 from app.db.base import Base
 from app.api import items, locations, stock, attributes, boms, manufacturing, categories, routing, auth, uoms, sales, samples, audit, admin, dashboard, partners, purchase, settings
+from app.core.ws_manager import manager
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
