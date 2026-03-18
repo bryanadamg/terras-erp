@@ -30,7 +30,8 @@ export default function ManufacturingPage() {
             setInitialCreateState({
                 sales_order_id: soId,
                 item_id: searchParams.get('item_id'),
-                qty: parseFloat(searchParams.get('qty') || '0')
+                qty: parseFloat(searchParams.get('qty') || '0'),
+                bom_id: searchParams.get('bom_id')
             });
             router.replace('/manufacturing');
         }

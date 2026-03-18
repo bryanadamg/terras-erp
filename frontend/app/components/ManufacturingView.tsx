@@ -74,11 +74,11 @@ export default function ManufacturingView({
   // Handle Automated Creation from Sales Order
   useEffect(() => {
       if (initialCreateState && items.length > 0 && boms.length > 0) {
-          const { item_id, qty, sales_order_id } = initialCreateState;
-          
-          // Find matching BOM
-          const bom = boms.find((b: any) => b.item_id === item_id);
-          
+          const { bom_id, qty, sales_order_id } = initialCreateState;
+
+          // Use the bom_id passed from the SO page (already matched on item + attributes)
+          const bom = boms.find((b: any) => b.id === bom_id);
+
           if (bom) {
               const suggestedCode = suggestWOCode(bom.id);
               setNewWO(prev => ({
@@ -89,11 +89,11 @@ export default function ManufacturingView({
                   sales_order_id: sales_order_id || ''
               }));
               setIsCreateOpen(true);
-              onClearInitialState(); // Stop the loop by signaling parent to clear state
+              onClearInitialState();
               showToast('Production details pre-filled from Sales Order', 'info');
           } else {
               showToast('No active BOM found for the requested item.', 'warning');
-              onClearInitialState(); // Still clear state to stop the alert loop
+              onClearInitialState();
           }
       }
   }, [initialCreateState, items, boms, onClearInitialState]);

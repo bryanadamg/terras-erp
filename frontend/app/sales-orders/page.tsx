@@ -59,7 +59,8 @@ export default function SalesOrdersPage() {
                 action: 'create_wo',
                 sales_order_id: so.id,
                 item_id: line.item_id,
-                qty: line.qty.toString()
+                qty: line.qty.toString(),
+                bom_id: matchingBOM.id
             });
             router.push(`/manufacturing?${params.toString()}`);
         } else {

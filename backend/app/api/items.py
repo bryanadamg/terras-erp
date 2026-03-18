@@ -2,6 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, UploadFile, File
 from fastapi.responses import Response
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.exc import IntegrityError
+from asyncpg.exceptions import ForeignKeyViolationError
 from app.db.session import get_async_db
 from app.services import item_service, stock_service, import_service, audit_service
 from app.schemas import ItemCreate, ItemResponse, StockEntryCreate, ItemUpdate, VariantCreate, PaginatedItemResponse
@@ -158,11 +159,11 @@ async def delete_item(item_id: str, db: AsyncSession = Depends(get_async_db), cu
     try:
         await db.delete(item)
         await db.commit()
-    except IntegrityError:
+    except (IntegrityError, ForeignKeyViolationError):
         await db.rollback()
         raise HTTPException(
             status_code=400,
-            detail=f"Cannot delete item {item.code} because it is still being used in records."
+            detail=f"Cannot delete item {item.code} because it is still referenced by a BOM or other record."
         )
     
     await audit_service.log_activity(
