@@ -1,28 +1,20 @@
-FROM node:20-alpine
-
+# Stage 1: Build
+FROM node:20-alpine AS builder
 WORKDIR /app
-
-# Install dependencies first for caching
 COPY package*.json ./
-RUN npm install
-
-# Copy source code
+RUN npm ci
 COPY . .
-
-# Accept the build argument
 ARG NEXT_PUBLIC_API_BASE
-# Set it as an environment variable for the build process
 ENV NEXT_PUBLIC_API_BASE=$NEXT_PUBLIC_API_BASE
-
-# Build the application
 RUN npm run build
 
-# Change ownership to the node user
-RUN chown -R node:node /app
-
-# Switch to non-root user
+# Stage 2: Run
+FROM node:20-alpine AS runner
+WORKDIR /app
+ENV NODE_ENV=production
+COPY --from=builder /app/public ./public
+COPY --from=builder /app/.next/standalone ./
+COPY --from=builder /app/.next/static ./.next/static
 USER node
-
 EXPOSE 3000
-
-CMD ["npm", "start"]
+CMD ["node", "server.js"]
