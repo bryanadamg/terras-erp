@@ -706,6 +706,12 @@ export default function ManufacturingView({
   // --- Print Template Component ---
   const WorkOrderPrintTemplate = ({ wo }: { wo: any }) => {
       const bom = boms.find((b: any) => b.id === wo.bom_id);
+      const [localQrUrl, setLocalQrUrl] = useState('');
+      useEffect(() => {
+          QRCode.toDataURL(wo.code, { margin: 1, width: 200 })
+              .then(setLocalQrUrl)
+              .catch(() => {});
+      }, [wo.code]);
 
       return (
           <div className="bg-white p-4 h-100 position-fixed top-0 start-0 w-100 print-container" style={{zIndex: 2000, overflowY: 'auto'}}>
@@ -714,7 +720,7 @@ export default function ManufacturingView({
               <div className="d-flex justify-content-between border-bottom pb-2 mb-3 mt-4">
                   <div className="d-flex gap-3">
                       <div className="bg-white border p-1 rounded">
-                          <img src={qrDataUrl} alt="WO QR" style={{ width: '100px', height: '100px' }} />
+                          <img src={localQrUrl} alt="WO QR" style={{ width: '100px', height: '100px' }} />
                       </div>
                       <div>
                           <h4 className="font-monospace mb-0 fw-bold text-primary">{wo.code}</h4>
