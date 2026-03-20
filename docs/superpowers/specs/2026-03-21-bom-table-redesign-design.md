@@ -94,11 +94,28 @@ The toolbar is a single flex row (`display: flex; justify-content: space-between
 5. Clear selection link (conditional — `selectedIds.size > 0`) — this is the **same existing** "Clear" `btn-link` element; no duplication. In classic mode it renders as a plain text link (`color: #000; text-decoration: underline; background: none; border: none; cursor: pointer; font-family: Tahoma, Arial, sans-serif; font-size: 11px`).
 
 **Right side:**
-6. New BOM button — label text: `t('create_recipe')` (existing i18n key, unchanged in both modes)
+6. New BOM button — label text: `t('create_recipe')` (existing i18n key, unchanged in both modes). Existing `<i className="bi bi-plus-lg me-2">` icon: keep the icon but in classic mode replace `me-2` with an inline `marginRight: '4px'` to avoid Bootstrap spacing utilities inside the XP-styled button.
 
 The existing two-div flex layout in `card-header` (`d-flex justify-content-between align-items-center`) is reused as-is in default mode. In classic mode it is replaced with the XP title bar `div` (same flex layout, XP styles applied).
 
-The existing inner `<div className="d-flex align-items-center gap-2">` grouping for items 3–5 (selected-count, Delete Selected, Clear) is **preserved** — it provides natural spacing and keeps those three conditional elements visually grouped.
+**Toolbar DOM structure (both modes):**
+```
+<div [outer toolbar flex — justify-content:space-between]>
+  <div [left side — d-flex align-items-center gap-2]>
+    <span/i [title icon + text]>
+    <input [search input — NEW, placed here, outside the inner selection group]>
+    <div [inner selection group — d-flex align-items-center gap-2, conditional on selectedIds.size > 0]>
+      <span [selected count label]>
+      <button [Delete Selected]>
+      <button [Clear link]>
+    </div>
+  </div>
+  <button [New BOM — right side]>
+</div>
+```
+The search input sits **outside** the inner selection group but inside the left-side flex div. The inner `<div className="d-flex align-items-center gap-2">` grouping for items 3–5 is **preserved unchanged** (same element, same classes in default mode; classes removed in classic mode per the XP button styling).
+
+**Selected-count label in classic mode:** same text `{selectedIds.size} selected` as default. Style: `font-family: Tahoma, Arial, sans-serif; font-size: 11px; color: #fff` (white text against the blue title bar).
 
 **Search behaviour:**
 - Local `useState<string>('')` for the search query. Not persisted.
@@ -193,7 +210,7 @@ Applied in **both modes** for improved readability. The existing `renderBOMTree`
 
 | Element       | Style                                                                                                     | Scope        |
 |---------------|-----------------------------------------------------------------------------------------------------------|--------------|
-| Qty           | `color: #0058e6; font-weight: bold; min-width: 22px` — remove `fw-bold text-primary` from `className`; apply via inline `style` only to avoid Bootstrap `text-primary` colour override | both modes   |
+| Qty           | `color: #0058e6; font-weight: bold; min-width: 22px` (current code has `minWidth: 20px` — this is an intentional 2px increase for alignment). Remove `fw-bold text-primary` from `className`; apply all styles via inline `style` only to avoid Bootstrap `text-primary` colour override | both modes   |
 | Item code     | `font-family: 'Courier New', monospace; font-size: 9px; color: #555` — the item code span (line 143) has classes `text-truncate text-muted extra-small font-monospace me-1` (order may vary). Replace all of these with `className="text-truncate me-1"` + inline `style={{ fontFamily: "'Courier New', monospace", fontSize: '9px', color: '#555' }}`. Removing `extra-small` is intentional — its font-size effect is superseded by `fontSize: '9px'`. | both modes   |
 | Item name     | `color: #000`                                                                                             | both modes   |
 | Sub-BOM badge | `background: #fff3cd; border: 1px solid #b8860b; color: #6b4e00; font-size: 8px; font-weight: bold` — replaces current `badge bg-secondary` on line 153 | both modes |
@@ -210,8 +227,10 @@ Applied in **both modes** for improved readability. The existing `renderBOMTree`
 - `filteredBOMs` uses `useMemo` with `[boms, searchQuery]` as dependencies.
 - Name-based filtering uses `bom.item_name || getItemName(bom.item_id)` to handle both denormalised and live-resolved names.
 - No changes to `BOMDesigner`, `BOMForm`, `BOMAutomatorModal`, or any backend files.
+- Inside `renderBOMTree`, the `boms.find(...)` call that locates sub-BOMs for tree expansion must **stay as `boms`** (the full unfiltered prop), not `filteredBOMs`. This is intentional: sub-BOMs of visible rows must still be findable even if the sub-BOM's parent is filtered out.
+- The `<div className="table-responsive">` wrapper (line 225): in classic mode change its `className` to `""` (empty) to avoid `overflow-x: auto` interfering with the XP bevel border rendering. The scroll behaviour is handled by the `maxHeight`/`overflowY` on the card-body wrapper instead.
 - `currentStyle` is already loaded from `localStorage` on mount — no new state needed.
-- **Empty filter state:** when `filteredBOMs.length === 0` and `searchQuery` is non-empty, render a single `<tr>` spanning all columns with the message: `No BOMs match your search.` (centred, muted text). No special treatment needed when `boms` itself is empty (existing empty-table behaviour is unchanged).
+- **Empty filter state:** when `filteredBOMs.length === 0` and `searchQuery` is non-empty, render a single `<tr><td colSpan={6}>` (6 columns: checkbox, BOM code, finished good, routing, materials, delete) spanning all columns, with the message: `No BOMs match your search.` (centred, `color: #888`, `font-size: 11px`). No special treatment needed when `boms` itself is empty (existing empty-table behaviour is unchanged).
 
 ## Acceptance Criteria
 
