@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import BOMDesigner from './BOMDesigner'; // New component
 import { useToast } from './Toast';
 import { useLanguage } from '../context/LanguageContext';
@@ -13,6 +13,7 @@ export default function BOMView({
 
   const [isDesignerOpen, setIsDesignerOpen] = useState(false);
   const [currentStyle, setCurrentStyle] = useState('default');
+  const [searchQuery, setSearchQuery] = useState('');
 
   // Tree Expansion State for List View
   const [expandedNodes, setExpandedNodes] = useState<Record<string, boolean>>({});
@@ -20,8 +21,19 @@ export default function BOMView({
   // Multi-select state
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
 
-  const allSelected = boms.length > 0 && selectedIds.size === boms.length;
-  const someSelected = selectedIds.size > 0 && !allSelected;
+  // Filtered BOMs based on search query
+  const filteredBOMs = useMemo(() => {
+    if (!searchQuery.trim()) return boms;
+    const q = searchQuery.toLowerCase();
+    return boms.filter((b: any) => {
+      const code = (b.code || '').toLowerCase();
+      const name = (b.item_name || items.find((i: any) => i.id === b.item_id)?.name || '').toLowerCase();
+      return code.includes(q) || name.includes(q);
+    });
+  }, [boms, searchQuery, items]);
+
+  const allSelected = filteredBOMs.length > 0 && filteredBOMs.every((b: any) => selectedIds.has(b.id));
+  const someSelected = filteredBOMs.some((b: any) => selectedIds.has(b.id)) && !allSelected;
 
   const toggleSelect = (id: string) => {
     setSelectedIds(prev => {
@@ -33,9 +45,18 @@ export default function BOMView({
 
   const toggleSelectAll = () => {
     if (allSelected) {
-      setSelectedIds(new Set());
+      // Deselect only filtered rows, preserve hidden selections
+      setSelectedIds(prev => {
+        const next = new Set(prev);
+        filteredBOMs.forEach((b: any) => next.delete(b.id));
+        return next;
+      });
     } else {
-      setSelectedIds(new Set(boms.map((b: any) => b.id)));
+      setSelectedIds(prev => {
+        const next = new Set(prev);
+        filteredBOMs.forEach((b: any) => next.add(b.id));
+        return next;
+      });
     }
   };
 
@@ -75,7 +96,7 @@ export default function BOMView({
 
   const handleCreateBOMWrapper = async (bomData: any) => {
       const res = await onCreateBOM(bomData);
-      
+
       if (res && res.status === 400) {
           const err = await res.json();
           showToast(`Error creating BOM ${bomData.code}: ${err.detail || 'Duplicate?'}`, 'warning');
@@ -87,7 +108,6 @@ export default function BOMView({
       } else if (res && res.ok) {
           showToast(`BOM ${bomData.code} saved`, 'success');
       } else {
-          // Try to parse error if json
           try {
               const err = await res.json();
               showToast(`Failed to save BOM ${bomData.code}: ${err.detail}`, 'danger');
@@ -112,50 +132,86 @@ export default function BOMView({
       return valId;
   };
 
+  const classic = currentStyle === 'classic';
+
   const toggleNode = (nodeId: string) => {
       setExpandedNodes(prev => ({...prev, [nodeId]: !prev[nodeId]}));
   };
 
   const renderBOMTree = (bomLines: any[], parentId: string, level = 0) => {
       return (
-          <div className="d-flex flex-column gap-1">
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
               {bomLines.map((line: any) => {
+                  // Use full boms prop (not filteredBOMs) so sub-BOMs of visible rows are always findable
                   const subBOM = boms.find((b: any) => b.item_id === line.item_id);
                   const isExpandable = !!subBOM;
-                  // Scoped expansion key ensures opening one tree doesn't affect other table rows
                   const nodeKey = `${parentId}-${line.id}`;
                   const isExpanded = expandedNodes[nodeKey];
 
                   return (
-                      <div key={line.id} className="small">
-                          <div className="d-flex align-items-center">
-                              {isExpandable && (
-                                  <i 
-                                    className={`bi bi-caret-${isExpanded ? 'down' : 'right'}-fill me-1 text-muted`} 
-                                    style={{cursor: 'pointer', fontSize: '0.7rem', width: '12px'}}
+                      <div key={line.id} style={{ fontSize: '11px' }}>
+                          <div style={{ display: 'flex', alignItems: 'center' }}>
+                              {isExpandable ? (
+                                  <i
+                                    className={`bi bi-caret-${isExpanded ? 'down' : 'right'}-fill`}
+                                    style={{
+                                      cursor: 'pointer',
+                                      fontSize: '0.7rem',
+                                      width: '12px',
+                                      marginRight: '4px',
+                                      color: classic ? '#0058e6' : undefined,
+                                      flexShrink: 0,
+                                    }}
                                     onClick={() => toggleNode(nodeKey)}
-                                  ></i>
+                                  />
+                              ) : (
+                                  <span style={{ width: '12px', display: 'inline-block', marginRight: '4px', flexShrink: 0 }} />
                               )}
-                              {!isExpandable && <span style={{width: '12px', display: 'inline-block'}} className="me-1"></span>}
-                              
-                              <div className="d-flex align-items-center gap-1 border-bottom pb-1 border-light w-100 overflow-hidden">
-                                  <span className="fw-bold text-primary flex-shrink-0" style={{minWidth: '20px'}}>{line.qty}</span> 
-                                  <span className="text-truncate text-muted extra-small font-monospace me-1">{getItemCode(line.item_id, line.item_code)}</span>
-                                  <span className="text-truncate">{getItemName(line.item_id, line.item_name)}</span>
-                                  <div className="text-muted fst-italic text-truncate flex-grow-1" style={{fontSize: '0.7rem'}}>
+
+                              <div
+                                style={{
+                                  display: 'flex', alignItems: 'center', gap: '4px',
+                                  paddingBottom: '2px',
+                                  borderBottom: classic ? '1px solid #e0ddd4' : '1px solid #f0f0f0',
+                                  width: '100%', overflow: 'hidden',
+                                }}
+                              >
+                                  <span style={{ color: '#0058e6', fontWeight: 'bold', minWidth: '22px', flexShrink: 0 }}>
+                                      {line.qty}
+                                  </span>
+                                  <span
+                                    className="text-truncate me-1"
+                                    style={{ fontFamily: "'Courier New', monospace", fontSize: '9px', color: '#555' }}
+                                  >
+                                      {getItemCode(line.item_id, line.item_code)}
+                                  </span>
+                                  <span className="text-truncate" style={{ color: '#000' }}>
+                                      {getItemName(line.item_id, line.item_name)}
+                                  </span>
+                                  <div className="text-truncate flex-grow-1" style={{ fontSize: '0.7rem', color: '#666', fontStyle: 'italic' }}>
                                       {(line.attribute_value_ids || []).map(getAttributeValueName).join(', ')}
                                   </div>
                                   {line.source_location_id && (
-                                      <span className="badge bg-light text-dark border ms-2 flex-shrink-0" style={{fontSize: '0.6rem'}}>
+                                      <span className="badge bg-light text-dark border ms-2 flex-shrink-0" style={{ fontSize: '0.6rem' }}>
                                           <i className="bi bi-geo-alt"></i>
                                       </span>
                                   )}
-                                  {isExpandable && <span className="badge bg-secondary ms-auto flex-shrink-0" style={{fontSize: '0.6rem'}}>Sub</span>}
+                                  {isExpandable && (
+                                      <span
+                                        style={{
+                                          background: '#fff3cd', border: '1px solid #b8860b',
+                                          color: '#6b4e00', fontSize: '8px', padding: '0 3px',
+                                          fontWeight: 'bold', marginLeft: 'auto', flexShrink: 0,
+                                        }}
+                                      >
+                                          Sub
+                                      </span>
+                                  )}
                               </div>
                           </div>
-                          
+
                           {isExpandable && isExpanded && subBOM.lines && (
-                              <div className="ms-2 ps-2 border-start border-light-subtle mt-1">
+                              <div style={{ borderLeft: '2px solid #b0aaa0', marginLeft: '14px', paddingLeft: '6px', marginTop: '4px' }}>
                                   {renderBOMTree(subBOM.lines, nodeKey, level + 1)}
                               </div>
                           )}
@@ -168,7 +224,7 @@ export default function BOMView({
 
   return (
     <div className="row g-4 fade-in">
-       {/* New Designer Modal */}
+       {/* BOM Designer Modal */}
        {isDesignerOpen && (
        <div className="modal d-block" style={{ backgroundColor: 'rgba(0,0,0,0.5)', zIndex: 9999, position: 'fixed', inset: 0 }}>
             <div className={`modal-dialog modal-xl modal-dialog-scrollable ui-style-${currentStyle}`}>
@@ -179,8 +235,7 @@ export default function BOMView({
                         </h5>
                         <button type="button" className="btn-close" onClick={() => setIsDesignerOpen(false)}></button>
                     </div>
-                    
-                    <BOMDesigner 
+                    <BOMDesigner
                         rootItemCode={initialItemCode || ""}
                         initialAttributeValueIds={initialAttributeIds}
                         items={items}
@@ -201,91 +256,294 @@ export default function BOMView({
 
        {/* BOM List */}
        <div className="col-12">
-          <div className="card h-100 shadow-sm border-0">
-             <div className="card-header bg-white d-flex justify-content-between align-items-center">
-                 <div className="d-flex align-items-center gap-3">
-                     <h5 className="card-title mb-0">{t('active_boms')}</h5>
-                     {selectedIds.size > 0 && (
-                         <div className="d-flex align-items-center gap-2">
-                             <span className="text-muted small">{selectedIds.size} selected</span>
-                             <button className="btn btn-sm btn-danger" onClick={handleBulkDelete}>
-                                 <i className="bi bi-trash me-1"></i>Delete Selected
-                             </button>
-                             <button className="btn btn-sm btn-link text-secondary p-0" onClick={() => setSelectedIds(new Set())}>
-                                 Clear
-                             </button>
-                         </div>
-                     )}
-                 </div>
-                 <button data-testid="create-bom-btn" className="btn btn-sm btn-primary" onClick={() => setIsDesignerOpen(true)}>
-                     <i className="bi bi-plus-lg me-2"></i>{t('create_recipe')}
-                 </button>
-             </div>
-             <div className="card-body p-0" style={{maxHeight: 'calc(100vh - 150px)', overflowY: 'auto'}}>
-                <div className="table-responsive">
-                    <table className="table table-hover align-middle mb-0">
-                        <thead className="table-light">
-                            <tr>
-                                <th className="ps-3" style={{width: '40px'}}>
-                                    <input
-                                        className="form-check-input"
-                                        type="checkbox"
-                                        checked={allSelected}
-                                        ref={el => { if (el) el.indeterminate = someSelected; }}
-                                        onChange={toggleSelectAll}
-                                    />
-                                </th>
-                                <th className="ps-2">{t('item_code')}</th>
-                                <th>{t('finished_good')}</th>
-                                <th>{t('routing')}</th>
-                                <th>{t('materials')}</th>
-                                <th style={{width: '50px'}}></th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {boms.map((bom: any) => (
-                                <tr key={bom.id} className={selectedIds.has(bom.id) ? 'table-active' : ''}>
-                                    <td className="ps-3 align-top">
-                                        <input
-                                            className="form-check-input"
-                                            type="checkbox"
-                                            checked={selectedIds.has(bom.id)}
-                                            onChange={() => toggleSelect(bom.id)}
-                                        />
-                                    </td>
-                                    <td className="ps-2 align-top"><span className="badge bg-light text-dark border font-monospace">{bom.code}</span></td>
-                                    <td className="align-top">
-                                        <div className="fw-medium">{getItemName(bom.item_id, bom.item_name)} ({getItemCode(bom.item_id, bom.item_code)})</div>
-                                        <div className="text-muted small">
-                                            {(bom.attribute_value_ids || []).map(getAttributeValueName).join(', ') || '-'}
-                                        </div>
-                                    </td>
-                                    <td className="align-top">
-                                        {bom.operations && bom.operations.length > 0 ? (
-                                            <div className="small">
-                                                {[...bom.operations].sort((a:any,b:any) => a.sequence - b.sequence).map((op: any) => (
-                                                    <div key={op.id} className="text-muted">
-                                                        {op.sequence}. {getOpName(op.operation_id)}
-                                                    </div>
-                                                ))}
-                                            </div>
-                                        ) : <span className="text-muted small">-</span>}
-                                    </td>
-                                    <td className="align-top">
-                                        {/* Recursive Tree View with unique parentId scoping */}
-                                        {renderBOMTree(bom.lines, bom.id)}
-                                    </td>
-                                    <td className="pe-4 text-end align-top">
-                                        <button className="btn btn-sm btn-link text-danger" onClick={() => onDeleteBOM(bom.id)}>
-                                            <i className="bi bi-trash"></i>
-                                        </button>
-                                    </td>
-                                </tr>
-                            ))}
-                        </tbody>
-                    </table>
+          {/* Outer shell — XP bevel in classic, Bootstrap card in default */}
+          <div
+            style={classic ? {
+              border: '2px solid',
+              borderColor: '#dfdfdf #808080 #808080 #dfdfdf',
+              boxShadow: '2px 2px 4px rgba(0,0,0,0.3)',
+              background: '#ece9d8',
+              borderRadius: 0,
+            } : undefined}
+            className={classic ? '' : 'card h-100 shadow-sm border-0'}
+          >
+            {/* Toolbar — XP title bar in classic, card-header in default */}
+            {classic ? (
+              <div style={{
+                background: 'linear-gradient(to right, #0058e6 0%, #08a5ff 100%)',
+                color: '#fff',
+                fontFamily: 'Tahoma, Arial, sans-serif',
+                fontSize: '12px',
+                fontWeight: 'bold',
+                padding: '4px 8px',
+                boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.3)',
+                borderBottom: '1px solid #003080',
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+              }}>
+                {/* Left side */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <span>
+                    <i className="bi bi-diagram-3-fill" style={{ marginRight: '6px' }}></i>
+                    {t('active_boms')}
+                  </span>
+                  <input
+                    type="text"
+                    value={searchQuery}
+                    onChange={e => setSearchQuery(e.target.value)}
+                    placeholder="Search BOMs..."
+                    style={{
+                      fontFamily: 'Tahoma, Arial, sans-serif',
+                      fontSize: '11px',
+                      border: '1px solid #808080',
+                      boxShadow: 'inset 1px 1px 0 rgba(0,0,0,0.15)',
+                      padding: '2px 6px',
+                      background: '#fff',
+                      color: '#000',
+                      outline: 'none',
+                    }}
+                  />
+                  {selectedIds.size > 0 && (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <span style={{ fontFamily: 'Tahoma, Arial, sans-serif', fontSize: '11px', color: '#fff' }}>
+                        {selectedIds.size} selected
+                      </span>
+                      <button
+                        style={{
+                          fontFamily: 'Tahoma, Arial, sans-serif', fontSize: '11px',
+                          padding: '2px 10px', cursor: 'pointer',
+                          background: 'linear-gradient(to bottom, #fff, #d4d0c8)',
+                          border: '1px solid', borderColor: '#dfdfdf #808080 #808080 #dfdfdf',
+                          color: '#000',
+                        }}
+                        onClick={handleBulkDelete}
+                      >
+                        <i className="bi bi-trash" style={{ marginRight: '4px' }}></i>Delete Selected
+                      </button>
+                      <button
+                        style={{
+                          background: 'none', border: 'none', cursor: 'pointer',
+                          color: '#fff', textDecoration: 'underline',
+                          fontFamily: 'Tahoma, Arial, sans-serif', fontSize: '11px',
+                          padding: 0,
+                        }}
+                        onClick={() => setSelectedIds(new Set())}
+                      >
+                        Clear
+                      </button>
+                    </div>
+                  )}
                 </div>
-             </div>
+                {/* Right side */}
+                <button
+                  data-testid="create-bom-btn"
+                  style={{
+                    fontFamily: 'Tahoma, Arial, sans-serif', fontSize: '11px',
+                    padding: '2px 10px', cursor: 'pointer', fontWeight: 'bold',
+                    background: 'linear-gradient(to bottom, #5ec85e, #2d7a2d)',
+                    border: '1px solid', borderColor: '#1a5e1a #0a3e0a #0a3e0a #1a5e1a',
+                    color: '#fff',
+                  }}
+                  onClick={() => setIsDesignerOpen(true)}
+                >
+                  <i className="bi bi-plus-lg" style={{ marginRight: '4px' }}></i>{t('create_recipe')}
+                </button>
+              </div>
+            ) : (
+              <div className="card-header bg-white d-flex justify-content-between align-items-center">
+                <div className="d-flex align-items-center gap-2">
+                  <h5 className="card-title mb-0">
+                    <i className="bi bi-diagram-3-fill me-2"></i>{t('active_boms')}
+                  </h5>
+                  <input
+                    type="text"
+                    className="form-control form-control-sm"
+                    style={{ width: '180px' }}
+                    value={searchQuery}
+                    onChange={e => setSearchQuery(e.target.value)}
+                    placeholder="Search BOMs..."
+                  />
+                  {selectedIds.size > 0 && (
+                    <div className="d-flex align-items-center gap-2">
+                      <span className="text-muted small">{selectedIds.size} selected</span>
+                      <button className="btn btn-sm btn-danger" onClick={handleBulkDelete}>
+                        <i className="bi bi-trash me-1"></i>Delete Selected
+                      </button>
+                      <button className="btn btn-sm btn-link text-secondary p-0" onClick={() => setSelectedIds(new Set())}>
+                        Clear
+                      </button>
+                    </div>
+                  )}
+                </div>
+                <button data-testid="create-bom-btn" className="btn btn-sm btn-primary" onClick={() => setIsDesignerOpen(true)}>
+                  <i className="bi bi-plus-lg me-2"></i>{t('create_recipe')}
+                </button>
+              </div>
+            )}
+
+            {/* Body */}
+            <div
+              className={classic ? '' : 'card-body p-0'}
+              style={{ maxHeight: 'calc(100vh - 150px)', overflowY: 'auto' }}
+            >
+              <div className={classic ? '' : 'table-responsive'}>
+                <table
+                  className={classic ? '' : 'table table-hover align-middle mb-0'}
+                  style={classic ? {
+                    width: '100%',
+                    borderCollapse: 'collapse',
+                    fontFamily: 'Tahoma, Arial, sans-serif',
+                    fontSize: '11px',
+                    background: '#fff',
+                  } : undefined}
+                >
+                  {/* Table header */}
+                  <thead>
+                    <tr
+                      style={classic ? {
+                        background: 'linear-gradient(to bottom, #ffffff, #d4d0c8)',
+                        borderBottom: '2px solid #808080',
+                        fontSize: '10px',
+                        fontWeight: 'bold',
+                        color: '#000',
+                        letterSpacing: '0.2px',
+                      } : undefined}
+                      className={classic ? '' : 'table-light'}
+                    >
+                      <th
+                        style={classic ? { width: '40px', padding: '4px 6px', borderRight: '1px solid #b0aaa0' } : { width: '40px' }}
+                        className={classic ? '' : 'ps-3'}
+                      >
+                        <input
+                          className="form-check-input"
+                          type="checkbox"
+                          checked={allSelected}
+                          ref={el => { if (el) el.indeterminate = someSelected; }}
+                          onChange={toggleSelectAll}
+                        />
+                      </th>
+                      <th
+                        style={classic ? { padding: '4px 6px', borderRight: '1px solid #b0aaa0' } : undefined}
+                        className={classic ? '' : 'ps-2'}
+                      >
+                        {t('item_code')}
+                      </th>
+                      <th style={classic ? { padding: '4px 6px', borderRight: '1px solid #b0aaa0' } : undefined}>
+                        {t('finished_good')}
+                      </th>
+                      <th style={classic ? { padding: '4px 6px', borderRight: '1px solid #b0aaa0' } : undefined}>
+                        {t('routing')}
+                      </th>
+                      <th style={classic ? { padding: '4px 6px', borderRight: '1px solid #b0aaa0' } : undefined}>
+                        {t('materials')}
+                      </th>
+                      <th style={classic ? { width: '50px', padding: '4px 6px' } : { width: '50px' }}></th>
+                    </tr>
+                  </thead>
+
+                  <tbody>
+                    {filteredBOMs.length === 0 && searchQuery.trim() ? (
+                      <tr>
+                        <td colSpan={6} style={{ textAlign: 'center', padding: '16px', color: '#888', fontSize: '11px' }}>
+                          No BOMs match your search.
+                        </td>
+                      </tr>
+                    ) : (
+                      filteredBOMs.map((bom: any, index: number) => {
+                        const rowBg = classic
+                          ? (selectedIds.has(bom.id) ? '#d8e4f8' : index % 2 === 0 ? '#ffffff' : '#f5f3ee')
+                          : undefined;
+
+                        return (
+                          <tr
+                            key={bom.id}
+                            className={classic ? '' : (selectedIds.has(bom.id) ? 'table-active' : '')}
+                            style={classic ? { background: rowBg, borderBottom: '1px solid #c0bdb5' } : undefined}
+                          >
+                            <td
+                              style={classic ? { padding: '5px 6px', borderRight: '1px solid #c0bdb5', verticalAlign: 'top' } : undefined}
+                              className={classic ? '' : 'ps-3 align-top'}
+                            >
+                              <input
+                                className="form-check-input"
+                                type="checkbox"
+                                checked={selectedIds.has(bom.id)}
+                                onChange={() => toggleSelect(bom.id)}
+                              />
+                            </td>
+                            <td
+                              style={classic ? { padding: '5px 6px', borderRight: '1px solid #c0bdb5', verticalAlign: 'top' } : undefined}
+                              className={classic ? '' : 'ps-2 align-top'}
+                            >
+                              <span
+                                style={classic ? {
+                                  fontFamily: "'Courier New', monospace",
+                                  fontSize: '10px',
+                                  background: '#fff',
+                                  border: '1px solid #888',
+                                  padding: '1px 5px',
+                                  color: '#000',
+                                  whiteSpace: 'nowrap',
+                                } : undefined}
+                                className={classic ? '' : 'badge bg-light text-dark border font-monospace'}
+                              >
+                                {bom.code}
+                              </span>
+                            </td>
+                            <td
+                              style={classic ? { padding: '5px 6px', borderRight: '1px solid #c0bdb5', verticalAlign: 'top' } : undefined}
+                              className={classic ? '' : 'align-top'}
+                            >
+                              <div style={classic ? { fontWeight: 'bold', color: '#000' } : undefined} className={classic ? '' : 'fw-medium'}>
+                                {getItemName(bom.item_id, bom.item_name)} ({getItemCode(bom.item_id, bom.item_code)})
+                              </div>
+                              <div style={classic ? { fontSize: '9px', color: '#444', marginTop: '1px' } : undefined} className={classic ? '' : 'text-muted small'}>
+                                {(bom.attribute_value_ids || []).map(getAttributeValueName).join(', ') || '-'}
+                              </div>
+                            </td>
+                            <td
+                              style={classic ? { padding: '5px 6px', borderRight: '1px solid #c0bdb5', verticalAlign: 'top', fontSize: '10px', color: '#222' } : undefined}
+                              className={classic ? '' : 'align-top'}
+                            >
+                              {bom.operations && bom.operations.length > 0 ? (
+                                <div className={classic ? '' : 'small'}>
+                                  {[...bom.operations].sort((a: any, b: any) => a.sequence - b.sequence).map((op: any) => (
+                                    <div key={op.id} style={classic ? { color: '#333' } : undefined} className={classic ? '' : 'text-muted'}>
+                                      {op.sequence}. {getOpName(op.operation_id)}
+                                    </div>
+                                  ))}
+                                </div>
+                              ) : (
+                                <span style={classic ? { color: '#888' } : undefined} className={classic ? '' : 'text-muted small'}>-</span>
+                              )}
+                            </td>
+                            <td
+                              style={classic ? { padding: '5px 6px', borderRight: '1px solid #c0bdb5', verticalAlign: 'top' } : undefined}
+                              className={classic ? '' : 'align-top'}
+                            >
+                              {renderBOMTree(bom.lines, bom.id)}
+                            </td>
+                            <td
+                              style={classic ? { padding: '5px 6px', textAlign: 'right', verticalAlign: 'top' } : undefined}
+                              className={classic ? '' : 'pe-4 text-end align-top'}
+                            >
+                              <button
+                                style={classic ? { background: 'none', border: 'none', cursor: 'pointer', color: '#a00', padding: '0 2px' } : undefined}
+                                className={classic ? '' : 'btn btn-sm btn-link text-danger'}
+                                onClick={() => onDeleteBOM(bom.id)}
+                              >
+                                <i className="bi bi-trash"></i>
+                              </button>
+                            </td>
+                          </tr>
+                        );
+                      })
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
           </div>
        </div>
     </div>
