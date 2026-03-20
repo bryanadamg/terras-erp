@@ -772,11 +772,100 @@ export default function ManufacturingView({
           border: '1px solid #ced4da', boxSizing: 'border-box', color: '#000',
       };
 
-      // Document content placeholder — replaced in Task 6
+      const displayCompanyName = headerCompanyName || companyProfile?.name || '';
+
       const documentContent = (
-          <div style={{ fontSize: '9px', color: '#888', padding: '20px' }}>
-              [Document preview — coming in next task]
-          </div>
+          <>
+              {/* Company header row */}
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', borderBottom: '2px solid #000', paddingBottom: '8px', marginBottom: '10px' }}>
+                  <div>
+                      {companyProfile?.logo_url ? (
+                          <img src={companyProfile.logo_url} alt="Logo" style={{ maxHeight: '64px', maxWidth: '200px', objectFit: 'contain', display: 'block', marginBottom: '4px' }} />
+                      ) : (
+                          <div style={{ fontSize: '14px', fontWeight: 'bold', color: '#0058e6' }}>{displayCompanyName}</div>
+                      )}
+                      {companyProfile?.address && <div style={{ color: '#555' }}>{companyProfile.address}</div>}
+                      {(companyProfile?.phone || companyProfile?.email) && (
+                          <div style={{ color: '#555' }}>{[companyProfile?.phone, companyProfile?.email].filter(Boolean).join(' · ')}</div>
+                      )}
+                  </div>
+                  <div style={{ textAlign: 'right' }}>
+                      <div style={{ fontSize: '16px', fontWeight: 'bold', textTransform: 'uppercase', letterSpacing: '1px' }}>Work Order</div>
+                      {headerDepartment && <div style={{ color: '#555' }}>Dept: <strong>{headerDepartment}</strong></div>}
+                      {headerApprovedBy && <div style={{ color: '#555' }}>Approved By: <strong>{headerApprovedBy}</strong></div>}
+                      {headerReference && <div style={{ color: '#555' }}>Ref: <strong>{headerReference}</strong></div>}
+                  </div>
+              </div>
+
+              {/* WO identity row */}
+              <div style={{ display: 'flex', gap: '12px', alignItems: 'flex-start', marginBottom: '10px' }}>
+                  {/* QR */}
+                  <div style={{ border: '2px solid #000', padding: '3px', flexShrink: 0 }}>
+                      {qrDataUrl
+                          ? <img src={qrDataUrl} alt="QR" style={{ width: '84px', height: '84px', display: 'block' }} />
+                          : <div style={{ width: '84px', height: '84px', background: '#eee' }} />
+                      }
+                  </div>
+                  <div style={{ flex: 1 }}>
+                      <div style={{ fontFamily: 'monospace', fontSize: '14px', fontWeight: 'bold', color: '#0058e6' }}>{wo.code}</div>
+                      <div style={{ fontSize: '8px', background: '#f0ad4e', display: 'inline-block', padding: '1px 5px', color: '#000', fontWeight: 'bold', margin: '2px 0' }}>{wo.status}</div>
+                      <div style={{ marginTop: '4px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '2px 12px' }}>
+                          <div><span style={{ color: '#666' }}>Item:</span> <strong>{wo.item_name || getItemName(wo.item_id)}</strong></div>
+                          <div><span style={{ color: '#666' }}>Qty:</span> <strong>{wo.qty}</strong></div>
+                          {showTimeline && (
+                              <>
+                                  <div><span style={{ color: '#666' }}>Target Start:</span> <strong>{formatDate(wo.target_start_date) || '—'}</strong></div>
+                                  <div><span style={{ color: '#666' }}>Target End:</span> <strong>{formatDate(wo.target_end_date) || '—'}</strong></div>
+                                  <div><span style={{ color: '#666' }}>Actual Start:</span> <strong>{wo.actual_start_date ? formatDate(wo.actual_start_date) : '—'}</strong></div>
+                                  <div><span style={{ color: '#666' }}>Actual End:</span> <strong>{wo.actual_end_date ? formatDate(wo.actual_end_date) : '—'}</strong></div>
+                              </>
+                          )}
+                      </div>
+                  </div>
+              </div>
+
+              {/* BOM / Materials Table */}
+              {showBOMTable && (() => {
+                  const bom = boms.find((b: any) => b.id === wo.bom_id);
+                  return (
+                      <>
+                          <div style={{ fontSize: '8px', fontWeight: 'bold', textTransform: 'uppercase', color: '#555', letterSpacing: '0.3px', marginBottom: '3px', borderTop: '1px solid #ccc', paddingTop: '6px' }}>
+                              Bill of Materials
+                          </div>
+                          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '8px', marginBottom: '10px' }}>
+                              <thead>
+                                  <tr style={{ background: '#f0f0f0' }}>
+                                      <th style={{ border: '1px solid #ccc', padding: '2px 4px', textAlign: 'left' }}>Code</th>
+                                      <th style={{ border: '1px solid #ccc', padding: '2px 4px', textAlign: 'left' }}>Component</th>
+                                      <th style={{ border: '1px solid #ccc', padding: '2px 4px', textAlign: 'left' }}>Specs</th>
+                                      <th style={{ border: '1px solid #ccc', padding: '2px 4px', textAlign: 'left' }}>Source</th>
+                                      <th style={{ border: '1px solid #ccc', padding: '2px 4px', textAlign: 'right' }}>Req. Qty</th>
+                                  </tr>
+                              </thead>
+                              <tbody>
+                                  {bom ? renderPrintBOMLines(wo, bom.lines, 0, 1, bom) : (
+                                      <tr><td colSpan={5} style={{ border: '1px solid #ccc', padding: '4px', color: '#888' }}>No BOM found</td></tr>
+                                  )}
+                              </tbody>
+                          </table>
+                      </>
+                  );
+              })()}
+
+              {/* Child Work Orders */}
+              {showChildWOs && renderChildWOsPrint(wo.child_wos || [], childQrUrls)}
+
+              {/* Signature line */}
+              <div style={{ marginTop: '16px', display: 'flex', justifyContent: 'space-between', fontSize: '8px', color: '#555', borderTop: '1px solid #ccc', paddingTop: '8px' }}>
+                  <div>Printed: {new Date().toLocaleString()}</div>
+                  {showSignatureLine && (
+                      <div style={{ textAlign: 'center', width: '140px' }}>
+                          <div style={{ borderBottom: '1px solid #000', height: '28px', marginBottom: '2px' }}></div>
+                          Authorized Signature
+                      </div>
+                  )}
+              </div>
+          </>
       );
 
       return (
