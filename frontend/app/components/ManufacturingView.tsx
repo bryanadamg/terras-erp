@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import QRCode from 'qrcode';
 import { Html5QrcodeScanner } from 'html5-qrcode';
 import CodeConfigModal, { CodeConfig } from './CodeConfigModal';
@@ -57,8 +58,7 @@ export default function ManufacturingView({
   
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
-  const [printingWO, setPrintingWO] = useState<any>(null); 
-  const [qrDataUrl, setQrDataUrl] = useState<string>(''); 
+  const [printPreviewWO, setPrintPreviewWO] = useState<any>(null);
   
   const [expandedRows, setExpandedRows] = useState<Record<string, boolean>>({});
   const [selectedTreeNodes, setSelectedTreeNodes] = useState<Record<string, string>>({});
@@ -224,17 +224,8 @@ export default function ManufacturingView({
       window.print();
   };
 
-  const handlePrintWO = async (wo: any) => {
-      try {
-          const url = await QRCode.toDataURL(wo.code, { margin: 1, width: 200 });
-          setQrDataUrl(url);
-          setPrintingWO(wo);
-          setTimeout(() => window.print(), 300);
-      } catch (err) {
-          console.error("QR Generation failed", err);
-          setPrintingWO(wo);
-          setTimeout(() => window.print(), 300);
-      }
+  const handlePrintWO = (wo: any) => {
+      setPrintPreviewWO(wo);
   };
 
   const filteredWorkOrders = workOrders.filter((wo: any) => {
@@ -790,7 +781,7 @@ export default function ManufacturingView({
               </div>
 
               <div className="position-fixed top-0 end-0 p-3 no-print" style={{ zIndex: 3000 }}>
-                  <button className="btn btn-dark shadow" onClick={() => setPrintingWO(null)}>
+                  <button className="btn btn-dark shadow" onClick={() => {}}>
                       <i className="bi bi-x-lg me-2"></i>Close Preview
                   </button>
               </div>
@@ -800,7 +791,14 @@ export default function ManufacturingView({
 
   return (
       <div className="row g-4 fade-in print-container">
-          {printingWO && <WorkOrderPrintTemplate wo={printingWO} />}
+          {printPreviewWO && (
+            <PrintPreviewModal
+                wo={printPreviewWO}
+                onClose={() => setPrintPreviewWO(null)}
+                printSettings={printSettings}
+                onPrintSettingsChange={setPrintSettings}
+            />
+        )}
 
           <CodeConfigModal isOpen={isConfigOpen} onClose={() => setIsConfigOpen(false)} type="WO" onSave={handleSaveConfig} initialConfig={codeConfig} attributes={attributes} />
 
