@@ -740,7 +740,7 @@ export default function ManufacturingView({
 
       const isClassic = currentStyle === 'classic';
 
-      const xpBevelStyle = isClassic
+      const xpBevelStyle: React.CSSProperties = isClassic
           ? { border: '2px solid', borderColor: '#dfdfdf #808080 #808080 #dfdfdf' }
           : {};
 
@@ -836,7 +836,7 @@ export default function ManufacturingView({
                                   <div style={sectionLabelStyle}>Header Fields</div>
                                   <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                                       {[
-                                          { label: 'Company Name', key: 'headerCompanyName', value: headerCompanyName || companyProfile?.name || '' },
+                                          { label: 'Company Name', key: 'headerCompanyName', value: headerCompanyName },
                                           { label: 'Department', key: 'headerDepartment', value: headerDepartment },
                                           { label: 'Approved By', key: 'headerApprovedBy', value: headerApprovedBy },
                                           { label: 'Reference No.', key: 'headerReference', value: headerReference },
