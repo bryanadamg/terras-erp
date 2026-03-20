@@ -694,6 +694,215 @@ export default function ManufacturingView({
       );
   };
 
+  // --- Print Preview Modal Component ---
+  const PrintPreviewModal = ({
+      wo,
+      onClose,
+      printSettings,
+      onPrintSettingsChange,
+  }: {
+      wo: any;
+      onClose: () => void;
+      printSettings: PrintSettings;
+      onPrintSettingsChange: (updated: PrintSettings) => void;
+  }) => {
+      const { showBOMTable, showTimeline, showChildWOs, showSignatureLine,
+              headerCompanyName, headerDepartment, headerApprovedBy, headerReference } = printSettings;
+
+      const [qrDataUrl, setQrDataUrl] = useState('');
+      const [childQrUrls, setChildQrUrls] = useState<Record<string, string>>({});
+
+      // Add body class for print CSS isolation
+      useEffect(() => {
+          document.body.classList.add('wo-print-preview-active');
+          return () => { document.body.classList.remove('wo-print-preview-active'); };
+      }, []);
+
+      // Generate main WO QR on mount
+      useEffect(() => {
+          QRCode.toDataURL(wo.code, { margin: 1, width: 200 })
+              .then(setQrDataUrl)
+              .catch(() => {});
+      }, [wo.code]);
+
+      // Generate child WO QRs when showChildWOs is enabled
+      useEffect(() => {
+          if (!showChildWOs) return;
+          (wo.child_wos || []).forEach((child: any) => {
+              QRCode.toDataURL(child.code, { margin: 1, width: 160 })
+                  .then(url => setChildQrUrls(prev => prev[child.code] ? prev : { ...prev, [child.code]: url }))
+                  .catch(() => {});
+          });
+      }, [showChildWOs, wo.child_wos]);
+
+      const update = (patch: Partial<PrintSettings>) =>
+          onPrintSettingsChange({ ...printSettings, ...patch });
+
+      const isClassic = currentStyle === 'classic';
+
+      const xpBevelStyle = isClassic
+          ? { border: '2px solid', borderColor: '#dfdfdf #808080 #808080 #dfdfdf' }
+          : {};
+
+      const headerStyle = isClassic
+          ? { background: 'linear-gradient(to right, #0058e6, #08a5ff)', color: '#fff', font: 'bold 12px Tahoma', padding: '5px 10px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' } as React.CSSProperties
+          : {} as React.CSSProperties;
+      const headerClass = isClassic ? '' : 'bg-primary text-white px-3 py-2 d-flex justify-content-between align-items-center';
+
+      const xpBtnGrey: React.CSSProperties = isClassic
+          ? { fontFamily: 'Tahoma', fontSize: '11px', padding: '3px 12px', background: 'linear-gradient(to bottom,#fff,#d4d0c8)', border: '1px solid', borderColor: '#dfdfdf #808080 #808080 #dfdfdf', cursor: 'pointer' }
+          : {};
+      const xpBtnGreen: React.CSSProperties = isClassic
+          ? { fontFamily: 'Tahoma', fontSize: '11px', padding: '3px 14px', background: 'linear-gradient(to bottom,#5ec85e,#2d7a2d)', border: '1px solid', borderColor: '#1a5e1a #0a3e0a #0a3e0a #1a5e1a', color: '#fff', cursor: 'pointer', fontWeight: 'bold' }
+          : {};
+
+      const sectionLabelStyle: React.CSSProperties = {
+          fontSize: '10px', fontWeight: 'bold', textTransform: 'uppercase',
+          color: '#212529', letterSpacing: '0.5px', marginBottom: '6px',
+      };
+      const toggleLabelStyle: React.CSSProperties = {
+          display: 'flex', alignItems: 'center', gap: '8px',
+          fontSize: '12px', color: '#212529', cursor: 'pointer',
+      };
+      const fieldLabelStyle: React.CSSProperties = {
+          fontSize: '10px', color: '#212529', marginBottom: '3px', fontWeight: '500',
+      };
+      const fieldInputStyle: React.CSSProperties = {
+          width: '100%', fontSize: '11px', padding: '3px 6px',
+          border: '1px solid #ced4da', boxSizing: 'border-box', color: '#000',
+      };
+
+      // Document content placeholder — replaced in Task 6
+      const documentContent = (
+          <div style={{ fontSize: '9px', color: '#888', padding: '20px' }}>
+              [Document preview — coming in next task]
+          </div>
+      );
+
+      return (
+          <>
+              {/* Backdrop + modal box */}
+              <div
+                  style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', zIndex: 2000, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                  onClick={onClose}
+              >
+                  <div
+                      style={{ background: '#fff', width: '90vw', maxWidth: '960px', height: '88vh', display: 'flex', flexDirection: 'column', boxShadow: '0 8px 32px rgba(0,0,0,0.4)', ...xpBevelStyle }}
+                      onClick={e => e.stopPropagation()}
+                  >
+                      {/* Modal header */}
+                      <div style={headerStyle} className={headerClass}>
+                          <span>🖨 Print Work Order — {wo.code}</span>
+                          <button onClick={onClose} style={{ background: 'none', border: 'none', color: 'inherit', fontSize: '14px', cursor: 'pointer', lineHeight: '1' }}>✕</button>
+                      </div>
+
+                      {/* Body row: left panel + right panel */}
+                      <div style={{ display: 'flex', flexDirection: 'row', flex: 1, overflow: 'hidden' }}>
+
+                          {/* LEFT PANEL */}
+                          <div style={{ width: '230px', minWidth: '230px', borderRight: '1px solid #dee2e6', background: '#f8f9fa', padding: '14px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '14px' }}>
+
+                              {/* Section toggles */}
+                              <div>
+                                  <div style={sectionLabelStyle}>Sections</div>
+                                  <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
+                                      <label style={{ ...toggleLabelStyle, opacity: 0.5 }}>
+                                          <input type="checkbox" checked disabled />
+                                          QR Code <span style={{ fontSize: '10px', color: '#555' }}>(always on)</span>
+                                      </label>
+                                      <label style={toggleLabelStyle}>
+                                          <input type="checkbox" checked={showBOMTable} onChange={e => update({ showBOMTable: e.target.checked })} />
+                                          BOM / Materials Table
+                                      </label>
+                                      <label style={toggleLabelStyle}>
+                                          <input type="checkbox" checked={showTimeline} onChange={e => update({ showTimeline: e.target.checked })} />
+                                          Timeline
+                                      </label>
+                                      <label style={toggleLabelStyle}>
+                                          <input type="checkbox" checked={showChildWOs} onChange={e => update({ showChildWOs: e.target.checked })} />
+                                          Child Work Orders
+                                      </label>
+                                      <label style={toggleLabelStyle}>
+                                          <input type="checkbox" checked={showSignatureLine} onChange={e => update({ showSignatureLine: e.target.checked })} />
+                                          Signature Line
+                                      </label>
+                                  </div>
+              </div>
+
+                              <hr style={{ margin: '0', borderColor: '#dee2e6' }} />
+
+                              {/* Header fields */}
+                              <div>
+                                  <div style={sectionLabelStyle}>Header Fields</div>
+                                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                                      {[
+                                          { label: 'Company Name', key: 'headerCompanyName', value: headerCompanyName || companyProfile?.name || '' },
+                                          { label: 'Department', key: 'headerDepartment', value: headerDepartment },
+                                          { label: 'Approved By', key: 'headerApprovedBy', value: headerApprovedBy },
+                                          { label: 'Reference No.', key: 'headerReference', value: headerReference },
+                                      ].map(({ label, key, value }) => (
+                                          <div key={key}>
+                                              <div style={fieldLabelStyle}>{label}</div>
+                                              <input
+                                                  type="text"
+                                                  value={value}
+                                                  onChange={e => update({ [key]: e.target.value } as Partial<PrintSettings>)}
+                                                  style={fieldInputStyle}
+                                              />
+                                          </div>
+                                      ))}
+                                  </div>
+                              </div>
+
+                              {/* Footer note */}
+                              <div style={{ fontSize: '10px', color: '#555', marginTop: 'auto', paddingTop: '8px', borderTop: '1px solid #dee2e6' }}>
+                                  Paper size &amp; margins set in browser print dialog.
+                              </div>
+                          </div>
+
+                          {/* RIGHT PANEL — preview */}
+                          <div style={{ flex: 1, background: '#e0e0e0', overflowY: 'auto', padding: '16px', display: 'flex', justifyContent: 'center' }}>
+                              <div className="wo-print-paper" style={{ background: '#fff', width: '100%', maxWidth: '560px', padding: '24px 28px', boxShadow: '0 2px 10px rgba(0,0,0,0.25)', fontSize: '9px', lineHeight: '1.5', color: '#000', fontFamily: 'Arial, sans-serif' }}>
+                                  {documentContent}
+                              </div>
+                          </div>
+
+                      </div>{/* /body row */}
+
+                      {/* Modal footer */}
+                      <div style={{ padding: '8px 12px', borderTop: '1px solid #dee2e6', background: '#f8f9fa', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                          <span style={{ fontSize: '10px', color: '#666' }}>Settings saved automatically</span>
+                          <div style={{ display: 'flex', gap: '6px' }}>
+                              {isClassic ? (
+                                  <>
+                                      <button style={xpBtnGrey} onClick={onClose}>Close</button>
+                                      <button style={xpBtnGreen} onClick={() => { (window as any).onafterprint = onClose; window.print(); }}>🖨 Print</button>
+                                  </>
+                              ) : (
+                                  <>
+                                      <button className="btn btn-sm btn-secondary" onClick={onClose}>Close</button>
+                                      <button className="btn btn-sm btn-success" onClick={() => { (window as any).onafterprint = onClose; window.print(); }}>🖨 Print</button>
+                                  </>
+                              )}
+                          </div>
+                      </div>
+
+                  </div>{/* /modal box */}
+              </div>{/* /backdrop */}
+
+              {/* PRINT PORTAL — second instance of document content, rendered into document.body */}
+              {createPortal(
+                  <div className="wo-print-paper-portal" style={{ position: 'fixed', left: '-9999px', top: 0 }}>
+                      <div className="wo-print-paper" style={{ background: '#fff', width: '100%', maxWidth: '560px', padding: '24px 28px', fontSize: '9px', lineHeight: '1.5', color: '#000', fontFamily: 'Arial, sans-serif' }}>
+                          {documentContent}
+                      </div>
+                  </div>,
+                  document.body
+              )}
+          </>
+      );
+  };
+
   // --- Print Template Component ---
   const WorkOrderPrintTemplate = ({ wo }: { wo: any }) => {
       const bom = boms.find((b: any) => b.id === wo.bom_id);
