@@ -150,6 +150,13 @@ Gap activation:
 - Only the hovered gap activates — not all gaps simultaneously
 - `activeGap` is reset to `null` in **three places**: `onDrop` on a gap, `onDrop` on the palette, and `onDragEnd` on the dragged element (covers cancel/escape/drop-outside cases)
 
+**Gap divs double as separator character display.** Each gap div renders the separator character as its text content when inactive. When active (dragged-over), the character disappears and the gap expands + highlights. If `separator` is `""` (None), the gap renders no character in either state. This unified approach avoids hit-area conflicts between separator chars and gap targets:
+
+```
+gap div (inactive): width 4px, shows separator char centered, color #4b5563 (default) / #555 (classic)
+gap div (active):   width 16px, no char, shows colored vertical bar, background accent
+```
+
 ### Drop handlers
 
 **Drop on a gap (insert into track):**
