@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import QRCode from 'qrcode';
 import { Html5QrcodeScanner } from 'html5-qrcode';
-import CodeConfigModal, { CodeConfig } from './CodeConfigModal';
+import CodeConfigModal, { CodeConfig, buildCodeParts } from './CodeConfigModal';
 import CalendarView from './CalendarView';
 import SearchableSelect from './SearchableSelect';
 import QRScannerView from './QRScannerView';
@@ -578,32 +578,17 @@ export default function ManufacturingView({
       const item = items.find((i: any) => i.id === bom.item_id);
       const itemCode = item ? item.code : 'PROD';
 
-      let variantName = '';
-      if (config.includeVariant && bom.attribute_value_ids && bom.attribute_value_ids.length > 0) {
-          const names: string[] = [];
-          for (const valId of bom.attribute_value_ids) {
-              for (const attr of attributes) {
-                  const val = attr.values.find((v: any) => v.id === valId);
-                  if (val) {
-                      if (!config.variantAttributeNames || config.variantAttributeNames.length === 0 || config.variantAttributeNames.includes(attr.name)) {
-                          names.push(val.value.toUpperCase().replace(/\s+/g, ''));
-                      }
-                      break;
-                  }
-              }
+      const names: string[] = [];
+      if (config.includeVariant && bom.attribute_value_ids) {
+          for (const attrName of (config.variantAttributeNames ?? [])) {
+              const attr = attributes.find((a: any) => a.name === attrName);
+              if (!attr) continue;
+              const selectedVal = attr.values.find((v: any) => bom.attribute_value_ids.includes(v.id));
+              if (selectedVal) names.push(selectedVal.value.toUpperCase().replace(/\s+/g, ''));
           }
-          variantName = names.join('');
       }
 
-      const parts = [];
-      if (config.prefix) parts.push(config.prefix);
-      if (config.includeItemCode) parts.push(itemCode);
-      if (config.includeVariant && variantName) parts.push(variantName);
-      const now = new Date();
-      if (config.includeYear) parts.push(now.getFullYear());
-      if (config.includeMonth) parts.push(String(now.getMonth() + 1).padStart(2, '0'));
-      if (config.suffix) parts.push(config.suffix);
-      return parts.join(config.separator);
+      return buildCodeParts(config, itemCode, names).join(config.separator);
   };
 
   const fetchAvailableCode = async (base: string): Promise<string> => {
@@ -620,8 +605,19 @@ export default function ManufacturingView({
   const handleSaveConfig = async (newConfig: CodeConfig) => {
       setCodeConfig(newConfig);
       localStorage.setItem('wo_code_config', JSON.stringify(newConfig));
+      let base: string;
       if (newWO.bom_id) {
-          const base = buildWOBasePattern(newWO.bom_id, newConfig);
+          base = buildWOBasePattern(newWO.bom_id, newConfig);
+      } else {
+          const parts = [];
+          if (newConfig.prefix) parts.push(newConfig.prefix);
+          const now = new Date();
+          if (newConfig.includeYear) parts.push(now.getFullYear());
+          if (newConfig.includeMonth) parts.push(String(now.getMonth() + 1).padStart(2, '0'));
+          if (newConfig.suffix) parts.push(newConfig.suffix);
+          base = parts.join(newConfig.separator);
+      }
+      if (base) {
           const suggested = await fetchAvailableCode(base);
           setNewWO(prev => ({ ...prev, code: suggested }));
       }

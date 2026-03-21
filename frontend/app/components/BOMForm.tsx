@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import CodeConfigModal, { CodeConfig } from './CodeConfigModal';
+import CodeConfigModal, { CodeConfig, buildCodeParts } from './CodeConfigModal';
 import SearchableSelect from './SearchableSelect';
 import { useLanguage } from '../context/LanguageContext';
 
@@ -60,17 +60,16 @@ export default function BOMForm({
   }, [initialItemCode]);
 
   const suggestBOMCode = (itemCode: string, attributeValueIds: string[] = [], config = codeConfig) => {
-      const parts = [];
-      if (config.prefix) parts.push(config.prefix);
-      if (config.includeItemCode && itemCode) parts.push(itemCode);
-      
-      // ... (Variant logic same as before) ...
-      
-      const now = new Date();
-      if (config.includeYear) parts.push(now.getFullYear());
-      if (config.includeMonth) parts.push(String(now.getMonth() + 1).padStart(2, '0'));
-      if (config.suffix) parts.push(config.suffix);
-
+      const names: string[] = [];
+      if (config.includeVariant) {
+          for (const attrName of (config.variantAttributeNames ?? [])) {
+              const attr = attributes.find((a: any) => a.name === attrName);
+              if (!attr) continue;
+              const selectedVal = attr.values.find((v: any) => attributeValueIds.includes(v.id));
+              if (selectedVal) names.push(selectedVal.value.toUpperCase().replace(/\s+/g, ''));
+          }
+      }
+      const parts = buildCodeParts(config, itemCode, names);
       const basePattern = parts.join(config.separator);
       
       let counter = 1;
@@ -86,10 +85,8 @@ export default function BOMForm({
   const handleSaveConfig = (newConfig: CodeConfig) => {
       setCodeConfig(newConfig);
       localStorage.setItem('bom_code_config', JSON.stringify(newConfig));
-      if (newBOM.item_code) {
-          const suggested = suggestBOMCode(newBOM.item_code, newBOM.attribute_value_ids, newConfig);
-          setNewBOM(prev => ({ ...prev, code: suggested }));
-      }
+      const suggested = suggestBOMCode(newBOM.item_code, newBOM.attribute_value_ids, newConfig);
+      setNewBOM(prev => ({ ...prev, code: suggested }));
   };
 
   const handleItemChange = (itemCode: string) => {

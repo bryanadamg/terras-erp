@@ -9,6 +9,7 @@ export interface CodeConfig {
     variantAttributeNames?: string[]; // Array of selected attribute names
     includeYear: boolean;
     includeMonth: boolean;
+    segmentOrder?: string[]; // Ordered list of non-counter segment types
 }
 
 // ─── Pipeline Segment Types ───────────────────────────────────────────────────
@@ -71,23 +72,39 @@ export function configToSegments(
   }
   if (!safe.variantAttributeNames) safe.variantAttributeNames = [];
 
+  const order: string[] = safe.segmentOrder ?? ['prefix', 'item', 'attribute', 'year', 'month', 'suffix'];
   const segs: Segment[] = [];
-  if (safe.prefix)          segs.push({ type: 'prefix', value: safe.prefix });
-  if (safe.includeItemCode)  segs.push({ type: 'item' });
+  let attrNameIndex = 0;
 
-  if (safe.includeVariant && safe.variantAttributeNames.length > 0) {
-    const seen = new Set<string>();
-    for (const name of safe.variantAttributeNames) {
-      if (seen.has(name)) continue;
-      if (!attributes.find(a => a.name === name)) continue;
-      seen.add(name);
-      segs.push({ type: 'attribute', name });
+  for (const type of order) {
+    switch (type) {
+      case 'prefix':
+        if (safe.prefix) segs.push({ type: 'prefix', value: safe.prefix });
+        break;
+      case 'item':
+        if (safe.includeItemCode) segs.push({ type: 'item' });
+        break;
+      case 'attribute': {
+        if (safe.includeVariant) {
+          const name = safe.variantAttributeNames[attrNameIndex++];
+          if (name && attributes.find((a: any) => a.name === name)) {
+            segs.push({ type: 'attribute', name });
+          }
+        }
+        break;
+      }
+      case 'year':
+        if (safe.includeYear) segs.push({ type: 'year' });
+        break;
+      case 'month':
+        if (safe.includeMonth) segs.push({ type: 'month' });
+        break;
+      case 'suffix':
+        if (safe.suffix) segs.push({ type: 'suffix', value: safe.suffix });
+        break;
     }
   }
 
-  if (safe.includeYear)    segs.push({ type: 'year' });
-  if (safe.includeMonth)   segs.push({ type: 'month' });
-  if (safe.suffix)         segs.push({ type: 'suffix', value: safe.suffix });
   segs.push({ type: 'counter' });
   return segs;
 }
@@ -103,7 +120,30 @@ export function segmentsToConfig(segs: Segment[], separator: string): CodeConfig
     variantAttributeNames: (normalized.filter((s): s is Extract<Segment, { type: 'attribute' }> => s.type === 'attribute')).map(s => s.name),
     includeYear:           normalized.some(s => s.type === 'year'),
     includeMonth:          normalized.some(s => s.type === 'month'),
+    segmentOrder:          normalized.filter(s => s.type !== 'counter').map(s => s.type),
   };
+}
+
+export function buildCodeParts(
+  config: CodeConfig,
+  itemCode = '',
+  variantNames: string[] = []
+): string[] {
+  const now = new Date();
+  const order = config.segmentOrder ?? ['prefix', 'item', 'attribute', 'year', 'month', 'suffix'];
+  const parts: string[] = [];
+  let attrIndex = 0;
+  for (const type of order) {
+    switch (type) {
+      case 'prefix':    if (config.prefix) parts.push(config.prefix); break;
+      case 'item':      if (config.includeItemCode && itemCode) parts.push(itemCode); break;
+      case 'attribute': { const v = variantNames[attrIndex++]; if (config.includeVariant && v) parts.push(v); break; }
+      case 'year':      if (config.includeYear) parts.push(String(now.getFullYear())); break;
+      case 'month':     if (config.includeMonth) parts.push(String(now.getMonth() + 1).padStart(2, '0')); break;
+      case 'suffix':    if (config.suffix) parts.push(config.suffix); break;
+    }
+  }
+  return parts;
 }
 
 export function getSegmentPreviewValue(

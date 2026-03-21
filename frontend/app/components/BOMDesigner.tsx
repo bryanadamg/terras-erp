@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, memo } from 'react';
 import { useLanguage } from '../context/LanguageContext';
-import CodeConfigModal, { CodeConfig } from './CodeConfigModal';
+import CodeConfigModal, { CodeConfig, buildCodeParts } from './CodeConfigModal';
 import BOMAutomatorModal from './BOMAutomatorModal';
 import SearchableSelect from './SearchableSelect';
 
@@ -170,31 +170,16 @@ export default function BOMDesigner({
 
     // --- Logic ---
     const suggestBOMCode = useCallback((itemCode: string, attributeValueIds: string[] = [], config = codeConfig) => {
-        const parts = [];
-        if (config.prefix) parts.push(config.prefix);
-        if (config.includeItemCode && itemCode) parts.push(itemCode);
-        
-        // Variant logic
-        if (config.includeVariant && attributeValueIds.length > 0) {
-             const valueNames: string[] = [];
-             for (const valId of attributeValueIds) {
-                 for (const attr of attributes) {
-                     const val = attr.values.find((v: any) => v.id === valId);
-                     if (val) {
-                         if (!config.variantAttributeNames || config.variantAttributeNames.length === 0 || config.variantAttributeNames.includes(attr.name)) {
-                             valueNames.push(val.value.toUpperCase().replace(/\s+/g, ''));
-                         }
-                         break;
-                     }
-                 }
-             }
-             if (valueNames.length > 0) parts.push(...valueNames);
+        const valueNames: string[] = [];
+        if (config.includeVariant) {
+            for (const attrName of (config.variantAttributeNames ?? [])) {
+                const attr = attributes.find((a: any) => a.name === attrName);
+                if (!attr) continue;
+                const selectedVal = attr.values.find((v: any) => attributeValueIds.includes(v.id));
+                if (selectedVal) valueNames.push(selectedVal.value.toUpperCase().replace(/\s+/g, ''));
+            }
         }
-
-        const now = new Date();
-        if (config.includeYear) parts.push(now.getFullYear());
-        if (config.includeMonth) parts.push(String(now.getMonth() + 1).padStart(2, '0'));
-        if (config.suffix) parts.push(config.suffix);
+        const parts = buildCodeParts(config, itemCode, valueNames);
         const basePattern = parts.join(config.separator);
         let counter = 1;
         let baseCode = `${basePattern}${config.separator}001`;

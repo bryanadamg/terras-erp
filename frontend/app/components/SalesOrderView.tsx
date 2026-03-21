@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import CodeConfigModal, { CodeConfig } from './CodeConfigModal';
+import CodeConfigModal, { CodeConfig, buildCodeParts } from './CodeConfigModal';
 import { useToast } from './Toast';
 import { useLanguage } from '../context/LanguageContext';
 import SearchableSelect from './SearchableSelect';
@@ -52,14 +52,7 @@ export default function SalesOrderView({ items, attributes, salesOrders, partner
   };
 
   const suggestSOCode = (config = codeConfig) => {
-      const parts = [];
-      if (config.prefix) parts.push(config.prefix);
-      
-      const now = new Date();
-      if (config.includeYear) parts.push(now.getFullYear());
-      if (config.includeMonth) parts.push(String(now.getMonth() + 1).padStart(2, '0'));
-      if (config.suffix) parts.push(config.suffix);
-
+      const parts = buildCodeParts(config);
       const basePattern = parts.join(config.separator);
       
       let counter = 1;
