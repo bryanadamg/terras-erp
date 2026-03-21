@@ -60,26 +60,11 @@ body {
   background-color: var(--win-bg) !important;
 }
 
-/* Override Sidebar for Classic */
+/* Sidebar base (classic theme) — visual handled by inline styles in Sidebar.tsx */
 .ui-style-classic .sidebar {
-  background-color: #d6dff7;
   border-right: 1px solid #718bb7;
   width: 200px;
   z-index: 1040;
-}
-
-.ui-style-classic .sidebar-header {
-  background: var(--win-header-grad);
-  color: white;
-  height: 30px;
-  padding: 0 10px;
-  font-weight: bold;
-  border-bottom: 1px solid #00309c;
-}
-
-.ui-style-classic .sidebar-header .text-primary {
-  color: white !important;
-  font-size: 14px !important;
 }
 
 /* Classic Header (Top Bar) */
@@ -181,107 +166,7 @@ body {
   padding: 10px;
 }
 
-/* ── SIDEBAR: Enhanced XP Classic ── */
-
-/* 1. Sub-item container backgrounds */
-.ui-style-classic .sidebar .nav .nav {
-  background-color: #b8c4dc !important;
-  background-image: none !important;
-}
-.ui-style-classic .sidebar .nav .nav .nav {
-  background-color: #a8b4cc !important;
-  border-left: 2px solid #7080a0 !important;
-  margin-left: 4px;
-}
-
-/* 2. Section group headers */
-.ui-style-classic .sidebar .nav > .nav-item > .nav-link {
-  background: linear-gradient(to bottom, #dce4f5, #c0cadf) !important;
-  border-bottom: 1px solid #9098b8 !important;
-  font-weight: bold !important;
-  color: #000000 !important;
-}
-.ui-style-classic .sidebar .nav > .nav-item > .nav-link i {
-  color: #00309c !important;
-}
-
-/* 3. Nav link hover state */
-.ui-style-classic .nav-link:hover {
-  background-color: #316ac5 !important;
-  color: #ffffff !important;
-}
-.ui-style-classic .nav-link:hover i {
-  color: #ffffff !important;
-}
-
-/* 4. Active nav link */
-.ui-style-classic .nav-link.active {
-  background-color: #316ac5 !important;
-  color: #ffffff !important;
-  border: none !important;
-  border-radius: 0 !important;
-  font-weight: bold;
-}
-.ui-style-classic .nav-link.active i {
-  color: #ffffff !important;
-}
-
-/* 5. Active sub-item */
-.ui-style-classic .nav-link.text-primary,
-.ui-style-classic .nav-link.fw-bold.text-primary {
-  color: #ffffff !important;
-  background-color: #316ac5 !important;
-}
-.ui-style-classic .nav-link.text-primary i,
-.ui-style-classic .nav-link.fw-bold.text-primary i {
-  color: #ffffff !important;
-}
-
-/* 6. Quick Scan button */
-.ui-style-classic .sidebar .btn-primary {
-  background: linear-gradient(to bottom, #5a9ae0 0%, #0058e6 100%) !important;
-  border: 1px solid #003080 !important;
-  border-radius: 0 !important;
-  color: #ffffff !important;
-  font-family: Tahoma, Arial, sans-serif !important;
-  font-size: 11px !important;
-  font-weight: bold !important;
-  box-shadow: 1px 1px 0 rgba(0,0,0,0.2) !important;
-}
-.ui-style-classic .sidebar .btn-primary:hover {
-  background: linear-gradient(to bottom, #6aaaf0, #1068f6) !important;
-}
-.ui-style-classic .sidebar .btn-primary:active {
-  background: linear-gradient(to bottom, #0048c6, #4a8ad0) !important;
-  box-shadow: inset 1px 1px 2px rgba(0,0,0,0.3) !important;
-}
-
-/* 7. Sidebar logout button */
-.ui-style-classic .sidebar .btn-outline-danger {
-  background: linear-gradient(to bottom, #ffffff 0%, #d4d0c8 100%) !important;
-  border: 1px solid !important;
-  border-color: #dfdfdf #808080 #808080 #dfdfdf !important;
-  border-radius: 0 !important;
-  color: #c00000 !important;
-  font-family: Tahoma, Arial, sans-serif !important;
-  font-size: 11px !important;
-}
-.ui-style-classic .sidebar .btn-outline-danger:hover {
-  background: #ffffff !important;
-  border-color: #00309c !important;
-}
-.ui-style-classic .sidebar .btn-outline-danger:active {
-  background: #d4d0c8 !important;
-  box-shadow: inset 1px 1px 2px rgba(0,0,0,0.2) !important;
-}
-
-/* 8. Sidebar footer area */
-.ui-style-classic .sidebar > div:last-child {
-  background: #c0cade !important;
-  border-top: 1px solid #9098b8 !important;
-}
-
-/* 9. Sidebar scrollbar */
+/* ── SIDEBAR: XP Scrollbar ── */
 .ui-style-classic .sidebar::-webkit-scrollbar {
   width: 16px;
 }

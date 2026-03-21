@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
+import { createPortal } from 'react-dom';
 import BOMDesigner from './BOMDesigner'; // New component
 import { useToast } from './Toast';
 import { useLanguage } from '../context/LanguageContext';
@@ -225,34 +226,69 @@ export default function BOMView({
   return (
     <div className="row g-4 fade-in">
        {/* BOM Designer Modal */}
-       {isDesignerOpen && (
-       <div className="modal d-block" style={{ backgroundColor: 'rgba(0,0,0,0.5)', zIndex: 9999, position: 'fixed', inset: 0 }}>
-            <div className={`modal-dialog modal-xl modal-dialog-scrollable ui-style-${currentStyle}`}>
-                <div className="modal-content shadow h-100">
-                    <div className="modal-header bg-warning bg-opacity-10 text-warning-emphasis">
-                        <h5 className="modal-title">
-                            <i className="bi bi-diagram-3-fill me-2"></i>BOM Designer (Recursive)
-                        </h5>
-                        <button type="button" className="btn-close" onClick={() => setIsDesignerOpen(false)}></button>
-                    </div>
-                    <BOMDesigner
-                        rootItemCode={initialItemCode || ""}
-                        initialAttributeValueIds={initialAttributeIds}
-                        items={items}
-                        locations={locations || []}
-                        attributes={attributes}
-                        workCenters={workCenters}
-                        operations={operations}
-                        existingBOMs={boms}
-                        onSave={handleCreateBOMWrapper}
-                        onCreateItem={onCreateItem}
-                        onCancel={handleCloseDesigner}
-                        onSearchItem={onSearchItem}
-                    />
-                </div>
-            </div>
+       {isDesignerOpen && createPortal(
+       <div style={{
+           position: 'fixed', inset: 0, zIndex: 9999,
+           background: 'rgba(0,0,0,0.45)',
+           display: 'flex', alignItems: 'center', justifyContent: 'center',
+       }}>
+           <div style={{
+               display: 'flex', flexDirection: 'column',
+               width: 'min(1200px, 96vw)', height: 'min(860px, 94vh)',
+               background: '#ece9d8',
+               border: '2px solid #0a246a',
+               boxShadow: '4px 4px 20px rgba(0,0,0,0.6), inset 0 0 0 1px #a6caf0',
+               fontFamily: 'Tahoma, "Segoe UI", sans-serif',
+               borderRadius: 4,
+               overflow: 'hidden',
+           }}>
+               {/* XP Title Bar */}
+               <div style={{
+                   background: 'linear-gradient(to right, #0a246a, #a6caf0, #0a246a)',
+                   padding: '3px 6px',
+                   display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                   flexShrink: 0,
+                   userSelect: 'none',
+               }}>
+                   <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                       <span style={{ fontSize: 14 }}>🗂️</span>
+                       <span style={{ color: '#fff', fontWeight: 'bold', fontSize: 12, fontFamily: 'Tahoma, "Segoe UI", sans-serif', textShadow: '1px 1px 2px rgba(0,0,0,0.6)' }}>
+                           BOM Designer (Recursive)
+                       </span>
+                   </div>
+                   <button
+                       onClick={() => setIsDesignerOpen(false)}
+                       style={{
+                           width: 21, height: 21, padding: 0,
+                           background: 'linear-gradient(to bottom, #e06060, #b03030)',
+                           border: '1px solid #800',
+                           borderRadius: 2, cursor: 'pointer',
+                           color: '#fff', fontSize: 12, fontWeight: 'bold',
+                           display: 'flex', alignItems: 'center', justifyContent: 'center',
+                           lineHeight: 1,
+                       }}
+                   >✕</button>
+               </div>
+               {/* Content */}
+               <div style={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+                   <BOMDesigner
+                       rootItemCode={initialItemCode || ""}
+                       initialAttributeValueIds={initialAttributeIds}
+                       items={items}
+                       locations={locations || []}
+                       attributes={attributes}
+                       workCenters={workCenters}
+                       operations={operations}
+                       existingBOMs={boms}
+                       onSave={handleCreateBOMWrapper}
+                       onCreateItem={onCreateItem}
+                       onCancel={handleCloseDesigner}
+                       onSearchItem={onSearchItem}
+                   />
+               </div>
+           </div>
        </div>
-       )}
+       , document.body)}
 
        {/* BOM List */}
        <div className="col-12">
