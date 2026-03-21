@@ -43,15 +43,23 @@ Both the **default (modern)** and **XP classic** visual themes must be supported
 
 Each attribute in `attributes[]` is its own draggable chip (e.g. "Color", "Size" are separate). `variantAttributeNames` order in the saved config matches the order attribute chips appear in the track.
 
+**`attributes[]` shape** (from the `attributes: any[]` prop):
+```ts
+{ id: string | number; name: string; values: { id: string | number; value: string }[] }
+```
+The attribute chip's preview value is `attr.values[0]?.value.toUpperCase() ?? 'VAR'`. If the same attribute appears more than once in `initialConfig.variantAttributeNames` (a data integrity issue), only the first occurrence is used.
+
 The **counter chip is always pinned to the end** of the track. It has no drag handle and no remove button.
 
 ### Separator
 
-A single dropdown at the top of the modal body, unchanged from current. Applies between all segments uniformly.
+A single dropdown rendered in a slim toolbar row **above the track**, right-aligned. Label: "Separator:". The old "Code Structure" row (prefix / separator / suffix inputs) is removed — prefix and suffix are now chips on the track. The separator dropdown is the only persistent top-of-body control.
 
 ### Prefix / Suffix Inline Editing
 
-When a prefix or suffix chip is on the track, it shows an inline `<input>` inside the chip body. The input auto-upcases. If suffix is removed from the track, its value is discarded.
+When a prefix or suffix chip is on the track, it shows an inline `<input>` inside the chip body. The input auto-upcases.
+
+**Multiplicity rule:** `prefix` and `suffix` may each appear **at most once** in the track. While a prefix chip is on the track, the prefix chip is hidden from the palette (not shown at all — it is "consumed"). Same for suffix. Removing the chip from the track returns it to the palette. If suffix is removed, its typed value is discarded.
 
 ---
 
@@ -87,7 +95,16 @@ interface InternalState {
 | `suffix` (non-empty) | `{ type: 'suffix', value }` |
 | always | `{ type: 'counter' }` at end |
 
-Default initial order when no `initialConfig`: `[prefix, item?, year?, counter]` based on document type defaults.
+**Default initial segments when no `initialConfig`** (mirrors existing component defaults):
+
+| type | BOM | WO | PO | SO | SAMPLE | ITEM |
+|------|-----|----|----|----|--------|------|
+| prefix | BOM | WO | PO | SO | SMP | ITM |
+| item | ✓ | ✓ | — | — | — | — |
+| year | — | — | ✓ | — | ✓ | — |
+| counter | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
+
+Initial segment array order: `[prefix, item (if applicable), year (if applicable), counter]`.
 
 ### Deriving `CodeConfig` on save (backward compatibility)
 
@@ -112,15 +129,53 @@ The `onSave(config: CodeConfig)` signature is **unchanged**. Before calling it, 
 
 Use the **HTML5 native drag-and-drop API** — no external dependencies.
 
-- `draggable="true"` on each non-counter track chip and each palette chip
-- `onDragStart`: record dragged segment index/type and source zone (`'track'` or `'palette'`)
-- Track: renders drop-gap indicators between chips during drag-over
-- `onDrop` on a gap indicator: insert segment at that position (remove from source if it was on track)
-- `onDrop` on the palette zone: remove segment from track
-- Clicking a palette chip (no drag): append to track before counter
-- Clicking × on a track chip: remove from track, return to palette
+### Drag state storage
 
-The counter chip has no `draggable` and no × button, and is always rendered last in the track.
+Use a `useRef<{ sourceZone: 'track' | 'palette'; index: number; segmentType: string } | null>` to store the active drag. Do **not** use `dataTransfer.setData` for cross-zone data — `dataTransfer` payload is inaccessible during `dragover` in some browsers, which is needed for drop-indicator activation. The ref is set in `onDragStart` and cleared in `onDragEnd`.
+
+### Draggable elements
+
+- `draggable="true"` on every track chip except the counter
+- `draggable="true"` on every palette chip
+- Counter chip: no `draggable`, no × button, always rendered last
+
+### Drop gap indicators
+
+Between each pair of adjacent track chips (and before the first chip), render a `<div class="drop-gap">` element. The gap after the counter is **not rendered** — drops always land before the counter.
+
+Gap activation:
+- Each gap div handles `onDragOver={(e) => { e.preventDefault(); setActiveGap(gapIndex); }}` and `onDragLeave={() => setActiveGap(null)}`
+- `activeGap` is a `useState<number | null>` tracking which gap is highlighted
+- Active gap visual: a `2px` solid vertical bar in the chip color (default) or `#0058e6` (classic), with a small expansion animation; the gap div widens from `4px` to `16px`
+- Only the hovered gap activates — not all gaps simultaneously
+
+### Drop handlers
+
+**Drop on a gap (insert into track):**
+```
+onDrop on gap[i]:
+  e.preventDefault()
+  if sourceZone === 'track': remove segment at sourceIndex, insert at adjusted i
+  if sourceZone === 'palette': insert segment at i (before counter)
+  setActiveGap(null)
+```
+
+**Drop on palette zone (remove from track):**
+```
+onDrop on palette:
+  e.preventDefault()
+  if sourceZone === 'track': remove segment at sourceIndex
+```
+
+**Click on palette chip (no drag needed):**
+Append the segment to the track immediately before the counter.
+
+**Click × on a track chip:**
+Remove segment from track. If it is a `prefix` or `suffix`, the chip reappears in the palette.
+
+### Counter position enforcement
+
+The counter is always the last element of the `segments` array. After every drop/add/remove operation, ensure `segments[segments.length - 1].type === 'counter'` — enforce this as an invariant in the state-update helpers rather than relying on render order. If a bug somehow puts counter elsewhere, a normalization pass in `getPreview()` and `handleSave()` re-moves it to the end.
 
 ---
 
@@ -197,6 +252,22 @@ All text elements must meet WCAG AA (4.5:1 for normal text, 3:1 for large/bold):
 | Drag handle (classic) | `#666666` | light chip bg | ✓ |
 | Label below chip (classic) | `#333333` | `#ece9d8` | ✓ |
 | Preview text (classic) | `#000000` | `#ffffff` | ✓ |
+
+---
+
+## Re-open Behavior
+
+The `useEffect` hook watches `[isOpen, initialConfig]`. Every time the modal opens (`isOpen` becomes true), the segments state is **fully re-derived from `initialConfig`** (or from the type-defaults table if `initialConfig` is absent). No segment state persists across open/close cycles — this matches the current component's behavior.
+
+The existing legacy-migration guard must be preserved inside the re-derive logic:
+```ts
+// Migrate old single-string variantAttributeName → variantAttributeNames[]
+if (typeof safeConfig.variantAttributeName === 'string') {
+  safeConfig.variantAttributeNames = [safeConfig.variantAttributeName].filter(Boolean);
+  delete safeConfig.variantAttributeName;
+}
+```
+Apply this before converting `initialConfig` to segments.
 
 ---
 
