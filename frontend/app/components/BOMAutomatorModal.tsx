@@ -16,98 +16,178 @@ interface BOMAutomatorModalProps {
 const DUMMY_CODE = "9698/22";
 const DEFAULT_LEVELS = [['WIP CBG {CODE}'], ['WIP CSBG {CODE}'], ['WIP WARPING {CODE}']];
 
+// --- XP style helpers ---
+const xpBtn: React.CSSProperties = {
+    fontFamily: 'Tahoma, "Segoe UI", sans-serif',
+    fontSize: 11,
+    padding: '2px 10px',
+    background: 'linear-gradient(to bottom, #f0efe6, #dddbd0)',
+    borderTop: '1px solid #fff',
+    borderLeft: '1px solid #fff',
+    borderRight: '1px solid #555',
+    borderBottom: '1px solid #555',
+    cursor: 'pointer',
+    whiteSpace: 'nowrap' as const,
+    minWidth: 60,
+    color: '#000',
+};
+
+const xpBtnPrimary: React.CSSProperties = {
+    ...xpBtn,
+    background: 'linear-gradient(to bottom, #b4d0f8, #7aacf0)',
+    borderTopColor: '#c8e0ff',
+    borderLeftColor: '#c8e0ff',
+    fontWeight: 'bold',
+    color: '#00007a',
+    minWidth: 80,
+};
+
+const xpBtnDanger: React.CSSProperties = {
+    ...xpBtn,
+    background: 'linear-gradient(to bottom, #f8d0d0, #e0a0a0)',
+    color: '#800000',
+    minWidth: 'auto',
+    padding: '1px 6px',
+    fontSize: 10,
+};
+
+const xpInput: React.CSSProperties = {
+    fontFamily: 'Tahoma, "Segoe UI", sans-serif',
+    fontSize: 11,
+    border: '1px solid #7f9db9',
+    borderTopColor: '#5a7fa8',
+    background: 'white',
+    height: 20,
+    padding: '0 4px',
+    outline: 'none',
+    width: '100%',
+};
+
+const xpGroupbox = (label: string): { wrapper: React.CSSProperties; labelStyle: React.CSSProperties } => ({
+    wrapper: {
+        border: '1px solid #aca899',
+        borderRadius: 3,
+        padding: '12px 8px 8px',
+        background: '#f5f4ee',
+        position: 'relative',
+        marginBottom: 6,
+    },
+    labelStyle: {
+        position: 'absolute',
+        top: -8,
+        left: 8,
+        background: '#f5f4ee',
+        padding: '0 4px',
+        fontSize: 10,
+        fontWeight: 'bold',
+        color: '#000080',
+        fontFamily: 'Tahoma, "Segoe UI", sans-serif',
+    },
+});
+
+const LEVEL_BADGE_COLORS = ['#316ac5', '#2a7a2a', '#b46a00', '#7a2a7a', '#7a4a00'];
+
 // Memoized Sub-component for the Preview
 const BranchingPreview = memo(({ levels }: { levels: string[][] }) => (
-    <div className="bg-light rounded p-3 border">
-        <h6 className="extra-small fw-bold text-uppercase text-muted mb-3 letter-spacing-1">
-            <i className="bi bi-diagram-3 me-2"></i>Branching Preview
-        </h6>
-        <div className="font-monospace small overflow-auto py-2" style={{ maxHeight: '200px' }}>
-            <div className="d-flex align-items-center mb-2">
-                <div className="bg-primary bg-opacity-10 text-primary px-2 py-1 rounded border border-primary border-opacity-25 fw-bold">
-                    {DUMMY_CODE} <span className="opacity-50 fw-normal ms-1">(Root)</span>
+    <div style={{
+        border: '2px inset #aaa',
+        background: 'white',
+        padding: '6px',
+        fontFamily: '"Courier New", Courier, monospace',
+        fontSize: 10,
+        lineHeight: 1.8,
+        minHeight: 120,
+        overflowY: 'auto',
+        flex: 1,
+    }}>
+        <div style={{ color: '#000080', fontWeight: 'bold' }}>📦 {DUMMY_CODE}</div>
+        {levels.map((lvl, lIdx) => (
+            lvl.map((p, pIdx) => (
+                <div key={`${lIdx}-${pIdx}`} style={{ paddingLeft: `${(lIdx + 1) * 14}px`, color: lIdx === 0 ? '#333' : '#555' }}>
+                    {lIdx === 0 ? '├─ ' : '│ ├─ '}{p.replace('{CODE}', DUMMY_CODE) || '...'}
                 </div>
-            </div>
-            {levels.map((lvl, lIdx) => (
-                <div key={lIdx} style={{ paddingLeft: `${(lIdx + 1) * 24}px` }} className="border-start border-2 border-primary border-opacity-10 my-1">
-                    {lvl.map((p, pIdx) => (
-                        <div key={pIdx} className="d-flex align-items-center gap-2 mb-1">
-                            <span className="text-primary opacity-25">├──</span>
-                            <span className="bg-white text-dark px-2 py-1 border rounded" style={{ fontSize: '0.7rem', minWidth: '120px' }}>
-                                {p.replace('{CODE}', DUMMY_CODE) || '...'}
-                            </span>
-                        </div>
-                    ))}
-                </div>
-            ))}
-        </div>
+            ))
+        ))}
     </div>
 ));
-
 BranchingPreview.displayName = 'BranchingPreview';
 
-// Memoized Level Card with no-hover to prevent scroll lag
-const LevelCard = memo(({ 
-    lIdx, 
-    lvl, 
-    onRemoveLevel, 
-    onAddPattern, 
-    onRemovePattern, 
-    onPatternChange 
-}: { 
-    lIdx: number; 
+// Memoized Level Card — XP groupbox style
+const LevelCard = memo(({
+    lIdx,
+    lvl,
+    onRemoveLevel,
+    onAddPattern,
+    onRemovePattern,
+    onPatternChange
+}: {
+    lIdx: number;
     lvl: string[];
     onRemoveLevel: (idx: number) => void;
     onAddPattern: (idx: number) => void;
     onRemovePattern: (lIdx: number, pIdx: number) => void;
     onPatternChange: (lIdx: number, pIdx: number, val: string) => void;
-}) => (
-    <div className="position-relative">
-        {lIdx > 0 && (
-            <div className="position-absolute start-50 top-0 translate-middle-x" style={{ height: '24px', width: '2px', backgroundColor: '#dee2e6', marginTop: '-24px' }}></div>
-        )}
-        
-        <div className="card no-hover border-primary border-opacity-10 overflow-hidden shadow-none border">
-            <div className="card-header bg-primary bg-opacity-5 py-2 px-3 d-flex justify-content-between align-items-center border-0">
-                <div className="d-flex align-items-center">
-                    <span className="badge bg-primary text-white me-2">L{lIdx + 1}</span>
-                    <span className="small fw-bold text-primary-emphasis">Processing Level</span>
-                </div>
-                <button 
-                    className="btn btn-sm btn-link text-danger p-0 opacity-75" 
-                    onClick={() => onRemoveLevel(lIdx)} 
-                >
-                    <i className="bi bi-trash"></i>
+}) => {
+    const badgeColor = LEVEL_BADGE_COLORS[lIdx % LEVEL_BADGE_COLORS.length];
+    const gb = xpGroupbox(`Level ${lIdx + 1}`);
+
+    return (
+        <div style={gb.wrapper}>
+            <span style={gb.labelStyle}>Level {lIdx + 1}</span>
+
+            {/* Card header row */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 6 }}>
+                <span style={{
+                    background: badgeColor, color: 'white',
+                    fontSize: 9, fontWeight: 'bold', padding: '1px 6px',
+                    borderRadius: 1, fontFamily: 'Tahoma, sans-serif',
+                }}>L{lIdx + 1}</span>
+                <span style={{ flex: 1, fontSize: 10, color: '#555', fontFamily: 'Tahoma, sans-serif' }}>
+                    Processing Level
+                </span>
+                <button style={xpBtnDanger} onClick={() => onRemoveLevel(lIdx)}>
+                    🗑 Remove
                 </button>
             </div>
-            <div className="card-body p-3 bg-white">
-                <div className="d-flex flex-column gap-2">
-                    {lvl.map((pattern, pIdx) => (
-                        <div key={pIdx} className="input-group input-group-sm">
-                            <span className="input-group-text bg-light border-end-0 text-muted" style={{ width: '35px' }}>{pIdx + 1}</span>
-                            <input 
-                                type="text" 
-                                className="form-control border-primary border-opacity-10" 
-                                value={pattern} 
-                                onChange={(e) => onPatternChange(lIdx, pIdx, e.target.value)}
-                                placeholder="Pattern e.g. WIP {CODE}"
-                            />
-                            {lvl.length > 1 && (
-                                <button className="btn btn-outline-danger border-primary border-opacity-10" onClick={() => onRemovePattern(lIdx, pIdx)}>
-                                    <i className="bi bi-dash-lg"></i>
-                                </button>
-                            )}
-                        </div>
-                    ))}
-                    <button className="btn btn-sm btn-link text-primary text-decoration-none p-0 mt-1 d-flex align-items-center small fw-bold" onClick={() => onAddPattern(lIdx)}>
-                        <i className="bi bi-plus-circle-fill me-2"></i> Add branching item
-                    </button>
-                </div>
-            </div>
-        </div>
-    </div>
-));
 
+            {/* Pattern rows */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                {lvl.map((pattern, pIdx) => (
+                    <div key={pIdx} style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
+                        <span style={{
+                            background: '#ddd', border: '1px solid #aaa',
+                            padding: '1px 5px', fontSize: 10, minWidth: 18,
+                            textAlign: 'center', fontFamily: 'Tahoma, sans-serif',
+                        }}>{pIdx + 1}</span>
+                        <input
+                            type="text"
+                            style={{ ...xpInput, flex: 1 }}
+                            value={pattern}
+                            onChange={(e) => onPatternChange(lIdx, pIdx, e.target.value)}
+                            placeholder="e.g. WIP {CODE}"
+                        />
+                        {lvl.length > 1 && (
+                            <button style={{ ...xpBtn, minWidth: 'auto', padding: '0 6px', fontSize: 12 }}
+                                onClick={() => onRemovePattern(lIdx, pIdx)}>−</button>
+                        )}
+                    </div>
+                ))}
+            </div>
+
+            <button
+                style={{
+                    background: 'none', border: 'none',
+                    color: '#0000aa', fontSize: 10, cursor: 'pointer',
+                    padding: '4px 0 0', fontFamily: 'Tahoma, sans-serif',
+                    textDecoration: 'underline',
+                }}
+                onClick={() => onAddPattern(lIdx)}
+            >
+                + Add branching item
+            </button>
+        </div>
+    );
+});
 LevelCard.displayName = 'LevelCard';
 
 const BOMAutomatorModal = memo(({ isOpen, onClose, onApply }: BOMAutomatorModalProps) => {
@@ -119,49 +199,36 @@ const BOMAutomatorModal = memo(({ isOpen, onClose, onApply }: BOMAutomatorModalP
 
     useEffect(() => {
         if (!isOpen) return;
-
         const savedProfiles = localStorage.getItem('bom_auto_profiles');
         if (savedProfiles) {
-            try {
-                setProfiles(JSON.parse(savedProfiles));
-            } catch (e) {
-                console.error("Invalid profiles in localstorage");
-            }
+            try { setProfiles(JSON.parse(savedProfiles)); } catch (e) { console.error("Invalid profiles in localstorage"); }
         }
-        
         const lastLevels = localStorage.getItem('bom_auto_levels_active');
         if (lastLevels) {
-            try {
-                setLevels(JSON.parse(lastLevels));
-            } catch (e) {}
+            try { setLevels(JSON.parse(lastLevels)); } catch (e) {}
         }
-
         const savedStyle = localStorage.getItem('ui_style');
         if (savedStyle) setCurrentStyle(savedStyle);
     }, [isOpen]);
 
     const handlePatternChange = useCallback((lIdx: number, pIdx: number, value: string) => {
-        setLevels(prev => prev.map((lvl, i) => 
+        setLevels(prev => prev.map((lvl, i) =>
             i === lIdx ? lvl.map((p, j) => j === pIdx ? value : p) : lvl
         ));
     }, []);
 
-    const addLevel = useCallback(() => {
-        setLevels(prev => [...prev, ['']]);
-    }, []);
+    const addLevel = useCallback(() => { setLevels(prev => [...prev, ['']]); }, []);
 
     const removeLevel = useCallback((index: number) => {
         setLevels(prev => prev.filter((_, i) => i !== index));
     }, []);
 
     const addPatternToLevel = useCallback((lIdx: number) => {
-        setLevels(prev => prev.map((lvl, i) => 
-            i === lIdx ? [...lvl, ''] : lvl
-        ));
+        setLevels(prev => prev.map((lvl, i) => i === lIdx ? [...lvl, ''] : lvl));
     }, []);
 
     const removePatternFromLevel = useCallback((lIdx: number, pIdx: number) => {
-        setLevels(prev => prev.map((lvl, i) => 
+        setLevels(prev => prev.map((lvl, i) =>
             i === lIdx ? lvl.filter((_, j) => j !== pIdx) : lvl
         ));
     }, []);
@@ -202,91 +269,195 @@ const BOMAutomatorModal = memo(({ isOpen, onClose, onApply }: BOMAutomatorModalP
 
     if (!isOpen) return null;
 
+    const gb = xpGroupbox('Saved Profiles');
+    const gbPreview = xpGroupbox('Structure Preview');
+    const gbTip = xpGroupbox('💡 Tip');
+
     return (
-        <div className="modal d-block" data-testid="bom-automator-modal" style={{ backgroundColor: 'rgba(0,0,0,0.5)', zIndex: 20100, position: 'fixed', inset: 0 }}>
-            <div className={`modal-dialog modal-lg modal-dialog-centered ui-style-${currentStyle}`}>
-                <div className="modal-content border-0 shadow-lg overflow-hidden" style={{ borderRadius: currentStyle === 'classic' ? '0' : '8px' }}>
-                    <div className="modal-header bg-dark text-white border-0 py-2">
-                        <h5 className="modal-title d-flex align-items-center small fw-bold">
-                            <i className="bi bi-magic me-2"></i>
-                            BOM AUTOMATION WIZARD
-                        </h5>
-                        <button type="button" className="btn-close btn-close-white px-2" onClick={onClose}></button>
+        <div
+            data-testid="bom-automator-modal"
+            style={{
+                position: 'fixed', inset: 0,
+                background: 'rgba(0,0,0,0.55)',
+                zIndex: 20100,
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+            }}
+        >
+            <div style={{
+                width: 680,
+                maxWidth: '96vw',
+                maxHeight: '90vh',
+                display: 'flex',
+                flexDirection: 'column',
+                fontFamily: 'Tahoma, "Segoe UI", sans-serif',
+                fontSize: 11,
+                boxShadow: '4px 4px 16px rgba(0,0,0,0.6)',
+                border: '1px solid #0a246a',
+            }}>
+                {/* XP Title Bar */}
+                <div style={{
+                    background: 'linear-gradient(to right, #0a246a 0%, #3a72d0 45%, #0a246a 100%)',
+                    display: 'flex', alignItems: 'center',
+                    justifyContent: 'space-between',
+                    padding: '3px 4px 3px 8px',
+                    height: 22, flexShrink: 0,
+                }}>
+                    <span style={{ color: 'white', fontSize: 11, fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: 5 }}>
+                        ⚡ BOM Automator — Configure Structure
+                    </span>
+                    <div style={{ display: 'flex', gap: 2 }}>
+                        <button onClick={onClose} style={{
+                            width: 16, height: 14,
+                            background: 'linear-gradient(to bottom, #f0f0e0, #d0cfc0)',
+                            borderTop: '1px solid #fff', borderLeft: '1px solid #fff',
+                            borderRight: '1px solid #555', borderBottom: '1px solid #555',
+                            fontSize: 9, cursor: 'pointer', display: 'flex',
+                            alignItems: 'center', justifyContent: 'center', fontWeight: 'bold',
+                        }}>_</button>
+                        <button style={{
+                            width: 16, height: 14,
+                            background: 'linear-gradient(to bottom, #f0f0e0, #d0cfc0)',
+                            borderTop: '1px solid #fff', borderLeft: '1px solid #fff',
+                            borderRight: '1px solid #555', borderBottom: '1px solid #555',
+                            fontSize: 9, cursor: 'pointer', display: 'flex',
+                            alignItems: 'center', justifyContent: 'center',
+                        }}>□</button>
+                        <button onClick={onClose} style={{
+                            width: 16, height: 14,
+                            background: 'linear-gradient(to bottom, #d06060, #a03030)',
+                            borderTop: '1px solid #e08080', borderLeft: '1px solid #e08080',
+                            borderRight: '1px solid #600', borderBottom: '1px solid #600',
+                            fontSize: 9, color: 'white', cursor: 'pointer',
+                            display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold',
+                        }}>✕</button>
                     </div>
-                    
-                    <div className="modal-body p-0" style={{ maxHeight: '70vh', overflowY: 'auto', backgroundColor: '#fff' }}>
-                        
-                        {/* Profile Management Section */}
-                        <div className="p-3 bg-light border-bottom">
-                            <div className="row g-2 align-items-center">
-                                <div className="col-md-7">
-                                    <div className="d-flex flex-wrap gap-1">
-                                        {profiles.map(p => (
-                                            <div key={p.id} className="btn-group btn-group-sm bg-white border rounded shadow-none">
-                                                <button className="btn btn-outline-secondary border-0 py-0" style={{fontSize: '11px'}} onClick={() => handleLoadProfile(p)}>
-                                                    {p.name}
-                                                </button>
-                                                <button className="btn btn-outline-danger border-0 py-0 px-1" style={{fontSize: '11px'}} onClick={(e) => handleDeleteProfile(e, p.id)}>
-                                                    <i className="bi bi-x"></i>
-                                                </button>
-                                            </div>
-                                        ))}
-                                        {profiles.length === 0 && <span className="text-muted extra-small italic">No saved configurations.</span>}
-                                    </div>
-                                </div>
-                                <div className="col-md-5">
-                                    <div className="input-group input-group-sm">
-                                        <input 
-                                            type="text" 
-                                            className="form-control" 
-                                            placeholder="New Profile Name..." 
-                                            value={profileName}
-                                            onChange={e => setProfileName(e.target.value)}
-                                        />
-                                        <button className="btn btn-primary" type="button" onClick={handleSaveProfile} disabled={!profileName.trim()}>
-                                            Save
+                </div>
+
+                {/* Body: two columns */}
+                <div style={{
+                    background: '#ece9d8',
+                    display: 'flex',
+                    gap: 8,
+                    padding: 8,
+                    flex: 1,
+                    overflow: 'hidden',
+                    minHeight: 0,
+                }}>
+                    {/* Left: config + levels (scrollable) */}
+                    <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 6, minHeight: 0, paddingRight: 4 }}>
+
+                        {/* Saved Profiles */}
+                        <div style={gb.wrapper}>
+                            <span style={gb.labelStyle}>Saved Profiles</span>
+                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 3, marginBottom: 6, minHeight: 20 }}>
+                                {profiles.length === 0 && (
+                                    <span style={{ fontSize: 10, color: '#888', fontStyle: 'italic' }}>No saved configurations.</span>
+                                )}
+                                {profiles.map(p => (
+                                    <div key={p.id} style={{ display: 'flex', border: '1px solid #aaa' }}>
+                                        <button
+                                            style={{ ...xpBtn, minWidth: 'auto', borderRight: 'none', fontSize: 10, padding: '1px 8px' }}
+                                            onClick={() => handleLoadProfile(p)}
+                                        >
+                                            {p.name}
                                         </button>
+                                        <button
+                                            style={{ ...xpBtnDanger, borderLeft: 'none', borderTopLeftRadius: 0, borderBottomLeftRadius: 0 }}
+                                            onClick={(e) => handleDeleteProfile(e, p.id)}
+                                        >✕</button>
                                     </div>
-                                </div>
+                                ))}
+                            </div>
+                            <div style={{ display: 'flex', gap: 4 }}>
+                                <input
+                                    type="text"
+                                    style={{ ...xpInput, flex: 1 }}
+                                    placeholder="New profile name..."
+                                    value={profileName}
+                                    onChange={e => setProfileName(e.target.value)}
+                                    onKeyDown={e => e.key === 'Enter' && handleSaveProfile()}
+                                />
+                                <button
+                                    style={profileName.trim() ? xpBtnPrimary : { ...xpBtn, opacity: 0.5 }}
+                                    onClick={handleSaveProfile}
+                                    disabled={!profileName.trim()}
+                                >
+                                    Save
+                                </button>
                             </div>
                         </div>
 
-                        <div className="p-3 bg-white border-bottom">
-                            <p className="text-muted mb-3 extra-small">
-                                Configure naming patterns per processing level. Use <code>{'{CODE}'}</code> as a placeholder.
-                            </p>
+                        {/* Level Cards */}
+                        <div style={{ fontSize: 10, fontWeight: 'bold', color: '#000080', marginBottom: 2 }}>
+                            Processing Levels
+                        </div>
+                        <div style={{ fontSize: 10, color: '#555', marginBottom: 4 }}>
+                            Use <code style={{ background: '#f0e8a0', padding: '0 3px', border: '1px solid #d0c860' }}>{'{CODE}'}</code> as a placeholder — replaced with the parent item code on generation.
+                        </div>
+
+                        {levels.map((lvl, lIdx) => (
+                            <LevelCard
+                                key={lIdx}
+                                lIdx={lIdx}
+                                lvl={lvl}
+                                onRemoveLevel={removeLevel}
+                                onAddPattern={addPatternToLevel}
+                                onRemovePattern={removePatternFromLevel}
+                                onPatternChange={handlePatternChange}
+                            />
+                        ))}
+
+                        <button
+                            style={{
+                                ...xpBtn, width: '100%',
+                                borderStyle: 'dashed',
+                                borderColor: '#888',
+                                fontSize: 10, textAlign: 'center',
+                            }}
+                            onClick={addLevel}
+                        >
+                            + Add Next Level
+                        </button>
+                    </div>
+
+                    {/* Right: preview panel */}
+                    <div style={{ width: 220, flexShrink: 0, display: 'flex', flexDirection: 'column', gap: 6 }}>
+
+                        <div style={{ ...gbPreview.wrapper, flex: 1, display: 'flex', flexDirection: 'column' }}>
+                            <span style={gbPreview.labelStyle}>Structure Preview</span>
+                            <div style={{ fontSize: 10, color: '#555', marginBottom: 6 }}>
+                                Preview with code: <strong>{DUMMY_CODE}</strong>
+                            </div>
                             <BranchingPreview levels={levels} />
                         </div>
 
-                        <div className="p-3">
-                            <div className="d-flex flex-column gap-3">
-                                {levels.map((lvl, lIdx) => (
-                                    <LevelCard 
-                                        key={lIdx}
-                                        lIdx={lIdx}
-                                        lvl={lvl}
-                                        onRemoveLevel={removeLevel}
-                                        onAddPattern={addPatternToLevel}
-                                        onRemovePattern={removePatternFromLevel}
-                                        onPatternChange={handlePatternChange}
-                                    />
-                                ))}
-                                
-                                <div className="text-center py-1">
-                                    <button className="btn btn-sm btn-outline-primary border-dashed px-4 bg-primary bg-opacity-5 rounded-pill" onClick={addLevel} style={{ borderStyle: 'dashed' }}>
-                                        <i className="bi bi-plus-lg me-2"></i>Add Next Level
-                                    </button>
-                                </div>
+                        <div style={{ ...gbTip.wrapper, background: '#fffbe6', borderColor: '#d4b000' }}>
+                            <span style={{ ...gbTip.labelStyle, background: '#fffbe6', color: '#806000' }}>💡 Tip</span>
+                            <div style={{ fontSize: 10, color: '#555', lineHeight: 1.6 }}>
+                                Each level becomes a child BOM node. Branching items at the same level are created as siblings under the parent.
                             </div>
                         </div>
                     </div>
-                    
-                    <div className="modal-footer bg-light border-top p-2 px-3">
-                        <button type="button" className="btn btn-sm btn-link text-muted text-decoration-none" onClick={onClose}>{t('cancel')}</button>
-                        <button data-testid="generate-structure-btn" type="button" className="btn btn-sm btn-primary px-4 fw-bold shadow-sm" onClick={handleSaveAndApply}>
-                            <i className="bi bi-lightning-charge-fill me-1"></i>GENERATE STRUCTURE
-                        </button>
-                    </div>
+                </div>
+
+                {/* XP Footer */}
+                <div style={{
+                    background: '#ece9d8',
+                    borderTop: '1px solid #aca899',
+                    padding: '5px 8px',
+                    display: 'flex',
+                    justifyContent: 'flex-end',
+                    gap: 6,
+                    flexShrink: 0,
+                }}>
+                    <button style={xpBtn} onClick={onClose}>{t('cancel')}</button>
+                    <button
+                        data-testid="generate-structure-btn"
+                        style={xpBtnPrimary}
+                        onClick={handleSaveAndApply}
+                    >
+                        ⚡ Generate Structure
+                    </button>
                 </div>
             </div>
         </div>

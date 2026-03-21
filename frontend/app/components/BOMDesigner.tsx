@@ -6,20 +6,20 @@ import SearchableSelect from './SearchableSelect';
 
 // Types for Recursive Structure
 interface BOMLineNode {
-    id: string; 
+    id: string;
     item_code: string;
     attribute_value_ids: string[];
     qty: number;
     is_percentage: boolean;
     source_location_code: string;
-    subBOM?: BOMNodeData; 
+    subBOM?: BOMNodeData;
     isNewItem?: boolean;
 }
 
 interface BOMNodeData {
-    id: string; // Unique ID for selecting in tree
+    id: string;
     code: string;
-    item_code: string; 
+    item_code: string;
     attribute_value_ids: string[];
     qty: number;
     tolerance_percentage: number;
@@ -28,49 +28,141 @@ interface BOMNodeData {
     isNewItem?: boolean;
 }
 
-// --- Sub-Components moved outside to prevent re-creation on every render ---
+// --- XP style constants ---
+const xpFont = 'Tahoma, "Segoe UI", sans-serif';
 
-const TreeView = memo(({ 
-    node, 
-    level = 0, 
-    selectedNodeId, 
-    items, 
-    onSelect,
-    hasExistingBOM 
-}: { 
-    node: BOMNodeData, 
-    level: number, 
-    selectedNodeId: string, 
-    items: any[], 
-    onSelect: (id: string) => void,
+const xpBtn: React.CSSProperties = {
+    fontFamily: xpFont, fontSize: 11,
+    padding: '2px 10px',
+    background: 'linear-gradient(to bottom, #f0efe6, #dddbd0)',
+    borderTop: '1px solid #fff', borderLeft: '1px solid #fff',
+    borderRight: '1px solid #555', borderBottom: '1px solid #555',
+    cursor: 'pointer', whiteSpace: 'nowrap', color: '#000',
+};
+
+const xpBtnPrimary: React.CSSProperties = {
+    ...xpBtn,
+    background: 'linear-gradient(to bottom, #b4d0f8, #7aacf0)',
+    borderTopColor: '#c8e0ff', borderLeftColor: '#c8e0ff',
+    fontWeight: 'bold', color: '#00007a', minWidth: 80,
+};
+
+const xpBtnSuccess: React.CSSProperties = {
+    ...xpBtn,
+    background: 'linear-gradient(to bottom, #b0e8b0, #70c870)',
+    borderTopColor: '#d0f0d0', borderLeftColor: '#d0f0d0',
+    fontWeight: 'bold', color: '#004000', minWidth: 100,
+};
+
+const xpBtnDanger: React.CSSProperties = {
+    ...xpBtn,
+    background: 'linear-gradient(to bottom, #f8d0d0, #e0a0a0)',
+    color: '#800000', minWidth: 'auto', padding: '1px 5px', fontSize: 10,
+};
+
+const xpBtnInfo: React.CSSProperties = {
+    ...xpBtn,
+    background: 'linear-gradient(to bottom, #d0e8f8, #90c8e8)',
+    borderTopColor: '#e8f4ff', borderLeftColor: '#e8f4ff',
+    color: '#003060', minWidth: 'auto', padding: '1px 8px', fontSize: 10,
+};
+
+const xpBtnWarning: React.CSSProperties = {
+    ...xpBtn,
+    background: 'linear-gradient(to bottom, #fff0b0, #e8d060)',
+    color: '#604000', minWidth: 'auto', padding: '1px 8px', fontSize: 10,
+};
+
+const xpInput: React.CSSProperties = {
+    fontFamily: xpFont, fontSize: 11,
+    border: '1px solid #7f9db9', borderTopColor: '#5a7fa8',
+    background: 'white', height: 20, padding: '0 4px',
+    outline: 'none', width: '100%',
+};
+
+const xpSelect: React.CSSProperties = {
+    fontFamily: xpFont, fontSize: 11,
+    border: '1px solid #7f9db9',
+    background: 'white', height: 20, padding: '0 2px',
+    width: '100%',
+};
+
+const xpLabel: React.CSSProperties = {
+    fontFamily: xpFont, fontSize: 11, color: '#000',
+    display: 'block', marginBottom: 2,
+};
+
+const xpGroupWrapper: React.CSSProperties = {
+    border: '1px solid #aca899', borderRadius: 3,
+    padding: '14px 8px 8px', background: '#f5f4ee',
+    position: 'relative',
+};
+
+const xpGroupLabel = (bg = '#f5f4ee'): React.CSSProperties => ({
+    position: 'absolute', top: -8, left: 8,
+    background: bg, padding: '0 4px',
+    fontSize: 10, fontWeight: 'bold', color: '#000080',
+    fontFamily: xpFont,
+});
+
+const xpInset: React.CSSProperties = {
+    border: '2px inset #aaa', background: 'white',
+    overflowY: 'auto', padding: 2,
+};
+
+const xpBadge = (color = '#316ac5'): React.CSSProperties => ({
+    background: color, color: 'white',
+    fontSize: 9, fontWeight: 'bold',
+    padding: '1px 5px', borderRadius: 1,
+    fontFamily: xpFont, whiteSpace: 'nowrap',
+});
+
+// --- Tree View Component ---
+const TreeView = memo(({
+    node, level = 0, selectedNodeId, items, onSelect, hasExistingBOM
+}: {
+    node: BOMNodeData, level: number, selectedNodeId: string,
+    items: any[], onSelect: (id: string) => void,
     hasExistingBOM: (code: string) => boolean
 }) => {
     const itemExists = items.some((i: any) => (i.code || '').trim().toLowerCase() === (node.item_code || '').trim().toLowerCase());
     const recipeExists = hasExistingBOM(node.item_code);
     const hasLocalDef = node.lines.length > 0 || node.operations.length > 0;
+    const isSelected = selectedNodeId === node.id;
 
     return (
         <div className="tree-node" data-testid={`tree-node-${node.item_code}`}>
-            <div 
-                className={`d-flex align-items-center p-2 rounded mb-1 cursor-pointer ${selectedNodeId === node.id ? 'bg-primary text-white shadow-sm' : 'hover-bg-light'}`}
-                style={{ paddingLeft: `${level * 16 + 8}px`, cursor: 'pointer' }}
+            <div
+                style={{
+                    display: 'flex', alignItems: 'center', gap: 4,
+                    padding: '3px 4px',
+                    paddingLeft: `${level * 14 + 4}px`,
+                    cursor: 'pointer',
+                    background: isSelected ? '#316ac5' : 'transparent',
+                    color: isSelected ? 'white' : '#000',
+                    borderBottom: '1px solid #e8e4d8',
+                    fontFamily: xpFont, fontSize: 11,
+                }}
                 onClick={() => onSelect(node.id)}
                 data-testid={`tree-node-clickable-${node.item_code}`}
+                onMouseEnter={e => { if (!isSelected) (e.currentTarget as HTMLElement).style.background = '#d0e4f8'; }}
+                onMouseLeave={e => { if (!isSelected) (e.currentTarget as HTMLElement).style.background = 'transparent'; }}
             >
-                <i className={`bi ${level === 0 ? 'bi-box-seam-fill' : 'bi-diagram-3'} me-2`}></i>
-                <span className="text-truncate small fw-bold">{node.item_code || 'Unnamed'}</span>
-                
-                <div className="ms-auto d-flex gap-1">
-                    {recipeExists && <span className="badge bg-success" style={{fontSize: '0.5rem'}}>RECIPE✓</span>}
-                    {!recipeExists && hasLocalDef && <span className="badge bg-info" style={{fontSize: '0.5rem'}}>DRAFT</span>}
-                    {!itemExists && <span className="badge bg-danger" style={{fontSize: '0.5rem'}}>NEW ITEM</span>}
+                <span style={{ fontSize: 12 }}>{level === 0 ? '📦' : '🔩'}</span>
+                <span style={{ flex: 1, fontWeight: level === 0 ? 'bold' : 'normal', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    {node.item_code || 'Unnamed'}
+                </span>
+                <div style={{ display: 'flex', gap: 2, flexShrink: 0 }}>
+                    {recipeExists && <span style={xpBadge('#2a7a2a')}>RECIPE✓</span>}
+                    {!recipeExists && hasLocalDef && <span style={xpBadge('#316ac5')}>DRAFT</span>}
+                    {!itemExists && <span style={xpBadge('#a02020')}>NEW</span>}
                 </div>
             </div>
             {node.lines.map(line => line.subBOM && (
-                <TreeView 
-                    key={line.subBOM.id} 
-                    node={line.subBOM} 
-                    level={level + 1} 
+                <TreeView
+                    key={line.subBOM.id}
+                    node={line.subBOM}
+                    level={level + 1}
                     selectedNodeId={selectedNodeId}
                     items={items}
                     onSelect={onSelect}
@@ -80,56 +172,45 @@ const TreeView = memo(({
         </div>
     );
 });
-
 TreeView.displayName = 'TreeView';
 
-export default function BOMDesigner({ 
-    rootItemCode, 
-    initialAttributeValueIds, // New Prop
-    items, 
-    locations, 
-    attributes, 
-    workCenters, 
-    operations, 
-    onSave, 
+export default function BOMDesigner({
+    rootItemCode,
+    initialAttributeValueIds,
+    items,
+    locations,
+    attributes,
+    workCenters,
+    operations,
+    onSave,
     onCreateItem,
     onCancel,
     existingBOMs,
     onSearchItem
 }: any) {
     const { t } = useLanguage();
-    
-    // State
+
     const [rootBOM, setRootBOM] = useState<BOMNodeData>({
-        id: 'root',
-        code: '',
+        id: 'root', code: '',
         item_code: rootItemCode || '',
-        attribute_value_ids: initialAttributeValueIds || [], // Use it here
-        qty: 1.0,
-        tolerance_percentage: 0.0,
-        operations: [],
-        lines: []
+        attribute_value_ids: initialAttributeValueIds || [],
+        qty: 1.0, tolerance_percentage: 0.0,
+        operations: [], lines: []
     });
 
     const [selectedNodeId, setSelectedNodeId] = useState<string>('root');
     const [isConfigOpen, setIsConfigOpen] = useState(false);
     const [isAutomatorOpen, setIsAutomatorOpen] = useState(false);
     const [isSaving, setIsSaving] = useState(false);
-    
-    // Add Component Local State
+
     const [pendingItemCode, setPendingItemCode] = useState('');
     const [pendingQty, setPendingQty] = useState<string>('');
     const [pendingIsPercentage, setPendingIsPercentage] = useState(false);
-    
+
     const [codeConfig, setCodeConfig] = useState<CodeConfig>({
-        prefix: 'BOM',
-        suffix: '',
-        separator: '-',
-        includeItemCode: true,
-        includeVariant: false,
-        variantAttributeNames: [],
-        includeYear: false,
-        includeMonth: false
+        prefix: 'BOM', suffix: '', separator: '-',
+        includeItemCode: true, includeVariant: false,
+        variantAttributeNames: [], includeYear: false, includeMonth: false
     });
 
     useEffect(() => {
@@ -139,7 +220,6 @@ export default function BOMDesigner({
         }
     }, []);
 
-    // Initial code suggestion
     useEffect(() => {
         if (rootItemCode && !rootBOM.code) {
             setRootBOM(prev => ({
@@ -149,17 +229,17 @@ export default function BOMDesigner({
         }
     }, [rootItemCode]);
 
-    // --- Helpers ---
-    const getItemName = useCallback((code: string) => items.find((i: any) => (i.code || '').trim().toLowerCase() === (code || '').trim().toLowerCase())?.name || code, [items]);
-    
+    const getItemName = useCallback((code: string) =>
+        items.find((i: any) => (i.code || '').trim().toLowerCase() === (code || '').trim().toLowerCase())?.name || code,
+    [items]);
+
     const hasExistingBOM = useCallback((code: string) => {
-         const item = items.find((i:any) => (i.code || '').trim().toLowerCase() === (code || '').trim().toLowerCase());
-         return item && existingBOMs.some((b:any) => b.item_id === item.id);
+        const item = items.find((i: any) => (i.code || '').trim().toLowerCase() === (code || '').trim().toLowerCase());
+        return item && existingBOMs.some((b: any) => b.item_id === item.id);
     }, [items, existingBOMs]);
 
     const getOpName = (id: string) => operations.find((o: any) => o.id === id)?.name || id;
-    const getWCName = (id: string) => workCenters.find((w: any) => w.id === id)?.name || id;
-    
+
     const getAttributeValueName = (valId: string) => {
         for (const attr of attributes) {
             const val = attr.values.find((v: any) => v.id === valId);
@@ -168,7 +248,6 @@ export default function BOMDesigner({
         return valId;
     };
 
-    // --- Logic ---
     const suggestBOMCode = useCallback((itemCode: string, attributeValueIds: string[] = [], config = codeConfig) => {
         const valueNames: string[] = [];
         if (config.includeVariant) {
@@ -218,50 +297,33 @@ export default function BOMDesigner({
 
         const constructTreeRecursive = (parentAttrs: string[], levelIdx: number): any[] => {
             if (levelIdx >= levels.length) return [];
-            
             const currentLevelPatterns = levels[levelIdx];
             const levelLines: any[] = [];
-
             for (const pattern of currentLevelPatterns) {
                 if (!pattern) continue;
-                // FIX: Always use rootBOM.item_code for naming patterns
                 const expectedChildCode = pattern.replace('{CODE}', rootBOM.item_code);
-                
-                const childItem = items.find((i: any) => 
+                const childItem = items.find((i: any) =>
                     (i.code || '').trim().toLowerCase() === (expectedChildCode || '').trim().toLowerCase()
                 );
-                
                 const isNewItem = !childItem;
                 const matchingAttrs = isNewItem ? parentAttrs : findMatchingAttributeIds(expectedChildCode, parentAttrs);
-                
-                // Construct next level
                 const subLines = constructTreeRecursive(matchingAttrs, levelIdx + 1);
-                
                 const subBOM: BOMNodeData = {
                     id: Math.random().toString(36).substr(2, 9),
                     code: suggestBOMCode(expectedChildCode, matchingAttrs),
                     item_code: expectedChildCode,
                     attribute_value_ids: matchingAttrs,
-                    qty: 1.0,
-                    tolerance_percentage: 0.0,
-                    operations: [],
-                    lines: subLines,
-                    isNewItem: isNewItem
+                    qty: 1.0, tolerance_percentage: 0.0,
+                    operations: [], lines: subLines, isNewItem,
                 };
-
                 levelLines.push({
                     id: Math.random().toString(36).substr(2, 9),
                     item_code: expectedChildCode,
                     attribute_value_ids: matchingAttrs,
-                    qty: 1.0,
-                    is_percentage: false,
-                    source_location_code: '',
-                    subBOM: subBOM, // Always generate draft subBOM for automation
-                    isExpanded: true,
-                    isNewItem: isNewItem
+                    qty: 1.0, is_percentage: false, source_location_code: '',
+                    subBOM, isExpanded: true, isNewItem,
                 });
             }
-
             return levelLines;
         };
 
@@ -270,58 +332,34 @@ export default function BOMDesigner({
     }, [rootBOM.item_code, rootBOM.attribute_value_ids, items, attributes, existingBOMs, suggestBOMCode]);
 
     const saveNode = async (node: BOMNodeData): Promise<boolean> => {
-        // Resolve Root Item to inherit attributes for new items
         const rootItem = items.find((i: any) => (i.code || '').trim().toLowerCase() === (rootBOM.item_code || '').trim().toLowerCase());
-
-        // 1. Resolve Item (Create if missing)
         let item = items.find((i: any) => (i.code || '').trim().toLowerCase() === (node.item_code || '').trim().toLowerCase());
-        
-        // FIX: Ensure item creation happens if it doesn't exist OR if marked isNewItem
         if (!item && node.isNewItem) {
             const res = await onCreateItem({
-                code: node.item_code, 
-                name: node.item_code, 
-                uom: rootItem?.uom || 'pcs', 
-                category: 'WIP', 
-                attribute_ids: rootItem?.attribute_ids || [] 
+                code: node.item_code, name: node.item_code,
+                uom: rootItem?.uom || 'pcs', category: 'WIP',
+                attribute_ids: rootItem?.attribute_ids || []
             });
-            
             if (res.status === 400) {
-                // Item might have been created in a previous step or by another user
-                // We proceed, assuming it exists now.
-                // Re-fetch logic is handled by parent view usually, but here we optimistically continue.
+                // item exists, continue
             } else if (!res.ok) {
-                return false; 
+                return false;
             }
         }
-
-        // 2. Save all children first (Bottom-Up)
         for (const line of node.lines) {
             if (line.isNewItem && !line.subBOM) {
-                // Leaf item creation
-                const res = await onCreateItem({ 
-                    code: line.item_code, 
-                    name: line.item_code, 
-                    uom: rootItem?.uom || 'pcs', 
-                    category: 'WIP', 
-                    attribute_ids: rootItem?.attribute_ids || [] 
+                await onCreateItem({
+                    code: line.item_code, name: line.item_code,
+                    uom: rootItem?.uom || 'pcs', category: 'WIP',
+                    attribute_ids: rootItem?.attribute_ids || []
                 });
-                // Ignore 400 (duplicate)
             }
             if (line.subBOM) {
                 const success = await saveNode(line.subBOM);
                 if (!success) return false;
             }
         }
-
-        // 3. Save this BOM node
-        // FIX: Only save if it has lines or ops. If it's a leaf WIP with no definition yet, we skip saving BOM
-        // BUT user wanted draft. If user added nothing to the last node, do we save an empty BOM?
-        // No, API likely rejects empty BOM.
-        // If the user didn't fill in the last node (Materials), we just skip saving that specific BOM.
-        // It remains an Item in inventory, but without a Recipe.
         if (node.lines.length === 0 && node.operations.length === 0) return true;
-        
         try {
             await onSave(node);
             return true;
@@ -338,7 +376,6 @@ export default function BOMDesigner({
         if (success) onCancel();
     };
 
-    // --- Search / Update node in tree ---
     const findNodeAndReplace = (root: BOMNodeData, targetId: string, newNode: BOMNodeData): BOMNodeData => {
         if (root.id === targetId) return newNode;
         return {
@@ -368,173 +405,292 @@ export default function BOMDesigner({
         setRootBOM(prev => findNodeAndReplace(prev, selectedNodeId, newNode));
     };
 
-    // --- Components ---
-
     const selectedNode = findNodeById(rootBOM, selectedNodeId);
 
-    return (
-        <div className="d-flex flex-column h-100 bg-white" style={{ minHeight: '80vh' }}>
-            <CodeConfigModal isOpen={isConfigOpen} onClose={() => setIsConfigOpen(false)} type="BOM" onSave={(cfg) => {
-                setCodeConfig(cfg);
-                if (rootBOM.item_code) setRootBOM(p => ({...p, code: suggestBOMCode(p.item_code, p.attribute_value_ids, cfg)}));
-            }} initialConfig={codeConfig} attributes={attributes} />
-            <BOMAutomatorModal isOpen={isAutomatorOpen} onClose={() => setIsAutomatorOpen(false)} onApply={handleApplyAutomation} />
+    // Count nodes
+    const countNodes = (node: BOMNodeData): number =>
+        1 + node.lines.reduce((sum, l) => sum + (l.subBOM ? countNodes(l.subBOM) : 0), 0);
 
-            <div className="row g-0 flex-grow-1 overflow-hidden">
-                {/* LEFT: Tree Nav */}
-                <div className="col-md-3 border-end bg-light d-flex flex-column h-100">
-                    <div className="p-3 border-bottom bg-white d-flex justify-content-between align-items-center">
-                        <h6 className="small fw-bold text-uppercase text-muted mb-0">Structure</h6>
-                        <span className="badge bg-secondary extra-small">{items.length} SKUs</span>
+    return (
+        <div style={{ display: 'flex', flexDirection: 'column', height: '100%', minHeight: '80vh', fontFamily: xpFont, fontSize: 11, background: '#ece9d8' }}>
+            <CodeConfigModal
+                isOpen={isConfigOpen}
+                onClose={() => setIsConfigOpen(false)}
+                type="BOM"
+                onSave={(cfg) => {
+                    setCodeConfig(cfg);
+                    if (rootBOM.item_code) setRootBOM(p => ({ ...p, code: suggestBOMCode(p.item_code, p.attribute_value_ids, cfg) }));
+                }}
+                initialConfig={codeConfig}
+                attributes={attributes}
+            />
+            <BOMAutomatorModal
+                isOpen={isAutomatorOpen}
+                onClose={() => setIsAutomatorOpen(false)}
+                onApply={handleApplyAutomation}
+            />
+
+            <div style={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
+
+                {/* ===== LEFT PANEL: Tree ===== */}
+                <div style={{ width: 220, flexShrink: 0, borderRight: '2px solid #aca899', display: 'flex', flexDirection: 'column', background: '#ddd9c8' }}>
+                    {/* Sub-titlebar */}
+                    <div style={{
+                        background: 'linear-gradient(to bottom, #4a78c8, #2a54a8)',
+                        padding: '3px 8px',
+                        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                        flexShrink: 0,
+                    }}>
+                        <span style={{ color: 'white', fontSize: 11, fontWeight: 'bold' }}>📁 Structure</span>
+                        <span style={{
+                            background: 'rgba(255,255,255,0.2)', color: 'white',
+                            fontSize: 9, padding: '0 5px', borderRadius: 2,
+                        }}>
+                            {countNodes(rootBOM)} nodes
+                        </span>
                     </div>
-                    <div className="p-2 flex-grow-1 overflow-auto">
-                        <TreeView 
-                            node={rootBOM} 
-                            level={0} 
-                            selectedNodeId={selectedNodeId} 
-                            items={items} 
-                            onSelect={setSelectedNodeId} 
+
+                    {/* Tree list */}
+                    <div style={{ ...xpInset, flex: 1, margin: 4, marginBottom: 0 }}>
+                        <TreeView
+                            node={rootBOM}
+                            level={0}
+                            selectedNodeId={selectedNodeId}
+                            items={items}
+                            onSelect={setSelectedNodeId}
                             hasExistingBOM={hasExistingBOM}
                         />
                     </div>
+
+                    {/* Automate button */}
+                    <div style={{ padding: 4 }}>
+                        <button
+                            data-testid="automate-levels-btn"
+                            style={{ ...xpBtnPrimary, width: '100%', fontSize: 10, display: selectedNodeId === 'root' ? 'block' : 'none' }}
+                            onClick={() => setIsAutomatorOpen(true)}
+                        >
+                            ⚡ Automate All Levels
+                        </button>
+                    </div>
                 </div>
 
-                {/* RIGHT: Detail Editor */}
-                <div className="col-md-9 d-flex flex-column h-100 bg-white">
+                {/* ===== RIGHT PANEL: Editor ===== */}
+                <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
                     {selectedNode ? (
-                        <div className="p-4 overflow-auto">
-                            <div className="d-flex justify-content-between align-items-start mb-4 border-bottom pb-3">
-                                <div>
-                                    <h4 className="fw-bold mb-1">{getItemName(selectedNode.item_code)}</h4>
-                                    <div className="d-flex align-items-center gap-2">
-                                        <span className="text-muted small font-monospace">{selectedNode.item_code}</span>
-                                        {selectedNode.isNewItem && <span className="badge bg-danger-subtle text-danger border border-danger border-opacity-25 small">New Inventory Record</span>}
-                                        {hasExistingBOM(selectedNode.item_code) && <span className="badge bg-success-subtle text-success border border-success border-opacity-25 small">Existing Recipe</span>}
+                        <>
+                            {/* Node title strip */}
+                            <div style={{
+                                background: 'linear-gradient(to bottom, #e8e4d8, #dddad0)',
+                                borderBottom: '1px solid #aca899',
+                                padding: '5px 10px',
+                                display: 'flex', alignItems: 'center', gap: 8,
+                                flexShrink: 0,
+                            }}>
+                                <span style={{ fontSize: 16 }}>{selectedNodeId === 'root' ? '📦' : '🔩'}</span>
+                                <div style={{ flex: 1 }}>
+                                    <div style={{ fontWeight: 'bold', fontSize: 12, color: '#000080' }}>
+                                        {getItemName(selectedNode.item_code) || 'Select an item'}
+                                    </div>
+                                    <div style={{ fontSize: 9, color: '#555', fontFamily: '"Courier New", monospace' }}>
+                                        {selectedNode.item_code || '—'}
                                     </div>
                                 </div>
-                                {selectedNodeId === 'root' && (
-                                    <button data-testid="automate-levels-btn" className="btn btn-sm btn-info shadow-sm" onClick={() => setIsAutomatorOpen(true)}>
-                                        <i className="bi bi-magic me-1"></i>Automate All Levels
-                                    </button>
-                                )}
-                            </div>
-
-                            <div className="row g-4">
-                                <div className="col-md-4">
-                                    <label className="form-label small text-muted d-flex justify-content-between">
-                                        BOM Code
-                                        {selectedNodeId === 'root' && <i className="bi bi-gear-fill cursor-pointer" onClick={() => setIsConfigOpen(true)}></i>}
-                                    </label>
-                                    <input data-testid="bom-code-input" className="form-control" value={selectedNode.code} onChange={e => updateSelectedNode({ code: e.target.value })} />
-                                </div>
-                                <div className="col-md-5">
-                                    <label className="form-label small text-muted">Finished Item</label>
-                                    {selectedNodeId === 'root' ? (
-                                        <SearchableSelect 
-                                            options={items.map((i: any) => ({ value: i.code, label: i.name, subLabel: i.code }))}
-                                            value={selectedNode.item_code}
-                                            onChange={(code) => {
-                                                setRootBOM(prev => ({
-                                                    ...prev,
-                                                    item_code: code,
-                                                    code: suggestBOMCode(code, prev.attribute_value_ids),
-                                                    attribute_value_ids: []
-                                                }));
-                                            }}
-                                            placeholder="Select Item..."
-                                            testId="root-item-select"
-                                            onSearch={onSearchItem}
-                                        />
-                                    ) : (
-                                        <div className="form-control bg-light">{getItemName(selectedNode.item_code)}</div>
+                                <div style={{ display: 'flex', gap: 4 }}>
+                                    {selectedNode.isNewItem && (
+                                        <span style={xpBadge('#a02020')}>New Inventory Record</span>
+                                    )}
+                                    {hasExistingBOM(selectedNode.item_code) && (
+                                        <span style={xpBadge('#2a7a2a')}>Existing Recipe</span>
                                     )}
                                 </div>
-                                <div className="col-md-3">
-                                    <label className="form-label small text-muted">Batch Size</label>
-                                    <input data-testid="batch-size-input" type="number" className="form-control" value={selectedNode.qty} onChange={e => updateSelectedNode({ qty: parseFloat(e.target.value) })} />
-                                </div>
-                                <div className="col-md-2">
-                                    <label className="form-label small text-muted text-nowrap">Tolerance %</label>
-                                    <div className="input-group">
-                                        <input data-testid="tolerance-input" type="number" className="form-control" value={selectedNode.tolerance_percentage} onChange={e => updateSelectedNode({ tolerance_percentage: parseFloat(e.target.value) })} />
-                                        <span className="input-group-text px-2">%</span>
-                                    </div>
-                                </div>
                             </div>
 
-                            {/* Node Attributes */}
-                            <div className="mt-3 d-flex flex-wrap gap-2">
-                                {attributes.filter((a:any) => {
-                                    const itm = items.find((i:any) => (i.code || '').trim().toLowerCase() === (selectedNode.item_code || '').trim().toLowerCase());
-                                    // If new item, check root item for attributes
-                                    const rootItm = items.find((i:any) => (i.code || '').trim().toLowerCase() === (rootBOM.item_code || '').trim().toLowerCase());
-                                    return (itm?.attribute_ids || rootItm?.attribute_ids || []).includes(a.id);
-                                }).map((attr:any) => (
-                                    <div key={attr.id} style={{minWidth: '150px'}}>
-                                        <label className="extra-small text-muted">{attr.name}</label>
-                                        <select 
-                                            data-testid={`bom-attribute-select-${attr.name}`}
-                                            className="form-select form-select-sm" 
-                                            value={selectedNode.attribute_value_ids.find(v => attr.values.some((av:any) => av.id === v)) || ''}
-                                            onChange={e => {
-                                                const attrValId = e.target.value;
-                                                const others = selectedNode.attribute_value_ids.filter(v => !attr.values.some((av:any) => av.id === v));
-                                                const newVals = attrValId ? [...others, attrValId] : others;
-                                                updateSelectedNode({ attribute_value_ids: newVals, code: selectedNodeId === 'root' ? suggestBOMCode(selectedNode.item_code, newVals) : selectedNode.code });
-                                            }}
-                                        >
-                                            <option value="">Any...</option>
-                                            {attr.values.map((v:any) => <option key={v.id} value={v.id}>{v.value}</option>)}
-                                        </select>
+                            {/* Scrollable body */}
+                            <div style={{ flex: 1, overflowY: 'auto', padding: '8px 10px', display: 'flex', flexDirection: 'column', gap: 8 }}>
+
+                                {/* BOM Header groupbox */}
+                                <div style={xpGroupWrapper}>
+                                    <span style={xpGroupLabel()}>BOM Header</span>
+
+                                    {/* Row 1: Code + Item + Batch + Tolerance */}
+                                    <div style={{ display: 'flex', gap: 6, marginBottom: 6, flexWrap: 'wrap' }}>
+                                        {/* BOM Code */}
+                                        <div style={{ flex: 2, minWidth: 140 }}>
+                                            <label style={xpLabel}>
+                                                BOM Code
+                                                {selectedNodeId === 'root' && (
+                                                    <span
+                                                        style={{ marginLeft: 6, cursor: 'pointer', fontSize: 12 }}
+                                                        onClick={() => setIsConfigOpen(true)}
+                                                        title="Code Settings"
+                                                    >⚙</span>
+                                                )}
+                                            </label>
+                                            <input
+                                                data-testid="bom-code-input"
+                                                style={xpInput}
+                                                value={selectedNode.code}
+                                                onChange={e => updateSelectedNode({ code: e.target.value })}
+                                            />
+                                        </div>
+
+                                        {/* Finished Item */}
+                                        <div style={{ flex: 3, minWidth: 160 }}>
+                                            <label style={xpLabel}>Finished Item</label>
+                                            {selectedNodeId === 'root' ? (
+                                                <SearchableSelect
+                                                    options={items.map((i: any) => ({ value: i.code, label: i.name, subLabel: i.code }))}
+                                                    value={selectedNode.item_code}
+                                                    onChange={(code: string) => {
+                                                        setRootBOM(prev => ({
+                                                            ...prev,
+                                                            item_code: code,
+                                                            code: suggestBOMCode(code, prev.attribute_value_ids),
+                                                            attribute_value_ids: []
+                                                        }));
+                                                    }}
+                                                    placeholder="Select Item..."
+                                                    testId="root-item-select"
+                                                    onSearch={onSearchItem}
+                                                />
+                                            ) : (
+                                                <div style={{ ...xpInput, height: 'auto', minHeight: 20, display: 'flex', alignItems: 'center', background: '#f0efe6' }}>
+                                                    {getItemName(selectedNode.item_code)}
+                                                </div>
+                                            )}
+                                        </div>
+
+                                        {/* Batch Size */}
+                                        <div style={{ width: 80 }}>
+                                            <label style={xpLabel}>Batch Size</label>
+                                            <input
+                                                data-testid="batch-size-input"
+                                                type="number"
+                                                style={xpInput}
+                                                value={selectedNode.qty}
+                                                onChange={e => updateSelectedNode({ qty: parseFloat(e.target.value) })}
+                                            />
+                                        </div>
+
+                                        {/* Tolerance */}
+                                        <div style={{ width: 80 }}>
+                                            <label style={xpLabel}>Tolerance %</label>
+                                            <div style={{ display: 'flex', gap: 2, alignItems: 'center' }}>
+                                                <input
+                                                    data-testid="tolerance-input"
+                                                    type="number"
+                                                    style={{ ...xpInput, flex: 1 }}
+                                                    value={selectedNode.tolerance_percentage}
+                                                    onChange={e => updateSelectedNode({ tolerance_percentage: parseFloat(e.target.value) })}
+                                                />
+                                                <span style={{ fontSize: 10, color: '#555' }}>%</span>
+                                            </div>
+                                        </div>
                                     </div>
-                                ))}
-                            </div>
 
-                            <hr className="my-4" />
+                                    {/* Attributes row */}
+                                    {attributes.filter((a: any) => {
+                                        const itm = items.find((i: any) => (i.code || '').trim().toLowerCase() === (selectedNode.item_code || '').trim().toLowerCase());
+                                        const rootItm = items.find((i: any) => (i.code || '').trim().toLowerCase() === (rootBOM.item_code || '').trim().toLowerCase());
+                                        return (itm?.attribute_ids || rootItm?.attribute_ids || []).includes(a.id);
+                                    }).length > 0 && (
+                                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                                            {attributes.filter((a: any) => {
+                                                const itm = items.find((i: any) => (i.code || '').trim().toLowerCase() === (selectedNode.item_code || '').trim().toLowerCase());
+                                                const rootItm = items.find((i: any) => (i.code || '').trim().toLowerCase() === (rootBOM.item_code || '').trim().toLowerCase());
+                                                return (itm?.attribute_ids || rootItm?.attribute_ids || []).includes(a.id);
+                                            }).map((attr: any) => (
+                                                <div key={attr.id} style={{ minWidth: 130 }}>
+                                                    <label style={{ ...xpLabel, fontSize: 10, color: '#555' }}>{attr.name}</label>
+                                                    <select
+                                                        data-testid={`bom-attribute-select-${attr.name}`}
+                                                        style={xpSelect}
+                                                        value={selectedNode.attribute_value_ids.find(v => attr.values.some((av: any) => av.id === v)) || ''}
+                                                        onChange={e => {
+                                                            const attrValId = e.target.value;
+                                                            const others = selectedNode.attribute_value_ids.filter(v => !attr.values.some((av: any) => av.id === v));
+                                                            const newVals = attrValId ? [...others, attrValId] : others;
+                                                            updateSelectedNode({
+                                                                attribute_value_ids: newVals,
+                                                                code: selectedNodeId === 'root' ? suggestBOMCode(selectedNode.item_code, newVals) : selectedNode.code
+                                                            });
+                                                        }}
+                                                    >
+                                                        <option value="">Any...</option>
+                                                        {attr.values.map((v: any) => <option key={v.id} value={v.id}>{v.value}</option>)}
+                                                    </select>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )}
+                                </div>
 
-                            <div className="row g-4">
-                                {/* Ops */}
-                                <div className="col-lg-5">
-                                    <div className="card h-100 border shadow-none bg-light bg-opacity-50">
-                                        <div className="card-header bg-transparent border-0"><h6 className="fw-bold mb-0">Production Steps</h6></div>
-                                        <div className="card-body">
-                                            <div className="input-group input-group-sm mb-3">
-                                                <select className="form-select" id="addOpSel">
+                                {/* Two-column: Production Steps + Components */}
+                                <div style={{ display: 'flex', gap: 8, flex: 1, alignItems: 'flex-start' }}>
+
+                                    {/* Production Steps */}
+                                    <div style={{ flex: 1 }}>
+                                        <div style={{ ...xpGroupWrapper, height: '100%' }}>
+                                            <span style={xpGroupLabel()}>Production Steps</span>
+
+                                            {/* Add operation */}
+                                            <div style={{ display: 'flex', gap: 4, marginBottom: 6 }}>
+                                                <select style={{ ...xpSelect, flex: 1 }} id="addOpSel">
                                                     <option value="">Add Operation...</option>
-                                                    {operations.map((o:any) => <option key={o.id} value={o.id}>{o.name}</option>)}
+                                                    {operations.map((o: any) => (
+                                                        <option key={o.id} value={o.id}>{o.name}</option>
+                                                    ))}
                                                 </select>
-                                                <button className="btn btn-secondary" onClick={() => {
+                                                <button style={{ ...xpBtnPrimary, minWidth: 'auto', padding: '0 8px' }} onClick={() => {
                                                     const sel = document.getElementById('addOpSel') as HTMLSelectElement;
                                                     if (sel.value) {
-                                                        const newOps = [...selectedNode.operations, { operation_id: sel.value, sequence: (selectedNode.operations.length + 1) * 10, time_minutes: 0 }];
-                                                        updateSelectedNode({ operations: newOps });
-                                                        sel.value = "";
+                                                        updateSelectedNode({
+                                                            operations: [...selectedNode.operations, {
+                                                                operation_id: sel.value,
+                                                                sequence: (selectedNode.operations.length + 1) * 10,
+                                                                time_minutes: 0
+                                                            }]
+                                                        });
+                                                        sel.value = '';
                                                     }
-                                                }}><i className="bi bi-plus-lg"></i></button>
+                                                }}>+</button>
                                             </div>
-                                            <div className="list-group list-group-flush border rounded bg-white overflow-auto" style={{maxHeight: '300px'}}>
-                                                {selectedNode.operations.sort((a,b) => a.sequence - b.sequence).map((op, i) => (
-                                                    <div key={i} className="list-group-item d-flex justify-content-between align-items-center py-2">
-                                                        <span className="small fw-bold text-muted">{op.sequence}. {getOpName(op.operation_id)}</span>
-                                                        <button className="btn btn-xs text-danger p-0" onClick={() => updateSelectedNode({ operations: selectedNode.operations.filter((_, idx) => idx !== i) })}><i className="bi bi-trash"></i></button>
+
+                                            {/* Ops list */}
+                                            <div style={{ ...xpInset, maxHeight: 200, padding: 0 }}>
+                                                {selectedNode.operations.length === 0 && (
+                                                    <div style={{ padding: 6, fontSize: 10, color: '#888', fontStyle: 'italic' }}>No steps added.</div>
+                                                )}
+                                                {selectedNode.operations.sort((a, b) => a.sequence - b.sequence).map((op, i) => (
+                                                    <div key={i} style={{
+                                                        display: 'flex', alignItems: 'center', gap: 6,
+                                                        padding: '3px 6px',
+                                                        borderBottom: '1px solid #e8e4d8',
+                                                        background: i % 2 === 0 ? 'white' : '#f8f7f2',
+                                                    }}>
+                                                        <span style={xpBadge()}>{String(op.sequence).padStart(2, '0')}</span>
+                                                        <span style={{ flex: 1, fontSize: 11 }}>{getOpName(op.operation_id)}</span>
+                                                        <button
+                                                            style={xpBtnDanger}
+                                                            onClick={() => updateSelectedNode({ operations: selectedNode.operations.filter((_, idx) => idx !== i) })}
+                                                        >🗑</button>
                                                     </div>
                                                 ))}
                                             </div>
                                         </div>
                                     </div>
-                                </div>
 
-                                {/* Materials */}
-                                <div className="col-lg-7">
-                                    <div className="card h-100 border shadow-none">
-                                        <div className="card-header bg-transparent border-0 d-flex justify-content-between">
-                                            <h6 className="fw-bold mb-0">Components</h6>
-                                        </div>
-                                        <div className="card-body">
-                                            <div className="d-flex gap-2 mb-3">
-                                                <div style={{ flex: 2 }}>
-                                                    <SearchableSelect 
-                                                        options={items.map((i:any) => ({ value: i.code, label: i.name, subLabel: i.code }))}
+                                    {/* Components */}
+                                    <div style={{ flex: 2 }}>
+                                        <div style={xpGroupWrapper}>
+                                            <span style={xpGroupLabel()}>Components</span>
+
+                                            {/* Add component row */}
+                                            <div style={{ display: 'flex', gap: 4, marginBottom: 6, flexWrap: 'wrap', alignItems: 'flex-end' }}>
+                                                <div style={{ flex: 3, minWidth: 120 }}>
+                                                    <label style={{ ...xpLabel, fontSize: 10 }}>Item</label>
+                                                    <SearchableSelect
+                                                        options={items.map((i: any) => ({ value: i.code, label: i.name, subLabel: i.code }))}
                                                         value={pendingItemCode}
                                                         onChange={setPendingItemCode}
                                                         placeholder="Component..."
@@ -542,19 +698,22 @@ export default function BOMDesigner({
                                                         onSearch={onSearchItem}
                                                     />
                                                 </div>
-                                                <div style={{ flex: 1 }}>
-                                                    <div className="input-group">
-                                                        <input 
-                                                            type="number" 
-                                                            className="form-control" 
-                                                            placeholder="Qty" 
+                                                <div style={{ width: 90 }}>
+                                                    <label style={{ ...xpLabel, fontSize: 10 }}>Qty</label>
+                                                    <div style={{ display: 'flex', gap: 2 }}>
+                                                        <input
+                                                            type="number"
+                                                            style={{ ...xpInput, flex: 1 }}
+                                                            placeholder="Qty"
                                                             value={pendingQty}
                                                             onChange={e => setPendingQty(e.target.value)}
                                                             data-testid="component-qty-input"
                                                         />
-                                                        <button 
-                                                            className={`btn btn-sm ${pendingIsPercentage ? 'btn-warning' : 'btn-outline-secondary'}`}
-                                                            type="button"
+                                                        <button
+                                                            style={{
+                                                                ...(pendingIsPercentage ? xpBtnWarning : xpBtn),
+                                                                minWidth: 'auto', padding: '0 5px', fontSize: 10,
+                                                            }}
                                                             onClick={() => setPendingIsPercentage(!pendingIsPercentage)}
                                                             title="Toggle Percentage"
                                                         >
@@ -562,12 +721,12 @@ export default function BOMDesigner({
                                                         </button>
                                                     </div>
                                                 </div>
-                                                <button 
-                                                    className="btn btn-primary" 
+                                                <button
+                                                    style={{ ...xpBtnPrimary, minWidth: 'auto', padding: '2px 10px', alignSelf: 'flex-end' }}
                                                     onClick={() => {
                                                         if (pendingItemCode && pendingQty) {
                                                             const normalizedCode = pendingItemCode.trim().toLowerCase();
-                                                            const exists = items.some((i:any) => (i.code || '').trim().toLowerCase() === normalizedCode);
+                                                            const exists = items.some((i: any) => (i.code || '').trim().toLowerCase() === normalizedCode);
                                                             const newLine: BOMLineNode = {
                                                                 id: Math.random().toString(36).substr(2, 9),
                                                                 item_code: pendingItemCode,
@@ -584,41 +743,55 @@ export default function BOMDesigner({
                                                         }
                                                     }}
                                                     data-testid="add-component-btn"
-                                                >
-                                                    <i className="bi bi-plus-lg"></i>
-                                                </button>
+                                                >+ Add</button>
                                             </div>
 
-                                            <div className="d-flex flex-column gap-2 overflow-auto" style={{maxHeight: '400px'}}>
+                                            {/* Component list */}
+                                            <div style={{ ...xpInset, maxHeight: 260, padding: 0 }}>
+                                                {selectedNode.lines.length === 0 && (
+                                                    <div style={{ padding: 6, fontSize: 10, color: '#888', fontStyle: 'italic' }}>No components added.</div>
+                                                )}
                                                 {selectedNode.lines.map((line, i) => (
-                                                    <div key={line.id} className="p-2 border rounded d-flex justify-content-between align-items-center bg-white">
-                                                        <div className="d-flex align-items-center gap-2">
-                                                            <span className="fw-bold small">{getItemName(line.item_code)}</span>
-                                                            <span className={`badge ${line.is_percentage ? 'bg-warning text-dark' : 'bg-secondary'}`}>
-                                                                {line.qty}{line.is_percentage ? '%' : ''}
-                                                            </span>
-                                                            {!hasExistingBOM(line.item_code) && !line.subBOM && (
-                                                                <button className="btn btn-xs btn-warning py-0 px-2" onClick={() => {
-                                                                    const subNode: BOMNodeData = {
-                                                                        id: Math.random().toString(36).substr(2, 9),
-                                                                        code: suggestBOMCode(line.item_code, line.attribute_value_ids),
-                                                                        item_code: line.item_code,
-                                                                        attribute_value_ids: line.attribute_value_ids,
-                                                                        qty: 1.0,
-                                                                        tolerance_percentage: 0.0,
-                                                                        operations: [], 
-                                                                        lines: [], 
-                                                                        isNewItem: line.isNewItem
-                                                                    };
-                                                                    const newLines = [...selectedNode.lines];
-                                                                    newLines[i] = { ...line, subBOM: subNode };
-                                                                    updateSelectedNode({ lines: newLines });
-                                                                    setSelectedNodeId(subNode.id);
-                                                                }}>Define BOM</button>
-                                                            )}
-                                                            {line.subBOM && <span className="badge bg-info cursor-pointer" onClick={() => setSelectedNodeId(line.subBOM!.id)}>Draft Defined <i className="bi bi-arrow-right-short"></i></span>}
-                                                        </div>
-                                                        <button className="btn btn-xs text-danger p-0" onClick={() => updateSelectedNode({ lines: selectedNode.lines.filter((_, idx) => idx !== i) })}><i className="bi bi-trash"></i></button>
+                                                    <div key={line.id} style={{
+                                                        display: 'flex', alignItems: 'center', gap: 6,
+                                                        padding: '4px 6px',
+                                                        borderBottom: '1px solid #e8e4d8',
+                                                        background: i % 2 === 0 ? 'white' : '#f8f7f2',
+                                                    }}>
+                                                        <span style={{ flex: 1, fontWeight: 'bold', fontSize: 11 }}>
+                                                            {getItemName(line.item_code)}
+                                                        </span>
+                                                        <span style={xpBadge(line.is_percentage ? '#b46a00' : '#316ac5')}>
+                                                            {line.qty}{line.is_percentage ? '%' : ''}
+                                                        </span>
+                                                        {!hasExistingBOM(line.item_code) && !line.subBOM && (
+                                                            <button style={xpBtnInfo} onClick={() => {
+                                                                const subNode: BOMNodeData = {
+                                                                    id: Math.random().toString(36).substr(2, 9),
+                                                                    code: suggestBOMCode(line.item_code, line.attribute_value_ids),
+                                                                    item_code: line.item_code,
+                                                                    attribute_value_ids: line.attribute_value_ids,
+                                                                    qty: 1.0, tolerance_percentage: 0.0,
+                                                                    operations: [], lines: [],
+                                                                    isNewItem: line.isNewItem
+                                                                };
+                                                                const newLines = [...selectedNode.lines];
+                                                                newLines[i] = { ...line, subBOM: subNode };
+                                                                updateSelectedNode({ lines: newLines });
+                                                                setSelectedNodeId(subNode.id);
+                                                            }}>
+                                                                Define BOM
+                                                            </button>
+                                                        )}
+                                                        {line.subBOM && (
+                                                            <button style={xpBtnInfo} onClick={() => setSelectedNodeId(line.subBOM!.id)}>
+                                                                Draft ▶
+                                                            </button>
+                                                        )}
+                                                        <button
+                                                            style={xpBtnDanger}
+                                                            onClick={() => updateSelectedNode({ lines: selectedNode.lines.filter((_, idx) => idx !== i) })}
+                                                        >🗑</button>
                                                     </div>
                                                 ))}
                                             </div>
@@ -626,16 +799,32 @@ export default function BOMDesigner({
                                     </div>
                                 </div>
                             </div>
-                        </div>
+                        </>
                     ) : (
-                        <div className="h-100 d-flex align-items-center justify-content-center text-muted">Select a part from the tree to edit its recipe</div>
+                        <div style={{
+                            flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center',
+                            color: '#888', fontSize: 12, fontStyle: 'italic',
+                        }}>
+                            Select a part from the tree to edit its recipe
+                        </div>
                     )}
 
-                    {/* FOOTER */}
-                    <div className="mt-auto p-3 border-top bg-light d-flex justify-content-end gap-2">
-                        <button className="btn btn-secondary" onClick={onCancel}>{t('cancel')}</button>
-                        <button data-testid="save-bom-tree-btn" className="btn btn-success fw-bold px-4" onClick={handleGlobalSave} disabled={isSaving}>
-                            {isSaving ? 'Processing...' : 'Finish & Save Tree'}
+                    {/* Footer */}
+                    <div style={{
+                        borderTop: '1px solid #aca899',
+                        background: '#ece9d8',
+                        padding: '5px 10px',
+                        display: 'flex', justifyContent: 'flex-end', gap: 6,
+                        flexShrink: 0,
+                    }}>
+                        <button style={xpBtn} onClick={onCancel}>{t('cancel')}</button>
+                        <button
+                            data-testid="save-bom-tree-btn"
+                            style={{ ...xpBtnSuccess, opacity: isSaving ? 0.6 : 1 }}
+                            onClick={handleGlobalSave}
+                            disabled={isSaving}
+                        >
+                            {isSaving ? 'Processing...' : '💾 Finish & Save Tree'}
                         </button>
                     </div>
                 </div>
