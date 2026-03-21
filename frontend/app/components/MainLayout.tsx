@@ -32,8 +32,8 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
             if (currentUser && pathname === '/') {
                 router.push('/dashboard');
             }
-            // 2. If unauthenticated and on protected route, go to login
-            else if (!currentUser && pathname !== '/' && pathname !== '/login') {
+            // 2. If unauthenticated on any non-login route, go to login
+            else if (!currentUser && pathname !== '/login') {
                 router.push('/login');
             }
         }
@@ -44,8 +44,8 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
         return <div className="d-flex justify-content-center align-items-center vh-100 bg-light text-muted fw-bold">INITIALIZING_TERRAS_CORE...</div>;
     }
 
-    // Allow Landing Page or Login Page to render without layout wrappers
-    if (pathname === '/' || pathname === '/login') {
+    // Allow Login Page to render without layout wrappers
+    if (pathname === '/login') {
         return <>{children}</>;
     }
 
