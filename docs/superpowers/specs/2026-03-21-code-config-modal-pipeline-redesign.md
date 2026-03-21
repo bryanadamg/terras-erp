@@ -148,6 +148,7 @@ Gap activation:
 - `activeGap` is a `useState<number | null>` tracking which gap is highlighted
 - Active gap visual: a `2px` solid vertical bar in the chip color (default) or `#0058e6` (classic), with a small expansion animation; the gap div widens from `4px` to `16px`
 - Only the hovered gap activates — not all gaps simultaneously
+- `activeGap` is reset to `null` in **three places**: `onDrop` on a gap, `onDrop` on the palette, and `onDragEnd` on the dragged element (covers cancel/escape/drop-outside cases)
 
 ### Drop handlers
 
@@ -155,8 +156,12 @@ Gap activation:
 ```
 onDrop on gap[i]:
   e.preventDefault()
-  if sourceZone === 'track': remove segment at sourceIndex, insert at adjusted i
-  if sourceZone === 'palette': insert segment at i (before counter)
+  if sourceZone === 'track':
+    remove segment at sourceIndex from array → newArray
+    insertAt = sourceIndex < i ? i - 1 : i   // adjust for removal shift
+    insert segment at insertAt in newArray
+  if sourceZone === 'palette':
+    insert segment at i (before counter)
   setActiveGap(null)
 ```
 
@@ -165,6 +170,9 @@ onDrop on gap[i]:
 onDrop on palette:
   e.preventDefault()
   if sourceZone === 'track': remove segment at sourceIndex
+
+palette zone must also handle:
+  onDragOver={(e) => e.preventDefault()}   // required for browser to accept the drop
 ```
 
 **Click on palette chip (no drag needed):**
@@ -268,6 +276,19 @@ if (typeof safeConfig.variantAttributeName === 'string') {
 }
 ```
 Apply this before converting `initialConfig` to segments.
+
+**Stale attribute names:** If a name in `initialConfig.variantAttributeNames` does not match any entry in `attributes[]`, silently drop it — do not create a segment for it. This prevents phantom chips with no palette entry and no resolvable preview value.
+
+---
+
+## Modal Dimensions
+
+| Mode | Width | Max-width |
+|------|-------|-----------|
+| Default (modern) | `600px` | `96vw` |
+| Classic (XP) | `540px` | `96vw` |
+
+Both modes: no fixed height. Content scrolls within `modal-body` (or equivalent) if chips wrap to multiple lines. The track and palette panels each use `flex-wrap: wrap` and expand vertically. The preview bar is always visible at the bottom of the body (no scroll needed for it — it is inside the body flow, not sticky).
 
 ---
 
