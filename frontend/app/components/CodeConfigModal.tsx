@@ -292,19 +292,124 @@ export default function CodeConfigModal({ isOpen, onClose, type, onSave, initial
     setSegments(prev => prev.map(s => s.type === 'suffix' ? { ...s, value: value.toUpperCase() } : s));
   };
 
-  // TODO: replace with real render in Tasks 3–7
   const classic = currentStyle === 'classic';
-  const preview = getPreview(segments, separator, attributes);
+  const palette = getAvailablePalette(segments, attributes);
+
+  if (classic) {
+    // XP mode — built in Task 7
+    return (
+      <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 20100 }}>
+        <div style={{ background: '#fff', margin: '10vh auto', maxWidth: 400, padding: 24, fontFamily: 'Tahoma, Arial, sans-serif' }}>
+          <p><strong>XP mode coming soon — Task 7</strong></p>
+          <p>Preview: <code>{getPreview(segments, separator, attributes)}</code></p>
+          <button onClick={onClose}>Close</button>
+          <button onClick={handleSave} style={{ marginLeft: 8 }}>Save</button>
+        </div>
+      </div>
+    );
+  }
+
+  // ─── Default (Modern) Mode ────────────────────────────────────────────────
   return (
-    <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 20100,
-                  display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-      <div style={{ background: '#fff', padding: 24, borderRadius: 8, maxWidth: 400 }}>
-        <p><strong>Pipeline builder — wiring verified</strong></p>
-        <p>Type: {type} | Style: {classic ? 'classic' : 'default'}</p>
-        <p>Segments: {segments.map(s => s.type).join(' → ')}</p>
-        <p>Preview: <code>{preview}</code></p>
-        <button onClick={onClose}>Close</button>
-        <button onClick={handleSave} style={{ marginLeft: 8 }}>Save</button>
+    <div style={{
+      position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.55)',
+      zIndex: 20100, display: 'flex', alignItems: 'center', justifyContent: 'center',
+    }}>
+      <div className={`ui-style-${currentStyle}`} style={{
+        width: '600px', maxWidth: '96vw',
+        background: '#fff', borderRadius: '12px',
+        boxShadow: '0 20px 60px rgba(0,0,0,0.2), 0 4px 16px rgba(0,0,0,0.08)',
+        overflow: 'hidden', display: 'flex', flexDirection: 'column',
+      }}>
+
+        {/* Header */}
+        <div style={{
+          background: 'linear-gradient(135deg, #1e3a5f 0%, #2d5a9e 100%)',
+          padding: '14px 18px',
+          display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+          flexShrink: 0,
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <div style={{
+              width: '30px', height: '30px', borderRadius: '7px',
+              background: 'rgba(255,255,255,0.15)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+            }}>
+              <i className="bi bi-gear-fill" style={{ color: '#fff', fontSize: '13px' }}></i>
+            </div>
+            <div>
+              <div style={{ color: '#fff', fontWeight: 600, fontSize: '13px', lineHeight: 1.2 }}>
+                Configure {getTypeName(type)} Code
+              </div>
+              <div style={{ color: 'rgba(255,255,255,0.55)', fontSize: '11px', marginTop: '1px' }}>
+                Drag segments to build your ID format
+              </div>
+            </div>
+          </div>
+          <button onClick={onClose} style={{
+            background: 'rgba(255,255,255,0.1)', border: 'none', borderRadius: '6px',
+            color: 'rgba(255,255,255,0.75)', cursor: 'pointer',
+            padding: '2px 8px 4px', fontSize: '18px', lineHeight: 1,
+          }}>×</button>
+        </div>
+
+        {/* Body */}
+        <div style={{ padding: '16px 18px', display: 'flex', flexDirection: 'column', gap: '12px', overflowY: 'auto' }}>
+
+          {/* Separator row */}
+          <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: '8px' }}>
+            <label style={{ fontSize: '11px', fontWeight: 600, color: '#6b7280' }}>Separator:</label>
+            <select
+              className="form-select form-select-sm"
+              style={{ width: 'auto' }}
+              value={separator}
+              onChange={e => setSeparator(e.target.value)}
+            >
+              <option value="-">Dash ( - )</option>
+              <option value="_">Underscore ( _ )</option>
+              <option value="/">Slash ( / )</option>
+              <option value="">None</option>
+            </select>
+          </div>
+
+          {/* Track placeholder — replaced in Task 4 */}
+          <div style={{ minHeight: 60, background: '#f8fafc', border: '1.5px dashed #cbd5e1', borderRadius: 8,
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        color: '#94a3b8', fontSize: 12 }}>
+            Track (Task 4)
+          </div>
+
+          {/* Palette placeholder — replaced in Task 5 */}
+          <div style={{ minHeight: 40, background: '#f1f5f9', border: '1px solid #e2e8f0', borderRadius: 8,
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        color: '#94a3b8', fontSize: 12 }}>
+            Palette (Task 5)
+          </div>
+
+          {/* Preview bar */}
+          <div style={{ background: '#1e293b', borderRadius: '7px', padding: '9px 13px',
+                        display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <i className="bi bi-code-slash" style={{ color: '#64748b', fontSize: '12px', flexShrink: 0 }}></i>
+            <span style={{ fontFamily: "'Courier New', monospace", fontSize: '14px', fontWeight: 700,
+                           color: '#e2e8f0', letterSpacing: '1.2px' }}>
+              {getPreview(segments, separator, attributes)}
+            </span>
+          </div>
+
+        </div>
+
+        {/* Footer */}
+        <div style={{
+          padding: '11px 20px', borderTop: '1px solid #f1f5f9',
+          display: 'flex', justifyContent: 'flex-end', gap: '8px',
+          background: '#fafafa', flexShrink: 0,
+        }}>
+          <button type="button" className="btn btn-sm btn-secondary" onClick={onClose}>Cancel</button>
+          <button type="button" className="btn btn-sm btn-primary px-4" onClick={handleSave}>
+            Save Configuration
+          </button>
+        </div>
+
       </div>
     </div>
   );
