@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useToast } from './Toast';
 import { useLanguage } from '../context/LanguageContext';
 import ModalWrapper from './ModalWrapper';
@@ -27,8 +27,114 @@ export default function PartnersView({ partners, type, onCreate, onUpdate, onDel
     const [isCreateOpen, setIsCreateOpen] = useState(false);
     const [editingPartner, setEditingPartner] = useState<Partner | null>(null);
     const [newPartner, setNewPartner] = useState({ name: '', address: '', type, active: true });
+    const [searchTerm, setSearchTerm] = useState('');
+    const [currentStyle, setCurrentStyle] = useState('classic');
 
-    const filteredPartners = partners.filter(p => p.type === type);
+    useEffect(() => {
+        const saved = localStorage.getItem('ui_style');
+        if (saved) setCurrentStyle(saved);
+    }, []);
+
+    const classic = currentStyle === 'classic';
+    const typeLabel = type === 'CUSTOMER' ? 'Customer' : 'Supplier';
+
+    // ── XP shared inline styles ──────────────────────────────────────────────
+    const xpBevel: React.CSSProperties = {
+        border: '2px solid',
+        borderColor: '#dfdfdf #808080 #808080 #dfdfdf',
+        boxShadow: '2px 2px 4px rgba(0,0,0,0.3)',
+        background: '#ece9d8',
+        borderRadius: 0,
+    };
+
+    const xpTitleBar: React.CSSProperties = {
+        background: 'linear-gradient(to right, #0058e6 0%, #08a5ff 100%)',
+        color: '#ffffff',
+        fontFamily: 'Tahoma, Arial, sans-serif',
+        fontSize: '12px',
+        fontWeight: 'bold',
+        padding: '4px 8px',
+        boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.3)',
+        borderBottom: '1px solid #003080',
+        display: 'flex',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        minHeight: '26px',
+    };
+
+    const xpToolbar: React.CSSProperties = {
+        background: 'linear-gradient(to bottom, #f5f4ef, #e0dfd8)',
+        borderBottom: '1px solid #b0a898',
+        padding: '3px 6px',
+        display: 'flex',
+        alignItems: 'center',
+        gap: '4px',
+        flexWrap: 'wrap' as const,
+    };
+
+    const xpBtn = (extra: React.CSSProperties = {}): React.CSSProperties => ({
+        fontFamily: 'Tahoma, Arial, sans-serif',
+        fontSize: '11px',
+        padding: '2px 10px',
+        cursor: 'pointer',
+        background: 'linear-gradient(to bottom, #ffffff 0%, #d4d0c8 100%)',
+        border: '1px solid',
+        borderColor: '#dfdfdf #808080 #808080 #dfdfdf',
+        color: '#000000',
+        borderRadius: 0,
+        ...extra,
+    });
+
+    const xpInput: React.CSSProperties = {
+        fontFamily: 'Tahoma, Arial, sans-serif',
+        fontSize: '11px',
+        border: '1px solid #7f9db9',
+        boxShadow: 'inset 1px 1px 0 rgba(0,0,0,0.1)',
+        padding: '1px 6px',
+        background: '#ffffff',
+        color: '#000000',
+        height: '20px',
+        outline: 'none',
+    };
+
+    const xpSep: React.CSSProperties = {
+        width: '1px',
+        height: '20px',
+        background: '#a0988c',
+        margin: '0 2px',
+        flexShrink: 0,
+    };
+
+    const xpTableHeader: React.CSSProperties = {
+        background: 'linear-gradient(to bottom, #ffffff, #d4d0c8)',
+        borderBottom: '2px solid #808080',
+        fontSize: '10px',
+        fontWeight: 'bold',
+        color: '#000000',
+    };
+
+    const xpThCell: React.CSSProperties = {
+        padding: '3px 6px',
+        borderRight: '1px solid #b0aaa0',
+        textAlign: 'left' as const,
+        whiteSpace: 'nowrap' as const,
+        fontFamily: 'Tahoma, Arial, sans-serif',
+    };
+
+    const tdBase: React.CSSProperties = {
+        padding: '4px 6px',
+        borderRight: '1px solid #c0bdb5',
+        borderBottom: '1px solid #d0cdc8',
+        verticalAlign: 'middle' as const,
+        fontFamily: 'Tahoma, Arial, sans-serif',
+        fontSize: '11px',
+    };
+
+    const filteredPartners = partners.filter(p =>
+        p.type === type &&
+        (p.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+         (p.address || '').toLowerCase().includes(searchTerm.toLowerCase()))
+    );
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
@@ -49,56 +155,175 @@ export default function PartnersView({ partners, type, onCreate, onUpdate, onDel
         setEditingPartner(null);
     };
 
-    const typeLabel = type === 'CUSTOMER' ? 'Customer' : 'Supplier';
+    const handleDelete = (p: Partner) => {
+        if (!window.confirm(`Delete "${p.name}"? This action cannot be undone.`)) return;
+        onDelete(p.id);
+    };
 
     return (
         <div className="fade-in">
-            <div className="d-flex justify-content-between align-items-center mb-4">
-                <div>
-                    <h4 className="mb-0">{typeLabel} Management</h4>
-                    <p className="text-muted small">Maintain your network of {typeLabel.toLowerCase()}s</p>
-                </div>
-                <button className="btn btn-primary shadow-sm" onClick={() => setIsCreateOpen(true)}>
-                    <i className="bi bi-plus-lg me-2"></i>Add {typeLabel}
-                </button>
-            </div>
+            {/* ── Outer shell ── */}
+            <div
+                style={classic ? xpBevel : undefined}
+                className={classic ? '' : 'card border-0 shadow-sm'}
+            >
+                {/* ── Title bar ── */}
+                {classic ? (
+                    <div style={xpTitleBar}>
+                        <span>
+                            <i className="bi bi-people-fill" style={{ marginRight: 6 }}></i>
+                            {typeLabel} Management
+                        </span>
+                        <button
+                            style={xpBtn({ background: 'linear-gradient(to bottom, #5ec85e, #2d7a2d)', borderColor: '#1a5e1a #0a3e0a #0a3e0a #1a5e1a', color: '#ffffff', fontWeight: 'bold' })}
+                            onClick={() => setIsCreateOpen(true)}
+                        >
+                            <i className="bi bi-plus-lg" style={{ marginRight: 4 }}></i>Add {typeLabel}
+                        </button>
+                    </div>
+                ) : (
+                    <div className="card-header bg-white d-flex justify-content-between align-items-center">
+                        <div>
+                            <h5 className="card-title mb-0">
+                                <i className="bi bi-people-fill me-2"></i>{typeLabel} Management
+                            </h5>
+                            <p className="text-muted small mb-0 mt-1">
+                                Maintain your network of {typeLabel.toLowerCase()}s
+                            </p>
+                        </div>
+                        <button className="btn btn-sm btn-primary" onClick={() => setIsCreateOpen(true)}>
+                            <i className="bi bi-plus-lg me-2"></i>Add {typeLabel}
+                        </button>
+                    </div>
+                )}
 
-            <div className="card border-0 shadow-sm">
-                <div className="card-body p-0">
+                {/* ── Secondary toolbar: search + count ── */}
+                {classic ? (
+                    <div style={xpToolbar}>
+                        <input
+                            style={{ ...xpInput, width: 200 }}
+                            placeholder={`Search ${typeLabel.toLowerCase()}s…`}
+                            value={searchTerm}
+                            onChange={e => setSearchTerm(e.target.value)}
+                        />
+                        <div style={xpSep}></div>
+                        <span style={{ fontFamily: 'Tahoma, Arial, sans-serif', fontSize: '11px', color: '#333' }}>
+                            {filteredPartners.length} {typeLabel}{filteredPartners.length !== 1 ? 's' : ''}
+                        </span>
+                    </div>
+                ) : (
+                    <div className="px-3 py-2 border-bottom d-flex align-items-center gap-3 bg-white">
+                        <div className="position-relative" style={{ flex: '1 1 200px', maxWidth: 280 }}>
+                            <i className="bi bi-search position-absolute" style={{ left: 7, top: '50%', transform: 'translateY(-50%)', fontSize: 11, opacity: 0.5 }}></i>
+                            <input
+                                className="form-control form-control-sm"
+                                style={{ paddingLeft: 24 }}
+                                placeholder={`Search ${typeLabel.toLowerCase()}s…`}
+                                value={searchTerm}
+                                onChange={e => setSearchTerm(e.target.value)}
+                            />
+                        </div>
+                        <span className="text-muted small">
+                            {filteredPartners.length} {typeLabel}{filteredPartners.length !== 1 ? 's' : ''}
+                        </span>
+                    </div>
+                )}
+
+                {/* ── Table ── */}
+                <div
+                    className={classic ? '' : 'card-body p-0'}
+                    style={classic ? { maxHeight: 'calc(100vh - 160px)', overflowY: 'auto' } : undefined}
+                >
                     <div className="table-responsive">
-                        <table className="table table-hover align-middle mb-0">
-                            <thead className="table-light">
+                        <table
+                            className={classic ? '' : 'table table-hover align-middle mb-0'}
+                            style={classic ? { width: '100%', borderCollapse: 'collapse', background: '#fff' } : undefined}
+                        >
+                            <thead style={classic ? xpTableHeader : undefined} className={classic ? '' : 'table-light'}>
                                 <tr>
-                                    <th className="ps-4">Name</th>
-                                    <th>Address</th>
-                                    <th>Status</th>
-                                    <th className="text-end pe-4">Actions</th>
+                                    <th style={classic ? { ...xpThCell, width: '30%' } : undefined} className={classic ? '' : 'ps-4'}>Name</th>
+                                    <th style={classic ? xpThCell : undefined}>Address</th>
+                                    <th style={classic ? { ...xpThCell, width: '80px' } : undefined}>Status</th>
+                                    <th style={classic ? { ...xpThCell, textAlign: 'right' as const, borderRight: 'none', width: '80px' } : undefined} className={classic ? '' : 'text-end pe-4'}>Actions</th>
                                 </tr>
                             </thead>
                             <tbody>
-                                {filteredPartners.map(p => (
-                                    <tr key={p.id}>
-                                        <td className="ps-4 fw-bold">{p.name}</td>
-                                        <td className="text-muted small">{p.address || '-'}</td>
-                                        <td>
-                                            <span className={`badge ${p.active ? 'bg-success' : 'bg-secondary'}`}>
-                                                {p.active ? 'Active' : 'Inactive'}
-                                            </span>
+                                {filteredPartners.map((p, rowIndex) => (
+                                    <tr
+                                        key={p.id}
+                                        style={classic ? { background: rowIndex % 2 === 0 ? '#ffffff' : '#f5f3ee', borderBottom: '1px solid #c0bdb5' } : undefined}
+                                    >
+                                        <td style={classic ? { ...tdBase, fontWeight: 'bold' } : undefined} className={classic ? '' : 'ps-4 fw-bold'}>
+                                            {p.name}
                                         </td>
-                                        <td className="text-end pe-4">
-                                            <button className="btn btn-sm btn-link text-primary" onClick={() => setEditingPartner(p)}>
-                                                <i className="bi bi-pencil-square"></i>
-                                            </button>
-                                            <button className="btn btn-sm btn-link text-danger" onClick={() => onDelete(p.id)}>
-                                                <i className="bi bi-trash"></i>
-                                            </button>
+                                        <td style={classic ? { ...tdBase, color: '#555' } : undefined} className={classic ? '' : 'text-muted small'}>
+                                            {p.address || <span style={classic ? { color: '#aaa' } : undefined} className={classic ? '' : 'fst-italic'}>—</span>}
+                                        </td>
+                                        <td style={tdBase}>
+                                            {classic ? (
+                                                <span style={{
+                                                    background: p.active ? '#e8f5e9' : '#e8e8e8',
+                                                    border: `1px solid ${p.active ? '#2e7d32' : '#6a6a6a'}`,
+                                                    color: p.active ? '#1b4620' : '#444',
+                                                    padding: '1px 5px',
+                                                    fontSize: '9px',
+                                                    fontFamily: 'Tahoma, Arial, sans-serif',
+                                                    fontWeight: 'bold',
+                                                    whiteSpace: 'nowrap' as const,
+                                                }}>
+                                                    {p.active ? 'Active' : 'Inactive'}
+                                                </span>
+                                            ) : (
+                                                <span className={`badge ${p.active ? 'bg-success' : 'bg-secondary'}`}>
+                                                    {p.active ? 'Active' : 'Inactive'}
+                                                </span>
+                                            )}
+                                        </td>
+                                        <td style={classic ? { ...tdBase, borderRight: 'none', textAlign: 'right' as const } : undefined} className={classic ? '' : 'text-end pe-4'}>
+                                            {classic ? (
+                                                <div style={{ display: 'flex', gap: 2, justifyContent: 'flex-end' }}>
+                                                    <button
+                                                        title="Edit"
+                                                        onClick={() => setEditingPartner(p)}
+                                                        style={{ background: 'none', border: '1px solid transparent', borderRadius: 2, cursor: 'pointer', padding: '1px 4px', color: '#555', fontSize: '11px' }}
+                                                        onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.borderColor = '#7f9db9'; (e.currentTarget as HTMLButtonElement).style.background = '#e8f0f8'; }}
+                                                        onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.borderColor = 'transparent'; (e.currentTarget as HTMLButtonElement).style.background = 'none'; }}
+                                                    >
+                                                        <i className="bi bi-pencil-square"></i>
+                                                    </button>
+                                                    <button
+                                                        title="Delete"
+                                                        onClick={() => handleDelete(p)}
+                                                        style={{ background: 'none', border: '1px solid transparent', borderRadius: 2, cursor: 'pointer', padding: '1px 4px', color: '#aa0000', fontSize: '11px' }}
+                                                        onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.borderColor = '#cc4444'; (e.currentTarget as HTMLButtonElement).style.background = '#fff0f0'; }}
+                                                        onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.borderColor = 'transparent'; (e.currentTarget as HTMLButtonElement).style.background = 'none'; }}
+                                                    >
+                                                        <i className="bi bi-trash"></i>
+                                                    </button>
+                                                </div>
+                                            ) : (
+                                                <>
+                                                    <button className="btn btn-sm btn-link text-primary p-0 me-2" title="Edit" onClick={() => setEditingPartner(p)}>
+                                                        <i className="bi bi-pencil-square"></i>
+                                                    </button>
+                                                    <button className="btn btn-sm btn-link text-danger p-0" title="Delete" onClick={() => handleDelete(p)}>
+                                                        <i className="bi bi-trash"></i>
+                                                    </button>
+                                                </>
+                                            )}
                                         </td>
                                     </tr>
                                 ))}
                                 {filteredPartners.length === 0 && (
                                     <tr>
-                                        <td colSpan={4} className="text-center py-5 text-muted">
-                                            No {typeLabel.toLowerCase()}s found.
+                                        <td
+                                            colSpan={4}
+                                            style={classic ? { ...tdBase, borderRight: 'none', textAlign: 'center', padding: '24px 8px', color: '#888', fontStyle: 'italic' } : undefined}
+                                            className={classic ? '' : 'text-center py-5 text-muted'}
+                                        >
+                                            {searchTerm
+                                                ? `No ${typeLabel.toLowerCase()}s match "${searchTerm}"`
+                                                : `No ${typeLabel.toLowerCase()}s found. Add one to get started.`}
                                         </td>
                                     </tr>
                                 )}
@@ -106,6 +331,24 @@ export default function PartnersView({ partners, type, onCreate, onUpdate, onDel
                         </table>
                     </div>
                 </div>
+
+                {/* ── Status bar ── */}
+                {classic && (
+                    <div style={{
+                        background: 'linear-gradient(to bottom, #e8e6df, #d5d3cc)',
+                        borderTop: '1px solid #b0a898',
+                        padding: '2px 8px',
+                        display: 'flex',
+                        gap: '12px',
+                        fontFamily: 'Tahoma, Arial, sans-serif',
+                        fontSize: '10px',
+                        color: '#333',
+                    }}>
+                        <span>{partners.filter(p => p.type === type).length} total</span>
+                        <span>|</span>
+                        <span>{partners.filter(p => p.type === type && p.active).length} active</span>
+                    </div>
+                )}
             </div>
 
             {/* Create Modal */}
@@ -123,22 +366,23 @@ export default function PartnersView({ partners, type, onCreate, onUpdate, onDel
             >
                 <div className="mb-3">
                     <label className="form-label small fw-bold">Name</label>
-                    <input 
-                        className="form-control" 
-                        value={newPartner.name} 
-                        onChange={e => setNewPartner({...newPartner, name: e.target.value})} 
-                        required 
-                        placeholder={`Enter ${typeLabel.toLowerCase()} name...`}
+                    <input
+                        className="form-control"
+                        value={newPartner.name}
+                        onChange={e => setNewPartner({...newPartner, name: e.target.value})}
+                        required
+                        placeholder={`Enter ${typeLabel.toLowerCase()} name…`}
+                        autoFocus
                     />
                 </div>
                 <div className="mb-3">
-                    <label className="form-label small fw-bold">Address (Optional)</label>
-                    <textarea 
-                        className="form-control" 
-                        rows={3} 
-                        value={newPartner.address} 
+                    <label className="form-label small fw-bold">Address <span className="fw-normal text-muted">(Optional)</span></label>
+                    <textarea
+                        className="form-control"
+                        rows={3}
+                        value={newPartner.address}
                         onChange={e => setNewPartner({...newPartner, address: e.target.value})}
-                        placeholder="Street, City, Zip Code..."
+                        placeholder="Street, City, Zip Code…"
                     ></textarea>
                 </div>
             </ModalWrapper>
@@ -160,30 +404,31 @@ export default function PartnersView({ partners, type, onCreate, onUpdate, onDel
                     <>
                         <div className="mb-3">
                             <label className="form-label small fw-bold">Name</label>
-                            <input 
-                                className="form-control" 
-                                value={editingPartner.name} 
-                                onChange={e => setEditingPartner({...editingPartner, name: e.target.value})} 
-                                required 
+                            <input
+                                className="form-control"
+                                value={editingPartner.name}
+                                onChange={e => setEditingPartner({...editingPartner, name: e.target.value})}
+                                required
                             />
                         </div>
                         <div className="mb-3">
-                            <label className="form-label small fw-bold">Address (Optional)</label>
-                            <textarea 
-                                className="form-control" 
-                                rows={3} 
-                                value={editingPartner.address || ''} 
+                            <label className="form-label small fw-bold">Address <span className="fw-normal text-muted">(Optional)</span></label>
+                            <textarea
+                                className="form-control"
+                                rows={3}
+                                value={editingPartner.address || ''}
                                 onChange={e => setEditingPartner({...editingPartner, address: e.target.value})}
                             ></textarea>
                         </div>
-                        <div className="form-check form-switch mt-3">
-                            <input 
-                                className="form-check-input" 
-                                type="checkbox" 
-                                checked={editingPartner.active} 
+                        <div className="form-check mt-3">
+                            <input
+                                className="form-check-input"
+                                type="checkbox"
+                                id="activeCheck"
+                                checked={editingPartner.active}
                                 onChange={e => setEditingPartner({...editingPartner, active: e.target.checked})}
                             />
-                            <label className="form-check-label small fw-bold">Active {typeLabel}</label>
+                            <label className="form-check-label small fw-bold" htmlFor="activeCheck">Active {typeLabel}</label>
                         </div>
                     </>
                 )}
