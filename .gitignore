@@ -235,6 +235,7 @@ skills/
 CLAUDE.md
 .claude/
 .superpowers/
+docs/superpowers/
 
 # Playwright
 frontend/playwright-report
