@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { createPortal } from 'react-dom';
 import BOMDesigner from './BOMDesigner'; // New component
+import BOMDetailModal from './BOMDetailModal';
 import { useToast } from './Toast';
 import { useLanguage } from '../context/LanguageContext';
 
@@ -21,6 +22,9 @@ export default function BOMView({
 
   // Multi-select state
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+
+  // Detail modal state
+  const [detailBom, setDetailBom] = useState<any>(null);
 
   // Filtered BOMs based on search query
   const filteredBOMs = useMemo(() => {
@@ -224,6 +228,7 @@ export default function BOMView({
   };
 
   return (
+    <>
     <div className="row g-4 fade-in">
        {/* BOM Designer Modal */}
        {isDesignerOpen && createPortal(
@@ -509,8 +514,10 @@ export default function BOMView({
                               />
                             </td>
                             <td
-                              style={classic ? { padding: '5px 6px', borderRight: '1px solid #c0bdb5', verticalAlign: 'top' } : undefined}
+                              onClick={() => setDetailBom(bom)}
+                              style={classic ? { padding: '5px 6px', borderRight: '1px solid #c0bdb5', verticalAlign: 'top', cursor: 'pointer' } : { cursor: 'pointer' }}
                               className={classic ? '' : 'ps-2 align-top'}
+                              title="Click to view BOM details"
                             >
                               <span
                                 style={classic ? {
@@ -528,8 +535,10 @@ export default function BOMView({
                               </span>
                             </td>
                             <td
-                              style={classic ? { padding: '5px 6px', borderRight: '1px solid #c0bdb5', verticalAlign: 'top' } : undefined}
+                              onClick={() => setDetailBom(bom)}
+                              style={classic ? { padding: '5px 6px', borderRight: '1px solid #c0bdb5', verticalAlign: 'top', cursor: 'pointer' } : { cursor: 'pointer' }}
                               className={classic ? '' : 'align-top'}
+                              title="Click to view BOM details"
                             >
                               <div style={classic ? { fontWeight: 'bold', color: '#000' } : undefined} className={classic ? '' : 'fw-medium'}>
                                 {getItemName(bom.item_id, bom.item_name)} ({getItemCode(bom.item_id, bom.item_code)})
@@ -539,8 +548,10 @@ export default function BOMView({
                               </div>
                             </td>
                             <td
-                              style={classic ? { padding: '5px 6px', borderRight: '1px solid #c0bdb5', verticalAlign: 'top', fontSize: '10px', color: '#222' } : undefined}
+                              onClick={() => setDetailBom(bom)}
+                              style={classic ? { padding: '5px 6px', borderRight: '1px solid #c0bdb5', verticalAlign: 'top', fontSize: '10px', color: '#222', cursor: 'pointer' } : { cursor: 'pointer' }}
                               className={classic ? '' : 'align-top'}
+                              title="Click to view BOM details"
                             >
                               {bom.operations && bom.operations.length > 0 ? (
                                 <div className={classic ? '' : 'small'}>
@@ -583,5 +594,18 @@ export default function BOMView({
           </div>
        </div>
     </div>
+
+    <BOMDetailModal
+      bom={detailBom}
+      isOpen={!!detailBom}
+      onClose={() => setDetailBom(null)}
+      boms={boms}
+      items={items}
+      locations={locations}
+      attributes={attributes}
+      operations={operations}
+      workCenters={workCenters}
+    />
+    </>
   );
 }
