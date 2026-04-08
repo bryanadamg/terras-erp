@@ -1,4 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 from app.db.session import get_db
 from app.schemas import PartnerCreate, PartnerResponse, PartnerUpdate
@@ -50,6 +51,10 @@ def delete_partner(partner_id: uuid.UUID, db: Session = Depends(get_db), current
     if not partner:
         raise HTTPException(status_code=404, detail="Partner not found")
     
-    db.delete(partner)
-    db.commit()
+    try:
+        db.delete(partner)
+        db.commit()
+    except IntegrityError:
+        db.rollback()
+        raise HTTPException(status_code=409, detail=f"Cannot delete '{partner.name}': they are referenced by existing records")
     return {"status": "success"}

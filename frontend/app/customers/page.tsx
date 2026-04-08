@@ -34,13 +34,36 @@ export default function CustomersPage() {
         if (res.ok) fetchData();
     };
 
+    const handleBulkDeletePartner = async (ids: string[]) => {
+        let succeeded = 0;
+        let failed = 0;
+        for (const id of ids) {
+            try {
+                const res = await authFetch(`${API_BASE}/partners/${id}`, { method: 'DELETE' });
+                if (res.ok) succeeded++;
+                else failed++;
+            } catch {
+                failed++;
+            }
+        }
+        if (succeeded > 0 && failed === 0) {
+            showToast(`${succeeded} customer${succeeded !== 1 ? 's' : ''} deleted`, 'success');
+        } else if (succeeded > 0) {
+            showToast(`${succeeded} deleted, ${failed} could not be removed — linked records exist`, 'warning');
+        } else {
+            showToast(`Could not delete customers — they have linked records`, 'danger');
+        }
+        fetchData();
+    };
+
     return (
-            <PartnersView 
-                partners={partners} 
-                type="CUSTOMER" 
-                onCreate={handleCreatePartner} 
-                onUpdate={handleUpdatePartner} 
-                onDelete={handleDeletePartner} 
+            <PartnersView
+                partners={partners}
+                type="CUSTOMER"
+                onCreate={handleCreatePartner}
+                onUpdate={handleUpdatePartner}
+                onDelete={handleDeletePartner}
+                onBulkDelete={handleBulkDeletePartner}
             />
     );
 }

@@ -19,21 +19,29 @@ interface PartnersViewProps {
     onCreate: (partner: any) => void;
     onUpdate: (id: string, partner: any) => void;
     onDelete: (id: string) => void;
+    onBulkDelete?: (ids: string[]) => void;
 }
 
-export default function PartnersView({ partners, type, onCreate, onUpdate, onDelete }: PartnersViewProps) {
+export default function PartnersView({ partners, type, onCreate, onUpdate, onDelete, onBulkDelete }: PartnersViewProps) {
     const { showToast } = useToast();
     const { t } = useLanguage();
     const [isCreateOpen, setIsCreateOpen] = useState(false);
     const [editingPartner, setEditingPartner] = useState<Partner | null>(null);
     const [newPartner, setNewPartner] = useState({ name: '', address: '', type, active: true });
+    const [deletingPartner, setDeletingPartner] = useState<Partner | null>(null);
     const [searchTerm, setSearchTerm] = useState('');
     const [currentStyle, setCurrentStyle] = useState('classic');
+    const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+    const [showBulkDeleteConfirm, setShowBulkDeleteConfirm] = useState(false);
 
     useEffect(() => {
         const saved = localStorage.getItem('ui_style');
         if (saved) setCurrentStyle(saved);
     }, []);
+
+    useEffect(() => {
+        setSelectedIds(new Set());
+    }, [searchTerm]);
 
     const classic = currentStyle === 'classic';
     const typeLabel = type === 'CUSTOMER' ? 'Customer' : 'Supplier';
@@ -136,6 +144,36 @@ export default function PartnersView({ partners, type, onCreate, onUpdate, onDel
          (p.address || '').toLowerCase().includes(searchTerm.toLowerCase()))
     );
 
+    const allSelected = filteredPartners.length > 0 && selectedIds.size === filteredPartners.length;
+    const someSelected = selectedIds.size > 0;
+
+    const toggleSelect = (id: string) => {
+        setSelectedIds(prev => {
+            const next = new Set(prev);
+            if (next.has(id)) next.delete(id); else next.add(id);
+            return next;
+        });
+    };
+
+    const toggleSelectAll = () => {
+        if (allSelected) {
+            setSelectedIds(new Set());
+        } else {
+            setSelectedIds(new Set(filteredPartners.map(p => p.id)));
+        }
+    };
+
+    const confirmBulkDelete = () => {
+        const ids = Array.from(selectedIds);
+        if (onBulkDelete) {
+            onBulkDelete(ids);
+        } else {
+            ids.forEach(id => onDelete(id));
+        }
+        setSelectedIds(new Set());
+        setShowBulkDeleteConfirm(false);
+    };
+
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
         if (!newPartner.name) return;
@@ -156,8 +194,13 @@ export default function PartnersView({ partners, type, onCreate, onUpdate, onDel
     };
 
     const handleDelete = (p: Partner) => {
-        if (!window.confirm(`Delete "${p.name}"? This action cannot be undone.`)) return;
-        onDelete(p.id);
+        setDeletingPartner(p);
+    };
+
+    const confirmDelete = () => {
+        if (!deletingPartner) return;
+        onDelete(deletingPartner.id);
+        setDeletingPartner(null);
     };
 
     return (
@@ -229,6 +272,36 @@ export default function PartnersView({ partners, type, onCreate, onUpdate, onDel
                     </div>
                 )}
 
+                {/* ── Bulk action bar ── */}
+                {someSelected && (
+                    classic ? (
+                        <div style={{ ...xpToolbar, background: '#fff8e1', borderBottom: '1px solid #e0c060' }}>
+                            <span style={{ fontFamily: 'Tahoma, Arial, sans-serif', fontSize: '11px', color: '#665500', fontWeight: 'bold' }}>
+                                {selectedIds.size} selected
+                            </span>
+                            <div style={xpSep}></div>
+                            <button
+                                style={xpBtn({ background: 'linear-gradient(to bottom, #c84040, #8e0000)', borderColor: '#8e0000 #5e0000 #5e0000 #8e0000', color: '#ffffff', fontWeight: 'bold' })}
+                                onClick={() => setShowBulkDeleteConfirm(true)}
+                            >
+                                <i className="bi bi-trash" style={{ marginRight: 4 }}></i>Delete Selected
+                            </button>
+                            <button
+                                style={xpBtn()}
+                                onClick={() => setSelectedIds(new Set())}
+                            >Clear</button>
+                        </div>
+                    ) : (
+                        <div className="px-3 py-2 border-bottom d-flex align-items-center gap-3" style={{ background: '#fff8e1' }}>
+                            <span className="small fw-bold" style={{ color: '#665500' }}>{selectedIds.size} selected</span>
+                            <button className="btn btn-sm btn-danger" onClick={() => setShowBulkDeleteConfirm(true)}>
+                                <i className="bi bi-trash me-1"></i>Delete Selected
+                            </button>
+                            <button className="btn btn-sm btn-link text-muted p-0" onClick={() => setSelectedIds(new Set())}>Clear</button>
+                        </div>
+                    )
+                )}
+
                 {/* ── Table ── */}
                 <div
                     className={classic ? '' : 'card-body p-0'}
@@ -241,7 +314,17 @@ export default function PartnersView({ partners, type, onCreate, onUpdate, onDel
                         >
                             <thead style={classic ? xpTableHeader : undefined} className={classic ? '' : 'table-light'}>
                                 <tr>
-                                    <th style={classic ? { ...xpThCell, width: '30%' } : undefined} className={classic ? '' : 'ps-4'}>Name</th>
+                                    <th style={classic ? { ...xpThCell, width: '28px', textAlign: 'center' as const } : undefined} className={classic ? '' : 'ps-3'}>
+                                        <input
+                                            type="checkbox"
+                                            checked={allSelected}
+                                            ref={el => { if (el) el.indeterminate = someSelected && !allSelected; }}
+                                            onChange={toggleSelectAll}
+                                            title="Select all"
+                                            style={classic ? { cursor: 'pointer' } : undefined}
+                                        />
+                                    </th>
+                                    <th style={classic ? { ...xpThCell, width: '30%' } : undefined} className={classic ? '' : 'ps-2'}>Name</th>
                                     <th style={classic ? xpThCell : undefined}>Address</th>
                                     <th style={classic ? { ...xpThCell, width: '80px' } : undefined}>Status</th>
                                     <th style={classic ? { ...xpThCell, textAlign: 'right' as const, borderRight: 'none', width: '80px' } : undefined} className={classic ? '' : 'text-end pe-4'}>Actions</th>
@@ -251,9 +334,18 @@ export default function PartnersView({ partners, type, onCreate, onUpdate, onDel
                                 {filteredPartners.map((p, rowIndex) => (
                                     <tr
                                         key={p.id}
-                                        style={classic ? { background: rowIndex % 2 === 0 ? '#ffffff' : '#f5f3ee', borderBottom: '1px solid #c0bdb5' } : undefined}
+                                        style={classic ? { background: selectedIds.has(p.id) ? '#e8f0f8' : rowIndex % 2 === 0 ? '#ffffff' : '#f5f3ee', borderBottom: '1px solid #c0bdb5' } : undefined}
+                                        className={classic ? '' : selectedIds.has(p.id) ? 'table-active' : ''}
                                     >
-                                        <td style={classic ? { ...tdBase, fontWeight: 'bold' } : undefined} className={classic ? '' : 'ps-4 fw-bold'}>
+                                        <td style={classic ? { ...tdBase, textAlign: 'center' as const } : undefined} className={classic ? '' : 'ps-3'}>
+                                            <input
+                                                type="checkbox"
+                                                checked={selectedIds.has(p.id)}
+                                                onChange={() => toggleSelect(p.id)}
+                                                style={classic ? { cursor: 'pointer' } : undefined}
+                                            />
+                                        </td>
+                                        <td style={classic ? { ...tdBase, fontWeight: 'bold' } : undefined} className={classic ? '' : 'ps-2 fw-bold'}>
                                             {p.name}
                                         </td>
                                         <td style={classic ? { ...tdBase, color: '#555' } : undefined} className={classic ? '' : 'text-muted small'}>
@@ -317,7 +409,7 @@ export default function PartnersView({ partners, type, onCreate, onUpdate, onDel
                                 {filteredPartners.length === 0 && (
                                     <tr>
                                         <td
-                                            colSpan={4}
+                                            colSpan={5}
                                             style={classic ? { ...tdBase, borderRight: 'none', textAlign: 'center', padding: '24px 8px', color: '#888', fontStyle: 'italic' } : undefined}
                                             className={classic ? '' : 'text-center py-5 text-muted'}
                                         >
@@ -403,6 +495,64 @@ export default function PartnersView({ partners, type, onCreate, onUpdate, onDel
                         placeholder="Street, City, Zip Code…"
                     ></textarea>
                 </div>
+            </ModalWrapper>
+
+            {/* Delete Confirmation Modal */}
+            <ModalWrapper
+                isOpen={!!deletingPartner}
+                onClose={() => setDeletingPartner(null)}
+                title={<><i className="bi bi-trash me-1"></i> Delete {typeLabel}</>}
+                variant="danger"
+                size="sm"
+                footer={
+                    <>
+                        <button
+                            type="button"
+                            style={classic ? xpBtn() : undefined}
+                            className={classic ? '' : 'btn btn-sm btn-link text-muted'}
+                            onClick={() => setDeletingPartner(null)}
+                        >Cancel</button>
+                        <button
+                            type="button"
+                            style={classic ? xpBtn({ background: 'linear-gradient(to bottom, #c84040, #8e0000)', borderColor: '#8e0000 #5e0000 #5e0000 #8e0000', color: '#ffffff', fontWeight: 'bold' }) : undefined}
+                            className={classic ? '' : 'btn btn-sm btn-danger px-4 fw-bold'}
+                            onClick={confirmDelete}
+                        >DELETE</button>
+                    </>
+                }
+            >
+                <p style={classic ? { fontFamily: 'Tahoma, Arial, sans-serif', fontSize: '11px', margin: 0 } : undefined} className={classic ? '' : 'mb-0'}>
+                    Delete <strong>{deletingPartner?.name}</strong>? This action cannot be undone.
+                </p>
+            </ModalWrapper>
+
+            {/* Bulk Delete Confirmation Modal */}
+            <ModalWrapper
+                isOpen={showBulkDeleteConfirm}
+                onClose={() => setShowBulkDeleteConfirm(false)}
+                title={<><i className="bi bi-trash me-1"></i> Delete {selectedIds.size} {typeLabel}{selectedIds.size !== 1 ? 's' : ''}</>}
+                variant="danger"
+                size="sm"
+                footer={
+                    <>
+                        <button
+                            type="button"
+                            style={classic ? xpBtn() : undefined}
+                            className={classic ? '' : 'btn btn-sm btn-link text-muted'}
+                            onClick={() => setShowBulkDeleteConfirm(false)}
+                        >Cancel</button>
+                        <button
+                            type="button"
+                            style={classic ? xpBtn({ background: 'linear-gradient(to bottom, #c84040, #8e0000)', borderColor: '#8e0000 #5e0000 #5e0000 #8e0000', color: '#ffffff', fontWeight: 'bold' }) : undefined}
+                            className={classic ? '' : 'btn btn-sm btn-danger px-4 fw-bold'}
+                            onClick={confirmBulkDelete}
+                        >DELETE ALL</button>
+                    </>
+                }
+            >
+                <p style={classic ? { fontFamily: 'Tahoma, Arial, sans-serif', fontSize: '11px', margin: 0 } : undefined} className={classic ? '' : 'mb-0'}>
+                    Delete <strong>{selectedIds.size} {typeLabel.toLowerCase()}{selectedIds.size !== 1 ? 's' : ''}</strong>? This action cannot be undone.
+                </p>
             </ModalWrapper>
 
             {/* Edit Modal */}
