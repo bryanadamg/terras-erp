@@ -114,8 +114,17 @@ export default function QRScannerView({
             );
             scannerRef.current = scanner;
 
+            const findByCode = (nodes: any[], code: string): any => {
+                for (const wo of nodes) {
+                    if (wo.code === code) return wo;
+                    const child = findByCode(wo.child_wos || [], code);
+                    if (child) return child;
+                }
+                return null;
+            };
+
             const onScanSuccess = (decodedText: string) => {
-                const found = workOrders.find(wo => wo.code === decodedText);
+                const found = findByCode(workOrders, decodedText);
                 if (found) {
                     setScannedWO(found);
                     setError(null);

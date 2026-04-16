@@ -9,7 +9,8 @@ export default function ScannerPage() {
     const { workOrders, items, boms, locations, attributes, stockBalance, fetchData, authFetch } = useData();
     const router = useRouter();
     const { showToast } = useToast();
-    const API_BASE = (process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:8000/api').replace(/\/$/, '') + '/api';
+    const envBase = process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:8000/api';
+    const API_BASE = envBase.endsWith('/api') ? envBase : `${envBase}/api`;
 
     const handleUpdateWOStatus = async (woId: string, status: string) => {
         const res = await authFetch(`${API_BASE}/work-orders/${woId}/status?status=${status}`, { method: 'PUT' });
