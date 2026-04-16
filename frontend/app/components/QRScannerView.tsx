@@ -151,7 +151,7 @@ export default function QRScannerView({
         // Perform Material Check if starting
         if (status === 'IN_PROGRESS') {
             const { ok, missing } = validateMaterials(scannedWO);
-            if (!ok) {
+            if (!ok && missing.length > 0) {
                 setError(`INSUFFICIENT STOCK: Cannot start production. Missing ${missing.map(m => m.name).join(', ')} at ${missing[0].location}.`);
                 return;
             }
