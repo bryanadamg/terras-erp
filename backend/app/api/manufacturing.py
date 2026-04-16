@@ -2,6 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func, or_, inspect
 from sqlalchemy.orm import selectinload, joinedload, attributes as sa_attributes
+from collections import defaultdict
 from app.db.session import get_async_db
 from app.models.manufacturing import WorkOrder
 from app.models.bom import BOM, BOMLine
@@ -84,6 +85,60 @@ def populate_wo_ids(wo: WorkOrder):
     else:
         # Prevent Pydantic from triggering a lazy-load in async context
         sa_attributes.set_committed_value(wo, "child_wos", [])
+
+async def load_wo_tree(db: AsyncSession, root_ids: list) -> dict:
+    """
+    Load a WO tree of arbitrary depth using a recursive CTE.
+    Returns {wo.id: WorkOrder} with child_wos fully populated at every level.
+    """
+    if not root_ids:
+        return {}
+
+    # Recursive CTE: walk from roots down to all descendants
+    anchor = (
+        select(WorkOrder.id, WorkOrder.parent_wo_id)
+        .filter(WorkOrder.id.in_(root_ids))
+        .cte(name="wo_tree", recursive=True)
+    )
+    recursive_part = select(WorkOrder.id, WorkOrder.parent_wo_id).join(
+        anchor, WorkOrder.parent_wo_id == anchor.c.id
+    )
+    wo_cte = anchor.union_all(recursive_part)
+
+    id_result = await db.execute(select(wo_cte.c.id))
+    all_ids = [row[0] for row in id_result.fetchall()]
+
+    if not all_ids:
+        return {}
+
+    # Load every WO in the tree with its own relationships (no child_wos eager-load)
+    result = await db.execute(
+        select(WorkOrder)
+        .options(
+            selectinload(WorkOrder.item),
+            selectinload(WorkOrder.attribute_values),
+            selectinload(WorkOrder.bom).selectinload(BOM.item),
+            selectinload(WorkOrder.bom).selectinload(BOM.attribute_values),
+            selectinload(WorkOrder.bom).selectinload(BOM.operations),
+            selectinload(WorkOrder.bom).selectinload(BOM.lines).selectinload(BOMLine.item),
+            selectinload(WorkOrder.bom).selectinload(BOM.lines).selectinload(BOMLine.attribute_values),
+        )
+        .filter(WorkOrder.id.in_(all_ids))
+    )
+    wo_map = {wo.id: wo for wo in result.unique().scalars().all()}
+
+    # Index children by parent
+    children_by_parent: dict = defaultdict(list)
+    for wo in wo_map.values():
+        if wo.parent_wo_id is not None:
+            children_by_parent[wo.parent_wo_id].append(wo)
+
+    # Mark child_wos as committed on every node so Pydantic won't trigger a lazy-load
+    for wo in wo_map.values():
+        sa_attributes.set_committed_value(wo, "child_wos", children_by_parent.get(wo.id, []))
+
+    return wo_map
+
 
 async def create_wo_recursive(
     db: AsyncSession,
@@ -219,22 +274,13 @@ async def create_work_order(payload: WorkOrderCreate, db: AsyncSession = Depends
         db.add(wo)
         await db.commit()
     
-    # 3. Re-fetch fully loaded for response
-    result = await db.execute(
-        select(WorkOrder)
-        .options(*get_wo_options())
-        .filter(WorkOrder.id == wo.id)
-    )
-    wo = result.unique().scalars().first()
-    
-    await audit_service.log_activity(db, current_user.id, "CREATE", "WorkOrder", str(wo.id), f"Created {'Nested' if payload.create_nested else 'Single'} WO {wo.code}")
-    
-    # Populate IDs for response
-    wo.attribute_value_ids = [v.id for v in wo.attribute_values]
-    if wo.bom and wo.bom.lines:
-        for bl in wo.bom.lines:
-            bl.attribute_value_ids = [v.id for v in bl.attribute_values]
+    # 3. Re-fetch the full tree (unlimited depth) for response
+    wo_map = await load_wo_tree(db, [wo.id])
+    wo = wo_map.get(wo.id)
 
+    await audit_service.log_activity(db, current_user.id, "CREATE", "WorkOrder", str(wo.id), f"Created {'Nested' if payload.create_nested else 'Single'} WO {wo.code}")
+
+    populate_wo_ids(wo)
     return wo
 
 @router.get("/work-orders/available-code")
@@ -261,30 +307,32 @@ async def get_work_orders(
     db: AsyncSession = Depends(get_async_db),
     current_user: User = Depends(get_current_user)
 ):
-    query = select(WorkOrder)
-    
+    # Build a lightweight query for root WO IDs only (used for count + pagination)
+    id_query = select(WorkOrder.id)
+
     # Filter only root WOs by default to avoid clutter
     if not all_levels:
-        query = query.filter(WorkOrder.parent_wo_id == None)
-    
+        id_query = id_query.filter(WorkOrder.parent_wo_id == None)
+
     if start_date:
-        query = query.filter(WorkOrder.created_at >= start_date)
+        id_query = id_query.filter(WorkOrder.created_at >= start_date)
     if end_date:
-        query = query.filter(WorkOrder.created_at <= end_date)
-        
+        id_query = id_query.filter(WorkOrder.created_at <= end_date)
+
     if current_user.allowed_categories:
-        query = query.join(Item, WorkOrder.item_id == Item.id).filter(Item.category.in_(current_user.allowed_categories))
-        
-    count_result = await db.execute(select(func.count()).select_from(query.subquery()))
+        id_query = id_query.join(Item, WorkOrder.item_id == Item.id).filter(Item.category.in_(current_user.allowed_categories))
+
+    count_result = await db.execute(select(func.count()).select_from(id_query.subquery()))
     total = count_result.scalar()
-    
-    result = await db.execute(
-        query.options(*get_wo_options())
-        .order_by(WorkOrder.created_at.desc())
-        .offset(skip)
-        .limit(limit)
+
+    root_id_result = await db.execute(
+        id_query.order_by(WorkOrder.created_at.desc()).offset(skip).limit(limit)
     )
-    items_list = result.unique().scalars().all()
+    root_ids = [row[0] for row in root_id_result.fetchall()]
+
+    # Load the full tree (unlimited depth) for the paginated root WOs
+    wo_map = await load_wo_tree(db, root_ids)
+    items_list = [wo_map[rid] for rid in root_ids if rid in wo_map]
 
     requirements = []
     for item in items_list:
