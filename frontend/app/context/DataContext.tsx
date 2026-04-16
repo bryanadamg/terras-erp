@@ -163,7 +163,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
             }
 
             // Inventory / Stock
-            if (fetchTarget.includes('stock') || fetchTarget === 'dashboard' || fetchTarget === '' || fetchTarget.includes('inventory')) {
+            if (fetchTarget.includes('stock') || fetchTarget === 'dashboard' || fetchTarget === '' || fetchTarget.includes('inventory') || fetchTarget.includes('manufacturing')) {
                 requests.push(fetch(`${API_BASE}/stock/balance`, { headers }));
                 requestTypes.push('balance');
             }

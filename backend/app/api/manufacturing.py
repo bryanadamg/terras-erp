@@ -162,10 +162,19 @@ async def create_wo_recursive(
     if not bom:
         raise ValueError(f"BOM {bom_id} not found")
 
-    # 2. Generate unique code
-    timestamp = datetime.now().strftime("%y%m%d%H%M%S")
-    unique_suffix = str(uuid.uuid4())[:4].upper()
-    wo_code = f"WO-{timestamp}-{unique_suffix}"
+    # 2. Generate a meaningful code based on the BOM's item code (WO-{ITEM_CODE}-001)
+    item_result = await db.execute(select(Item).filter(Item.id == bom.item_id))
+    item = item_result.scalars().first()
+    item_code = item.code if item else str(bom.item_id)[:8].upper()
+    base = f"WO-{item_code}"
+    counter = 1
+    while True:
+        candidate = f"{base}-{str(counter).zfill(3)}"
+        existing = await db.execute(select(WorkOrder.id).filter(WorkOrder.code == candidate).limit(1))
+        if existing.scalars().first() is None:
+            wo_code = candidate
+            break
+        counter += 1
 
     # 3. Create this WO
     wo = WorkOrder(
