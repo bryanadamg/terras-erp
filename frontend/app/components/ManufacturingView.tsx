@@ -708,6 +708,23 @@ export default function ManufacturingView({
       return null;
   };
 
+  const findNodeByCode = (code: string): any => {
+      for (const wo of workOrders) {
+          const found = findNodeByCodeInTree(wo, code);
+          if (found) return found;
+      }
+      return null;
+  };
+
+  const findNodeByCodeInTree = (node: any, code: string): any => {
+      if (node.code === code) return node;
+      for (const child of (node.child_wos || [])) {
+          const found = findNodeByCodeInTree(child, code);
+          if (found) return found;
+      }
+      return null;
+  };
+
   const flattenTree = (node: any, level = 0): Array<{wo: any; level: number}> => {
       const result: Array<{wo: any; level: number}> = [{wo: node, level}];
       for (const child of (node.child_wos || [])) {
@@ -788,7 +805,7 @@ export default function ManufacturingView({
               const scanner = new Html5QrcodeScanner(readerId, { fps: 10, qrbox: { width: 180, height: 180 } }, false);
               scannerRef2.current = scanner;
               scanner.render((code: string) => {
-                  const found = workOrders.find((w: any) => w.code === code);
+                  const found = findNodeByCode(code);
                   if (found) {
                       scanner.clear().catch(() => {});
                       onUpdateStatus(found.id, found.status === 'PENDING' ? 'IN_PROGRESS' : 'COMPLETED');

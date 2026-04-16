@@ -17,6 +17,7 @@ from datetime import datetime
 from typing import Optional
 from app.core.ws_manager import manager
 import uuid
+import re
 
 router = APIRouter()
 
@@ -162,11 +163,12 @@ async def create_wo_recursive(
     if not bom:
         raise ValueError(f"BOM {bom_id} not found")
 
-    # 2. Generate a meaningful code based on the BOM's item code (WO-{ITEM_CODE}-001)
+    # 2. Generate a meaningful code based on the BOM's item name (WO-{ITEM_NAME}-001)
     item_result = await db.execute(select(Item).filter(Item.id == bom.item_id))
     item = item_result.scalars().first()
-    item_code = item.code if item else str(bom.item_id)[:8].upper()
-    base = f"WO-{item_code}"
+    raw_name = item.name if item else str(bom.item_id)[:8]
+    safe_name = re.sub(r'[^A-Za-z0-9\-]', '-', raw_name).strip('-')
+    base = f"WO-{safe_name}"
     counter = 1
     while True:
         candidate = f"{base}-{str(counter).zfill(3)}"
