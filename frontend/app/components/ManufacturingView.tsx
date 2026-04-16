@@ -456,6 +456,10 @@ export default function ManufacturingView({
   const API_BASE = envBase.endsWith('/api') ? envBase : `${envBase}/api`;
   const [viewMode, setViewMode] = useState('list');
 
+  // Keep a ref so scanner callbacks always access the latest workOrders without stale closure issues
+  const workOrdersRef = useRef<any[]>(workOrders);
+  useEffect(() => { workOrdersRef.current = workOrders; }, [workOrders]);
+
   // Derived Pagination
   const totalPages = Math.ceil(totalItems / pageSize);
   const startRange = (currentPage - 1) * pageSize + 1;
@@ -709,7 +713,7 @@ export default function ManufacturingView({
   };
 
   const findNodeByCode = (code: string): any => {
-      for (const wo of workOrders) {
+      for (const wo of workOrdersRef.current) {
           const found = findNodeByCodeInTree(wo, code);
           if (found) return found;
       }
