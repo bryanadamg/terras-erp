@@ -29,8 +29,12 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     );
 }
 
-export const useTheme = () => {
+const defaultTheme: ThemeContextType = {
+    uiStyle: 'classic',
+    setUiStyle: () => {},
+};
+
+export const useTheme = (): ThemeContextType => {
     const context = useContext(ThemeContext);
-    if (!context) throw new Error('useTheme must be used within ThemeProvider');
-    return context;
+    return context ?? defaultTheme;
 };
