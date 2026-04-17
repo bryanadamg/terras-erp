@@ -1,15 +1,18 @@
 'use client';
 
 import QRScannerView from '../components/QRScannerView';
+import MobileScannerView from '../components/mobile/ScannerView';
 import { useData } from '../context/DataContext';
 import { useRouter } from 'next/navigation';
 import { useToast } from '../components/Toast';
+import { useIsMobile } from '../hooks/useIsMobile';
 import { useEffect, useState } from 'react';
 
 export default function ScannerPage() {
     const { items, boms, locations, attributes, stockBalance, fetchData, authFetch } = useData();
     const router = useRouter();
     const { showToast } = useToast();
+    const isMobile = useIsMobile();
     const envBase = process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:8000/api';
     const API_BASE = envBase.endsWith('/api') ? envBase : `${envBase}/api`;
 
@@ -51,6 +54,21 @@ export default function ScannerPage() {
                     <div className="small">Loading work orders...</div>
                 </div>
             </div>
+        );
+    }
+
+    if (isMobile) {
+        return (
+            <MobileScannerView
+                workOrders={localWorkOrders}
+                items={items}
+                boms={localBoms}
+                locations={locations}
+                attributes={attributes}
+                stockBalance={localStockBalance}
+                onUpdateStatus={handleUpdateWOStatus}
+                onClose={() => router.push('/manufacturing')}
+            />
         );
     }
 

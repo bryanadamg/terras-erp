@@ -13,6 +13,15 @@ body {
   overflow-x: hidden;
 }
 
+@media (max-width: 767px) {
+  button, a, input, select, textarea {
+    min-height: 44px;
+  }
+  input[type="checkbox"], input[type="radio"] {
+    min-height: unset;
+  }
+}
+
 /* UI Style: Modern */
 .ui-style-modern {
   --primary-color: #6366f1;
