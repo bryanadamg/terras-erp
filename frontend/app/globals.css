@@ -14,10 +14,13 @@ body {
 }
 
 @media (max-width: 767px) {
-  button, a, input, select, textarea {
+  button, input, select, textarea {
     min-height: 44px;
   }
   input[type="checkbox"], input[type="radio"] {
+    min-height: unset;
+  }
+  .app-header button, .app-header select {
     min-height: unset;
   }
 }
@@ -600,7 +603,7 @@ body {
   
   .ui-style-classic .main-content {
     margin-left: 0 !important;
-    width: 100%;
+    width: 100% !important;
   }
 
   .mobile-overlay {

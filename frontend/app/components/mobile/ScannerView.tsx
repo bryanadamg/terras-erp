@@ -14,6 +14,87 @@ interface MobileScannerViewProps {
     onClose: () => void;
 }
 
+// ── XP style constants ────────────────────────────────────────────────────────
+const XP_BEIGE = '#ece9d8';
+const XP_FONT  = 'Tahoma, "Segoe UI", Arial, sans-serif';
+
+const xpWindow: React.CSSProperties = {
+    border: '2px solid',
+    borderColor: '#dfdfdf #808080 #808080 #dfdfdf',
+    boxShadow: '2px 2px 6px rgba(0,0,0,0.35)',
+    background: XP_BEIGE,
+    borderRadius: 0,
+    display: 'flex',
+    flexDirection: 'column',
+    minHeight: '100%',
+};
+
+const xpTitleBar: React.CSSProperties = {
+    background: 'linear-gradient(to right, #1a1a2e 0%, #3a3a5e 100%)',
+    color: '#ffffff',
+    fontFamily: XP_FONT,
+    fontSize: 13,
+    fontWeight: 'bold',
+    padding: '5px 8px',
+    boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.2)',
+    borderBottom: '1px solid #0a0a1e',
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    minHeight: 30,
+    flexShrink: 0,
+};
+
+const xpBtn = (extra: React.CSSProperties = {}): React.CSSProperties => ({
+    fontFamily: XP_FONT,
+    fontSize: 13,
+    padding: '6px 14px',
+    cursor: 'pointer',
+    background: 'linear-gradient(to bottom, #ffffff 0%, #d4d0c8 100%)',
+    border: '1px solid',
+    borderColor: '#dfdfdf #808080 #808080 #dfdfdf',
+    color: '#000000',
+    borderRadius: 0,
+    display: 'inline-flex',
+    alignItems: 'center',
+    gap: 5,
+    ...extra,
+});
+
+const xpInset: React.CSSProperties = {
+    border: '2px solid',
+    borderColor: '#808080 #dfdfdf #dfdfdf #808080',
+    background: '#ffffff',
+    borderRadius: 0,
+};
+
+const xpPanel: React.CSSProperties = {
+    border: '2px solid',
+    borderColor: '#dfdfdf #808080 #808080 #dfdfdf',
+    background: '#f5f4ef',
+    borderRadius: 0,
+    padding: '10px 12px',
+};
+
+const xpStatusBadge = (status: string): React.CSSProperties => {
+    const base: React.CSSProperties = {
+        fontFamily: XP_FONT, fontSize: 10, fontWeight: 'bold',
+        padding: '2px 8px', display: 'inline-block',
+    };
+    if (status === 'COMPLETED')   return { ...base, background: '#2e7d32', color: '#fff' };
+    if (status === 'IN_PROGRESS') return { ...base, background: '#1a4a8a', color: '#fff' };
+    if (status === 'CANCELLED')   return { ...base, background: '#666',    color: '#fff' };
+    return { ...base, background: '#b8860b', color: '#fff' };
+};
+
+const xpSectionLabel: React.CSSProperties = {
+    fontFamily: XP_FONT, fontSize: 10, fontWeight: 'bold',
+    textTransform: 'uppercase', letterSpacing: 0.5, color: '#555',
+    borderBottom: '1px solid #c0bdb5', paddingBottom: 3, marginBottom: 10,
+};
+
+// ─────────────────────────────────────────────────────────────────────────────
+
 export default function MobileScannerView({
     workOrders,
     items,
@@ -23,14 +104,15 @@ export default function MobileScannerView({
     onUpdateStatus,
     onClose,
 }: MobileScannerViewProps) {
-    const [scannedWO, setScannedWO] = useState<any>(null);
-    const [error, setError] = useState<string | null>(null);
-    const [manualCode, setManualCode] = useState('');
-    const [updating, setUpdating] = useState(false);
-    const scannerRef = useRef<Html5QrcodeScanner | null>(null);
+    const [scannedWO, setScannedWO]     = useState<any>(null);
+    const [error, setError]             = useState<string | null>(null);
+    const [manualCode, setManualCode]   = useState('');
+    const [updating, setUpdating]       = useState(false);
+    const scannerRef  = useRef<Html5QrcodeScanner | null>(null);
+    const terminalId  = useRef(Math.random().toString(36).substr(2, 6).toUpperCase());
 
-    // ── Helpers (same logic as QRScannerView) ────────────────────────────────
-    const getItemName = (id: string) => items.find((i: any) => i.id === id)?.name || id;
+    // ── Helpers ───────────────────────────────────────────────────────────────
+    const getItemName     = (id: string) => items.find((i: any) => i.id === id)?.name || id;
     const getLocationName = (id: string) => locations.find((l: any) => l.id === id)?.name || id;
 
     const calculateRequiredQty = (baseQty: number, line: any, bom: any) => {
@@ -77,7 +159,7 @@ export default function MobileScannerView({
 
     // ── Scanner lifecycle ─────────────────────────────────────────────────────
     useEffect(() => {
-        if (scannedWO) return; // don't init when a WO is already loaded
+        if (scannedWO) return;
 
         const timer = setTimeout(() => {
             if (!document.getElementById('mobile-reader')) return;
@@ -111,7 +193,7 @@ export default function MobileScannerView({
         if (status === 'IN_PROGRESS') {
             const { ok, missing } = validateMaterials(scannedWO);
             if (!ok && missing.length > 0) {
-                setError(`Insufficient stock: ${missing.map((m: any) => m.name).join(', ')} not available.`);
+                setError(`INSUFFICIENT STOCK: Missing ${missing.map((m: any) => m.name).join(', ')}.`);
                 return;
             }
         }
@@ -133,192 +215,206 @@ export default function MobileScannerView({
         setManualCode('');
     };
 
-    // ── Status helpers ────────────────────────────────────────────────────────
-    const statusColor: Record<string, string> = {
-        PENDING: '#f59e0b',
-        IN_PROGRESS: '#3b82f6',
-        COMPLETED: '#10b981',
-        CANCELLED: '#6b7280',
-    };
-
     const materialCheck = scannedWO ? validateMaterials(scannedWO) : null;
 
+    // ── Render ────────────────────────────────────────────────────────────────
     return (
-        <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100%', background: '#111' }}>
+        <div style={xpWindow}>
 
-            {/* ── Header ── */}
-            <div style={{ background: '#1a1a2e', padding: '10px 16px', display: 'flex', alignItems: 'center', gap: 10, borderBottom: '1px solid #333' }}>
-                <button
-                    onClick={onClose}
-                    style={{ background: 'none', border: 'none', color: '#aaa', fontSize: 20, padding: 0, lineHeight: 1, cursor: 'pointer' }}
-                >
-                    ←
-                </button>
-                <span style={{ color: '#fff', fontWeight: 700, fontSize: 15, letterSpacing: 1 }}>
-                    SCAN TERMINAL
+            {/* ── XP Title Bar ── */}
+            <div style={xpTitleBar}>
+                <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <i className="bi bi-qr-code-scan" style={{ color: '#aaccff', fontSize: 14 }}></i>
+                    Operator Scan Terminal
                 </span>
+                <button style={xpBtn({ padding: '1px 8px', fontSize: 12, minHeight: 22 })} type="button" onClick={onClose}>✕</button>
             </div>
 
-            {!scannedWO ? (
-                <>
-                    {/* ── Camera viewfinder ── */}
-                    <div style={{ background: '#000', flex: '0 0 auto' }}>
-                        <div id="mobile-reader" style={{ width: '100%' }} />
-                    </div>
+            {/* ── Body ── */}
+            <div style={{ background: XP_BEIGE, padding: '12px', flex: 1, display: 'flex', flexDirection: 'column', gap: 10 }}>
 
-                    {/* ── Error ── */}
-                    {error && (
-                        <div style={{ background: '#7f1d1d', color: '#fca5a5', padding: '10px 16px', fontSize: 13 }}>
-                            ⚠ {error}
+                {!scannedWO ? (
+                    <>
+                        {/* Camera viewfinder — XP inset border */}
+                        <div style={{ ...xpInset, overflow: 'hidden' }}>
+                            <div id="mobile-reader" style={{ width: '100%' }} />
                         </div>
-                    )}
 
-                    {/* ── Manual entry ── */}
-                    <div style={{ background: '#1a1a2e', padding: '16px', borderTop: '1px solid #333' }}>
-                        <div style={{ color: '#888', fontSize: 11, textTransform: 'uppercase', letterSpacing: 1, marginBottom: 8 }}>
-                            Or enter WO code manually
+                        {/* Ready label */}
+                        <div style={{ textAlign: 'center', fontFamily: XP_FONT, fontSize: 12, color: '#333' }}>
+                            <div style={{ fontWeight: 'bold', marginBottom: 2 }}>Ready to Scan</div>
+                            <div style={{ fontSize: 11, color: '#666' }}>Point your camera at a Work Order QR Code</div>
                         </div>
-                        <div style={{ display: 'flex', gap: 8 }}>
-                            <input
-                                type="text"
-                                value={manualCode}
-                                onChange={e => setManualCode(e.target.value)}
-                                onKeyDown={e => e.key === 'Enter' && handleManualLookup()}
-                                placeholder="e.g. WO-2024-0042"
-                                style={{
-                                    flex: 1, background: '#0f0f1a', border: '1px solid #444',
-                                    color: '#fff', borderRadius: 8, padding: '12px 14px',
-                                    fontSize: 15, outline: 'none',
-                                }}
-                            />
-                            <button
-                                onClick={handleManualLookup}
-                                style={{
-                                    background: '#3b82f6', color: '#fff', border: 'none',
-                                    borderRadius: 8, padding: '0 18px', fontSize: 15,
-                                    fontWeight: 700, cursor: 'pointer', minWidth: 56,
-                                }}
-                            >
-                                →
-                            </button>
-                        </div>
-                    </div>
-                </>
-            ) : (
-                <>
-                    {/* ── WO Result Card ── */}
-                    <div style={{ background: '#1c1c2e', flex: 1, padding: '20px 16px', display: 'flex', flexDirection: 'column', gap: 16 }}>
 
-                        {/* WO identity */}
-                        <div style={{ background: '#0f0f1a', borderRadius: 12, padding: '16px 18px', border: '1px solid #333' }}>
-                            <div style={{ color: '#888', fontSize: 11, textTransform: 'uppercase', letterSpacing: 1, marginBottom: 6 }}>Work Order</div>
-                            <div style={{ color: '#60a5fa', fontFamily: 'monospace', fontSize: 22, fontWeight: 700, marginBottom: 4 }}>{scannedWO.code}</div>
-                            <div style={{ color: '#e2e8f0', fontSize: 16, marginBottom: 8 }}>{getItemName(scannedWO.item_id)}</div>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
-                                <span style={{
-                                    background: statusColor[scannedWO.status] || '#555',
-                                    color: '#fff', borderRadius: 6, padding: '3px 10px',
-                                    fontSize: 12, fontWeight: 700,
-                                }}>
-                                    {scannedWO.status}
-                                </span>
-                                <span style={{ color: '#94a3b8', fontSize: 14 }}>Qty: {parseFloat(scannedWO.qty)}</span>
+                        {/* Error */}
+                        {error && (
+                            <div style={{ background: '#fce8e8', border: '1px solid #cc0000', borderLeft: '4px solid #cc0000', padding: '8px 10px', fontFamily: XP_FONT, fontSize: 12, color: '#6b0000' }}>
+                                <i className="bi bi-exclamation-triangle-fill" style={{ marginRight: 5 }}></i>{error}
+                            </div>
+                        )}
+
+                        {/* Manual entry */}
+                        <div style={{ ...xpPanel, marginTop: 4 }}>
+                            <div style={xpSectionLabel}>Or enter WO code manually</div>
+                            <div style={{ display: 'flex', gap: 6 }}>
+                                <input
+                                    type="text"
+                                    value={manualCode}
+                                    onChange={e => setManualCode(e.target.value)}
+                                    onKeyDown={e => e.key === 'Enter' && handleManualLookup()}
+                                    placeholder="e.g. WO-2024-0042"
+                                    style={{
+                                        ...xpInset,
+                                        flex: 1, padding: '8px 10px',
+                                        fontFamily: XP_FONT, fontSize: 14,
+                                        outline: 'none', minHeight: 40,
+                                    }}
+                                />
+                                <button
+                                    onClick={handleManualLookup}
+                                    style={xpBtn({ padding: '8px 14px', fontSize: 14, fontWeight: 'bold', minHeight: 40, minWidth: 48 })}
+                                >
+                                    →
+                                </button>
                             </div>
                         </div>
+                    </>
+                ) : (
+                    <>
+                        {/* ── WO identity panel ── */}
+                        <div style={{ ...xpPanel, display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 8 }}>
+                            <div style={{ minWidth: 0 }}>
+                                <div style={{ fontFamily: XP_FONT, fontSize: 9, fontWeight: 'bold', textTransform: 'uppercase', color: '#666', marginBottom: 2 }}>
+                                    Active Work Order
+                                </div>
+                                <div style={{ fontFamily: "'Courier New', monospace", fontSize: 22, fontWeight: 'bold', color: '#0058e6', lineHeight: 1.1 }}>
+                                    {scannedWO.code}
+                                </div>
+                                <div style={{ marginTop: 5, display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                                    <span style={{ fontFamily: XP_FONT, fontSize: 12, color: '#333' }}>{getItemName(scannedWO.item_id)}</span>
+                                    <span style={xpStatusBadge(scannedWO.status)}>{scannedWO.status}</span>
+                                </div>
+                                <div style={{ fontFamily: XP_FONT, fontSize: 11, color: '#555', marginTop: 3 }}>
+                                    Qty: {parseFloat(scannedWO.qty)}
+                                </div>
+                            </div>
+                            <button style={xpBtn({ flexShrink: 0, padding: '6px 12px' })} type="button" onClick={handleReset}>
+                                <i className="bi bi-arrow-repeat"></i> Reset
+                            </button>
+                        </div>
 
-                        {/* Material check */}
+                        {/* ── Material check ── */}
                         {materialCheck && (
                             <div style={{
-                                background: materialCheck.ok ? '#052e16' : '#450a0a',
-                                border: `1px solid ${materialCheck.ok ? '#166534' : '#991b1b'}`,
-                                borderRadius: 10, padding: '12px 14px',
+                                border: '1px solid',
+                                borderColor: materialCheck.ok ? '#2e7d32' : '#cc0000',
+                                borderLeft: `4px solid ${materialCheck.ok ? '#2e7d32' : '#cc0000'}`,
+                                background: materialCheck.ok ? '#e8f5e9' : '#fce8e8',
+                                padding: '8px 10px',
+                                fontFamily: XP_FONT,
                             }}>
-                                <div style={{ color: materialCheck.ok ? '#86efac' : '#fca5a5', fontSize: 13, fontWeight: 600, marginBottom: materialCheck.ok ? 0 : 6 }}>
-                                    {materialCheck.ok ? '✓ All materials available' : `⚠ Missing materials`}
+                                <div style={{ fontSize: 12, fontWeight: 'bold', color: materialCheck.ok ? '#1b5e20' : '#6b0000', marginBottom: materialCheck.ok ? 0 : 4 }}>
+                                    {materialCheck.ok
+                                        ? <><i className="bi bi-check-circle-fill" style={{ marginRight: 5 }}></i>All materials available</>
+                                        : <><i className="bi bi-exclamation-triangle-fill" style={{ marginRight: 5 }}></i>Missing materials</>
+                                    }
                                 </div>
                                 {!materialCheck.ok && materialCheck.missing.map((m: any, i: number) => (
-                                    <div key={i} style={{ color: '#fca5a5', fontSize: 12, marginTop: 2 }}>
-                                        • {m.name} at {m.location}
-                                    </div>
+                                    <div key={i} style={{ fontSize: 11, color: '#6b0000', marginTop: 2 }}>• {m.name} at {m.location}</div>
                                 ))}
                             </div>
                         )}
 
-                        {/* Error */}
+                        {/* ── Error ── */}
                         {error && (
-                            <div style={{ background: '#7f1d1d', color: '#fca5a5', borderRadius: 10, padding: '12px 14px', fontSize: 13 }}>
-                                ⚠ {error}
+                            <div style={{ background: '#fce8e8', border: '1px solid #cc0000', borderLeft: '4px solid #cc0000', padding: '8px 10px', fontFamily: XP_FONT, fontSize: 12, color: '#6b0000' }}>
+                                <i className="bi bi-exclamation-triangle-fill" style={{ marginRight: 5 }}></i>{error}
                             </div>
                         )}
 
-                        {/* Action buttons */}
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginTop: 'auto' }}>
-                            {scannedWO.status === 'PENDING' && (
-                                <button
-                                    onClick={() => handleUpdate('IN_PROGRESS')}
-                                    disabled={updating}
-                                    style={{
-                                        background: updating ? '#1e40af' : '#2563eb',
-                                        color: '#fff', border: 'none', borderRadius: 12,
-                                        padding: '18px', fontSize: 17, fontWeight: 700,
-                                        cursor: updating ? 'not-allowed' : 'pointer',
-                                        letterSpacing: 0.5,
-                                    }}
-                                >
-                                    {updating ? '...' : '▶  START PRODUCTION'}
-                                </button>
-                            )}
-                            {scannedWO.status === 'IN_PROGRESS' && (
-                                <>
-                                    <button
-                                        onClick={() => handleUpdate('COMPLETED')}
-                                        disabled={updating}
-                                        style={{
-                                            background: updating ? '#065f46' : '#059669',
-                                            color: '#fff', border: 'none', borderRadius: 12,
-                                            padding: '18px', fontSize: 17, fontWeight: 700,
-                                            cursor: updating ? 'not-allowed' : 'pointer',
-                                        }}
-                                    >
-                                        {updating ? '...' : '✓  FINISH'}
-                                    </button>
-                                    <button
-                                        onClick={() => handleUpdate('CANCELLED')}
-                                        disabled={updating}
-                                        style={{
-                                            background: 'transparent', color: '#f87171',
-                                            border: '1px solid #f87171', borderRadius: 12,
-                                            padding: '14px', fontSize: 15, fontWeight: 600,
-                                            cursor: updating ? 'not-allowed' : 'pointer',
-                                        }}
-                                    >
-                                        Cancel WO
-                                    </button>
-                                </>
-                            )}
-                            {(scannedWO.status === 'COMPLETED' || scannedWO.status === 'CANCELLED') && (
-                                <div style={{ color: '#94a3b8', textAlign: 'center', fontSize: 14, padding: '10px 0' }}>
-                                    This work order is {scannedWO.status.toLowerCase()}.
-                                </div>
-                            )}
-                        </div>
-                    </div>
+                        {/* ── Factory floor actions ── */}
+                        <div style={xpPanel}>
+                            <div style={xpSectionLabel}>Factory Floor Actions</div>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
 
-                    {/* ── Reset button ── */}
-                    <div style={{ background: '#111', padding: '14px 16px', borderTop: '1px solid #222' }}>
-                        <button
-                            onClick={handleReset}
-                            style={{
-                                width: '100%', background: 'none', color: '#60a5fa',
-                                border: '1px solid #334', borderRadius: 10, padding: '12px',
-                                fontSize: 14, cursor: 'pointer',
-                            }}
-                        >
-                            ↩ Scan another work order
-                        </button>
-                    </div>
-                </>
-            )}
+                                {scannedWO.status === 'PENDING' && (
+                                    <button
+                                        type="button"
+                                        disabled={updating}
+                                        onClick={() => handleUpdate('IN_PROGRESS')}
+                                        style={xpBtn({
+                                            background: 'linear-gradient(to bottom, #316ac5, #1a4a8a)',
+                                            borderColor: '#1a3a7a #0a1a4a #0a1a4a #1a3a7a',
+                                            color: '#fff', fontWeight: 'bold',
+                                            padding: '14px 20px', fontSize: 15,
+                                            width: '100%', justifyContent: 'center',
+                                            opacity: updating ? 0.7 : 1,
+                                        })}
+                                    >
+                                        <i className="bi bi-play-fill" style={{ fontSize: 18 }}></i>
+                                        {updating ? 'Starting...' : 'START PRODUCTION'}
+                                    </button>
+                                )}
+
+                                {scannedWO.status === 'IN_PROGRESS' && (
+                                    <>
+                                        <button
+                                            type="button"
+                                            disabled={updating}
+                                            onClick={() => handleUpdate('COMPLETED')}
+                                            style={xpBtn({
+                                                background: 'linear-gradient(to bottom, #5ec85e, #2d7a2d)',
+                                                borderColor: '#1a5e1a #0a3e0a #0a3e0a #1a5e1a',
+                                                color: '#fff', fontWeight: 'bold',
+                                                padding: '14px 20px', fontSize: 15,
+                                                width: '100%', justifyContent: 'center',
+                                                opacity: updating ? 0.7 : 1,
+                                            })}
+                                        >
+                                            <i className="bi bi-check-lg" style={{ fontSize: 18 }}></i>
+                                            {updating ? 'Finishing...' : 'MARK AS COMPLETED'}
+                                        </button>
+                                        <button
+                                            type="button"
+                                            disabled={updating}
+                                            onClick={() => handleUpdate('CANCELLED')}
+                                            style={{ background: 'none', border: 'none', color: '#cc0000', cursor: updating ? 'not-allowed' : 'pointer', fontFamily: XP_FONT, fontSize: 12, textDecoration: 'underline', padding: '4px 0', textAlign: 'center' as const }}
+                                        >
+                                            Cancel This Order
+                                        </button>
+                                    </>
+                                )}
+
+                                {scannedWO.status === 'COMPLETED' && (
+                                    <div style={{ background: '#e8f5e9', border: '1px solid #2e7d32', padding: '18px', textAlign: 'center' as const }}>
+                                        <i className="bi bi-check-circle-fill" style={{ color: '#2e7d32', fontSize: 32, display: 'block', marginBottom: 8 }}></i>
+                                        <div style={{ fontFamily: XP_FONT, fontSize: 14, fontWeight: 'bold', color: '#2e7d32' }}>PRODUCTION COMPLETE</div>
+                                        <div style={{ fontFamily: XP_FONT, fontSize: 11, color: '#2e7d32', opacity: 0.85, marginTop: 4 }}>This order has been received into inventory.</div>
+                                    </div>
+                                )}
+
+                                {scannedWO.status === 'CANCELLED' && (
+                                    <div style={{ background: '#f5f5f5', border: '1px solid #808080', padding: '18px', textAlign: 'center' as const }}>
+                                        <div style={{ fontFamily: XP_FONT, fontSize: 13, fontWeight: 'bold', color: '#444' }}>This work order has been cancelled.</div>
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                    </>
+                )}
+            </div>
+
+            {/* ── XP Status Bar ── */}
+            <div style={{
+                background: 'linear-gradient(to bottom, #e8e6df, #d5d3cc)',
+                borderTop: '1px solid #b0a898',
+                padding: '3px 10px',
+                fontFamily: XP_FONT, fontSize: 10, color: '#666',
+                textAlign: 'center',
+                flexShrink: 0,
+            }}>
+                Terminal ID: {terminalId.current} | Secured by Teras Auth
+            </div>
         </div>
     );
 }
