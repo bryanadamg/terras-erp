@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { useUser } from '../context/UserContext';
+import { useIsMobile } from '../hooks/useIsMobile';
 
 interface UserHint {
     username: string;
@@ -26,6 +27,7 @@ function getAvatarColor(username: string): string {
 export default function LoginPage() {
     const { currentUser, login, loading } = useUser();
     const router = useRouter();
+    const isMobile = useIsMobile();
 
     const [mounted, setMounted] = useState(false);
     const [currentTime, setCurrentTime] = useState(new Date());
@@ -115,9 +117,9 @@ export default function LoginPage() {
         e.preventDefault();
         setIsLoggingIn(true);
         setLoginError('');
-        const success = await login(selectedUsername, password);
-        if (!success) {
-            setLoginError('Invalid credentials');
+        const result = await login(selectedUsername, password);
+        if (result !== true) {
+            setLoginError(result === 'network_error' ? 'Cannot reach server — check your connection' : 'Invalid username or password');
             setIsLoggingIn(false);
         }
     };
@@ -140,6 +142,211 @@ export default function LoginPage() {
         return (
             <div className="d-flex justify-content-center align-items-center vh-100 bg-dark text-info fw-bold font-monospace">
                 SYSTEM_CHECK...
+            </div>
+        );
+    }
+
+    if (isMobile) {
+        return (
+            <div
+                style={{
+                    position: 'fixed', inset: 0,
+                    background: 'linear-gradient(135deg, #0d1f5c 0%, #1a3fa8 40%, #0a246a 100%)',
+                    fontFamily: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif",
+                    display: 'flex', flexDirection: 'column', overflow: 'auto',
+                }}
+                onClick={() => setShowSuggestions(false)}
+            >
+                {/* Mobile header */}
+                <div style={{ padding: '32px 28px 20px', textAlign: 'center' }}>
+                    <div style={{ fontSize: 28, fontWeight: 300, letterSpacing: 3, color: 'white', marginBottom: 4 }}>
+                        Teras ERP
+                    </div>
+                    <div style={{ fontSize: 11, color: '#a0c2f5', letterSpacing: 4, textTransform: 'uppercase' }}>
+                        Manufacturing &amp; Inventory
+                    </div>
+                </div>
+
+                {/* Mobile form card */}
+                <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', padding: '0 28px 40px' }}>
+                    <div style={{
+                        background: 'rgba(255,255,255,0.07)',
+                        border: '1px solid rgba(166,202,240,0.2)',
+                        borderRadius: 12, padding: '28px 24px',
+                    }}>
+                        {/* Avatar */}
+                        <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 20 }}>
+                            <div style={{
+                                width: 56, height: 56,
+                                background: step === 'password' ? getAvatarColor(selectedUsername) : 'linear-gradient(135deg,#4a8abf,#2a5a9f)',
+                                borderRadius: 8, border: '2px solid rgba(255,255,255,0.3)',
+                                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                boxShadow: '0 4px 16px rgba(0,0,0,0.4)',
+                            }}>
+                                <div style={{ width: '50%', height: '50%', background: 'rgba(255,255,255,0.75)', borderRadius: '50%' }} />
+                            </div>
+                        </div>
+
+                        {step === 'password' && (
+                            <div style={{ textAlign: 'center', fontSize: 16, color: 'white', fontWeight: 600, marginBottom: 16 }}>
+                                {selectedUsername}
+                            </div>
+                        )}
+
+                        <div style={{ fontSize: 13, color: '#8aace0', textAlign: 'center', marginBottom: 20 }}>
+                            {step === 'username' ? 'Enter your username to sign in' : 'Enter your password to continue'}
+                        </div>
+
+                        <form
+                            onSubmit={step === 'password'
+                                ? handleSubmit
+                                : (e) => {
+                                    e.preventDefault();
+                                    const match = suggestions[highlightedIdx] || { username: usernameInput.trim(), full_name: '' };
+                                    if (match.username) confirmUsername(match.username);
+                                }
+                            }
+                            style={{ display: 'flex', flexDirection: 'column', gap: 12 }}
+                            onClick={e => e.stopPropagation()}
+                        >
+                            {step === 'username' && (
+                                <div style={{ position: 'relative' }}>
+                                    <div style={{ fontSize: 12, color: '#c0d8f8', marginBottom: 6 }}>Username</div>
+                                    <input
+                                        ref={usernameRef}
+                                        id="username-input"
+                                        data-testid="username-input"
+                                        type="text"
+                                        autoComplete="username"
+                                        value={usernameInput}
+                                        onChange={e => { setUsernameInput(e.target.value); setShowSuggestions(true); }}
+                                        onKeyDown={handleUsernameKeyDown}
+                                        onFocus={() => setShowSuggestions(true)}
+                                        style={{
+                                            width: '100%', height: 48,
+                                            background: 'rgba(255,255,255,0.12)',
+                                            border: '1px solid rgba(166,202,240,0.6)',
+                                            borderRadius: 6, color: 'white', padding: '0 14px',
+                                            fontSize: 16, outline: 'none', boxSizing: 'border-box',
+                                        }}
+                                        required
+                                    />
+                                    {showSuggestions && suggestions.length > 0 && (
+                                        <div style={{
+                                            position: 'absolute', top: '100%', left: 0, right: 0,
+                                            background: 'rgba(8,24,80,0.97)',
+                                            border: '1px solid rgba(166,202,240,0.35)',
+                                            borderTop: 'none', borderRadius: '0 0 6px 6px',
+                                            zIndex: 100, overflow: 'hidden',
+                                        }}>
+                                            {suggestions.map((u, i) => (
+                                                <div
+                                                    key={u.username}
+                                                    onMouseDown={() => confirmUsername(u.username)}
+                                                    style={{
+                                                        padding: '12px 14px',
+                                                        fontSize: 14,
+                                                        color: i === highlightedIdx ? 'white' : '#b0cce8',
+                                                        background: i === highlightedIdx ? 'rgba(37,99,196,0.7)' : 'transparent',
+                                                        cursor: 'pointer',
+                                                        display: 'flex', alignItems: 'center', gap: 8,
+                                                        borderBottom: i < suggestions.length - 1 ? '1px solid rgba(255,255,255,0.05)' : 'none',
+                                                    }}
+                                                >
+                                                    <div style={{ width: 6, height: 6, borderRadius: '50%', background: '#4a90d9', flexShrink: 0 }} />
+                                                    <span style={{ fontWeight: 600 }}>{u.username}</span>
+                                                    {u.full_name && <span style={{ opacity: 0.6 }}>— {u.full_name}</span>}
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )}
+                                </div>
+                            )}
+
+                            {step === 'password' && (
+                                <div>
+                                    <div style={{ fontSize: 12, color: '#e8c870', marginBottom: 6 }}>Password</div>
+                                    <input
+                                        ref={passwordRef}
+                                        id="password-input"
+                                        data-testid="password-input"
+                                        type="password"
+                                        autoComplete="current-password"
+                                        value={password}
+                                        onChange={e => setPassword(e.target.value)}
+                                        style={{
+                                            width: '100%', height: 48,
+                                            background: 'rgba(255,255,255,0.12)',
+                                            border: '1px solid rgba(232,200,112,0.5)',
+                                            borderRadius: 6, color: 'white', padding: '0 14px',
+                                            fontSize: 16, outline: 'none', boxSizing: 'border-box',
+                                        }}
+                                        required
+                                    />
+                                </div>
+                            )}
+
+                            {loginError && (
+                                <div
+                                    data-testid="login-error"
+                                    style={{
+                                        fontSize: 13, color: '#ff9080',
+                                        background: 'rgba(180,40,20,0.25)',
+                                        border: '1px solid rgba(180,40,20,0.4)',
+                                        borderRadius: 6, padding: '10px 12px',
+                                    }}
+                                >
+                                    {loginError}
+                                </div>
+                            )}
+
+                            <div style={{
+                                display: 'flex',
+                                justifyContent: step === 'password' ? 'space-between' : 'flex-end',
+                                gap: 10, marginTop: 4,
+                            }}>
+                                {step === 'password' && (
+                                    <button
+                                        type="button"
+                                        onClick={handleBack}
+                                        style={{
+                                            background: 'linear-gradient(to bottom,#607090,#404860)',
+                                            border: '1px solid rgba(100,130,180,0.4)', borderRadius: 6,
+                                            color: 'white', fontSize: 14,
+                                            padding: '12px 20px',
+                                            cursor: 'pointer', flex: 1,
+                                        }}
+                                    >
+                                        ← Back
+                                    </button>
+                                )}
+                                <button
+                                    type="submit"
+                                    data-testid="login-submit"
+                                    disabled={isLoggingIn}
+                                    style={{
+                                        background: isLoggingIn
+                                            ? 'linear-gradient(to bottom,#3a6090,#1a3a6a)'
+                                            : 'linear-gradient(to bottom,#4a90d9,#2563c4)',
+                                        border: '1px solid #0a246a', borderRadius: 6,
+                                        color: 'white', fontSize: 15, fontWeight: 600,
+                                        padding: '14px 20px',
+                                        cursor: isLoggingIn ? 'not-allowed' : 'pointer',
+                                        flex: 1,
+                                        boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.2)',
+                                    }}
+                                >
+                                    {isLoggingIn ? 'Signing in...' : step === 'username' ? 'Next →' : 'Sign In →'}
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+
+                {/* Mobile clock */}
+                <div style={{ padding: '0 28px 24px', textAlign: 'center', fontSize: 12, color: '#8aaac8', lineHeight: 1.6 }}>
+                    {formatTime(currentTime)} · {formatDate(currentTime)}
+                </div>
             </div>
         );
     }

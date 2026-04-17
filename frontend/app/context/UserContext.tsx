@@ -38,7 +38,7 @@ interface UserContextType {
     setCurrentUser: (user: User) => void;
     hasPermission: (permissionCode: string) => boolean;
     refreshUsers: () => Promise<void>;
-    login: (username: string, password: string) => Promise<boolean>;
+    login: (username: string, password: string) => Promise<boolean | 'network_error'>;
     logout: () => void;
     loading: boolean;
 }
@@ -56,7 +56,7 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
     const [loading, setLoading] = useState(true);
     const API_BASE = process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:8000/api';
 
-    const login = async (username, password) => {
+    const login = async (username, password): Promise<boolean | 'network_error'> => {
         const formData = new FormData();
         formData.append('username', username);
         formData.append('password', password);
@@ -74,7 +74,7 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
             await fetchCurrentUser(data.access_token);
             return true;
         } catch (e) {
-            return false;
+            return 'network_error';
         }
     };
 
