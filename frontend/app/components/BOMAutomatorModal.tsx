@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback, memo } from 'react';
 import { useLanguage } from '../context/LanguageContext';
+import { useTheme } from '../context/ThemeContext';
 
 interface AutoBOMProfile {
     id: string;
@@ -195,7 +196,7 @@ const BOMAutomatorModal = memo(({ isOpen, onClose, onApply }: BOMAutomatorModalP
     const [levels, setLevels] = useState<string[][]>(DEFAULT_LEVELS);
     const [profiles, setProfiles] = useState<AutoBOMProfile[]>([]);
     const [profileName, setProfileName] = useState('');
-    const [currentStyle, setCurrentStyle] = useState('default');
+    const { uiStyle: currentStyle } = useTheme();
 
     useEffect(() => {
         if (!isOpen) return;
@@ -207,8 +208,6 @@ const BOMAutomatorModal = memo(({ isOpen, onClose, onApply }: BOMAutomatorModalP
         if (lastLevels) {
             try { setLevels(JSON.parse(lastLevels)); } catch (e) {}
         }
-        const savedStyle = localStorage.getItem('ui_style');
-        if (savedStyle) setCurrentStyle(savedStyle);
     }, [isOpen]);
 
     const handlePatternChange = useCallback((lIdx: number, pIdx: number, value: string) => {

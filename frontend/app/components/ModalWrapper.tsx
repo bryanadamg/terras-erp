@@ -1,6 +1,7 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
+import { useTheme } from '../context/ThemeContext';
 
 interface ModalWrapperProps {
     isOpen: boolean;
@@ -33,13 +34,8 @@ export default function ModalWrapper({
     isOpen, onClose, title, children, footer,
     level = 1, size = 'md', variant = 'primary'
 }: ModalWrapperProps) {
-    const [currentStyle, setCurrentStyle] = useState('classic');
+    const { uiStyle: currentStyle } = useTheme();
     const [closeBtnHov, setCloseBtnHov] = useState(false);
-
-    useEffect(() => {
-        const saved = localStorage.getItem('ui_style');
-        if (saved) setCurrentStyle(saved);
-    }, [isOpen]); // re-read on each open
 
     if (!isOpen) return null;
 

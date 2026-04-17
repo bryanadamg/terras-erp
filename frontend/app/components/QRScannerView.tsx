@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { Html5QrcodeScanner } from 'html5-qrcode';
 import { useLanguage } from '../context/LanguageContext';
+import { useTheme } from '../context/ThemeContext';
 
 interface QRScannerViewProps {
     workOrders: any[];
@@ -24,8 +25,7 @@ export default function QRScannerView({
     onClose
 }: QRScannerViewProps) {
     const { t } = useLanguage();
-    const [currentStyle, setCurrentStyle] = useState('classic');
-    useEffect(() => { const saved = localStorage.getItem('ui_style'); if (saved) setCurrentStyle(saved); }, []);
+    const { uiStyle: currentStyle } = useTheme();
     const classic = currentStyle === 'classic';
 
     const [scannedWO, setScannedWO] = useState<any>(null);

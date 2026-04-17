@@ -1,5 +1,6 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useRef } from 'react';
 import { useLanguage } from '../context/LanguageContext';
+import { useTheme } from '../context/ThemeContext';
 import ModalWrapper from './ModalWrapper';
 
 interface BulkImportModalProps {
@@ -17,8 +18,7 @@ export default function BulkImportModal({ isOpen, onClose, onImport, onDownloadT
     const [results, setResults] = useState<any>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
 
-    const [currentStyle, setCurrentStyle] = useState('classic');
-    useEffect(() => { const saved = localStorage.getItem('ui_style'); if (saved) setCurrentStyle(saved); }, [isOpen]);
+    const { uiStyle: currentStyle } = useTheme();
     const classic = currentStyle === 'classic';
 
     // ── XP style constants ────────────────────────────────────────────────────

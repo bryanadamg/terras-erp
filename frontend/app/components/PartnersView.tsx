@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { useToast } from './Toast';
 import { useLanguage } from '../context/LanguageContext';
 import ModalWrapper from './ModalWrapper';
+import { useTheme } from '../context/ThemeContext';
 
 interface Partner {
     id: string;
@@ -30,14 +31,9 @@ export default function PartnersView({ partners, type, onCreate, onUpdate, onDel
     const [newPartner, setNewPartner] = useState({ name: '', address: '', type, active: true });
     const [deletingPartner, setDeletingPartner] = useState<Partner | null>(null);
     const [searchTerm, setSearchTerm] = useState('');
-    const [currentStyle, setCurrentStyle] = useState('classic');
+    const { uiStyle: currentStyle } = useTheme();
     const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
     const [showBulkDeleteConfirm, setShowBulkDeleteConfirm] = useState(false);
-
-    useEffect(() => {
-        const saved = localStorage.getItem('ui_style');
-        if (saved) setCurrentStyle(saved);
-    }, []);
 
     useEffect(() => {
         setSelectedIds(new Set());

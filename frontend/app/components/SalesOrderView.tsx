@@ -5,6 +5,7 @@ import { useLanguage } from '../context/LanguageContext';
 import SearchableSelect from './SearchableSelect';
 import PrintHeader from './PrintHeader';
 import ModalWrapper from './ModalWrapper';
+import { useTheme } from '../context/ThemeContext';
 
 export default function SalesOrderView({ items, attributes, salesOrders, partners, onCreateSO, onDeleteSO, onUpdateSOStatus, onGenerateWO }: any) {
   const { showToast } = useToast();
@@ -13,16 +14,11 @@ export default function SalesOrderView({ items, attributes, salesOrders, partner
   const [printingSO, setPrintingSO] = useState<any>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('ALL');
-  const [currentStyle, setCurrentStyle] = useState('classic');
+  const { uiStyle: currentStyle } = useTheme();
 
   // Produce dropdown portal state
   const [produceDropdownSO, setProduceDropdownSO] = useState<any>(null);
   const [produceDropdownPos, setProduceDropdownPos] = useState({ top: 0, left: 0 });
-
-  useEffect(() => {
-      const saved = localStorage.getItem('ui_style');
-      if (saved) setCurrentStyle(saved);
-  }, []);
 
   const classic = currentStyle === 'classic';
 

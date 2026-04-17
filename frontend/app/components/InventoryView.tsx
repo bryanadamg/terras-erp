@@ -6,6 +6,7 @@ import HistoryPane from './HistoryPane';
 import ModalWrapper from './ModalWrapper';
 import { useToast } from './Toast';
 import { useLanguage } from '../context/LanguageContext';
+import { useTheme } from '../context/ThemeContext';
 
 // XP-style category badge colours derived from category name
 function getCategoryXPStyle(category: string): { bg: string; border: string; color: string } {
@@ -205,7 +206,7 @@ export default function InventoryView({
   // UI State
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [isImportOpen, setIsImportOpen] = useState(false);
-  const [currentStyle, setCurrentStyle] = useState('default');
+  const { uiStyle: currentStyle } = useTheme();
 
   // Derived Pagination
   const totalPages = Math.ceil(totalItems / pageSize);
@@ -245,8 +246,6 @@ export default function InventoryView({
               console.error("Invalid config in localstorage");
           }
       }
-      const savedStyle = localStorage.getItem('ui_style');
-      if (savedStyle) setCurrentStyle(savedStyle);
   }, []);
 
   // Update newItem category if forcedCategory changes (e.g. switching tabs)

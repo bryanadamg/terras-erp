@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import ModalWrapper from './ModalWrapper';
+import { useTheme } from '../context/ThemeContext';
 
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:8000';
 
@@ -26,11 +27,8 @@ export default function BOMDetailModal({
     const [activeTab, setActiveTab] = useState<Tab>('overview');
     const [stockMap, setStockMap] = useState<StockMap>({});
     const [loadingStock, setLoadingStock] = useState(false);
-    const [classic, setClassic] = useState(false);
-
-    useEffect(() => {
-        setClassic(localStorage.getItem('ui_style') === 'classic');
-    }, [isOpen]);
+    const { uiStyle } = useTheme();
+    const classic = uiStyle === 'classic';
 
     useEffect(() => {
         if (!isOpen || !bom) return;

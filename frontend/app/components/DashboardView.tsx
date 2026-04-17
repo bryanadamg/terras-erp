@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useLanguage } from '../context/LanguageContext';
+import { useTheme } from '../context/ThemeContext';
 import CalendarView from './CalendarView';
 
 // ── XP style helpers ─────────────────────────────────────────────────────────
@@ -133,13 +134,7 @@ const StatusBadge = ({ status }: { status: string }) => {
 
 export default function DashboardView({ items, locations, stockBalance, workOrders, stockEntries, samples, salesOrders, kpis }: any) {
     const { t } = useLanguage();
-    const [currentStyle, setCurrentStyle] = useState('default');
-
-    useEffect(() => {
-        const saved = localStorage.getItem('ui_style');
-        if (saved) setCurrentStyle(saved);
-    }, []);
-
+    const { uiStyle: currentStyle } = useTheme();
     const classic = currentStyle === 'classic';
 
     // ── Metrics ──────────────────────────────────────────────────────────────

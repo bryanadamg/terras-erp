@@ -3,18 +3,18 @@
 import { useState, useEffect } from 'react';
 import SettingsView from '../components/SettingsView';
 import { useData } from '../context/DataContext';
+import { useTheme } from '../context/ThemeContext';
 
 export default function SettingsPage() {
     const { fetchData, companyProfile, authFetch } = useData();
+    const { uiStyle, setUiStyle } = useTheme();
     const [appName, setAppName] = useState('Terras ERP');
-    const [uiStyle, setUiStyle] = useState('classic');
 
     const envBase = process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:8000/api';
     const API_BASE = envBase.endsWith('/api') ? envBase : `${envBase}/api`;
 
     useEffect(() => {
         const savedName = localStorage.getItem('app_name'); if (savedName) setAppName(savedName);
-        const savedStyle = localStorage.getItem('ui_style'); if (savedStyle) setUiStyle(savedStyle);
     }, []);
 
     const handleUpdateAppName = (name: string) => {
@@ -24,8 +24,6 @@ export default function SettingsPage() {
 
     const handleUpdateUIStyle = (style: string) => {
         setUiStyle(style);
-        localStorage.setItem('ui_style', style);
-        window.location.reload(); // Apply globally
     };
 
     const handleUpdateCompanyProfile = async (profile: any) => {

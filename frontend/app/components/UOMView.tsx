@@ -1,19 +1,14 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useLanguage } from '../context/LanguageContext';
+import { useTheme } from '../context/ThemeContext';
 
 export default function UOMView({ uoms, onCreateUOM, onDeleteUOM, onRefresh }: any) {
   const { t } = useLanguage();
   const [newUOMName, setNewUOMName] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
-  const [currentStyle, setCurrentStyle] = useState('classic');
-  const [hoveredId, setHoveredId] = useState<string | null>(null);
-
-  useEffect(() => {
-      const saved = localStorage.getItem('ui_style');
-      if (saved) setCurrentStyle(saved);
-  }, []);
-
+  const { uiStyle: currentStyle } = useTheme();
   const classic = currentStyle === 'classic';
+  const [hoveredId, setHoveredId] = useState<string | null>(null);
 
   const xpBevel: React.CSSProperties = {
       border: '2px solid', borderColor: '#dfdfdf #808080 #808080 #dfdfdf',

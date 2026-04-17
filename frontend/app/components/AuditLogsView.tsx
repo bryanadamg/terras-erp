@@ -1,5 +1,6 @@
-import React, { useState, useEffect, memo } from 'react';
+import React, { useState, memo } from 'react';
 import { useLanguage } from '../context/LanguageContext';
+import { useTheme } from '../context/ThemeContext';
 
 function getActionXPStyle(action: string): React.CSSProperties {
     const map: Record<string, { bg: string; border: string; color: string }> = {
@@ -111,13 +112,7 @@ AuditLogRow.displayName = 'AuditLogRow';
 
 export default function AuditLogsView({ auditLogs, currentPage, totalItems, pageSize, onPageChange, filterType, onFilterChange }: any) {
   const { t } = useLanguage();
-  const [currentStyle, setCurrentStyle] = useState('classic');
-
-  useEffect(() => {
-      const saved = localStorage.getItem('ui_style');
-      if (saved) setCurrentStyle(saved);
-  }, []);
-
+  const { uiStyle: currentStyle } = useTheme();
   const classic = currentStyle === 'classic';
 
   const totalPages = Math.ceil(totalItems / pageSize);

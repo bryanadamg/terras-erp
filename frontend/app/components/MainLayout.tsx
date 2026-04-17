@@ -6,23 +6,23 @@ import { useUser } from '../context/UserContext';
 import { useData } from '../context/DataContext';
 import { useLanguage } from '../context/LanguageContext';
 import { useRouter, usePathname } from 'next/navigation';
+import { useTheme } from '../context/ThemeContext';
 
 export default function MainLayout({ children }: { children: React.ReactNode }) {
     const { currentUser, logout, loading, hasPermission } = useUser();
     const { handleTabHover } = useData();
     const { language, setLanguage } = useLanguage();
+    const { uiStyle } = useTheme();
     const router = useRouter();
     const pathname = usePathname();
-    
+
     const [appName, setAppName] = useState('Terras ERP');
-    const [uiStyle, setUiStyle] = useState('classic');
     const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
     const [mounted, setMounted] = useState(false);
 
     useEffect(() => {
         setMounted(true);
         const savedName = localStorage.getItem('app_name'); if (savedName) setAppName(savedName);
-        const savedStyle = localStorage.getItem('ui_style'); if (savedStyle) setUiStyle(savedStyle);
     }, []);
 
     // Auth Protection Logic

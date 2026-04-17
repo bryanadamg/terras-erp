@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, Fragment } from 'react';
+import { useTheme } from '../context/ThemeContext';
 
 export interface CodeConfig {
     prefix: string;
@@ -368,16 +369,13 @@ export default function CodeConfigModal({ isOpen, onClose, type, onSave, initial
   const [segments, setSegments] = useState<Segment[]>(() => getDefaultSegments(type));
   const [separator, setSeparator] = useState('-');
   const [activeGap, setActiveGap] = useState<number | null>(null);
-  const [currentStyle, setCurrentStyle] = useState('default');
+  const { uiStyle: currentStyle } = useTheme();
   const dragRef = useRef<{
     sourceZone: 'track' | 'palette';
     index: number;
   } | null>(null);
 
   useEffect(() => {
-    const savedStyle = localStorage.getItem('ui_style');
-    if (savedStyle) setCurrentStyle(savedStyle);
-
     if (!isOpen) return;
 
     if (initialConfig) {

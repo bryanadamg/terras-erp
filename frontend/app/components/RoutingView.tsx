@@ -1,5 +1,6 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useLanguage } from '../context/LanguageContext';
+import { useTheme } from '../context/ThemeContext';
 
 export default function RoutingView({ workCenters, operations, onCreateWorkCenter, onDeleteWorkCenter, onCreateOperation, onDeleteOperation, onRefresh }: any) {
   const { t } = useLanguage();
@@ -7,15 +8,9 @@ export default function RoutingView({ workCenters, operations, onCreateWorkCente
   const [newOperation, setNewOperation] = useState({ code: '', name: '' });
   const [wcSearch, setWcSearch] = useState('');
   const [opSearch, setOpSearch] = useState('');
-  const [currentStyle, setCurrentStyle] = useState('classic');
-  const [hoveredId, setHoveredId] = useState<string | null>(null);
-
-  useEffect(() => {
-      const saved = localStorage.getItem('ui_style');
-      if (saved) setCurrentStyle(saved);
-  }, []);
-
+  const { uiStyle: currentStyle } = useTheme();
   const classic = currentStyle === 'classic';
+  const [hoveredId, setHoveredId] = useState<string | null>(null);
 
   const handleCreateWC = (e: React.FormEvent) => {
       e.preventDefault();

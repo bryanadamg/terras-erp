@@ -1,7 +1,8 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useLanguage } from '../context/LanguageContext';
+import { useTheme } from '../context/ThemeContext';
 
 interface Props {
     categories: any[];
@@ -29,11 +30,7 @@ export default function ItemMetadataView({
     const { t } = useLanguage();
 
     // ── UI style ──────────────────────────────────────────────────────────────
-    const [currentStyle, setCurrentStyle] = useState('classic');
-    useEffect(() => {
-        const saved = localStorage.getItem('ui_style');
-        if (saved) setCurrentStyle(saved);
-    }, []);
+    const { uiStyle: currentStyle } = useTheme();
     const classic = currentStyle === 'classic';
 
     // ── Category state ────────────────────────────────────────────────────────

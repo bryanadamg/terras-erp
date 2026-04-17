@@ -1,11 +1,11 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useLanguage } from '../context/LanguageContext';
+import { useTheme } from '../context/ThemeContext';
 
 export default function CalendarView({ workOrders, items, compact = false }: any) {
   const { t } = useLanguage();
   const [currentDate, setCurrentDate] = useState(new Date());
-  const [currentStyle, setCurrentStyle] = useState('classic');
-  useEffect(() => { const saved = localStorage.getItem('ui_style'); if (saved) setCurrentStyle(saved); }, []);
+  const { uiStyle: currentStyle } = useTheme();
   const classic = currentStyle === 'classic';
 
   const getDaysInMonth = (year: number, month: number) => new Date(year, month + 1, 0).getDate();

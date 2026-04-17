@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useTheme } from '../context/ThemeContext';
 import { useToast } from './Toast';
 import { useLanguage } from '../context/LanguageContext';
 import CodeConfigModal, { CodeConfig, buildCodeParts } from './CodeConfigModal';
@@ -15,13 +16,7 @@ export default function SampleRequestView({ samples, salesOrders, items, attribu
   const [historyEntityId, setHistoryEntityId] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('ALL');
-  const [currentStyle, setCurrentStyle] = useState('classic');
-
-  useEffect(() => {
-      const saved = localStorage.getItem('ui_style');
-      if (saved) setCurrentStyle(saved);
-  }, []);
-
+  const { uiStyle: currentStyle } = useTheme();
   const classic = currentStyle === 'classic';
 
   // ── XP shared inline styles ──────────────────────────────────────────────

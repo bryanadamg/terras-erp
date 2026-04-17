@@ -8,6 +8,7 @@ import SearchableSelect from './SearchableSelect';
 import QRScannerView from './QRScannerView';
 import { useToast } from './Toast';
 import { useLanguage } from '../context/LanguageContext';
+import { useTheme } from '../context/ThemeContext';
 import { useData } from '../context/DataContext';
 import ModalWrapper from './ModalWrapper';
 import PrintHeader from './PrintHeader';
@@ -499,7 +500,7 @@ export default function ManufacturingView({
       includeMonth: false
   });
 
-  const [currentStyle, setCurrentStyle] = useState('default');
+  const { uiStyle: currentStyle } = useTheme();
 
   const defaultPrintSettings: PrintSettings = {
     showBOMTable: true,
@@ -548,8 +549,6 @@ export default function ManufacturingView({
       if (savedConfig) {
           try { setCodeConfig(JSON.parse(savedConfig)); } catch (e) {}
       }
-      const savedStyle = localStorage.getItem('ui_style');
-      if (savedStyle) setCurrentStyle(savedStyle);
       const savedPrintSettings = localStorage.getItem('wo_print_settings');
       if (savedPrintSettings) {
           try { setPrintSettings(JSON.parse(savedPrintSettings)); } catch (e) {}

@@ -1,6 +1,7 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import SearchableSelect from './SearchableSelect';
 import { useLanguage } from '../context/LanguageContext';
+import { useTheme } from '../context/ThemeContext';
 
 export default function ReportsView({
     stockEntries,
@@ -17,13 +18,7 @@ export default function ReportsView({
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('');
-  const [currentStyle, setCurrentStyle] = useState('classic');
-
-  useEffect(() => {
-      const saved = localStorage.getItem('ui_style');
-      if (saved) setCurrentStyle(saved);
-  }, []);
-
+  const { uiStyle: currentStyle } = useTheme();
   const classic = currentStyle === 'classic';
 
   const totalPages = Math.ceil(totalItems / pageSize);

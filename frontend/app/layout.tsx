@@ -7,6 +7,7 @@ import { LanguageProvider } from './context/LanguageContext';
 import { Suspense } from 'react';
 import { UserProvider } from './context/UserContext';
 import { DataProvider } from './context/DataContext';
+import { ThemeProvider } from './context/ThemeContext';
 import QueryProvider from './components/QueryProvider';
 import MainLayout from './components/MainLayout';
 
@@ -27,15 +28,17 @@ export default function RootLayout({
           <LanguageProvider>
             <ToastProvider>
               <ConfirmProvider>
-                <UserProvider>
-                  <DataProvider>
-                    <Suspense fallback={<div className="d-flex justify-content-center align-items-center vh-100 bg-light text-muted fw-bold">LOADING_SYSTEM_RESOURCES...</div>}>
-                      <MainLayout>
-                        {children}
-                      </MainLayout>
-                    </Suspense>
-                  </DataProvider>
-                </UserProvider>
+                  <ThemeProvider>
+                  <UserProvider>
+                    <DataProvider>
+                      <Suspense fallback={<div className="d-flex justify-content-center align-items-center vh-100 bg-light text-muted fw-bold">LOADING_SYSTEM_RESOURCES...</div>}>
+                        <MainLayout>
+                          {children}
+                        </MainLayout>
+                      </Suspense>
+                    </DataProvider>
+                  </UserProvider>
+                </ThemeProvider>
               </ConfirmProvider>
             </ToastProvider>
           </LanguageProvider>

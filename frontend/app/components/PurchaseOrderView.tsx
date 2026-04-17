@@ -5,6 +5,7 @@ import { useLanguage } from '../context/LanguageContext';
 import SearchableSelect from './SearchableSelect';
 import PrintHeader from './PrintHeader';
 import ModalWrapper from './ModalWrapper';
+import { useTheme } from '../context/ThemeContext';
 
 export default function PurchaseOrderView({ items, attributes, purchaseOrders, partners, locations, onCreatePO, onDeletePO, onReceivePO }: any) {
   const { showToast } = useToast();
@@ -13,13 +14,7 @@ export default function PurchaseOrderView({ items, attributes, purchaseOrders, p
   const [printingPO, setPrintingPO] = useState<any>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('ALL');
-  const [currentStyle, setCurrentStyle] = useState('classic');
-
-  useEffect(() => {
-      const saved = localStorage.getItem('ui_style');
-      if (saved) setCurrentStyle(saved);
-  }, []);
-
+  const { uiStyle: currentStyle } = useTheme();
   const classic = currentStyle === 'classic';
 
   // ── XP shared inline styles ──────────────────────────────────────────────

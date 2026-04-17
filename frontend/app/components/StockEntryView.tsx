@@ -1,18 +1,13 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import SearchableSelect from './SearchableSelect';
 import { useLanguage } from '../context/LanguageContext';
+import { useTheme } from '../context/ThemeContext';
 
 export default function StockEntryView({ items, locations, attributes, stockBalance, onRecordStock }: any) {
   const { t } = useLanguage();
   const [stockEntry, setStockEntry] = useState({ item_code: '', location_code: '', attribute_value_ids: [] as string[], qty: 0 });
   const [balanceSearch, setBalanceSearch] = useState('');
-  const [currentStyle, setCurrentStyle] = useState('classic');
-
-  useEffect(() => {
-      const saved = localStorage.getItem('ui_style');
-      if (saved) setCurrentStyle(saved);
-  }, []);
-
+  const { uiStyle: currentStyle } = useTheme();
   const classic = currentStyle === 'classic';
 
   const handleValueChange = (valId: string, attrId: string) => {

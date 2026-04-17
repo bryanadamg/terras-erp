@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useToast } from './Toast';
+import { useTheme } from '../context/ThemeContext';
 
 export default function CompanyProfileView({ profile, onUpdate, onUploadLogo, authFetch }: any) {
     const { showToast } = useToast();
@@ -14,8 +15,7 @@ export default function CompanyProfileView({ profile, onUpdate, onUploadLogo, au
     const [isSaving, setIsSaving] = useState(false);
     const [isUploading, setIsUploading] = useState(false);
 
-    const [currentStyle, setCurrentStyle] = useState('classic');
-    useEffect(() => { const saved = localStorage.getItem('ui_style'); if (saved) setCurrentStyle(saved); }, []);
+    const { uiStyle: currentStyle } = useTheme();
     const classic = currentStyle === 'classic';
 
     useEffect(() => {

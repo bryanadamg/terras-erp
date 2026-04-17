@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useToast } from './Toast';
+import { useTheme } from '../context/ThemeContext';
 import { useUser, User } from '../context/UserContext';
 import CompanyProfileView from './CompanyProfileView';
 
@@ -11,13 +12,12 @@ export default function SettingsView({
   const { currentUser, users, setCurrentUser, hasPermission, refreshUsers } = useUser();
 
   const [name, setName] = useState(appName);
-  const [style, setStyle] = useState(uiStyle || 'default');
+  const [style, setStyle] = useState(uiStyle || currentStyle || 'classic');
   const [roles, setRoles] = useState<any[]>([]);
   const [allPermissions, setAllPermissions] = useState<any[]>([]);
   const [allCategories, setAllCategories] = useState<any[]>([]);
 
-  const [currentStyle, setCurrentStyle] = useState('classic');
-  useEffect(() => { const saved = localStorage.getItem('ui_style'); if (saved) setCurrentStyle(saved); }, []);
+  const { uiStyle: currentStyle } = useTheme();
   const classic = currentStyle === 'classic';
 
   // Database Management State

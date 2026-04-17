@@ -1,5 +1,6 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useLanguage } from '../context/LanguageContext';
+import { useTheme } from '../context/ThemeContext';
 
 export default function AttributesView({
     attributes,
@@ -16,15 +17,9 @@ export default function AttributesView({
   const [editingAttr, setEditingAttr] = useState<any>(null);
   const [newValueForEdit, setNewValueForEdit] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
-  const [currentStyle, setCurrentStyle] = useState('classic');
-  const [hoveredId, setHoveredId] = useState<string | null>(null);
-
-  useEffect(() => {
-      const saved = localStorage.getItem('ui_style');
-      if (saved) setCurrentStyle(saved);
-  }, []);
-
+  const { uiStyle: currentStyle } = useTheme();
   const classic = currentStyle === 'classic';
+  const [hoveredId, setHoveredId] = useState<string | null>(null);
 
   const activeAttribute = editingAttr ? attributes.find((a: any) => a.id === editingAttr.id) : null;
 

@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
+import { useTheme } from '../context/ThemeContext';
 import { createPortal } from 'react-dom';
 import BOMDesigner from './BOMDesigner'; // New component
 import BOMDetailModal from './BOMDetailModal';
@@ -14,7 +15,7 @@ export default function BOMView({
   const { t } = useLanguage();
 
   const [isDesignerOpen, setIsDesignerOpen] = useState(false);
-  const [currentStyle, setCurrentStyle] = useState('default');
+  const { uiStyle: currentStyle } = useTheme();
   const [searchQuery, setSearchQuery] = useState('');
 
   // Tree Expansion State for List View
@@ -71,11 +72,6 @@ export default function BOMView({
       setSelectedIds(new Set());
     }
   };
-
-  useEffect(() => {
-      const savedStyle = localStorage.getItem('ui_style');
-      if (savedStyle) setCurrentStyle(savedStyle);
-  }, []);
 
   const initialItemCode = initialCreateState
       ? (items.find((i: any) => i.id === initialCreateState.item_id)?.code || "")
