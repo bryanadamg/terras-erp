@@ -1,11 +1,11 @@
 import uuid
-from datetime import datetime
-from sqlalchemy import String, ForeignKey, Integer, Text, DateTime, Table, Column
+from datetime import datetime, date
+from sqlalchemy import String, ForeignKey, Integer, Text, DateTime, Table, Column, Boolean, Float, Date
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.db.base import Base
 
-# Association table for Sample <-> AttributeValue
+# Kept for backward compatibility — not actively used after this change
 sample_attribute_values = Table(
     "sample_attribute_values",
     Base.metadata,
@@ -13,32 +13,54 @@ sample_attribute_values = Table(
     Column("attribute_value_id", UUID(as_uuid=True), ForeignKey("attribute_values.id"), primary_key=True),
 )
 
+
+class SampleColor(Base):
+    __tablename__ = "sample_colors"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    sample_request_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("sample_requests.id", ondelete="CASCADE"), index=True
+    )
+    name: Mapped[str] = mapped_column(String(255))
+    is_repeat: Mapped[bool] = mapped_column(Boolean, default=False)
+    order: Mapped[int] = mapped_column(Integer, default=0)
+
+
 class SampleRequest(Base):
     __tablename__ = "sample_requests"
 
-    id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
-    )
-    code: Mapped[str] = mapped_column(String(64), unique=True, index=True) # e.g. SMP-2026-001
-    
-    # Link to the Incoming PO (Demand)
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    code: Mapped[str] = mapped_column(String(64), unique=True, index=True)
+
     sales_order_id: Mapped[uuid.UUID | None] = mapped_column(
         UUID(as_uuid=True), ForeignKey("sales_orders.id"), nullable=True, index=True
     )
-    
-    # Link to the Generic Item Definition (e.g. "T-Shirt")
-    base_item_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("items.id"), index=True
+    base_item_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("items.id"), nullable=True, index=True
     )
-    
-    version: Mapped[int] = mapped_column(Integer, default=1) # V1, V2, etc.
-    status: Mapped[str] = mapped_column(String(32), default="DRAFT") 
-    # DRAFT, IN_PRODUCTION, SENT, PENDING_APPROVAL, APPROVED, REJECTED
-    
+
+    request_date: Mapped[date] = mapped_column(Date, default=date.today)
+    project: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    customer_article_code: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    internal_article_code: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    width: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    main_material: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    middle_material: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    bottom_material: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    weft: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    warp: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    original_weight: Mapped[float | None] = mapped_column(Float, nullable=True)
+    production_weight: Mapped[float | None] = mapped_column(Float, nullable=True)
+    additional_info: Mapped[str | None] = mapped_column(Text, nullable=True)
+    quantity: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    sample_size: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    estimated_completion_date: Mapped[date | None] = mapped_column(Date, nullable=True)
+    completion_description: Mapped[str | None] = mapped_column(Text, nullable=True)
+
+    version: Mapped[int] = mapped_column(Integer, default=1)
+    status: Mapped[str] = mapped_column(String(32), default="DRAFT")
     notes: Mapped[str | None] = mapped_column(Text, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
-    
-    # Relationships
-    base_item = relationship("Item")
+
     sales_order = relationship("SalesOrder", backref="samples")
-    attribute_values = relationship("AttributeValue", secondary=sample_attribute_values)
+    colors = relationship("SampleColor", order_by="SampleColor.order", cascade="all, delete-orphan")

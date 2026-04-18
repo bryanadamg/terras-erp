@@ -1,6 +1,6 @@
 from pydantic import BaseModel
 from uuid import UUID
-from datetime import datetime
+from datetime import datetime, date
 from typing import Optional
 
 class VariantCreate(BaseModel):
@@ -348,18 +348,64 @@ class SalesOrderResponse(BaseModel):
 
 # --- Sample Request Schemas ---
 
+class SampleColorCreate(BaseModel):
+    name: str
+    is_repeat: bool = False
+    order: int = 0
+
+class SampleColorResponse(SampleColorCreate):
+    id: UUID
+    class Config:
+        from_attributes = True
+
 class SampleRequestCreate(BaseModel):
     sales_order_id: Optional[UUID] = None
-    base_item_id: UUID
-    attribute_value_ids: list[UUID] = []
+    request_date: Optional[str] = None
+    project: Optional[str] = None
+    customer_article_code: Optional[str] = None
+    internal_article_code: Optional[str] = None
+    width: Optional[str] = None
+    colors: list[SampleColorCreate] = []
+    main_material: Optional[str] = None
+    middle_material: Optional[str] = None
+    bottom_material: Optional[str] = None
+    weft: Optional[str] = None
+    warp: Optional[str] = None
+    original_weight: Optional[float] = None
+    production_weight: Optional[float] = None
+    additional_info: Optional[str] = None
+    quantity: Optional[str] = None
+    sample_size: Optional[str] = None
+    estimated_completion_date: Optional[str] = None
+    completion_description: Optional[str] = None
     notes: Optional[str] = None
 
-class SampleRequestResponse(SampleRequestCreate):
+class SampleRequestResponse(BaseModel):
     id: UUID
     code: str
     version: int
     status: str
     created_at: datetime
+    sales_order_id: Optional[UUID] = None
+    request_date: Optional[date] = None
+    project: Optional[str] = None
+    customer_article_code: Optional[str] = None
+    internal_article_code: Optional[str] = None
+    width: Optional[str] = None
+    colors: list[SampleColorResponse] = []
+    main_material: Optional[str] = None
+    middle_material: Optional[str] = None
+    bottom_material: Optional[str] = None
+    weft: Optional[str] = None
+    warp: Optional[str] = None
+    original_weight: Optional[float] = None
+    production_weight: Optional[float] = None
+    additional_info: Optional[str] = None
+    quantity: Optional[str] = None
+    sample_size: Optional[str] = None
+    estimated_completion_date: Optional[date] = None
+    completion_description: Optional[str] = None
+    notes: Optional[str] = None
     class Config:
         from_attributes = True
 
