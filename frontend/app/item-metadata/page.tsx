@@ -16,6 +16,7 @@ export default function ItemMetadataPage() {
             method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name }),
         });
         if (res.ok) fetchData();
+        return res;
     };
 
     const handleDeleteCategory = async (id: string) => {
@@ -34,6 +35,7 @@ export default function ItemMetadataPage() {
             method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name }),
         });
         if (res.ok) fetchData();
+        return res;
     };
 
     const handleDeleteUOM = async (id: string) => {
@@ -52,6 +54,7 @@ export default function ItemMetadataPage() {
             method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(p),
         });
         if (res.ok) fetchData();
+        return res;
     };
 
     const handleUpdateAttribute = async (id: string, name: string) => {

@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { useLanguage } from '../context/LanguageContext';
 import { useTheme } from '../context/ThemeContext';
+import { useToast } from './Toast';
 
 interface Props {
     categories: any[];
@@ -28,6 +29,7 @@ export default function ItemMetadataView({
     onAddValue, onUpdateValue, onDeleteValue,
 }: Props) {
     const { t } = useLanguage();
+    const { showToast } = useToast();
 
     // ── UI style ──────────────────────────────────────────────────────────────
     const { uiStyle: currentStyle } = useTheme();
@@ -37,14 +39,17 @@ export default function ItemMetadataView({
     const [newCategoryName, setNewCategoryName] = useState('');
     const [catSearch, setCatSearch] = useState('');
     const [catHovered, setCatHovered] = useState<string | null>(null);
+    const [isCatSubmitting, setIsCatSubmitting] = useState(false);
 
     // ── UOM state ─────────────────────────────────────────────────────────────
     const [newUOMName, setNewUOMName] = useState('');
     const [uomSearch, setUomSearch] = useState('');
     const [uomHovered, setUomHovered] = useState<string | null>(null);
+    const [isUomSubmitting, setIsUomSubmitting] = useState(false);
 
     // ── Attribute state ───────────────────────────────────────────────────────
     const [newAttribute, setNewAttribute] = useState({ name: '', values: [] as any[] });
+    const [isAttrSubmitting, setIsAttrSubmitting] = useState(false);
     const [newAttributeValue, setNewAttributeValue] = useState('');
     const [editingAttr, setEditingAttr] = useState<any>(null);
     const [newValueForEdit, setNewValueForEdit] = useState('');
@@ -67,14 +72,28 @@ export default function ItemMetadataView({
     const filteredAttrs = (attributes || []).filter((a: any) => a.name.toLowerCase().includes(attrSearch.toLowerCase()));
 
     // ── Handlers ──────────────────────────────────────────────────────────────
-    const handleCreateCategory = (e: React.FormEvent) => {
+    const handleCreateCategory = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (newCategoryName.trim()) { onCreateCategory(newCategoryName.trim()); setNewCategoryName(''); }
+        if (!newCategoryName.trim() || isCatSubmitting) return;
+        setIsCatSubmitting(true);
+        try {
+            const res = await onCreateCategory(newCategoryName.trim());
+            if (res?.ok) { showToast('Category added', 'success'); setNewCategoryName(''); }
+            else if (res?.status === 400) showToast(`Category "${newCategoryName.trim()}" already exists`, 'warning');
+            else showToast('Failed to add category', 'danger');
+        } finally { setIsCatSubmitting(false); }
     };
 
-    const handleCreateUOM = (e: React.FormEvent) => {
+    const handleCreateUOM = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (newUOMName.trim()) { onCreateUOM(newUOMName.trim()); setNewUOMName(''); }
+        if (!newUOMName.trim() || isUomSubmitting) return;
+        setIsUomSubmitting(true);
+        try {
+            const res = await onCreateUOM(newUOMName.trim());
+            if (res?.ok) { showToast('UOM added', 'success'); setNewUOMName(''); }
+            else if (res?.status === 400) showToast(`UOM "${newUOMName.trim()}" already exists`, 'warning');
+            else showToast('Failed to add UOM', 'danger');
+        } finally { setIsUomSubmitting(false); }
     };
 
     const handleAddValueToNewAttr = () => {
@@ -88,10 +107,16 @@ export default function ItemMetadataView({
             setNewAttribute({ ...newAttribute, values: [...newAttribute.values, { value: String(nextValForNew) }] });
     };
 
-    const handleCreateAttrSubmit = (e: React.FormEvent) => {
+    const handleCreateAttrSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        onCreateAttribute(newAttribute);
-        setNewAttribute({ name: '', values: [] });
+        if (!newAttribute.name.trim() || isAttrSubmitting) return;
+        setIsAttrSubmitting(true);
+        try {
+            const res = await onCreateAttribute(newAttribute);
+            if (res?.ok) { showToast('Attribute added', 'success'); setNewAttribute({ name: '', values: [] }); }
+            else if (res?.status === 400) showToast(`Attribute "${newAttribute.name}" already exists`, 'warning');
+            else showToast('Failed to add attribute', 'danger');
+        } finally { setIsAttrSubmitting(false); }
     };
 
     const startEditing = (attr: any) => setEditingAttr({ ...attr });
@@ -174,7 +199,7 @@ export default function ItemMetadataView({
                             <div style={xpToolbar}>
                                 <span style={{ fontFamily: 'Tahoma,Arial,sans-serif', fontSize: '11px', whiteSpace: 'nowrap' }}>New:</span>
                                 <input style={{ ...xpInput, flex: 1, minWidth: 80 }} placeholder="e.g. Spare Parts..." value={newCategoryName} onChange={e => setNewCategoryName(e.target.value)} />
-                                <button type="submit" style={xpBtnGreen}><i className="bi bi-plus-lg" style={{ marginRight: 3 }}></i>Add</button>
+                                <button type="submit" disabled={isCatSubmitting} style={{ ...xpBtnGreen, opacity: isCatSubmitting ? 0.6 : 1 }}><i className="bi bi-plus-lg" style={{ marginRight: 3 }}></i>{isCatSubmitting ? '...' : 'Add'}</button>
                             </div>
                         </form>
                         <div style={xpToolbar}>
@@ -210,7 +235,7 @@ export default function ItemMetadataView({
                             <div style={xpToolbar}>
                                 <span style={{ fontFamily: 'Tahoma,Arial,sans-serif', fontSize: '11px', whiteSpace: 'nowrap' }}>New:</span>
                                 <input style={{ ...xpInput, flex: 1, minWidth: 80 }} placeholder="e.g. Dozen, kg..." value={newUOMName} onChange={e => setNewUOMName(e.target.value)} />
-                                <button type="submit" style={xpBtnGreen}><i className="bi bi-plus-lg" style={{ marginRight: 3 }}></i>Add</button>
+                                <button type="submit" disabled={isUomSubmitting} style={{ ...xpBtnGreen, opacity: isUomSubmitting ? 0.6 : 1 }}><i className="bi bi-plus-lg" style={{ marginRight: 3 }}></i>{isUomSubmitting ? '...' : 'Add'}</button>
                             </div>
                         </form>
                         <div style={xpToolbar}>
@@ -324,8 +349,8 @@ export default function ItemMetadataView({
                                             ))}
                                             {newAttribute.values.length === 0 && <span style={{ fontFamily: 'Tahoma,Arial,sans-serif', fontSize: '11px', color: '#888', fontStyle: 'italic' }}>No values added</span>}
                                         </div>
-                                        <button type="submit" style={{ ...xpBtnGreen, width: '100%', padding: '4px 10px' }}>
-                                            <i className="bi bi-plus-circle" style={{ marginRight: 6 }}></i>Create Attribute
+                                        <button type="submit" disabled={isAttrSubmitting} style={{ ...xpBtnGreen, width: '100%', padding: '4px 10px', opacity: isAttrSubmitting ? 0.6 : 1 }}>
+                                            <i className="bi bi-plus-circle" style={{ marginRight: 6 }}></i>{isAttrSubmitting ? '...' : 'Create Attribute'}
                                         </button>
                                     </form>
                                 )}
@@ -405,7 +430,7 @@ export default function ItemMetadataView({
                             <form onSubmit={handleCreateCategory} className="mb-3">
                                 <div className="input-group">
                                     <input className="form-control" placeholder="e.g. Spare Parts, Raw Materials..." value={newCategoryName} onChange={e => setNewCategoryName(e.target.value)} required />
-                                    <button type="submit" className="btn btn-success px-4">{t('add')}</button>
+                                    <button type="submit" className="btn btn-success px-4" disabled={isCatSubmitting}>{isCatSubmitting ? '...' : t('add')}</button>
                                 </div>
                             </form>
                             <div className="input-group mb-3">
@@ -435,7 +460,7 @@ export default function ItemMetadataView({
                             <form onSubmit={handleCreateUOM} className="mb-3">
                                 <div className="input-group">
                                     <input className="form-control" placeholder="e.g. Dozen, Box, Litre..." value={newUOMName} onChange={e => setNewUOMName(e.target.value)} required />
-                                    <button type="submit" className="btn btn-success px-4">{t('add')}</button>
+                                    <button type="submit" className="btn btn-success px-4" disabled={isUomSubmitting}>{isUomSubmitting ? '...' : t('add')}</button>
                                 </div>
                             </form>
                             <div className="input-group mb-3">
@@ -521,7 +546,7 @@ export default function ItemMetadataView({
                                             {newAttribute.values.length === 0 && <small className="text-muted fst-italic">No values added</small>}
                                         </div>
                                     </div>
-                                    <button type="submit" className="btn btn-success w-100 fw-bold shadow-sm">{t('create')}</button>
+                                    <button type="submit" className="btn btn-success w-100 fw-bold shadow-sm" disabled={isAttrSubmitting}>{isAttrSubmitting ? '...' : t('create')}</button>
                                 </form>
                             )}
                         </div>
