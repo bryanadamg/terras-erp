@@ -5,7 +5,7 @@ import { useData } from '../context/DataContext';
 import { useToast } from '../components/Toast';
 
 export default function SamplesPage() {
-    const { items, attributes, salesOrders, samples, fetchData, authFetch } = useData();
+    const { salesOrders, samples, fetchData, authFetch } = useData();
     const { showToast } = useToast();
     const envBase = process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:8000/api';
     const API_BASE = envBase.endsWith('/api') ? envBase : `${envBase}/api`;
@@ -33,8 +33,6 @@ export default function SamplesPage() {
 
     return (
             <SampleRequestView
-                items={items}
-                attributes={attributes}
                 salesOrders={salesOrders}
                 samples={samples}
                 onCreateSample={handleCreateSample}

@@ -7,7 +7,7 @@ import SearchableSelect from './SearchableSelect';
 import HistoryPane from './HistoryPane';
 import ModalWrapper from './ModalWrapper';
 
-export default function SampleRequestView({ samples, salesOrders, items, attributes, onCreateSample, onUpdateStatus, onDeleteSample }: any) {
+export default function SampleRequestView({ samples, salesOrders, onCreateSample, onUpdateStatus, onDeleteSample }: any) {
   const { showToast } = useToast();
   const { t } = useLanguage();
   const [isCreateOpen, setIsCreateOpen] = useState(false);
@@ -113,13 +113,42 @@ export default function SampleRequestView({ samples, salesOrders, items, attribu
       fontSize: '11px',
   };
 
-  const [newSample, setNewSample] = useState({
+  const today = new Date().toISOString().split('T')[0];
+  const emptyForm = () => ({
       code: '',
+      request_date: today,
       sales_order_id: '',
-      base_item_id: '',
-      attribute_value_ids: [] as string[],
-      notes: ''
+      project: '',
+      customer_article_code: '',
+      internal_article_code: '',
+      width: '',
+      colors: [{ name: '', is_repeat: false }] as { name: string; is_repeat: boolean }[],
+      main_material: '',
+      middle_material: '',
+      bottom_material: '',
+      weft: '',
+      warp: '',
+      original_weight: '',
+      production_weight: '',
+      additional_info: '',
+      quantity: '',
+      sample_size: '',
+      estimated_completion_date: '',
+      completion_description: '',
   });
+  const [newSample, setNewSample] = useState(emptyForm());
+
+  const addColorRow = () =>
+      setNewSample(prev => ({ ...prev, colors: [...prev.colors, { name: '', is_repeat: false }] }));
+
+  const removeColorRow = (idx: number) =>
+      setNewSample(prev => ({ ...prev, colors: prev.colors.filter((_, i) => i !== idx) }));
+
+  const updateColor = (idx: number, field: 'name' | 'is_repeat', value: any) =>
+      setNewSample(prev => ({
+          ...prev,
+          colors: prev.colors.map((c, i) => i === idx ? { ...c, [field]: value } : c),
+      }));
 
   const [isConfigOpen, setIsConfigOpen] = useState(false);
   const [codeConfig, setCodeConfig] = useState<CodeConfig>({
@@ -189,23 +218,18 @@ export default function SampleRequestView({ samples, salesOrders, items, attribu
 
   const handleSubmit = (e: React.FormEvent) => {
       e.preventDefault();
-      onCreateSample({ ...newSample, sales_order_id: newSample.sales_order_id || null });
-      setNewSample({ code: '', sales_order_id: '', base_item_id: '', attribute_value_ids: [], notes: '' });
+      onCreateSample({
+          ...newSample,
+          sales_order_id: newSample.sales_order_id || null,
+          original_weight: newSample.original_weight !== '' ? parseFloat(newSample.original_weight) : null,
+          production_weight: newSample.production_weight !== '' ? parseFloat(newSample.production_weight) : null,
+          estimated_completion_date: newSample.estimated_completion_date || null,
+          colors: newSample.colors.filter(c => c.name.trim() !== ''),
+      });
+      setNewSample(emptyForm());
       setIsCreateOpen(false);
   };
 
-  const handleValueChange = (valId: string, attrId: string) => {
-      const attr = attributes.find((a: any) => a.id === attrId);
-      if (!attr) return;
-      const otherValues = newSample.attribute_value_ids.filter(vid => !attr.values.some((v: any) => v.id === vid));
-      setNewSample({...newSample, attribute_value_ids: valId ? [...otherValues, valId] : otherValues});
-  };
-
-  const getBoundAttributes = (itemId: string) => {
-      const item = items.find((i: any) => i.id === itemId);
-      if (!item || !item.attribute_ids) return [];
-      return attributes.filter((a: any) => item.attribute_ids.includes(a.id));
-  };
 
   const getStatusBadge = (status: string) => {
       switch(status) {
@@ -232,8 +256,6 @@ export default function SampleRequestView({ samples, salesOrders, items, attribu
       };
   };
 
-  const currentBoundAttrs = getBoundAttributes(newSample.base_item_id);
-  const getItemName = (id: string) => items.find((i: any) => i.id === id)?.name || id;
   const getPONumber = (id: string) => salesOrders.find((s: any) => s.id === id)?.po_number || 'No PO';
 
   const STATUS_FILTERS = ['ALL', 'IN_PRODUCTION', 'SENT', 'APPROVED', 'REJECTED'];
@@ -241,7 +263,8 @@ export default function SampleRequestView({ samples, salesOrders, items, attribu
   const filteredSamples = samples.filter((s: any) => {
       const matchSearch = !searchTerm ||
           s.code.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          getItemName(s.base_item_id).toLowerCase().includes(searchTerm.toLowerCase());
+          (s.project && s.project.toLowerCase().includes(searchTerm.toLowerCase())) ||
+          (s.customer_article_code && s.customer_article_code.toLowerCase().includes(searchTerm.toLowerCase()));
       const matchStatus = statusFilter === 'ALL' || s.status === statusFilter;
       return matchSearch && matchStatus;
   });
@@ -254,7 +277,7 @@ export default function SampleRequestView({ samples, salesOrders, items, attribu
            type="SAMPLE"
            onSave={handleSaveConfig}
            initialConfig={codeConfig}
-           attributes={attributes}
+           attributes={[]}
        />
 
        {/* Create Modal */}
@@ -282,86 +305,200 @@ export default function SampleRequestView({ samples, salesOrders, items, attribu
            }
        >
            <form onSubmit={handleSubmit} id="create-sample-form">
-               <div className="row g-3 mb-3">
+               {/* ── Section 1: Identity ── */}
+               <div style={classic ? { fontFamily: 'Tahoma, Arial, sans-serif', fontSize: '10px', fontWeight: 'bold', textTransform: 'uppercase' as const, letterSpacing: '0.5px', color: '#555', borderBottom: '1px solid #c0bdb5', paddingBottom: 3, marginBottom: 8 } : undefined}
+                    className={classic ? '' : 'text-uppercase text-muted small fw-semibold mb-2 border-bottom pb-1'}>
+                   Identity
+               </div>
+               <div className="row g-2 mb-3">
                    <div className="col-md-6">
-                       <label
-                           style={classic ? { fontFamily: 'Tahoma, Arial, sans-serif', fontSize: '11px', color: '#000', display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 2 } : undefined}
-                           className={classic ? '' : 'form-label d-flex justify-content-between align-items-center small text-muted'}
-                       >
+                       <label style={classic ? { fontFamily: 'Tahoma, Arial, sans-serif', fontSize: '11px', color: '#000', display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 2 } : undefined}
+                              className={classic ? '' : 'form-label d-flex justify-content-between align-items-center small text-muted'}>
                            Request Code
-                           <i className="bi bi-gear-fill text-muted" style={{cursor: 'pointer'}} onClick={() => setIsConfigOpen(true)} title="Configure Auto-Suggestion"></i>
+                           <i className="bi bi-gear-fill text-muted" style={{ cursor: 'pointer' }} onClick={() => setIsConfigOpen(true)} title="Configure Auto-Suggestion"></i>
                        </label>
-                       <input style={classic ? xpInput : undefined} className={classic ? '' : 'form-control'} placeholder="Auto-generated" value={newSample.code} onChange={e => setNewSample({...newSample, code: e.target.value})} required />
+                       <input style={classic ? xpInput : undefined} className={classic ? '' : 'form-control form-control-sm'}
+                              value={newSample.code} onChange={e => setNewSample({ ...newSample, code: e.target.value })}
+                              placeholder="Auto-generated" required />
                    </div>
                    <div className="col-md-6">
-                       <label
-                           style={classic ? { fontFamily: 'Tahoma, Arial, sans-serif', fontSize: '11px', color: '#000', display: 'block', marginBottom: 2 } : undefined}
-                           className={classic ? '' : 'form-label small text-muted'}
-                       >Link to Sales Order <span style={classic ? { fontWeight: 'normal', color: '#666' } : undefined} className={classic ? '' : 'fw-normal'}>(Optional)</span></label>
+                       <label style={classic ? { fontFamily: 'Tahoma, Arial, sans-serif', fontSize: '11px', color: '#000', display: 'block', marginBottom: 2 } : undefined}
+                              className={classic ? '' : 'form-label small text-muted'}>Request Date</label>
+                       <input type="date" style={classic ? xpInput : undefined} className={classic ? '' : 'form-control form-control-sm'}
+                              value={newSample.request_date} onChange={e => setNewSample({ ...newSample, request_date: e.target.value })}
+                              required />
+                   </div>
+                   <div className="col-12">
+                       <label style={classic ? { fontFamily: 'Tahoma, Arial, sans-serif', fontSize: '11px', color: '#000', display: 'block', marginBottom: 2 } : undefined}
+                              className={classic ? '' : 'form-label small text-muted'}>
+                           Link to Sales Order <span style={classic ? { fontWeight: 'normal', color: '#666' } : undefined} className={classic ? '' : 'fw-normal'}>(Optional)</span>
+                       </label>
                        <SearchableSelect
                            options={[
-                               { value: "", label: "No Sales Order (Internal/Prototype)" },
-                               ...salesOrders.map((so: any) => ({ value: so.id, label: `${so.po_number} — ${so.customer_name}` }))
+                               { value: '', label: 'No Sales Order (Internal/Prototype)' },
+                               ...salesOrders.map((so: any) => ({ value: so.id, label: `${so.po_number} — ${so.customer_name}` })),
                            ]}
                            value={newSample.sales_order_id}
-                           onChange={(val) => setNewSample({...newSample, sales_order_id: val})}
+                           onChange={(val: string) => setNewSample({ ...newSample, sales_order_id: val })}
                            placeholder="Select SO (Optional)…"
                        />
                    </div>
-               </div>
-               <div className="mb-3">
-                   <label
-                       style={classic ? { fontFamily: 'Tahoma, Arial, sans-serif', fontSize: '11px', color: '#000', display: 'block', marginBottom: 2 } : undefined}
-                       className={classic ? '' : 'form-label small text-muted'}
-                   >Base Item <span style={classic ? { fontWeight: 'normal', color: '#666' } : undefined} className={classic ? '' : 'fw-normal text-muted'}>(Prototype Model)</span></label>
-                   <SearchableSelect
-                       options={items.filter((i: any) => i.category === 'Sample').map((item: any) => ({ value: item.id, label: item.name, subLabel: item.code }))}
-                       value={newSample.base_item_id}
-                       onChange={(val) => setNewSample({...newSample, base_item_id: val, attribute_value_ids: []})}
-                       required
-                       placeholder="Select Base Item…"
-                   />
-               </div>
-               {currentBoundAttrs.length > 0 && (
-                   <div
-                       style={classic ? { marginBottom: 8, padding: '6px 8px', background: '#f5f4ef', border: '1px solid #b0a898' } : undefined}
-                       className={classic ? '' : 'mb-3 p-3 border config-attributes-section'}
-                   >
-                       {classic ? (
-                           <div style={{ fontFamily: 'Tahoma, Arial, sans-serif', fontSize: '10px', fontWeight: 'bold', textTransform: 'uppercase' as const, letterSpacing: '0.5px', color: '#555', borderBottom: '1px solid #c0bdb5', paddingBottom: 3, marginBottom: 6 }}>
-                               Define Configuration
-                           </div>
-                       ) : (
-                           <label className="form-label small text-muted mb-2">Define Configuration</label>
-                       )}
-                       <div className="row g-2">
-                           {currentBoundAttrs.map((attr: any) => (
-                               <div key={attr.id} className="col-md-6">
-                                   <label
-                                       style={classic ? { fontFamily: 'Tahoma, Arial, sans-serif', fontSize: '11px', color: '#000', display: 'block', marginBottom: 2 } : undefined}
-                                       className={classic ? '' : 'form-label small mb-1'}
-                                   >{attr.name}</label>
-                                   <select
-                                       style={classic ? { ...xpInput, height: 'auto', padding: '2px 4px', width: '100%' } : undefined}
-                                       className={classic ? '' : 'form-select form-select-sm'}
-                                       value={newSample.attribute_value_ids.find(vid => attr.values.some((v: any) => v.id === vid)) || ''}
-                                       onChange={e => handleValueChange(e.target.value, attr.id)}
-                                       required
-                                   >
-                                       <option value="">Select {attr.name}…</option>
-                                       {attr.values.map((v: any) => <option key={v.id} value={v.id}>{v.value}</option>)}
-                                   </select>
-                               </div>
-                           ))}
-                       </div>
+                   <div className="col-md-6">
+                       <label style={classic ? { fontFamily: 'Tahoma, Arial, sans-serif', fontSize: '11px', color: '#000', display: 'block', marginBottom: 2 } : undefined}
+                              className={classic ? '' : 'form-label small text-muted'}>Project</label>
+                       <input style={classic ? xpInput : undefined} className={classic ? '' : 'form-control form-control-sm'}
+                              value={newSample.project} onChange={e => setNewSample({ ...newSample, project: e.target.value })}
+                              placeholder="e.g. Spring 2026" />
                    </div>
-               )}
-               <div className="mb-3">
-                   <label
-                       style={classic ? { fontFamily: 'Tahoma, Arial, sans-serif', fontSize: '11px', color: '#000', display: 'block', marginBottom: 2 } : undefined}
-                       className={classic ? '' : 'form-label small text-muted'}
-                   >Notes</label>
-                   <textarea style={classic ? { ...xpInput, height: 'auto', padding: '4px 6px', width: '100%', resize: 'vertical' as const } : undefined} className={classic ? '' : 'form-control'} rows={3} value={newSample.notes} onChange={e => setNewSample({...newSample, notes: e.target.value})} placeholder="e.g. Client requested softer fabric…"></textarea>
+                   <div className="col-md-6">
+                       <label style={classic ? { fontFamily: 'Tahoma, Arial, sans-serif', fontSize: '11px', color: '#000', display: 'block', marginBottom: 2 } : undefined}
+                              className={classic ? '' : 'form-label small text-muted'}>Customer Article Code</label>
+                       <input style={classic ? xpInput : undefined} className={classic ? '' : 'form-control form-control-sm'}
+                              value={newSample.customer_article_code} onChange={e => setNewSample({ ...newSample, customer_article_code: e.target.value })}
+                              placeholder="Customer's ref code" />
+                   </div>
+                   <div className="col-md-6">
+                       <label style={classic ? { fontFamily: 'Tahoma, Arial, sans-serif', fontSize: '11px', color: '#000', display: 'block', marginBottom: 2 } : undefined}
+                              className={classic ? '' : 'form-label small text-muted'}>Internal Article Code</label>
+                       <input style={classic ? xpInput : undefined} className={classic ? '' : 'form-control form-control-sm'}
+                              value={newSample.internal_article_code} onChange={e => setNewSample({ ...newSample, internal_article_code: e.target.value })}
+                              placeholder="Bola Intan ref code" />
+                   </div>
+               </div>
+
+               {/* ── Section 2: Product Specs ── */}
+               <div style={classic ? { fontFamily: 'Tahoma, Arial, sans-serif', fontSize: '10px', fontWeight: 'bold', textTransform: 'uppercase' as const, letterSpacing: '0.5px', color: '#555', borderBottom: '1px solid #c0bdb5', paddingBottom: 3, marginBottom: 8 } : undefined}
+                    className={classic ? '' : 'text-uppercase text-muted small fw-semibold mb-2 border-bottom pb-1'}>
+                   Product Specs
+               </div>
+               <div className="row g-2 mb-3">
+                   <div className="col-md-4">
+                       <label style={classic ? { fontFamily: 'Tahoma, Arial, sans-serif', fontSize: '11px', color: '#000', display: 'block', marginBottom: 2 } : undefined}
+                              className={classic ? '' : 'form-label small text-muted'}>Width</label>
+                       <input style={classic ? xpInput : undefined} className={classic ? '' : 'form-control form-control-sm'}
+                              value={newSample.width} onChange={e => setNewSample({ ...newSample, width: e.target.value })}
+                              placeholder="e.g. 8 mm" />
+                   </div>
+                   <div className="col-12">
+                       <label style={classic ? { fontFamily: 'Tahoma, Arial, sans-serif', fontSize: '11px', color: '#000', display: 'block', marginBottom: 4 } : undefined}
+                              className={classic ? '' : 'form-label small text-muted mb-1'}>Colors</label>
+                       {newSample.colors.map((color, idx) => (
+                           <div key={idx} className="d-flex align-items-center gap-2 mb-1">
+                               <input
+                                   style={classic ? { ...xpInput, flex: 1 } : { flex: 1 }}
+                                   className={classic ? '' : 'form-control form-control-sm'}
+                                   value={color.name}
+                                   onChange={e => updateColor(idx, 'name', e.target.value)}
+                                   placeholder="Color name" />
+                               <button
+                                   type="button"
+                                   style={classic
+                                       ? (color.is_repeat
+                                           ? xpBtn({ background: 'linear-gradient(to bottom, #316ac5, #1a4a8a)', color: '#fff', borderColor: '#1a3a7a #0a1a4a #0a1a4a #1a3a7a', minWidth: 52 })
+                                           : xpBtn({ minWidth: 52 }))
+                                       : { minWidth: 56, fontSize: 11 }}
+                                   className={classic ? '' : `btn btn-sm ${color.is_repeat ? 'btn-primary' : 'btn-outline-secondary'}`}
+                                   onClick={() => updateColor(idx, 'is_repeat', !color.is_repeat)}
+                                   title="Toggle Repeat / New">
+                                   {color.is_repeat ? 'Repeat' : 'New'}
+                               </button>
+                               <button
+                                   type="button"
+                                   style={classic ? { background: 'none', border: '1px solid transparent', cursor: 'pointer', padding: '1px 4px', color: '#c00', fontFamily: 'Tahoma', fontSize: 11 } : undefined}
+                                   className={classic ? '' : 'btn btn-sm btn-link text-danger p-0'}
+                                   onClick={() => removeColorRow(idx)}
+                                   title="Remove row">×</button>
+                           </div>
+                       ))}
+                       <button
+                           type="button"
+                           style={classic ? xpBtn({ marginTop: 4 }) : { fontSize: 11 }}
+                           className={classic ? '' : 'btn btn-sm btn-outline-secondary mt-1'}
+                           onClick={addColorRow}>
+                           <i className="bi bi-plus-lg me-1"></i>Add Color
+                       </button>
+                   </div>
+               </div>
+
+               {/* ── Section 3: Materials ── */}
+               <div style={classic ? { fontFamily: 'Tahoma, Arial, sans-serif', fontSize: '10px', fontWeight: 'bold', textTransform: 'uppercase' as const, letterSpacing: '0.5px', color: '#555', borderBottom: '1px solid #c0bdb5', paddingBottom: 3, marginBottom: 8 } : undefined}
+                    className={classic ? '' : 'text-uppercase text-muted small fw-semibold mb-2 border-bottom pb-1'}>
+                   Materials
+               </div>
+               <div className="row g-2 mb-3">
+                   {[
+                       { key: 'main_material', label: 'Main Material (Bahan Utama)', placeholder: 'e.g. NILON' },
+                       { key: 'middle_material', label: 'Middle Material (Bahan Tengah)', placeholder: '' },
+                       { key: 'bottom_material', label: 'Bottom Material (Bahan Bawah)', placeholder: '' },
+                       { key: 'weft', label: 'Weft', placeholder: 'e.g. NILON' },
+                       { key: 'warp', label: 'Warp', placeholder: 'e.g. SPANDEX' },
+                   ].map(({ key, label, placeholder }) => (
+                       <div key={key} className="col-md-6">
+                           <label style={classic ? { fontFamily: 'Tahoma, Arial, sans-serif', fontSize: '11px', color: '#000', display: 'block', marginBottom: 2 } : undefined}
+                                  className={classic ? '' : 'form-label small text-muted'}>{label}</label>
+                           <input style={classic ? xpInput : undefined} className={classic ? '' : 'form-control form-control-sm'}
+                                  value={(newSample as any)[key]} onChange={e => setNewSample({ ...newSample, [key]: e.target.value })}
+                                  placeholder={placeholder} />
+                       </div>
+                   ))}
+                   <div className="col-md-6">
+                       <label style={classic ? { fontFamily: 'Tahoma, Arial, sans-serif', fontSize: '11px', color: '#000', display: 'block', marginBottom: 2 } : undefined}
+                              className={classic ? '' : 'form-label small text-muted'}>Original Weight (g/yd)</label>
+                       <input type="number" step="0.01" style={classic ? xpInput : undefined} className={classic ? '' : 'form-control form-control-sm'}
+                              value={newSample.original_weight} onChange={e => setNewSample({ ...newSample, original_weight: e.target.value })}
+                              placeholder="0.00" />
+                   </div>
+                   <div className="col-md-6">
+                       <label style={classic ? { fontFamily: 'Tahoma, Arial, sans-serif', fontSize: '11px', color: '#000', display: 'block', marginBottom: 2 } : undefined}
+                              className={classic ? '' : 'form-label small text-muted'}>Production Weight (g/yd)</label>
+                       <input type="number" step="0.01" style={classic ? xpInput : undefined} className={classic ? '' : 'form-control form-control-sm'}
+                              value={newSample.production_weight} onChange={e => setNewSample({ ...newSample, production_weight: e.target.value })}
+                              placeholder="0.00" />
+                   </div>
+                   <div className="col-12">
+                       <label style={classic ? { fontFamily: 'Tahoma, Arial, sans-serif', fontSize: '11px', color: '#000', display: 'block', marginBottom: 2 } : undefined}
+                              className={classic ? '' : 'form-label small text-muted'}>Additional Information</label>
+                       <textarea style={classic ? { ...xpInput, height: 'auto', padding: '4px 6px', width: '100%', resize: 'vertical' as const } : undefined}
+                                 className={classic ? '' : 'form-control form-control-sm'} rows={2}
+                                 value={newSample.additional_info} onChange={e => setNewSample({ ...newSample, additional_info: e.target.value })}
+                                 placeholder="e.g. PRINTING ROTARY" />
+                   </div>
+               </div>
+
+               {/* ── Section 4: Logistics ── */}
+               <div style={classic ? { fontFamily: 'Tahoma, Arial, sans-serif', fontSize: '10px', fontWeight: 'bold', textTransform: 'uppercase' as const, letterSpacing: '0.5px', color: '#555', borderBottom: '1px solid #c0bdb5', paddingBottom: 3, marginBottom: 8 } : undefined}
+                    className={classic ? '' : 'text-uppercase text-muted small fw-semibold mb-2 border-bottom pb-1'}>
+                   Logistics
+               </div>
+               <div className="row g-2">
+                   <div className="col-md-6">
+                       <label style={classic ? { fontFamily: 'Tahoma, Arial, sans-serif', fontSize: '11px', color: '#000', display: 'block', marginBottom: 2 } : undefined}
+                              className={classic ? '' : 'form-label small text-muted'}>Sample Quantity</label>
+                       <input style={classic ? xpInput : undefined} className={classic ? '' : 'form-control form-control-sm'}
+                              value={newSample.quantity} onChange={e => setNewSample({ ...newSample, quantity: e.target.value })}
+                              placeholder="e.g. 1 METER" />
+                   </div>
+                   <div className="col-md-6">
+                       <label style={classic ? { fontFamily: 'Tahoma, Arial, sans-serif', fontSize: '11px', color: '#000', display: 'block', marginBottom: 2 } : undefined}
+                              className={classic ? '' : 'form-label small text-muted'}>Per-Sample Size</label>
+                       <input style={classic ? xpInput : undefined} className={classic ? '' : 'form-control form-control-sm'}
+                              value={newSample.sample_size} onChange={e => setNewSample({ ...newSample, sample_size: e.target.value })}
+                              placeholder="Dimensions" />
+                   </div>
+                   <div className="col-md-6">
+                       <label style={classic ? { fontFamily: 'Tahoma, Arial, sans-serif', fontSize: '11px', color: '#000', display: 'block', marginBottom: 2 } : undefined}
+                              className={classic ? '' : 'form-label small text-muted'}>Est. Completion Date</label>
+                       <input type="date" style={classic ? xpInput : undefined} className={classic ? '' : 'form-control form-control-sm'}
+                              value={newSample.estimated_completion_date} onChange={e => setNewSample({ ...newSample, estimated_completion_date: e.target.value })} />
+                   </div>
+                   <div className="col-12">
+                       <label style={classic ? { fontFamily: 'Tahoma, Arial, sans-serif', fontSize: '11px', color: '#000', display: 'block', marginBottom: 2 } : undefined}
+                              className={classic ? '' : 'form-label small text-muted'}>Completion Description</label>
+                       <textarea style={classic ? { ...xpInput, height: 'auto', padding: '4px 6px', width: '100%', resize: 'vertical' as const } : undefined}
+                                 className={classic ? '' : 'form-control form-control-sm'} rows={2}
+                                 value={newSample.completion_description} onChange={e => setNewSample({ ...newSample, completion_description: e.target.value })}
+                                 placeholder="Priority instructions, special notes…" />
+                   </div>
                </div>
            </form>
        </ModalWrapper>
@@ -437,7 +574,7 @@ export default function SampleRequestView({ samples, salesOrders, items, attribu
                <div style={xpToolbar}>
                    <input
                        style={{ ...xpInput, width: 180 }}
-                       placeholder="Search code or item…"
+                       placeholder="Search code, article, project…"
                        value={searchTerm}
                        onChange={e => setSearchTerm(e.target.value)}
                    />
@@ -466,7 +603,7 @@ export default function SampleRequestView({ samples, salesOrders, items, attribu
                        <input
                            className="form-control form-control-sm"
                            style={{ paddingLeft: 24 }}
-                           placeholder="Search code or item…"
+                           placeholder="Search code, article, project…"
                            value={searchTerm}
                            onChange={e => setSearchTerm(e.target.value)}
                        />
@@ -503,7 +640,8 @@ export default function SampleRequestView({ samples, salesOrders, items, attribu
                            <tr>
                                <th style={classic ? { ...xpThCell, width: '130px' } : undefined} className={classic ? '' : 'ps-4'}>Request Code</th>
                                <th style={classic ? { ...xpThCell, width: '110px' } : undefined}>Related PO</th>
-                               <th style={classic ? xpThCell : undefined}>Item Config</th>
+                               <th style={classic ? xpThCell : undefined}>Article / Project</th>
+                               <th style={classic ? xpThCell : undefined}>Specs</th>
                                <th style={classic ? { ...xpThCell, width: '90px' } : undefined}>Status</th>
                                <th style={classic ? { ...xpThCell, textAlign: 'right' as const, borderRight: 'none', width: '100px' } : undefined} className={classic ? '' : 'text-end pe-4'}>Actions</th>
                            </tr>
@@ -537,31 +675,45 @@ export default function SampleRequestView({ samples, salesOrders, items, attribu
                                            </span>
                                        )}
                                    </td>
+                                   {/* Article / Project */}
                                    <td style={classic ? tdBase : undefined}>
-                                       <div style={classic ? { fontWeight: 'bold', fontSize: '11px' } : undefined} className={classic ? '' : 'fw-medium'}>
-                                           {getItemName(s.base_item_id)}
-                                       </div>
-                                       <div style={classic ? { display: 'flex', gap: 2, flexWrap: 'wrap' as const, marginTop: 2 } : undefined} className={classic ? '' : 'small text-muted d-flex gap-1 flex-wrap mt-1'}>
-                                           {s.attribute_values && s.attribute_values.map((v: any) => (
+                                       {s.customer_article_code && (
+                                           <div style={classic ? { fontWeight: 'bold', fontSize: '11px' } : undefined} className={classic ? '' : 'fw-medium'}>
+                                               {s.customer_article_code}
+                                           </div>
+                                       )}
+                                       {s.project && (
+                                           <div style={classic ? { fontSize: '9px', color: '#888' } : undefined} className={classic ? '' : 'small text-muted'}>
+                                               {s.project}
+                                           </div>
+                                       )}
+                                       {!s.customer_article_code && !s.project && (
+                                           <span style={classic ? { fontSize: '9px', color: '#aaa', fontStyle: 'italic', fontFamily: 'Tahoma, Arial, sans-serif' } : undefined}
+                                                 className={classic ? '' : 'text-muted small fst-italic'}>—</span>
+                                       )}
+                                   </td>
+                                   {/* Specs */}
+                                   <td style={classic ? tdBase : undefined}>
+                                       {s.width && (
+                                           <div style={classic ? { fontSize: '10px', fontFamily: 'Tahoma, Arial, sans-serif' } : undefined}
+                                                className={classic ? '' : 'small'}>
+                                               <i className="bi bi-rulers me-1 opacity-50"></i>{s.width}
+                                           </div>
+                                       )}
+                                       <div style={classic ? { display: 'flex', gap: 2, flexWrap: 'wrap' as const, marginTop: 2 } : undefined}
+                                            className={classic ? '' : 'small text-muted d-flex gap-1 flex-wrap mt-1'}>
+                                           {s.colors && s.colors.map((c: any, i: number) => (
                                                classic ? (
-                                                   <span key={v.id} style={{ background: '#e8e8e8', border: '1px solid #aaa', color: '#333', padding: '0 4px', fontSize: '9px', fontFamily: 'Tahoma, Arial, sans-serif' }}>
-                                                       {v.value}
+                                                   <span key={i} style={{ background: c.is_repeat ? '#e8e8ff' : '#e8f5e8', border: `1px solid ${c.is_repeat ? '#8888cc' : '#88aa88'}`, color: c.is_repeat ? '#333' : '#1a3a1a', padding: '0 4px', fontSize: '9px', fontFamily: 'Tahoma, Arial, sans-serif' }}>
+                                                       {c.name}{c.is_repeat ? ' (R)' : ''}
                                                    </span>
                                                ) : (
-                                                   <span key={v.id} className="badge bg-secondary bg-opacity-10 text-secondary border border-secondary border-opacity-10">{v.value}</span>
+                                                   <span key={i} className={`badge ${c.is_repeat ? 'bg-primary bg-opacity-10 text-primary' : 'bg-success bg-opacity-10 text-success'} border`}>
+                                                       {c.name}{c.is_repeat ? ' ↺' : ''}
+                                                   </span>
                                                )
                                            ))}
                                        </div>
-                                       {s.notes && (
-                                           <div
-                                               style={classic
-                                                   ? { fontSize: '9px', color: '#666', fontStyle: 'italic', marginTop: 2, maxWidth: 260, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' as const }
-                                                   : { maxWidth: 280, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
-                                               className={classic ? '' : 'small text-muted fst-italic mt-1'}
-                                           >
-                                               <i className="bi bi-sticky" style={{ marginRight: 3 }}></i>{s.notes}
-                                           </div>
-                                       )}
                                    </td>
                                    <td style={classic ? tdBase : undefined}>
                                        {classic ? (
@@ -612,7 +764,7 @@ export default function SampleRequestView({ samples, salesOrders, items, attribu
                            {filteredSamples.length === 0 && (
                                <tr>
                                    <td
-                                       colSpan={5}
+                                       colSpan={6}
                                        style={classic ? { ...tdBase, borderRight: 'none', textAlign: 'center', padding: '24px 8px', color: '#888', fontStyle: 'italic' } : undefined}
                                        className={classic ? '' : 'text-center py-5 text-muted'}
                                    >
