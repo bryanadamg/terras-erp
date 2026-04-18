@@ -21,7 +21,7 @@ export default function StockEntryPage() {
                 locations={locations} 
                 attributes={attributes} 
                 stockBalance={stockBalance} 
-                onAddStock={handleAddStock} 
+                onRecordStock={handleAddStock}
             />
     );
 }

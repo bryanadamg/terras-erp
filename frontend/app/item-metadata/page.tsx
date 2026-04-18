@@ -7,7 +7,8 @@ import { useConfirm } from '../context/ConfirmContext';
 export default function ItemMetadataPage() {
     const { categories, uoms, attributes, fetchData, authFetch } = useData();
     const { confirm } = useConfirm();
-    const API_BASE = (process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:8000/api').replace(/\/$/, '') + '/api';
+    const envBase = process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:8000/api';
+    const API_BASE = envBase.endsWith('/api') ? envBase : `${envBase}/api`;
 
     // ── Categories ────────────────────────────────────────────────────────────
     const handleCreateCategory = async (name: string) => {
