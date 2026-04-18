@@ -1,12 +1,13 @@
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func
 from app.db.session import get_async_db
-from app.services import stock_service
-from app.schemas import StockLedgerResponse, StockBalanceResponse, PaginatedStockLedgerResponse
+from app.services import stock_service, audit_service
+from app.schemas import StockLedgerResponse, StockBalanceResponse, PaginatedStockLedgerResponse, StockEntryCreate
 from app.models.auth import User
 from app.api.auth import get_current_user
 from app.models.item import Item
+from app.models.location import Location
 from datetime import datetime
 from typing import Optional
 
@@ -50,6 +51,45 @@ async def get_stock_ledger(
         "page": (skip // limit) + 1,
         "size": len(items)
     }
+
+@router.post("/stock", status_code=201)
+async def create_stock_entry(
+    payload: StockEntryCreate,
+    db: AsyncSession = Depends(get_async_db),
+    current_user: User = Depends(get_current_user)
+):
+    item_result = await db.execute(select(Item).filter(Item.code == payload.item_code))
+    item = item_result.scalars().first()
+    if not item:
+        raise HTTPException(status_code=404, detail=f"Item '{payload.item_code}' not found")
+
+    loc_result = await db.execute(select(Location).filter(Location.code == payload.location_code))
+    location = loc_result.scalars().first()
+    if not location:
+        raise HTTPException(status_code=404, detail=f"Location '{payload.location_code}' not found")
+
+    attribute_value_ids = [str(uid) for uid in payload.attribute_value_ids]
+    await stock_service.add_stock_entry(
+        db=db,
+        item_id=item.id,
+        location_id=location.id,
+        qty_change=payload.qty,
+        reference_type=payload.reference_type,
+        reference_id=payload.reference_id,
+        attribute_value_ids=attribute_value_ids,
+    )
+
+    await audit_service.log_activity(
+        db=db,
+        user_id=current_user.id,
+        action="create",
+        entity_type="stock_entry",
+        entity_id=str(item.id),
+        changes={"item": payload.item_code, "location": payload.location_code, "qty": payload.qty},
+    )
+
+    return {"status": "success", "message": "Stock entry recorded"}
+
 
 @router.get("/stock/balance", response_model=list[StockBalanceResponse])
 async def get_stock_balance_api(db: AsyncSession = Depends(get_async_db), current_user: User = Depends(get_current_user)):
