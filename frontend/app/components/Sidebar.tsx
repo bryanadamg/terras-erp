@@ -124,7 +124,7 @@ export default function Sidebar({ activeTab, setActiveTab, onTabHover, appName, 
       onClick={(e) => handleTabClick(tab, e)}
       {...H(tab)}
     >
-      <span style={{ width: 14, textAlign: 'center', fontSize: 12 }}>{icon}</span>
+      <span style={{ width: 14, textAlign: 'center', fontSize: 12 }}><i className={`bi ${icon}`} /></span>
       <span>{label}</span>
     </div>
   );
@@ -154,7 +154,7 @@ export default function Sidebar({ activeTab, setActiveTab, onTabHover, appName, 
         fontFamily: xpFont,
         minHeight: 40,
       }}>
-        <span style={{ fontSize: 18 }}>🏭</span>
+        <i className="bi bi-building-fill" style={{ fontSize: 18 }} />
         <span className="text-truncate" title={appName}>{appName}</span>
       </div>
 
@@ -186,12 +186,12 @@ export default function Sidebar({ activeTab, setActiveTab, onTabHover, appName, 
               letterSpacing: '0.5px',
             }}
           >
-            <span>⬛</span> QUICK SCAN
+            <i className="bi bi-qr-code-scan" /> QUICK SCAN
           </button>
         </div>
 
         {/* ── Dashboard ── */}
-        <NavItem tab="dashboard" label={t('dashboard') || 'Dashboard'} icon="🏠" />
+        <NavItem tab="dashboard" label={t('dashboard') || 'Dashboard'} icon="bi-house-door" />
 
         {/* ── Sales ── */}
         <div
@@ -199,14 +199,14 @@ export default function Sidebar({ activeTab, setActiveTab, onTabHover, appName, 
           onClick={() => setSalesExpanded(!salesExpanded)}
           {...H('hdr-sales')}
         >
-          <span>📈 {t('sales') || 'Sales'}</span>
+          <span><i className="bi bi-graph-up" /> {t('sales') || 'Sales'}</span>
           {chevron(salesExpanded)}
         </div>
         {salesExpanded && (
           <>
-            <NavItem tab="sales-orders" label={t('sales_orders') || 'Sales Orders'} icon="📄" isSub />
-            <NavItem tab="customers"    label={t('customers') || 'Customers'}        icon="👥" isSub />
-            <NavItem tab="samples"      label={t('sample_requests') || 'Sample Requests'} icon="🧪" isSub />
+            <NavItem tab="sales-orders" label={t('sales_orders') || 'Sales Orders'} icon="bi-file-text" isSub />
+            <NavItem tab="customers"    label={t('customers') || 'Customers'}        icon="bi-people" isSub />
+            <NavItem tab="samples"      label={t('sample_requests') || 'Sample Requests'} icon="bi-flask" isSub />
           </>
         )}
 
@@ -216,13 +216,13 @@ export default function Sidebar({ activeTab, setActiveTab, onTabHover, appName, 
           onClick={() => setProcurementExpanded(!procurementExpanded)}
           {...H('hdr-procurement')}
         >
-          <span>🛒 {t('procurement') || 'Procurement'}</span>
+          <span><i className="bi bi-cart3" /> {t('procurement') || 'Procurement'}</span>
           {chevron(procurementExpanded)}
         </div>
         {procurementExpanded && (
           <>
-            <NavItem tab="purchase-orders" label={t('purchase_orders') || 'Purchase Orders'} icon="🛍" isSub />
-            <NavItem tab="suppliers"        label={t('suppliers') || 'Suppliers'}              icon="🚚" isSub />
+            <NavItem tab="purchase-orders" label={t('purchase_orders') || 'Purchase Orders'} icon="bi-bag" isSub />
+            <NavItem tab="suppliers"        label={t('suppliers') || 'Suppliers'}              icon="bi-truck" isSub />
           </>
         )}
 
@@ -234,24 +234,24 @@ export default function Sidebar({ activeTab, setActiveTab, onTabHover, appName, 
               onClick={() => setInventoryExpanded(!inventoryExpanded)}
               {...H('hdr-inventory')}
             >
-              <span>📦 {t('inventory') || 'Inventory'}</span>
+              <span><i className="bi bi-box-seam" /> {t('inventory') || 'Inventory'}</span>
               {chevron(inventoryExpanded)}
             </div>
             {inventoryExpanded && (
               <>
                 {hasPermission('inventory.manage') && (
                   <>
-                    <NavItem tab="inventory"     label={t('item_inventory') || 'Item Inventory'} icon="📋" isSub />
-                    <NavItem tab="sample-masters" label={t('sample_masters') || 'Sample Masters'} icon="🧡" isSub />
+                    <NavItem tab="inventory"     label={t('item_inventory') || 'Item Inventory'} icon="bi-list-check" isSub />
+                    <NavItem tab="sample-masters" label={t('sample_masters') || 'Sample Masters'} icon="bi-gem" isSub />
 
-                    <NavItem tab="item-metadata" label={t('attributes') || 'Attributes'} icon="🏷" isSub />
+                    <NavItem tab="item-metadata" label={t('attributes') || 'Attributes'} icon="bi-tag" isSub />
                   </>
                 )}
                 {hasPermission('stock.entry') && (
-                  <NavItem tab="stock"     label={t('stock_entry') || 'Stock Entry'} icon="↔" isSub />
+                  <NavItem tab="stock"     label={t('stock_entry') || 'Stock Entry'} icon="bi-arrow-left-right" isSub />
                 )}
                 {hasPermission('locations.manage') && (
-                  <NavItem tab="locations" label={t('locations') || 'Locations'}     icon="📍" isSub />
+                  <NavItem tab="locations" label={t('locations') || 'Locations'}     icon="bi-geo-alt" isSub />
                 )}
               </>
             )}
@@ -266,19 +266,19 @@ export default function Sidebar({ activeTab, setActiveTab, onTabHover, appName, 
               onClick={() => setEngineeringExpanded(!engineeringExpanded)}
               {...H('hdr-engineering')}
             >
-              <span>⚙ {t('engineering') || 'Engineering'}</span>
+              <span><i className="bi bi-gear" /> {t('engineering') || 'Engineering'}</span>
               {chevron(engineeringExpanded)}
             </div>
             {engineeringExpanded && (
               <>
                 {hasPermission('manufacturing.manage') && (
                   <>
-                    <NavItem tab="bom"     label={t('bom') || 'BOM'}     icon="🗂" isSub />
-                    <NavItem tab="routing" label={t('routing') || 'Routing'} icon="🔀" isSub />
+                    <NavItem tab="bom"     label={t('bom') || 'BOM'}     icon="bi-diagram-3" isSub />
+                    <NavItem tab="routing" label={t('routing') || 'Routing'} icon="bi-shuffle" isSub />
                   </>
                 )}
                 {hasPermission('work_order.manage') && (
-                  <NavItem tab="manufacturing" label={t('work_orders') || 'Work Orders'} icon="⚙" isSub />
+                  <NavItem tab="manufacturing" label={t('work_orders') || 'Work Orders'} icon="bi-tools" isSub />
                 )}
               </>
             )}
@@ -293,14 +293,14 @@ export default function Sidebar({ activeTab, setActiveTab, onTabHover, appName, 
               onClick={() => setReportsExpanded(!reportsExpanded)}
               {...H('hdr-reports')}
             >
-              <span>📊 {t('reports') || 'Reports'}</span>
+              <span><i className="bi bi-bar-chart" /> {t('reports') || 'Reports'}</span>
               {chevron(reportsExpanded)}
             </div>
             {reportsExpanded && (
               <>
-                <NavItem tab="reports"    label={t('stock_ledger') || 'Stock Ledger'} icon="📒" isSub />
+                <NavItem tab="reports"    label={t('stock_ledger') || 'Stock Ledger'} icon="bi-journal-text" isSub />
                 {hasPermission('admin.access') && (
-                  <NavItem tab="audit-logs" label="Audit Logs" icon="📝" isSub />
+                  <NavItem tab="audit-logs" label="Audit Logs" icon="bi-clipboard-check" isSub />
                 )}
               </>
             )}
@@ -309,7 +309,7 @@ export default function Sidebar({ activeTab, setActiveTab, onTabHover, appName, 
 
         {/* ── System Admin ── */}
         {hasPermission('admin.access') && (
-          <NavItem tab="settings" label="System Admin" icon="🔒" />
+          <NavItem tab="settings" label="System Admin" icon="bi-shield-lock" />
         )}
       </div>
 
@@ -344,7 +344,7 @@ export default function Sidebar({ activeTab, setActiveTab, onTabHover, appName, 
             gap: 6,
           }}
         >
-          <span>⬚</span> {t('logout') || 'Logout'}
+          <i className="bi bi-box-arrow-right" /> {t('logout') || 'Logout'}
         </button>
         <div style={{ marginTop: 5, textAlign: 'center' }}>
           <small style={{ fontSize: 9, color: '#6070a0', fontFamily: xpFont }}>
