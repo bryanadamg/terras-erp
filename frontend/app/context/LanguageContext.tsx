@@ -56,6 +56,10 @@ const translations = {
         'from': 'From',
         'to': 'To',
         
+        // Locations
+        'location_code': 'Code',
+        'location_name': 'Name',
+
         // Items
         'item_code': 'Item Code',
         'item_name': 'Item Name',
@@ -136,6 +140,10 @@ const translations = {
         'from': 'Dari',
         'to': 'Sampai',
         
+        // Locations
+        'location_code': 'Kode',
+        'location_name': 'Nama',
+
         // Items
         'item_code': 'Kode Barang',
         'item_name': 'Nama Barang',

@@ -121,8 +121,8 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
             const requestTypes: string[] = [];
 
             // 1. MASTER DATA (Locations, Partners, etc.)
-            // Fetch if initial load OR explicitly targeted OR on Settings page
-            if ((isInitialLoad && !masterFetched) || fetchTarget === 'settings') {
+            // Fetch if initial load OR explicitly targeted OR on Settings/Locations page
+            if ((isInitialLoad && !masterFetched) || fetchTarget === 'settings' || fetchTarget === 'locations') {
                 requests.push(fetch(`${API_BASE}/locations`, { headers })); requestTypes.push('locations');
                 requests.push(fetch(`${API_BASE}/attributes`, { headers })); requestTypes.push('attributes');
                 requests.push(fetch(`${API_BASE}/categories`, { headers })); requestTypes.push('categories');

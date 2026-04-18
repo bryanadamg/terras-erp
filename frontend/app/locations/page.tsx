@@ -10,6 +10,14 @@ export default function LocationsPage() {
     const envBase = process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:8000/api';
     const API_BASE = envBase.endsWith('/api') ? envBase : `${envBase}/api`;
 
+    const fetchLocations = async (): Promise<any[]> => {
+        try {
+            const res = await authFetch(`${API_BASE}/locations`);
+            if (res.ok) return res.json();
+        } catch {}
+        return locations;
+    };
+
     const handleCreateLocation = async (p: any) => {
         const res = await authFetch(`${API_BASE}/locations`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(p) });
         if (res.ok) fetchData();
@@ -32,6 +40,7 @@ export default function LocationsPage() {
                 onCreateLocation={handleCreateLocation}
                 onDeleteLocation={handleDeleteLocation}
                 onRefresh={fetchData}
+                fetchLocations={fetchLocations}
             />
     );
 }

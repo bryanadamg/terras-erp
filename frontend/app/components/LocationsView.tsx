@@ -3,7 +3,7 @@ import { useToast } from './Toast';
 import { useLanguage } from '../context/LanguageContext';
 import { useTheme } from '../context/ThemeContext';
 
-export default function LocationsView({ locations, onCreateLocation, onDeleteLocation, onRefresh }: any) {
+export default function LocationsView({ locations, onCreateLocation, onDeleteLocation, onRefresh, fetchLocations }: any) {
   const { showToast } = useToast();
   const { t } = useLanguage();
   const [newLocation, setNewLocation] = useState({ code: '', name: '' });
@@ -11,6 +11,7 @@ export default function LocationsView({ locations, onCreateLocation, onDeleteLoc
   const { uiStyle: currentStyle } = useTheme();
   const classic = currentStyle === 'classic';
   const [hoveredId, setHoveredId] = useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const xpBevel: React.CSSProperties = {
       border: '2px solid', borderColor: '#dfdfdf #808080 #808080 #dfdfdf',
@@ -50,21 +51,28 @@ export default function LocationsView({ locations, onCreateLocation, onDeleteLoc
 
   const handleSubmitLocation = async (e: React.FormEvent) => {
       e.preventDefault();
-      const res = await onCreateLocation(newLocation);
-      if (res && res.status === 400) {
-          let baseCode = newLocation.code;
-          const baseMatch = baseCode.match(/^(.*)-(\d+)$/);
-          if (baseMatch) baseCode = baseMatch[1];
-          let counter = 1;
-          let suggestedCode = `${baseCode}-${counter}`;
-          while (locations.some((l: any) => l.code === suggestedCode)) { counter++; suggestedCode = `${baseCode}-${counter}`; }
-          showToast(`Location Code "${newLocation.code}" already exists. Suggesting: ${suggestedCode}`, 'warning');
-          setNewLocation({ ...newLocation, code: suggestedCode });
-      } else if (res && res.ok) {
-          showToast('Location added successfully!', 'success');
-          setNewLocation({ code: '', name: '' });
-      } else {
-          showToast('Failed to add location', 'danger');
+      if (isSubmitting) return;
+      setIsSubmitting(true);
+      try {
+          const res = await onCreateLocation(newLocation);
+          if (res && res.status === 400) {
+              const freshLocations = fetchLocations ? await fetchLocations() : locations;
+              let baseCode = newLocation.code;
+              const baseMatch = baseCode.match(/^(.*)-(\d+)$/);
+              if (baseMatch) baseCode = baseMatch[1];
+              let counter = 1;
+              let suggestedCode = `${baseCode}-${counter}`;
+              while (freshLocations.some((l: any) => l.code === suggestedCode)) { counter++; suggestedCode = `${baseCode}-${counter}`; }
+              showToast(`Location Code "${newLocation.code}" already exists. Suggesting: ${suggestedCode}`, 'warning');
+              setNewLocation({ ...newLocation, code: suggestedCode });
+          } else if (res && res.ok) {
+              showToast('Location added successfully!', 'success');
+              setNewLocation({ code: '', name: '' });
+          } else {
+              showToast('Failed to add location', 'danger');
+          }
+      } finally {
+          setIsSubmitting(false);
       }
   };
 
@@ -89,7 +97,7 @@ export default function LocationsView({ locations, onCreateLocation, onDeleteLoc
                                   <i className="bi bi-plus-circle" style={{ marginRight: 4 }}></i>Add Location
                               </div>
                               <form onSubmit={handleSubmitLocation}>
-                                  <label style={xpLabel}>{t('item_code')}</label>
+                                  <label style={xpLabel}>{t('location_code')}</label>
                                   <input
                                       style={{ ...xpInput, width: '100%', marginBottom: 6 }}
                                       placeholder="WH-01"
@@ -97,7 +105,7 @@ export default function LocationsView({ locations, onCreateLocation, onDeleteLoc
                                       onChange={e => setNewLocation({ ...newLocation, code: e.target.value })}
                                       required
                                   />
-                                  <label style={xpLabel}>{t('item_name')}</label>
+                                  <label style={xpLabel}>{t('location_name')}</label>
                                   <input
                                       style={{ ...xpInput, width: '100%', marginBottom: 8 }}
                                       placeholder="Main Warehouse"
@@ -107,9 +115,10 @@ export default function LocationsView({ locations, onCreateLocation, onDeleteLoc
                                   />
                                   <button
                                       type="submit"
-                                      style={{ ...xpBtn({ background: 'linear-gradient(to bottom,#5ec85e,#2d7a2d)', borderColor: '#1a5e1a #0a3e0a #0a3e0a #1a5e1a', color: '#ffffff', fontWeight: 'bold' }), width: '100%' }}
+                                      disabled={isSubmitting}
+                                      style={{ ...xpBtn({ background: 'linear-gradient(to bottom,#5ec85e,#2d7a2d)', borderColor: '#1a5e1a #0a3e0a #0a3e0a #1a5e1a', color: '#ffffff', fontWeight: 'bold' }), width: '100%', opacity: isSubmitting ? 0.6 : 1 }}
                                   >
-                                      <i className="bi bi-plus-lg" style={{ marginRight: 4 }}></i>{t('add')}
+                                      <i className="bi bi-plus-lg" style={{ marginRight: 4 }}></i>{isSubmitting ? '...' : t('add')}
                                   </button>
                               </form>
                           </div>
@@ -133,8 +142,8 @@ export default function LocationsView({ locations, onCreateLocation, onDeleteLoc
                                   <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                                       <thead>
                                           <tr>
-                                              <th style={{ ...xpTableHeader, padding: '3px 8px', width: 100 }}>{t('item_code')}</th>
-                                              <th style={{ ...xpTableHeader, padding: '3px 8px' }}>{t('item_name')}</th>
+                                              <th style={{ ...xpTableHeader, padding: '3px 8px', width: 100 }}>{t('location_code')}</th>
+                                              <th style={{ ...xpTableHeader, padding: '3px 8px' }}>{t('location_name')}</th>
                                               <th style={{ ...xpTableHeader, padding: '3px 8px', width: 36 }}></th>
                                           </tr>
                                       </thead>
@@ -201,14 +210,14 @@ export default function LocationsView({ locations, onCreateLocation, onDeleteLoc
                               <h6 className="text-muted text-uppercase small fw-bold mb-3">{t('create')} {t('locations')}</h6>
                               <form onSubmit={handleSubmitLocation}>
                                   <div className="mb-3">
-                                      <label className="form-label">{t('item_code')}</label>
+                                      <label className="form-label">{t('location_code')}</label>
                                       <input className="form-control" placeholder="WH-01" value={newLocation.code} onChange={e => setNewLocation({ ...newLocation, code: e.target.value })} required />
                                   </div>
                                   <div className="mb-3">
-                                      <label className="form-label">{t('item_name')}</label>
+                                      <label className="form-label">{t('location_name')}</label>
                                       <input className="form-control" placeholder="Main Warehouse" value={newLocation.name} onChange={e => setNewLocation({ ...newLocation, name: e.target.value })} required />
                                   </div>
-                                  <button type="submit" className="btn btn-success w-100"><i className="bi bi-plus-lg me-1"></i> {t('add')}</button>
+                                  <button type="submit" className="btn btn-success w-100" disabled={isSubmitting}><i className="bi bi-plus-lg me-1"></i> {isSubmitting ? '...' : t('add')}</button>
                               </form>
                           </div>
                           <div className="col-md-7">
@@ -220,8 +229,8 @@ export default function LocationsView({ locations, onCreateLocation, onDeleteLoc
                                   <table className="table table-hover align-middle">
                                       <thead className="table-light">
                                           <tr>
-                                              <th>{t('item_code')}</th>
-                                              <th>{t('item_name')}</th>
+                                              <th>{t('location_code')}</th>
+                                              <th>{t('location_name')}</th>
                                               <th style={{ width: '50px' }}></th>
                                           </tr>
                                       </thead>
