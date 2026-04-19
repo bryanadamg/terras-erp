@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo, memo } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
-import CodeConfigModal, { CodeConfig, buildCodeParts } from './CodeConfigModal';
+import CodeConfigModal, { CodeConfig, buildCodeWithCounter } from './CodeConfigModal';
 import BulkImportModal from './BulkImportModal';
 import SearchableSelect from './SearchableSelect';
 import HistoryPane from './HistoryPane';
@@ -288,17 +288,13 @@ export default function InventoryView({
   };
 
   const suggestItemCode = (config = codeConfig) => {
-      const parts = buildCodeParts(config);
-      const basePattern = parts.join(config.separator);
-
       let counter = 1;
-      let baseCode = `${basePattern}${config.separator}001`;
-
-      while (items.some((i: any) => i.code === baseCode)) {
+      let code = buildCodeWithCounter(config, counter);
+      while (items.some((i: any) => i.code === code)) {
           counter++;
-          baseCode = `${basePattern}${config.separator}${String(counter).padStart(3, '0')}`;
+          code = buildCodeWithCounter(config, counter);
       }
-      return baseCode;
+      return code;
   };
 
   const openCreateModal = () => {

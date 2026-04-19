@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import CodeConfigModal, { CodeConfig, buildCodeParts } from './CodeConfigModal';
+import CodeConfigModal, { CodeConfig, buildCodeWithCounter } from './CodeConfigModal';
 import { useToast } from './Toast';
 import { useLanguage } from '../context/LanguageContext';
 import SearchableSelect from './SearchableSelect';
@@ -147,15 +147,13 @@ export default function PurchaseOrderView({ items, attributes, purchaseOrders, p
   };
 
   const suggestPOCode = (config = codeConfig) => {
-      const parts = buildCodeParts(config);
-      const basePattern = parts.join(config.separator);
       let counter = 1;
-      let baseCode = `${basePattern}${config.separator}001`;
-      while (purchaseOrders.some((s: any) => s.po_number === baseCode)) {
+      let code = buildCodeWithCounter(config, counter);
+      while (purchaseOrders.some((s: any) => s.po_number === code)) {
           counter++;
-          baseCode = `${basePattern}${config.separator}${String(counter).padStart(3, '0')}`;
+          code = buildCodeWithCounter(config, counter);
       }
-      return baseCode;
+      return code;
   };
 
   useEffect(() => {

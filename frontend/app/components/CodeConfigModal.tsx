@@ -46,8 +46,8 @@ export const CHIP_COLORS_CLASSIC_TEXT: Record<string, string> = {
 };
 
 export function normalizeCounter(segs: Segment[]): Segment[] {
-  const without = segs.filter(s => s.type !== 'counter');
-  return [...without, { type: 'counter' }];
+  if (segs.some(s => s.type === 'counter')) return segs;
+  return [...segs, { type: 'counter' }];
 }
 
 export function getDefaultSegments(type: string): Segment[] {
@@ -73,7 +73,8 @@ export function configToSegments(
   }
   if (!safe.variantAttributeNames) safe.variantAttributeNames = [];
 
-  const order: string[] = safe.segmentOrder ?? ['prefix', 'item', 'attribute', 'year', 'month', 'suffix'];
+  const rawOrder: string[] = safe.segmentOrder ?? ['prefix', 'item', 'attribute', 'year', 'month', 'suffix'];
+  const order = rawOrder.includes('counter') ? rawOrder : [...rawOrder, 'counter'];
   const segs: Segment[] = [];
   let attrNameIndex = 0;
 
@@ -103,10 +104,12 @@ export function configToSegments(
       case 'suffix':
         if (safe.suffix) segs.push({ type: 'suffix', value: safe.suffix });
         break;
+      case 'counter':
+        segs.push({ type: 'counter' });
+        break;
     }
   }
 
-  segs.push({ type: 'counter' });
   return segs;
 }
 
@@ -121,7 +124,7 @@ export function segmentsToConfig(segs: Segment[], separator: string): CodeConfig
     variantAttributeNames: (normalized.filter((s): s is Extract<Segment, { type: 'attribute' }> => s.type === 'attribute')).map(s => s.name),
     includeYear:           normalized.some(s => s.type === 'year'),
     includeMonth:          normalized.some(s => s.type === 'month'),
-    segmentOrder:          normalized.filter(s => s.type !== 'counter').map(s => s.type),
+    segmentOrder:          normalized.map(s => s.type),
   };
 }
 
@@ -147,6 +150,31 @@ export function buildCodeParts(
   return parts;
 }
 
+export function buildCodeWithCounter(
+  config: CodeConfig,
+  counterValue: number,
+  itemCode = '',
+  variantNames: string[] = []
+): string {
+  const now = new Date();
+  const rawOrder = config.segmentOrder ?? ['prefix', 'item', 'attribute', 'year', 'month', 'suffix'];
+  const order = rawOrder.includes('counter') ? rawOrder : [...rawOrder, 'counter'];
+  const parts: string[] = [];
+  let attrIndex = 0;
+  for (const type of order) {
+    switch (type) {
+      case 'prefix':    if (config.prefix) parts.push(config.prefix); break;
+      case 'item':      if (config.includeItemCode && itemCode) parts.push(itemCode); break;
+      case 'attribute': { const v = variantNames[attrIndex++]; if (config.includeVariant && v) parts.push(v); break; }
+      case 'year':      if (config.includeYear) parts.push(String(now.getFullYear())); break;
+      case 'month':     if (config.includeMonth) parts.push(String(now.getMonth() + 1).padStart(2, '0')); break;
+      case 'suffix':    if (config.suffix) parts.push(config.suffix); break;
+      case 'counter':   parts.push(String(counterValue).padStart(5, '0')); break;
+    }
+  }
+  return parts.join(config.separator);
+}
+
 export function getSegmentPreviewValue(
   seg: Segment,
   attributes: { id: any; name: string; values: { id: any; value: string }[] }[]
@@ -161,7 +189,7 @@ export function getSegmentPreviewValue(
     case 'year':    return String(new Date().getFullYear());
     case 'month':   return String(new Date().getMonth() + 1).padStart(2, '0');
     case 'suffix':  return seg.value || 'SUFFIX';
-    case 'counter': return '001';
+    case 'counter': return '00001';
   }
 }
 
@@ -170,8 +198,7 @@ export function getPreview(
   separator: string,
   attributes: { id: any; name: string; values: { id: any; value: string }[] }[]
 ): string {
-  const normalized = normalizeCounter(segs);
-  return normalized.map(s => getSegmentPreviewValue(s, attributes)).join(separator);
+  return segs.map(s => getSegmentPreviewValue(s, attributes)).join(separator);
 }
 
 export function getAvailablePalette(
@@ -267,13 +294,12 @@ function SegmentChipDefault({
 
       {/* Chip */}
       <div
-        draggable={!isCounter}
-        onDragStart={isCounter ? undefined : onDragStart}
-        onDragEnd={isCounter ? undefined : onDragEnd}
+        draggable
+        onDragStart={onDragStart}
+        onDragEnd={onDragEnd}
         style={{
           display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '2px',
-          cursor: isCounter ? 'default' : 'grab',
-          opacity: isCounter ? 0.75 : 1,
+          cursor: 'grab',
           flexShrink: 0,
         }}
       >
@@ -326,7 +352,7 @@ function SegmentChipDefault({
                : seg.type === 'attribute' ? (seg as Extract<Segment, { type: 'attribute' }>).name.toUpperCase()
                : seg.type === 'year' ? new Date().getFullYear()
                : seg.type === 'month' ? String(new Date().getMonth() + 1).padStart(2, '0')
-               : '001'}
+               : '00001'}
             </span>
           )}
 
@@ -441,7 +467,10 @@ export default function CodeConfigModal({ isOpen, onClose, type, onSave, initial
     setActiveGap(null);
     const drag = dragRef.current;
     if (drag?.sourceZone === 'track') {
-      setSegments(prev => normalizeCounter(removeSegment(prev, drag.index)));
+      const dragged = segments[drag.index];
+      if (dragged?.type !== 'counter') {
+        setSegments(prev => normalizeCounter(removeSegment(prev, drag.index)));
+      }
     }
     dragRef.current = null;
   };
@@ -508,9 +537,9 @@ export default function CodeConfigModal({ isOpen, onClose, type, onSave, initial
           {xpGap(i)}
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1px', flexShrink: 0 }}>
             <div
-              draggable={!isCounter}
-              onDragStart={isCounter ? undefined : e => handleTrackDragStart(e, i)}
-              onDragEnd={isCounter ? undefined : handleDragEnd}
+              draggable
+              onDragStart={e => handleTrackDragStart(e, i)}
+              onDragEnd={handleDragEnd}
               style={{
                 display: 'flex', alignItems: 'center', gap: '4px',
                 background: isCounter
@@ -522,8 +551,7 @@ export default function CodeConfigModal({ isOpen, onClose, type, onSave, initial
                 fontFamily: "'Courier New', monospace",
                 fontSize: '11px', fontWeight: 'bold',
                 color: isCounter ? '#333' : textColor,
-                cursor: isCounter ? 'default' : 'grab',
-                opacity: isCounter ? 0.85 : 1,
+                cursor: 'grab',
                 userSelect: 'none', minHeight: '22px',
               }}
             >
@@ -568,7 +596,7 @@ export default function CodeConfigModal({ isOpen, onClose, type, onSave, initial
                    : seg.type === 'attribute' ? (seg as Extract<Segment, { type: 'attribute' }>).name.toUpperCase()
                    : seg.type === 'year' ? new Date().getFullYear()
                    : seg.type === 'month' ? String(new Date().getMonth() + 1).padStart(2, '0')
-                   : '001'}
+                   : '00001'}
                 </span>
               )}
               {!isCounter && (
@@ -688,6 +716,21 @@ export default function CodeConfigModal({ isOpen, onClose, type, onSave, initial
                 flexWrap: 'wrap', gap: '2px', minHeight: '46px',
               }}>
                 {segments.map((seg, i) => xpChip(seg, i))}
+                {/* Trailing drop zone */}
+                <div
+                  onDragOver={e => handleGapDragOver(e, segments.length)}
+                  onDragLeave={handleGapDragLeave}
+                  onDrop={e => handleGapDrop(e, segments.length)}
+                  style={{
+                    width: activeGap === segments.length ? '16px' : '6px',
+                    minWidth: activeGap === segments.length ? '16px' : '6px',
+                    height: '22px',
+                    background: activeGap === segments.length ? '#cce0ff' : 'transparent',
+                    borderLeft: activeGap === segments.length ? '2px solid #0058e6' : 'none',
+                    transition: 'width 0.1s',
+                    cursor: 'crosshair', flexShrink: 0,
+                  }}
+                />
               </div>
             </div>
 
@@ -859,6 +902,21 @@ export default function CodeConfigModal({ isOpen, onClose, type, onSave, initial
                   onSuffixChange={handleSuffixChange}
                 />
               ))}
+              {/* Trailing drop zone — allows placing any segment at the very end */}
+              <div
+                onDragOver={e => handleGapDragOver(e, segments.length)}
+                onDragLeave={handleGapDragLeave}
+                onDrop={e => handleGapDrop(e, segments.length)}
+                style={{
+                  width: activeGap === segments.length ? '16px' : '8px',
+                  minWidth: activeGap === segments.length ? '16px' : '8px',
+                  height: '36px',
+                  background: activeGap === segments.length ? '#47556922' : 'transparent',
+                  borderLeft: activeGap === segments.length ? '2px solid #475569' : 'none',
+                  transition: 'width 0.1s, background 0.1s',
+                  cursor: 'crosshair', flexShrink: 0,
+                }}
+              />
             </div>
           </div>
 

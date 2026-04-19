@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, memo } from 'react';
 import { useLanguage } from '../context/LanguageContext';
-import CodeConfigModal, { CodeConfig, buildCodeParts } from './CodeConfigModal';
+import CodeConfigModal, { CodeConfig, buildCodeWithCounter } from './CodeConfigModal';
 import BOMAutomatorModal from './BOMAutomatorModal';
 import SearchableSelect from './SearchableSelect';
 
@@ -258,15 +258,13 @@ export default function BOMDesigner({
                 if (selectedVal) valueNames.push(selectedVal.value.toUpperCase().replace(/\s+/g, ''));
             }
         }
-        const parts = buildCodeParts(config, itemCode, valueNames);
-        const basePattern = parts.join(config.separator);
         let counter = 1;
-        let baseCode = `${basePattern}${config.separator}001`;
-        while (existingBOMs.some((b: any) => b.code === baseCode)) {
+        let code = buildCodeWithCounter(config, counter, itemCode, valueNames);
+        while (existingBOMs.some((b: any) => b.code === code)) {
             counter++;
-            baseCode = `${basePattern}${config.separator}${String(counter).padStart(3, '0')}`;
+            code = buildCodeWithCounter(config, counter, itemCode, valueNames);
         }
-        return baseCode;
+        return code;
     }, [codeConfig, attributes, existingBOMs]);
 
     const findMatchingAttributeIds = useCallback((childItemCode: string, parentAttrIds: string[]): string[] => {

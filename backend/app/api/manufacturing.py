@@ -171,7 +171,7 @@ async def create_wo_recursive(
     base = f"WO-{safe_name}"
     counter = 1
     while True:
-        candidate = f"{base}-{str(counter).zfill(3)}"
+        candidate = f"{base}-{str(counter).zfill(5)}"
         existing = await db.execute(select(WorkOrder.id).filter(WorkOrder.code == candidate).limit(1))
         if existing.scalars().first() is None:
             wo_code = candidate
@@ -302,7 +302,7 @@ async def get_available_wo_code(
 ):
     counter = 1
     while True:
-        candidate = f"{base}-{str(counter).zfill(3)}"
+        candidate = f"{base}-{str(counter).zfill(5)}"
         result = await db.execute(select(WorkOrder.id).filter(WorkOrder.code == candidate).limit(1))
         if result.scalars().first() is None:
             return {"code": candidate}

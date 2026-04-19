@@ -18,7 +18,7 @@ def create_sample_request(
     current_user: User = Depends(get_current_user),
 ):
     count = db.query(SampleRequest).count()
-    code = f"SMP-{datetime.now().year}-{str(count + 1).zfill(3)}"
+    code = f"SMP-{datetime.now().year}-{str(count + 1).zfill(5)}"
 
     req_date = date.fromisoformat(payload.request_date) if payload.request_date else date.today()
     est_date = date.fromisoformat(payload.estimated_completion_date) if payload.estimated_completion_date else None

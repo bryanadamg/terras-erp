@@ -4,7 +4,7 @@ import { useTheme } from '../context/ThemeContext';
 import { useToast } from './Toast';
 import { useLanguage } from '../context/LanguageContext';
 import { useData } from '../context/DataContext';
-import CodeConfigModal, { CodeConfig, buildCodeParts } from './CodeConfigModal';
+import CodeConfigModal, { CodeConfig, buildCodeWithCounter } from './CodeConfigModal';
 import SearchableSelect from './SearchableSelect';
 import HistoryPane from './HistoryPane';
 import ModalWrapper from './ModalWrapper';
@@ -216,15 +216,13 @@ export default function SampleRequestView({ samples, customers, onCreateSample, 
   };
 
   const suggestSampleCode = (config = codeConfig) => {
-      const parts = buildCodeParts(config);
-      const basePattern = parts.join(config.separator);
       let counter = 1;
-      let baseCode = `${basePattern}${config.separator}001`;
-      while (samples.some((s: any) => s.code === baseCode)) {
+      let code = buildCodeWithCounter(config, counter);
+      while (samples.some((s: any) => s.code === code)) {
           counter++;
-          baseCode = `${basePattern}${config.separator}${String(counter).padStart(3, '0')}`;
+          code = buildCodeWithCounter(config, counter);
       }
-      return baseCode;
+      return code;
   };
 
   const openCreateModal = () => {

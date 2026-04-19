@@ -602,7 +602,7 @@ export default function ManufacturingView({
               return data.code;
           }
       } catch (_) {}
-      return `${base}-001`;
+      return `${base}-00001`;
   };
 
   const handleSaveConfig = async (newConfig: CodeConfig) => {

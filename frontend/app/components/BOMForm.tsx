@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import CodeConfigModal, { CodeConfig, buildCodeParts } from './CodeConfigModal';
+import CodeConfigModal, { CodeConfig, buildCodeWithCounter } from './CodeConfigModal';
 import SearchableSelect from './SearchableSelect';
 import { useLanguage } from '../context/LanguageContext';
 
@@ -69,17 +69,13 @@ export default function BOMForm({
               if (selectedVal) names.push(selectedVal.value.toUpperCase().replace(/\s+/g, ''));
           }
       }
-      const parts = buildCodeParts(config, itemCode, names);
-      const basePattern = parts.join(config.separator);
-      
       let counter = 1;
-      let baseCode = `${basePattern}${config.separator}001`;
-      
-      while (boms.some((b: any) => b.code === baseCode)) {
+      let code = buildCodeWithCounter(config, counter, itemCode, names);
+      while (boms.some((b: any) => b.code === code)) {
           counter++;
-          baseCode = `${basePattern}${config.separator}${String(counter).padStart(3, '0')}`;
+          code = buildCodeWithCounter(config, counter, itemCode, names);
       }
-      return baseCode;
+      return code;
   };
 
   const handleSaveConfig = (newConfig: CodeConfig) => {
