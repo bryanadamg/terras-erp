@@ -1094,21 +1094,6 @@ export default function InventoryView({
                         </div>
                     </div>
 
-                    <div className="mb-3">
-                        <label
-                          className={classic ? '' : 'form-label small text-muted'}
-                          style={classic ? { fontFamily: 'Tahoma, Arial, sans-serif', fontSize: '10px', color: '#333333', display: 'block', marginBottom: '2px' } : undefined}
-                        >
-                          {t('source_sample')}
-                        </label>
-                        <SearchableSelect
-                            options={sampleItems.map((s: any) => ({ value: s.id, label: s.name, subLabel: s.code }))}
-                            value={editingItem.source_sample_id || ''}
-                            onChange={(val) => setEditingItem({...editingItem, source_sample_id: val})}
-                            placeholder="None"
-                        />
-                    </div>
-
                     <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '8px' }}>
                         {classic ? (
                           <>
