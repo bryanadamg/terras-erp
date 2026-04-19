@@ -357,29 +357,28 @@ export default function SampleRequestView({ samples, customers, onCreateSample, 
       whiteSpace: 'nowrap' as const,
       border: '1px solid',
   };
-  const cbInprod = (disabled: boolean): React.CSSProperties => ({
+  const cbInprod = (active: boolean): React.CSSProperties => ({
       ...cbBase,
-      background: disabled ? '#f0e8c8' : 'linear-gradient(to bottom, #fff8e1, #ffe082)',
-      borderColor: disabled ? '#ccc #ccc #ccc #ccc' : '#e6c000 #a06000 #a06000 #e6c000',
-      color: disabled ? '#888' : '#3e2000',
-      cursor: disabled ? 'default' : 'pointer',
-      opacity: disabled ? 0.45 : 1,
+      background: active ? 'linear-gradient(to bottom, #ffe082, #c77800)' : 'linear-gradient(to bottom, #f5f5f5, #e0dfd8)',
+      borderColor: active ? '#a06000 #603000 #603000 #a06000' : '#d0cfc8 #a0a09a #a0a09a #d0cfc8',
+      color: active ? '#3e2000' : '#666',
+      fontWeight: active ? 'bold' : 'normal',
+      borderRight: 'none',
   });
-  const cbApprove = (disabled: boolean): React.CSSProperties => ({
+  const cbApprove = (active: boolean): React.CSSProperties => ({
       ...cbBase,
-      background: disabled ? '#d4ebd4' : 'linear-gradient(to bottom, #c8e6c9, #8dc78f)',
-      borderColor: disabled ? '#ccc #ccc #ccc #ccc' : '#66bb6a #1b5e20 #1b5e20 #66bb6a',
-      color: disabled ? '#888' : '#0c3a1a',
-      cursor: disabled ? 'default' : 'pointer',
-      opacity: disabled ? 0.45 : 1,
+      background: active ? 'linear-gradient(to bottom, #4cae4c, #2d7a2d)' : 'linear-gradient(to bottom, #f5f5f5, #e0dfd8)',
+      borderColor: active ? '#1b5e20 #0a3e0a #0a3e0a #1b5e20' : '#d0cfc8 #a0a09a #a0a09a #d0cfc8',
+      color: active ? '#fff' : '#666',
+      fontWeight: active ? 'bold' : 'normal',
+      borderRight: 'none',
   });
-  const cbReject = (disabled: boolean): React.CSSProperties => ({
+  const cbReject = (active: boolean): React.CSSProperties => ({
       ...cbBase,
-      background: disabled ? '#edd4d4' : 'linear-gradient(to bottom, #ffcdd2, #e88a8a)',
-      borderColor: disabled ? '#ccc #ccc #ccc #ccc' : '#ef9a9a #7f0000 #7f0000 #ef9a9a',
-      color: disabled ? '#888' : '#4a0000',
-      cursor: disabled ? 'default' : 'pointer',
-      opacity: disabled ? 0.45 : 1,
+      background: active ? 'linear-gradient(to bottom, #d32f2f, #8b0000)' : 'linear-gradient(to bottom, #f5f5f5, #e0dfd8)',
+      borderColor: active ? '#7f0000 #4a0000 #4a0000 #7f0000' : '#d0cfc8 #a0a09a #a0a09a #d0cfc8',
+      color: active ? '#fff' : '#666',
+      fontWeight: active ? 'bold' : 'normal',
   });
 
   // Left-border + row background for each color status
@@ -1145,11 +1144,9 @@ export default function SampleRequestView({ samples, customers, onCreateSample, 
                                                            <colgroup>
                                                                <col style={{ width: 110 }} />
                                                                <col style={{ width: 62 }} />
-                                                               <col style={{ width: 108 }} />
+                                                               <col style={{ width: 106 }} />
                                                                <col />{/* flex spacer */}
-                                                               <col style={{ width: 82 }} />
-                                                               <col style={{ width: 82 }} />
-                                                               <col style={{ width: 74 }} />
+                                                               <col style={{ width: 240 }} />
                                                                <col style={{ width: 90 }} />
                                                            </colgroup>
                                                            <thead>
@@ -1158,9 +1155,7 @@ export default function SampleRequestView({ samples, customers, onCreateSample, 
                                                                    <th style={colorThCell}>Type</th>
                                                                    <th style={colorThCell}>Status</th>
                                                                    <th style={{ ...colorThCell, borderRight: 'none' }}></th>
-                                                                   <th style={{ ...colorThCell, textAlign: 'center' as const }}>In Prod</th>
-                                                                   <th style={{ ...colorThCell, textAlign: 'center' as const }}>Approve</th>
-                                                                   <th style={{ ...colorThCell, textAlign: 'center' as const }}>Reject</th>
+                                                                   <th style={{ ...colorThCell, textAlign: 'center' as const }}>Update Status</th>
                                                                    <th style={{ ...colorThCell, borderRight: 'none', textAlign: 'center' as const }}>Item</th>
                                                                </tr>
                                                            </thead>
@@ -1185,13 +1180,11 @@ export default function SampleRequestView({ samples, customers, onCreateSample, 
                                                                            </td>
                                                                            <td style={{ ...tdStyle, borderRight: 'none' }}></td>
                                                                            <td style={{ ...tdStyle, textAlign: 'center' as const }}>
-                                                                               <button disabled={isInProd} style={cbInprod(isInProd)} onClick={() => onUpdateColorStatus(s.id, c.id, 'IN_PRODUCTION')}>⚙ In Prod</button>
-                                                                           </td>
-                                                                           <td style={{ ...tdStyle, textAlign: 'center' as const }}>
-                                                                               <button disabled={isApproved} style={cbApprove(isApproved)} onClick={() => onUpdateColorStatus(s.id, c.id, 'APPROVED')}>✓ Approve</button>
-                                                                           </td>
-                                                                           <td style={{ ...tdStyle, textAlign: 'center' as const }}>
-                                                                               <button disabled={isRejected} style={cbReject(isRejected)} onClick={() => onUpdateColorStatus(s.id, c.id, 'REJECTED')}>✗ Reject</button>
+                                                                               <div style={{ display: 'inline-flex' }}>
+                                                                                   <button type="button" style={cbInprod(isInProd)} onClick={() => onUpdateColorStatus(s.id, c.id, isInProd ? 'PENDING' : 'IN_PRODUCTION')} title={isInProd ? 'Reset to Pending' : 'Set In Production'}>⚙ In Prod</button>
+                                                                                   <button type="button" style={cbApprove(isApproved)} onClick={() => onUpdateColorStatus(s.id, c.id, isApproved ? 'PENDING' : 'APPROVED')} title={isApproved ? 'Reset to Pending' : 'Approve'}>✓ Approve</button>
+                                                                                   <button type="button" style={cbReject(isRejected)} onClick={() => onUpdateColorStatus(s.id, c.id, isRejected ? 'PENDING' : 'REJECTED')} title={isRejected ? 'Reset to Pending' : 'Reject'}>✗ Reject</button>
+                                                                               </div>
                                                                            </td>
                                                                            <td style={{ ...tdStyle, borderRight: 'none', textAlign: 'center' as const }}>
                                                                                {isApproved && (
@@ -1214,9 +1207,8 @@ export default function SampleRequestView({ samples, customers, onCreateSample, 
                                                <div style={{ background: '#f8f9fa', padding: '6px 12px 8px 32px' }}>
                                                    <table style={{ width: '100%', borderCollapse: 'collapse', tableLayout: 'fixed' as const }}>
                                                        <colgroup>
-                                                           <col style={{ width: 110 }} /><col style={{ width: 62 }} /><col style={{ width: 100 }} />
-                                                           <col /><col style={{ width: 82 }} /><col style={{ width: 82 }} /><col style={{ width: 74 }} />
-                                                           <col style={{ width: 90 }} />
+                                                           <col style={{ width: 110 }} /><col style={{ width: 62 }} /><col style={{ width: 106 }} />
+                                                           <col /><col style={{ width: 240 }} /><col style={{ width: 90 }} />
                                                        </colgroup>
                                                        <thead>
                                                            <tr>
@@ -1224,9 +1216,7 @@ export default function SampleRequestView({ samples, customers, onCreateSample, 
                                                                <th className="small text-muted fw-semibold" style={{ padding: '2px 6px', borderBottom: '1px solid #dee2e6', fontSize: 10 }}>Type</th>
                                                                <th className="small text-muted fw-semibold" style={{ padding: '2px 6px', borderBottom: '1px solid #dee2e6', fontSize: 10 }}>Status</th>
                                                                <th style={{ borderBottom: '1px solid #dee2e6' }}></th>
-                                                               <th className="small text-muted fw-semibold text-center" style={{ padding: '2px 6px', borderBottom: '1px solid #dee2e6', fontSize: 10 }}>In Prod</th>
-                                                               <th className="small text-muted fw-semibold text-center" style={{ padding: '2px 6px', borderBottom: '1px solid #dee2e6', fontSize: 10 }}>Approve</th>
-                                                               <th className="small text-muted fw-semibold text-center" style={{ padding: '2px 6px', borderBottom: '1px solid #dee2e6', fontSize: 10 }}>Reject</th>
+                                                               <th className="small text-muted fw-semibold text-center" style={{ padding: '2px 6px', borderBottom: '1px solid #dee2e6', fontSize: 10 }}>Update Status</th>
                                                                <th className="small text-muted fw-semibold text-center" style={{ padding: '2px 6px', borderBottom: '1px solid #dee2e6', fontSize: 10 }}>Item</th>
                                                            </tr>
                                                        </thead>
@@ -1246,13 +1236,11 @@ export default function SampleRequestView({ samples, customers, onCreateSample, 
                                                                        </td>
                                                                        <td style={{ borderBottom: '1px solid #e9ecef' }}></td>
                                                                        <td style={{ padding: '3px 6px', borderBottom: '1px solid #e9ecef', textAlign: 'center' as const }}>
-                                                                           <button disabled={isInProd} className="btn btn-sm btn-outline-warning" style={{ fontSize: 10, padding: '1px 6px' }} onClick={() => onUpdateColorStatus(s.id, c.id, 'IN_PRODUCTION')}>In Prod</button>
-                                                                       </td>
-                                                                       <td style={{ padding: '3px 6px', borderBottom: '1px solid #e9ecef', textAlign: 'center' as const }}>
-                                                                           <button disabled={isApproved} className="btn btn-sm btn-outline-success" style={{ fontSize: 10, padding: '1px 6px' }} onClick={() => onUpdateColorStatus(s.id, c.id, 'APPROVED')}>Approve</button>
-                                                                       </td>
-                                                                       <td style={{ padding: '3px 6px', borderBottom: '1px solid #e9ecef', textAlign: 'center' as const }}>
-                                                                           <button disabled={isRejected} className="btn btn-sm btn-outline-danger" style={{ fontSize: 10, padding: '1px 6px' }} onClick={() => onUpdateColorStatus(s.id, c.id, 'REJECTED')}>Reject</button>
+                                                                           <div className="btn-group btn-group-sm" role="group">
+                                                                               <button type="button" className={`btn ${isInProd ? 'btn-warning' : 'btn-outline-warning'}`} style={{ fontSize: 10, padding: '1px 6px' }} onClick={() => onUpdateColorStatus(s.id, c.id, isInProd ? 'PENDING' : 'IN_PRODUCTION')} title={isInProd ? 'Reset to Pending' : 'Set In Production'}>⚙ In Prod</button>
+                                                                               <button type="button" className={`btn ${isApproved ? 'btn-success' : 'btn-outline-success'}`} style={{ fontSize: 10, padding: '1px 6px' }} onClick={() => onUpdateColorStatus(s.id, c.id, isApproved ? 'PENDING' : 'APPROVED')} title={isApproved ? 'Reset to Pending' : 'Approve'}>✓ Approve</button>
+                                                                               <button type="button" className={`btn ${isRejected ? 'btn-danger' : 'btn-outline-danger'}`} style={{ fontSize: 10, padding: '1px 6px' }} onClick={() => onUpdateColorStatus(s.id, c.id, isRejected ? 'PENDING' : 'REJECTED')} title={isRejected ? 'Reset to Pending' : 'Reject'}>✗ Reject</button>
+                                                                           </div>
                                                                        </td>
                                                                        <td style={{ padding: '3px 6px', borderBottom: '1px solid #e9ecef', textAlign: 'center' as const }}>
                                                                            {isApproved && (
