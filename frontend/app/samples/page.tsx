@@ -21,6 +21,11 @@ export default function SamplesPage() {
         if (res.ok) fetchData();
     };
 
+    const handleUpdateColorStatus = async (sampleId: string, colorId: string, status: string) => {
+        const res = await authFetch(`${API_BASE}/samples/${sampleId}/colors/${colorId}/status?status=${status}`, { method: 'PUT' });
+        if (res.ok) fetchData();
+    };
+
     const handleDeleteSample = async (id: string) => {
         if (!window.confirm('Delete this sample request? This action cannot be undone.')) return;
         const res = await authFetch(`${API_BASE}/samples/${id}`, { method: 'DELETE' });
@@ -33,12 +38,13 @@ export default function SamplesPage() {
     };
 
     return (
-            <SampleRequestView
-                customers={customers}
-                samples={samples}
-                onCreateSample={handleCreateSample}
-                onUpdateStatus={handleUpdateSampleStatus}
-                onDeleteSample={handleDeleteSample}
-            />
+        <SampleRequestView
+            customers={customers}
+            samples={samples}
+            onCreateSample={handleCreateSample}
+            onUpdateStatus={handleUpdateSampleStatus}
+            onUpdateColorStatus={handleUpdateColorStatus}
+            onDeleteSample={handleDeleteSample}
+        />
     );
 }

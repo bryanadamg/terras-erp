@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useTheme } from '../context/ThemeContext';
 import { useToast } from './Toast';
 import { useLanguage } from '../context/LanguageContext';
@@ -7,7 +7,7 @@ import SearchableSelect from './SearchableSelect';
 import HistoryPane from './HistoryPane';
 import ModalWrapper from './ModalWrapper';
 
-export default function SampleRequestView({ samples, customers, onCreateSample, onUpdateStatus, onDeleteSample }: any) {
+export default function SampleRequestView({ samples, customers, onCreateSample, onUpdateStatus, onUpdateColorStatus, onDeleteSample }: any) {
   const { showToast } = useToast();
   const { t } = useLanguage();
   const [isCreateOpen, setIsCreateOpen] = useState(false);
@@ -16,6 +16,13 @@ export default function SampleRequestView({ samples, customers, onCreateSample, 
   const [historyEntityId, setHistoryEntityId] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('ALL');
+  const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
+  const toggleExpand = (id: string) =>
+      setExpandedIds(prev => {
+          const next = new Set(prev);
+          next.has(id) ? next.delete(id) : next.add(id);
+          return next;
+      });
   const { uiStyle: currentStyle } = useTheme();
   const classic = currentStyle === 'classic';
 
@@ -254,6 +261,31 @@ export default function SampleRequestView({ samples, customers, onCreateSample, 
           padding: '1px 5px', fontSize: '9px', fontFamily: 'Tahoma, Arial, sans-serif',
           fontWeight: 'bold', whiteSpace: 'nowrap' as const,
       };
+  };
+
+  const getColorStatusStyle = (status: string): React.CSSProperties => {
+      const map: Record<string, { bg: string; border: string; color: string }> = {
+          APPROVED:      { bg: '#e8f5e9', border: '#2e7d32', color: '#1b4620' },
+          REJECTED:      { bg: '#fce4ec', border: '#b71c1c', color: '#6b0000' },
+          IN_PRODUCTION: { bg: '#fff8e1', border: '#c77800', color: '#4a3000' },
+          PENDING:       { bg: '#e8e8e8', border: '#6a6a6a', color: '#333' },
+      };
+      const s = map[status] || map['PENDING'];
+      return {
+          background: s.bg, border: `1px solid ${s.border}`, color: s.color,
+          padding: '1px 5px', fontSize: '9px', fontFamily: 'Tahoma, Arial, sans-serif',
+          fontWeight: 'bold', whiteSpace: 'nowrap' as const,
+      };
+  };
+
+  const getColorStatusBadgeClass = (status: string) => {
+      const map: Record<string, string> = {
+          APPROVED: 'bg-success',
+          REJECTED: 'bg-danger',
+          IN_PRODUCTION: 'bg-warning text-dark',
+          PENDING: 'bg-secondary',
+      };
+      return map[status] || 'bg-secondary';
   };
 
   const getCustomerName = (id: string) => (customers || []).find((c: any) => c.id === id)?.name || '—';
@@ -648,16 +680,39 @@ export default function SampleRequestView({ samples, customers, onCreateSample, 
                        </thead>
                        <tbody>
                            {filteredSamples.map((s: any, rowIndex: number) => (
+                               <React.Fragment key={s.id}>
                                <tr
-                                   key={s.id}
+                                   key={`${s.id}-row`}
                                    style={classic ? { background: rowIndex % 2 === 0 ? '#ffffff' : '#f5f3ee', borderBottom: '1px solid #c0bdb5' } : undefined}
                                >
                                    <td style={classic ? tdBase : undefined} className={classic ? '' : 'ps-4'}>
-                                       <div style={classic ? { fontFamily: "'Courier New', monospace", fontWeight: 'bold', color: '#0058e6', fontSize: '10px' } : undefined} className={classic ? '' : 'fw-bold font-monospace text-primary'}>
-                                           {s.code}
-                                       </div>
-                                       <div style={classic ? { fontSize: '9px', color: '#888' } : undefined} className={classic ? '' : 'small text-muted'}>
-                                           {new Date(s.created_at).toLocaleDateString()}
+                                       <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                                           {s.colors && s.colors.length > 0 && (
+                                               classic ? (
+                                                   <button
+                                                       onClick={() => toggleExpand(s.id)}
+                                                       style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '0 2px', fontFamily: 'Tahoma', fontSize: 10, color: '#333' }}
+                                                   >
+                                                       {expandedIds.has(s.id) ? '▼' : '▶'}
+                                                   </button>
+                                               ) : (
+                                                   <button
+                                                       className="btn btn-link p-0 text-muted"
+                                                       style={{ fontSize: 10, lineHeight: 1 }}
+                                                       onClick={() => toggleExpand(s.id)}
+                                                   >
+                                                       <i className={`bi bi-chevron-${expandedIds.has(s.id) ? 'down' : 'right'}`}></i>
+                                                   </button>
+                                               )
+                                           )}
+                                           <div>
+                                               <div style={classic ? { fontFamily: "'Courier New', monospace", fontWeight: 'bold', color: '#0058e6', fontSize: '10px' } : undefined} className={classic ? '' : 'fw-bold font-monospace text-primary'}>
+                                                   {s.code}
+                                               </div>
+                                               <div style={classic ? { fontSize: '9px', color: '#888' } : undefined} className={classic ? '' : 'small text-muted'}>
+                                                   {new Date(s.created_at).toLocaleDateString()}
+                                               </div>
+                                           </div>
                                        </div>
                                    </td>
                                    <td style={classic ? tdBase : undefined}>
@@ -718,6 +773,16 @@ export default function SampleRequestView({ samples, customers, onCreateSample, 
                                        ) : (
                                            <span className={`badge ${getStatusBadge(s.status)}`}>{s.status}</span>
                                        )}
+                                       {s.colors && s.colors.length > 0 && (() => {
+                                           const approved = s.colors.filter((c: any) => c.status === 'APPROVED').length;
+                                           const total = s.colors.length;
+                                           return (
+                                               <div style={classic ? { fontSize: '9px', color: '#888', fontFamily: 'Tahoma, Arial, sans-serif', marginTop: 2 } : undefined}
+                                                    className={classic ? '' : 'small text-muted mt-1'}>
+                                                   {approved}/{total} approved
+                                               </div>
+                                           );
+                                       })()}
                                    </td>
                                    <td style={classic ? { ...tdBase, borderRight: 'none', textAlign: 'right' as const } : undefined} className={classic ? '' : 'pe-4 text-end'}>
                                        <div style={classic ? { display: 'flex', gap: 2, justifyContent: 'flex-end' } : undefined} className={classic ? '' : 'd-flex justify-content-end gap-2'}>
@@ -757,6 +822,70 @@ export default function SampleRequestView({ samples, customers, onCreateSample, 
                                        </div>
                                    </td>
                                </tr>
+                               {expandedIds.has(s.id) && s.colors && s.colors.length > 0 && (
+                                   <tr key={`${s.id}-colors`}>
+                                       <td
+                                           colSpan={6}
+                                           style={classic
+                                               ? { background: '#f0ede6', borderBottom: '2px solid #c0bdb5', padding: '6px 12px 8px 32px' }
+                                               : { background: '#f8f9fa', borderBottom: '2px solid #dee2e6', padding: '6px 12px 8px 32px' }}
+                                       >
+                                           {s.colors.map((c: any) => (
+                                               <div
+                                                   key={c.id}
+                                                   style={classic
+                                                       ? { display: 'flex', alignItems: 'center', gap: 8, padding: '3px 0', borderBottom: '1px solid #d8d5ce', fontFamily: 'Tahoma, Arial, sans-serif', fontSize: 11 }
+                                                       : { display: 'flex', alignItems: 'center', gap: 8, padding: '4px 0', borderBottom: '1px solid #e9ecef' }}
+                                               >
+                                                   <span style={classic ? { minWidth: 100, fontWeight: 'bold' } : { minWidth: 100, fontWeight: 500 }}>
+                                                       {c.name}
+                                                   </span>
+                                                   {classic ? (
+                                                       <span style={{ background: c.is_repeat ? '#e8e8ff' : '#e8f5e8', border: `1px solid ${c.is_repeat ? '#8888cc' : '#88aa88'}`, color: c.is_repeat ? '#333' : '#1a3a1a', padding: '0 4px', fontSize: '9px' }}>
+                                                           {c.is_repeat ? 'Repeat' : 'New'}
+                                                       </span>
+                                                   ) : (
+                                                       <span className={`badge ${c.is_repeat ? 'bg-primary bg-opacity-10 text-primary' : 'bg-success bg-opacity-10 text-success'} border`} style={{ fontSize: 10 }}>
+                                                           {c.is_repeat ? 'Repeat' : 'New'}
+                                                       </span>
+                                                   )}
+                                                   {classic ? (
+                                                       <span style={getColorStatusStyle(c.status || 'PENDING')}>{c.status || 'PENDING'}</span>
+                                                   ) : (
+                                                       <span className={`badge ${getColorStatusBadgeClass(c.status || 'PENDING')}`} style={{ fontSize: 10 }}>{c.status || 'PENDING'}</span>
+                                                   )}
+                                                   <div style={{ display: 'flex', gap: 4, marginLeft: 4 }}>
+                                                       {(['IN_PRODUCTION', 'APPROVED', 'REJECTED'] as const).map(action => (
+                                                           classic ? (
+                                                               <button
+                                                                   key={action}
+                                                                   disabled={(c.status || 'PENDING') === action}
+                                                                   style={(c.status || 'PENDING') === action
+                                                                       ? { ...xpBtn(), opacity: 0.4, cursor: 'default' }
+                                                                       : xpBtn()}
+                                                                   onClick={() => onUpdateColorStatus(s.id, c.id, action)}
+                                                               >
+                                                                   {action === 'IN_PRODUCTION' ? 'In Prod' : action === 'APPROVED' ? 'Approve' : 'Reject'}
+                                                               </button>
+                                                           ) : (
+                                                               <button
+                                                                   key={action}
+                                                                   disabled={(c.status || 'PENDING') === action}
+                                                                   className={`btn btn-sm ${action === 'APPROVED' ? 'btn-outline-success' : action === 'REJECTED' ? 'btn-outline-danger' : 'btn-outline-warning'}`}
+                                                                   style={{ fontSize: 10, padding: '1px 6px' }}
+                                                                   onClick={() => onUpdateColorStatus(s.id, c.id, action)}
+                                                               >
+                                                                   {action === 'IN_PRODUCTION' ? 'In Prod' : action === 'APPROVED' ? 'Approve' : 'Reject'}
+                                                               </button>
+                                                           )
+                                                       ))}
+                                                   </div>
+                                               </div>
+                                           ))}
+                                       </td>
+                                   </tr>
+                               )}
+                               </React.Fragment>
                            ))}
                            {filteredSamples.length === 0 && (
                                <tr>
