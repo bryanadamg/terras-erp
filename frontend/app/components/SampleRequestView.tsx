@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import React, { useState, useEffect, useRef } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useTheme } from '../context/ThemeContext';
 import { useToast } from './Toast';
 import { useLanguage } from '../context/LanguageContext';
@@ -15,6 +15,8 @@ export default function SampleRequestView({ samples, customers, onCreateSample, 
   const { t } = useLanguage();
   const { companyProfile } = useData();
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const highlightRef = useRef<HTMLTableRowElement | null>(null);
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [printSample, setPrintSample] = useState<any>(null);
   const [openDropdownId, setOpenDropdownId] = useState<string | null>(null);
@@ -33,6 +35,16 @@ export default function SampleRequestView({ samples, customers, onCreateSample, 
   const [pendingColorIsRepeat, setPendingColorIsRepeat] = useState(false);
   const { uiStyle: currentStyle } = useTheme();
   const classic = currentStyle === 'classic';
+
+  // Auto-expand and scroll to highlighted sample from ?highlight= param
+  const highlightId = searchParams?.get('highlight');
+  useEffect(() => {
+      if (!highlightId || !samples?.length) return;
+      setExpandedIds(prev => { const next = new Set(prev); next.add(highlightId); return next; });
+      setTimeout(() => {
+          highlightRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }, 150);
+  }, [highlightId, samples?.length]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── XP group box styles (create modal) ──────────────────────────────────
   const xpGroupBox: React.CSSProperties = {
@@ -951,10 +963,11 @@ export default function SampleRequestView({ samples, customers, onCreateSample, 
                                <React.Fragment key={s.id}>
                                <tr
                                    key={`${s.id}-row`}
+                                   ref={s.id === highlightId ? highlightRef : undefined}
                                    onClick={() => s.colors && s.colors.length > 0 && toggleExpand(s.id)}
                                    style={classic
-                                       ? { background: rowIndex % 2 === 0 ? '#ffffff' : '#f5f3ee', borderBottom: '1px solid #c0bdb5', cursor: s.colors && s.colors.length > 0 ? 'pointer' : 'default' }
-                                       : { cursor: s.colors && s.colors.length > 0 ? 'pointer' : 'default' }}
+                                       ? { background: s.id === highlightId ? '#fff8cc' : rowIndex % 2 === 0 ? '#ffffff' : '#f5f3ee', borderBottom: '1px solid #c0bdb5', cursor: s.colors && s.colors.length > 0 ? 'pointer' : 'default', outline: s.id === highlightId ? '2px solid #f0a000' : undefined }
+                                       : { cursor: s.colors && s.colors.length > 0 ? 'pointer' : 'default', background: s.id === highlightId ? '#fff8e1' : undefined, outline: s.id === highlightId ? '2px solid #f0a000' : undefined }}
                                >
                                    <td style={classic ? tdBase : undefined} className={classic ? '' : 'ps-4'}>
                                        <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>

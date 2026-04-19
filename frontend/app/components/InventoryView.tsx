@@ -87,13 +87,21 @@ const InventoryRow = memo(({ item, rowIndex, isEditing, isSelected, onToggleSele
             <td style={tdBase}>
                 {item.source_sample_code ? (
                     classic ? (
-                        <span style={{ color: isSelected ? '#cce0ff' : '#0047c8', fontSize: '9px', fontFamily: 'Tahoma, Arial, sans-serif' }}>
+                        <a
+                            href={`/samples?highlight=${item.source_sample_id}`}
+                            style={{ color: isSelected ? '#cce0ff' : '#0047c8', fontSize: '9px', fontFamily: 'Tahoma, Arial, sans-serif', textDecoration: 'underline', cursor: 'pointer' }}
+                            onClick={e => e.stopPropagation()}
+                        >
                             ↖ {item.source_sample_code}{item.source_color_name ? ` · ${item.source_color_name}` : ''}
-                        </span>
+                        </a>
                     ) : (
-                        <div className="text-primary small fw-medium">
+                        <a
+                            href={`/samples?highlight=${item.source_sample_id}`}
+                            className="text-primary small fw-medium text-decoration-none"
+                            onClick={e => e.stopPropagation()}
+                        >
                             <i className="bi bi-arrow-up-left"></i> {item.source_sample_code}{item.source_color_name ? ` · ${item.source_color_name}` : ''}
-                        </div>
+                        </a>
                     )
                 ) : (
                     <span style={classic ? { color: isSelected ? '#cce0ff' : '#999', fontSize: '9px' } : undefined} className={classic ? '' : 'text-muted small'}>-</span>
