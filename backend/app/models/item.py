@@ -22,16 +22,18 @@ class Item(Base):
     name: Mapped[str] = mapped_column(String(255))
     uom: Mapped[str] = mapped_column(String(32))
     category: Mapped[str | None] = mapped_column(String(64), nullable=True, index=True)
-    
-    # Lineage: Link to the sample this item was derived from
+
+    # Lineage: which SampleRequest + SampleColor this item was derived from
     source_sample_id: Mapped[uuid.UUID | None] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("items.id"), nullable=True
+        UUID(as_uuid=True), ForeignKey("sample_requests.id", ondelete="SET NULL"), nullable=True
+    )
+    source_color_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("sample_colors.id", ondelete="SET NULL"), nullable=True
     )
 
     active: Mapped[bool] = mapped_column(Boolean, default=True)
 
     # Relationships
     attributes = relationship("Attribute", secondary=item_attributes, backref="items")
-    
-    # Relationship for the self-referential key
-    source_sample = relationship("Item", remote_side=[id], backref="derived_items")
+    source_sample = relationship("SampleRequest", foreign_keys=[source_sample_id])
+    source_color = relationship("SampleColor", foreign_keys=[source_color_id])

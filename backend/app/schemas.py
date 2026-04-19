@@ -159,6 +159,7 @@ class ItemCreate(BaseModel):
     category: str | None = None
     attribute_ids: list[UUID] = []
     source_sample_id: UUID | None = None
+    source_color_id: UUID | None = None
 
 class ItemUpdate(BaseModel):
     code: str | None = None
@@ -167,11 +168,15 @@ class ItemUpdate(BaseModel):
     category: str | None = None
     attribute_ids: list[UUID] | None = None
     source_sample_id: UUID | None = None
+    source_color_id: UUID | None = None
     active: bool | None = None
 
 class ItemResponse(ItemCreate):
     id: UUID
     active: bool
+    # Populated by the API layer from eager-loaded relationships
+    source_sample_code: str | None = None
+    source_color_name: str | None = None
 
     class Config:
         from_attributes = True

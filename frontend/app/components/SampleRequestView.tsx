@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { useTheme } from '../context/ThemeContext';
 import { useToast } from './Toast';
 import { useLanguage } from '../context/LanguageContext';
@@ -13,6 +14,7 @@ export default function SampleRequestView({ samples, customers, onCreateSample, 
   const { showToast } = useToast();
   const { t } = useLanguage();
   const { companyProfile } = useData();
+  const router = useRouter();
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [printSample, setPrintSample] = useState<any>(null);
   const [openDropdownId, setOpenDropdownId] = useState<string | null>(null);
@@ -368,6 +370,16 @@ export default function SampleRequestView({ samples, customers, onCreateSample, 
       if (approved === 0) return '#777';
       if (approved === total) return '#1a6e1a';
       return '#0047c8';
+  };
+
+  const createItemFromColor = (sample: any, color: any) => {
+      const suggestedCode = encodeURIComponent(`${sample.code}-${color.name}`);
+      router.push(
+          `/inventory?source_sample_id=${sample.id}&source_color_id=${color.id}` +
+          `&suggested_code=${suggestedCode}` +
+          `&source_sample_code=${encodeURIComponent(sample.code)}` +
+          `&source_color_name=${encodeURIComponent(color.name)}`
+      );
   };
 
   const getCustomerName = (id: string) => (customers || []).find((c: any) => c.id === id)?.name || '—';
@@ -962,6 +974,7 @@ export default function SampleRequestView({ samples, customers, onCreateSample, 
                                                                <col style={{ width: 82 }} />
                                                                <col style={{ width: 82 }} />
                                                                <col style={{ width: 74 }} />
+                                                               <col style={{ width: 90 }} />
                                                            </colgroup>
                                                            <thead>
                                                                <tr>
@@ -971,7 +984,8 @@ export default function SampleRequestView({ samples, customers, onCreateSample, 
                                                                    <th style={{ ...colorThCell, borderRight: 'none' }}></th>
                                                                    <th style={{ ...colorThCell, textAlign: 'center' as const }}>In Prod</th>
                                                                    <th style={{ ...colorThCell, textAlign: 'center' as const }}>Approve</th>
-                                                                   <th style={{ ...colorThCell, borderRight: 'none', textAlign: 'center' as const }}>Reject</th>
+                                                                   <th style={{ ...colorThCell, textAlign: 'center' as const }}>Reject</th>
+                                                                   <th style={{ ...colorThCell, borderRight: 'none', textAlign: 'center' as const }}>Item</th>
                                                                </tr>
                                                            </thead>
                                                            <tbody>
@@ -1000,8 +1014,17 @@ export default function SampleRequestView({ samples, customers, onCreateSample, 
                                                                            <td style={{ ...tdStyle, textAlign: 'center' as const }}>
                                                                                <button disabled={isApproved} style={cbApprove(isApproved)} onClick={() => onUpdateColorStatus(s.id, c.id, 'APPROVED')}>✓ Approve</button>
                                                                            </td>
-                                                                           <td style={{ ...tdStyle, borderRight: 'none', textAlign: 'center' as const }}>
+                                                                           <td style={{ ...tdStyle, textAlign: 'center' as const }}>
                                                                                <button disabled={isRejected} style={cbReject(isRejected)} onClick={() => onUpdateColorStatus(s.id, c.id, 'REJECTED')}>✗ Reject</button>
+                                                                           </td>
+                                                                           <td style={{ ...tdStyle, borderRight: 'none', textAlign: 'center' as const }}>
+                                                                               {isApproved && (
+                                                                                   <button
+                                                                                       style={xpBtn({ background: 'linear-gradient(to bottom, #5ec85e, #2d7a2d)', borderColor: '#1a5e1a #0a3e0a #0a3e0a #1a5e1a', color: '#fff', fontSize: 10, padding: '1px 6px' })}
+                                                                                       onClick={() => createItemFromColor(s, c)}
+                                                                                       title="Create Item from this approved color"
+                                                                                   >+ Item</button>
+                                                                               )}
                                                                            </td>
                                                                        </tr>
                                                                    );
@@ -1017,6 +1040,7 @@ export default function SampleRequestView({ samples, customers, onCreateSample, 
                                                        <colgroup>
                                                            <col style={{ width: 110 }} /><col style={{ width: 62 }} /><col style={{ width: 100 }} />
                                                            <col /><col style={{ width: 82 }} /><col style={{ width: 82 }} /><col style={{ width: 74 }} />
+                                                           <col style={{ width: 90 }} />
                                                        </colgroup>
                                                        <thead>
                                                            <tr>
@@ -1027,6 +1051,7 @@ export default function SampleRequestView({ samples, customers, onCreateSample, 
                                                                <th className="small text-muted fw-semibold text-center" style={{ padding: '2px 6px', borderBottom: '1px solid #dee2e6', fontSize: 10 }}>In Prod</th>
                                                                <th className="small text-muted fw-semibold text-center" style={{ padding: '2px 6px', borderBottom: '1px solid #dee2e6', fontSize: 10 }}>Approve</th>
                                                                <th className="small text-muted fw-semibold text-center" style={{ padding: '2px 6px', borderBottom: '1px solid #dee2e6', fontSize: 10 }}>Reject</th>
+                                                               <th className="small text-muted fw-semibold text-center" style={{ padding: '2px 6px', borderBottom: '1px solid #dee2e6', fontSize: 10 }}>Item</th>
                                                            </tr>
                                                        </thead>
                                                        <tbody>
@@ -1052,6 +1077,11 @@ export default function SampleRequestView({ samples, customers, onCreateSample, 
                                                                        </td>
                                                                        <td style={{ padding: '3px 6px', borderBottom: '1px solid #e9ecef', textAlign: 'center' as const }}>
                                                                            <button disabled={isRejected} className="btn btn-sm btn-outline-danger" style={{ fontSize: 10, padding: '1px 6px' }} onClick={() => onUpdateColorStatus(s.id, c.id, 'REJECTED')}>Reject</button>
+                                                                       </td>
+                                                                       <td style={{ padding: '3px 6px', borderBottom: '1px solid #e9ecef', textAlign: 'center' as const }}>
+                                                                           {isApproved && (
+                                                                               <button className="btn btn-sm btn-success" style={{ fontSize: 10, padding: '1px 6px' }} onClick={() => createItemFromColor(s, c)} title="Create Item from this approved color">+ Item</button>
+                                                                           )}
                                                                        </td>
                                                                    </tr>
                                                                );

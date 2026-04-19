@@ -29,7 +29,8 @@ def run_migrations():
             # 1. Verification of missing columns in existing tables
             migrations = [
                 ("items", "category", "VARCHAR(64)"),
-                ("items", "source_sample_id", "UUID REFERENCES items(id)"),
+                ("items", "source_sample_id", "UUID REFERENCES sample_requests(id) ON DELETE SET NULL"),
+                ("items", "source_color_id", "UUID REFERENCES sample_colors(id) ON DELETE SET NULL"),
                 ("items", "attribute_id", "UUID REFERENCES attributes(id)"),
                 ("work_orders", "location_id", "UUID REFERENCES locations(id)"),
                 ("work_orders", "source_location_id", "UUID REFERENCES locations(id)"),
@@ -122,6 +123,30 @@ def run_migrations():
                 conn.commit()
             except Exception as e:
                 logger.warning(f"sample_colors table migration failed: {e}")
+
+            # Repurpose items.source_sample_id FK: items(self) → sample_requests
+            try:
+                res = conn.execute(text("""
+                    SELECT constraint_name FROM information_schema.table_constraints
+                    WHERE table_name='items' AND constraint_name='items_source_sample_id_fkey'
+                """))
+                row = res.fetchone()
+                if row:
+                    # Null out stale values pointing to other items, then re-point FK
+                    conn.execute(text("""
+                        UPDATE items SET source_sample_id = NULL
+                        WHERE source_sample_id IS NOT NULL
+                          AND source_sample_id NOT IN (SELECT id FROM sample_requests)
+                    """))
+                    conn.execute(text("ALTER TABLE items DROP CONSTRAINT items_source_sample_id_fkey"))
+                    conn.execute(text("""
+                        ALTER TABLE items ADD CONSTRAINT items_source_sample_id_fkey
+                            FOREIGN KEY (source_sample_id) REFERENCES sample_requests(id) ON DELETE SET NULL
+                    """))
+                    conn.commit()
+                    logger.info("Migration: Repurposed items.source_sample_id FK → sample_requests")
+            except Exception as e:
+                logger.warning(f"source_sample_id FK migration failed: {e}")
 
             # 1c. Advanced Search Optimization (Trigrams)
             try:

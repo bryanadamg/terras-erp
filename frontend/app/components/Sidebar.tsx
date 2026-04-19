@@ -242,8 +242,6 @@ export default function Sidebar({ activeTab, setActiveTab, onTabHover, appName, 
                 {hasPermission('inventory.manage') && (
                   <>
                     <NavItem tab="inventory"     label={t('item_inventory') || 'Item Inventory'} icon="bi-list-check" isSub />
-                    <NavItem tab="sample-masters" label={t('sample_masters') || 'Sample Masters'} icon="bi-gem" isSub />
-
                     <NavItem tab="item-metadata" label={t('attributes') || 'Attributes'} icon="bi-tag" isSub />
                   </>
                 )}

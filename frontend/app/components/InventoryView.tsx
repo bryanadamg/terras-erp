@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo, memo } from 'react';
+import { useSearchParams, useRouter } from 'next/navigation';
 import CodeConfigModal, { CodeConfig, buildCodeParts } from './CodeConfigModal';
 import BulkImportModal from './BulkImportModal';
 import SearchableSelect from './SearchableSelect';
@@ -84,14 +85,14 @@ const InventoryRow = memo(({ item, rowIndex, isEditing, isSelected, onToggleSele
                 ) : null}
             </td>
             <td style={tdBase}>
-                {item.source_sample_id ? (
+                {item.source_sample_code ? (
                     classic ? (
-                        <span style={{ color: isSelected ? '#cce0ff' : '#0058e6', fontSize: '9px', textDecoration: 'underline', cursor: 'default' }}>
-                            🔗 Source Linked
+                        <span style={{ color: isSelected ? '#cce0ff' : '#0047c8', fontSize: '9px', fontFamily: 'Tahoma, Arial, sans-serif' }}>
+                            ↖ {item.source_sample_code}{item.source_color_name ? ` · ${item.source_color_name}` : ''}
                         </span>
                     ) : (
                         <div className="text-primary small fw-medium">
-                            <i className="bi bi-link-45deg"></i> Source Linked
+                            <i className="bi bi-arrow-up-left"></i> {item.source_sample_code}{item.source_color_name ? ` · ${item.source_color_name}` : ''}
                         </div>
                     )
                 ) : (
@@ -203,6 +204,8 @@ export default function InventoryView({
 }: any) {
   const { showToast } = useToast();
   const { t } = useLanguage();
+  const searchParams = useSearchParams();
+  const router = useRouter();
   // UI State
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [isImportOpen, setIsImportOpen] = useState(false);
@@ -227,7 +230,7 @@ export default function InventoryView({
   });
 
   // Creation State
-  const [newItem, setNewItem] = useState({ code: '', name: '', uom: '', category: forcedCategory || '', source_sample_id: '', attribute_ids: [] as string[] });
+  const [newItem, setNewItem] = useState({ code: '', name: '', uom: '', category: forcedCategory || '', source_sample_id: '', source_color_id: '', source_sample_code: '', source_color_name: '', attribute_ids: [] as string[] });
 
   // Editing State
   const [editingItem, setEditingItem] = useState<any>(null);
@@ -254,6 +257,28 @@ export default function InventoryView({
           setNewItem(prev => ({ ...prev, category: forcedCategory }));
       }
   }, [forcedCategory]);
+
+  // Pre-fill create modal when arriving from SampleRequestView's Create Item button
+  useEffect(() => {
+      const sourceSampleId = searchParams.get('source_sample_id');
+      const sourceColorId = searchParams.get('source_color_id');
+      const suggestedCode = searchParams.get('suggested_code');
+      const sourceSampleCode = searchParams.get('source_sample_code');
+      const sourceColorName = searchParams.get('source_color_name');
+
+      if (sourceSampleId && suggestedCode) {
+          setNewItem(prev => ({
+              ...prev,
+              code: suggestedCode,
+              source_sample_id: sourceSampleId,
+              source_color_id: sourceColorId || '',
+              source_sample_code: sourceSampleCode || '',
+              source_color_name: sourceColorName || '',
+          }));
+          setIsCreateOpen(true);
+          router.replace('/inventory');
+      }
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleSaveConfig = (newConfig: CodeConfig) => {
       setCodeConfig(newConfig);
@@ -290,6 +315,9 @@ export default function InventoryView({
       const payload: any = { ...newItem };
       if (forcedCategory) payload.category = forcedCategory;
       if (!payload.source_sample_id) delete payload.source_sample_id;
+      if (!payload.source_color_id) delete payload.source_color_id;
+      delete payload.source_sample_code;
+      delete payload.source_color_name;
 
       const res = await onCreateItem(payload);
 
@@ -309,7 +337,7 @@ export default function InventoryView({
           showToast(`Item Code "${newItem.code}" already exists. Suggesting: ${suggestedCode}`, 'warning');
           setNewItem({ ...newItem, code: suggestedCode });
       } else if (res && res.ok) {
-          setNewItem({ code: '', name: '', uom: '', category: forcedCategory || '', source_sample_id: '', attribute_ids: [] });
+          setNewItem({ code: '', name: '', uom: '', category: forcedCategory || '', source_sample_id: '', source_color_id: '', source_sample_code: '', source_color_name: '', attribute_ids: [] });
           setIsCreateOpen(false);
           showToast('Item created successfully', 'success');
       } else {
@@ -328,7 +356,8 @@ export default function InventoryView({
           uom: editingItem.uom,
           category: editingItem.category,
           attribute_ids: editingItem.attribute_ids || [],
-          source_sample_id: editingItem.source_sample_id || null
+          source_sample_id: editingItem.source_sample_id || null,
+          source_color_id: editingItem.source_color_id || null,
       };
 
       onUpdateItem(editingItem.id, payload);
@@ -367,13 +396,10 @@ export default function InventoryView({
   const filteredItems = useMemo(() => {
       return items.filter((i: any) => {
           if (forcedCategory) return i.category === forcedCategory;
-          if (i.category === 'Sample') return false;
           const matchesCategory = !categoryFilter || i.category === categoryFilter;
           return matchesCategory;
       });
   }, [items, forcedCategory, categoryFilter]);
-
-  const sampleItems = useMemo(() => items.filter((i: any) => i.category === 'Sample'), [items]);
 
   const allSelected = filteredItems.length > 0 && selectedIds.size === filteredItems.length;
   const someSelected = selectedIds.size > 0 && !allSelected;
@@ -629,18 +655,20 @@ export default function InventoryView({
                   </div>
               </div>
 
-              <div className="mb-3">
-                  <label
-                      style={classic ? { fontFamily: 'Tahoma, Arial, sans-serif', fontSize: '11px', color: '#000', display: 'block', marginBottom: 2 } : undefined}
-                      className={classic ? '' : 'form-label small text-muted'}
-                  >{t('source_sample')}</label>
-                  <SearchableSelect
-                      options={sampleItems.map((s: any) => ({ value: s.id, label: s.name, subLabel: s.code }))}
-                      value={newItem.source_sample_id}
-                      onChange={(val) => setNewItem({...newItem, source_sample_id: val})}
-                      placeholder="None"
-                  />
-              </div>
+              {newItem.source_sample_id && (
+                  <div className="mb-3">
+                      {classic ? (
+                          <div style={{ border: '1px solid #7f9db9', background: '#dce4f5', padding: '4px 8px', fontFamily: 'Tahoma, Arial, sans-serif', fontSize: '11px', color: '#0d2a6e' }}>
+                              ↖ Derived from sample: <strong>{newItem.source_sample_code}{newItem.source_color_name ? ` · ${newItem.source_color_name}` : ''}</strong>
+                          </div>
+                      ) : (
+                          <div className="alert alert-info py-2 px-3 mb-0 small">
+                              <i className="bi bi-arrow-up-left me-1"></i>
+                              Derived from sample: <strong>{newItem.source_sample_code}{newItem.source_color_name ? ` · ${newItem.source_color_name}` : ''}</strong>
+                          </div>
+                      )}
+                  </div>
+              )}
           </form>
       </ModalWrapper>
 

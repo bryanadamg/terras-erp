@@ -13,6 +13,13 @@ from sqlalchemy import select
 
 router = APIRouter()
 
+
+def _populate_source_info(item) -> None:
+    item.attribute_ids = [a.id for a in item.attributes]
+    item.source_sample_code = item.source_sample.code if item.source_sample else None
+    item.source_color_name = item.source_color.name if item.source_color else None
+
+
 @router.post("/items", response_model=ItemResponse)
 async def create_item_api(payload: ItemCreate, db: AsyncSession = Depends(get_async_db), current_user: User = Depends(get_current_user)):
     db_item = await item_service.get_item_by_code(db, code=payload.code)
@@ -26,6 +33,7 @@ async def create_item_api(payload: ItemCreate, db: AsyncSession = Depends(get_as
         uom=payload.uom,
         category=payload.category,
         source_sample_id=payload.source_sample_id,
+        source_color_id=payload.source_color_id,
         attribute_ids=payload.attribute_ids
     )
     
@@ -38,7 +46,8 @@ async def create_item_api(payload: ItemCreate, db: AsyncSession = Depends(get_as
         details=f"Created item {item.code} ({item.name})",
         changes=payload.dict()
     )
-    
+
+    _populate_source_info(item)
     return item
 
 @router.get("/items", response_model=PaginatedItemResponse)
@@ -51,10 +60,9 @@ async def get_items_api(
     current_user: User = Depends(get_current_user)
 ):
     items, total = await item_service.get_items(db, skip=skip, limit=limit, user=current_user, search=search, category=category)
-    # Populate attribute_ids for response
     for item in items:
-        item.attribute_ids = [a.id for a in item.attributes]
-    
+        _populate_source_info(item)
+
     return {
         "items": items,
         "total": total,
@@ -67,8 +75,8 @@ async def update_item_api(item_id: str, payload: ItemUpdate, db: AsyncSession = 
     item = await item_service.update_item(db, item_id, payload.dict(exclude_unset=True))
     if not item:
         raise HTTPException(status_code=404, detail="Item not found")
-    item.attribute_ids = [a.id for a in item.attributes]
-    
+    _populate_source_info(item)
+
     await audit_service.log_activity(
         db,
         user_id=current_user.id,
