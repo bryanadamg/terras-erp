@@ -7,7 +7,7 @@ import SearchableSelect from './SearchableSelect';
 import HistoryPane from './HistoryPane';
 import ModalWrapper from './ModalWrapper';
 
-export default function SampleRequestView({ samples, salesOrders, onCreateSample, onUpdateStatus, onDeleteSample }: any) {
+export default function SampleRequestView({ samples, customers, onCreateSample, onUpdateStatus, onDeleteSample }: any) {
   const { showToast } = useToast();
   const { t } = useLanguage();
   const [isCreateOpen, setIsCreateOpen] = useState(false);
@@ -117,7 +117,7 @@ export default function SampleRequestView({ samples, salesOrders, onCreateSample
   const emptyForm = () => ({
       code: '',
       request_date: today,
-      sales_order_id: '',
+      customer_id: '',
       project: '',
       customer_article_code: '',
       internal_article_code: '',
@@ -220,7 +220,7 @@ export default function SampleRequestView({ samples, salesOrders, onCreateSample
       e.preventDefault();
       onCreateSample({
           ...newSample,
-          sales_order_id: newSample.sales_order_id || null,
+          customer_id: newSample.customer_id || null,
           original_weight: newSample.original_weight !== '' ? parseFloat(newSample.original_weight) : null,
           production_weight: newSample.production_weight !== '' ? parseFloat(newSample.production_weight) : null,
           estimated_completion_date: newSample.estimated_completion_date || null,
@@ -256,7 +256,7 @@ export default function SampleRequestView({ samples, salesOrders, onCreateSample
       };
   };
 
-  const getPONumber = (id: string) => salesOrders.find((s: any) => s.id === id)?.po_number || 'No PO';
+  const getCustomerName = (id: string) => (customers || []).find((c: any) => c.id === id)?.name || '—';
 
   const STATUS_FILTERS = ['ALL', 'IN_PRODUCTION', 'SENT', 'APPROVED', 'REJECTED'];
 
@@ -331,16 +331,16 @@ export default function SampleRequestView({ samples, salesOrders, onCreateSample
                    <div className="col-12">
                        <label style={classic ? { fontFamily: 'Tahoma, Arial, sans-serif', fontSize: '11px', color: '#000', display: 'block', marginBottom: 2 } : undefined}
                               className={classic ? '' : 'form-label small text-muted'}>
-                           Link to Sales Order <span style={classic ? { fontWeight: 'normal', color: '#666' } : undefined} className={classic ? '' : 'fw-normal'}>(Optional)</span>
+                           Customer <span style={classic ? { fontWeight: 'normal', color: '#666' } : undefined} className={classic ? '' : 'fw-normal'}>(Optional)</span>
                        </label>
                        <SearchableSelect
                            options={[
-                               { value: '', label: 'No Sales Order (Internal/Prototype)' },
-                               ...salesOrders.map((so: any) => ({ value: so.id, label: `${so.po_number} — ${so.customer_name}` })),
+                               { value: '', label: 'No Customer (Internal/Prototype)' },
+                               ...(customers || []).map((c: any) => ({ value: c.id, label: c.name })),
                            ]}
-                           value={newSample.sales_order_id}
-                           onChange={(val: string) => setNewSample({ ...newSample, sales_order_id: val })}
-                           placeholder="Select SO (Optional)…"
+                           value={newSample.customer_id}
+                           onChange={(val: string) => setNewSample({ ...newSample, customer_id: val })}
+                           placeholder="Select Customer (Optional)…"
                        />
                    </div>
                    <div className="col-md-6">
@@ -639,7 +639,7 @@ export default function SampleRequestView({ samples, salesOrders, onCreateSample
                        <thead style={classic ? xpTableHeader : undefined} className={classic ? '' : 'table-light'}>
                            <tr>
                                <th style={classic ? { ...xpThCell, width: '130px' } : undefined} className={classic ? '' : 'ps-4'}>Request Code</th>
-                               <th style={classic ? { ...xpThCell, width: '110px' } : undefined}>Related PO</th>
+                               <th style={classic ? { ...xpThCell, width: '110px' } : undefined}>Customer</th>
                                <th style={classic ? xpThCell : undefined}>Article / Project</th>
                                <th style={classic ? xpThCell : undefined}>Specs</th>
                                <th style={classic ? { ...xpThCell, width: '90px' } : undefined}>Status</th>
@@ -661,14 +661,11 @@ export default function SampleRequestView({ samples, salesOrders, onCreateSample
                                        </div>
                                    </td>
                                    <td style={classic ? tdBase : undefined}>
-                                       {s.sales_order_id ? (
-                                           classic ? (
-                                               <span style={{ background: '#e8e8e8', border: '1px solid #6a6a6a', color: '#000', padding: '1px 5px', fontSize: '9px', fontFamily: 'Tahoma, Arial, sans-serif' }}>
-                                                   <i className="bi bi-receipt" style={{ marginRight: 3 }}></i>{getPONumber(s.sales_order_id)}
-                                               </span>
-                                           ) : (
-                                               <span className="badge bg-light text-dark border"><i className="bi bi-receipt me-1"></i>{getPONumber(s.sales_order_id)}</span>
-                                           )
+                                       {s.customer_id ? (
+                                           <span style={classic ? { fontFamily: 'Tahoma, Arial, sans-serif', fontSize: '11px' } : undefined}
+                                                 className={classic ? '' : 'fw-medium'}>
+                                               {getCustomerName(s.customer_id)}
+                                           </span>
                                        ) : (
                                            <span style={classic ? { fontSize: '9px', color: '#888', fontStyle: 'italic', fontFamily: 'Tahoma, Arial, sans-serif' } : undefined} className={classic ? '' : 'text-muted small fst-italic'}>
                                                Internal

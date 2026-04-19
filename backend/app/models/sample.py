@@ -35,6 +35,9 @@ class SampleRequest(Base):
     sales_order_id: Mapped[uuid.UUID | None] = mapped_column(
         UUID(as_uuid=True), ForeignKey("sales_orders.id"), nullable=True, index=True
     )
+    customer_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("partners.id"), nullable=True, index=True
+    )
     base_item_id: Mapped[uuid.UUID | None] = mapped_column(
         UUID(as_uuid=True), ForeignKey("items.id"), nullable=True, index=True
     )
@@ -63,4 +66,5 @@ class SampleRequest(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
 
     sales_order = relationship("SalesOrder", backref="samples")
+    customer = relationship("Partner", foreign_keys=[customer_id])
     colors = relationship("SampleColor", order_by="SampleColor.order", cascade="all, delete-orphan")

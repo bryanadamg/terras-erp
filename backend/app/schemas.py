@@ -359,7 +359,7 @@ class SampleColorResponse(SampleColorCreate):
         from_attributes = True
 
 class SampleRequestCreate(BaseModel):
-    sales_order_id: Optional[UUID] = None
+    customer_id: Optional[UUID] = None
     request_date: Optional[str] = None
     project: Optional[str] = None
     customer_article_code: Optional[str] = None
@@ -386,7 +386,7 @@ class SampleRequestResponse(BaseModel):
     version: int
     status: str
     created_at: datetime
-    sales_order_id: Optional[UUID] = None
+    customer_id: Optional[UUID] = None
     request_date: Optional[date] = None
     project: Optional[str] = None
     customer_article_code: Optional[str] = None

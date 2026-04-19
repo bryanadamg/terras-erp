@@ -189,7 +189,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
             }
 
             // Partners (Customers/Suppliers)
-            if (fetchTarget.includes('customers') || fetchTarget.includes('suppliers') || fetchTarget === 'dashboard' || fetchTarget === '') {
+            if (fetchTarget.includes('customers') || fetchTarget.includes('suppliers') || fetchTarget.includes('samples') || fetchTarget === 'dashboard' || fetchTarget === '') {
                 requests.push(fetch(`${API_BASE}/partners`, { headers }));
                 requestTypes.push('partners');
             }

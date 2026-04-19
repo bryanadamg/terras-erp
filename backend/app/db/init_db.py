@@ -47,6 +47,25 @@ def run_migrations():
                 ("users", "hashed_password", "VARCHAR(255)"),
                 ("users", "allowed_categories", "JSON"),
                 ("sales_orders", "delivered_at", "TIMESTAMP WITHOUT TIME ZONE"),
+                # sample_requests SPK fields
+                ("sample_requests", "request_date", "DATE NOT NULL DEFAULT CURRENT_DATE"),
+                ("sample_requests", "project", "VARCHAR(255)"),
+                ("sample_requests", "customer_article_code", "VARCHAR(255)"),
+                ("sample_requests", "internal_article_code", "VARCHAR(255)"),
+                ("sample_requests", "width", "VARCHAR(64)"),
+                ("sample_requests", "main_material", "VARCHAR(255)"),
+                ("sample_requests", "middle_material", "VARCHAR(255)"),
+                ("sample_requests", "bottom_material", "VARCHAR(255)"),
+                ("sample_requests", "weft", "VARCHAR(255)"),
+                ("sample_requests", "warp", "VARCHAR(255)"),
+                ("sample_requests", "original_weight", "FLOAT"),
+                ("sample_requests", "production_weight", "FLOAT"),
+                ("sample_requests", "additional_info", "TEXT"),
+                ("sample_requests", "quantity", "VARCHAR(255)"),
+                ("sample_requests", "sample_size", "VARCHAR(255)"),
+                ("sample_requests", "estimated_completion_date", "DATE"),
+                ("sample_requests", "completion_description", "TEXT"),
+                ("sample_requests", "customer_id", "UUID REFERENCES partners(id)"),
             ]
 
             for table, col, col_type in migrations:
@@ -70,6 +89,7 @@ def run_migrations():
                 ("idx_audit_logs_timestamp", "audit_logs", "timestamp"),
                 ("idx_sample_requests_so_id", "sample_requests", "sales_order_id"),
                 ("idx_sample_requests_base_id", "sample_requests", "base_item_id"),
+                ("idx_sample_requests_customer_id", "sample_requests", "customer_id"),
             ]
 
             for idx_name, table, col in index_migrations:
@@ -79,6 +99,28 @@ def run_migrations():
                     conn.commit()
                 except Exception as e:
                     logger.warning(f"Index migration {idx_name} failed: {e}")
+
+            # 1b2. Special structural migrations
+            try:
+                conn.execute(text("ALTER TABLE sample_requests ALTER COLUMN base_item_id DROP NOT NULL"))
+                conn.commit()
+            except Exception:
+                pass
+
+            try:
+                conn.execute(text("""
+                    CREATE TABLE IF NOT EXISTS sample_colors (
+                        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+                        sample_request_id UUID NOT NULL
+                            REFERENCES sample_requests(id) ON DELETE CASCADE,
+                        name VARCHAR(255) NOT NULL,
+                        is_repeat BOOLEAN NOT NULL DEFAULT FALSE,
+                        "order" INTEGER NOT NULL DEFAULT 0
+                    )
+                """))
+                conn.commit()
+            except Exception as e:
+                logger.warning(f"sample_colors table migration failed: {e}")
 
             # 1c. Advanced Search Optimization (Trigrams)
             try:

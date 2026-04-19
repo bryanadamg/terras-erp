@@ -25,7 +25,7 @@ def create_sample_request(
 
     sample = SampleRequest(
         code=code,
-        sales_order_id=payload.sales_order_id,
+        customer_id=payload.customer_id,
         request_date=req_date,
         project=payload.project,
         customer_article_code=payload.customer_article_code,
