@@ -231,6 +231,7 @@ export default function InventoryView({
 
   // Creation State
   const [newItem, setNewItem] = useState({ code: '', name: '', uom: '', category: forcedCategory || '', source_sample_id: '', source_color_id: '', source_sample_code: '', source_color_name: '', attribute_ids: [] as string[] });
+  const [nameManuallyEdited, setNameManuallyEdited] = useState(false);
 
   // Editing State
   const [editingItem, setEditingItem] = useState<any>(null);
@@ -284,7 +285,7 @@ export default function InventoryView({
       setCodeConfig(newConfig);
       localStorage.setItem('item_code_config', JSON.stringify(newConfig));
       const suggested = suggestItemCode(newConfig);
-      setNewItem(prev => ({ ...prev, code: suggested }));
+      setNewItem(prev => ({ ...prev, code: suggested, name: nameManuallyEdited ? prev.name : suggested }));
   };
 
   const suggestItemCode = (config = codeConfig) => {
@@ -299,7 +300,8 @@ export default function InventoryView({
 
   const openCreateModal = () => {
       if (!newItem.code) {
-          setNewItem(prev => ({ ...prev, code: suggestItemCode() }));
+          const suggested = suggestItemCode();
+          setNewItem(prev => ({ ...prev, code: suggested, name: nameManuallyEdited ? prev.name : suggested }));
       }
       setIsCreateOpen(true);
   };
@@ -334,6 +336,7 @@ export default function InventoryView({
           setNewItem({ ...newItem, code: suggestedCode });
       } else if (res && res.ok) {
           setNewItem({ code: '', name: '', uom: '', category: forcedCategory || '', source_sample_id: '', source_color_id: '', source_sample_code: '', source_color_name: '', attribute_ids: [] });
+          setNameManuallyEdited(false);
           setIsCreateOpen(false);
           showToast('Item created successfully', 'success');
       } else {
@@ -544,7 +547,7 @@ export default function InventoryView({
       {/* Create Modal */}
       <ModalWrapper
           isOpen={isCreateOpen}
-          onClose={() => setIsCreateOpen(false)}
+          onClose={() => { setIsCreateOpen(false); setNameManuallyEdited(false); }}
           title={<span data-testid="modal-title"><i className="bi bi-box-seam me-2"></i>{t('create')} {forcedCategory ? t('sample_masters') : t('item_inventory')}</span>}
           variant="primary"
           size="md"
@@ -554,7 +557,7 @@ export default function InventoryView({
                       type="button"
                       style={classic ? xpBtn() : undefined}
                       className={classic ? '' : 'btn btn-secondary'}
-                      onClick={() => setIsCreateOpen(false)}
+                      onClick={() => { setIsCreateOpen(false); setNameManuallyEdited(false); }}
                   >{t('cancel')}</button>
                   <button
                       data-testid="submit-create-item"
@@ -575,14 +578,20 @@ export default function InventoryView({
                       {t('item_code')}
                       <i className="bi bi-gear-fill text-muted" style={{cursor: 'pointer'}} onClick={() => setIsConfigOpen(true)} title="Configure Auto-Suggestion"></i>
                   </label>
-                  <input data-testid="item-code-input" style={classic ? xpInput : undefined} className={classic ? '' : 'form-control'} placeholder="ITM-001" value={newItem.code} onChange={e => setNewItem({...newItem, code: e.target.value})} required />
+                  <input data-testid="item-code-input" style={classic ? xpInput : undefined} className={classic ? '' : 'form-control'} placeholder="ITM-001" value={newItem.code} onChange={e => {
+                      const code = e.target.value;
+                      setNewItem(prev => ({ ...prev, code, name: nameManuallyEdited ? prev.name : code }));
+                  }} required />
               </div>
               <div className="mb-3">
                   <label
                       style={classic ? { fontFamily: 'Tahoma, Arial, sans-serif', fontSize: '11px', color: '#000', display: 'block', marginBottom: 2 } : undefined}
                       className={classic ? '' : 'form-label small text-muted'}
                   >{t('item_name')}</label>
-                  <input data-testid="item-name-input" style={classic ? xpInput : undefined} className={classic ? '' : 'form-control'} placeholder="Product Name" value={newItem.name} onChange={e => setNewItem({...newItem, name: e.target.value})} required />
+                  <input data-testid="item-name-input" style={classic ? xpInput : undefined} className={classic ? '' : 'form-control'} placeholder="Product Name" value={newItem.name} onChange={e => {
+                      setNameManuallyEdited(true);
+                      setNewItem(prev => ({ ...prev, name: e.target.value }));
+                  }} required />
               </div>
               <div className="row g-2 mb-3">
                   <div className="col-7">
