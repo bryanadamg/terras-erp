@@ -218,7 +218,7 @@ export default function SampleRequestView({ samples, customers, onCreateSample, 
   const toggleDropdown = (id: string, e: React.MouseEvent) => {
       e.stopPropagation();
       if (openDropdownId === id) { setOpenDropdownId(null); return; }
-      const rect = (e.target as HTMLElement).getBoundingClientRect();
+      const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
       setDropdownPos({ top: rect.bottom + window.scrollY + 2, left: rect.right + window.scrollX - 180 });
       setOpenDropdownId(id);
   };
@@ -250,12 +250,12 @@ export default function SampleRequestView({ samples, customers, onCreateSample, 
 
   const getStatusXPStyle = (status: string): React.CSSProperties => {
       const map: Record<string, { bg: string; border: string; color: string }> = {
-          APPROVED:      { bg: '#e8f5e9', border: '#2e7d32', color: '#1b4620' },
-          REJECTED:      { bg: '#fce4ec', border: '#b71c1c', color: '#6b0000' },
-          SENT:          { bg: '#e8eaf6', border: '#3949ab', color: '#1a237e' },
-          IN_PRODUCTION: { bg: '#fff8e1', border: '#c77800', color: '#4a3000' },
+          APPROVED:      { bg: '#d4edda', border: '#27713a', color: '#0c3a1a' },
+          REJECTED:      { bg: '#f8d7da', border: '#a01a1a', color: '#4a0000' },
+          SENT:          { bg: '#dce4f5', border: '#3a5faa', color: '#0d2a6e' },
+          IN_PRODUCTION: { bg: '#fff3cd', border: '#b8860b', color: '#3e2000' },
       };
-      const s = map[status] || { bg: '#e8e8e8', border: '#6a6a6a', color: '#222' };
+      const s = map[status] || { bg: '#e8e8e8', border: '#7a7a7a', color: '#111' };
       return {
           background: s.bg, border: `1px solid ${s.border}`, color: s.color,
           padding: '1px 5px', fontSize: '9px', fontFamily: 'Tahoma, Arial, sans-serif',
@@ -265,10 +265,10 @@ export default function SampleRequestView({ samples, customers, onCreateSample, 
 
   const getColorStatusStyle = (status: string): React.CSSProperties => {
       const map: Record<string, { bg: string; border: string; color: string }> = {
-          APPROVED:      { bg: '#e8f5e9', border: '#2e7d32', color: '#1b4620' },
-          REJECTED:      { bg: '#fce4ec', border: '#b71c1c', color: '#6b0000' },
-          IN_PRODUCTION: { bg: '#fff8e1', border: '#c77800', color: '#4a3000' },
-          PENDING:       { bg: '#e8e8e8', border: '#6a6a6a', color: '#333' },
+          APPROVED:      { bg: '#d4edda', border: '#27713a', color: '#0c3a1a' },
+          REJECTED:      { bg: '#f8d7da', border: '#a01a1a', color: '#4a0000' },
+          IN_PRODUCTION: { bg: '#fff3cd', border: '#b8860b', color: '#3e2000' },
+          PENDING:       { bg: '#e8e8e8', border: '#7a7a7a', color: '#111' },
       };
       const s = map[status] || map['PENDING'];
       return {
@@ -286,6 +286,84 @@ export default function SampleRequestView({ samples, customers, onCreateSample, 
           PENDING: 'bg-secondary',
       };
       return map[status] || 'bg-secondary';
+  };
+
+  // ── Color panel inner-table styles ──────────────────────────────────────────
+  const colorThCell: React.CSSProperties = {
+      background: 'linear-gradient(to bottom, #f0ede8, #e4e1da)',
+      borderBottom: '1px solid #b0a898',
+      borderRight: '1px solid #ccc',
+      fontSize: '9px',
+      fontWeight: 'bold',
+      color: '#111',
+      padding: '2px 6px',
+      textAlign: 'left' as const,
+      whiteSpace: 'nowrap' as const,
+      textTransform: 'uppercase' as const,
+      letterSpacing: '0.3px',
+      fontFamily: 'Tahoma, Arial, sans-serif',
+  };
+
+  const colorTdCell: React.CSSProperties = {
+      padding: '3px 6px',
+      borderBottom: '1px solid #e8e5e0',
+      borderRight: '1px solid #e0ddd8',
+      fontSize: '11px',
+      verticalAlign: 'middle' as const,
+      fontFamily: 'Tahoma, Arial, sans-serif',
+  };
+
+  const cbBase: React.CSSProperties = {
+      fontFamily: 'Tahoma, Arial, sans-serif',
+      fontSize: '10px',
+      padding: '1px 7px',
+      cursor: 'pointer',
+      borderRadius: 0,
+      whiteSpace: 'nowrap' as const,
+      border: '1px solid',
+  };
+  const cbInprod = (disabled: boolean): React.CSSProperties => ({
+      ...cbBase,
+      background: disabled ? '#f0e8c8' : 'linear-gradient(to bottom, #fff8e1, #ffe082)',
+      borderColor: disabled ? '#ccc #ccc #ccc #ccc' : '#e6c000 #a06000 #a06000 #e6c000',
+      color: disabled ? '#888' : '#3e2000',
+      cursor: disabled ? 'default' : 'pointer',
+      opacity: disabled ? 0.45 : 1,
+  });
+  const cbApprove = (disabled: boolean): React.CSSProperties => ({
+      ...cbBase,
+      background: disabled ? '#d4ebd4' : 'linear-gradient(to bottom, #c8e6c9, #8dc78f)',
+      borderColor: disabled ? '#ccc #ccc #ccc #ccc' : '#66bb6a #1b5e20 #1b5e20 #66bb6a',
+      color: disabled ? '#888' : '#0c3a1a',
+      cursor: disabled ? 'default' : 'pointer',
+      opacity: disabled ? 0.45 : 1,
+  });
+  const cbReject = (disabled: boolean): React.CSSProperties => ({
+      ...cbBase,
+      background: disabled ? '#edd4d4' : 'linear-gradient(to bottom, #ffcdd2, #e88a8a)',
+      borderColor: disabled ? '#ccc #ccc #ccc #ccc' : '#ef9a9a #7f0000 #7f0000 #ef9a9a',
+      color: disabled ? '#888' : '#4a0000',
+      cursor: disabled ? 'default' : 'pointer',
+      opacity: disabled ? 0.45 : 1,
+  });
+
+  // Left-border + row background for each color status
+  const colorRowStyle = (status: string): { borderLeftColor: string; background: string } => {
+      const map: Record<string, { borderLeftColor: string; background: string }> = {
+          PENDING:       { borderLeftColor: '#9e9e9e', background: '#fdfdfd' },
+          IN_PRODUCTION: { borderLeftColor: '#c77800', background: '#fffdf8' },
+          APPROVED:      { borderLeftColor: '#27713a', background: '#f8fff8' },
+          REJECTED:      { borderLeftColor: '#a01a1a', background: '#fff8f8' },
+      };
+      return map[status] || map['PENDING'];
+  };
+
+  // Approved fraction numerator color: grey (0) → XP blue (partial) → green (complete)
+  const fracNumColor = (approved: number, total: number): string => {
+      if (total === 0) return '#777';
+      if (approved === 0) return '#777';
+      if (approved === total) return '#1a6e1a';
+      return '#0047c8';
   };
 
   const getCustomerName = (id: string) => (customers || []).find((c: any) => c.id === id)?.name || '—';
@@ -674,8 +752,9 @@ export default function SampleRequestView({ samples, customers, onCreateSample, 
                                <th style={classic ? { ...xpThCell, width: '110px' } : undefined}>Customer</th>
                                <th style={classic ? xpThCell : undefined}>Article / Project</th>
                                <th style={classic ? xpThCell : undefined}>Specs</th>
-                               <th style={classic ? { ...xpThCell, width: '90px' } : undefined}>Status</th>
-                               <th style={classic ? { ...xpThCell, textAlign: 'right' as const, borderRight: 'none', width: '100px' } : undefined} className={classic ? '' : 'text-end pe-4'}>Actions</th>
+                               <th style={classic ? { ...xpThCell, width: '100px' } : undefined}>Status</th>
+                               <th style={classic ? { ...xpThCell, width: '90px' } : undefined}>Colors</th>
+                               <th style={classic ? { ...xpThCell, textAlign: 'right' as const, borderRight: 'none', width: '130px' } : undefined} className={classic ? '' : 'text-end pe-4'}>Actions</th>
                            </tr>
                        </thead>
                        <tbody>
@@ -706,10 +785,10 @@ export default function SampleRequestView({ samples, customers, onCreateSample, 
                                                )
                                            )}
                                            <div>
-                                               <div style={classic ? { fontFamily: "'Courier New', monospace", fontWeight: 'bold', color: '#0058e6', fontSize: '10px' } : undefined} className={classic ? '' : 'fw-bold font-monospace text-primary'}>
+                                               <div style={classic ? { fontFamily: "'Courier New', monospace", fontWeight: 'bold', color: '#0047c8', fontSize: '10px' } : undefined} className={classic ? '' : 'fw-bold font-monospace text-primary'}>
                                                    {s.code}
                                                </div>
-                                               <div style={classic ? { fontSize: '9px', color: '#888' } : undefined} className={classic ? '' : 'small text-muted'}>
+                                               <div style={classic ? { fontSize: '9px', color: '#555' } : undefined} className={classic ? '' : 'small text-muted'}>
                                                    {new Date(s.created_at).toLocaleDateString()}
                                                </div>
                                            </div>
@@ -722,7 +801,7 @@ export default function SampleRequestView({ samples, customers, onCreateSample, 
                                                {getCustomerName(s.customer_id)}
                                            </span>
                                        ) : (
-                                           <span style={classic ? { fontSize: '9px', color: '#888', fontStyle: 'italic', fontFamily: 'Tahoma, Arial, sans-serif' } : undefined} className={classic ? '' : 'text-muted small fst-italic'}>
+                                           <span style={classic ? { fontSize: '9px', color: '#555', fontStyle: 'italic', fontFamily: 'Tahoma, Arial, sans-serif' } : undefined} className={classic ? '' : 'text-muted small fst-italic'}>
                                                Internal
                                            </span>
                                        )}
@@ -735,12 +814,12 @@ export default function SampleRequestView({ samples, customers, onCreateSample, 
                                            </div>
                                        )}
                                        {s.project && (
-                                           <div style={classic ? { fontSize: '9px', color: '#888' } : undefined} className={classic ? '' : 'small text-muted'}>
+                                           <div style={classic ? { fontSize: '9px', color: '#555' } : undefined} className={classic ? '' : 'small text-muted'}>
                                                {s.project}
                                            </div>
                                        )}
                                        {!s.customer_article_code && !s.project && (
-                                           <span style={classic ? { fontSize: '9px', color: '#aaa', fontStyle: 'italic', fontFamily: 'Tahoma, Arial, sans-serif' } : undefined}
+                                           <span style={classic ? { fontSize: '9px', color: '#888', fontStyle: 'italic', fontFamily: 'Tahoma, Arial, sans-serif' } : undefined}
                                                  className={classic ? '' : 'text-muted small fst-italic'}>—</span>
                                        )}
                                    </td>
@@ -767,48 +846,67 @@ export default function SampleRequestView({ samples, customers, onCreateSample, 
                                            ))}
                                        </div>
                                    </td>
+                                   {/* Status — request-level only */}
                                    <td style={classic ? tdBase : undefined}>
                                        {classic ? (
                                            <span style={getStatusXPStyle(s.status)}>{s.status}</span>
                                        ) : (
                                            <span className={`badge ${getStatusBadge(s.status)}`}>{s.status}</span>
                                        )}
-                                       {s.colors && s.colors.length > 0 && (() => {
+                                   </td>
+                                   {/* Colors — approved fraction */}
+                                   <td style={classic ? tdBase : undefined}>
+                                       {s.colors && s.colors.length > 0 ? (() => {
                                            const approved = s.colors.filter((c: any) => c.status === 'APPROVED').length;
                                            const total = s.colors.length;
-                                           return (
-                                               <div style={classic ? { fontSize: '9px', color: '#888', fontFamily: 'Tahoma, Arial, sans-serif', marginTop: 2 } : undefined}
-                                                    className={classic ? '' : 'small text-muted mt-1'}>
-                                                   {approved}/{total} approved
+                                           const numColor = fracNumColor(approved, total);
+                                           return classic ? (
+                                               <div style={{ display: 'flex', alignItems: 'baseline', gap: 1, whiteSpace: 'nowrap' as const }}>
+                                                   <span style={{ fontSize: 13, fontWeight: 'bold', color: numColor, fontFamily: 'Tahoma, Arial, sans-serif' }}>{approved}</span>
+                                                   <span style={{ fontSize: 11, color: '#777', fontFamily: 'Tahoma, Arial, sans-serif', margin: '0 1px' }}>/</span>
+                                                   <span style={{ fontSize: 13, fontWeight: 'bold', color: '#888', fontFamily: 'Tahoma, Arial, sans-serif' }}>{total}</span>
+                                                   <span style={{ fontSize: 9, color: '#555', marginLeft: 3, fontFamily: 'Tahoma, Arial, sans-serif' }}>approved</span>
                                                </div>
-                                           );
-                                       })()}
-                                   </td>
-                                   <td style={classic ? { ...tdBase, borderRight: 'none', textAlign: 'right' as const } : undefined} className={classic ? '' : 'pe-4 text-end'}>
-                                       <div style={classic ? { display: 'flex', gap: 2, justifyContent: 'flex-end' } : undefined} className={classic ? '' : 'd-flex justify-content-end gap-2'}>
-                                           {classic ? (
-                                               <button
-                                                   title="View History"
-                                                   onClick={() => setHistoryEntityId(s.id)}
-                                                   style={{ background: 'none', border: '1px solid transparent', borderRadius: 2, cursor: 'pointer', padding: '1px 4px', color: '#555', fontSize: '11px' }}
-                                                   onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.borderColor = '#7f9db9'; (e.currentTarget as HTMLButtonElement).style.background = '#e8f0f8'; }}
-                                                   onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.borderColor = 'transparent'; (e.currentTarget as HTMLButtonElement).style.background = 'none'; }}
-                                               >
-                                                   <i className="bi bi-clock-history"></i>
-                                               </button>
                                            ) : (
-                                               <button className="btn btn-sm btn-link text-muted p-0" title="View History" onClick={() => setHistoryEntityId(s.id)}>
-                                                   <i className="bi bi-clock-history"></i>
-                                               </button>
-                                           )}
+                                               <span className="small">
+                                                   <span style={{ fontWeight: 'bold', color: numColor }}>{approved}</span>
+                                                   <span className="text-muted">/{total}</span>
+                                                   <span className="text-muted ms-1" style={{ fontSize: 10 }}>approved</span>
+                                               </span>
+                                           );
+                                       })() : (
+                                           <span style={classic ? { fontSize: '9px', color: '#888', fontStyle: 'italic', fontFamily: 'Tahoma, Arial, sans-serif' } : undefined}
+                                                 className={classic ? '' : 'text-muted small fst-italic'}>—</span>
+                                       )}
+                                   </td>
+                                   {/* Actions — history icon + split Update button */}
+                                   <td style={classic ? { ...tdBase, borderRight: 'none', textAlign: 'right' as const } : undefined} className={classic ? '' : 'pe-4 text-end'}>
+                                       <div style={{ display: 'flex', gap: 3, justifyContent: 'flex-end', alignItems: 'center' }}>
+                                           {/* History button */}
+                                           <button
+                                               title="View History"
+                                               onClick={() => setHistoryEntityId(s.id)}
+                                               style={classic
+                                                   ? xpBtn({ padding: '2px 5px', fontSize: '12px', lineHeight: '1' })
+                                                   : undefined}
+                                               className={classic ? '' : 'btn btn-sm btn-link text-muted p-0'}
+                                           >
+                                               <i className="bi bi-clock-history"></i>
+                                           </button>
+                                           {/* Update split button (classic) / plain button (modern) */}
                                            {classic ? (
-                                               <button
-                                                   style={xpBtn()}
+                                               <div
                                                    className="action-dropdown-btn"
-                                                   onClick={(e) => toggleDropdown(s.id, e)}
+                                                   style={{ display: 'inline-flex', border: '1px solid', borderColor: '#dfdfdf #808080 #808080 #dfdfdf', cursor: 'pointer' }}
+                                                   onClick={(e) => toggleDropdown(s.id, e as any)}
                                                >
-                                                   Update <i className="bi bi-caret-down-fill ms-1" style={{fontSize: '0.65em'}}></i>
-                                               </button>
+                                                   <button style={{ fontFamily: 'Tahoma, Arial, sans-serif', fontSize: 11, padding: '2px 9px', background: 'linear-gradient(to bottom, #fff, #d4d0c8)', border: 'none', borderRight: '1px solid #b0a898', cursor: 'pointer', color: '#000' }}>
+                                                       Update
+                                                   </button>
+                                                   <button style={{ fontFamily: 'Tahoma, Arial, sans-serif', fontSize: 10, padding: '2px 6px', background: 'linear-gradient(to bottom, #fff, #d4d0c8)', border: 'none', cursor: 'pointer', color: '#000' }}>
+                                                       ▾
+                                                   </button>
+                                               </div>
                                            ) : (
                                                <button
                                                    className="btn btn-sm btn-light border action-dropdown-btn py-0 px-2"
@@ -825,63 +923,125 @@ export default function SampleRequestView({ samples, customers, onCreateSample, 
                                {expandedIds.has(s.id) && s.colors && s.colors.length > 0 && (
                                    <tr key={`${s.id}-colors`}>
                                        <td
-                                           colSpan={6}
-                                           style={classic
-                                               ? { background: '#f0ede6', borderBottom: '2px solid #c0bdb5', padding: '6px 12px 8px 32px' }
-                                               : { background: '#f8f9fa', borderBottom: '2px solid #dee2e6', padding: '6px 12px 8px 32px' }}
+                                           colSpan={7}
+                                           style={{ padding: 0, borderBottom: classic ? '2px solid #9a9690' : '2px solid #dee2e6' }}
                                        >
-                                           {s.colors.map((c: any) => (
-                                               <div
-                                                   key={c.id}
-                                                   style={classic
-                                                       ? { display: 'flex', alignItems: 'center', gap: 8, padding: '3px 0', borderBottom: '1px solid #d8d5ce', fontFamily: 'Tahoma, Arial, sans-serif', fontSize: 11 }
-                                                       : { display: 'flex', alignItems: 'center', gap: 8, padding: '4px 0', borderBottom: '1px solid #e9ecef' }}
-                                               >
-                                                   <span style={classic ? { minWidth: 100, fontWeight: 'bold' } : { minWidth: 100, fontWeight: 500 }}>
-                                                       {c.name}
-                                                   </span>
-                                                   {classic ? (
-                                                       <span style={{ background: c.is_repeat ? '#e8e8ff' : '#e8f5e8', border: `1px solid ${c.is_repeat ? '#8888cc' : '#88aa88'}`, color: c.is_repeat ? '#333' : '#1a3a1a', padding: '0 4px', fontSize: '9px' }}>
-                                                           {c.is_repeat ? 'Repeat' : 'New'}
-                                                       </span>
-                                                   ) : (
-                                                       <span className={`badge ${c.is_repeat ? 'bg-primary bg-opacity-10 text-primary' : 'bg-success bg-opacity-10 text-success'} border`} style={{ fontSize: 10 }}>
-                                                           {c.is_repeat ? 'Repeat' : 'New'}
-                                                       </span>
-                                                   )}
-                                                   {classic ? (
-                                                       <span style={getColorStatusStyle(c.status || 'PENDING')}>{c.status || 'PENDING'}</span>
-                                                   ) : (
-                                                       <span className={`badge ${getColorStatusBadgeClass(c.status || 'PENDING')}`} style={{ fontSize: 10 }}>{c.status || 'PENDING'}</span>
-                                                   )}
-                                                   <div style={{ display: 'flex', gap: 4, marginLeft: 4 }}>
-                                                       {(['IN_PRODUCTION', 'APPROVED', 'REJECTED'] as const).map(action => (
-                                                           classic ? (
-                                                               <button
-                                                                   key={action}
-                                                                   disabled={(c.status || 'PENDING') === action}
-                                                                   style={(c.status || 'PENDING') === action
-                                                                       ? { ...xpBtn(), opacity: 0.4, cursor: 'default' }
-                                                                       : xpBtn()}
-                                                                   onClick={() => onUpdateColorStatus(s.id, c.id, action)}
-                                                               >
-                                                                   {action === 'IN_PRODUCTION' ? 'In Prod' : action === 'APPROVED' ? 'Approve' : 'Reject'}
-                                                               </button>
-                                                           ) : (
-                                                               <button
-                                                                   key={action}
-                                                                   disabled={(c.status || 'PENDING') === action}
-                                                                   className={`btn btn-sm ${action === 'APPROVED' ? 'btn-outline-success' : action === 'REJECTED' ? 'btn-outline-danger' : 'btn-outline-warning'}`}
-                                                                   style={{ fontSize: 10, padding: '1px 6px' }}
-                                                                   onClick={() => onUpdateColorStatus(s.id, c.id, action)}
-                                                               >
-                                                                   {action === 'IN_PRODUCTION' ? 'In Prod' : action === 'APPROVED' ? 'Approve' : 'Reject'}
-                                                               </button>
-                                                           )
-                                                       ))}
+                                           {classic ? (
+                                               /* ── XP group-box expand panel ── */
+                                               <div style={{ padding: '6px 10px 8px 34px', background: '#ece9d8' }}>
+                                                   <div style={{ border: '1px solid #7a7a7a', background: '#fff' }}>
+                                                       {/* Group box header */}
+                                                       <div style={{ background: 'linear-gradient(to bottom, #e4e1d8, #d5d2c8)', borderBottom: '1px solid #9a9690', padding: '2px 8px', fontSize: 10, fontWeight: 'bold', color: '#111', letterSpacing: '0.3px', display: 'flex', alignItems: 'center', gap: 6, fontFamily: 'Tahoma, Arial, sans-serif' }}>
+                                                           🎨 Color Status — {s.colors.length} color{s.colors.length !== 1 ? 's' : ''} · {s.colors.filter((c: any) => c.status === 'APPROVED').length} approved
+                                                       </div>
+                                                       {/* Inner table — colgroup ensures headers and rows always align */}
+                                                       <table style={{ width: '100%', borderCollapse: 'collapse', tableLayout: 'fixed' as const }}>
+                                                           <colgroup>
+                                                               <col style={{ width: 110 }} />
+                                                               <col style={{ width: 62 }} />
+                                                               <col style={{ width: 108 }} />
+                                                               <col />{/* flex spacer */}
+                                                               <col style={{ width: 82 }} />
+                                                               <col style={{ width: 82 }} />
+                                                               <col style={{ width: 74 }} />
+                                                           </colgroup>
+                                                           <thead>
+                                                               <tr>
+                                                                   <th style={colorThCell}>Color Name</th>
+                                                                   <th style={colorThCell}>Type</th>
+                                                                   <th style={colorThCell}>Status</th>
+                                                                   <th style={{ ...colorThCell, borderRight: 'none' }}></th>
+                                                                   <th style={{ ...colorThCell, textAlign: 'center' as const }}>In Prod</th>
+                                                                   <th style={{ ...colorThCell, textAlign: 'center' as const }}>Approve</th>
+                                                                   <th style={{ ...colorThCell, borderRight: 'none', textAlign: 'center' as const }}>Reject</th>
+                                                               </tr>
+                                                           </thead>
+                                                           <tbody>
+                                                               {s.colors.map((c: any, ci: number) => {
+                                                                   const cst = colorRowStyle(c.status || 'PENDING');
+                                                                   const isLast = ci === s.colors.length - 1;
+                                                                   const tdStyle: React.CSSProperties = { ...colorTdCell, background: cst.background, borderBottom: isLast ? 'none' : colorTdCell.borderBottom };
+                                                                   const isInProd = (c.status || 'PENDING') === 'IN_PRODUCTION';
+                                                                   const isApproved = (c.status || 'PENDING') === 'APPROVED';
+                                                                   const isRejected = (c.status || 'PENDING') === 'REJECTED';
+                                                                   return (
+                                                                       <tr key={c.id} style={{ background: cst.background }}>
+                                                                           <td style={{ ...tdStyle, borderLeft: `4px solid ${cst.borderLeftColor}`, fontWeight: 'bold' }}>{c.name}</td>
+                                                                           <td style={tdStyle}>
+                                                                               <span style={{ background: c.is_repeat ? '#dce4f5' : '#d4edda', border: `1px solid ${c.is_repeat ? '#6878c8' : '#5aaa68'}`, color: c.is_repeat ? '#0d2a6e' : '#0c3a1a', padding: '0 4px', fontSize: '9px', fontFamily: 'Tahoma, Arial, sans-serif', fontWeight: 'bold' }}>
+                                                                                   {c.is_repeat ? 'Repeat' : 'New'}
+                                                                               </span>
+                                                                           </td>
+                                                                           <td style={tdStyle}>
+                                                                               <span style={getColorStatusStyle(c.status || 'PENDING')}>{c.status || 'PENDING'}</span>
+                                                                           </td>
+                                                                           <td style={{ ...tdStyle, borderRight: 'none' }}></td>
+                                                                           <td style={{ ...tdStyle, textAlign: 'center' as const }}>
+                                                                               <button disabled={isInProd} style={cbInprod(isInProd)} onClick={() => onUpdateColorStatus(s.id, c.id, 'IN_PRODUCTION')}>⚙ In Prod</button>
+                                                                           </td>
+                                                                           <td style={{ ...tdStyle, textAlign: 'center' as const }}>
+                                                                               <button disabled={isApproved} style={cbApprove(isApproved)} onClick={() => onUpdateColorStatus(s.id, c.id, 'APPROVED')}>✓ Approve</button>
+                                                                           </td>
+                                                                           <td style={{ ...tdStyle, borderRight: 'none', textAlign: 'center' as const }}>
+                                                                               <button disabled={isRejected} style={cbReject(isRejected)} onClick={() => onUpdateColorStatus(s.id, c.id, 'REJECTED')}>✗ Reject</button>
+                                                                           </td>
+                                                                       </tr>
+                                                                   );
+                                                               })}
+                                                           </tbody>
+                                                       </table>
                                                    </div>
                                                </div>
-                                           ))}
+                                           ) : (
+                                               /* ── Modern Bootstrap expand panel ── */
+                                               <div style={{ background: '#f8f9fa', padding: '6px 12px 8px 32px' }}>
+                                                   <table style={{ width: '100%', borderCollapse: 'collapse', tableLayout: 'fixed' as const }}>
+                                                       <colgroup>
+                                                           <col style={{ width: 110 }} /><col style={{ width: 62 }} /><col style={{ width: 100 }} />
+                                                           <col /><col style={{ width: 82 }} /><col style={{ width: 82 }} /><col style={{ width: 74 }} />
+                                                       </colgroup>
+                                                       <thead>
+                                                           <tr>
+                                                               <th className="small text-muted fw-semibold" style={{ padding: '2px 6px', borderBottom: '1px solid #dee2e6', fontSize: 10 }}>Color</th>
+                                                               <th className="small text-muted fw-semibold" style={{ padding: '2px 6px', borderBottom: '1px solid #dee2e6', fontSize: 10 }}>Type</th>
+                                                               <th className="small text-muted fw-semibold" style={{ padding: '2px 6px', borderBottom: '1px solid #dee2e6', fontSize: 10 }}>Status</th>
+                                                               <th style={{ borderBottom: '1px solid #dee2e6' }}></th>
+                                                               <th className="small text-muted fw-semibold text-center" style={{ padding: '2px 6px', borderBottom: '1px solid #dee2e6', fontSize: 10 }}>In Prod</th>
+                                                               <th className="small text-muted fw-semibold text-center" style={{ padding: '2px 6px', borderBottom: '1px solid #dee2e6', fontSize: 10 }}>Approve</th>
+                                                               <th className="small text-muted fw-semibold text-center" style={{ padding: '2px 6px', borderBottom: '1px solid #dee2e6', fontSize: 10 }}>Reject</th>
+                                                           </tr>
+                                                       </thead>
+                                                       <tbody>
+                                                           {s.colors.map((c: any, ci: number) => {
+                                                               const isInProd = (c.status || 'PENDING') === 'IN_PRODUCTION';
+                                                               const isApproved = (c.status || 'PENDING') === 'APPROVED';
+                                                               const isRejected = (c.status || 'PENDING') === 'REJECTED';
+                                                               return (
+                                                                   <tr key={c.id}>
+                                                                       <td style={{ padding: '4px 6px', borderBottom: '1px solid #e9ecef', fontSize: 11, fontWeight: 500 }}>{c.name}</td>
+                                                                       <td style={{ padding: '4px 6px', borderBottom: '1px solid #e9ecef' }}>
+                                                                           <span className={`badge ${c.is_repeat ? 'bg-primary bg-opacity-10 text-primary' : 'bg-success bg-opacity-10 text-success'} border`} style={{ fontSize: 10 }}>{c.is_repeat ? 'Repeat' : 'New'}</span>
+                                                                       </td>
+                                                                       <td style={{ padding: '4px 6px', borderBottom: '1px solid #e9ecef' }}>
+                                                                           <span className={`badge ${getColorStatusBadgeClass(c.status || 'PENDING')}`} style={{ fontSize: 10 }}>{c.status || 'PENDING'}</span>
+                                                                       </td>
+                                                                       <td style={{ borderBottom: '1px solid #e9ecef' }}></td>
+                                                                       <td style={{ padding: '3px 6px', borderBottom: '1px solid #e9ecef', textAlign: 'center' as const }}>
+                                                                           <button disabled={isInProd} className="btn btn-sm btn-outline-warning" style={{ fontSize: 10, padding: '1px 6px' }} onClick={() => onUpdateColorStatus(s.id, c.id, 'IN_PRODUCTION')}>In Prod</button>
+                                                                       </td>
+                                                                       <td style={{ padding: '3px 6px', borderBottom: '1px solid #e9ecef', textAlign: 'center' as const }}>
+                                                                           <button disabled={isApproved} className="btn btn-sm btn-outline-success" style={{ fontSize: 10, padding: '1px 6px' }} onClick={() => onUpdateColorStatus(s.id, c.id, 'APPROVED')}>Approve</button>
+                                                                       </td>
+                                                                       <td style={{ padding: '3px 6px', borderBottom: '1px solid #e9ecef', textAlign: 'center' as const }}>
+                                                                           <button disabled={isRejected} className="btn btn-sm btn-outline-danger" style={{ fontSize: 10, padding: '1px 6px' }} onClick={() => onUpdateColorStatus(s.id, c.id, 'REJECTED')}>Reject</button>
+                                                                       </td>
+                                                                   </tr>
+                                                               );
+                                                           })}
+                                                       </tbody>
+                                                   </table>
+                                               </div>
+                                           )}
                                        </td>
                                    </tr>
                                )}
@@ -890,8 +1050,8 @@ export default function SampleRequestView({ samples, customers, onCreateSample, 
                            {filteredSamples.length === 0 && (
                                <tr>
                                    <td
-                                       colSpan={6}
-                                       style={classic ? { ...tdBase, borderRight: 'none', textAlign: 'center', padding: '24px 8px', color: '#888', fontStyle: 'italic' } : undefined}
+                                       colSpan={7}
+                                       style={classic ? { ...tdBase, borderRight: 'none', textAlign: 'center', padding: '24px 8px', color: '#555', fontStyle: 'italic' } : undefined}
                                        className={classic ? '' : 'text-center py-5 text-muted'}
                                    >
                                        {searchTerm || statusFilter !== 'ALL'
