@@ -55,7 +55,9 @@ async def create_bom(payload: BOMCreate, db: AsyncSession = Depends(get_async_db
         bom_line = BOMLine(
             bom_id=bom.id,
             item_id=material.id,
-            qty=line.qty
+            qty=line.qty,
+            is_percentage=line.is_percentage,
+            percentage=line.percentage,
         )
         
         # Resolve source location if provided

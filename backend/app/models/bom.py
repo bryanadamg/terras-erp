@@ -75,6 +75,7 @@ class BOMLine(Base):
 
     qty: Mapped[float] = mapped_column(Numeric(14, 4))
     is_percentage: Mapped[bool] = mapped_column(Boolean, default=False)
+    percentage: Mapped[float] = mapped_column(Numeric(6, 2), default=0.0)
 
     # Relationships
     bom = relationship("BOM", back_populates="lines")

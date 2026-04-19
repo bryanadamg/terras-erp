@@ -10,6 +10,7 @@ interface BOMLineNode {
     item_code: string;
     attribute_value_ids: string[];
     qty: number;
+    percentage: number;
     is_percentage: boolean;
     source_location_code: string;
     subBOM?: BOMNodeData;
@@ -205,7 +206,8 @@ export default function BOMDesigner({
 
     const [pendingItemCode, setPendingItemCode] = useState('');
     const [pendingQty, setPendingQty] = useState<string>('');
-    const [pendingIsPercentage, setPendingIsPercentage] = useState(false);
+    const [pendingPercentage, setPendingPercentage] = useState<string>('');
+    const [pctError, setPctError] = useState<string | null>(null);
 
     const [codeConfig, setCodeConfig] = useState<CodeConfig>({
         prefix: 'BOM', suffix: '', separator: '-',
@@ -318,7 +320,7 @@ export default function BOMDesigner({
                     id: Math.random().toString(36).substr(2, 9),
                     item_code: expectedChildCode,
                     attribute_value_ids: matchingAttrs,
-                    qty: 1.0, is_percentage: false, source_location_code: '',
+                    qty: 1.0, percentage: 0, is_percentage: false, source_location_code: '',
                     subBOM, isExpanded: true, isNewItem,
                 });
             }
@@ -367,7 +369,30 @@ export default function BOMDesigner({
         }
     };
 
+    const validatePercentages = (node: BOMNodeData): string | null => {
+        if (node.lines.length > 0) {
+            const total = node.lines.reduce((sum, l) => sum + (l.percentage || 0), 0);
+            const hasAny = node.lines.some(l => (l.percentage || 0) > 0);
+            if (hasAny && Math.abs(total - 100) > 0.01) {
+                return node.item_code || 'root';
+            }
+        }
+        for (const line of node.lines) {
+            if (line.subBOM) {
+                const err = validatePercentages(line.subBOM);
+                if (err) return err;
+            }
+        }
+        return null;
+    };
+
     const handleGlobalSave = async () => {
+        const pctErr = validatePercentages(rootBOM);
+        if (pctErr) {
+            setPctError(`Percentages for "${pctErr}" must sum to 100%.`);
+            return;
+        }
+        setPctError(null);
         setIsSaving(true);
         const success = await saveNode(rootBOM);
         setIsSaving(false);
@@ -696,28 +721,29 @@ export default function BOMDesigner({
                                                         onSearch={onSearchItem}
                                                     />
                                                 </div>
-                                                <div style={{ width: 90 }}>
+                                                <div style={{ width: 70 }}>
                                                     <label style={{ ...xpLabel, fontSize: 10 }}>Qty</label>
-                                                    <div style={{ display: 'flex', gap: 2 }}>
-                                                        <input
-                                                            type="number"
-                                                            style={{ ...xpInput, flex: 1 }}
-                                                            placeholder="Qty"
-                                                            value={pendingQty}
-                                                            onChange={e => setPendingQty(e.target.value)}
-                                                            data-testid="component-qty-input"
-                                                        />
-                                                        <button
-                                                            style={{
-                                                                ...(pendingIsPercentage ? xpBtnWarning : xpBtn),
-                                                                minWidth: 'auto', padding: '0 5px', fontSize: 10,
-                                                            }}
-                                                            onClick={() => setPendingIsPercentage(!pendingIsPercentage)}
-                                                            title="Toggle Percentage"
-                                                        >
-                                                            {pendingIsPercentage ? '%' : '#'}
-                                                        </button>
-                                                    </div>
+                                                    <input
+                                                        type="number"
+                                                        style={xpInput}
+                                                        placeholder="Qty"
+                                                        value={pendingQty}
+                                                        onChange={e => setPendingQty(e.target.value)}
+                                                        data-testid="component-qty-input"
+                                                    />
+                                                </div>
+                                                <div style={{ width: 60 }}>
+                                                    <label style={{ ...xpLabel, fontSize: 10 }}>%</label>
+                                                    <input
+                                                        type="number"
+                                                        style={xpInput}
+                                                        placeholder="0"
+                                                        min="0"
+                                                        max="100"
+                                                        value={pendingPercentage}
+                                                        onChange={e => setPendingPercentage(e.target.value)}
+                                                        data-testid="component-pct-input"
+                                                    />
                                                 </div>
                                                 <button
                                                     style={{ ...xpBtnPrimary, minWidth: 'auto', padding: '2px 10px', alignSelf: 'flex-end' }}
@@ -729,15 +755,16 @@ export default function BOMDesigner({
                                                                 id: Math.random().toString(36).substr(2, 9),
                                                                 item_code: pendingItemCode,
                                                                 attribute_value_ids: findMatchingAttributeIds(pendingItemCode, selectedNode.attribute_value_ids),
-                                                                qty: parseFloat(pendingQty),
-                                                                is_percentage: pendingIsPercentage,
+                                                                qty: parseFloat(pendingQty) || 0,
+                                                                percentage: parseFloat(pendingPercentage) || 0,
+                                                                is_percentage: false,
                                                                 source_location_code: '',
                                                                 isNewItem: !exists
                                                             };
                                                             updateSelectedNode({ lines: [...selectedNode.lines, newLine] });
                                                             setPendingItemCode('');
                                                             setPendingQty('');
-                                                            setPendingIsPercentage(false);
+                                                            setPendingPercentage('');
                                                         }
                                                     }}
                                                     data-testid="add-component-btn"
@@ -759,9 +786,10 @@ export default function BOMDesigner({
                                                         <span style={{ flex: 1, fontWeight: 'bold', fontSize: 11 }}>
                                                             {getItemName(line.item_code)}
                                                         </span>
-                                                        <span style={xpBadge(line.is_percentage ? '#b46a00' : '#316ac5')}>
-                                                            {line.qty}{line.is_percentage ? '%' : ''}
-                                                        </span>
+                                                        <span style={xpBadge('#316ac5')}>{line.qty}</span>
+                                                        {(line.percentage || 0) > 0 && (
+                                                            <span style={xpBadge('#b46a00')}>{line.percentage}%</span>
+                                                        )}
                                                         {!hasExistingBOM(line.item_code) && !line.subBOM && (
                                                             <button style={xpBtnInfo} onClick={() => {
                                                                 const subNode: BOMNodeData = {
@@ -793,6 +821,20 @@ export default function BOMDesigner({
                                                     </div>
                                                 ))}
                                             </div>
+                                            {/* Percentage total indicator */}
+                                            {(() => {
+                                                const totalPct = selectedNode.lines.reduce((sum, l) => sum + (l.percentage || 0), 0);
+                                                const hasPct = selectedNode.lines.some(l => (l.percentage || 0) > 0);
+                                                if (!hasPct) return null;
+                                                const isValid = Math.abs(totalPct - 100) < 0.01;
+                                                return (
+                                                    <div style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '3px 6px', borderTop: '1px solid #aca899', background: '#ece9d8' }}>
+                                                        <span style={{ fontSize: 10, color: '#555', flex: 1 }}>Total %:</span>
+                                                        <span style={xpBadge(isValid ? '#2a7a2a' : '#a02020')}>{totalPct.toFixed(1)}%</span>
+                                                        {!isValid && <span style={{ fontSize: 10, color: '#a02020' }}>must = 100%</span>}
+                                                    </div>
+                                                );
+                                            })()}
                                         </div>
                                     </div>
                                 </div>
@@ -812,9 +854,14 @@ export default function BOMDesigner({
                         borderTop: '1px solid #aca899',
                         background: '#ece9d8',
                         padding: '5px 10px',
-                        display: 'flex', justifyContent: 'flex-end', gap: 6,
+                        display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: 6,
                         flexShrink: 0,
                     }}>
+                        {pctError && (
+                            <span style={{ flex: 1, fontSize: 10, color: '#a02020', fontFamily: xpFont }}>
+                                ⚠ {pctError}
+                            </span>
+                        )}
                         <button style={xpBtn} onClick={onCancel}>{t('cancel')}</button>
                         <button
                             data-testid="save-bom-tree-btn"

@@ -43,6 +43,7 @@ def run_migrations():
                 ("work_orders", "parent_wo_id", "UUID REFERENCES work_orders(id)"),
                 ("bom_lines", "source_location_id", "UUID REFERENCES locations(id)"),
                 ("bom_lines", "is_percentage", "BOOLEAN DEFAULT FALSE"),
+                ("bom_lines", "percentage", "NUMERIC(6,2) DEFAULT 0.0"),
                 ("boms", "tolerance_percentage", "NUMERIC(5,2) DEFAULT 0.0"),
                 ("purchase_orders", "target_location_id", "UUID REFERENCES locations(id)"),
                 ("users", "hashed_password", "VARCHAR(255)"),
