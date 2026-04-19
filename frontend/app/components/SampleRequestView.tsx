@@ -2,15 +2,19 @@ import React, { useState, useEffect } from 'react';
 import { useTheme } from '../context/ThemeContext';
 import { useToast } from './Toast';
 import { useLanguage } from '../context/LanguageContext';
+import { useData } from '../context/DataContext';
 import CodeConfigModal, { CodeConfig, buildCodeParts } from './CodeConfigModal';
 import SearchableSelect from './SearchableSelect';
 import HistoryPane from './HistoryPane';
 import ModalWrapper from './ModalWrapper';
+import SamplePrintModal from './SamplePrintModal';
 
 export default function SampleRequestView({ samples, customers, onCreateSample, onUpdateStatus, onUpdateColorStatus, onDeleteSample }: any) {
   const { showToast } = useToast();
   const { t } = useLanguage();
+  const { companyProfile } = useData();
   const [isCreateOpen, setIsCreateOpen] = useState(false);
+  const [printSample, setPrintSample] = useState<any>(null);
   const [openDropdownId, setOpenDropdownId] = useState<string | null>(null);
   const [dropdownPos, setDropdownPos] = useState({ top: 0, left: 0 });
   const [historyEntityId, setHistoryEntityId] = useState<string | null>(null);
@@ -762,14 +766,17 @@ export default function SampleRequestView({ samples, customers, onCreateSample, 
                                <React.Fragment key={s.id}>
                                <tr
                                    key={`${s.id}-row`}
-                                   style={classic ? { background: rowIndex % 2 === 0 ? '#ffffff' : '#f5f3ee', borderBottom: '1px solid #c0bdb5' } : undefined}
+                                   onClick={() => s.colors && s.colors.length > 0 && toggleExpand(s.id)}
+                                   style={classic
+                                       ? { background: rowIndex % 2 === 0 ? '#ffffff' : '#f5f3ee', borderBottom: '1px solid #c0bdb5', cursor: s.colors && s.colors.length > 0 ? 'pointer' : 'default' }
+                                       : { cursor: s.colors && s.colors.length > 0 ? 'pointer' : 'default' }}
                                >
                                    <td style={classic ? tdBase : undefined} className={classic ? '' : 'ps-4'}>
                                        <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
                                            {s.colors && s.colors.length > 0 && (
                                                classic ? (
                                                    <button
-                                                       onClick={() => toggleExpand(s.id)}
+                                                       onClick={e => { e.stopPropagation(); toggleExpand(s.id); }}
                                                        style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '0 2px', fontFamily: 'Tahoma', fontSize: 10, color: '#333' }}
                                                    >
                                                        {expandedIds.has(s.id) ? '▼' : '▶'}
@@ -778,7 +785,7 @@ export default function SampleRequestView({ samples, customers, onCreateSample, 
                                                    <button
                                                        className="btn btn-link p-0 text-muted"
                                                        style={{ fontSize: 10, lineHeight: 1 }}
-                                                       onClick={() => toggleExpand(s.id)}
+                                                       onClick={e => { e.stopPropagation(); toggleExpand(s.id); }}
                                                    >
                                                        <i className={`bi bi-chevron-${expandedIds.has(s.id) ? 'down' : 'right'}`}></i>
                                                    </button>
@@ -882,10 +889,21 @@ export default function SampleRequestView({ samples, customers, onCreateSample, 
                                    {/* Actions — history icon + split Update button */}
                                    <td style={classic ? { ...tdBase, borderRight: 'none', textAlign: 'right' as const } : undefined} className={classic ? '' : 'pe-4 text-end'}>
                                        <div style={{ display: 'flex', gap: 3, justifyContent: 'flex-end', alignItems: 'center' }}>
+                                           {/* Print button */}
+                                           <button
+                                               title="Print SPK Sample"
+                                               onClick={(e) => { e.stopPropagation(); setPrintSample(s); }}
+                                               style={classic
+                                                   ? xpBtn({ padding: '2px 5px', fontSize: '12px', lineHeight: '1' })
+                                                   : undefined}
+                                               className={classic ? '' : 'btn btn-sm btn-link text-muted p-0'}
+                                           >
+                                               <i className="bi bi-printer"></i>
+                                           </button>
                                            {/* History button */}
                                            <button
                                                title="View History"
-                                               onClick={() => setHistoryEntityId(s.id)}
+                                               onClick={(e) => { e.stopPropagation(); setHistoryEntityId(s.id); }}
                                                style={classic
                                                    ? xpBtn({ padding: '2px 5px', fontSize: '12px', lineHeight: '1' })
                                                    : undefined}
@@ -1085,6 +1103,16 @@ export default function SampleRequestView({ samples, customers, onCreateSample, 
                </div>
            )}
        </div>
+
+       {printSample && (
+           <SamplePrintModal
+               sample={printSample}
+               onClose={() => setPrintSample(null)}
+               currentStyle={currentStyle}
+               companyProfile={companyProfile}
+               getCustomerName={getCustomerName}
+           />
+       )}
 
        {historyEntityId && (
            <HistoryPane

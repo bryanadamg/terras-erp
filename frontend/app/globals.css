@@ -839,6 +839,23 @@ body {
     max-width: 100% !important;
     width: 100% !important;
   }
+
+  /* SPK Sample print preview modal — hide everything except the paper portal */
+  body.smp-print-preview-active > *:not(.smp-print-paper-portal) {
+    display: none !important;
+  }
+  body.smp-print-preview-active .smp-print-paper-portal {
+    display: block !important;
+    position: static !important;
+    left: 0 !important;
+    width: 100% !important;
+  }
+  body.smp-print-preview-active .smp-print-paper-portal .smp-print-paper {
+    box-shadow: none !important;
+    padding: 16px !important;
+    max-width: 100% !important;
+    width: 100% !important;
+  }
 }
 
 /* Toast Styles */
