@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session, joinedload
 from app.db.session import get_db
 from app.models.sample import SampleRequest, SampleColor
-from app.schemas import SampleRequestCreate, SampleRequestResponse
+from app.schemas import SampleRequestCreate, SampleRequestResponse, SampleColorResponse
 from app.models.auth import User
 from app.api.auth import get_current_user
 from app.services import audit_service
@@ -115,6 +115,43 @@ def update_sample_status(
         changes={"status": status, "previous_status": previous_status},
     )
     return {"status": "success", "message": f"Sample updated to {status}"}
+
+
+@router.put("/samples/{sample_id}/colors/{color_id}/status", response_model=SampleColorResponse)
+def update_color_status(
+    sample_id: str,
+    color_id: str,
+    status: str,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    color = (
+        db.query(SampleColor)
+        .filter(SampleColor.id == color_id, SampleColor.sample_request_id == sample_id)
+        .first()
+    )
+    if not color:
+        raise HTTPException(status_code=404, detail="Color not found")
+
+    valid_statuses = ["PENDING", "IN_PRODUCTION", "APPROVED", "REJECTED"]
+    if status not in valid_statuses:
+        raise HTTPException(status_code=400, detail="Invalid status")
+
+    previous_status = color.status
+    color.status = status
+    db.commit()
+    db.refresh(color)
+
+    audit_service.log_activity(
+        db,
+        user_id=current_user.id,
+        action="UPDATE_COLOR_STATUS",
+        entity_type="SampleColor",
+        entity_id=color_id,
+        details=f"Updated color '{color.name}' status from {previous_status} to {status}",
+        changes={"status": status, "previous_status": previous_status},
+    )
+    return color
 
 
 @router.delete("/samples/{sample_id}")

@@ -81,3 +81,55 @@ def test_sample_empty_color_rows_excluded(client, auth_headers):
     assert len(sample["colors"]) == 1
     assert sample["colors"][0]["name"] == "RED"
     client.delete(f"/api/samples/{sample['id']}", headers=auth_headers)
+
+
+def test_color_status_update(client, auth_headers):
+    """Each color's status can be updated independently; invalid status is rejected."""
+    payload = {
+        "colors": [
+            {"name": "RED", "is_repeat": False, "order": 0},
+            {"name": "BLUE", "is_repeat": False, "order": 1},
+        ]
+    }
+    res = client.post("/api/samples", json=payload, headers=auth_headers)
+    assert res.status_code == 200
+    sample = res.json()
+    red_id = sample["colors"][0]["id"]
+    blue_id = sample["colors"][1]["id"]
+    sample_id = sample["id"]
+
+    # Both start as PENDING
+    assert sample["colors"][0]["status"] == "PENDING"
+    assert sample["colors"][1]["status"] == "PENDING"
+
+    # Approve RED
+    res2 = client.put(
+        f"/api/samples/{sample_id}/colors/{red_id}/status?status=APPROVED",
+        headers=auth_headers,
+    )
+    assert res2.status_code == 200
+    assert res2.json()["status"] == "APPROVED"
+
+    # BLUE is still PENDING
+    res3 = client.get("/api/samples", headers=auth_headers)
+    found = next(s for s in res3.json() if s["id"] == sample_id)
+    colors_by_id = {c["id"]: c for c in found["colors"]}
+    assert colors_by_id[red_id]["status"] == "APPROVED"
+    assert colors_by_id[blue_id]["status"] == "PENDING"
+
+    # Wrong sample_id returns 404
+    res4 = client.put(
+        f"/api/samples/00000000-0000-0000-0000-000000000000/colors/{red_id}/status?status=APPROVED",
+        headers=auth_headers,
+    )
+    assert res4.status_code == 404
+
+    # Invalid status returns 400
+    res5 = client.put(
+        f"/api/samples/{sample_id}/colors/{red_id}/status?status=NONSENSE",
+        headers=auth_headers,
+    )
+    assert res5.status_code == 400
+
+    # Cleanup
+    client.delete(f"/api/samples/{sample_id}", headers=auth_headers)

@@ -353,8 +353,12 @@ class SampleColorCreate(BaseModel):
     is_repeat: bool = False
     order: int = 0
 
-class SampleColorResponse(SampleColorCreate):
+class SampleColorResponse(BaseModel):
     id: UUID
+    name: str
+    is_repeat: bool = False
+    order: int = 0
+    status: str = "PENDING"
     class Config:
         from_attributes = True
 
