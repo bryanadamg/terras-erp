@@ -268,9 +268,11 @@ export default function InventoryView({
       const sourceColorName = searchParams.get('source_color_name');
 
       if (sourceSampleId && suggestedCode) {
+          const autoCode = suggestItemCode();
           setNewItem(prev => ({
               ...prev,
-              code: suggestedCode,
+              code: autoCode,
+              name: autoCode,
               source_sample_id: sourceSampleId,
               source_color_id: sourceColorId || '',
               source_sample_code: sourceSampleCode || '',
