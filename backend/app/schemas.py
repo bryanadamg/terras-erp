@@ -162,6 +162,8 @@ class ItemCreate(BaseModel):
     attribute_ids: list[UUID] = []
     source_sample_id: UUID | None = None
     source_color_id: UUID | None = None
+    weight_per_unit: float | None = None
+    weight_unit: str | None = None
 
 class ItemUpdate(BaseModel):
     code: str | None = None
@@ -172,6 +174,8 @@ class ItemUpdate(BaseModel):
     source_sample_id: UUID | None = None
     source_color_id: UUID | None = None
     active: bool | None = None
+    weight_per_unit: float | None = None
+    weight_unit: str | None = None
 
 class ItemResponse(ItemCreate):
     id: UUID

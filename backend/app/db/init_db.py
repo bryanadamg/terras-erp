@@ -69,6 +69,8 @@ def run_migrations():
                 ("sample_requests", "completion_description", "TEXT"),
                 ("sample_requests", "customer_id", "UUID REFERENCES partners(id)"),
                 ("sample_colors", "status", "VARCHAR(32) NOT NULL DEFAULT 'PENDING'"),
+                ("items", "weight_per_unit", "FLOAT"),
+                ("items", "weight_unit", "VARCHAR(16)"),
             ]
 
             for table, col, col_type in migrations:

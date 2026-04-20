@@ -238,7 +238,7 @@ export default function InventoryView({
   });
 
   // Creation State
-  const [newItem, setNewItem] = useState({ code: '', name: '', uom: '', category: forcedCategory || '', source_sample_id: '', source_color_id: '', source_sample_code: '', source_color_name: '', attribute_ids: [] as string[] });
+  const [newItem, setNewItem] = useState({ code: '', name: '', uom: '', category: forcedCategory || '', source_sample_id: '', source_color_id: '', source_sample_code: '', source_color_name: '', attribute_ids: [] as string[], weight_per_unit: '' as string | number, weight_unit: 'gsm' });
   const [nameManuallyEdited, setNameManuallyEdited] = useState(false);
 
   // Editing State
@@ -326,6 +326,7 @@ export default function InventoryView({
       if (!payload.source_color_id) delete payload.source_color_id;
       delete payload.source_sample_code;
       delete payload.source_color_name;
+      if (payload.weight_per_unit === '' || payload.weight_per_unit === null) { delete payload.weight_per_unit; delete payload.weight_unit; }
 
       const res = await onCreateItem(payload);
 
@@ -345,7 +346,7 @@ export default function InventoryView({
           showToast(`Item Code "${newItem.code}" already exists. Suggesting: ${suggestedCode}`, 'warning');
           setNewItem({ ...newItem, code: suggestedCode });
       } else if (res && res.ok) {
-          setNewItem({ code: '', name: '', uom: '', category: forcedCategory || '', source_sample_id: '', source_color_id: '', source_sample_code: '', source_color_name: '', attribute_ids: [] });
+          setNewItem({ code: '', name: '', uom: '', category: forcedCategory || '', source_sample_id: '', source_color_id: '', source_sample_code: '', source_color_name: '', attribute_ids: [], weight_per_unit: '', weight_unit: 'gsm' });
           setNameManuallyEdited(false);
           setIsCreateOpen(false);
           showToast('Item created successfully', 'success');
@@ -367,6 +368,8 @@ export default function InventoryView({
           attribute_ids: editingItem.attribute_ids || [],
           source_sample_id: editingItem.source_sample_id || null,
           source_color_id: editingItem.source_color_id || null,
+          weight_per_unit: editingItem.weight_per_unit || null,
+          weight_unit: editingItem.weight_per_unit ? (editingItem.weight_unit || 'gsm') : null,
       };
 
       onUpdateItem(editingItem.id, payload);
@@ -634,6 +637,42 @@ export default function InventoryView({
                       <select data-testid="uom-select" style={classic ? { ...xpInput, height: 'auto', padding: '2px 4px', width: '100%' } : undefined} className={classic ? '' : 'form-select'} value={newItem.uom} onChange={e => setNewItem({...newItem, uom: e.target.value})} required>
                           <option value="">Unit...</option>
                           {(uoms || []).map((u: any) => <option key={u.id} value={u.name}>{u.name}</option>)}
+                      </select>
+                  </div>
+              </div>
+
+              <div className="row g-2 mb-3">
+                  <div className="col-5">
+                      <label
+                          style={classic ? { fontFamily: 'Tahoma, Arial, sans-serif', fontSize: '11px', color: '#000', display: 'block', marginBottom: 2 } : undefined}
+                          className={classic ? '' : 'form-label small text-muted'}
+                      >Weight / Unit</label>
+                      <input
+                          style={classic ? xpInput : undefined}
+                          className={classic ? '' : 'form-control'}
+                          type="number"
+                          min="0"
+                          step="0.01"
+                          placeholder="e.g. 280"
+                          value={newItem.weight_per_unit}
+                          onChange={e => setNewItem({...newItem, weight_per_unit: e.target.value})}
+                      />
+                  </div>
+                  <div className="col-4">
+                      <label
+                          style={classic ? { fontFamily: 'Tahoma, Arial, sans-serif', fontSize: '11px', color: '#000', display: 'block', marginBottom: 2 } : undefined}
+                          className={classic ? '' : 'form-label small text-muted'}
+                      >Unit</label>
+                      <select
+                          style={classic ? { ...xpInput, height: 'auto', padding: '2px 4px', width: '100%' } : undefined}
+                          className={classic ? '' : 'form-select'}
+                          value={newItem.weight_unit}
+                          onChange={e => setNewItem({...newItem, weight_unit: e.target.value})}
+                      >
+                          <option value="gsm">gsm</option>
+                          <option value="g/m²">g/m²</option>
+                          <option value="oz/yd²">oz/yd²</option>
+                          <option value="g/y">g/y</option>
                       </select>
                   </div>
               </div>
@@ -1069,6 +1108,42 @@ export default function InventoryView({
                             >
                                 <option value="">Unit...</option>
                                 {(uoms || []).map((u: any) => <option key={u.id} value={u.name}>{u.name}</option>)}
+                            </select>
+                        </div>
+                    </div>
+
+                    <div className="row g-2 mb-3">
+                        <div className="col-6">
+                            <label
+                              className={classic ? '' : 'form-label small text-muted'}
+                              style={classic ? { fontFamily: 'Tahoma, Arial, sans-serif', fontSize: '10px', color: '#333333', display: 'block', marginBottom: '2px' } : undefined}
+                            >Weight / Unit</label>
+                            <input
+                              className={classic ? '' : 'form-control'}
+                              style={classic ? { ...xpInput, width: '100%', boxSizing: 'border-box' } : undefined}
+                              type="number"
+                              min="0"
+                              step="0.01"
+                              placeholder="e.g. 280"
+                              value={editingItem.weight_per_unit || ''}
+                              onChange={e => setEditingItem({...editingItem, weight_per_unit: e.target.value})}
+                            />
+                        </div>
+                        <div className="col-6">
+                            <label
+                              className={classic ? '' : 'form-label small text-muted'}
+                              style={classic ? { fontFamily: 'Tahoma, Arial, sans-serif', fontSize: '10px', color: '#333333', display: 'block', marginBottom: '2px' } : undefined}
+                            >Weight Unit</label>
+                            <select
+                              className={classic ? '' : 'form-select'}
+                              style={classic ? { ...xpSelect, width: '100%', boxSizing: 'border-box', height: '22px' } : undefined}
+                              value={editingItem.weight_unit || 'gsm'}
+                              onChange={e => setEditingItem({...editingItem, weight_unit: e.target.value})}
+                            >
+                                <option value="gsm">gsm</option>
+                                <option value="g/m²">g/m²</option>
+                                <option value="oz/yd²">oz/yd²</option>
+                                <option value="g/y">g/y</option>
                             </select>
                         </div>
                     </div>
