@@ -707,12 +707,23 @@ export default function BOMView({
                                                         style={classic ? { padding: '5px 6px', borderRight: '1px solid #c0bdb5', verticalAlign: 'top', cursor: 'pointer' } : { cursor: 'pointer' }}
                                                         className={classic ? '' : 'align-top'}
                                                     >
-                                                        <div style={classic ? { fontWeight: 'bold', color: '#000' } : undefined} className={classic ? '' : 'fw-medium'}>
-                                                            {getItemName(bom.item_id, bom.item_name)} ({getItemCode(bom.item_id, bom.item_code)})
+                                                        <div style={{ fontWeight: 'bold', color: '#000', fontSize: 11, fontFamily: 'Tahoma, Arial, sans-serif' }}>
+                                                            {getItemName(bom.item_id, bom.item_name)}
                                                         </div>
-                                                        <div style={classic ? { fontSize: '9px', color: '#444', marginTop: '1px' } : undefined} className={classic ? '' : 'text-muted small'}>
-                                                            {(bom.attribute_value_ids || []).map(getAttributeValueName).join(', ') || '-'}
+                                                        <div style={{ marginTop: 2 }}>
+                                                            <span style={{ fontFamily: "'Courier New', monospace", fontSize: 10, background: '#fff', border: '1px solid #aaa', padding: '0 4px', color: '#000055', whiteSpace: 'nowrap' }}>
+                                                                {getItemCode(bom.item_id, bom.item_code)}
+                                                            </span>
                                                         </div>
+                                                        {(bom.attribute_value_ids || []).length > 0 && (
+                                                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 3, marginTop: 3 }}>
+                                                                {(bom.attribute_value_ids || []).map((valId: string) => (
+                                                                    <span key={valId} style={{ background: '#e8e4d8', border: '1px solid #b0aaa0', color: '#333', fontSize: 10, padding: '1px 5px', fontFamily: 'Tahoma, Arial, sans-serif', whiteSpace: 'nowrap' }}>
+                                                                        {getAttributeValueName(valId)}
+                                                                    </span>
+                                                                ))}
+                                                            </div>
+                                                        )}
                                                     </td>
                                                     <td style={classic ? { padding: '5px 6px', borderRight: '1px solid #c0bdb5', verticalAlign: 'top', fontSize: '10px', color: '#333' } : undefined} className={classic ? '' : 'align-top'}>
                                                         {bom.operations?.length > 0 ? (
