@@ -5,11 +5,6 @@ import { useRouter } from 'next/navigation';
 import { useUser } from '../context/UserContext';
 import { useIsMobile } from '../hooks/useIsMobile';
 
-interface UserHint {
-    username: string;
-    full_name: string;
-}
-
 const AVATAR_COLORS = [
     'linear-gradient(135deg,#4a90d9,#2563c4)',
     'linear-gradient(135deg,#6a4da0,#4a2d80)',
@@ -31,12 +26,8 @@ export default function LoginPage() {
 
     const [mounted, setMounted] = useState(false);
     const [currentTime, setCurrentTime] = useState(new Date());
-    const [userHints, setUserHints] = useState<UserHint[]>([]);
 
     const [usernameInput, setUsernameInput] = useState('');
-    const [suggestions, setSuggestions] = useState<UserHint[]>([]);
-    const [showSuggestions, setShowSuggestions] = useState(false);
-    const [highlightedIdx, setHighlightedIdx] = useState(0);
 
     const [step, setStep] = useState<'username' | 'password'>('username');
     const [selectedUsername, setSelectedUsername] = useState('');
@@ -47,7 +38,6 @@ export default function LoginPage() {
 
     const passwordRef = useRef<HTMLInputElement>(null);
     const usernameRef = useRef<HTMLInputElement>(null);
-    const API_BASE = process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:8000/api';
 
     useEffect(() => { setMounted(true); }, []);
 
@@ -61,34 +51,6 @@ export default function LoginPage() {
     }, [currentUser, loading, mounted, router]);
 
     useEffect(() => {
-        if (!mounted) return;
-        fetch(`${API_BASE}/users`)
-            .then(r => r.ok ? r.json() : [])
-            .then((users: { username: string; full_name: string }[]) => {
-                setUserHints(users.map(u => ({ username: u.username, full_name: u.full_name })));
-            })
-            .catch(() => {});
-    }, [mounted, API_BASE]);
-
-    useEffect(() => {
-        if (!usernameInput.trim()) {
-            setSuggestions([]);
-            return;
-        }
-        const q = usernameInput.toLowerCase();
-        const filtered = userHints.filter(u => u.username.toLowerCase().includes(q));
-        setSuggestions(filtered);
-        setHighlightedIdx(0);
-
-        const exact = userHints.find(u => u.username.toLowerCase() === q);
-        if (exact) {
-            setSelectedUsername(exact.username);
-            setStep('password');
-            setShowSuggestions(false);
-        }
-    }, [usernameInput, userHints]);
-
-    useEffect(() => {
         if (step === 'password') {
             setTimeout(() => passwordRef.current?.focus(), 50);
         }
@@ -97,20 +59,7 @@ export default function LoginPage() {
     const confirmUsername = (username: string) => {
         setSelectedUsername(username);
         setStep('password');
-        setShowSuggestions(false);
         setLoginError('');
-    };
-
-    const handleUsernameKeyDown = (e: React.KeyboardEvent) => {
-        if (e.key === 'ArrowDown') {
-            setHighlightedIdx(i => Math.min(i + 1, suggestions.length - 1));
-        } else if (e.key === 'ArrowUp') {
-            setHighlightedIdx(i => Math.max(i - 1, 0));
-        } else if (e.key === 'Enter') {
-            e.preventDefault();
-            if (suggestions[highlightedIdx]) confirmUsername(suggestions[highlightedIdx].username);
-            else if (usernameInput.trim()) confirmUsername(usernameInput.trim());
-        }
     };
 
     const handleSubmit = async (e: React.FormEvent) => {
@@ -155,7 +104,6 @@ export default function LoginPage() {
                     fontFamily: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif",
                     display: 'flex', flexDirection: 'column', overflow: 'auto',
                 }}
-                onClick={() => setShowSuggestions(false)}
             >
                 {/* Mobile header */}
                 <div style={{ padding: '32px 28px 20px', textAlign: 'center' }}>
@@ -202,15 +150,13 @@ export default function LoginPage() {
                                 ? handleSubmit
                                 : (e) => {
                                     e.preventDefault();
-                                    const match = suggestions[highlightedIdx] || { username: usernameInput.trim(), full_name: '' };
-                                    if (match.username) confirmUsername(match.username);
+                                    if (usernameInput.trim()) confirmUsername(usernameInput.trim());
                                 }
                             }
                             style={{ display: 'flex', flexDirection: 'column', gap: 12 }}
-                            onClick={e => e.stopPropagation()}
                         >
                             {step === 'username' && (
-                                <div style={{ position: 'relative' }}>
+                                <div>
                                     <div style={{ fontSize: 12, color: '#c0d8f8', marginBottom: 6 }}>Username</div>
                                     <input
                                         ref={usernameRef}
@@ -219,9 +165,7 @@ export default function LoginPage() {
                                         type="text"
                                         autoComplete="username"
                                         value={usernameInput}
-                                        onChange={e => { setUsernameInput(e.target.value); setShowSuggestions(true); }}
-                                        onKeyDown={handleUsernameKeyDown}
-                                        onFocus={() => setShowSuggestions(true)}
+                                        onChange={e => setUsernameInput(e.target.value)}
                                         style={{
                                             width: '100%', height: 48,
                                             background: 'rgba(255,255,255,0.12)',
@@ -231,35 +175,6 @@ export default function LoginPage() {
                                         }}
                                         required
                                     />
-                                    {showSuggestions && suggestions.length > 0 && (
-                                        <div style={{
-                                            position: 'absolute', top: '100%', left: 0, right: 0,
-                                            background: 'rgba(8,24,80,0.97)',
-                                            border: '1px solid rgba(166,202,240,0.35)',
-                                            borderTop: 'none', borderRadius: '0 0 6px 6px',
-                                            zIndex: 100, overflow: 'hidden',
-                                        }}>
-                                            {suggestions.map((u, i) => (
-                                                <div
-                                                    key={u.username}
-                                                    onMouseDown={() => confirmUsername(u.username)}
-                                                    style={{
-                                                        padding: '12px 14px',
-                                                        fontSize: 14,
-                                                        color: i === highlightedIdx ? 'white' : '#b0cce8',
-                                                        background: i === highlightedIdx ? 'rgba(37,99,196,0.7)' : 'transparent',
-                                                        cursor: 'pointer',
-                                                        display: 'flex', alignItems: 'center', gap: 8,
-                                                        borderBottom: i < suggestions.length - 1 ? '1px solid rgba(255,255,255,0.05)' : 'none',
-                                                    }}
-                                                >
-                                                    <div style={{ width: 6, height: 6, borderRadius: '50%', background: '#4a90d9', flexShrink: 0 }} />
-                                                    <span style={{ fontWeight: 600 }}>{u.username}</span>
-                                                    {u.full_name && <span style={{ opacity: 0.6 }}>— {u.full_name}</span>}
-                                                </div>
-                                            ))}
-                                        </div>
-                                    )}
                                 </div>
                             )}
 
@@ -367,7 +282,6 @@ export default function LoginPage() {
                 display: 'flex', flexDirection: 'column', overflow: 'hidden',
                 userSelect: 'none',
             }}
-            onClick={() => setShowSuggestions(false)}
         >
             {/* Top stripe */}
             <div style={{
@@ -464,15 +378,13 @@ export default function LoginPage() {
                             ? handleSubmit
                             : (e) => {
                                 e.preventDefault();
-                                const match = suggestions[highlightedIdx] || { username: usernameInput.trim(), full_name: '' };
-                                if (match.username) confirmUsername(match.username);
+                                if (usernameInput.trim()) confirmUsername(usernameInput.trim());
                             }
                         }
                         style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: 8 }}
-                        onClick={e => e.stopPropagation()}
                     >
                         {step === 'username' && (
-                            <div style={{ position: 'relative' }}>
+                            <div>
                                 <div style={{ fontSize: 'clamp(9px,1.1vw,12px)', color: '#c0d8f8', marginBottom: 4 }}>
                                     Username
                                 </div>
@@ -482,11 +394,9 @@ export default function LoginPage() {
                                     data-testid="username-input"
                                     type="text"
                                     autoFocus
-                                    autoComplete="off"
+                                    autoComplete="username"
                                     value={usernameInput}
-                                    onChange={e => { setUsernameInput(e.target.value); setShowSuggestions(true); }}
-                                    onKeyDown={handleUsernameKeyDown}
-                                    onFocus={() => setShowSuggestions(true)}
+                                    onChange={e => setUsernameInput(e.target.value)}
                                     style={{
                                         width: '100%', height: 'clamp(24px,3vw,36px)',
                                         background: 'rgba(255,255,255,0.15)',
@@ -496,35 +406,6 @@ export default function LoginPage() {
                                     }}
                                     required
                                 />
-                                {showSuggestions && suggestions.length > 0 && (
-                                    <div style={{
-                                        position: 'absolute', top: '100%', left: 0, right: 0,
-                                        background: 'rgba(8,24,80,0.97)',
-                                        border: '1px solid rgba(166,202,240,0.35)',
-                                        borderTop: 'none', borderRadius: '0 0 3px 3px',
-                                        zIndex: 100, overflow: 'hidden',
-                                    }}>
-                                        {suggestions.map((u, i) => (
-                                            <div
-                                                key={u.username}
-                                                onMouseDown={() => confirmUsername(u.username)}
-                                                style={{
-                                                    padding: 'clamp(4px,0.6vw,8px) 10px',
-                                                    fontSize: 'clamp(9px,1.1vw,12px)',
-                                                    color: i === highlightedIdx ? 'white' : '#b0cce8',
-                                                    background: i === highlightedIdx ? 'rgba(37,99,196,0.7)' : 'transparent',
-                                                    cursor: 'pointer',
-                                                    display: 'flex', alignItems: 'center', gap: 8,
-                                                    borderBottom: i < suggestions.length - 1 ? '1px solid rgba(255,255,255,0.05)' : 'none',
-                                                }}
-                                            >
-                                                <div style={{ width: 6, height: 6, borderRadius: '50%', background: '#4a90d9', flexShrink: 0 }} />
-                                                <span style={{ fontWeight: 600 }}>{u.username}</span>
-                                                {u.full_name && <span style={{ opacity: 0.6 }}>— {u.full_name}</span>}
-                                            </div>
-                                        ))}
-                                    </div>
-                                )}
                             </div>
                         )}
 
@@ -538,6 +419,7 @@ export default function LoginPage() {
                                     id="password-input"
                                     data-testid="password-input"
                                     type="password"
+                                    autoComplete="current-password"
                                     value={password}
                                     onChange={e => setPassword(e.target.value)}
                                     style={{
