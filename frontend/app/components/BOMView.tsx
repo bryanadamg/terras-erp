@@ -306,7 +306,7 @@ export default function BOMView({
                     onMouseEnter={e => { if (!isSelected && isSelectable) (e.currentTarget as HTMLElement).style.background = '#d0e4f8'; }}
                     onMouseLeave={e => { if (!isSelected) (e.currentTarget as HTMLElement).style.background = 'transparent'; }}
                 >
-                    <span style={{ fontSize: 11, flexShrink: 0 }}>🔩</span>
+                    <i className="bi bi-gear-fill" style={{ fontSize: 11, flexShrink: 0 }} />
                     <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                         {line.item_name || line.item_code}
                     </span>
@@ -349,7 +349,7 @@ export default function BOMView({
                         {/* LEFT: Tree */}
                         <div style={{ width: 210, flexShrink: 0, borderRight: '2px solid #aca899', display: 'flex', flexDirection: 'column', background: '#ddd9c8' }}>
                             <div style={{ background: 'linear-gradient(to bottom, #4a78c8, #2a54a8)', color: '#fff', fontSize: 11, fontWeight: 'bold', padding: '3px 8px', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                                <span>📁 BOM Structure</span>
+                                <span><i className="bi bi-diagram-3-fill" style={{ marginRight: 4 }} />BOM Structure</span>
                                 <span style={{ background: 'rgba(255,255,255,0.2)', color: '#fff', fontSize: 9, padding: '0 5px', borderRadius: 2 }}>{nodeCount} nodes</span>
                             </div>
                             <div style={{ border: '2px inset #aaa', background: 'white', flex: 1, margin: 4, overflowY: 'auto', padding: 0 }}>
@@ -369,7 +369,7 @@ export default function BOMView({
                                     onMouseEnter={e => { if (!isRootSelected) (e.currentTarget as HTMLElement).style.background = '#d0e4f8'; }}
                                     onMouseLeave={e => { if (!isRootSelected) (e.currentTarget as HTMLElement).style.background = 'transparent'; }}
                                 >
-                                    <span style={{ fontSize: 13, flexShrink: 0 }}>📦</span>
+                                    <i className="bi bi-box-seam" style={{ fontSize: 13, flexShrink: 0 }} />
                                     <span style={{ flex: 1, fontWeight: 'bold', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                                         {bom.item_name || bom.item_code}
                                     </span>
@@ -383,7 +383,7 @@ export default function BOMView({
                         <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
                             {/* Node header strip */}
                             <div style={{ background: 'linear-gradient(to bottom, #e8e4d8, #dddad0)', borderBottom: '1px solid #aca899', padding: '4px 10px', flexShrink: 0, display: 'flex', alignItems: 'center', gap: 8 }}>
-                                <span style={{ fontSize: 16, flexShrink: 0 }}>{isRootSelected ? '📦' : '🔩'}</span>
+                                <i className={`bi ${isRootSelected ? 'bi-box-seam' : 'bi-gear-fill'}`} style={{ fontSize: 16, flexShrink: 0 }} />
                                 <div style={{ flex: 1, minWidth: 0 }}>
                                     <div style={{ fontWeight: 'bold', fontSize: 12, color: '#000080', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                                         {displayBOM.item_name || displayBOM.item_code}
@@ -404,7 +404,7 @@ export default function BOMView({
 
                                 {/* Components */}
                                 <div>
-                                    <div style={xpSectionHdr}>⚙ Components</div>
+                                    <div style={xpSectionHdr}><i className="bi bi-gear-fill" style={{ marginRight: 4 }} />Components</div>
                                     {lines.length === 0 ? (
                                         <div style={{ fontSize: 10, color: '#555', fontStyle: 'italic', padding: '4px 6px' }}>No components defined.</div>
                                     ) : (
@@ -474,7 +474,7 @@ export default function BOMView({
 
                                 {/* Routing */}
                                 <div>
-                                    <div style={xpSectionHdr}>🔧 Routing</div>
+                                    <div style={xpSectionHdr}><i className="bi bi-wrench" style={{ marginRight: 4 }} />Routing</div>
                                     {ops.length === 0 ? (
                                         <div style={{ fontSize: 10, color: '#555', fontStyle: 'italic', padding: '4px 6px' }}>No routing defined.</div>
                                     ) : (
@@ -514,7 +514,7 @@ export default function BOMView({
 
                         {/* RIGHT: BOM info card */}
                         <div style={{ width: 165, flexShrink: 0, borderLeft: '1px solid #aca899', padding: 8, display: 'flex', flexDirection: 'column', gap: 8, overflowY: 'auto', background: '#f5f4ee' }}>
-                            <div style={{ fontSize: 10, fontWeight: 'bold', color: '#000080', borderBottom: '1px solid #c0bdb5', paddingBottom: 3, fontFamily: 'Tahoma, Arial, sans-serif' }}>📋 BOM Details</div>
+                            <div style={{ fontSize: 10, fontWeight: 'bold', color: '#000080', borderBottom: '1px solid #c0bdb5', paddingBottom: 3, fontFamily: 'Tahoma, Arial, sans-serif' }}><i className="bi bi-clipboard" style={{ marginRight: 4 }} />BOM Details</div>
                             <div>
                                 <div style={{ fontSize: 10, color: '#444', marginBottom: 1 }}>BOM Code</div>
                                 <div style={{ fontFamily: "'Courier New', monospace", color: '#0000cc', fontSize: 10 }}>{displayBOM.code}</div>
@@ -581,7 +581,7 @@ export default function BOMView({
                     <div style={{ display: 'flex', flexDirection: 'column', width: 'min(1200px, 96vw)', height: 'min(860px, 94vh)', background: '#ece9d8', border: '2px solid #0a246a', boxShadow: '4px 4px 20px rgba(0,0,0,0.6), inset 0 0 0 1px #a6caf0', fontFamily: 'Tahoma, "Segoe UI", sans-serif', borderRadius: 4, overflow: 'hidden' }}>
                         <div style={{ background: 'linear-gradient(to right, #0a246a, #a6caf0, #0a246a)', padding: '3px 6px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0, userSelect: 'none' }}>
                             <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                                <span style={{ fontSize: 14 }}>🗂️</span>
+                                <i className="bi bi-collection-fill" style={{ fontSize: 14 }} />
                                 <span style={{ color: '#fff', fontWeight: 'bold', fontSize: 12, fontFamily: 'Tahoma, "Segoe UI", sans-serif', textShadow: '1px 1px 2px rgba(0,0,0,0.6)' }}>BOM Designer (Recursive)</span>
                             </div>
                             <button onClick={() => setIsDesignerOpen(false)} style={{ width: 21, height: 21, padding: 0, background: 'linear-gradient(to bottom, #e06060, #b03030)', border: '1px solid #800', borderRadius: 2, cursor: 'pointer', color: '#fff', fontSize: 12, fontWeight: 'bold', display: 'flex', alignItems: 'center', justifyContent: 'center', lineHeight: 1 }}>✕</button>
@@ -662,7 +662,7 @@ export default function BOMView({
                                         <th style={classic ? { padding: '4px 6px', borderRight: '1px solid #b0aaa0' } : undefined} className={classic ? '' : 'ps-2'}>{t('item_code')}</th>
                                         <th style={classic ? { padding: '4px 6px', borderRight: '1px solid #b0aaa0' } : undefined}>{t('finished_good')}</th>
                                         <th style={classic ? { padding: '4px 6px', borderRight: '1px solid #b0aaa0' } : undefined}>{t('routing')}</th>
-                                        <th style={classic ? { padding: '4px 6px', borderRight: '1px solid #b0aaa0' } : undefined}>{t('materials')}</th>
+                                        <th style={classic ? { padding: '4px 6px', borderRight: '1px solid #b0aaa0' } : undefined}>Summary</th>
                                         <th style={classic ? { width: '50px', padding: '4px 6px' } : { width: '50px' }} />
                                     </tr>
                                 </thead>
@@ -725,8 +725,19 @@ export default function BOMView({
                                                             <span style={{ color: '#888' }} className={classic ? '' : 'text-muted small'}>-</span>
                                                         )}
                                                     </td>
-                                                    <td style={classic ? { padding: '5px 6px', borderRight: '1px solid #c0bdb5', verticalAlign: 'top' } : undefined} className={classic ? '' : 'align-top'}>
-                                                        {renderBOMTree(bom.lines, bom.id)}
+                                                    <td style={classic ? { padding: '5px 8px', borderRight: '1px solid #c0bdb5', verticalAlign: 'middle' } : undefined} className={classic ? '' : 'align-middle'}>
+                                                        <div style={{ display: 'flex', alignItems: 'center', gap: 5, flexWrap: 'wrap', fontFamily: 'Tahoma, Arial, sans-serif' }}>
+                                                            <span title="Components" style={{ background: '#e6eeff', border: '1px solid #0058e6', color: '#003080', fontSize: 10, padding: '1px 6px', whiteSpace: 'nowrap' }}>
+                                                                <i className="bi bi-gear-fill" style={{ marginRight: 3 }} />{bom.lines?.length ?? 0} mat{bom.lines?.length !== 1 ? 's' : ''}
+                                                            </span>
+                                                            <span title="Operations" style={{ background: '#e8f5e8', border: '1px solid #2d7a2d', color: '#1a4d1a', fontSize: 10, padding: '1px 6px', whiteSpace: 'nowrap' }}>
+                                                                <i className="bi bi-wrench" style={{ marginRight: 3 }} />{bom.operations?.length ?? 0} op{bom.operations?.length !== 1 ? 's' : ''}
+                                                            </span>
+                                                            <span title="Batch output" style={{ background: '#f5f3ee', border: '1px solid #b0aaa0', color: '#333', fontSize: 10, padding: '1px 6px', whiteSpace: 'nowrap' }}>
+                                                                <i className="bi bi-box-seam" style={{ marginRight: 3 }} />{Number(bom.qty ?? 1).toFixed(2)}
+                                                            </span>
+                                                            <span title={bom.active ? 'Active' : 'Inactive'} style={{ display: 'inline-block', width: 8, height: 8, background: bom.active ? '#00aa00' : '#cc0000', border: `1px solid ${bom.active ? '#005500' : '#660000'}`, flexShrink: 0 }} />
+                                                        </div>
                                                     </td>
                                                     <td style={classic ? { padding: '5px 6px', textAlign: 'right', verticalAlign: 'top' } : undefined} className={classic ? '' : 'pe-4 text-end align-top'}>
                                                         <button
