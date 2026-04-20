@@ -3,6 +3,8 @@ import { useToast } from './Toast';
 import { useTheme } from '../context/ThemeContext';
 import { useUser, User } from '../context/UserContext';
 import CompanyProfileView from './CompanyProfileView';
+import PixelAvatar from './PixelAvatar';
+import AvatarPicker from './AvatarPicker';
 
 export default function SettingsView({
     appName, onUpdateAppName, uiStyle, onUpdateUIStyle, requestConfirm,
@@ -33,6 +35,7 @@ export default function SettingsView({
   const [selfFullName, setSelfFullName] = useState('');
   const [selfPassword, setSelfPassword] = useState('');
   const [selfConfirmPassword, setSelfConfirmPassword] = useState('');
+  const [selfAvatarId, setSelfAvatarId] = useState<string>('1');
 
   // User Management State (Admin)
   const [editingUser, setEditingUser] = useState<string | null>(null);
@@ -41,6 +44,7 @@ export default function SettingsView({
   const [editRoleId, setEditRoleId] = useState('');
   const [editPermissionIds, setEditPermissionIds] = useState<string[]>([]);
   const [editAllowedCategories, setEditAllowedCategories] = useState<string[]>([]);
+  const [editAvatarId, setEditAvatarId] = useState<string>('1');
   const [newPassword, setNewPassword] = useState('');
 
   const API_BASE = process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:8000/api';
@@ -157,6 +161,7 @@ export default function SettingsView({
       if (currentUser) {
           setSelfUsername(currentUser.username);
           setSelfFullName(currentUser.full_name);
+          setSelfAvatarId(currentUser.avatar_id || '1');
       }
       Promise.all([
           fetch(`${API_BASE}/roles`).then(res => res.json()),
@@ -297,7 +302,7 @@ export default function SettingsView({
   const handleSelfAccountUpdate = async (e: React.FormEvent) => {
       e.preventDefault();
       if (!currentUser) return;
-      const payload: any = { username: selfUsername, full_name: selfFullName };
+      const payload: any = { username: selfUsername, full_name: selfFullName, avatar_id: selfAvatarId };
       if (selfPassword) {
           if (selfPassword !== selfConfirmPassword) {
               showToast('Passwords do not match', 'warning');
@@ -336,6 +341,7 @@ export default function SettingsView({
       setEditRoleId(user.role?.id || '');
       setEditPermissionIds(user.permissions?.map(p => p.id) || []);
       setEditAllowedCategories(user.allowed_categories || []);
+      setEditAvatarId(user.avatar_id || '1');
       setNewPassword('');
   };
 
@@ -358,7 +364,8 @@ export default function SettingsView({
               full_name: editName,
               role_id: editRoleId || null,
               permission_ids: editPermissionIds,
-              allowed_categories: editAllowedCategories.length > 0 ? editAllowedCategories : null
+              allowed_categories: editAllowedCategories.length > 0 ? editAllowedCategories : null,
+              avatar_id: editAvatarId,
           };
           if (newPassword) payload.password = newPassword;
           const res = await fetch(`${API_BASE}/users/${userId}`, {
@@ -468,6 +475,18 @@ export default function SettingsView({
             )}
             <div style={classic ? { padding: '12px 14px', background: '#ece9d8' } : undefined} className={classic ? '' : 'card-body'}>
                 <form onSubmit={handleSelfAccountUpdate}>
+                    <div style={classic ? { display: 'flex', alignItems: 'flex-start', gap: 12, marginBottom: 12 } : { display: 'flex', alignItems: 'flex-start', gap: 16, marginBottom: 16 }}>
+                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, flexShrink: 0 }}>
+                            <div style={classic ? { width: 56, height: 56, border: '2px solid', borderColor: '#fff #888 #888 #fff', background: '#e0dcd4', display: 'flex', alignItems: 'center', justifyContent: 'center' } : { width: 60, height: 60, border: '2px solid #dee2e6', borderRadius: 8, background: '#f8f9fa', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                <PixelAvatar avatarId={selfAvatarId} size={48} />
+                            </div>
+                            <span style={classic ? { fontFamily: 'Tahoma,Arial,sans-serif', fontSize: 9, color: '#555' } : { fontSize: 10, color: '#888' }}>Preview</span>
+                        </div>
+                        <div>
+                            <label style={classic ? xpLabel : { fontSize: 12, fontWeight: 600, color: '#555', marginBottom: 4, display: 'block' }}>Choose Avatar</label>
+                            <AvatarPicker value={selfAvatarId} onChange={setSelfAvatarId} classic={classic} />
+                        </div>
+                    </div>
                     <div className="row">
                         <div className="col-md-6 mb-3">
                             <label style={classic ? xpLabel : undefined} className={classic ? '' : 'form-label'}>Username</label>
@@ -775,7 +794,8 @@ export default function SettingsView({
                         >
                             <thead style={classic ? xpTableHeader : undefined} className={classic ? '' : 'table-light'}>
                                 <tr>
-                                    <th style={classic ? xpThCell : undefined} className={classic ? '' : 'ps-4'}>Username</th>
+                                    <th style={classic ? { ...xpThCell, width: 36 } : undefined} className={classic ? '' : 'ps-4'} />
+                                    <th style={classic ? xpThCell : undefined} className={classic ? '' : ''}>Username</th>
                                     <th style={classic ? xpThCell : undefined}>Full Name</th>
                                     <th style={classic ? xpThCell : undefined}>Role &amp; Password</th>
                                     <th style={classic ? xpThCell : undefined}>Permissions</th>
@@ -792,7 +812,15 @@ export default function SettingsView({
                                     >
                                         {editingUser === user.id ? (
                                             <>
-                                                <td style={classic ? tdBase : undefined} className={classic ? '' : 'ps-4'}>
+                                                <td style={classic ? { ...tdBase, verticalAlign: 'top' } : undefined} className={classic ? '' : 'ps-4'}>
+                                                    <div style={classic ? { width: 28, height: 28, border: '1px solid', borderColor: '#fff #888 #888 #fff', background: '#e0dcd4', display: 'flex', alignItems: 'center', justifyContent: 'center' } : { width: 32, height: 32, border: '1px solid #dee2e6', borderRadius: 4, background: '#f8f9fa', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                                        <PixelAvatar avatarId={editAvatarId} size={24} />
+                                                    </div>
+                                                    <div style={{ marginTop: 4 }}>
+                                                        <AvatarPicker value={editAvatarId} onChange={setEditAvatarId} classic={classic} />
+                                                    </div>
+                                                </td>
+                                                <td style={classic ? tdBase : undefined} className={classic ? '' : ''}>
                                                     <input
                                                         style={classic ? { ...xpInput, width: '100%', fontFamily: "'Courier New', monospace" } : undefined}
                                                         className={classic ? '' : 'form-control form-control-sm font-monospace'}
@@ -911,7 +939,12 @@ export default function SettingsView({
                                             </>
                                         ) : (
                                             <>
-                                                <td style={classic ? { ...tdBase, fontFamily: "'Courier New', monospace", fontWeight: 'bold' } : undefined} className={classic ? '' : 'ps-4 font-monospace'}>{user.username}</td>
+                                                <td style={classic ? { ...tdBase, textAlign: 'center' as const } : undefined} className={classic ? '' : 'ps-4'}>
+                                                    <div style={classic ? { width: 28, height: 28, border: '1px solid', borderColor: '#fff #888 #888 #fff', background: '#e0dcd4', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' } : { width: 32, height: 32, border: '1px solid #dee2e6', borderRadius: 4, background: '#f8f9fa', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>
+                                                        <PixelAvatar avatarId={user.avatar_id} size={24} />
+                                                    </div>
+                                                </td>
+                                                <td style={classic ? { ...tdBase, fontFamily: "'Courier New', monospace", fontWeight: 'bold' } : undefined} className={classic ? '' : 'font-monospace'}>{user.username}</td>
                                                 <td style={classic ? tdBase : undefined}>{user.full_name}</td>
                                                 <td style={classic ? tdBase : undefined}>
                                                     {classic ? (

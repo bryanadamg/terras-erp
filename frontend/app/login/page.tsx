@@ -4,20 +4,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { useUser } from '../context/UserContext';
 import { useIsMobile } from '../hooks/useIsMobile';
-
-const AVATAR_COLORS = [
-    'linear-gradient(135deg,#4a90d9,#2563c4)',
-    'linear-gradient(135deg,#6a4da0,#4a2d80)',
-    'linear-gradient(135deg,#2a8a60,#1a6040)',
-    'linear-gradient(135deg,#c04a20,#8a2a10)',
-    'linear-gradient(135deg,#a04090,#702860)',
-];
-
-function getAvatarColor(username: string): string {
-    let hash = 0;
-    for (let i = 0; i < username.length; i++) hash = username.charCodeAt(i) + ((hash << 5) - hash);
-    return AVATAR_COLORS[Math.abs(hash) % AVATAR_COLORS.length];
-}
+import PixelAvatar from '../components/PixelAvatar';
 
 export default function LoginPage() {
     const { currentUser, login, loading } = useUser();
@@ -125,13 +112,14 @@ export default function LoginPage() {
                         {/* Avatar */}
                         <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 20 }}>
                             <div style={{
-                                width: 56, height: 56,
-                                background: step === 'password' ? getAvatarColor(selectedUsername) : 'linear-gradient(135deg,#4a8abf,#2a5a9f)',
-                                borderRadius: 8, border: '2px solid rgba(255,255,255,0.3)',
+                                width: 60, height: 60,
+                                background: '#c8d8f0',
+                                border: '2px solid',
+                                borderColor: '#fff #888 #888 #fff',
+                                boxShadow: 'inset 1px 1px 0 rgba(255,255,255,0.4)',
                                 display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                boxShadow: '0 4px 16px rgba(0,0,0,0.4)',
                             }}>
-                                <div style={{ width: '50%', height: '50%', background: 'rgba(255,255,255,0.75)', borderRadius: '50%' }} />
+                                <PixelAvatar avatarId="1" size={48} />
                             </div>
                         </div>
 
@@ -358,13 +346,13 @@ export default function LoginPage() {
                     {/* Avatar */}
                     <div style={{
                         width: 'clamp(40px,6vw,64px)', height: 'clamp(40px,6vw,64px)',
-                        background: step === 'password' ? getAvatarColor(selectedUsername) : 'linear-gradient(135deg,#4a8abf,#2a5a9f)',
-                        borderRadius: 6, border: '2px solid rgba(255,255,255,0.3)',
+                        background: '#c8d8f0',
+                        border: '2px solid',
+                        borderColor: '#fff #888 #888 #fff',
+                        boxShadow: 'inset 1px 1px 0 rgba(255,255,255,0.4)',
                         display: 'flex', alignItems: 'center', justifyContent: 'center',
-                        boxShadow: '0 4px 16px rgba(0,0,0,0.4)',
-                        transition: 'background 0.3s',
                     }}>
-                        <div style={{ width: '50%', height: '50%', background: 'rgba(255,255,255,0.75)', borderRadius: '50%' }} />
+                        <PixelAvatar avatarId="1" size={48} />
                     </div>
 
                     {step === 'password' && (

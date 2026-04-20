@@ -73,6 +73,7 @@ def run_migrations():
                 ("items", "weight_unit", "VARCHAR(16)"),
                 ("sample_requests", "original_weight_unit", "VARCHAR(16)"),
                 ("sample_requests", "production_weight_unit", "VARCHAR(16)"),
+                ("users", "avatar_id", "VARCHAR(4)"),
             ]
 
             for table, col, col_type in migrations:

@@ -467,12 +467,14 @@ class UserUpdate(BaseModel):
     permission_ids: Optional[list[UUID]] = None
     allowed_categories: Optional[list[str]] = None
     password: Optional[str] = None
+    avatar_id: Optional[str] = None
 
 class UserResponse(UserBase):
     id: UUID
     role: RoleResponse | None = None
     permissions: list[PermissionResponse] = []
     allowed_categories: list[str] | None = None
+    avatar_id: str | None = None
     class Config:
         from_attributes = True
 

@@ -9,6 +9,7 @@ import { useLanguage } from '../context/LanguageContext';
 import { useRouter, usePathname } from 'next/navigation';
 import { useTheme } from '../context/ThemeContext';
 import { useIsMobile } from '../hooks/useIsMobile';
+import PixelAvatar from './PixelAvatar';
 
 export default function MainLayout({ children }: { children: React.ReactNode }) {
     const { currentUser, logout, loading, hasPermission } = useUser();
@@ -105,7 +106,10 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
 
                         <div className="dropdown">
                             <button data-testid="user-dropdown" className="btn btn-sm btn-light border d-flex align-items-center gap-2 rounded-pill px-2" data-bs-toggle="dropdown" id="userDropdown">
-                                <i className="bi bi-person-circle text-primary"></i><span className="small fw-bold d-none d-sm-inline" data-testid="username-display">{currentUser?.username}</span>
+                                <div style={{ width: 22, height: 22, border: '1px solid #aaa', borderColor: '#fff #999 #999 #fff', background: '#e0dcd4', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                                    <PixelAvatar avatarId={currentUser?.avatar_id} size={18} />
+                                </div>
+                                <span className="small fw-bold d-none d-sm-inline" data-testid="username-display">{currentUser?.username}</span>
                             </button>
                             <ul className="dropdown-menu dropdown-menu-end shadow border-0 mt-2" aria-labelledby="userDropdown">
                                 <li className="px-3 py-2 border-bottom mb-1"><div className="small fw-bold">{currentUser?.full_name}</div></li>

@@ -99,7 +99,10 @@ def update_user(user_id: str, payload: UserUpdate, db: Session = Depends(get_db)
         from app.models.auth import Permission
         perms = db.query(Permission).filter(Permission.id.in_(payload.permission_ids)).all()
         user.permissions = perms
-        
+
+    if payload.avatar_id is not None:
+        user.avatar_id = payload.avatar_id
+
     db.commit()
     db.refresh(user)
     return user

@@ -55,6 +55,7 @@ class User(Base):
     
     # Category-based restriction (If Null, allow all. If set, allow only these categories)
     allowed_categories: Mapped[list[str] | None] = mapped_column(JSON, nullable=True)
+    avatar_id: Mapped[str | None] = mapped_column(String(4), nullable=True)
 
     role = relationship("Role")
     permissions = relationship("Permission", secondary=user_permissions)
