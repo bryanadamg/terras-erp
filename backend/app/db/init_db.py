@@ -71,6 +71,8 @@ def run_migrations():
                 ("sample_colors", "status", "VARCHAR(32) NOT NULL DEFAULT 'PENDING'"),
                 ("items", "weight_per_unit", "FLOAT"),
                 ("items", "weight_unit", "VARCHAR(16)"),
+                ("sample_requests", "original_weight_unit", "VARCHAR(16)"),
+                ("sample_requests", "production_weight_unit", "VARCHAR(16)"),
             ]
 
             for table, col, col_type in migrations:

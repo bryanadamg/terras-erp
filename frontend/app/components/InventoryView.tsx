@@ -238,7 +238,7 @@ export default function InventoryView({
   });
 
   // Creation State
-  const [newItem, setNewItem] = useState({ code: '', name: '', uom: '', category: forcedCategory || '', source_sample_id: '', source_color_id: '', source_sample_code: '', source_color_name: '', attribute_ids: [] as string[], weight_per_unit: '' as string | number, weight_unit: 'gsm' });
+  const [newItem, setNewItem] = useState({ code: '', name: '', uom: '', category: forcedCategory || 'Finished Goods', source_sample_id: '', source_color_id: '', source_sample_code: '', source_color_name: '', attribute_ids: [] as string[], weight_per_unit: '' as string | number, weight_unit: 'g/y' });
   const [nameManuallyEdited, setNameManuallyEdited] = useState(false);
 
   // Editing State
@@ -346,7 +346,7 @@ export default function InventoryView({
           showToast(`Item Code "${newItem.code}" already exists. Suggesting: ${suggestedCode}`, 'warning');
           setNewItem({ ...newItem, code: suggestedCode });
       } else if (res && res.ok) {
-          setNewItem({ code: '', name: '', uom: '', category: forcedCategory || '', source_sample_id: '', source_color_id: '', source_sample_code: '', source_color_name: '', attribute_ids: [], weight_per_unit: '', weight_unit: 'gsm' });
+          setNewItem({ code: '', name: '', uom: '', category: forcedCategory || 'Finished Goods', source_sample_id: '', source_color_id: '', source_sample_code: '', source_color_name: '', attribute_ids: [], weight_per_unit: '', weight_unit: 'g/y' });
           setNameManuallyEdited(false);
           setIsCreateOpen(false);
           showToast('Item created successfully', 'success');

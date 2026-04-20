@@ -184,7 +184,9 @@ export default function SampleRequestView({ samples, customers, onCreateSample, 
       weft: '',
       warp: '',
       original_weight: '',
+      original_weight_unit: 'g/y',
       production_weight: '',
+      production_weight_unit: 'g/y',
       additional_info: '',
       quantity: '',
       sample_size: '',
@@ -272,7 +274,9 @@ export default function SampleRequestView({ samples, customers, onCreateSample, 
           ...newSample,
           customer_id: newSample.customer_id || null,
           original_weight: newSample.original_weight !== '' ? parseFloat(newSample.original_weight) : null,
+          original_weight_unit: newSample.original_weight !== '' ? newSample.original_weight_unit : null,
           production_weight: newSample.production_weight !== '' ? parseFloat(newSample.production_weight) : null,
+          production_weight_unit: newSample.production_weight !== '' ? newSample.production_weight_unit : null,
           estimated_completion_date: newSample.estimated_completion_date || null,
           colors: newSample.colors.filter(c => c.name.trim() !== ''),
       });
@@ -691,16 +695,34 @@ export default function SampleRequestView({ samples, customers, onCreateSample, 
                                           placeholder="e.g. SPANDEX" />
                                </div>
                                <div>
-                                   <label style={xpLbl}>Original Weight (g/yd)</label>
-                                   <input type="number" step="0.01" style={{ ...xpInput, width: '100%', boxSizing: 'border-box' as const }}
-                                          value={newSample.original_weight} onChange={e => setNewSample({ ...newSample, original_weight: e.target.value })}
-                                          placeholder="0.00" />
+                                   <label style={xpLbl}>Original Weight</label>
+                                   <div style={{ display: 'flex', gap: 2 }}>
+                                       <input type="number" step="0.01" style={{ ...xpInput, flex: 1, minWidth: 0 }}
+                                              value={newSample.original_weight} onChange={e => setNewSample({ ...newSample, original_weight: e.target.value })}
+                                              placeholder="0.00" />
+                                       <select style={{ ...xpInput, width: 68, padding: '0 2px' }}
+                                               value={newSample.original_weight_unit} onChange={e => setNewSample({ ...newSample, original_weight_unit: e.target.value })}>
+                                           <option value="g/y">g/y</option>
+                                           <option value="gsm">gsm</option>
+                                           <option value="g/m²">g/m²</option>
+                                           <option value="oz/yd²">oz/yd²</option>
+                                       </select>
+                                   </div>
                                </div>
                                <div>
-                                   <label style={xpLbl}>Production Weight (g/yd)</label>
-                                   <input type="number" step="0.01" style={{ ...xpInput, width: '100%', boxSizing: 'border-box' as const }}
-                                          value={newSample.production_weight} onChange={e => setNewSample({ ...newSample, production_weight: e.target.value })}
-                                          placeholder="0.00" />
+                                   <label style={xpLbl}>Production Weight</label>
+                                   <div style={{ display: 'flex', gap: 2 }}>
+                                       <input type="number" step="0.01" style={{ ...xpInput, flex: 1, minWidth: 0 }}
+                                              value={newSample.production_weight} onChange={e => setNewSample({ ...newSample, production_weight: e.target.value })}
+                                              placeholder="0.00" />
+                                       <select style={{ ...xpInput, width: 68, padding: '0 2px' }}
+                                               value={newSample.production_weight_unit} onChange={e => setNewSample({ ...newSample, production_weight_unit: e.target.value })}>
+                                           <option value="g/y">g/y</option>
+                                           <option value="gsm">gsm</option>
+                                           <option value="g/m²">g/m²</option>
+                                           <option value="oz/yd²">oz/yd²</option>
+                                       </select>
+                                   </div>
                                </div>
                                <div style={{ gridColumn: '1 / -1' }}>
                                    <label style={xpLbl}>Additional Information</label>
@@ -738,12 +760,28 @@ export default function SampleRequestView({ samples, customers, onCreateSample, 
                                    <input className="form-control form-control-sm" value={newSample.warp} onChange={e => setNewSample({ ...newSample, warp: e.target.value })} placeholder="e.g. SPANDEX" />
                                </div>
                                <div className="col-md-6">
-                                   <label className="form-label small text-muted">Original Weight (g/yd)</label>
-                                   <input type="number" step="0.01" className="form-control form-control-sm" value={newSample.original_weight} onChange={e => setNewSample({ ...newSample, original_weight: e.target.value })} placeholder="0.00" />
+                                   <label className="form-label small text-muted">Original Weight</label>
+                                   <div className="input-group input-group-sm">
+                                       <input type="number" step="0.01" className="form-control" value={newSample.original_weight} onChange={e => setNewSample({ ...newSample, original_weight: e.target.value })} placeholder="0.00" />
+                                       <select className="form-select" style={{ maxWidth: 80 }} value={newSample.original_weight_unit} onChange={e => setNewSample({ ...newSample, original_weight_unit: e.target.value })}>
+                                           <option value="g/y">g/y</option>
+                                           <option value="gsm">gsm</option>
+                                           <option value="g/m²">g/m²</option>
+                                           <option value="oz/yd²">oz/yd²</option>
+                                       </select>
+                                   </div>
                                </div>
                                <div className="col-md-6">
-                                   <label className="form-label small text-muted">Production Weight (g/yd)</label>
-                                   <input type="number" step="0.01" className="form-control form-control-sm" value={newSample.production_weight} onChange={e => setNewSample({ ...newSample, production_weight: e.target.value })} placeholder="0.00" />
+                                   <label className="form-label small text-muted">Production Weight</label>
+                                   <div className="input-group input-group-sm">
+                                       <input type="number" step="0.01" className="form-control" value={newSample.production_weight} onChange={e => setNewSample({ ...newSample, production_weight: e.target.value })} placeholder="0.00" />
+                                       <select className="form-select" style={{ maxWidth: 80 }} value={newSample.production_weight_unit} onChange={e => setNewSample({ ...newSample, production_weight_unit: e.target.value })}>
+                                           <option value="g/y">g/y</option>
+                                           <option value="gsm">gsm</option>
+                                           <option value="g/m²">g/m²</option>
+                                           <option value="oz/yd²">oz/yd²</option>
+                                       </select>
+                                   </div>
                                </div>
                                <div className="col-12">
                                    <label className="form-label small text-muted">Additional Information</label>

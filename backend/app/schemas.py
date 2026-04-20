@@ -387,7 +387,9 @@ class SampleRequestCreate(BaseModel):
     weft: Optional[str] = None
     warp: Optional[str] = None
     original_weight: Optional[float] = None
+    original_weight_unit: Optional[str] = None
     production_weight: Optional[float] = None
+    production_weight_unit: Optional[str] = None
     additional_info: Optional[str] = None
     quantity: Optional[str] = None
     sample_size: Optional[str] = None
@@ -414,7 +416,9 @@ class SampleRequestResponse(BaseModel):
     weft: Optional[str] = None
     warp: Optional[str] = None
     original_weight: Optional[float] = None
+    original_weight_unit: Optional[str] = None
     production_weight: Optional[float] = None
+    production_weight_unit: Optional[str] = None
     additional_info: Optional[str] = None
     quantity: Optional[str] = None
     sample_size: Optional[str] = None
