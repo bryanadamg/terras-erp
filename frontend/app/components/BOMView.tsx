@@ -375,7 +375,7 @@ export default function BOMView({
                                     </span>
                                     <span style={{ background: isRootSelected ? 'rgba(255,255,255,0.25)' : '#2d7a2d', color: '#fff', fontSize: 8, padding: '0 3px', fontWeight: 'bold', flexShrink: 0, border: isRootSelected ? '1px solid rgba(255,255,255,0.4)' : 'none' }}>ROOT</span>
                                 </div>
-                                {buildTreeNodes(bom, 1, new Set([bom.id]), bomId, selectedItemId)}
+                                {buildTreeNodes(bom, 1, new Set(), bomId, selectedItemId)}
                             </div>
                         </div>
 
