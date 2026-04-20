@@ -4,6 +4,8 @@ from app.core.db_manager import db_manager
 from app.schemas import DatabaseResponse, ConnectionProfile
 from app.api.auth import get_current_user
 from app.models.auth import User
+from pathlib import Path
+from urllib.parse import urlparse, urlunparse
 import shutil
 
 router = APIRouter(prefix="/admin/database", tags=["admin"])
@@ -12,11 +14,17 @@ router = APIRouter(prefix="/admin/database", tags=["admin"])
 def get_current_db(current_user: User = Depends(get_current_user)):
     if current_user.role.name != "Administrator":
         raise HTTPException(status_code=403, detail="Not authorized")
-    
+
+    parsed = urlparse(db_manager.current_url)
+    masked = parsed._replace(
+        netloc=parsed.netloc.replace(f":{parsed.password}@", ":***@") if parsed.password else parsed.netloc
+    )
+    safe_url = urlunparse(masked)
+
     return DatabaseResponse(
         message="Current database info",
         status=True,
-        data={"url": db_manager.current_url}
+        data={"url": safe_url}
     )
 
 @router.post("/switch", response_model=DatabaseResponse)
@@ -37,10 +45,10 @@ def list_snapshots(current_user: User = Depends(get_current_user)):
     return db_manager.list_snapshots()
 
 @router.post("/snapshots")
-def create_snapshot(current_user: User = Depends(get_current_user)):
+async def create_snapshot(current_user: User = Depends(get_current_user)):
     if current_user.role.name != "Administrator":
         raise HTTPException(status_code=403, detail="Not authorized")
-    return db_manager.create_snapshot()
+    return await db_manager.create_snapshot()
 
 @router.get("/snapshots/{filename}/download")
 def download_snapshot(filename: str, current_user: User = Depends(get_current_user)):
@@ -55,15 +63,16 @@ def download_snapshot(filename: str, current_user: User = Depends(get_current_us
 async def upload_snapshot(file: UploadFile = File(...), current_user: User = Depends(get_current_user)):
     if current_user.role.name != "Administrator":
         raise HTTPException(status_code=403, detail="Not authorized")
-    
-    dest = db_manager.get_snapshot_path(file.filename)
+
+    safe_filename = Path(file.filename).name
+    dest = db_manager.get_snapshot_path(safe_filename)
     with dest.open("wb") as buffer:
         shutil.copyfileobj(file.file, buffer)
-    
-    return {"message": f"Snapshot {file.filename} uploaded", "status": True}
+
+    return {"message": f"Snapshot {safe_filename} uploaded", "status": True}
 
 @router.post("/snapshots/{filename}/restore")
-def restore_db(filename: str, current_user: User = Depends(get_current_user)):
+async def restore_db(filename: str, current_user: User = Depends(get_current_user)):
     if current_user.role.name != "Administrator":
         raise HTTPException(status_code=403, detail="Not authorized")
-    return db_manager.restore_snapshot(filename)
+    return await db_manager.restore_snapshot(filename)

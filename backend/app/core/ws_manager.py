@@ -49,12 +49,10 @@ class ConnectionManager:
     async def _listen_to_redis(self):
         """Internal task to listen for Redis messages and broadcast to local clients."""
         try:
-            while True:
-                message = await self.pubsub.get_message(ignore_subscribe_messages=True)
-                if message and message["type"] == "message":
+            async for message in self.pubsub.listen():
+                if message["type"] == "message":
                     data = json.loads(message["data"])
                     await self._local_broadcast(data)
-                await asyncio.sleep(0.01) # Low latency check
         except asyncio.CancelledError:
             pass
         except Exception as e:

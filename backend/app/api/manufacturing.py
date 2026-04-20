@@ -464,10 +464,12 @@ async def update_work_order_status(wo_id: str, status: str, db: AsyncSession = D
     return {"status": "success", "message": f"Updated to {status}"}
 
 @router.delete("/work-orders/{wo_id}")
-async def delete_work_order(wo_id: str, db: AsyncSession = Depends(get_async_db)):
+async def delete_work_order(wo_id: str, db: AsyncSession = Depends(get_async_db), current_user: User = Depends(get_current_user)):
     result = await db.execute(select(WorkOrder).filter(WorkOrder.id == wo_id))
     wo = result.scalars().first()
     if not wo: raise HTTPException(status_code=404, detail="Not found")
+    wo_code = wo.code
     await db.delete(wo)
     await db.commit()
+    await audit_service.log_activity(db, current_user.id, "DELETE", "work_order", wo_id, details={"code": wo_code})
     return {"status": "success"}

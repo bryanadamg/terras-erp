@@ -46,7 +46,7 @@ class PurchaseOrderLine(Base):
         UUID(as_uuid=True), ForeignKey("purchase_orders.id"), index=True
     )
     item_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("items.id")
+        UUID(as_uuid=True), ForeignKey("items.id"), index=True
     )
     qty: Mapped[float] = mapped_column(Numeric(14, 4))
     unit_price: Mapped[float | None] = mapped_column(Numeric(14, 2), nullable=True)

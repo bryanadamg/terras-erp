@@ -6,12 +6,12 @@ from app.models.manufacturing import WorkOrder
 from app.models.stock_balance import StockBalance
 from app.models.sales import SalesOrder
 from app.models.sample import SampleRequest
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 def get_kpi(db: Session, key: str, ttl_minutes: int = 10):
     """Retrieves a KPI from cache or returns None if expired."""
     cached = db.query(KPICache).filter(KPICache.key == key).first()
-    if cached and (datetime.utcnow() - cached.updated_at) < timedelta(minutes=ttl_minutes):
+    if cached and (datetime.now(timezone.utc) - cached.updated_at) < timedelta(minutes=ttl_minutes):
         return cached.value
     return None
 
@@ -19,7 +19,7 @@ def update_kpi(db: Session, key: str, value: float):
     cached = db.query(KPICache).filter(KPICache.key == key).first()
     if cached:
         cached.value = value
-        cached.updated_at = datetime.utcnow()
+        cached.updated_at = datetime.now(timezone.utc)
     else:
         db.add(KPICache(key=key, value=value))
     db.commit()
@@ -62,7 +62,7 @@ def get_all_cached_kpis(db: Session):
     needs_refresh = not kpis
     if kpis:
         oldest = min(k.updated_at for k in kpis)
-        if (datetime.utcnow() - oldest) > timedelta(minutes=5):
+        if (datetime.now(timezone.utc) - oldest) > timedelta(minutes=5):
             needs_refresh = True
 
     if needs_refresh:

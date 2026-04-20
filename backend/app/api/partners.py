@@ -4,6 +4,7 @@ from sqlalchemy.orm import Session
 from app.db.session import get_db
 from app.schemas import PartnerCreate, PartnerResponse, PartnerUpdate
 from app.models.partner import Partner
+from app.models.audit import AuditLog
 from app.api.auth import get_current_user
 from app.models.auth import User
 from typing import List, Optional
@@ -52,6 +53,13 @@ def delete_partner(partner_id: uuid.UUID, db: Session = Depends(get_db), current
         raise HTTPException(status_code=404, detail="Partner not found")
     
     try:
+        db.add(AuditLog(
+            user_id=current_user.id,
+            action="DELETE",
+            entity_type="partner",
+            entity_id=str(partner.id),
+            details=f"Deleted partner {partner.name}"
+        ))
         db.delete(partner)
         db.commit()
     except IntegrityError:

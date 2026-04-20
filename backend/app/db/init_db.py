@@ -298,17 +298,12 @@ def seed_rbac(db):
             if not user:
                 role = db.query(Role).filter(Role.name == rname).first()
                 user = User(
-                    username=uname, 
-                    full_name=fname, 
+                    username=uname,
+                    full_name=fname,
                     role_id=role.id,
                     hashed_password=get_password_hash("password") # Default password
                 )
                 db.add(user)
-                db.commit()
-            else:
-                # Ensure password is set correctly (Reset for dev/demo)
-                # In production, remove this else block
-                user.hashed_password = get_password_hash("password")
                 db.commit()
 
         logger.info("Seeded RBAC (Roles, Permissions, Users)")

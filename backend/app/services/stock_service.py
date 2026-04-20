@@ -61,11 +61,16 @@ async def add_stock_entry(
 
     # 3. ATOMIC SUMMARY UPDATE
     v_key = _generate_variant_key(attribute_value_ids)
-    result = await db.execute(select(StockBalance).filter(
-        StockBalance.item_id == item_id,
-        StockBalance.location_id == location_id,
-        StockBalance.variant_key == v_key
-    ))
+    result = await db.execute(
+        select(StockBalance)
+        .filter(
+            StockBalance.item_id == item_id,
+            StockBalance.location_id == location_id,
+            StockBalance.variant_key == v_key
+        )
+        .with_for_update()
+        .limit(1)
+    )
     balance = result.scalars().first()
 
     if not balance:

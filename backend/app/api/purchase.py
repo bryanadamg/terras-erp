@@ -27,7 +27,7 @@ async def create_purchase_order(payload: PurchaseOrderCreate, db: AsyncSession =
         order_date=payload.order_date
     )
     db.add(po)
-    await db.commit()
+    await db.flush()  # Get po.id without committing — lines added below in same transaction
 
     for line in payload.lines:
         db_line = PurchaseOrderLine(
@@ -114,6 +114,14 @@ async def delete_purchase_order(po_id: uuid.UUID, db: AsyncSession = Depends(get
     if not po:
         raise HTTPException(status_code=404, detail="PO not found")
     
+    await audit_service.log_activity(
+        db,
+        user_id=current_user.id,
+        action="DELETE",
+        entity_type="purchase_order",
+        entity_id=str(po.id),
+        details=f"Deleted PO {po.po_number}"
+    )
     await db.delete(po)
     await db.commit()
     return {"status": "success"}

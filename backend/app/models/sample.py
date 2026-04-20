@@ -64,7 +64,7 @@ class SampleRequest(Base):
     completion_description: Mapped[str | None] = mapped_column(Text, nullable=True)
 
     version: Mapped[int] = mapped_column(Integer, default=1)
-    status: Mapped[str] = mapped_column(String(32), default="DRAFT")
+    status: Mapped[str] = mapped_column(String(32), default="DRAFT", index=True)
     notes: Mapped[str | None] = mapped_column(Text, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
 

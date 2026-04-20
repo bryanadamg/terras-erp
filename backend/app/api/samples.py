@@ -1,6 +1,8 @@
 from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy.orm import Session, joinedload
-from app.db.session import get_db
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import select, func
+from sqlalchemy.orm import joinedload
+from app.db.session import get_async_db
 from app.models.sample import SampleRequest, SampleColor
 from app.schemas import SampleRequestCreate, SampleRequestResponse, SampleColorResponse
 from app.models.auth import User
@@ -12,12 +14,13 @@ router = APIRouter()
 
 
 @router.post("/samples", response_model=SampleRequestResponse)
-def create_sample_request(
+async def create_sample_request(
     payload: SampleRequestCreate,
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_async_db),
     current_user: User = Depends(get_current_user),
 ):
-    count = db.query(SampleRequest).count()
+    count_result = await db.execute(select(func.count()).select_from(SampleRequest))
+    count = count_result.scalar_one()
     code = f"SMP-{datetime.now().year}-{str(count + 1).zfill(5)}"
 
     req_date = date.fromisoformat(payload.request_date) if payload.request_date else date.today()
@@ -47,7 +50,7 @@ def create_sample_request(
         status="DRAFT",
     )
     db.add(sample)
-    db.flush()
+    await db.flush()
 
     for i, color_data in enumerate(payload.colors):
         if color_data.name.strip():
@@ -58,10 +61,16 @@ def create_sample_request(
                 order=i,
             ))
 
-    db.commit()
-    db.refresh(sample)
+    await db.commit()
 
-    audit_service.log_activity(
+    result = await db.execute(
+        select(SampleRequest)
+        .options(joinedload(SampleRequest.colors))
+        .filter(SampleRequest.id == sample.id)
+    )
+    sample = result.unique().scalars().first()
+
+    await audit_service.log_activity(
         db,
         user_id=current_user.id,
         action="CREATE",
@@ -75,25 +84,31 @@ def create_sample_request(
 
 
 @router.get("/samples", response_model=list[SampleRequestResponse])
-def get_samples(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
-    return (
-        db.query(SampleRequest)
+async def get_samples(
+    skip: int = 0,
+    limit: int = 100,
+    db: AsyncSession = Depends(get_async_db),
+    current_user: User = Depends(get_current_user),
+):
+    result = await db.execute(
+        select(SampleRequest)
         .options(joinedload(SampleRequest.colors))
         .order_by(SampleRequest.created_at.desc())
         .offset(skip)
         .limit(limit)
-        .all()
     )
+    return result.unique().scalars().all()
 
 
 @router.put("/samples/{sample_id}/status")
-def update_sample_status(
+async def update_sample_status(
     sample_id: str,
     status: str,
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_async_db),
     current_user: User = Depends(get_current_user),
 ):
-    sample = db.query(SampleRequest).filter(SampleRequest.id == sample_id).first()
+    result = await db.execute(select(SampleRequest).filter(SampleRequest.id == sample_id))
+    sample = result.scalars().first()
     if not sample:
         raise HTTPException(status_code=404, detail="Sample not found")
 
@@ -103,9 +118,9 @@ def update_sample_status(
 
     previous_status = sample.status
     sample.status = status
-    db.commit()
+    await db.commit()
 
-    audit_service.log_activity(
+    await audit_service.log_activity(
         db,
         user_id=current_user.id,
         action="UPDATE_STATUS",
@@ -118,18 +133,17 @@ def update_sample_status(
 
 
 @router.put("/samples/{sample_id}/colors/{color_id}/status", response_model=SampleColorResponse)
-def update_color_status(
+async def update_color_status(
     sample_id: str,
     color_id: str,
     status: str,
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_async_db),
     current_user: User = Depends(get_current_user),
 ):
-    color = (
-        db.query(SampleColor)
-        .filter(SampleColor.id == color_id, SampleColor.sample_request_id == sample_id)
-        .first()
+    result = await db.execute(
+        select(SampleColor).filter(SampleColor.id == color_id, SampleColor.sample_request_id == sample_id)
     )
+    color = result.scalars().first()
     if not color:
         raise HTTPException(status_code=404, detail="Color not found")
 
@@ -139,10 +153,12 @@ def update_color_status(
 
     previous_status = color.status
     color.status = status
-    db.commit()
-    db.refresh(color)
+    await db.commit()
 
-    audit_service.log_activity(
+    result = await db.execute(select(SampleColor).filter(SampleColor.id == color_id))
+    color = result.scalars().first()
+
+    await audit_service.log_activity(
         db,
         user_id=current_user.id,
         action="UPDATE_COLOR_STATUS",
@@ -155,20 +171,21 @@ def update_color_status(
 
 
 @router.delete("/samples/{sample_id}")
-def delete_sample(
+async def delete_sample(
     sample_id: str,
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_async_db),
     current_user: User = Depends(get_current_user),
 ):
-    sample = db.query(SampleRequest).filter(SampleRequest.id == sample_id).first()
+    result = await db.execute(select(SampleRequest).filter(SampleRequest.id == sample_id))
+    sample = result.scalars().first()
     if not sample:
         raise HTTPException(status_code=404, detail="Sample not found")
 
     details = f"Deleted Sample {sample.code}"
-    db.delete(sample)
-    db.commit()
+    await db.delete(sample)
+    await db.commit()
 
-    audit_service.log_activity(
+    await audit_service.log_activity(
         db,
         user_id=current_user.id,
         action="DELETE",

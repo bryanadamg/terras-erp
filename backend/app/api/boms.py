@@ -98,7 +98,7 @@ async def create_bom(payload: BOMCreate, db: AsyncSession = Depends(get_async_db
         entity_type="BOM",
         entity_id=str(refresh_bom.id),
         details=f"Created BOM {refresh_bom.code} for {item.code}",
-        changes=payload.dict()
+        changes=payload.model_dump()
     )
     
     # Pydantic picks up @property fields automatically via from_attributes
@@ -131,7 +131,7 @@ async def get_boms(skip: int = 0, limit: int = 100, db: AsyncSession = Depends(g
     return items_list
 
 @router.get("/boms/{bom_id}", response_model=BOMResponse)
-async def get_bom(bom_id: str, db: AsyncSession = Depends(get_async_db)):
+async def get_bom(bom_id: str, db: AsyncSession = Depends(get_async_db), current_user: User = Depends(get_current_user)):
     result = await db.execute(
         select(BOM)
         .options(

@@ -44,7 +44,7 @@ async def create_item_api(payload: ItemCreate, db: AsyncSession = Depends(get_as
         entity_type="Item",
         entity_id=str(item.id),
         details=f"Created item {item.code} ({item.name})",
-        changes=payload.dict()
+        changes=payload.model_dump()
     )
 
     _populate_source_info(item)
@@ -72,7 +72,7 @@ async def get_items_api(
 
 @router.put("/items/{item_id}", response_model=ItemResponse)
 async def update_item_api(item_id: str, payload: ItemUpdate, db: AsyncSession = Depends(get_async_db), current_user: User = Depends(get_current_user)):
-    item = await item_service.update_item(db, item_id, payload.dict(exclude_unset=True))
+    item = await item_service.update_item(db, item_id, payload.model_dump(exclude_unset=True))
     if not item:
         raise HTTPException(status_code=404, detail="Item not found")
     _populate_source_info(item)
@@ -84,7 +84,7 @@ async def update_item_api(item_id: str, payload: ItemUpdate, db: AsyncSession = 
         entity_type="Item",
         entity_id=item_id,
         details=f"Updated item {item.code}",
-        changes=payload.dict(exclude_unset=True)
+        changes=payload.model_dump(exclude_unset=True)
     )
     
     return item
@@ -130,19 +130,19 @@ async def add_stock_api(payload: StockEntryCreate, db: AsyncSession = Depends(ge
         entity_type="StockEntry",
         entity_id=item.code, 
         details=f"Manual stock adjustment: {payload.qty} for {item.code} at {location.name}",
-        changes=payload.dict()
+        changes=payload.model_dump()
     )
     
     return {"status": "success", "message": "Stock recorded"}
 
 @router.get("/items/template")
-async def get_items_template():
+async def get_items_template(current_user: User = Depends(get_current_user)):
     # Keep as sync if generating CSV doesn't need DB or use run_in_threadpool
     content = import_service.generate_items_template()
     return Response(content=content, media_type="text/csv", headers={"Content-Disposition": "attachment; filename=items_template.csv"})
 
 @router.post("/items/import")
-async def import_items(file: UploadFile = File(...), db: AsyncSession = Depends(get_async_db)):
+async def import_items(file: UploadFile = File(...), db: AsyncSession = Depends(get_async_db), current_user: User = Depends(get_current_user)):
     if not file.filename.endswith(".csv"):
         raise HTTPException(status_code=400, detail="Invalid file type. Please upload a CSV.")
     

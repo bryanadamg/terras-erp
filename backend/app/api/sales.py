@@ -127,6 +127,14 @@ async def delete_sales_order(so_id: uuid.UUID, db: AsyncSession = Depends(get_as
     if not so:
         raise HTTPException(status_code=404, detail="SO not found")
     
+    await audit_service.log_activity(
+        db,
+        user_id=current_user.id,
+        action="DELETE",
+        entity_type="sales_order",
+        entity_id=str(so.id),
+        details=f"Deleted SO {so.po_number}"
+    )
     await db.delete(so)
     await db.commit()
     return {"status": "success"}

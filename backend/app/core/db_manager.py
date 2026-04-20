@@ -1,3 +1,4 @@
+import asyncio
 import threading
 import logging
 import os
@@ -37,24 +38,24 @@ class DatabaseManager:
                     cls._instance = cls()
         return cls._instance
 
-    def create_snapshot(self, label: str = "manual") -> DatabaseResponse:
+    async def create_snapshot(self, label: str = "manual") -> DatabaseResponse:
         """Creates a snapshot of the current database."""
         if not self._current_url:
             return DatabaseResponse(message="No database connection", status=False)
 
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         filename = f"snapshot_{label}_{timestamp}"
-        
+
         try:
             if "postgresql" in self._current_url:
                 url = make_url(self._current_url)
-                
+
                 env = os.environ.copy()
                 if url.password:
                     env["PGPASSWORD"] = url.password
-                
+
                 filepath = self._snapshots_dir / f"{filename}.sql"
-                
+
                 cmd = [
                     "pg_dump",
                     "-h", url.host or "localhost",
@@ -63,7 +64,15 @@ class DatabaseManager:
                     "-f", str(filepath),
                     url.database
                 ]
-                subprocess.run(cmd, env=env, check=True)
+                proc = await asyncio.create_subprocess_exec(
+                    *cmd,
+                    env=env,
+                    stdout=asyncio.subprocess.PIPE,
+                    stderr=asyncio.subprocess.PIPE
+                )
+                stdout, stderr = await proc.communicate()
+                if proc.returncode != 0:
+                    raise Exception(f"pg_dump failed: {stderr.decode()}")
                 return DatabaseResponse(message=f"Postgres snapshot created: {filename}", status=True, data={"filename": f"{filename}.sql"})
 
             elif "sqlite" in self._current_url:
@@ -90,15 +99,17 @@ class DatabaseManager:
         return sorted(files, key=lambda x: x["created_at"], reverse=True)
 
     def get_snapshot_path(self, filename: str) -> Path:
-        """Returns the absolute path to a snapshot file."""
-        return self._snapshots_dir / filename
+        """Returns the absolute path to a snapshot file, guarding against path traversal."""
+        safe_name = Path(filename).name  # strips all parent directory components
+        return self._snapshots_dir / safe_name
 
-    def restore_snapshot(self, filename: str) -> DatabaseResponse:
+    async def restore_snapshot(self, filename: str) -> DatabaseResponse:
         """Restores the current database from a snapshot."""
         if not self._current_url:
             return DatabaseResponse(message="No active database connection", status=False)
-        
-        filepath = self._snapshots_dir / filename
+
+        safe_name = Path(filename).name
+        filepath = self._snapshots_dir / safe_name
         if not filepath.exists():
             return DatabaseResponse(message="Snapshot file not found", status=False)
 
@@ -108,21 +119,29 @@ class DatabaseManager:
 
             if "postgresql" in self._current_url:
                 url = make_url(self._current_url)
-                
+
                 env = os.environ.copy()
                 if url.password:
                     env["PGPASSWORD"] = url.password
-                
+
                 cmd = [
-                    "psql", 
+                    "psql",
                     "-h", url.host or "localhost",
                     "-p", str(url.port or 5432),
                     "-U", url.username or "postgres",
                     "-d", url.database,
                     "-f", str(filepath)
                 ]
-                subprocess.run(cmd, env=env, check=True)
-                
+                proc = await asyncio.create_subprocess_exec(
+                    *cmd,
+                    env=env,
+                    stdout=asyncio.subprocess.PIPE,
+                    stderr=asyncio.subprocess.PIPE
+                )
+                stdout, stderr = await proc.communicate()
+                if proc.returncode != 0:
+                    raise Exception(f"pg_restore failed: {stderr.decode()}")
+
             elif "sqlite" in self._current_url:
                 db_path = self._current_url.replace("sqlite:///", "")
                 shutil.copy2(filepath, db_path)

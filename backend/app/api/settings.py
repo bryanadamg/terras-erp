@@ -15,7 +15,7 @@ router = APIRouter(prefix="/settings", tags=["settings"])
 UPLOAD_DIR = Path("static/logos")
 
 @router.get("/company", response_model=CompanyProfileResponse)
-async def get_company_profile(db: AsyncSession = Depends(get_async_db)):
+async def get_company_profile(db: AsyncSession = Depends(get_async_db), current_user: User = Depends(get_current_user)):
     result = await db.execute(select(CompanyProfile))
     profile = result.scalars().first()
     if not profile:

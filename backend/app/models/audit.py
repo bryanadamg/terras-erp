@@ -1,5 +1,5 @@
 import uuid
-from datetime import datetime
+from datetime import datetime, timezone
 from sqlalchemy import String, ForeignKey, Text, DateTime
 from sqlalchemy.dialects.postgresql import UUID, JSONB
 from sqlalchemy.orm import Mapped, mapped_column, relationship
@@ -20,7 +20,7 @@ class AuditLog(Base):
     details: Mapped[str | None] = mapped_column(Text, nullable=True) # Human readable summary
     changes: Mapped[dict | None] = mapped_column(JSONB, nullable=True) # Technical diff
     
-    timestamp: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, index=True)
+    timestamp: Mapped[datetime] = mapped_column(DateTime, default=lambda: datetime.now(timezone.utc), index=True)
 
     # Relationships
     user = relationship("User")

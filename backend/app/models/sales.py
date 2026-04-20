@@ -22,7 +22,7 @@ class SalesOrder(Base):
     po_number: Mapped[str] = mapped_column(String(64), unique=True, index=True) # The Customer's PO Number
     customer_name: Mapped[str] = mapped_column(String(255))
     order_date: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
-    status: Mapped[str] = mapped_column(String(32), default="PENDING") # PENDING, READY, SENT, DELIVERED, CANCELLED
+    status: Mapped[str] = mapped_column(String(32), default="PENDING", index=True) # PENDING, READY, SENT, DELIVERED, CANCELLED
     notes: Mapped[str | None] = mapped_column(Text, nullable=True)
     
     delivered_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
@@ -41,7 +41,7 @@ class SalesOrderLine(Base):
         UUID(as_uuid=True), ForeignKey("sales_orders.id"), index=True
     )
     item_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("items.id")
+        UUID(as_uuid=True), ForeignKey("items.id"), index=True
     )
     qty: Mapped[float] = mapped_column(Numeric(14, 4))
     due_date: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)

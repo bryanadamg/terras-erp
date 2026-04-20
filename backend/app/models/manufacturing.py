@@ -47,19 +47,19 @@ class WorkOrder(Base):
     )
     
     parent_wo_id: Mapped[uuid.UUID | None] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("work_orders.id"), nullable=True
+        UUID(as_uuid=True), ForeignKey("work_orders.id"), nullable=True, index=True
     )
 
     qty: Mapped[float] = mapped_column(Numeric(14, 4))
-    status: Mapped[str] = mapped_column(String(32), default="PENDING")
-    
+    status: Mapped[str] = mapped_column(String(32), default="PENDING", index=True)
+
     # Lifecycle Timestamps
     target_start_date: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
     target_end_date: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
     actual_start_date: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
     actual_end_date: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
-    
-    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, index=True)
 
     # Relationships
     bom = relationship("BOM", back_populates="work_orders")
