@@ -2,11 +2,13 @@
 
 import React, { useState, useEffect } from 'react';
 import Sidebar from './Sidebar';
+import MobileShell from './mobile/MobileShell';
 import { useUser } from '../context/UserContext';
 import { useData } from '../context/DataContext';
 import { useLanguage } from '../context/LanguageContext';
 import { useRouter, usePathname } from 'next/navigation';
 import { useTheme } from '../context/ThemeContext';
+import { useIsMobile } from '../hooks/useIsMobile';
 
 export default function MainLayout({ children }: { children: React.ReactNode }) {
     const { currentUser, logout, loading, hasPermission } = useUser();
@@ -19,6 +21,7 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
     const [appName, setAppName] = useState('Terras ERP');
     const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
     const [mounted, setMounted] = useState(false);
+    const isMobile = useIsMobile();
 
     useEffect(() => {
         setMounted(true);
@@ -51,6 +54,11 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
 
     // Protect all other routes
     if (!currentUser) return null;
+
+    // Mobile: render the XP mobile shell instead of sidebar layout
+    if (isMobile) {
+        return <MobileShell appName={appName}>{children}</MobileShell>;
+    }
 
     // Map pathname to activeTab for Sidebar highlighting
     const activeTab = !pathname || pathname === '/' ? 'dashboard' : pathname.substring(1).replace(/\//g, '-');

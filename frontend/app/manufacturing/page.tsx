@@ -1,11 +1,13 @@
 'use client';
 
 import ManufacturingView from '../components/ManufacturingView';
+import MobileManufacturingView from '../components/mobile/ManufacturingView';
 import { useData } from '../context/DataContext';
 import { useToast } from '../components/Toast';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { useEffect, useState, useRef, useCallback } from 'react';
 import { useConfirm } from '../context/ConfirmContext';
+import { useIsMobile } from '../hooks/useIsMobile';
 
 export default function ManufacturingPage() {
     const { 
@@ -16,6 +18,7 @@ export default function ManufacturingPage() {
     const { confirm } = useConfirm();
     const searchParams = useSearchParams();
     const router = useRouter();
+    const isMobile = useIsMobile();
     const [initialCreateState, setInitialCreateState] = useState<any>(null);
     const consumedSOIdRef = useRef<string | null>(null);
 
@@ -69,8 +72,12 @@ export default function ManufacturingPage() {
         setInitialCreateState(null);
     }, []);
 
+    if (isMobile) {
+        return <MobileManufacturingView workOrders={workOrders} items={items} />;
+    }
+
     return (
-            <ManufacturingView 
+            <ManufacturingView
                 items={items} 
                 boms={boms} 
                 locations={locations} 

@@ -219,19 +219,13 @@ export default function MobileScannerView({
 
     // ── Render ────────────────────────────────────────────────────────────────
     return (
-        <div style={xpWindow}>
+        <div style={{ background: XP_BEIGE, padding: 12, display: 'flex', flexDirection: 'column', gap: 10 }}>
 
-            {/* ── XP Title Bar ── */}
-            <div style={xpTitleBar}>
-                <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                    <i className="bi bi-qr-code-scan" style={{ color: '#aaccff', fontSize: 14 }}></i>
-                    Operator Scan Terminal
-                </span>
-                <button style={xpBtn({ padding: '1px 8px', fontSize: 12, minHeight: 22 })} type="button" onClick={onClose}>✕</button>
+            <div style={{ fontFamily: XP_FONT, fontSize: 11, fontWeight: 'bold', textTransform: 'uppercase', letterSpacing: 0.5, color: '#555', borderBottom: '1px solid #c0bdb5', paddingBottom: 4, display: 'flex', alignItems: 'center', gap: 5 }}>
+                <i className="bi bi-qr-code-scan" style={{ color: '#1a4a8a' }} />
+                Operator Scan Terminal
+                <span style={{ marginLeft: 'auto', fontWeight: 'normal', fontSize: 10, color: '#888' }}>ID: {terminalId.current}</span>
             </div>
-
-            {/* ── Body ── */}
-            <div style={{ background: XP_BEIGE, padding: '12px', flex: 1, display: 'flex', flexDirection: 'column', gap: 10 }}>
 
                 {!scannedWO ? (
                     <>
@@ -402,19 +396,6 @@ export default function MobileScannerView({
                         </div>
                     </>
                 )}
-            </div>
-
-            {/* ── XP Status Bar ── */}
-            <div style={{
-                background: 'linear-gradient(to bottom, #e8e6df, #d5d3cc)',
-                borderTop: '1px solid #b0a898',
-                padding: '3px 10px',
-                fontFamily: XP_FONT, fontSize: 10, color: '#666',
-                textAlign: 'center',
-                flexShrink: 0,
-            }}>
-                Terminal ID: {terminalId.current} | Secured by Teras Auth
-            </div>
         </div>
     );
 }

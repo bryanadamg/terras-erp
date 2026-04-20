@@ -14,6 +14,10 @@ body {
 }
 
 @media (max-width: 767px) {
+  body {
+    overflow: hidden;
+    height: 100dvh;
+  }
   button, input, select, textarea {
     min-height: 44px;
   }

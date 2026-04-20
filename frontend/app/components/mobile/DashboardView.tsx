@@ -3,25 +3,63 @@
 import { useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 
+const XP_FONT  = 'Tahoma, "Segoe UI", Arial, sans-serif';
+const XP_BEIGE = '#ece9d8';
+
+const xpPanel = (extra: React.CSSProperties = {}): React.CSSProperties => ({
+    border: '2px solid',
+    borderColor: '#dfdfdf #808080 #808080 #dfdfdf',
+    background: '#f5f4ef',
+    borderRadius: 0,
+    ...extra,
+});
+
+const xpInset = (extra: React.CSSProperties = {}): React.CSSProperties => ({
+    border: '2px solid',
+    borderColor: '#808080 #dfdfdf #dfdfdf #808080',
+    background: '#ffffff',
+    borderRadius: 0,
+    ...extra,
+});
+
+const xpSectionLabel: React.CSSProperties = {
+    fontFamily: XP_FONT,
+    fontSize: 10,
+    fontWeight: 'bold',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+    color: '#555',
+    borderBottom: '1px solid #c0bdb5',
+    paddingBottom: 3,
+    marginBottom: 8,
+};
+
+const xpStatusBadge = (status: string): React.CSSProperties => {
+    const base: React.CSSProperties = {
+        fontFamily: XP_FONT, fontSize: 9, fontWeight: 'bold',
+        padding: '1px 6px', display: 'inline-block',
+    };
+    if (status === 'IN_PROGRESS') return { ...base, background: '#1a4a8a', color: '#fff' };
+    if (status === 'COMPLETED')   return { ...base, background: '#2e7d32', color: '#fff' };
+    if (status === 'CANCELLED')   return { ...base, background: '#666',    color: '#fff' };
+    return { ...base, background: '#b8860b', color: '#fff' };
+};
+
 export default function MobileDashboardView({ items, stockBalance, workOrders, salesOrders, kpis }: any) {
     const router = useRouter();
-
-    // ── Metrics (same as desktop DashboardView) ───────────────────────────────
-    const metrics = {
-        totalItems: kpis?.total_items    ?? items.length,
-        lowStock:   kpis?.low_stock      ?? 0,
-        activeWO:   kpis?.active_wo      ?? 0,
-        openOrders: kpis?.open_sos       ?? (salesOrders || []).filter((s: any) => s.status === 'PENDING').length,
-    };
-
     const today = new Date();
+
+    const metrics = {
+        totalItems: kpis?.total_items ?? items.length,
+        lowStock:   kpis?.low_stock   ?? 0,
+        activeWO:   kpis?.active_wo   ?? 0,
+        openOrders: kpis?.open_sos    ?? (salesOrders || []).filter((s: any) => s.status === 'PENDING').length,
+    };
 
     const overdueWOs = (workOrders || []).filter((w: any) =>
         ['IN_PROGRESS', 'PENDING'].includes(w.status) &&
         w.target_end_date && new Date(w.target_end_date) < today
     );
-
-    const openSOs = (salesOrders || []).filter((s: any) => s.status === 'PENDING');
 
     const namedLowStock = useMemo(() => {
         return (items || [])
@@ -36,7 +74,7 @@ export default function MobileDashboardView({ items, stockBalance, workOrders, s
             .slice(0, 4);
     }, [items, stockBalance]);
 
-    const shortSOs = openSOs.filter((so: any) => {
+    const shortSOs = (salesOrders || []).filter((so: any) => {
         if (!(so.lines || []).length) return false;
         return (so.lines || []).some((line: any) => {
             const inStock = (stockBalance || [])
@@ -85,106 +123,105 @@ export default function MobileDashboardView({ items, stockBalance, workOrders, s
             .slice(0, 10);
     }, [workOrders, items]);
 
-    // ── KPI config ────────────────────────────────────────────────────────────
     const kpiCards = [
-        { label: 'Total SKUs',   value: metrics.totalItems, bg: '#f8fafc', border: '#e2e8f0', color: '#0f172a', labelColor: '#64748b' },
-        { label: 'Low Stock',    value: metrics.lowStock,   bg: metrics.lowStock > 0 ? '#fffbeb' : '#f8fafc', border: metrics.lowStock > 0 ? '#fbbf24' : '#e2e8f0', color: metrics.lowStock > 0 ? '#92400e' : '#0f172a', labelColor: metrics.lowStock > 0 ? '#b45309' : '#64748b' },
-        { label: 'Active WOs',   value: metrics.activeWO,   bg: '#eff6ff', border: '#bfdbfe', color: '#1e40af', labelColor: '#3b82f6' },
-        { label: 'Open Orders',  value: metrics.openOrders, bg: '#f0fdf4', border: '#bbf7d0', color: '#14532d', labelColor: '#16a34a' },
+        { label: 'Total SKUs',  value: metrics.totalItems, icon: 'bi-tags-fill',        alert: false },
+        { label: 'Low Stock',   value: metrics.lowStock,   icon: 'bi-exclamation-triangle-fill', alert: metrics.lowStock > 0 },
+        { label: 'Active WOs',  value: metrics.activeWO,   icon: 'bi-gear-fill',         alert: false },
+        { label: 'Open Orders', value: metrics.openOrders, icon: 'bi-bag-fill',          alert: false },
     ];
 
-    const sevColor = { crit: '#dc2626', warn: '#d97706', info: '#2563eb' };
-    const sevBg    = { crit: '#fef2f2', warn: '#fffbeb', info: '#eff6ff' };
-    const sevBorder = { crit: '#fecaca', warn: '#fde68a', info: '#bfdbfe' };
-
-    const statusBadge: Record<string, { bg: string; color: string }> = {
-        IN_PROGRESS: { bg: '#dbeafe', color: '#1e40af' },
-        PENDING:     { bg: '#fef9c3', color: '#854d0e' },
-    };
+    const sevBorderLeft = { crit: '#cc0000', warn: '#b8860b', info: '#1a4a8a' };
+    const sevBg         = { crit: '#fce8e8', warn: '#fef9e7', info: '#e8f0fe' };
+    const sevColor      = { crit: '#6b0000', warn: '#5a3e00', info: '#0a246a' };
 
     return (
-        <div style={{ background: '#f8fafc', minHeight: '100%' }}>
+        <div style={{ background: XP_BEIGE, padding: 12, display: 'flex', flexDirection: 'column', gap: 10 }}>
 
-            {/* ── KPI 2×2 grid ── */}
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, padding: '16px 16px 0' }}>
-                {kpiCards.map(k => (
-                    <div key={k.label} style={{ background: k.bg, border: `1px solid ${k.border}`, borderRadius: 14, padding: '14px 16px' }}>
-                        <div style={{ fontSize: 11, fontWeight: 600, textTransform: 'uppercase', letterSpacing: 0.5, color: k.labelColor, marginBottom: 4 }}>{k.label}</div>
-                        <div style={{ fontSize: 32, fontWeight: 800, color: k.color, lineHeight: 1 }}>{k.value}</div>
-                    </div>
-                ))}
+            {/* KPI 2×2 grid */}
+            <div>
+                <div style={xpSectionLabel}>System Status</div>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+                    {kpiCards.map(k => (
+                        <div key={k.label} style={xpPanel({
+                            padding: '10px 12px',
+                            borderColor: k.alert ? '#cc0000 #800000 #800000 #cc0000' : undefined,
+                            background: k.alert ? '#fce8e8' : '#f5f4ef',
+                        })}>
+                            <div style={{ fontFamily: XP_FONT, fontSize: 9, fontWeight: 'bold', textTransform: 'uppercase', letterSpacing: 0.5, color: k.alert ? '#cc0000' : '#666', marginBottom: 3 }}>
+                                <i className={`bi ${k.icon}`} style={{ marginRight: 4 }} />{k.label}
+                            </div>
+                            <div style={{ fontFamily: "'Courier New', monospace", fontSize: 28, fontWeight: 'bold', color: k.alert ? '#cc0000' : '#00309c', lineHeight: 1 }}>
+                                {k.value}
+                            </div>
+                        </div>
+                    ))}
+                </div>
             </div>
 
-            {/* ── Advisor ── */}
+            {/* Needs Attention */}
             {actionItems.length > 0 && (
-                <div style={{ margin: '14px 16px 0' }}>
-                    <div style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 0.5, color: '#64748b', marginBottom: 8 }}>
-                        Needs Attention
-                    </div>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                <div>
+                    <div style={xpSectionLabel}>Needs Attention</div>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
                         {actionItems.slice(0, 5).map((item, i) => (
                             <div key={i} style={{
-                                background: sevBg[item.sev], border: `1px solid ${sevBorder[item.sev]}`,
-                                borderLeft: `4px solid ${sevColor[item.sev]}`,
-                                borderRadius: 10, padding: '10px 12px',
+                                ...xpInset(),
+                                padding: '8px 10px',
+                                borderLeft: `4px solid ${sevBorderLeft[item.sev]}`,
+                                background: sevBg[item.sev],
                             }}>
-                                <div style={{ fontSize: 13, fontWeight: 600, color: sevColor[item.sev] }}>{item.title}</div>
-                                <div style={{ fontSize: 12, color: '#64748b', marginTop: 2 }}>{item.sub}</div>
+                                <div style={{ fontFamily: XP_FONT, fontSize: 12, fontWeight: 'bold', color: sevColor[item.sev] }}>{item.title}</div>
+                                <div style={{ fontFamily: XP_FONT, fontSize: 11, color: '#555', marginTop: 2 }}>{item.sub}</div>
                             </div>
                         ))}
                     </div>
                 </div>
             )}
 
-            {/* ── Active Work Orders ── */}
-            <div style={{ margin: '14px 16px 16px' }}>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
-                    <div style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 0.5, color: '#64748b' }}>
-                        Active Work Orders
-                    </div>
+            {/* Active Work Orders */}
+            <div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 6 }}>
+                    <div style={xpSectionLabel}>Active Work Orders</div>
                     <button
                         onClick={() => router.push('/manufacturing')}
-                        style={{ background: 'none', border: 'none', color: '#3b82f6', fontSize: 12, fontWeight: 600, cursor: 'pointer', padding: 0 }}
+                        style={{ background: 'none', border: 'none', color: '#0058e6', fontFamily: XP_FONT, fontSize: 11, cursor: 'pointer', padding: 0, textDecoration: 'underline' }}
                     >
                         View all →
                     </button>
                 </div>
 
                 {activeWOList.length === 0 ? (
-                    <div style={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: 12, padding: '20px', textAlign: 'center', color: '#94a3b8', fontSize: 14 }}>
+                    <div style={xpInset({ padding: '16px', textAlign: 'center', color: '#666', fontFamily: XP_FONT, fontSize: 12 })}>
                         No active work orders
                     </div>
                 ) : (
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
                         {activeWOList.map((wo: any) => (
-                            <div key={wo.id} style={{
-                                background: '#fff', border: `1px solid ${wo.isOverdue ? '#fecaca' : '#e2e8f0'}`,
-                                borderLeft: `4px solid ${wo.isOverdue ? '#dc2626' : wo.status === 'IN_PROGRESS' ? '#3b82f6' : '#f59e0b'}`,
-                                borderRadius: 10, padding: '12px 14px',
-                                display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-                            }}>
-                                <div style={{ flex: 1, minWidth: 0 }}>
-                                    <div style={{ fontSize: 13, fontWeight: 700, color: '#0f172a', fontFamily: 'monospace' }}>{wo.code}</div>
-                                    <div style={{ fontSize: 12, color: '#64748b', marginTop: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{wo.itemName}</div>
+                            <div key={wo.id} style={xpPanel({
+                                padding: '9px 10px',
+                                display: 'flex',
+                                justifyContent: 'space-between',
+                                alignItems: 'center',
+                                borderLeft: `4px solid ${wo.isOverdue ? '#cc0000' : wo.status === 'IN_PROGRESS' ? '#1a4a8a' : '#b8860b'}`,
+                            })}>
+                                <div style={{ minWidth: 0 }}>
+                                    <div style={{ fontFamily: "'Courier New', monospace", fontSize: 14, fontWeight: 'bold', color: '#00309c' }}>{wo.code}</div>
+                                    <div style={{ fontFamily: XP_FONT, fontSize: 11, color: '#444', marginTop: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{wo.itemName}</div>
                                     {wo.isOverdue && (
-                                        <div style={{ fontSize: 11, color: '#dc2626', marginTop: 2, fontWeight: 600 }}>⚠ Overdue</div>
+                                        <div style={{ fontFamily: XP_FONT, fontSize: 10, color: '#cc0000', fontWeight: 'bold', marginTop: 1 }}>
+                                            <i className="bi bi-exclamation-triangle-fill" style={{ marginRight: 3 }} />Overdue
+                                        </div>
                                     )}
                                 </div>
-                                <div style={{ marginLeft: 10, flexShrink: 0 }}>
-                                    <span style={{
-                                        background: statusBadge[wo.status]?.bg || '#f1f5f9',
-                                        color: statusBadge[wo.status]?.color || '#475569',
-                                        borderRadius: 6, padding: '3px 8px', fontSize: 11, fontWeight: 600,
-                                    }}>
-                                        {wo.status === 'IN_PROGRESS' ? 'IN PROGRESS' : wo.status}
-                                    </span>
-                                </div>
+                                <span style={xpStatusBadge(wo.status)}>
+                                    {wo.status === 'IN_PROGRESS' ? 'IN PROGRESS' : wo.status}
+                                </span>
                             </div>
                         ))}
                         {(workOrders || []).filter((w: any) => ['IN_PROGRESS', 'PENDING'].includes(w.status)).length > 10 && (
                             <button
                                 onClick={() => router.push('/manufacturing')}
-                                style={{ background: 'none', border: '1px solid #e2e8f0', borderRadius: 10, padding: '10px', color: '#3b82f6', fontSize: 13, cursor: 'pointer', fontWeight: 600 }}
+                                style={{ ...xpPanel({ padding: '9px', textAlign: 'center' as const }), border: '2px solid', borderColor: '#dfdfdf #808080 #808080 #dfdfdf', color: '#0058e6', fontFamily: XP_FONT, fontSize: 12, cursor: 'pointer', width: '100%' }}
                             >
                                 View all work orders →
                             </button>
