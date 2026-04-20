@@ -20,7 +20,7 @@ class AuditLog(Base):
     details: Mapped[str | None] = mapped_column(Text, nullable=True) # Human readable summary
     changes: Mapped[dict | None] = mapped_column(JSONB, nullable=True) # Technical diff
     
-    timestamp: Mapped[datetime] = mapped_column(DateTime, default=lambda: datetime.now(timezone.utc), index=True)
+    timestamp: Mapped[datetime] = mapped_column(DateTime, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None), index=True)
 
     # Relationships
     user = relationship("User")

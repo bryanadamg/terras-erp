@@ -163,10 +163,11 @@ export default function SettingsView({
           setSelfFullName(currentUser.full_name);
           setSelfAvatarId(currentUser.avatar_id || '1');
       }
+      const authHeaders = { 'Authorization': `Bearer ${localStorage.getItem('access_token')}` };
       Promise.all([
-          fetch(`${API_BASE}/roles`).then(res => res.json()),
-          fetch(`${API_BASE}/permissions`).then(res => res.json()),
-          fetch(`${API_BASE}/categories`).then(res => res.json())
+          fetch(`${API_BASE}/roles`, { headers: authHeaders }).then(res => res.ok ? res.json() : []),
+          fetch(`${API_BASE}/permissions`, { headers: authHeaders }).then(res => res.ok ? res.json() : []),
+          fetch(`${API_BASE}/categories`, { headers: authHeaders }).then(res => res.ok ? res.json() : []),
       ]).then(([rolesData, permsData, catsData]) => {
           setRoles(rolesData);
           setAllPermissions(permsData);

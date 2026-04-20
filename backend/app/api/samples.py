@@ -154,9 +154,7 @@ async def update_color_status(
     previous_status = color.status
     color.status = status
     await db.commit()
-
-    result = await db.execute(select(SampleColor).filter(SampleColor.id == color_id))
-    color = result.scalars().first()
+    await db.refresh(color)
 
     await audit_service.log_activity(
         db,
