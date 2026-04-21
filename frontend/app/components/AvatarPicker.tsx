@@ -8,6 +8,7 @@ const AVATAR_LABELS: Record<string, string> = {
   '3': 'Tech',
   '4': 'Analyst',
   '5': 'Operator',
+  '6': 'Capybara',
 };
 
 interface AvatarPickerProps {
@@ -21,7 +22,7 @@ export default function AvatarPicker({ value, onChange, classic }: AvatarPickerP
 
   return (
     <div style={{ display: 'flex', gap: classic ? 4 : 8, flexWrap: 'wrap' }}>
-      {(['1', '2', '3', '4', '5'] as const).map(id => {
+      {(['1', '2', '3', '4', '5', '6'] as const).map(id => {
         const isSelected = selected === id;
         return (
           <button
