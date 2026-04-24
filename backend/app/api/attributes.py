@@ -47,6 +47,8 @@ def delete_attribute(attribute_id: str, db: Session = Depends(get_db), current_u
     attribute = db.query(Attribute).filter(Attribute.id == attribute_id).first()
     if not attribute:
         raise HTTPException(status_code=404, detail="Attribute not found")
+    if attribute.name == "Colors":
+        raise HTTPException(status_code=400, detail="The 'Colors' attribute is system-reserved and cannot be deleted.")
 
     db.delete(attribute)
     db.commit()

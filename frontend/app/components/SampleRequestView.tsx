@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useTheme } from '../context/ThemeContext';
 import { useToast } from './Toast';
@@ -13,7 +13,11 @@ import SamplePrintModal from './SamplePrintModal';
 export default function SampleRequestView({ samples, customers, onCreateSample, onUpdateStatus, onUpdateColorStatus, onDeleteSample }: any) {
   const { showToast } = useToast();
   const { t } = useLanguage();
-  const { companyProfile } = useData();
+  const { companyProfile, attributes } = useData();
+  const colorOptions = useMemo(() => {
+    const colorsAttr = (attributes as any[]).find((a: any) => a.name === 'Colors');
+    return (colorsAttr?.values ?? []).map((v: any) => ({ value: v.value, label: v.value }));
+  }, [attributes]);
   const router = useRouter();
   const searchParams = useSearchParams();
   const highlightRef = useRef<HTMLTableRowElement | null>(null);
@@ -602,12 +606,14 @@ export default function SampleRequestView({ samples, customers, onCreateSample, 
                                }
                            </div>
                            <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
-                               <input
-                                   style={{ ...xpInput, flex: 1 }}
-                                   value={pendingColorName}
-                                   onChange={e => setPendingColorName(e.target.value)}
-                                   onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); addPendingColor(); } }}
-                                   placeholder="Color name…" />
+                               <div style={{ flex: 1 }}>
+                                   <SearchableSelect
+                                       options={colorOptions}
+                                       value={pendingColorName}
+                                       onChange={setPendingColorName}
+                                       placeholder="Select color…"
+                                   />
+                               </div>
                                <button
                                    type="button"
                                    style={pendingColorIsRepeat
@@ -645,11 +651,14 @@ export default function SampleRequestView({ samples, customers, onCreateSample, 
                                }
                            </div>
                            <div className="d-flex gap-2 align-items-center">
-                               <input className="form-control form-control-sm flex-grow-1"
-                                      value={pendingColorName}
-                                      onChange={e => setPendingColorName(e.target.value)}
-                                      onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); addPendingColor(); } }}
-                                      placeholder="Color name…" />
+                               <div className="flex-grow-1">
+                                   <SearchableSelect
+                                       options={colorOptions}
+                                       value={pendingColorName}
+                                       onChange={setPendingColorName}
+                                       placeholder="Select color…"
+                                   />
+                               </div>
                                <button type="button" className={`btn btn-sm ${pendingColorIsRepeat ? 'btn-primary' : 'btn-outline-secondary'}`} style={{ minWidth: 60 }} onClick={() => setPendingColorIsRepeat(!pendingColorIsRepeat)}>
                                    {pendingColorIsRepeat ? 'Repeat' : 'New'}
                                </button>
