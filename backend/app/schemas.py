@@ -36,6 +36,7 @@ class AttributeUpdate(BaseModel):
 
 class AttributeResponse(AttributeCreate):
     id: UUID
+    is_system: bool = False
     values: list[AttributeValueResponse] = []
 
     class Config:

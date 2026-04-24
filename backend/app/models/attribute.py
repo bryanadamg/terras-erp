@@ -10,8 +10,9 @@ class Attribute(Base):
     id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
     )
-    name: Mapped[str] = mapped_column(String(255), unique=True, index=True) # e.g. "Color"
-    
+    name: Mapped[str] = mapped_column(String(255), unique=True, index=True)
+    is_system: Mapped[bool] = mapped_column(default=False)
+
     values = relationship("AttributeValue", backref="attribute", cascade="all, delete-orphan")
 
 class AttributeValue(Base):

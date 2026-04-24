@@ -15,7 +15,7 @@ export default function SampleRequestView({ samples, customers, onCreateSample, 
   const { t } = useLanguage();
   const { companyProfile, attributes } = useData();
   const colorOptions = useMemo(() => {
-    const colorsAttr = (attributes as any[]).find((a: any) => a.name === 'Colors');
+    const colorsAttr = (attributes as any[]).find((a: any) => a.is_system);
     return (colorsAttr?.values ?? []).map((v: any) => ({ value: v.value, label: v.value }));
   }, [attributes]);
   const router = useRouter();

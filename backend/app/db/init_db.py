@@ -74,6 +74,7 @@ def run_migrations():
                 ("sample_requests", "original_weight_unit", "VARCHAR(16)"),
                 ("sample_requests", "production_weight_unit", "VARCHAR(16)"),
                 ("users", "avatar_id", "VARCHAR(4)"),
+                ("attributes", "is_system", "BOOLEAN NOT NULL DEFAULT FALSE"),
             ]
 
             for table, col, col_type in migrations:
@@ -233,11 +234,15 @@ from app.core.security import get_password_hash
 def seed_colors_attribute(db):
     try:
         from app.models.attribute import Attribute
-        exists = db.query(Attribute).filter(Attribute.name == "Colors").first()
-        if not exists:
-            db.add(Attribute(name="Colors"))
+        existing = db.query(Attribute).filter(Attribute.name == "Colors").first()
+        if not existing:
+            db.add(Attribute(name="Colors", is_system=True))
             db.commit()
             logger.info("Seeded 'Colors' attribute")
+        elif not existing.is_system:
+            existing.is_system = True
+            db.commit()
+            logger.info("Marked existing 'Colors' attribute as system")
     except Exception as e:
         logger.warning(f"Colors attribute seeding skipped: {e}")
 
