@@ -75,6 +75,7 @@ def run_migrations():
                 ("sample_requests", "production_weight_unit", "VARCHAR(16)"),
                 ("users", "avatar_id", "VARCHAR(4)"),
                 ("attributes", "is_system", "BOOLEAN NOT NULL DEFAULT FALSE"),
+                ("sample_requests", "updated_at", "TIMESTAMP WITHOUT TIME ZONE DEFAULT NOW()"),
             ]
 
             for table, col, col_type in migrations:
@@ -115,6 +116,19 @@ def run_migrations():
                 conn.commit()
             except Exception:
                 pass
+
+            try:
+                conn.execute(text("""
+                    CREATE TABLE IF NOT EXISTS sample_request_reads (
+                        user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+                        sample_request_id UUID NOT NULL REFERENCES sample_requests(id) ON DELETE CASCADE,
+                        read_at TIMESTAMP WITHOUT TIME ZONE NOT NULL DEFAULT NOW(),
+                        PRIMARY KEY (user_id, sample_request_id)
+                    )
+                """))
+                conn.commit()
+            except Exception as e:
+                logger.warning(f"sample_request_reads table migration failed: {e}")
 
             try:
                 conn.execute(text("""

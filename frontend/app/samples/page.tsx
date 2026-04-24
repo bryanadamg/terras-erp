@@ -37,6 +37,21 @@ export default function SamplesPage() {
         }
     };
 
+    const handleMarkRead = async (id: string) => {
+        await authFetch(`${API_BASE}/samples/${id}/read`, { method: 'POST' });
+        fetchData('samples');
+    };
+
+    const handleMarkUnread = async (id: string) => {
+        await authFetch(`${API_BASE}/samples/${id}/read`, { method: 'DELETE' });
+        fetchData('samples');
+    };
+
+    const handleMarkAllRead = async () => {
+        await authFetch(`${API_BASE}/samples/read-all`, { method: 'POST' });
+        fetchData('samples');
+    };
+
     return (
         <SampleRequestView
             customers={customers}
@@ -45,6 +60,9 @@ export default function SamplesPage() {
             onUpdateStatus={handleUpdateSampleStatus}
             onUpdateColorStatus={handleUpdateColorStatus}
             onDeleteSample={handleDeleteSample}
+            onMarkRead={handleMarkRead}
+            onMarkUnread={handleMarkUnread}
+            onMarkAllRead={handleMarkAllRead}
         />
     );
 }

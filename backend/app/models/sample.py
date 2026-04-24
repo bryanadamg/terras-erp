@@ -67,7 +67,20 @@ class SampleRequest(Base):
     status: Mapped[str] = mapped_column(String(32), default="DRAFT", index=True)
     notes: Mapped[str | None] = mapped_column(Text, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+    updated_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
 
     sales_order = relationship("SalesOrder", backref="samples")
     customer = relationship("Partner", foreign_keys=[customer_id])
     colors = relationship("SampleColor", order_by="SampleColor.order", cascade="all, delete-orphan")
+
+
+class SampleRequestRead(Base):
+    __tablename__ = "sample_request_reads"
+
+    user_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), primary_key=True
+    )
+    sample_request_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("sample_requests.id", ondelete="CASCADE"), primary_key=True
+    )
+    read_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)

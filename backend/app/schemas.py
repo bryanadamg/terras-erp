@@ -404,6 +404,7 @@ class SampleRequestResponse(BaseModel):
     version: int
     status: str
     created_at: datetime
+    is_unread: bool = False
     customer_id: Optional[UUID] = None
     request_date: Optional[date] = None
     project: Optional[str] = None

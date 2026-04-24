@@ -10,7 +10,7 @@ import HistoryPane from './HistoryPane';
 import ModalWrapper from './ModalWrapper';
 import SamplePrintModal from './SamplePrintModal';
 
-export default function SampleRequestView({ samples, customers, onCreateSample, onUpdateStatus, onUpdateColorStatus, onDeleteSample }: any) {
+export default function SampleRequestView({ samples, customers, onCreateSample, onUpdateStatus, onUpdateColorStatus, onDeleteSample, onMarkRead, onMarkUnread, onMarkAllRead }: any) {
   const { showToast } = useToast();
   const { t } = useLanguage();
   const { companyProfile, attributes } = useData();
@@ -952,8 +952,19 @@ export default function SampleRequestView({ samples, customers, onCreateSample, 
                        </button>
                    ))}
                    <div style={xpSep}></div>
-                   <span style={{ fontFamily: 'Tahoma, Arial, sans-serif', fontSize: '11px', color: '#333' }}>
-                       {filteredSamples.length} request{filteredSamples.length !== 1 ? 's' : ''}
+                   <button
+                       onClick={onMarkAllRead}
+                       style={xpBtn({ display: 'inline-flex', alignItems: 'center', gap: 4 })}
+                       title="Mark all sample requests as read"
+                   >
+                       <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><circle cx="12" cy="12" r="10"/><path d="M8 12l2.5 2.5L16 9"/></svg>
+                       Mark All as Read
+                   </button>
+                   <span style={{ marginLeft: 'auto', fontFamily: 'Tahoma, Arial, sans-serif', fontSize: '11px', color: '#333' }}>
+                       {filteredSamples.length} item{filteredSamples.length !== 1 ? 's' : ''}
+                       {filteredSamples.filter((s: any) => s.is_unread).length > 0 && (
+                           <> · <span style={{ color: '#1c5bc8', fontWeight: 'bold' }}>{filteredSamples.filter((s: any) => s.is_unread).length} unread</span></>
+                       )}
                    </span>
                </div>
            ) : (
@@ -980,8 +991,19 @@ export default function SampleRequestView({ samples, customers, onCreateSample, 
                            </button>
                        ))}
                    </div>
-                   <span className="text-muted small ms-1">
-                       {filteredSamples.length} request{filteredSamples.length !== 1 ? 's' : ''}
+                   <button
+                       className="btn btn-sm btn-outline-primary ms-auto"
+                       style={{ fontSize: 11 }}
+                       onClick={onMarkAllRead}
+                       title="Mark all sample requests as read"
+                   >
+                       <i className="bi bi-check-circle me-1"></i>Mark All as Read
+                   </button>
+                   <span className="small text-muted">
+                       {filteredSamples.length} item{filteredSamples.length !== 1 ? 's' : ''}
+                       {filteredSamples.filter((s: any) => s.is_unread).length > 0 && (
+                           <> · <span className="fw-bold" style={{ color: '#0d6efd' }}>{filteredSamples.filter((s: any) => s.is_unread).length} unread</span></>
+                       )}
                    </span>
                </div>
            )}
@@ -1015,8 +1037,8 @@ export default function SampleRequestView({ samples, customers, onCreateSample, 
                                    ref={s.id === highlightId ? highlightRef : undefined}
                                    onClick={() => s.colors && s.colors.length > 0 && toggleExpand(s.id)}
                                    style={classic
-                                       ? { background: s.id === highlightId ? '#fff8cc' : rowIndex % 2 === 0 ? '#ffffff' : '#f5f3ee', borderBottom: '1px solid #c0bdb5', cursor: s.colors && s.colors.length > 0 ? 'pointer' : 'default', outline: s.id === highlightId ? '2px solid #f0a000' : undefined }
-                                       : { cursor: s.colors && s.colors.length > 0 ? 'pointer' : 'default', background: s.id === highlightId ? '#fff8e1' : undefined, outline: s.id === highlightId ? '2px solid #f0a000' : undefined }}
+                                       ? { background: s.id === highlightId ? '#fff8cc' : s.is_unread ? '#dde8fb' : rowIndex % 2 === 0 ? '#ffffff' : '#f5f3ee', borderBottom: '1px solid #c0bdb5', cursor: s.colors && s.colors.length > 0 ? 'pointer' : 'default', outline: s.id === highlightId ? '2px solid #f0a000' : undefined }
+                                       : { cursor: s.colors && s.colors.length > 0 ? 'pointer' : 'default', background: s.id === highlightId ? '#fff8e1' : s.is_unread ? '#f0f7ff' : undefined, outline: s.id === highlightId ? '2px solid #f0a000' : undefined }}
                                >
                                    <td style={classic ? tdBase : undefined} className={classic ? '' : 'ps-4'}>
                                        <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
@@ -1039,7 +1061,7 @@ export default function SampleRequestView({ samples, customers, onCreateSample, 
                                                )
                                            )}
                                            <div>
-                                               <div style={classic ? { fontFamily: "'Courier New', monospace", fontWeight: 'bold', color: '#0047c8', fontSize: '10px' } : undefined} className={classic ? '' : 'fw-bold font-monospace text-primary'}>
+                                               <div style={classic ? { fontFamily: "'Courier New', monospace", fontWeight: s.is_unread ? '900' : 'bold', color: s.is_unread ? '#0a3a9a' : '#0047c8', fontSize: '10px' } : undefined} className={classic ? '' : `font-monospace text-primary${s.is_unread ? ' fw-bolder' : ' fw-bold'}`}>
                                                    {s.code}
                                                </div>
                                                <div style={classic ? { fontSize: '9px', color: '#555' } : undefined} className={classic ? '' : 'small text-muted'}>
@@ -1182,6 +1204,42 @@ export default function SampleRequestView({ samples, customers, onCreateSample, 
                                                    Update <i className="bi bi-caret-down-fill ms-1" style={{fontSize: '0.65em'}}></i>
                                                </button>
                                            )}
+                                           {/* Read/unread dot */}
+                                           <span
+                                               title={s.is_unread ? 'Unread — click to mark as read' : 'Read — click to mark as unread'}
+                                               onClick={(e) => { e.stopPropagation(); s.is_unread ? onMarkRead(s.id) : onMarkUnread(s.id); }}
+                                               style={classic ? {
+                                                   display: 'inline-block',
+                                                   width: 10,
+                                                   height: 10,
+                                                   borderRadius: '50%',
+                                                   cursor: 'pointer',
+                                                   flexShrink: 0,
+                                                   ...(s.is_unread ? {
+                                                       background: '#1c5bc8',
+                                                       border: '1px solid #0a3a9a',
+                                                       boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.4), 0 0 0 1px rgba(10,58,154,0.3)',
+                                                   } : {
+                                                       background: '#ece9d8',
+                                                       border: '1px solid #7f9db9',
+                                                       boxShadow: 'inset 1px 1px 0 rgba(255,255,255,0.6)',
+                                                   })
+                                               } : {
+                                                   display: 'inline-block',
+                                                   width: 10,
+                                                   height: 10,
+                                                   borderRadius: '50%',
+                                                   cursor: 'pointer',
+                                                   flexShrink: 0,
+                                                   ...(s.is_unread ? {
+                                                       background: '#0d6efd',
+                                                       boxShadow: '0 0 0 2px rgba(13,110,253,0.25)',
+                                                   } : {
+                                                       background: 'white',
+                                                       border: '2px solid #0d6efd',
+                                                   })
+                                               }}
+                                           />
                                        </div>
                                    </td>
                                </tr>

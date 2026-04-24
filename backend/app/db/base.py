@@ -24,7 +24,7 @@ from app.models.routing import WorkCenter, Operation
 from app.models.auth import Permission, Role, User, role_permissions, user_permissions
 from app.models.uom import UOM
 from app.models.sales import SalesOrder, SalesOrderLine
-from app.models.sample import SampleRequest, SampleColor, sample_attribute_values
+from app.models.sample import SampleRequest, SampleColor, sample_attribute_values, SampleRequestRead
 from app.models.audit import AuditLog
 from app.models.kpi import KPICache
 from app.models.partner import Partner
