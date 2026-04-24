@@ -719,6 +719,7 @@ export default function BOMDesigner({
                                                         placeholder="Component..."
                                                         testId="component-select"
                                                         onSearch={onSearchItem}
+                                                        size="sm"
                                                     />
                                                 </div>
                                                 <div style={{ width: 70 }}>

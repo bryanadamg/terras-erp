@@ -117,6 +117,7 @@ export default function StockEntryView({ items, locations, attributes, stockBala
                                           onChange={(code: string) => setStockEntry({ ...stockEntry, item_code: code, attribute_value_ids: [] })}
                                           required
                                           placeholder={t('search') + '...'}
+                                          size="sm"
                                       />
                                   </div>
                                   {boundAttrs.map((attr: any) => (
@@ -144,6 +145,7 @@ export default function StockEntryView({ items, locations, attributes, stockBala
                                           onChange={(code: string) => setStockEntry({ ...stockEntry, location_code: code })}
                                           required
                                           placeholder={t('locations') + '...'}
+                                          size="sm"
                                       />
                                   </div>
                                   <label style={xpLabel}>{t('qty')} <span style={{ color: '#666', fontWeight: 'normal' }}>(use negative to subtract)</span></label>

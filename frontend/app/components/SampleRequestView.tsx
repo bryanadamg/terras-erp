@@ -612,6 +612,7 @@ export default function SampleRequestView({ samples, customers, onCreateSample, 
                                        value={pendingColorName}
                                        onChange={setPendingColorName}
                                        placeholder="Select color…"
+                                       size="sm"
                                    />
                                </div>
                                <button
@@ -657,6 +658,7 @@ export default function SampleRequestView({ samples, customers, onCreateSample, 
                                        value={pendingColorName}
                                        onChange={setPendingColorName}
                                        placeholder="Select color…"
+                                       size="sm"
                                    />
                                </div>
                                <button type="button" className={`btn btn-sm ${pendingColorIsRepeat ? 'btn-primary' : 'btn-outline-secondary'}`} style={{ minWidth: 60 }} onClick={() => setPendingColorIsRepeat(!pendingColorIsRepeat)}>

@@ -4,7 +4,7 @@ interface Option {
     value: string;
     label: string;
     subLabel?: string;
-    category?: string; // Added for filtering
+    category?: string;
 }
 
 interface SearchableSelectProps {
@@ -15,20 +15,27 @@ interface SearchableSelectProps {
     disabled?: boolean;
     className?: string;
     required?: boolean;
-    categories?: string[]; // Optional list of categories to filter by
+    categories?: string[];
     testId?: string;
+    onSearch?: (term: string) => void;
+    size?: 'sm' | 'md';
 }
 
-export default function SearchableSelect({ options, value, onChange, placeholder, disabled, className, required, categories, testId, onSearch }: SearchableSelectProps) {
+export default function SearchableSelect({ options, value, onChange, placeholder, disabled, className, required, categories, testId, onSearch, size = 'md' }: SearchableSelectProps) {
     const [isOpen, setIsOpen] = useState(false);
     const [searchTerm, setSearchTerm] = useState('');
     const [activeCategory, setActiveCategory] = useState<string | null>(null);
     const [showCategoryMenu, setShowCategoryMenu] = useState(false);
-    
+
     const containerRef = useRef<HTMLDivElement>(null);
     const inputRef = useRef<HTMLInputElement>(null);
 
     const selectedOption = options.find(o => o.value === value);
+
+    const isSm = size === 'sm';
+    const triggerClass = `form-control${isSm ? ' form-control-sm' : ''} d-flex align-items-center justify-content-between ${disabled ? 'bg-light' : 'bg-white'} ${isOpen ? 'border-primary ring-2' : ''}`;
+    const triggerMinHeight = isSm ? '31px' : '38px';
+    const triggerPaddingRight = isSm ? '24px' : '30px';
 
     useEffect(() => {
         const handleClickOutside = (event: MouseEvent) => {
@@ -44,7 +51,6 @@ export default function SearchableSelect({ options, value, onChange, placeholder
     useEffect(() => {
         if (!isOpen) {
             setSearchTerm('');
-            // Optional: Reset category on close? keeping it for now allows "sticky" filtering
         } else if (inputRef.current) {
             inputRef.current.focus();
         }
@@ -55,8 +61,8 @@ export default function SearchableSelect({ options, value, onChange, placeholder
         if (activeCategory) {
             result = result.filter(o => o.category === activeCategory);
         }
-        return result.filter(option => 
-            option.label.toLowerCase().includes(searchTerm.toLowerCase()) || 
+        return result.filter(option =>
+            option.label.toLowerCase().includes(searchTerm.toLowerCase()) ||
             (option.subLabel && option.subLabel.toLowerCase().includes(searchTerm.toLowerCase()))
         ).slice(0, 50);
     }, [options, searchTerm, activeCategory]);
@@ -69,43 +75,42 @@ export default function SearchableSelect({ options, value, onChange, placeholder
 
     return (
         <div className={`position-relative ${className || ''}`} ref={containerRef} data-testid={testId}>
-            <div 
-                className={`form-control d-flex align-items-center justify-content-between ${disabled ? 'bg-light' : 'bg-white'} ${isOpen ? 'border-primary ring-2' : ''}`}
-                style={{ cursor: disabled ? 'not-allowed' : 'pointer', minHeight: '38px', paddingRight: '30px' }}
+            <div
+                className={triggerClass}
+                style={{ cursor: disabled ? 'not-allowed' : 'pointer', minHeight: triggerMinHeight, paddingRight: triggerPaddingRight }}
                 onClick={() => !disabled && setIsOpen(!isOpen)}
                 data-testid={testId ? `${testId}-trigger` : undefined}
             >
                 <div className="text-truncate w-100">
                     {selectedOption ? (
                         <span>
-                            {selectedOption.label} 
+                            {selectedOption.label}
                             {selectedOption.subLabel && <small className="text-muted ms-2">({selectedOption.subLabel})</small>}
                         </span>
                     ) : (
                         <span className="text-muted">{placeholder || 'Select...'}</span>
                     )}
                 </div>
-                <i className="bi bi-chevron-down small text-muted position-absolute end-0 me-3"></i>
+                <i className={`bi bi-chevron-down text-muted position-absolute end-0 me-${isSm ? '2' : '3'} ${isSm ? '' : 'small'}`}></i>
             </div>
 
-            {/* Hidden Input for HTML5 Validation */}
-            <input 
+            {/* Hidden input for HTML5 validation */}
+            <input
                 tabIndex={-1}
-                className="position-absolute opacity-0" 
-                style={{bottom: 0, left: 0, width: '100%', height: 0}}
-                value={value} 
+                className="position-absolute opacity-0"
+                style={{ bottom: 0, left: 0, width: '100%', height: 0 }}
+                value={value}
                 onChange={() => {}}
-                required={required} 
+                required={required}
             />
 
             {isOpen && (
-                <div className="position-absolute top-100 start-0 w-100 bg-white border rounded shadow-sm mt-1 z-3" style={{maxHeight: '300px', overflowY: 'auto'}} data-testid={testId ? `${testId}-dropdown` : undefined}>
+                <div className="position-absolute top-100 start-0 w-100 bg-white border rounded shadow-sm mt-1 z-3" style={{ maxHeight: '300px', overflowY: 'auto' }} data-testid={testId ? `${testId}-dropdown` : undefined}>
                     {/* Search & Filter Header */}
                     <div className="p-2 border-bottom sticky-top bg-white d-flex gap-2 align-items-center">
-                        {/* Filter Button (Only if categories exist) */}
                         {categories && categories.length > 0 && (
                             <div className="position-relative">
-                                <button 
+                                <button
                                     className={`btn btn-sm ${activeCategory ? 'btn-primary' : 'btn-outline-secondary'} px-2`}
                                     type="button"
                                     onClick={(e) => { e.stopPropagation(); setShowCategoryMenu(!showCategoryMenu); }}
@@ -113,10 +118,9 @@ export default function SearchableSelect({ options, value, onChange, placeholder
                                 >
                                     <i className="bi bi-funnel-fill"></i>
                                 </button>
-                                {/* Inline Category Menu */}
                                 {showCategoryMenu && (
-                                    <div className="position-absolute top-100 start-0 mt-1 bg-white border rounded shadow p-1" style={{width: '200px', zIndex: 1050}}>
-                                        <button 
+                                    <div className="position-absolute top-100 start-0 mt-1 bg-white border rounded shadow p-1" style={{ width: '200px', zIndex: 1050 }}>
+                                        <button
                                             className={`btn btn-sm w-100 text-start border-0 ${!activeCategory ? 'bg-light fw-bold' : ''}`}
                                             onClick={(e) => { e.stopPropagation(); setActiveCategory(null); setShowCategoryMenu(false); }}
                                         >
@@ -124,7 +128,7 @@ export default function SearchableSelect({ options, value, onChange, placeholder
                                         </button>
                                         <hr className="my-1"/>
                                         {categories.map(cat => (
-                                            <button 
+                                            <button
                                                 key={cat}
                                                 className={`btn btn-sm w-100 text-start border-0 ${activeCategory === cat ? 'bg-primary text-white' : ''}`}
                                                 onClick={(e) => { e.stopPropagation(); setActiveCategory(cat); setShowCategoryMenu(false); }}
@@ -137,14 +141,13 @@ export default function SearchableSelect({ options, value, onChange, placeholder
                             </div>
                         )}
 
-                        {/* Search Input with Active Filter Badge */}
                         <div className="input-group input-group-sm">
                             {activeCategory && (
-                                <span className="input-group-text bg-primary text-white border-primary px-2" style={{fontSize: '0.75rem'}}>
+                                <span className="input-group-text bg-primary text-white border-primary px-2" style={{ fontSize: '0.75rem' }}>
                                     {activeCategory}
-                                    <i 
-                                        className="bi bi-x ms-2 cursor-pointer" 
-                                        style={{cursor: 'pointer'}} 
+                                    <i
+                                        className="bi bi-x ms-2"
+                                        style={{ cursor: 'pointer' }}
                                         onClick={(e) => { e.stopPropagation(); setActiveCategory(null); }}
                                     ></i>
                                 </span>
@@ -167,11 +170,11 @@ export default function SearchableSelect({ options, value, onChange, placeholder
 
                     {filteredOptions.length > 0 ? (
                         filteredOptions.map((option) => (
-                            <div 
+                            <div
                                 key={option.value}
                                 className={`px-3 py-2 cursor-pointer ${option.value === value ? 'bg-primary text-white' : 'hover-bg-light text-dark'}`}
                                 onClick={() => handleSelect(option.value)}
-                                style={{cursor: 'pointer'}}
+                                style={{ cursor: 'pointer' }}
                                 data-testid={testId ? `${testId}-option-${option.value}` : undefined}
                             >
                                 <div className="fw-medium">{option.label}</div>
