@@ -130,27 +130,40 @@ def run_migrations():
             except Exception as e:
                 logger.warning(f"sample_colors table migration failed: {e}")
 
-            # Repurpose items.source_sample_id FK: items(self) → sample_requests
+            # Repurpose items.source_sample_id FK: any old FK (possibly self-ref to items) → sample_requests
             try:
+                # Find any FK on items.source_sample_id that does NOT reference sample_requests
                 res = conn.execute(text("""
-                    SELECT constraint_name FROM information_schema.table_constraints
-                    WHERE table_name='items' AND constraint_name='items_source_sample_id_fkey'
+                    SELECT tc.constraint_name
+                    FROM information_schema.table_constraints tc
+                    JOIN information_schema.key_column_usage kcu
+                        ON tc.constraint_name = kcu.constraint_name AND tc.table_name = kcu.table_name
+                    JOIN information_schema.referential_constraints rc
+                        ON tc.constraint_name = rc.constraint_name
+                    JOIN information_schema.table_constraints tc2
+                        ON rc.unique_constraint_name = tc2.constraint_name
+                    WHERE tc.table_name = 'items'
+                      AND kcu.column_name = 'source_sample_id'
+                      AND tc.constraint_type = 'FOREIGN KEY'
+                      AND tc2.table_name != 'sample_requests'
                 """))
-                row = res.fetchone()
-                if row:
-                    # Null out stale values pointing to other items, then re-point FK
+                stale_constraints = [row[0] for row in res.fetchall()]
+                if stale_constraints:
+                    # Null out values that don't exist in sample_requests
                     conn.execute(text("""
                         UPDATE items SET source_sample_id = NULL
                         WHERE source_sample_id IS NOT NULL
                           AND source_sample_id NOT IN (SELECT id FROM sample_requests)
                     """))
-                    conn.execute(text("ALTER TABLE items DROP CONSTRAINT items_source_sample_id_fkey"))
+                    conn.commit()
+                    for constraint_name in stale_constraints:
+                        conn.execute(text(f"ALTER TABLE items DROP CONSTRAINT IF EXISTS \"{constraint_name}\""))
                     conn.execute(text("""
-                        ALTER TABLE items ADD CONSTRAINT items_source_sample_id_fkey
+                        ALTER TABLE items ADD CONSTRAINT fk_items_source_sample_id_sample_requests
                             FOREIGN KEY (source_sample_id) REFERENCES sample_requests(id) ON DELETE SET NULL
                     """))
                     conn.commit()
-                    logger.info("Migration: Repurposed items.source_sample_id FK → sample_requests")
+                    logger.info(f"Migration: Replaced stale source_sample_id FK(s) {stale_constraints} → sample_requests")
             except Exception as e:
                 logger.warning(f"source_sample_id FK migration failed: {e}")
 
@@ -216,6 +229,17 @@ from app.models.category import Category
 from app.models.auth import Permission, Role, User
 from app.models.uom import UOM
 from app.core.security import get_password_hash
+
+def seed_colors_attribute(db):
+    try:
+        from app.models.attribute import Attribute
+        exists = db.query(Attribute).filter(Attribute.name == "Colors").first()
+        if not exists:
+            db.add(Attribute(name="Colors"))
+            db.commit()
+            logger.info("Seeded 'Colors' attribute")
+    except Exception as e:
+        logger.warning(f"Colors attribute seeding skipped: {e}")
 
 def seed_categories(db):
     try:
@@ -389,6 +413,7 @@ def init_db() -> None:
         seed_categories(db)
         seed_uoms(db)
         seed_rbac(db)
+        seed_colors_attribute(db)
         sync_stock_balances(db) # Perform sync
     finally:
         db.close()
