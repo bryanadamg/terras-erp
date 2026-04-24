@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, UploadFile, File
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func, delete
 from sqlalchemy.orm import joinedload
@@ -9,7 +9,8 @@ from app.models.auth import User
 from app.api.auth import get_current_user
 from app.services import audit_service
 from datetime import datetime, date
-import uuid
+from pathlib import Path
+import shutil, os, uuid
 
 router = APIRouter()
 
@@ -255,6 +256,55 @@ async def mark_all_samples_read(
         ))
     await db.commit()
     return {"status": "success"}
+
+
+@router.post("/samples/{sample_id}/completion-image")
+async def upload_completion_image(
+    sample_id: str,
+    file: UploadFile = File(...),
+    db: AsyncSession = Depends(get_async_db),
+    current_user: User = Depends(get_current_user),
+):
+    result = await db.execute(select(SampleRequest).filter(SampleRequest.id == sample_id))
+    sample = result.scalars().first()
+    if not sample:
+        raise HTTPException(status_code=404, detail="Sample not found")
+
+    upload_dir = Path("static/samples")
+    upload_dir.mkdir(parents=True, exist_ok=True)
+
+    ext = os.path.splitext(file.filename or "")[1].lower() or ".jpg"
+    file_path = upload_dir / f"{sample_id}_completion{ext}"
+    with file_path.open("wb") as buf:
+        shutil.copyfileobj(file.file, buf)
+
+    sample.completion_image_url = f"/static/samples/{sample_id}_completion{ext}"
+    await db.commit()
+    return {"completion_image_url": sample.completion_image_url}
+
+
+@router.post("/samples/{sample_id}/design-pdf")
+async def upload_design_pdf(
+    sample_id: str,
+    file: UploadFile = File(...),
+    db: AsyncSession = Depends(get_async_db),
+    current_user: User = Depends(get_current_user),
+):
+    result = await db.execute(select(SampleRequest).filter(SampleRequest.id == sample_id))
+    sample = result.scalars().first()
+    if not sample:
+        raise HTTPException(status_code=404, detail="Sample not found")
+
+    upload_dir = Path("static/samples")
+    upload_dir.mkdir(parents=True, exist_ok=True)
+
+    file_path = upload_dir / f"{sample_id}_design.pdf"
+    with file_path.open("wb") as buf:
+        shutil.copyfileobj(file.file, buf)
+
+    sample.design_pdf_url = f"/static/samples/{sample_id}_design.pdf"
+    await db.commit()
+    return {"design_pdf_url": sample.design_pdf_url}
 
 
 @router.delete("/samples/{sample_id}")

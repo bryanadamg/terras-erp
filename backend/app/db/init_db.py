@@ -16,6 +16,10 @@ def ensure_static_dirs():
         if not log_dir.exists():
             log_dir.mkdir(parents=True, exist_ok=True)
             logger.info(f"Created directory: {log_dir}")
+        samples_dir = Path("static/samples")
+        if not samples_dir.exists():
+            samples_dir.mkdir(parents=True, exist_ok=True)
+            logger.info(f"Created directory: {samples_dir}")
     except Exception as e:
         logger.warning(f"Static directory creation skipped: {e}")
 
@@ -76,6 +80,8 @@ def run_migrations():
                 ("users", "avatar_id", "VARCHAR(4)"),
                 ("attributes", "is_system", "BOOLEAN NOT NULL DEFAULT FALSE"),
                 ("sample_requests", "updated_at", "TIMESTAMP WITHOUT TIME ZONE DEFAULT NOW()"),
+                ("sample_requests", "completion_image_url", "VARCHAR(512)"),
+                ("sample_requests", "design_pdf_url", "VARCHAR(512)"),
             ]
 
             for table, col, col_type in migrations:

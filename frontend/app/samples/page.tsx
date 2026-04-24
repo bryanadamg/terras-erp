@@ -11,9 +11,23 @@ export default function SamplesPage() {
     const envBase = process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:8000/api';
     const API_BASE = envBase.endsWith('/api') ? envBase : `${envBase}/api`;
 
-    const handleCreateSample = async (p: any) => {
+    const handleCreateSample = async (p: any, completionImage?: File, designPdf?: File) => {
         const res = await authFetch(`${API_BASE}/samples`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(p) });
-        if (res.ok) fetchData();
+        if (!res.ok) return;
+        const created = await res.json();
+        const uploads: Promise<any>[] = [];
+        if (completionImage) {
+            const fd = new FormData();
+            fd.append('file', completionImage);
+            uploads.push(authFetch(`${API_BASE}/samples/${created.id}/completion-image`, { method: 'POST', body: fd }));
+        }
+        if (designPdf) {
+            const fd = new FormData();
+            fd.append('file', designPdf);
+            uploads.push(authFetch(`${API_BASE}/samples/${created.id}/design-pdf`, { method: 'POST', body: fd }));
+        }
+        if (uploads.length) await Promise.all(uploads);
+        fetchData();
     };
 
     const handleUpdateSampleStatus = async (id: string, status: string) => {

@@ -427,6 +427,8 @@ class SampleRequestResponse(BaseModel):
     estimated_completion_date: Optional[date] = None
     completion_description: Optional[str] = None
     notes: Optional[str] = None
+    completion_image_url: Optional[str] = None
+    design_pdf_url: Optional[str] = None
     class Config:
         from_attributes = True
 

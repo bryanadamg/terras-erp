@@ -26,9 +26,12 @@ export default function SampleRequestView({ samples, customers, onCreateSample, 
   const [openDropdownId, setOpenDropdownId] = useState<string | null>(null);
   const [dropdownPos, setDropdownPos] = useState({ top: 0, left: 0 });
   const [historyEntityId, setHistoryEntityId] = useState<string | null>(null);
+  const STATIC_BASE = (process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:8000/api').replace('/api', '');
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('ALL');
   const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
+  const [completionImageFile, setCompletionImageFile] = useState<File | null>(null);
+  const [designPdfFile, setDesignPdfFile] = useState<File | null>(null);
   const toggleExpand = (id: string) =>
       setExpandedIds(prev => {
           const next = new Set(prev);
@@ -283,10 +286,12 @@ export default function SampleRequestView({ samples, customers, onCreateSample, 
           production_weight_unit: newSample.production_weight !== '' ? newSample.production_weight_unit : null,
           estimated_completion_date: newSample.estimated_completion_date || null,
           colors: newSample.colors.filter(c => c.name.trim() !== ''),
-      });
+      }, completionImageFile || undefined, designPdfFile || undefined);
       setNewSample(emptyForm());
       setPendingColorName('');
       setPendingColorIsRepeat(false);
+      setCompletionImageFile(null);
+      setDesignPdfFile(null);
       setIsCreateOpen(false);
   };
 
@@ -832,6 +837,41 @@ export default function SampleRequestView({ samples, customers, onCreateSample, 
                                              rows={2} value={newSample.completion_description} onChange={e => setNewSample({ ...newSample, completion_description: e.target.value })}
                                              placeholder="Priority instructions, special notes…" />
                                </div>
+                               {/* Completion Photo */}
+                               <div>
+                                   <label style={xpLbl}>Completion Photo</label>
+                                   <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                                       <input type="file" accept="image/*" id="xp-completion-image" style={{ display: 'none' }}
+                                              onChange={e => setCompletionImageFile(e.target.files?.[0] || null)} />
+                                       <button type="button" style={xpBtn({ padding: '1px 8px' })}
+                                               onClick={() => (document.getElementById('xp-completion-image') as HTMLInputElement)?.click()}>
+                                           Browse…
+                                       </button>
+                                       <span style={{ fontFamily: 'Tahoma, Arial, sans-serif', fontSize: 10, color: '#444' }}>
+                                           {completionImageFile ? completionImageFile.name : 'No file chosen'}
+                                       </span>
+                                   </div>
+                                   {completionImageFile && (
+                                       <img src={URL.createObjectURL(completionImageFile)}
+                                            style={{ marginTop: 4, maxHeight: 72, maxWidth: '100%', border: '1px solid #b0a898', display: 'block' }}
+                                            alt="Preview" />
+                                   )}
+                               </div>
+                               {/* Design PDF */}
+                               <div>
+                                   <label style={xpLbl}>Design (PDF)</label>
+                                   <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                                       <input type="file" accept="application/pdf" id="xp-design-pdf" style={{ display: 'none' }}
+                                              onChange={e => setDesignPdfFile(e.target.files?.[0] || null)} />
+                                       <button type="button" style={xpBtn({ padding: '1px 8px' })}
+                                               onClick={() => (document.getElementById('xp-design-pdf') as HTMLInputElement)?.click()}>
+                                           Browse…
+                                       </button>
+                                       <span style={{ fontFamily: 'Tahoma, Arial, sans-serif', fontSize: 10, color: '#444' }}>
+                                           {designPdfFile ? designPdfFile.name : 'No file chosen'}
+                                       </span>
+                                   </div>
+                               </div>
                            </div>
                        </div>
                    </div>
@@ -855,6 +895,24 @@ export default function SampleRequestView({ samples, customers, onCreateSample, 
                                <div className="col-12">
                                    <label className="form-label small text-muted">Completion Notes</label>
                                    <textarea className="form-control form-control-sm" rows={2} value={newSample.completion_description} onChange={e => setNewSample({ ...newSample, completion_description: e.target.value })} placeholder="Priority instructions, special notes…" />
+                               </div>
+                               <div className="col-md-6">
+                                   <label className="form-label small text-muted">Completion Photo</label>
+                                   <input type="file" accept="image/*" className="form-control form-control-sm"
+                                          onChange={e => setCompletionImageFile(e.target.files?.[0] || null)} />
+                                   {completionImageFile && (
+                                       <img src={URL.createObjectURL(completionImageFile)}
+                                            className="mt-1 border" style={{ maxHeight: 60, maxWidth: '100%', display: 'block' }}
+                                            alt="Preview" />
+                                   )}
+                               </div>
+                               <div className="col-md-6">
+                                   <label className="form-label small text-muted">Design (PDF)</label>
+                                   <input type="file" accept="application/pdf" className="form-control form-control-sm"
+                                          onChange={e => setDesignPdfFile(e.target.files?.[0] || null)} />
+                                   {designPdfFile && (
+                                       <div className="small text-muted mt-1">📄 {designPdfFile.name}</div>
+                                   )}
                                </div>
                            </div>
                        </div>
@@ -1373,6 +1431,27 @@ export default function SampleRequestView({ samples, customers, onCreateSample, 
                                                                        )}
                                                                        {s.notes && (
                                                                            <div style={{ ...row, gridColumn: '1 / -1' }}><span style={lbl}>Notes</span><span style={{ ...val, whiteSpace: 'pre-wrap' as const }}>{s.notes}</span></div>
+                                                                       )}
+                                                                       {s.completion_image_url && (
+                                                                           <div style={{ ...row, gridColumn: '1 / -1', alignItems: 'flex-start' }}>
+                                                                               <span style={lbl}>Photo</span>
+                                                                               <img
+                                                                                   src={`${STATIC_BASE}${s.completion_image_url}`}
+                                                                                   alt="Completion"
+                                                                                   onClick={() => window.open(`${STATIC_BASE}${s.completion_image_url}`, '_blank')}
+                                                                                   style={{ maxHeight: 80, maxWidth: 180, border: '1px solid #b0a898', cursor: 'pointer', display: 'block' }}
+                                                                                   title="Click to view full size"
+                                                                               />
+                                                                           </div>
+                                                                       )}
+                                                                       {s.design_pdf_url && (
+                                                                           <div style={{ ...row, gridColumn: '1 / -1' }}>
+                                                                               <span style={lbl}>Design PDF</span>
+                                                                               <a href={`${STATIC_BASE}${s.design_pdf_url}`} target="_blank" rel="noopener noreferrer"
+                                                                                  style={{ fontFamily: 'Tahoma, Arial, sans-serif', fontSize: 11, color: '#0047c8', textDecoration: 'underline' }}>
+                                                                                   📄 View / Download
+                                                                               </a>
+                                                                           </div>
                                                                        )}
                                                                    </div>
                                                                </div>
