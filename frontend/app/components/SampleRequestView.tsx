@@ -1035,30 +1035,28 @@ export default function SampleRequestView({ samples, customers, onCreateSample, 
                                <tr
                                    key={`${s.id}-row`}
                                    ref={s.id === highlightId ? highlightRef : undefined}
-                                   onClick={() => s.colors && s.colors.length > 0 && toggleExpand(s.id)}
+                                   onClick={() => toggleExpand(s.id)}
                                    style={classic
-                                       ? { background: s.id === highlightId ? '#fff8cc' : s.is_unread ? '#dde8fb' : rowIndex % 2 === 0 ? '#ffffff' : '#f5f3ee', borderBottom: '1px solid #c0bdb5', cursor: s.colors && s.colors.length > 0 ? 'pointer' : 'default', outline: s.id === highlightId ? '2px solid #f0a000' : undefined }
-                                       : { cursor: s.colors && s.colors.length > 0 ? 'pointer' : 'default', background: s.id === highlightId ? '#fff8e1' : s.is_unread ? '#f0f7ff' : undefined, outline: s.id === highlightId ? '2px solid #f0a000' : undefined }}
+                                       ? { background: s.id === highlightId ? '#fff8cc' : s.is_unread ? '#dde8fb' : rowIndex % 2 === 0 ? '#ffffff' : '#f5f3ee', borderBottom: '1px solid #c0bdb5', cursor: 'pointer', outline: s.id === highlightId ? '2px solid #f0a000' : undefined }
+                                       : { cursor: 'pointer', background: s.id === highlightId ? '#fff8e1' : s.is_unread ? '#f0f7ff' : undefined, outline: s.id === highlightId ? '2px solid #f0a000' : undefined }}
                                >
                                    <td style={classic ? tdBase : undefined} className={classic ? '' : 'ps-4'}>
                                        <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                                           {s.colors && s.colors.length > 0 && (
-                                               classic ? (
-                                                   <button
-                                                       onClick={e => { e.stopPropagation(); toggleExpand(s.id); }}
-                                                       style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '0 2px', fontFamily: 'Tahoma', fontSize: 10, color: '#333' }}
-                                                   >
-                                                       {expandedIds.has(s.id) ? '▼' : '▶'}
-                                                   </button>
-                                               ) : (
-                                                   <button
-                                                       className="btn btn-link p-0 text-muted"
-                                                       style={{ fontSize: 10, lineHeight: 1 }}
-                                                       onClick={e => { e.stopPropagation(); toggleExpand(s.id); }}
-                                                   >
-                                                       <i className={`bi bi-chevron-${expandedIds.has(s.id) ? 'down' : 'right'}`}></i>
-                                                   </button>
-                                               )
+                                           {classic ? (
+                                               <button
+                                                   onClick={e => { e.stopPropagation(); toggleExpand(s.id); }}
+                                                   style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '0 2px', fontFamily: 'Tahoma', fontSize: 10, color: '#333' }}
+                                               >
+                                                   {expandedIds.has(s.id) ? '▼' : '▶'}
+                                               </button>
+                                           ) : (
+                                               <button
+                                                   className="btn btn-link p-0 text-muted"
+                                                   style={{ fontSize: 10, lineHeight: 1 }}
+                                                   onClick={e => { e.stopPropagation(); toggleExpand(s.id); }}
+                                               >
+                                                   <i className={`bi bi-chevron-${expandedIds.has(s.id) ? 'down' : 'right'}`}></i>
+                                               </button>
                                            )}
                                            <div>
                                                <div style={classic ? { fontFamily: "'Courier New', monospace", fontWeight: s.is_unread ? '900' : 'bold', color: s.is_unread ? '#0a3a9a' : '#0047c8', fontSize: '10px' } : undefined} className={classic ? '' : `font-monospace text-primary${s.is_unread ? ' fw-bolder' : ' fw-bold'}`}>
@@ -1243,133 +1241,247 @@ export default function SampleRequestView({ samples, customers, onCreateSample, 
                                        </div>
                                    </td>
                                </tr>
-                               {expandedIds.has(s.id) && s.colors && s.colors.length > 0 && (
-                                   <tr key={`${s.id}-colors`}>
+                               {expandedIds.has(s.id) && (
+                                   <tr key={`${s.id}-detail`}>
                                        <td
                                            colSpan={7}
                                            style={{ padding: 0, borderBottom: classic ? '2px solid #9a9690' : '2px solid #dee2e6' }}
                                        >
                                            {classic ? (
-                                               /* ── XP group-box expand panel ── */
-                                               <div style={{ padding: '6px 10px 8px 34px', background: '#ece9d8' }}>
-                                                   <div style={{ border: '1px solid #7a7a7a', background: '#fff' }}>
-                                                       {/* Group box header */}
-                                                       <div style={{ background: 'linear-gradient(to bottom, #e4e1d8, #d5d2c8)', borderBottom: '1px solid #9a9690', padding: '2px 8px', fontSize: 10, fontWeight: 'bold', color: '#111', letterSpacing: '0.3px', display: 'flex', alignItems: 'center', gap: 6, fontFamily: 'Tahoma, Arial, sans-serif' }}>
-                                                           🎨 Color Status — {s.colors.length} color{s.colors.length !== 1 ? 's' : ''} · {s.colors.filter((c: any) => c.status === 'APPROVED').length} approved
+                                               /* ── XP 2-pane detail panel ── */
+                                               <div style={{ background: '#ece9d8', borderTop: '2px solid #0058e6', display: 'flex', minHeight: 160 }}>
+                                                   {/* LEFT — Color table */}
+                                                   <div style={{ width: '48%', borderRight: '1px solid #a0988c', display: 'flex', flexDirection: 'column' }}>
+                                                       <div style={{ background: 'linear-gradient(to bottom, #e4e1d8, #d5d2c8)', borderBottom: '1px solid #9a9690', padding: '2px 8px', fontSize: 10, fontWeight: 'bold', color: '#111', letterSpacing: '0.3px', display: 'flex', alignItems: 'center', gap: 6, fontFamily: 'Tahoma, Arial, sans-serif', flexShrink: 0 }}>
+                                                           🎨 Colors — {s.colors?.length ?? 0} total · {s.colors?.filter((c: any) => c.status === 'APPROVED').length ?? 0} approved
                                                        </div>
-                                                       {/* Inner table — colgroup ensures headers and rows always align */}
-                                                       <table style={{ width: '100%', borderCollapse: 'collapse', tableLayout: 'fixed' as const }}>
-                                                           <colgroup>
-                                                               <col style={{ width: 110 }} />
-                                                               <col style={{ width: 62 }} />
-                                                               <col style={{ width: 106 }} />
-                                                               <col />{/* flex spacer */}
-                                                               <col style={{ width: 240 }} />
-                                                               <col style={{ width: 90 }} />
-                                                           </colgroup>
-                                                           <thead>
-                                                               <tr>
-                                                                   <th style={colorThCell}>Color Name</th>
-                                                                   <th style={colorThCell}>Type</th>
-                                                                   <th style={colorThCell}>Status</th>
-                                                                   <th style={{ ...colorThCell, borderRight: 'none' }}></th>
-                                                                   <th style={{ ...colorThCell, textAlign: 'center' as const }}>Update Status</th>
-                                                                   <th style={{ ...colorThCell, borderRight: 'none', textAlign: 'center' as const }}>Item</th>
-                                                               </tr>
-                                                           </thead>
-                                                           <tbody>
-                                                               {s.colors.map((c: any, ci: number) => {
-                                                                   const cst = colorRowStyle(c.status || 'PENDING');
-                                                                   const isLast = ci === s.colors.length - 1;
-                                                                   const tdStyle: React.CSSProperties = { ...colorTdCell, background: cst.background, borderBottom: isLast ? 'none' : colorTdCell.borderBottom };
-                                                                   const isInProd = (c.status || 'PENDING') === 'IN_PRODUCTION';
-                                                                   const isApproved = (c.status || 'PENDING') === 'APPROVED';
-                                                                   const isRejected = (c.status || 'PENDING') === 'REJECTED';
-                                                                   return (
-                                                                       <tr key={c.id} style={{ background: cst.background }}>
-                                                                           <td style={{ ...tdStyle, borderLeft: `4px solid ${cst.borderLeftColor}`, fontWeight: 'bold' }}>{c.name}</td>
-                                                                           <td style={tdStyle}>
-                                                                               <span style={{ background: c.is_repeat ? '#dce4f5' : '#d4edda', border: `1px solid ${c.is_repeat ? '#6878c8' : '#5aaa68'}`, color: c.is_repeat ? '#0d2a6e' : '#0c3a1a', padding: '0 4px', fontSize: '9px', fontFamily: 'Tahoma, Arial, sans-serif', fontWeight: 'bold' }}>
-                                                                                   {c.is_repeat ? 'Repeat' : 'New'}
-                                                                               </span>
-                                                                           </td>
-                                                                           <td style={tdStyle}>
-                                                                               <span style={getColorStatusStyle(c.status || 'PENDING')}>{c.status || 'PENDING'}</span>
-                                                                           </td>
-                                                                           <td style={{ ...tdStyle, borderRight: 'none' }}></td>
-                                                                           <td style={{ ...tdStyle, textAlign: 'center' as const }}>
-                                                                               <div style={{ display: 'inline-flex' }}>
-                                                                                   <button type="button" style={cbInprod(isInProd)} onClick={() => onUpdateColorStatus(s.id, c.id, isInProd ? 'PENDING' : 'IN_PRODUCTION')} title={isInProd ? 'Reset to Pending' : 'Set In Production'}>⚙ In Prod</button>
-                                                                                   <button type="button" style={cbApprove(isApproved)} onClick={() => onUpdateColorStatus(s.id, c.id, isApproved ? 'PENDING' : 'APPROVED')} title={isApproved ? 'Reset to Pending' : 'Approve'}>✓ Approve</button>
-                                                                                   <button type="button" style={cbReject(isRejected)} onClick={() => onUpdateColorStatus(s.id, c.id, isRejected ? 'PENDING' : 'REJECTED')} title={isRejected ? 'Reset to Pending' : 'Reject'}>✗ Reject</button>
-                                                                               </div>
-                                                                           </td>
-                                                                           <td style={{ ...tdStyle, borderRight: 'none', textAlign: 'center' as const }}>
-                                                                               {isApproved && (
-                                                                                   <button
-                                                                                       style={xpBtn({ background: 'linear-gradient(to bottom, #5ec85e, #2d7a2d)', borderColor: '#1a5e1a #0a3e0a #0a3e0a #1a5e1a', color: '#fff', fontSize: 10, padding: '1px 6px' })}
-                                                                                       onClick={() => createItemFromColor(s, c)}
-                                                                                       title="Create Item from this approved color"
-                                                                                   >+ Item</button>
-                                                                               )}
-                                                                           </td>
+                                                       {s.colors && s.colors.length > 0 ? (
+                                                           <div style={{ overflowY: 'auto', flex: 1 }}>
+                                                               <table style={{ width: '100%', borderCollapse: 'collapse', tableLayout: 'fixed' as const }}>
+                                                                   <colgroup>
+                                                                       <col style={{ width: 110 }} />
+                                                                       <col style={{ width: 58 }} />
+                                                                       <col style={{ width: 100 }} />
+                                                                       <col />
+                                                                       <col style={{ width: 236 }} />
+                                                                       <col style={{ width: 68 }} />
+                                                                   </colgroup>
+                                                                   <thead>
+                                                                       <tr>
+                                                                           <th style={colorThCell}>Color Name</th>
+                                                                           <th style={colorThCell}>Type</th>
+                                                                           <th style={colorThCell}>Status</th>
+                                                                           <th style={{ ...colorThCell, borderRight: 'none' }}></th>
+                                                                           <th style={{ ...colorThCell, textAlign: 'center' as const }}>Update Status</th>
+                                                                           <th style={{ ...colorThCell, borderRight: 'none', textAlign: 'center' as const }}>Item</th>
                                                                        </tr>
-                                                                   );
-                                                               })}
-                                                           </tbody>
-                                                       </table>
+                                                                   </thead>
+                                                                   <tbody>
+                                                                       {s.colors.map((c: any, ci: number) => {
+                                                                           const cst = colorRowStyle(c.status || 'PENDING');
+                                                                           const isLast = ci === s.colors.length - 1;
+                                                                           const tdStyle: React.CSSProperties = { ...colorTdCell, background: cst.background, borderBottom: isLast ? 'none' : colorTdCell.borderBottom };
+                                                                           const isInProd = (c.status || 'PENDING') === 'IN_PRODUCTION';
+                                                                           const isApproved = (c.status || 'PENDING') === 'APPROVED';
+                                                                           const isRejected = (c.status || 'PENDING') === 'REJECTED';
+                                                                           return (
+                                                                               <tr key={c.id} style={{ background: cst.background }}>
+                                                                                   <td style={{ ...tdStyle, borderLeft: `4px solid ${cst.borderLeftColor}`, fontWeight: 'bold' }}>{c.name}</td>
+                                                                                   <td style={tdStyle}>
+                                                                                       <span style={{ background: c.is_repeat ? '#dce4f5' : '#d4edda', border: `1px solid ${c.is_repeat ? '#6878c8' : '#5aaa68'}`, color: c.is_repeat ? '#0d2a6e' : '#0c3a1a', padding: '0 4px', fontSize: '9px', fontFamily: 'Tahoma, Arial, sans-serif', fontWeight: 'bold' }}>
+                                                                                           {c.is_repeat ? 'Repeat' : 'New'}
+                                                                                       </span>
+                                                                                   </td>
+                                                                                   <td style={tdStyle}>
+                                                                                       <span style={getColorStatusStyle(c.status || 'PENDING')}>{c.status || 'PENDING'}</span>
+                                                                                   </td>
+                                                                                   <td style={{ ...tdStyle, borderRight: 'none' }}></td>
+                                                                                   <td style={{ ...tdStyle, textAlign: 'center' as const }}>
+                                                                                       <div style={{ display: 'inline-flex' }}>
+                                                                                           <button type="button" style={cbInprod(isInProd)} onClick={() => onUpdateColorStatus(s.id, c.id, isInProd ? 'PENDING' : 'IN_PRODUCTION')} title={isInProd ? 'Reset to Pending' : 'Set In Production'}>⚙ In Prod</button>
+                                                                                           <button type="button" style={cbApprove(isApproved)} onClick={() => onUpdateColorStatus(s.id, c.id, isApproved ? 'PENDING' : 'APPROVED')} title={isApproved ? 'Reset to Pending' : 'Approve'}>✓ Approve</button>
+                                                                                           <button type="button" style={cbReject(isRejected)} onClick={() => onUpdateColorStatus(s.id, c.id, isRejected ? 'PENDING' : 'REJECTED')} title={isRejected ? 'Reset to Pending' : 'Reject'}>✗ Reject</button>
+                                                                                       </div>
+                                                                                   </td>
+                                                                                   <td style={{ ...tdStyle, borderRight: 'none', textAlign: 'center' as const }}>
+                                                                                       {isApproved && (
+                                                                                           <button
+                                                                                               style={xpBtn({ background: 'linear-gradient(to bottom, #5ec85e, #2d7a2d)', borderColor: '#1a5e1a #0a3e0a #0a3e0a #1a5e1a', color: '#fff', fontSize: 10, padding: '1px 6px' })}
+                                                                                               onClick={() => createItemFromColor(s, c)}
+                                                                                               title="Create Item from this approved color"
+                                                                                           >+ Item</button>
+                                                                                       )}
+                                                                                   </td>
+                                                                               </tr>
+                                                                           );
+                                                                       })}
+                                                                   </tbody>
+                                                               </table>
+                                                           </div>
+                                                       ) : (
+                                                           <div style={{ padding: '12px 10px', color: '#555', fontStyle: 'italic', fontSize: 10, fontFamily: 'Tahoma, Arial, sans-serif' }}>No colors defined.</div>
+                                                       )}
                                                    </div>
+                                                   {/* RIGHT — Sample details */}
+                                                   {(() => {
+                                                       const lbl: React.CSSProperties = { fontFamily: 'Tahoma, Arial, sans-serif', fontSize: 10, color: '#333', fontWeight: 'bold', minWidth: 90, flexShrink: 0 };
+                                                       const val: React.CSSProperties = { fontFamily: 'Tahoma, Arial, sans-serif', fontSize: 11, color: '#000' };
+                                                       const row: React.CSSProperties = { display: 'flex', gap: 8, marginBottom: 3, alignItems: 'flex-start' };
+                                                       const grpHdr: React.CSSProperties = { background: 'linear-gradient(to right, #3a6fc4, #6a9fd8 60%, #a8c8f0)', color: '#fff', fontSize: 10, fontWeight: 'bold', padding: '2px 8px', letterSpacing: '0.4px', textTransform: 'uppercase' as const, fontFamily: 'Tahoma, Arial, sans-serif' };
+                                                       const grpBody: React.CSSProperties = { background: '#fff', padding: '6px 10px', borderBottom: '1px solid #d0cdc8' };
+                                                       const empty = (v: any) => !v ? '—' : v;
+                                                       return (
+                                                           <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column' }}>
+                                                               {/* ① Identity & Specs */}
+                                                               <div>
+                                                                   <div style={grpHdr}>① Identity &amp; Specs</div>
+                                                                   <div style={{ ...grpBody, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '2px 20px' }}>
+                                                                       <div style={row}><span style={lbl}>Customer</span><span style={val}>{s.customer_id ? getCustomerName(s.customer_id) : <em style={{ color: '#555' }}>Internal</em>}</span></div>
+                                                                       <div style={row}><span style={lbl}>Project</span><span style={val}>{empty(s.project)}</span></div>
+                                                                       <div style={row}><span style={lbl}>Customer Art.</span><span style={val}>{empty(s.customer_article_code)}</span></div>
+                                                                       <div style={row}><span style={lbl}>Internal Art.</span><span style={val}>{empty(s.internal_article_code)}</span></div>
+                                                                       <div style={row}><span style={lbl}>Width</span><span style={val}>{empty(s.width)}</span></div>
+                                                                       <div style={row}><span style={lbl}>Request Date</span><span style={val}>{s.request_date ? new Date(s.request_date).toLocaleDateString() : '—'}</span></div>
+                                                                   </div>
+                                                               </div>
+                                                               {/* ② Materials & Weight */}
+                                                               <div>
+                                                                   <div style={grpHdr}>② Materials &amp; Weight</div>
+                                                                   <div style={{ ...grpBody, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '2px 20px' }}>
+                                                                       <div style={row}><span style={lbl}>Main Mat.</span><span style={val}>{empty(s.main_material)}</span></div>
+                                                                       <div style={row}><span style={lbl}>Middle Mat.</span><span style={val}>{empty(s.middle_material)}</span></div>
+                                                                       <div style={row}><span style={lbl}>Bottom Mat.</span><span style={val}>{empty(s.bottom_material)}</span></div>
+                                                                       <div style={row}><span style={lbl}>Weft</span><span style={val}>{empty(s.weft)}</span></div>
+                                                                       <div style={row}><span style={lbl}>Warp</span><span style={val}>{empty(s.warp)}</span></div>
+                                                                       <div style={row}></div>
+                                                                       <div style={row}><span style={lbl}>Orig. Weight</span><span style={val}>{s.original_weight ? `${s.original_weight} ${s.original_weight_unit || ''}`.trim() : '—'}</span></div>
+                                                                       <div style={row}><span style={lbl}>Prod. Weight</span><span style={val}>{s.production_weight ? `${s.production_weight} ${s.production_weight_unit || ''}`.trim() : '—'}</span></div>
+                                                                       {s.additional_info && (
+                                                                           <div style={{ ...row, gridColumn: '1 / -1' }}><span style={lbl}>Additional</span><span style={{ ...val, whiteSpace: 'pre-wrap' as const }}>{s.additional_info}</span></div>
+                                                                       )}
+                                                                   </div>
+                                                               </div>
+                                                               {/* ③ Logistics */}
+                                                               <div>
+                                                                   <div style={grpHdr}>③ Logistics</div>
+                                                                   <div style={{ ...grpBody, borderBottom: 'none', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '2px 20px' }}>
+                                                                       <div style={row}><span style={lbl}>Quantity</span><span style={val}>{empty(s.quantity)}</span></div>
+                                                                       <div style={row}><span style={lbl}>Sample Size</span><span style={val}>{empty(s.sample_size)}</span></div>
+                                                                       <div style={row}><span style={lbl}>Est. Complete</span><span style={val}>{s.estimated_completion_date ? new Date(s.estimated_completion_date).toLocaleDateString() : '—'}</span></div>
+                                                                       {s.completion_description && (
+                                                                           <div style={{ ...row, gridColumn: '1 / -1' }}><span style={lbl}>Completion</span><span style={{ ...val, whiteSpace: 'pre-wrap' as const }}>{s.completion_description}</span></div>
+                                                                       )}
+                                                                       {s.notes && (
+                                                                           <div style={{ ...row, gridColumn: '1 / -1' }}><span style={lbl}>Notes</span><span style={{ ...val, whiteSpace: 'pre-wrap' as const }}>{s.notes}</span></div>
+                                                                       )}
+                                                                   </div>
+                                                               </div>
+                                                           </div>
+                                                       );
+                                                   })()}
                                                </div>
                                            ) : (
-                                               /* ── Modern Bootstrap expand panel ── */
-                                               <div style={{ background: '#f8f9fa', padding: '6px 12px 8px 32px' }}>
-                                                   <table style={{ width: '100%', borderCollapse: 'collapse', tableLayout: 'fixed' as const }}>
-                                                       <colgroup>
-                                                           <col style={{ width: 110 }} /><col style={{ width: 62 }} /><col style={{ width: 106 }} />
-                                                           <col /><col style={{ width: 240 }} /><col style={{ width: 90 }} />
-                                                       </colgroup>
-                                                       <thead>
-                                                           <tr>
-                                                               <th className="small text-muted fw-semibold" style={{ padding: '2px 6px', borderBottom: '1px solid #dee2e6', fontSize: 10 }}>Color</th>
-                                                               <th className="small text-muted fw-semibold" style={{ padding: '2px 6px', borderBottom: '1px solid #dee2e6', fontSize: 10 }}>Type</th>
-                                                               <th className="small text-muted fw-semibold" style={{ padding: '2px 6px', borderBottom: '1px solid #dee2e6', fontSize: 10 }}>Status</th>
-                                                               <th style={{ borderBottom: '1px solid #dee2e6' }}></th>
-                                                               <th className="small text-muted fw-semibold text-center" style={{ padding: '2px 6px', borderBottom: '1px solid #dee2e6', fontSize: 10 }}>Update Status</th>
-                                                               <th className="small text-muted fw-semibold text-center" style={{ padding: '2px 6px', borderBottom: '1px solid #dee2e6', fontSize: 10 }}>Item</th>
-                                                           </tr>
-                                                       </thead>
-                                                       <tbody>
-                                                           {s.colors.map((c: any, ci: number) => {
-                                                               const isInProd = (c.status || 'PENDING') === 'IN_PRODUCTION';
-                                                               const isApproved = (c.status || 'PENDING') === 'APPROVED';
-                                                               const isRejected = (c.status || 'PENDING') === 'REJECTED';
-                                                               return (
-                                                                   <tr key={c.id}>
-                                                                       <td style={{ padding: '4px 6px', borderBottom: '1px solid #e9ecef', fontSize: 11, fontWeight: 500 }}>{c.name}</td>
-                                                                       <td style={{ padding: '4px 6px', borderBottom: '1px solid #e9ecef' }}>
-                                                                           <span className={`badge ${c.is_repeat ? 'bg-primary bg-opacity-10 text-primary' : 'bg-success bg-opacity-10 text-success'} border`} style={{ fontSize: 10 }}>{c.is_repeat ? 'Repeat' : 'New'}</span>
-                                                                       </td>
-                                                                       <td style={{ padding: '4px 6px', borderBottom: '1px solid #e9ecef' }}>
-                                                                           <span className={`badge ${getColorStatusBadgeClass(c.status || 'PENDING')}`} style={{ fontSize: 10 }}>{c.status || 'PENDING'}</span>
-                                                                       </td>
-                                                                       <td style={{ borderBottom: '1px solid #e9ecef' }}></td>
-                                                                       <td style={{ padding: '3px 6px', borderBottom: '1px solid #e9ecef', textAlign: 'center' as const }}>
-                                                                           <div className="btn-group btn-group-sm" role="group">
-                                                                               <button type="button" className={`btn ${isInProd ? 'btn-warning' : 'btn-outline-warning'}`} style={{ fontSize: 10, padding: '1px 6px' }} onClick={() => onUpdateColorStatus(s.id, c.id, isInProd ? 'PENDING' : 'IN_PRODUCTION')} title={isInProd ? 'Reset to Pending' : 'Set In Production'}>⚙ In Prod</button>
-                                                                               <button type="button" className={`btn ${isApproved ? 'btn-success' : 'btn-outline-success'}`} style={{ fontSize: 10, padding: '1px 6px' }} onClick={() => onUpdateColorStatus(s.id, c.id, isApproved ? 'PENDING' : 'APPROVED')} title={isApproved ? 'Reset to Pending' : 'Approve'}>✓ Approve</button>
-                                                                               <button type="button" className={`btn ${isRejected ? 'btn-danger' : 'btn-outline-danger'}`} style={{ fontSize: 10, padding: '1px 6px' }} onClick={() => onUpdateColorStatus(s.id, c.id, isRejected ? 'PENDING' : 'REJECTED')} title={isRejected ? 'Reset to Pending' : 'Reject'}>✗ Reject</button>
-                                                                           </div>
-                                                                       </td>
-                                                                       <td style={{ padding: '3px 6px', borderBottom: '1px solid #e9ecef', textAlign: 'center' as const }}>
-                                                                           {isApproved && (
-                                                                               <button className="btn btn-sm btn-success" style={{ fontSize: 10, padding: '1px 6px' }} onClick={() => createItemFromColor(s, c)} title="Create Item from this approved color">+ Item</button>
-                                                                           )}
-                                                                       </td>
+                                               /* ── Modern Bootstrap 2-pane detail panel ── */
+                                               <div style={{ display: 'flex', background: '#f8f9fa', borderTop: '2px solid #0d6efd' }}>
+                                                   {/* LEFT — Colors */}
+                                                   <div style={{ width: '48%', borderRight: '1px solid #dee2e6' }}>
+                                                       <div className="px-2 py-1 fw-semibold small text-muted" style={{ borderBottom: '1px solid #dee2e6', fontSize: 10, background: '#f1f3f5' }}>
+                                                           Colors — {s.colors?.length ?? 0} total · {s.colors?.filter((c: any) => c.status === 'APPROVED').length ?? 0} approved
+                                                       </div>
+                                                       {s.colors && s.colors.length > 0 ? (
+                                                           <table style={{ width: '100%', borderCollapse: 'collapse', tableLayout: 'fixed' as const }}>
+                                                               <colgroup>
+                                                                   <col style={{ width: 110 }} /><col style={{ width: 62 }} /><col style={{ width: 106 }} />
+                                                                   <col /><col style={{ width: 240 }} /><col style={{ width: 68 }} />
+                                                               </colgroup>
+                                                               <thead>
+                                                                   <tr>
+                                                                       <th className="small fw-semibold" style={{ padding: '2px 6px', borderBottom: '1px solid #dee2e6', fontSize: 10, color: '#333' }}>Color</th>
+                                                                       <th className="small fw-semibold" style={{ padding: '2px 6px', borderBottom: '1px solid #dee2e6', fontSize: 10, color: '#333' }}>Type</th>
+                                                                       <th className="small fw-semibold" style={{ padding: '2px 6px', borderBottom: '1px solid #dee2e6', fontSize: 10, color: '#333' }}>Status</th>
+                                                                       <th style={{ borderBottom: '1px solid #dee2e6' }}></th>
+                                                                       <th className="small fw-semibold text-center" style={{ padding: '2px 6px', borderBottom: '1px solid #dee2e6', fontSize: 10, color: '#333' }}>Update Status</th>
+                                                                       <th className="small fw-semibold text-center" style={{ padding: '2px 6px', borderBottom: '1px solid #dee2e6', fontSize: 10, color: '#333' }}>Item</th>
                                                                    </tr>
-                                                               );
-                                                           })}
-                                                       </tbody>
-                                                   </table>
+                                                               </thead>
+                                                               <tbody>
+                                                                   {s.colors.map((c: any, ci: number) => {
+                                                                       const isInProd = (c.status || 'PENDING') === 'IN_PRODUCTION';
+                                                                       const isApproved = (c.status || 'PENDING') === 'APPROVED';
+                                                                       const isRejected = (c.status || 'PENDING') === 'REJECTED';
+                                                                       return (
+                                                                           <tr key={c.id}>
+                                                                               <td style={{ padding: '4px 6px', borderBottom: '1px solid #e9ecef', fontSize: 11, fontWeight: 500, color: '#111' }}>{c.name}</td>
+                                                                               <td style={{ padding: '4px 6px', borderBottom: '1px solid #e9ecef' }}>
+                                                                                   <span className={`badge ${c.is_repeat ? 'bg-primary bg-opacity-10 text-primary' : 'bg-success bg-opacity-10 text-success'} border`} style={{ fontSize: 10 }}>{c.is_repeat ? 'Repeat' : 'New'}</span>
+                                                                               </td>
+                                                                               <td style={{ padding: '4px 6px', borderBottom: '1px solid #e9ecef' }}>
+                                                                                   <span className={`badge ${getColorStatusBadgeClass(c.status || 'PENDING')}`} style={{ fontSize: 10 }}>{c.status || 'PENDING'}</span>
+                                                                               </td>
+                                                                               <td style={{ borderBottom: '1px solid #e9ecef' }}></td>
+                                                                               <td style={{ padding: '3px 6px', borderBottom: '1px solid #e9ecef', textAlign: 'center' as const }}>
+                                                                                   <div className="btn-group btn-group-sm" role="group">
+                                                                                       <button type="button" className={`btn ${isInProd ? 'btn-warning' : 'btn-outline-warning'}`} style={{ fontSize: 10, padding: '1px 6px' }} onClick={() => onUpdateColorStatus(s.id, c.id, isInProd ? 'PENDING' : 'IN_PRODUCTION')}>⚙ In Prod</button>
+                                                                                       <button type="button" className={`btn ${isApproved ? 'btn-success' : 'btn-outline-success'}`} style={{ fontSize: 10, padding: '1px 6px' }} onClick={() => onUpdateColorStatus(s.id, c.id, isApproved ? 'PENDING' : 'APPROVED')}>✓ Approve</button>
+                                                                                       <button type="button" className={`btn ${isRejected ? 'btn-danger' : 'btn-outline-danger'}`} style={{ fontSize: 10, padding: '1px 6px' }} onClick={() => onUpdateColorStatus(s.id, c.id, isRejected ? 'PENDING' : 'REJECTED')}>✗ Reject</button>
+                                                                                   </div>
+                                                                               </td>
+                                                                               <td style={{ padding: '3px 6px', borderBottom: '1px solid #e9ecef', textAlign: 'center' as const }}>
+                                                                                   {isApproved && (
+                                                                                       <button className="btn btn-sm btn-success" style={{ fontSize: 10, padding: '1px 6px' }} onClick={() => createItemFromColor(s, c)}>+ Item</button>
+                                                                                   )}
+                                                                               </td>
+                                                                           </tr>
+                                                                       );
+                                                                   })}
+                                                               </tbody>
+                                                           </table>
+                                                       ) : (
+                                                           <div className="text-muted fst-italic small p-3">No colors defined.</div>
+                                                       )}
+                                                   </div>
+                                                   {/* RIGHT — Details */}
+                                                   <div style={{ flex: 1, overflowY: 'auto' }}>
+                                                       {[
+                                                           { title: '① Identity & Specs', fields: [
+                                                               ['Customer', s.customer_id ? getCustomerName(s.customer_id) : 'Internal'],
+                                                               ['Project', s.project || '—'],
+                                                               ['Customer Art.', s.customer_article_code || '—'],
+                                                               ['Internal Art.', s.internal_article_code || '—'],
+                                                               ['Width', s.width || '—'],
+                                                               ['Request Date', s.request_date ? new Date(s.request_date).toLocaleDateString() : '—'],
+                                                           ]},
+                                                           { title: '② Materials & Weight', fields: [
+                                                               ['Main Mat.', s.main_material || '—'],
+                                                               ['Middle Mat.', s.middle_material || '—'],
+                                                               ['Bottom Mat.', s.bottom_material || '—'],
+                                                               ['Weft', s.weft || '—'],
+                                                               ['Warp', s.warp || '—'],
+                                                               ['Orig. Weight', s.original_weight ? `${s.original_weight} ${s.original_weight_unit || ''}`.trim() : '—'],
+                                                               ['Prod. Weight', s.production_weight ? `${s.production_weight} ${s.production_weight_unit || ''}`.trim() : '—'],
+                                                               ...(s.additional_info ? [['Additional', s.additional_info]] : []),
+                                                           ]},
+                                                           { title: '③ Logistics', fields: [
+                                                               ['Quantity', s.quantity || '—'],
+                                                               ['Sample Size', s.sample_size || '—'],
+                                                               ['Est. Complete', s.estimated_completion_date ? new Date(s.estimated_completion_date).toLocaleDateString() : '—'],
+                                                               ...(s.completion_description ? [['Completion', s.completion_description]] : []),
+                                                               ...(s.notes ? [['Notes', s.notes]] : []),
+                                                           ]},
+                                                       ].map(({ title, fields }) => (
+                                                           <div key={title}>
+                                                               <div className="px-2 py-1 fw-semibold small" style={{ borderBottom: '1px solid #dee2e6', borderTop: '1px solid #dee2e6', fontSize: 10, color: '#333', background: '#e9ecef' }}>{title}</div>
+                                                               <div style={{ padding: '6px 10px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '2px 16px', background: '#fff', borderBottom: '1px solid #dee2e6' }}>
+                                                                   {fields.map(([label, value]) => (
+                                                                       <div key={label as string} style={{ display: 'flex', gap: 6, alignItems: 'flex-start' }}>
+                                                                           <span style={{ fontSize: 10, color: '#444', fontWeight: 600, minWidth: 88, flexShrink: 0 }}>{label}</span>
+                                                                           <span style={{ fontSize: 11, color: '#111' }}>{value}</span>
+                                                                       </div>
+                                                                   ))}
+                                                               </div>
+                                                           </div>
+                                                       ))}
+                                                   </div>
                                                </div>
                                            )}
                                        </td>
