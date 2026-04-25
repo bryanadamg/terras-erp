@@ -100,7 +100,7 @@ function SOTableDocument({
                         <th style={{ ...th, width: '12%' }}>Nama Customer</th>
                         <th style={{ ...th, width: '8%' }}>Permintaan Kirim Customer</th>
                         <th style={{ ...th, width: '8%' }}>Tanggal Konfirmasi Internal</th>
-                        <th style={{ ...th, width: '8%' }}>Ket Stock</th>
+                        <th style={{ ...th, width: '8%' }}>Stock Notes</th>
                         <th style={{ ...th, width: '14%' }}>Nama Barang</th>
                         <th style={{ ...th, width: '6%' }}>Size</th>
                         <th style={{ ...th, width: '5%' }}>Qty Order</th>

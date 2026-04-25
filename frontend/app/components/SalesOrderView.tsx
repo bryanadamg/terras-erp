@@ -148,6 +148,8 @@ export default function SalesOrderView({ items, attributes, salesOrders, partner
       item_id: '', qty: 0, due_date: '', attribute_value_ids: [] as string[],
       ket_stock: '', internal_confirmation_date: '', qty_kg: '', qty2: '', uom2: '',
   });
+  const [qtyMeter, setQtyMeter] = useState('');
+  const [kgAuto, setKgAuto] = useState(true);
 
   const [isConfigOpen, setIsConfigOpen] = useState(false);
   const [codeConfig, setCodeConfig] = useState<CodeConfig>({
@@ -194,6 +196,8 @@ export default function SalesOrderView({ items, attributes, salesOrders, partner
       if (!newLine.item_id || newLine.qty <= 0) return;
       setNewSO({ ...newSO, lines: [...newSO.lines, { ...newLine }] });
       setNewLine({ item_id: '', qty: 0, due_date: '', attribute_value_ids: [], ket_stock: '', internal_confirmation_date: '', qty_kg: '', qty2: '', uom2: '' });
+      setQtyMeter('');
+      setKgAuto(true);
   };
 
   const handleRemoveLine = (index: number) => {
@@ -205,6 +209,46 @@ export default function SalesOrderView({ items, attributes, salesOrders, partner
       if (!attr) return;
       const otherValues = newLine.attribute_value_ids.filter(vid => !attr.values.some((v: any) => v.id === vid));
       setNewLine({...newLine, attribute_value_ids: valId ? [...otherValues, valId] : otherValues});
+  };
+
+  const getItemWeight = (id: string) => items.find((i: any) => i.id === id)?.weight_per_unit ?? null;
+  const getItemWeightUnit = (id: string) => items.find((i: any) => i.id === id)?.weight_unit ?? 'g/m';
+
+  const handleLineItemChange = (val: string) => {
+      const w = items.find((i: any) => i.id === val)?.weight_per_unit ?? null;
+      const m = parseFloat(qtyMeter) || 0;
+      const kgStr = kgAuto && w && m > 0 ? String(Math.round(w * m / 1000 * 1000) / 1000) : newLine.qty_kg;
+      setNewLine({ ...newLine, item_id: val, attribute_value_ids: [], qty_kg: kgAuto && w ? kgStr : newLine.qty_kg });
+  };
+
+  const handleQtyYardChange = (ydStr: string) => {
+      const yd = parseFloat(ydStr) || 0;
+      const m = yd > 0 ? Math.round(yd * 0.9144 * 100) / 100 : 0;
+      setQtyMeter(m > 0 ? String(m) : '');
+      const w = getItemWeight(newLine.item_id);
+      const kgStr = kgAuto && w && m > 0 ? String(Math.round(w * m / 1000 * 1000) / 1000) : newLine.qty_kg;
+      setNewLine({ ...newLine, qty: yd, qty_kg: kgAuto && w ? kgStr : newLine.qty_kg });
+  };
+
+  const handleQtyMeterChange = (mStr: string) => {
+      setQtyMeter(mStr);
+      const m = parseFloat(mStr) || 0;
+      const yd = m > 0 ? Math.round(m / 0.9144 * 100) / 100 : 0;
+      const w = getItemWeight(newLine.item_id);
+      const kgStr = kgAuto && w && m > 0 ? String(Math.round(w * m / 1000 * 1000) / 1000) : newLine.qty_kg;
+      setNewLine({ ...newLine, qty: yd, qty_kg: kgAuto && w ? kgStr : newLine.qty_kg });
+  };
+
+  const toggleKgAuto = () => {
+      const newAuto = !kgAuto;
+      setKgAuto(newAuto);
+      if (newAuto) {
+          const w = getItemWeight(newLine.item_id);
+          const m = parseFloat(qtyMeter) || 0;
+          if (w && m > 0) {
+              setNewLine(prev => ({ ...prev, qty_kg: String(Math.round(w * m / 1000 * 1000) / 1000) }));
+          }
+      }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -427,48 +471,120 @@ export default function SalesOrderView({ items, attributes, salesOrders, partner
                }
                <div style={{background:classic?'#f5f4ef':'rgba(0,0,0,0.02)',border:classic?'1px solid #b0a898':'1px solid #dee2e6',padding:classic?'6px 8px':'12px',marginBottom:classic?6:12}}>
                    <div className="row g-2 mb-2">
-                       <div className="col-5">
+                       {/* Item + Add button */}
+                       <div className="col-10">
                            <label style={classic ? {fontFamily:'Tahoma,Arial,sans-serif',fontSize:'11px',color:'#000',display:'block',marginBottom:2} : undefined} className={classic ? '' : 'form-label small text-muted mb-1'}>Item</label>
                            <SearchableSelect
                                options={items.map((item: any) => ({ value: item.id, label: item.name, subLabel: `${item.code}${item.category === 'Sample' ? ' ★' : ''}` }))}
                                value={newLine.item_id}
-                               onChange={(val) => setNewLine({...newLine, item_id: val, attribute_value_ids: []})}
+                               onChange={handleLineItemChange}
                                placeholder="Select Item…"
                            />
-                       </div>
-                       <div className="col-2">
-                           <label style={classic ? {fontFamily:'Tahoma,Arial,sans-serif',fontSize:'11px',color:'#000',display:'block',marginBottom:2} : undefined} className={classic ? '' : 'form-label small text-muted mb-1'}>Qty</label>
-                           <input type="number" className="form-control" style={classic ? xpInput : undefined} placeholder="0" value={newLine.qty || ''} onChange={e => setNewLine({...newLine, qty: parseFloat(e.target.value)})} />
-                       </div>
-                       <div className="col-3">
-                           <label style={classic ? {fontFamily:'Tahoma,Arial,sans-serif',fontSize:'11px',color:'#000',display:'block',marginBottom:2} : undefined} className={classic ? '' : 'form-label small text-muted mb-1'}>Del. Request</label>
-                           <input type="date" className="form-control" style={classic ? {...xpInput,width:'100%',height:'22px'} : undefined} value={newLine.due_date} onChange={e => setNewLine({...newLine, due_date: e.target.value})} />
                        </div>
                        <div className="col-2 d-flex align-items-end">
                            <button type="button" style={classic ? {...xpBtn(),width:'100%',padding:'2px 6px'} : undefined} className={classic ? '' : 'btn btn-secondary w-100'} onClick={handleAddLine} disabled={!newLine.item_id || newLine.qty <= 0}>
                                <i className="bi bi-plus-lg"></i>
                            </button>
                        </div>
-                       <div className="col-3">
-                           <label style={classic ? {fontFamily:'Tahoma,Arial,sans-serif',fontSize:'11px',color:'#000',display:'block',marginBottom:2} : undefined} className={classic ? '' : 'form-label small text-muted mb-1'}>Del. Confirmation</label>
-                           <input type="date" className="form-control" style={classic ? {...xpInput,width:'100%',height:'22px'} : undefined} value={newLine.internal_confirmation_date} onChange={e => setNewLine({...newLine, internal_confirmation_date: e.target.value})} />
+
+                       {/* Option B: 2-column qty / dates grid */}
+                       <div className="col-12">
+                           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: classic ? 6 : 10 }}>
+
+                               {/* Left: Qty inputs panel */}
+                               <div style={{ background: classic ? '#f8f7f2' : 'rgba(0,0,0,0.02)', border: classic ? '1px solid #c0bdb5' : '1px solid #dee2e6', padding: classic ? '6px 8px' : '10px 12px' }}>
+
+                                   {/* Yard / Meter pair */}
+                                   <div style={{ display: 'flex', gap: 6, alignItems: 'flex-end', marginBottom: classic ? 5 : 8 }}>
+                                       <div style={{ flex: 1, minWidth: 0 }}>
+                                           <label style={classic ? {fontFamily:'Tahoma,Arial,sans-serif',fontSize:'11px',color:'#000',display:'block',marginBottom:2} : undefined} className={classic ? '' : 'form-label small text-muted mb-1'}>Qty (Yd)</label>
+                                           <input type="number" className="form-control" style={classic ? {...xpInput, width:'100%'} : undefined} placeholder="0" value={newLine.qty || ''} onChange={e => handleQtyYardChange(e.target.value)} />
+                                       </div>
+                                       <div style={{ paddingBottom: classic ? 3 : 6, color: '#888', fontSize: 14, flexShrink: 0, userSelect: 'none' as const }}>&#8596;</div>
+                                       <div style={{ flex: 1, minWidth: 0 }}>
+                                           <label style={classic ? {fontFamily:'Tahoma,Arial,sans-serif',fontSize:'11px',color:'#000',display:'block',marginBottom:2} : undefined} className={classic ? '' : 'form-label small text-muted mb-1'}>Qty (m)</label>
+                                           <input type="number" className="form-control" style={classic ? {...xpInput, width:'100%'} : undefined} placeholder="0" value={qtyMeter} onChange={e => handleQtyMeterChange(e.target.value)} />
+                                       </div>
+                                   </div>
+
+                                   {/* KG with AUTO toggle */}
+                                   <div style={{ marginBottom: classic ? 5 : 8 }}>
+                                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 2 }}>
+                                           <label style={classic ? {fontFamily:'Tahoma,Arial,sans-serif',fontSize:'11px',color:'#000'} : undefined} className={classic ? '' : 'form-label small text-muted mb-0'}>Qty (KG)</label>
+                                           {kgAuto ? (
+                                               <button type="button" onClick={toggleKgAuto} title="Click to enter manually"
+                                                   style={classic ? {fontFamily:'Tahoma,Arial,sans-serif',fontSize:'9px',padding:'1px 6px',background:'linear-gradient(to bottom,#4a9ae8,#1a5ec8)',border:'1px solid',borderColor:'#1a3a8a #0a2a6a #0a2a6a #1a3a8a',color:'#fff',cursor:'pointer',borderRadius:0} : undefined}
+                                                   className={classic ? '' : 'badge bg-primary border-0'}
+                                               >AUTO</button>
+                                           ) : (
+                                               <button type="button" onClick={toggleKgAuto} title="Click to restore auto calculation"
+                                                   style={classic ? {fontFamily:'Tahoma,Arial,sans-serif',fontSize:'9px',padding:'1px 6px',background:'linear-gradient(to bottom,#ffffff,#d4d0c8)',border:'1px solid',borderColor:'#dfdfdf #808080 #808080 #dfdfdf',color:'#000',cursor:'pointer',borderRadius:0} : undefined}
+                                                   className={classic ? '' : 'badge bg-secondary border-0'}
+                                               >&larr; Auto</button>
+                                           )}
+                                       </div>
+                                       <input type="number" className="form-control"
+                                           style={classic ? {...xpInput, width:'100%', background: (kgAuto && !!getItemWeight(newLine.item_id)) ? '#ececec' : '#ffffff'} : undefined}
+                                           placeholder="0"
+                                           value={newLine.qty_kg}
+                                           readOnly={kgAuto && !!getItemWeight(newLine.item_id)}
+                                           onChange={e => setNewLine({...newLine, qty_kg: e.target.value})}
+                                       />
+                                       {kgAuto && !!getItemWeight(newLine.item_id) && qtyMeter && (
+                                           <div style={{ fontFamily:'Tahoma,Arial,sans-serif', fontSize:'10px', color:'#666', fontStyle:'italic', marginTop:2 }}>
+                                               = {getItemWeight(newLine.item_id)} {getItemWeightUnit(newLine.item_id)} &times; {qtyMeter} m
+                                           </div>
+                                       )}
+                                   </div>
+
+                                   {/* Qty 3 compound input */}
+                                   <div>
+                                       <label style={classic ? {fontFamily:'Tahoma,Arial,sans-serif',fontSize:'11px',color:'#000',display:'block',marginBottom:2} : undefined} className={classic ? '' : 'form-label small text-muted mb-1'}>Qty 3</label>
+                                       {classic ? (
+                                           <div style={{ display: 'flex' }}>
+                                               <input type="number" className="form-control"
+                                                   style={{ ...xpInput, flex: 1, borderRight: 'none', minWidth: 0 }}
+                                                   placeholder="0" value={newLine.qty2} onChange={e => setNewLine({...newLine, qty2: e.target.value})} />
+                                               <select
+                                                   style={{ fontFamily:'Tahoma,Arial,sans-serif', fontSize:'11px', border:'1px solid #7f9db9', height:'20px', borderRadius:0, padding:'1px 4px', background:'#ffffff', outline:'none', color:'#000', flexShrink: 0 }}
+                                                   value={newLine.uom2} onChange={e => setNewLine({...newLine, uom2: e.target.value})}
+                                               >
+                                                   <option value="">Unit</option>
+                                                   {['Pcs','Gross','Roll','Pic','Cone','Bal','Box','Set'].map(u => <option key={u} value={u}>{u}</option>)}
+                                               </select>
+                                           </div>
+                                       ) : (
+                                           <div className="input-group input-group-sm">
+                                               <input type="number" className="form-control" placeholder="0" value={newLine.qty2} onChange={e => setNewLine({...newLine, qty2: e.target.value})} />
+                                               <select className="form-select" style={{ maxWidth: 80 }} value={newLine.uom2} onChange={e => setNewLine({...newLine, uom2: e.target.value})}>
+                                                   <option value="">Unit</option>
+                                                   {['Pcs','Gross','Roll','Pic','Cone','Bal','Box','Set'].map(u => <option key={u} value={u}>{u}</option>)}
+                                               </select>
+                                           </div>
+                                       )}
+                                   </div>
+                               </div>
+
+                               {/* Right: Dates + Stock Notes */}
+                               <div style={{ display: 'flex', flexDirection: 'column', gap: classic ? 5 : 8 }}>
+                                   <div>
+                                       <label style={classic ? {fontFamily:'Tahoma,Arial,sans-serif',fontSize:'11px',color:'#000',display:'block',marginBottom:2} : undefined} className={classic ? '' : 'form-label small text-muted mb-1'}>Del. Request</label>
+                                       <input type="date" className="form-control" style={classic ? {...xpInput,width:'100%',height:'22px'} : undefined} value={newLine.due_date} onChange={e => setNewLine({...newLine, due_date: e.target.value})} />
+                                   </div>
+                                   <div>
+                                       <label style={classic ? {fontFamily:'Tahoma,Arial,sans-serif',fontSize:'11px',color:'#000',display:'block',marginBottom:2} : undefined} className={classic ? '' : 'form-label small text-muted mb-1'}>Del. Confirmation</label>
+                                       <input type="date" className="form-control" style={classic ? {...xpInput,width:'100%',height:'22px'} : undefined} value={newLine.internal_confirmation_date} onChange={e => setNewLine({...newLine, internal_confirmation_date: e.target.value})} />
+                                   </div>
+                                   <div>
+                                       <label style={classic ? {fontFamily:'Tahoma,Arial,sans-serif',fontSize:'11px',color:'#000',display:'block',marginBottom:2} : undefined} className={classic ? '' : 'form-label small text-muted mb-1'}>Stock Notes</label>
+                                       <input className="form-control" style={classic ? {...xpInput, width:'100%'} : undefined} placeholder="e.g. 1 IKAT 60 PCS" value={newLine.ket_stock} onChange={e => setNewLine({...newLine, ket_stock: e.target.value})} />
+                                   </div>
+                               </div>
+
+                           </div>
                        </div>
-                       <div className="col-4">
-                           <label style={classic ? {fontFamily:'Tahoma,Arial,sans-serif',fontSize:'11px',color:'#000',display:'block',marginBottom:2} : undefined} className={classic ? '' : 'form-label small text-muted mb-1'}>Ket Stock</label>
-                           <input className="form-control" style={classic ? xpInput : undefined} placeholder="e.g. 1 IKAT 60 PCS" value={newLine.ket_stock} onChange={e => setNewLine({...newLine, ket_stock: e.target.value})} />
-                       </div>
-                       <div className="col-2">
-                           <label style={classic ? {fontFamily:'Tahoma,Arial,sans-serif',fontSize:'11px',color:'#000',display:'block',marginBottom:2} : undefined} className={classic ? '' : 'form-label small text-muted mb-1'}>Qty (KG)</label>
-                           <input type="number" className="form-control" style={classic ? xpInput : undefined} placeholder="0" value={newLine.qty_kg} onChange={e => setNewLine({...newLine, qty_kg: e.target.value})} />
-                       </div>
-                       <div className="col-2">
-                           <label style={classic ? {fontFamily:'Tahoma,Arial,sans-serif',fontSize:'11px',color:'#000',display:'block',marginBottom:2} : undefined} className={classic ? '' : 'form-label small text-muted mb-1'}>Qty 2</label>
-                           <input type="number" className="form-control" style={classic ? xpInput : undefined} placeholder="0" value={newLine.qty2} onChange={e => setNewLine({...newLine, qty2: e.target.value})} />
-                       </div>
-                       <div className="col-1">
-                           <label style={classic ? {fontFamily:'Tahoma,Arial,sans-serif',fontSize:'11px',color:'#000',display:'block',marginBottom:2} : undefined} className={classic ? '' : 'form-label small text-muted mb-1'}>Unit 2</label>
-                           <input className="form-control" style={classic ? xpInput : undefined} placeholder="Pcs" value={newLine.uom2} onChange={e => setNewLine({...newLine, uom2: e.target.value})} />
-                       </div>
+
+                       {/* Variants */}
                        {currentBoundAttrs.length > 0 && (
                            <div className="col-12 mt-1">
                                <div style={{background:'#ffffff',border:classic?'1px solid #b0a898':'1px solid #dee2e6',padding:classic?'4px 6px':'8px'}}>
