@@ -53,6 +53,12 @@ def run_migrations():
                 ("users", "hashed_password", "VARCHAR(255)"),
                 ("users", "allowed_categories", "JSON"),
                 ("sales_orders", "delivered_at", "TIMESTAMP WITHOUT TIME ZONE"),
+                ("sales_orders", "customer_po_ref", "VARCHAR(64)"),
+                ("sales_order_lines", "internal_confirmation_date", "TIMESTAMP WITHOUT TIME ZONE"),
+                ("sales_order_lines", "ket_stock", "VARCHAR(255)"),
+                ("sales_order_lines", "qty_kg", "NUMERIC(14,4)"),
+                ("sales_order_lines", "qty2", "NUMERIC(14,4)"),
+                ("sales_order_lines", "uom2", "VARCHAR(32)"),
                 # sample_requests SPK fields
                 ("sample_requests", "request_date", "DATE NOT NULL DEFAULT CURRENT_DATE"),
                 ("sample_requests", "project", "VARCHAR(255)"),

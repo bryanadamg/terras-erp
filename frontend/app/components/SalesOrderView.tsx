@@ -5,6 +5,7 @@ import { useLanguage } from '../context/LanguageContext';
 import SearchableSelect from './SearchableSelect';
 import ModalWrapper from './ModalWrapper';
 import SalesPrintModal from './SalesPrintModal';
+import SOTablePrintModal from './SOTablePrintModal';
 import { useTheme } from '../context/ThemeContext';
 import { useData } from '../context/DataContext';
 
@@ -13,6 +14,7 @@ export default function SalesOrderView({ items, attributes, salesOrders, partner
   const { t } = useLanguage();
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [printingSO, setPrintingSO] = useState<any>(null);
+  const [isTablePrintOpen, setIsTablePrintOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('ALL');
   const { uiStyle: currentStyle } = useTheme();
@@ -136,12 +138,16 @@ export default function SalesOrderView({ items, attributes, salesOrders, partner
 
   const [newSO, setNewSO] = useState({
       po_number: '',
+      customer_po_ref: '',
       customer_name: '',
       order_date: new Date().toISOString().split('T')[0],
       lines: [] as any[]
   });
 
-  const [newLine, setNewLine] = useState({ item_id: '', qty: 0, due_date: '', attribute_value_ids: [] as string[] });
+  const [newLine, setNewLine] = useState({
+      item_id: '', qty: 0, due_date: '', attribute_value_ids: [] as string[],
+      ket_stock: '', internal_confirmation_date: '', qty_kg: '', qty2: '', uom2: '',
+  });
 
   const [isConfigOpen, setIsConfigOpen] = useState(false);
   const [codeConfig, setCodeConfig] = useState<CodeConfig>({
@@ -187,7 +193,7 @@ export default function SalesOrderView({ items, attributes, salesOrders, partner
   const handleAddLine = () => {
       if (!newLine.item_id || newLine.qty <= 0) return;
       setNewSO({ ...newSO, lines: [...newSO.lines, { ...newLine }] });
-      setNewLine({ item_id: '', qty: 0, due_date: '', attribute_value_ids: [] });
+      setNewLine({ item_id: '', qty: 0, due_date: '', attribute_value_ids: [], ket_stock: '', internal_confirmation_date: '', qty_kg: '', qty2: '', uom2: '' });
   };
 
   const handleRemoveLine = (index: number) => {
@@ -205,8 +211,15 @@ export default function SalesOrderView({ items, attributes, salesOrders, partner
       e.preventDefault();
       const payload = {
           ...newSO,
+          customer_po_ref: newSO.customer_po_ref || null,
           order_date: newSO.order_date || null,
-          lines: newSO.lines.map((line: any) => ({ ...line, due_date: line.due_date || null }))
+          lines: newSO.lines.map((line: any) => ({
+              ...line,
+              due_date: line.due_date || null,
+              internal_confirmation_date: line.internal_confirmation_date || null,
+              qty_kg: line.qty_kg !== '' ? parseFloat(line.qty_kg) || null : null,
+              qty2: line.qty2 !== '' ? parseFloat(line.qty2) || null : null,
+          }))
       };
       const res = await onCreateSO(payload);
       if (res && res.status === 400) {
@@ -219,7 +232,7 @@ export default function SalesOrderView({ items, attributes, salesOrders, partner
           showToast(`PO# "${newSO.po_number}" already exists. Suggesting: ${suggestedPO}`, 'warning');
           setNewSO({ ...newSO, po_number: suggestedPO });
       } else if (res && res.ok) {
-          setNewSO({ po_number: '', customer_name: '', order_date: new Date().toISOString().split('T')[0], lines: [] });
+          setNewSO({ po_number: '', customer_po_ref: '', customer_name: '', order_date: new Date().toISOString().split('T')[0], lines: [] });
           setIsCreateOpen(false);
           showToast('Sales Order created successfully', 'success');
       }
@@ -302,7 +315,20 @@ export default function SalesOrderView({ items, attributes, salesOrders, partner
 
   return (
     <div className="fade-in">
-       {/* Print Modal */}
+       {/* Table Print Modal */}
+       {isTablePrintOpen && (
+           <SOTablePrintModal
+               salesOrders={filteredOrders}
+               onClose={() => setIsTablePrintOpen(false)}
+               currentStyle={currentStyle}
+               companyProfile={companyProfile}
+               items={items}
+               attributes={attributes}
+               partners={partners}
+           />
+       )}
+
+       {/* Single SO Print Modal */}
        {printingSO && (
            <SalesPrintModal
                so={printingSO}
@@ -350,7 +376,7 @@ export default function SalesOrderView({ items, attributes, salesOrders, partner
        {/* Create SO Modal */}
        <ModalWrapper
            isOpen={isCreateOpen}
-           onClose={() => { setIsCreateOpen(false); setNewSO({ po_number: '', customer_name: '', order_date: new Date().toISOString().split('T')[0], lines: [] }); }}
+           onClose={() => { setIsCreateOpen(false); setNewSO({ po_number: '', customer_po_ref: '', customer_name: '', order_date: new Date().toISOString().split('T')[0], lines: [] }); }}
            title={<><i className="bi bi-cart-plus" style={classic ? {marginRight:6} : {marginRight:8}}></i>Create Sales Order</>}
            variant="primary"
            size="lg"
@@ -375,7 +401,15 @@ export default function SalesOrderView({ items, attributes, salesOrders, partner
                        </label>
                        <input className="form-control" style={classic ? xpInput : undefined} placeholder="Auto-generated" value={newSO.po_number} onChange={e => setNewSO({...newSO, po_number: e.target.value})} required />
                    </div>
-                   <div className="col-md-5">
+                   <div className="col-md-4">
+                       <label style={classic ? {fontFamily:'Tahoma,Arial,sans-serif',fontSize:'11px',color:'#000',display:'block',marginBottom:2} : undefined} className={classic ? '' : 'form-label small text-muted'}>Customer PO Ref</label>
+                       <input className="form-control" style={classic ? xpInput : undefined} placeholder="Customer's own PO reference" value={newSO.customer_po_ref} onChange={e => setNewSO({...newSO, customer_po_ref: e.target.value})} />
+                   </div>
+                   <div className="col-md-4">
+                       <label style={classic ? {fontFamily:'Tahoma,Arial,sans-serif',fontSize:'11px',color:'#000',display:'block',marginBottom:2} : undefined} className={classic ? '' : 'form-label small text-muted'}>Date</label>
+                       <input type="date" className="form-control" style={classic ? {...xpInput,width:'100%',height:'22px'} : undefined} value={newSO.order_date} onChange={e => setNewSO({...newSO, order_date: e.target.value})} required />
+                   </div>
+                   <div className="col-md-12">
                        <label style={classic ? {fontFamily:'Tahoma,Arial,sans-serif',fontSize:'11px',color:'#000',display:'block',marginBottom:2} : undefined} className={classic ? '' : 'form-label small text-muted'}>Customer</label>
                        <SearchableSelect
                            options={customers.map((c: any) => ({ value: c.name, label: c.name, subLabel: c.address }))}
@@ -384,10 +418,6 @@ export default function SalesOrderView({ items, attributes, salesOrders, partner
                            placeholder="Select Customer…"
                            required
                        />
-                   </div>
-                   <div className="col-md-3">
-                       <label style={classic ? {fontFamily:'Tahoma,Arial,sans-serif',fontSize:'11px',color:'#000',display:'block',marginBottom:2} : undefined} className={classic ? '' : 'form-label small text-muted'}>Date</label>
-                       <input type="date" className="form-control" style={classic ? {...xpInput,width:'100%',height:'22px'} : undefined} value={newSO.order_date} onChange={e => setNewSO({...newSO, order_date: e.target.value})} required />
                    </div>
                </div>
 
@@ -411,13 +441,33 @@ export default function SalesOrderView({ items, attributes, salesOrders, partner
                            <input type="number" className="form-control" style={classic ? xpInput : undefined} placeholder="0" value={newLine.qty || ''} onChange={e => setNewLine({...newLine, qty: parseFloat(e.target.value)})} />
                        </div>
                        <div className="col-3">
-                           <label style={classic ? {fontFamily:'Tahoma,Arial,sans-serif',fontSize:'11px',color:'#000',display:'block',marginBottom:2} : undefined} className={classic ? '' : 'form-label small text-muted mb-1'}>Due Date</label>
+                           <label style={classic ? {fontFamily:'Tahoma,Arial,sans-serif',fontSize:'11px',color:'#000',display:'block',marginBottom:2} : undefined} className={classic ? '' : 'form-label small text-muted mb-1'}>Del. Request</label>
                            <input type="date" className="form-control" style={classic ? {...xpInput,width:'100%',height:'22px'} : undefined} value={newLine.due_date} onChange={e => setNewLine({...newLine, due_date: e.target.value})} />
                        </div>
                        <div className="col-2 d-flex align-items-end">
                            <button type="button" style={classic ? {...xpBtn(),width:'100%',padding:'2px 6px'} : undefined} className={classic ? '' : 'btn btn-secondary w-100'} onClick={handleAddLine} disabled={!newLine.item_id || newLine.qty <= 0}>
                                <i className="bi bi-plus-lg"></i>
                            </button>
+                       </div>
+                       <div className="col-3">
+                           <label style={classic ? {fontFamily:'Tahoma,Arial,sans-serif',fontSize:'11px',color:'#000',display:'block',marginBottom:2} : undefined} className={classic ? '' : 'form-label small text-muted mb-1'}>Del. Confirmation</label>
+                           <input type="date" className="form-control" style={classic ? {...xpInput,width:'100%',height:'22px'} : undefined} value={newLine.internal_confirmation_date} onChange={e => setNewLine({...newLine, internal_confirmation_date: e.target.value})} />
+                       </div>
+                       <div className="col-4">
+                           <label style={classic ? {fontFamily:'Tahoma,Arial,sans-serif',fontSize:'11px',color:'#000',display:'block',marginBottom:2} : undefined} className={classic ? '' : 'form-label small text-muted mb-1'}>Ket Stock</label>
+                           <input className="form-control" style={classic ? xpInput : undefined} placeholder="e.g. 1 IKAT 60 PCS" value={newLine.ket_stock} onChange={e => setNewLine({...newLine, ket_stock: e.target.value})} />
+                       </div>
+                       <div className="col-2">
+                           <label style={classic ? {fontFamily:'Tahoma,Arial,sans-serif',fontSize:'11px',color:'#000',display:'block',marginBottom:2} : undefined} className={classic ? '' : 'form-label small text-muted mb-1'}>Qty (KG)</label>
+                           <input type="number" className="form-control" style={classic ? xpInput : undefined} placeholder="0" value={newLine.qty_kg} onChange={e => setNewLine({...newLine, qty_kg: e.target.value})} />
+                       </div>
+                       <div className="col-2">
+                           <label style={classic ? {fontFamily:'Tahoma,Arial,sans-serif',fontSize:'11px',color:'#000',display:'block',marginBottom:2} : undefined} className={classic ? '' : 'form-label small text-muted mb-1'}>Qty 2</label>
+                           <input type="number" className="form-control" style={classic ? xpInput : undefined} placeholder="0" value={newLine.qty2} onChange={e => setNewLine({...newLine, qty2: e.target.value})} />
+                       </div>
+                       <div className="col-1">
+                           <label style={classic ? {fontFamily:'Tahoma,Arial,sans-serif',fontSize:'11px',color:'#000',display:'block',marginBottom:2} : undefined} className={classic ? '' : 'form-label small text-muted mb-1'}>Unit 2</label>
+                           <input className="form-control" style={classic ? xpInput : undefined} placeholder="Pcs" value={newLine.uom2} onChange={e => setNewLine({...newLine, uom2: e.target.value})} />
                        </div>
                        {currentBoundAttrs.length > 0 && (
                            <div className="col-12 mt-1">
@@ -478,12 +528,17 @@ export default function SalesOrderView({ items, attributes, salesOrders, partner
                        <i className="bi bi-receipt-cutoff" style={{ marginRight: 6 }}></i>
                        {t('sales_orders')}
                    </span>
-                   <button
-                       style={xpBtn({ background: 'linear-gradient(to bottom, #5ec85e, #2d7a2d)', borderColor: '#1a5e1a #0a3e0a #0a3e0a #1a5e1a', color: '#ffffff', fontWeight: 'bold' })}
-                       onClick={() => setIsCreateOpen(true)}
-                   >
-                       <i className="bi bi-plus-lg" style={{ marginRight: 4 }}></i>{t('create')}
-                   </button>
+                   <div style={{ display: 'flex', gap: 4 }}>
+                       <button style={xpBtn()} onClick={() => setIsTablePrintOpen(true)}>
+                           <i className="bi bi-printer" style={{ marginRight: 4 }}></i>Print Table
+                       </button>
+                       <button
+                           style={xpBtn({ background: 'linear-gradient(to bottom, #5ec85e, #2d7a2d)', borderColor: '#1a5e1a #0a3e0a #0a3e0a #1a5e1a', color: '#ffffff', fontWeight: 'bold' })}
+                           onClick={() => setIsCreateOpen(true)}
+                       >
+                           <i className="bi bi-plus-lg" style={{ marginRight: 4 }}></i>{t('create')}
+                       </button>
+                   </div>
                </div>
            ) : (
                <div className="card-header bg-white d-flex justify-content-between align-items-center">
@@ -493,9 +548,14 @@ export default function SalesOrderView({ items, attributes, salesOrders, partner
                        </h5>
                        <p className="text-muted small mb-0 mt-1">Manage incoming customer orders</p>
                    </div>
-                   <button className="btn btn-sm btn-primary" onClick={() => setIsCreateOpen(true)}>
-                       <i className="bi bi-plus-lg me-2"></i>{t('create')}
-                   </button>
+                   <div className="d-flex gap-2">
+                       <button className="btn btn-sm btn-outline-secondary btn-print" onClick={() => setIsTablePrintOpen(true)}>
+                           <i className="bi bi-printer me-1"></i>Print Table
+                       </button>
+                       <button className="btn btn-sm btn-primary" onClick={() => setIsCreateOpen(true)}>
+                           <i className="bi bi-plus-lg me-2"></i>{t('create')}
+                       </button>
+                   </div>
                </div>
            )}
 

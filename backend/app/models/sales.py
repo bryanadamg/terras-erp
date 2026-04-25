@@ -19,12 +19,13 @@ class SalesOrder(Base):
     id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
     )
-    po_number: Mapped[str] = mapped_column(String(64), unique=True, index=True) # The Customer's PO Number
+    po_number: Mapped[str] = mapped_column(String(64), unique=True, index=True)
+    customer_po_ref: Mapped[str | None] = mapped_column(String(64), nullable=True)
     customer_name: Mapped[str] = mapped_column(String(255))
     order_date: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
     status: Mapped[str] = mapped_column(String(32), default="PENDING", index=True) # PENDING, READY, SENT, DELIVERED, CANCELLED
     notes: Mapped[str | None] = mapped_column(Text, nullable=True)
-    
+
     delivered_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
 
@@ -45,6 +46,11 @@ class SalesOrderLine(Base):
     )
     qty: Mapped[float] = mapped_column(Numeric(14, 4))
     due_date: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    internal_confirmation_date: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    ket_stock: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    qty_kg: Mapped[float | None] = mapped_column(Numeric(14, 4), nullable=True)
+    qty2: Mapped[float | None] = mapped_column(Numeric(14, 4), nullable=True)
+    uom2: Mapped[str | None] = mapped_column(String(32), nullable=True)
 
     # Relationships
     item = relationship("Item")

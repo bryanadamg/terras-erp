@@ -332,6 +332,11 @@ class SalesOrderLineCreate(BaseModel):
     item_id: UUID
     qty: float
     due_date: datetime | None = None
+    internal_confirmation_date: datetime | None = None
+    ket_stock: str | None = None
+    qty_kg: float | None = None
+    qty2: float | None = None
+    uom2: str | None = None
     attribute_value_ids: list[UUID] = []
 
 class SalesOrderLineResponse(SalesOrderLineCreate):
@@ -342,6 +347,7 @@ class SalesOrderLineResponse(SalesOrderLineCreate):
 
 class SalesOrderCreate(BaseModel):
     po_number: str
+    customer_po_ref: str | None = None
     customer_name: str
     order_date: datetime | None = None
     lines: list[SalesOrderLineCreate]
@@ -349,6 +355,7 @@ class SalesOrderCreate(BaseModel):
 class SalesOrderResponse(BaseModel):
     id: UUID
     po_number: str
+    customer_po_ref: str | None = None
     customer_name: str
     order_date: datetime
     status: str

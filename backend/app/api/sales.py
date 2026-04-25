@@ -25,6 +25,7 @@ async def create_sales_order(payload: SalesOrderCreate, db: AsyncSession = Depen
 
         so = SalesOrder(
             po_number=payload.po_number,
+            customer_po_ref=payload.customer_po_ref,
             customer_name=payload.customer_name,
             order_date=payload.order_date or datetime.utcnow()
         )
@@ -36,7 +37,12 @@ async def create_sales_order(payload: SalesOrderCreate, db: AsyncSession = Depen
                 sales_order_id=so.id,
                 item_id=line.item_id,
                 qty=line.qty,
-                due_date=line.due_date
+                due_date=line.due_date,
+                internal_confirmation_date=line.internal_confirmation_date,
+                ket_stock=line.ket_stock,
+                qty_kg=line.qty_kg,
+                qty2=line.qty2,
+                uom2=line.uom2,
             )
             if line.attribute_value_ids:
                 attr_result = await db.execute(select(AttributeValue).filter(AttributeValue.id.in_(line.attribute_value_ids)))

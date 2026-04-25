@@ -861,6 +861,23 @@ body {
     width: 100% !important;
   }
 
+  /* Sales Order table print — landscape, hide everything except portal */
+  body.so-table-print-active > *:not(.so-table-print-portal) {
+    display: none !important;
+  }
+  body.so-table-print-active .so-table-print-portal {
+    display: block !important;
+    position: static !important;
+    left: 0 !important;
+    width: 100% !important;
+  }
+  body.so-table-print-active .so-table-print-portal .so-table-print-paper {
+    box-shadow: none !important;
+    padding: 12px !important;
+    max-width: 100% !important;
+    width: 100% !important;
+  }
+
   /* Sales Order print preview modal — hide everything except the paper portal */
   body.so-print-preview-active > *:not(.so-print-paper-portal) {
     display: none !important;
