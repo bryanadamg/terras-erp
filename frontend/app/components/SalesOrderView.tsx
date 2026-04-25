@@ -3,9 +3,10 @@ import CodeConfigModal, { CodeConfig, buildCodeWithCounter } from './CodeConfigM
 import { useToast } from './Toast';
 import { useLanguage } from '../context/LanguageContext';
 import SearchableSelect from './SearchableSelect';
-import PrintHeader from './PrintHeader';
 import ModalWrapper from './ModalWrapper';
+import SalesPrintModal from './SalesPrintModal';
 import { useTheme } from '../context/ThemeContext';
+import { useData } from '../context/DataContext';
 
 export default function SalesOrderView({ items, attributes, salesOrders, partners, onCreateSO, onDeleteSO, onUpdateSOStatus, onGenerateWO }: any) {
   const { showToast } = useToast();
@@ -15,6 +16,7 @@ export default function SalesOrderView({ items, attributes, salesOrders, partner
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('ALL');
   const { uiStyle: currentStyle } = useTheme();
+  const { companyProfile } = useData();
 
   // Produce dropdown portal state
   const [produceDropdownSO, setProduceDropdownSO] = useState<any>(null);
@@ -276,12 +278,9 @@ export default function SalesOrderView({ items, attributes, salesOrders, partner
 
   const handlePrintSO = (so: any) => {
       setPrintingSO(so);
-      setTimeout(() => window.print(), 300);
   };
 
   const customers = partners.filter((p: any) => p.type === 'CUSTOMER' && p.active);
-  const getCustomerAddress = (name: string) => partners.find((p: any) => p.name === name)?.address || '—';
-
   const STATUS_FILTERS = ['ALL', 'PENDING', 'READY', 'SENT', 'DELIVERED'];
 
   const filteredOrders = salesOrders.filter((so: any) => {
@@ -300,85 +299,21 @@ export default function SalesOrderView({ items, attributes, salesOrders, partner
       setProduceDropdownSO(so);
   };
 
-  // --- Print Template ---
-  const SalesOrderPrintTemplate = ({ so }: { so: any }) => (
-      <div className="bg-white p-5 h-100 position-fixed top-0 start-0 w-100 print-container" style={{zIndex: 2000, overflowY: 'auto'}}>
-          <PrintHeader title="Sales Order" />
-          <div className="row mb-3 mt-4">
-              <div className="col-8">
-                  <div className="small text-muted fw-bold">Order Reference</div>
-                  <h4 className="font-monospace mb-0 fw-bold text-primary">{so.po_number}</h4>
-                  <div className="small text-muted mt-1">Date: {new Date(so.order_date).toLocaleDateString()}</div>
-              </div>
-              <div className="col-4 text-end">
-                  <div className="badge bg-secondary mb-3">{so.status}</div>
-              </div>
-          </div>
-          <div className="row mb-5">
-              <div className="col-6">
-                  <div className="p-3 border rounded bg-light bg-opacity-50 h-100">
-                      <h6 className="extra-small fw-bold text-uppercase text-muted border-bottom pb-2 mb-2">Customer Details</h6>
-                      <div className="fw-bold fs-5">{so.customer_name}</div>
-                      <div className="text-muted small mt-2" style={{ whiteSpace: 'pre-wrap' }}>{getCustomerAddress(so.customer_name)}</div>
-                  </div>
-              </div>
-              <div className="col-6">
-                  <div className="p-3 border rounded h-100">
-                      <h6 className="extra-small fw-bold text-uppercase text-muted border-bottom pb-2 mb-2">Order Status</h6>
-                      <div className="badge bg-secondary mb-3">{so.status}</div>
-                      <div className="small text-muted">Authorized By: ________________</div>
-                  </div>
-              </div>
-          </div>
-          <table className="table table-bordered table-sm mb-5">
-              <thead className="table-light">
-                  <tr style={{fontSize: '9pt'}}>
-                      <th style={{width: '15%'}}>Item Code</th>
-                      <th style={{width: '40%'}}>Item Description / Variation</th>
-                      <th style={{width: '15%'}} className="text-end">Quantity</th>
-                      <th style={{width: '15%'}} className="text-end">Due Date</th>
-                      <th style={{width: '15%'}}>Note</th>
-                  </tr>
-              </thead>
-              <tbody>
-                  {so.lines.map((line: any) => (
-                      <tr key={line.id} style={{fontSize: '10pt'}}>
-                          <td className="font-monospace fw-bold">{getItemCode(line.item_id)}</td>
-                          <td>
-                              <div className="fw-medium">{getItemName(line.item_id)}</div>
-                              <div className="extra-small text-muted fst-italic">
-                                  {line.attribute_value_ids.map(getAttributeValueName).join(', ') || 'No variation'}
-                              </div>
-                          </td>
-                          <td className="text-end fw-bold">{line.qty}</td>
-                          <td className="text-end small">{line.due_date ? new Date(line.due_date).toLocaleDateString() : '—'}</td>
-                          <td></td>
-                      </tr>
-                  ))}
-              </tbody>
-          </table>
-          <div className="mt-5 pt-5 border-top row g-4 text-center">
-              <div className="col-4">
-                  <div className="small text-muted mb-5">Requested By</div>
-                  <div className="border-top mx-4 pt-2 small fw-bold">Customer Representative</div>
-              </div>
-              <div className="col-4 offset-4">
-                  <div className="small text-muted mb-5">Approved By</div>
-                  <div className="border-top mx-4 pt-2 small fw-bold">Production Manager</div>
-              </div>
-          </div>
-          <div className="position-fixed top-0 end-0 p-3 no-print">
-              <button className="btn btn-dark shadow rounded-pill px-4" onClick={() => setPrintingSO(null)}>
-                  <i className="bi bi-x-lg me-2"></i>Close Preview
-              </button>
-          </div>
-      </div>
-  );
 
   return (
     <div className="fade-in">
-       {/* Print Overlay */}
-       {printingSO && <SalesOrderPrintTemplate so={printingSO} />}
+       {/* Print Modal */}
+       {printingSO && (
+           <SalesPrintModal
+               so={printingSO}
+               onClose={() => setPrintingSO(null)}
+               currentStyle={currentStyle}
+               companyProfile={companyProfile}
+               items={items}
+               attributes={attributes}
+               partners={partners}
+           />
+       )}
 
        <CodeConfigModal
            isOpen={isConfigOpen}
