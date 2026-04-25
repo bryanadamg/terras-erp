@@ -212,42 +212,54 @@ export default function SalesOrderView({ items, attributes, salesOrders, partner
   };
 
   const getItemWeight = (id: string) => items.find((i: any) => i.id === id)?.weight_per_unit ?? null;
-  const getItemWeightUnit = (id: string) => items.find((i: any) => i.id === id)?.weight_unit ?? 'g/m';
+  const getItemWeightUnit = (id: string): string => items.find((i: any) => i.id === id)?.weight_unit ?? '';
+
+  // Only g/y and g/m can auto-calculate KG from a length qty alone.
+  // gsm / g/m² require fabric width, so auto-calc is disabled for those.
+  const isAutoCalcSupported = (id: string) => {
+      const w = getItemWeight(id);
+      const unit = getItemWeightUnit(id);
+      return !!w && (unit === 'g/y' || unit === 'g/m');
+  };
+
+  const calcKgAuto = (id: string, yd: number, m: number): string | null => {
+      const w = getItemWeight(id);
+      const unit = getItemWeightUnit(id);
+      if (!w || yd <= 0) return null;
+      if (unit === 'g/y') return String(Math.round(w * yd / 1000 * 1000) / 1000);
+      if (unit === 'g/m' && m > 0) return String(Math.round(w * m / 1000 * 1000) / 1000);
+      return null;
+  };
 
   const handleLineItemChange = (val: string) => {
-      const w = items.find((i: any) => i.id === val)?.weight_per_unit ?? null;
       const m = parseFloat(qtyMeter) || 0;
-      const kgStr = kgAuto && w && m > 0 ? String(Math.round(w * m / 1000 * 1000) / 1000) : newLine.qty_kg;
-      setNewLine({ ...newLine, item_id: val, attribute_value_ids: [], qty_kg: kgAuto && w ? kgStr : newLine.qty_kg });
+      const kg = kgAuto ? calcKgAuto(val, newLine.qty, m) : null;
+      setNewLine({ ...newLine, item_id: val, attribute_value_ids: [], qty_kg: kg !== null ? kg : newLine.qty_kg });
   };
 
   const handleQtyYardChange = (ydStr: string) => {
       const yd = parseFloat(ydStr) || 0;
       const m = yd > 0 ? Math.round(yd * 0.9144 * 100) / 100 : 0;
       setQtyMeter(m > 0 ? String(m) : '');
-      const w = getItemWeight(newLine.item_id);
-      const kgStr = kgAuto && w && m > 0 ? String(Math.round(w * m / 1000 * 1000) / 1000) : newLine.qty_kg;
-      setNewLine({ ...newLine, qty: yd, qty_kg: kgAuto && w ? kgStr : newLine.qty_kg });
+      const kg = kgAuto ? calcKgAuto(newLine.item_id, yd, m) : null;
+      setNewLine({ ...newLine, qty: yd, qty_kg: kg !== null ? kg : newLine.qty_kg });
   };
 
   const handleQtyMeterChange = (mStr: string) => {
       setQtyMeter(mStr);
       const m = parseFloat(mStr) || 0;
       const yd = m > 0 ? Math.round(m / 0.9144 * 100) / 100 : 0;
-      const w = getItemWeight(newLine.item_id);
-      const kgStr = kgAuto && w && m > 0 ? String(Math.round(w * m / 1000 * 1000) / 1000) : newLine.qty_kg;
-      setNewLine({ ...newLine, qty: yd, qty_kg: kgAuto && w ? kgStr : newLine.qty_kg });
+      const kg = kgAuto ? calcKgAuto(newLine.item_id, yd, m) : null;
+      setNewLine({ ...newLine, qty: yd, qty_kg: kg !== null ? kg : newLine.qty_kg });
   };
 
   const toggleKgAuto = () => {
       const newAuto = !kgAuto;
       setKgAuto(newAuto);
       if (newAuto) {
-          const w = getItemWeight(newLine.item_id);
           const m = parseFloat(qtyMeter) || 0;
-          if (w && m > 0) {
-              setNewLine(prev => ({ ...prev, qty_kg: String(Math.round(w * m / 1000 * 1000) / 1000) }));
-          }
+          const kg = calcKgAuto(newLine.item_id, newLine.qty, m);
+          if (kg !== null) setNewLine(prev => ({ ...prev, qty_kg: kg }));
       }
   };
 
@@ -524,15 +536,17 @@ export default function SalesOrderView({ items, attributes, salesOrders, partner
                                            )}
                                        </div>
                                        <input type="number" className="form-control"
-                                           style={classic ? {...xpInput, width:'100%', background: (kgAuto && !!getItemWeight(newLine.item_id)) ? '#ececec' : '#ffffff'} : undefined}
+                                           style={classic ? {...xpInput, width:'100%', background: (kgAuto && isAutoCalcSupported(newLine.item_id)) ? '#ececec' : '#ffffff'} : undefined}
                                            placeholder="0"
                                            value={newLine.qty_kg}
-                                           readOnly={kgAuto && !!getItemWeight(newLine.item_id)}
+                                           readOnly={kgAuto && isAutoCalcSupported(newLine.item_id)}
                                            onChange={e => setNewLine({...newLine, qty_kg: e.target.value})}
                                        />
-                                       {kgAuto && !!getItemWeight(newLine.item_id) && qtyMeter && (
+                                       {kgAuto && isAutoCalcSupported(newLine.item_id) && newLine.qty > 0 && (
                                            <div style={{ fontFamily:'Tahoma,Arial,sans-serif', fontSize:'10px', color:'#666', fontStyle:'italic', marginTop:2 }}>
-                                               = {getItemWeight(newLine.item_id)} {getItemWeightUnit(newLine.item_id)} &times; {qtyMeter} m
+                                               {getItemWeightUnit(newLine.item_id) === 'g/y'
+                                                   ? `= ${getItemWeight(newLine.item_id)} g/y × ${newLine.qty} Yd`
+                                                   : `= ${getItemWeight(newLine.item_id)} g/m × ${qtyMeter} m`}
                                            </div>
                                        )}
                                    </div>
