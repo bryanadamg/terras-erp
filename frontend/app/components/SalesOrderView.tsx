@@ -329,6 +329,23 @@ export default function SalesOrderView({ items, attributes, salesOrders, partner
       return new Date(date).toLocaleDateString();
   };
 
+  const formatShortDate = (date: string | null | undefined) => {
+      if (!date) return '';
+      try {
+          const d = new Date(date);
+          return `${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')}`;
+      } catch { return ''; }
+  };
+
+  const getAttributeValues = (ids: string[]) =>
+      ids.map(vid => {
+          for (const attr of attributes) {
+              const val = attr.values?.find((v: any) => v.id === vid);
+              if (val) return val.value;
+          }
+          return '';
+      }).filter(Boolean).join(', ');
+
   const getBoundAttributes = (itemId: string) => {
       const item = items.find((i: any) => i.id === itemId);
       if (!item || !item.attribute_ids) return [];
@@ -774,10 +791,10 @@ export default function SalesOrderView({ items, attributes, salesOrders, partner
                    >
                        <thead style={classic ? xpTableHeader : undefined} className={classic ? '' : 'table-light'}>
                            <tr>
-                               <th style={classic ? { ...xpThCell, width: '130px' } : undefined} className={classic ? '' : 'ps-4'}>Order Ref (PO#)</th>
+                               <th style={classic ? { ...xpThCell, width: '140px' } : undefined} className={classic ? '' : 'ps-4'}>PO# / Cust. Ref</th>
                                <th style={classic ? xpThCell : undefined}>Customer</th>
-                               <th style={classic ? { ...xpThCell, width: '90px' } : undefined}>Date</th>
-                               <th style={classic ? xpThCell : undefined}>Items</th>
+                               <th style={classic ? { ...xpThCell, width: '80px' } : undefined}>Date</th>
+                               <th style={classic ? xpThCell : undefined}>Lines</th>
                                <th style={classic ? { ...xpThCell, width: '90px' } : undefined}>Status</th>
                                <th style={classic ? { ...xpThCell, textAlign: 'right' as const, borderRight: 'none', width: '120px' } : undefined} className={classic ? '' : 'text-end pe-4'}>Actions</th>
                            </tr>
@@ -788,31 +805,78 @@ export default function SalesOrderView({ items, attributes, salesOrders, partner
                                    key={so.id}
                                    style={classic ? { background: rowIndex % 2 === 0 ? '#ffffff' : '#f5f3ee', borderBottom: '1px solid #c0bdb5' } : undefined}
                                >
-                                   <td style={classic ? { ...tdBase, fontFamily: "'Courier New', monospace", fontWeight: 'bold', color: '#0058e6' } : undefined} className={classic ? '' : 'ps-4 fw-bold font-monospace text-primary'}>
-                                       {so.po_number}
+                                   <td style={classic ? tdBase : undefined} className={classic ? '' : 'ps-4'}>
+                                       <div style={classic ? { fontFamily:"'Courier New',monospace", fontWeight:'bold', color:'#0058e6', fontSize:'11px' } : undefined} className={classic ? '' : 'fw-bold font-monospace text-primary small'}>
+                                           {so.po_number}
+                                       </div>
+                                       {so.customer_po_ref && (
+                                           <div style={{ fontFamily:'Tahoma,Arial,sans-serif', fontSize:'10px', color:'#666', marginTop:1 }} className={classic ? '' : 'text-muted small'}>
+                                               {so.customer_po_ref}
+                                           </div>
+                                       )}
                                    </td>
                                    <td style={classic ? tdBase : undefined}>{so.customer_name}</td>
                                    <td style={classic ? { ...tdBase, fontSize: '10px' } : undefined} className={classic ? '' : 'small'}>
                                        {new Date(so.order_date).toLocaleDateString()}
                                    </td>
-                                   <td style={classic ? tdBase : undefined}>
-                                       <div>
-                                           {classic ? (
-                                               <span style={{ background: '#e8e8e8', border: '1px solid #6a6a6a', color: '#222', padding: '1px 5px', fontSize: '9px', fontFamily: 'Tahoma, Arial, sans-serif', fontWeight: 'bold' }}>
-                                                   {so.lines.length} item{so.lines.length !== 1 ? 's' : ''}
-                                               </span>
-                                           ) : (
-                                               <span className="badge bg-light text-dark border me-1">{so.lines.length} item{so.lines.length !== 1 ? 's' : ''}</span>
-                                           )}
-                                       </div>
-                                       <div style={{ marginTop: 2 }}>
-                                           {so.lines.map((line: any) => (
-                                               <div key={line.id} style={classic ? { fontSize: '10px', color: '#333', lineHeight: 1.4 } : undefined} className={classic ? '' : 'small text-muted'}>
-                                                   <span style={classic ? { fontWeight: 'bold' } : undefined} className={classic ? '' : 'fw-bold text-dark'}>{line.qty}×</span> {getItemName(line.item_id)}
-                                                   {isSample(line.item_id) && <i className="bi bi-star-fill text-warning ms-1" style={{fontSize: '0.6rem'}}></i>}
+                                   <td style={classic ? { ...tdBase, minWidth: 280 } : undefined}>
+                                       {so.lines.length === 0 ? (
+                                           <span style={{ fontFamily:'Tahoma,Arial,sans-serif', fontSize:'10px', color:'#aaa', fontStyle:'italic' }} className={classic ? '' : 'text-muted small fst-italic'}>No lines</span>
+                                       ) : (
+                                           so.lines.map((line: any, li: number) => (
+                                               <div key={line.id} style={{
+                                                   borderTop: li > 0 ? (classic ? '1px solid #d8d5ce' : '1px solid #e8e8e8') : undefined,
+                                                   paddingTop: li > 0 ? (classic ? 4 : 6) : 0,
+                                                   marginTop: li > 0 ? (classic ? 4 : 6) : 0,
+                                               }}>
+                                                   {/* Item name + size */}
+                                                   <div style={{ fontFamily:'Tahoma,Arial,sans-serif', fontSize:'10px', fontWeight:'bold', color: classic?'#000':'', lineHeight:1.3 }} className={classic ? '' : 'fw-semibold small'}>
+                                                       {getItemName(line.item_id)}
+                                                       {isSample(line.item_id) && <i className="bi bi-star-fill text-warning ms-1" style={{fontSize:'0.6rem'}}></i>}
+                                                       {(line.attribute_value_ids || []).length > 0 && (
+                                                           <span style={{ fontWeight:'normal', color:'#666', marginLeft:4, fontSize:'9px' }}>
+                                                               [{getAttributeValues(line.attribute_value_ids)}]
+                                                           </span>
+                                                       )}
+                                                   </div>
+
+                                                   {/* Quantities row */}
+                                                   <div style={{ fontFamily:'Tahoma,Arial,sans-serif', fontSize:'10px', color: classic?'#333':'', marginTop:1, display:'flex', gap:8, flexWrap:'wrap' as const }} className={classic ? '' : 'text-muted small'}>
+                                                       <span style={{ fontWeight:'bold', color: classic?'#0058e6':'#0d6efd' }}>{line.qty} Yd</span>
+                                                       {line.qty_kg != null && line.qty_kg !== '' && (
+                                                           <span>{line.qty_kg} KG</span>
+                                                       )}
+                                                       {line.qty2 != null && line.qty2 !== '' && line.uom2 && (
+                                                           <span>{line.qty2} {line.uom2}</span>
+                                                       )}
+                                                   </div>
+
+                                                   {/* Delivery dates row */}
+                                                   {(line.due_date || line.internal_confirmation_date) && (
+                                                       <div style={{ fontFamily:'Tahoma,Arial,sans-serif', fontSize:'9px', color: classic?'#555':'', marginTop:1, display:'flex', gap:6 }} className={classic ? '' : 'text-muted'} >
+                                                           {line.due_date && (
+                                                               <span>
+                                                                   <span style={{ color:'#888' }}>Req:</span> {formatShortDate(line.due_date)}
+                                                               </span>
+                                                           )}
+                                                           {line.due_date && line.internal_confirmation_date && <span style={{ color:'#ccc' }}>|</span>}
+                                                           {line.internal_confirmation_date && (
+                                                               <span>
+                                                                   <span style={{ color:'#888' }}>Conf:</span> {formatShortDate(line.internal_confirmation_date)}
+                                                               </span>
+                                                           )}
+                                                       </div>
+                                                   )}
+
+                                                   {/* Stock Notes */}
+                                                   {line.ket_stock && (
+                                                       <div style={{ fontFamily:'Tahoma,Arial,sans-serif', fontSize:'9px', color:'#888', fontStyle:'italic', marginTop:1 }}>
+                                                           {line.ket_stock}
+                                                       </div>
+                                                   )}
                                                </div>
-                                           ))}
-                                       </div>
+                                           ))
+                                       )}
                                    </td>
                                    <td style={classic ? tdBase : undefined}>
                                        {classic ? (
