@@ -833,8 +833,6 @@ body {
   }
   body.wo-print-preview-active .wo-print-paper-portal {
     display: block !important;
-    position: static !important;
-    left: 0 !important;
     width: 100% !important;
   }
   body.wo-print-preview-active .wo-print-paper-portal .wo-print-paper {
