@@ -16,7 +16,6 @@ function SOTableDocument({
     const API_BASE = (process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:8000/api').replace(/\/api$/, '');
 
     const getItemName = (id: string) => items.find((i: any) => i.id === id)?.name || id;
-    const getItemUOM = (id: string) => items.find((i: any) => i.id === id)?.uom || '';
     const getAttributeValues = (ids: string[]) =>
         ids.map(vid => {
             for (const attr of attributes) {
@@ -85,7 +84,7 @@ function SOTableDocument({
                 </div>
                 <div style={{ textAlign: 'center' }}>
                     <div style={{ fontWeight: 'bold', fontSize: 11 }}>{dateHeader}</div>
-                    <div style={{ fontSize: 7, color: '#555' }}>Daftar Sales Order — {rows.length} item(s)</div>
+                    <div style={{ fontSize: 7, color: '#555' }}>Sales Order List — {rows.length} line(s)</div>
                 </div>
             </div>
 
@@ -93,54 +92,52 @@ function SOTableDocument({
             <table style={{ width: '100%', borderCollapse: 'collapse', tableLayout: 'fixed' }}>
                 <thead>
                     <tr>
-                        <th style={{ ...th, width: '2.5%' }}>No</th>
-                        <th style={{ ...th, width: '8%' }}>Tanggal</th>
-                        <th style={{ ...th, width: '7%' }}>No.PO</th>
-                        <th style={{ ...th, width: '8%' }}>No PO Customer</th>
-                        <th style={{ ...th, width: '12%' }}>Nama Customer</th>
-                        <th style={{ ...th, width: '8%' }}>Permintaan Kirim Customer</th>
-                        <th style={{ ...th, width: '8%' }}>Tanggal Konfirmasi Internal</th>
-                        <th style={{ ...th, width: '8%' }}>Stock Notes</th>
-                        <th style={{ ...th, width: '14%' }}>Nama Barang</th>
+                        <th style={{ ...th, width: '2%' }}>No</th>
+                        <th style={{ ...th, width: '7%' }}>Date</th>
+                        <th style={{ ...th, width: '7%' }}>Ref No. (PO#)</th>
+                        <th style={{ ...th, width: '7%' }}>Customer PO Ref</th>
+                        <th style={{ ...th, width: '12%' }}>Customer</th>
+                        <th style={{ ...th, width: '7%' }}>Del. Request</th>
+                        <th style={{ ...th, width: '7%' }}>Del. Confirmation</th>
+                        <th style={{ ...th, width: '9%' }}>Stock Notes</th>
+                        <th style={{ ...th, width: '13%' }}>Item</th>
                         <th style={{ ...th, width: '6%' }}>Size</th>
-                        <th style={{ ...th, width: '5%' }}>Qty Order</th>
-                        <th style={{ ...th, width: '4%' }}>Unit</th>
-                        <th style={{ ...th, width: '5%' }}>Qty Order (KG)</th>
-                        <th style={{ ...th, width: '5%' }}>Qty Order ke 2</th>
-                        <th style={{ ...th, width: '4%' }}>Unit</th>
+                        <th style={{ ...th, width: '5%' }}>Qty (Yd)</th>
+                        <th style={{ ...th, width: '5%' }}>Qty (m)</th>
+                        <th style={{ ...th, width: '5%' }}>Qty (KG)</th>
+                        <th style={{ ...th, width: '7%' }}>Qty 3</th>
                     </tr>
                 </thead>
                 <tbody>
                     {rows.map(({ so, line }, idx) => (
                         <tr key={`${so.id}-${line?.id ?? 'empty'}`} style={{ background: idx % 2 === 0 ? '#fff' : '#f9f9f9' }}>
                             <td style={{ ...td, textAlign: 'center' }}>{idx + 1}</td>
-                            <td style={{ ...td }}>{formatDateTime(so.order_date)}</td>
+                            <td style={{ ...td, textAlign: 'center' }}>{formatDate(so.order_date)}</td>
                             <td style={{ ...td, fontWeight: 'bold', wordBreak: 'break-all' }}>{so.po_number}</td>
                             <td style={{ ...td, wordBreak: 'break-all' }}>{so.customer_po_ref || ''}</td>
                             <td style={{ ...td }}>{so.customer_name}</td>
-                            <td style={{ ...td, textAlign: 'center' }}>{line ? formatDateTime(line.due_date) : ''}</td>
-                            <td style={{ ...td, textAlign: 'center' }}>{line ? formatDateTime(line.internal_confirmation_date) : ''}</td>
+                            <td style={{ ...td, textAlign: 'center' }}>{line ? formatDate(line.due_date) : ''}</td>
+                            <td style={{ ...td, textAlign: 'center' }}>{line ? formatDate(line.internal_confirmation_date) : ''}</td>
                             <td style={{ ...td }}>{line?.ket_stock || ''}</td>
-                            <td style={{ ...td }}>
-                                {line && (
-                                    <>
-                                        <div>{getItemName(line.item_id)}</div>
-                                    </>
-                                )}
-                            </td>
+                            <td style={{ ...td }}>{line ? getItemName(line.item_id) : ''}</td>
                             <td style={{ ...td, textAlign: 'center' }}>
                                 {line ? getAttributeValues(line.attribute_value_ids || []) : ''}
                             </td>
                             <td style={{ ...td, textAlign: 'right' }}>{line ? formatNum(line.qty) : ''}</td>
-                            <td style={{ ...td, textAlign: 'center' }}>{line ? getItemUOM(line.item_id) : ''}</td>
+                            <td style={{ ...td, textAlign: 'right' }}>
+                                {line && line.qty ? formatNum(Math.round(line.qty * 0.9144 * 100) / 100) : ''}
+                            </td>
                             <td style={{ ...td, textAlign: 'right' }}>{line ? formatNum(line.qty_kg) : ''}</td>
-                            <td style={{ ...td, textAlign: 'right' }}>{line ? formatNum(line.qty2) : ''}</td>
-                            <td style={{ ...td, textAlign: 'center' }}>{line?.uom2 || ''}</td>
+                            <td style={{ ...td, textAlign: 'right' }}>
+                                {line && line.qty2 != null && line.qty2 !== ''
+                                    ? `${formatNum(line.qty2)}${line.uom2 ? ' ' + line.uom2 : ''}`
+                                    : ''}
+                            </td>
                         </tr>
                     ))}
                     {rows.length === 0 && (
                         <tr>
-                            <td colSpan={15} style={{ ...td, textAlign: 'center', padding: '12px', color: '#888', fontStyle: 'italic' }}>No sales orders to display.</td>
+                            <td colSpan={14} style={{ ...td, textAlign: 'center', padding: '12px', color: '#888', fontStyle: 'italic' }}>No sales orders to display.</td>
                         </tr>
                     )}
                 </tbody>
@@ -173,7 +170,14 @@ export default function SOTablePrintModal({
     }, []);
 
     const handlePrint = () => {
-        const handler = () => onClose();
+        const pageStyle = document.createElement('style');
+        pageStyle.id = '__so-table-page';
+        pageStyle.textContent = '@page { size: A4 landscape; margin: 10mm; }';
+        document.head.appendChild(pageStyle);
+        const handler = () => {
+            onClose();
+            document.getElementById('__so-table-page')?.remove();
+        };
         window.addEventListener('afterprint', handler, { once: true });
         window.print();
     };
@@ -216,11 +220,11 @@ export default function SOTablePrintModal({
                         <button onClick={onClose} style={{ background: 'none', border: 'none', color: 'inherit', fontSize: 16, cursor: 'pointer', lineHeight: 1, fontWeight: 'bold' }}>X</button>
                     </div>
 
-                    {/* Preview */}
+                    {/* Preview — A4 landscape: 297mm × 210mm ≈ 1122px × 794px at 96dpi */}
                     <div style={{ flex: 1, background: '#e0e0e0', overflowY: 'auto', overflowX: 'auto', padding: 16 }}>
                         <div
                             className="so-table-print-paper"
-                            style={{ background: '#fff', minWidth: 900, padding: '16px 20px', boxShadow: '0 2px 10px rgba(0,0,0,0.25)', fontSize: '7.5px', lineHeight: 1.4, color: '#000', fontFamily: 'Arial, sans-serif' }}
+                            style={{ background: '#fff', width: 1090, minWidth: 1090, padding: '12px 16px', boxShadow: '0 2px 10px rgba(0,0,0,0.25)', fontSize: '7.5px', lineHeight: 1.4, color: '#000', fontFamily: 'Arial, sans-serif' }}
                         >
                             {docContent}
                         </div>
@@ -229,7 +233,7 @@ export default function SOTablePrintModal({
                     {/* Footer */}
                     <div style={{ padding: '8px 12px', borderTop: '1px solid #dee2e6', background: '#f8f9fa', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                         <span style={{ fontSize: 10, color: '#555' }}>
-                            Prints landscape — set orientation to Landscape in the browser print dialog for best results.
+                            Landscape orientation is set automatically — no need to change the browser print dialog.
                         </span>
                         <div style={{ display: 'flex', gap: 6 }}>
                             {isClassic ? (
@@ -253,7 +257,7 @@ export default function SOTablePrintModal({
             {/* Print portal */}
             {createPortal(
                 <div className="so-table-print-portal" style={{ position: 'fixed', left: '-9999px', top: 0 }}>
-                    <div className="so-table-print-paper" style={{ background: '#fff', width: '100%', padding: '16px 20px', fontSize: '7.5px', lineHeight: 1.4, color: '#000', fontFamily: 'Arial, sans-serif' }}>
+                    <div className="so-table-print-paper" style={{ background: '#fff', width: '100%', boxSizing: 'border-box', padding: '0', fontSize: '7.5px', lineHeight: 1.4, color: '#000', fontFamily: 'Arial, sans-serif' }}>
                         {docContent}
                     </div>
                 </div>,
