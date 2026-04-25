@@ -494,9 +494,25 @@ export default function SalesOrderView({ items, attributes, salesOrders, partner
                            />
                        </div>
                        <div className="col-2 d-flex align-items-end">
-                           <button type="button" style={classic ? {...xpBtn(),width:'100%',padding:'2px 6px'} : undefined} className={classic ? '' : 'btn btn-secondary w-100'} onClick={handleAddLine} disabled={!newLine.item_id || newLine.qty <= 0}>
-                               <i className="bi bi-plus-lg"></i>
-                           </button>
+                           {classic ? (
+                               <button type="button"
+                                   style={(!newLine.item_id || newLine.qty <= 0)
+                                       ? {...xpBtn(), width:'100%', padding:'2px 6px', opacity: 0.5}
+                                       : {...xpBtn({background:'linear-gradient(to bottom,#5ec85e,#2d7a2d)',borderColor:'#1a5e1a #0a3e0a #0a3e0a #1a5e1a',color:'#fff',fontWeight:'bold'}), width:'100%', padding:'2px 6px'}}
+                                   onClick={handleAddLine} disabled={!newLine.item_id || newLine.qty <= 0}
+                                   title={!newLine.item_id ? 'Select an item first' : newLine.qty <= 0 ? 'Enter Qty (Yd) first' : 'Add line'}
+                               >
+                                   <i className="bi bi-plus-lg"></i> Add
+                               </button>
+                           ) : (
+                               <button type="button"
+                                   className={`w-100 btn btn-sm ${(!newLine.item_id || newLine.qty <= 0) ? 'btn-outline-secondary' : 'btn-success'}`}
+                                   onClick={handleAddLine} disabled={!newLine.item_id || newLine.qty <= 0}
+                                   title={!newLine.item_id ? 'Select an item first' : newLine.qty <= 0 ? 'Enter Qty (Yd) first' : 'Add line'}
+                               >
+                                   <i className="bi bi-plus-lg"></i> Add
+                               </button>
+                           )}
                        </div>
 
                        {/* Option B: 2-column qty / dates grid */}

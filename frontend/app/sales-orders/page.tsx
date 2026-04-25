@@ -18,6 +18,7 @@ export default function SalesOrdersPage() {
     const handleCreateSO = async (p: any) => {
         const res = await authFetch(`${API_BASE}/sales-orders`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(p) });
         if (res.ok) fetchData();
+        return res;
     };
 
     const handleDeleteSO = async (id: string) => {
