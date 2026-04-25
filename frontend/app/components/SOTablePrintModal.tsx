@@ -172,7 +172,10 @@ export default function SOTablePrintModal({
     const handlePrint = () => {
         const pageStyle = document.createElement('style');
         pageStyle.id = '__so-table-page';
-        pageStyle.textContent = '@page { size: A4 landscape; margin: 10mm; }';
+        pageStyle.textContent = [
+            '@page { size: landscape; margin: 10mm; }',
+            'html, body { width: 100% !important; max-width: none !important; margin: 0 !important; padding: 0 !important; }',
+        ].join(' ');
         document.head.appendChild(pageStyle);
         const handler = () => {
             onClose();
@@ -256,7 +259,7 @@ export default function SOTablePrintModal({
 
             {/* Print portal */}
             {createPortal(
-                <div className="so-table-print-portal" style={{ position: 'fixed', left: '-9999px', top: 0 }}>
+                <div className="so-table-print-portal" style={{ display: 'none' }}>
                     <div className="so-table-print-paper" style={{ background: '#fff', width: '100%', boxSizing: 'border-box', padding: '0', fontSize: '7.5px', lineHeight: 1.4, color: '#000', fontFamily: 'Arial, sans-serif' }}>
                         {docContent}
                     </div>
