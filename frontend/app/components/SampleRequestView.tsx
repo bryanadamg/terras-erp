@@ -32,6 +32,7 @@ export default function SampleRequestView({ samples, customers, onCreateSample, 
   const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
   const [completionImageFile, setCompletionImageFile] = useState<File | null>(null);
   const [designPdfFile, setDesignPdfFile] = useState<File | null>(null);
+  const [filePreview, setFilePreview] = useState<{ url: string; type: 'image' | 'pdf'; filename: string } | null>(null);
   const toggleExpand = (id: string) =>
       setExpandedIds(prev => {
           const next = new Set(prev);
@@ -911,7 +912,7 @@ export default function SampleRequestView({ samples, customers, onCreateSample, 
                                    <input type="file" accept="application/pdf" className="form-control form-control-sm"
                                           onChange={e => setDesignPdfFile(e.target.files?.[0] || null)} />
                                    {designPdfFile && (
-                                       <div className="small text-muted mt-1">📄 {designPdfFile.name}</div>
+                                       <div className="small text-muted mt-1">{designPdfFile.name}</div>
                                    )}
                                </div>
                            </div>
@@ -1438,19 +1439,21 @@ export default function SampleRequestView({ samples, customers, onCreateSample, 
                                                                                <img
                                                                                    src={`${STATIC_BASE}${s.completion_image_url}`}
                                                                                    alt="Completion"
-                                                                                   onClick={() => window.open(`${STATIC_BASE}${s.completion_image_url}`, '_blank')}
+                                                                                   onClick={() => setFilePreview({ url: `${STATIC_BASE}${s.completion_image_url}`, type: 'image', filename: s.completion_image_url.split('/').pop() || 'completion_photo' })}
                                                                                    style={{ maxHeight: 80, maxWidth: 180, border: '1px solid #b0a898', cursor: 'pointer', display: 'block' }}
-                                                                                   title="Click to view full size"
+                                                                                   title="Click to preview"
                                                                                />
                                                                            </div>
                                                                        )}
                                                                        {s.design_pdf_url && (
                                                                            <div style={{ ...row, gridColumn: '1 / -1' }}>
                                                                                <span style={lbl}>Design PDF</span>
-                                                                               <a href={`${STATIC_BASE}${s.design_pdf_url}`} target="_blank" rel="noopener noreferrer"
-                                                                                  style={{ fontFamily: 'Tahoma, Arial, sans-serif', fontSize: 11, color: '#0047c8', textDecoration: 'underline' }}>
-                                                                                   📄 View / Download
-                                                                               </a>
+                                                                               <button
+                                                                                   onClick={() => setFilePreview({ url: `${STATIC_BASE}${s.design_pdf_url}`, type: 'pdf', filename: s.design_pdf_url.split('/').pop() || 'design.pdf' })}
+                                                                                   style={{ fontFamily: 'Tahoma, Arial, sans-serif', fontSize: 11, color: '#0047c8', textDecoration: 'underline', background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}
+                                                                               >
+                                                                                   View / Download
+                                                                               </button>
                                                                            </div>
                                                                        )}
                                                                    </div>
@@ -1560,6 +1563,35 @@ export default function SampleRequestView({ samples, customers, onCreateSample, 
                                                                </div>
                                                            </div>
                                                        ))}
+                                                       {(s.completion_image_url || s.design_pdf_url) && (
+                                                           <div>
+                                                               <div className="px-2 py-1 fw-semibold small" style={{ borderBottom: '1px solid #dee2e6', borderTop: '1px solid #dee2e6', fontSize: 10, color: '#333', background: '#e9ecef' }}>④ Attachments</div>
+                                                               <div style={{ padding: '6px 10px', background: '#fff', borderBottom: '1px solid #dee2e6', display: 'flex', flexDirection: 'column' as const, gap: 8 }}>
+                                                                   {s.completion_image_url && (
+                                                                       <div>
+                                                                           <div style={{ fontSize: 10, color: '#444', fontWeight: 600, marginBottom: 4 }}>Completion Photo</div>
+                                                                           <img
+                                                                               src={`${STATIC_BASE}${s.completion_image_url}`}
+                                                                               alt="Completion"
+                                                                               onClick={() => setFilePreview({ url: `${STATIC_BASE}${s.completion_image_url}`, type: 'image', filename: s.completion_image_url.split('/').pop() || 'completion_photo' })}
+                                                                               style={{ maxHeight: 80, maxWidth: 180, border: '1px solid #dee2e6', cursor: 'pointer', display: 'block' }}
+                                                                               title="Click to preview"
+                                                                           />
+                                                                       </div>
+                                                                   )}
+                                                                   {s.design_pdf_url && (
+                                                                       <div>
+                                                                           <div style={{ fontSize: 10, color: '#444', fontWeight: 600, marginBottom: 2 }}>Design PDF</div>
+                                                                           <button
+                                                                               onClick={() => setFilePreview({ url: `${STATIC_BASE}${s.design_pdf_url}`, type: 'pdf', filename: s.design_pdf_url.split('/').pop() || 'design.pdf' })}
+                                                                               className="btn btn-link btn-sm p-0"
+                                                                               style={{ fontSize: 11 }}
+                                                                           >View / Download</button>
+                                                                       </div>
+                                                                   )}
+                                                               </div>
+                                                           </div>
+                                                       )}
                                                    </div>
                                                </div>
                                            )}
@@ -1623,6 +1655,62 @@ export default function SampleRequestView({ samples, customers, onCreateSample, 
                entityId={historyEntityId}
                onClose={() => setHistoryEntityId(null)}
            />
+       )}
+
+       {filePreview && (
+           <ModalWrapper
+               isOpen={true}
+               onClose={() => setFilePreview(null)}
+               title={filePreview.type === 'image' ? `Photo: ${filePreview.filename}` : `PDF: ${filePreview.filename}`}
+               size="xl"
+               variant={filePreview.type === 'image' ? 'primary' : 'info'}
+               level={2}
+               footer={
+                   <>
+                       <span style={classic
+                           ? { flex: 1, fontFamily: 'Tahoma, Arial, sans-serif', fontSize: 10, color: '#555', textAlign: 'left' as const }
+                           : { flex: 1, fontSize: 12, color: '#666' }
+                       }>
+                           {filePreview.filename}
+                       </span>
+                       <button
+                           onClick={() => window.open(filePreview.url, '_blank')}
+                           style={classic ? xpBtn() : undefined}
+                           className={classic ? '' : 'btn btn-sm btn-outline-secondary'}
+                       >
+                           ↗ Open Full View
+                       </button>
+                       {classic && (
+                           <button onClick={() => setFilePreview(null)} style={xpBtn()}>
+                               Close
+                           </button>
+                       )}
+                   </>
+               }
+           >
+               {filePreview.type === 'image' ? (
+                   <div style={{
+                       margin: classic ? '-12px -14px' : '-24px',
+                       background: '#1e1e1e',
+                       display: 'flex', alignItems: 'center', justifyContent: 'center',
+                       minHeight: 320,
+                   }}>
+                       <img
+                           src={filePreview.url}
+                           alt="Preview"
+                           style={{ maxWidth: '100%', maxHeight: '68vh', display: 'block', objectFit: 'contain' }}
+                       />
+                   </div>
+               ) : (
+                   <div style={{ margin: classic ? '-12px -14px' : '-24px' }}>
+                       <iframe
+                           src={filePreview.url}
+                           style={{ width: '100%', height: '70vh', border: 'none', display: 'block' }}
+                           title="PDF Preview"
+                       />
+                   </div>
+               )}
+           </ModalWrapper>
        )}
     </div>
   );
