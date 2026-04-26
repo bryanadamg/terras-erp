@@ -1,4 +1,5 @@
 from pydantic import BaseModel
+from pydantic import ConfigDict
 from uuid import UUID
 from datetime import datetime, date
 from typing import Optional
@@ -183,18 +184,21 @@ class BOMResponse(BaseModel):
     class Config:
         from_attributes = True
 
-class WorkOrderCreate(BaseModel):
+class ManufacturingOrderCreate(BaseModel):
     code: str
     bom_id: UUID
     location_code: str
     source_location_code: str | None = None
     sales_order_id: UUID | None = None
     qty: float
+    production_run_id: UUID | None = None
+    bom_size_id: UUID | None = None
     target_start_date: datetime | None = None
     target_end_date: datetime | None = None
-    create_nested: bool = False # Prompt user to create child WOs
+    create_nested: bool = False # Prompt user to create child MOs
 
-class WorkOrderResponse(BaseModel):
+class ManufacturingOrderResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
     id: UUID
     code: str
     bom_id: UUID
@@ -202,7 +206,9 @@ class WorkOrderResponse(BaseModel):
     item_code: str | None = None
     item_name: str | None = None
     sales_order_id: UUID | None = None
-    parent_wo_id: UUID | None = None
+    parent_mo_id: UUID | None = None
+    production_run_id: UUID | None = None
+    bom_size_id: UUID | None = None
     attribute_value_ids: list[UUID] = [] # We'll populate this in the API
     location_id: UUID
     source_location_id: UUID | None = None
@@ -214,22 +220,93 @@ class WorkOrderResponse(BaseModel):
     actual_end_date: datetime | None
     created_at: datetime
     is_material_available: bool = True # Calculated field
-    
+
     # We need to include BOM data for expansion
     bom: Optional[BOMResponse] = None
-    child_wos: list['WorkOrderResponse'] = []
+    child_mos: list['ManufacturingOrderResponse'] = []
+    work_orders: list['WorkOrderResponse'] = []
 
-    class Config:
-        from_attributes = True
+# Forward refs resolved after WorkOrderResponse is defined below
 
-# To avoid circular reference issues with Pydantic
-WorkOrderResponse.update_forward_refs()
-
-class PaginatedWorkOrderResponse(BaseModel):
-    items: list[WorkOrderResponse]
+class PaginatedManufacturingOrderResponse(BaseModel):
+    items: list[ManufacturingOrderResponse]
     total: int
     page: int
     size: int
+
+# --- Production Run Schemas ---
+
+class ProductionRunSizeEntry(BaseModel):
+    bom_size_id: UUID
+    qty: float
+
+class ProductionRunCreate(BaseModel):
+    code: str
+    bom_id: UUID
+    location_code: str
+    source_location_code: str | None = None
+    sales_order_id: UUID | None = None
+    target_start_date: datetime | None = None
+    target_end_date: datetime | None = None
+    notes: str | None = None
+    sizes: list[ProductionRunSizeEntry] = []
+
+class ProductionRunResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    id: UUID
+    code: str
+    bom_id: UUID
+    sales_order_id: UUID | None = None
+    location_id: UUID
+    source_location_id: UUID | None = None
+    status: str
+    notes: str | None = None
+    target_start_date: datetime | None = None
+    target_end_date: datetime | None = None
+    actual_start_date: datetime | None = None
+    actual_end_date: datetime | None = None
+    created_at: datetime
+    bom: Optional['BOMResponse'] = None
+    manufacturing_orders: list['ManufacturingOrderResponse'] = []
+
+class PaginatedProductionRunResponse(BaseModel):
+    items: list[ProductionRunResponse]
+    total: int
+    page: int
+    size: int
+
+# --- Work Order (operation step) Schemas ---
+
+class WorkOrderCreate(BaseModel):
+    manufacturing_order_id: UUID
+    sequence: int = 1
+    name: str
+    work_center_id: UUID | None = None
+    planned_duration_hours: float | None = None
+    notes: str | None = None
+    target_start_date: datetime | None = None
+    target_end_date: datetime | None = None
+
+class WorkOrderResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    id: UUID
+    manufacturing_order_id: UUID
+    sequence: int
+    name: str
+    work_center_id: UUID | None = None
+    work_center_name: str | None = None
+    status: str
+    planned_duration_hours: float | None = None
+    actual_duration_hours: float | None = None
+    notes: str | None = None
+    target_start_date: datetime | None = None
+    target_end_date: datetime | None = None
+    actual_start_date: datetime | None = None
+    actual_end_date: datetime | None = None
+    created_at: datetime
+
+# Resolve forward references now that all referenced schemas are defined
+ManufacturingOrderResponse.update_forward_refs()
 
 class ItemCreate(BaseModel):
     code: str
