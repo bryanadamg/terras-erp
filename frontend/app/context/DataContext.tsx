@@ -15,7 +15,8 @@ interface DataContextType {
     uoms: any[];
     sizes: any[];
     boms: any[];
-    workOrders: any[];
+    manufacturingOrders: any[];
+    productionRuns: any[];
     stockEntries: any[];
     stockBalance: any[];
     workCenters: any[];
@@ -27,11 +28,12 @@ interface DataContextType {
     partners: any[];
     dashboardKPIs: any;
     companyProfile: any;
-    
+
     // Pagination & Search State
     pagination: {
         itemPage: number; setItemPage: (p: number) => void; itemTotal: number;
         woPage: number; setWoPage: (p: number) => void; woTotal: number;
+        prPage: number; setPrPage: (p: number) => void; prTotal: number;
         auditPage: number; setAuditPage: (p: number) => void; auditTotal: number;
         reportPage: number; setReportPage: (p: number) => void; reportTotal: number;
         pageSize: number;
@@ -62,7 +64,8 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
     const [uoms, setUoms] = useState([]);
     const [sizes, setSizes] = useState([]);
     const [boms, setBoms] = useState([]);
-    const [workOrders, setWorkOrders] = useState([]);
+    const [manufacturingOrders, setManufacturingOrders] = useState<any[]>([]);
+    const [productionRuns, setProductionRuns] = useState<any[]>([]);
     const [stockEntries, setStockEntries] = useState([]);
     const [stockBalance, setStockBalance] = useState([]);
     const [workCenters, setWorkCenters] = useState([]);
@@ -80,6 +83,8 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
     const [itemTotal, setItemTotal] = useState(0);
     const [woPage, setWoPage] = useState(1);
     const [woTotal, setWoTotal] = useState(0);
+    const [prPage, setPrPage] = useState(1);
+    const [prTotal, setPrTotal] = useState(0);
     const [auditPage, setAuditPage] = useState(1);
     const [auditTotal, setAuditTotal] = useState(0);
     const [reportPage, setReportPage] = useState(1);
@@ -158,11 +163,14 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
                 requestTypes.push('boms');
             }
 
-            // MES (Work Orders)
+            // MES (Manufacturing Orders + Production Runs)
             if (fetchTarget.includes('manufacturing') || fetchTarget === 'dashboard' || fetchTarget === '' || fetchTarget.includes('reports')) {
-                const skip = (woPage - 1) * pageSize;
-                requests.push(fetch(`${API_BASE}/work-orders?skip=${skip}&limit=${pageSize}`, { headers }));
-                requestTypes.push('work-orders');
+                const moSkip = (woPage - 1) * pageSize;
+                requests.push(fetch(`${API_BASE}/manufacturing-orders?skip=${moSkip}&limit=${pageSize}`, { headers }));
+                requestTypes.push('manufacturing-orders');
+                const prSkip = (prPage - 1) * pageSize;
+                requests.push(fetch(`${API_BASE}/production-runs?skip=${prSkip}&limit=${pageSize}`, { headers }));
+                requestTypes.push('production-runs');
             }
 
             // Inventory / Stock
@@ -222,7 +230,8 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
                     case 'items': setItems(data.items); setItemTotal(data.total); break;
                     case 'kpis': setDashboardKPIs(data); break;
                     case 'boms': setBoms(data); break;
-                    case 'work-orders': setWorkOrders(data.items); setWoTotal(data.total); break;
+                    case 'manufacturing-orders': setManufacturingOrders(data.items); setWoTotal(data.total); break;
+                    case 'production-runs': setProductionRuns(data.items); setPrTotal(data.total); break;
                     case 'balance': setStockBalance(data); break;
                     case 'stock-ledger': setStockEntries(data.items || []); setReportTotal(data.total || 0); break;
                     case 'sales-orders': setSalesOrders(data); break;
@@ -237,11 +246,11 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
                 setIsInitialLoad(false);
             }
         } catch (e) { console.error("Fetch Error", e); }
-    }, [currentUser, itemPage, woPage, auditPage, reportPage, itemSearch, itemCategory, auditType, isInitialLoad, pageSize]);
+    }, [currentUser, itemPage, woPage, prPage, auditPage, reportPage, itemSearch, itemCategory, auditType, isInitialLoad, pageSize]);
 
     const handleTabHover = (tab: string) => fetchData(tab);
 
-    useEffect(() => { if (currentUser) fetchData(); }, [currentUser, itemPage, woPage, auditPage, reportPage, itemSearch, itemCategory, auditType, fetchData]);
+    useEffect(() => { if (currentUser) fetchData(); }, [currentUser, itemPage, woPage, prPage, auditPage, reportPage, itemSearch, itemCategory, auditType, fetchData]);
 
     // WebSocket Logic
     const fetchDataRef = useRef(fetchData);
@@ -260,10 +269,20 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
             ws.onmessage = (event) => {
                 try {
                     const data = JSON.parse(event.data);
-                    if (data.type === 'WORK_ORDER_UPDATE') {
-                        setWorkOrders((prev: any) => prev.map((wo: any) => wo.id === data.wo_id ? { ...wo, status: data.status, actual_start_date: data.actual_start_date, actual_end_date: data.actual_end_date } : wo));
-                        fetchDataRef.current();
-                        showToast(`Work Order ${data.code} updated: ${data.status}`, 'info');
+                    switch (data.type) {
+                        case 'WORK_ORDER_UPDATE':
+                        case 'MANUFACTURING_ORDER_UPDATE':
+                            setManufacturingOrders((prev: any[]) => prev.map((mo: any) =>
+                                mo.id === data.mo_id ? { ...mo, status: data.status } : mo
+                            ));
+                            fetchDataRef.current('/manufacturing');
+                            showToast(`Manufacturing Order ${data.code} updated: ${data.status}`, 'info');
+                            break;
+                        case 'PRODUCTION_RUN_UPDATE':
+                            fetchDataRef.current('/manufacturing');
+                            break;
+                        default:
+                            break;
                     }
                 } catch (e) { console.error("WS Error", e); }
             };
@@ -275,17 +294,17 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
     }, [currentUser, showToast]);
 
     const value = React.useMemo(() => ({
-        items, locations, attributes, categories, uoms, sizes, boms, workOrders, stockEntries, stockBalance,
-        workCenters, operations, salesOrders, purchaseOrders, samples, auditLogs, partners, dashboardKPIs,
-        companyProfile,
-        pagination: { itemPage, setItemPage, itemTotal, woPage, setWoPage, woTotal, auditPage, setAuditPage, auditTotal, reportPage, setReportPage, reportTotal, pageSize },
+        items, locations, attributes, categories, uoms, sizes, boms, manufacturingOrders, productionRuns,
+        stockEntries, stockBalance, workCenters, operations, salesOrders, purchaseOrders, samples, auditLogs,
+        partners, dashboardKPIs, companyProfile,
+        pagination: { itemPage, setItemPage, itemTotal, woPage, setWoPage, woTotal, prPage, setPrPage, prTotal, auditPage, setAuditPage, auditTotal, reportPage, setReportPage, reportTotal, pageSize },
         filters: { itemSearch, setItemSearch, itemCategory, setItemCategory, auditType, setAuditType },
         fetchData, handleTabHover, authFetch
     }), [
-        items, locations, attributes, categories, uoms, sizes, boms, workOrders, stockEntries, stockBalance,
-        workCenters, operations, salesOrders, purchaseOrders, samples, auditLogs, partners, dashboardKPIs,
-        companyProfile,
-        itemPage, itemTotal, woPage, woTotal, auditPage, auditTotal, reportPage, reportTotal, pageSize,
+        items, locations, attributes, categories, uoms, sizes, boms, manufacturingOrders, productionRuns,
+        stockEntries, stockBalance, workCenters, operations, salesOrders, purchaseOrders, samples, auditLogs,
+        partners, dashboardKPIs, companyProfile,
+        itemPage, itemTotal, woPage, woTotal, prPage, prTotal, auditPage, auditTotal, reportPage, reportTotal, pageSize,
         itemSearch, itemCategory, auditType, fetchData, handleTabHover, authFetch
     ]);
 
