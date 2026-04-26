@@ -34,6 +34,81 @@ def run_migrations():
     """
     try:
         with engine.connect() as conn:
+            # ── Production Runs + Manufacturing Orders rename ──────────────────────────
+
+            # 1. Create production_runs table (idempotent)
+            conn.execute(text("""
+                CREATE TABLE IF NOT EXISTS production_runs (
+                    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+                    code VARCHAR(64) UNIQUE NOT NULL,
+                    bom_id UUID NOT NULL REFERENCES boms(id) ON DELETE RESTRICT,
+                    sales_order_id UUID REFERENCES sales_orders(id) ON DELETE SET NULL,
+                    location_id UUID NOT NULL REFERENCES locations(id) ON DELETE RESTRICT,
+                    source_location_id UUID REFERENCES locations(id) ON DELETE SET NULL,
+                    status VARCHAR(32) NOT NULL DEFAULT 'PENDING',
+                    notes TEXT,
+                    target_start_date TIMESTAMP,
+                    target_end_date TIMESTAMP,
+                    actual_start_date TIMESTAMP,
+                    actual_end_date TIMESTAMP,
+                    created_at TIMESTAMP NOT NULL DEFAULT NOW()
+                )
+            """))
+            conn.commit()
+
+            # 2. Rename work_orders → manufacturing_orders
+            try:
+                conn.execute(text("ALTER TABLE work_orders RENAME TO manufacturing_orders"))
+                conn.commit()
+                logger.info("Migration: Renamed work_orders → manufacturing_orders")
+            except Exception:
+                conn.rollback()
+
+            # 3. Rename work_order_values junction → manufacturing_order_values
+            try:
+                conn.execute(text("ALTER TABLE work_order_values RENAME TO manufacturing_order_values"))
+                conn.commit()
+                logger.info("Migration: Renamed work_order_values → manufacturing_order_values")
+            except Exception:
+                conn.rollback()
+
+            # 4. Rename work_order_id column inside the junction table
+            try:
+                conn.execute(text("ALTER TABLE manufacturing_order_values RENAME COLUMN work_order_id TO manufacturing_order_id"))
+                conn.commit()
+                logger.info("Migration: Renamed junction column work_order_id → manufacturing_order_id")
+            except Exception:
+                conn.rollback()
+
+            # 5. Rename parent_wo_id → parent_mo_id on manufacturing_orders
+            try:
+                conn.execute(text("ALTER TABLE manufacturing_orders RENAME COLUMN parent_wo_id TO parent_mo_id"))
+                conn.commit()
+                logger.info("Migration: Renamed parent_wo_id → parent_mo_id")
+            except Exception:
+                conn.rollback()
+
+            # 6. Create work_orders table (operation steps within a Manufacturing Order)
+            conn.execute(text("""
+                CREATE TABLE IF NOT EXISTS work_orders (
+                    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+                    manufacturing_order_id UUID NOT NULL REFERENCES manufacturing_orders(id) ON DELETE CASCADE,
+                    sequence INTEGER NOT NULL DEFAULT 1,
+                    name VARCHAR(128) NOT NULL,
+                    work_center_id UUID REFERENCES work_centers(id) ON DELETE SET NULL,
+                    status VARCHAR(32) NOT NULL DEFAULT 'PENDING',
+                    planned_duration_hours FLOAT,
+                    actual_duration_hours FLOAT,
+                    notes TEXT,
+                    target_start_date TIMESTAMP,
+                    target_end_date TIMESTAMP,
+                    actual_start_date TIMESTAMP,
+                    actual_end_date TIMESTAMP,
+                    created_at TIMESTAMP NOT NULL DEFAULT NOW()
+                )
+            """))
+            conn.commit()
+
             # 1. Verification of missing columns in existing tables
             migrations = [
                 ("items", "category", "VARCHAR(64)"),
@@ -116,6 +191,8 @@ def run_migrations():
                 ("boms", "berat_bahan_mateng", "NUMERIC(10,4)"),
                 ("boms", "berat_bahan_mentah_pelesan", "NUMERIC(10,4)"),
                 ("bom_sizes", "label", "VARCHAR(128)"),
+                ("manufacturing_orders", "production_run_id", "UUID REFERENCES production_runs(id) ON DELETE SET NULL"),
+                ("manufacturing_orders", "bom_size_id", "UUID REFERENCES bom_sizes(id) ON DELETE SET NULL"),
             ]
 
             for table, col, col_type in migrations:
