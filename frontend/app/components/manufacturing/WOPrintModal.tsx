@@ -6,7 +6,7 @@ import QRCode from 'qrcode';
 export interface PrintSettings {
     showBOMTable: boolean;
     showTimeline: boolean;
-    showChildWOs: boolean;
+    showChildMOs: boolean;
     showSignatureLine: boolean;
     headerCompanyName: string;
     headerDepartment: string;
@@ -80,7 +80,7 @@ const renderChildWOsPrint = (
     if (!children || children.length === 0) return null;
     return (
         <div className="mt-5 pt-4 border-top">
-            <h6 className="fw-bold text-uppercase text-muted extra-small mb-3"><i className="bi bi-diagram-3-fill me-2"></i>Child Work Orders (Nested Chain)</h6>
+            <h6 className="fw-bold text-uppercase text-muted extra-small mb-3"><i className="bi bi-diagram-3-fill me-2"></i>Child Manufacturing Orders (Nested Chain)</h6>
             <div className="row g-3">
                 {children.map(child => (
                     <div key={child.id} className="col-12 border rounded p-2 bg-light bg-opacity-10 d-flex justify-content-between align-items-center">
@@ -134,7 +134,7 @@ export default function WOPrintModal({
     getAttributeValueName: (id: any) => string;
     formatDate: (d: any) => string;
 }) {
-    const { showBOMTable, showTimeline, showChildWOs, showSignatureLine,
+    const { showBOMTable, showTimeline, showChildMOs, showSignatureLine,
         headerCompanyName, headerDepartment, headerApprovedBy, headerReference } = printSettings;
 
     const [qrDataUrl, setQrDataUrl] = useState('');
@@ -152,13 +152,13 @@ export default function WOPrintModal({
     }, [wo.code]);
 
     useEffect(() => {
-        if (!showChildWOs) return;
-        (wo.child_wos || []).forEach((child: any) => {
+        if (!showChildMOs) return;
+        (wo.child_mos || []).forEach((child: any) => {
             QRCode.toDataURL(child.code, { margin: 1, width: 160 })
                 .then(url => setChildQrUrls(prev => prev[child.code] ? prev : { ...prev, [child.code]: url }))
                 .catch(() => {});
         });
-    }, [showChildWOs, wo.child_wos]);
+    }, [showChildMOs, wo.child_mos]);
 
     const update = (patch: Partial<PrintSettings>) =>
         onPrintSettingsChange({ ...printSettings, ...patch });
@@ -215,7 +215,7 @@ export default function WOPrintModal({
                     )}
                 </div>
                 <div style={{ textAlign: 'right' }}>
-                    <div style={{ fontSize: '16px', fontWeight: 'bold', textTransform: 'uppercase', letterSpacing: '1px' }}>Work Order</div>
+                    <div style={{ fontSize: '16px', fontWeight: 'bold', textTransform: 'uppercase', letterSpacing: '1px' }}>Manufacturing Order</div>
                     {headerDepartment && <div style={{ color: '#555' }}>Dept: <strong>{headerDepartment}</strong></div>}
                     {headerApprovedBy && <div style={{ color: '#555' }}>Approved By: <strong>{headerApprovedBy}</strong></div>}
                     {headerReference && <div style={{ color: '#555' }}>Ref: <strong>{headerReference}</strong></div>}
@@ -276,8 +276,8 @@ export default function WOPrintModal({
                 );
             })()}
 
-            {/* Child Work Orders */}
-            {showChildWOs && renderChildWOsPrint(wo.child_wos || [], childQrUrls, { getItemName, getLocationName, formatDate })}
+            {/* Child Manufacturing Orders */}
+            {showChildMOs && renderChildWOsPrint(wo.child_mos || [], childQrUrls, { getItemName, getLocationName, formatDate })}
 
             {/* Signature / footer */}
             <div style={{ marginTop: '16px', display: 'flex', justifyContent: 'space-between', fontSize: '8px', color: '#555', borderTop: '1px solid #ccc', paddingTop: '8px' }}>
@@ -305,7 +305,7 @@ export default function WOPrintModal({
                 >
                     {/* Modal header */}
                     <div style={headerStyle} className={headerClass}>
-                        <span>Print Work Order &mdash; {wo.code}</span>
+                        <span>Print Manufacturing Order &mdash; {wo.code}</span>
                         <button onClick={onClose} style={{ background: 'none', border: 'none', color: 'inherit', fontSize: '14px', cursor: 'pointer', lineHeight: '1', fontWeight: 'bold' }}>X</button>
                     </div>
 
@@ -332,8 +332,8 @@ export default function WOPrintModal({
                                         Timeline
                                     </label>
                                     <label style={toggleLabelStyle}>
-                                        <input type="checkbox" checked={showChildWOs} onChange={e => update({ showChildWOs: e.target.checked })} />
-                                        Child Work Orders
+                                        <input type="checkbox" checked={showChildMOs} onChange={e => update({ showChildMOs: e.target.checked })} />
+                                        Child Manufacturing Orders
                                     </label>
                                     <label style={toggleLabelStyle}>
                                         <input type="checkbox" checked={showSignatureLine} onChange={e => update({ showSignatureLine: e.target.checked })} />

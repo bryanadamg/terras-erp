@@ -3,6 +3,7 @@ import { useTheme } from '../../context/ThemeContext';
 import { createPortal } from 'react-dom';
 import BOMDesigner from './BOMDesigner';
 import BOMPrintModal from './BOMPrintModal';
+import ProductionRunModal from '../manufacturing/ProductionRunModal';
 import { useToast } from '../shared/Toast';
 import { useLanguage } from '../../context/LanguageContext';
 
@@ -59,7 +60,8 @@ export default function BOMView({
     onCreateBOM, onDeleteBOM, onDeleteMultipleBOMs, onCreateItem, onSearchItem,
     onUploadBOMPhoto, onUploadBOMDesign,
     companyProfile,
-    initialCreateState, onClearInitialState
+    initialCreateState, onClearInitialState,
+    onCreateProductionRun
 }: any) {
     const { showToast } = useToast();
     const { t } = useLanguage();
@@ -68,6 +70,7 @@ export default function BOMView({
 
     const [isDesignerOpen, setIsDesignerOpen] = useState(false);
     const [printBOM, setPrintBOM] = useState<any>(null);
+    const [startPRBom, setStartPRBom] = useState<any>(null);
     const [searchQuery, setSearchQuery] = useState('');
     const [expandedNodes, setExpandedNodes] = useState<Record<string, boolean>>({});
     const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
@@ -679,6 +682,22 @@ export default function BOMView({
                                         </div>
                                     )}
 
+                                    {/* Start Production Run */}
+                                    <div style={{ marginTop: 6 }}>
+                                        <button
+                                            onClick={() => setStartPRBom(displayBOM)}
+                                            style={{
+                                                fontFamily: 'Tahoma, Arial, sans-serif', fontSize: 10,
+                                                padding: '2px 8px', width: '100%',
+                                                background: 'linear-gradient(to bottom, #b4d0f8, #7aacf0)',
+                                                border: '1px solid', borderColor: '#c8e0ff #003080 #003080 #c8e0ff',
+                                                cursor: 'pointer', fontWeight: 'bold', color: '#00007a',
+                                            }}
+                                        >
+                                            Start Production Run
+                                        </button>
+                                    </div>
+
                                 </div>
                             );
                         })()}
@@ -907,6 +926,15 @@ export default function BOMView({
                 companyProfile={companyProfile}
                 getAttributeValueName={getAttributeValueName}
                 onClose={() => setPrintBOM(null)}
+            />
+        )}
+        {startPRBom && locations && (
+            <ProductionRunModal
+                bom={startPRBom}
+                boms={boms || []}
+                locations={locations}
+                onSave={onCreateProductionRun}
+                onClose={() => setStartPRBom(null)}
             />
         )}
         </>

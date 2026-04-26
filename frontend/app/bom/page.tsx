@@ -7,7 +7,7 @@ import { useSearchParams } from 'next/navigation';
 import { useEffect, useState } from 'react';
 
 export default function BOMPage() {
-    const { items, attributes, sizes, boms, operations, workCenters, partners, companyProfile, fetchData, authFetch, filters } = useData();
+    const { items, attributes, sizes, boms, locations, operations, workCenters, partners, companyProfile, fetchData, authFetch, filters } = useData();
     const { confirm } = useConfirm();
     const searchParams = useSearchParams();
     const [initialCreateState, setInitialCreateState] = useState<any>(null);
@@ -67,6 +67,14 @@ export default function BOMPage() {
         if (res.ok) fetchData();
     };
 
+    const handleCreateProductionRun = async (p: any) => {
+        const res = await authFetch(`${API_BASE}/production-runs`, {
+            method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(p)
+        });
+        if (res.ok) fetchData();
+        return res;
+    };
+
     const handleDeleteMultipleBOMs = async (ids: string[]) => {
         const confirmed = await confirm({
             title: 'Delete BOMs',
@@ -96,7 +104,8 @@ export default function BOMPage() {
                 onDeleteMultipleBOMs={handleDeleteMultipleBOMs}
                 onSearchItem={filters.setItemSearch}
                 onCreateItem={handleCreateItem}
-                locations={[]}
+                locations={locations || []}
+                onCreateProductionRun={handleCreateProductionRun}
                 companyProfile={companyProfile}
                 initialCreateState={initialCreateState}
                 onClearInitialState={handleClearInitialState}

@@ -13,6 +13,7 @@ import ModalWrapper from '../shared/ModalWrapper';
 import PrintHeader from '../shared/PrintHeader';
 import WOPrintModal, { PrintSettings } from './WOPrintModal';
 import ProductionRunModal from './ProductionRunModal';
+import WorkOrderPanel from './WorkOrderPanel';
 
 export default function ManufacturingView({
     items,
@@ -103,7 +104,7 @@ export default function ManufacturingView({
   const defaultPrintSettings: PrintSettings = {
     showBOMTable: true,
     showTimeline: true,
-    showChildWOs: false,
+    showChildMOs: false,
     showSignatureLine: true,
     headerCompanyName: '',
     headerDepartment: '',
@@ -640,6 +641,19 @@ export default function ManufacturingView({
                       )}
                   </div>
               </div>
+          </div>
+
+          {/* ── BOTTOM: Operation Steps ── */}
+          <div style={{ marginTop: 10, borderTop: '1px solid #d4d0c8', paddingTop: 8, padding: '8px 12px' }}>
+              <WorkOrderPanel
+                  manufacturingOrderId={selectedNode.id}
+                  workOrders={selectedNode.work_orders || []}
+                  workCenters={workCenters || []}
+                  onAdd={onCreateWO}
+                  onUpdate={onUpdateWO}
+                  onUpdateStatus={onUpdateWOStatus}
+                  onDelete={onDeleteWO}
+              />
           </div>
       );
   };
