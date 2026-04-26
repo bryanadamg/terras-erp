@@ -34,7 +34,9 @@ async def create_item_api(payload: ItemCreate, db: AsyncSession = Depends(get_as
         category=payload.category,
         source_sample_id=payload.source_sample_id,
         source_color_id=payload.source_color_id,
-        attribute_ids=payload.attribute_ids
+        attribute_ids=payload.attribute_ids,
+        weight_per_unit=payload.weight_per_unit,
+        weight_unit=payload.weight_unit,
     )
     
     await audit_service.log_activity(

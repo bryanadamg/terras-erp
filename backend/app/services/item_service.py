@@ -19,7 +19,9 @@ async def create_item(
     category: str | None = None,
     source_sample_id: str | None = None,
     source_color_id: str | None = None,
-    attribute_ids: list[str] = []
+    attribute_ids: list[str] = [],
+    weight_per_unit: float | None = None,
+    weight_unit: str | None = None,
 ) -> Item:
     item = Item(
         code=code,
@@ -28,6 +30,8 @@ async def create_item(
         category=category,
         source_sample_id=source_sample_id,
         source_color_id=source_color_id,
+        weight_per_unit=weight_per_unit,
+        weight_unit=weight_unit,
     )
 
     if attribute_ids:
