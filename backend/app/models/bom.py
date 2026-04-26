@@ -45,6 +45,10 @@ class BOM(Base):
 
     active: Mapped[bool] = mapped_column(Boolean, default=True)
 
+    customer_id: Mapped[Optional[uuid.UUID]] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("partners.id"), nullable=True
+    )
+
     # Relationships
     item = relationship("Item")
     attribute_values = relationship("AttributeValue", secondary=bom_values)
@@ -52,6 +56,7 @@ class BOM(Base):
     operations = relationship("BOMOperation", back_populates="bom", cascade="all, delete-orphan")
     sizes = relationship("BOMSize", back_populates="bom", cascade="all, delete-orphan")
     work_orders = relationship("WorkOrder", back_populates="bom")
+    customer = relationship("Partner")
 
     @property
     def item_code(self) -> str | None:
@@ -60,6 +65,10 @@ class BOM(Base):
     @property
     def item_name(self) -> str | None:
         return self.item.name if self.item else None
+
+    @property
+    def customer_name(self) -> Optional[str]:
+        return self.customer.name if self.customer else None
 
 
 class BOMLine(Base):

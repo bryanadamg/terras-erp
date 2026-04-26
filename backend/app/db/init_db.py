@@ -99,6 +99,7 @@ def run_migrations():
                 ("boms", "pemakaian_obat", "VARCHAR(255)"),
                 ("boms", "pembuatan_sample_oleh", "VARCHAR(255)"),
                 ("boms", "sample_photo_url", "VARCHAR(512)"),
+                ("boms", "customer_id", "UUID REFERENCES partners(id) ON DELETE SET NULL"),
             ]
 
             for table, col, col_type in migrations:

@@ -54,7 +54,7 @@ const xpSectionHdr: React.CSSProperties = {
 };
 
 export default function BOMView({
-    items, boms, locations, attributes, sizes, workCenters, operations,
+    items, boms, locations, attributes, sizes, workCenters, operations, partners,
     onCreateBOM, onDeleteBOM, onDeleteMultipleBOMs, onCreateItem, onSearchItem,
     onUploadBOMPhoto,
     initialCreateState, onClearInitialState
@@ -190,7 +190,8 @@ export default function BOMView({
     const handleCloseDesigner = () => { setIsDesignerOpen(false); if (onClearInitialState) onClearInitialState(); };
 
     const handleCreateBOMWrapper = async (bomData: any) => {
-        const res = await onCreateBOM(bomData);
+        const cleaned = { ...bomData, customer_id: bomData.customer_id || null };
+        const res = await onCreateBOM(cleaned);
         if (res?.status === 400) {
             const err = await res.json();
             showToast(`Error creating BOM ${bomData.code}: ${err.detail || 'Duplicate?'}`, 'warning');
@@ -595,6 +596,7 @@ export default function BOMView({
                                 initialAttributeValueIds={initialAttributeIds}
                                 items={items} locations={locations || []} attributes={attributes}
                                 sizes={sizes || []}
+                                partners={partners || []}
                                 workCenters={workCenters} operations={operations} existingBOMs={boms}
                                 onSave={handleCreateBOMWrapper} onCreateItem={onCreateItem}
                                 onUploadPhoto={onUploadBOMPhoto}

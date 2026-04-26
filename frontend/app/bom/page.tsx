@@ -7,7 +7,7 @@ import { useSearchParams } from 'next/navigation';
 import { useEffect, useState } from 'react';
 
 export default function BOMPage() {
-    const { items, attributes, sizes, boms, operations, workCenters, fetchData, authFetch, filters } = useData();
+    const { items, attributes, sizes, boms, operations, workCenters, partners, fetchData, authFetch, filters } = useData();
     const { confirm } = useConfirm();
     const searchParams = useSearchParams();
     const [initialCreateState, setInitialCreateState] = useState<any>(null);
@@ -81,13 +81,14 @@ export default function BOMPage() {
                 boms={boms}
                 operations={operations}
                 workCenters={workCenters}
+                partners={partners}
                 onCreateBOM={handleCreateBOM}
                 onUploadBOMPhoto={handleUploadBOMPhoto}
                 onDeleteBOM={handleDeleteBOM}
                 onDeleteMultipleBOMs={handleDeleteMultipleBOMs}
                 onSearchItem={filters.setItemSearch}
                 onCreateItem={handleCreateItem}
-                locations={[]} 
+                locations={[]}
                 initialCreateState={initialCreateState}
                 onClearInitialState={handleClearInitialState}
             />

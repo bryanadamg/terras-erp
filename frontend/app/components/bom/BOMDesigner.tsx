@@ -39,6 +39,7 @@ interface BOMNodeData {
     sisir_no: number | null;
     pemakaian_obat: string;
     pembuatan_sample_oleh: string;
+    customer_id: string;
     isNewItem?: boolean;
 }
 
@@ -197,6 +198,7 @@ export default function BOMDesigner({
     locations,
     attributes,
     sizes,
+    partners,
     workCenters,
     operations,
     onSave,
@@ -216,6 +218,7 @@ export default function BOMDesigner({
         operations: [], lines: [], sizes: [],
         kerapatan_picks: null, kerapatan_unit: '/cm',
         sisir_no: null, pemakaian_obat: '', pembuatan_sample_oleh: '',
+        customer_id: '',
     });
 
     const [selectedNodeId, setSelectedNodeId] = useState<string>('root');
@@ -338,6 +341,7 @@ export default function BOMDesigner({
                     operations: [], lines: subLines, sizes: [],
                     kerapatan_picks: null, kerapatan_unit: '/cm',
                     sisir_no: null, pemakaian_obat: '', pembuatan_sample_oleh: '',
+                    customer_id: '',
                     isNewItem,
                 };
                 levelLines.push({
@@ -685,6 +689,42 @@ export default function BOMDesigner({
                                             ))}
                                         </div>
                                     )}
+
+                                    {/* Linked sample info strip — root only, when item has a source sample */}
+                                    {selectedNodeId === 'root' && (() => {
+                                        const selItem = items.find((i: any) => (i.code || '').trim().toLowerCase() === (selectedNode.item_code || '').trim().toLowerCase());
+                                        if (!selItem?.source_sample_code) return null;
+                                        return (
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: '#eef4ff', border: '1px solid #b0c8e8', padding: '4px 8px', marginTop: 2 }}>
+                                                <span style={{ fontSize: 10, color: '#003080', fontWeight: 'bold', whiteSpace: 'nowrap' }}>Linked Sample:</span>
+                                                <span style={{ fontFamily: '"Courier New", monospace', fontSize: 10, background: '#fff', border: '1px solid #b0c8e8', padding: '0 5px', color: '#0000cc', whiteSpace: 'nowrap' }}>
+                                                    {selItem.source_sample_code}
+                                                </span>
+                                                {selItem.source_color_name && (
+                                                    <span style={{ fontSize: 10, color: '#333', background: '#d8e8f8', border: '1px solid #b0c8e8', padding: '0 6px', whiteSpace: 'nowrap' }}>
+                                                        {selItem.source_color_name}
+                                                    </span>
+                                                )}
+                                            </div>
+                                        );
+                                    })()}
+
+                                    {/* Customer selector — root only */}
+                                    {selectedNodeId === 'root' && (
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 2 }}>
+                                            <label style={{ ...xpLabel, marginBottom: 0, whiteSpace: 'nowrap', minWidth: 60 }}>Customer</label>
+                                            <select
+                                                style={{ ...xpSelect, maxWidth: 220 }}
+                                                value={selectedNode.customer_id || ''}
+                                                onChange={e => updateSelectedNode({ customer_id: e.target.value })}
+                                            >
+                                                <option value="">— None —</option>
+                                                {(partners || []).filter((p: any) => p.type === 'CUSTOMER' && p.active !== false).map((p: any) => (
+                                                    <option key={p.id} value={p.id}>{p.name}</option>
+                                                ))}
+                                            </select>
+                                        </div>
+                                    )}
                                 </div>
 
                                 {/* Sizes + BOM details row - root BOM only */}
@@ -954,6 +994,7 @@ export default function BOMDesigner({
                                                                     operations: [], lines: [], sizes: [],
                                                                     kerapatan_picks: null, kerapatan_unit: '/cm',
                                                                     sisir_no: null, pemakaian_obat: '', pembuatan_sample_oleh: '',
+                                                                    customer_id: '',
                                                                     isNewItem: line.isNewItem
                                                                 };
                                                                 const newLines = [...selectedNode.lines];

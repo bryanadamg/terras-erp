@@ -48,6 +48,7 @@ async def create_bom(payload: BOMCreate, db: AsyncSession = Depends(get_async_db
         sisir_no=payload.sisir_no,
         pemakaian_obat=payload.pemakaian_obat,
         pembuatan_sample_oleh=payload.pembuatan_sample_oleh,
+        customer_id=payload.customer_id,
     )
     
     if payload.attribute_value_ids:
@@ -109,6 +110,7 @@ async def create_bom(payload: BOMCreate, db: AsyncSession = Depends(get_async_db
         select(BOM)
         .options(
             joinedload(BOM.item),
+            joinedload(BOM.customer),
             selectinload(BOM.attribute_values),
             selectinload(BOM.lines).joinedload(BOMLine.item),
             selectinload(BOM.lines).selectinload(BOMLine.attribute_values),
@@ -139,6 +141,7 @@ async def create_bom(payload: BOMCreate, db: AsyncSession = Depends(get_async_db
 async def get_boms(skip: int = 0, limit: int = 100, db: AsyncSession = Depends(get_async_db), current_user: User = Depends(get_current_user)):
     query = select(BOM).options(
         joinedload(BOM.item),
+        joinedload(BOM.customer),
         selectinload(BOM.attribute_values),
         selectinload(BOM.lines).joinedload(BOMLine.item),
         selectinload(BOM.lines).selectinload(BOMLine.attribute_values),
@@ -164,6 +167,7 @@ async def get_bom(bom_id: str, db: AsyncSession = Depends(get_async_db), current
         select(BOM)
         .options(
             joinedload(BOM.item),
+            joinedload(BOM.customer),
             selectinload(BOM.attribute_values),
             selectinload(BOM.lines).joinedload(BOMLine.item),
             selectinload(BOM.lines).selectinload(BOMLine.attribute_values),

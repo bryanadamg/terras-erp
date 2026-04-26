@@ -122,6 +122,7 @@ class BOMCreate(BaseModel):
     pemakaian_obat: str | None = None
     pembuatan_sample_oleh: str | None = None
     sample_photo_url: str | None = None
+    customer_id: Optional[UUID] = None
 
 class BOMResponse(BaseModel):
     id: UUID
@@ -143,6 +144,8 @@ class BOMResponse(BaseModel):
     pemakaian_obat: str | None = None
     pembuatan_sample_oleh: str | None = None
     sample_photo_url: str | None = None
+    customer_id: Optional[UUID] = None
+    customer_name: Optional[str] = None
 
     class Config:
         from_attributes = True
