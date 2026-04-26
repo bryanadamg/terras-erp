@@ -112,6 +112,9 @@ def run_migrations():
                 ("boms", "celup_panjang_tarikan_bandul_9kg", "NUMERIC(8,2)"),
                 ("boms", "work_center_id", "UUID REFERENCES work_centers(id) ON DELETE SET NULL"),
                 ("boms", "size_mode", "VARCHAR(8) NOT NULL DEFAULT 'sized'"),
+                ("boms", "design_file_url", "VARCHAR(512)"),
+                ("boms", "berat_bahan_mateng", "NUMERIC(10,4)"),
+                ("boms", "berat_bahan_mentah_pelesan", "NUMERIC(10,4)"),
                 ("bom_sizes", "label", "VARCHAR(128)"),
             ]
 

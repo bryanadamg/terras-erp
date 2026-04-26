@@ -51,6 +51,8 @@ async def create_bom(payload: BOMCreate, db: AsyncSession = Depends(get_async_db
         customer_id=payload.customer_id,
         work_center_id=payload.work_center_id,
         size_mode=payload.size_mode,
+        berat_bahan_mateng=payload.berat_bahan_mateng,
+        berat_bahan_mentah_pelesan=payload.berat_bahan_mentah_pelesan,
         mesin_lebar=payload.mesin_lebar,
         mesin_panjang_tulisan=payload.mesin_panjang_tulisan,
         mesin_panjang_tarikan=payload.mesin_panjang_tarikan,
@@ -238,6 +240,29 @@ async def upload_bom_sample_photo(
     bom.sample_photo_url = f"/static/boms/{bom_id}_sample{ext}"
     await db.commit()
     return {"sample_photo_url": bom.sample_photo_url}
+
+@router.post("/boms/{bom_id}/design-file")
+async def upload_bom_design_file(
+    bom_id: str,
+    file: UploadFile = File(...),
+    db: AsyncSession = Depends(get_async_db),
+    current_user: User = Depends(get_current_user),
+):
+    result = await db.execute(select(BOM).filter(BOM.id == bom_id))
+    bom = result.scalars().first()
+    if not bom:
+        raise HTTPException(status_code=404, detail="BOM not found")
+
+    upload_dir = Path("static/boms")
+    upload_dir.mkdir(parents=True, exist_ok=True)
+    ext = os.path.splitext(file.filename or "")[1].lower() or ".pdf"
+    file_path = upload_dir / f"{bom_id}_design{ext}"
+    with file_path.open("wb") as buf:
+        shutil.copyfileobj(file.file, buf)
+
+    bom.design_file_url = f"/static/boms/{bom_id}_design{ext}"
+    await db.commit()
+    return {"design_file_url": bom.design_file_url}
 
 @router.delete("/boms/{bom_id}")
 async def delete_bom(bom_id: str, db: AsyncSession = Depends(get_async_db), current_user: User = Depends(get_current_user)):

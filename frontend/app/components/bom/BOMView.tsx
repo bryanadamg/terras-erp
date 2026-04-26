@@ -56,7 +56,7 @@ const xpSectionHdr: React.CSSProperties = {
 export default function BOMView({
     items, boms, locations, attributes, sizes, workCenters, operations, partners,
     onCreateBOM, onDeleteBOM, onDeleteMultipleBOMs, onCreateItem, onSearchItem,
-    onUploadBOMPhoto,
+    onUploadBOMPhoto, onUploadBOMDesign,
     initialCreateState, onClearInitialState
 }: any) {
     const { showToast } = useToast();
@@ -588,6 +588,14 @@ export default function BOMView({
                                                     <span style={lbl}>Sample oleh</span>
                                                     <span style={{ fontSize: 10, wordBreak: 'break-word' }}>{displayBOM.pembuatan_sample_oleh}</span>
                                                 </>)}
+                                                {displayBOM.berat_bahan_mateng != null && (<>
+                                                    <span style={lbl}>B. Mateng</span>
+                                                    <span style={{ fontSize: 11 }}>{displayBOM.berat_bahan_mateng} <span style={{ fontSize: 9, color: '#666' }}>gr/yd</span></span>
+                                                </>)}
+                                                {displayBOM.berat_bahan_mentah_pelesan != null && (<>
+                                                    <span style={lbl}>B. Mentah</span>
+                                                    <span style={{ fontSize: 11 }}>{displayBOM.berat_bahan_mentah_pelesan} <span style={{ fontSize: 9, color: '#666' }}>gr/yd</span></span>
+                                                </>)}
                                             </div>
                                         </div>
                                     )}
@@ -613,6 +621,31 @@ export default function BOMView({
                                                     {mRow('Bandul 9kg', displayBOM.mesin_panjang_tarikan_bandul_9kg, displayBOM.celup_panjang_tarikan_bandul_9kg, 'cm')}
                                                 </tbody>
                                             </table>
+                                        </div>
+                                    )}
+
+                                    {/* Design file */}
+                                    {displayBOM.design_file_url && (
+                                        <div style={sep}>
+                                            <div style={secHdr}>Design / Susunan Rumusan</div>
+                                            {/\.(jpg|jpeg|png|gif|webp)$/i.test(displayBOM.design_file_url) ? (
+                                                <a href={`${(process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:8000').replace(/\/api$/, '')}${displayBOM.design_file_url}`} target="_blank" rel="noreferrer">
+                                                    <img
+                                                        src={`${(process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:8000').replace(/\/api$/, '')}${displayBOM.design_file_url}`}
+                                                        alt="Design"
+                                                        style={{ maxWidth: '100%', maxHeight: 80, border: '1px solid #c0bdb5', display: 'block', objectFit: 'cover', cursor: 'pointer' }}
+                                                    />
+                                                </a>
+                                            ) : (
+                                                <a
+                                                    href={`${(process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:8000').replace(/\/api$/, '')}${displayBOM.design_file_url}`}
+                                                    target="_blank" rel="noreferrer"
+                                                    style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 10, color: '#0000cc', textDecoration: 'underline' }}
+                                                >
+                                                    <i className="bi bi-file-earmark-pdf" style={{ color: '#c00', fontSize: 12 }} />
+                                                    Open design file
+                                                </a>
+                                            )}
                                         </div>
                                     )}
 
@@ -651,6 +684,7 @@ export default function BOMView({
                                 workCenters={workCenters} operations={operations} existingBOMs={boms}
                                 onSave={handleCreateBOMWrapper} onCreateItem={onCreateItem}
                                 onUploadPhoto={onUploadBOMPhoto}
+                                onUploadDesign={onUploadBOMDesign}
                                 onCancel={handleCloseDesigner} onSearchItem={onSearchItem}
                             />
                         </div>

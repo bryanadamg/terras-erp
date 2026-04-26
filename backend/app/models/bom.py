@@ -42,6 +42,9 @@ class BOM(Base):
     pemakaian_obat: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
     pembuatan_sample_oleh: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
     sample_photo_url: Mapped[Optional[str]] = mapped_column(String(512), nullable=True)
+    design_file_url: Mapped[Optional[str]] = mapped_column(String(512), nullable=True)
+    berat_bahan_mateng: Mapped[Optional[float]] = mapped_column(Numeric(10, 4), nullable=True)
+    berat_bahan_mentah_pelesan: Mapped[Optional[float]] = mapped_column(Numeric(10, 4), nullable=True)
 
     # Bahan Keluar Dari Mesin (Machine output measurements)
     mesin_lebar: Mapped[Optional[float]] = mapped_column(Numeric(8, 2), nullable=True)

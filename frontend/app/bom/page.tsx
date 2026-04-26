@@ -60,6 +60,13 @@ export default function BOMPage() {
         if (res.ok) fetchData();
     };
 
+    const handleUploadBOMDesign = async (bomId: string, file: File) => {
+        const formData = new FormData();
+        formData.append('file', file);
+        const res = await authFetch(`${API_BASE}/boms/${bomId}/design-file`, { method: 'POST', body: formData });
+        if (res.ok) fetchData();
+    };
+
     const handleDeleteMultipleBOMs = async (ids: string[]) => {
         const confirmed = await confirm({
             title: 'Delete BOMs',
@@ -84,6 +91,7 @@ export default function BOMPage() {
                 partners={partners}
                 onCreateBOM={handleCreateBOM}
                 onUploadBOMPhoto={handleUploadBOMPhoto}
+                onUploadBOMDesign={handleUploadBOMDesign}
                 onDeleteBOM={handleDeleteBOM}
                 onDeleteMultipleBOMs={handleDeleteMultipleBOMs}
                 onSearchItem={filters.setItemSearch}

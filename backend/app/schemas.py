@@ -125,8 +125,11 @@ class BOMCreate(BaseModel):
     pemakaian_obat: str | None = None
     pembuatan_sample_oleh: str | None = None
     sample_photo_url: str | None = None
+    design_file_url: str | None = None
     customer_id: Optional[UUID] = None
     work_center_id: Optional[UUID] = None
+    berat_bahan_mateng: float | None = None
+    berat_bahan_mentah_pelesan: float | None = None
     mesin_lebar: float | None = None
     mesin_panjang_tulisan: float | None = None
     mesin_panjang_tarikan: float | None = None
@@ -159,10 +162,13 @@ class BOMResponse(BaseModel):
     pemakaian_obat: str | None = None
     pembuatan_sample_oleh: str | None = None
     sample_photo_url: str | None = None
+    design_file_url: str | None = None
     customer_id: Optional[UUID] = None
     customer_name: Optional[str] = None
     work_center_id: Optional[UUID] = None
     work_center_name: Optional[str] = None
+    berat_bahan_mateng: float | None = None
+    berat_bahan_mentah_pelesan: float | None = None
     mesin_lebar: float | None = None
     mesin_panjang_tulisan: float | None = None
     mesin_panjang_tarikan: float | None = None

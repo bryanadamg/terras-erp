@@ -43,6 +43,8 @@ interface BOMNodeData {
     customer_id: string;
     work_center_id: string;
     sizeMode: 'sized' | 'free';
+    berat_bahan_mateng: number | null;
+    berat_bahan_mentah_pelesan: number | null;
     mesin_lebar: number | null;
     mesin_panjang_tulisan: number | null;
     mesin_panjang_tarikan: number | null;
@@ -217,6 +219,7 @@ export default function BOMDesigner({
     onSave,
     onCreateItem,
     onUploadPhoto,
+    onUploadDesign,
     onCancel,
     existingBOMs,
     onSearchItem
@@ -232,6 +235,7 @@ export default function BOMDesigner({
         kerapatan_picks: null, kerapatan_unit: '/cm',
         sisir_no: null, pemakaian_obat: '', pembuatan_sample_oleh: '',
         customer_id: '', work_center_id: '', sizeMode: 'sized',
+        berat_bahan_mateng: null, berat_bahan_mentah_pelesan: null,
         mesin_lebar: null, mesin_panjang_tulisan: null, mesin_panjang_tarikan: null,
         mesin_panjang_tarikan_bandul_1kg: null, mesin_panjang_tarikan_bandul_9kg: null,
         celup_lebar: null, celup_panjang_tulisan: null, celup_panjang_tarikan: null,
@@ -244,6 +248,7 @@ export default function BOMDesigner({
     const [isSaving, setIsSaving] = useState(false);
     const [pendingPhotoFile, setPendingPhotoFile] = useState<File | null>(null);
     const [photoPreview, setPhotoPreview] = useState<string | null>(null);
+    const [pendingDesignFile, setPendingDesignFile] = useState<File | null>(null);
 
     const [pendingItemCode, setPendingItemCode] = useState('');
     const [pendingQty, setPendingQty] = useState<string>('');
@@ -411,8 +416,9 @@ export default function BOMDesigner({
         if (node.lines.length === 0 && node.operations.length === 0) return true;
         try {
             const bomId = await onSave(node);
-            if (bomId && node.id === 'root' && pendingPhotoFile && onUploadPhoto) {
-                await onUploadPhoto(bomId, pendingPhotoFile);
+            if (bomId && node.id === 'root') {
+                if (pendingPhotoFile && onUploadPhoto) await onUploadPhoto(bomId, pendingPhotoFile);
+                if (pendingDesignFile && onUploadDesign) await onUploadDesign(bomId, pendingDesignFile);
             }
             return true;
         } catch (e) {
@@ -946,6 +952,26 @@ export default function BOMDesigner({
                                                         onChange={e => updateSelectedNode({ pembuatan_sample_oleh: e.target.value })} />
                                                 </div>
 
+                                                {/* Berat Bahan */}
+                                                <div>
+                                                    <label style={xpLabel}>Berat Bahan Mateng</label>
+                                                    <div style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
+                                                        <input type="number" style={{ ...xpInput, flex: 1 }} placeholder="—"
+                                                            value={selectedNode?.berat_bahan_mateng ?? ''}
+                                                            onChange={e => updateSelectedNode({ berat_bahan_mateng: e.target.value === '' ? null : parseFloat(e.target.value) })} />
+                                                        <span style={{ fontSize: 9, color: '#555', whiteSpace: 'nowrap' }}>gr/yard</span>
+                                                    </div>
+                                                </div>
+                                                <div>
+                                                    <label style={xpLabel}>Berat Bahan Mentah (Pelesan 1 Jam)</label>
+                                                    <div style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
+                                                        <input type="number" style={{ ...xpInput, flex: 1 }} placeholder="—"
+                                                            value={selectedNode?.berat_bahan_mentah_pelesan ?? ''}
+                                                            onChange={e => updateSelectedNode({ berat_bahan_mentah_pelesan: e.target.value === '' ? null : parseFloat(e.target.value) })} />
+                                                        <span style={{ fontSize: 9, color: '#555', whiteSpace: 'nowrap' }}>gr/yard</span>
+                                                    </div>
+                                                </div>
+
                                                 {/* Product Sample Photo */}
                                                 <div>
                                                     <label style={xpLabel}>Product Sample Photo</label>
@@ -969,6 +995,36 @@ export default function BOMDesigner({
                                                             onClick={() => setPhotoPreview(URL.createObjectURL(pendingPhotoFile!))}
                                                             style={{ marginTop: 4, maxHeight: 64, maxWidth: '100%', border: '1px solid #b0a898', display: 'block', cursor: 'pointer', objectFit: 'cover' }}
                                                         />
+                                                    )}
+                                                </div>
+
+                                                {/* Design / Formula File */}
+                                                <div>
+                                                    <label style={xpLabel}>Design / Susunan Rumusan</label>
+                                                    <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                                                        <input type="file" accept="image/*,.pdf" id="bom-design-file"
+                                                            style={{ display: 'none' }}
+                                                            onChange={e => setPendingDesignFile(e.target.files?.[0] || null)} />
+                                                        <button type="button" style={{ ...xpBtn, padding: '1px 8px' }}
+                                                            onClick={() => (document.getElementById('bom-design-file') as HTMLInputElement)?.click()}>
+                                                            Browse...
+                                                        </button>
+                                                        <span style={{ fontFamily: xpFont, fontSize: 10, color: '#555', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: 120 }}>
+                                                            {pendingDesignFile ? pendingDesignFile.name : 'No file chosen'}
+                                                        </span>
+                                                    </div>
+                                                    {pendingDesignFile && pendingDesignFile.type.startsWith('image/') && (
+                                                        <img
+                                                            src={URL.createObjectURL(pendingDesignFile)}
+                                                            alt="Design preview"
+                                                            style={{ marginTop: 4, maxHeight: 48, maxWidth: '100%', border: '1px solid #b0a898', display: 'block', objectFit: 'cover' }}
+                                                        />
+                                                    )}
+                                                    {pendingDesignFile && pendingDesignFile.type === 'application/pdf' && (
+                                                        <div style={{ marginTop: 4, fontSize: 10, color: '#555', background: '#f5f3ee', border: '1px solid #c0bdb5', padding: '2px 6px', display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                                                            <i className="bi bi-file-earmark-pdf" style={{ color: '#c00' }} />
+                                                            {pendingDesignFile.name}
+                                                        </div>
                                                     )}
                                                 </div>
 
