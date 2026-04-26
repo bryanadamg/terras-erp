@@ -4,17 +4,23 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy import select
 from sqlalchemy.orm import selectinload, joinedload
 from app.db.session import get_async_db
-from app.models.bom import BOM, BOMLine, BOMOperation
+from app.models.bom import BOM, BOMLine, BOMOperation, BOMSize
+from app.models.size import Size
 from app.models.item import Item
 from app.models.location import Location
 from app.models.routing import WorkCenter, Operation
-from app.schemas import BOMCreate, BOMResponse
+from app.schemas import BOMCreate, BOMResponse, SizeResponse
 from app.models.auth import User
 from app.api.auth import get_current_user
 from app.services import audit_service
 from app.models.attribute import AttributeValue
 
 router = APIRouter()
+
+@router.get("/sizes", response_model=list[SizeResponse])
+async def get_sizes(db: AsyncSession = Depends(get_async_db), current_user: User = Depends(get_current_user)):
+    result = await db.execute(select(Size).order_by(Size.sort_order))
+    return result.scalars().all()
 
 @router.post("/boms", response_model=BOMResponse)
 async def create_bom(payload: BOMCreate, db: AsyncSession = Depends(get_async_db), current_user: User = Depends(get_current_user)):
@@ -34,7 +40,12 @@ async def create_bom(payload: BOMCreate, db: AsyncSession = Depends(get_async_db
         code=payload.code,
         description=payload.description,
         item_id=item.id,
-        qty=payload.qty
+        qty=payload.qty,
+        kerapatan_picks=payload.kerapatan_picks,
+        kerapatan_unit=payload.kerapatan_unit,
+        sisir_no=payload.sisir_no,
+        pemakaian_obat=payload.pemakaian_obat,
+        pembuatan_sample_oleh=payload.pembuatan_sample_oleh,
     )
     
     if payload.attribute_value_ids:
@@ -45,7 +56,21 @@ async def create_bom(payload: BOMCreate, db: AsyncSession = Depends(get_async_db
     db.add(bom)
     await db.commit()
 
-    # 4. Create BOM Lines
+    # 4. Create BOM Sizes
+    for size_entry in payload.sizes:
+        if size_entry.target_measurement is None and size_entry.measurement_min is None and size_entry.measurement_max is None:
+            continue
+        bom_size = BOMSize(
+            bom_id=bom.id,
+            size_id=size_entry.size_id,
+            target_measurement=size_entry.target_measurement,
+            measurement_min=size_entry.measurement_min,
+            measurement_max=size_entry.measurement_max,
+        )
+        db.add(bom_size)
+    await db.commit()
+
+    # 5. Create BOM Lines
     for line in payload.lines:
         result = await db.execute(select(Item).filter(Item.code == line.item_code))
         material = result.scalars().first()
@@ -81,16 +106,17 @@ async def create_bom(payload: BOMCreate, db: AsyncSession = Depends(get_async_db
     result = await db.execute(
         select(BOM)
         .options(
-            joinedload(BOM.item), 
-            selectinload(BOM.attribute_values), 
-            selectinload(BOM.lines).joinedload(BOMLine.item), 
+            joinedload(BOM.item),
+            selectinload(BOM.attribute_values),
+            selectinload(BOM.lines).joinedload(BOMLine.item),
             selectinload(BOM.lines).selectinload(BOMLine.attribute_values),
-            selectinload(BOM.operations)
+            selectinload(BOM.operations),
+            selectinload(BOM.sizes).joinedload(BOMSize.size),
         )
         .filter(BOM.id == bom.id)
     )
     refresh_bom = result.scalars().first()
-    
+
     await audit_service.log_activity(
         db,
         user_id=current_user.id,
@@ -100,22 +126,22 @@ async def create_bom(payload: BOMCreate, db: AsyncSession = Depends(get_async_db
         details=f"Created BOM {refresh_bom.code} for {item.code}",
         changes=payload.model_dump()
     )
-    
-    # Pydantic picks up @property fields automatically via from_attributes
+
     refresh_bom.attribute_value_ids = [v.id for v in refresh_bom.attribute_values]
     for bl in refresh_bom.lines:
         bl.attribute_value_ids = [v.id for v in bl.attribute_values]
-    
+
     return refresh_bom
 
 @router.get("/boms", response_model=list[BOMResponse])
 async def get_boms(skip: int = 0, limit: int = 100, db: AsyncSession = Depends(get_async_db), current_user: User = Depends(get_current_user)):
     query = select(BOM).options(
         joinedload(BOM.item),
-        selectinload(BOM.attribute_values), 
+        selectinload(BOM.attribute_values),
         selectinload(BOM.lines).joinedload(BOMLine.item),
         selectinload(BOM.lines).selectinload(BOMLine.attribute_values),
-        selectinload(BOM.operations)
+        selectinload(BOM.operations),
+        selectinload(BOM.sizes).joinedload(BOMSize.size),
     )
     
     if current_user.allowed_categories:
@@ -136,10 +162,11 @@ async def get_bom(bom_id: str, db: AsyncSession = Depends(get_async_db), current
         select(BOM)
         .options(
             joinedload(BOM.item),
-            selectinload(BOM.attribute_values), 
+            selectinload(BOM.attribute_values),
             selectinload(BOM.lines).joinedload(BOMLine.item),
             selectinload(BOM.lines).selectinload(BOMLine.attribute_values),
-            selectinload(BOM.operations)
+            selectinload(BOM.operations),
+            selectinload(BOM.sizes).joinedload(BOMSize.size),
         )
         .filter(BOM.id == bom_id)
     )

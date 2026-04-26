@@ -42,6 +42,32 @@ class AttributeResponse(AttributeCreate):
     class Config:
         from_attributes = True
 
+class SizeResponse(BaseModel):
+    id: UUID
+    name: str
+    sort_order: int
+
+    class Config:
+        from_attributes = True
+
+class BOMSizeCreate(BaseModel):
+    size_id: UUID
+    target_measurement: float | None = None
+    measurement_min: float | None = None
+    measurement_max: float | None = None
+
+class BOMSizeResponse(BaseModel):
+    id: UUID
+    size_id: UUID
+    size_name: str | None = None
+    target_measurement: float | None = None
+    measurement_min: float | None = None
+    measurement_max: float | None = None
+    sort_order: int = 0
+
+    class Config:
+        from_attributes = True
+
 class BOMLineCreate(BaseModel):
     item_code: str
     attribute_value_ids: list[UUID] = []
@@ -89,6 +115,12 @@ class BOMCreate(BaseModel):
     tolerance_percentage: float = 0.0
     lines: list[BOMLineCreate]
     operations: list[BOMOperationCreate] = []
+    sizes: list[BOMSizeCreate] = []
+    kerapatan_picks: float | None = None
+    kerapatan_unit: str | None = None
+    sisir_no: int | None = None
+    pemakaian_obat: str | None = None
+    pembuatan_sample_oleh: str | None = None
 
 class BOMResponse(BaseModel):
     id: UUID
@@ -103,6 +135,12 @@ class BOMResponse(BaseModel):
     active: bool
     lines: list[BOMLineResponse]
     operations: list[BOMOperationResponse] = []
+    sizes: list[BOMSizeResponse] = []
+    kerapatan_picks: float | None = None
+    kerapatan_unit: str | None = None
+    sisir_no: int | None = None
+    pemakaian_obat: str | None = None
+    pembuatan_sample_oleh: str | None = None
 
     class Config:
         from_attributes = True

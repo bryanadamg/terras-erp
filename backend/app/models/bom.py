@@ -3,6 +3,7 @@ from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.db.base import Base
 import uuid
+from typing import Optional
 
 # Association tables
 bom_values = Table(
@@ -33,8 +34,14 @@ class BOM(Base):
         UUID(as_uuid=True), ForeignKey("items.id"), index=True
     )
     qty: Mapped[float] = mapped_column(Numeric(14, 4), default=1.0)
-    tolerance_percentage: Mapped[float] = mapped_column(Numeric(5, 2), default=0.0) # e.g. 10.0 for 10%
-    
+    tolerance_percentage: Mapped[float] = mapped_column(Numeric(5, 2), default=0.0)
+
+    kerapatan_picks: Mapped[Optional[float]] = mapped_column(Numeric(10, 2), nullable=True)
+    kerapatan_unit: Mapped[Optional[str]] = mapped_column(String(8), nullable=True)  # '/cm' or '/inch'
+    sisir_no: Mapped[Optional[int]] = mapped_column(nullable=True)
+    pemakaian_obat: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
+    pembuatan_sample_oleh: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
+
     active: Mapped[bool] = mapped_column(Boolean, default=True)
 
     # Relationships
@@ -42,6 +49,7 @@ class BOM(Base):
     attribute_values = relationship("AttributeValue", secondary=bom_values)
     lines = relationship("BOMLine", back_populates="bom", cascade="all, delete-orphan")
     operations = relationship("BOMOperation", back_populates="bom", cascade="all, delete-orphan")
+    sizes = relationship("BOMSize", back_populates="bom", cascade="all, delete-orphan")
     work_orders = relationship("WorkOrder", back_populates="bom")
 
     @property
@@ -113,3 +121,25 @@ class BOMOperation(Base):
     
     sequence: Mapped[int] = mapped_column(Numeric(4, 0), default=10) # e.g. 10, 20, 30
     time_minutes: Mapped[float] = mapped_column(Numeric(10, 2), default=0.0) # Estimated time
+
+
+class BOMSize(Base):
+    __tablename__ = "bom_sizes"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    bom_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("boms.id"), index=True)
+    size_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("sizes.id"), index=True)
+    target_measurement: Mapped[Optional[float]] = mapped_column(Numeric(8, 2), nullable=True)
+    measurement_min: Mapped[Optional[float]] = mapped_column(Numeric(8, 2), nullable=True)
+    measurement_max: Mapped[Optional[float]] = mapped_column(Numeric(8, 2), nullable=True)
+
+    bom = relationship("BOM", back_populates="sizes")
+    size = relationship("Size")
+
+    @property
+    def size_name(self) -> Optional[str]:
+        return self.size.name if self.size else None
+
+    @property
+    def sort_order(self) -> int:
+        return self.size.sort_order if self.size else 0

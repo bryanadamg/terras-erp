@@ -88,6 +88,12 @@ def run_migrations():
                 ("sample_requests", "updated_at", "TIMESTAMP WITHOUT TIME ZONE DEFAULT NOW()"),
                 ("sample_requests", "completion_image_url", "VARCHAR(512)"),
                 ("sample_requests", "design_pdf_url", "VARCHAR(512)"),
+                ("work_orders", "size_id", "UUID REFERENCES sizes(id)"),
+                ("boms", "kerapatan_picks", "NUMERIC(10,2)"),
+                ("boms", "kerapatan_unit", "VARCHAR(8)"),
+                ("boms", "sisir_no", "INTEGER"),
+                ("boms", "pemakaian_obat", "VARCHAR(255)"),
+                ("boms", "pembuatan_sample_oleh", "VARCHAR(255)"),
             ]
 
             for table, col, col_type in migrations:
@@ -256,6 +262,18 @@ from app.models.category import Category
 from app.models.auth import Permission, Role, User
 from app.models.uom import UOM
 from app.core.security import get_password_hash
+
+def seed_sizes(db):
+    try:
+        from app.models.size import Size
+        if db.query(Size).count() == 0:
+            sizes = [("S", 1), ("M", 2), ("L", 3), ("XL", 4), ("2XL", 5), ("3XL", 6), ("4XL", 7)]
+            for name, order in sizes:
+                db.add(Size(name=name, sort_order=order))
+            db.commit()
+            logger.info("Seeded sizes S–4XL")
+    except Exception as e:
+        logger.warning(f"Size seeding skipped: {e}")
 
 def seed_colors_attribute(db):
     try:
@@ -445,6 +463,7 @@ def init_db() -> None:
         seed_uoms(db)
         seed_rbac(db)
         seed_colors_attribute(db)
+        seed_sizes(db)
         sync_stock_balances(db) # Perform sync
     finally:
         db.close()

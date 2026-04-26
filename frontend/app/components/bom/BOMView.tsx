@@ -54,7 +54,7 @@ const xpSectionHdr: React.CSSProperties = {
 };
 
 export default function BOMView({
-    items, boms, locations, attributes, workCenters, operations,
+    items, boms, locations, attributes, sizes, workCenters, operations,
     onCreateBOM, onDeleteBOM, onDeleteMultipleBOMs, onCreateItem, onSearchItem,
     initialCreateState, onClearInitialState
 }: any) {
@@ -591,6 +591,7 @@ export default function BOMView({
                                 rootItemCode={initialItemCode || ''}
                                 initialAttributeValueIds={initialAttributeIds}
                                 items={items} locations={locations || []} attributes={attributes}
+                                sizes={sizes || []}
                                 workCenters={workCenters} operations={operations} existingBOMs={boms}
                                 onSave={handleCreateBOMWrapper} onCreateItem={onCreateItem}
                                 onCancel={handleCloseDesigner} onSearchItem={onSearchItem}

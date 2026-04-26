@@ -16,7 +16,8 @@ from app.models.item import Item, item_attributes
 from app.models.location import Location
 from app.models.attribute import Attribute, AttributeValue
 from app.models.category import Category
-from app.models.bom import BOM, BOMLine, bom_values, bom_line_values, BOMOperation
+from app.models.size import Size
+from app.models.bom import BOM, BOMLine, bom_values, bom_line_values, BOMOperation, BOMSize
 from app.models.manufacturing import WorkOrder, work_order_values
 from app.models.stock_ledger import StockLedger, stock_ledger_values
 from app.models.variant import Variant

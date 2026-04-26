@@ -1,10 +1,17 @@
-import { useState, useEffect, useCallback, memo } from 'react';
+import React, { useState, useEffect, useCallback, memo } from 'react';
 import { useLanguage } from '../../context/LanguageContext';
 import CodeConfigModal, { CodeConfig, buildCodeWithCounter } from '../shared/CodeConfigModal';
 import BOMAutomatorModal from './BOMAutomatorModal';
 import SearchableSelect from '../shared/SearchableSelect';
 
 // Types for Recursive Structure
+interface BOMSizeEntry {
+    size_id: string;
+    target_measurement: number | null;
+    measurement_min: number | null;
+    measurement_max: number | null;
+}
+
 interface BOMLineNode {
     id: string;
     item_code: string;
@@ -26,6 +33,12 @@ interface BOMNodeData {
     tolerance_percentage: number;
     operations: any[];
     lines: BOMLineNode[];
+    sizes: BOMSizeEntry[];
+    kerapatan_picks: number | null;
+    kerapatan_unit: string;
+    sisir_no: number | null;
+    pemakaian_obat: string;
+    pembuatan_sample_oleh: string;
     isNewItem?: boolean;
 }
 
@@ -181,6 +194,7 @@ export default function BOMDesigner({
     items,
     locations,
     attributes,
+    sizes,
     workCenters,
     operations,
     onSave,
@@ -196,7 +210,9 @@ export default function BOMDesigner({
         item_code: rootItemCode || '',
         attribute_value_ids: initialAttributeValueIds || [],
         qty: 1.0, tolerance_percentage: 0.0,
-        operations: [], lines: []
+        operations: [], lines: [], sizes: [],
+        kerapatan_picks: null, kerapatan_unit: '/cm',
+        sisir_no: null, pemakaian_obat: '', pembuatan_sample_oleh: '',
     });
 
     const [selectedNodeId, setSelectedNodeId] = useState<string>('root');
@@ -314,7 +330,10 @@ export default function BOMDesigner({
                     item_code: expectedChildCode,
                     attribute_value_ids: matchingAttrs,
                     qty: 1.0, tolerance_percentage: 0.0,
-                    operations: [], lines: subLines, isNewItem,
+                    operations: [], lines: subLines, sizes: [],
+                    kerapatan_picks: null, kerapatan_unit: '/cm',
+                    sisir_no: null, pemakaian_obat: '', pembuatan_sample_oleh: '',
+                    isNewItem,
                 };
                 levelLines.push({
                     id: Math.random().toString(36).substr(2, 9),
@@ -426,6 +445,18 @@ export default function BOMDesigner({
         if (!selected) return;
         const newNode = { ...selected, ...updatedFields };
         setRootBOM(prev => findNodeAndReplace(prev, selectedNodeId, newNode));
+    };
+
+    const handleSizeChange = (sizeId: string, field: keyof BOMSizeEntry, rawValue: string) => {
+        const value = rawValue === '' ? null : parseFloat(rawValue);
+        const current = findNodeById(rootBOM, selectedNodeId);
+        if (!current) return;
+        const currentSizes = current.sizes || [];
+        const exists = currentSizes.find(s => s.size_id === sizeId);
+        const newSizes = exists
+            ? currentSizes.map(s => s.size_id === sizeId ? { ...s, [field]: value } : s)
+            : [...currentSizes, { size_id: sizeId, target_measurement: null, measurement_min: null, measurement_max: null, [field]: value }];
+        updateSelectedNode({ sizes: newSizes });
     };
 
     const selectedNode = findNodeById(rootBOM, selectedNodeId);
@@ -648,6 +679,93 @@ export default function BOMDesigner({
                                     )}
                                 </div>
 
+                                {/* Sizes + BOM details row - root BOM only */}
+                                {selectedNodeId === 'root' && (
+                                    <div style={{ display: 'flex', gap: 8 }}>
+
+                                        {/* Left: Size Measurements */}
+                                        {(sizes || []).length > 0 && (
+                                            <div style={{ ...xpGroupWrapper, flexShrink: 0 }}>
+                                                <span style={xpGroupLabel()}>Size Measurements (cm)</span>
+                                                <div style={{ display: 'grid', gridTemplateColumns: '32px 52px 48px 12px 48px', gap: '3px 4px', alignItems: 'center' }}>
+                                                    <div />
+                                                    <span style={{ ...xpLabel, fontSize: 10, color: '#555', marginBottom: 0 }}>Target</span>
+                                                    <span style={{ ...xpLabel, fontSize: 10, color: '#555', marginBottom: 0 }}>Min</span>
+                                                    <div />
+                                                    <span style={{ ...xpLabel, fontSize: 10, color: '#555', marginBottom: 0 }}>Max</span>
+                                                    {(sizes || []).map((size: any) => {
+                                                        const entry = (selectedNode?.sizes || []).find((s: BOMSizeEntry) => s.size_id === size.id);
+                                                        return (
+                                                            <React.Fragment key={size.id}>
+                                                                <span style={{ ...xpLabel, fontWeight: 'bold', fontSize: 11, marginBottom: 0 }}>{size.name}</span>
+                                                                <input type="number" style={{ ...xpInput, height: 19 }} placeholder="—"
+                                                                    value={entry?.target_measurement ?? ''}
+                                                                    onChange={e => handleSizeChange(size.id, 'target_measurement', e.target.value)} />
+                                                                <input type="number" style={{ ...xpInput, height: 19 }} placeholder="—"
+                                                                    value={entry?.measurement_min ?? ''}
+                                                                    onChange={e => handleSizeChange(size.id, 'measurement_min', e.target.value)} />
+                                                                <span style={{ textAlign: 'center', fontSize: 11, color: '#555', fontWeight: 'bold', lineHeight: '19px' }}>—</span>
+                                                                <input type="number" style={{ ...xpInput, height: 19 }} placeholder="—"
+                                                                    value={entry?.measurement_max ?? ''}
+                                                                    onChange={e => handleSizeChange(size.id, 'measurement_max', e.target.value)} />
+                                                            </React.Fragment>
+                                                        );
+                                                    })}
+                                                </div>
+                                            </div>
+                                        )}
+
+                                        {/* Right: Additional BOM fields */}
+                                        <div style={{ ...xpGroupWrapper, flex: 1 }}>
+                                            <span style={xpGroupLabel()}>Detail Teknis</span>
+                                            <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+
+                                                {/* Kerapatan/Picks */}
+                                                <div>
+                                                    <label style={xpLabel}>Kerapatan / Picks</label>
+                                                    <div style={{ display: 'flex', gap: 4 }}>
+                                                        <input type="number" style={{ ...xpInput, flex: 1 }}
+                                                            value={selectedNode?.kerapatan_picks ?? ''}
+                                                            onChange={e => updateSelectedNode({ kerapatan_picks: e.target.value === '' ? null : parseFloat(e.target.value) })} />
+                                                        <select style={{ ...xpSelect, width: 60 }}
+                                                            value={selectedNode?.kerapatan_unit || '/cm'}
+                                                            onChange={e => updateSelectedNode({ kerapatan_unit: e.target.value })}>
+                                                            <option value="/cm">/cm</option>
+                                                            <option value="/inch">/inch</option>
+                                                        </select>
+                                                    </div>
+                                                </div>
+
+                                                {/* Sisir no. */}
+                                                <div>
+                                                    <label style={xpLabel}>Sisir no.</label>
+                                                    <input type="number" style={xpInput}
+                                                        value={selectedNode?.sisir_no ?? ''}
+                                                        onChange={e => updateSelectedNode({ sisir_no: e.target.value === '' ? null : parseInt(e.target.value, 10) })} />
+                                                </div>
+
+                                                {/* Pemakaian Obat */}
+                                                <div>
+                                                    <label style={xpLabel}>Pemakaian Obat U/ Setting</label>
+                                                    <input type="text" style={xpInput}
+                                                        value={selectedNode?.pemakaian_obat || ''}
+                                                        onChange={e => updateSelectedNode({ pemakaian_obat: e.target.value })} />
+                                                </div>
+
+                                                {/* Pembuatan sample */}
+                                                <div>
+                                                    <label style={xpLabel}>Pembuatan sample dikerjakan oleh</label>
+                                                    <input type="text" style={xpInput}
+                                                        value={selectedNode?.pembuatan_sample_oleh || ''}
+                                                        onChange={e => updateSelectedNode({ pembuatan_sample_oleh: e.target.value })} />
+                                                </div>
+
+                                            </div>
+                                        </div>
+
+                                    </div>
+                                )}
+
                                 {/* Two-column: Production Steps + Components */}
                                 <div style={{ display: 'flex', gap: 8, flex: 1, alignItems: 'flex-start' }}>
 
@@ -799,7 +917,9 @@ export default function BOMDesigner({
                                                                     item_code: line.item_code,
                                                                     attribute_value_ids: line.attribute_value_ids,
                                                                     qty: 1.0, tolerance_percentage: 0.0,
-                                                                    operations: [], lines: [],
+                                                                    operations: [], lines: [], sizes: [],
+                                                                    kerapatan_picks: null, kerapatan_unit: '/cm',
+                                                                    sisir_no: null, pemakaian_obat: '', pembuatan_sample_oleh: '',
                                                                     isNewItem: line.isNewItem
                                                                 };
                                                                 const newLines = [...selectedNode.lines];

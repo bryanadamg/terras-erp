@@ -13,6 +13,7 @@ interface DataContextType {
     attributes: any[];
     categories: any[];
     uoms: any[];
+    sizes: any[];
     boms: any[];
     workOrders: any[];
     stockEntries: any[];
@@ -59,6 +60,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
     const [attributes, setAttributes] = useState([]);
     const [categories, setCategories] = useState([]);
     const [uoms, setUoms] = useState([]);
+    const [sizes, setSizes] = useState([]);
     const [boms, setBoms] = useState([]);
     const [workOrders, setWorkOrders] = useState([]);
     const [stockEntries, setStockEntries] = useState([]);
@@ -111,7 +113,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
                 if (Date.now() - parsed.timestamp < CACHE_TTL) {
                     const data = parsed.data;
                     setLocations(data.locations || []); setAttributes(data.attributes || []); setCategories(data.categories || []);
-                    setUoms(data.uoms || []); setWorkCenters(data.workCenters || []); setOperations(data.operations || []);
+                    setUoms(data.uoms || []); setSizes(data.sizes || []); setWorkCenters(data.workCenters || []); setOperations(data.operations || []);
                     setPartners(data.partners || []);
                     setIsInitialLoad(false); masterFetched = true;
                 }
@@ -127,6 +129,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
                 requests.push(fetch(`${API_BASE}/attributes`, { headers })); requestTypes.push('attributes');
                 requests.push(fetch(`${API_BASE}/categories`, { headers })); requestTypes.push('categories');
                 requests.push(fetch(`${API_BASE}/uoms`, { headers })); requestTypes.push('uoms');
+                requests.push(fetch(`${API_BASE}/sizes`, { headers })); requestTypes.push('sizes');
                 requests.push(fetch(`${API_BASE}/work-centers`, { headers })); requestTypes.push('work-centers');
                 requests.push(fetch(`${API_BASE}/operations`, { headers })); requestTypes.push('operations');
                 requests.push(fetch(`${API_BASE}/partners`, { headers })); requestTypes.push('partners');
@@ -211,6 +214,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
                     case 'attributes': setAttributes(data); newMasterData.attributes = data; break;
                     case 'categories': setCategories(data); newMasterData.categories = data; break;
                     case 'uoms': setUoms(data); newMasterData.uoms = data; break;
+                    case 'sizes': setSizes(data); newMasterData.sizes = data; break;
                     case 'work-centers': setWorkCenters(data); newMasterData.workCenters = data; break;
                     case 'operations': setOperations(data); newMasterData.operations = data; break;
                     case 'partners': setPartners(data); newMasterData.partners = data; break;
@@ -271,14 +275,14 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
     }, [currentUser, showToast]);
 
     const value = React.useMemo(() => ({
-        items, locations, attributes, categories, uoms, boms, workOrders, stockEntries, stockBalance,
+        items, locations, attributes, categories, uoms, sizes, boms, workOrders, stockEntries, stockBalance,
         workCenters, operations, salesOrders, purchaseOrders, samples, auditLogs, partners, dashboardKPIs,
         companyProfile,
         pagination: { itemPage, setItemPage, itemTotal, woPage, setWoPage, woTotal, auditPage, setAuditPage, auditTotal, reportPage, setReportPage, reportTotal, pageSize },
         filters: { itemSearch, setItemSearch, itemCategory, setItemCategory, auditType, setAuditType },
         fetchData, handleTabHover, authFetch
     }), [
-        items, locations, attributes, categories, uoms, boms, workOrders, stockEntries, stockBalance,
+        items, locations, attributes, categories, uoms, sizes, boms, workOrders, stockEntries, stockBalance,
         workCenters, operations, salesOrders, purchaseOrders, samples, auditLogs, partners, dashboardKPIs,
         companyProfile,
         itemPage, itemTotal, woPage, woTotal, auditPage, auditTotal, reportPage, reportTotal, pageSize,
