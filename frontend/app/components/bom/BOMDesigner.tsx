@@ -7,6 +7,7 @@ import SearchableSelect from '../shared/SearchableSelect';
 // Types for Recursive Structure
 interface BOMSizeEntry {
     size_id: string;
+    label?: string;
     target_measurement: number | null;
     measurement_min: number | null;
     measurement_max: number | null;
@@ -41,6 +42,7 @@ interface BOMNodeData {
     pembuatan_sample_oleh: string;
     customer_id: string;
     work_center_id: string;
+    sizeMode: 'sized' | 'free';
     mesin_lebar: number | null;
     mesin_panjang_tulisan: number | null;
     mesin_panjang_tarikan: number | null;
@@ -229,7 +231,7 @@ export default function BOMDesigner({
         operations: [], lines: [], sizes: [],
         kerapatan_picks: null, kerapatan_unit: '/cm',
         sisir_no: null, pemakaian_obat: '', pembuatan_sample_oleh: '',
-        customer_id: '', work_center_id: '',
+        customer_id: '', work_center_id: '', sizeMode: 'sized',
         mesin_lebar: null, mesin_panjang_tulisan: null, mesin_panjang_tarikan: null,
         mesin_panjang_tarikan_bandul_1kg: null, mesin_panjang_tarikan_bandul_9kg: null,
         celup_lebar: null, celup_panjang_tulisan: null, celup_panjang_tarikan: null,
@@ -770,9 +772,44 @@ export default function BOMDesigner({
                                     <div style={{ display: 'flex', gap: 8 }}>
 
                                         {/* Left: Size Measurements */}
-                                        {(sizes || []).length > 0 && (
-                                            <div style={{ ...xpGroupWrapper, flexShrink: 0 }}>
-                                                <span style={xpGroupLabel()}>Size Measurements (cm)</span>
+                                        <div style={{ ...xpGroupWrapper, flexShrink: 0 }}>
+                                            {/* Header with toggle */}
+                                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
+                                                <span style={xpGroupLabel()}>Measurements (cm)</span>
+                                                <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginLeft: 8 }}>
+                                                    <span style={{ fontSize: 9, color: '#555' }}>Sizes</span>
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => {
+                                                            const next = selectedNode.sizeMode === 'sized' ? 'free' : 'sized';
+                                                            updateSelectedNode({ sizeMode: next, sizes: [] });
+                                                        }}
+                                                        title={selectedNode.sizeMode === 'sized' ? 'Switch to free labels' : 'Switch to size labels'}
+                                                        style={{
+                                                            width: 34, height: 14, padding: 0, cursor: 'pointer',
+                                                            border: '1px solid #7f9db9',
+                                                            background: selectedNode.sizeMode === 'sized'
+                                                                ? 'linear-gradient(to right, #316ac5 50%, #d4d0c8 50%)'
+                                                                : 'linear-gradient(to right, #d4d0c8 50%, #316ac5 50%)',
+                                                            position: 'relative', display: 'flex', alignItems: 'center',
+                                                        }}
+                                                    >
+                                                        <span style={{
+                                                            position: 'absolute',
+                                                            width: 14, height: 12,
+                                                            background: 'linear-gradient(to bottom, #f0efe6, #dddbd0)',
+                                                            border: '1px solid #888',
+                                                            left: selectedNode.sizeMode === 'sized' ? 0 : 18,
+                                                            top: 0,
+                                                            transition: 'left 0.1s',
+                                                        }} />
+                                                    </button>
+                                                    <span style={{ fontSize: 9, color: '#555' }}>Free</span>
+                                                </div>
+                                            </div>
+
+                                            {/* Sized mode */}
+                                            {selectedNode.sizeMode === 'sized' && (sizes || []).length > 0 && (
                                                 <div style={{ display: 'grid', gridTemplateColumns: '32px 52px 48px 12px 48px', gap: '3px 4px', alignItems: 'center' }}>
                                                     <div />
                                                     <span style={{ ...xpLabel, fontSize: 10, color: '#555', marginBottom: 0 }}>Target</span>
@@ -798,8 +835,71 @@ export default function BOMDesigner({
                                                         );
                                                     })}
                                                 </div>
-                                            </div>
-                                        )}
+                                            )}
+
+                                            {/* Free mode */}
+                                            {selectedNode.sizeMode === 'free' && (
+                                                <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+                                                    {/* Column headers */}
+                                                    <div style={{ display: 'grid', gridTemplateColumns: '80px 52px 48px 12px 48px 18px', gap: '0 4px', alignItems: 'center' }}>
+                                                        <span style={{ ...xpLabel, fontSize: 10, color: '#555', marginBottom: 0 }}>Label</span>
+                                                        <span style={{ ...xpLabel, fontSize: 10, color: '#555', marginBottom: 0 }}>Target</span>
+                                                        <span style={{ ...xpLabel, fontSize: 10, color: '#555', marginBottom: 0 }}>Min</span>
+                                                        <div />
+                                                        <span style={{ ...xpLabel, fontSize: 10, color: '#555', marginBottom: 0 }}>Max</span>
+                                                        <div />
+                                                    </div>
+                                                    {/* Rows */}
+                                                    {(selectedNode.sizes || []).map((entry, idx) => (
+                                                        <div key={idx} style={{ display: 'grid', gridTemplateColumns: '80px 52px 48px 12px 48px 18px', gap: '0 4px', alignItems: 'center' }}>
+                                                            <input type="text" style={{ ...xpInput, height: 19 }} placeholder="Label..."
+                                                                value={entry.label || ''}
+                                                                onChange={e => {
+                                                                    const newSizes = [...(selectedNode.sizes || [])];
+                                                                    newSizes[idx] = { ...newSizes[idx], label: e.target.value };
+                                                                    updateSelectedNode({ sizes: newSizes });
+                                                                }} />
+                                                            <input type="number" style={{ ...xpInput, height: 19 }} placeholder="—"
+                                                                value={entry.target_measurement ?? ''}
+                                                                onChange={e => {
+                                                                    const newSizes = [...(selectedNode.sizes || [])];
+                                                                    newSizes[idx] = { ...newSizes[idx], target_measurement: e.target.value === '' ? null : parseFloat(e.target.value) };
+                                                                    updateSelectedNode({ sizes: newSizes });
+                                                                }} />
+                                                            <input type="number" style={{ ...xpInput, height: 19 }} placeholder="—"
+                                                                value={entry.measurement_min ?? ''}
+                                                                onChange={e => {
+                                                                    const newSizes = [...(selectedNode.sizes || [])];
+                                                                    newSizes[idx] = { ...newSizes[idx], measurement_min: e.target.value === '' ? null : parseFloat(e.target.value) };
+                                                                    updateSelectedNode({ sizes: newSizes });
+                                                                }} />
+                                                            <span style={{ textAlign: 'center', fontSize: 11, color: '#555', fontWeight: 'bold', lineHeight: '19px' }}>—</span>
+                                                            <input type="number" style={{ ...xpInput, height: 19 }} placeholder="—"
+                                                                value={entry.measurement_max ?? ''}
+                                                                onChange={e => {
+                                                                    const newSizes = [...(selectedNode.sizes || [])];
+                                                                    newSizes[idx] = { ...newSizes[idx], measurement_max: e.target.value === '' ? null : parseFloat(e.target.value) };
+                                                                    updateSelectedNode({ sizes: newSizes });
+                                                                }} />
+                                                            <button type="button" style={{ ...xpBtnDanger, padding: '0 3px', minWidth: 'auto', height: 19 }}
+                                                                onClick={() => updateSelectedNode({ sizes: (selectedNode.sizes || []).filter((_, i) => i !== idx) })}>
+                                                                ×
+                                                            </button>
+                                                        </div>
+                                                    ))}
+                                                    {/* Add row button */}
+                                                    <button type="button" style={{ ...xpBtn, padding: '1px 6px', marginTop: 2, alignSelf: 'flex-start', fontSize: 10 }}
+                                                        onClick={() => updateSelectedNode({ sizes: [...(selectedNode.sizes || []), { size_id: '', label: '', target_measurement: null, measurement_min: null, measurement_max: null }] })}>
+                                                        + Add Row
+                                                    </button>
+                                                </div>
+                                            )}
+
+                                            {/* Placeholder when sized mode but no sizes configured */}
+                                            {selectedNode.sizeMode === 'sized' && (sizes || []).length === 0 && (
+                                                <div style={{ fontSize: 10, color: '#888', fontStyle: 'italic' }}>No sizes configured.</div>
+                                            )}
+                                        </div>
 
                                         {/* Detail Teknis */}
                                         <div style={{ ...xpGroupWrapper, flexShrink: 0 }}>

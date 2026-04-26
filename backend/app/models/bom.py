@@ -58,6 +58,7 @@ class BOM(Base):
     celup_panjang_tarikan_bandul_9kg: Mapped[Optional[float]] = mapped_column(Numeric(8, 2), nullable=True)
 
     active: Mapped[bool] = mapped_column(Boolean, default=True)
+    size_mode: Mapped[str] = mapped_column(String(8), default='sized')  # 'sized' | 'free'
 
     customer_id: Mapped[Optional[uuid.UUID]] = mapped_column(
         UUID(as_uuid=True), ForeignKey("partners.id"), nullable=True
@@ -160,13 +161,14 @@ class BOMSize(Base):
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     bom_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("boms.id"), index=True)
-    size_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("sizes.id"), index=True)
+    size_id: Mapped[Optional[uuid.UUID]] = mapped_column(UUID(as_uuid=True), ForeignKey("sizes.id"), index=True, nullable=True)
+    label: Mapped[Optional[str]] = mapped_column(String(128), nullable=True)
     target_measurement: Mapped[Optional[float]] = mapped_column(Numeric(8, 2), nullable=True)
     measurement_min: Mapped[Optional[float]] = mapped_column(Numeric(8, 2), nullable=True)
     measurement_max: Mapped[Optional[float]] = mapped_column(Numeric(8, 2), nullable=True)
 
     bom = relationship("BOM", back_populates="sizes")
-    size = relationship("Size")
+    size = relationship("Size", foreign_keys=[size_id])
 
     @property
     def size_name(self) -> Optional[str]:

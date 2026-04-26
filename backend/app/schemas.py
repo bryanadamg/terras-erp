@@ -51,14 +51,16 @@ class SizeResponse(BaseModel):
         from_attributes = True
 
 class BOMSizeCreate(BaseModel):
-    size_id: UUID
+    size_id: UUID | None = None
+    label: str | None = None
     target_measurement: float | None = None
     measurement_min: float | None = None
     measurement_max: float | None = None
 
 class BOMSizeResponse(BaseModel):
     id: UUID
-    size_id: UUID
+    size_id: UUID | None = None
+    label: str | None = None
     size_name: str | None = None
     target_measurement: float | None = None
     measurement_min: float | None = None
@@ -113,6 +115,7 @@ class BOMCreate(BaseModel):
     attribute_value_ids: list[UUID] = []
     qty: float = 1.0
     tolerance_percentage: float = 0.0
+    size_mode: str = 'sized'
     lines: list[BOMLineCreate]
     operations: list[BOMOperationCreate] = []
     sizes: list[BOMSizeCreate] = []
@@ -145,6 +148,7 @@ class BOMResponse(BaseModel):
     attribute_value_ids: list[UUID] = [] # We'll populate this in the API
     qty: float
     tolerance_percentage: float = 0.0
+    size_mode: str = 'sized'
     active: bool
     lines: list[BOMLineResponse]
     operations: list[BOMOperationResponse] = []

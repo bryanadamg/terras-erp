@@ -189,7 +189,19 @@ export default function BOMView({
     const handleCloseDesigner = () => { setIsDesignerOpen(false); if (onClearInitialState) onClearInitialState(); };
 
     const handleCreateBOMWrapper = async (bomData: any) => {
-        const cleaned = { ...bomData, customer_id: bomData.customer_id || null, work_center_id: bomData.work_center_id || null };
+        const cleaned = {
+            ...bomData,
+            customer_id: bomData.customer_id || null,
+            work_center_id: bomData.work_center_id || null,
+            size_mode: bomData.sizeMode || 'sized',
+            sizes: (bomData.sizes || []).map((s: any) => ({
+                size_id: s.size_id || null,
+                label: s.label || null,
+                target_measurement: s.target_measurement,
+                measurement_min: s.measurement_min,
+                measurement_max: s.measurement_max,
+            })),
+        };
         const res = await onCreateBOM(cleaned);
         if (res?.status === 400) {
             const err = await res.json();
