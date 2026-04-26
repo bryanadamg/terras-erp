@@ -1,6 +1,6 @@
 'use client';
 
-import ReportsView from '../components/ReportsView';
+import ReportsView from '../components/dashboard/ReportsView';
 import { useData } from '../context/DataContext';
 
 export default function ReportsPage() {

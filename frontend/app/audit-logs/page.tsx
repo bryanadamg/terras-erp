@@ -1,6 +1,6 @@
 'use client';
 
-import AuditLogsView from '../components/AuditLogsView';
+import AuditLogsView from '../components/settings/AuditLogsView';
 import { useData } from '../context/DataContext';
 
 export default function AuditLogsPage() {

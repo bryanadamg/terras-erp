@@ -1,6 +1,6 @@
 'use client';
 
-import BOMView from '../components/BOMView';
+import BOMView from '../components/bom/BOMView';
 import { useData } from '../context/DataContext';
 import { useConfirm } from '../context/ConfirmContext';
 import { useSearchParams } from 'next/navigation';

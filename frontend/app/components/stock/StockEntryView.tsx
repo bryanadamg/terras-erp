@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import SearchableSelect from './SearchableSelect';
+import SearchableSelect from '../shared/SearchableSelect';
 import { useLanguage } from '../context/LanguageContext';
 import { useTheme } from '../context/ThemeContext';
 

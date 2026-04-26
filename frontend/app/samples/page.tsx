@@ -1,8 +1,8 @@
 'use client';
 
-import SampleRequestView from '../components/SampleRequestView';
+import SampleRequestView from '../components/samples/SampleRequestView';
 import { useData } from '../context/DataContext';
-import { useToast } from '../components/Toast';
+import { useToast } from '../components/shared/Toast';
 
 export default function SamplesPage() {
     const { partners, samples, fetchData, authFetch } = useData();

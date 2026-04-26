@@ -1,16 +1,16 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import QRCode from 'qrcode';
 import { Html5QrcodeScanner } from 'html5-qrcode';
-import CodeConfigModal, { CodeConfig, buildCodeParts } from './CodeConfigModal';
-import CalendarView from './CalendarView';
-import SearchableSelect from './SearchableSelect';
-import QRScannerView from './QRScannerView';
-import { useToast } from './Toast';
+import CodeConfigModal, { CodeConfig, buildCodeParts } from '../shared/CodeConfigModal';
+import CalendarView from '../shared/CalendarView';
+import SearchableSelect from '../shared/SearchableSelect';
+import QRScannerView from '../shared/QRScannerView';
+import { useToast } from '../shared/Toast';
 import { useLanguage } from '../context/LanguageContext';
 import { useTheme } from '../context/ThemeContext';
 import { useData } from '../context/DataContext';
-import ModalWrapper from './ModalWrapper';
-import PrintHeader from './PrintHeader';
+import ModalWrapper from '../shared/ModalWrapper';
+import PrintHeader from '../shared/PrintHeader';
 import WOPrintModal, { PrintSettings } from './WOPrintModal';
 
 export default function ManufacturingView({ 

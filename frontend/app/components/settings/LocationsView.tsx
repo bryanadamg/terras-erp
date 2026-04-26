@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useToast } from './Toast';
+import { useToast } from '../shared/Toast';
 import { useLanguage } from '../context/LanguageContext';
 import { useTheme } from '../context/ThemeContext';
 

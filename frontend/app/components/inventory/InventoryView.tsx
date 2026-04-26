@@ -1,11 +1,11 @@
 import React, { useState, useEffect, useMemo, memo } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
-import CodeConfigModal, { CodeConfig, buildCodeWithCounter } from './CodeConfigModal';
+import CodeConfigModal, { CodeConfig, buildCodeWithCounter } from '../shared/CodeConfigModal';
 import BulkImportModal from './BulkImportModal';
-import SearchableSelect from './SearchableSelect';
-import HistoryPane from './HistoryPane';
-import ModalWrapper from './ModalWrapper';
-import { useToast } from './Toast';
+import SearchableSelect from '../shared/SearchableSelect';
+import HistoryPane from '../shared/HistoryPane';
+import ModalWrapper from '../shared/ModalWrapper';
+import { useToast } from '../shared/Toast';
 import { useLanguage } from '../context/LanguageContext';
 import { useTheme } from '../context/ThemeContext';
 

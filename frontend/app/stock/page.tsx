@@ -1,9 +1,9 @@
 'use client';
 
-import StockEntryView from '../components/StockEntryView';
+import StockEntryView from '../components/stock/StockEntryView';
 import MobileStockView from '../components/mobile/StockView';
 import { useData } from '../context/DataContext';
-import { useToast } from '../components/Toast';
+import { useToast } from '../components/shared/Toast';
 import { useIsMobile } from '../hooks/useIsMobile';
 
 export default function StockEntryPage() {

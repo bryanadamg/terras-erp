@@ -1,6 +1,6 @@
 'use client';
 
-import InventoryView from '../components/InventoryView';
+import InventoryView from '../components/inventory/InventoryView';
 import { useData } from '../context/DataContext';
 import { useConfirm } from '../context/ConfirmContext';
 

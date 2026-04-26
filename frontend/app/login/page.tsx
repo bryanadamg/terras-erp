@@ -4,7 +4,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { useUser } from '../context/UserContext';
 import { useIsMobile } from '../hooks/useIsMobile';
-import PixelAvatar from '../components/PixelAvatar';
+import PixelAvatar from '../components/shared/PixelAvatar';
 
 export default function LoginPage() {
     const { currentUser, login, loading } = useUser();

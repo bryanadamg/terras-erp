@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
-import CodeConfigModal, { CodeConfig, buildCodeWithCounter } from './CodeConfigModal';
-import SearchableSelect from './SearchableSelect';
+import CodeConfigModal, { CodeConfig, buildCodeWithCounter } from '../shared/CodeConfigModal';
+import SearchableSelect from '../shared/SearchableSelect';
 import { useLanguage } from '../context/LanguageContext';
 
 export default function BOMForm({ 

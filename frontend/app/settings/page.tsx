@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import SettingsView from '../components/SettingsView';
+import SettingsView from '../components/settings/SettingsView';
 import { useData } from '../context/DataContext';
 import { useTheme } from '../context/ThemeContext';
 

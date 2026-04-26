@@ -1,8 +1,8 @@
 import { useState, useEffect, useCallback, memo } from 'react';
 import { useLanguage } from '../context/LanguageContext';
-import CodeConfigModal, { CodeConfig, buildCodeWithCounter } from './CodeConfigModal';
+import CodeConfigModal, { CodeConfig, buildCodeWithCounter } from '../shared/CodeConfigModal';
 import BOMAutomatorModal from './BOMAutomatorModal';
-import SearchableSelect from './SearchableSelect';
+import SearchableSelect from '../shared/SearchableSelect';
 
 // Types for Recursive Structure
 interface BOMLineNode {

@@ -1,9 +1,9 @@
 'use client';
 
-import ManufacturingView from '../components/ManufacturingView';
+import ManufacturingView from '../components/manufacturing/ManufacturingView';
 import MobileManufacturingView from '../components/mobile/ManufacturingView';
 import { useData } from '../context/DataContext';
-import { useToast } from '../components/Toast';
+import { useToast } from '../components/shared/Toast';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { useEffect, useState, useRef, useCallback } from 'react';
 import { useConfirm } from '../context/ConfirmContext';

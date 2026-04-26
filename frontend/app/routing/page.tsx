@@ -1,6 +1,6 @@
 'use client';
 
-import RoutingView from '../components/RoutingView';
+import RoutingView from '../components/settings/RoutingView';
 import { useData } from '../context/DataContext';
 
 export default function RoutingPage() {

@@ -1,6 +1,6 @@
 'use client';
 
-import LocationsView from '../components/LocationsView';
+import LocationsView from '../components/settings/LocationsView';
 import { useData } from '../context/DataContext';
 import { useConfirm } from '../context/ConfirmContext';
 

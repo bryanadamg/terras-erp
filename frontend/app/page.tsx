@@ -1,6 +1,6 @@
 'use client';
 
-import DashboardView from './components/DashboardView';
+import DashboardView from './components/dashboard/DashboardView';
 import { useData } from './context/DataContext';
 
 export default function RootPage() {

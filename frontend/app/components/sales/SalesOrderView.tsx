@@ -1,9 +1,9 @@
 import { useState, useEffect } from 'react';
-import CodeConfigModal, { CodeConfig, buildCodeWithCounter } from './CodeConfigModal';
-import { useToast } from './Toast';
+import CodeConfigModal, { CodeConfig, buildCodeWithCounter } from '../shared/CodeConfigModal';
+import { useToast } from '../shared/Toast';
 import { useLanguage } from '../context/LanguageContext';
-import SearchableSelect from './SearchableSelect';
-import ModalWrapper from './ModalWrapper';
+import SearchableSelect from '../shared/SearchableSelect';
+import ModalWrapper from '../shared/ModalWrapper';
 import SalesPrintModal from './SalesPrintModal';
 import SOTablePrintModal from './SOTablePrintModal';
 import { useTheme } from '../context/ThemeContext';

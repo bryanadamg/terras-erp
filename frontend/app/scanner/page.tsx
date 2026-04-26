@@ -1,10 +1,10 @@
 'use client';
 
-import QRScannerView from '../components/QRScannerView';
+import QRScannerView from '../components/shared/QRScannerView';
 import MobileScannerView from '../components/mobile/ScannerView';
 import { useData } from '../context/DataContext';
 import { useRouter } from 'next/navigation';
-import { useToast } from '../components/Toast';
+import { useToast } from '../components/shared/Toast';
 import { useIsMobile } from '../hooks/useIsMobile';
 import { useEffect, useState } from 'react';
 

@@ -1,9 +1,9 @@
 'use client';
 
-import SalesOrderView from '../components/SalesOrderView';
+import SalesOrderView from '../components/sales/SalesOrderView';
 import { useData } from '../context/DataContext';
 import { useRouter } from 'next/navigation';
-import { useToast } from '../components/Toast';
+import { useToast } from '../components/shared/Toast';
 import { useConfirm } from '../context/ConfirmContext';
 
 export default function SalesOrdersPage() {

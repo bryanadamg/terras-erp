@@ -1,8 +1,8 @@
 'use client';
 
-import PartnersView from '../components/PartnersView';
+import PartnersView from '../components/settings/PartnersView';
 import { useData } from '../context/DataContext';
-import { useToast } from '../components/Toast';
+import { useToast } from '../components/shared/Toast';
 
 export default function SuppliersPage() {
     const { partners, fetchData, authFetch } = useData();

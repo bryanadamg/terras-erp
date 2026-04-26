@@ -1,9 +1,9 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useToast } from './Toast';
+import { useToast } from '../shared/Toast';
 import { useLanguage } from '../context/LanguageContext';
-import ModalWrapper from './ModalWrapper';
+import ModalWrapper from '../shared/ModalWrapper';
 import { useTheme } from '../context/ThemeContext';
 
 interface Partner {

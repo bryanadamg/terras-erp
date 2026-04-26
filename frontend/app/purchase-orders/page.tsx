@@ -1,8 +1,8 @@
 'use client';
 
-import PurchaseOrderView from '../components/PurchaseOrderView';
+import PurchaseOrderView from '../components/purchasing/PurchaseOrderView';
 import { useData } from '../context/DataContext';
-import { useToast } from '../components/Toast';
+import { useToast } from '../components/shared/Toast';
 import { useConfirm } from '../context/ConfirmContext';
 
 export default function PurchaseOrdersPage() {

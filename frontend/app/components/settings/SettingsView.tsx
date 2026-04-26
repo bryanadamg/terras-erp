@@ -1,10 +1,10 @@
 import { useState, useEffect } from 'react';
-import { useToast } from './Toast';
+import { useToast } from '../shared/Toast';
 import { useTheme } from '../context/ThemeContext';
 import { useUser, User } from '../context/UserContext';
 import CompanyProfileView from './CompanyProfileView';
-import PixelAvatar from './PixelAvatar';
-import AvatarPicker from './AvatarPicker';
+import PixelAvatar from '../shared/PixelAvatar';
+import AvatarPicker from '../shared/AvatarPicker';
 
 export default function SettingsView({
     appName, onUpdateAppName, uiStyle, onUpdateUIStyle, requestConfirm,

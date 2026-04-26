@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { useLanguage } from '../context/LanguageContext';
 import { useTheme } from '../context/ThemeContext';
-import { useToast } from './Toast';
+import { useToast } from '../shared/Toast';
 
 interface Props {
     categories: any[];

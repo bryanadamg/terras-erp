@@ -1,15 +1,15 @@
 import 'bootstrap/dist/css/bootstrap.min.css';
 import 'bootstrap-icons/font/bootstrap-icons.css';
 import './globals.css';
-import { ToastProvider } from './components/Toast';
+import { ToastProvider } from './components/shared/Toast';
 import { ConfirmProvider } from './context/ConfirmContext';
 import { LanguageProvider } from './context/LanguageContext';
 import { Suspense } from 'react';
 import { UserProvider } from './context/UserContext';
 import { DataProvider } from './context/DataContext';
 import { ThemeProvider } from './context/ThemeContext';
-import QueryProvider from './components/QueryProvider';
-import MainLayout from './components/MainLayout';
+import QueryProvider from './components/shared/QueryProvider';
+import MainLayout from './components/shared/MainLayout';
 
 export const metadata = {
   title: 'Terras ERP',

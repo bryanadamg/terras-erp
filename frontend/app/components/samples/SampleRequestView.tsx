@@ -1,13 +1,13 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useTheme } from '../context/ThemeContext';
-import { useToast } from './Toast';
+import { useToast } from '../shared/Toast';
 import { useLanguage } from '../context/LanguageContext';
 import { useData } from '../context/DataContext';
-import CodeConfigModal, { CodeConfig, buildCodeWithCounter } from './CodeConfigModal';
-import SearchableSelect from './SearchableSelect';
-import HistoryPane from './HistoryPane';
-import ModalWrapper from './ModalWrapper';
+import CodeConfigModal, { CodeConfig, buildCodeWithCounter } from '../shared/CodeConfigModal';
+import SearchableSelect from '../shared/SearchableSelect';
+import HistoryPane from '../shared/HistoryPane';
+import ModalWrapper from '../shared/ModalWrapper';
 import SamplePrintModal from './SamplePrintModal';
 
 export default function SampleRequestView({ samples, customers, onCreateSample, onUpdateStatus, onUpdateColorStatus, onDeleteSample, onMarkRead, onMarkUnread, onMarkAllRead }: any) {

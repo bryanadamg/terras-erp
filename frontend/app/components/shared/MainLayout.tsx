@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import Sidebar from './Sidebar';
-import MobileShell from './mobile/MobileShell';
+import MobileShell from '../mobile/MobileShell';
 import { useUser } from '../context/UserContext';
 import { useData } from '../context/DataContext';
 import { useLanguage } from '../context/LanguageContext';

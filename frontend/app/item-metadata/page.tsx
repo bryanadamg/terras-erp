@@ -1,6 +1,6 @@
 'use client';
 
-import ItemMetadataView from '../components/ItemMetadataView';
+import ItemMetadataView from '../components/settings/ItemMetadataView';
 import { useData } from '../context/DataContext';
 import { useConfirm } from '../context/ConfirmContext';
 

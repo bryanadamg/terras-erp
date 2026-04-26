@@ -1,7 +1,7 @@
 import { useState, useRef } from 'react';
 import { useLanguage } from '../context/LanguageContext';
 import { useTheme } from '../context/ThemeContext';
-import ModalWrapper from './ModalWrapper';
+import ModalWrapper from '../shared/ModalWrapper';
 
 interface BulkImportModalProps {
     isOpen: boolean;

@@ -1,6 +1,6 @@
 'use client';
 
-import DashboardView from '../components/DashboardView';
+import DashboardView from '../components/dashboard/DashboardView';
 import MobileDashboardView from '../components/mobile/DashboardView';
 import { useData } from '../context/DataContext';
 import { useIsMobile } from '../hooks/useIsMobile';
