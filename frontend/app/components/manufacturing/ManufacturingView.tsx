@@ -12,25 +12,37 @@ import { useData } from '../../context/DataContext';
 import ModalWrapper from '../shared/ModalWrapper';
 import PrintHeader from '../shared/PrintHeader';
 import WOPrintModal, { PrintSettings } from './WOPrintModal';
+import ProductionRunModal from './ProductionRunModal';
 
-export default function ManufacturingView({ 
-    items, 
-    boms, 
-    locations, 
-    attributes, 
-    workOrders, 
-    stockBalance, 
-    workCenters, 
-    operations, 
-    onCreateWO, 
-    onUpdateStatus, 
-    onDeleteWO, 
-    currentPage, 
-    totalItems, 
-    pageSize, 
+export default function ManufacturingView({
+    items,
+    boms,
+    locations,
+    attributes,
+    manufacturingOrders,
+    productionRuns,
+    stockBalance,
+    workCenters,
+    operations,
+    onCreateMO,
+    onUpdateStatus,
+    onDeleteMO,
+    onCreateProductionRun,
+    onDeleteProductionRun,
+    onUpdatePRStatus,
+    onCreateWO,
+    onUpdateWO,
+    onUpdateWOStatus,
+    onDeleteWO,
+    currentPage,
+    totalItems,
+    pageSize,
     onPageChange,
+    prPage,
+    prTotal,
+    setPrPage,
     initialCreateState,
-    onClearInitialState 
+    onClearInitialState
 }: any) {
   const { showToast } = useToast();
   const { t } = useLanguage();
@@ -39,9 +51,13 @@ export default function ManufacturingView({
   const API_BASE = envBase.endsWith('/api') ? envBase : `${envBase}/api`;
   const [viewMode, setViewMode] = useState('list');
 
-  // Keep a ref so scanner callbacks always access the latest workOrders without stale closure issues
-  const workOrdersRef = useRef<any[]>(workOrders);
-  useEffect(() => { workOrdersRef.current = workOrders; }, [workOrders]);
+  // Keep a ref so scanner callbacks always access the latest manufacturingOrders without stale closure issues
+  const workOrdersRef = useRef<any[]>(manufacturingOrders);
+  useEffect(() => { workOrdersRef.current = manufacturingOrders; }, [manufacturingOrders]);
+
+  // Tab state: 'production-runs' | 'manufacturing-orders'
+  const [activeTab, setActiveTab] = useState<'production-runs' | 'manufacturing-orders'>('production-runs');
+  const [isPRModalOpen, setIsPRModalOpen] = useState(false);
 
   // Derived Pagination
   const totalPages = Math.ceil(totalItems / pageSize);
@@ -72,7 +88,7 @@ export default function ManufacturingView({
   const [isConfigOpen, setIsConfigOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [codeConfig, setCodeConfig] = useState<CodeConfig>({
-      prefix: 'WO',
+      prefix: 'MO',
       suffix: '',
       separator: '-',
       includeItemCode: true,
@@ -127,24 +143,24 @@ export default function ManufacturingView({
   }, [initialCreateState, items, boms, onClearInitialState]);
 
   useEffect(() => {
-      const savedConfig = localStorage.getItem('wo_code_config');
+      const savedConfig = localStorage.getItem('mo_code_config');
       if (savedConfig) {
           try { setCodeConfig(JSON.parse(savedConfig)); } catch (e) {}
       }
-      const savedPrintSettings = localStorage.getItem('wo_print_settings');
+      const savedPrintSettings = localStorage.getItem('mo_print_settings');
       if (savedPrintSettings) {
           try { setPrintSettings(JSON.parse(savedPrintSettings)); } catch (e) {}
       }
   }, []);
 
   useEffect(() => {
-      localStorage.setItem('wo_print_settings', JSON.stringify(printSettings));
+      localStorage.setItem('mo_print_settings', JSON.stringify(printSettings));
   }, [printSettings]);
 
   useEffect(() => {
       const expandedIds = Object.keys(expandedRows).filter(id => expandedRows[id]);
       for (const woId of expandedIds) {
-          const wo = workOrders.find((w: any) => w.id === woId);
+          const wo = manufacturingOrders.find((w: any) => w.id === woId);
           if (!wo) continue;
           const nodes = flattenTree(wo);
           for (const { wo: node } of nodes) {
@@ -155,7 +171,7 @@ export default function ManufacturingView({
               }
           }
       }
-  }, [expandedRows, workOrders]);
+  }, [expandedRows, manufacturingOrders]);
 
   const buildWOBasePattern = (bomId: string, config = codeConfig) => {
       const bom = boms.find((b: any) => b.id === bomId);
@@ -178,7 +194,7 @@ export default function ManufacturingView({
 
   const fetchAvailableCode = async (base: string): Promise<string> => {
       try {
-          const res = await authFetch(`${API_BASE}/work-orders/available-code?base=${encodeURIComponent(base)}`);
+          const res = await authFetch(`${API_BASE}/manufacturing-orders/available-code?base=${encodeURIComponent(base)}`);
           if (res.ok) {
               const data = await res.json();
               return data.code;
@@ -189,7 +205,7 @@ export default function ManufacturingView({
 
   const handleSaveConfig = async (newConfig: CodeConfig) => {
       setCodeConfig(newConfig);
-      localStorage.setItem('wo_code_config', JSON.stringify(newConfig));
+      localStorage.setItem('mo_code_config', JSON.stringify(newConfig));
       let base: string;
       if (newWO.bom_id) {
           base = buildWOBasePattern(newWO.bom_id, newConfig);
@@ -216,7 +232,7 @@ export default function ManufacturingView({
       setPrintPreviewWO(wo);
   };
 
-  const filteredWorkOrders = workOrders.filter((wo: any) => {
+  const filteredWorkOrders = manufacturingOrders.filter((wo: any) => {
       const date = new Date(wo.created_at);
       const start = startDate ? new Date(startDate) : null;
       const end = endDate ? new Date(endDate) : null;
@@ -248,24 +264,24 @@ export default function ManufacturingView({
               sales_order_id: newWO.sales_order_id || null
           };
 
-          const res = await onCreateWO(payload);
+          const res = await onCreateMO(payload);
           if (res && res.status === 400) {
               const baseMatch = newWO.code.match(/^(.*)-\d+$/);
               const base = baseMatch ? baseMatch[1] : newWO.code;
               const suggestedCode = await fetchAvailableCode(base);
-              showToast(`Work Order Code "${newWO.code}" already exists. Suggesting: ${suggestedCode}`, 'warning');
+              showToast(`Manufacturing Order Code "${newWO.code}" already exists. Suggesting: ${suggestedCode}`, 'warning');
               setNewWO({ ...newWO, code: suggestedCode });
           } else if (res && res.ok) {
-              const createdWO = await res.json();
-              if (createdWO.is_material_available === false) {
-                  showToast('Work Order created, but insufficient materials!', 'warning');
+              const createdMO = await res.json();
+              if (createdMO.is_material_available === false) {
+                  showToast('Manufacturing Order created, but insufficient materials!', 'warning');
               } else {
-                  showToast('Work Order created successfully!', 'success');
+                  showToast('Manufacturing Order created successfully!', 'success');
               }
               setNewWO({ code: '', bom_id: '', location_code: '', source_location_code: '', qty: 1.0, target_start_date: '', target_end_date: '' });
               setIsCreateOpen(false);
           } else {
-              showToast('Failed to create Work Order', 'danger');
+              showToast('Failed to create Manufacturing Order', 'danger');
           }
       } finally {
           setIsSubmitting(false);
@@ -286,7 +302,7 @@ export default function ManufacturingView({
 
   const findNodeById = (node: any, id: string): any => {
       if (node.id === id) return node;
-      for (const child of (node.child_wos || [])) {
+      for (const child of (node.child_mos || [])) {
           const found = findNodeById(child, id);
           if (found) return found;
       }
@@ -303,7 +319,7 @@ export default function ManufacturingView({
 
   const findNodeByCodeInTree = (node: any, code: string): any => {
       if (node.code === code) return node;
-      for (const child of (node.child_wos || [])) {
+      for (const child of (node.child_mos || [])) {
           const found = findNodeByCodeInTree(child, code);
           if (found) return found;
       }
@@ -312,7 +328,7 @@ export default function ManufacturingView({
 
   const flattenTree = (node: any, level = 0): Array<{wo: any; level: number}> => {
       const result: Array<{wo: any; level: number}> = [{wo: node, level}];
-      for (const child of (node.child_wos || [])) {
+      for (const child of (node.child_mos || [])) {
           result.push(...flattenTree(child, level + 1));
       }
       return result;
@@ -396,7 +412,7 @@ export default function ManufacturingView({
                       onUpdateStatus(found.id, found.status === 'PENDING' ? 'IN_PROGRESS' : 'COMPLETED');
                       onClose();
                   } else {
-                      showToast(`WO "${code}" not found`, 'danger');
+                      showToast(`MO "${code}" not found`, 'danger');
                   }
               }, () => {});
           }, 100);
@@ -433,7 +449,7 @@ export default function ManufacturingView({
       return (
           <div style={{ display: 'flex', minHeight: '280px', background: classic ? '#f5f3ee' : '#f8f9fa', border: classic ? '1px solid #808080' : undefined }}>
 
-              {/* ── LEFT: WO Tree ── */}
+              {/* ── LEFT: MO Tree ── */}
               <div style={{
                   width: '210px', minWidth: '210px',
                   borderRight: classic ? '2px solid #808080' : '1px solid #dee2e6',
@@ -445,10 +461,10 @@ export default function ManufacturingView({
                       color: '#fff', fontWeight: 'bold', fontSize: '11px',
                       padding: '5px 8px', letterSpacing: '0.3px'
                   }}>
-                      <i className="bi bi-diagram-3-fill me-2"></i>WO Tree
+                      <i className="bi bi-diagram-3-fill me-2"></i>MO Tree
                   </div>
                   <div style={{ padding: '4px', overflowY: 'auto', flex: 1 }}>
-                      {treeNodes.map(({ wo: node, level }) => {
+                      {treeNodes.map(({ wo: node, level }: { wo: any; level: number }) => {
                           const isActive = node.id === selectedNodeId;
                           const statusColor = node.status === 'COMPLETED' ? '#2d7a2d' : node.status === 'IN_PROGRESS' ? (classic ? '#0058e6' : '#fd7e14') : '#6c757d';
                           return (
@@ -561,7 +577,7 @@ export default function ManufacturingView({
                               </tbody>
                           </table>
                       ) : (
-                          <div style={{ padding: '16px', color: '#555', fontSize: '11px', textAlign: 'center' }}>No BOM lines to display for this work order.</div>
+                          <div style={{ padding: '16px', color: '#555', fontSize: '11px', textAlign: 'center' }}>No BOM lines to display for this manufacturing order.</div>
                       )}
                   </div>
               </div>
@@ -647,7 +663,7 @@ export default function ManufacturingView({
             />
         )}
 
-          <CodeConfigModal isOpen={isConfigOpen} onClose={() => setIsConfigOpen(false)} type="WO" onSave={handleSaveConfig} initialConfig={codeConfig} attributes={attributes} />
+          <CodeConfigModal isOpen={isConfigOpen} onClose={() => setIsConfigOpen(false)} type="MO" onSave={handleSaveConfig} initialConfig={codeConfig} attributes={attributes} />
 
           <ModalWrapper
               isOpen={isCreateOpen}
@@ -658,13 +674,13 @@ export default function ManufacturingView({
               footer={
                   <>
                       <button type="button" className="btn btn-sm btn-link text-muted text-decoration-none" onClick={() => setIsCreateOpen(false)}>{t('cancel')}</button>
-                      <button type="button" className="btn btn-sm btn-success px-4 fw-bold shadow-sm" onClick={handleSubmit} disabled={isSubmitting}>{isSubmitting ? 'Creating...' : 'CREATE WORK ORDER'}</button>
+                      <button type="button" className="btn btn-sm btn-success px-4 fw-bold shadow-sm" onClick={handleSubmit} disabled={isSubmitting}>{isSubmitting ? 'Creating...' : 'CREATE MANUFACTURING ORDER'}</button>
                   </>
               }
           >
               <div className="row g-3 mb-3">
                   <div className="col-md-6">
-                      <label className="form-label extra-small fw-bold text-muted uppercase">WO Reference Code</label>
+                      <label className="form-label extra-small fw-bold text-muted uppercase">MO Reference Code</label>
                       <div className="input-group">
                           <input className="form-control form-control-sm" placeholder="Auto-generated" value={newWO.code} onChange={e => setNewWO({...newWO, code: e.target.value})} required />
                           <button className="btn btn-sm btn-outline-secondary" type="button" onClick={() => setIsConfigOpen(true)}><i className="bi bi-gear-fill"></i></button>
@@ -726,11 +742,11 @@ export default function ManufacturingView({
                       />
                       <label className="form-check-label small fw-bold text-info-emphasis" htmlFor="nested-wo-switch">
                           <i className="bi bi-diagram-3-fill me-2"></i>
-                          Create child Work Orders for all nested BOMs
+                          Create child Manufacturing Orders for all nested BOMs
                       </label>
                   </div>
                   <div className="extra-small text-muted mt-1 ms-4 ps-1">
-                      Automatically generate production runs for every sub-assembly in the recipe.
+                      Automatically generate manufacturing orders for every sub-assembly in the recipe.
                   </div>
               </div>
           </ModalWrapper>
@@ -816,10 +832,22 @@ export default function ManufacturingView({
                           </div>
                       </div>
 
-                      {/* Right: Create + Print */}
+                      {/* Right: New Production Run + Create MO + Print */}
                       <div style={{ display: 'flex', gap: '6px' }}>
                           {currentStyle === 'classic' ? (
                               <>
+                                  <button
+                                      onClick={() => setIsPRModalOpen(true)}
+                                      style={{
+                                          fontFamily: 'Tahoma, Arial, sans-serif', fontSize: '11px',
+                                          padding: '2px 10px', cursor: 'pointer', fontWeight: 'bold',
+                                          background: 'linear-gradient(to bottom,#5a9ae0,#0058e6)',
+                                          border: '1px solid', borderColor: '#003080 #001840 #001840 #003080',
+                                          color: '#fff',
+                                      }}
+                                  >
+                                      <i className="bi bi-collection-play me-1"></i>New Production Run
+                                  </button>
                                   <button
                                       onClick={() => setIsCreateOpen(true)}
                                       style={{
@@ -830,7 +858,7 @@ export default function ManufacturingView({
                                           color: '#fff',
                                       }}
                                   >
-                                      <i className="bi bi-plus-lg me-1"></i>{t('create')}
+                                      <i className="bi bi-plus-lg me-1"></i>New MO
                                   </button>
                                   <button
                                       onClick={handlePrintList}
@@ -847,18 +875,184 @@ export default function ManufacturingView({
                               </>
                           ) : (
                               <>
-                                  <button className="btn btn-success btn-sm text-white" onClick={() => setIsCreateOpen(true)}><i className="bi bi-plus-lg me-1"></i>{t('create')}</button>
+                                  <button className="btn btn-primary btn-sm" onClick={() => setIsPRModalOpen(true)}><i className="bi bi-collection-play me-1"></i>New Production Run</button>
+                                  <button className="btn btn-success btn-sm text-white" onClick={() => setIsCreateOpen(true)}><i className="bi bi-plus-lg me-1"></i>New MO</button>
                                   <button className="btn btn-outline-primary btn-sm btn-print" onClick={handlePrintList}><i className="bi bi-printer me-1"></i>{t('print')}</button>
                               </>
                           )}
                       </div>
                   </div>
 
+                  {/* ── Tab bar ── */}
+                  <div className="no-print" style={{
+                      background: currentStyle === 'classic' ? '#ece9d8' : '#f8f9fa',
+                      borderBottom: currentStyle === 'classic' ? '1px solid #808080' : '1px solid #dee2e6',
+                      display: 'flex', gap: currentStyle === 'classic' ? '0' : '4px',
+                      padding: currentStyle === 'classic' ? '4px 8px 0' : '6px 12px 0',
+                  }}>
+                      {[
+                          { key: 'production-runs', label: 'Production Runs', icon: 'bi-collection-play' },
+                          { key: 'manufacturing-orders', label: 'Manufacturing Orders', icon: 'bi-list-task' },
+                      ].map(({ key, label, icon }) => {
+                          const isActive = activeTab === key;
+                          if (currentStyle === 'classic') {
+                              return (
+                                  <button
+                                      key={key}
+                                      onClick={() => setActiveTab(key as any)}
+                                      style={{
+                                          fontFamily: 'Tahoma, Arial, sans-serif', fontSize: '11px',
+                                          padding: '3px 12px',
+                                          background: isActive ? '#ece9d8' : 'linear-gradient(to bottom,#d4d0c8,#b8b4ac)',
+                                          border: '1px solid #808080',
+                                          borderBottom: isActive ? '1px solid #ece9d8' : '1px solid #808080',
+                                          color: '#000', cursor: 'pointer',
+                                          fontWeight: isActive ? 'bold' : 'normal',
+                                          marginRight: 2, position: 'relative', top: 1,
+                                      }}
+                                  >
+                                      <i className={`bi ${icon} me-1`}></i>{label}
+                                  </button>
+                              );
+                          }
+                          return (
+                              <button key={key}
+                                  onClick={() => setActiveTab(key as any)}
+                                  style={{
+                                      fontSize: '12px', padding: '4px 14px', cursor: 'pointer',
+                                      background: isActive ? '#fff' : 'transparent',
+                                      border: '1px solid',
+                                      borderColor: isActive ? '#dee2e6 #dee2e6 #fff' : 'transparent',
+                                      borderBottom: isActive ? '1px solid #fff' : '1px solid transparent',
+                                      fontWeight: isActive ? 'bold' : 'normal',
+                                      color: isActive ? '#000' : '#555',
+                                      borderRadius: '4px 4px 0 0',
+                                  }}
+                              >
+                                  <i className={`bi ${icon} me-1`}></i>{label}
+                              </button>
+                          );
+                      })}
+                  </div>
+
                   {/* ── Body ── */}
                   <div style={{ background: currentStyle === 'classic' ? '#ece9d8' : undefined }} className={currentStyle === 'classic' ? '' : 'card-body p-0'}>
-                      {viewMode === 'calendar' ? (
-                          <div className="p-3"><CalendarView workOrders={workOrders} items={items} /></div>
-                      ) : (
+
+                      {/* Production Runs tab content */}
+                      {activeTab === 'production-runs' && (
+                          <div>
+                              {productionRuns && productionRuns.length > 0 ? (
+                                  <div className="table-responsive">
+                                      <table style={{
+                                          width: '100%', borderCollapse: 'collapse',
+                                          fontFamily: currentStyle === 'classic' ? 'Tahoma, Arial, sans-serif' : undefined,
+                                          fontSize: currentStyle === 'classic' ? '11px' : undefined,
+                                          background: currentStyle === 'classic' ? '#fff' : undefined,
+                                      }} className={currentStyle === 'classic' ? '' : 'table table-hover align-middle mb-0'}>
+                                          <thead>
+                                              <tr style={{
+                                                  background: currentStyle === 'classic' ? 'linear-gradient(to bottom,#fff 0%,#d4d0c8 100%)' : undefined,
+                                                  fontSize: currentStyle === 'classic' ? '10px' : '9pt',
+                                              }} className={currentStyle === 'classic' ? '' : 'table-light'}>
+                                                  {['Code', 'BOM / Style', 'MOs', 'Progress', 'Status', 'Due Date', 'Actions'].map(h => (
+                                                      <th key={h} style={{
+                                                          border: currentStyle === 'classic' ? '1px solid #808080' : undefined,
+                                                          padding: currentStyle === 'classic' ? '3px 8px' : undefined,
+                                                          color: '#000', fontWeight: 'bold', whiteSpace: 'nowrap',
+                                                          textAlign: h === 'Actions' ? 'right' : 'left',
+                                                      }}>{h}</th>
+                                                  ))}
+                                              </tr>
+                                          </thead>
+                                          <tbody>
+                                              {productionRuns.map((pr: any, rowIdx: number) => {
+                                                  const mos = pr.manufacturing_orders || [];
+                                                  const done = mos.filter((m: any) => m.status === 'COMPLETED').length;
+                                                  const total = mos.length;
+                                                  const pct = total > 0 ? Math.round((done / total) * 100) : 0;
+                                                  const rowBg = currentStyle === 'classic'
+                                                      ? (rowIdx % 2 === 0 ? '#fff' : '#f5f3ee')
+                                                      : undefined;
+                                                  const tdStyle: React.CSSProperties = currentStyle === 'classic' ? {
+                                                      border: '1px solid #c0bdb5', padding: '4px 8px', color: '#000', verticalAlign: 'middle',
+                                                  } : {};
+                                                  return (
+                                                      <tr key={pr.id} style={{ background: rowBg }}>
+                                                          <td style={{ ...tdStyle, fontFamily: 'monospace', fontWeight: 'bold' }}>{pr.code}</td>
+                                                          <td style={tdStyle}>
+                                                              <div style={{ fontWeight: 'bold', fontSize: currentStyle === 'classic' ? '11px' : undefined }}>
+                                                                  {pr.bom_code || pr.bom_id}
+                                                              </div>
+                                                          </td>
+                                                          <td style={{ ...tdStyle, textAlign: 'center' }}>{total}</td>
+                                                          <td style={{ ...tdStyle, minWidth: 120 }}>
+                                                              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                                                                  <div style={{ flex: 1, height: 10, background: '#ddd', borderRadius: 2, border: currentStyle === 'classic' ? '1px solid #808080' : undefined, overflow: 'hidden' }}>
+                                                                      <div style={{ height: '100%', width: `${pct}%`, background: pct === 100 ? '#2d7a2d' : '#0058e6', transition: 'width 0.3s' }} />
+                                                                  </div>
+                                                                  <span style={{ fontSize: 10, fontFamily: 'monospace', minWidth: 32 }}>{pct}%</span>
+                                                              </div>
+                                                              <div style={{ fontSize: 9, color: '#666' }}>{done}/{total} done</div>
+                                                          </td>
+                                                          <td style={tdStyle}>
+                                                              {currentStyle === 'classic' ? (
+                                                                  (() => {
+                                                                      const chipStyle: React.CSSProperties = {
+                                                                          display: 'inline-block', fontSize: '9px', fontWeight: 'bold',
+                                                                          padding: '1px 6px', borderRadius: 0, border: '1px solid',
+                                                                          fontFamily: 'Tahoma, Arial, sans-serif',
+                                                                      };
+                                                                      switch (pr.status) {
+                                                                          case 'COMPLETED': return <span style={{ ...chipStyle, background: '#2d7a2d', borderColor: '#1a5e1a', color: '#fff' }}>COMPLETED</span>;
+                                                                          case 'IN_PROGRESS': return <span style={{ ...chipStyle, background: '#0058e6', borderColor: '#003080', color: '#fff' }}>IN PROGRESS</span>;
+                                                                          case 'CANCELLED': return <span style={{ ...chipStyle, background: '#c00000', borderColor: '#800000', color: '#fff' }}>CANCELLED</span>;
+                                                                          default: return <span style={{ ...chipStyle, background: '#d4d0c8', borderColor: '#808080', color: '#333' }}>PENDING</span>;
+                                                                      }
+                                                                  })()
+                                                              ) : (
+                                                                  <span className={`badge ${getStatusBadge(pr.status)} extra-small`}>{pr.status}</span>
+                                                              )}
+                                                          </td>
+                                                          <td style={{ ...tdStyle, fontSize: 10 }}>{formatDate(pr.target_end_date)}</td>
+                                                          <td style={{ ...tdStyle, textAlign: 'right' }}>
+                                                              {currentStyle === 'classic' ? (
+                                                                  <button onClick={() => onDeleteProductionRun(pr.id)} style={{
+                                                                      fontFamily: 'Tahoma, Arial, sans-serif', fontSize: '10px',
+                                                                      padding: '2px 7px', cursor: 'pointer', border: '1px solid',
+                                                                      background: 'linear-gradient(to bottom,#fff,#d4d0c8)', borderColor: '#dfdfdf #808080 #808080 #dfdfdf', color: '#c00000',
+                                                                  }}>
+                                                                      <i className="bi bi-trash me-1"></i>Del
+                                                                  </button>
+                                                              ) : (
+                                                                  <button className="btn btn-sm btn-link text-danger p-0" onClick={() => onDeleteProductionRun(pr.id)} title="Delete Production Run">
+                                                                      <i className="bi bi-trash fs-5"></i>
+                                                                  </button>
+                                                              )}
+                                                          </td>
+                                                      </tr>
+                                                  );
+                                              })}
+                                          </tbody>
+                                      </table>
+                                  </div>
+                              ) : (
+                                  <div style={{
+                                      padding: '32px', textAlign: 'center',
+                                      fontFamily: currentStyle === 'classic' ? 'Tahoma, Arial, sans-serif' : undefined,
+                                      fontSize: currentStyle === 'classic' ? '11px' : undefined,
+                                      color: '#888',
+                                  }}>
+                                      <i className="bi bi-collection-play" style={{ fontSize: 32, display: 'block', marginBottom: 8, opacity: 0.4 }}></i>
+                                      No Production Runs yet. Click <strong>New Production Run</strong> to get started.
+                                  </div>
+                              )}
+                          </div>
+                      )}
+
+                      {/* Manufacturing Orders tab content */}
+                      {activeTab === 'manufacturing-orders' && viewMode === 'calendar' ? (
+                          <div className="p-3"><CalendarView workOrders={manufacturingOrders} items={items} /></div>
+                      ) : activeTab === 'manufacturing-orders' && (
                           <div className="table-responsive">
                               <table style={{
                                   width: '100%',
@@ -875,7 +1069,7 @@ export default function ManufacturingView({
                                           fontSize: currentStyle === 'classic' ? '10px' : '9pt',
                                       }} className={currentStyle === 'classic' ? '' : 'table-light'}>
                                           {[
-                                              { label: 'WO Code',           align: 'left',   cls: 'ps-3' },
+                                              { label: 'MO Code',           align: 'left',   cls: 'ps-3' },
                                               { label: 'Product / Variant', align: 'left',   cls: '' },
                                               { label: 'Qty',               align: 'center', cls: '' },
                                               { label: 'Target Timeline',   align: 'left',   cls: '' },
@@ -951,7 +1145,7 @@ export default function ManufacturingView({
                                               <tr key={wo.id} style={{ background: rowBg, cursor: 'default' }}
                                                   className={currentStyle !== 'classic' && isExpanded ? 'table-primary bg-opacity-10' : ''}>
 
-                                                  {/* WO Code */}
+                                                  {/* MO Code */}
                                                   <td style={{ ...tdStyle, paddingLeft: currentStyle === 'classic' ? '10px' : undefined }}
                                                       className={currentStyle !== 'classic' ? 'ps-4 fw-bold font-monospace small' : ''}>
                                                       <span style={{ fontFamily: 'monospace', fontWeight: 'bold', fontSize: '11px', color: '#000' }}>{wo.code}</span>
@@ -970,10 +1164,10 @@ export default function ManufacturingView({
                                                                   {wo.sales_order_id && (
                                                                       <span style={{ marginLeft: '6px', fontWeight: 'bold', color: currentStyle === 'classic' ? '#0058e6' : undefined }} className={currentStyle !== 'classic' ? 'text-primary' : ''}>From SO</span>
                                                                   )}
-                                                                  {wo.child_wos && wo.child_wos.length > 0 && (
+                                                                  {wo.child_mos && wo.child_mos.length > 0 && (
                                                                       currentStyle === 'classic'
-                                                                          ? <span style={{ marginLeft: '6px', fontSize: '8px', background: '#fff3cd', border: '1px solid #b8860b', color: '#6b4e00', padding: '0 4px', fontWeight: 'bold' }}>NESTED ×{wo.child_wos.length}</span>
-                                                                          : <span className="ms-2 badge bg-info bg-opacity-10 text-info border border-info border-opacity-25" style={{fontSize: '0.65rem'}}>NESTED ({wo.child_wos.length})</span>
+                                                                          ? <span style={{ marginLeft: '6px', fontSize: '8px', background: '#fff3cd', border: '1px solid #b8860b', color: '#6b4e00', padding: '0 4px', fontWeight: 'bold' }}>NESTED x{wo.child_mos.length}</span>
+                                                                          : <span className="ms-2 badge bg-info bg-opacity-10 text-info border border-info border-opacity-25" style={{fontSize: '0.65rem'}}>NESTED ({wo.child_mos.length})</span>
                                                                   )}
                                                               </div>
                                                               {wo.status === 'PENDING' && wo.is_material_available === false && (
@@ -1020,17 +1214,17 @@ export default function ManufacturingView({
                                                       <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: '4px' }}>
                                                           {currentStyle === 'classic' ? (
                                                               <>
-                                                                  {xpBtn('Print', 'default', () => handlePrintWO(wo), 'Print Work Order', 'bi bi-printer')}
+                                                                  {xpBtn('Print', 'default', () => handlePrintWO(wo), 'Print Manufacturing Order', 'bi bi-printer')}
                                                                   {wo.status === 'PENDING'     && xpBtn('Start',  'primary', () => onUpdateStatus(wo.id, 'IN_PROGRESS'))}
                                                                   {wo.status === 'IN_PROGRESS' && xpBtn('Finish', 'success', () => onUpdateStatus(wo.id, 'COMPLETED'))}
-                                                                  {xpBtn('Del', 'danger', () => onDeleteWO(wo.id), 'Delete', 'bi bi-trash')}
+                                                                  {xpBtn('Del', 'danger', () => onDeleteMO(wo.id), 'Delete', 'bi bi-trash')}
                                                               </>
                                                           ) : (
                                                               <>
-                                                                  <button className="btn btn-sm btn-link text-primary p-0" onClick={() => handlePrintWO(wo)} title="Print Work Order"><i className="bi bi-printer fs-5"></i></button>
+                                                                  <button className="btn btn-sm btn-link text-primary p-0" onClick={() => handlePrintWO(wo)} title="Print Manufacturing Order"><i className="bi bi-printer fs-5"></i></button>
                                                                   {wo.status === 'PENDING'     && <button className="btn btn-sm btn-primary py-0 px-2" style={{fontSize: '0.75rem'}} onClick={() => onUpdateStatus(wo.id, 'IN_PROGRESS')}>START</button>}
                                                                   {wo.status === 'IN_PROGRESS' && <button className="btn btn-sm btn-success py-0 px-2" style={{fontSize: '0.75rem'}} onClick={() => onUpdateStatus(wo.id, 'COMPLETED')}>FINISH</button>}
-                                                                  <button className="btn btn-sm btn-link text-danger p-0" onClick={() => onDeleteWO(wo.id)} title="Delete"><i className="bi bi-trash fs-5"></i></button>
+                                                                  <button className="btn btn-sm btn-link text-danger p-0" onClick={() => onDeleteMO(wo.id)} title="Delete"><i className="bi bi-trash fs-5"></i></button>
                                                               </>
                                                           )}
                                                       </div>
@@ -1053,6 +1247,15 @@ export default function ManufacturingView({
                   </div>
               </div>
           </div>
+
+          {isPRModalOpen && (
+              <ProductionRunModal
+                  boms={boms}
+                  locations={locations}
+                  onSave={onCreateProductionRun}
+                  onClose={() => setIsPRModalOpen(false)}
+              />
+          )}
       </div>
   );
 }
