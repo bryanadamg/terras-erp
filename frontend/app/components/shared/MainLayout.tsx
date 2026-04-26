@@ -105,8 +105,8 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
                         </div>
 
                         <div className="dropdown">
-                            <button data-testid="user-dropdown" className="btn btn-sm btn-light border d-flex align-items-center gap-2 rounded-pill px-2" data-bs-toggle="dropdown" id="userDropdown">
-                                <div style={{ width: 22, height: 22, border: '1px solid #aaa', borderColor: '#fff #999 #999 #fff', background: '#e0dcd4', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                            <button data-testid="user-dropdown" className="btn btn-sm btn-light border d-flex align-items-center rounded-pill gap-2 px-2" data-bs-toggle="dropdown" id="userDropdown" style={{ height: 30 }}>
+                                <div style={{ width: 22, height: 22, borderRadius: '4px', background: 'rgba(0,0,0,0.07)', border: '1px solid rgba(0,0,0,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                                     <PixelAvatar avatarId={currentUser?.avatar_id} size={18} />
                                 </div>
                                 <span className="small fw-bold d-none d-sm-inline" data-testid="username-display">{currentUser?.username}</span>
