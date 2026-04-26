@@ -2,7 +2,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy import func
 from app.models.kpi import KPICache
 from app.models.item import Item
-from app.models.manufacturing import WorkOrder
+from app.models.manufacturing import ManufacturingOrder as WorkOrder
 from app.models.stock_balance import StockBalance
 from app.models.sales import SalesOrder
 from app.models.sample import SampleRequest

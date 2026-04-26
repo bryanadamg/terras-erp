@@ -448,6 +448,7 @@ export default function ManufacturingView({
       };
 
       return (
+          <>
           <div style={{ display: 'flex', minHeight: '280px', background: classic ? '#f5f3ee' : '#f8f9fa', border: classic ? '1px solid #808080' : undefined }}>
 
               {/* ── LEFT: MO Tree ── */}
@@ -655,6 +656,7 @@ export default function ManufacturingView({
                   onDelete={onDeleteWO}
               />
           </div>
+      </>
       );
   };
 
