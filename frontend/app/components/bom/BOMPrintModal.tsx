@@ -138,176 +138,188 @@ export default function BOMPrintModal({ bom, companyProfile, getAttributeValueNa
                 </tbody>
             </table>
 
-            {/* Detail Teknis */}
-            {settings.showDetailTeknis && hasTeknis && (
-                <>
-                    <div style={secTitle}>Detail Teknis</div>
-                    <table style={printTable}>
-                        <tbody>
-                            {(bom.kerapatan_picks != null || bom.sisir_no != null) && (
-                                <tr>
-                                    {bom.kerapatan_picks != null && <>
-                                        <td style={{ ...td, background: '#f5f5f5', fontWeight: 'bold', width: '22%' }}>Kerapatan / Picks</td>
-                                        <td style={{ ...td, width: '28%' }}>{bom.kerapatan_picks} {bom.kerapatan_unit || '/cm'}</td>
-                                    </>}
-                                    {bom.sisir_no != null && <>
-                                        <td style={{ ...td, background: '#f5f5f5', fontWeight: 'bold', width: '22%' }}>Sisir No.</td>
-                                        <td style={{ ...td, width: '28%' }}>{bom.sisir_no}</td>
-                                    </>}
-                                    {bom.kerapatan_picks == null && <><td style={td} colSpan={2} /></>}
-                                </tr>
-                            )}
-                            {bom.pemakaian_obat && (
-                                <tr>
-                                    <td style={{ ...td, background: '#f5f5f5', fontWeight: 'bold' }}>Pemakaian Obat U/ Setting</td>
-                                    <td style={td} colSpan={3}>{bom.pemakaian_obat}</td>
-                                </tr>
-                            )}
-                            {bom.pembuatan_sample_oleh && (
-                                <tr>
-                                    <td style={{ ...td, background: '#f5f5f5', fontWeight: 'bold' }}>Pembuatan Sample Oleh</td>
-                                    <td style={td} colSpan={3}>{bom.pembuatan_sample_oleh}</td>
-                                </tr>
-                            )}
-                            {(bom.berat_bahan_mateng != null || bom.berat_bahan_mentah_pelesan != null) && (
-                                <tr>
-                                    {bom.berat_bahan_mateng != null && <>
-                                        <td style={{ ...td, background: '#f5f5f5', fontWeight: 'bold' }}>Berat Bahan Mateng</td>
-                                        <td style={td}>{fmt(bom.berat_bahan_mateng, 4)} gr/yard</td>
-                                    </>}
-                                    {bom.berat_bahan_mentah_pelesan != null && <>
-                                        <td style={{ ...td, background: '#f5f5f5', fontWeight: 'bold' }}>Berat Bahan Mentah (Pelesan 1 Jam)</td>
-                                        <td style={td}>{fmt(bom.berat_bahan_mentah_pelesan, 4)} gr/yard</td>
-                                    </>}
-                                    {bom.berat_bahan_mateng == null && <><td style={td} colSpan={2} /></>}
-                                </tr>
-                            )}
-                        </tbody>
-                    </table>
-                </>
-            )}
+            {/* Row: Detail Teknis (left) + Pengukuran Bahan (right) */}
+            {((settings.showDetailTeknis && hasTeknis) || (settings.showMeasurements && hasMeasurements)) && (
+                <div style={{ display: 'flex', gap: 14, alignItems: 'flex-start', marginTop: 2 }}>
 
-            {/* Measurements (Mesin / Celup) */}
-            {settings.showMeasurements && hasMeasurements && (
-                <>
-                    <div style={secTitle}>Pengukuran Bahan</div>
-                    <table style={printTable}>
-                        <thead>
-                            <tr>
-                                <th style={th}>Ukuran</th>
-                                {hasMesin && <th style={{ ...th, textAlign: 'right' }}>Keluar Mesin</th>}
-                                {hasCelup && <th style={{ ...th, textAlign: 'right' }}>Celup / Setting</th>}
-                                <th style={th}>Satuan</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {mRow('Lebar', bom.mesin_lebar, bom.celup_lebar, 'mm')}
-                            {mRow('Panjang Tulisan', bom.mesin_panjang_tulisan, bom.celup_panjang_tulisan, 'cm')}
-                            {mRow('Panjang Tarikan (10cm ref)', bom.mesin_panjang_tarikan, bom.celup_panjang_tarikan, 'cm')}
-                            {mRow('Tarikan Bandul 1kg (10cm ref)', bom.mesin_panjang_tarikan_bandul_1kg, bom.celup_panjang_tarikan_bandul_1kg, 'cm')}
-                            {mRow('Tarikan Bandul 9kg (10cm ref)', bom.mesin_panjang_tarikan_bandul_9kg, bom.celup_panjang_tarikan_bandul_9kg, 'cm')}
-                        </tbody>
-                    </table>
-                </>
-            )}
-
-            {/* Size Measurements */}
-            {settings.showSizes && sizes.length > 0 && (
-                <>
-                    <div style={secTitle}>Size Measurements</div>
-                    <table style={printTable}>
-                        <thead>
-                            <tr>
-                                <th style={th}>{bom.size_mode === 'free' ? 'Label' : 'Ukuran'}</th>
-                                <th style={{ ...th, textAlign: 'right' }}>Target (cm)</th>
-                                <th style={{ ...th, textAlign: 'right' }}>Min (cm)</th>
-                                <th style={{ ...th, textAlign: 'right' }}>Max (cm)</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {sizes.map((s: any, i: number) => (
-                                <tr key={i} style={{ background: i % 2 === 0 ? '#fff' : '#f9f9f9' }}>
-                                    <td style={{ ...td, fontWeight: 'bold' }}>{s.size_name || s.label || `Row ${i + 1}`}</td>
-                                    <td style={{ ...td, textAlign: 'right' }}>{fmt(s.target_measurement)}</td>
-                                    <td style={{ ...td, textAlign: 'right' }}>{fmt(s.measurement_min)}</td>
-                                    <td style={{ ...td, textAlign: 'right' }}>{fmt(s.measurement_max)}</td>
-                                </tr>
-                            ))}
-                        </tbody>
-                    </table>
-                </>
-            )}
-
-            {/* Components */}
-            {settings.showComponents && lines.length > 0 && (
-                <>
-                    <div style={secTitle}>Komponen / Materials</div>
-                    <table style={printTable}>
-                        <thead>
-                            <tr>
-                                <th style={{ ...th, width: '5%' }}>#</th>
-                                <th style={th}>Kode Item</th>
-                                <th style={th}>Nama Item</th>
-                                <th style={{ ...th, textAlign: 'right' }}>Qty</th>
-                                <th style={{ ...th, textAlign: 'right' }}>%</th>
-                                <th style={th}>Atribut</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {lines.map((line: any, i: number) => (
-                                <tr key={line.id} style={{ background: i % 2 === 0 ? '#fff' : '#f9f9f9' }}>
-                                    <td style={{ ...td, textAlign: 'center', color: '#666' }}>{i + 1}</td>
-                                    <td style={{ ...td, fontFamily: 'Courier New, monospace', fontSize: '7.5pt', color: '#0000cc' }}>{line.item_code}</td>
-                                    <td style={td}>{line.item_name}</td>
-                                    <td style={{ ...td, textAlign: 'right', fontWeight: 'bold' }}>{fmt(line.qty)}</td>
-                                    <td style={{ ...td, textAlign: 'right' }}>{(line.percentage || 0) > 0 ? `${line.percentage}%` : '—'}</td>
-                                    <td style={{ ...td, fontSize: '7.5pt', color: '#444' }}>{(line.attribute_value_ids || []).map(getAttributeValueName).filter(Boolean).join(', ') || '—'}</td>
-                                </tr>
-                            ))}
-                        </tbody>
-                        <tfoot>
-                            <tr>
-                                <td colSpan={6} style={{ ...td, background: '#f0f0f0', fontSize: '7.5pt', color: '#555', textAlign: 'right' }}>
-                                    {lines.length} komponen
-                                </td>
-                            </tr>
-                        </tfoot>
-                    </table>
-                </>
-            )}
-
-            {/* Photo + Design side by side */}
-            {(settings.showSamplePhoto && bom.sample_photo_url) || (settings.showDesignFile && bom.design_file_url) ? (
-                <div style={{ display: 'flex', gap: 16, marginTop: 10, alignItems: 'flex-start' }}>
-                    {settings.showSamplePhoto && bom.sample_photo_url && (
-                        <div style={{ flex: 1 }}>
-                            <div style={secTitle}>Sample Photo</div>
-                            <img
-                                src={`${STATIC_BASE}${bom.sample_photo_url}`}
-                                alt="Sample"
-                                style={{ maxWidth: '100%', maxHeight: 180, objectFit: 'contain', border: '1px solid #ccc', display: 'block' }}
-                            />
+                    {settings.showDetailTeknis && hasTeknis && (
+                        <div style={{ flex: '0 0 44%' }}>
+                            <div style={secTitle}>Detail Teknis</div>
+                            <table style={{ ...printTable, marginBottom: 0 }}>
+                                <tbody>
+                                    {(bom.kerapatan_picks != null || bom.sisir_no != null) && (
+                                        <tr>
+                                            <td style={{ ...td, background: '#f5f5f5', fontWeight: 'bold', width: '48%' }}>
+                                                {bom.kerapatan_picks != null ? 'Kerapatan / Picks' : 'Sisir No.'}
+                                            </td>
+                                            <td style={td}>
+                                                {bom.kerapatan_picks != null
+                                                    ? `${bom.kerapatan_picks} ${bom.kerapatan_unit || '/cm'}`
+                                                    : bom.sisir_no}
+                                            </td>
+                                        </tr>
+                                    )}
+                                    {bom.kerapatan_picks != null && bom.sisir_no != null && (
+                                        <tr>
+                                            <td style={{ ...td, background: '#f5f5f5', fontWeight: 'bold' }}>Sisir No.</td>
+                                            <td style={td}>{bom.sisir_no}</td>
+                                        </tr>
+                                    )}
+                                    {bom.pemakaian_obat && (
+                                        <tr>
+                                            <td style={{ ...td, background: '#f5f5f5', fontWeight: 'bold' }}>Pemakaian Obat</td>
+                                            <td style={td}>{bom.pemakaian_obat}</td>
+                                        </tr>
+                                    )}
+                                    {bom.pembuatan_sample_oleh && (
+                                        <tr>
+                                            <td style={{ ...td, background: '#f5f5f5', fontWeight: 'bold' }}>Sample Oleh</td>
+                                            <td style={td}>{bom.pembuatan_sample_oleh}</td>
+                                        </tr>
+                                    )}
+                                    {bom.berat_bahan_mateng != null && (
+                                        <tr>
+                                            <td style={{ ...td, background: '#f5f5f5', fontWeight: 'bold' }}>Berat Mateng</td>
+                                            <td style={td}>{fmt(bom.berat_bahan_mateng, 4)} gr/yard</td>
+                                        </tr>
+                                    )}
+                                    {bom.berat_bahan_mentah_pelesan != null && (
+                                        <tr>
+                                            <td style={{ ...td, background: '#f5f5f5', fontWeight: 'bold' }}>Berat Mentah (Pelesan)</td>
+                                            <td style={td}>{fmt(bom.berat_bahan_mentah_pelesan, 4)} gr/yard</td>
+                                        </tr>
+                                    )}
+                                </tbody>
+                            </table>
                         </div>
                     )}
-                    {settings.showDesignFile && bom.design_file_url && (
+
+                    {settings.showMeasurements && hasMeasurements && (
                         <div style={{ flex: 1 }}>
-                            <div style={secTitle}>Design / Susunan Rumusan</div>
-                            {isDesignImage
-                                ? <img
-                                    src={`${STATIC_BASE}${bom.design_file_url}`}
-                                    alt="Design"
-                                    style={{ maxWidth: '100%', maxHeight: 180, objectFit: 'contain', border: '1px solid #ccc', display: 'block' }}
-                                  />
-                                : isDesignPdf
-                                ? <div style={{ fontSize: '8pt', color: '#555', border: '1px solid #ccc', padding: '8px 10px', background: '#fafafa' }}>
-                                    [Design file attached as PDF — see: {bom.design_file_url.split('/').pop()}]
-                                  </div>
-                                : null
-                            }
+                            <div style={secTitle}>Pengukuran Bahan</div>
+                            <table style={{ ...printTable, marginBottom: 0 }}>
+                                <thead>
+                                    <tr>
+                                        <th style={th}>Ukuran</th>
+                                        {hasMesin && <th style={{ ...th, textAlign: 'right' }}>Keluar Mesin</th>}
+                                        {hasCelup && <th style={{ ...th, textAlign: 'right' }}>Celup / Setting</th>}
+                                        <th style={{ ...th, width: 28 }}>Sat.</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {mRow('Lebar', bom.mesin_lebar, bom.celup_lebar, 'mm')}
+                                    {mRow('P. Tulisan', bom.mesin_panjang_tulisan, bom.celup_panjang_tulisan, 'cm')}
+                                    {mRow('P. Tarikan', bom.mesin_panjang_tarikan, bom.celup_panjang_tarikan, 'cm')}
+                                    {mRow('Bandul 1kg', bom.mesin_panjang_tarikan_bandul_1kg, bom.celup_panjang_tarikan_bandul_1kg, 'cm')}
+                                    {mRow('Bandul 9kg', bom.mesin_panjang_tarikan_bandul_9kg, bom.celup_panjang_tarikan_bandul_9kg, 'cm')}
+                                </tbody>
+                            </table>
                         </div>
                     )}
+
                 </div>
-            ) : null}
+            )}
+
+            {/* Row: Size Measurements (left) + Components (right) */}
+            {((settings.showSizes && sizes.length > 0) || (settings.showComponents && lines.length > 0)) && (
+                <div style={{ display: 'flex', gap: 14, alignItems: 'flex-start', marginTop: 8 }}>
+
+                    {settings.showSizes && sizes.length > 0 && (
+                        <div style={{ flex: '0 0 36%' }}>
+                            <div style={secTitle}>{bom.size_mode === 'free' ? 'Measurements' : 'Size Measurements'}</div>
+                            <table style={{ ...printTable, marginBottom: 0 }}>
+                                <thead>
+                                    <tr>
+                                        <th style={th}>{bom.size_mode === 'free' ? 'Label' : 'Size'}</th>
+                                        <th style={{ ...th, textAlign: 'right' }}>Target</th>
+                                        <th style={{ ...th, textAlign: 'right' }}>Min</th>
+                                        <th style={{ ...th, textAlign: 'right' }}>Max</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {sizes.map((s: any, i: number) => (
+                                        <tr key={i} style={{ background: i % 2 === 0 ? '#fff' : '#f9f9f9' }}>
+                                            <td style={{ ...td, fontWeight: 'bold' }}>{s.size_name || s.label || `Row ${i + 1}`}</td>
+                                            <td style={{ ...td, textAlign: 'right' }}>{fmt(s.target_measurement)}</td>
+                                            <td style={{ ...td, textAlign: 'right' }}>{fmt(s.measurement_min)}</td>
+                                            <td style={{ ...td, textAlign: 'right' }}>{fmt(s.measurement_max)}</td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+                    )}
+
+                    {settings.showComponents && lines.length > 0 && (
+                        <div style={{ flex: 1 }}>
+                            <div style={secTitle}>Komponen / Materials</div>
+                            <table style={{ ...printTable, marginBottom: 0 }}>
+                                <thead>
+                                    <tr>
+                                        <th style={{ ...th, width: '5%' }}>#</th>
+                                        <th style={th}>Kode</th>
+                                        <th style={th}>Nama Item</th>
+                                        <th style={{ ...th, textAlign: 'right' }}>Qty</th>
+                                        <th style={{ ...th, textAlign: 'right' }}>%</th>
+                                        <th style={th}>Atribut</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {lines.map((line: any, i: number) => (
+                                        <tr key={line.id} style={{ background: i % 2 === 0 ? '#fff' : '#f9f9f9' }}>
+                                            <td style={{ ...td, textAlign: 'center', color: '#666' }}>{i + 1}</td>
+                                            <td style={{ ...td, fontFamily: 'Courier New, monospace', fontSize: '7.5pt', color: '#0000cc' }}>{line.item_code}</td>
+                                            <td style={td}>{line.item_name}</td>
+                                            <td style={{ ...td, textAlign: 'right', fontWeight: 'bold' }}>{fmt(line.qty)}</td>
+                                            <td style={{ ...td, textAlign: 'right' }}>{(line.percentage || 0) > 0 ? `${line.percentage}%` : '—'}</td>
+                                            <td style={{ ...td, fontSize: '7.5pt', color: '#444' }}>{(line.attribute_value_ids || []).map(getAttributeValueName).filter(Boolean).join(', ') || '—'}</td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                                <tfoot>
+                                    <tr>
+                                        <td colSpan={6} style={{ ...td, background: '#f0f0f0', fontSize: '7.5pt', color: '#555', textAlign: 'right' }}>
+                                            {lines.length} komponen
+                                        </td>
+                                    </tr>
+                                </tfoot>
+                            </table>
+                        </div>
+                    )}
+
+                </div>
+            )}
+
+            {/* Sample Photo */}
+            {settings.showSamplePhoto && bom.sample_photo_url && (
+                <div style={{ marginTop: 10 }}>
+                    <div style={secTitle}>Sample Photo</div>
+                    <img
+                        src={`${STATIC_BASE}${bom.sample_photo_url}`}
+                        alt="Sample"
+                        style={{ maxWidth: '100%', maxHeight: 200, objectFit: 'contain', border: '1px solid #ccc', display: 'block' }}
+                    />
+                </div>
+            )}
+
+            {/* Design / Susunan Rumusan — full width */}
+            {settings.showDesignFile && bom.design_file_url && (
+                <div style={{ marginTop: 10 }}>
+                    <div style={secTitle}>Design / Susunan Rumusan</div>
+                    {isDesignImage
+                        ? <img
+                            src={`${STATIC_BASE}${bom.design_file_url}`}
+                            alt="Design"
+                            style={{ maxWidth: '100%', objectFit: 'contain', border: '1px solid #ccc', display: 'block' }}
+                          />
+                        : isDesignPdf
+                        ? <div style={{ fontSize: '8pt', color: '#555', border: '1px solid #ccc', padding: '8px 10px', background: '#fafafa' }}>
+                            [Design file attached as PDF — see: {bom.design_file_url.split('/').pop()}]
+                          </div>
+                        : null
+                    }
+                </div>
+            )}
 
             {/* Signature / footer */}
             <div style={{ marginTop: 16, borderTop: '1px solid #ccc', paddingTop: 8, display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', fontSize: '7.5pt', color: '#555' }}>
