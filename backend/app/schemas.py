@@ -121,6 +121,7 @@ class BOMCreate(BaseModel):
     sisir_no: int | None = None
     pemakaian_obat: str | None = None
     pembuatan_sample_oleh: str | None = None
+    sample_photo_url: str | None = None
 
 class BOMResponse(BaseModel):
     id: UUID
@@ -141,6 +142,7 @@ class BOMResponse(BaseModel):
     sisir_no: int | None = None
     pemakaian_obat: str | None = None
     pembuatan_sample_oleh: str | None = None
+    sample_photo_url: str | None = None
 
     class Config:
         from_attributes = True

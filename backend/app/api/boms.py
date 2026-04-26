@@ -1,8 +1,10 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, UploadFile, File
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy import select
 from sqlalchemy.orm import selectinload, joinedload
+from pathlib import Path
+import shutil, os
 from app.db.session import get_async_db
 from app.models.bom import BOM, BOMLine, BOMOperation, BOMSize
 from app.models.size import Size
@@ -179,6 +181,29 @@ async def get_bom(bom_id: str, db: AsyncSession = Depends(get_async_db), current
         bl.attribute_value_ids = [v.id for v in bl.attribute_values]
         
     return bom
+
+@router.post("/boms/{bom_id}/sample-photo")
+async def upload_bom_sample_photo(
+    bom_id: str,
+    file: UploadFile = File(...),
+    db: AsyncSession = Depends(get_async_db),
+    current_user: User = Depends(get_current_user),
+):
+    result = await db.execute(select(BOM).filter(BOM.id == bom_id))
+    bom = result.scalars().first()
+    if not bom:
+        raise HTTPException(status_code=404, detail="BOM not found")
+
+    upload_dir = Path("static/boms")
+    upload_dir.mkdir(parents=True, exist_ok=True)
+    ext = os.path.splitext(file.filename or "")[1].lower() or ".jpg"
+    file_path = upload_dir / f"{bom_id}_sample{ext}"
+    with file_path.open("wb") as buf:
+        shutil.copyfileobj(file.file, buf)
+
+    bom.sample_photo_url = f"/static/boms/{bom_id}_sample{ext}"
+    await db.commit()
+    return {"sample_photo_url": bom.sample_photo_url}
 
 @router.delete("/boms/{bom_id}")
 async def delete_bom(bom_id: str, db: AsyncSession = Depends(get_async_db), current_user: User = Depends(get_current_user)):

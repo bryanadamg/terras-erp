@@ -20,6 +20,10 @@ def ensure_static_dirs():
         if not samples_dir.exists():
             samples_dir.mkdir(parents=True, exist_ok=True)
             logger.info(f"Created directory: {samples_dir}")
+        boms_dir = Path("static/boms")
+        if not boms_dir.exists():
+            boms_dir.mkdir(parents=True, exist_ok=True)
+            logger.info(f"Created directory: {boms_dir}")
     except Exception as e:
         logger.warning(f"Static directory creation skipped: {e}")
 
@@ -94,6 +98,7 @@ def run_migrations():
                 ("boms", "sisir_no", "INTEGER"),
                 ("boms", "pemakaian_obat", "VARCHAR(255)"),
                 ("boms", "pembuatan_sample_oleh", "VARCHAR(255)"),
+                ("boms", "sample_photo_url", "VARCHAR(512)"),
             ]
 
             for table, col, col_type in migrations:

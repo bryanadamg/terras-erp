@@ -41,6 +41,7 @@ class BOM(Base):
     sisir_no: Mapped[Optional[int]] = mapped_column(nullable=True)
     pemakaian_obat: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
     pembuatan_sample_oleh: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
+    sample_photo_url: Mapped[Optional[str]] = mapped_column(String(512), nullable=True)
 
     active: Mapped[bool] = mapped_column(Boolean, default=True)
 

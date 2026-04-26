@@ -188,6 +188,8 @@ const TreeView = memo(({
 });
 TreeView.displayName = 'TreeView';
 
+const STATIC_BASE = (process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:8000').replace(/\/api$/, '');
+
 export default function BOMDesigner({
     rootItemCode,
     initialAttributeValueIds,
@@ -199,6 +201,7 @@ export default function BOMDesigner({
     operations,
     onSave,
     onCreateItem,
+    onUploadPhoto,
     onCancel,
     existingBOMs,
     onSearchItem
@@ -219,6 +222,8 @@ export default function BOMDesigner({
     const [isConfigOpen, setIsConfigOpen] = useState(false);
     const [isAutomatorOpen, setIsAutomatorOpen] = useState(false);
     const [isSaving, setIsSaving] = useState(false);
+    const [pendingPhotoFile, setPendingPhotoFile] = useState<File | null>(null);
+    const [photoPreview, setPhotoPreview] = useState<string | null>(null);
 
     const [pendingItemCode, setPendingItemCode] = useState('');
     const [pendingQty, setPendingQty] = useState<string>('');
@@ -380,7 +385,10 @@ export default function BOMDesigner({
         }
         if (node.lines.length === 0 && node.operations.length === 0) return true;
         try {
-            await onSave(node);
+            const bomId = await onSave(node);
+            if (bomId && node.id === 'root' && pendingPhotoFile && onUploadPhoto) {
+                await onUploadPhoto(bomId, pendingPhotoFile);
+            }
             return true;
         } catch (e) {
             console.error("Save failed for", node.code, e);
@@ -760,6 +768,32 @@ export default function BOMDesigner({
                                                         onChange={e => updateSelectedNode({ pembuatan_sample_oleh: e.target.value })} />
                                                 </div>
 
+                                                {/* Product Sample Photo */}
+                                                <div>
+                                                    <label style={xpLabel}>Product Sample Photo</label>
+                                                    <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                                                        <input type="file" accept="image/*" id="bom-sample-photo"
+                                                            style={{ display: 'none' }}
+                                                            onChange={e => setPendingPhotoFile(e.target.files?.[0] || null)} />
+                                                        <button type="button" style={{ ...xpBtn, padding: '1px 8px' }}
+                                                            onClick={() => (document.getElementById('bom-sample-photo') as HTMLInputElement)?.click()}>
+                                                            Browse...
+                                                        </button>
+                                                        <span style={{ fontFamily: xpFont, fontSize: 10, color: '#555', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: 120 }}>
+                                                            {pendingPhotoFile ? pendingPhotoFile.name : 'No file chosen'}
+                                                        </span>
+                                                    </div>
+                                                    {pendingPhotoFile && (
+                                                        <img
+                                                            src={URL.createObjectURL(pendingPhotoFile)}
+                                                            alt="Sample photo"
+                                                            title="Click to preview"
+                                                            onClick={() => setPhotoPreview(URL.createObjectURL(pendingPhotoFile!))}
+                                                            style={{ marginTop: 4, maxHeight: 64, maxWidth: '100%', border: '1px solid #b0a898', display: 'block', cursor: 'pointer', objectFit: 'cover' }}
+                                                        />
+                                                    )}
+                                                </div>
+
                                             </div>
                                         </div>
 
@@ -995,6 +1029,29 @@ export default function BOMDesigner({
                     </div>
                 </div>
             </div>
+
+            {/* Photo preview overlay */}
+            {photoPreview && (
+            <div style={{ position: 'fixed', inset: 0, zIndex: 99999, background: 'rgba(0,0,0,0.72)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <div style={{ background: '#ece9d8', border: '2px solid #0a246a', borderRadius: 4, overflow: 'hidden', maxWidth: '80vw', display: 'flex', flexDirection: 'column' }}>
+                    <div style={{ background: 'linear-gradient(to right, #0a246a, #a6caf0, #0a246a)', padding: '3px 6px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', userSelect: 'none' }}>
+                        <span style={{ color: '#fff', fontWeight: 'bold', fontSize: 12, fontFamily: xpFont, textShadow: '1px 1px 2px rgba(0,0,0,0.6)' }}>Product Sample Photo</span>
+                        <button onClick={() => setPhotoPreview(null)} style={{ width: 21, height: 21, padding: 0, background: 'linear-gradient(to bottom, #e06060, #b03030)', border: '1px solid #800', borderRadius: 2, cursor: 'pointer', color: '#fff', fontSize: 12, fontWeight: 'bold', display: 'flex', alignItems: 'center', justifyContent: 'center', lineHeight: 1 }}>✕</button>
+                    </div>
+                    <div style={{ background: '#1e1e1e', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 8 }}>
+                        <img src={photoPreview} alt="Sample" style={{ maxWidth: '72vw', maxHeight: '62vh', objectFit: 'contain', display: 'block' }} />
+                    </div>
+                    <div style={{ padding: '5px 8px', display: 'flex', justifyContent: 'flex-end', gap: 4, background: '#f0efe6', borderTop: '1px solid #ccc' }}>
+                        <button style={{ ...xpBtn, padding: '2px 10px' }} onClick={() => window.open(photoPreview, '_blank')}>
+                            ↗ Open Full View
+                        </button>
+                        <button style={{ ...xpBtn, padding: '2px 10px' }} onClick={() => setPhotoPreview(null)}>
+                            Close
+                        </button>
+                    </div>
+                </div>
+            </div>
+        )}
         </div>
     );
 }

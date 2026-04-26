@@ -56,6 +56,7 @@ const xpSectionHdr: React.CSSProperties = {
 export default function BOMView({
     items, boms, locations, attributes, sizes, workCenters, operations,
     onCreateBOM, onDeleteBOM, onDeleteMultipleBOMs, onCreateItem, onSearchItem,
+    onUploadBOMPhoto,
     initialCreateState, onClearInitialState
 }: any) {
     const { showToast } = useToast();
@@ -199,7 +200,9 @@ export default function BOMView({
             showToast(`Failed to save BOM ${bomData.code}: ${err.detail}`, 'danger');
             throw new Error(err.detail || 'Item not found');
         } else if (res?.ok) {
+            const created = await res.json();
             showToast(`BOM ${bomData.code} saved`, 'success');
+            return created.id;
         } else {
             try { const err = await res.json(); showToast(`Failed to save BOM ${bomData.code}: ${err.detail}`, 'danger'); } catch (_) { showToast(`Failed to save BOM ${bomData.code}`, 'danger'); }
             throw new Error('Failed');
@@ -594,6 +597,7 @@ export default function BOMView({
                                 sizes={sizes || []}
                                 workCenters={workCenters} operations={operations} existingBOMs={boms}
                                 onSave={handleCreateBOMWrapper} onCreateItem={onCreateItem}
+                                onUploadPhoto={onUploadBOMPhoto}
                                 onCancel={handleCloseDesigner} onSearchItem={onSearchItem}
                             />
                         </div>
