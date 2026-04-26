@@ -100,6 +100,16 @@ def run_migrations():
                 ("boms", "pembuatan_sample_oleh", "VARCHAR(255)"),
                 ("boms", "sample_photo_url", "VARCHAR(512)"),
                 ("boms", "customer_id", "UUID REFERENCES partners(id) ON DELETE SET NULL"),
+                ("boms", "mesin_lebar", "NUMERIC(8,2)"),
+                ("boms", "mesin_panjang_tulisan", "NUMERIC(8,2)"),
+                ("boms", "mesin_panjang_tarikan", "NUMERIC(8,2)"),
+                ("boms", "mesin_panjang_tarikan_bandul_1kg", "NUMERIC(8,2)"),
+                ("boms", "mesin_panjang_tarikan_bandul_9kg", "NUMERIC(8,2)"),
+                ("boms", "celup_lebar", "NUMERIC(8,2)"),
+                ("boms", "celup_panjang_tulisan", "NUMERIC(8,2)"),
+                ("boms", "celup_panjang_tarikan", "NUMERIC(8,2)"),
+                ("boms", "celup_panjang_tarikan_bandul_1kg", "NUMERIC(8,2)"),
+                ("boms", "celup_panjang_tarikan_bandul_9kg", "NUMERIC(8,2)"),
             ]
 
             for table, col, col_type in migrations:

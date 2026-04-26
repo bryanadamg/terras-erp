@@ -43,6 +43,20 @@ class BOM(Base):
     pembuatan_sample_oleh: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
     sample_photo_url: Mapped[Optional[str]] = mapped_column(String(512), nullable=True)
 
+    # Bahan Keluar Dari Mesin (Machine output measurements)
+    mesin_lebar: Mapped[Optional[float]] = mapped_column(Numeric(8, 2), nullable=True)
+    mesin_panjang_tulisan: Mapped[Optional[float]] = mapped_column(Numeric(8, 2), nullable=True)
+    mesin_panjang_tarikan: Mapped[Optional[float]] = mapped_column(Numeric(8, 2), nullable=True)
+    mesin_panjang_tarikan_bandul_1kg: Mapped[Optional[float]] = mapped_column(Numeric(8, 2), nullable=True)
+    mesin_panjang_tarikan_bandul_9kg: Mapped[Optional[float]] = mapped_column(Numeric(8, 2), nullable=True)
+
+    # Bahan Dari Celup / Setting (Post-dye/setting measurements)
+    celup_lebar: Mapped[Optional[float]] = mapped_column(Numeric(8, 2), nullable=True)
+    celup_panjang_tulisan: Mapped[Optional[float]] = mapped_column(Numeric(8, 2), nullable=True)
+    celup_panjang_tarikan: Mapped[Optional[float]] = mapped_column(Numeric(8, 2), nullable=True)
+    celup_panjang_tarikan_bandul_1kg: Mapped[Optional[float]] = mapped_column(Numeric(8, 2), nullable=True)
+    celup_panjang_tarikan_bandul_9kg: Mapped[Optional[float]] = mapped_column(Numeric(8, 2), nullable=True)
+
     active: Mapped[bool] = mapped_column(Boolean, default=True)
 
     customer_id: Mapped[Optional[uuid.UUID]] = mapped_column(

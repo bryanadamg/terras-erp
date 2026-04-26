@@ -123,6 +123,16 @@ class BOMCreate(BaseModel):
     pembuatan_sample_oleh: str | None = None
     sample_photo_url: str | None = None
     customer_id: Optional[UUID] = None
+    mesin_lebar: float | None = None
+    mesin_panjang_tulisan: float | None = None
+    mesin_panjang_tarikan: float | None = None
+    mesin_panjang_tarikan_bandul_1kg: float | None = None
+    mesin_panjang_tarikan_bandul_9kg: float | None = None
+    celup_lebar: float | None = None
+    celup_panjang_tulisan: float | None = None
+    celup_panjang_tarikan: float | None = None
+    celup_panjang_tarikan_bandul_1kg: float | None = None
+    celup_panjang_tarikan_bandul_9kg: float | None = None
 
 class BOMResponse(BaseModel):
     id: UUID
@@ -146,6 +156,16 @@ class BOMResponse(BaseModel):
     sample_photo_url: str | None = None
     customer_id: Optional[UUID] = None
     customer_name: Optional[str] = None
+    mesin_lebar: float | None = None
+    mesin_panjang_tulisan: float | None = None
+    mesin_panjang_tarikan: float | None = None
+    mesin_panjang_tarikan_bandul_1kg: float | None = None
+    mesin_panjang_tarikan_bandul_9kg: float | None = None
+    celup_lebar: float | None = None
+    celup_panjang_tulisan: float | None = None
+    celup_panjang_tarikan: float | None = None
+    celup_panjang_tarikan_bandul_1kg: float | None = None
+    celup_panjang_tarikan_bandul_9kg: float | None = None
 
     class Config:
         from_attributes = True

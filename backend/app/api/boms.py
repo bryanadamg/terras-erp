@@ -49,6 +49,16 @@ async def create_bom(payload: BOMCreate, db: AsyncSession = Depends(get_async_db
         pemakaian_obat=payload.pemakaian_obat,
         pembuatan_sample_oleh=payload.pembuatan_sample_oleh,
         customer_id=payload.customer_id,
+        mesin_lebar=payload.mesin_lebar,
+        mesin_panjang_tulisan=payload.mesin_panjang_tulisan,
+        mesin_panjang_tarikan=payload.mesin_panjang_tarikan,
+        mesin_panjang_tarikan_bandul_1kg=payload.mesin_panjang_tarikan_bandul_1kg,
+        mesin_panjang_tarikan_bandul_9kg=payload.mesin_panjang_tarikan_bandul_9kg,
+        celup_lebar=payload.celup_lebar,
+        celup_panjang_tulisan=payload.celup_panjang_tulisan,
+        celup_panjang_tarikan=payload.celup_panjang_tarikan,
+        celup_panjang_tarikan_bandul_1kg=payload.celup_panjang_tarikan_bandul_1kg,
+        celup_panjang_tarikan_bandul_9kg=payload.celup_panjang_tarikan_bandul_9kg,
     )
     
     if payload.attribute_value_ids:

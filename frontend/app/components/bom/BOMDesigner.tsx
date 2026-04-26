@@ -40,6 +40,16 @@ interface BOMNodeData {
     pemakaian_obat: string;
     pembuatan_sample_oleh: string;
     customer_id: string;
+    mesin_lebar: number | null;
+    mesin_panjang_tulisan: number | null;
+    mesin_panjang_tarikan: number | null;
+    mesin_panjang_tarikan_bandul_1kg: number | null;
+    mesin_panjang_tarikan_bandul_9kg: number | null;
+    celup_lebar: number | null;
+    celup_panjang_tulisan: number | null;
+    celup_panjang_tarikan: number | null;
+    celup_panjang_tarikan_bandul_1kg: number | null;
+    celup_panjang_tarikan_bandul_9kg: number | null;
     isNewItem?: boolean;
 }
 
@@ -219,6 +229,10 @@ export default function BOMDesigner({
         kerapatan_picks: null, kerapatan_unit: '/cm',
         sisir_no: null, pemakaian_obat: '', pembuatan_sample_oleh: '',
         customer_id: '',
+        mesin_lebar: null, mesin_panjang_tulisan: null, mesin_panjang_tarikan: null,
+        mesin_panjang_tarikan_bandul_1kg: null, mesin_panjang_tarikan_bandul_9kg: null,
+        celup_lebar: null, celup_panjang_tulisan: null, celup_panjang_tarikan: null,
+        celup_panjang_tarikan_bandul_1kg: null, celup_panjang_tarikan_bandul_9kg: null,
     });
 
     const [selectedNodeId, setSelectedNodeId] = useState<string>('root');
@@ -342,6 +356,10 @@ export default function BOMDesigner({
                     kerapatan_picks: null, kerapatan_unit: '/cm',
                     sisir_no: null, pemakaian_obat: '', pembuatan_sample_oleh: '',
                     customer_id: '',
+                    mesin_lebar: null, mesin_panjang_tulisan: null, mesin_panjang_tarikan: null,
+                    mesin_panjang_tarikan_bandul_1kg: null, mesin_panjang_tarikan_bandul_9kg: null,
+                    celup_lebar: null, celup_panjang_tulisan: null, celup_panjang_tarikan: null,
+                    celup_panjang_tarikan_bandul_1kg: null, celup_panjang_tarikan_bandul_9kg: null,
                     isNewItem,
                 };
                 levelLines.push({
@@ -730,7 +748,7 @@ export default function BOMDesigner({
                                     )}
                                 </div>
 
-                                {/* Sizes + BOM details row - root BOM only */}
+                                {/* Sizes + Detail Teknis + Measurements row — root BOM only */}
                                 {selectedNodeId === 'root' && (
                                     <div style={{ display: 'flex', gap: 8 }}>
 
@@ -766,8 +784,8 @@ export default function BOMDesigner({
                                             </div>
                                         )}
 
-                                        {/* Right: Additional BOM fields */}
-                                        <div style={{ ...xpGroupWrapper, flex: 1 }}>
+                                        {/* Detail Teknis */}
+                                        <div style={{ ...xpGroupWrapper, flexShrink: 0 }}>
                                             <span style={xpGroupLabel()}>Detail Teknis</span>
                                             <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
 
@@ -837,6 +855,90 @@ export default function BOMDesigner({
                                                     )}
                                                 </div>
 
+                                            </div>
+                                        </div>
+
+                                        {/* Bahan Keluar Dari Mesin */}
+                                        <div style={{ ...xpGroupWrapper, flex: 1 }}>
+                                            <span style={xpGroupLabel()}>Bahan Keluar Dari Mesin</span>
+                                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 60px', gap: '4px 6px', alignItems: 'center' }}>
+                                                <label style={{ ...xpLabel, marginBottom: 0 }}>Lebar</label>
+                                                <div style={{ display: 'flex', gap: 3, alignItems: 'center' }}>
+                                                    <input type="number" style={{ ...xpInput, flex: 1 }} placeholder="—"
+                                                        value={selectedNode?.mesin_lebar ?? ''}
+                                                        onChange={e => updateSelectedNode({ mesin_lebar: e.target.value === '' ? null : parseFloat(e.target.value) })} />
+                                                    <span style={{ fontSize: 9, color: '#555', whiteSpace: 'nowrap' }}>mm</span>
+                                                </div>
+                                                <label style={{ ...xpLabel, marginBottom: 0 }}>Panjang Tulisan</label>
+                                                <div style={{ display: 'flex', gap: 3, alignItems: 'center' }}>
+                                                    <input type="number" style={{ ...xpInput, flex: 1 }} placeholder="—"
+                                                        value={selectedNode?.mesin_panjang_tulisan ?? ''}
+                                                        onChange={e => updateSelectedNode({ mesin_panjang_tulisan: e.target.value === '' ? null : parseFloat(e.target.value) })} />
+                                                    <span style={{ fontSize: 9, color: '#555', whiteSpace: 'nowrap' }}>cm</span>
+                                                </div>
+                                                <label style={{ ...xpLabel, marginBottom: 0, fontSize: 10 }}>Panjang Tarikan <span style={{ color: '#888' }}>(10cm)</span></label>
+                                                <div style={{ display: 'flex', gap: 3, alignItems: 'center' }}>
+                                                    <input type="number" style={{ ...xpInput, flex: 1 }} placeholder="—"
+                                                        value={selectedNode?.mesin_panjang_tarikan ?? ''}
+                                                        onChange={e => updateSelectedNode({ mesin_panjang_tarikan: e.target.value === '' ? null : parseFloat(e.target.value) })} />
+                                                    <span style={{ fontSize: 9, color: '#555', whiteSpace: 'nowrap' }}>cm</span>
+                                                </div>
+                                                <label style={{ ...xpLabel, marginBottom: 0, fontSize: 10 }}>Tarikan Bandul 1kg <span style={{ color: '#888' }}>(10cm)</span></label>
+                                                <div style={{ display: 'flex', gap: 3, alignItems: 'center' }}>
+                                                    <input type="number" style={{ ...xpInput, flex: 1 }} placeholder="—"
+                                                        value={selectedNode?.mesin_panjang_tarikan_bandul_1kg ?? ''}
+                                                        onChange={e => updateSelectedNode({ mesin_panjang_tarikan_bandul_1kg: e.target.value === '' ? null : parseFloat(e.target.value) })} />
+                                                    <span style={{ fontSize: 9, color: '#555', whiteSpace: 'nowrap' }}>cm</span>
+                                                </div>
+                                                <label style={{ ...xpLabel, marginBottom: 0, fontSize: 10 }}>Tarikan Bandul 9kg <span style={{ color: '#888' }}>(10cm)</span></label>
+                                                <div style={{ display: 'flex', gap: 3, alignItems: 'center' }}>
+                                                    <input type="number" style={{ ...xpInput, flex: 1 }} placeholder="—"
+                                                        value={selectedNode?.mesin_panjang_tarikan_bandul_9kg ?? ''}
+                                                        onChange={e => updateSelectedNode({ mesin_panjang_tarikan_bandul_9kg: e.target.value === '' ? null : parseFloat(e.target.value) })} />
+                                                    <span style={{ fontSize: 9, color: '#555', whiteSpace: 'nowrap' }}>cm</span>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        {/* Bahan Dari Celup / Setting */}
+                                        <div style={{ ...xpGroupWrapper, flex: 1 }}>
+                                            <span style={xpGroupLabel()}>Bahan Dari Celup / Setting</span>
+                                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 60px', gap: '4px 6px', alignItems: 'center' }}>
+                                                <label style={{ ...xpLabel, marginBottom: 0 }}>Lebar</label>
+                                                <div style={{ display: 'flex', gap: 3, alignItems: 'center' }}>
+                                                    <input type="number" style={{ ...xpInput, flex: 1 }} placeholder="—"
+                                                        value={selectedNode?.celup_lebar ?? ''}
+                                                        onChange={e => updateSelectedNode({ celup_lebar: e.target.value === '' ? null : parseFloat(e.target.value) })} />
+                                                    <span style={{ fontSize: 9, color: '#555', whiteSpace: 'nowrap' }}>mm</span>
+                                                </div>
+                                                <label style={{ ...xpLabel, marginBottom: 0 }}>Panjang Tulisan</label>
+                                                <div style={{ display: 'flex', gap: 3, alignItems: 'center' }}>
+                                                    <input type="number" style={{ ...xpInput, flex: 1 }} placeholder="—"
+                                                        value={selectedNode?.celup_panjang_tulisan ?? ''}
+                                                        onChange={e => updateSelectedNode({ celup_panjang_tulisan: e.target.value === '' ? null : parseFloat(e.target.value) })} />
+                                                    <span style={{ fontSize: 9, color: '#555', whiteSpace: 'nowrap' }}>cm</span>
+                                                </div>
+                                                <label style={{ ...xpLabel, marginBottom: 0, fontSize: 10 }}>Panjang Tarikan <span style={{ color: '#888' }}>(10cm)</span></label>
+                                                <div style={{ display: 'flex', gap: 3, alignItems: 'center' }}>
+                                                    <input type="number" style={{ ...xpInput, flex: 1 }} placeholder="—"
+                                                        value={selectedNode?.celup_panjang_tarikan ?? ''}
+                                                        onChange={e => updateSelectedNode({ celup_panjang_tarikan: e.target.value === '' ? null : parseFloat(e.target.value) })} />
+                                                    <span style={{ fontSize: 9, color: '#555', whiteSpace: 'nowrap' }}>cm</span>
+                                                </div>
+                                                <label style={{ ...xpLabel, marginBottom: 0, fontSize: 10 }}>Tarikan Bandul 1kg <span style={{ color: '#888' }}>(10cm)</span></label>
+                                                <div style={{ display: 'flex', gap: 3, alignItems: 'center' }}>
+                                                    <input type="number" style={{ ...xpInput, flex: 1 }} placeholder="—"
+                                                        value={selectedNode?.celup_panjang_tarikan_bandul_1kg ?? ''}
+                                                        onChange={e => updateSelectedNode({ celup_panjang_tarikan_bandul_1kg: e.target.value === '' ? null : parseFloat(e.target.value) })} />
+                                                    <span style={{ fontSize: 9, color: '#555', whiteSpace: 'nowrap' }}>cm</span>
+                                                </div>
+                                                <label style={{ ...xpLabel, marginBottom: 0, fontSize: 10 }}>Tarikan Bandul 9kg <span style={{ color: '#888' }}>(10cm)</span></label>
+                                                <div style={{ display: 'flex', gap: 3, alignItems: 'center' }}>
+                                                    <input type="number" style={{ ...xpInput, flex: 1 }} placeholder="—"
+                                                        value={selectedNode?.celup_panjang_tarikan_bandul_9kg ?? ''}
+                                                        onChange={e => updateSelectedNode({ celup_panjang_tarikan_bandul_9kg: e.target.value === '' ? null : parseFloat(e.target.value) })} />
+                                                    <span style={{ fontSize: 9, color: '#555', whiteSpace: 'nowrap' }}>cm</span>
+                                                </div>
                                             </div>
                                         </div>
 
@@ -1000,6 +1102,10 @@ export default function BOMDesigner({
                                                                     kerapatan_picks: null, kerapatan_unit: '/cm',
                                                                     sisir_no: null, pemakaian_obat: '', pembuatan_sample_oleh: '',
                                                                     customer_id: '',
+                                                                    mesin_lebar: null, mesin_panjang_tulisan: null, mesin_panjang_tarikan: null,
+                                                                    mesin_panjang_tarikan_bandul_1kg: null, mesin_panjang_tarikan_bandul_9kg: null,
+                                                                    celup_lebar: null, celup_panjang_tulisan: null, celup_panjang_tarikan: null,
+                                                                    celup_panjang_tarikan_bandul_1kg: null, celup_panjang_tarikan_bandul_9kg: null,
                                                                     isNewItem: line.isNewItem
                                                                 };
                                                                 const newLines = [...selectedNode.lines];
