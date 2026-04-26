@@ -4,28 +4,33 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.db.base import Base
 import uuid
 from datetime import datetime
+from typing import Optional, List, TYPE_CHECKING
 
-# Association table for WorkOrder <-> AttributeValue
-work_order_values = Table(
-    "work_order_values",
+if TYPE_CHECKING:
+    from app.models.production_run import ProductionRun
+    from app.models.work_order import WorkOrder
+
+# Association table for ManufacturingOrder <-> AttributeValue
+manufacturing_order_values = Table(
+    "manufacturing_order_values",
     Base.metadata,
-    Column("work_order_id", UUID(as_uuid=True), ForeignKey("work_orders.id"), primary_key=True),
+    Column("manufacturing_order_id", UUID(as_uuid=True), ForeignKey("manufacturing_orders.id"), primary_key=True),
     Column("attribute_value_id", UUID(as_uuid=True), ForeignKey("attribute_values.id"), primary_key=True),
 )
 
-class WorkOrder(Base):
-    __tablename__ = "work_orders"
+class ManufacturingOrder(Base):
+    __tablename__ = "manufacturing_orders"
 
     id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
     )
     code: Mapped[str] = mapped_column(String(64), unique=True, index=True)
-    
+
     # Link to the Recipe (BOM)
     bom_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), ForeignKey("boms.id"), index=True
     )
-    
+
     # Produced Item
     item_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), ForeignKey("items.id"), index=True
@@ -35,19 +40,19 @@ class WorkOrder(Base):
     location_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), ForeignKey("locations.id"), index=True
     )
-    
+
     # Raw Material Source
     source_location_id: Mapped[uuid.UUID | None] = mapped_column(
         UUID(as_uuid=True), ForeignKey("locations.id"), nullable=True
     )
-    
+
     # Traceability
     sales_order_id: Mapped[uuid.UUID | None] = mapped_column(
         UUID(as_uuid=True), ForeignKey("sales_orders.id"), nullable=True
     )
-    
-    parent_wo_id: Mapped[uuid.UUID | None] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("work_orders.id"), nullable=True, index=True
+
+    parent_mo_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("manufacturing_orders.id"), nullable=True, index=True
     )
     size_id: Mapped[uuid.UUID | None] = mapped_column(
         UUID(as_uuid=True), ForeignKey("sizes.id"), nullable=True
@@ -64,11 +69,30 @@ class WorkOrder(Base):
 
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, index=True)
 
+    # Production Run link
+    production_run_id: Mapped[Optional[uuid.UUID]] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("production_runs.id"), nullable=True, index=True
+    )
+    bom_size_id: Mapped[Optional[uuid.UUID]] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("bom_sizes.id"), nullable=True
+    )
+
     # Relationships
-    bom = relationship("BOM", back_populates="work_orders")
+    bom = relationship("BOM", back_populates="manufacturing_orders")
     item = relationship("Item")
-    attribute_values = relationship("AttributeValue", secondary=work_order_values)
-    parent_wo = relationship("WorkOrder", remote_side=[id], backref="child_wos")
+    attribute_values = relationship("AttributeValue", secondary=manufacturing_order_values)
+    parent_mo = relationship("ManufacturingOrder", remote_side=[id], backref="child_mos")
+    production_run: Mapped[Optional["ProductionRun"]] = relationship(
+        "ProductionRun",
+        back_populates="manufacturing_orders",
+        foreign_keys=[production_run_id],
+    )
+    work_orders: Mapped[List["WorkOrder"]] = relationship(
+        "WorkOrder",
+        back_populates="manufacturing_order",
+        order_by="WorkOrder.sequence",
+        cascade="all, delete-orphan",
+    )
 
     @property
     def item_code(self) -> str | None:

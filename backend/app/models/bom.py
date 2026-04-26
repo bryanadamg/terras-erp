@@ -76,7 +76,7 @@ class BOM(Base):
     lines = relationship("BOMLine", back_populates="bom", cascade="all, delete-orphan")
     operations = relationship("BOMOperation", back_populates="bom", cascade="all, delete-orphan")
     sizes = relationship("BOMSize", back_populates="bom", cascade="all, delete-orphan")
-    work_orders = relationship("WorkOrder", back_populates="bom")
+    manufacturing_orders = relationship("ManufacturingOrder", back_populates="bom")
     customer = relationship("Partner", foreign_keys=[customer_id])
     work_center = relationship("WorkCenter", foreign_keys=[work_center_id])
 
