@@ -1,8 +1,8 @@
 'use client';
 
 import { useState } from 'react';
-import { useLanguage } from '../context/LanguageContext';
-import { useTheme } from '../context/ThemeContext';
+import { useLanguage } from '../../context/LanguageContext';
+import { useTheme } from '../../context/ThemeContext';
 import { useToast } from '../shared/Toast';
 
 interface Props {

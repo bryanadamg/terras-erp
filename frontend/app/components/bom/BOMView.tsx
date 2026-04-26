@@ -1,9 +1,9 @@
 import { useState, useEffect, useMemo } from 'react';
-import { useTheme } from '../context/ThemeContext';
+import { useTheme } from '../../context/ThemeContext';
 import { createPortal } from 'react-dom';
 import BOMDesigner from './BOMDesigner';
 import { useToast } from '../shared/Toast';
-import { useLanguage } from '../context/LanguageContext';
+import { useLanguage } from '../../context/LanguageContext';
 
 type StockLevel = 'ok' | 'low' | 'out';
 

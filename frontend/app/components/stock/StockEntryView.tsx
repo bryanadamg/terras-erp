@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import SearchableSelect from '../shared/SearchableSelect';
-import { useLanguage } from '../context/LanguageContext';
-import { useTheme } from '../context/ThemeContext';
+import { useLanguage } from '../../context/LanguageContext';
+import { useTheme } from '../../context/ThemeContext';
 
 export default function StockEntryView({ items, locations, attributes, stockBalance, onRecordStock }: any) {
   const { t } = useLanguage();

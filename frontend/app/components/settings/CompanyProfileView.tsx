@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useToast } from '../shared/Toast';
-import { useTheme } from '../context/ThemeContext';
+import { useTheme } from '../../context/ThemeContext';
 
 export default function CompanyProfileView({ profile, onUpdate, onUploadLogo, authFetch }: any) {
     const { showToast } = useToast();

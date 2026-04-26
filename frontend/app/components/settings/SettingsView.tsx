@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useToast } from '../shared/Toast';
-import { useTheme } from '../context/ThemeContext';
-import { useUser, User } from '../context/UserContext';
+import { useTheme } from '../../context/ThemeContext';
+import { useUser, User } from '../../context/UserContext';
 import CompanyProfileView from './CompanyProfileView';
 import PixelAvatar from '../shared/PixelAvatar';
 import AvatarPicker from '../shared/AvatarPicker';

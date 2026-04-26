@@ -1,6 +1,6 @@
 import { useState } from 'react';
-import { useLanguage } from '../context/LanguageContext';
-import { useTheme } from '../context/ThemeContext';
+import { useLanguage } from '../../context/LanguageContext';
+import { useTheme } from '../../context/ThemeContext';
 
 export default function CalendarView({ workOrders, items, compact = false }: any) {
   const { t } = useLanguage();

@@ -1,6 +1,6 @@
 import { useState } from 'react';
-import { useLanguage } from '../context/LanguageContext';
-import { useTheme } from '../context/ThemeContext';
+import { useLanguage } from '../../context/LanguageContext';
+import { useTheme } from '../../context/ThemeContext';
 
 export default function CategoriesView({ categories, onCreateCategory, onDeleteCategory }: any) {
   const { t } = useLanguage();

@@ -1,11 +1,11 @@
 import { useState, useEffect } from 'react';
 import CodeConfigModal, { CodeConfig, buildCodeWithCounter } from '../shared/CodeConfigModal';
 import { useToast } from '../shared/Toast';
-import { useLanguage } from '../context/LanguageContext';
+import { useLanguage } from '../../context/LanguageContext';
 import SearchableSelect from '../shared/SearchableSelect';
 import PrintHeader from '../shared/PrintHeader';
 import ModalWrapper from '../shared/ModalWrapper';
-import { useTheme } from '../context/ThemeContext';
+import { useTheme } from '../../context/ThemeContext';
 
 export default function PurchaseOrderView({ items, attributes, purchaseOrders, partners, locations, onCreatePO, onDeletePO, onReceivePO }: any) {
   const { showToast } = useToast();

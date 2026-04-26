@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
-import { useLanguage } from '../context/LanguageContext';
-import { useTheme } from '../context/ThemeContext';
+import { useLanguage } from '../../context/LanguageContext';
+import { useTheme } from '../../context/ThemeContext';
 import CalendarView from '../shared/CalendarView';
 
 // ── XP style helpers ─────────────────────────────────────────────────────────

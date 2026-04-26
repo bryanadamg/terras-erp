@@ -1,6 +1,6 @@
 import { useState, useRef, useLayoutEffect } from 'react';
-import { useLanguage } from '../context/LanguageContext';
-import { useUser } from '../context/UserContext';
+import { useLanguage } from '../../context/LanguageContext';
+import { useUser } from '../../context/UserContext';
 
 interface SidebarProps {
   activeTab: string;

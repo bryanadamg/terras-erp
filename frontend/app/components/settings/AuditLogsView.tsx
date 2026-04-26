@@ -1,6 +1,6 @@
 import React, { useState, memo } from 'react';
-import { useLanguage } from '../context/LanguageContext';
-import { useTheme } from '../context/ThemeContext';
+import { useLanguage } from '../../context/LanguageContext';
+import { useTheme } from '../../context/ThemeContext';
 
 function getActionXPStyle(action: string): React.CSSProperties {
     const map: Record<string, { bg: string; border: string; color: string }> = {

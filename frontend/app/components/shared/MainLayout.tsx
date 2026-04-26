@@ -3,12 +3,12 @@
 import React, { useState, useEffect } from 'react';
 import Sidebar from './Sidebar';
 import MobileShell from '../mobile/MobileShell';
-import { useUser } from '../context/UserContext';
-import { useData } from '../context/DataContext';
-import { useLanguage } from '../context/LanguageContext';
+import { useUser } from '../../context/UserContext';
+import { useData } from '../../context/DataContext';
+import { useLanguage } from '../../context/LanguageContext';
 import { useRouter, usePathname } from 'next/navigation';
-import { useTheme } from '../context/ThemeContext';
-import { useIsMobile } from '../hooks/useIsMobile';
+import { useTheme } from '../../context/ThemeContext';
+import { useIsMobile } from '../../hooks/useIsMobile';
 import PixelAvatar from './PixelAvatar';
 
 export default function MainLayout({ children }: { children: React.ReactNode }) {
