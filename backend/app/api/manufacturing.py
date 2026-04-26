@@ -5,6 +5,7 @@ from sqlalchemy.orm import selectinload, joinedload, attributes as sa_attributes
 from collections import defaultdict
 from app.db.session import get_async_db
 from app.models.manufacturing import ManufacturingOrder
+from app.models.work_order import WorkOrder as WorkOrderModel  # noqa: F401 — eager load
 from app.models.bom import BOM, BOMLine
 from app.models.location import Location
 from app.models.sales import SalesOrder
@@ -30,6 +31,7 @@ def get_mo_options():
     options = [
         selectinload(ManufacturingOrder.item),
         selectinload(ManufacturingOrder.attribute_values),
+        selectinload(ManufacturingOrder.work_orders),
         selectinload(ManufacturingOrder.bom).selectinload(BOM.item),
         selectinload(ManufacturingOrder.bom).selectinload(BOM.attribute_values),
         selectinload(ManufacturingOrder.bom).selectinload(BOM.operations),
