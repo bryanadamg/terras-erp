@@ -12,7 +12,7 @@ from fastapi.staticfiles import StaticFiles
 from app.db.session import engine
 from app.core.db_manager import db_manager
 from app.db.base import Base
-from app.api import items, locations, stock, attributes, boms, manufacturing, categories, routing, auth, uoms, sales, samples, audit, admin, dashboard, partners, purchase, settings
+from app.api import items, locations, stock, attributes, boms, manufacturing, categories, routing, auth, uoms, sales, samples, audit, admin, dashboard, partners, purchase, settings, production_runs
 from app.core.ws_manager import manager
 
 @asynccontextmanager
@@ -55,6 +55,7 @@ api_router.include_router(dashboard.router)
 api_router.include_router(partners.router)
 api_router.include_router(purchase.router)
 api_router.include_router(settings.router)
+api_router.include_router(production_runs.router)
 
 @api_router.websocket("/ws/events")
 async def websocket_endpoint(websocket: WebSocket):
