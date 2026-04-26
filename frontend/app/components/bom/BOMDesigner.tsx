@@ -713,16 +713,19 @@ export default function BOMDesigner({
                                     {selectedNodeId === 'root' && (
                                         <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 2 }}>
                                             <label style={{ ...xpLabel, marginBottom: 0, whiteSpace: 'nowrap', minWidth: 60 }}>Customer</label>
-                                            <select
-                                                style={{ ...xpSelect, maxWidth: 220 }}
-                                                value={selectedNode.customer_id || ''}
-                                                onChange={e => updateSelectedNode({ customer_id: e.target.value })}
-                                            >
-                                                <option value="">— None —</option>
-                                                {(partners || []).filter((p: any) => p.type === 'CUSTOMER' && p.active !== false).map((p: any) => (
-                                                    <option key={p.id} value={p.id}>{p.name}</option>
-                                                ))}
-                                            </select>
+                                            <div style={{ maxWidth: 220, flex: 1 }}>
+                                                <SearchableSelect
+                                                    options={[
+                                                        { value: '', label: '— None —' },
+                                                        ...(partners || [])
+                                                            .filter((p: any) => p.type === 'CUSTOMER' && p.active !== false)
+                                                            .map((p: any) => ({ value: p.id, label: p.name }))
+                                                    ]}
+                                                    value={selectedNode.customer_id || ''}
+                                                    onChange={(val: string) => updateSelectedNode({ customer_id: val })}
+                                                    placeholder="— None —"
+                                                />
+                                            </div>
                                         </div>
                                     )}
                                 </div>
