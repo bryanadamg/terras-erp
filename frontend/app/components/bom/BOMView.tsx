@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useTheme } from '../../context/ThemeContext';
 import { createPortal } from 'react-dom';
 import BOMDesigner from './BOMDesigner';
@@ -347,7 +347,7 @@ export default function BOMView({
         return (
             <tr key={`${bom.id}-detail`}>
                 <td colSpan={6} style={{ padding: 0, borderTop: 'none' }}>
-                    <div style={{ display: 'flex', height: 280, background: '#ece9d8', borderTop: '2px solid #0058e6', fontFamily: 'Tahoma, Arial, sans-serif', fontSize: 11 }}>
+                    <div style={{ display: 'flex', height: 420, background: '#ece9d8', borderTop: '2px solid #0058e6', fontFamily: 'Tahoma, Arial, sans-serif', fontSize: 11 }}>
 
                         {/* LEFT: Tree */}
                         <div style={{ width: 210, flexShrink: 0, borderRight: '2px solid #aca899', display: 'flex', flexDirection: 'column', background: '#ddd9c8' }}>
@@ -475,69 +475,138 @@ export default function BOMView({
                                     )}
                                 </div>
 
-                                {/* Machine */}
-                                {displayBOM.work_center_name && (
-                                    <div>
-                                        <div style={xpSectionHdr}><i className="bi bi-wrench" style={{ marginRight: 4 }} />Machine</div>
-                                        <div style={{ padding: '4px 6px', fontSize: 11, color: '#000' }}>{displayBOM.work_center_name}</div>
-                                    </div>
-                                )}
 
                             </div>
                         </div>
 
                         {/* RIGHT: BOM info card */}
-                        <div style={{ width: 165, flexShrink: 0, borderLeft: '1px solid #aca899', padding: 8, display: 'flex', flexDirection: 'column', gap: 8, overflowY: 'auto', background: '#f5f4ee' }}>
-                            <div style={{ fontSize: 10, fontWeight: 'bold', color: '#000080', borderBottom: '1px solid #c0bdb5', paddingBottom: 3, fontFamily: 'Tahoma, Arial, sans-serif' }}><i className="bi bi-clipboard" style={{ marginRight: 4 }} />BOM Details</div>
-                            <div>
-                                <div style={{ fontSize: 10, color: '#444', marginBottom: 1 }}>BOM Code</div>
-                                <div style={{ fontFamily: "'Courier New', monospace", color: '#0000cc', fontSize: 10 }}>{displayBOM.code}</div>
-                            </div>
-                            <div>
-                                <div style={{ fontSize: 10, color: '#444', marginBottom: 1 }}>Item</div>
-                                <div style={{ fontSize: 11, fontWeight: 'bold', color: '#000' }}>{displayBOM.item_name || displayBOM.item_code}</div>
-                                <div style={{ fontFamily: "'Courier New', monospace", color: '#0000cc', fontSize: 10 }}>{displayBOM.item_code}</div>
-                            </div>
-                            {(displayBOM.attribute_value_ids || []).length > 0 && (
-                                <div>
-                                    <div style={{ fontSize: 10, color: '#444', marginBottom: 1 }}>Variant</div>
-                                    <div style={{ fontSize: 11, color: '#333' }}>{getAttrValues(displayBOM.attribute_value_ids)}</div>
-                                </div>
-                            )}
-                            <div>
-                                <div style={{ fontSize: 10, color: '#444', marginBottom: 1 }}>Batch Output</div>
-                                <div style={{ fontSize: 12, fontWeight: 'bold', color: '#000' }}>
-                                    {Number(displayBOM.qty).toFixed(2)} <span style={{ fontWeight: 'normal', color: '#555', fontSize: 10 }}>pcs</span>
-                                </div>
-                            </div>
-                            <div>
-                                <div style={{ fontSize: 10, color: '#444', marginBottom: 1 }}>Tolerance</div>
-                                <div style={{ fontSize: 12, fontWeight: 'bold', color: '#000' }}>±{Number(displayBOM.tolerance_percentage || 0).toFixed(2)}%</div>
-                            </div>
-                            <div>
-                                <div style={{ fontSize: 10, color: '#444', marginBottom: 1 }}>Status</div>
-                                <div style={{ fontSize: 11, fontWeight: 'bold', color: displayBOM.active ? '#004400' : '#880000', display: 'flex', alignItems: 'center', gap: 4 }}>
-                                    <span style={{ display: 'inline-block', width: 8, height: 8, background: displayBOM.active ? '#00aa00' : '#cc0000', border: `1px solid ${displayBOM.active ? '#005500' : '#660000'}`, flexShrink: 0 }} />
-                                    {displayBOM.active ? 'Active' : 'Inactive'}
-                                </div>
-                            </div>
-                            <div style={{ borderTop: '1px solid #c0bdb5', paddingTop: 6 }}>
-                                <div style={{ fontSize: 10, color: '#444', marginBottom: 4 }}>Quick Stats</div>
-                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 3 }}>
-                                    {[
-                                        { v: lines.length, l: 'Mats' },
-                                        { v: ops.length, l: 'Ops' },
-                                        { v: subBOMCount, l: 'Sub-BOMs' },
-                                        { v: totalMinutes.toFixed(0), l: 'Min' },
-                                    ].map(s => (
-                                        <div key={s.l} style={{ textAlign: 'center', background: '#f0efe6', border: '1px solid #c0bdb5', padding: '3px 2px' }}>
-                                            <div style={{ fontSize: 15, fontWeight: 'bold', color: '#0000cc', fontFamily: 'Tahoma, Arial, sans-serif' }}>{s.v}</div>
-                                            <div style={{ fontSize: 9, color: '#555', fontFamily: 'Tahoma, Arial, sans-serif' }}>{s.l}</div>
+                        {(() => {
+                            const hasMesin = [displayBOM.mesin_lebar, displayBOM.mesin_panjang_tulisan, displayBOM.mesin_panjang_tarikan, displayBOM.mesin_panjang_tarikan_bandul_1kg, displayBOM.mesin_panjang_tarikan_bandul_9kg].some(v => v != null);
+                            const hasCelup = [displayBOM.celup_lebar, displayBOM.celup_panjang_tulisan, displayBOM.celup_panjang_tarikan, displayBOM.celup_panjang_tarikan_bandul_1kg, displayBOM.celup_panjang_tarikan_bandul_9kg].some(v => v != null);
+                            const hasMeasurements = hasMesin || hasCelup;
+                            const hasTeknis = displayBOM.kerapatan_picks != null || displayBOM.sisir_no != null || displayBOM.pemakaian_obat || displayBOM.pembuatan_sample_oleh;
+                            const lbl: React.CSSProperties = { fontSize: 9, color: '#666', textTransform: 'uppercase', letterSpacing: '0.3px', marginBottom: 1 };
+                            const val: React.CSSProperties = { fontSize: 11, color: '#000', fontWeight: 'bold', wordBreak: 'break-word' };
+                            const sep: React.CSSProperties = { borderTop: '1px solid #c0bdb5', marginTop: 4, paddingTop: 6 };
+                            const secHdr: React.CSSProperties = { fontSize: 9, fontWeight: 'bold', color: '#000080', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: 4 };
+                            const mRow = (label: string, mesinVal: any, celupVal: any, unit: string) => (
+                                <tr key={label}>
+                                    <td style={{ padding: '1px 4px 1px 0', fontSize: 10, color: '#444', whiteSpace: 'nowrap' }}>{label}</td>
+                                    <td style={{ padding: '1px 4px', textAlign: 'right', fontWeight: 'bold', fontSize: 10, color: mesinVal != null ? '#000' : '#bbb', background: '#f8f7f2', border: '1px solid #e0ddd4' }}>{mesinVal != null ? mesinVal : '—'}</td>
+                                    <td style={{ padding: '1px 4px', textAlign: 'right', fontWeight: 'bold', fontSize: 10, color: celupVal != null ? '#000' : '#bbb', background: '#f8f7f2', border: '1px solid #e0ddd4', borderLeft: 'none' }}>{celupVal != null ? celupVal : '—'}</td>
+                                    <td style={{ padding: '1px 0 1px 3px', fontSize: 9, color: '#777' }}>{unit}</td>
+                                </tr>
+                            );
+                            return (
+                                <div style={{ width: 260, flexShrink: 0, borderLeft: '1px solid #aca899', padding: '6px 8px', display: 'flex', flexDirection: 'column', gap: 0, overflowY: 'auto', background: '#f5f4ee' }}>
+
+                                    {/* Header */}
+                                    <div style={{ fontSize: 10, fontWeight: 'bold', color: '#000080', borderBottom: '1px solid #c0bdb5', paddingBottom: 3, marginBottom: 6 }}>
+                                        <i className="bi bi-clipboard" style={{ marginRight: 4 }} />BOM Details
+                                    </div>
+
+                                    {/* Identity */}
+                                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '4px 8px', marginBottom: 6 }}>
+                                        <div style={{ gridColumn: '1/-1' }}>
+                                            <div style={lbl}>BOM Code</div>
+                                            <div style={{ fontFamily: "'Courier New', monospace", color: '#0000cc', fontSize: 10 }}>{displayBOM.code}</div>
                                         </div>
-                                    ))}
+                                        <div style={{ gridColumn: '1/-1' }}>
+                                            <div style={lbl}>Item</div>
+                                            <div style={{ ...val, fontSize: 11 }}>{displayBOM.item_name || displayBOM.item_code}</div>
+                                            <div style={{ fontFamily: "'Courier New', monospace", color: '#666', fontSize: 9 }}>{displayBOM.item_code}</div>
+                                        </div>
+                                        {(displayBOM.attribute_value_ids || []).length > 0 && (
+                                            <div style={{ gridColumn: '1/-1' }}>
+                                                <div style={lbl}>Variant</div>
+                                                <div style={{ fontSize: 10, color: '#333' }}>{getAttrValues(displayBOM.attribute_value_ids)}</div>
+                                            </div>
+                                        )}
+                                        {displayBOM.customer_name && (
+                                            <div style={{ gridColumn: '1/-1' }}>
+                                                <div style={lbl}>Customer</div>
+                                                <div style={{ fontSize: 11, color: '#000' }}>{displayBOM.customer_name}</div>
+                                            </div>
+                                        )}
+                                        {displayBOM.work_center_name && (
+                                            <div style={{ gridColumn: '1/-1' }}>
+                                                <div style={lbl}>Machine</div>
+                                                <div style={{ fontSize: 11, color: '#000' }}>{displayBOM.work_center_name}</div>
+                                            </div>
+                                        )}
+                                        <div>
+                                            <div style={lbl}>Batch Output</div>
+                                            <div style={val}>{Number(displayBOM.qty).toFixed(2)} <span style={{ fontWeight: 'normal', color: '#555', fontSize: 9 }}>pcs</span></div>
+                                        </div>
+                                        <div>
+                                            <div style={lbl}>Tolerance</div>
+                                            <div style={val}>±{Number(displayBOM.tolerance_percentage || 0).toFixed(2)}%</div>
+                                        </div>
+                                        <div>
+                                            <div style={lbl}>Status</div>
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 11, fontWeight: 'bold', color: displayBOM.active ? '#004400' : '#880000' }}>
+                                                <span style={{ display: 'inline-block', width: 8, height: 8, background: displayBOM.active ? '#00aa00' : '#cc0000', border: `1px solid ${displayBOM.active ? '#005500' : '#660000'}`, flexShrink: 0 }} />
+                                                {displayBOM.active ? 'Active' : 'Inactive'}
+                                            </div>
+                                        </div>
+                                        <div>
+                                            <div style={lbl}>Components</div>
+                                            <div style={val}>{lines.length} <span style={{ fontWeight: 'normal', fontSize: 9, color: '#555' }}>mat{lines.length !== 1 ? 's' : ''}</span></div>
+                                        </div>
+                                    </div>
+
+                                    {/* Detail Teknis */}
+                                    {hasTeknis && (
+                                        <div style={sep}>
+                                            <div style={secHdr}>Detail Teknis</div>
+                                            <div style={{ display: 'grid', gridTemplateColumns: 'auto 1fr', gap: '2px 8px', alignItems: 'baseline' }}>
+                                                {displayBOM.kerapatan_picks != null && (<>
+                                                    <span style={lbl}>Kerapatan</span>
+                                                    <span style={{ fontSize: 11 }}>{displayBOM.kerapatan_picks} {displayBOM.kerapatan_unit || '/cm'}</span>
+                                                </>)}
+                                                {displayBOM.sisir_no != null && (<>
+                                                    <span style={lbl}>Sisir No.</span>
+                                                    <span style={{ fontSize: 11 }}>{displayBOM.sisir_no}</span>
+                                                </>)}
+                                                {displayBOM.pemakaian_obat && (<>
+                                                    <span style={lbl}>Obat Setting</span>
+                                                    <span style={{ fontSize: 10, wordBreak: 'break-word' }}>{displayBOM.pemakaian_obat}</span>
+                                                </>)}
+                                                {displayBOM.pembuatan_sample_oleh && (<>
+                                                    <span style={lbl}>Sample oleh</span>
+                                                    <span style={{ fontSize: 10, wordBreak: 'break-word' }}>{displayBOM.pembuatan_sample_oleh}</span>
+                                                </>)}
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    {/* Measurements */}
+                                    {hasMeasurements && (
+                                        <div style={sep}>
+                                            <div style={secHdr}>Measurements</div>
+                                            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 10 }}>
+                                                <thead>
+                                                    <tr>
+                                                        <th style={{ fontSize: 9, color: '#555', fontWeight: 'normal', textAlign: 'left', paddingBottom: 2 }}></th>
+                                                        <th style={{ fontSize: 9, color: '#555', fontWeight: 'bold', textAlign: 'center', paddingBottom: 2, paddingRight: 4 }}>Mesin</th>
+                                                        <th style={{ fontSize: 9, color: '#555', fontWeight: 'bold', textAlign: 'center', paddingBottom: 2 }}>Celup</th>
+                                                        <th></th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    {mRow('Lebar', displayBOM.mesin_lebar, displayBOM.celup_lebar, 'mm')}
+                                                    {mRow('P. Tulisan', displayBOM.mesin_panjang_tulisan, displayBOM.celup_panjang_tulisan, 'cm')}
+                                                    {mRow('P. Tarikan', displayBOM.mesin_panjang_tarikan, displayBOM.celup_panjang_tarikan, 'cm')}
+                                                    {mRow('Bandul 1kg', displayBOM.mesin_panjang_tarikan_bandul_1kg, displayBOM.celup_panjang_tarikan_bandul_1kg, 'cm')}
+                                                    {mRow('Bandul 9kg', displayBOM.mesin_panjang_tarikan_bandul_9kg, displayBOM.celup_panjang_tarikan_bandul_9kg, 'cm')}
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    )}
+
                                 </div>
-                            </div>
-                        </div>
+                            );
+                        })()}
 
                     </div>
                 </td>
