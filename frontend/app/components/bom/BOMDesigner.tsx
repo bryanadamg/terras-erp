@@ -250,6 +250,8 @@ export default function BOMDesigner({
     const [photoPreview, setPhotoPreview] = useState<string | null>(null);
     const [pendingDesignFile, setPendingDesignFile] = useState<File | null>(null);
 
+    const [inheritFields, setInheritFields] = useState(true);
+
     const [pendingItemCode, setPendingItemCode] = useState('');
     const [pendingQty, setPendingQty] = useState<string>('');
     const [pendingPercentage, setPendingPercentage] = useState<string>('');
@@ -360,14 +362,8 @@ export default function BOMDesigner({
                     item_code: expectedChildCode,
                     attribute_value_ids: matchingAttrs,
                     qty: 1.0, tolerance_percentage: 0.0,
-                    operations: [], lines: subLines, sizes: [],
-                    kerapatan_picks: null, kerapatan_unit: '/cm',
-                    sisir_no: null, pemakaian_obat: '', pembuatan_sample_oleh: '',
-                    customer_id: '',
-                    mesin_lebar: null, mesin_panjang_tulisan: null, mesin_panjang_tarikan: null,
-                    mesin_panjang_tarikan_bandul_1kg: null, mesin_panjang_tarikan_bandul_9kg: null,
-                    celup_lebar: null, celup_panjang_tulisan: null, celup_panjang_tarikan: null,
-                    celup_panjang_tarikan_bandul_1kg: null, celup_panjang_tarikan_bandul_9kg: null,
+                    operations: [], lines: subLines,
+                    ...getInheritedFields(rootBOM),
                     isNewItem,
                 };
                 levelLines.push({
@@ -383,7 +379,41 @@ export default function BOMDesigner({
 
         const newLines = constructTreeRecursive(rootBOM.attribute_value_ids, 0);
         setRootBOM(prev => ({ ...prev, lines: newLines }));
-    }, [rootBOM.item_code, rootBOM.attribute_value_ids, items, attributes, existingBOMs, suggestBOMCode]);
+    }, [rootBOM.item_code, rootBOM.attribute_value_ids, items, attributes, existingBOMs, suggestBOMCode, inheritFields, getInheritedFields]);
+
+    const getInheritedFields = (source: BOMNodeData) => inheritFields ? {
+        sizes: (source.sizes || []).map(s => ({ ...s })),
+        sizeMode: source.sizeMode,
+        kerapatan_picks: source.kerapatan_picks,
+        kerapatan_unit: source.kerapatan_unit,
+        sisir_no: source.sisir_no,
+        pemakaian_obat: source.pemakaian_obat,
+        pembuatan_sample_oleh: source.pembuatan_sample_oleh,
+        customer_id: source.customer_id,
+        work_center_id: source.work_center_id,
+        berat_bahan_mateng: source.berat_bahan_mateng,
+        berat_bahan_mentah_pelesan: source.berat_bahan_mentah_pelesan,
+        mesin_lebar: source.mesin_lebar,
+        mesin_panjang_tulisan: source.mesin_panjang_tulisan,
+        mesin_panjang_tarikan: source.mesin_panjang_tarikan,
+        mesin_panjang_tarikan_bandul_1kg: source.mesin_panjang_tarikan_bandul_1kg,
+        mesin_panjang_tarikan_bandul_9kg: source.mesin_panjang_tarikan_bandul_9kg,
+        celup_lebar: source.celup_lebar,
+        celup_panjang_tulisan: source.celup_panjang_tulisan,
+        celup_panjang_tarikan: source.celup_panjang_tarikan,
+        celup_panjang_tarikan_bandul_1kg: source.celup_panjang_tarikan_bandul_1kg,
+        celup_panjang_tarikan_bandul_9kg: source.celup_panjang_tarikan_bandul_9kg,
+    } : {
+        sizes: [], sizeMode: 'sized' as const,
+        kerapatan_picks: null, kerapatan_unit: '/cm',
+        sisir_no: null, pemakaian_obat: '', pembuatan_sample_oleh: '',
+        customer_id: '', work_center_id: '',
+        berat_bahan_mateng: null, berat_bahan_mentah_pelesan: null,
+        mesin_lebar: null, mesin_panjang_tulisan: null, mesin_panjang_tarikan: null,
+        mesin_panjang_tarikan_bandul_1kg: null, mesin_panjang_tarikan_bandul_9kg: null,
+        celup_lebar: null, celup_panjang_tulisan: null, celup_panjang_tarikan: null,
+        celup_panjang_tarikan_bandul_1kg: null, celup_panjang_tarikan_bandul_9kg: null,
+    };
 
     const saveNode = async (node: BOMNodeData): Promise<boolean> => {
         const rootItem = items.find((i: any) => (i.code || '').trim().toLowerCase() === (rootBOM.item_code || '').trim().toLowerCase());
@@ -736,8 +766,8 @@ export default function BOMDesigner({
                                         );
                                     })()}
 
-                                    {/* Customer + Machine selectors — root only */}
-                                    {selectedNodeId === 'root' && (
+                                    {/* Customer + Machine selectors */}
+                                    {(
                                         <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginTop: 2, flexWrap: 'wrap' }}>
                                             <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                                                 <label style={{ ...xpLabel, marginBottom: 0, whiteSpace: 'nowrap', minWidth: 60 }}>Customer</label>
@@ -773,8 +803,8 @@ export default function BOMDesigner({
                                     )}
                                 </div>
 
-                                {/* Sizes + Detail Teknis + Measurements row — root BOM only */}
-                                {selectedNodeId === 'root' && (
+                                {/* Sizes + Detail Teknis + Measurements row */}
+                                {(
                                     <div style={{ display: 'flex', gap: 8 }}>
 
                                         {/* Left: Size Measurements */}
@@ -972,8 +1002,8 @@ export default function BOMDesigner({
                                                     </div>
                                                 </div>
 
-                                                {/* Product Sample Photo */}
-                                                <div>
+                                                {/* Product Sample Photo — root only */}
+                                                {selectedNodeId === 'root' && <div>
                                                     <label style={xpLabel}>Product Sample Photo</label>
                                                     <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                                                         <input type="file" accept="image/*" id="bom-sample-photo"
@@ -996,10 +1026,10 @@ export default function BOMDesigner({
                                                             style={{ marginTop: 4, maxHeight: 64, maxWidth: '100%', border: '1px solid #b0a898', display: 'block', cursor: 'pointer', objectFit: 'cover' }}
                                                         />
                                                     )}
-                                                </div>
+                                                </div>}
 
-                                                {/* Design / Formula File */}
-                                                <div>
+                                                {/* Design / Formula File — root only */}
+                                                {selectedNodeId === 'root' && <div>
                                                     <label style={xpLabel}>Design / Susunan Rumusan</label>
                                                     <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                                                         <input type="file" accept="image/*,.pdf" id="bom-design-file"
@@ -1026,7 +1056,7 @@ export default function BOMDesigner({
                                                             {pendingDesignFile.name}
                                                         </div>
                                                     )}
-                                                </div>
+                                                </div>}
 
                                             </div>
                                         </div>
@@ -1125,6 +1155,17 @@ export default function BOMDesigner({
                                     <div style={{ flex: 1 }}>
                                         <div style={xpGroupWrapper}>
                                             <span style={xpGroupLabel()}>Components</span>
+                                            <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 4 }}>
+                                                <label style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 10, color: '#444', cursor: 'pointer', userSelect: 'none' }}>
+                                                    <input
+                                                        type="checkbox"
+                                                        checked={inheritFields}
+                                                        onChange={e => setInheritFields(e.target.checked)}
+                                                        style={{ margin: 0 }}
+                                                    />
+                                                    Inherit fields to child BOMs
+                                                </label>
+                                            </div>
 
                                             {/* Add component row */}
                                             <div style={{ display: 'flex', gap: 4, marginBottom: 6, flexWrap: 'wrap', alignItems: 'flex-end' }}>
@@ -1217,14 +1258,8 @@ export default function BOMDesigner({
                                                                     item_code: line.item_code,
                                                                     attribute_value_ids: line.attribute_value_ids,
                                                                     qty: 1.0, tolerance_percentage: 0.0,
-                                                                    operations: [], lines: [], sizes: [],
-                                                                    kerapatan_picks: null, kerapatan_unit: '/cm',
-                                                                    sisir_no: null, pemakaian_obat: '', pembuatan_sample_oleh: '',
-                                                                    customer_id: '',
-                                                                    mesin_lebar: null, mesin_panjang_tulisan: null, mesin_panjang_tarikan: null,
-                                                                    mesin_panjang_tarikan_bandul_1kg: null, mesin_panjang_tarikan_bandul_9kg: null,
-                                                                    celup_lebar: null, celup_panjang_tulisan: null, celup_panjang_tarikan: null,
-                                                                    celup_panjang_tarikan_bandul_1kg: null, celup_panjang_tarikan_bandul_9kg: null,
+                                                                    operations: [], lines: [],
+                                                                    ...getInheritedFields(selectedNode),
                                                                     isNewItem: line.isNewItem
                                                                 };
                                                                 const newLines = [...selectedNode.lines];
