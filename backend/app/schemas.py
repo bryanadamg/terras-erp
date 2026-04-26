@@ -91,15 +91,15 @@ class BOMLineResponse(BaseModel):
         from_attributes = True
 
 class BOMOperationCreate(BaseModel):
-    operation_id: UUID
-    work_center_id: UUID | None = None
+    operation_id: Optional[UUID] = None
+    work_center_id: Optional[UUID] = None
     sequence: int = 10
     time_minutes: float = 0.0
 
 class BOMOperationResponse(BaseModel):
     id: UUID
-    operation_id: UUID
-    work_center_id: UUID | None
+    operation_id: Optional[UUID] = None
+    work_center_id: Optional[UUID] = None
     sequence: int
     time_minutes: float
 

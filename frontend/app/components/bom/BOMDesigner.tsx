@@ -264,7 +264,7 @@ export default function BOMDesigner({
         return item && existingBOMs.some((b: any) => b.item_id === item.id);
     }, [items, existingBOMs]);
 
-    const getOpName = (id: string) => operations.find((o: any) => o.id === id)?.name || id;
+    const getWcName = (id: string) => workCenters.find((wc: any) => wc.id === id)?.name || id;
 
     const getAttributeValueName = (valId: string) => {
         for (const attr of attributes) {
@@ -843,25 +843,25 @@ export default function BOMDesigner({
                                 {/* Two-column: Production Steps + Components */}
                                 <div style={{ display: 'flex', gap: 8, flex: 1, alignItems: 'flex-start' }}>
 
-                                    {/* Production Steps */}
+                                    {/* Work Stations (Machines) */}
                                     <div style={{ flex: 1 }}>
                                         <div style={{ ...xpGroupWrapper, height: '100%' }}>
-                                            <span style={xpGroupLabel()}>Production Steps</span>
+                                            <span style={xpGroupLabel()}>Work Stations (Machines)</span>
 
-                                            {/* Add operation */}
+                                            {/* Add work station */}
                                             <div style={{ display: 'flex', gap: 4, marginBottom: 6 }}>
-                                                <select style={{ ...xpSelect, flex: 1 }} id="addOpSel">
-                                                    <option value="">Add Operation...</option>
-                                                    {operations.map((o: any) => (
-                                                        <option key={o.id} value={o.id}>{o.name}</option>
+                                                <select style={{ ...xpSelect, flex: 1 }} id="addWcSel">
+                                                    <option value="">Add Work Station...</option>
+                                                    {workCenters.map((wc: any) => (
+                                                        <option key={wc.id} value={wc.id}>{wc.name}</option>
                                                     ))}
                                                 </select>
                                                 <button style={{ ...xpBtnPrimary, minWidth: 'auto', padding: '0 8px' }} onClick={() => {
-                                                    const sel = document.getElementById('addOpSel') as HTMLSelectElement;
+                                                    const sel = document.getElementById('addWcSel') as HTMLSelectElement;
                                                     if (sel.value) {
                                                         updateSelectedNode({
                                                             operations: [...selectedNode.operations, {
-                                                                operation_id: sel.value,
+                                                                work_center_id: sel.value,
                                                                 sequence: (selectedNode.operations.length + 1) * 10,
                                                                 time_minutes: 0
                                                             }]
@@ -871,10 +871,10 @@ export default function BOMDesigner({
                                                 }}>+</button>
                                             </div>
 
-                                            {/* Ops list */}
+                                            {/* Work station list */}
                                             <div style={{ ...xpInset, maxHeight: 200, padding: 0 }}>
                                                 {selectedNode.operations.length === 0 && (
-                                                    <div style={{ padding: 6, fontSize: 10, color: '#888', fontStyle: 'italic' }}>No steps added.</div>
+                                                    <div style={{ padding: 6, fontSize: 10, color: '#888', fontStyle: 'italic' }}>No work stations added.</div>
                                                 )}
                                                 {selectedNode.operations.sort((a, b) => a.sequence - b.sequence).map((op, i) => (
                                                     <div key={i} style={{
@@ -884,7 +884,9 @@ export default function BOMDesigner({
                                                         background: i % 2 === 0 ? 'white' : '#f8f7f2',
                                                     }}>
                                                         <span style={xpBadge()}>{String(op.sequence).padStart(2, '0')}</span>
-                                                        <span style={{ flex: 1, fontSize: 11 }}>{getOpName(op.operation_id)}</span>
+                                                        <span style={{ flex: 1, fontSize: 11 }}>
+                                                            {workCenters.find((wc: any) => wc.id === (op.work_center_id || op.operation_id))?.name || op.work_center_id || op.operation_id || '—'}
+                                                        </span>
                                                         <button
                                                             style={xpBtnDanger}
                                                             onClick={() => updateSelectedNode({ operations: selectedNode.operations.filter((_, idx) => idx !== i) })}

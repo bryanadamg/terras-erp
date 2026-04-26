@@ -142,6 +142,12 @@ def run_migrations():
                 pass
 
             try:
+                conn.execute(text("ALTER TABLE bom_operations ALTER COLUMN operation_id DROP NOT NULL"))
+                conn.commit()
+            except Exception:
+                pass
+
+            try:
                 conn.execute(text("""
                     CREATE TABLE IF NOT EXISTS sample_request_reads (
                         user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,

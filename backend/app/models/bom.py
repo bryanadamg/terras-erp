@@ -122,8 +122,8 @@ class BOMOperation(Base):
     # Relationships
     bom = relationship("BOM", back_populates="operations")
     
-    operation_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("operations.id")
+    operation_id: Mapped[Optional[uuid.UUID]] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("operations.id"), nullable=True
     )
     work_center_id: Mapped[uuid.UUID | None] = mapped_column(
         UUID(as_uuid=True), ForeignKey("work_centers.id"), nullable=True

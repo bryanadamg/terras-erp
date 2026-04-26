@@ -102,9 +102,24 @@ async def create_bom(payload: BOMCreate, db: AsyncSession = Depends(get_async_db
             bom_line.attribute_values = vals
 
         db.add(bom_line)
-    
+
     await db.commit()
-    
+
+    # 6. Create BOM Operations (Work Stations)
+    for op in payload.operations:
+        if op.work_center_id is None and op.operation_id is None:
+            continue
+        bom_op = BOMOperation(
+            bom_id=bom.id,
+            operation_id=op.operation_id,
+            work_center_id=op.work_center_id,
+            sequence=op.sequence,
+            time_minutes=op.time_minutes,
+        )
+        db.add(bom_op)
+
+    await db.commit()
+
     # Re-fetch with FULL eager loading for serialization
     result = await db.execute(
         select(BOM)
