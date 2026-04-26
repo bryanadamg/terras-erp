@@ -189,7 +189,7 @@ export default function BOMView({
     const handleCloseDesigner = () => { setIsDesignerOpen(false); if (onClearInitialState) onClearInitialState(); };
 
     const handleCreateBOMWrapper = async (bomData: any) => {
-        const cleaned = { ...bomData, customer_id: bomData.customer_id || null };
+        const cleaned = { ...bomData, customer_id: bomData.customer_id || null, work_center_id: bomData.work_center_id || null };
         const res = await onCreateBOM(cleaned);
         if (res?.status === 400) {
             const err = await res.json();
@@ -475,40 +475,13 @@ export default function BOMView({
                                     )}
                                 </div>
 
-                                {/* Work Stations */}
-                                <div>
-                                    <div style={xpSectionHdr}><i className="bi bi-wrench" style={{ marginRight: 4 }} />Work Stations (Machines)</div>
-                                    {ops.length === 0 ? (
-                                        <div style={{ fontSize: 10, color: '#555', fontStyle: 'italic', padding: '4px 6px' }}>No work stations defined.</div>
-                                    ) : (
-                                        <table style={{ width: '100%', borderCollapse: 'collapse', background: 'white', fontFamily: 'Tahoma, Arial, sans-serif', fontSize: 11 }}>
-                                            <thead>
-                                                <tr>
-                                                    <th style={{ ...xpTh, width: 44, textAlign: 'center' }}>Seq.</th>
-                                                    <th style={xpTh}>Work Station</th>
-                                                    <th style={{ ...xpTh, textAlign: 'right', width: 80 }}>Time (min)</th>
-                                                </tr>
-                                            </thead>
-                                            <tbody>
-                                                {ops.map((op: any, i: number) => (
-                                                    <tr key={op.id} style={{ background: i % 2 === 0 ? '#fff' : '#f5f3ee' }}>
-                                                        <td style={{ ...xpTd, textAlign: 'center' }}>
-                                                            <span style={{ background: '#0058e6', color: '#fff', padding: '1px 6px', fontSize: 10, fontWeight: 'bold' }}>{op.sequence}</span>
-                                                        </td>
-                                                        <td style={xpTd}>{getWcName(op.work_center_id)}</td>
-                                                        <td style={{ ...xpTd, textAlign: 'right', fontWeight: 'bold' }}>{Number(op.time_minutes).toFixed(2)}</td>
-                                                    </tr>
-                                                ))}
-                                            </tbody>
-                                            <tfoot>
-                                                <tr>
-                                                    <td colSpan={2} style={{ ...xpFooterTd, textAlign: 'right' }}>Total estimated time:</td>
-                                                    <td style={{ ...xpFooterTd, textAlign: 'right', fontWeight: 'bold', color: '#000' }}>{totalMinutes.toFixed(2)}</td>
-                                                </tr>
-                                            </tfoot>
-                                        </table>
-                                    )}
-                                </div>
+                                {/* Machine */}
+                                {displayBOM.work_center_name && (
+                                    <div>
+                                        <div style={xpSectionHdr}><i className="bi bi-wrench" style={{ marginRight: 4 }} />Machine</div>
+                                        <div style={{ padding: '4px 6px', fontSize: 11, color: '#000' }}>{displayBOM.work_center_name}</div>
+                                    </div>
+                                )}
 
                             </div>
                         </div>
@@ -665,7 +638,7 @@ export default function BOMView({
                                         </th>
                                         <th style={classic ? { padding: '4px 6px', borderRight: '1px solid #b0aaa0' } : undefined} className={classic ? '' : 'ps-2'}>{t('item_code')}</th>
                                         <th style={classic ? { padding: '4px 6px', borderRight: '1px solid #b0aaa0' } : undefined}>{t('finished_good')}</th>
-                                        <th style={classic ? { padding: '4px 6px', borderRight: '1px solid #b0aaa0' } : undefined}>Work Stations</th>
+                                        <th style={classic ? { padding: '4px 6px', borderRight: '1px solid #b0aaa0' } : undefined}>Machine</th>
                                         <th style={classic ? { padding: '4px 6px', borderRight: '1px solid #b0aaa0' } : undefined}>Summary</th>
                                         <th style={classic ? { width: '50px', padding: '4px 6px' } : { width: '50px' }} />
                                     </tr>
@@ -730,12 +703,8 @@ export default function BOMView({
                                                         )}
                                                     </td>
                                                     <td style={classic ? { padding: '5px 6px', borderRight: '1px solid #c0bdb5', verticalAlign: 'top', fontSize: '10px', color: '#333' } : undefined} className={classic ? '' : 'align-top'}>
-                                                        {bom.operations?.length > 0 ? (
-                                                            <div className={classic ? '' : 'small'}>
-                                                                {[...bom.operations].sort((a: any, b: any) => a.sequence - b.sequence).map((op: any) => (
-                                                                    <div key={op.id} style={{ color: '#333' }}>{op.sequence}. {getWcName(op.work_center_id)}</div>
-                                                                ))}
-                                                            </div>
+                                                        {bom.work_center_name ? (
+                                                            <span style={{ color: '#333' }}>{bom.work_center_name}</span>
                                                         ) : (
                                                             <span style={{ color: '#888' }} className={classic ? '' : 'text-muted small'}>-</span>
                                                         )}

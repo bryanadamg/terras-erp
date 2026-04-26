@@ -49,6 +49,7 @@ async def create_bom(payload: BOMCreate, db: AsyncSession = Depends(get_async_db
         pemakaian_obat=payload.pemakaian_obat,
         pembuatan_sample_oleh=payload.pembuatan_sample_oleh,
         customer_id=payload.customer_id,
+        work_center_id=payload.work_center_id,
         mesin_lebar=payload.mesin_lebar,
         mesin_panjang_tulisan=payload.mesin_panjang_tulisan,
         mesin_panjang_tarikan=payload.mesin_panjang_tarikan,
@@ -136,6 +137,7 @@ async def create_bom(payload: BOMCreate, db: AsyncSession = Depends(get_async_db
         .options(
             joinedload(BOM.item),
             joinedload(BOM.customer),
+            joinedload(BOM.work_center),
             selectinload(BOM.attribute_values),
             selectinload(BOM.lines).joinedload(BOMLine.item),
             selectinload(BOM.lines).selectinload(BOMLine.attribute_values),
@@ -193,6 +195,7 @@ async def get_bom(bom_id: str, db: AsyncSession = Depends(get_async_db), current
         .options(
             joinedload(BOM.item),
             joinedload(BOM.customer),
+            joinedload(BOM.work_center),
             selectinload(BOM.attribute_values),
             selectinload(BOM.lines).joinedload(BOMLine.item),
             selectinload(BOM.lines).selectinload(BOMLine.attribute_values),

@@ -110,6 +110,7 @@ def run_migrations():
                 ("boms", "celup_panjang_tarikan", "NUMERIC(8,2)"),
                 ("boms", "celup_panjang_tarikan_bandul_1kg", "NUMERIC(8,2)"),
                 ("boms", "celup_panjang_tarikan_bandul_9kg", "NUMERIC(8,2)"),
+                ("boms", "work_center_id", "UUID REFERENCES work_centers(id) ON DELETE SET NULL"),
             ]
 
             for table, col, col_type in migrations:

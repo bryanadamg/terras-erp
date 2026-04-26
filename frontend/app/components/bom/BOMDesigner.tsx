@@ -40,6 +40,7 @@ interface BOMNodeData {
     pemakaian_obat: string;
     pembuatan_sample_oleh: string;
     customer_id: string;
+    work_center_id: string;
     mesin_lebar: number | null;
     mesin_panjang_tulisan: number | null;
     mesin_panjang_tarikan: number | null;
@@ -228,7 +229,7 @@ export default function BOMDesigner({
         operations: [], lines: [], sizes: [],
         kerapatan_picks: null, kerapatan_unit: '/cm',
         sisir_no: null, pemakaian_obat: '', pembuatan_sample_oleh: '',
-        customer_id: '',
+        customer_id: '', work_center_id: '',
         mesin_lebar: null, mesin_panjang_tulisan: null, mesin_panjang_tarikan: null,
         mesin_panjang_tarikan_bandul_1kg: null, mesin_panjang_tarikan_bandul_9kg: null,
         celup_lebar: null, celup_panjang_tulisan: null, celup_panjang_tarikan: null,
@@ -727,22 +728,38 @@ export default function BOMDesigner({
                                         );
                                     })()}
 
-                                    {/* Customer selector — root only */}
+                                    {/* Customer + Machine selectors — root only */}
                                     {selectedNodeId === 'root' && (
-                                        <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 2 }}>
-                                            <label style={{ ...xpLabel, marginBottom: 0, whiteSpace: 'nowrap', minWidth: 60 }}>Customer</label>
-                                            <div style={{ maxWidth: 220, flex: 1 }}>
-                                                <SearchableSelect
-                                                    options={[
-                                                        { value: '', label: '— None —' },
-                                                        ...(partners || [])
-                                                            .filter((p: any) => p.type === 'CUSTOMER' && p.active !== false)
-                                                            .map((p: any) => ({ value: p.id, label: p.name }))
-                                                    ]}
-                                                    value={selectedNode.customer_id || ''}
-                                                    onChange={(val: string) => updateSelectedNode({ customer_id: val })}
-                                                    placeholder="— None —"
-                                                />
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginTop: 2, flexWrap: 'wrap' }}>
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                                                <label style={{ ...xpLabel, marginBottom: 0, whiteSpace: 'nowrap', minWidth: 60 }}>Customer</label>
+                                                <div style={{ width: 200 }}>
+                                                    <SearchableSelect
+                                                        options={[
+                                                            { value: '', label: '— None —' },
+                                                            ...(partners || [])
+                                                                .filter((p: any) => p.type === 'CUSTOMER' && p.active !== false)
+                                                                .map((p: any) => ({ value: p.id, label: p.name }))
+                                                        ]}
+                                                        value={selectedNode.customer_id || ''}
+                                                        onChange={(val: string) => updateSelectedNode({ customer_id: val })}
+                                                        placeholder="— None —"
+                                                    />
+                                                </div>
+                                            </div>
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                                                <label style={{ ...xpLabel, marginBottom: 0, whiteSpace: 'nowrap', minWidth: 50 }}>Machine</label>
+                                                <div style={{ width: 200 }}>
+                                                    <SearchableSelect
+                                                        options={[
+                                                            { value: '', label: '— None —' },
+                                                            ...(workCenters || []).map((wc: any) => ({ value: wc.id, label: wc.name }))
+                                                        ]}
+                                                        value={selectedNode.work_center_id || ''}
+                                                        onChange={(val: string) => updateSelectedNode({ work_center_id: val })}
+                                                        placeholder="— None —"
+                                                    />
+                                                </div>
                                             </div>
                                         </div>
                                     )}
@@ -945,65 +962,11 @@ export default function BOMDesigner({
                                     </div>
                                 )}
 
-                                {/* Two-column: Production Steps + Components */}
+                                {/* Components */}
                                 <div style={{ display: 'flex', gap: 8, flex: 1, alignItems: 'flex-start' }}>
 
-                                    {/* Work Stations (Machines) */}
-                                    <div style={{ flex: 1 }}>
-                                        <div style={{ ...xpGroupWrapper, height: '100%' }}>
-                                            <span style={xpGroupLabel()}>Work Stations (Machines)</span>
-
-                                            {/* Add work station */}
-                                            <div style={{ display: 'flex', gap: 4, marginBottom: 6 }}>
-                                                <select style={{ ...xpSelect, flex: 1 }} id="addWcSel">
-                                                    <option value="">Add Work Station...</option>
-                                                    {workCenters.map((wc: any) => (
-                                                        <option key={wc.id} value={wc.id}>{wc.name}</option>
-                                                    ))}
-                                                </select>
-                                                <button style={{ ...xpBtnPrimary, minWidth: 'auto', padding: '0 8px' }} onClick={() => {
-                                                    const sel = document.getElementById('addWcSel') as HTMLSelectElement;
-                                                    if (sel.value) {
-                                                        updateSelectedNode({
-                                                            operations: [...selectedNode.operations, {
-                                                                work_center_id: sel.value,
-                                                                sequence: (selectedNode.operations.length + 1) * 10,
-                                                                time_minutes: 0
-                                                            }]
-                                                        });
-                                                        sel.value = '';
-                                                    }
-                                                }}>+</button>
-                                            </div>
-
-                                            {/* Work station list */}
-                                            <div style={{ ...xpInset, maxHeight: 200, padding: 0 }}>
-                                                {selectedNode.operations.length === 0 && (
-                                                    <div style={{ padding: 6, fontSize: 10, color: '#888', fontStyle: 'italic' }}>No work stations added.</div>
-                                                )}
-                                                {selectedNode.operations.sort((a, b) => a.sequence - b.sequence).map((op, i) => (
-                                                    <div key={i} style={{
-                                                        display: 'flex', alignItems: 'center', gap: 6,
-                                                        padding: '3px 6px',
-                                                        borderBottom: '1px solid #e8e4d8',
-                                                        background: i % 2 === 0 ? 'white' : '#f8f7f2',
-                                                    }}>
-                                                        <span style={xpBadge()}>{String(op.sequence).padStart(2, '0')}</span>
-                                                        <span style={{ flex: 1, fontSize: 11 }}>
-                                                            {workCenters.find((wc: any) => wc.id === (op.work_center_id || op.operation_id))?.name || op.work_center_id || op.operation_id || '—'}
-                                                        </span>
-                                                        <button
-                                                            style={xpBtnDanger}
-                                                            onClick={() => updateSelectedNode({ operations: selectedNode.operations.filter((_, idx) => idx !== i) })}
-                                                        >🗑</button>
-                                                    </div>
-                                                ))}
-                                            </div>
-                                        </div>
-                                    </div>
-
                                     {/* Components */}
-                                    <div style={{ flex: 2 }}>
+                                    <div style={{ flex: 1 }}>
                                         <div style={xpGroupWrapper}>
                                             <span style={xpGroupLabel()}>Components</span>
 
