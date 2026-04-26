@@ -6,7 +6,7 @@ from collections import defaultdict
 from app.db.session import get_async_db
 from app.models.manufacturing import ManufacturingOrder
 from app.models.work_order import WorkOrder as WorkOrderModel  # noqa: F401 — eager load
-from app.models.bom import BOM, BOMLine
+from app.models.bom import BOM, BOMLine, BOMSize
 from app.models.location import Location
 from app.models.sales import SalesOrder
 from app.services import stock_service, audit_service
@@ -129,6 +129,7 @@ async def load_mo_tree(db: AsyncSession, root_ids: list) -> dict:
             selectinload(ManufacturingOrder.bom).selectinload(BOM.operations),
             selectinload(ManufacturingOrder.bom).selectinload(BOM.lines).selectinload(BOMLine.item),
             selectinload(ManufacturingOrder.bom).selectinload(BOM.lines).selectinload(BOMLine.attribute_values),
+            selectinload(ManufacturingOrder.bom).selectinload(BOM.sizes).selectinload(BOMSize.size),
         )
         .filter(ManufacturingOrder.id.in_(all_ids))
     )

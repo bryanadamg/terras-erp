@@ -88,6 +88,52 @@ def run_migrations():
             except Exception:
                 conn.rollback()
 
+            # 5b. Migrate old work_orders data → manufacturing_orders if rename failed (create_all beat us to it)
+            try:
+                # Old format has 'code' column; new operation-step format does not
+                has_code = conn.execute(text(
+                    "SELECT 1 FROM information_schema.columns "
+                    "WHERE table_name='work_orders' AND column_name='code'"
+                )).fetchone()
+                if has_code:
+                    mo_count = conn.execute(text("SELECT COUNT(*) FROM manufacturing_orders")).scalar()
+                    if mo_count == 0:
+                        conn.execute(text("""
+                            INSERT INTO manufacturing_orders
+                                (id, code, bom_id, item_id, location_id, source_location_id,
+                                 sales_order_id, parent_mo_id, size_id, qty, status,
+                                 target_start_date, target_end_date, actual_start_date, actual_end_date, created_at)
+                            SELECT id, code, bom_id, item_id, location_id, source_location_id,
+                                 sales_order_id, parent_wo_id, size_id, qty, status,
+                                 target_start_date, target_end_date, actual_start_date, actual_end_date, created_at
+                            FROM work_orders
+                            ON CONFLICT (id) DO NOTHING
+                        """))
+                        conn.commit()
+                        logger.info("Migration: Copied work_orders → manufacturing_orders")
+
+                        # Migrate attribute value links
+                        try:
+                            conn.execute(text("""
+                                INSERT INTO manufacturing_order_values (manufacturing_order_id, attribute_value_id)
+                                SELECT work_order_id, attribute_value_id FROM work_order_values
+                                ON CONFLICT DO NOTHING
+                            """))
+                            conn.commit()
+                            logger.info("Migration: Copied work_order_values → manufacturing_order_values")
+                        except Exception as e:
+                            conn.rollback()
+                            logger.warning(f"work_order_values copy failed: {e}")
+
+                    # Drop old work_orders (CASCADE removes work_order_values FK too)
+                    conn.execute(text("DROP TABLE IF EXISTS work_order_values CASCADE"))
+                    conn.execute(text("DROP TABLE IF EXISTS work_orders CASCADE"))
+                    conn.commit()
+                    logger.info("Migration: Dropped old work_orders table; will recreate as operation-step schema")
+            except Exception as e:
+                conn.rollback()
+                logger.warning(f"work_orders data migration failed: {e}")
+
             # 6. Create work_orders table (operation steps within a Manufacturing Order)
             conn.execute(text("""
                 CREATE TABLE IF NOT EXISTS work_orders (
@@ -115,15 +161,6 @@ def run_migrations():
                 ("items", "source_sample_id", "UUID REFERENCES sample_requests(id) ON DELETE SET NULL"),
                 ("items", "source_color_id", "UUID REFERENCES sample_colors(id) ON DELETE SET NULL"),
                 ("items", "attribute_id", "UUID REFERENCES attributes(id)"),
-                ("work_orders", "location_id", "UUID REFERENCES locations(id)"),
-                ("work_orders", "source_location_id", "UUID REFERENCES locations(id)"),
-                ("work_orders", "target_start_date", "TIMESTAMP WITHOUT TIME ZONE"),
-                ("work_orders", "target_end_date", "TIMESTAMP WITHOUT TIME ZONE"),
-                ("work_orders", "actual_start_date", "TIMESTAMP WITHOUT TIME ZONE"),
-                ("work_orders", "actual_end_date", "TIMESTAMP WITHOUT TIME ZONE"),
-                ("work_orders", "completed_at", "TIMESTAMP WITHOUT TIME ZONE"),
-                ("work_orders", "sales_order_id", "UUID REFERENCES sales_orders(id)"),
-                ("work_orders", "parent_wo_id", "UUID REFERENCES work_orders(id)"),
                 ("bom_lines", "source_location_id", "UUID REFERENCES locations(id)"),
                 ("bom_lines", "is_percentage", "BOOLEAN DEFAULT FALSE"),
                 ("bom_lines", "percentage", "NUMERIC(6,2) DEFAULT 0.0"),
@@ -167,7 +204,6 @@ def run_migrations():
                 ("sample_requests", "updated_at", "TIMESTAMP WITHOUT TIME ZONE DEFAULT NOW()"),
                 ("sample_requests", "completion_image_url", "VARCHAR(512)"),
                 ("sample_requests", "design_pdf_url", "VARCHAR(512)"),
-                ("work_orders", "size_id", "UUID REFERENCES sizes(id)"),
                 ("boms", "kerapatan_picks", "NUMERIC(10,2)"),
                 ("boms", "kerapatan_unit", "VARCHAR(8)"),
                 ("boms", "sisir_no", "INTEGER"),
@@ -210,7 +246,6 @@ def run_migrations():
             index_migrations = [
                 ("idx_items_category", "items", "category"),
                 ("idx_bom_lines_item_id", "bom_lines", "item_id"),
-                ("idx_work_orders_item_id", "work_orders", "item_id"),
                 ("idx_audit_logs_entity_type", "audit_logs", "entity_type"),
                 ("idx_audit_logs_entity_id", "audit_logs", "entity_id"),
                 ("idx_audit_logs_timestamp", "audit_logs", "timestamp"),
@@ -331,8 +366,7 @@ def run_migrations():
                 ("items", "attribute_id", "item_attributes", "item_id", "attribute_id"),
                 ("stock_ledger", "attribute_value_id", "stock_ledger_values", "stock_ledger_id", "attribute_value_id"),
                 ("boms", "attribute_value_id", "bom_values", "bom_id", "attribute_value_id"),
-                ("bom_lines", "attribute_value_id", "bom_line_values", "bom_line_id", "attribute_value_id"),
-                ("work_orders", "attribute_value_id", "work_order_values", "work_order_id", "attribute_value_id")
+                ("bom_lines", "attribute_value_id", "bom_line_values", "bom_line_id", "attribute_value_id")
             ]
 
             for src_table, src_col, target_table, target_id_col, target_val_col in move_data:
