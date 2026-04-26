@@ -2,6 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { useTheme } from '../../context/ThemeContext';
 import { createPortal } from 'react-dom';
 import BOMDesigner from './BOMDesigner';
+import BOMPrintModal from './BOMPrintModal';
 import { useToast } from '../shared/Toast';
 import { useLanguage } from '../../context/LanguageContext';
 
@@ -57,6 +58,7 @@ export default function BOMView({
     items, boms, locations, attributes, sizes, workCenters, operations, partners,
     onCreateBOM, onDeleteBOM, onDeleteMultipleBOMs, onCreateItem, onSearchItem,
     onUploadBOMPhoto, onUploadBOMDesign,
+    companyProfile,
     initialCreateState, onClearInitialState
 }: any) {
     const { showToast } = useToast();
@@ -65,6 +67,7 @@ export default function BOMView({
     const classic = currentStyle === 'classic';
 
     const [isDesignerOpen, setIsDesignerOpen] = useState(false);
+    const [printBOM, setPrintBOM] = useState<any>(null);
     const [searchQuery, setSearchQuery] = useState('');
     const [expandedNodes, setExpandedNodes] = useState<Record<string, boolean>>({});
     const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
@@ -839,13 +842,23 @@ export default function BOMView({
                                                         </div>
                                                     </td>
                                                     <td style={classic ? { padding: '5px 6px', textAlign: 'right', verticalAlign: 'top' } : undefined} className={classic ? '' : 'pe-4 text-end align-top'}>
-                                                        <button
-                                                            style={classic ? { background: 'none', border: 'none', cursor: 'pointer', color: '#a00', padding: '0 2px' } : undefined}
-                                                            className={classic ? '' : 'btn btn-sm btn-link text-danger'}
-                                                            onClick={() => onDeleteBOM(bom.id)}
-                                                        >
-                                                            <i className="bi bi-trash" />
-                                                        </button>
+                                                        <div style={{ display: 'flex', alignItems: 'center', gap: 2, justifyContent: 'flex-end' }}>
+                                                            <button
+                                                                title="Print BOM"
+                                                                style={classic ? { background: 'none', border: 'none', cursor: 'pointer', color: '#555', padding: '0 2px' } : undefined}
+                                                                className={classic ? '' : 'btn btn-sm btn-link text-secondary'}
+                                                                onClick={e => { e.stopPropagation(); setPrintBOM(bom); }}
+                                                            >
+                                                                <i className="bi bi-printer" />
+                                                            </button>
+                                                            <button
+                                                                style={classic ? { background: 'none', border: 'none', cursor: 'pointer', color: '#a00', padding: '0 2px' } : undefined}
+                                                                className={classic ? '' : 'btn btn-sm btn-link text-danger'}
+                                                                onClick={() => onDeleteBOM(bom.id)}
+                                                            >
+                                                                <i className="bi bi-trash" />
+                                                            </button>
+                                                        </div>
                                                     </td>
                                                 </tr>
                                                 {isExpanded && renderDetailPanel(bom)}
@@ -860,6 +873,15 @@ export default function BOMView({
                 </div>
             </div>
         </div>
+
+        {printBOM && (
+            <BOMPrintModal
+                bom={printBOM}
+                companyProfile={companyProfile}
+                getAttributeValueName={getAttributeValueName}
+                onClose={() => setPrintBOM(null)}
+            />
+        )}
         </>
     );
 }

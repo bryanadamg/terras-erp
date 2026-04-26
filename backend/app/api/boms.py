@@ -173,6 +173,7 @@ async def get_boms(skip: int = 0, limit: int = 100, db: AsyncSession = Depends(g
     query = select(BOM).options(
         joinedload(BOM.item),
         joinedload(BOM.customer),
+        joinedload(BOM.work_center),
         selectinload(BOM.attribute_values),
         selectinload(BOM.lines).joinedload(BOMLine.item),
         selectinload(BOM.lines).selectinload(BOMLine.attribute_values),

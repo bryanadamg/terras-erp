@@ -842,6 +842,21 @@ body {
     width: 100% !important;
   }
 
+  /* BOM print preview modal — hide everything except the paper portal */
+  body.bom-print-preview-active > *:not(.bom-print-paper-portal) {
+    display: none !important;
+  }
+  body.bom-print-preview-active .bom-print-paper-portal {
+    display: block !important;
+    width: 100% !important;
+  }
+  body.bom-print-preview-active .bom-print-paper-portal .bom-print-paper {
+    box-shadow: none !important;
+    padding: 20px !important;
+    max-width: 100% !important;
+    width: 100% !important;
+  }
+
   /* SPK Sample print preview modal — hide everything except the paper portal */
   body.smp-print-preview-active > *:not(.smp-print-paper-portal) {
     display: none !important;
