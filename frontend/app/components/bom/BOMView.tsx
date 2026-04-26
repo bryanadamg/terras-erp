@@ -627,6 +627,33 @@ export default function BOMView({
                                         </div>
                                     )}
 
+                                    {/* Size Measurements */}
+                                    {(displayBOM.sizes || []).length > 0 && (
+                                        <div style={sep}>
+                                            <div style={secHdr}>Size Measurements</div>
+                                            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 10 }}>
+                                                <thead>
+                                                    <tr>
+                                                        <th style={{ fontSize: 9, color: '#555', fontWeight: 'bold', textAlign: 'left', paddingBottom: 2 }}>{displayBOM.size_mode === 'free' ? 'Label' : 'Size'}</th>
+                                                        <th style={{ fontSize: 9, color: '#555', fontWeight: 'normal', textAlign: 'right', paddingBottom: 2 }}>Target</th>
+                                                        <th style={{ fontSize: 9, color: '#555', fontWeight: 'normal', textAlign: 'right', paddingBottom: 2 }}>Min</th>
+                                                        <th style={{ fontSize: 9, color: '#555', fontWeight: 'normal', textAlign: 'right', paddingBottom: 2 }}>Max</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    {(displayBOM.sizes || []).map((s: any, i: number) => (
+                                                        <tr key={i} style={{ background: i % 2 === 0 ? '#fff' : '#f5f3ee' }}>
+                                                            <td style={{ padding: '1px 4px 1px 0', fontWeight: 'bold', fontSize: 10 }}>{s.size_name || s.label || `Row ${i + 1}`}</td>
+                                                            <td style={{ padding: '1px 4px', textAlign: 'right', fontSize: 10, background: '#f8f7f2', border: '1px solid #e0ddd4' }}>{s.target_measurement != null ? s.target_measurement : '—'}</td>
+                                                            <td style={{ padding: '1px 4px', textAlign: 'right', fontSize: 10, background: '#f8f7f2', border: '1px solid #e0ddd4', borderLeft: 'none' }}>{s.measurement_min != null ? s.measurement_min : '—'}</td>
+                                                            <td style={{ padding: '1px 4px', textAlign: 'right', fontSize: 10, background: '#f8f7f2', border: '1px solid #e0ddd4', borderLeft: 'none' }}>{s.measurement_max != null ? s.measurement_max : '—'}</td>
+                                                        </tr>
+                                                    ))}
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    )}
+
                                     {/* Design file */}
                                     {displayBOM.design_file_url && (
                                         <div style={sep}>
