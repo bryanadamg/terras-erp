@@ -116,6 +116,19 @@ const InventoryRow = memo(({ item, rowIndex, isEditing, isSelected, onToggleSele
                     <span className="text-muted small">{getAttributeNames(item.attribute_ids)}</span>
                 )}
             </td>
+            <td style={tdBase}>
+                {item.weight_per_unit != null ? (
+                    classic ? (
+                        <span style={{ color: isSelected ? '#e8f0ff' : '#333', fontSize: '9px', whiteSpace: 'nowrap' }}>
+                            {item.weight_per_unit} {item.weight_unit || ''}
+                        </span>
+                    ) : (
+                        <span className="text-muted small">{item.weight_per_unit} {item.weight_unit || ''}</span>
+                    )
+                ) : (
+                    <span style={classic ? { color: isSelected ? '#cce0ff' : '#999', fontSize: '9px' } : undefined} className={classic ? '' : 'text-muted small'}>-</span>
+                )}
+            </td>
             <td style={classic ? { ...tdBase, borderRight: 'none', textAlign: 'right' } : undefined}>
                 <div className={classic ? '' : 'd-flex gap-1'} style={classic ? { display: 'flex', gap: '2px', justifyContent: 'flex-end' } : undefined}>
                     {classic ? (
@@ -908,6 +921,7 @@ export default function InventoryView({
                     <th style={classic ? { ...xpThCell, width: '110px' } : undefined}>{t('categories')}</th>
                     <th style={classic ? { ...xpThCell, width: '90px' } : undefined}>{t('source_sample')}</th>
                     <th style={classic ? xpThCell : undefined}>{t('attributes')}</th>
+                    <th style={classic ? { ...xpThCell, width: '90px' } : { width: '90px' }}>{t('weight_per_unit')}</th>
                     <th style={classic ? { ...xpThCell, width: '80px', borderRight: 'none' } : { width: '80px' }}>{t('actions')}</th>
                   </tr>
                 </thead>
@@ -930,7 +944,7 @@ export default function InventoryView({
                   {filteredItems.length === 0 && (
                     <tr>
                       <td
-                        colSpan={7}
+                        colSpan={8}
                         style={classic ? {
                             textAlign: 'center', padding: '20px',
                             color: '#666666', fontSize: '11px',

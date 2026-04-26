@@ -65,6 +65,7 @@ const translations = {
         'item_name': 'Item Name',
         'uom': 'UOM',
         'source_sample': 'Source Sample',
+        'weight_per_unit': 'Weight / Unit',
         
         // Manufacturing
         'production_schedule': 'Production Schedule',
@@ -149,6 +150,7 @@ const translations = {
         'item_name': 'Nama Barang',
         'uom': 'Satuan',
         'source_sample': 'Sampel Sumber',
+        'weight_per_unit': 'Berat / Satuan',
         
         // Manufacturing
         'production_schedule': 'Jadwal Produksi',
