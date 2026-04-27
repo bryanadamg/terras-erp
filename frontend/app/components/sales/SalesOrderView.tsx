@@ -20,9 +20,6 @@ export default function SalesOrderView({ items, attributes, boms, salesOrders, p
   const { uiStyle: currentStyle } = useTheme();
   const { companyProfile } = useData();
 
-  // Produce dropdown portal state
-  const [produceDropdownSO, setProduceDropdownSO] = useState<any>(null);
-  const [produceDropdownPos, setProduceDropdownPos] = useState({ top: 0, left: 0 });
 
   const classic = currentStyle === 'classic';
 
@@ -120,21 +117,6 @@ export default function SalesOrderView({ items, attributes, boms, salesOrders, p
       fontSize: '11px',
   };
 
-  // Close produce dropdown on outside click / scroll
-  useEffect(() => {
-      const close = (e: any) => {
-          if (!e.target.closest('.produce-dropdown-btn') && !e.target.closest('.produce-dropdown-menu')) {
-              setProduceDropdownSO(null);
-          }
-      };
-      const closeScroll = () => setProduceDropdownSO(null);
-      document.addEventListener('click', close);
-      window.addEventListener('scroll', closeScroll, true);
-      return () => {
-          document.removeEventListener('click', close);
-          window.removeEventListener('scroll', closeScroll, true);
-      };
-  }, []);
 
   const [newSO, setNewSO] = useState({
       po_number: '',
@@ -413,13 +395,6 @@ export default function SalesOrderView({ items, attributes, boms, salesOrders, p
       return matchSearch && matchStatus;
   });
 
-  const openProduceDropdown = (so: any, e: React.MouseEvent) => {
-      e.stopPropagation();
-      if (produceDropdownSO?.id === so.id) { setProduceDropdownSO(null); return; }
-      const rect = (e.target as HTMLElement).getBoundingClientRect();
-      setProduceDropdownPos({ top: rect.bottom + window.scrollY + 2, left: rect.right + window.scrollX - 200 });
-      setProduceDropdownSO(so);
-  };
 
 
   return (
@@ -459,28 +434,6 @@ export default function SalesOrderView({ items, attributes, boms, salesOrders, p
            attributes={attributes}
        />
 
-       {/* Produce Dropdown Portal */}
-       {produceDropdownSO && (
-           <div
-               className={`dropdown-menu show shadow produce-dropdown-menu ui-style-${currentStyle}`}
-               style={{ position: 'absolute', top: produceDropdownPos.top, left: produceDropdownPos.left, zIndex: 9999, minWidth: 210 }}
-           >
-               <div className="px-3 py-1 border-bottom" style={{ fontSize: 10, fontWeight: 'bold', textTransform: 'uppercase', letterSpacing: 1 }}>
-                   Produce Line Item
-               </div>
-               {produceDropdownSO.lines.map((line: any, idx: number) => (
-                   <button
-                       key={idx}
-                       className="dropdown-item small"
-                       onClick={() => { onGenerateWO(produceDropdownSO, line); setProduceDropdownSO(null); }}
-                   >
-                       <i className="bi bi-gear-wide-connected me-2"></i>
-                       <span className="fw-bold">{line.qty}×</span> {getItemName(line.item_id)}
-                       {isSample(line.item_id) && <span className="badge bg-warning text-dark ms-2" style={{fontSize: '0.6rem'}}>Sample</span>}
-                   </button>
-               ))}
-           </div>
-       )}
 
        {/* Create SO Modal */}
        <ModalWrapper
@@ -889,7 +842,9 @@ export default function SalesOrderView({ items, attributes, boms, salesOrders, p
                                                    borderTop: li > 0 ? (classic ? '1px solid #d8d5ce' : '1px solid #e8e8e8') : undefined,
                                                    paddingTop: li > 0 ? (classic ? 4 : 6) : 0,
                                                    marginTop: li > 0 ? (classic ? 4 : 6) : 0,
+                                                   display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 6,
                                                }}>
+                                                   <div style={{ flex: 1, minWidth: 0 }}>
                                                    {/* Item name + size */}
                                                    <div style={{ fontFamily:'Tahoma,Arial,sans-serif', fontSize:'10px', fontWeight:'bold', color: classic?'#000':'', lineHeight:1.3 }} className={classic ? '' : 'fw-semibold small'}>
                                                        {getItemName(line.item_id)}
@@ -935,6 +890,34 @@ export default function SalesOrderView({ items, attributes, boms, salesOrders, p
                                                            {line.ket_stock}
                                                        </div>
                                                    )}
+                                                   </div>
+                                                   {/* Per-line Produce button */}
+                                                   {so.status === 'PENDING' && (
+                                                       classic ? (
+                                                           <button
+                                                               title="Create Manufacturing Order"
+                                                               onClick={() => onGenerateWO(so, line)}
+                                                               style={{
+                                                                   fontFamily: 'Tahoma,Arial,sans-serif', fontSize: '10px',
+                                                                   padding: '2px 7px', cursor: 'pointer', whiteSpace: 'nowrap' as const,
+                                                                   background: 'linear-gradient(to bottom,#5a9ae0,#0058e6)',
+                                                                   border: '1px solid', borderColor: '#003080 #001840 #001840 #003080',
+                                                                   color: '#fff', fontWeight: 'bold', flexShrink: 0,
+                                                               }}
+                                                           >
+                                                               <i className="bi bi-gear-wide-connected" style={{ marginRight: 3 }}></i>MO
+                                                           </button>
+                                                       ) : (
+                                                           <button
+                                                               className="btn btn-sm btn-primary py-0 px-2"
+                                                               style={{ fontSize: 10, whiteSpace: 'nowrap', flexShrink: 0 }}
+                                                               title="Create Manufacturing Order"
+                                                               onClick={() => onGenerateWO(so, line)}
+                                                           >
+                                                               <i className="bi bi-gear-wide-connected me-1"></i>MO
+                                                           </button>
+                                                       )
+                                                   )}
                                                </div>
                                            ))
                                        )}
@@ -971,18 +954,7 @@ export default function SalesOrderView({ items, attributes, boms, salesOrders, p
                                                    </button>
                                                )
                                            )}
-                                           {so.status === 'PENDING' && so.lines.length > 0 && (
-                                               classic ? (
-                                                   <button style={xpBtn()} className="produce-dropdown-btn" onClick={(e) => openProduceDropdown(so, e)}>
-                                                       <i className="bi bi-gear-wide-connected" style={{ marginRight: 3 }}></i>PRODUCE
-                                                   </button>
-                                               ) : (
-                                                   <button className="btn btn-sm btn-light border produce-dropdown-btn py-0 px-2" style={{fontSize: 11}} onClick={(e) => openProduceDropdown(so, e)}>
-                                                       <i className="bi bi-gear-wide-connected me-1"></i>PRODUCE
-                                                   </button>
-                                               )
-                                           )}
-                                           {classic ? (
+                                            {classic ? (
                                                <>
                                                    <button
                                                        title="Print"
