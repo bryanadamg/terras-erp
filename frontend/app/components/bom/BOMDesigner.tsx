@@ -206,6 +206,54 @@ TreeView.displayName = 'TreeView';
 
 const STATIC_BASE = (process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:8000').replace(/\/api$/, '');
 
+type InheritableFields = Pick<BOMNodeData,
+    'sizes' | 'sizeMode' |
+    'kerapatan_picks' | 'kerapatan_unit' | 'sisir_no' | 'pemakaian_obat' | 'pembuatan_sample_oleh' |
+    'customer_id' | 'work_center_id' |
+    'berat_bahan_mateng' | 'berat_bahan_mentah_pelesan' |
+    'mesin_lebar' | 'mesin_panjang_tulisan' | 'mesin_panjang_tarikan' |
+    'mesin_panjang_tarikan_bandul_1kg' | 'mesin_panjang_tarikan_bandul_9kg' |
+    'celup_lebar' | 'celup_panjang_tulisan' | 'celup_panjang_tarikan' |
+    'celup_panjang_tarikan_bandul_1kg' | 'celup_panjang_tarikan_bandul_9kg'
+>;
+
+function extractInheritableFields(source: BOMNodeData): InheritableFields {
+    return {
+        sizes: (source.sizes || []).map(s => ({ ...s })),
+        sizeMode: source.sizeMode,
+        kerapatan_picks: source.kerapatan_picks,
+        kerapatan_unit: source.kerapatan_unit,
+        sisir_no: source.sisir_no,
+        pemakaian_obat: source.pemakaian_obat,
+        pembuatan_sample_oleh: source.pembuatan_sample_oleh,
+        customer_id: source.customer_id,
+        work_center_id: source.work_center_id,
+        berat_bahan_mateng: source.berat_bahan_mateng,
+        berat_bahan_mentah_pelesan: source.berat_bahan_mentah_pelesan,
+        mesin_lebar: source.mesin_lebar,
+        mesin_panjang_tulisan: source.mesin_panjang_tulisan,
+        mesin_panjang_tarikan: source.mesin_panjang_tarikan,
+        mesin_panjang_tarikan_bandul_1kg: source.mesin_panjang_tarikan_bandul_1kg,
+        mesin_panjang_tarikan_bandul_9kg: source.mesin_panjang_tarikan_bandul_9kg,
+        celup_lebar: source.celup_lebar,
+        celup_panjang_tulisan: source.celup_panjang_tulisan,
+        celup_panjang_tarikan: source.celup_panjang_tarikan,
+        celup_panjang_tarikan_bandul_1kg: source.celup_panjang_tarikan_bandul_1kg,
+        celup_panjang_tarikan_bandul_9kg: source.celup_panjang_tarikan_bandul_9kg,
+    };
+}
+
+function applyFieldsToDescendants(node: BOMNodeData, fields: InheritableFields): BOMNodeData {
+    return {
+        ...node,
+        lines: node.lines.map(line =>
+            line.subBOM
+                ? { ...line, subBOM: { ...applyFieldsToDescendants(line.subBOM, fields), ...fields } }
+                : line
+        ),
+    };
+}
+
 export default function BOMDesigner({
     rootItemCode,
     initialAttributeValueIds,
@@ -340,39 +388,19 @@ export default function BOMDesigner({
         return matches;
     }, [items, attributes]);
 
-    const getInheritedFields = (source: BOMNodeData) => inheritFields ? {
-        sizes: (source.sizes || []).map(s => ({ ...s })),
-        sizeMode: source.sizeMode,
-        kerapatan_picks: source.kerapatan_picks,
-        kerapatan_unit: source.kerapatan_unit,
-        sisir_no: source.sisir_no,
-        pemakaian_obat: source.pemakaian_obat,
-        pembuatan_sample_oleh: source.pembuatan_sample_oleh,
-        customer_id: source.customer_id,
-        work_center_id: source.work_center_id,
-        berat_bahan_mateng: source.berat_bahan_mateng,
-        berat_bahan_mentah_pelesan: source.berat_bahan_mentah_pelesan,
-        mesin_lebar: source.mesin_lebar,
-        mesin_panjang_tulisan: source.mesin_panjang_tulisan,
-        mesin_panjang_tarikan: source.mesin_panjang_tarikan,
-        mesin_panjang_tarikan_bandul_1kg: source.mesin_panjang_tarikan_bandul_1kg,
-        mesin_panjang_tarikan_bandul_9kg: source.mesin_panjang_tarikan_bandul_9kg,
-        celup_lebar: source.celup_lebar,
-        celup_panjang_tulisan: source.celup_panjang_tulisan,
-        celup_panjang_tarikan: source.celup_panjang_tarikan,
-        celup_panjang_tarikan_bandul_1kg: source.celup_panjang_tarikan_bandul_1kg,
-        celup_panjang_tarikan_bandul_9kg: source.celup_panjang_tarikan_bandul_9kg,
-    } : {
-        sizes: [], sizeMode: 'sized' as const,
-        kerapatan_picks: null, kerapatan_unit: '/cm',
-        sisir_no: null, pemakaian_obat: '', pembuatan_sample_oleh: '',
-        customer_id: '', work_center_id: '',
-        berat_bahan_mateng: null, berat_bahan_mentah_pelesan: null,
-        mesin_lebar: null, mesin_panjang_tulisan: null, mesin_panjang_tarikan: null,
-        mesin_panjang_tarikan_bandul_1kg: null, mesin_panjang_tarikan_bandul_9kg: null,
-        celup_lebar: null, celup_panjang_tulisan: null, celup_panjang_tarikan: null,
-        celup_panjang_tarikan_bandul_1kg: null, celup_panjang_tarikan_bandul_9kg: null,
-    };
+    const getInheritedFields = (source: BOMNodeData) => inheritFields
+        ? extractInheritableFields(source)
+        : {
+            sizes: [], sizeMode: 'sized' as const,
+            kerapatan_picks: null, kerapatan_unit: '/cm',
+            sisir_no: null, pemakaian_obat: '', pembuatan_sample_oleh: '',
+            customer_id: '', work_center_id: '',
+            berat_bahan_mateng: null, berat_bahan_mentah_pelesan: null,
+            mesin_lebar: null, mesin_panjang_tulisan: null, mesin_panjang_tarikan: null,
+            mesin_panjang_tarikan_bandul_1kg: null, mesin_panjang_tarikan_bandul_9kg: null,
+            celup_lebar: null, celup_panjang_tulisan: null, celup_panjang_tarikan: null,
+            celup_panjang_tarikan_bandul_1kg: null, celup_panjang_tarikan_bandul_9kg: null,
+        };
 
     const handleApplyAutomation = useCallback((levels: string[][]) => {
         if (!rootBOM.item_code) return;
@@ -1155,12 +1183,25 @@ export default function BOMDesigner({
                                     <div style={{ flex: 1 }}>
                                         <div style={xpGroupWrapper}>
                                             <span style={xpGroupLabel()}>Components</span>
-                                            <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 4 }}>
+                                            <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: 6, marginBottom: 4 }}>
+                                                {inheritFields && (
+                                                    <button
+                                                        style={{ ...xpBtnInfo, fontSize: 9, padding: '1px 6px' }}
+                                                        title="Copy current node fields to all child BOMs"
+                                                        onClick={() => setRootBOM(prev => applyFieldsToDescendants(prev, extractInheritableFields(rootBOM)))}
+                                                    >Re-apply to children</button>
+                                                )}
                                                 <label style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 10, color: '#444', cursor: 'pointer', userSelect: 'none' }}>
                                                     <input
                                                         type="checkbox"
                                                         checked={inheritFields}
-                                                        onChange={e => setInheritFields(e.target.checked)}
+                                                        onChange={e => {
+                                                            const checked = e.target.checked;
+                                                            setInheritFields(checked);
+                                                            if (checked) {
+                                                                setRootBOM(prev => applyFieldsToDescendants(prev, extractInheritableFields(prev)));
+                                                            }
+                                                        }}
                                                         style={{ margin: 0 }}
                                                     />
                                                     Inherit fields to child BOMs
