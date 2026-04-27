@@ -44,7 +44,8 @@ export default function ManufacturingView({
     setPrPage,
     initialCreateState,
     onClearInitialState,
-    initialTab
+    initialTab,
+    showTabSwitcher = true
 }: any) {
   const { showToast } = useToast();
   const { t } = useLanguage();
@@ -901,7 +902,7 @@ export default function ManufacturingView({
                   </div>
 
                   {/* ── Tab bar ── */}
-                  <div className="no-print" style={{
+                  {showTabSwitcher && <div className="no-print" style={{
                       background: currentStyle === 'classic' ? '#ece9d8' : '#f8f9fa',
                       borderBottom: currentStyle === 'classic' ? '1px solid #808080' : '1px solid #dee2e6',
                       display: 'flex', gap: currentStyle === 'classic' ? '0' : '4px',
@@ -950,7 +951,7 @@ export default function ManufacturingView({
                               </button>
                           );
                       })}
-                  </div>
+                  </div>}
 
                   {/* ── Body ── */}
                   <div style={{ background: currentStyle === 'classic' ? '#ece9d8' : undefined }} className={currentStyle === 'classic' ? '' : 'card-body p-0'}>

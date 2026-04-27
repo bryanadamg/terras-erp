@@ -9,7 +9,7 @@ import { useEffect, useState, useRef, useCallback } from 'react';
 import { useConfirm } from '../context/ConfirmContext';
 import { useIsMobile } from '../hooks/useIsMobile';
 
-export default function ManufacturingPage() {
+export default function WorkOrdersPage() {
     const {
         items, attributes, sizes, boms,
         manufacturingOrders,
@@ -41,11 +41,11 @@ export default function ManufacturingPage() {
                 qty: parseFloat(searchParams.get('qty') || '0'),
                 bom_id: searchParams.get('bom_id')
             });
-            router.replace('/manufacturing');
+            router.replace('/work-orders');
         }
     }, [searchParams]);
 
-    // Manufacturing Order (was Work Order) handlers
+    // Manufacturing Order handlers
     const handleCreateMO = async (payload: any) => {
         const res = await authFetch(`${API_BASE}/manufacturing-orders`, {
             method: 'POST',
@@ -161,6 +161,8 @@ export default function ManufacturingPage() {
             setPrPage={setPrPage}
             initialCreateState={initialCreateState}
             onClearInitialState={handleClearInitialState}
+            initialTab="production-runs"
+            showTabSwitcher={false}
         />
     );
 }

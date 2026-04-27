@@ -137,6 +137,7 @@ export default function ManufacturingOrdersPage() {
             prTotal={prTotal}
             setPrPage={setPrPage}
             initialTab="manufacturing-orders"
+            showTabSwitcher={false}
         />
     );
 }

@@ -183,7 +183,7 @@ export default function MobileDashboardView({ items, stockBalance, workOrders, s
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 6 }}>
                     <div style={xpSectionLabel}>Active Work Orders</div>
                     <button
-                        onClick={() => router.push('/manufacturing')}
+                        onClick={() => router.push('/work-orders')}
                         style={{ background: 'none', border: 'none', color: '#0058e6', fontFamily: XP_FONT, fontSize: 11, cursor: 'pointer', padding: 0, textDecoration: 'underline' }}
                     >
                         View all →
@@ -220,7 +220,7 @@ export default function MobileDashboardView({ items, stockBalance, workOrders, s
                         ))}
                         {(workOrders || []).filter((w: any) => ['IN_PROGRESS', 'PENDING'].includes(w.status)).length > 10 && (
                             <button
-                                onClick={() => router.push('/manufacturing')}
+                                onClick={() => router.push('/work-orders')}
                                 style={{ ...xpPanel({ padding: '9px', textAlign: 'center' as const }), border: '2px solid', borderColor: '#dfdfdf #808080 #808080 #dfdfdf', color: '#0058e6', fontFamily: XP_FONT, fontSize: 12, cursor: 'pointer', width: '100%' }}
                             >
                                 View all work orders →

@@ -9,14 +9,14 @@ const XP_BEIGE = '#ece9d8';
 const TABS = [
     { id: 'home',       label: 'Home',       icon: 'bi-house-fill',    route: '/dashboard'     },
     { id: 'scan',       label: 'Scan',       icon: 'bi-qr-code-scan',  route: '/scanner'       },
-    { id: 'production', label: 'Production', icon: 'bi-gear-fill',     route: '/manufacturing' },
+    { id: 'production', label: 'Production', icon: 'bi-gear-fill',     route: '/work-orders'   },
     { id: 'stock',      label: 'Stock',      icon: 'bi-box-seam-fill', route: '/stock'         },
 ];
 
 function getActiveTab(pathname: string): string {
     if (pathname === '/' || pathname === '/dashboard') return 'home';
     if (pathname === '/scanner') return 'scan';
-    if (pathname === '/manufacturing') return 'production';
+    if (pathname === '/work-orders') return 'production';
     if (pathname === '/stock' || pathname === '/inventory') return 'stock';
     return '';
 }

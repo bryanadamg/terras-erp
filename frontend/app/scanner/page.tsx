@@ -67,7 +67,7 @@ export default function ScannerPage() {
                 attributes={attributes}
                 stockBalance={localStockBalance}
                 onUpdateStatus={handleUpdateWOStatus}
-                onClose={() => router.push('/manufacturing')}
+                onClose={() => router.push('/work-orders')}
             />
         );
     }
@@ -84,7 +84,7 @@ export default function ScannerPage() {
                             attributes={attributes}
                             stockBalance={localStockBalance}
                             onUpdateStatus={handleUpdateWOStatus}
-                            onClose={() => router.push('/manufacturing')}
+                            onClose={() => router.push('/work-orders')}
                         />
                     </div>
                 </div>

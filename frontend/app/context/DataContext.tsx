@@ -145,7 +145,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
             // Only fetch what matches the current route to minimize load
             
             // Items & Inventory
-            if (['dashboard', 'inventory', 'sample-masters', 'bom', 'manufacturing', 'sales-orders', 'purchase-orders', 'stock', 'reports', 'samples'].some(t => fetchTarget.includes(t))) {
+            if (['dashboard', 'inventory', 'sample-masters', 'bom', 'manufacturing', 'work-orders', 'manufacturing-orders', 'sales-orders', 'purchase-orders', 'stock', 'reports', 'samples'].some(t => fetchTarget.includes(t))) {
                 const skip = (itemPage - 1) * pageSize;
                 requests.push(fetch(`${API_BASE}/items?skip=${skip}&limit=${pageSize}&search=${encodeURIComponent(itemSearch)}&category=${encodeURIComponent(itemCategory)}`, { headers }));
                 requestTypes.push('items');
@@ -158,13 +158,13 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
             }
 
             // Engineering
-            if (fetchTarget.includes('bom') || fetchTarget.includes('manufacturing') || fetchTarget.includes('samples') || fetchTarget.includes('sales-orders')) {
+            if (fetchTarget.includes('bom') || fetchTarget.includes('manufacturing') || fetchTarget.includes('work-orders') || fetchTarget.includes('samples') || fetchTarget.includes('sales-orders')) {
                 requests.push(fetch(`${API_BASE}/boms`, { headers }));
                 requestTypes.push('boms');
             }
 
             // MES (Manufacturing Orders + Production Runs)
-            if (fetchTarget.includes('manufacturing') || fetchTarget === 'dashboard' || fetchTarget === '' || fetchTarget.includes('reports')) {
+            if (fetchTarget.includes('manufacturing') || fetchTarget.includes('work-orders') || fetchTarget === 'dashboard' || fetchTarget === '' || fetchTarget.includes('reports')) {
                 const moSkip = (woPage - 1) * pageSize;
                 requests.push(fetch(`${API_BASE}/manufacturing-orders?skip=${moSkip}&limit=${pageSize}`, { headers }));
                 requestTypes.push('manufacturing-orders');
@@ -174,7 +174,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
             }
 
             // Inventory / Stock
-            if (fetchTarget.includes('stock') || fetchTarget === 'dashboard' || fetchTarget === '' || fetchTarget.includes('inventory') || fetchTarget.includes('manufacturing')) {
+            if (fetchTarget.includes('stock') || fetchTarget === 'dashboard' || fetchTarget === '' || fetchTarget.includes('inventory') || fetchTarget.includes('manufacturing') || fetchTarget.includes('work-orders')) {
                 requests.push(fetch(`${API_BASE}/stock/balance`, { headers }));
                 requestTypes.push('balance');
             }
@@ -275,11 +275,11 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
                             setManufacturingOrders((prev: any[]) => prev.map((mo: any) =>
                                 mo.id === data.mo_id ? { ...mo, status: data.status } : mo
                             ));
-                            fetchDataRef.current('/manufacturing');
+                            fetchDataRef.current('work-orders');
                             showToast(`Manufacturing Order ${data.code} updated: ${data.status}`, 'info');
                             break;
                         case 'PRODUCTION_RUN_UPDATE':
-                            fetchDataRef.current('/manufacturing');
+                            fetchDataRef.current('work-orders');
                             break;
                         default:
                             break;

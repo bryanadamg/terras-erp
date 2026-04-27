@@ -62,7 +62,7 @@ export default function SalesOrdersPage() {
                 qty: line.qty.toString(),
                 bom_id: matchingBOM.id
             });
-            router.push(`/manufacturing?${params.toString()}`);
+            router.push(`/work-orders?${params.toString()}`);
         } else {
             // No BOM found - Redirect to BOM creation
             showToast('No matching BOM found. Please create a recipe first.', 'warning');
