@@ -43,7 +43,8 @@ export default function ManufacturingView({
     prTotal,
     setPrPage,
     initialCreateState,
-    onClearInitialState
+    onClearInitialState,
+    initialTab
 }: any) {
   const { showToast } = useToast();
   const { t } = useLanguage();
@@ -57,7 +58,7 @@ export default function ManufacturingView({
   useEffect(() => { workOrdersRef.current = manufacturingOrders; }, [manufacturingOrders]);
 
   // Tab state: 'production-runs' | 'manufacturing-orders'
-  const [activeTab, setActiveTab] = useState<'production-runs' | 'manufacturing-orders'>('production-runs');
+  const [activeTab, setActiveTab] = useState<'production-runs' | 'manufacturing-orders'>(initialTab || 'production-runs');
   const [isPRModalOpen, setIsPRModalOpen] = useState(false);
 
   // Derived Pagination

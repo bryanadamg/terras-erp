@@ -276,7 +276,10 @@ export default function Sidebar({ activeTab, setActiveTab, onTabHover, appName, 
                   </>
                 )}
                 {hasPermission('work_order.manage') && (
-                  <NavItem tab="manufacturing" label={t('work_orders') || 'Work Orders'} icon="bi-tools" isSub />
+                  <>
+                    <NavItem tab="manufacturing-orders" label={t('manufacturing_orders') || 'Manufacturing Orders'} icon="bi-list-task" isSub />
+                    <NavItem tab="manufacturing" label={t('work_orders') || 'Work Orders'} icon="bi-tools" isSub />
+                  </>
                 )}
               </>
             )}
