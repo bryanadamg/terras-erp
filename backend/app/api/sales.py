@@ -43,6 +43,7 @@ async def create_sales_order(payload: SalesOrderCreate, db: AsyncSession = Depen
                 qty_kg=line.qty_kg,
                 qty2=line.qty2,
                 uom2=line.uom2,
+                bom_size_id=line.bom_size_id,
             )
             if line.attribute_value_ids:
                 attr_result = await db.execute(select(AttributeValue).filter(AttributeValue.id.in_(line.attribute_value_ids)))

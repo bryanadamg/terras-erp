@@ -4,9 +4,10 @@ import ManufacturingView from '../components/manufacturing/ManufacturingView';
 import MobileManufacturingView from '../components/mobile/ManufacturingView';
 import { useData } from '../context/DataContext';
 import { useToast } from '../components/shared/Toast';
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import { useConfirm } from '../context/ConfirmContext';
 import { useIsMobile } from '../hooks/useIsMobile';
+import { useSearchParams, useRouter } from 'next/navigation';
 
 export default function ManufacturingOrdersPage() {
     const {
@@ -22,6 +23,25 @@ export default function ManufacturingOrdersPage() {
     const { showToast } = useToast();
     const { confirm } = useConfirm();
     const isMobile = useIsMobile();
+    const searchParams = useSearchParams();
+    const router = useRouter();
+    const [initialCreateState, setInitialCreateState] = useState<any>(null);
+    const consumedSOIdRef = useRef<string | null>(null);
+
+    useEffect(() => {
+        const soId = searchParams.get('sales_order_id');
+        if (searchParams.get('action') === 'create_wo' && soId !== consumedSOIdRef.current) {
+            consumedSOIdRef.current = soId;
+            setInitialCreateState({
+                sales_order_id: soId,
+                item_id: searchParams.get('item_id'),
+                qty: parseFloat(searchParams.get('qty') || '0'),
+                bom_id: searchParams.get('bom_id'),
+                bom_size_id: searchParams.get('bom_size_id') || null,
+            });
+            router.replace('/manufacturing-orders');
+        }
+    }, [searchParams]);
 
     const envBase = process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:8000/api';
     const API_BASE = envBase.endsWith('/api') ? envBase : `${envBase}/api`;
@@ -108,6 +128,8 @@ export default function ManufacturingOrdersPage() {
         return <MobileManufacturingView workOrders={manufacturingOrders} items={items} />;
     }
 
+    const handleClearInitialState = useCallback(() => setInitialCreateState(null), []);
+
     return (
         <ManufacturingView
             items={items}
@@ -136,6 +158,8 @@ export default function ManufacturingOrdersPage() {
             prPage={prPage}
             prTotal={prTotal}
             setPrPage={setPrPage}
+            initialCreateState={initialCreateState}
+            onClearInitialState={handleClearInitialState}
             initialTab="manufacturing-orders"
             showTabSwitcher={false}
         />

@@ -68,16 +68,17 @@ export default function ManufacturingView({
   const endRange = Math.min(currentPage * pageSize, totalItems);
 
   const [isCreateOpen, setIsCreateOpen] = useState(false);
-  const [newWO, setNewWO] = useState({ 
-      code: '', 
-      bom_id: '', 
-      location_code: '', 
-      source_location_code: '', 
-      qty: 1.0, 
+  const [newWO, setNewWO] = useState({
+      code: '',
+      bom_id: '',
+      location_code: '',
+      source_location_code: '',
+      qty: 1.0,
       target_start_date: '',
       target_end_date: '',
       sales_order_id: '',
-      create_nested: false // Default to false
+      bom_size_id: '',
+      create_nested: false,
   });
   
   const [startDate, setStartDate] = useState('');
@@ -119,7 +120,7 @@ export default function ManufacturingView({
   // Handle Automated Creation from Sales Order
   useEffect(() => {
       if (initialCreateState && items.length > 0 && boms.length > 0) {
-          const { bom_id, qty, sales_order_id } = initialCreateState;
+          const { bom_id, qty, sales_order_id, bom_size_id } = initialCreateState;
 
           // Use the bom_id passed from the SO page (already matched on item + attributes)
           const bom = boms.find((b: any) => b.id === bom_id);
@@ -132,7 +133,8 @@ export default function ManufacturingView({
                       code: suggestedCode,
                       bom_id: bom.id,
                       qty: qty,
-                      sales_order_id: sales_order_id || ''
+                      sales_order_id: sales_order_id || '',
+                      bom_size_id: bom_size_id || '',
                   }));
                   setIsCreateOpen(true);
                   onClearInitialState();
@@ -264,7 +266,8 @@ export default function ManufacturingView({
               ...newWO,
               target_start_date: newWO.target_start_date || null,
               target_end_date: newWO.target_end_date || null,
-              sales_order_id: newWO.sales_order_id || null
+              sales_order_id: newWO.sales_order_id || null,
+              bom_size_id: newWO.bom_size_id || null,
           };
 
           const res = await onCreateMO(payload);
@@ -281,7 +284,7 @@ export default function ManufacturingView({
               } else {
                   showToast('Manufacturing Order created successfully!', 'success');
               }
-              setNewWO({ code: '', bom_id: '', location_code: '', source_location_code: '', qty: 1.0, target_start_date: '', target_end_date: '' });
+              setNewWO({ code: '', bom_id: '', location_code: '', source_location_code: '', qty: 1.0, target_start_date: '', target_end_date: '', sales_order_id: '', bom_size_id: '', create_nested: false });
               setIsCreateOpen(false);
           } else {
               showToast('Failed to create Manufacturing Order', 'danger');

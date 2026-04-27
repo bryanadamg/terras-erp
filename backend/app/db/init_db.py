@@ -175,6 +175,7 @@ def run_migrations():
                 ("sales_order_lines", "qty_kg", "NUMERIC(14,4)"),
                 ("sales_order_lines", "qty2", "NUMERIC(14,4)"),
                 ("sales_order_lines", "uom2", "VARCHAR(32)"),
+                ("sales_order_lines", "bom_size_id", "UUID REFERENCES bom_sizes(id) ON DELETE SET NULL"),
                 # sample_requests SPK fields
                 ("sample_requests", "request_date", "DATE NOT NULL DEFAULT CURRENT_DATE"),
                 ("sample_requests", "project", "VARCHAR(255)"),

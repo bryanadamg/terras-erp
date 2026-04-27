@@ -9,7 +9,7 @@ import SOTablePrintModal from './SOTablePrintModal';
 import { useTheme } from '../../context/ThemeContext';
 import { useData } from '../../context/DataContext';
 
-export default function SalesOrderView({ items, attributes, salesOrders, partners, onCreateSO, onDeleteSO, onUpdateSOStatus, onGenerateWO }: any) {
+export default function SalesOrderView({ items, attributes, boms, salesOrders, partners, onCreateSO, onDeleteSO, onUpdateSOStatus, onGenerateWO }: any) {
   const { showToast } = useToast();
   const { t } = useLanguage();
   const [isCreateOpen, setIsCreateOpen] = useState(false);
@@ -147,6 +147,7 @@ export default function SalesOrderView({ items, attributes, salesOrders, partner
   const [newLine, setNewLine] = useState({
       item_id: '', qty: 0, due_date: '', attribute_value_ids: [] as string[],
       ket_stock: '', internal_confirmation_date: '', qty_kg: '', qty2: '', uom2: '',
+      bom_size_id: '',
   });
   const [qtyMeter, setQtyMeter] = useState('');
   const [kgAuto, setKgAuto] = useState(true);
@@ -194,8 +195,8 @@ export default function SalesOrderView({ items, attributes, salesOrders, partner
 
   const handleAddLine = () => {
       if (!newLine.item_id || newLine.qty <= 0) return;
-      setNewSO({ ...newSO, lines: [...newSO.lines, { ...newLine }] });
-      setNewLine({ item_id: '', qty: 0, due_date: '', attribute_value_ids: [], ket_stock: '', internal_confirmation_date: '', qty_kg: '', qty2: '', uom2: '' });
+      setNewSO({ ...newSO, lines: [...newSO.lines, { ...newLine, bom_size_id: newLine.bom_size_id || null }] });
+      setNewLine({ item_id: '', qty: 0, due_date: '', attribute_value_ids: [], ket_stock: '', internal_confirmation_date: '', qty_kg: '', qty2: '', uom2: '', bom_size_id: '' });
       setQtyMeter('');
       setKgAuto(true);
   };
@@ -234,7 +235,42 @@ export default function SalesOrderView({ items, attributes, salesOrders, partner
   const handleLineItemChange = (val: string) => {
       const m = parseFloat(qtyMeter) || 0;
       const kg = kgAuto ? calcKgAuto(val, newLine.qty, m) : null;
-      setNewLine({ ...newLine, item_id: val, attribute_value_ids: [], qty_kg: kg !== null ? kg : newLine.qty_kg });
+      setNewLine({ ...newLine, item_id: val, attribute_value_ids: [], bom_size_id: '', qty_kg: kg !== null ? kg : newLine.qty_kg });
+  };
+
+  const getBOMSizesForLine = (itemId: string, attrValueIds: string[]) => {
+      if (!boms || !itemId) return [];
+      const bom = boms.find((b: any) => {
+          if (b.item_id !== itemId) return false;
+          const bomAttrs = b.attribute_value_ids || [];
+          if (attrValueIds.length !== bomAttrs.length) return false;
+          return attrValueIds.every((id: string) => bomAttrs.includes(id));
+      });
+      return bom?.sizes || [];
+  };
+
+  const formatBomSizeLabel = (bs: any): string => {
+      const parts: string[] = [];
+      const sizeName = bs.size_name || bs.size?.name;
+      if (sizeName) parts.push(sizeName);
+      if (bs.label) parts.push(bs.label);
+      if (bs.target_measurement != null) {
+          let meas = `${parseFloat(bs.target_measurement)}`;
+          if (bs.measurement_min != null && bs.measurement_max != null) {
+              meas += ` (${parseFloat(bs.measurement_min)}–${parseFloat(bs.measurement_max)})`;
+          }
+          parts.push(meas + ' cm');
+      }
+      return parts.join(' — ') || `Size ${bs.id.slice(0, 6)}`;
+  };
+
+  const getBomSizeLabelById = (bomSizeId: string): string => {
+      if (!boms || !bomSizeId) return '';
+      for (const bom of boms) {
+          const bs = (bom.sizes || []).find((s: any) => s.id === bomSizeId);
+          if (bs) return formatBomSizeLabel(bs);
+      }
+      return '';
   };
 
   const handleQtyYardChange = (ydStr: string) => {
@@ -654,6 +690,30 @@ export default function SalesOrderView({ items, attributes, salesOrders, partner
                                </div>
                            </div>
                        )}
+
+                       {/* Size / Measurement */}
+                       {(() => {
+                           const bomSizes = getBOMSizesForLine(newLine.item_id, newLine.attribute_value_ids);
+                           if (!bomSizes.length) return null;
+                           return (
+                               <div className="col-12 mt-1">
+                                   <div style={{background:'#ffffff',border:classic?'1px solid #b0a898':'1px solid #dee2e6',padding:classic?'4px 6px':'8px'}}>
+                                       <div style={classic?{fontFamily:'Tahoma,Arial,sans-serif',fontSize:'10px',fontWeight:'bold',color:'#444',marginBottom:4}:undefined} className={classic?'':'text-muted fw-bold mb-2 small'}>Size / Measurement</div>
+                                       <select
+                                           className="form-select form-select-sm"
+                                           style={classic?{fontFamily:'Tahoma,Arial,sans-serif',fontSize:'11px',border:'1px solid #7f9db9',height:'22px',borderRadius:0,padding:'1px 4px',background:'#ffffff',outline:'none',width:'100%'}:undefined}
+                                           value={newLine.bom_size_id}
+                                           onChange={e => setNewLine({...newLine, bom_size_id: e.target.value})}
+                                       >
+                                           <option value="">No specific size</option>
+                                           {bomSizes.map((bs: any) => (
+                                               <option key={bs.id} value={bs.id}>{formatBomSizeLabel(bs)}</option>
+                                           ))}
+                                       </select>
+                                   </div>
+                               </div>
+                           );
+                       })()}
                    </div>
                    <div>
                        {newSO.lines.map((line: any, idx) => (
@@ -664,6 +724,7 @@ export default function SalesOrderView({ items, attributes, salesOrders, partner
                                    {isSample(line.item_id) && <span style={{background:'#fff8dc',border:'1px solid #c8a000',color:'#4a3000',padding:'0 4px',fontSize:'9px',fontFamily:classic?'Tahoma,Arial,sans-serif':'',marginLeft:6}} className={classic?'':'badge bg-warning text-dark ms-2'}>Sample</span>}
                                    {line.due_date && <span style={{color:classic?'#666':'',marginLeft:8,fontSize:classic?'10px':''}} className={classic?'':'text-muted ms-2 small'}><i className="bi bi-calendar2" style={{marginRight:3}}></i>{new Date(line.due_date).toLocaleDateString()}</span>}
                                    {(line.attribute_value_ids || []).length > 0 && <div style={{color:classic?'#666':'',fontSize:classic?'10px':'',fontStyle:'italic'}} className={classic?'':'small text-muted fst-italic'}>{(line.attribute_value_ids || []).map(getAttributeValueName).join(', ')}</div>}
+                                   {line.bom_size_id && <div style={{color:classic?'#005':'',fontSize:classic?'10px':'',fontWeight:'bold'}} className={classic?'':'small text-primary fw-semibold'}><i className="bi bi-rulers me-1"></i>{getBomSizeLabelById(line.bom_size_id)}</div>}
                                </div>
                                <div style={{display:'flex',alignItems:'center',gap:12}}>
                                    <span style={{fontWeight:'bold'}}>×{line.qty}</span>

@@ -1,9 +1,13 @@
 import uuid
+from typing import TYPE_CHECKING, Optional
 from sqlalchemy import String, ForeignKey, Numeric, DateTime, Text, Table, Column
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.db.base import Base
 from datetime import datetime
+
+if TYPE_CHECKING:
+    from app.models.bom import BOMSize
 
 # Association table for SalesOrderLine <-> AttributeValue
 sales_order_line_values = Table(
@@ -51,7 +55,11 @@ class SalesOrderLine(Base):
     qty_kg: Mapped[float | None] = mapped_column(Numeric(14, 4), nullable=True)
     qty2: Mapped[float | None] = mapped_column(Numeric(14, 4), nullable=True)
     uom2: Mapped[str | None] = mapped_column(String(32), nullable=True)
+    bom_size_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("bom_sizes.id", ondelete="SET NULL"), nullable=True
+    )
 
     # Relationships
     item = relationship("Item")
     attribute_values = relationship("AttributeValue", secondary=sales_order_line_values)
+    bom_size = relationship("BOMSize", foreign_keys=[bom_size_id])

@@ -491,10 +491,13 @@ class SalesOrderLineCreate(BaseModel):
     qty2: float | None = None
     uom2: str | None = None
     attribute_value_ids: list[UUID] = []
+    bom_size_id: UUID | None = None
 
 class SalesOrderLineResponse(SalesOrderLineCreate):
     id: UUID
     attribute_value_ids: list[UUID] = []
+    bom_size_id: UUID | None = None
+
     class Config:
         from_attributes = True
 

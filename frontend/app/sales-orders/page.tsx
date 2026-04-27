@@ -7,7 +7,7 @@ import { useToast } from '../components/shared/Toast';
 import { useConfirm } from '../context/ConfirmContext';
 
 export default function SalesOrdersPage() {
-    const { items, attributes, salesOrders, partners, fetchData, authFetch, boms } = useData();
+    const { items, attributes, salesOrders, partners, boms, fetchData, authFetch } = useData();
     const { showToast } = useToast();
     const { confirm } = useConfirm();
     const router = useRouter();
@@ -34,37 +34,25 @@ export default function SalesOrdersPage() {
     };
 
     const handleGenerateWO = (so: any, line: any) => {
-        // 1. Check if BOM exists for this item + attributes
         const lineAttrIds = line.attribute_value_ids || [];
-        
-        // Find a BOM that matches the item ID
         const matchingBOM = boms.find((b: any) => {
             if (b.item_id !== line.item_id) return false;
-            
-            // Check if BOM attributes match the line attributes
-            // A BOM matches if its attribute_value_ids (Set) is EQUAL to the line's attribute_value_ids (Set)
-            // Or if the BOM covers the specific configuration.
-            // Simplified: Exact match of sorted IDs or if BOM has no attributes and line has none.
             const bomAttrIds = b.attribute_value_ids || [];
-            
             if (lineAttrIds.length !== bomAttrIds.length) return false;
-            
-            // Check if every ID in lineAttrIds is present in bomAttrIds
             return lineAttrIds.every((id: string) => bomAttrIds.includes(id));
         });
 
         if (matchingBOM) {
-            // Navigate to manufacturing page with pre-filled data
-            const params = new URLSearchParams({
+            const params: Record<string, string> = {
                 action: 'create_wo',
                 sales_order_id: so.id,
                 item_id: line.item_id,
                 qty: line.qty.toString(),
-                bom_id: matchingBOM.id
-            });
-            router.push(`/work-orders?${params.toString()}`);
+                bom_id: matchingBOM.id,
+            };
+            if (line.bom_size_id) params.bom_size_id = line.bom_size_id;
+            router.push(`/manufacturing-orders?${new URLSearchParams(params).toString()}`);
         } else {
-            // No BOM found - Redirect to BOM creation
             showToast('No matching BOM found. Please create a recipe first.', 'warning');
             const params = new URLSearchParams({
                 action: 'create_bom',
@@ -87,10 +75,11 @@ export default function SalesOrdersPage() {
     };
 
     return (
-            <SalesOrderView 
-                items={items} 
-                attributes={attributes} 
-                salesOrders={salesOrders} 
+            <SalesOrderView
+                items={items}
+                attributes={attributes}
+                boms={boms}
+                salesOrders={salesOrders}
                 partners={partners}
                 onCreateSO={handleCreateSO}
                 onDeleteSO={handleDeleteSO}
