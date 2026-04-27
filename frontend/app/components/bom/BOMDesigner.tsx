@@ -1217,7 +1217,7 @@ export default function BOMDesigner({
                                                                 attribute_value_ids: findMatchingAttributeIds(pendingItemCode, selectedNode.attribute_value_ids),
                                                                 qty: parseFloat(pendingQty) || 0,
                                                                 percentage: parseFloat(pendingPercentage) || 0,
-                                                                is_percentage: false,
+                                                                is_percentage: (parseFloat(pendingPercentage) || 0) > 0,
                                                                 source_location_code: '',
                                                                 isNewItem: !exists
                                                             };
@@ -1233,6 +1233,14 @@ export default function BOMDesigner({
 
                                             {/* Component list */}
                                             <div style={{ ...xpInset, maxHeight: 260, padding: 0 }}>
+                                                {selectedNode.lines.length > 0 && (
+                                                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '2px 6px', background: '#ece9d8', borderBottom: '1px solid #aca899', fontSize: 9, color: '#555', fontWeight: 'bold' }}>
+                                                        <span style={{ flex: 1 }}>Component</span>
+                                                        <span style={{ width: 55, textAlign: 'right' }}>Qty</span>
+                                                        <span style={{ width: 57, textAlign: 'right' }}>%</span>
+                                                        <span style={{ minWidth: 60 }}></span>
+                                                    </div>
+                                                )}
                                                 {selectedNode.lines.length === 0 && (
                                                     <div style={{ padding: 6, fontSize: 10, color: '#888', fontStyle: 'italic' }}>No components added.</div>
                                                 )}
@@ -1246,10 +1254,35 @@ export default function BOMDesigner({
                                                         <span style={{ flex: 1, fontWeight: 'bold', fontSize: 11 }}>
                                                             {getItemName(line.item_code)}
                                                         </span>
-                                                        <span style={xpBadge('#316ac5')}>{line.qty}</span>
-                                                        {(line.percentage || 0) > 0 && (
-                                                            <span style={xpBadge('#b46a00')}>{line.percentage}%</span>
-                                                        )}
+                                                        <input
+                                                            type="number"
+                                                            title="Qty"
+                                                            style={{ ...xpInput, width: 55, textAlign: 'right', padding: '1px 3px' }}
+                                                            value={line.qty}
+                                                            onChange={e => {
+                                                                const newLines = [...selectedNode.lines];
+                                                                newLines[i] = { ...line, qty: parseFloat(e.target.value) || 0 };
+                                                                updateSelectedNode({ lines: newLines });
+                                                            }}
+                                                        />
+                                                        <div style={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                                            <input
+                                                                type="number"
+                                                                title="Percentage"
+                                                                placeholder="0"
+                                                                min="0"
+                                                                max="100"
+                                                                style={{ ...xpInput, width: 48, textAlign: 'right', padding: '1px 3px' }}
+                                                                value={line.percentage || ''}
+                                                                onChange={e => {
+                                                                    const pct = parseFloat(e.target.value) || 0;
+                                                                    const newLines = [...selectedNode.lines];
+                                                                    newLines[i] = { ...line, percentage: pct, is_percentage: pct > 0 };
+                                                                    updateSelectedNode({ lines: newLines });
+                                                                }}
+                                                            />
+                                                            <span style={{ fontSize: 9, color: '#666' }}>%</span>
+                                                        </div>
                                                         {!hasExistingBOM(line.item_code) && !line.subBOM && (
                                                             <button style={xpBtnInfo} onClick={() => {
                                                                 const subNode: BOMNodeData = {
