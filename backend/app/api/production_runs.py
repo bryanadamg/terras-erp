@@ -24,6 +24,8 @@ def _pr_load_options():
     return [
         joinedload(ProductionRun.bom).options(
             joinedload(BOM.item),
+            joinedload(BOM.customer),
+            joinedload(BOM.work_center),
         ),
         selectinload(ProductionRun.manufacturing_orders).options(
             joinedload(ManufacturingOrder.item),

@@ -36,7 +36,9 @@ def get_mo_options():
         selectinload(ManufacturingOrder.bom).selectinload(BOM.attribute_values),
         selectinload(ManufacturingOrder.bom).selectinload(BOM.operations),
         selectinload(ManufacturingOrder.bom).selectinload(BOM.lines).selectinload(BOMLine.item),
-        selectinload(ManufacturingOrder.bom).selectinload(BOM.lines).selectinload(BOMLine.attribute_values)
+        selectinload(ManufacturingOrder.bom).selectinload(BOM.lines).selectinload(BOMLine.attribute_values),
+        selectinload(ManufacturingOrder.bom).selectinload(BOM.customer),
+        selectinload(ManufacturingOrder.bom).selectinload(BOM.work_center),
     ]
 
     # Sub-relationships for children (Level 1)
@@ -51,6 +53,8 @@ def get_mo_options():
     options.append(child_bom.selectinload(BOM.operations))
     options.append(child_bom.selectinload(BOM.lines).selectinload(BOMLine.item))
     options.append(child_bom.selectinload(BOM.lines).selectinload(BOMLine.attribute_values))
+    options.append(child_bom.selectinload(BOM.customer))
+    options.append(child_bom.selectinload(BOM.work_center))
 
     # Support deeper levels if needed (Level 2)
     gchild_rel = child_rel.selectinload(ManufacturingOrder.child_mos)
@@ -63,6 +67,8 @@ def get_mo_options():
     options.append(gchild_bom.selectinload(BOM.operations))
     options.append(gchild_bom.selectinload(BOM.lines).selectinload(BOMLine.item))
     options.append(gchild_bom.selectinload(BOM.lines).selectinload(BOMLine.attribute_values))
+    options.append(gchild_bom.selectinload(BOM.customer))
+    options.append(gchild_bom.selectinload(BOM.work_center))
 
     return options
 
@@ -130,6 +136,8 @@ async def load_mo_tree(db: AsyncSession, root_ids: list) -> dict:
             selectinload(ManufacturingOrder.bom).selectinload(BOM.lines).selectinload(BOMLine.item),
             selectinload(ManufacturingOrder.bom).selectinload(BOM.lines).selectinload(BOMLine.attribute_values),
             selectinload(ManufacturingOrder.bom).selectinload(BOM.sizes).selectinload(BOMSize.size),
+            selectinload(ManufacturingOrder.bom).selectinload(BOM.customer),
+            selectinload(ManufacturingOrder.bom).selectinload(BOM.work_center),
         )
         .filter(ManufacturingOrder.id.in_(all_ids))
     )
