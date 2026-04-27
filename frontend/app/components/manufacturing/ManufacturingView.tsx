@@ -689,7 +689,7 @@ export default function ManufacturingView({
           <ModalWrapper
               isOpen={isCreateOpen}
               onClose={() => setIsCreateOpen(false)}
-              title={<><i className="bi bi-play-circle me-1"></i> NEW PRODUCTION RUN</>}
+              title={<><i className="bi bi-gear-wide-connected me-1"></i> NEW MANUFACTURING ORDER</>}
               variant="success"
               size="lg"
               footer={
@@ -702,9 +702,20 @@ export default function ManufacturingView({
               <div className="row g-3 mb-3">
                   <div className="col-md-6">
                       <label className="form-label extra-small fw-bold text-muted uppercase">MO Reference Code</label>
-                      <div className="input-group">
-                          <input className="form-control form-control-sm" placeholder="Auto-generated" value={newWO.code} onChange={e => setNewWO({...newWO, code: e.target.value})} required />
-                          <button className="btn btn-sm btn-outline-secondary" type="button" onClick={() => setIsConfigOpen(true)}><i className="bi bi-gear-fill"></i></button>
+                      <div style={{ display: 'flex' }}>
+                          <input
+                              placeholder="Auto-generated"
+                              value={newWO.code}
+                              onChange={e => setNewWO({...newWO, code: e.target.value})}
+                              required
+                              style={{ flex: 1, fontFamily: 'Tahoma, "Segoe UI", sans-serif', fontSize: 11, border: '1px solid #7f9db9', borderRight: 'none', background: 'white', height: 24, padding: '0 4px', outline: 'none', borderRadius: 0, boxSizing: 'border-box' }}
+                          />
+                          <button
+                              type="button"
+                              onClick={() => setIsConfigOpen(true)}
+                              style={{ fontFamily: 'Tahoma, "Segoe UI", sans-serif', fontSize: 11, height: 24, padding: '0 7px', background: 'linear-gradient(to bottom, #f0efe6, #dddbd0)', border: '1px solid', borderColor: '#dfdfdf #808080 #808080 #dfdfdf', borderRadius: 0, cursor: 'pointer', boxSizing: 'border-box' }}
+                              title="Configure code format"
+                          ><i className="bi bi-gear-fill" style={{ fontSize: 10 }}></i></button>
                       </div>
                   </div>
                   <div className="col-md-6">
@@ -715,8 +726,8 @@ export default function ManufacturingView({
 
               <div className="mb-3">
                   <label className="form-label extra-small fw-bold text-muted uppercase">Product Recipe (BOM)</label>
-                  <SearchableSelect 
-                      options={boms.map((b: any) => ({ value: b.id, label: `${b.code} - ${getItemName(b.item_id)}` }))}
+                  <SearchableSelect
+                      options={boms.map((b: any) => ({ value: b.id, label: `[${b.code}]  ${getItemName(b.item_id)}` }))}
                       value={newWO.bom_id}
                       onChange={handleBOMChange}
                       required

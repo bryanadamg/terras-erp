@@ -6,6 +6,7 @@ const xpFont = 'Tahoma, "Segoe UI", sans-serif';
 const xpInput: React.CSSProperties = {
     fontFamily: xpFont, fontSize: 11, border: '1px solid #7f9db9',
     background: 'white', height: 20, padding: '0 4px', outline: 'none', width: '100%',
+    borderRadius: 0, boxSizing: 'border-box',
 };
 const xpLabel: React.CSSProperties = {
     fontFamily: xpFont, fontSize: 11, display: 'block', marginBottom: 2,
@@ -90,15 +91,15 @@ export default function ProductionRunModal({ bom: initialBom, boms, locations, o
                             <input style={xpInput} value={code} onChange={e => setCode(e.target.value)} />
                         </div>
                         <div style={{ flex: 2 }}>
-                            <label style={xpLabel}>BOM / Style</label>
+                            <label style={xpLabel}>Product Recipe (BOM)</label>
                             <select style={{ ...xpInput, height: 20 }}
                                 value={selectedBom?.id || ''}
                                 onChange={e => setSelectedBom(boms.find((b: any) => b.id === e.target.value) || null)}
                                 disabled={!!initialBom}
                             >
-                                <option value="">Select BOM...</option>
+                                <option value="">-- Select a BOM --</option>
                                 {boms.map((b: any) => (
-                                    <option key={b.id} value={b.id}>{b.item_name || b.item_code} ({b.code})</option>
+                                    <option key={b.id} value={b.id}>[{b.code}]  {b.item_name || b.item_code}</option>
                                 ))}
                             </select>
                         </div>

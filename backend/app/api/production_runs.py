@@ -5,7 +5,8 @@ from sqlalchemy.orm import joinedload, selectinload
 from app.db.session import get_async_db
 from app.models.production_run import ProductionRun
 from app.models.manufacturing import ManufacturingOrder
-from app.models.bom import BOM, BOMLine
+from app.models.bom import BOM, BOMLine, BOMSize
+from app.models.work_order import WorkOrder as WorkOrderModel
 from app.models.location import Location
 from app.schemas import (
     ProductionRunCreate, ProductionRunResponse,
@@ -21,16 +22,30 @@ from datetime import datetime
 router = APIRouter()
 
 def _pr_load_options():
+    mos = selectinload(ProductionRun.manufacturing_orders)
     return [
         joinedload(ProductionRun.bom).options(
             joinedload(BOM.item),
             joinedload(BOM.customer),
             joinedload(BOM.work_center),
+            selectinload(BOM.attribute_values),
+            selectinload(BOM.lines).selectinload(BOMLine.item),
+            selectinload(BOM.lines).selectinload(BOMLine.attribute_values),
+            selectinload(BOM.operations),
+            selectinload(BOM.sizes).selectinload(BOMSize.size),
         ),
-        selectinload(ProductionRun.manufacturing_orders).options(
-            joinedload(ManufacturingOrder.item),
-            selectinload(ManufacturingOrder.attribute_values),
-        ),
+        mos.selectinload(ManufacturingOrder.item),
+        mos.selectinload(ManufacturingOrder.attribute_values),
+        mos.selectinload(ManufacturingOrder.child_mos),
+        mos.selectinload(ManufacturingOrder.work_orders),
+        mos.selectinload(ManufacturingOrder.bom).selectinload(BOM.item),
+        mos.selectinload(ManufacturingOrder.bom).selectinload(BOM.attribute_values),
+        mos.selectinload(ManufacturingOrder.bom).selectinload(BOM.customer),
+        mos.selectinload(ManufacturingOrder.bom).selectinload(BOM.work_center),
+        mos.selectinload(ManufacturingOrder.bom).selectinload(BOM.lines).selectinload(BOMLine.item),
+        mos.selectinload(ManufacturingOrder.bom).selectinload(BOM.lines).selectinload(BOMLine.attribute_values),
+        mos.selectinload(ManufacturingOrder.bom).selectinload(BOM.operations),
+        mos.selectinload(ManufacturingOrder.bom).selectinload(BOM.sizes).selectinload(BOMSize.size),
     ]
 
 @router.get("/production-runs/available-code")
