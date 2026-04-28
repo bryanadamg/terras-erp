@@ -268,7 +268,7 @@ export default function WOPrintModal({
                                 </tr>
                             </thead>
                             <tbody>
-                                {bom ? renderPrintBOMLines(wo, bom.lines, 0, 1, bom, { boms, getItemName, getItemCode, getLocationName, getAttributeValueName }) : (
+                                {bom ? renderPrintBOMLines(wo, bom.lines, 0, 1, bom, { boms: hideChildMOs ? [] : boms, getItemName, getItemCode, getLocationName, getAttributeValueName }) : (
                                     <tr><td colSpan={5} style={{ border: '1px solid #ccc', padding: '4px', color: '#888' }}>No BOM found</td></tr>
                                 )}
                             </tbody>
