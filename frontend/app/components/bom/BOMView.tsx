@@ -72,6 +72,7 @@ export default function BOMView({
     const [printBOM, setPrintBOM] = useState<any>(null);
     const [startPRBom, setStartPRBom] = useState<any>(null);
     const [searchQuery, setSearchQuery] = useState('');
+    const [showRootOnly, setShowRootOnly] = useState(true);
     const [expandedNodes, setExpandedNodes] = useState<Record<string, boolean>>({});
     const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
 
@@ -151,16 +152,29 @@ export default function BOMView({
         return 'ok';
     };
 
+    // Item IDs that appear as components in any BOM — these are sub-BOMs
+    const subBOMItemIds = useMemo(() => {
+        const ids = new Set<string>();
+        for (const b of boms) {
+            for (const line of b.lines || []) {
+                if (line.item_id) ids.add(line.item_id);
+            }
+        }
+        return ids;
+    }, [boms]);
+
     // Filtered list
     const filteredBOMs = useMemo(() => {
-        if (!searchQuery.trim()) return boms;
+        let list = boms;
+        if (showRootOnly) list = list.filter((b: any) => !subBOMItemIds.has(b.item_id));
+        if (!searchQuery.trim()) return list;
         const q = searchQuery.toLowerCase();
-        return boms.filter((b: any) => {
+        return list.filter((b: any) => {
             const code = (b.code || '').toLowerCase();
             const name = (b.item_name || items.find((i: any) => i.id === b.item_id)?.name || '').toLowerCase();
             return code.includes(q) || name.includes(q);
         });
-    }, [boms, searchQuery, items]);
+    }, [boms, searchQuery, items, showRootOnly, subBOMItemIds]);
 
     const allSelected = filteredBOMs.length > 0 && filteredBOMs.every((b: any) => selectedIds.has(b.id));
     const someSelected = filteredBOMs.some((b: any) => selectedIds.has(b.id)) && !allSelected;
@@ -767,6 +781,16 @@ export default function BOMView({
                                 <span><i className="bi bi-diagram-3-fill" style={{ marginRight: '6px' }} />{t('active_boms')}</span>
                                 <input type="text" value={searchQuery} onChange={e => setSearchQuery(e.target.value)} placeholder="Search BOMs..."
                                     style={{ fontFamily: 'Tahoma, Arial, sans-serif', fontSize: '11px', border: '1px solid #808080', boxShadow: 'inset 1px 1px 0 rgba(0,0,0,0.15)', padding: '2px 6px', background: '#fff', color: '#000', outline: 'none' }} />
+                                <div style={{ display: 'flex', border: '1px solid #808080', overflow: 'hidden', flexShrink: 0 }}>
+                                    <button
+                                        onClick={() => setShowRootOnly(true)}
+                                        style={{ fontFamily: 'Tahoma, Arial, sans-serif', fontSize: '11px', padding: '1px 8px', cursor: 'pointer', border: 'none', background: showRootOnly ? 'linear-gradient(to bottom, #316ac5, #1a4a9a)' : 'linear-gradient(to bottom, #fff, #d4d0c8)', color: showRootOnly ? '#fff' : '#000', fontWeight: showRootOnly ? 'bold' : 'normal' }}
+                                    >Root BOMs</button>
+                                    <button
+                                        onClick={() => setShowRootOnly(false)}
+                                        style={{ fontFamily: 'Tahoma, Arial, sans-serif', fontSize: '11px', padding: '1px 8px', cursor: 'pointer', border: 'none', borderLeft: '1px solid #808080', background: !showRootOnly ? 'linear-gradient(to bottom, #316ac5, #1a4a9a)' : 'linear-gradient(to bottom, #fff, #d4d0c8)', color: !showRootOnly ? '#fff' : '#000', fontWeight: !showRootOnly ? 'bold' : 'normal' }}
+                                    >All BOMs</button>
+                                </div>
                                 {selectedIds.size > 0 && (
                                     <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                                         <span style={{ fontFamily: 'Tahoma, Arial, sans-serif', fontSize: '11px', color: '#fff' }}>{selectedIds.size} selected</span>
@@ -786,6 +810,10 @@ export default function BOMView({
                             <div className="d-flex align-items-center gap-2">
                                 <h5 className="card-title mb-0"><i className="bi bi-diagram-3-fill me-2" />{t('active_boms')}</h5>
                                 <input type="text" className="form-control form-control-sm" style={{ width: '180px' }} value={searchQuery} onChange={e => setSearchQuery(e.target.value)} placeholder="Search BOMs..." />
+                                <div className="btn-group btn-group-sm">
+                                    <button className={`btn ${showRootOnly ? 'btn-primary' : 'btn-outline-secondary'}`} onClick={() => setShowRootOnly(true)}>Root BOMs</button>
+                                    <button className={`btn ${!showRootOnly ? 'btn-primary' : 'btn-outline-secondary'}`} onClick={() => setShowRootOnly(false)}>All BOMs</button>
+                                </div>
                                 {selectedIds.size > 0 && (
                                     <div className="d-flex align-items-center gap-2">
                                         <span className="text-muted small">{selectedIds.size} selected</span>
