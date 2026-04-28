@@ -84,6 +84,7 @@ export default function ManufacturingView({
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
   const [printPreviewWO, setPrintPreviewWO] = useState<any>(null);
+  const [printHideChildren, setPrintHideChildren] = useState(false);
   
   const [expandedRows, setExpandedRows] = useState<Record<string, boolean>>({});
   const [selectedTreeNodes, setSelectedTreeNodes] = useState<Record<string, string>>({});
@@ -233,7 +234,8 @@ export default function ManufacturingView({
       window.print();
   };
 
-  const handlePrintWO = (wo: any) => {
+  const handlePrintWO = (wo: any, hideChildren = false) => {
+      setPrintHideChildren(hideChildren);
       setPrintPreviewWO(wo);
   };
 
@@ -531,6 +533,14 @@ export default function ManufacturingView({
                                   <i className="bi bi-check-lg me-1"></i>Finish
                               </button>
                           )}
+                          <button
+                              title="Print this MO"
+                              className={classic ? '' : 'btn btn-sm btn-outline-secondary py-0 px-2'}
+                              style={classic ? { fontFamily: 'Tahoma, Arial, sans-serif', fontSize: '10px', padding: '1px 8px', background: 'linear-gradient(to bottom,#f0efe6,#dddbd0)', border: '1px solid', borderColor: '#dfdfdf #808080 #808080 #dfdfdf', cursor: 'pointer', color: '#000' } : { fontSize: '0.72rem' }}
+                              onClick={() => handlePrintWO(selectedNode, true)}
+                          >
+                              <i className="bi bi-printer me-1"></i>Print
+                          </button>
                       </div>
                   </div>
 
@@ -681,6 +691,7 @@ export default function ManufacturingView({
                 getLocationName={getLocationName}
                 getAttributeValueName={getAttributeValueName}
                 formatDate={formatDate}
+                hideChildMOs={printHideChildren}
             />
         )}
 

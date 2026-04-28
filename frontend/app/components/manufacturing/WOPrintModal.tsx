@@ -49,10 +49,8 @@ const renderPrintBOMLines = (
                         <span className="font-monospace extra-small">{line.item_code || getItemCode(line.item_id)}</span>
                     </td>
                     <td>
-                        <div style={{ fontSize: '9pt' }}>
-                            {level > 0 && <span className="text-muted me-1 small">↳</span>}
-                            {line.item_name || getItemName(line.item_id)}
-                        </div>
+                        {level > 0 && <span style={{ color: '#888', marginRight: '3px' }}>↳</span>}
+                        {line.item_name || getItemName(line.item_id)}
                     </td>
                     <td className="extra-small fst-italic">
                         {line.qty}{line.is_percentage ? '%' : ''}
@@ -120,6 +118,7 @@ export default function WOPrintModal({
     getLocationName,
     getAttributeValueName,
     formatDate,
+    hideChildMOs = false,
 }: {
     wo: any;
     onClose: () => void;
@@ -133,9 +132,11 @@ export default function WOPrintModal({
     getLocationName: (id: any) => string;
     getAttributeValueName: (id: any) => string;
     formatDate: (d: any) => string;
+    hideChildMOs?: boolean;
 }) {
-    const { showBOMTable, showTimeline, showChildMOs, showSignatureLine,
+    const { showBOMTable, showTimeline, showChildMOs: showChildMOsSetting, showSignatureLine,
         headerCompanyName, headerDepartment, headerApprovedBy, headerReference } = printSettings;
+    const showChildMOs = hideChildMOs ? false : showChildMOsSetting;
 
     const [qrDataUrl, setQrDataUrl] = useState('');
     const [childQrUrls, setChildQrUrls] = useState<Record<string, string>>({});
@@ -331,10 +332,12 @@ export default function WOPrintModal({
                                         <input type="checkbox" checked={showTimeline} onChange={e => update({ showTimeline: e.target.checked })} />
                                         Timeline
                                     </label>
+                                    {!hideChildMOs && (
                                     <label style={toggleLabelStyle}>
-                                        <input type="checkbox" checked={showChildMOs} onChange={e => update({ showChildMOs: e.target.checked })} />
+                                        <input type="checkbox" checked={showChildMOsSetting} onChange={e => update({ showChildMOs: e.target.checked })} />
                                         Child Manufacturing Orders
                                     </label>
+                                    )}
                                     <label style={toggleLabelStyle}>
                                         <input type="checkbox" checked={showSignatureLine} onChange={e => update({ showSignatureLine: e.target.checked })} />
                                         Signature Line
