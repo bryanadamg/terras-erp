@@ -682,8 +682,20 @@ export default function BOMView({
                                         </div>
                                     )}
 
-                                    {/* Start Production Run */}
-                                    <div style={{ marginTop: 6 }}>
+                                    {/* Actions */}
+                                    <div style={{ marginTop: 6, display: 'flex', flexDirection: 'column', gap: 4 }}>
+                                        <button
+                                            onClick={() => setPrintBOM(displayBOM)}
+                                            style={{
+                                                fontFamily: 'Tahoma, Arial, sans-serif', fontSize: 10,
+                                                padding: '2px 8px', width: '100%',
+                                                background: 'linear-gradient(to bottom, #f0efe6, #dddbd0)',
+                                                border: '1px solid', borderColor: '#dfdfdf #808080 #808080 #dfdfdf',
+                                                cursor: 'pointer', color: '#000',
+                                            }}
+                                        >
+                                            <i className="bi bi-printer" style={{ marginRight: 4 }} />Print BOM
+                                        </button>
                                         <button
                                             onClick={() => setStartPRBom(displayBOM)}
                                             style={{
