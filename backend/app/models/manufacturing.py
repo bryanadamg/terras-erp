@@ -82,6 +82,7 @@ class ManufacturingOrder(Base):
     item = relationship("Item")
     attribute_values = relationship("AttributeValue", secondary=manufacturing_order_values)
     parent_mo = relationship("ManufacturingOrder", remote_side=[id], backref="child_mos")
+    sales_order = relationship("SalesOrder", foreign_keys=[sales_order_id], lazy="noload")
     production_run: Mapped[Optional["ProductionRun"]] = relationship(
         "ProductionRun",
         back_populates="manufacturing_orders",

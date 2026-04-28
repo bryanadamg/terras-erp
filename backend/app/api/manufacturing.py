@@ -32,6 +32,7 @@ def get_mo_options():
         selectinload(ManufacturingOrder.item),
         selectinload(ManufacturingOrder.attribute_values),
         selectinload(ManufacturingOrder.work_orders),
+        selectinload(ManufacturingOrder.sales_order),
         selectinload(ManufacturingOrder.bom).selectinload(BOM.item),
         selectinload(ManufacturingOrder.bom).selectinload(BOM.attribute_values),
         selectinload(ManufacturingOrder.bom).selectinload(BOM.operations),
@@ -80,6 +81,10 @@ def populate_mo_ids(mo: ManufacturingOrder):
     # 1. Populate Attribute Values (if loaded)
     if "attribute_values" not in insp.unloaded:
         mo.attribute_value_ids = [v.id for v in mo.attribute_values]
+
+    # 1b. Populate sales_order_code (if loaded)
+    if "sales_order" not in insp.unloaded and mo.sales_order:
+        mo.sales_order_code = mo.sales_order.po_number
 
     # 2. Populate BOM IDs (if loaded)
     if "bom" not in insp.unloaded and mo.bom:

@@ -206,6 +206,7 @@ class ManufacturingOrderResponse(BaseModel):
     item_code: str | None = None
     item_name: str | None = None
     sales_order_id: UUID | None = None
+    sales_order_code: str | None = None
     parent_mo_id: UUID | None = None
     production_run_id: UUID | None = None
     bom_size_id: UUID | None = None
