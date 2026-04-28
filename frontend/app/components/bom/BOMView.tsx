@@ -533,8 +533,15 @@ export default function BOMView({
                                 <div style={{ width: 260, flexShrink: 0, borderLeft: '1px solid #aca899', padding: '6px 8px', display: 'flex', flexDirection: 'column', gap: 0, overflowY: 'auto', background: '#f5f4ee' }}>
 
                                     {/* Header */}
-                                    <div style={{ fontSize: 10, fontWeight: 'bold', color: '#000080', borderBottom: '1px solid #c0bdb5', paddingBottom: 3, marginBottom: 6 }}>
-                                        <i className="bi bi-clipboard" style={{ marginRight: 4 }} />BOM Details
+                                    <div style={{ fontSize: 10, fontWeight: 'bold', color: '#000080', borderBottom: '1px solid #c0bdb5', paddingBottom: 3, marginBottom: 6, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                                        <span><i className="bi bi-clipboard" style={{ marginRight: 4 }} />BOM Details</span>
+                                        <button
+                                            onClick={() => setPrintBOM(displayBOM)}
+                                            title="Print BOM"
+                                            style={{ fontFamily: 'Tahoma, Arial, sans-serif', fontSize: 10, padding: '1px 6px', background: 'linear-gradient(to bottom, #f0efe6, #dddbd0)', border: '1px solid', borderColor: '#dfdfdf #808080 #808080 #dfdfdf', cursor: 'pointer', color: '#000' }}
+                                        >
+                                            <i className="bi bi-printer" style={{ marginRight: 3 }} />Print
+                                        </button>
                                     </div>
 
                                     {/* Identity */}
@@ -697,19 +704,7 @@ export default function BOMView({
                                     )}
 
                                     {/* Actions */}
-                                    <div style={{ marginTop: 6, display: 'flex', flexDirection: 'column', gap: 4 }}>
-                                        <button
-                                            onClick={() => setPrintBOM(displayBOM)}
-                                            style={{
-                                                fontFamily: 'Tahoma, Arial, sans-serif', fontSize: 10,
-                                                padding: '2px 8px', width: '100%',
-                                                background: 'linear-gradient(to bottom, #f0efe6, #dddbd0)',
-                                                border: '1px solid', borderColor: '#dfdfdf #808080 #808080 #dfdfdf',
-                                                cursor: 'pointer', color: '#000',
-                                            }}
-                                        >
-                                            <i className="bi bi-printer" style={{ marginRight: 4 }} />Print BOM
-                                        </button>
+                                    <div style={{ marginTop: 6 }}>
                                         <button
                                             onClick={() => setStartPRBom(displayBOM)}
                                             style={{
@@ -929,14 +924,6 @@ export default function BOMView({
                                                     </td>
                                                     <td style={classic ? { padding: '5px 6px', textAlign: 'right', verticalAlign: 'top' } : undefined} className={classic ? '' : 'pe-4 text-end align-top'}>
                                                         <div style={{ display: 'flex', alignItems: 'center', gap: 2, justifyContent: 'flex-end' }}>
-                                                            <button
-                                                                title="Print BOM"
-                                                                style={classic ? { background: 'none', border: 'none', cursor: 'pointer', color: '#555', padding: '0 2px' } : undefined}
-                                                                className={classic ? '' : 'btn btn-sm btn-link text-secondary'}
-                                                                onClick={e => { e.stopPropagation(); setPrintBOM(bom); }}
-                                                            >
-                                                                <i className="bi bi-printer" />
-                                                            </button>
                                                             <button
                                                                 style={classic ? { background: 'none', border: 'none', cursor: 'pointer', color: '#a00', padding: '0 2px' } : undefined}
                                                                 className={classic ? '' : 'btn btn-sm btn-link text-danger'}
