@@ -258,7 +258,7 @@ export default function WOPrintModal({
                     {wo.sales_order_id && (
                         <tr>
                             <td style={gridLbl}>Sales Order</td>
-                            <td style={{ ...gridVal, fontFamily: 'monospace', color: '#0058e6' }}>{wo.sales_order_code || wo.sales_order_id}</td>
+                            <td style={{ ...gridVal, fontFamily: 'monospace', color: '#0058e6' }}>{wo.sales_order_code || '—'}</td>
                             <td style={gridLbl}>Customer</td>
                             <td style={gridVal}>{bom?.customer_name || '—'}</td>
                         </tr>
