@@ -806,15 +806,15 @@ export default function SalesOrderView({ items, attributes, boms, salesOrders, p
                        <thead style={classic ? xpTableHeader : undefined} className={classic ? '' : 'table-light'}>
                            <tr>
                                <th style={classic ? { ...xpThCell, width: '130px' } : undefined} className={classic ? '' : 'ps-3'}>PO# / Ref</th>
-                               <th style={classic ? xpThCell : undefined}>Customer</th>
+                               <th style={classic ? { ...xpThCell, width: '180px' } : undefined}>Customer</th>
                                <th style={classic ? { ...xpThCell, width: '72px' } : undefined}>Date</th>
-                               <th style={classic ? xpThCell : undefined}>Item</th>
-                               <th style={classic ? { ...xpThCell, width: '100px' } : undefined}>Qty</th>
+                               <th style={classic ? { ...xpThCell, width: '180px' } : undefined}>Item</th>
+                               <th style={classic ? { ...xpThCell, width: '140px' } : undefined}>Qty</th>
                                <th style={classic ? { ...xpThCell, width: '80px' } : undefined}>Qty 3</th>
-                               <th style={classic ? xpThCell : undefined}>Stock Notes</th>
+                               <th style={classic ? { ...xpThCell, width: '110px' } : undefined}>Stock Notes</th>
                                <th style={classic ? { ...xpThCell, width: '88px' } : undefined}>Req / Conf</th>
                                <th style={classic ? { ...xpThCell, width: '80px' } : undefined}>Status</th>
-                               <th style={classic ? { ...xpThCell, textAlign: 'right' as const, borderRight: 'none', width: '120px' } : undefined} className={classic ? '' : 'text-end pe-3'}>Actions</th>
+                               <th style={classic ? { ...xpThCell, textAlign: 'right' as const, borderRight: 'none', width: '80px' } : undefined} className={classic ? '' : 'text-end pe-3'}>Actions</th>
                            </tr>
                        </thead>
                        <tbody>
@@ -859,23 +859,23 @@ export default function SalesOrderView({ items, attributes, boms, salesOrders, p
                                    <div style={classic ? { display:'flex', gap:2, justifyContent:'flex-end', alignItems:'center' } : undefined} className={classic ? '' : 'd-flex justify-content-end align-items-center gap-1'}>
                                        {so.status === 'READY' && (
                                            classic ? (
-                                               <button style={xpBtn()} onClick={() => onUpdateSOStatus(so.id, 'SENT')}>
-                                                   <i className="bi bi-send" style={{ marginRight:3 }}></i>SENT
+                                               <button style={xpBtn({ padding:'1px 5px' })} title="Mark as Sent" onClick={() => onUpdateSOStatus(so.id, 'SENT')}>
+                                                   <i className="bi bi-send"></i>
                                                </button>
                                            ) : (
-                                               <button className="btn btn-sm btn-light border py-0 px-2" style={{fontSize:11}} onClick={() => onUpdateSOStatus(so.id, 'SENT')}>
-                                                   <i className="bi bi-send me-1"></i>SENT
+                                               <button className="btn btn-sm btn-light border py-0 px-2" style={{fontSize:12}} title="Mark as Sent" onClick={() => onUpdateSOStatus(so.id, 'SENT')}>
+                                                   <i className="bi bi-send"></i>
                                                </button>
                                            )
                                        )}
                                        {so.status === 'SENT' && (
                                            classic ? (
-                                               <button style={xpBtn({ background:'linear-gradient(to bottom,#5ec85e,#2d7a2d)', borderColor:'#1a5e1a #0a3e0a #0a3e0a #1a5e1a', color:'#fff' })} onClick={() => onUpdateSOStatus(so.id, 'DELIVERED')}>
-                                                   <i className="bi bi-check2-all" style={{ marginRight:3 }}></i>DELIVERED
+                                               <button style={xpBtn({ background:'linear-gradient(to bottom,#5ec85e,#2d7a2d)', borderColor:'#1a5e1a #0a3e0a #0a3e0a #1a5e1a', color:'#fff', padding:'1px 5px' })} title="Mark as Delivered" onClick={() => onUpdateSOStatus(so.id, 'DELIVERED')}>
+                                                   <i className="bi bi-check2-all"></i>
                                                </button>
                                            ) : (
-                                               <button className="btn btn-sm btn-light border py-0 px-2" style={{fontSize:11}} onClick={() => onUpdateSOStatus(so.id, 'DELIVERED')}>
-                                                   <i className="bi bi-check2-all me-1"></i>DELIVERED
+                                               <button className="btn btn-sm btn-light border py-0 px-2" style={{fontSize:12}} title="Mark as Delivered" onClick={() => onUpdateSOStatus(so.id, 'DELIVERED')}>
+                                                   <i className="bi bi-check2-all"></i>
                                                </button>
                                            )
                                        )}
@@ -964,11 +964,13 @@ export default function SalesOrderView({ items, attributes, boms, salesOrders, p
 
                                            {/* Qty */}
                                            <td style={lineTd(isFirst, isLast)}>
-                                               <div style={{ fontFamily:'Tahoma,Arial,sans-serif', fontSize:'10px', fontWeight:'bold', color: classic?'#0058e6':'#0d6efd' }}>{line.qty} Yd</div>
-                                               <div style={{ fontFamily:'Tahoma,Arial,sans-serif', fontSize:'9px', color: classic?'#666':'#888' }}>{Math.round(line.qty * 0.9144 * 100) / 100} m</div>
-                                               {line.qty_kg != null && line.qty_kg !== '' && (
-                                                   <div style={{ fontFamily:'Tahoma,Arial,sans-serif', fontSize:'10px', color: classic?'#444':'' }}>{line.qty_kg} KG</div>
-                                               )}
+                                               <div style={{ display:'flex', flexWrap:'nowrap' as const, gap:3, alignItems:'center' }}>
+                                                   <span style={{ fontFamily:'Tahoma,Arial,sans-serif', fontSize:'9px', fontWeight:'bold', color: classic?'#003ea6':'#fff', background: classic?'#dce8ff':'#0d6efd', border: classic?'1px solid #9ab0e0':'none', padding:'1px 5px', borderRadius: classic?0:3 }}>{line.qty} Yd</span>
+                                                   <span style={{ fontFamily:'Tahoma,Arial,sans-serif', fontSize:'9px', color: classic?'#444':'#555', background: classic?'#efefef':'#f0f0f0', border: classic?'1px solid #c0bdb5':'1px solid #ddd', padding:'1px 5px', borderRadius: classic?0:3 }}>{Math.round(line.qty * 0.9144 * 100) / 100} m</span>
+                                                   {line.qty_kg != null && line.qty_kg !== '' && (
+                                                       <span style={{ fontFamily:'Tahoma,Arial,sans-serif', fontSize:'9px', color: classic?'#1a5e1a':'#166534', background: classic?'#e4f5e4':'#dcfce7', border: classic?'1px solid #90c090':'1px solid #86efac', padding:'1px 5px', borderRadius: classic?0:3 }}>{line.qty_kg} KG</span>
+                                                   )}
+                                               </div>
                                            </td>
 
                                            {/* Qty 3 */}
