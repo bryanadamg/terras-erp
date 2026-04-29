@@ -1227,21 +1227,21 @@ export default function SampleRequestView({ samples, customers, onCreateSample, 
                                            <button
                                                title="Print SPK Sample"
                                                onClick={(e) => { e.stopPropagation(); setPrintSample(s); }}
-                                               style={classic
-                                                   ? xpBtn({ padding: '2px 5px', fontSize: '12px', lineHeight: '1' })
-                                                   : undefined}
+                                               style={classic ? { background: 'none', border: '1px solid transparent', borderRadius: 2, cursor: 'pointer', padding: '1px 4px', color: '#555', fontSize: '13px' } : undefined}
                                                className={classic ? '' : 'btn btn-sm btn-link text-muted p-0'}
+                                               onMouseEnter={classic ? e => { (e.currentTarget as HTMLButtonElement).style.borderColor = '#7f9db9'; (e.currentTarget as HTMLButtonElement).style.background = '#e8f0f8'; } : undefined}
+                                               onMouseLeave={classic ? e => { (e.currentTarget as HTMLButtonElement).style.borderColor = 'transparent'; (e.currentTarget as HTMLButtonElement).style.background = 'none'; } : undefined}
                                            >
                                                <i className="bi bi-printer"></i>
                                            </button>
                                            {/* History button */}
                                            <button
-                                               title="View History"
+                                               title="View Event Log"
                                                onClick={(e) => { e.stopPropagation(); setHistoryEntityId(s.id); }}
-                                               style={classic
-                                                   ? xpBtn({ padding: '2px 5px', fontSize: '12px', lineHeight: '1' })
-                                                   : undefined}
+                                               style={classic ? { background: 'none', border: '1px solid transparent', borderRadius: 2, cursor: 'pointer', padding: '1px 4px', color: '#555', fontSize: '13px' } : undefined}
                                                className={classic ? '' : 'btn btn-sm btn-link text-muted p-0'}
+                                               onMouseEnter={classic ? e => { (e.currentTarget as HTMLButtonElement).style.borderColor = '#7f9db9'; (e.currentTarget as HTMLButtonElement).style.background = '#e8f0f8'; } : undefined}
+                                               onMouseLeave={classic ? e => { (e.currentTarget as HTMLButtonElement).style.borderColor = 'transparent'; (e.currentTarget as HTMLButtonElement).style.background = 'none'; } : undefined}
                                            >
                                                <i className="bi bi-clock-history"></i>
                                            </button>

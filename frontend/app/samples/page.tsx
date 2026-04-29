@@ -3,11 +3,13 @@
 import SampleRequestView from '../components/samples/SampleRequestView';
 import { useData } from '../context/DataContext';
 import { useToast } from '../components/shared/Toast';
+import { useConfirm } from '../context/ConfirmContext';
 
 export default function SamplesPage() {
     const { partners, samples, fetchData, authFetch } = useData();
     const customers = partners.filter((p: any) => p.type === 'CUSTOMER');
     const { showToast } = useToast();
+    const { confirm } = useConfirm();
     const envBase = process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:8000/api';
     const API_BASE = envBase.endsWith('/api') ? envBase : `${envBase}/api`;
 
@@ -41,7 +43,13 @@ export default function SamplesPage() {
     };
 
     const handleDeleteSample = async (id: string) => {
-        if (!window.confirm('Delete this sample request? This action cannot be undone.')) return;
+        const confirmed = await confirm({
+            title: 'Delete Sample Request',
+            message: 'Delete this sample request? This action cannot be undone.',
+            confirmText: 'Delete',
+            variant: 'danger',
+        });
+        if (!confirmed) return;
         const res = await authFetch(`${API_BASE}/samples/${id}`, { method: 'DELETE' });
         if (res.ok) {
             fetchData();
