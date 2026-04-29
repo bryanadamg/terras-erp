@@ -809,7 +809,9 @@ export default function SalesOrderView({ items, attributes, boms, salesOrders, p
                                <th style={classic ? xpThCell : undefined}>Customer</th>
                                <th style={classic ? { ...xpThCell, width: '72px' } : undefined}>Date</th>
                                <th style={classic ? xpThCell : undefined}>Item</th>
-                               <th style={classic ? { ...xpThCell, width: '110px' } : undefined}>Qty</th>
+                               <th style={classic ? { ...xpThCell, width: '100px' } : undefined}>Qty</th>
+                               <th style={classic ? { ...xpThCell, width: '80px' } : undefined}>Qty 3</th>
+                               <th style={classic ? xpThCell : undefined}>Stock Notes</th>
                                <th style={classic ? { ...xpThCell, width: '88px' } : undefined}>Req / Conf</th>
                                <th style={classic ? { ...xpThCell, width: '80px' } : undefined}>Status</th>
                                <th style={classic ? { ...xpThCell, textAlign: 'right' as const, borderRight: 'none', width: '120px' } : undefined} className={classic ? '' : 'text-end pe-3'}>Actions</th>
@@ -911,7 +913,7 @@ export default function SalesOrderView({ items, attributes, boms, salesOrders, p
                                            <td style={soTd()} className={classic ? '' : 'ps-3'}>{poCellContent}</td>
                                            <td style={soTd()}>{so.customer_name}</td>
                                            <td style={soTd({ fontSize:'10px' })} className={classic ? '' : 'small'}>{new Date(so.order_date).toLocaleDateString()}</td>
-                                           <td colSpan={3} style={classic ? { ...tdBase, background:rowBg, borderBottom:'1px solid #c0bdb5', color:'#aaa', fontStyle:'italic', fontSize:'10px' } : { background:rowBg, padding:'6px 10px', borderBottom:'1px solid #dee2e6', color:'#aaa', fontStyle:'italic', fontSize:'0.78rem' }}>No lines</td>
+                                           <td colSpan={5} style={classic ? { ...tdBase, background:rowBg, borderBottom:'1px solid #c0bdb5', color:'#aaa', fontStyle:'italic', fontSize:'10px' } : { background:rowBg, padding:'6px 10px', borderBottom:'1px solid #dee2e6', color:'#aaa', fontStyle:'italic', fontSize:'0.78rem' }}>No lines</td>
                                            <td style={soTd()}>{statusCellContent}</td>
                                            <td style={soTd({ textAlign:'right' as const, borderRight:'none' })} className={classic ? '' : 'pe-3 text-end'}>{actionsCellContent}</td>
                                        </tr>
@@ -944,11 +946,6 @@ export default function SalesOrderView({ items, attributes, boms, salesOrders, p
                                                                {getAttributeValues(line.attribute_value_ids)}
                                                            </div>
                                                        )}
-                                                       {line.ket_stock && (
-                                                           <div style={{ fontFamily:'Tahoma,Arial,sans-serif', fontSize:'9px', color:'#999', fontStyle:'italic' }}>
-                                                               {line.ket_stock}
-                                                           </div>
-                                                       )}
                                                    </div>
                                                    {so.status === 'PENDING' && (
                                                        classic ? (
@@ -968,11 +965,27 @@ export default function SalesOrderView({ items, attributes, boms, salesOrders, p
                                            {/* Qty */}
                                            <td style={lineTd(isFirst, isLast)}>
                                                <div style={{ fontFamily:'Tahoma,Arial,sans-serif', fontSize:'10px', fontWeight:'bold', color: classic?'#0058e6':'#0d6efd' }}>{line.qty} Yd</div>
+                                               <div style={{ fontFamily:'Tahoma,Arial,sans-serif', fontSize:'9px', color: classic?'#666':'#888' }}>{Math.round(line.qty * 0.9144 * 100) / 100} m</div>
                                                {line.qty_kg != null && line.qty_kg !== '' && (
                                                    <div style={{ fontFamily:'Tahoma,Arial,sans-serif', fontSize:'10px', color: classic?'#444':'' }}>{line.qty_kg} KG</div>
                                                )}
-                                               {line.qty2 != null && line.qty2 !== '' && line.uom2 && (
+                                           </td>
+
+                                           {/* Qty 3 */}
+                                           <td style={lineTd(isFirst, isLast)}>
+                                               {line.qty2 != null && line.qty2 !== '' && line.uom2 ? (
                                                    <div style={{ fontFamily:'Tahoma,Arial,sans-serif', fontSize:'10px', color: classic?'#444':'' }}>{line.qty2} {line.uom2}</div>
+                                               ) : (
+                                                   <span style={{ fontFamily:'Tahoma,Arial,sans-serif', fontSize:'9px', color:'#ccc' }}>—</span>
+                                               )}
+                                           </td>
+
+                                           {/* Stock Notes */}
+                                           <td style={lineTd(isFirst, isLast)}>
+                                               {line.ket_stock ? (
+                                                   <div style={{ fontFamily:'Tahoma,Arial,sans-serif', fontSize:'9px', color: classic?'#555':'#666', fontStyle:'italic' }}>{line.ket_stock}</div>
+                                               ) : (
+                                                   <span style={{ fontFamily:'Tahoma,Arial,sans-serif', fontSize:'9px', color:'#ccc' }}>—</span>
                                                )}
                                            </td>
 
@@ -1006,7 +1019,7 @@ export default function SalesOrderView({ items, attributes, boms, salesOrders, p
                            {filteredOrders.length === 0 && (
                                <tr>
                                    <td
-                                       colSpan={8}
+                                       colSpan={10}
                                        style={classic ? { ...tdBase, borderRight: 'none', textAlign: 'center', padding: '24px 8px', color: '#888', fontStyle: 'italic' } : undefined}
                                        className={classic ? '' : 'text-center py-5 text-muted'}
                                    >
