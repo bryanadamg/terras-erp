@@ -8,6 +8,7 @@ from sqlalchemy import text
 import os
 from contextlib import asynccontextmanager
 
+import mimetypes
 from fastapi.staticfiles import StaticFiles
 from app.db.session import engine
 from app.core.db_manager import db_manager
@@ -28,6 +29,9 @@ app = FastAPI(
     default_response_class=ORJSONResponse,
     lifespan=lifespan
 )
+
+# Ensure .jpeg is recognized on minimal Linux images that lack a full mime.types db
+mimetypes.add_type("image/jpeg", ".jpeg")
 
 # Mount Static Files
 static_path = Path("static")

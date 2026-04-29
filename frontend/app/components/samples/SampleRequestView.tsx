@@ -31,6 +31,7 @@ export default function SampleRequestView({ samples, customers, onCreateSample, 
   const [statusFilter, setStatusFilter] = useState('ALL');
   const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
   const [completionImageFile, setCompletionImageFile] = useState<File | null>(null);
+  const [completionImagePreviewUrl, setCompletionImagePreviewUrl] = useState<string | null>(null);
   const [designPdfFile, setDesignPdfFile] = useState<File | null>(null);
   const [filePreview, setFilePreview] = useState<{ url: string; type: 'image' | 'pdf'; filename: string } | null>(null);
   const toggleExpand = (id: string) =>
@@ -43,6 +44,13 @@ export default function SampleRequestView({ samples, customers, onCreateSample, 
   const [pendingColorIsRepeat, setPendingColorIsRepeat] = useState(false);
   const { uiStyle: currentStyle } = useTheme();
   const classic = currentStyle === 'classic';
+
+  useEffect(() => {
+      if (!completionImageFile) { setCompletionImagePreviewUrl(null); return; }
+      const url = URL.createObjectURL(completionImageFile);
+      setCompletionImagePreviewUrl(url);
+      return () => URL.revokeObjectURL(url);
+  }, [completionImageFile]);
 
   // Auto-expand and scroll to highlighted sample from ?highlight= param
   const highlightId = searchParams?.get('highlight');
@@ -852,8 +860,8 @@ export default function SampleRequestView({ samples, customers, onCreateSample, 
                                            {completionImageFile ? completionImageFile.name : 'No file chosen'}
                                        </span>
                                    </div>
-                                   {completionImageFile && (
-                                       <img src={URL.createObjectURL(completionImageFile)}
+                                   {completionImagePreviewUrl && (
+                                       <img src={completionImagePreviewUrl}
                                             style={{ marginTop: 4, maxHeight: 72, maxWidth: '100%', border: '1px solid #b0a898', display: 'block' }}
                                             alt="Preview" />
                                    )}
@@ -901,8 +909,8 @@ export default function SampleRequestView({ samples, customers, onCreateSample, 
                                    <label className="form-label small text-muted">Completion Photo</label>
                                    <input type="file" accept="image/*" className="form-control form-control-sm"
                                           onChange={e => setCompletionImageFile(e.target.files?.[0] || null)} />
-                                   {completionImageFile && (
-                                       <img src={URL.createObjectURL(completionImageFile)}
+                                   {completionImagePreviewUrl && (
+                                       <img src={completionImagePreviewUrl}
                                             className="mt-1 border" style={{ maxHeight: 60, maxWidth: '100%', display: 'block' }}
                                             alt="Preview" />
                                    )}

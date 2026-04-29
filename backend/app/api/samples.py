@@ -274,6 +274,8 @@ async def upload_completion_image(
     upload_dir.mkdir(parents=True, exist_ok=True)
 
     ext = os.path.splitext(file.filename or "")[1].lower() or ".jpg"
+    if ext == ".jpeg":
+        ext = ".jpg"
     file_path = upload_dir / f"{sample_id}_completion{ext}"
     with file_path.open("wb") as buf:
         shutil.copyfileobj(file.file, buf)
