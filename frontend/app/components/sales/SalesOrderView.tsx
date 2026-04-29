@@ -805,194 +805,208 @@ export default function SalesOrderView({ items, attributes, boms, salesOrders, p
                    >
                        <thead style={classic ? xpTableHeader : undefined} className={classic ? '' : 'table-light'}>
                            <tr>
-                               <th style={classic ? { ...xpThCell, width: '140px' } : undefined} className={classic ? '' : 'ps-4'}>PO# / Cust. Ref</th>
+                               <th style={classic ? { ...xpThCell, width: '130px' } : undefined} className={classic ? '' : 'ps-3'}>PO# / Ref</th>
                                <th style={classic ? xpThCell : undefined}>Customer</th>
-                               <th style={classic ? { ...xpThCell, width: '80px' } : undefined}>Date</th>
-                               <th style={classic ? xpThCell : undefined}>Lines</th>
-                               <th style={classic ? { ...xpThCell, width: '90px' } : undefined}>Status</th>
-                               <th style={classic ? { ...xpThCell, textAlign: 'right' as const, borderRight: 'none', width: '120px' } : undefined} className={classic ? '' : 'text-end pe-4'}>Actions</th>
+                               <th style={classic ? { ...xpThCell, width: '72px' } : undefined}>Date</th>
+                               <th style={classic ? xpThCell : undefined}>Item</th>
+                               <th style={classic ? { ...xpThCell, width: '110px' } : undefined}>Qty</th>
+                               <th style={classic ? { ...xpThCell, width: '88px' } : undefined}>Req / Conf</th>
+                               <th style={classic ? { ...xpThCell, width: '80px' } : undefined}>Status</th>
+                               <th style={classic ? { ...xpThCell, textAlign: 'right' as const, borderRight: 'none', width: '120px' } : undefined} className={classic ? '' : 'text-end pe-3'}>Actions</th>
                            </tr>
                        </thead>
                        <tbody>
-                           {filteredOrders.map((so: any, rowIndex: number) => (
-                               <tr
-                                   key={so.id}
-                                   style={classic ? { background: rowIndex % 2 === 0 ? '#ffffff' : '#f5f3ee', borderBottom: '1px solid #c0bdb5' } : undefined}
-                               >
-                                   <td style={classic ? tdBase : undefined} className={classic ? '' : 'ps-4'}>
+                           {filteredOrders.flatMap((so: any, rowIndex: number) => {
+                               const rowBg = rowIndex % 2 === 0 ? '#ffffff' : (classic ? '#f5f3ee' : '#fafafa');
+                               const soLines: any[] = so.lines;
+                               const lineCount = Math.max(soLines.length, 1);
+
+                               const soTd = (extra: React.CSSProperties = {}): React.CSSProperties => classic
+                                   ? { ...tdBase, background: rowBg, verticalAlign: 'middle', borderBottom: '1px solid #c0bdb5', ...extra }
+                                   : { background: rowBg, verticalAlign: 'middle', padding: '6px 10px', borderBottom: '1px solid #dee2e6', ...extra };
+
+                               const lineTd = (isFirst: boolean, isLast: boolean, extra: React.CSSProperties = {}): React.CSSProperties => classic
+                                   ? { ...tdBase, background: rowBg, paddingTop: 3, paddingBottom: 3, fontSize: '10px', borderBottom: isLast ? '1px solid #c0bdb5' : 'none', borderTop: isFirst ? 'none' : '1px dashed #d0cdc8', ...extra }
+                                   : { background: rowBg, padding: '3px 10px', fontSize: '0.78rem', borderBottom: isLast ? '1px solid #dee2e6' : 'none', borderTop: isFirst ? 'none' : '1px dashed #e4e4e4', ...extra };
+
+                               const poCellContent = (
+                                   <>
                                        <div style={classic ? { fontFamily:"'Courier New',monospace", fontWeight:'bold', color:'#0058e6', fontSize:'11px' } : undefined} className={classic ? '' : 'fw-bold font-monospace text-primary small'}>
                                            {so.po_number}
                                        </div>
                                        {so.customer_po_ref && (
-                                           <div style={{ fontFamily:'Tahoma,Arial,sans-serif', fontSize:'10px', color:'#666', marginTop:1 }} className={classic ? '' : 'text-muted small'}>
+                                           <div style={{ fontFamily:'Tahoma,Arial,sans-serif', fontSize:'10px', color:'#666', marginTop:1 }}>
                                                {so.customer_po_ref}
                                            </div>
                                        )}
-                                   </td>
-                                   <td style={classic ? tdBase : undefined}>{so.customer_name}</td>
-                                   <td style={classic ? { ...tdBase, fontSize: '10px' } : undefined} className={classic ? '' : 'small'}>
-                                       {new Date(so.order_date).toLocaleDateString()}
-                                   </td>
-                                   <td style={classic ? { ...tdBase, minWidth: 280 } : undefined}>
-                                       {so.lines.length === 0 ? (
-                                           <span style={{ fontFamily:'Tahoma,Arial,sans-serif', fontSize:'10px', color:'#aaa', fontStyle:'italic' }} className={classic ? '' : 'text-muted small fst-italic'}>No lines</span>
-                                       ) : (
-                                           so.lines.map((line: any, li: number) => (
-                                               <div key={line.id} style={{
-                                                   borderTop: li > 0 ? (classic ? '1px solid #d8d5ce' : '1px solid #e8e8e8') : undefined,
-                                                   paddingTop: li > 0 ? (classic ? 4 : 6) : 0,
-                                                   marginTop: li > 0 ? (classic ? 4 : 6) : 0,
-                                                   display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 6,
-                                               }}>
-                                                   <div style={{ flex: 1, minWidth: 0 }}>
-                                                   {/* Item name + size */}
-                                                   <div style={{ fontFamily:'Tahoma,Arial,sans-serif', fontSize:'10px', fontWeight:'bold', color: classic?'#000':'', lineHeight:1.3 }} className={classic ? '' : 'fw-semibold small'}>
-                                                       {getItemName(line.item_id)}
-                                                       {isSample(line.item_id) && <i className="bi bi-star-fill text-warning ms-1" style={{fontSize:'0.6rem'}}></i>}
-                                                       {(line.attribute_value_ids || []).length > 0 && (
-                                                           <span style={{ fontWeight:'normal', color:'#666', marginLeft:4, fontSize:'9px' }}>
-                                                               [{getAttributeValues(line.attribute_value_ids)}]
-                                                           </span>
-                                                       )}
-                                                   </div>
+                                   </>
+                               );
 
-                                                   {/* Quantities row */}
-                                                   <div style={{ fontFamily:'Tahoma,Arial,sans-serif', fontSize:'10px', color: classic?'#333':'', marginTop:1, display:'flex', gap:8, flexWrap:'wrap' as const }} className={classic ? '' : 'text-muted small'}>
-                                                       <span style={{ fontWeight:'bold', color: classic?'#0058e6':'#0d6efd' }}>{line.qty} Yd</span>
-                                                       {line.qty_kg != null && line.qty_kg !== '' && (
-                                                           <span>{line.qty_kg} KG</span>
-                                                       )}
-                                                       {line.qty2 != null && line.qty2 !== '' && line.uom2 && (
-                                                           <span>{line.qty2} {line.uom2}</span>
-                                                       )}
-                                                   </div>
-
-                                                   {/* Delivery dates row */}
-                                                   {(line.due_date || line.internal_confirmation_date) && (
-                                                       <div style={{ fontFamily:'Tahoma,Arial,sans-serif', fontSize:'9px', color: classic?'#555':'', marginTop:1, display:'flex', gap:6 }} className={classic ? '' : 'text-muted'} >
-                                                           {line.due_date && (
-                                                               <span>
-                                                                   <span style={{ color:'#888' }}>Req:</span> {formatShortDate(line.due_date)}
-                                                               </span>
-                                                           )}
-                                                           {line.due_date && line.internal_confirmation_date && <span style={{ color:'#ccc' }}>|</span>}
-                                                           {line.internal_confirmation_date && (
-                                                               <span>
-                                                                   <span style={{ color:'#888' }}>Conf:</span> {formatShortDate(line.internal_confirmation_date)}
-                                                               </span>
-                                                           )}
-                                                       </div>
-                                                   )}
-
-                                                   {/* Stock Notes */}
-                                                   {line.ket_stock && (
-                                                       <div style={{ fontFamily:'Tahoma,Arial,sans-serif', fontSize:'9px', color:'#888', fontStyle:'italic', marginTop:1 }}>
-                                                           {line.ket_stock}
-                                                       </div>
-                                                   )}
-                                                   </div>
-                                                   {/* Per-line Produce button */}
-                                                   {so.status === 'PENDING' && (
-                                                       classic ? (
-                                                           <button
-                                                               title="Create Manufacturing Order"
-                                                               onClick={() => onGenerateWO(so, line)}
-                                                               style={{
-                                                                   fontFamily: 'Tahoma,Arial,sans-serif', fontSize: '10px',
-                                                                   padding: '2px 7px', cursor: 'pointer', whiteSpace: 'nowrap' as const,
-                                                                   background: 'linear-gradient(to bottom,#5a9ae0,#0058e6)',
-                                                                   border: '1px solid', borderColor: '#003080 #001840 #001840 #003080',
-                                                                   color: '#fff', fontWeight: 'bold', flexShrink: 0,
-                                                               }}
-                                                           >
-                                                               <i className="bi bi-gear-wide-connected" style={{ marginRight: 3 }}></i>MO
-                                                           </button>
-                                                       ) : (
-                                                           <button
-                                                               className="btn btn-sm btn-primary py-0 px-2"
-                                                               style={{ fontSize: 10, whiteSpace: 'nowrap', flexShrink: 0 }}
-                                                               title="Create Manufacturing Order"
-                                                               onClick={() => onGenerateWO(so, line)}
-                                                           >
-                                                               <i className="bi bi-gear-wide-connected me-1"></i>MO
-                                                           </button>
-                                                       )
-                                                   )}
-                                               </div>
-                                           ))
-                                       )}
-                                   </td>
-                                   <td style={classic ? tdBase : undefined}>
+                               const statusCellContent = (
+                                   <>
                                        {classic ? (
                                            <span style={getStatusXPStyle(so.status)}>{so.status}</span>
                                        ) : (
                                            <span className={`badge ${getStatusBadge(so.status)}`}>{so.status}</span>
                                        )}
-                                       {so.delivered_at && <div className="extra-small text-muted mt-1">Delivered: {formatDate(so.delivered_at)}</div>}
-                                   </td>
-                                   <td style={classic ? { ...tdBase, borderRight: 'none', textAlign: 'right' as const } : undefined} className={classic ? '' : 'pe-4 text-end'}>
-                                       <div style={classic ? { display: 'flex', gap: 2, justifyContent: 'flex-end', alignItems: 'center' } : undefined} className={classic ? '' : 'd-flex justify-content-end align-items-center gap-1'}>
-                                           {so.status === 'READY' && (
-                                               classic ? (
-                                                   <button style={xpBtn()} onClick={() => onUpdateSOStatus(so.id, 'SENT')}>
-                                                       <i className="bi bi-send" style={{ marginRight: 3 }}></i>SENT
-                                                   </button>
-                                               ) : (
-                                                   <button className="btn btn-sm btn-light border py-0 px-2" style={{fontSize: 11}} onClick={() => onUpdateSOStatus(so.id, 'SENT')}>
-                                                       <i className="bi bi-send me-1"></i>SENT
-                                                   </button>
-                                               )
-                                           )}
-                                           {so.status === 'SENT' && (
-                                               classic ? (
-                                                   <button style={xpBtn({ background: 'linear-gradient(to bottom, #5ec85e, #2d7a2d)', borderColor: '#1a5e1a #0a3e0a #0a3e0a #1a5e1a', color: '#fff' })} onClick={() => onUpdateSOStatus(so.id, 'DELIVERED')}>
-                                                       <i className="bi bi-check2-all" style={{ marginRight: 3 }}></i>DELIVERED
-                                                   </button>
-                                               ) : (
-                                                   <button className="btn btn-sm btn-light border py-0 px-2" style={{fontSize: 11}} onClick={() => onUpdateSOStatus(so.id, 'DELIVERED')}>
-                                                       <i className="bi bi-check2-all me-1"></i>DELIVERED
-                                                   </button>
-                                               )
-                                           )}
-                                            {classic ? (
-                                               <>
-                                                   <button
-                                                       title="Print"
-                                                       onClick={() => handlePrintSO(so)}
-                                                       style={{ background: 'none', border: '1px solid transparent', borderRadius: 2, cursor: 'pointer', padding: '1px 4px', color: '#555', fontSize: '13px' }}
-                                                       onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.borderColor = '#7f9db9'; (e.currentTarget as HTMLButtonElement).style.background = '#e8f0f8'; }}
-                                                       onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.borderColor = 'transparent'; (e.currentTarget as HTMLButtonElement).style.background = 'none'; }}
-                                                   >
-                                                       <i className="bi bi-printer"></i>
-                                                   </button>
-                                                   <button
-                                                       title="Delete"
-                                                       onClick={() => onDeleteSO(so.id)}
-                                                       style={{ background: 'none', border: '1px solid transparent', borderRadius: 2, cursor: 'pointer', padding: '1px 4px', color: '#aa0000', fontSize: '13px' }}
-                                                       onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.borderColor = '#cc4444'; (e.currentTarget as HTMLButtonElement).style.background = '#fff0f0'; }}
-                                                       onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.borderColor = 'transparent'; (e.currentTarget as HTMLButtonElement).style.background = 'none'; }}
-                                                   >
-                                                       <i className="bi bi-trash"></i>
-                                                   </button>
-                                               </>
+                                       {so.delivered_at && <div className="extra-small text-muted mt-1" style={{ fontSize:'9px' }}>Del: {formatDate(so.delivered_at)}</div>}
+                                   </>
+                               );
+
+                               const actionsCellContent = (
+                                   <div style={classic ? { display:'flex', gap:2, justifyContent:'flex-end', alignItems:'center' } : undefined} className={classic ? '' : 'd-flex justify-content-end align-items-center gap-1'}>
+                                       {so.status === 'READY' && (
+                                           classic ? (
+                                               <button style={xpBtn()} onClick={() => onUpdateSOStatus(so.id, 'SENT')}>
+                                                   <i className="bi bi-send" style={{ marginRight:3 }}></i>SENT
+                                               </button>
                                            ) : (
+                                               <button className="btn btn-sm btn-light border py-0 px-2" style={{fontSize:11}} onClick={() => onUpdateSOStatus(so.id, 'SENT')}>
+                                                   <i className="bi bi-send me-1"></i>SENT
+                                               </button>
+                                           )
+                                       )}
+                                       {so.status === 'SENT' && (
+                                           classic ? (
+                                               <button style={xpBtn({ background:'linear-gradient(to bottom,#5ec85e,#2d7a2d)', borderColor:'#1a5e1a #0a3e0a #0a3e0a #1a5e1a', color:'#fff' })} onClick={() => onUpdateSOStatus(so.id, 'DELIVERED')}>
+                                                   <i className="bi bi-check2-all" style={{ marginRight:3 }}></i>DELIVERED
+                                               </button>
+                                           ) : (
+                                               <button className="btn btn-sm btn-light border py-0 px-2" style={{fontSize:11}} onClick={() => onUpdateSOStatus(so.id, 'DELIVERED')}>
+                                                   <i className="bi bi-check2-all me-1"></i>DELIVERED
+                                               </button>
+                                           )
+                                       )}
+                                       {classic ? (
+                                           <>
+                                               <button title="Print" onClick={() => handlePrintSO(so)}
+                                                   style={{ background:'none', border:'1px solid transparent', borderRadius:2, cursor:'pointer', padding:'1px 4px', color:'#555', fontSize:'13px' }}
+                                                   onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.borderColor='#7f9db9'; (e.currentTarget as HTMLButtonElement).style.background='#e8f0f8'; }}
+                                                   onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.borderColor='transparent'; (e.currentTarget as HTMLButtonElement).style.background='none'; }}>
+                                                   <i className="bi bi-printer"></i>
+                                               </button>
+                                               <button title="Delete" onClick={() => onDeleteSO(so.id)}
+                                                   style={{ background:'none', border:'1px solid transparent', borderRadius:2, cursor:'pointer', padding:'1px 4px', color:'#aa0000', fontSize:'13px' }}
+                                                   onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.borderColor='#cc4444'; (e.currentTarget as HTMLButtonElement).style.background='#fff0f0'; }}
+                                                   onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.borderColor='transparent'; (e.currentTarget as HTMLButtonElement).style.background='none'; }}>
+                                                   <i className="bi bi-trash"></i>
+                                               </button>
+                                           </>
+                                       ) : (
+                                           <>
+                                               <button className="btn btn-sm btn-link text-muted p-0" title="Print" onClick={() => handlePrintSO(so)}>
+                                                   <i className="bi bi-printer fs-6"></i>
+                                               </button>
+                                               <button className="btn btn-sm btn-link text-danger p-0" title="Delete" onClick={() => onDeleteSO(so.id)}>
+                                                   <i className="bi bi-trash fs-6"></i>
+                                               </button>
+                                           </>
+                                       )}
+                                   </div>
+                               );
+
+                               if (soLines.length === 0) {
+                                   return [(
+                                       <tr key={so.id}>
+                                           <td style={soTd()} className={classic ? '' : 'ps-3'}>{poCellContent}</td>
+                                           <td style={soTd()}>{so.customer_name}</td>
+                                           <td style={soTd({ fontSize:'10px' })} className={classic ? '' : 'small'}>{new Date(so.order_date).toLocaleDateString()}</td>
+                                           <td colSpan={3} style={classic ? { ...tdBase, background:rowBg, borderBottom:'1px solid #c0bdb5', color:'#aaa', fontStyle:'italic', fontSize:'10px' } : { background:rowBg, padding:'6px 10px', borderBottom:'1px solid #dee2e6', color:'#aaa', fontStyle:'italic', fontSize:'0.78rem' }}>No lines</td>
+                                           <td style={soTd()}>{statusCellContent}</td>
+                                           <td style={soTd({ textAlign:'right' as const, borderRight:'none' })} className={classic ? '' : 'pe-3 text-end'}>{actionsCellContent}</td>
+                                       </tr>
+                                   )];
+                               }
+
+                               return soLines.map((line: any, li: number) => {
+                                   const isFirst = li === 0;
+                                   const isLast = li === soLines.length - 1;
+                                   return (
+                                       <tr key={`${so.id}-${li}`}>
+                                           {isFirst && (
                                                <>
-                                                   <button className="btn btn-sm btn-link text-muted p-0" title="Print" onClick={() => handlePrintSO(so)}>
-                                                       <i className="bi bi-printer fs-6"></i>
-                                                   </button>
-                                                   <button className="btn btn-sm btn-link text-danger p-0" title="Delete" onClick={() => onDeleteSO(so.id)}>
-                                                       <i className="bi bi-trash fs-6"></i>
-                                                   </button>
+                                                   <td rowSpan={lineCount} style={soTd()} className={classic ? '' : 'ps-3'}>{poCellContent}</td>
+                                                   <td rowSpan={lineCount} style={soTd()}>{so.customer_name}</td>
+                                                   <td rowSpan={lineCount} style={soTd({ fontSize:'10px' })} className={classic ? '' : 'small'}>{new Date(so.order_date).toLocaleDateString()}</td>
                                                </>
                                            )}
-                                       </div>
-                                   </td>
-                               </tr>
-                           ))}
+
+                                           {/* Item */}
+                                           <td style={lineTd(isFirst, isLast)}>
+                                               <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', gap:6 }}>
+                                                   <div style={{ flex:1, minWidth:0 }}>
+                                                       <div style={{ fontFamily:'Tahoma,Arial,sans-serif', fontSize:'10px', fontWeight:'bold', lineHeight:1.3 }} className={classic ? '' : 'fw-semibold'}>
+                                                           {getItemName(line.item_id)}
+                                                           {isSample(line.item_id) && <i className="bi bi-star-fill text-warning ms-1" style={{fontSize:'0.6rem'}}></i>}
+                                                       </div>
+                                                       {(line.attribute_value_ids || []).length > 0 && (
+                                                           <div style={{ fontFamily:'Tahoma,Arial,sans-serif', fontSize:'9px', color:'#666', fontStyle:'italic' }}>
+                                                               {getAttributeValues(line.attribute_value_ids)}
+                                                           </div>
+                                                       )}
+                                                       {line.ket_stock && (
+                                                           <div style={{ fontFamily:'Tahoma,Arial,sans-serif', fontSize:'9px', color:'#999', fontStyle:'italic' }}>
+                                                               {line.ket_stock}
+                                                           </div>
+                                                       )}
+                                                   </div>
+                                                   {so.status === 'PENDING' && (
+                                                       classic ? (
+                                                           <button title="Create Manufacturing Order" onClick={() => onGenerateWO(so, line)}
+                                                               style={{ fontFamily:'Tahoma,Arial,sans-serif', fontSize:'9px', padding:'1px 5px', cursor:'pointer', whiteSpace:'nowrap' as const, background:'linear-gradient(to bottom,#5a9ae0,#0058e6)', border:'1px solid', borderColor:'#003080 #001840 #001840 #003080', color:'#fff', fontWeight:'bold', flexShrink:0 }}>
+                                                               <i className="bi bi-gear-wide-connected" style={{ marginRight:2 }}></i>MO
+                                                           </button>
+                                                       ) : (
+                                                           <button className="btn btn-sm btn-primary py-0 px-2" style={{ fontSize:10, whiteSpace:'nowrap', flexShrink:0 }} title="Create Manufacturing Order" onClick={() => onGenerateWO(so, line)}>
+                                                               <i className="bi bi-gear-wide-connected me-1"></i>MO
+                                                           </button>
+                                                       )
+                                                   )}
+                                               </div>
+                                           </td>
+
+                                           {/* Qty */}
+                                           <td style={lineTd(isFirst, isLast)}>
+                                               <div style={{ fontFamily:'Tahoma,Arial,sans-serif', fontSize:'10px', fontWeight:'bold', color: classic?'#0058e6':'#0d6efd' }}>{line.qty} Yd</div>
+                                               {line.qty_kg != null && line.qty_kg !== '' && (
+                                                   <div style={{ fontFamily:'Tahoma,Arial,sans-serif', fontSize:'10px', color: classic?'#444':'' }}>{line.qty_kg} KG</div>
+                                               )}
+                                               {line.qty2 != null && line.qty2 !== '' && line.uom2 && (
+                                                   <div style={{ fontFamily:'Tahoma,Arial,sans-serif', fontSize:'10px', color: classic?'#444':'' }}>{line.qty2} {line.uom2}</div>
+                                               )}
+                                           </td>
+
+                                           {/* Req / Conf */}
+                                           <td style={lineTd(isFirst, isLast)}>
+                                               {line.due_date ? (
+                                                   <div style={{ fontFamily:'Tahoma,Arial,sans-serif', fontSize:'9px', color: classic?'#555':'' }}>
+                                                       <span style={{ color:'#999' }}>Req</span> {formatShortDate(line.due_date)}
+                                                   </div>
+                                               ) : null}
+                                               {line.internal_confirmation_date ? (
+                                                   <div style={{ fontFamily:'Tahoma,Arial,sans-serif', fontSize:'9px', color: classic?'#555':'' }}>
+                                                       <span style={{ color:'#999' }}>Conf</span> {formatShortDate(line.internal_confirmation_date)}
+                                                   </div>
+                                               ) : null}
+                                               {!line.due_date && !line.internal_confirmation_date && (
+                                                   <span style={{ fontFamily:'Tahoma,Arial,sans-serif', fontSize:'9px', color:'#ccc' }}>—</span>
+                                               )}
+                                           </td>
+
+                                           {isFirst && (
+                                               <>
+                                                   <td rowSpan={lineCount} style={soTd()}>{statusCellContent}</td>
+                                                   <td rowSpan={lineCount} style={soTd({ textAlign:'right' as const, borderRight:'none' })} className={classic ? '' : 'pe-3 text-end'}>{actionsCellContent}</td>
+                                               </>
+                                           )}
+                                       </tr>
+                                   );
+                               });
+                           })}
                            {filteredOrders.length === 0 && (
                                <tr>
                                    <td
-                                       colSpan={6}
+                                       colSpan={8}
                                        style={classic ? { ...tdBase, borderRight: 'none', textAlign: 'center', padding: '24px 8px', color: '#888', fontStyle: 'italic' } : undefined}
                                        className={classic ? '' : 'text-center py-5 text-muted'}
                                    >
