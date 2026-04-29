@@ -1,14 +1,23 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   output: 'standalone',
-  // Ensure that static export doesn't happen if not intended, 
-  // or configure it if it is. 
-  // For now, standalone is best for Docker production.
   eslint: {
     ignoreDuringBuilds: true,
   },
   typescript: {
     ignoreBuildErrors: true,
+  },
+  async rewrites() {
+    return [
+      {
+        source: '/api/:path*',
+        destination: 'http://api:8000/api/:path*',
+      },
+      {
+        source: '/static/:path*',
+        destination: 'http://api:8000/static/:path*',
+      },
+    ]
   },
 }
 

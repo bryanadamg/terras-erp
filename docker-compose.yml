@@ -18,6 +18,8 @@ services:
       start_period: 30s
     env_file:
       - .env
+    volumes:
+      - ./static:/app/static
     networks:
       - erp_network
 
