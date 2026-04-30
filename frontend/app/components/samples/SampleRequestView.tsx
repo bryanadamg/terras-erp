@@ -34,7 +34,14 @@ export default function SampleRequestView({ samples, customers, onCreateSample, 
   const [completionImageFile, setCompletionImageFile] = useState<File | null>(null);
   const [completionImagePreviewUrl, setCompletionImagePreviewUrl] = useState<string | null>(null);
   const [designPdfFile, setDesignPdfFile] = useState<File | null>(null);
-  const [filePreview, setFilePreview] = useState<{ url: string; type: 'image' | 'pdf'; filename: string } | null>(null);
+  const [filePreview, setFilePreview] = useState<{ url: string; type: 'image' | 'pdf' | 'excel'; filename: string } | null>(null);
+
+  const getDesignFileType = (url: string): 'pdf' | 'image' | 'excel' => {
+      const ext = url.split('.').pop()?.toLowerCase() || '';
+      if (['jpg', 'jpeg', 'png', 'gif', 'webp', 'bmp'].includes(ext)) return 'image';
+      if (['xlsx', 'xls'].includes(ext)) return 'excel';
+      return 'pdf';
+  };
   const toggleExpand = (id: string) =>
       setExpandedIds(prev => {
           const next = new Set(prev);
@@ -892,9 +899,9 @@ export default function SampleRequestView({ samples, customers, onCreateSample, 
                                              rows={2} value={newSample.completion_description} onChange={e => setNewSample({ ...newSample, completion_description: e.target.value })}
                                              placeholder="Priority instructions, special notes…" />
                                </div>
-                               {/* Completion Photo */}
+                               {/* Sample Photo */}
                                <div>
-                                   <label style={xpLbl}>Completion Photo</label>
+                                   <label style={xpLbl}>Sample Photo</label>
                                    <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                                        <input type="file" accept="image/*" id="xp-completion-image" style={{ display: 'none' }}
                                               onChange={e => setCompletionImageFile(e.target.files?.[0] || null)} />
@@ -912,11 +919,11 @@ export default function SampleRequestView({ samples, customers, onCreateSample, 
                                             alt="Preview" />
                                    )}
                                </div>
-                               {/* Design PDF */}
+                               {/* Design File */}
                                <div>
-                                   <label style={xpLbl}>Design (PDF)</label>
+                                   <label style={xpLbl}>Design</label>
                                    <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                                       <input type="file" accept="application/pdf" id="xp-design-pdf" style={{ display: 'none' }}
+                                       <input type="file" accept="application/pdf,image/*,.xlsx,.xls,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel" id="xp-design-pdf" style={{ display: 'none' }}
                                               onChange={e => setDesignPdfFile(e.target.files?.[0] || null)} />
                                        <button type="button" style={xpBtn({ padding: '1px 8px' })}
                                                onClick={() => (document.getElementById('xp-design-pdf') as HTMLInputElement)?.click()}>
@@ -952,7 +959,7 @@ export default function SampleRequestView({ samples, customers, onCreateSample, 
                                    <textarea className="form-control form-control-sm" rows={2} value={newSample.completion_description} onChange={e => setNewSample({ ...newSample, completion_description: e.target.value })} placeholder="Priority instructions, special notes…" />
                                </div>
                                <div className="col-md-6">
-                                   <label className="form-label small text-muted">Completion Photo</label>
+                                   <label className="form-label small text-muted">Sample Photo</label>
                                    <input type="file" accept="image/*" className="form-control form-control-sm"
                                           onChange={e => setCompletionImageFile(e.target.files?.[0] || null)} />
                                    {completionImagePreviewUrl && (
@@ -962,8 +969,8 @@ export default function SampleRequestView({ samples, customers, onCreateSample, 
                                    )}
                                </div>
                                <div className="col-md-6">
-                                   <label className="form-label small text-muted">Design (PDF)</label>
-                                   <input type="file" accept="application/pdf" className="form-control form-control-sm"
+                                   <label className="form-label small text-muted">Design</label>
+                                   <input type="file" accept="application/pdf,image/*,.xlsx,.xls,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel" className="form-control form-control-sm"
                                           onChange={e => setDesignPdfFile(e.target.files?.[0] || null)} />
                                    {designPdfFile && (
                                        <div className="small text-muted mt-1">{designPdfFile.name}</div>
@@ -1504,23 +1511,45 @@ export default function SampleRequestView({ samples, customers, onCreateSample, 
                                                                                <img
                                                                                    src={`${STATIC_BASE}${s.completion_image_url}`}
                                                                                    alt="Completion"
-                                                                                   onClick={() => setFilePreview({ url: `${STATIC_BASE}${s.completion_image_url}`, type: 'image', filename: s.completion_image_url.split('/').pop() || 'completion_photo' })}
+                                                                                   onClick={() => setFilePreview({ url: `${STATIC_BASE}${s.completion_image_url}`, type: 'image', filename: s.completion_image_url.split('/').pop() || 'sample_photo' })}
                                                                                    style={{ maxHeight: 80, maxWidth: 180, border: '1px solid #b0a898', cursor: 'pointer', display: 'block' }}
                                                                                    title="Click to preview"
                                                                                />
                                                                            </div>
                                                                        )}
-                                                                       {s.design_pdf_url && (
-                                                                           <div style={{ ...row, gridColumn: '1 / -1' }}>
-                                                                               <span style={lbl}>Design PDF</span>
-                                                                               <button
-                                                                                   onClick={() => setFilePreview({ url: `${STATIC_BASE}${s.design_pdf_url}`, type: 'pdf', filename: s.design_pdf_url.split('/').pop() || 'design.pdf' })}
-                                                                                   style={{ fontFamily: 'Tahoma, Arial, sans-serif', fontSize: 11, color: '#0047c8', textDecoration: 'underline', background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}
-                                                                               >
-                                                                                   View / Download
-                                                                               </button>
-                                                                           </div>
-                                                                       )}
+                                                                       {s.design_pdf_url && (() => {
+                                                                           const designType = getDesignFileType(s.design_pdf_url);
+                                                                           const designUrl = `${STATIC_BASE}${s.design_pdf_url}`;
+                                                                           const designFilename = s.design_pdf_url.split('/').pop() || 'design';
+                                                                           return (
+                                                                               <div style={{ ...row, gridColumn: '1 / -1', alignItems: designType === 'image' ? 'flex-start' : 'center' }}>
+                                                                                   <span style={lbl}>Design</span>
+                                                                                   {designType === 'image' ? (
+                                                                                       <img
+                                                                                           src={designUrl}
+                                                                                           alt="Design"
+                                                                                           onClick={() => setFilePreview({ url: designUrl, type: 'image', filename: designFilename })}
+                                                                                           style={{ maxHeight: 80, maxWidth: 180, border: '1px solid #b0a898', cursor: 'pointer', display: 'block' }}
+                                                                                           title="Click to preview"
+                                                                                       />
+                                                                                   ) : designType === 'excel' ? (
+                                                                                       <button
+                                                                                           onClick={() => window.open(designUrl, '_blank')}
+                                                                                           style={{ fontFamily: 'Tahoma, Arial, sans-serif', fontSize: 11, color: '#0047c8', textDecoration: 'underline', background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}
+                                                                                       >
+                                                                                           {designFilename}
+                                                                                       </button>
+                                                                                   ) : (
+                                                                                       <button
+                                                                                           onClick={() => setFilePreview({ url: designUrl, type: 'pdf', filename: designFilename })}
+                                                                                           style={{ fontFamily: 'Tahoma, Arial, sans-serif', fontSize: 11, color: '#0047c8', textDecoration: 'underline', background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}
+                                                                                       >
+                                                                                           View / Download
+                                                                                       </button>
+                                                                                   )}
+                                                                               </div>
+                                                                           );
+                                                                       })()}
                                                                    </div>
                                                                </div>
                                                            </div>
@@ -1634,26 +1663,47 @@ export default function SampleRequestView({ samples, customers, onCreateSample, 
                                                                <div style={{ padding: '6px 10px', background: '#fff', borderBottom: '1px solid #dee2e6', display: 'flex', flexDirection: 'column' as const, gap: 8 }}>
                                                                    {s.completion_image_url && (
                                                                        <div>
-                                                                           <div style={{ fontSize: 10, color: '#444', fontWeight: 600, marginBottom: 4 }}>Completion Photo</div>
+                                                                           <div style={{ fontSize: 10, color: '#444', fontWeight: 600, marginBottom: 4 }}>Sample Photo</div>
                                                                            <img
                                                                                src={`${STATIC_BASE}${s.completion_image_url}`}
-                                                                               alt="Completion"
-                                                                               onClick={() => setFilePreview({ url: `${STATIC_BASE}${s.completion_image_url}`, type: 'image', filename: s.completion_image_url.split('/').pop() || 'completion_photo' })}
+                                                                               alt="Sample"
+                                                                               onClick={() => setFilePreview({ url: `${STATIC_BASE}${s.completion_image_url}`, type: 'image', filename: s.completion_image_url.split('/').pop() || 'sample_photo' })}
                                                                                style={{ maxHeight: 80, maxWidth: 180, border: '1px solid #dee2e6', cursor: 'pointer', display: 'block' }}
                                                                                title="Click to preview"
                                                                            />
                                                                        </div>
                                                                    )}
-                                                                   {s.design_pdf_url && (
-                                                                       <div>
-                                                                           <div style={{ fontSize: 10, color: '#444', fontWeight: 600, marginBottom: 2 }}>Design PDF</div>
-                                                                           <button
-                                                                               onClick={() => setFilePreview({ url: `${STATIC_BASE}${s.design_pdf_url}`, type: 'pdf', filename: s.design_pdf_url.split('/').pop() || 'design.pdf' })}
-                                                                               className="btn btn-link btn-sm p-0"
-                                                                               style={{ fontSize: 11 }}
-                                                                           >View / Download</button>
-                                                                       </div>
-                                                                   )}
+                                                                   {s.design_pdf_url && (() => {
+                                                                       const designType = getDesignFileType(s.design_pdf_url);
+                                                                       const designUrl = `${STATIC_BASE}${s.design_pdf_url}`;
+                                                                       const designFilename = s.design_pdf_url.split('/').pop() || 'design';
+                                                                       return (
+                                                                           <div>
+                                                                               <div style={{ fontSize: 10, color: '#444', fontWeight: 600, marginBottom: 2 }}>Design</div>
+                                                                               {designType === 'image' ? (
+                                                                                   <img
+                                                                                       src={designUrl}
+                                                                                       alt="Design"
+                                                                                       onClick={() => setFilePreview({ url: designUrl, type: 'image', filename: designFilename })}
+                                                                                       style={{ maxHeight: 80, maxWidth: 180, border: '1px solid #dee2e6', cursor: 'pointer', display: 'block' }}
+                                                                                       title="Click to preview"
+                                                                                   />
+                                                                               ) : designType === 'excel' ? (
+                                                                                   <button
+                                                                                       onClick={() => window.open(designUrl, '_blank')}
+                                                                                       className="btn btn-link btn-sm p-0"
+                                                                                       style={{ fontSize: 11 }}
+                                                                                   >{designFilename}</button>
+                                                                               ) : (
+                                                                                   <button
+                                                                                       onClick={() => setFilePreview({ url: designUrl, type: 'pdf', filename: designFilename })}
+                                                                                       className="btn btn-link btn-sm p-0"
+                                                                                       style={{ fontSize: 11 }}
+                                                                                   >View / Download</button>
+                                                                               )}
+                                                                           </div>
+                                                                       );
+                                                                   })()}
                                                                </div>
                                                            </div>
                                                        )}
@@ -1726,7 +1776,7 @@ export default function SampleRequestView({ samples, customers, onCreateSample, 
            <ModalWrapper
                isOpen={true}
                onClose={() => setFilePreview(null)}
-               title={filePreview.type === 'image' ? `Photo: ${filePreview.filename}` : `PDF: ${filePreview.filename}`}
+               title={filePreview.type === 'image' ? `Photo: ${filePreview.filename}` : filePreview.type === 'pdf' ? `PDF: ${filePreview.filename}` : filePreview.filename}
                size="xl"
                variant={filePreview.type === 'image' ? 'primary' : 'info'}
                level={2}

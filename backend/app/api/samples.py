@@ -391,11 +391,12 @@ async def upload_design_pdf(
     upload_dir = Path("static/samples")
     upload_dir.mkdir(parents=True, exist_ok=True)
 
-    file_path = upload_dir / f"{sample_id}_design.pdf"
+    ext = Path(file.filename).suffix.lower() if file.filename else ".pdf"
+    file_path = upload_dir / f"{sample_id}_design{ext}"
     with file_path.open("wb") as buf:
         shutil.copyfileobj(file.file, buf)
 
-    sample.design_pdf_url = f"/static/samples/{sample_id}_design.pdf"
+    sample.design_pdf_url = f"/static/samples/{sample_id}_design{ext}"
     await db.commit()
     return {"design_pdf_url": sample.design_pdf_url}
 
