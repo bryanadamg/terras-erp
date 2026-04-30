@@ -1,9 +1,10 @@
-from sqlalchemy import String, ForeignKey, Numeric, Boolean, Table, Column
+from sqlalchemy import String, ForeignKey, Numeric, Boolean, Table, Column, DateTime, func
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.db.base import Base
 import uuid
 from typing import Optional
+from datetime import datetime
 
 # Association tables
 bom_values = Table(
@@ -71,6 +72,8 @@ class BOM(Base):
     )
 
     # Relationships
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+
     item = relationship("Item")
     attribute_values = relationship("AttributeValue", secondary=bom_values)
     lines = relationship("BOMLine", back_populates="bom", cascade="all, delete-orphan")

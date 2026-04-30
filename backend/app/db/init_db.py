@@ -231,6 +231,7 @@ def run_migrations():
                 ("manufacturing_orders", "production_run_id", "UUID REFERENCES production_runs(id) ON DELETE SET NULL"),
                 ("manufacturing_orders", "bom_size_id", "UUID REFERENCES bom_sizes(id) ON DELETE SET NULL"),
                 ("items", "created_at", "TIMESTAMPTZ NOT NULL DEFAULT NOW()"),
+                ("boms", "created_at", "TIMESTAMPTZ NOT NULL DEFAULT NOW()"),
             ]
 
             for table, col, col_type in migrations:
