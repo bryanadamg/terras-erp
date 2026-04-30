@@ -153,10 +153,10 @@ const TreeView = memo(({
 }: {
     node: BOMNodeData, level: number, selectedNodeId: string,
     items: any[], onSelect: (id: string) => void,
-    hasExistingBOM: (code: string) => boolean
+    hasExistingBOM: (code: string, attributeValueIds: string[]) => boolean
 }) => {
     const itemExists = items.some((i: any) => (i.code || '').trim().toLowerCase() === (node.item_code || '').trim().toLowerCase());
-    const recipeExists = hasExistingBOM(node.item_code);
+    const recipeExists = hasExistingBOM(node.item_code, node.attribute_value_ids);
     const hasLocalDef = node.lines.length > 0 || node.operations.length > 0;
     const isSelected = selectedNodeId === node.id;
 
@@ -335,9 +335,18 @@ export default function BOMDesigner({
         items.find((i: any) => (i.code || '').trim().toLowerCase() === (code || '').trim().toLowerCase())?.uom || '',
     [items]);
 
-    const hasExistingBOM = useCallback((code: string) => {
+    const hasExistingBOM = useCallback((code: string, attributeValueIds: string[] = []): boolean => {
         const item = items.find((i: any) => (i.code || '').trim().toLowerCase() === (code || '').trim().toLowerCase());
-        return item && existingBOMs.some((b: any) => b.item_id === item.id);
+        if (!item) return false;
+        const candidates = existingBOMs.filter((b: any) => b.item_id === item.id);
+        if (candidates.length === 0) return false;
+        const sortedAttrs = [...attributeValueIds].sort();
+        const exactMatch = candidates.some((b: any) => {
+            const bAttrs = [...(b.attribute_value_ids || [])].sort();
+            return bAttrs.length === sortedAttrs.length && bAttrs.every((id: string, i: number) => id === sortedAttrs[i]);
+        });
+        if (exactMatch) return true;
+        return candidates.some((b: any) => (b.attribute_value_ids || []).length === 0);
     }, [items, existingBOMs]);
 
     const getWcName = (id: string) => workCenters.find((wc: any) => wc.id === id)?.name || id;
@@ -684,7 +693,7 @@ export default function BOMDesigner({
                                     {selectedNode.isNewItem && (
                                         <span style={xpBadge('#a02020')}>New Inventory Record</span>
                                     )}
-                                    {hasExistingBOM(selectedNode.item_code) && (
+                                    {hasExistingBOM(selectedNode.item_code, selectedNode.attribute_value_ids) && (
                                         <span style={xpBadge('#2a7a2a')}>Existing Recipe</span>
                                     )}
                                 </div>
@@ -1366,7 +1375,7 @@ export default function BOMDesigner({
                                                             />
                                                             <span style={{ fontSize: 9, color: '#666' }}>%</span>
                                                         </div>
-                                                        {!hasExistingBOM(line.item_code) && !line.subBOM && (
+                                                        {!hasExistingBOM(line.item_code, line.attribute_value_ids) && !line.subBOM && (
                                                             <button style={xpBtnInfo} onClick={() => {
                                                                 const subNode: BOMNodeData = {
                                                                     id: Math.random().toString(36).substr(2, 9),
