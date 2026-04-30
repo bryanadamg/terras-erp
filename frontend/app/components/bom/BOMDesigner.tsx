@@ -331,6 +331,10 @@ export default function BOMDesigner({
         items.find((i: any) => (i.code || '').trim().toLowerCase() === (code || '').trim().toLowerCase())?.name || code,
     [items]);
 
+    const getItemUom = useCallback((code: string) =>
+        items.find((i: any) => (i.code || '').trim().toLowerCase() === (code || '').trim().toLowerCase())?.uom || '',
+    [items]);
+
     const hasExistingBOM = useCallback((code: string) => {
         const item = items.find((i: any) => (i.code || '').trim().toLowerCase() === (code || '').trim().toLowerCase());
         return item && existingBOMs.some((b: any) => b.item_id === item.id);
@@ -1253,7 +1257,11 @@ export default function BOMDesigner({
                                                     />
                                                 </div>
                                                 <div style={{ width: 70 }}>
-                                                    <label style={{ ...xpLabel, fontSize: 10 }}>Qty</label>
+                                                    <label style={{ ...xpLabel, fontSize: 10 }}>
+                                                        Qty{pendingItemCode && getItemUom(pendingItemCode) && (
+                                                            <span style={{ color: '#316ac5', marginLeft: 3 }}>({getItemUom(pendingItemCode)})</span>
+                                                        )}
+                                                    </label>
                                                     <input
                                                         type="number"
                                                         style={xpInput}
@@ -1308,6 +1316,7 @@ export default function BOMDesigner({
                                                     <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '2px 6px', background: '#ece9d8', borderBottom: '1px solid #aca899', fontSize: 9, color: '#555', fontWeight: 'bold' }}>
                                                         <span style={{ flex: 1 }}>Component</span>
                                                         <span style={{ width: 55, textAlign: 'right' }}>Qty</span>
+                                                        <span style={{ width: 36, textAlign: 'left', paddingLeft: 3 }}>UoM</span>
                                                         <span style={{ width: 57, textAlign: 'right' }}>%</span>
                                                         <span style={{ minWidth: 60 }}></span>
                                                     </div>
@@ -1336,6 +1345,9 @@ export default function BOMDesigner({
                                                                 updateSelectedNode({ lines: newLines });
                                                             }}
                                                         />
+                                                        <span style={{ width: 36, fontSize: 9, color: '#316ac5', fontWeight: 'bold', paddingLeft: 3, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                                            {getItemUom(line.item_code)}
+                                                        </span>
                                                         <div style={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                                                             <input
                                                                 type="number"
