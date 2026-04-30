@@ -170,7 +170,8 @@ async def create_mo_recursive(
     parent_mo_id: Optional[uuid.UUID] = None,
     sales_order_id: Optional[uuid.UUID] = None,
     target_start_date: Optional[datetime] = None,
-    target_end_date: Optional[datetime] = None
+    target_end_date: Optional[datetime] = None,
+    bom_size_id: Optional[uuid.UUID] = None,
 ) -> ManufacturingOrder:
     """Recursively creates manufacturing orders for sub-assemblies."""
     # 1. Fetch BOM with lines
@@ -198,7 +199,7 @@ async def create_mo_recursive(
             break
         counter += 1
 
-    # 3. Create this MO
+    # 3. Create this MO (bom_size_id only applies to the root MO, not sub-assemblies)
     mo = ManufacturingOrder(
         code=mo_code,
         bom_id=bom.id,
@@ -207,6 +208,7 @@ async def create_mo_recursive(
         source_location_id=location_id,
         sales_order_id=sales_order_id,
         parent_mo_id=parent_mo_id,
+        bom_size_id=bom_size_id if parent_mo_id is None else None,
         qty=qty,
         target_start_date=target_start_date,
         target_end_date=target_end_date,
@@ -269,7 +271,8 @@ async def create_manufacturing_order(payload: ManufacturingOrderCreate, db: Asyn
                 current_user.id,
                 sales_order_id=payload.sales_order_id,
                 target_start_date=payload.target_start_date,
-                target_end_date=payload.target_end_date
+                target_end_date=payload.target_end_date,
+                bom_size_id=payload.bom_size_id,
             )
             # Overwrite code if specified for root
             if payload.code:
@@ -291,6 +294,7 @@ async def create_manufacturing_order(payload: ManufacturingOrderCreate, db: Asyn
             location_id=location.id,
             source_location_id=location.id,
             sales_order_id=payload.sales_order_id,
+            bom_size_id=payload.bom_size_id,
             qty=payload.qty,
             target_start_date=payload.target_start_date,
             target_end_date=payload.target_end_date,

@@ -353,6 +353,25 @@ export default function ManufacturingView({
       return valId;
   };
 
+  const getBomSizeLabel = (bomId: string, bomSizeId: string): string => {
+      const bom = boms.find((b: any) => b.id === bomId);
+      if (!bom) return '';
+      const bs = (bom.sizes || []).find((s: any) => s.id === bomSizeId);
+      if (!bs) return '';
+      const parts: string[] = [];
+      const sizeName = bs.size_name || bs.size?.name;
+      if (sizeName) parts.push(sizeName);
+      if (bs.label) parts.push(bs.label);
+      if (bs.target_measurement != null) {
+          let meas = `${parseFloat(bs.target_measurement)}`;
+          if (bs.measurement_min != null && bs.measurement_max != null) {
+              meas += ` (${parseFloat(bs.measurement_min)}–${parseFloat(bs.measurement_max)})`;
+          }
+          parts.push(meas + ' cm');
+      }
+      return parts.join(' — ') || '';
+  };
+
   const getStatusBadge = (status: string) => {
       switch(status) {
           case 'COMPLETED': return 'bg-success';
@@ -504,6 +523,23 @@ export default function ManufacturingView({
                                       <div style={{ fontSize: '10px', color: isActive ? '#e0ecff' : '#444', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                                           {node.item_name}
                                       </div>
+                                      {((node.attribute_value_ids || []).length > 0 || node.bom_size_id) && (
+                                          <div style={{ display: 'flex', gap: 2, flexWrap: 'wrap', marginTop: 2 }}>
+                                              {(node.attribute_value_ids || []).map((id: string) => (
+                                                  <span key={id} style={{ fontSize: '8px', padding: '0 4px', background: isActive ? 'rgba(219,234,254,0.25)' : '#dbeafe', color: isActive ? '#bfdbfe' : '#1d4ed8', borderRadius: 2, fontWeight: 700, lineHeight: '14px' }}>
+                                                      {getAttributeValueName(id)}
+                                                  </span>
+                                              ))}
+                                              {node.bom_size_id && (() => {
+                                                  const label = getBomSizeLabel(node.bom_id, node.bom_size_id);
+                                                  return label ? (
+                                                      <span style={{ fontSize: '8px', padding: '0 4px', background: isActive ? 'rgba(220,252,231,0.25)' : '#dcfce7', color: isActive ? '#bbf7d0' : '#15803d', borderRadius: 2, fontWeight: 700, lineHeight: '14px' }}>
+                                                          <i className="bi bi-rulers me-1" style={{ fontSize: '7px' }}></i>{label}
+                                                      </span>
+                                                  ) : null;
+                                              })()}
+                                          </div>
+                                      )}
                                   </div>
                                   <span style={{ fontSize: '8px', background: statusColor, color: '#fff', padding: '1px 4px', borderRadius: classic ? '0' : '2px', whiteSpace: 'nowrap', alignSelf: 'center', flexShrink: 0 }}>
                                       {node.status === 'IN_PROGRESS' ? 'IN PROG' : node.status}
@@ -524,6 +560,19 @@ export default function ManufacturingView({
                   }}>
                       <span style={{ fontFamily: 'monospace', fontSize: '12px', fontWeight: 'bold', color: '#000' }}>{selectedNode.code}</span>
                       <span style={{ fontSize: '12px', color: '#000' }}>{selectedNode.item_name}</span>
+                      {(selectedNode.attribute_value_ids || []).map((id: string) => (
+                          <span key={id} style={{ fontSize: '9px', padding: '1px 6px', background: '#dbeafe', color: '#1d4ed8', border: '1px solid #93c5fd', borderRadius: 2, fontWeight: 700 }}>
+                              {getAttributeValueName(id)}
+                          </span>
+                      ))}
+                      {selectedNode.bom_size_id && (() => {
+                          const label = getBomSizeLabel(selectedNode.bom_id, selectedNode.bom_size_id);
+                          return label ? (
+                              <span style={{ fontSize: '9px', padding: '1px 6px', background: '#dcfce7', color: '#15803d', border: '1px solid #86efac', borderRadius: 2, fontWeight: 700 }}>
+                                  <i className="bi bi-rulers me-1"></i>{label}
+                              </span>
+                          ) : null;
+                      })()}
                       {bom && <span style={{ fontSize: '10px', color: '#444' }}>BOM: <span style={{ fontFamily: 'monospace', fontWeight: 'bold', color: '#000' }}>{bom.code}</span></span>}
                       <div style={{ marginLeft: 'auto', display: 'flex', gap: '6px' }}>
                           {selectedNode.status === 'PENDING' && (
@@ -713,6 +762,33 @@ export default function ManufacturingView({
                   </>
               }
           >
+              {/* Product variant context — shown when triggered from SO with color/size */}
+              {(() => {
+                  const bom = boms.find((b: any) => b.id === newWO.bom_id);
+                  const attrNames: string[] = bom ? (bom.attribute_value_ids || []).map(getAttributeValueName).filter(Boolean) : [];
+                  const sizeLabel = bom && newWO.bom_size_id ? getBomSizeLabel(bom.id, newWO.bom_size_id) : '';
+                  if (!attrNames.length && !sizeLabel) return null;
+                  return (
+                      <div className="mb-3 px-2 py-2 rounded" style={{ background: '#f6f8ff', border: '1px solid #c8d8f8' }}>
+                          <div className="extra-small fw-bold text-muted mb-1" style={{ letterSpacing: '0.04em', textTransform: 'uppercase' }}>
+                              <i className="bi bi-tag-fill me-1 text-primary opacity-75"></i>Product Variant
+                          </div>
+                          <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap', alignItems: 'center' }}>
+                              {attrNames.map((name: string, i: number) => (
+                                  <span key={i} style={{ fontSize: 10, padding: '2px 8px', background: '#dbeafe', color: '#1d4ed8', border: '1px solid #93c5fd', borderRadius: 3, fontWeight: 700 }}>
+                                      {name}
+                                  </span>
+                              ))}
+                              {sizeLabel && (
+                                  <span style={{ fontSize: 10, padding: '2px 8px', background: '#dcfce7', color: '#15803d', border: '1px solid #86efac', borderRadius: 3, fontWeight: 700 }}>
+                                      <i className="bi bi-rulers me-1"></i>{sizeLabel}
+                                  </span>
+                              )}
+                          </div>
+                      </div>
+                  );
+              })()}
+
               <div className="row g-3 mb-3">
                   <div className="col-md-6">
                       <label className="form-label extra-small fw-bold text-muted uppercase">MO Reference Code</label>
@@ -1205,6 +1281,23 @@ export default function ManufacturingView({
                                                               <div style={{ fontWeight: 'bold', color: '#000', fontSize: currentStyle === 'classic' ? '11px' : '9pt' }}>
                                                                   {wo.item_name || getItemName(wo.item_id)}
                                                               </div>
+                                                              {((wo.attribute_value_ids || []).length > 0 || wo.bom_size_id) && (
+                                                                  <div style={{ display: 'flex', gap: 3, flexWrap: 'wrap', marginBottom: 2 }}>
+                                                                      {(wo.attribute_value_ids || []).map((id: string) => (
+                                                                          <span key={id} style={{ fontSize: '8px', padding: '1px 5px', background: currentStyle === 'classic' ? '#dce8ff' : '#dbeafe', color: currentStyle === 'classic' ? '#003ea6' : '#1d4ed8', border: `1px solid ${currentStyle === 'classic' ? '#9ab0e0' : '#93c5fd'}`, borderRadius: currentStyle === 'classic' ? 0 : 3, fontWeight: 700 }}>
+                                                                              {getAttributeValueName(id)}
+                                                                          </span>
+                                                                      ))}
+                                                                      {wo.bom_size_id && (() => {
+                                                                          const label = getBomSizeLabel(wo.bom_id, wo.bom_size_id);
+                                                                          return label ? (
+                                                                              <span style={{ fontSize: '8px', padding: '1px 5px', background: currentStyle === 'classic' ? '#e4f5e4' : '#dcfce7', color: currentStyle === 'classic' ? '#1a5e1a' : '#15803d', border: `1px solid ${currentStyle === 'classic' ? '#90c090' : '#86efac'}`, borderRadius: currentStyle === 'classic' ? 0 : 3, fontWeight: 700 }}>
+                                                                                  <i className="bi bi-rulers me-1" style={{ fontSize: '7px' }}></i>{label}
+                                                                              </span>
+                                                                          ) : null;
+                                                                      })()}
+                                                                  </div>
+                                                              )}
                                                               <div style={{ fontSize: '9px', color: '#555' }}>
                                                                   BOM: {getBOMCode(wo.bom_id)}
                                                                   {wo.sales_order_id && (
