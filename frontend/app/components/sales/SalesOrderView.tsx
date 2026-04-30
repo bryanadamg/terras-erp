@@ -809,6 +809,7 @@ export default function SalesOrderView({ items, attributes, boms, salesOrders, p
                                <th style={classic ? { ...xpThCell, width: '180px' } : undefined}>Customer</th>
                                <th style={classic ? { ...xpThCell, width: '72px' } : undefined}>Date</th>
                                <th style={classic ? { ...xpThCell, width: '180px' } : undefined}>Item</th>
+                               <th style={classic ? { ...xpThCell, width: '80px' } : undefined}>Size</th>
                                <th style={classic ? { ...xpThCell, width: '140px' } : undefined}>Qty</th>
                                <th style={classic ? { ...xpThCell, width: '80px' } : undefined}>Qty 3</th>
                                <th style={classic ? { ...xpThCell, width: '110px' } : undefined}>Stock Notes</th>
@@ -913,7 +914,7 @@ export default function SalesOrderView({ items, attributes, boms, salesOrders, p
                                            <td style={soTd()} className={classic ? '' : 'ps-3'}>{poCellContent}</td>
                                            <td style={soTd()}>{so.customer_name}</td>
                                            <td style={soTd({ fontSize:'10px' })} className={classic ? '' : 'small'}>{new Date(so.order_date).toLocaleDateString()}</td>
-                                           <td colSpan={5} style={classic ? { ...tdBase, background:rowBg, borderBottom:'1px solid #c0bdb5', color:'#aaa', fontStyle:'italic', fontSize:'10px' } : { background:rowBg, padding:'6px 10px', borderBottom:'1px solid #dee2e6', color:'#aaa', fontStyle:'italic', fontSize:'0.78rem' }}>No lines</td>
+                                           <td colSpan={6} style={classic ? { ...tdBase, background:rowBg, borderBottom:'1px solid #c0bdb5', color:'#aaa', fontStyle:'italic', fontSize:'10px' } : { background:rowBg, padding:'6px 10px', borderBottom:'1px solid #dee2e6', color:'#aaa', fontStyle:'italic', fontSize:'0.78rem' }}>No lines</td>
                                            <td style={soTd()}>{statusCellContent}</td>
                                            <td style={soTd({ textAlign:'right' as const, borderRight:'none' })} className={classic ? '' : 'pe-3 text-end'}>{actionsCellContent}</td>
                                        </tr>
@@ -960,6 +961,17 @@ export default function SalesOrderView({ items, attributes, boms, salesOrders, p
                                                        )
                                                    )}
                                                </div>
+                                           </td>
+
+                                           {/* Size */}
+                                           <td style={lineTd(isFirst, isLast)}>
+                                               {line.bom_size_id ? (
+                                                   <div style={{ fontFamily:'Tahoma,Arial,sans-serif', fontSize:'10px', fontWeight:'bold', color: classic?'#005':'#0d6efd' }}>
+                                                       <i className="bi bi-rulers me-1"></i>{getBomSizeLabelById(line.bom_size_id)}
+                                                   </div>
+                                               ) : (
+                                                   <span style={{ fontFamily:'Tahoma,Arial,sans-serif', fontSize:'9px', color:'#ccc' }}>—</span>
+                                               )}
                                            </td>
 
                                            {/* Qty */}
@@ -1021,7 +1033,7 @@ export default function SalesOrderView({ items, attributes, boms, salesOrders, p
                            {filteredOrders.length === 0 && (
                                <tr>
                                    <td
-                                       colSpan={10}
+                                       colSpan={11}
                                        style={classic ? { ...tdBase, borderRight: 'none', textAlign: 'center', padding: '24px 8px', color: '#888', fontStyle: 'italic' } : undefined}
                                        className={classic ? '' : 'text-center py-5 text-muted'}
                                    >
