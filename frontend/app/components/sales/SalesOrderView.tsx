@@ -314,6 +314,19 @@ export default function SalesOrderView({ items, attributes, boms, salesOrders, p
       }
   };
 
+  const handleQtyKgChange = (kgStr: string) => {
+      setNewLine(prev => ({ ...prev, qty_kg: kgStr }));
+      if (!kgAuto) return;
+      const kg = parseFloat(kgStr) || 0;
+      const result = calcYdFromKg(newLine.item_id, kg);
+      if (!result) return;
+      const { yd, m } = result;
+      const gross = yd > 0 ? Math.round(yd / 144 * 10000) / 10000 : 0;
+      setQtyMeter(m > 0 ? String(m) : '');
+      setQtyGrossYd(gross > 0 ? String(gross) : '');
+      setNewLine(prev => ({ ...prev, qty_kg: kgStr, qty: yd }));
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
       e.preventDefault();
       const payload = {
@@ -596,17 +609,16 @@ export default function SalesOrderView({ items, attributes, boms, salesOrders, p
                                            )}
                                        </div>
                                        <input type="number" className="form-control"
-                                           style={classic ? {...xpInput, width:'100%', background: (kgAuto && isAutoCalcSupported(newLine.item_id)) ? '#ececec' : '#ffffff'} : undefined}
+                                           style={classic ? {...xpInput, width:'100%'} : undefined}
                                            placeholder="0"
                                            value={newLine.qty_kg}
-                                           readOnly={kgAuto && isAutoCalcSupported(newLine.item_id)}
-                                           onChange={e => setNewLine({...newLine, qty_kg: e.target.value})}
+                                           onChange={e => handleQtyKgChange(e.target.value)}
                                        />
-                                       {kgAuto && isAutoCalcSupported(newLine.item_id) && newLine.qty > 0 && (
+                                       {kgAuto && isAutoCalcSupported(newLine.item_id) && (
                                            <div style={{ fontFamily:'Tahoma,Arial,sans-serif', fontSize:'10px', color:'#666', fontStyle:'italic', marginTop:2 }}>
                                                {getItemWeightUnit(newLine.item_id) === 'g/y'
-                                                   ? `= ${getItemWeight(newLine.item_id)} g/y × ${newLine.qty} Yd`
-                                                   : `= ${getItemWeight(newLine.item_id)} g/m × ${qtyMeter} m`}
+                                                   ? `${getItemWeight(newLine.item_id)} g/y ↔ Yd`
+                                                   : `${getItemWeight(newLine.item_id)} g/m ↔ m`}
                                            </div>
                                        )}
                                    </div>
