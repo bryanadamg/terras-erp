@@ -1,5 +1,5 @@
 import uuid
-from sqlalchemy import String, Numeric, ForeignKey
+from sqlalchemy import String, Numeric, ForeignKey, Boolean
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.db.base import Base
@@ -11,6 +11,7 @@ class UOM(Base):
         UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
     )
     name: Mapped[str] = mapped_column(String(32), unique=True, index=True)
+    is_system: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     factors: Mapped[list["UOMFactor"]] = relationship("UOMFactor", back_populates="uom", cascade="all, delete-orphan", order_by="UOMFactor.value")
 
 

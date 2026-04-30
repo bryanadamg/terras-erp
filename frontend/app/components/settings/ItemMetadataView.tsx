@@ -260,19 +260,24 @@ export default function ItemMetadataView({
                                                 title="Conversion factors"
                                             >{expandedUomId === uom.id ? '▾' : '▸'}</button>
                                             <span style={{ fontFamily: 'Tahoma,Arial,sans-serif', fontSize: '11px', fontVariant: 'all-small-caps' }}>{uom.name}</span>
+                                            {uom.is_system && (
+                                                <span style={{ fontFamily: 'Tahoma,Arial,sans-serif', fontSize: '9px', color: '#003080', background: '#dce8ff', border: '1px solid #7fa8e0', padding: '0 4px', borderRadius: 0 }}>SYSTEM</span>
+                                            )}
                                             {(uom.factors || []).length > 0 && (
                                                 <span style={{ fontFamily: 'Tahoma,Arial,sans-serif', fontSize: '9px', color: '#c06a00', background: '#fff3e0', border: '1px solid #f0a040', padding: '0 4px', borderRadius: 0 }}>
                                                     {(uom.factors || []).length} factor{(uom.factors || []).length > 1 ? 's' : ''}
                                                 </span>
                                             )}
                                         </div>
-                                        <button
-                                            style={{ ...xpBtn(), border: uomHovered === uom.id ? '1px solid #808080' : '1px solid transparent', background: uomHovered === uom.id ? 'linear-gradient(to bottom,#ffffff,#d4d0c8)' : 'transparent', padding: '1px 6px' }}
-                                            onMouseEnter={() => setUomHovered(uom.id)} onMouseLeave={() => setUomHovered(null)}
-                                            onClick={() => onDeleteUOM(uom.id)} title="Delete"
-                                        >
-                                            <i className="bi bi-trash" style={{ color: '#c00000', fontSize: '11px' }}></i>
-                                        </button>
+                                        {!uom.is_system && (
+                                            <button
+                                                style={{ ...xpBtn(), border: uomHovered === uom.id ? '1px solid #808080' : '1px solid transparent', background: uomHovered === uom.id ? 'linear-gradient(to bottom,#ffffff,#d4d0c8)' : 'transparent', padding: '1px 6px' }}
+                                                onMouseEnter={() => setUomHovered(uom.id)} onMouseLeave={() => setUomHovered(null)}
+                                                onClick={() => onDeleteUOM(uom.id)} title="Delete"
+                                            >
+                                                <i className="bi bi-trash" style={{ color: '#c00000', fontSize: '11px' }}></i>
+                                            </button>
+                                        )}
                                     </div>
                                     {expandedUomId === uom.id && (
                                         <div style={{ background: '#f0ede4', borderBottom: '1px solid #c0bdb5', padding: '6px 12px 6px 28px' }}>
@@ -517,13 +522,18 @@ export default function ItemMetadataView({
                                                     onClick={() => setExpandedUomId(expandedUomId === uom.id ? null : uom.id)}
                                                 >{expandedUomId === uom.id ? '▾' : '▸'}</button>
                                                 <span className="fw-medium font-monospace">{uom.name}</span>
+                                                {uom.is_system && (
+                                                    <span className="badge bg-primary" style={{ fontSize: 10 }}>SYSTEM</span>
+                                                )}
                                                 {(uom.factors || []).length > 0 && (
                                                     <span className="badge bg-warning text-dark" style={{ fontSize: 10 }}>
                                                         {(uom.factors || []).length} factor{(uom.factors || []).length > 1 ? 's' : ''}
                                                     </span>
                                                 )}
                                             </div>
-                                            <button className="btn btn-sm text-danger" onClick={() => onDeleteUOM(uom.id)}><i className="bi bi-trash me-1"></i>{t('delete')}</button>
+                                            {!uom.is_system && (
+                                                <button className="btn btn-sm text-danger" onClick={() => onDeleteUOM(uom.id)}><i className="bi bi-trash me-1"></i>{t('delete')}</button>
+                                            )}
                                         </div>
                                         {expandedUomId === uom.id && (
                                             <div className="list-group-item bg-light ps-4">

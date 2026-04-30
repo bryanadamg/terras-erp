@@ -134,6 +134,10 @@ export default function SalesOrderView({ items, attributes, boms, salesOrders, p
   });
   const [qtyMeter, setQtyMeter] = useState('');
   const [qtyGrossYd, setQtyGrossYd] = useState('');
+  const [qtyRoll, setQtyRoll] = useState('');
+  const [qtyPic, setQtyPic] = useState('');
+  const [rollFactor, setRollFactor] = useState<number | null>(null);
+  const [picFactor, setPicFactor] = useState<number | null>(null);
   const [kgAuto, setKgAuto] = useState(true);
 
   const [isConfigOpen, setIsConfigOpen] = useState(false);
@@ -183,6 +187,8 @@ export default function SalesOrderView({ items, attributes, boms, salesOrders, p
       setNewLine({ item_id: '', qty: 0, due_date: '', attribute_value_ids: [], ket_stock: '', internal_confirmation_date: '', qty_kg: '', qty2: '', uom2: '', uom2_factor: null, bom_size_id: '' });
       setQtyMeter('');
       setQtyGrossYd('');
+      setQtyRoll('');
+      setQtyPic('');
       setKgAuto(true);
   };
 
@@ -275,12 +281,18 @@ export default function SalesOrderView({ items, attributes, boms, salesOrders, p
       return '';
   };
 
+  const recalcRollPic = (yd: number, rFactor = rollFactor, pFactor = picFactor) => {
+      setQtyRoll(rFactor && yd > 0 ? String(Math.round(yd / rFactor * 10000) / 10000) : '');
+      setQtyPic(pFactor && yd > 0 ? String(Math.round(yd / pFactor * 10000) / 10000) : '');
+  };
+
   const handleQtyYardChange = (ydStr: string) => {
       const yd = parseFloat(ydStr) || 0;
       const m = yd > 0 ? Math.round(yd * 0.9144 * 100) / 100 : 0;
       const gross = yd > 0 ? Math.round(yd / 144 * 10000) / 10000 : 0;
       setQtyMeter(m > 0 ? String(m) : '');
       setQtyGrossYd(gross > 0 ? String(gross) : '');
+      recalcRollPic(yd);
       const kg = kgAuto ? calcKgAuto(newLine.item_id, yd, m) : null;
       setNewLine({ ...newLine, qty: yd, qty_kg: kg !== null ? kg : newLine.qty_kg });
   };
@@ -291,6 +303,7 @@ export default function SalesOrderView({ items, attributes, boms, salesOrders, p
       const yd = m > 0 ? Math.round(m / 0.9144 * 100) / 100 : 0;
       const gross = yd > 0 ? Math.round(yd / 144 * 10000) / 10000 : 0;
       setQtyGrossYd(gross > 0 ? String(gross) : '');
+      recalcRollPic(yd);
       const kg = kgAuto ? calcKgAuto(newLine.item_id, yd, m) : null;
       setNewLine({ ...newLine, qty: yd, qty_kg: kg !== null ? kg : newLine.qty_kg });
   };
@@ -301,6 +314,7 @@ export default function SalesOrderView({ items, attributes, boms, salesOrders, p
       const yd = gross > 0 ? Math.round(gross * 144 * 100) / 100 : 0;
       const m = yd > 0 ? Math.round(yd * 0.9144 * 100) / 100 : 0;
       setQtyMeter(m > 0 ? String(m) : '');
+      recalcRollPic(yd);
       const kg = kgAuto ? calcKgAuto(newLine.item_id, yd, m) : null;
       setNewLine({ ...newLine, qty: yd, qty_kg: kg !== null ? kg : newLine.qty_kg });
   };
@@ -325,19 +339,61 @@ export default function SalesOrderView({ items, attributes, boms, salesOrders, p
       const gross = yd > 0 ? Math.round(yd / 144 * 10000) / 10000 : 0;
       setQtyMeter(m > 0 ? String(m) : '');
       setQtyGrossYd(gross > 0 ? String(gross) : '');
+      recalcRollPic(yd);
       setNewLine(prev => ({ ...prev, qty_kg: kgStr, qty: yd }));
   };
 
   const applyFactor = (qty2Str: string, factorVal: number | null) => {
-      const qty2 = parseFloat(qty2Str) || 0;
+      const qty2 = parseFloat(qty2Str as string) || 0;
       if (!factorVal || qty2 <= 0) return;
       const yd = Math.round(qty2 * factorVal * 100) / 100;
       const m = Math.round(yd * 0.9144 * 100) / 100;
       const gross = Math.round(yd / 144 * 10000) / 10000;
       setQtyMeter(m > 0 ? String(m) : '');
       setQtyGrossYd(gross > 0 ? String(gross) : '');
+      recalcRollPic(yd);
       const kg = kgAuto ? calcKgAuto(newLine.item_id, yd, m) : null;
       setNewLine(prev => ({ ...prev, qty: yd, qty_kg: kg !== null ? kg : prev.qty_kg }));
+  };
+
+  const handleQtyRollChange = (rollStr: string) => {
+      setQtyRoll(rollStr);
+      if (!rollFactor) return;
+      const roll = parseFloat(rollStr) || 0;
+      const yd = roll > 0 ? Math.round(roll * rollFactor * 100) / 100 : 0;
+      const m = yd > 0 ? Math.round(yd * 0.9144 * 100) / 100 : 0;
+      const gross = yd > 0 ? Math.round(yd / 144 * 10000) / 10000 : 0;
+      setQtyMeter(m > 0 ? String(m) : '');
+      setQtyGrossYd(gross > 0 ? String(gross) : '');
+      setQtyPic(picFactor && yd > 0 ? String(Math.round(yd / picFactor * 10000) / 10000) : '');
+      const kg = kgAuto ? calcKgAuto(newLine.item_id, yd, m) : null;
+      setNewLine(prev => ({ ...prev, qty: yd, qty_kg: kg !== null ? kg : prev.qty_kg }));
+  };
+
+  const handleRollFactorChange = (factorStr: string) => {
+      const f = factorStr ? parseFloat(factorStr) : null;
+      setRollFactor(f);
+      recalcRollPic(newLine.qty, f, picFactor);
+  };
+
+  const handleQtyPicChange = (picStr: string) => {
+      setQtyPic(picStr);
+      if (!picFactor) return;
+      const pic = parseFloat(picStr) || 0;
+      const yd = pic > 0 ? Math.round(pic * picFactor * 100) / 100 : 0;
+      const m = yd > 0 ? Math.round(yd * 0.9144 * 100) / 100 : 0;
+      const gross = yd > 0 ? Math.round(yd / 144 * 10000) / 10000 : 0;
+      setQtyMeter(m > 0 ? String(m) : '');
+      setQtyGrossYd(gross > 0 ? String(gross) : '');
+      setQtyRoll(rollFactor && yd > 0 ? String(Math.round(yd / rollFactor * 10000) / 10000) : '');
+      const kg = kgAuto ? calcKgAuto(newLine.item_id, yd, m) : null;
+      setNewLine(prev => ({ ...prev, qty: yd, qty_kg: kg !== null ? kg : prev.qty_kg }));
+  };
+
+  const handlePicFactorChange = (factorStr: string) => {
+      const f = factorStr ? parseFloat(factorStr) : null;
+      setPicFactor(f);
+      recalcRollPic(newLine.qty, rollFactor, f);
   };
 
   const handleQty2Change = (val: string) => {
@@ -616,6 +672,50 @@ export default function SalesOrderView({ items, attributes, boms, salesOrders, p
                                        </div>
                                    </div>
 
+                                   {/* Roll / Pic rows — always shown */}
+                                   {(['Roll', 'Pic'] as const).map(uomName => {
+                                       const uomObj = uoms.find((u: any) => u.name === uomName);
+                                       const factors = uomObj?.factors || [];
+                                       const factor = uomName === 'Roll' ? rollFactor : picFactor;
+                                       const qty = uomName === 'Roll' ? qtyRoll : qtyPic;
+                                       const onFactorChange = uomName === 'Roll' ? handleRollFactorChange : handlePicFactorChange;
+                                       const onQtyChange = uomName === 'Roll' ? handleQtyRollChange : handleQtyPicChange;
+                                       return (
+                                           <div key={uomName} style={{ display: 'flex', gap: 4, alignItems: 'flex-end', marginBottom: classic ? 5 : 8 }}>
+                                               <div style={{ flex: 1, minWidth: 0 }}>
+                                                   <label style={classic ? {fontFamily:'Tahoma,Arial,sans-serif',fontSize:'11px',color:'#000',display:'block',marginBottom:2} : undefined} className={classic ? '' : 'form-label small text-muted mb-1'}>Qty ({uomName})</label>
+                                                   <input
+                                                       type="number" className="form-control"
+                                                       style={classic ? {...xpInput, width:'100%', background: factor ? '#fff' : '#f5f5f0'} : undefined}
+                                                       placeholder={factor ? '0' : '—'}
+                                                       disabled={!factor}
+                                                       value={qty}
+                                                       onChange={e => onQtyChange(e.target.value)}
+                                                   />
+                                               </div>
+                                               <div style={{ paddingBottom: classic ? 3 : 6, color: '#888', fontSize: 12, flexShrink: 0 }}>×</div>
+                                               <div style={{ flexShrink: 0, minWidth: 0, width: classic ? 90 : 100 }}>
+                                                   <label style={classic ? {fontFamily:'Tahoma,Arial,sans-serif',fontSize:'11px',color:'#000',display:'block',marginBottom:2} : undefined} className={classic ? '' : 'form-label small text-muted mb-1'}>Yd/{uomName}</label>
+                                                   {factors.length > 0 ? (
+                                                       <select
+                                                           className="form-select form-select-sm"
+                                                           style={classic ? {fontFamily:'Tahoma,Arial,sans-serif',fontSize:'11px',border:'1px solid #7f9db9',height:'20px',borderRadius:0,padding:'1px 4px',background:'#ffffff',outline:'none',color:'#000',width:'100%'} : undefined}
+                                                           value={factor ?? ''}
+                                                           onChange={e => onFactorChange(e.target.value)}
+                                                       >
+                                                           <option value="">—</option>
+                                                           {factors.map((f: any) => (
+                                                               <option key={f.id} value={f.value}>{parseFloat(f.value)}{f.label ? ` (${f.label})` : ''}</option>
+                                                           ))}
+                                                       </select>
+                                                   ) : (
+                                                       <input type="text" className="form-control form-control-sm" style={classic ? {...xpInput,width:'100%',color:'#999'} : {color:'#aaa'}} value="no factors" readOnly disabled />
+                                                   )}
+                                               </div>
+                                           </div>
+                                       );
+                                   })}
+
                                    {/* KG with AUTO toggle */}
                                    <div style={{ marginBottom: classic ? 5 : 8 }}>
                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 2 }}>
@@ -653,6 +753,8 @@ export default function SalesOrderView({ items, attributes, boms, salesOrders, p
                                        {(() => {
                                            const selectedUom = uoms.find((u: any) => u.name === newLine.uom2);
                                            const factors = selectedUom?.factors || [];
+                                           const isSystem = selectedUom?.is_system || false;
+                                           const qty2Val = parseFloat(newLine.qty2 as string) || 0;
                                            return classic ? (
                                                <div>
                                                    <div style={{ display: 'flex' }}>
@@ -667,7 +769,24 @@ export default function SalesOrderView({ items, attributes, boms, salesOrders, p
                                                            {uoms.map((u: any) => <option key={u.id} value={u.name}>{u.name}</option>)}
                                                        </select>
                                                    </div>
-                                                   {factors.length > 0 && (
+                                                   {factors.length > 0 && isSystem && (
+                                                       <div style={{ marginTop: 4, display: 'flex', flexWrap: 'wrap' as const, gap: 3 }}>
+                                                           {factors.map((f: any) => {
+                                                               const fVal = parseFloat(f.value);
+                                                               const totalYd = qty2Val > 0 ? Math.round(qty2Val * fVal * 100) / 100 : null;
+                                                               const active = newLine.uom2_factor === fVal;
+                                                               return (
+                                                                   <button key={f.id} type="button"
+                                                                       style={{ fontFamily:'Tahoma,Arial,sans-serif', fontSize:'10px', padding:'1px 6px', cursor:'pointer', borderRadius:0, border: active ? '1px solid #1a3a8a' : '1px solid #7f9db9', background: active ? 'linear-gradient(to bottom,#4a9ae8,#1a5ec8)' : 'linear-gradient(to bottom,#fff,#e8e4d8)', color: active ? '#fff' : '#000' }}
+                                                                       onClick={() => handleUom2FactorChange(String(fVal))}
+                                                                   >
+                                                                       ×{fVal} Yd{totalYd !== null ? ` = ${totalYd}` : ''}{f.label ? ` (${f.label})` : ''}
+                                                                   </button>
+                                                               );
+                                                           })}
+                                                       </div>
+                                                   )}
+                                                   {factors.length > 0 && !isSystem && (
                                                        <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginTop: 3 }}>
                                                            <span style={{ fontFamily:'Tahoma,Arial,sans-serif', fontSize:'10px', color:'#804800', whiteSpace:'nowrap' }}>1 {newLine.uom2} =</span>
                                                            <select
@@ -690,7 +809,25 @@ export default function SalesOrderView({ items, attributes, boms, salesOrders, p
                                                            {uoms.map((u: any) => <option key={u.id} value={u.name}>{u.name}</option>)}
                                                        </select>
                                                    </div>
-                                                   {factors.length > 0 && (
+                                                   {factors.length > 0 && isSystem && (
+                                                       <div className="d-flex flex-wrap gap-1 mt-2">
+                                                           {factors.map((f: any) => {
+                                                               const fVal = parseFloat(f.value);
+                                                               const totalYd = qty2Val > 0 ? Math.round(qty2Val * fVal * 100) / 100 : null;
+                                                               const active = newLine.uom2_factor === fVal;
+                                                               return (
+                                                                   <button key={f.id} type="button"
+                                                                       className={`btn btn-sm ${active ? 'btn-primary' : 'btn-outline-secondary'}`}
+                                                                       style={{ fontSize: 11 }}
+                                                                       onClick={() => handleUom2FactorChange(String(fVal))}
+                                                                   >
+                                                                       ×{fVal} Yd{totalYd !== null ? ` = ${totalYd}` : ''}{f.label ? ` (${f.label})` : ''}
+                                                                   </button>
+                                                               );
+                                                           })}
+                                                       </div>
+                                                   )}
+                                                   {factors.length > 0 && !isSystem && (
                                                        <div className="d-flex align-items-center gap-1 mt-1">
                                                            <span className="text-muted small" style={{ whiteSpace:'nowrap' }}>1 {newLine.uom2} =</span>
                                                            <select className="form-select form-select-sm" style={{ background: newLine.uom2_factor ? '#fff8e8' : undefined }}

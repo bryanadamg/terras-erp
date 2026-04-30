@@ -407,6 +407,7 @@ class UOMFactorResponse(UOMFactorCreate):
 
 class UOMResponse(UOMCreate):
     id: UUID
+    is_system: bool = False
     factors: list[UOMFactorResponse] = []
 
     class Config:

@@ -401,6 +401,24 @@ def run_migrations():
             except Exception as e:
                 pass
 
+            # 4a0. is_system column on uoms
+            try:
+                res = conn.execute(text("SELECT column_name FROM information_schema.columns WHERE table_name='uoms' AND column_name='is_system'"))
+                if not res.fetchone():
+                    conn.execute(text("ALTER TABLE uoms ADD COLUMN is_system BOOLEAN NOT NULL DEFAULT FALSE"))
+                    conn.commit()
+            except Exception as e:
+                conn.rollback()
+                logger.warning(f"is_system column migration failed: {e}")
+
+            try:
+                conn.execute(text("UPDATE uoms SET is_system = TRUE WHERE name IN ('Roll', 'Pic')"))
+                conn.commit()
+                logger.info("Migration: Marked Roll and Pic as system UOMs")
+            except Exception as e:
+                conn.rollback()
+                logger.warning(f"system UOM marking failed: {e}")
+
             # 4a. uom_factors table and uom2_factor column
             try:
                 conn.execute(text("""
@@ -485,9 +503,10 @@ def seed_categories(db):
 def seed_uoms(db):
     try:
         if db.query(UOM).count() == 0:
+            system_uoms = {"Roll", "Pic"}
             defaults = ["Pcs", "Roll", "Pic", "Cone", "Bal", "Box", "Set", "kg", "m", "l"]
             for name in defaults:
-                db.add(UOM(name=name))
+                db.add(UOM(name=name, is_system=(name in system_uoms)))
             db.commit()
             logger.info("Seeded default UOMs")
     except Exception as e:

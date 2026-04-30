@@ -28,6 +28,8 @@ def delete_uom(uom_id: str, db: Session = Depends(get_db), current_user: User = 
     uom = db.query(UOM).filter(UOM.id == uom_id).first()
     if not uom:
         raise HTTPException(status_code=404, detail="UOM not found")
+    if uom.is_system:
+        raise HTTPException(status_code=400, detail=f"'{uom.name}' is a system UOM and cannot be deleted")
     db.delete(uom)
     db.commit()
     return {"status": "success", "message": "UOM deleted"}
