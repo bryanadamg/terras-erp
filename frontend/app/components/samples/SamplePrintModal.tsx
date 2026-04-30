@@ -174,7 +174,7 @@ function SPKDocument({
                 <tbody>
                     <FieldRow label="JUMLAH/ BANYAK SAMPEL" value={sample.quantity} />
                     <FieldRow label="Est Tgl Selesai Sample (Req cust)" value={formatDate(sample.estimated_completion_date)} />
-                    <FieldRow label="Est tgl Selesai Sample (div sample)" value={sample.completion_description} />
+                    <FieldRow label="Est tgl Selesai Sample (div sample)" value={undefined} />
                 </tbody>
             </table>
 
@@ -182,8 +182,19 @@ function SPKDocument({
             {showSampleBox && (
                 <div style={{ marginTop: 8 }}>
                     <div style={{ fontSize: 8, marginBottom: 2 }}>Contoh Original Sample</div>
-                    <div style={{ border: '1px solid #555', height: 110, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                        {/* blank area for physical sample attachment */}
+                    <div style={{ border: '1px solid #555', minHeight: 110, padding: '4px 6px', display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
+                        {sample.completion_description && (
+                            <div style={{ fontSize: 8, color: '#000', whiteSpace: 'pre-wrap', marginBottom: 4, alignSelf: 'flex-start' }}>
+                                {sample.completion_description}
+                            </div>
+                        )}
+                        {sample.completion_image_url && (
+                            <img
+                                src={`${API_BASE}${sample.completion_image_url}`}
+                                alt="Contoh"
+                                style={{ maxWidth: '100%', maxHeight: 90, objectFit: 'contain', display: 'block' }}
+                            />
+                        )}
                     </div>
                 </div>
             )}
