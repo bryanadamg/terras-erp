@@ -614,9 +614,9 @@ export default function SalesOrderView({ items, attributes, boms, salesOrders, p
                    : <h6 className="small text-uppercase text-muted fw-bold mb-2">Order Items</h6>
                }
                <div style={{background:classic?'#f5f4ef':'rgba(0,0,0,0.02)',border:classic?'1px solid #b0a898':'1px solid #dee2e6',padding:classic?'6px 8px':'12px',marginBottom:classic?6:12}}>
+                   {/* Item selector — full width */}
                    <div className="row g-2 mb-2">
-                       {/* Item + Add button */}
-                       <div className="col-10">
+                       <div className="col-12">
                            <label style={classic ? {fontFamily:'Tahoma,Arial,sans-serif',fontSize:'11px',color:'#000',display:'block',marginBottom:2} : undefined} className={classic ? '' : 'form-label small text-muted mb-1'}>Item</label>
                            <SearchableSelect
                                options={items.map((item: any) => ({ value: item.id, label: item.name, subLabel: `${item.code}${item.category === 'Sample' ? ' ★' : ''}` }))}
@@ -625,126 +625,127 @@ export default function SalesOrderView({ items, attributes, boms, salesOrders, p
                                placeholder="Select Item…"
                            />
                        </div>
-                       <div className="col-2 d-flex align-items-end">
-                           {classic ? (
-                               <button type="button"
-                                   style={(!newLine.item_id || newLine.qty <= 0)
-                                       ? {...xpBtn(), width:'100%', padding:'2px 6px', opacity: 0.5}
-                                       : {...xpBtn({background:'linear-gradient(to bottom,#5ec85e,#2d7a2d)',borderColor:'#1a5e1a #0a3e0a #0a3e0a #1a5e1a',color:'#fff',fontWeight:'bold'}), width:'100%', padding:'2px 6px'}}
-                                   onClick={handleAddLine} disabled={!newLine.item_id || newLine.qty <= 0}
-                                   title={!newLine.item_id ? 'Select an item first' : newLine.qty <= 0 ? 'Enter Qty (Yd) first' : 'Add line'}
-                               >
-                                   <i className="bi bi-plus-lg"></i> Add
-                               </button>
-                           ) : (
-                               <button type="button"
-                                   className={`w-100 btn btn-sm ${(!newLine.item_id || newLine.qty <= 0) ? 'btn-outline-secondary' : 'btn-success'}`}
-                                   onClick={handleAddLine} disabled={!newLine.item_id || newLine.qty <= 0}
-                                   title={!newLine.item_id ? 'Select an item first' : newLine.qty <= 0 ? 'Enter Qty (Yd) first' : 'Add line'}
-                               >
-                                   <i className="bi bi-plus-lg"></i> Add
-                               </button>
-                           )}
-                       </div>
 
-                       {/* Option B: 2-column qty / dates grid */}
+                       {/* 2-column qty / dates grid */}
                        <div className="col-12">
                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: classic ? 6 : 10 }}>
 
                                {/* Left: Qty inputs panel */}
                                <div style={{ background: classic ? '#f8f7f2' : 'rgba(0,0,0,0.02)', border: classic ? '1px solid #c0bdb5' : '1px solid #dee2e6', padding: classic ? '6px 8px' : '10px 12px' }}>
 
-                                   {/* Yard / Meter / GrossYd row */}
-                                   <div style={{ display: 'flex', gap: 6, alignItems: 'flex-end', marginBottom: classic ? 5 : 8 }}>
-                                       <div style={{ flex: 1, minWidth: 0 }}>
-                                           <label style={classic ? {fontFamily:'Tahoma,Arial,sans-serif',fontSize:'11px',color:'#000',display:'block',marginBottom:2} : undefined} className={classic ? '' : 'form-label small text-muted mb-1'}>Qty (Yd)</label>
-                                           <input type="number" className="form-control" style={classic ? {...xpInput, width:'100%'} : undefined} placeholder="0" value={newLine.qty || ''} onChange={e => handleQtyYardChange(e.target.value)} />
-                                       </div>
-                                       <div style={{ paddingBottom: classic ? 3 : 6, color: '#888', fontSize: 14, flexShrink: 0, userSelect: 'none' as const }}>&#8596;</div>
-                                       <div style={{ flex: 1, minWidth: 0 }}>
-                                           <label style={classic ? {fontFamily:'Tahoma,Arial,sans-serif',fontSize:'11px',color:'#000',display:'block',marginBottom:2} : undefined} className={classic ? '' : 'form-label small text-muted mb-1'}>Qty (m)</label>
-                                           <input type="number" className="form-control" style={classic ? {...xpInput, width:'100%'} : undefined} placeholder="0" value={qtyMeter} onChange={e => handleQtyMeterChange(e.target.value)} />
-                                       </div>
-                                       <div style={{ paddingBottom: classic ? 3 : 6, color: '#888', fontSize: 14, flexShrink: 0, userSelect: 'none' as const }}>&#8596;</div>
-                                       <div style={{ flex: 1, minWidth: 0 }}>
-                                           <label style={classic ? {fontFamily:'Tahoma,Arial,sans-serif',fontSize:'11px',color:'#000',display:'block',marginBottom:2} : undefined} className={classic ? '' : 'form-label small text-muted mb-1'}>Qty (Gross Yd)</label>
-                                           <input type="number" className="form-control" style={classic ? {...xpInput, width:'100%'} : undefined} placeholder="0" value={qtyGrossYd} onChange={e => handleQtyGrossYdChange(e.target.value)} />
+                                   {/* LENGTH GROUP */}
+                                   <div style={classic ? { border: '1px solid #a0988c', padding: '4px 8px 8px', marginBottom: 8, position: 'relative' } : { marginBottom: 10 }}>
+                                       {classic
+                                           ? <span style={{ position: 'absolute', top: -7, left: 8, background: '#f8f7f2', padding: '0 4px', fontSize: '10px', fontWeight: 'bold', color: '#444', textTransform: 'uppercase' as const, letterSpacing: '0.4px', fontFamily: 'Tahoma,Arial,sans-serif' }}>Length</span>
+                                           : <div className="text-muted fw-bold mb-2" style={{ fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.5px' }}>Length</div>
+                                       }
+                                       <div style={{ paddingTop: classic ? 4 : 0, display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: classic ? 5 : 8 }}>
+                                           <div>
+                                               <label style={classic ? {fontFamily:'Tahoma,Arial,sans-serif',fontSize:'11px',color:'#000',display:'block',marginBottom:2} : undefined} className={classic ? '' : 'form-label small text-muted mb-1'}>Yard</label>
+                                               <input type="number" className="form-control" style={classic ? {...xpInput, width:'100%'} : undefined} placeholder="0" value={newLine.qty || ''} onChange={e => handleQtyYardChange(e.target.value)} />
+                                           </div>
+                                           <div>
+                                               <label style={classic ? {fontFamily:'Tahoma,Arial,sans-serif',fontSize:'11px',color:'#000',display:'block',marginBottom:2} : undefined} className={classic ? '' : 'form-label small text-muted mb-1'}>Meter</label>
+                                               <input type="number" className="form-control" style={classic ? {...xpInput, width:'100%'} : undefined} placeholder="0" value={qtyMeter} onChange={e => handleQtyMeterChange(e.target.value)} />
+                                           </div>
+                                           <div>
+                                               <label style={classic ? {fontFamily:'Tahoma,Arial,sans-serif',fontSize:'11px',color:'#000',display:'block',marginBottom:2} : undefined} className={classic ? '' : 'form-label small text-muted mb-1'}>Gross Yd <span style={{ fontWeight: 'normal', fontSize: '10px', color: '#888' }}>(144 yd)</span></label>
+                                               <input type="number" className="form-control" style={classic ? {...xpInput, width:'100%'} : undefined} placeholder="0" value={qtyGrossYd} onChange={e => handleQtyGrossYdChange(e.target.value)} />
+                                           </div>
                                        </div>
                                    </div>
 
-                                   {/* Roll / Pic rows — always shown */}
-                                   {(['Roll', 'Pic'] as const).map(uomName => {
-                                       const uomObj = uoms.find((u: any) => u.name === uomName);
-                                       const factors = uomObj?.factors || [];
-                                       const factor = uomName === 'Roll' ? rollFactor : picFactor;
-                                       const qty = uomName === 'Roll' ? qtyRoll : qtyPic;
-                                       const onFactorChange = uomName === 'Roll' ? handleRollFactorChange : handlePicFactorChange;
-                                       const onQtyChange = uomName === 'Roll' ? handleQtyRollChange : handleQtyPicChange;
-                                       return (
-                                           <div key={uomName} style={{ display: 'flex', gap: 4, alignItems: 'flex-end', marginBottom: classic ? 5 : 8 }}>
-                                               <div style={{ flex: 1, minWidth: 0 }}>
-                                                   <label style={classic ? {fontFamily:'Tahoma,Arial,sans-serif',fontSize:'11px',color:'#000',display:'block',marginBottom:2} : undefined} className={classic ? '' : 'form-label small text-muted mb-1'}>Qty ({uomName})</label>
-                                                   <input
-                                                       type="number" className="form-control"
-                                                       style={classic ? {...xpInput, width:'100%', background: factor ? '#fff' : '#f5f5f0'} : undefined}
-                                                       placeholder={factor ? '0' : '—'}
-                                                       disabled={!factor}
-                                                       value={qty}
-                                                       onChange={e => onQtyChange(e.target.value)}
+                                   {/* PACKAGING GROUP */}
+                                   <div style={classic ? { border: '1px solid #a0988c', padding: '4px 8px 8px', marginBottom: 8, position: 'relative' } : { marginBottom: 10 }}>
+                                       {classic
+                                           ? <span style={{ position: 'absolute', top: -7, left: 8, background: '#f8f7f2', padding: '0 4px', fontSize: '10px', fontWeight: 'bold', color: '#444', textTransform: 'uppercase' as const, letterSpacing: '0.4px', fontFamily: 'Tahoma,Arial,sans-serif' }}>Packaging</span>
+                                           : <div className="text-muted fw-bold mb-2" style={{ fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.5px' }}>Packaging</div>
+                                       }
+                                       <div style={{ paddingTop: classic ? 4 : 0, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: classic ? 5 : 8 }}>
+                                           {(['Roll', 'Pic'] as const).map(uomName => {
+                                               const uomObj = uoms.find((u: any) => u.name === uomName);
+                                               const factors = uomObj?.factors || [];
+                                               const factor = uomName === 'Roll' ? rollFactor : picFactor;
+                                               const qty = uomName === 'Roll' ? qtyRoll : qtyPic;
+                                               const onFactorChange = uomName === 'Roll' ? handleRollFactorChange : handlePicFactorChange;
+                                               const onQtyChange = uomName === 'Roll' ? handleQtyRollChange : handleQtyPicChange;
+                                               return (
+                                                   <div key={uomName}>
+                                                       <label style={classic ? {fontFamily:'Tahoma,Arial,sans-serif',fontSize:'11px',color:'#000',display:'block',marginBottom:2} : undefined} className={classic ? '' : 'form-label small text-muted mb-1'}>{uomName}</label>
+                                                       {factors.length > 0 ? (
+                                                           <div style={{ display: 'flex', flexWrap: 'wrap' as const, gap: 2, marginBottom: 3 }}>
+                                                               {factors.map((f: any) => {
+                                                                   const fVal = parseFloat(f.value);
+                                                                   const active = factor === fVal;
+                                                                   return classic ? (
+                                                                       <button key={f.id} type="button"
+                                                                           style={{ fontFamily:'Tahoma,Arial,sans-serif', fontSize:'10px', padding:'0 5px', height:'18px', lineHeight:'16px', cursor:'pointer', borderRadius:0, border:'1px solid', borderColor: active ? '#1a3a7a #0a2a5a #0a2a5a #1a3a7a' : '#dfdfdf #808080 #808080 #dfdfdf', background: active ? 'linear-gradient(to bottom,#316ac5,#1a4a8a)' : 'linear-gradient(to bottom,#ffffff,#d4d0c8)', color: active ? '#fff' : '#000' }}
+                                                                           onClick={() => onFactorChange(active ? '' : String(fVal))}
+                                                                       >×{fVal}{f.label ? ` ${f.label}` : ' yd'}</button>
+                                                                   ) : (
+                                                                       <button key={f.id} type="button"
+                                                                           className={`btn btn-sm ${active ? 'btn-primary' : 'btn-outline-secondary'}`}
+                                                                           style={{ fontSize: 10, padding: '1px 6px' }}
+                                                                           onClick={() => onFactorChange(active ? '' : String(fVal))}
+                                                                       >×{fVal}{f.label ? ` ${f.label}` : ' yd'}</button>
+                                                                   );
+                                                               })}
+                                                           </div>
+                                                       ) : (
+                                                           <div style={{ fontFamily:'Tahoma,Arial,sans-serif', fontSize:'10px', color:'#aaa', marginBottom: 3 }}>no factors defined</div>
+                                                       )}
+                                                       <input type="number" className="form-control"
+                                                           style={classic ? {...xpInput, width:'100%', background: factor ? '#fff' : '#f5f5f0'} : undefined}
+                                                           placeholder={factor ? '0' : '—'}
+                                                           disabled={!factor}
+                                                           value={qty}
+                                                           onChange={e => onQtyChange(e.target.value)}
+                                                       />
+                                                   </div>
+                                               );
+                                           })}
+                                       </div>
+                                   </div>
+
+                                   {/* WEIGHT GROUP */}
+                                   <div style={classic ? { border: '1px solid #a0988c', padding: '4px 8px 8px', marginBottom: 8, position: 'relative' } : { marginBottom: 10 }}>
+                                       {classic
+                                           ? <span style={{ position: 'absolute', top: -7, left: 8, background: '#f8f7f2', padding: '0 4px', fontSize: '10px', fontWeight: 'bold', color: '#444', textTransform: 'uppercase' as const, letterSpacing: '0.4px', fontFamily: 'Tahoma,Arial,sans-serif' }}>Weight</span>
+                                           : <div className="text-muted fw-bold mb-2" style={{ fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.5px' }}>Weight</div>
+                                       }
+                                       <div style={{ paddingTop: classic ? 4 : 0 }}>
+                                           <div style={{ display: 'flex', alignItems: 'flex-end', gap: 4 }}>
+                                               <div style={{ flex: 1 }}>
+                                                   <label style={classic ? {fontFamily:'Tahoma,Arial,sans-serif',fontSize:'11px',color:'#000',display:'block',marginBottom:2} : undefined} className={classic ? '' : 'form-label small text-muted mb-1'}>Kilogram</label>
+                                                   <input type="number" className="form-control"
+                                                       style={classic ? {...xpInput, width:'100%'} : undefined}
+                                                       placeholder="0"
+                                                       value={newLine.qty_kg}
+                                                       onChange={e => handleQtyKgChange(e.target.value)}
                                                    />
                                                </div>
-                                               <div style={{ paddingBottom: classic ? 3 : 6, color: '#888', fontSize: 12, flexShrink: 0 }}>×</div>
-                                               <div style={{ flexShrink: 0, minWidth: 0, width: classic ? 90 : 100 }}>
-                                                   <label style={classic ? {fontFamily:'Tahoma,Arial,sans-serif',fontSize:'11px',color:'#000',display:'block',marginBottom:2} : undefined} className={classic ? '' : 'form-label small text-muted mb-1'}>Yd/{uomName}</label>
-                                                   {factors.length > 0 ? (
-                                                       <select
-                                                           className="form-select form-select-sm"
-                                                           style={classic ? {fontFamily:'Tahoma,Arial,sans-serif',fontSize:'11px',border:'1px solid #7f9db9',height:'20px',borderRadius:0,padding:'1px 4px',background:'#ffffff',outline:'none',color:'#000',width:'100%'} : undefined}
-                                                           value={factor ?? ''}
-                                                           onChange={e => onFactorChange(e.target.value)}
-                                                       >
-                                                           <option value="">—</option>
-                                                           {factors.map((f: any) => (
-                                                               <option key={f.id} value={f.value}>{parseFloat(f.value)}{f.label ? ` (${f.label})` : ''}</option>
-                                                           ))}
-                                                       </select>
+                                               <div style={{ paddingBottom: 1 }}>
+                                                   {kgAuto ? (
+                                                       <button type="button" onClick={toggleKgAuto} title="Click to enter manually"
+                                                           style={classic ? {fontFamily:'Tahoma,Arial,sans-serif',fontSize:'9px',padding:'1px 6px',background:'linear-gradient(to bottom,#4a9ae8,#1a5ec8)',border:'1px solid',borderColor:'#1a3a8a #0a2a6a #0a2a6a #1a3a8a',color:'#fff',cursor:'pointer',borderRadius:0} : undefined}
+                                                           className={classic ? '' : 'badge bg-primary border-0'}
+                                                       >AUTO</button>
                                                    ) : (
-                                                       <input type="text" className="form-control form-control-sm" style={classic ? {...xpInput,width:'100%',color:'#999'} : {color:'#aaa'}} value="no factors" readOnly disabled />
+                                                       <button type="button" onClick={toggleKgAuto} title="Click to restore auto calculation"
+                                                           style={classic ? {fontFamily:'Tahoma,Arial,sans-serif',fontSize:'9px',padding:'1px 6px',background:'linear-gradient(to bottom,#ffffff,#d4d0c8)',border:'1px solid',borderColor:'#dfdfdf #808080 #808080 #dfdfdf',color:'#000',cursor:'pointer',borderRadius:0} : undefined}
+                                                           className={classic ? '' : 'badge bg-secondary border-0'}
+                                                       >&larr; Auto</button>
                                                    )}
                                                </div>
                                            </div>
-                                       );
-                                   })}
-
-                                   {/* KG with AUTO toggle */}
-                                   <div style={{ marginBottom: classic ? 5 : 8 }}>
-                                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 2 }}>
-                                           <label style={classic ? {fontFamily:'Tahoma,Arial,sans-serif',fontSize:'11px',color:'#000'} : undefined} className={classic ? '' : 'form-label small text-muted mb-0'}>Qty (KG)</label>
-                                           {kgAuto ? (
-                                               <button type="button" onClick={toggleKgAuto} title="Click to enter manually"
-                                                   style={classic ? {fontFamily:'Tahoma,Arial,sans-serif',fontSize:'9px',padding:'1px 6px',background:'linear-gradient(to bottom,#4a9ae8,#1a5ec8)',border:'1px solid',borderColor:'#1a3a8a #0a2a6a #0a2a6a #1a3a8a',color:'#fff',cursor:'pointer',borderRadius:0} : undefined}
-                                                   className={classic ? '' : 'badge bg-primary border-0'}
-                                               >AUTO</button>
-                                           ) : (
-                                               <button type="button" onClick={toggleKgAuto} title="Click to restore auto calculation"
-                                                   style={classic ? {fontFamily:'Tahoma,Arial,sans-serif',fontSize:'9px',padding:'1px 6px',background:'linear-gradient(to bottom,#ffffff,#d4d0c8)',border:'1px solid',borderColor:'#dfdfdf #808080 #808080 #dfdfdf',color:'#000',cursor:'pointer',borderRadius:0} : undefined}
-                                                   className={classic ? '' : 'badge bg-secondary border-0'}
-                                               >&larr; Auto</button>
+                                           {kgAuto && isAutoCalcSupported(newLine.item_id) && (
+                                               <div style={{ fontFamily:'Tahoma,Arial,sans-serif', fontSize:'10px', color:'#666', fontStyle:'italic', marginTop:2 }}>
+                                                   {getItemWeightUnit(newLine.item_id) === 'g/y'
+                                                       ? `${getItemWeight(newLine.item_id)} g/y ↔ Yd`
+                                                       : `${getItemWeight(newLine.item_id)} g/m ↔ m`}
+                                               </div>
                                            )}
                                        </div>
-                                       <input type="number" className="form-control"
-                                           style={classic ? {...xpInput, width:'100%'} : undefined}
-                                           placeholder="0"
-                                           value={newLine.qty_kg}
-                                           onChange={e => handleQtyKgChange(e.target.value)}
-                                       />
-                                       {kgAuto && isAutoCalcSupported(newLine.item_id) && (
-                                           <div style={{ fontFamily:'Tahoma,Arial,sans-serif', fontSize:'10px', color:'#666', fontStyle:'italic', marginTop:2 }}>
-                                               {getItemWeightUnit(newLine.item_id) === 'g/y'
-                                                   ? `${getItemWeight(newLine.item_id)} g/y ↔ Yd`
-                                                   : `${getItemWeight(newLine.item_id)} g/m ↔ m`}
-                                           </div>
-                                       )}
                                    </div>
 
                                    {/* Qty 3 compound input */}
@@ -912,6 +913,32 @@ export default function SalesOrderView({ items, attributes, boms, salesOrders, p
                            );
                        })()}
                    </div>
+
+                   {/* Add Line button — full width, bottom of form */}
+                   <div style={{ marginTop: classic ? 6 : 10, marginBottom: classic ? 6 : 10 }}>
+                       {classic ? (
+                           <button type="button"
+                               style={(!newLine.item_id || newLine.qty <= 0)
+                                   ? { ...xpBtn(), width: '100%', padding: '3px 0', opacity: 0.5, textAlign: 'center' as const }
+                                   : { ...xpBtn({ background: 'linear-gradient(to bottom,#5ec85e,#2d7a2d)', borderColor: '#1a5e1a #0a3e0a #0a3e0a #1a5e1a', color: '#fff', fontWeight: 'bold' }), width: '100%', padding: '3px 0', textAlign: 'center' as const }}
+                               onClick={handleAddLine} disabled={!newLine.item_id || newLine.qty <= 0}
+                               title={!newLine.item_id ? 'Select an item first' : newLine.qty <= 0 ? 'Enter Qty (Yd) first' : 'Add item to order'}
+                           >
+                               <i className="bi bi-plus-lg" style={{ marginRight: 5 }}></i>Add Line to Order
+                           </button>
+                       ) : (
+                           <button type="button"
+                               className={`w-100 btn ${(!newLine.item_id || newLine.qty <= 0) ? 'btn-outline-secondary' : 'btn-success'}`}
+                               style={{ fontWeight: 600 }}
+                               onClick={handleAddLine} disabled={!newLine.item_id || newLine.qty <= 0}
+                               title={!newLine.item_id ? 'Select an item first' : newLine.qty <= 0 ? 'Enter Qty (Yd) first' : 'Add item to order'}
+                           >
+                               <i className="bi bi-plus-lg me-2"></i>Add Line to Order
+                           </button>
+                       )}
+                   </div>
+
+                   {/* Lines list */}
                    <div>
                        {newSO.lines.map((line: any, idx) => (
                            <div key={idx} style={{display:'flex',justifyContent:'space-between',alignItems:'center',padding:classic?'3px 6px':'8px',background:classic?(idx%2===0?'#ffffff':'#f5f3ee'):'white',border:classic?'1px solid #c0bdb5':'1px solid #dee2e6',marginBottom:2,fontFamily:classic?'Tahoma,Arial,sans-serif':undefined,fontSize:classic?'11px':undefined}}>
