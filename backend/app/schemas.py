@@ -562,6 +562,36 @@ class SampleRequestCreate(BaseModel):
     completion_description: Optional[str] = None
     notes: Optional[str] = None
 
+class SampleColorUpdate(BaseModel):
+    id: Optional[UUID] = None
+    name: str
+    is_repeat: bool = False
+    order: int = 0
+
+class SampleRequestUpdate(BaseModel):
+    customer_id: Optional[UUID] = None
+    request_date: Optional[str] = None
+    project: Optional[str] = None
+    customer_article_code: Optional[str] = None
+    internal_article_code: Optional[str] = None
+    width: Optional[str] = None
+    colors: list[SampleColorUpdate] = []
+    main_material: Optional[str] = None
+    middle_material: Optional[str] = None
+    bottom_material: Optional[str] = None
+    weft: Optional[str] = None
+    warp: Optional[str] = None
+    original_weight: Optional[float] = None
+    original_weight_unit: Optional[str] = None
+    production_weight: Optional[float] = None
+    production_weight_unit: Optional[str] = None
+    additional_info: Optional[str] = None
+    quantity: Optional[str] = None
+    sample_size: Optional[str] = None
+    estimated_completion_date: Optional[str] = None
+    completion_description: Optional[str] = None
+    notes: Optional[str] = None
+
 class SampleRequestResponse(BaseModel):
     id: UUID
     code: str

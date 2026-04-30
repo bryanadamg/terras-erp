@@ -10,7 +10,7 @@ import HistoryPane from '../shared/HistoryPane';
 import ModalWrapper from '../shared/ModalWrapper';
 import SamplePrintModal from './SamplePrintModal';
 
-export default function SampleRequestView({ samples, customers, onCreateSample, onUpdateStatus, onUpdateColorStatus, onDeleteSample, onMarkRead, onMarkUnread, onMarkAllRead }: any) {
+export default function SampleRequestView({ samples, customers, onCreateSample, onEditSample, onUpdateStatus, onUpdateColorStatus, onDeleteSample, onMarkRead, onMarkUnread, onMarkAllRead }: any) {
   const { showToast } = useToast();
   const { t } = useLanguage();
   const { companyProfile, attributes } = useData();
@@ -22,6 +22,7 @@ export default function SampleRequestView({ samples, customers, onCreateSample, 
   const searchParams = useSearchParams();
   const highlightRef = useRef<HTMLTableRowElement | null>(null);
   const [isCreateOpen, setIsCreateOpen] = useState(false);
+  const [editingSample, setEditingSample] = useState<any>(null);
   const [printSample, setPrintSample] = useState<any>(null);
   const [openDropdownId, setOpenDropdownId] = useState<string | null>(null);
   const [dropdownPos, setDropdownPos] = useState({ top: 0, left: 0 });
@@ -193,7 +194,7 @@ export default function SampleRequestView({ samples, customers, onCreateSample, 
       customer_article_code: '',
       internal_article_code: '',
       width: '',
-      colors: [] as { name: string; is_repeat: boolean }[],
+      colors: [] as { id?: string; name: string; is_repeat: boolean }[],
       main_material: '',
       middle_material: '',
       bottom_material: '',
@@ -208,6 +209,7 @@ export default function SampleRequestView({ samples, customers, onCreateSample, 
       sample_size: '',
       estimated_completion_date: '',
       completion_description: '',
+      notes: '',
   });
   const [newSample, setNewSample] = useState(emptyForm());
 
@@ -257,6 +259,41 @@ export default function SampleRequestView({ samples, customers, onCreateSample, 
 
   const openCreateModal = () => {
       if (!newSample.code) setNewSample(prev => ({ ...prev, code: suggestSampleCode() }));
+      setEditingSample(null);
+      setIsCreateOpen(true);
+  };
+
+  const openEditModal = (sample: any) => {
+      setEditingSample(sample);
+      setNewSample({
+          code: sample.code,
+          request_date: sample.request_date || today,
+          customer_id: sample.customer_id || '',
+          project: sample.project || '',
+          customer_article_code: sample.customer_article_code || '',
+          internal_article_code: sample.internal_article_code || '',
+          width: sample.width || '',
+          colors: (sample.colors || []).map((c: any) => ({ id: c.id, name: c.name, is_repeat: c.is_repeat })),
+          main_material: sample.main_material || '',
+          middle_material: sample.middle_material || '',
+          bottom_material: sample.bottom_material || '',
+          weft: sample.weft || '',
+          warp: sample.warp || '',
+          original_weight: sample.original_weight != null ? String(sample.original_weight) : '',
+          original_weight_unit: sample.original_weight_unit || 'g/y',
+          production_weight: sample.production_weight != null ? String(sample.production_weight) : '',
+          production_weight_unit: sample.production_weight_unit || 'g/y',
+          additional_info: sample.additional_info || '',
+          quantity: sample.quantity || '',
+          sample_size: sample.sample_size || '',
+          estimated_completion_date: sample.estimated_completion_date || '',
+          completion_description: sample.completion_description || '',
+          notes: sample.notes || '',
+      });
+      setPendingColorName('');
+      setPendingColorIsRepeat(false);
+      setCompletionImageFile(null);
+      setDesignPdfFile(null);
       setIsCreateOpen(true);
   };
 
@@ -286,7 +323,7 @@ export default function SampleRequestView({ samples, customers, onCreateSample, 
 
   const handleSubmit = (e: React.FormEvent) => {
       e.preventDefault();
-      onCreateSample({
+      const payload = {
           ...newSample,
           customer_id: newSample.customer_id || null,
           original_weight: newSample.original_weight !== '' ? parseFloat(newSample.original_weight) : null,
@@ -295,12 +332,18 @@ export default function SampleRequestView({ samples, customers, onCreateSample, 
           production_weight_unit: newSample.production_weight !== '' ? newSample.production_weight_unit : null,
           estimated_completion_date: newSample.estimated_completion_date || null,
           colors: newSample.colors.filter(c => c.name.trim() !== ''),
-      }, completionImageFile || undefined, designPdfFile || undefined);
+      };
+      if (editingSample) {
+          onEditSample(editingSample.id, payload);
+      } else {
+          onCreateSample(payload, completionImageFile || undefined, designPdfFile || undefined);
+      }
       setNewSample(emptyForm());
       setPendingColorName('');
       setPendingColorIsRepeat(false);
       setCompletionImageFile(null);
       setDesignPdfFile(null);
+      setEditingSample(null);
       setIsCreateOpen(false);
   };
 
@@ -466,11 +509,14 @@ export default function SampleRequestView({ samples, customers, onCreateSample, 
            attributes={[]}
        />
 
-       {/* Create Modal */}
+       {/* Create / Edit Modal */}
        <ModalWrapper
            isOpen={isCreateOpen}
-           onClose={() => setIsCreateOpen(false)}
-           title={<><i className="bi bi-eyedropper me-2"></i>New Sample Request</>}
+           onClose={() => { setIsCreateOpen(false); setEditingSample(null); }}
+           title={editingSample
+               ? <><i className="bi bi-pencil me-2"></i>Edit Sample Request — {editingSample.code}</>
+               : <><i className="bi bi-eyedropper me-2"></i>New Sample Request</>
+           }
            variant="primary"
            size="lg"
            footer={
@@ -479,14 +525,14 @@ export default function SampleRequestView({ samples, customers, onCreateSample, 
                        type="button"
                        style={classic ? xpBtn() : undefined}
                        className={classic ? '' : 'btn btn-sm btn-link text-muted'}
-                       onClick={() => setIsCreateOpen(false)}
+                       onClick={() => { setIsCreateOpen(false); setEditingSample(null); }}
                    >{t('cancel')}</button>
                    <button
                        type="button"
                        style={classic ? xpBtn({ background: 'linear-gradient(to bottom, #316ac5, #1a4a8a)', borderColor: '#1a3a7a #0a1a4a #0a1a4a #1a3a7a', color: '#ffffff', fontWeight: 'bold' }) : undefined}
                        className={classic ? '' : 'btn btn-sm btn-primary px-4 fw-bold'}
                        onClick={handleSubmit as any}
-                   >Create Request</button>
+                   >{editingSample ? 'Save Changes' : 'Create Request'}</button>
                </>
            }
        >
@@ -501,11 +547,11 @@ export default function SampleRequestView({ samples, customers, onCreateSample, 
                                <div>
                                    <label style={{ ...xpLbl, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                                        <span>Request Code <span style={{ fontWeight: 'normal', color: '#a00' }}>*</span></span>
-                                       <i className="bi bi-gear-fill" style={{ cursor: 'pointer', color: '#555', fontSize: 10 }} onClick={() => setIsConfigOpen(true)} title="Configure Auto-Suggestion" />
+                                       {!editingSample && <i className="bi bi-gear-fill" style={{ cursor: 'pointer', color: '#555', fontSize: 10 }} onClick={() => setIsConfigOpen(true)} title="Configure Auto-Suggestion" />}
                                    </label>
-                                   <input style={{ ...xpInput, width: '100%', boxSizing: 'border-box' as const }}
-                                          value={newSample.code} onChange={e => setNewSample({ ...newSample, code: e.target.value })}
-                                          placeholder="Auto-generated" required />
+                                   <input style={{ ...xpInput, width: '100%', boxSizing: 'border-box' as const, ...(editingSample ? { background: '#f0f0f0', color: '#666' } : {}) }}
+                                          value={newSample.code} onChange={e => !editingSample && setNewSample({ ...newSample, code: e.target.value })}
+                                          placeholder="Auto-generated" required readOnly={!!editingSample} />
                                </div>
                                <div>
                                    <label style={xpLbl}>Request Date <span style={{ fontWeight: 'normal', color: '#a00' }}>*</span></label>
@@ -549,9 +595,9 @@ export default function SampleRequestView({ samples, customers, onCreateSample, 
                            <div className="row g-2">
                                <div className="col-md-6">
                                    <label className="form-label d-flex justify-content-between align-items-center small text-muted">
-                                       Request Code <i className="bi bi-gear-fill text-muted" style={{ cursor: 'pointer' }} onClick={() => setIsConfigOpen(true)} title="Configure Auto-Suggestion" />
+                                       Request Code {!editingSample && <i className="bi bi-gear-fill text-muted" style={{ cursor: 'pointer' }} onClick={() => setIsConfigOpen(true)} title="Configure Auto-Suggestion" />}
                                    </label>
-                                   <input className="form-control form-control-sm" value={newSample.code} onChange={e => setNewSample({ ...newSample, code: e.target.value })} placeholder="Auto-generated" required />
+                                   <input className="form-control form-control-sm" value={newSample.code} onChange={e => !editingSample && setNewSample({ ...newSample, code: e.target.value })} placeholder="Auto-generated" required readOnly={!!editingSample} />
                                </div>
                                <div className="col-md-6">
                                    <label className="form-label small text-muted">Request Date</label>
@@ -1223,6 +1269,17 @@ export default function SampleRequestView({ samples, customers, onCreateSample, 
                                    {/* Actions — history icon + split Update button */}
                                    <td style={classic ? { ...tdBase, borderRight: 'none', textAlign: 'right' as const } : undefined} className={classic ? '' : 'pe-4 text-end'}>
                                        <div style={{ display: 'flex', gap: 3, justifyContent: 'flex-end', alignItems: 'center' }}>
+                                           {/* Edit button */}
+                                           <button
+                                               title="Edit Sample Request"
+                                               onClick={(e) => { e.stopPropagation(); openEditModal(s); }}
+                                               style={classic ? { background: 'none', border: '1px solid transparent', borderRadius: 2, cursor: 'pointer', padding: '1px 4px', color: '#555', fontSize: '13px' } : undefined}
+                                               className={classic ? '' : 'btn btn-sm btn-link text-muted p-0'}
+                                               onMouseEnter={classic ? e => { (e.currentTarget as HTMLButtonElement).style.borderColor = '#7f9db9'; (e.currentTarget as HTMLButtonElement).style.background = '#e8f0f8'; } : undefined}
+                                               onMouseLeave={classic ? e => { (e.currentTarget as HTMLButtonElement).style.borderColor = 'transparent'; (e.currentTarget as HTMLButtonElement).style.background = 'none'; } : undefined}
+                                           >
+                                               <i className="bi bi-pencil"></i>
+                                           </button>
                                            {/* Print button */}
                                            <button
                                                title="Print SPK Sample"

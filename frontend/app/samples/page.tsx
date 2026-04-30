@@ -42,6 +42,13 @@ export default function SamplesPage() {
         if (res.ok) fetchData();
     };
 
+    const handleEditSample = async (id: string, p: any) => {
+        const res = await authFetch(`${API_BASE}/samples/${id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(p) });
+        if (!res.ok) return;
+        fetchData('samples');
+        showToast('Sample request updated', 'success');
+    };
+
     const handleDeleteSample = async (id: string) => {
         const confirmed = await confirm({
             title: 'Delete Sample Request',
@@ -79,6 +86,7 @@ export default function SamplesPage() {
             customers={customers}
             samples={samples}
             onCreateSample={handleCreateSample}
+            onEditSample={handleEditSample}
             onUpdateStatus={handleUpdateSampleStatus}
             onUpdateColorStatus={handleUpdateColorStatus}
             onDeleteSample={handleDeleteSample}

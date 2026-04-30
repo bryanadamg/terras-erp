@@ -4,7 +4,7 @@ from sqlalchemy import select, func, delete
 from sqlalchemy.orm import joinedload
 from app.db.session import get_async_db
 from app.models.sample import SampleRequest, SampleColor, SampleRequestRead
-from app.schemas import SampleRequestCreate, SampleRequestResponse, SampleColorResponse
+from app.schemas import SampleRequestCreate, SampleRequestUpdate, SampleRequestResponse, SampleColorResponse
 from app.models.auth import User
 from app.api.auth import get_current_user
 from app.services import audit_service
@@ -115,6 +115,97 @@ async def get_samples(
         sample.is_unread = read_at is None or read_at < sample_updated_at
 
     return samples
+
+
+@router.put("/samples/{sample_id}", response_model=SampleRequestResponse)
+async def update_sample_request(
+    sample_id: str,
+    payload: SampleRequestUpdate,
+    db: AsyncSession = Depends(get_async_db),
+    current_user: User = Depends(get_current_user),
+):
+    result = await db.execute(
+        select(SampleRequest)
+        .options(joinedload(SampleRequest.colors))
+        .filter(SampleRequest.id == sample_id)
+    )
+    sample = result.unique().scalars().first()
+    if not sample:
+        raise HTTPException(status_code=404, detail="Sample not found")
+
+    req_date = date.fromisoformat(payload.request_date) if payload.request_date else date.today()
+    est_date = date.fromisoformat(payload.estimated_completion_date) if payload.estimated_completion_date else None
+
+    sample.customer_id = payload.customer_id
+    sample.request_date = req_date
+    sample.project = payload.project
+    sample.customer_article_code = payload.customer_article_code
+    sample.internal_article_code = payload.internal_article_code
+    sample.width = payload.width
+    sample.main_material = payload.main_material
+    sample.middle_material = payload.middle_material
+    sample.bottom_material = payload.bottom_material
+    sample.weft = payload.weft
+    sample.warp = payload.warp
+    sample.original_weight = payload.original_weight
+    sample.original_weight_unit = payload.original_weight_unit
+    sample.production_weight = payload.production_weight
+    sample.production_weight_unit = payload.production_weight_unit
+    sample.additional_info = payload.additional_info
+    sample.quantity = payload.quantity
+    sample.sample_size = payload.sample_size
+    sample.estimated_completion_date = est_date
+    sample.completion_description = payload.completion_description
+    sample.notes = payload.notes
+    sample.updated_at = datetime.utcnow()
+
+    # Colors diff: keep existing ids, delete removed, insert new
+    incoming_ids = {str(c.id) for c in payload.colors if c.id is not None}
+    for existing_color in list(sample.colors):
+        if str(existing_color.id) not in incoming_ids:
+            await db.delete(existing_color)
+
+    for i, color_data in enumerate(payload.colors):
+        if not color_data.name.strip():
+            continue
+        if color_data.id is not None:
+            color_result = await db.execute(
+                select(SampleColor).filter(SampleColor.id == color_data.id)
+            )
+            existing = color_result.scalars().first()
+            if existing:
+                existing.name = color_data.name.strip()
+                existing.is_repeat = color_data.is_repeat
+                existing.order = i
+        else:
+            db.add(SampleColor(
+                sample_request_id=sample.id,
+                name=color_data.name.strip(),
+                is_repeat=color_data.is_repeat,
+                order=i,
+            ))
+
+    await db.commit()
+
+    result = await db.execute(
+        select(SampleRequest)
+        .options(joinedload(SampleRequest.colors))
+        .filter(SampleRequest.id == sample_id)
+    )
+    sample = result.unique().scalars().first()
+
+    await audit_service.log_activity(
+        db,
+        user_id=current_user.id,
+        action="UPDATE",
+        entity_type="SampleRequest",
+        entity_id=sample_id,
+        details=f"Updated Sample Request {sample.code}",
+        changes={"customer_article_code": sample.customer_article_code},
+    )
+
+    sample.is_unread = False
+    return sample
 
 
 @router.put("/samples/{sample_id}/status")
