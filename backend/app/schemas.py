@@ -394,8 +394,20 @@ class LocationResponse(LocationCreate):
 class UOMCreate(BaseModel):
     name: str
 
+class UOMFactorCreate(BaseModel):
+    value: float
+    label: str | None = None
+
+class UOMFactorResponse(UOMFactorCreate):
+    id: UUID
+    uom_id: UUID
+
+    class Config:
+        from_attributes = True
+
 class UOMResponse(UOMCreate):
     id: UUID
+    factors: list[UOMFactorResponse] = []
 
     class Config:
         from_attributes = True
@@ -491,6 +503,7 @@ class SalesOrderLineCreate(BaseModel):
     qty_kg: float | None = None
     qty2: float | None = None
     uom2: str | None = None
+    uom2_factor: float | None = None
     attribute_value_ids: list[UUID] = []
     bom_size_id: UUID | None = None
 

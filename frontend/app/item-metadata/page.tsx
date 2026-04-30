@@ -48,6 +48,19 @@ export default function ItemMetadataPage() {
         if (res.ok) fetchData();
     };
 
+    const handleCreateUOMFactor = async (uomId: string, value: number, label: string) => {
+        const res = await authFetch(`${API_BASE}/uoms/${uomId}/factors`, {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ value, label: label || null }),
+        });
+        if (res.ok) fetchData();
+    };
+
+    const handleDeleteUOMFactor = async (uomId: string, factorId: string) => {
+        const res = await authFetch(`${API_BASE}/uoms/${uomId}/factors/${factorId}`, { method: 'DELETE' });
+        if (res.ok) fetchData();
+    };
+
     // ── Attributes ────────────────────────────────────────────────────────────
     const handleCreateAttribute = async (p: any) => {
         const res = await authFetch(`${API_BASE}/attributes`, {
@@ -102,6 +115,8 @@ export default function ItemMetadataPage() {
                 onDeleteCategory={handleDeleteCategory}
                 onCreateUOM={handleCreateUOM}
                 onDeleteUOM={handleDeleteUOM}
+                onCreateUOMFactor={handleCreateUOMFactor}
+                onDeleteUOMFactor={handleDeleteUOMFactor}
                 onCreateAttribute={handleCreateAttribute}
                 onUpdateAttribute={handleUpdateAttribute}
                 onDeleteAttribute={handleDeleteAttribute}

@@ -55,6 +55,7 @@ class SalesOrderLine(Base):
     qty_kg: Mapped[float | None] = mapped_column(Numeric(14, 4), nullable=True)
     qty2: Mapped[float | None] = mapped_column(Numeric(14, 4), nullable=True)
     uom2: Mapped[str | None] = mapped_column(String(32), nullable=True)
+    uom2_factor: Mapped[float | None] = mapped_column(Numeric(14, 4), nullable=True)
     bom_size_id: Mapped[uuid.UUID | None] = mapped_column(
         UUID(as_uuid=True), ForeignKey("bom_sizes.id", ondelete="SET NULL"), nullable=True
     )

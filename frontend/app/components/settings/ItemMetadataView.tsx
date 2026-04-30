@@ -13,6 +13,8 @@ interface Props {
     onDeleteCategory: (id: string) => void;
     onCreateUOM: (name: string) => void;
     onDeleteUOM: (id: string) => void;
+    onCreateUOMFactor: (uomId: string, value: number, label: string) => void;
+    onDeleteUOMFactor: (uomId: string, factorId: string) => void;
     onCreateAttribute: (p: any) => void;
     onUpdateAttribute: (id: string, name: string) => void;
     onDeleteAttribute: (id: string) => void;
@@ -24,7 +26,7 @@ interface Props {
 export default function ItemMetadataView({
     categories, uoms, attributes,
     onCreateCategory, onDeleteCategory,
-    onCreateUOM, onDeleteUOM,
+    onCreateUOM, onDeleteUOM, onCreateUOMFactor, onDeleteUOMFactor,
     onCreateAttribute, onUpdateAttribute, onDeleteAttribute,
     onAddValue, onUpdateValue, onDeleteValue,
 }: Props) {
@@ -46,6 +48,9 @@ export default function ItemMetadataView({
     const [uomSearch, setUomSearch] = useState('');
     const [uomHovered, setUomHovered] = useState<string | null>(null);
     const [isUomSubmitting, setIsUomSubmitting] = useState(false);
+    const [expandedUomId, setExpandedUomId] = useState<string | null>(null);
+    const [newFactorValue, setNewFactorValue] = useState('');
+    const [newFactorLabel, setNewFactorLabel] = useState('');
 
     // ── Attribute state ───────────────────────────────────────────────────────
     const [newAttribute, setNewAttribute] = useState({ name: '', values: [] as any[] });
@@ -244,17 +249,53 @@ export default function ItemMetadataView({
                             <div style={xpSep} />
                             <span style={{ fontFamily: 'Tahoma,Arial,sans-serif', fontSize: '11px', color: '#444' }}>{filteredUOMs.length}</span>
                         </div>
-                        <div style={{ background: '#ffffff', maxHeight: 200, overflowY: 'auto' }}>
+                        <div style={{ background: '#ffffff', maxHeight: 260, overflowY: 'auto' }}>
                             {filteredUOMs.map((uom: any, i: number) => (
-                                <div key={uom.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '4px 8px', background: i % 2 === 0 ? '#ffffff' : '#f5f3ee', borderBottom: '1px solid #c0bdb5' }}>
-                                    <span style={{ fontFamily: 'Tahoma,Arial,sans-serif', fontSize: '11px', fontVariant: 'all-small-caps' }}>{uom.name}</span>
-                                    <button
-                                        style={{ ...xpBtn(), border: uomHovered === uom.id ? '1px solid #808080' : '1px solid transparent', background: uomHovered === uom.id ? 'linear-gradient(to bottom,#ffffff,#d4d0c8)' : 'transparent', padding: '1px 6px' }}
-                                        onMouseEnter={() => setUomHovered(uom.id)} onMouseLeave={() => setUomHovered(null)}
-                                        onClick={() => onDeleteUOM(uom.id)} title="Delete"
-                                    >
-                                        <i className="bi bi-trash" style={{ color: '#c00000', fontSize: '11px' }}></i>
-                                    </button>
+                                <div key={uom.id}>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '4px 8px', background: i % 2 === 0 ? '#ffffff' : '#f5f3ee', borderBottom: '1px solid #c0bdb5' }}>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: 6, flex: 1 }}>
+                                            <button
+                                                style={{ ...xpBtn(), padding: '0px 4px', fontSize: '10px', minWidth: 16 }}
+                                                onClick={() => setExpandedUomId(expandedUomId === uom.id ? null : uom.id)}
+                                                title="Conversion factors"
+                                            >{expandedUomId === uom.id ? '▾' : '▸'}</button>
+                                            <span style={{ fontFamily: 'Tahoma,Arial,sans-serif', fontSize: '11px', fontVariant: 'all-small-caps' }}>{uom.name}</span>
+                                            {(uom.factors || []).length > 0 && (
+                                                <span style={{ fontFamily: 'Tahoma,Arial,sans-serif', fontSize: '9px', color: '#c06a00', background: '#fff3e0', border: '1px solid #f0a040', padding: '0 4px', borderRadius: 0 }}>
+                                                    {(uom.factors || []).length} factor{(uom.factors || []).length > 1 ? 's' : ''}
+                                                </span>
+                                            )}
+                                        </div>
+                                        <button
+                                            style={{ ...xpBtn(), border: uomHovered === uom.id ? '1px solid #808080' : '1px solid transparent', background: uomHovered === uom.id ? 'linear-gradient(to bottom,#ffffff,#d4d0c8)' : 'transparent', padding: '1px 6px' }}
+                                            onMouseEnter={() => setUomHovered(uom.id)} onMouseLeave={() => setUomHovered(null)}
+                                            onClick={() => onDeleteUOM(uom.id)} title="Delete"
+                                        >
+                                            <i className="bi bi-trash" style={{ color: '#c00000', fontSize: '11px' }}></i>
+                                        </button>
+                                    </div>
+                                    {expandedUomId === uom.id && (
+                                        <div style={{ background: '#f0ede4', borderBottom: '1px solid #c0bdb5', padding: '6px 12px 6px 28px' }}>
+                                            <div style={{ fontFamily: 'Tahoma,Arial,sans-serif', fontSize: '10px', color: '#804800', marginBottom: 4 }}>
+                                                1 {uom.name} = X Yd (conversion factors)
+                                            </div>
+                                            {(uom.factors || []).map((f: any) => (
+                                                <div key={f.id} style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 3 }}>
+                                                    <span style={{ fontFamily: 'Tahoma,Arial,sans-serif', fontSize: '11px', color: '#000' }}>
+                                                        <b>{parseFloat(f.value)} Yd</b>{f.label ? ` — ${f.label}` : ''}
+                                                    </span>
+                                                    <button style={{ ...xpBtn(), padding: '0px 4px', fontSize: '10px' }} onClick={() => onDeleteUOMFactor(uom.id, f.id)} title="Remove">✕</button>
+                                                </div>
+                                            ))}
+                                            <div style={{ display: 'flex', gap: 4, marginTop: 4 }}>
+                                                <input type="number" style={{ ...xpInput, width: 64 }} placeholder="Yd" value={expandedUomId === uom.id ? newFactorValue : ''} onChange={e => setNewFactorValue(e.target.value)} />
+                                                <input style={{ ...xpInput, flex: 1 }} placeholder="Label (optional)" value={expandedUomId === uom.id ? newFactorLabel : ''} onChange={e => setNewFactorLabel(e.target.value)} />
+                                                <button style={xpBtn({ background: 'linear-gradient(to bottom,#5ec85e,#2d7a2d)', borderColor: '#1a5e1a #0a3e0a #0a3e0a #1a5e1a', color: '#fff' })}
+                                                    onClick={() => { if (newFactorValue) { onCreateUOMFactor(uom.id, parseFloat(newFactorValue), newFactorLabel); setNewFactorValue(''); setNewFactorLabel(''); } }}
+                                                >Add</button>
+                                            </div>
+                                        </div>
+                                    )}
                                 </div>
                             ))}
                             {filteredUOMs.length === 0 && <div style={{ textAlign: 'center', padding: '16px', fontFamily: 'Tahoma,Arial,sans-serif', fontSize: '11px', color: '#666' }}>No units</div>}
@@ -469,9 +510,39 @@ export default function ItemMetadataView({
                             </div>
                             <div className="list-group list-group-flush border rounded">
                                 {filteredUOMs.map((uom: any) => (
-                                    <div key={uom.id} className="list-group-item d-flex justify-content-between align-items-center">
-                                        <span className="fw-medium font-monospace">{uom.name}</span>
-                                        <button className="btn btn-sm text-danger" onClick={() => onDeleteUOM(uom.id)}><i className="bi bi-trash me-1"></i>{t('delete')}</button>
+                                    <div key={uom.id}>
+                                        <div className="list-group-item d-flex justify-content-between align-items-center">
+                                            <div className="d-flex align-items-center gap-2">
+                                                <button className="btn btn-sm btn-outline-secondary py-0 px-1" style={{ fontSize: 11 }}
+                                                    onClick={() => setExpandedUomId(expandedUomId === uom.id ? null : uom.id)}
+                                                >{expandedUomId === uom.id ? '▾' : '▸'}</button>
+                                                <span className="fw-medium font-monospace">{uom.name}</span>
+                                                {(uom.factors || []).length > 0 && (
+                                                    <span className="badge bg-warning text-dark" style={{ fontSize: 10 }}>
+                                                        {(uom.factors || []).length} factor{(uom.factors || []).length > 1 ? 's' : ''}
+                                                    </span>
+                                                )}
+                                            </div>
+                                            <button className="btn btn-sm text-danger" onClick={() => onDeleteUOM(uom.id)}><i className="bi bi-trash me-1"></i>{t('delete')}</button>
+                                        </div>
+                                        {expandedUomId === uom.id && (
+                                            <div className="list-group-item bg-light ps-4">
+                                                <div className="text-muted small mb-2">1 {uom.name} = X Yd — conversion factors</div>
+                                                {(uom.factors || []).map((f: any) => (
+                                                    <div key={f.id} className="d-flex align-items-center gap-2 mb-1">
+                                                        <span className="small"><strong>{parseFloat(f.value)} Yd</strong>{f.label ? ` — ${f.label}` : ''}</span>
+                                                        <button className="btn btn-sm text-danger p-0 px-1" onClick={() => onDeleteUOMFactor(uom.id, f.id)}>✕</button>
+                                                    </div>
+                                                ))}
+                                                <div className="d-flex gap-2 mt-2">
+                                                    <input type="number" className="form-control form-control-sm" style={{ width: 80 }} placeholder="Yd"
+                                                        value={expandedUomId === uom.id ? newFactorValue : ''} onChange={e => setNewFactorValue(e.target.value)} />
+                                                    <input className="form-control form-control-sm" placeholder="Label (optional)"
+                                                        value={expandedUomId === uom.id ? newFactorLabel : ''} onChange={e => setNewFactorLabel(e.target.value)} />
+                                                    <button className="btn btn-sm btn-success" onClick={() => { if (newFactorValue) { onCreateUOMFactor(uom.id, parseFloat(newFactorValue), newFactorLabel); setNewFactorValue(''); setNewFactorLabel(''); } }}>Add</button>
+                                                </div>
+                                            </div>
+                                        )}
                                     </div>
                                 ))}
                                 {filteredUOMs.length === 0 && <div className="list-group-item text-center text-muted py-4 fst-italic">No UOMs defined</div>}

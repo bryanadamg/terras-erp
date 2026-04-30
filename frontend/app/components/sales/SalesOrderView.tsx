@@ -129,6 +129,7 @@ export default function SalesOrderView({ items, attributes, boms, salesOrders, p
   const [newLine, setNewLine] = useState({
       item_id: '', qty: 0, due_date: '', attribute_value_ids: [] as string[],
       ket_stock: '', internal_confirmation_date: '', qty_kg: '', qty2: '', uom2: '',
+      uom2_factor: null as number | null,
       bom_size_id: '',
   });
   const [qtyMeter, setQtyMeter] = useState('');
@@ -179,7 +180,7 @@ export default function SalesOrderView({ items, attributes, boms, salesOrders, p
   const handleAddLine = () => {
       if (!newLine.item_id || newLine.qty <= 0) return;
       setNewSO({ ...newSO, lines: [...newSO.lines, { ...newLine, bom_size_id: newLine.bom_size_id || null }] });
-      setNewLine({ item_id: '', qty: 0, due_date: '', attribute_value_ids: [], ket_stock: '', internal_confirmation_date: '', qty_kg: '', qty2: '', uom2: '', bom_size_id: '' });
+      setNewLine({ item_id: '', qty: 0, due_date: '', attribute_value_ids: [], ket_stock: '', internal_confirmation_date: '', qty_kg: '', qty2: '', uom2: '', uom2_factor: null, bom_size_id: '' });
       setQtyMeter('');
       setQtyGrossYd('');
       setKgAuto(true);
@@ -325,6 +326,29 @@ export default function SalesOrderView({ items, attributes, boms, salesOrders, p
       setQtyMeter(m > 0 ? String(m) : '');
       setQtyGrossYd(gross > 0 ? String(gross) : '');
       setNewLine(prev => ({ ...prev, qty_kg: kgStr, qty: yd }));
+  };
+
+  const applyFactor = (qty2Str: string, factorVal: number | null) => {
+      const qty2 = parseFloat(qty2Str) || 0;
+      if (!factorVal || qty2 <= 0) return;
+      const yd = Math.round(qty2 * factorVal * 100) / 100;
+      const m = Math.round(yd * 0.9144 * 100) / 100;
+      const gross = Math.round(yd / 144 * 10000) / 10000;
+      setQtyMeter(m > 0 ? String(m) : '');
+      setQtyGrossYd(gross > 0 ? String(gross) : '');
+      const kg = kgAuto ? calcKgAuto(newLine.item_id, yd, m) : null;
+      setNewLine(prev => ({ ...prev, qty: yd, qty_kg: kg !== null ? kg : prev.qty_kg }));
+  };
+
+  const handleQty2Change = (val: string) => {
+      setNewLine(prev => ({ ...prev, qty2: val }));
+      applyFactor(val, newLine.uom2_factor);
+  };
+
+  const handleUom2FactorChange = (factorStr: string) => {
+      const factorVal = factorStr ? parseFloat(factorStr) : null;
+      setNewLine(prev => ({ ...prev, uom2_factor: factorVal }));
+      applyFactor(newLine.qty2, factorVal);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -626,28 +650,61 @@ export default function SalesOrderView({ items, attributes, boms, salesOrders, p
                                    {/* Qty 3 compound input */}
                                    <div>
                                        <label style={classic ? {fontFamily:'Tahoma,Arial,sans-serif',fontSize:'11px',color:'#000',display:'block',marginBottom:2} : undefined} className={classic ? '' : 'form-label small text-muted mb-1'}>Qty 3</label>
-                                       {classic ? (
-                                           <div style={{ display: 'flex' }}>
-                                               <input type="number" className="form-control"
-                                                   style={{ ...xpInput, flex: 1, borderRight: 'none', minWidth: 0 }}
-                                                   placeholder="0" value={newLine.qty2} onChange={e => setNewLine({...newLine, qty2: e.target.value})} />
-                                               <select
-                                                   style={{ fontFamily:'Tahoma,Arial,sans-serif', fontSize:'11px', border:'1px solid #7f9db9', height:'20px', borderRadius:0, padding:'1px 4px', background:'#ffffff', outline:'none', color:'#000', flexShrink: 0 }}
-                                                   value={newLine.uom2} onChange={e => setNewLine({...newLine, uom2: e.target.value})}
-                                               >
-                                                   <option value="">Unit</option>
-                                                   {uoms.map((u: any) => <option key={u.id} value={u.name}>{u.name}</option>)}
-                                               </select>
-                                           </div>
-                                       ) : (
-                                           <div className="input-group input-group-sm">
-                                               <input type="number" className="form-control" placeholder="0" value={newLine.qty2} onChange={e => setNewLine({...newLine, qty2: e.target.value})} />
-                                               <select className="form-select" style={{ maxWidth: 80 }} value={newLine.uom2} onChange={e => setNewLine({...newLine, uom2: e.target.value})}>
-                                                   <option value="">Unit</option>
-                                                   {uoms.map((u: any) => <option key={u.id} value={u.name}>{u.name}</option>)}
-                                               </select>
-                                           </div>
-                                       )}
+                                       {(() => {
+                                           const selectedUom = uoms.find((u: any) => u.name === newLine.uom2);
+                                           const factors = selectedUom?.factors || [];
+                                           return classic ? (
+                                               <div>
+                                                   <div style={{ display: 'flex' }}>
+                                                       <input type="number" className="form-control"
+                                                           style={{ ...xpInput, flex: 1, borderRight: 'none', minWidth: 0 }}
+                                                           placeholder="0" value={newLine.qty2} onChange={e => handleQty2Change(e.target.value)} />
+                                                       <select
+                                                           style={{ fontFamily:'Tahoma,Arial,sans-serif', fontSize:'11px', border:'1px solid #7f9db9', height:'20px', borderRadius:0, padding:'1px 4px', background:'#ffffff', outline:'none', color:'#000', flexShrink: 0 }}
+                                                           value={newLine.uom2} onChange={e => { setNewLine(prev => ({ ...prev, uom2: e.target.value, uom2_factor: null })); }}
+                                                       >
+                                                           <option value="">Unit</option>
+                                                           {uoms.map((u: any) => <option key={u.id} value={u.name}>{u.name}</option>)}
+                                                       </select>
+                                                   </div>
+                                                   {factors.length > 0 && (
+                                                       <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginTop: 3 }}>
+                                                           <span style={{ fontFamily:'Tahoma,Arial,sans-serif', fontSize:'10px', color:'#804800', whiteSpace:'nowrap' }}>1 {newLine.uom2} =</span>
+                                                           <select
+                                                               style={{ fontFamily:'Tahoma,Arial,sans-serif', fontSize:'11px', border:'1px solid #7f9db9', height:'20px', borderRadius:0, padding:'1px 4px', background: newLine.uom2_factor ? '#fff8e8' : '#ffffff', outline:'none', color:'#000', flex: 1 }}
+                                                               value={newLine.uom2_factor ?? ''}
+                                                               onChange={e => handleUom2FactorChange(e.target.value)}
+                                                           >
+                                                               <option value="">— select factor —</option>
+                                                               {factors.map((f: any) => <option key={f.id} value={f.value}>{parseFloat(f.value)} Yd{f.label ? ` (${f.label})` : ''}</option>)}
+                                                           </select>
+                                                       </div>
+                                                   )}
+                                               </div>
+                                           ) : (
+                                               <div>
+                                                   <div className="input-group input-group-sm">
+                                                       <input type="number" className="form-control" placeholder="0" value={newLine.qty2} onChange={e => handleQty2Change(e.target.value)} />
+                                                       <select className="form-select" style={{ maxWidth: 80 }} value={newLine.uom2} onChange={e => setNewLine(prev => ({ ...prev, uom2: e.target.value, uom2_factor: null }))}>
+                                                           <option value="">Unit</option>
+                                                           {uoms.map((u: any) => <option key={u.id} value={u.name}>{u.name}</option>)}
+                                                       </select>
+                                                   </div>
+                                                   {factors.length > 0 && (
+                                                       <div className="d-flex align-items-center gap-1 mt-1">
+                                                           <span className="text-muted small" style={{ whiteSpace:'nowrap' }}>1 {newLine.uom2} =</span>
+                                                           <select className="form-select form-select-sm" style={{ background: newLine.uom2_factor ? '#fff8e8' : undefined }}
+                                                               value={newLine.uom2_factor ?? ''}
+                                                               onChange={e => handleUom2FactorChange(e.target.value)}
+                                                           >
+                                                               <option value="">— select factor —</option>
+                                                               {factors.map((f: any) => <option key={f.id} value={f.value}>{parseFloat(f.value)} Yd{f.label ? ` (${f.label})` : ''}</option>)}
+                                                           </select>
+                                                       </div>
+                                                   )}
+                                               </div>
+                                           );
+                                       })()}
                                    </div>
                                </div>
 

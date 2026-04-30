@@ -401,6 +401,30 @@ def run_migrations():
             except Exception as e:
                 pass
 
+            # 4a. uom_factors table and uom2_factor column
+            try:
+                conn.execute(text("""
+                    CREATE TABLE IF NOT EXISTS uom_factors (
+                        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+                        uom_id UUID NOT NULL REFERENCES uoms(id) ON DELETE CASCADE,
+                        value NUMERIC(14,4) NOT NULL,
+                        label VARCHAR(64)
+                    )
+                """))
+                conn.commit()
+            except Exception as e:
+                conn.rollback()
+                logger.warning(f"uom_factors table creation failed: {e}")
+
+            try:
+                res = conn.execute(text("SELECT column_name FROM information_schema.columns WHERE table_name='sales_order_lines' AND column_name='uom2_factor'"))
+                if not res.fetchone():
+                    conn.execute(text("ALTER TABLE sales_order_lines ADD COLUMN uom2_factor NUMERIC(14,4)"))
+                    conn.commit()
+            except Exception as e:
+                conn.rollback()
+                logger.warning(f"uom2_factor column migration failed: {e}")
+
             # 4. Seed standard UoM values (idempotent — safe to run on existing databases)
             try:
                 uom_defaults = ["Pcs", "Roll", "Pic", "Cone", "Bal", "Box", "Set", "kg", "m", "l"]
