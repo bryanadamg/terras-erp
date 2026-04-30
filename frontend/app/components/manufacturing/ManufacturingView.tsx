@@ -78,7 +78,7 @@ export default function ManufacturingView({
       target_end_date: '',
       sales_order_id: '',
       bom_size_id: '',
-      create_nested: false,
+      create_nested: true,
   });
   
   const [startDate, setStartDate] = useState('');
@@ -289,7 +289,7 @@ export default function ManufacturingView({
               } else {
                   showToast('Manufacturing Order created successfully!', 'success');
               }
-              setNewWO({ code: '', bom_id: '', location_code: '', source_location_code: '', qty: 1.0, target_start_date: '', target_end_date: '', sales_order_id: '', bom_size_id: '', create_nested: false });
+              setNewWO({ code: '', bom_id: '', location_code: '', source_location_code: '', qty: 1.0, target_start_date: '', target_end_date: '', sales_order_id: '', bom_size_id: '', create_nested: true });
               setIsCreateOpen(false);
           } else {
               showToast('Failed to create Manufacturing Order', 'danger');
@@ -1301,7 +1301,9 @@ export default function ManufacturingView({
                                                               <div style={{ fontSize: '9px', color: '#555' }}>
                                                                   BOM: {getBOMCode(wo.bom_id)}
                                                                   {wo.sales_order_id && (
-                                                                      <span style={{ marginLeft: '6px', fontWeight: 'bold', color: currentStyle === 'classic' ? '#0058e6' : undefined }} className={currentStyle !== 'classic' ? 'text-primary' : ''}>From SO</span>
+                                                                      <span style={{ marginLeft: '6px', fontWeight: 'bold', color: currentStyle === 'classic' ? '#0058e6' : undefined }} className={currentStyle !== 'classic' ? 'text-primary' : ''}>
+                                                                          SO: {wo.sales_order_code || '—'}
+                                                                      </span>
                                                                   )}
                                                                   {wo.child_mos && wo.child_mos.length > 0 && (
                                                                       currentStyle === 'classic'

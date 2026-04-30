@@ -134,6 +134,7 @@ async def load_mo_tree(db: AsyncSession, root_ids: list) -> dict:
         .options(
             selectinload(ManufacturingOrder.item),
             selectinload(ManufacturingOrder.attribute_values),
+            selectinload(ManufacturingOrder.sales_order),
             selectinload(ManufacturingOrder.work_orders).selectinload(WorkOrderModel.work_center),
             selectinload(ManufacturingOrder.bom).selectinload(BOM.item),
             selectinload(ManufacturingOrder.bom).selectinload(BOM.attribute_values),
