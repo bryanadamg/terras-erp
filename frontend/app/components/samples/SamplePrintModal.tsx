@@ -22,7 +22,7 @@ const SETTINGS_KEY = 'smp_print_settings';
 function Checkbox({ checked }: { checked: boolean }) {
     return (
         <span style={{
-            display: 'inline-block', width: 10, height: 10,
+            display: 'inline-block', width: 13, height: 13,
             border: '1px solid #000', marginRight: 2, verticalAlign: 'middle',
             background: checked ? '#000' : '#fff', flexShrink: 0,
         }} />
@@ -32,10 +32,10 @@ function Checkbox({ checked }: { checked: boolean }) {
 function FieldRow({ label, value, tall }: { label: string; value?: string | null; tall?: boolean }) {
     return (
         <tr>
-            <td style={{ border: '1px solid #555', padding: '2px 5px', fontWeight: 'bold', whiteSpace: 'nowrap', width: '38%', verticalAlign: tall ? 'top' : 'middle' }}>
+            <td style={{ border: '1px solid #555', padding: '4px 7px', fontWeight: 'bold', whiteSpace: 'nowrap', width: '38%', verticalAlign: tall ? 'top' : 'middle' }}>
                 {label}
             </td>
-            <td style={{ border: '1px solid #555', padding: '2px 5px', verticalAlign: tall ? 'top' : 'middle', minHeight: tall ? 28 : undefined }}>
+            <td style={{ border: '1px solid #555', padding: '4px 7px', verticalAlign: tall ? 'top' : 'middle', minHeight: tall ? 36 : undefined }}>
                 {value || ''}
             </td>
         </tr>
@@ -69,7 +69,7 @@ function SPKDocument({
 
     const docStyle: React.CSSProperties = {
         fontFamily: 'Arial, Helvetica, sans-serif',
-        fontSize: '8.5px',
+        fontSize: '13px',
         color: '#000',
         lineHeight: '1.4',
     };
@@ -94,13 +94,13 @@ function SPKDocument({
                 <div style={{ flexShrink: 0 }}>
                     {companyProfile?.logo_url ? (
                         <img src={`${API_BASE}${companyProfile.logo_url}`} alt="Logo"
-                            style={{ maxHeight: 52, maxWidth: 72, objectFit: 'contain', display: 'block' }} />
+                            style={{ maxHeight: 68, maxWidth: 92, objectFit: 'contain', display: 'block' }} />
                     ) : (
-                        <div style={{ width: 60, height: 44, border: '2px solid #003080', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold', fontSize: 11, color: '#003080' }}>BIE</div>
+                        <div style={{ width: 76, height: 56, border: '2px solid #003080', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold', fontSize: 17, color: '#003080' }}>BIE</div>
                     )}
                 </div>
                 <div style={{ flex: 1 }}>
-                    <div style={{ fontWeight: 'bold', fontSize: 11 }}>{companyProfile?.name || 'PT. BOLA INTAN ELASTIC'}</div>
+                    <div style={{ fontWeight: 'bold', fontSize: 16 }}>{companyProfile?.name || 'PT. BOLA INTAN ELASTIC'}</div>
                     {companyProfile?.address && <div>{companyProfile.address}</div>}
                     <div>
                         {companyProfile?.phone && <span>Telp : {companyProfile.phone}</span>}
@@ -111,7 +111,7 @@ function SPKDocument({
             </div>
 
             {/* ── SPK Sample title ── */}
-            <div style={{ border: '1px solid #555', textAlign: 'center', fontWeight: 'bold', fontSize: 10, padding: '3px 0', marginBottom: 0 }}>
+            <div style={{ border: '1px solid #555', textAlign: 'center', fontWeight: 'bold', fontSize: 15, padding: '4px 0', marginBottom: 0 }}>
                 SPK Sample
             </div>
 
@@ -128,11 +128,11 @@ function SPKDocument({
                     {/* Color rows */}
                     {colorRows.map((c: any, i: number) => (
                         <tr key={i}>
-                            <td style={{ border: '1px solid #555', padding: '2px 5px', fontWeight: 'bold', verticalAlign: 'middle' }}>
+                            <td style={{ border: '1px solid #555', padding: '4px 7px', fontWeight: 'bold', verticalAlign: 'middle' }}>
                                 {i === 0 ? 'WARNA' : ''}
                             </td>
-                            <td style={{ border: '1px solid #555', padding: '2px 5px', verticalAlign: 'middle' }}>
-                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', minHeight: 14 }}>
+                            <td style={{ border: '1px solid #555', padding: '4px 7px', verticalAlign: 'middle' }}>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', minHeight: 18 }}>
                                     <span>{c?.name || ''}</span>
                                     <span style={{ display: 'flex', alignItems: 'center', gap: 3, flexShrink: 0 }}>
                                         <Checkbox checked={!!c?.is_repeat} />
@@ -141,7 +141,7 @@ function SPKDocument({
                                         <Checkbox checked={c ? !c.is_repeat : false} />
                                         <span>New</span>
                                         &nbsp;
-                                        <span style={{ display: 'inline-block', width: 10, height: 10, border: '1px solid #888', verticalAlign: 'middle' }} />
+                                        <span style={{ display: 'inline-block', width: 13, height: 13, border: '1px solid #888', verticalAlign: 'middle' }} />
                                     </span>
                                 </div>
                             </td>
@@ -154,7 +154,7 @@ function SPKDocument({
             <table style={tableStyle}>
                 <tbody>
                     <tr>
-                        <td colSpan={2} style={{ border: '1px solid #555', padding: '2px 5px', textAlign: 'center', fontWeight: 'bold', fontSize: 9, background: '#bdd7ee', color: '#1f3864', letterSpacing: 1 }}>
+                        <td colSpan={2} style={{ border: '1px solid #555', padding: '4px 7px', textAlign: 'center', fontWeight: 'bold', fontSize: 14, background: '#bdd7ee', color: '#1f3864', letterSpacing: 1 }}>
                             DETAIL QUALITY
                         </td>
                     </tr>
@@ -181,10 +181,10 @@ function SPKDocument({
             {/* ── Contoh Original Sample box ── */}
             {showSampleBox && (
                 <div style={{ marginTop: 8 }}>
-                    <div style={{ fontSize: 8, marginBottom: 2 }}>Contoh Original Sample</div>
-                    <div style={{ border: '1px solid #555', minHeight: 110, padding: '4px 6px', display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
+                    <div style={{ fontSize: 13, marginBottom: 2 }}>Contoh Original Sample</div>
+                    <div style={{ border: '1px solid #555', minHeight: 150, padding: '6px 8px', display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
                         {sample.completion_description && (
-                            <div style={{ fontSize: 8, color: '#000', whiteSpace: 'pre-wrap', marginBottom: 4, alignSelf: 'flex-start' }}>
+                            <div style={{ fontSize: 13, color: '#000', whiteSpace: 'pre-wrap', marginBottom: 6, alignSelf: 'flex-start' }}>
                                 {sample.completion_description}
                             </div>
                         )}
@@ -192,7 +192,7 @@ function SPKDocument({
                             <img
                                 src={`${API_BASE}${sample.completion_image_url}`}
                                 alt="Contoh"
-                                style={{ maxWidth: '100%', maxHeight: 90, objectFit: 'contain', display: 'block' }}
+                                style={{ maxWidth: '100%', maxHeight: 140, objectFit: 'contain', display: 'block' }}
                             />
                         )}
                     </div>
@@ -202,33 +202,33 @@ function SPKDocument({
             {/* ── Prioritas + Checklist ── */}
             {showChecklist && colors.length > 0 && (
                 <div style={{ marginTop: 8, border: '1px solid #555', padding: '6px 10px' }}>
-                    <div style={{ textAlign: 'center', fontWeight: 'bold', color: '#c00', fontSize: 10, marginBottom: 6, letterSpacing: 1 }}>PRIORITAS</div>
+                    <div style={{ textAlign: 'center', fontWeight: 'bold', color: '#c00', fontSize: 15, marginBottom: 6, letterSpacing: 1 }}>PRIORITAS</div>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                        <div style={{ fontWeight: 'bold', fontSize: 8.5 }}>CHECKLIST:</div>
+                        <div style={{ fontWeight: 'bold', fontSize: 13 }}>CHECKLIST:</div>
                         <div style={{ display: 'flex', gap: 24 }}>
                             {/* OK column */}
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
                                 {colors.map((c: any, i: number) => (
-                                    <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                                        <span style={{ display: 'inline-block', width: 9, height: 9, border: '1px solid #555', flexShrink: 0 }} />
-                                        <span style={{ fontSize: 8 }}>OK</span>
+                                    <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+                                        <span style={{ display: 'inline-block', width: 12, height: 12, border: '1px solid #555', flexShrink: 0 }} />
+                                        <span style={{ fontSize: 13 }}>OK</span>
                                     </div>
                                 ))}
                                 {/* extra blank row */}
-                                <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                                    <span style={{ display: 'inline-block', width: 9, height: 9, border: '1px solid #555', flexShrink: 0 }} />
+                                <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+                                    <span style={{ display: 'inline-block', width: 12, height: 12, border: '1px solid #555', flexShrink: 0 }} />
                                 </div>
                             </div>
                             {/* NOT OK column */}
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
                                 {colors.map((c: any, i: number) => (
-                                    <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                                        <span style={{ display: 'inline-block', width: 9, height: 9, border: '1px solid #555', flexShrink: 0 }} />
-                                        <span style={{ fontSize: 8 }}>NOT OK</span>
+                                    <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+                                        <span style={{ display: 'inline-block', width: 12, height: 12, border: '1px solid #555', flexShrink: 0 }} />
+                                        <span style={{ fontSize: 13 }}>NOT OK</span>
                                     </div>
                                 ))}
-                                <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                                    <span style={{ display: 'inline-block', width: 9, height: 9, border: '1px solid #555', flexShrink: 0 }} />
+                                <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+                                    <span style={{ display: 'inline-block', width: 12, height: 12, border: '1px solid #555', flexShrink: 0 }} />
                                 </div>
                             </div>
                         </div>
@@ -239,12 +239,12 @@ function SPKDocument({
             {/* ── Footer ── */}
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginTop: 12 }}>
                 <div>
-                    <div style={{ fontSize: 8 }}>Disiapkan oleh :</div>
-                    <div style={{ height: 32, borderBottom: '1px solid #000', width: 90, marginTop: 4 }}></div>
-                    {preparedBy && <div style={{ fontWeight: 'bold', fontSize: 8.5, marginTop: 2 }}>{preparedBy}</div>}
-                    {preparedRole && <div style={{ fontSize: 8 }}>{preparedRole}</div>}
+                    <div style={{ fontSize: 13 }}>Disiapkan oleh :</div>
+                    <div style={{ height: 36, borderBottom: '1px solid #000', width: 110, marginTop: 4 }}></div>
+                    {preparedBy && <div style={{ fontWeight: 'bold', fontSize: 13, marginTop: 2 }}>{preparedBy}</div>}
+                    {preparedRole && <div style={{ fontSize: 13 }}>{preparedRole}</div>}
                 </div>
-                <div style={{ border: '2px solid #c00', padding: '6px 16px', color: '#c00', fontWeight: 'bold', fontSize: 11, letterSpacing: 1, alignSelf: 'center' }}>
+                <div style={{ border: '2px solid #c00', padding: '8px 20px', color: '#c00', fontWeight: 'bold', fontSize: 16, letterSpacing: 1, alignSelf: 'center' }}>
                     INTERNAL REPORT
                 </div>
             </div>
@@ -319,7 +319,17 @@ export default function SamplePrintModal({
     );
 
     const handlePrint = () => {
-        const handler = () => onClose();
+        const pageStyle = document.createElement('style');
+        pageStyle.id = '__smp-page';
+        pageStyle.textContent = [
+            '@page { size: A4 portrait; margin: 10mm; }',
+            'html, body { width: 210mm !important; max-width: none !important; margin: 0 !important; padding: 0 !important; }',
+        ].join(' ');
+        document.head.appendChild(pageStyle);
+        const handler = () => {
+            onClose();
+            document.getElementById('__smp-page')?.remove();
+        };
         window.addEventListener('afterprint', handler, { once: true });
         window.print();
     };
@@ -384,7 +394,7 @@ export default function SamplePrintModal({
 
                         {/* RIGHT — preview */}
                         <div style={{ flex: 1, background: '#e0e0e0', overflowY: 'auto', padding: 16, display: 'flex', justifyContent: 'center', alignItems: 'flex-start' }}>
-                            <div className="smp-print-paper" style={{ background: '#fff', width: '100%', maxWidth: 480, padding: '20px 24px', boxShadow: '0 2px 10px rgba(0,0,0,0.25)', fontSize: '8.5px', lineHeight: 1.5, color: '#000', fontFamily: 'Arial, sans-serif' }}>
+                            <div className="smp-print-paper" style={{ background: '#fff', width: '100%', maxWidth: 480, padding: '20px 24px', boxShadow: '0 2px 10px rgba(0,0,0,0.25)', fontSize: '13px', lineHeight: 1.5, color: '#000', fontFamily: 'Arial, sans-serif' }}>
                                 {docContent}
                             </div>
                         </div>
@@ -415,7 +425,7 @@ export default function SamplePrintModal({
             {/* ── Print portal ── */}
             {createPortal(
                 <div className="smp-print-paper-portal" style={{ position: 'fixed', left: '-9999px', top: 0 }}>
-                    <div className="smp-print-paper" style={{ background: '#fff', width: '100%', padding: '20px 24px', fontSize: '8.5px', lineHeight: 1.5, color: '#000', fontFamily: 'Arial, sans-serif' }}>
+                    <div className="smp-print-paper" style={{ background: '#fff', width: '100%', padding: '20px 24px', fontSize: '13px', lineHeight: 1.5, color: '#000', fontFamily: 'Arial, sans-serif' }}>
                         {docContent}
                     </div>
                 </div>,
