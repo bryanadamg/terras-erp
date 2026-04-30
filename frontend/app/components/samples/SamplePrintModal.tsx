@@ -394,8 +394,12 @@ export default function SamplePrintModal({
 
                         {/* RIGHT — preview */}
                         <div style={{ flex: 1, background: '#e0e0e0', overflowY: 'auto', padding: 16, display: 'flex', justifyContent: 'center', alignItems: 'flex-start' }}>
-                            <div className="smp-print-paper" style={{ background: '#fff', width: '100%', maxWidth: 480, padding: '20px 24px', boxShadow: '0 2px 10px rgba(0,0,0,0.25)', fontSize: '13px', lineHeight: 1.5, color: '#000', fontFamily: 'Arial, sans-serif' }}>
-                                {docContent}
+                            {/* zoom scales layout space too, so 730px × 0.62 ≈ 453px apparent width —
+                                matches the old preview size while showing content at true A4 proportions */}
+                            <div style={{ zoom: 0.62, width: 730, flexShrink: 0 }}>
+                                <div className="smp-print-paper" style={{ background: '#fff', width: '100%', padding: '20px 24px', boxShadow: '0 2px 10px rgba(0,0,0,0.25)', fontSize: '13px', lineHeight: 1.5, color: '#000', fontFamily: 'Arial, sans-serif' }}>
+                                    {docContent}
+                                </div>
                             </div>
                         </div>
 
