@@ -486,26 +486,45 @@ export default function BOMDesigner({
     };
 
     const validatePercentages = (node: BOMNodeData): string | null => {
-        if (node.lines.length > 0) {
-            const total = node.lines.reduce((sum, l) => sum + (l.percentage || 0), 0);
-            const hasAny = node.lines.some(l => (l.percentage || 0) > 0);
-            if (hasAny && Math.abs(total - 100) > 0.01) {
-                return node.item_code || 'root';
+        const childSubBOMs = node.lines
+            .map(l => l.subBOM)
+            .filter((s): s is BOMNodeData => !!s);
+
+        if (childSubBOMs.length > 0) {
+            // Validate ALL sibling subBOM component lines combined
+            const allChildLines = childSubBOMs.flatMap(s => s.lines);
+            const hasAny = allChildLines.some(l => (l.percentage || 0) > 0);
+            if (hasAny) {
+                const total = allChildLines.reduce((sum, l) => sum + (l.percentage || 0), 0);
+                if (Math.abs(total - 100) > 0.01) {
+                    return node.item_code || 'root';
+                }
             }
-        }
-        for (const line of node.lines) {
-            if (line.subBOM) {
-                const err = validatePercentages(line.subBOM);
+            for (const child of childSubBOMs) {
+                const err = validatePercentages(child);
                 if (err) return err;
             }
         }
+        // No own-lines check — percentages are validated by the parent node
         return null;
     };
 
     const handleGlobalSave = async () => {
+        // Check root's own direct leaf lines (lines with no subBOM)
+        const rootLeafLines = rootBOM.lines.filter(l => !l.subBOM);
+        if (rootLeafLines.length > 0) {
+            const hasAny = rootLeafLines.some(l => (l.percentage || 0) > 0);
+            if (hasAny) {
+                const total = rootLeafLines.reduce((sum, l) => sum + (l.percentage || 0), 0);
+                if (Math.abs(total - 100) > 0.01) {
+                    setPctError(`Percentages for root must sum to 100%.`);
+                    return;
+                }
+            }
+        }
         const pctErr = validatePercentages(rootBOM);
         if (pctErr) {
-            setPctError(`Percentages for "${pctErr}" must sum to 100%.`);
+            setPctError(`Percentages under "${pctErr}" must sum to 100% across child nodes.`);
             return;
         }
         setPctError(null);
@@ -531,6 +550,17 @@ export default function BOMDesigner({
         for (const line of root.lines) {
             if (line.subBOM) {
                 const found = findNodeById(line.subBOM, id);
+                if (found) return found;
+            }
+        }
+        return null;
+    };
+
+    const findParentById = (root: BOMNodeData, targetId: string): BOMNodeData | null => {
+        for (const line of root.lines) {
+            if (line.subBOM) {
+                if (line.subBOM.id === targetId) return root;
+                const found = findParentById(line.subBOM, targetId);
                 if (found) return found;
             }
         }
@@ -1358,14 +1388,36 @@ export default function BOMDesigner({
                                             </div>
                                             {/* Percentage total indicator */}
                                             {(() => {
-                                                const totalPct = selectedNode.lines.reduce((sum, l) => sum + (l.percentage || 0), 0);
+                                                const nodePct = selectedNode.lines.reduce((sum, l) => sum + (l.percentage || 0), 0);
                                                 const hasPct = selectedNode.lines.some(l => (l.percentage || 0) > 0);
                                                 if (!hasPct) return null;
-                                                const isValid = Math.abs(totalPct - 100) < 0.01;
+
+                                                const parent = findParentById(rootBOM, selectedNode.id);
+                                                const siblingSubBOMs = parent
+                                                    ? parent.lines.map(l => l.subBOM).filter((s): s is BOMNodeData => !!s)
+                                                    : [];
+                                                const hasSiblings = siblingSubBOMs.length > 1;
+
+                                                if (hasSiblings) {
+                                                    const allSiblingLines = siblingSubBOMs.flatMap(s => s.lines);
+                                                    const groupTotal = allSiblingLines.reduce((sum, l) => sum + (l.percentage || 0), 0);
+                                                    const isValid = Math.abs(groupTotal - 100) < 0.01;
+                                                    return (
+                                                        <div style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '3px 6px', borderTop: '1px solid #aca899', background: '#ece9d8' }}>
+                                                            <span style={{ fontSize: 10, color: '#555', flex: 1 }}>Subtotal %:</span>
+                                                            <span style={xpBadge('#555')}>{nodePct.toFixed(1)}%</span>
+                                                            <span style={{ fontSize: 10, color: '#555' }}>| Group:</span>
+                                                            <span style={xpBadge(isValid ? '#2a7a2a' : '#a02020')}>{groupTotal.toFixed(1)}%</span>
+                                                            {!isValid && <span style={{ fontSize: 10, color: '#a02020' }}>must = 100%</span>}
+                                                        </div>
+                                                    );
+                                                }
+
+                                                const isValid = Math.abs(nodePct - 100) < 0.01;
                                                 return (
                                                     <div style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '3px 6px', borderTop: '1px solid #aca899', background: '#ece9d8' }}>
                                                         <span style={{ fontSize: 10, color: '#555', flex: 1 }}>Total %:</span>
-                                                        <span style={xpBadge(isValid ? '#2a7a2a' : '#a02020')}>{totalPct.toFixed(1)}%</span>
+                                                        <span style={xpBadge(isValid ? '#2a7a2a' : '#a02020')}>{nodePct.toFixed(1)}%</span>
                                                         {!isValid && <span style={{ fontSize: 10, color: '#a02020' }}>must = 100%</span>}
                                                     </div>
                                                 );
