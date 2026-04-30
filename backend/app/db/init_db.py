@@ -401,6 +401,17 @@ def run_migrations():
             except Exception as e:
                 pass
 
+            # 4. Seed standard UoM values (idempotent — safe to run on existing databases)
+            try:
+                uom_defaults = ["Pcs", "Roll", "Pic", "Cone", "Bal", "Box", "Set", "kg", "m", "l"]
+                for name in uom_defaults:
+                    conn.execute(text("INSERT INTO uoms (id, name) VALUES (gen_random_uuid(), :name) ON CONFLICT (name) DO NOTHING"), {"name": name})
+                conn.commit()
+                logger.info("Migration: Seeded standard UoM values")
+            except Exception as e:
+                conn.rollback()
+                logger.warning(f"UoM seeding migration failed: {e}")
+
     except Exception as e:
         logger.error(f"Migration engine failed: {e}")
 
@@ -450,7 +461,7 @@ def seed_categories(db):
 def seed_uoms(db):
     try:
         if db.query(UOM).count() == 0:
-            defaults = ["pcs", "kg", "m", "l", "box", "roll"]
+            defaults = ["Pcs", "Roll", "Pic", "Cone", "Bal", "Box", "Set", "kg", "m", "l"]
             for name in defaults:
                 db.add(UOM(name=name))
             db.commit()

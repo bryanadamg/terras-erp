@@ -18,7 +18,7 @@ export default function SalesOrderView({ items, attributes, boms, salesOrders, p
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('ALL');
   const { uiStyle: currentStyle } = useTheme();
-  const { companyProfile } = useData();
+  const { companyProfile, uoms } = useData();
 
 
   const classic = currentStyle === 'classic';
@@ -132,6 +132,7 @@ export default function SalesOrderView({ items, attributes, boms, salesOrders, p
       bom_size_id: '',
   });
   const [qtyMeter, setQtyMeter] = useState('');
+  const [qtyGrossYd, setQtyGrossYd] = useState('');
   const [kgAuto, setKgAuto] = useState(true);
 
   const [isConfigOpen, setIsConfigOpen] = useState(false);
@@ -180,6 +181,7 @@ export default function SalesOrderView({ items, attributes, boms, salesOrders, p
       setNewSO({ ...newSO, lines: [...newSO.lines, { ...newLine, bom_size_id: newLine.bom_size_id || null }] });
       setNewLine({ item_id: '', qty: 0, due_date: '', attribute_value_ids: [], ket_stock: '', internal_confirmation_date: '', qty_kg: '', qty2: '', uom2: '', bom_size_id: '' });
       setQtyMeter('');
+      setQtyGrossYd('');
       setKgAuto(true);
   };
 
@@ -211,6 +213,23 @@ export default function SalesOrderView({ items, attributes, boms, salesOrders, p
       if (!w || yd <= 0) return null;
       if (unit === 'g/y') return String(Math.round(w * yd / 1000 * 1000) / 1000);
       if (unit === 'g/m' && m > 0) return String(Math.round(w * m / 1000 * 1000) / 1000);
+      return null;
+  };
+
+  const calcYdFromKg = (id: string, kg: number): { yd: number; m: number } | null => {
+      const w = getItemWeight(id);
+      const unit = getItemWeightUnit(id);
+      if (!w || kg <= 0) return null;
+      if (unit === 'g/y') {
+          const yd = Math.round(kg * 1000 / w * 100) / 100;
+          const m = Math.round(yd * 0.9144 * 100) / 100;
+          return { yd, m };
+      }
+      if (unit === 'g/m') {
+          const m = Math.round(kg * 1000 / w * 100) / 100;
+          const yd = Math.round(m / 0.9144 * 100) / 100;
+          return { yd, m };
+      }
       return null;
   };
 
@@ -258,7 +277,9 @@ export default function SalesOrderView({ items, attributes, boms, salesOrders, p
   const handleQtyYardChange = (ydStr: string) => {
       const yd = parseFloat(ydStr) || 0;
       const m = yd > 0 ? Math.round(yd * 0.9144 * 100) / 100 : 0;
+      const gross = yd > 0 ? Math.round(yd / 144 * 10000) / 10000 : 0;
       setQtyMeter(m > 0 ? String(m) : '');
+      setQtyGrossYd(gross > 0 ? String(gross) : '');
       const kg = kgAuto ? calcKgAuto(newLine.item_id, yd, m) : null;
       setNewLine({ ...newLine, qty: yd, qty_kg: kg !== null ? kg : newLine.qty_kg });
   };
@@ -267,6 +288,18 @@ export default function SalesOrderView({ items, attributes, boms, salesOrders, p
       setQtyMeter(mStr);
       const m = parseFloat(mStr) || 0;
       const yd = m > 0 ? Math.round(m / 0.9144 * 100) / 100 : 0;
+      const gross = yd > 0 ? Math.round(yd / 144 * 10000) / 10000 : 0;
+      setQtyGrossYd(gross > 0 ? String(gross) : '');
+      const kg = kgAuto ? calcKgAuto(newLine.item_id, yd, m) : null;
+      setNewLine({ ...newLine, qty: yd, qty_kg: kg !== null ? kg : newLine.qty_kg });
+  };
+
+  const handleQtyGrossYdChange = (grossStr: string) => {
+      setQtyGrossYd(grossStr);
+      const gross = parseFloat(grossStr) || 0;
+      const yd = gross > 0 ? Math.round(gross * 144 * 100) / 100 : 0;
+      const m = yd > 0 ? Math.round(yd * 0.9144 * 100) / 100 : 0;
+      setQtyMeter(m > 0 ? String(m) : '');
       const kg = kgAuto ? calcKgAuto(newLine.item_id, yd, m) : null;
       setNewLine({ ...newLine, qty: yd, qty_kg: kg !== null ? kg : newLine.qty_kg });
   };
@@ -528,7 +561,7 @@ export default function SalesOrderView({ items, attributes, boms, salesOrders, p
                                {/* Left: Qty inputs panel */}
                                <div style={{ background: classic ? '#f8f7f2' : 'rgba(0,0,0,0.02)', border: classic ? '1px solid #c0bdb5' : '1px solid #dee2e6', padding: classic ? '6px 8px' : '10px 12px' }}>
 
-                                   {/* Yard / Meter pair */}
+                                   {/* Yard / Meter / GrossYd row */}
                                    <div style={{ display: 'flex', gap: 6, alignItems: 'flex-end', marginBottom: classic ? 5 : 8 }}>
                                        <div style={{ flex: 1, minWidth: 0 }}>
                                            <label style={classic ? {fontFamily:'Tahoma,Arial,sans-serif',fontSize:'11px',color:'#000',display:'block',marginBottom:2} : undefined} className={classic ? '' : 'form-label small text-muted mb-1'}>Qty (Yd)</label>
@@ -538,6 +571,11 @@ export default function SalesOrderView({ items, attributes, boms, salesOrders, p
                                        <div style={{ flex: 1, minWidth: 0 }}>
                                            <label style={classic ? {fontFamily:'Tahoma,Arial,sans-serif',fontSize:'11px',color:'#000',display:'block',marginBottom:2} : undefined} className={classic ? '' : 'form-label small text-muted mb-1'}>Qty (m)</label>
                                            <input type="number" className="form-control" style={classic ? {...xpInput, width:'100%'} : undefined} placeholder="0" value={qtyMeter} onChange={e => handleQtyMeterChange(e.target.value)} />
+                                       </div>
+                                       <div style={{ paddingBottom: classic ? 3 : 6, color: '#888', fontSize: 14, flexShrink: 0, userSelect: 'none' as const }}>&#8596;</div>
+                                       <div style={{ flex: 1, minWidth: 0 }}>
+                                           <label style={classic ? {fontFamily:'Tahoma,Arial,sans-serif',fontSize:'11px',color:'#000',display:'block',marginBottom:2} : undefined} className={classic ? '' : 'form-label small text-muted mb-1'}>Qty (Gross Yd)</label>
+                                           <input type="number" className="form-control" style={classic ? {...xpInput, width:'100%'} : undefined} placeholder="0" value={qtyGrossYd} onChange={e => handleQtyGrossYdChange(e.target.value)} />
                                        </div>
                                    </div>
 
@@ -586,7 +624,7 @@ export default function SalesOrderView({ items, attributes, boms, salesOrders, p
                                                    value={newLine.uom2} onChange={e => setNewLine({...newLine, uom2: e.target.value})}
                                                >
                                                    <option value="">Unit</option>
-                                                   {['Pcs','Gross','Roll','Pic','Cone','Bal','Box','Set'].map(u => <option key={u} value={u}>{u}</option>)}
+                                                   {uoms.map((u: any) => <option key={u.id} value={u.name}>{u.name}</option>)}
                                                </select>
                                            </div>
                                        ) : (
@@ -594,7 +632,7 @@ export default function SalesOrderView({ items, attributes, boms, salesOrders, p
                                                <input type="number" className="form-control" placeholder="0" value={newLine.qty2} onChange={e => setNewLine({...newLine, qty2: e.target.value})} />
                                                <select className="form-select" style={{ maxWidth: 80 }} value={newLine.uom2} onChange={e => setNewLine({...newLine, uom2: e.target.value})}>
                                                    <option value="">Unit</option>
-                                                   {['Pcs','Gross','Roll','Pic','Cone','Bal','Box','Set'].map(u => <option key={u} value={u}>{u}</option>)}
+                                                   {uoms.map((u: any) => <option key={u.id} value={u.name}>{u.name}</option>)}
                                                </select>
                                            </div>
                                        )}
