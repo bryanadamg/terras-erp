@@ -230,6 +230,7 @@ def run_migrations():
                 ("bom_sizes", "label", "VARCHAR(128)"),
                 ("manufacturing_orders", "production_run_id", "UUID REFERENCES production_runs(id) ON DELETE SET NULL"),
                 ("manufacturing_orders", "bom_size_id", "UUID REFERENCES bom_sizes(id) ON DELETE SET NULL"),
+                ("items", "created_at", "TIMESTAMPTZ NOT NULL DEFAULT NOW()"),
             ]
 
             for table, col, col_type in migrations:
@@ -403,21 +404,11 @@ def run_migrations():
 
             # 4a0. is_system column on uoms
             try:
-                res = conn.execute(text("SELECT column_name FROM information_schema.columns WHERE table_name='uoms' AND column_name='is_system'"))
-                if not res.fetchone():
-                    conn.execute(text("ALTER TABLE uoms ADD COLUMN is_system BOOLEAN NOT NULL DEFAULT FALSE"))
-                    conn.commit()
+                conn.execute(text("ALTER TABLE uoms ADD COLUMN IF NOT EXISTS is_system BOOLEAN NOT NULL DEFAULT FALSE"))
+                conn.commit()
             except Exception as e:
                 conn.rollback()
                 logger.warning(f"is_system column migration failed: {e}")
-
-            try:
-                conn.execute(text("UPDATE uoms SET is_system = TRUE WHERE name IN ('Roll', 'Pic')"))
-                conn.commit()
-                logger.info("Migration: Marked Roll and Pic as system UOMs")
-            except Exception as e:
-                conn.rollback()
-                logger.warning(f"system UOM marking failed: {e}")
 
             # 4a. uom_factors table and uom2_factor column
             try:
@@ -453,6 +444,15 @@ def run_migrations():
             except Exception as e:
                 conn.rollback()
                 logger.warning(f"UoM seeding migration failed: {e}")
+
+            # Mark Roll and Pic as system UOMs — runs after seed so rows are guaranteed to exist
+            try:
+                conn.execute(text("UPDATE uoms SET is_system = TRUE WHERE name IN ('Roll', 'Pic')"))
+                conn.commit()
+                logger.info("Migration: Marked Roll and Pic as system UOMs")
+            except Exception as e:
+                conn.rollback()
+                logger.warning(f"system UOM marking failed: {e}")
 
     except Exception as e:
         logger.error(f"Migration engine failed: {e}")

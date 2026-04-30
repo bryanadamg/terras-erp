@@ -1,8 +1,9 @@
-from sqlalchemy import String, Boolean, Float, ForeignKey, Table, Column
+from sqlalchemy import String, Boolean, Float, ForeignKey, Table, Column, DateTime, func
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.db.base import Base
 import uuid
+from datetime import datetime
 
 # Association table for Item <-> Attribute
 item_attributes = Table(
@@ -35,6 +36,7 @@ class Item(Base):
     weight_unit: Mapped[str | None] = mapped_column(String(16), nullable=True)  # e.g. gsm, g/m², oz/yd²
 
     active: Mapped[bool] = mapped_column(Boolean, default=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
 
     # Relationships
     attributes = relationship("Attribute", secondary=item_attributes, backref="items")

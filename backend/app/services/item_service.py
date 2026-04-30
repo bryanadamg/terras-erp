@@ -116,7 +116,7 @@ async def get_items(db: AsyncSession, skip: int = 0, limit: int = 100, user=None
     total_result = await db.execute(count_query)
     total = total_result.scalar()
 
-    query = query.options(selectinload(Item.attributes), *_source_opts()).offset(skip).limit(limit)
+    query = query.options(selectinload(Item.attributes), *_source_opts()).order_by(Item.created_at.desc()).offset(skip).limit(limit)
     result = await db.execute(query)
     items = result.unique().scalars().all()
 
