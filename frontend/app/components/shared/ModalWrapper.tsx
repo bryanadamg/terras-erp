@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { useTheme } from '../../context/ThemeContext';
 
 interface ModalWrapperProps {
@@ -36,6 +36,7 @@ export default function ModalWrapper({
 }: ModalWrapperProps) {
     const { uiStyle: currentStyle } = useTheme();
     const [closeBtnHov, setCloseBtnHov] = useState(false);
+    const backdropMouseDown = useRef(false);
 
     if (!isOpen) return null;
 
@@ -51,7 +52,8 @@ export default function ModalWrapper({
                     backgroundColor: 'rgba(0,0,0,0.45)',
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
                 }}
-                onClick={onClose}
+                onMouseDown={e => { backdropMouseDown.current = e.target === e.currentTarget; }}
+                onClick={() => { if (backdropMouseDown.current) onClose(); }}
             >
                 <div
                     style={{
@@ -143,7 +145,8 @@ export default function ModalWrapper({
         <div
             className="modal d-block"
             style={{ backgroundColor: 'rgba(0,0,0,0.5)', zIndex: modalZIndex, position: 'fixed', inset: 0, backdropFilter: 'blur(4px)' }}
-            onClick={onClose}
+            onMouseDown={e => { backdropMouseDown.current = e.target === e.currentTarget; }}
+            onClick={() => { if (backdropMouseDown.current) onClose(); }}
         >
             <div className={`modal-dialog modal-${size} modal-dialog-centered`} onClick={e => e.stopPropagation()}>
                 <div className="modal-content shadow-lg border-0 overflow-hidden">
