@@ -115,8 +115,21 @@ export default function BOMView({
         });
     };
 
-    const selectDetailNode = (bomId: string, itemId: string) => {
-        setSelectedBOMNodes(prev => ({ ...prev, [bomId]: itemId }));
+    const selectDetailNode = (bomId: string, subBomId: string) => {
+        setSelectedBOMNodes(prev => ({ ...prev, [bomId]: subBomId }));
+    };
+
+    // Attribute-aware sub-BOM lookup: exact attribute match first, then generic (no attrs), then undefined
+    const findSubBOM = (line: any, excludeIds: Set<string> = new Set()): any | undefined => {
+        const candidates = boms.filter((b: any) => b.item_id === line.item_id && !excludeIds.has(b.id));
+        if (candidates.length === 0) return undefined;
+        const lineAttrs = [...(line.attribute_value_ids || [])].sort();
+        const exact = candidates.find((b: any) => {
+            const bAttrs = [...(b.attribute_value_ids || [])].sort();
+            return bAttrs.length === lineAttrs.length && bAttrs.every((id: string, idx: number) => id === lineAttrs[idx]);
+        });
+        if (exact) return exact;
+        return candidates.find((b: any) => (b.attribute_value_ids || []).length === 0);
     };
 
     // Lookup helpers
@@ -247,7 +260,7 @@ export default function BOMView({
     const renderBOMTree = (bomLines: any[], parentId: string, level = 0) => (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
             {bomLines.map((line: any) => {
-                const subBOM = boms.find((b: any) => b.item_id === line.item_id);
+                const subBOM = findSubBOM(line);
                 const isExpandable = !!subBOM;
                 const nodeKey = `${parentId}-${line.id}`;
                 const isExpanded = expandedNodes[nodeKey];
@@ -296,38 +309,38 @@ export default function BOMView({
         visited.add(b.id);
         let count = 1;
         for (const line of b.lines || []) {
-            const sub = boms.find((sb: any) => sb.item_id === line.item_id && !visited.has(sb.id));
+            const sub = findSubBOM(line, visited);
             count += sub ? countTreeNodes(sub, new Set(visited)) : 1;
         }
         return count;
     };
 
-    const findParentName = (b: any, targetItemId: string, visited = new Set<string>()): string => {
+    const findParentName = (b: any, targetBomId: string, visited = new Set<string>()): string => {
         if (visited.has(b.id)) return '';
         visited.add(b.id);
         for (const line of b.lines || []) {
-            if (line.item_id === targetItemId) return b.item_name || b.item_code || '';
-            const sub = boms.find((sb: any) => sb.item_id === line.item_id && !visited.has(sb.id));
-            if (sub) { const r = findParentName(sub, targetItemId, new Set(visited)); if (r) return r; }
+            const sub = findSubBOM(line, visited);
+            if (sub?.id === targetBomId) return b.item_name || b.item_code || '';
+            if (sub) { const r = findParentName(sub, targetBomId, new Set(visited)); if (r) return r; }
         }
         return '';
     };
 
-    const buildTreeNodes = (b: any, level: number, visited: Set<string>, rootBomId: string, selectedItemId: string): React.ReactNode[] => {
+    const buildTreeNodes = (b: any, level: number, visited: Set<string>, rootBomId: string, selectedBomId: string): React.ReactNode[] => {
         if (visited.has(b.id)) return [];
         const seen = new Set(visited);
         seen.add(b.id);
         const nodes: React.ReactNode[] = [];
 
         for (const line of b.lines || []) {
-            const sub = boms.find((sb: any) => sb.item_id === line.item_id && !seen.has(sb.id));
+            const sub = findSubBOM(line, seen);
             const isSelectable = !!sub;
-            const isSelected = isSelectable && selectedItemId === line.item_id;
+            const isSelected = isSelectable && !!sub && selectedBomId === sub.id;
             const indentPx = 5 + level * 14;
 
             nodes.push(
                 <div key={line.id}
-                    onClick={isSelectable ? () => selectDetailNode(rootBomId, line.item_id) : undefined}
+                    onClick={isSelectable && sub ? () => selectDetailNode(rootBomId, sub.id) : undefined}
                     style={{
                         display: 'flex', alignItems: 'center', gap: 5,
                         padding: `3px 5px 3px ${indentPx}px`,
@@ -356,16 +369,16 @@ export default function BOMView({
                 </div>
             );
 
-            if (sub) nodes.push(...buildTreeNodes(sub, level + 1, seen, rootBomId, selectedItemId));
+            if (sub) nodes.push(...buildTreeNodes(sub, level + 1, seen, rootBomId, selectedBomId));
         }
         return nodes;
     };
 
     const renderDetailPanel = (bom: any) => {
         const bomId = bom.id;
-        const selectedItemId = selectedBOMNodes[bomId] ?? bom.item_id;
-        const isRootSelected = selectedItemId === bom.item_id;
-        const displayBOM = isRootSelected ? bom : (boms.find((b: any) => b.item_id === selectedItemId) || bom);
+        const selectedBomId = selectedBOMNodes[bomId] ?? bom.id;
+        const isRootSelected = selectedBomId === bom.id;
+        const displayBOM = isRootSelected ? bom : (boms.find((b: any) => b.id === selectedBomId) || bom);
 
         const lines: any[] = displayBOM.lines || [];
         const ops: any[] = [...(displayBOM.operations || [])].sort((a: any, b: any) => a.sequence - b.sequence);
@@ -373,8 +386,8 @@ export default function BOMView({
         const totalPct = lines.reduce((sum: number, l: any) => sum + (l.percentage || 0), 0);
         const hasPct = lines.some((l: any) => (l.percentage || 0) > 0);
         const nodeCount = countTreeNodes(bom);
-        const parentName = isRootSelected ? '' : findParentName(bom, selectedItemId);
-        const subBOMCount = boms.filter((b: any) => lines.some((l: any) => l.item_id === b.item_id)).length;
+        const parentName = isRootSelected ? '' : findParentName(bom, selectedBomId);
+        const subBOMCount = lines.filter((l: any) => !!findSubBOM(l)).length;
 
         return (
             <tr key={`${bom.id}-detail`}>
@@ -390,7 +403,7 @@ export default function BOMView({
                             <div style={{ border: '2px inset #aaa', background: 'white', flex: 1, margin: 4, overflowY: 'auto', padding: 0 }}>
                                 {/* Root node */}
                                 <div
-                                    onClick={() => selectDetailNode(bomId, bom.item_id)}
+                                    onClick={() => selectDetailNode(bomId, bom.id)}
                                     style={{
                                         display: 'flex', alignItems: 'center', gap: 5,
                                         padding: '3px 5px',
@@ -410,7 +423,7 @@ export default function BOMView({
                                     </span>
                                     <span style={{ background: isRootSelected ? 'rgba(255,255,255,0.25)' : '#2d7a2d', color: '#fff', fontSize: 8, padding: '0 3px', fontWeight: 'bold', flexShrink: 0, border: isRootSelected ? '1px solid rgba(255,255,255,0.4)' : 'none' }}>ROOT</span>
                                 </div>
-                                {buildTreeNodes(bom, 1, new Set(), bomId, selectedItemId)}
+                                {buildTreeNodes(bom, 1, new Set(), bomId, selectedBomId)}
                             </div>
                         </div>
 
@@ -458,7 +471,7 @@ export default function BOMView({
                                                     const level = getStockLevel(line);
                                                     const sc = stockColors[level];
                                                     const onHand = stockMap[String(line.item_id)];
-                                                    const isSubBOM = boms.some((b: any) => b.item_id === line.item_id);
+                                                    const isSubBOM = !!findSubBOM(line);
                                                     return (
                                                         <tr key={line.id} style={{ background: i % 2 === 0 ? '#fff' : '#f5f3ee' }}>
                                                             <td style={xpTd}>
