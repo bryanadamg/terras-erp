@@ -161,7 +161,6 @@ export default function BOMView({
         const onHand = stockMap[String(line.item_id)] ?? null;
         if (onHand === null) return 'ok';
         if (onHand === 0) return 'out';
-        if (onHand < line.qty) return 'low';
         return 'ok';
     };
 
@@ -275,7 +274,6 @@ export default function BOMView({
                                 <span style={{ width: '12px', display: 'inline-block', marginRight: '4px', flexShrink: 0 }} />
                             )}
                             <div style={{ display: 'flex', alignItems: 'center', gap: '4px', paddingBottom: '2px', borderBottom: classic ? '1px solid #e0ddd4' : '1px solid #f0f0f0', width: '100%', overflow: 'hidden' }}>
-                                <span style={{ color: '#0058e6', fontWeight: 'bold', minWidth: '22px', flexShrink: 0 }}>{line.qty}</span>
                                 <span className="text-truncate me-1" style={{ fontFamily: "'Courier New', monospace", fontSize: '9px', color: '#555' }}>{getItemCode(line.item_id, line.item_code)}</span>
                                 <span className="text-truncate" style={{ color: '#000' }}>{getItemName(line.item_id, line.item_name)}</span>
                                 <div className="text-truncate flex-grow-1" style={{ fontSize: '0.7rem', color: '#555', fontStyle: 'italic' }}>
@@ -460,7 +458,6 @@ export default function BOMView({
                                             <thead>
                                                 <tr>
                                                     <th style={xpTh}>Item</th>
-                                                    <th style={{ ...xpTh, textAlign: 'right' }}>Qty</th>
                                                     <th style={{ ...xpTh, textAlign: 'right' }}>%</th>
                                                     <th style={xpTh}>Stock</th>
                                                     <th style={xpTh}>Attributes</th>
@@ -483,7 +480,6 @@ export default function BOMView({
                                                                     <span style={{ marginLeft: 5, background: '#e6eeff', border: '1px solid #0058e6', color: '#003080', fontSize: 9, padding: '0 3px', fontWeight: 'bold' }}>Sub</span>
                                                                 )}
                                                             </td>
-                                                            <td style={{ ...xpTd, textAlign: 'right', fontWeight: 'bold' }}>{Number(line.qty).toFixed(2)}</td>
                                                             <td style={{ ...xpTd, textAlign: 'right' }}>
                                                                 {(line.percentage || 0) > 0 ? (
                                                                     <span style={{ background: '#b46a00', color: '#fff', fontSize: 9, padding: '1px 5px', fontWeight: 'bold' }}>{line.percentage}%</span>
@@ -508,7 +504,7 @@ export default function BOMView({
                                             </tbody>
                                             <tfoot>
                                                 <tr>
-                                                    <td colSpan={5} style={{ ...xpFooterTd, textAlign: 'right' }}>
+                                                    <td colSpan={4} style={{ ...xpFooterTd, textAlign: 'right' }}>
                                                         {lines.length} component{lines.length !== 1 ? 's' : ''}
                                                         {hasPct && (
                                                             <> · Total %: <span style={{ fontWeight: 'bold', color: Math.abs(totalPct - 100) < 0.01 ? '#004400' : '#880000' }}>{totalPct.toFixed(1)}%</span></>

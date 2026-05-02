@@ -120,8 +120,7 @@ class BOMLine(Base):
         UUID(as_uuid=True), ForeignKey("locations.id"), nullable=True
     )
 
-    qty: Mapped[float] = mapped_column(Numeric(14, 4))
-    is_percentage: Mapped[bool] = mapped_column(Boolean, default=False)
+    qty: Mapped[float] = mapped_column(Numeric(14, 4), default=0.0)
     percentage: Mapped[float] = mapped_column(Numeric(6, 2), default=0.0)
 
     # Relationships

@@ -435,6 +435,14 @@ def run_migrations():
                 conn.rollback()
                 logger.warning(f"uom2_factor column migration failed: {e}")
 
+            try:
+                conn.execute(text("ALTER TABLE bom_lines DROP COLUMN IF EXISTS is_percentage"))
+                conn.commit()
+                logger.info("Migration: Dropped is_percentage from bom_lines")
+            except Exception as e:
+                conn.rollback()
+                logger.warning(f"Drop bom_lines.is_percentage failed: {e}")
+
             # 4. Seed standard UoM values (idempotent — safe to run on existing databases)
             try:
                 uom_defaults = ["Pcs", "Roll", "Pic", "Cone", "Bal", "Box", "Set", "kg", "m", "l"]

@@ -74,8 +74,7 @@ class BOMSizeResponse(BaseModel):
 class BOMLineCreate(BaseModel):
     item_code: str
     attribute_value_ids: list[UUID] = []
-    qty: float
-    is_percentage: bool = False
+    qty: float = 0.0
     percentage: float = 0.0
     source_location_code: str | None = None
 
@@ -86,7 +85,6 @@ class BOMLineResponse(BaseModel):
     item_name: str | None = None
     attribute_value_ids: list[UUID] = [] # We'll populate this in the API
     qty: float
-    is_percentage: bool = False
     percentage: float = 0.0
     source_location_id: UUID | None = None
 

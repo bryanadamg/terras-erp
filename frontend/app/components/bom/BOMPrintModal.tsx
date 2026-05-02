@@ -259,7 +259,6 @@ export default function BOMPrintModal({ bom, companyProfile, getAttributeValueNa
                                         <th style={{ ...th, width: '5%' }}>#</th>
                                         <th style={th}>Kode</th>
                                         <th style={th}>Nama Item</th>
-                                        <th style={{ ...th, textAlign: 'right' }}>Qty</th>
                                         <th style={{ ...th, textAlign: 'right' }}>%</th>
                                         <th style={th}>Atribut</th>
                                     </tr>
@@ -270,7 +269,6 @@ export default function BOMPrintModal({ bom, companyProfile, getAttributeValueNa
                                             <td style={{ ...td, textAlign: 'center', color: '#666' }}>{i + 1}</td>
                                             <td style={{ ...td, fontFamily: 'Courier New, monospace', fontSize: '7.5pt', color: '#0000cc' }}>{line.item_code}</td>
                                             <td style={td}>{line.item_name}</td>
-                                            <td style={{ ...td, textAlign: 'right', fontWeight: 'bold' }}>{fmt(line.qty)}</td>
                                             <td style={{ ...td, textAlign: 'right' }}>{(line.percentage || 0) > 0 ? `${line.percentage}%` : '—'}</td>
                                             <td style={{ ...td, fontSize: '7.5pt', color: '#444' }}>{(line.attribute_value_ids || []).map(getAttributeValueName).filter(Boolean).join(', ') || '—'}</td>
                                         </tr>
@@ -278,7 +276,7 @@ export default function BOMPrintModal({ bom, companyProfile, getAttributeValueNa
                                 </tbody>
                                 <tfoot>
                                     <tr>
-                                        <td colSpan={6} style={{ ...td, background: '#f0f0f0', fontSize: '7.5pt', color: '#555', textAlign: 'right' }}>
+                                        <td colSpan={5} style={{ ...td, background: '#f0f0f0', fontSize: '7.5pt', color: '#555', textAlign: 'right' }}>
                                             {lines.length} komponen
                                         </td>
                                     </tr>
