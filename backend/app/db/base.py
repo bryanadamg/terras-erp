@@ -34,3 +34,4 @@ from app.models.partner import Partner
 from app.models.purchase import PurchaseOrder, PurchaseOrderLine, purchase_order_line_values
 from app.models.stock_balance import StockBalance, stock_balance_values
 from app.models.settings import CompanyProfile
+from app.models.batch import Batch, BatchConsumption

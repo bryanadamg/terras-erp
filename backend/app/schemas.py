@@ -734,3 +734,52 @@ class CompanyProfileResponse(CompanyProfileBase):
     id: UUID
     class Config:
         from_attributes = True
+
+# --- Batch / Lot Schemas ---
+
+class BatchCreate(BaseModel):
+    item_id: UUID
+    notes: Optional[str] = None
+
+class BatchResponse(BaseModel):
+    id: UUID
+    batch_number: str
+    item_id: UUID
+    notes: Optional[str] = None
+    created_by: Optional[str] = None
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+
+class BatchConsumptionResponse(BaseModel):
+    id: UUID
+    manufacturing_order_id: UUID
+    input_batch_id: UUID
+    output_batch_id: Optional[UUID] = None
+    qty_consumed: float
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+
+class BatchTraceResponse(BaseModel):
+    batch: BatchResponse
+    consumptions: list[BatchConsumptionResponse]
+
+class MOLineBatchAssignment(BaseModel):
+    bom_line_item_id: UUID
+    attribute_value_ids: list[UUID] = []
+    batch_id: UUID
+    qty: float
+
+class MOCompleteWithBatchesPayload(BaseModel):
+    output_batch_id: Optional[UUID] = None
+    material_batches: list[MOLineBatchAssignment] = []
+
+class POLineBatchAssignment(BaseModel):
+    line_id: UUID
+    batch_id: UUID
+
+class POReceiveWithBatchesPayload(BaseModel):
+    batch_assignments: list[POLineBatchAssignment] = []

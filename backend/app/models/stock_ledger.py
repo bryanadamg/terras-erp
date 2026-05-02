@@ -35,9 +35,14 @@ class StockLedger(Base):
     reference_type: Mapped[str] = mapped_column(String(32))
     reference_id: Mapped[str] = mapped_column(String(64))
 
+    batch_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("batches.id", ondelete="SET NULL"), nullable=True, index=True
+    )
+
     created_at: Mapped[datetime] = mapped_column(
         DateTime, default=datetime.utcnow, index=True
     )
 
     # Relationships
     attribute_values = relationship("AttributeValue", secondary=stock_ledger_values)
+    batch = relationship("Batch", foreign_keys=[batch_id])

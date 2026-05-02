@@ -443,6 +443,74 @@ def run_migrations():
                 conn.rollback()
                 logger.warning(f"Drop bom_lines.is_percentage failed: {e}")
 
+            # ── Batch / Lot Tracking ───────────────────────────────────────────────────
+
+            # Create batches table
+            conn.execute(text("""
+                CREATE TABLE IF NOT EXISTS batches (
+                    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+                    batch_number VARCHAR(64) UNIQUE NOT NULL,
+                    item_id UUID NOT NULL REFERENCES items(id) ON DELETE RESTRICT,
+                    notes TEXT,
+                    created_by VARCHAR(128),
+                    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+                )
+            """))
+            conn.commit()
+
+            # Create batch_consumptions table
+            conn.execute(text("""
+                CREATE TABLE IF NOT EXISTS batch_consumptions (
+                    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+                    manufacturing_order_id UUID NOT NULL REFERENCES manufacturing_orders(id) ON DELETE CASCADE,
+                    input_batch_id UUID NOT NULL REFERENCES batches(id) ON DELETE CASCADE,
+                    output_batch_id UUID REFERENCES batches(id) ON DELETE SET NULL,
+                    qty_consumed NUMERIC(14,4) NOT NULL,
+                    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+                )
+            """))
+            conn.commit()
+
+            # Add batch_id to stock_ledger
+            try:
+                res = conn.execute(text("SELECT column_name FROM information_schema.columns WHERE table_name='stock_ledger' AND column_name='batch_id'"))
+                if not res.fetchone():
+                    conn.execute(text("ALTER TABLE stock_ledger ADD COLUMN batch_id UUID REFERENCES batches(id) ON DELETE SET NULL"))
+                    conn.commit()
+                    logger.info("Migration: Added batch_id to stock_ledger")
+            except Exception as e:
+                conn.rollback()
+                logger.warning(f"stock_ledger.batch_id migration failed: {e}")
+
+            # Add batch_key to stock_balances and update unique constraint
+            try:
+                res = conn.execute(text("SELECT column_name FROM information_schema.columns WHERE table_name='stock_balances' AND column_name='batch_key'"))
+                if not res.fetchone():
+                    conn.execute(text("ALTER TABLE stock_balances ADD COLUMN batch_key VARCHAR(64) NOT NULL DEFAULT ''"))
+                    conn.commit()
+                    logger.info("Migration: Added batch_key to stock_balances")
+
+                    # Drop old unique constraint and create new one including batch_key
+                    try:
+                        conn.execute(text("ALTER TABLE stock_balances DROP CONSTRAINT IF EXISTS _item_loc_variant_uc"))
+                        conn.commit()
+                    except Exception:
+                        conn.rollback()
+                    try:
+                        conn.execute(text("""
+                            ALTER TABLE stock_balances
+                            ADD CONSTRAINT _item_loc_variant_batch_uc
+                            UNIQUE (item_id, location_id, variant_key, batch_key)
+                        """))
+                        conn.commit()
+                        logger.info("Migration: Updated stock_balances unique constraint to include batch_key")
+                    except Exception as e2:
+                        conn.rollback()
+                        logger.warning(f"stock_balances unique constraint update failed: {e2}")
+            except Exception as e:
+                conn.rollback()
+                logger.warning(f"stock_balances.batch_key migration failed: {e}")
+
             # 4. Seed standard UoM values (idempotent — safe to run on existing databases)
             try:
                 uom_defaults = ["Pcs", "Roll", "Pic", "Cone", "Bal", "Box", "Set", "kg", "m", "l"]
@@ -618,18 +686,19 @@ def sync_stock_balances(db):
         for e in entries:
             attr_ids = [str(v.id) for v in e.attribute_values]
             v_key = stock_service._generate_variant_key(attr_ids)
-            # Force to string to ensure dictionary key uniqueness works across different object instances
-            s_key = f"{str(e.item_id)}:{str(e.location_id)}:{v_key}"
+            b_key = str(e.batch_id) if e.batch_id else ""
+            s_key = f"{str(e.item_id)}:{str(e.location_id)}:{v_key}:{b_key}"
 
             if s_key not in aggregated:
                 aggregated[s_key] = {
-                    "qty": 0.0, 
+                    "qty": 0.0,
                     "attr_ids": attr_ids,
                     "item_id": e.item_id,
                     "location_id": e.location_id,
-                    "v_key": v_key
+                    "v_key": v_key,
+                    "b_key": b_key,
                 }
-            
+
             aggregated[s_key]["qty"] += float(e.qty_change)
 
         logger.info(f"Aggregated {len(entries)} ledger entries into {len(aggregated)} unique balance records.")
@@ -640,6 +709,7 @@ def sync_stock_balances(db):
                 item_id=data["item_id"],
                 location_id=data["location_id"],
                 variant_key=data["v_key"],
+                batch_key=data["b_key"],
                 qty=data["qty"]
             )
             if data["attr_ids"]:

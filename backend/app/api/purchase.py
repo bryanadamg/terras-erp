@@ -3,7 +3,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from sqlalchemy.orm import selectinload
 from app.db.session import get_async_db
-from app.schemas import PurchaseOrderCreate, PurchaseOrderResponse
+from app.schemas import PurchaseOrderCreate, PurchaseOrderResponse, POReceiveWithBatchesPayload
 from app.models.purchase import PurchaseOrder, PurchaseOrderLine
 from app.models.attribute import AttributeValue
 from app.api.auth import get_current_user
@@ -55,25 +55,32 @@ async def create_purchase_order(payload: PurchaseOrderCreate, db: AsyncSession =
     return final_result.scalars().first()
 
 @router.put("/{po_id}/receive", response_model=PurchaseOrderResponse)
-async def receive_purchase_order(po_id: uuid.UUID, db: AsyncSession = Depends(get_async_db), current_user: User = Depends(get_current_user)):
+async def receive_purchase_order(
+    po_id: uuid.UUID,
+    payload: POReceiveWithBatchesPayload = POReceiveWithBatchesPayload(),
+    db: AsyncSession = Depends(get_async_db),
+    current_user: User = Depends(get_current_user),
+):
     result = await db.execute(
         select(PurchaseOrder)
         .options(selectinload(PurchaseOrder.lines).selectinload(PurchaseOrderLine.attribute_values))
         .filter(PurchaseOrder.id == po_id)
     )
     po = result.scalars().first()
-    
+
     if not po:
         raise HTTPException(status_code=404, detail="PO not found")
-    
+
     if po.status == "RECEIVED":
         raise HTTPException(status_code=400, detail="PO already received")
-    
+
     if not po.target_location_id:
         raise HTTPException(status_code=400, detail="Target location not set for this PO")
 
-    # Process each line into stock
+    batch_lookup = {str(a.line_id): a.batch_id for a in payload.batch_assignments}
+
     for line in po.lines:
+        batch_id = batch_lookup.get(str(line.id))
         await stock_service.add_stock_entry(
             db,
             item_id=line.item_id,
@@ -81,7 +88,8 @@ async def receive_purchase_order(po_id: uuid.UUID, db: AsyncSession = Depends(ge
             attribute_value_ids=[str(v.id) for v in line.attribute_values],
             qty_change=line.qty,
             reference_type="Purchase Order",
-            reference_id=po.po_number
+            reference_id=po.po_number,
+            batch_id=batch_id,
         )
 
     po.status = "RECEIVED"

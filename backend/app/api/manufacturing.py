@@ -12,7 +12,8 @@ from app.models.sales import SalesOrder
 from app.services import stock_service, audit_service
 from app.schemas import (
     ManufacturingOrderCreate, ManufacturingOrderResponse,
-    PaginatedManufacturingOrderResponse
+    PaginatedManufacturingOrderResponse,
+    MOCompleteWithBatchesPayload
 )
 from app.models.auth import User
 from app.api.auth import get_current_user
@@ -487,6 +488,95 @@ async def update_manufacturing_order_status(mo_id: str, status: str, db: AsyncSe
     await manager.broadcast({"type": "MANUFACTURING_ORDER_UPDATE", "mo_id": mo_id, "status": status, "code": mo.code})
 
     return {"status": "success", "message": f"Updated to {status}"}
+
+@router.post("/manufacturing-orders/{mo_id}/complete-with-batches")
+async def complete_manufacturing_order_with_batches(
+    mo_id: str,
+    payload: MOCompleteWithBatchesPayload,
+    db: AsyncSession = Depends(get_async_db),
+    current_user: User = Depends(get_current_user),
+):
+    from app.models.batch import BatchConsumption
+
+    result = await db.execute(
+        select(ManufacturingOrder)
+        .filter(ManufacturingOrder.id == mo_id)
+        .options(*get_mo_options())
+    )
+    mo = result.unique().scalars().first()
+    if not mo:
+        raise HTTPException(status_code=404, detail="Manufacturing Order not found")
+
+    if mo.status == "COMPLETED":
+        raise HTTPException(status_code=400, detail="Already completed")
+
+    # Build lookup: (item_id, sorted attr ids) -> batch_id + qty from payload
+    batch_map: dict[tuple, uuid.UUID] = {}
+    for mb in payload.material_batches:
+        key = (str(mb.bom_line_item_id), ",".join(sorted(str(v) for v in mb.attribute_value_ids)))
+        batch_map[key] = (mb.batch_id, mb.qty)
+
+    if mo.bom:
+        for line in mo.bom.lines:
+            qty = float(line.qty)
+            req = (float(mo.qty) * qty) / 100 if line.is_percentage else float(mo.qty) * qty
+            tol = float(mo.bom.tolerance_percentage or 0)
+            if tol > 0:
+                req *= (1 + (tol / 100))
+
+            deduct_loc_id = line.source_location_id or mo.source_location_id or mo.location_id
+            attr_ids = [v.id for v in line.attribute_values]
+            key = (str(line.item_id), ",".join(sorted(str(v) for v in attr_ids)))
+            batch_id, _ = batch_map.get(key, (None, req))
+
+            await stock_service.add_stock_entry(
+                db,
+                item_id=line.item_id,
+                location_id=deduct_loc_id,
+                qty_change=-req,
+                reference_type="Manufacturing Order",
+                reference_id=mo.code,
+                attribute_value_ids=attr_ids,
+                batch_id=batch_id,
+            )
+
+            # Record traceability if both batches known
+            if batch_id and payload.output_batch_id:
+                consumption = BatchConsumption(
+                    manufacturing_order_id=mo.id,
+                    input_batch_id=batch_id,
+                    output_batch_id=payload.output_batch_id,
+                    qty_consumed=req,
+                )
+                db.add(consumption)
+
+    # Add finished goods with output batch
+    await stock_service.add_stock_entry(
+        db,
+        item_id=mo.item_id,
+        location_id=mo.location_id,
+        qty_change=mo.qty,
+        reference_type="Manufacturing Order",
+        reference_id=mo.code,
+        attribute_value_ids=[v.id for v in mo.attribute_values],
+        batch_id=payload.output_batch_id,
+    )
+
+    mo.status = "COMPLETED"
+    mo.actual_end_date = datetime.utcnow()
+
+    if mo.sales_order_id and mo.parent_mo_id is None:
+        res = await db.execute(select(SalesOrder).filter(SalesOrder.id == mo.sales_order_id))
+        so = res.scalars().first()
+        if so:
+            so.status = "READY"
+
+    await db.commit()
+    await audit_service.log_activity(db, current_user.id, "COMPLETE", "ManufacturingOrder", mo_id, f"Completed with batch tracking")
+    await manager.broadcast({"type": "MANUFACTURING_ORDER_UPDATE", "mo_id": mo_id, "status": "COMPLETED", "code": mo.code})
+
+    return {"status": "success", "message": "Completed with batch tracking"}
+
 
 @router.delete("/manufacturing-orders/{mo_id}")
 async def delete_manufacturing_order(mo_id: str, db: AsyncSession = Depends(get_async_db), current_user: User = Depends(get_current_user)):

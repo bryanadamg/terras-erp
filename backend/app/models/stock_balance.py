@@ -36,6 +36,9 @@ class StockBalance(Base):
     # Store sorted attribute value IDs as a string for easy matching
     variant_key: Mapped[str] = mapped_column(String(255), default="", index=True)
 
+    # Batch tracking: empty string = no batch, UUID string = specific batch
+    batch_key: Mapped[str] = mapped_column(String(64), default="", index=True)
+
     # Relationships
     item = relationship("Item")
     location = relationship("Location")
@@ -43,5 +46,5 @@ class StockBalance(Base):
 
     # Ensure we only have one row per unique combination
     __table_args__ = (
-        UniqueConstraint('item_id', 'location_id', 'variant_key', name='_item_loc_variant_uc'),
+        UniqueConstraint('item_id', 'location_id', 'variant_key', 'batch_key', name='_item_loc_variant_batch_uc'),
     )
