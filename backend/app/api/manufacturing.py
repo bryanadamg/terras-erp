@@ -13,11 +13,13 @@ from app.services import stock_service, audit_service
 from app.schemas import (
     ManufacturingOrderCreate, ManufacturingOrderResponse,
     PaginatedManufacturingOrderResponse,
-    MOCompleteWithBatchesPayload
+    MOCompleteWithBatchesPayload,
+    BatchConsumptionInMO,
 )
 from app.models.auth import User
 from app.api.auth import get_current_user
 from app.models.item import Item
+from app.models.batch import BatchConsumption
 from datetime import datetime
 from typing import Optional
 from app.core.ws_manager import manager
@@ -41,6 +43,8 @@ def get_mo_options():
         selectinload(ManufacturingOrder.bom).selectinload(BOM.lines).selectinload(BOMLine.attribute_values),
         selectinload(ManufacturingOrder.bom).selectinload(BOM.customer),
         selectinload(ManufacturingOrder.bom).selectinload(BOM.work_center),
+        selectinload(ManufacturingOrder.batch_consumptions).selectinload(BatchConsumption.input_batch),
+        selectinload(ManufacturingOrder.batch_consumptions).selectinload(BatchConsumption.output_batch),
     ]
 
     # Sub-relationships for children (Level 1)
@@ -96,7 +100,22 @@ def populate_mo_ids(mo: ManufacturingOrder):
                 if "attribute_values" not in bl_insp.unloaded:
                     bl.attribute_value_ids = [v.id for v in bl.attribute_values]
 
-    # 3. Recurse into children (if loaded); stub unloaded child_mos as []
+    # 3. Populate batch trace (if loaded)
+    if "batch_consumptions" not in insp.unloaded:
+        mo.batch_trace = [
+            BatchConsumptionInMO(
+                input_batch_id=c.input_batch_id,
+                input_batch_number=c.input_batch.batch_number if c.input_batch else str(c.input_batch_id),
+                output_batch_id=c.output_batch_id,
+                output_batch_number=c.output_batch.batch_number if c.output_batch else None,
+                qty_consumed=float(c.qty_consumed),
+            )
+            for c in mo.batch_consumptions
+        ]
+    else:
+        mo.batch_trace = []
+
+    # 4. Recurse into children (if loaded); stub unloaded child_mos as []
     if "child_mos" not in insp.unloaded:
         for child in mo.child_mos:
             populate_mo_ids(child)
@@ -145,6 +164,8 @@ async def load_mo_tree(db: AsyncSession, root_ids: list) -> dict:
             selectinload(ManufacturingOrder.bom).selectinload(BOM.sizes).selectinload(BOMSize.size),
             selectinload(ManufacturingOrder.bom).selectinload(BOM.customer),
             selectinload(ManufacturingOrder.bom).selectinload(BOM.work_center),
+            selectinload(ManufacturingOrder.batch_consumptions).selectinload(BatchConsumption.input_batch),
+            selectinload(ManufacturingOrder.batch_consumptions).selectinload(BatchConsumption.output_batch),
         )
         .filter(ManufacturingOrder.id.in_(all_ids))
     )

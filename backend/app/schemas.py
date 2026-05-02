@@ -195,6 +195,13 @@ class ManufacturingOrderCreate(BaseModel):
     target_end_date: datetime | None = None
     create_nested: bool = False # Prompt user to create child MOs
 
+class BatchConsumptionInMO(BaseModel):
+    input_batch_id: UUID
+    input_batch_number: str
+    output_batch_id: Optional[UUID] = None
+    output_batch_number: Optional[str] = None
+    qty_consumed: float
+
 class ManufacturingOrderResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
     id: UUID
@@ -224,6 +231,7 @@ class ManufacturingOrderResponse(BaseModel):
     bom: Optional[BOMResponse] = None
     child_mos: list['ManufacturingOrderResponse'] = []
     work_orders: list['WorkOrderResponse'] = []
+    batch_trace: list[BatchConsumptionInMO] = []
 
 # Forward refs resolved after WorkOrderResponse is defined below
 

@@ -681,6 +681,41 @@ export default function ManufacturingView({
                       <div style={{ fontSize: '10px', color: '#444' }}>Qty: <strong style={{ color: '#000' }}>{selectedNode.qty}</strong></div>
                   </div>
 
+                  {/* Batch Trace */}
+                  <div style={{ borderBottom: classic ? '1px solid #c0bdb5' : '1px solid #dee2e6', padding: '6px 8px' }}>
+                      <div style={{ fontSize: '9px', fontWeight: 'bold', textTransform: 'uppercase', color: '#555', letterSpacing: '0.5px', marginBottom: '4px' }}>
+                          <i className="bi bi-upc-scan me-1"></i>Batches
+                      </div>
+                      {(() => {
+                          const trace: any[] = selectedNode.batch_trace || [];
+                          if (trace.length === 0) {
+                              return <div style={{ fontSize: '9px', color: '#999', fontStyle: 'italic' }}>No batch recorded</div>;
+                          }
+                          const outputBatch = trace[0]?.output_batch_number;
+                          return (
+                              <>
+                                  {outputBatch && (
+                                      <div style={{ fontSize: '10px', marginBottom: '4px' }}>
+                                          <span style={{ color: '#555', fontSize: '9px' }}>Output: </span>
+                                          <span style={{ fontFamily: 'monospace', fontWeight: 'bold', color: '#1a6e1a', fontSize: '10px', background: '#f0fdf4', border: '1px solid #86efac', padding: '0 4px', borderRadius: 2 }}>
+                                              {outputBatch}
+                                          </span>
+                                      </div>
+                                  )}
+                                  <div style={{ fontSize: '9px', color: '#555', marginBottom: '2px' }}>Input batches:</div>
+                                  {trace.map((c: any, i: number) => (
+                                      <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2px', fontSize: '9px' }}>
+                                          <span style={{ fontFamily: 'monospace', color: '#1d4ed8', background: '#eff6ff', border: '1px solid #93c5fd', padding: '0 3px', borderRadius: 2, fontSize: '9px' }}>
+                                              {c.input_batch_number}
+                                          </span>
+                                          <span style={{ color: '#666', fontSize: '9px' }}>{Number(c.qty_consumed).toFixed(2)}</span>
+                                      </div>
+                                  ))}
+                              </>
+                          );
+                      })()}
+                  </div>
+
                   {/* QR + Scan */}
                   <div style={{ padding: '8px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '5px', flex: 1 }}>
                       <div style={{ fontSize: '9px', fontWeight: 'bold', textTransform: 'uppercase', color: '#555', letterSpacing: '0.5px', alignSelf: 'flex-start' }}>QR Code</div>

@@ -94,6 +94,11 @@ class ManufacturingOrder(Base):
         order_by="WorkOrder.sequence",
         cascade="all, delete-orphan",
     )
+    batch_consumptions = relationship(
+        "BatchConsumption",
+        primaryjoin="ManufacturingOrder.id == foreign(BatchConsumption.manufacturing_order_id)",
+        lazy="noload",
+    )
 
     @property
     def item_code(self) -> str | None:
