@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Body
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from sqlalchemy.orm import selectinload
@@ -57,7 +57,7 @@ async def create_purchase_order(payload: PurchaseOrderCreate, db: AsyncSession =
 @router.put("/{po_id}/receive", response_model=PurchaseOrderResponse)
 async def receive_purchase_order(
     po_id: uuid.UUID,
-    payload: POReceiveWithBatchesPayload = POReceiveWithBatchesPayload(),
+    payload: POReceiveWithBatchesPayload = Body(default_factory=POReceiveWithBatchesPayload),
     db: AsyncSession = Depends(get_async_db),
     current_user: User = Depends(get_current_user),
 ):

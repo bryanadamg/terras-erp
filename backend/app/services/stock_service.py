@@ -156,6 +156,6 @@ async def get_batch_stock_balances(db: AsyncSession, requirements: list[dict]):
 
     for b in balances:
         key = (str(b.item_id), str(b.location_id), b.variant_key)
-        results_map[key] = float(b.qty)
-            
+        results_map[key] = results_map.get(key, 0.0) + float(b.qty)
+
     return results_map

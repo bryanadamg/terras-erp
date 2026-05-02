@@ -129,6 +129,6 @@ async def trace_batch_forward(
     consumptions = consumptions_result.scalars().all()
 
     return BatchTraceResponse(
-        batch=batch,
+        batch=BatchResponse.model_validate(batch),
         consumptions=[BatchConsumptionResponse.model_validate(c) for c in consumptions],
     )
