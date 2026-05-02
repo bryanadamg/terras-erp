@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
+import { useRouter } from 'next/navigation';
 import QRCode from 'qrcode';
 import { Html5QrcodeScanner } from 'html5-qrcode';
 import CodeConfigModal, { CodeConfig, buildCodeParts } from '../shared/CodeConfigModal';
@@ -49,6 +50,7 @@ export default function ManufacturingView({
     showTabSwitcher = true
 }: any) {
   const { showToast } = useToast();
+  const router = useRouter();
   const { t } = useLanguage();
   const { authFetch, companyProfile } = useData();
   const envBase = process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:8000/api';
@@ -689,6 +691,45 @@ export default function ManufacturingView({
                       <div style={{ fontSize: '10px', color: '#444' }}>Qty: <strong style={{ color: '#000' }}>{selectedNode.qty}</strong></div>
                   </div>
 
+                  {/* Completion Progress */}
+                  {(selectedNode.status === 'IN_PROGRESS' || selectedNode.status === 'COMPLETED' || (selectedNode.qty_completed_total ?? 0) > 0) && (() => {
+                      const done = selectedNode.qty_completed_total ?? 0;
+                      const total = selectedNode.qty ?? 0;
+                      const pct = total > 0 ? Math.min(100, Math.round((done / total) * 100)) : 0;
+                      return (
+                          <div style={{ borderBottom: classic ? '1px solid #c0bdb5' : '1px solid #dee2e6', padding: '6px 8px' }}>
+                              <div style={{ fontSize: '9px', fontWeight: 'bold', textTransform: 'uppercase', color: '#555', letterSpacing: '0.5px', marginBottom: '4px' }}>
+                                  Production Progress
+                              </div>
+                              {/* XP-style striped progress bar */}
+                              <div style={{ border: '1px solid #7f9db9', height: 13, background: '#fff', position: 'relative', overflow: 'hidden', marginBottom: 3 }}>
+                                  <div style={{
+                                      height: '100%', width: `${pct}%`,
+                                      background: pct >= 100
+                                          ? 'repeating-linear-gradient(45deg,#2e7d32,#2e7d32 3px,#4caf50 3px,#4caf50 6px)'
+                                          : 'repeating-linear-gradient(45deg,#000080,#000080 3px,#1565c0 3px,#1565c0 6px)',
+                                      transition: 'width 0.2s',
+                                  }} />
+                                  <span style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '8px', fontWeight: 'bold', color: pct > 50 ? '#fff' : '#000080' }}>
+                                      {pct}%
+                                  </span>
+                              </div>
+                              <div style={{ fontSize: '9px', color: '#555', display: 'flex', justifyContent: 'space-between' }}>
+                                  <span>Done: <strong style={{ color: '#000' }}>{done.toFixed(2)}</strong></span>
+                                  <span>Left: <strong style={{ color: done >= total ? '#1a6e1a' : '#c00' }}>{Math.max(0, total - done).toFixed(2)}</strong></span>
+                              </div>
+                              {selectedNode.status === 'IN_PROGRESS' && (
+                                  <button
+                                      onClick={() => setCompletionMO(selectedNode)}
+                                      style={{ marginTop: 5, width: '100%', fontFamily: 'Tahoma, Arial, sans-serif', fontSize: '10px', padding: '2px 0', background: 'linear-gradient(to bottom,#b0e8b0,#70c870)', border: '1px solid', borderColor: '#d0f0d0 #0a3e0a #0a3e0a #1a5e1a', cursor: 'pointer', fontWeight: 'bold', color: '#004000' }}
+                                  >
+                                      + Log Entry
+                                  </button>
+                              )}
+                          </div>
+                      );
+                  })()}
+
                   {/* Batch Trace */}
                   <div style={{ borderBottom: classic ? '1px solid #c0bdb5' : '1px solid #dee2e6', padding: '6px 8px' }}>
                       <div style={{ fontSize: '9px', fontWeight: 'bold', textTransform: 'uppercase', color: '#555', letterSpacing: '0.5px', marginBottom: '4px' }}>
@@ -727,29 +768,23 @@ export default function ManufacturingView({
                   {/* QR + Scan */}
                   <div style={{ padding: '8px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '5px', flex: 1 }}>
                       <div style={{ fontSize: '9px', fontWeight: 'bold', textTransform: 'uppercase', color: '#555', letterSpacing: '0.5px', alignSelf: 'flex-start' }}>QR Code</div>
-                      {!isScanActive ? (
-                          <>
-                              {qrDataUrls[selectedNode.code] ? (
-                                  <img src={qrDataUrls[selectedNode.code]} alt="QR" style={{ width: '90px', height: '90px', border: '2px solid #000' }} />
-                              ) : (
-                                  <div style={{ width: '90px', height: '90px', background: '#eee', border: '1px solid #ccc', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '9px', color: '#888' }}>Loading...</div>
-                              )}
-                              <div style={{ fontFamily: 'monospace', fontSize: '8px', color: '#000', textAlign: 'center', wordBreak: 'break-all' }}>{selectedNode.code}</div>
-                              <button
-                                  style={{
-                                      width: '100%', padding: '3px 0', fontSize: '10px',
-                                      background: classic ? 'linear-gradient(to bottom,#fff,#d4d0c8)' : '#e9ecef',
-                                      border: classic ? '1px solid #808080' : '1px solid #ced4da',
-                                      cursor: 'pointer', color: '#000', fontFamily: 'inherit', fontWeight: 'bold'
-                                  }}
-                                  onClick={() => setScanningWOId(wo.id)}
-                              >
-                                  <i className="bi bi-qr-code-scan me-1"></i>Scan
-                              </button>
-                          </>
+                      {qrDataUrls[selectedNode.code] ? (
+                          <img src={qrDataUrls[selectedNode.code]} alt="QR" style={{ width: '90px', height: '90px', border: '2px solid #000' }} />
                       ) : (
-                          <InlineScanWidget rootWoId={wo.id} onClose={() => setScanningWOId(null)} />
+                          <div style={{ width: '90px', height: '90px', background: '#eee', border: '1px solid #ccc', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '9px', color: '#888' }}>Loading...</div>
                       )}
+                      <div style={{ fontFamily: 'monospace', fontSize: '8px', color: '#000', textAlign: 'center', wordBreak: 'break-all' }}>{selectedNode.code}</div>
+                      <button
+                          style={{
+                              width: '100%', padding: '3px 0', fontSize: '10px',
+                              background: classic ? 'linear-gradient(to bottom,#fff,#d4d0c8)' : '#e9ecef',
+                              border: classic ? '1px solid #808080' : '1px solid #ced4da',
+                              cursor: 'pointer', color: '#000', fontFamily: 'inherit', fontWeight: 'bold'
+                          }}
+                          onClick={() => router.push('/scanner')}
+                      >
+                          <i className="bi bi-qr-code-scan me-1"></i>Scan
+                      </button>
                   </div>
               </div>
           </div>
@@ -963,11 +998,12 @@ export default function ManufacturingView({
                                   { key: 'scanner',  icon: 'bi-qr-code-scan',   label: 'Scanner' },
                               ].map(({ key, icon, label }) => {
                                   const isActive = viewMode === key;
+                                  const handleClick = () => key === 'scanner' ? router.push('/scanner') : setViewMode(key);
                                   if (currentStyle === 'classic') {
                                       return (
                                           <button
                                               key={key}
-                                              onClick={() => setViewMode(key)}
+                                              onClick={handleClick}
                                               style={{
                                                   fontFamily: 'Tahoma, Arial, sans-serif',
                                                   fontSize: '11px',
@@ -989,7 +1025,7 @@ export default function ManufacturingView({
                                       );
                                   }
                                   return (
-                                      <button key={key} className={`btn btn-sm btn-light border ${isActive ? 'active' : ''}`} onClick={() => setViewMode(key)}>
+                                      <button key={key} className={`btn btn-sm btn-light border ${isActive ? 'active' : ''}`} onClick={handleClick}>
                                           <i className={`bi ${icon} me-1`}></i>{label}
                                       </button>
                                   );

@@ -1,8 +1,30 @@
 'use client';
 
 import React, { useState } from 'react';
+import { createPortal } from 'react-dom';
 import { useData } from '../../context/DataContext';
 import { useToast } from '../shared/Toast';
+
+const xpFont = 'Tahoma, "Segoe UI", sans-serif';
+const xpInput: React.CSSProperties = {
+    fontFamily: xpFont, fontSize: 11, border: '1px solid #7f9db9',
+    background: 'white', height: 20, padding: '0 4px', outline: 'none', width: '100%',
+    borderRadius: 0, boxSizing: 'border-box',
+};
+const xpLabel: React.CSSProperties = {
+    fontFamily: xpFont, fontSize: 11, display: 'block', marginBottom: 2,
+};
+const xpBtn = (primary?: boolean): React.CSSProperties => primary ? {
+    fontFamily: xpFont, fontSize: 11, padding: '2px 14px',
+    background: 'linear-gradient(to bottom, #b0e8b0, #70c870)',
+    border: '1px solid', borderColor: '#d0f0d0 #0a3e0a #0a3e0a #1a5e1a',
+    cursor: 'pointer', fontWeight: 'bold', color: '#004000',
+} : {
+    fontFamily: xpFont, fontSize: 11, padding: '2px 10px',
+    background: 'linear-gradient(to bottom, #f0efe6, #dddbd0)',
+    border: '1px solid', borderColor: '#dfdfdf #808080 #808080 #dfdfdf',
+    cursor: 'pointer',
+};
 
 interface MOCompletionModalProps {
     mo: any;
@@ -59,100 +81,115 @@ export default function MOCompletionModal({ mo, onClose, onSaved }: MOCompletion
         }
     };
 
-    return (
-        <div className="modal d-block" tabIndex={-1} style={{ background: 'rgba(0,0,0,0.5)', zIndex: 1055 }}>
-            <div className="modal-dialog modal-dialog-centered">
-                <div className="modal-content">
-                    <div className="modal-header py-2">
-                        <h6 className="modal-title mb-0">Log Completion — {mo.code}</h6>
-                        <button type="button" className="btn-close" onClick={onClose}></button>
-                    </div>
-                    <div className="modal-body">
-                        <div className="mb-3">
-                            <div className="d-flex justify-content-between extra-small text-muted mb-1">
-                                <span>{mo.item_name || mo.item_code}</span>
-                                <span>{totalCompleted.toFixed(2)} / {target} ({pct}%)</span>
+    const completions = mo.completions ? [...mo.completions].reverse() : [];
+
+    return createPortal(
+        <div style={{ position: 'fixed', inset: 0, zIndex: 9999, background: 'rgba(0,0,0,0.45)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <div style={{ width: 420, background: '#ece9d8', border: '2px solid #0a246a', fontFamily: xpFont, borderRadius: 4, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+
+                {/* Title bar */}
+                <div style={{ background: 'linear-gradient(to right, #0a246a, #a6caf0, #0a246a)', padding: '3px 6px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', userSelect: 'none' }}>
+                    <span style={{ color: '#fff', fontWeight: 'bold', fontSize: 12, textShadow: '1px 1px 2px rgba(0,0,0,0.6)' }}>
+                        Log Completion — {mo.code}
+                    </span>
+                    <button onClick={onClose} style={{ width: 21, height: 21, background: 'linear-gradient(to bottom, #e06060, #b03030)', border: '1px solid #800', borderRadius: 2, cursor: 'pointer', color: '#fff', fontSize: 12, fontWeight: 'bold', lineHeight: 1 }}>x</button>
+                </div>
+
+                {/* Body */}
+                <form onSubmit={handleSubmit}>
+                    <div style={{ padding: 12, display: 'flex', flexDirection: 'column', gap: 10 }}>
+
+                        {/* Product info + progress */}
+                        <div style={{ border: '1px solid #aca899', padding: '8px 10px', background: '#f5f4ee', display: 'flex', flexDirection: 'column', gap: 5 }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
+                                <span style={{ fontSize: 11, fontWeight: 'bold', color: '#000080' }}>{mo.item_name || mo.item_code}</span>
+                                <span style={{ fontSize: 10, color: '#555' }}>{mo.code}</span>
                             </div>
-                            <div className="progress" style={{ height: '8px' }}>
-                                <div
-                                    className={`progress-bar ${pct >= 100 ? 'bg-success' : 'bg-primary'}`}
-                                    style={{ width: `${pct}%` }}
-                                />
+                            {/* XP-style progress bar */}
+                            <div style={{ border: '1px solid #7f9db9', height: 14, background: '#fff', position: 'relative', overflow: 'hidden' }}>
+                                <div style={{
+                                    height: '100%',
+                                    width: `${pct}%`,
+                                    background: pct >= 100
+                                        ? 'repeating-linear-gradient(45deg, #2e7d32, #2e7d32 4px, #4caf50 4px, #4caf50 8px)'
+                                        : 'repeating-linear-gradient(45deg, #000080, #000080 4px, #1565c0 4px, #1565c0 8px)',
+                                    transition: 'width 0.2s',
+                                }} />
+                                <span style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 9, fontWeight: 'bold', color: pct > 45 ? '#fff' : '#000080', mixBlendMode: 'difference' }}>
+                                    {totalCompleted.toFixed(2)} / {target} ({pct}%)
+                                </span>
                             </div>
-                            <div className="extra-small text-muted mt-1">Remaining: {remaining.toFixed(2)}</div>
+                            <div style={{ fontSize: 10, color: '#555' }}>Remaining: <strong>{remaining.toFixed(2)}</strong></div>
                         </div>
 
-                        <form onSubmit={handleSubmit}>
-                            <div className="mb-2">
-                                <label className="form-label form-label-sm mb-1">Qty Completed</label>
+                        {/* Entry fields */}
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                            <div>
+                                <label style={{ ...xpLabel, fontWeight: 'bold' }}>Qty Completed</label>
                                 <input
                                     type="number"
-                                    className="form-control form-control-sm"
+                                    style={{ ...xpInput, fontSize: 13, height: 22 }}
                                     value={qtyCompleted}
                                     onChange={e => setQtyCompleted(e.target.value)}
                                     min="0.0001"
                                     step="any"
-                                    placeholder={`e.g. ${remaining > 0 ? remaining.toFixed(2) : target}`}
+                                    placeholder={remaining > 0 ? remaining.toFixed(2) : String(target)}
                                     autoFocus
                                     required
                                 />
                             </div>
-                            <div className="mb-2">
-                                <label className="form-label form-label-sm mb-1">Operator (optional)</label>
-                                <input
-                                    type="text"
-                                    className="form-control form-control-sm"
-                                    value={operatorName}
-                                    onChange={e => setOperatorName(e.target.value)}
-                                    placeholder="Name"
-                                />
+                            <div style={{ display: 'flex', gap: 8 }}>
+                                <div style={{ flex: 1 }}>
+                                    <label style={xpLabel}>Operator</label>
+                                    <input type="text" style={xpInput} value={operatorName} onChange={e => setOperatorName(e.target.value)} placeholder="Name (optional)" />
+                                </div>
+                                <div style={{ flex: 2 }}>
+                                    <label style={xpLabel}>Notes</label>
+                                    <input type="text" style={xpInput} value={notes} onChange={e => setNotes(e.target.value)} placeholder="Batch, shift, remarks..." />
+                                </div>
                             </div>
-                            <div className="mb-3">
-                                <label className="form-label form-label-sm mb-1">Notes (optional)</label>
-                                <input
-                                    type="text"
-                                    className="form-control form-control-sm"
-                                    value={notes}
-                                    onChange={e => setNotes(e.target.value)}
-                                    placeholder="Batch, shift, remarks..."
-                                />
-                            </div>
-                            <div className="d-flex gap-2">
-                                <button type="submit" className="btn btn-primary btn-sm" disabled={submitting}>
-                                    {submitting ? 'Saving...' : 'Log Completion'}
-                                </button>
-                                <button type="button" className="btn btn-outline-secondary btn-sm" onClick={onClose}>
-                                    Cancel
-                                </button>
-                            </div>
-                        </form>
+                        </div>
 
-                        {mo.completions && mo.completions.length > 0 && (
-                            <div className="mt-3 border-top pt-2">
-                                <div className="extra-small text-muted mb-1">Previous entries</div>
-                                <table className="table table-sm extra-small mb-0">
-                                    <thead>
-                                        <tr>
-                                            <th>Qty</th>
-                                            <th>Operator</th>
-                                            <th>Time</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        {[...mo.completions].reverse().map((c: any) => (
-                                            <tr key={c.id}>
-                                                <td>{parseFloat(c.qty_completed).toFixed(2)}</td>
-                                                <td>{c.operator_name || '—'}</td>
-                                                <td>{new Date(c.created_at).toLocaleString()}</td>
+                        {/* History */}
+                        {completions.length > 0 && (
+                            <div style={{ border: '1px solid #aca899', background: '#f5f4ee', position: 'relative', paddingTop: 10 }}>
+                                <span style={{ position: 'absolute', top: -7, left: 8, background: '#f5f4ee', padding: '0 4px', fontSize: 10, fontWeight: 'bold', color: '#000080' }}>
+                                    Previous Entries
+                                </span>
+                                <div style={{ maxHeight: 120, overflowY: 'auto' }}>
+                                    <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 10, fontFamily: xpFont }}>
+                                        <thead>
+                                            <tr style={{ background: '#dddbd0' }}>
+                                                <th style={{ padding: '2px 6px', textAlign: 'right', borderBottom: '1px solid #aca899' }}>Qty</th>
+                                                <th style={{ padding: '2px 6px', textAlign: 'left', borderBottom: '1px solid #aca899' }}>Operator</th>
+                                                <th style={{ padding: '2px 6px', textAlign: 'left', borderBottom: '1px solid #aca899' }}>Time</th>
                                             </tr>
-                                        ))}
-                                    </tbody>
-                                </table>
+                                        </thead>
+                                        <tbody>
+                                            {completions.map((c: any, i: number) => (
+                                                <tr key={c.id} style={{ background: i % 2 === 0 ? '#fff' : '#f5f4ee' }}>
+                                                    <td style={{ padding: '2px 6px', textAlign: 'right', fontWeight: 'bold' }}>{parseFloat(c.qty_completed).toFixed(2)}</td>
+                                                    <td style={{ padding: '2px 6px', color: '#555' }}>{c.operator_name || '—'}</td>
+                                                    <td style={{ padding: '2px 6px', color: '#555' }}>{new Date(c.created_at).toLocaleString()}</td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                </div>
                             </div>
                         )}
                     </div>
-                </div>
+
+                    {/* Footer */}
+                    <div style={{ borderTop: '1px solid #aca899', padding: '6px 10px', display: 'flex', justifyContent: 'flex-end', gap: 6, background: '#ece9d8' }}>
+                        <button type="button" onClick={onClose} style={xpBtn()}>Cancel</button>
+                        <button type="submit" disabled={submitting} style={{ ...xpBtn(true), opacity: submitting ? 0.6 : 1 }}>
+                            {submitting ? 'Saving...' : 'Log Completion'}
+                        </button>
+                    </div>
+                </form>
             </div>
-        </div>
+        </div>,
+        document.body
     );
 }
