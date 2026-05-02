@@ -229,10 +229,7 @@ async def create_mo_recursive(
         sub_bom = sub_bom_result.scalars().first()
 
         if sub_bom:
-            # Scale quantity
-            sub_qty = qty * float(line.qty)
-            if line.is_percentage:
-                sub_qty = (qty * float(line.qty)) / 100
+            sub_qty = (qty * float(line.percentage)) / 100 if line.percentage else qty
 
             # Recursive call
             await create_mo_recursive(
@@ -390,8 +387,9 @@ async def get_manufacturing_orders(
         item.is_material_available = True
         if item.status == "PENDING" and item.bom:
             for line in item.bom.lines:
-                qty = float(line.qty)
-                req = (float(item.qty) * qty) / 100 if line.is_percentage else float(item.qty) * qty
+                if not line.percentage:
+                    continue
+                req = (float(item.qty) * float(line.percentage)) / 100
                 tol = float(item.bom.tolerance_percentage or 0)
                 if tol > 0: req *= (1 + (tol / 100))
 
@@ -428,8 +426,9 @@ async def update_manufacturing_order_status(mo_id: str, status: str, db: AsyncSe
     if status == "IN_PROGRESS" and previous_status != "IN_PROGRESS":
         if mo.bom:
             for line in mo.bom.lines:
-                qty = float(line.qty)
-                req = (float(mo.qty) * qty) / 100 if line.is_percentage else float(mo.qty) * qty
+                if not line.percentage:
+                    continue
+                req = (float(mo.qty) * float(line.percentage)) / 100
                 tol = float(mo.bom.tolerance_percentage or 0)
                 if tol > 0: req *= (1 + (tol / 100))
 
@@ -446,8 +445,9 @@ async def update_manufacturing_order_status(mo_id: str, status: str, db: AsyncSe
         if mo.bom:
             # 1. DEDUCT Raw Materials
             for line in mo.bom.lines:
-                qty = float(line.qty)
-                req = (float(mo.qty) * qty) / 100 if line.is_percentage else float(mo.qty) * qty
+                if not line.percentage:
+                    continue
+                req = (float(mo.qty) * float(line.percentage)) / 100
                 tol = float(mo.bom.tolerance_percentage or 0)
                 if tol > 0: req *= (1 + (tol / 100))
 
@@ -518,8 +518,9 @@ async def complete_manufacturing_order_with_batches(
 
     if mo.bom:
         for line in mo.bom.lines:
-            qty = float(line.qty)
-            req = (float(mo.qty) * qty) / 100 if line.is_percentage else float(mo.qty) * qty
+            if not line.percentage:
+                continue
+            req = (float(mo.qty) * float(line.percentage)) / 100
             tol = float(mo.bom.tolerance_percentage or 0)
             if tol > 0:
                 req *= (1 + (tol / 100))

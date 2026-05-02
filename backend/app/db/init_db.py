@@ -162,7 +162,6 @@ def run_migrations():
                 ("items", "source_color_id", "UUID REFERENCES sample_colors(id) ON DELETE SET NULL"),
                 ("items", "attribute_id", "UUID REFERENCES attributes(id)"),
                 ("bom_lines", "source_location_id", "UUID REFERENCES locations(id)"),
-                ("bom_lines", "is_percentage", "BOOLEAN DEFAULT FALSE"),
                 ("bom_lines", "percentage", "NUMERIC(6,2) DEFAULT 0.0"),
                 ("boms", "tolerance_percentage", "NUMERIC(5,2) DEFAULT 0.0"),
                 ("purchase_orders", "target_location_id", "UUID REFERENCES locations(id)"),
