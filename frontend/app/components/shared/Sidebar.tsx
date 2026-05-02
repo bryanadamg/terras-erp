@@ -248,8 +248,11 @@ export default function Sidebar({ activeTab, setActiveTab, onTabHover, appName, 
                 {hasPermission('inventory.manage') && (
                   <NavItem tab="batches" label="Batch / Lot" icon="bi-upc-scan" isSub />
                 )}
+                {hasPermission('inventory.manage') && (
+                  <NavItem tab="stock-on-hand" label={t('stock_on_hand') || 'Stock On-Hand'} icon="bi-boxes" isSub />
+                )}
                 {hasPermission('stock.entry') && (
-                  <NavItem tab="stock"     label={t('stock_entry') || 'Stock Entry'} icon="bi-arrow-left-right" isSub />
+                  <NavItem tab="stock"     label={t('stock_adjustment') || 'Stock Adjustment'} icon="bi-arrow-left-right" isSub />
                 )}
                 {hasPermission('locations.manage') && (
                   <NavItem tab="locations" label={t('locations') || 'Locations'}     icon="bi-geo-alt" isSub />

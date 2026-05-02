@@ -102,7 +102,7 @@ export default function StockEntryView({ items, locations, attributes, stockBala
               <div className="col-md-5">
                   <div style={{ ...xpBevel, display: 'flex', flexDirection: 'column' }}>
                       <div style={xpTitleBar({ background: 'linear-gradient(to right, #6a3a8e 0%, #a06ac8 100%)', borderBottom: '1px solid #3d1a5e' })}>
-                          <span><i className="bi bi-box-seam" style={{ marginRight: 6 }}></i>{t('stock_entry')}</span>
+                          <span><i className="bi bi-box-seam" style={{ marginRight: 6 }}></i>{t('stock_adjustment')}</span>
                       </div>
                       <div style={{ padding: '8px', background: '#f5f4ef' }}>
                           <form onSubmit={handleSubmit}>
@@ -247,7 +247,7 @@ export default function StockEntryView({ items, locations, attributes, stockBala
           <div className="col-md-5">
               <div className="card h-100 shadow-sm border-0">
                   <div className="card-header bg-primary bg-opacity-10 text-primary-emphasis py-3">
-                      <h5 className="card-title mb-0"><i className="bi bi-box-seam me-2"></i>{t('stock_entry')}</h5>
+                      <h5 className="card-title mb-0"><i className="bi bi-box-seam me-2"></i>{t('stock_adjustment')}</h5>
                   </div>
                   <div className="card-body">
                       <form onSubmit={handleSubmit}>

@@ -402,6 +402,7 @@ class StockBalanceResponse(BaseModel):
     attribute_value_ids: list[UUID] = []
     location_id: UUID
     qty: float
+    batch_key: str = ""
 
 class LocationCreate(BaseModel):
     code: str
