@@ -5,6 +5,7 @@ from app.db.base import Base
 import uuid
 from datetime import datetime
 from typing import Optional, List, TYPE_CHECKING
+from sqlalchemy.sql import func
 
 if TYPE_CHECKING:
     from app.models.production_run import ProductionRun
@@ -100,6 +101,14 @@ class ManufacturingOrder(Base):
         lazy="noload",
     )
 
+    completions: Mapped[List["MOCompletion"]] = relationship(
+        "MOCompletion",
+        back_populates="mo",
+        order_by="MOCompletion.created_at",
+        cascade="all, delete-orphan",
+        lazy="noload",
+    )
+
     @property
     def item_code(self) -> str | None:
         return self.item.code if self.item else None
@@ -107,3 +116,16 @@ class ManufacturingOrder(Base):
     @property
     def item_name(self) -> str | None:
         return self.item.name if self.item else None
+
+
+class MOCompletion(Base):
+    __tablename__ = "mo_completions"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    mo_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("manufacturing_orders.id"), index=True)
+    qty_completed: Mapped[float] = mapped_column(Numeric(14, 4))
+    operator_name: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
+    notes: Mapped[Optional[str]] = mapped_column(String(512), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, index=True)
+
+    mo = relationship("ManufacturingOrder", back_populates="completions")

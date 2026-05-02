@@ -14,6 +14,7 @@ import PrintHeader from '../shared/PrintHeader';
 import WOPrintModal, { PrintSettings } from './WOPrintModal';
 import ProductionRunModal from './ProductionRunModal';
 import WorkOrderPanel from './WorkOrderPanel';
+import MOCompletionModal from './MOCompletionModal';
 
 export default function ManufacturingView({
     items,
@@ -90,6 +91,7 @@ export default function ManufacturingView({
   const [selectedTreeNodes, setSelectedTreeNodes] = useState<Record<string, string>>({});
   const [qrDataUrls, setQrDataUrls] = useState<Record<string, string>>({});
   const [scanningWOId, setScanningWOId] = useState<string | null>(null);
+  const [completionMO, setCompletionMO] = useState<any>(null);
   const [isConfigOpen, setIsConfigOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [codeConfig, setCodeConfig] = useState<CodeConfig>({
@@ -439,8 +441,14 @@ export default function ManufacturingView({
                   const found = findNodeByCode(code);
                   if (found) {
                       scanner.clear().catch(() => {});
-                      onUpdateStatus(found.id, found.status === 'PENDING' ? 'IN_PROGRESS' : 'COMPLETED');
                       onClose();
+                      if (found.status === 'PENDING') {
+                          onUpdateStatus(found.id, 'IN_PROGRESS');
+                      } else if (found.status === 'IN_PROGRESS') {
+                          setCompletionMO(found);
+                      } else {
+                          showToast(`MO "${code}" is already ${found.status}`, 'warning');
+                      }
                   } else {
                       showToast(`MO "${code}" not found`, 'danger');
                   }
@@ -581,8 +589,8 @@ export default function ManufacturingView({
                               </button>
                           )}
                           {selectedNode.status === 'IN_PROGRESS' && (
-                              <button className="btn btn-sm btn-success py-0 px-2" style={{ fontSize: '0.72rem' }} onClick={() => onUpdateStatus(selectedNode.id, 'COMPLETED')}>
-                                  <i className="bi bi-check-lg me-1"></i>Finish
+                              <button className="btn btn-sm btn-success py-0 px-2" style={{ fontSize: '0.72rem' }} onClick={() => setCompletionMO(selectedNode)}>
+                                  <i className="bi bi-check-lg me-1"></i>Log
                               </button>
                           )}
                           <button
@@ -1375,10 +1383,21 @@ export default function ManufacturingView({
 
                                                   {/* Actual Progression */}
                                                   <td style={tdStyle}>
-                                                      <div style={{ fontSize: currentStyle === 'classic' ? '10px' : undefined, display: 'flex', flexDirection: 'column', gap: '1px' }}
+                                                      <div style={{ fontSize: currentStyle === 'classic' ? '10px' : undefined, display: 'flex', flexDirection: 'column', gap: '2px' }}
                                                            className={currentStyle !== 'classic' ? 'extra-small text-muted' : ''}>
                                                           <span style={{ color: '#555' }}>Start: {formatDateTime(wo.actual_start_date)}</span>
                                                           <span style={{ color: '#555' }}>End: {formatDateTime(wo.actual_end_date)}</span>
+                                                          {(wo.qty_completed_total != null && wo.qty_completed_total > 0) && (() => {
+                                                              const pct = Math.min(100, Math.round((wo.qty_completed_total / wo.qty) * 100));
+                                                              return (
+                                                                  <div style={{ marginTop: '2px' }}>
+                                                                      <div className="progress" style={{ height: '5px', minWidth: '80px' }}>
+                                                                          <div className={`progress-bar ${pct >= 100 ? 'bg-success' : 'bg-primary'}`} style={{ width: `${pct}%` }} />
+                                                                      </div>
+                                                                      <span style={{ fontSize: '9px', color: '#555' }}>{parseFloat(wo.qty_completed_total).toFixed(2)} / {wo.qty} ({pct}%)</span>
+                                                                  </div>
+                                                              );
+                                                          })()}
                                                       </div>
                                                   </td>
 
@@ -1392,14 +1411,14 @@ export default function ManufacturingView({
                                                               <>
                                                                   {xpBtn('Print', 'default', () => handlePrintWO(wo), 'Print Manufacturing Order', 'bi bi-printer')}
                                                                   {wo.status === 'PENDING'     && xpBtn('Start',  'primary', () => onUpdateStatus(wo.id, 'IN_PROGRESS'))}
-                                                                  {wo.status === 'IN_PROGRESS' && xpBtn('Finish', 'success', () => onUpdateStatus(wo.id, 'COMPLETED'))}
+                                                                  {wo.status === 'IN_PROGRESS' && xpBtn('Log', 'success', () => setCompletionMO(wo))}
                                                                   {xpBtn('Del', 'danger', () => onDeleteMO(wo.id), 'Delete', 'bi bi-trash')}
                                                               </>
                                                           ) : (
                                                               <>
                                                                   <button className="btn btn-sm btn-link text-primary p-0" onClick={() => handlePrintWO(wo)} title="Print Manufacturing Order"><i className="bi bi-printer fs-5"></i></button>
                                                                   {wo.status === 'PENDING'     && <button className="btn btn-sm btn-primary py-0 px-2" style={{fontSize: '0.75rem'}} onClick={() => onUpdateStatus(wo.id, 'IN_PROGRESS')}>START</button>}
-                                                                  {wo.status === 'IN_PROGRESS' && <button className="btn btn-sm btn-success py-0 px-2" style={{fontSize: '0.75rem'}} onClick={() => onUpdateStatus(wo.id, 'COMPLETED')}>FINISH</button>}
+                                                                  {wo.status === 'IN_PROGRESS' && <button className="btn btn-sm btn-success py-0 px-2" style={{fontSize: '0.75rem'}} onClick={() => setCompletionMO(wo)}>LOG</button>}
                                                                   <button className="btn btn-sm btn-link text-danger p-0" onClick={() => onDeleteMO(wo.id)} title="Delete"><i className="bi bi-trash fs-5"></i></button>
                                                               </>
                                                           )}
@@ -1430,6 +1449,16 @@ export default function ManufacturingView({
                   locations={locations}
                   onSave={onCreateProductionRun}
                   onClose={() => setIsPRModalOpen(false)}
+              />
+          )}
+
+          {completionMO && (
+              <MOCompletionModal
+                  mo={completionMO}
+                  onClose={() => setCompletionMO(null)}
+                  onSaved={(updated) => {
+                      setCompletionMO(null);
+                  }}
               />
           )}
       </div>

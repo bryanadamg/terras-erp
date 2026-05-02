@@ -442,6 +442,24 @@ def run_migrations():
                 conn.rollback()
                 logger.warning(f"Drop bom_lines.is_percentage failed: {e}")
 
+            # ── MO Incremental Completions ────────────────────────────────────────────
+            try:
+                conn.execute(text("""
+                    CREATE TABLE IF NOT EXISTS mo_completions (
+                        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+                        mo_id UUID NOT NULL REFERENCES manufacturing_orders(id) ON DELETE CASCADE,
+                        qty_completed NUMERIC(14,4) NOT NULL,
+                        operator_name VARCHAR(255),
+                        notes VARCHAR(512),
+                        created_at TIMESTAMP NOT NULL DEFAULT NOW()
+                    )
+                """))
+                conn.commit()
+                logger.info("Migration: Created mo_completions table")
+            except Exception as e:
+                conn.rollback()
+                logger.warning(f"mo_completions table creation failed: {e}")
+
             # ── Batch / Lot Tracking ───────────────────────────────────────────────────
 
             # Create batches table

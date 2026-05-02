@@ -4,7 +4,7 @@ from sqlalchemy import select, func, or_, inspect
 from sqlalchemy.orm import selectinload, joinedload, attributes as sa_attributes
 from collections import defaultdict
 from app.db.session import get_async_db
-from app.models.manufacturing import ManufacturingOrder
+from app.models.manufacturing import ManufacturingOrder, MOCompletion
 from app.models.work_order import WorkOrder as WorkOrderModel  # noqa: F401 — eager load
 from app.models.bom import BOM, BOMLine, BOMSize
 from app.models.location import Location
@@ -15,6 +15,7 @@ from app.schemas import (
     PaginatedManufacturingOrderResponse,
     MOCompleteWithBatchesPayload,
     BatchConsumptionInMO,
+    MOCompletionCreate, MOCompletionResponse,
 )
 from app.models.auth import User
 from app.api.auth import get_current_user
@@ -45,6 +46,7 @@ def get_mo_options():
         selectinload(ManufacturingOrder.bom).selectinload(BOM.work_center),
         selectinload(ManufacturingOrder.batch_consumptions).selectinload(BatchConsumption.input_batch),
         selectinload(ManufacturingOrder.batch_consumptions).selectinload(BatchConsumption.output_batch),
+        selectinload(ManufacturingOrder.completions),
     ]
 
     # Sub-relationships for children (Level 1)
@@ -115,6 +117,13 @@ def populate_mo_ids(mo: ManufacturingOrder):
     else:
         mo.batch_trace = []
 
+    # 3b. Populate completion totals (if loaded)
+    if "completions" not in insp.unloaded:
+        mo.qty_completed_total = sum(float(c.qty_completed) for c in mo.completions)
+    else:
+        mo.qty_completed_total = 0.0
+        sa_attributes.set_committed_value(mo, "completions", [])
+
     # 4. Recurse into children (if loaded); stub unloaded child_mos as []
     if "child_mos" not in insp.unloaded:
         for child in mo.child_mos:
@@ -166,6 +175,7 @@ async def load_mo_tree(db: AsyncSession, root_ids: list) -> dict:
             selectinload(ManufacturingOrder.bom).selectinload(BOM.work_center),
             selectinload(ManufacturingOrder.batch_consumptions).selectinload(BatchConsumption.input_batch),
             selectinload(ManufacturingOrder.batch_consumptions).selectinload(BatchConsumption.output_batch),
+            selectinload(ManufacturingOrder.completions),
         )
         .filter(ManufacturingOrder.id.in_(all_ids))
     )
@@ -463,15 +473,19 @@ async def update_manufacturing_order_status(mo_id: str, status: str, db: AsyncSe
     if status == "COMPLETED" and previous_status != "COMPLETED":
         mo.actual_end_date = datetime.utcnow()
 
-        if mo.bom:
-            # 1. DEDUCT Raw Materials
+        # How much was already covered by incremental completion entries?
+        completed_result = await db.execute(
+            select(func.sum(MOCompletion.qty_completed)).filter(MOCompletion.mo_id == mo.id)
+        )
+        already_completed = float(completed_result.scalar() or 0)
+        remaining_qty = max(0.0, float(mo.qty) - already_completed)
+
+        if remaining_qty > 0 and mo.bom:
+            # 1. DEDUCT Raw Materials for remaining (uncovered) qty
             for line in mo.bom.lines:
                 if not line.percentage:
                     continue
-                req = (float(mo.qty) * float(line.percentage)) / 100
-                tol = float(mo.bom.tolerance_percentage or 0)
-                if tol > 0: req *= (1 + (tol / 100))
-
+                req = (remaining_qty * float(line.percentage)) / 100
                 deduct_loc_id = line.source_location_id or mo.source_location_id or mo.location_id
                 await stock_service.add_stock_entry(
                     db,
@@ -483,16 +497,16 @@ async def update_manufacturing_order_status(mo_id: str, status: str, db: AsyncSe
                     attribute_value_ids=[v.id for v in line.attribute_values]
                 )
 
-        # 2. ADD Finished Goods
-        await stock_service.add_stock_entry(
-            db,
-            item_id=mo.item_id,
-            location_id=mo.location_id,
-            qty_change=mo.qty,
-            reference_type="Manufacturing Order",
-            reference_id=mo.code,
-            attribute_value_ids=[v.id for v in mo.attribute_values]
-        )
+            # 2. ADD remaining Finished Goods
+            await stock_service.add_stock_entry(
+                db,
+                item_id=mo.item_id,
+                location_id=mo.location_id,
+                qty_change=remaining_qty,
+                reference_type="Manufacturing Order",
+                reference_id=mo.code,
+                attribute_value_ids=[v.id for v in mo.attribute_values]
+            )
 
         # 3. UPDATE Sales Order status if root MO
         if mo.sales_order_id and mo.parent_mo_id is None:
@@ -509,6 +523,97 @@ async def update_manufacturing_order_status(mo_id: str, status: str, db: AsyncSe
     await manager.broadcast({"type": "MANUFACTURING_ORDER_UPDATE", "mo_id": mo_id, "status": status, "code": mo.code})
 
     return {"status": "success", "message": f"Updated to {status}"}
+
+@router.post("/manufacturing-orders/{mo_id}/completions", response_model=ManufacturingOrderResponse)
+async def add_mo_completion(
+    mo_id: str,
+    payload: MOCompletionCreate,
+    db: AsyncSession = Depends(get_async_db),
+    current_user: User = Depends(get_current_user),
+):
+    result = await db.execute(
+        select(ManufacturingOrder)
+        .filter(ManufacturingOrder.id == mo_id)
+        .options(*get_mo_options())
+    )
+    mo = result.unique().scalars().first()
+    if not mo:
+        raise HTTPException(status_code=404, detail="Manufacturing Order not found")
+
+    if mo.status in ("COMPLETED", "CANCELLED"):
+        raise HTTPException(status_code=400, detail=f"Cannot log completion on a {mo.status} MO")
+
+    if payload.qty_completed <= 0:
+        raise HTTPException(status_code=400, detail="qty_completed must be positive")
+
+    # Auto-start if PENDING
+    if mo.status == "PENDING":
+        mo.status = "IN_PROGRESS"
+        mo.actual_start_date = datetime.utcnow()
+
+    # Create completion record
+    completion = MOCompletion(
+        mo_id=mo.id,
+        qty_completed=payload.qty_completed,
+        operator_name=payload.operator_name,
+        notes=payload.notes,
+    )
+    db.add(completion)
+    await db.flush()
+
+    # Proportional raw material deduction for this entry
+    if mo.bom:
+        for line in mo.bom.lines:
+            if not line.percentage:
+                continue
+            req = (float(payload.qty_completed) * float(line.percentage)) / 100
+            deduct_loc_id = line.source_location_id or mo.source_location_id or mo.location_id
+            await stock_service.add_stock_entry(
+                db,
+                item_id=line.item_id,
+                location_id=deduct_loc_id,
+                qty_change=-req,
+                reference_type="Manufacturing Order",
+                reference_id=mo.code,
+                attribute_value_ids=[v.id for v in line.attribute_values],
+            )
+
+    # Credit proportional finished goods
+    await stock_service.add_stock_entry(
+        db,
+        item_id=mo.item_id,
+        location_id=mo.location_id,
+        qty_change=float(payload.qty_completed),
+        reference_type="Manufacturing Order",
+        reference_id=mo.code,
+        attribute_value_ids=[v.id for v in mo.attribute_values],
+    )
+
+    # Sum all completions to check for auto-complete
+    total_result = await db.execute(
+        select(func.sum(MOCompletion.qty_completed)).filter(MOCompletion.mo_id == mo.id)
+    )
+    total_completed = float(total_result.scalar() or 0)
+
+    if total_completed >= float(mo.qty):
+        mo.status = "COMPLETED"
+        mo.actual_end_date = datetime.utcnow()
+        if mo.sales_order_id and mo.parent_mo_id is None:
+            res = await db.execute(select(SalesOrder).filter(SalesOrder.id == mo.sales_order_id))
+            so = res.scalars().first()
+            if so:
+                so.status = "READY"
+                await audit_service.log_activity(db, current_user.id, "STATUS_CHANGE", "SalesOrder", str(so.id), f"Ready by root MO {mo.code}")
+
+    await db.commit()
+    await audit_service.log_activity(db, current_user.id, "COMPLETION", "ManufacturingOrder", mo_id, f"Logged {payload.qty_completed} completed (total {total_completed}/{mo.qty})")
+    await manager.broadcast({"type": "MANUFACTURING_ORDER_UPDATE", "mo_id": mo_id, "status": mo.status, "code": mo.code})
+
+    mo_map = await load_mo_tree(db, [mo.id])
+    mo = mo_map.get(mo.id)
+    populate_mo_ids(mo)
+    return mo
+
 
 @router.post("/manufacturing-orders/{mo_id}/complete-with-batches")
 async def complete_manufacturing_order_with_batches(

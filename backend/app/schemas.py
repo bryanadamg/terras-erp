@@ -182,6 +182,20 @@ class BOMResponse(BaseModel):
     class Config:
         from_attributes = True
 
+class MOCompletionCreate(BaseModel):
+    qty_completed: float
+    operator_name: str | None = None
+    notes: str | None = None
+
+class MOCompletionResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    id: UUID
+    mo_id: UUID
+    qty_completed: float
+    operator_name: str | None = None
+    notes: str | None = None
+    created_at: datetime
+
 class ManufacturingOrderCreate(BaseModel):
     code: str
     bom_id: UUID
@@ -226,12 +240,14 @@ class ManufacturingOrderResponse(BaseModel):
     actual_end_date: datetime | None
     created_at: datetime
     is_material_available: bool = True # Calculated field
+    qty_completed_total: float = 0.0  # Populated in API
 
     # We need to include BOM data for expansion
     bom: Optional[BOMResponse] = None
     child_mos: list['ManufacturingOrderResponse'] = []
     work_orders: list['WorkOrderResponse'] = []
     batch_trace: list[BatchConsumptionInMO] = []
+    completions: list[MOCompletionResponse] = []
 
 # Forward refs resolved after WorkOrderResponse is defined below
 
