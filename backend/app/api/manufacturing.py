@@ -454,6 +454,12 @@ async def update_manufacturing_order_status(mo_id: str, status: str, db: AsyncSe
     if status not in valid_statuses:
         raise HTTPException(status_code=400, detail="Invalid status")
 
+    if status in ("IN_PROGRESS", "COMPLETED") and previous_status not in ("IN_PROGRESS", "COMPLETED"):
+        incomplete_children = [c for c in mo.child_mos if c.status != "COMPLETED"]
+        if incomplete_children:
+            codes = ", ".join(c.code for c in incomplete_children)
+            raise HTTPException(status_code=400, detail=f"Child MOs must be completed first: {codes}")
+
     if status == "IN_PROGRESS" and previous_status != "IN_PROGRESS":
         if mo.bom:
             for line in mo.bom.lines:
@@ -546,8 +552,26 @@ async def add_mo_completion(
     if payload.qty_completed <= 0:
         raise HTTPException(status_code=400, detail="qty_completed must be positive")
 
-    # Auto-start if PENDING
+    # All child MOs must be completed before parent can be logged
+    incomplete_children = [c for c in mo.child_mos if c.status != "COMPLETED"]
+    if incomplete_children:
+        codes = ", ".join(c.code for c in incomplete_children)
+        raise HTTPException(status_code=400, detail=f"Child MOs must be completed first: {codes}")
+
+    # Auto-start if PENDING — pre-check stock before committing
     if mo.status == "PENDING":
+        if mo.bom:
+            for line in mo.bom.lines:
+                if not line.percentage:
+                    continue
+                req = (float(mo.qty) * float(line.percentage)) / 100
+                tol = float(mo.bom.tolerance_percentage or 0)
+                if tol > 0:
+                    req *= (1 + (tol / 100))
+                check_loc_id = line.source_location_id or mo.source_location_id or mo.location_id
+                stock = await stock_service.get_stock_balance(db, line.item_id, check_loc_id, [v.id for v in line.attribute_values])
+                if stock < req:
+                    raise HTTPException(status_code=400, detail=f"Insufficient stock for component {line.item_id}")
         mo.status = "IN_PROGRESS"
         mo.actual_start_date = datetime.utcnow()
 

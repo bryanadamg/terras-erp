@@ -53,7 +53,7 @@ export default function ManufacturingView({
   const { showToast } = useToast();
   const router = useRouter();
   const { t } = useLanguage();
-  const { authFetch, companyProfile } = useData();
+  const { authFetch, companyProfile, fetchData } = useData();
   const envBase = process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:8000/api';
   const API_BASE = envBase.endsWith('/api') ? envBase : `${envBase}/api`;
   const [viewMode, setViewMode] = useState('list');
@@ -630,8 +630,8 @@ export default function ManufacturingView({
                           <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '11px' }}>
                               <thead>
                                   <tr style={{ background: classic ? 'linear-gradient(to bottom,#fff,#d4d0c8)' : '#f8f9fa', position: 'sticky', top: 0 }}>
-                                      {['Component', 'Variant', 'Required', 'In Stock', '✔', 'Source'].map(h => (
-                                          <th key={h} style={{ border: classic ? '1px solid #808080' : '1px solid #dee2e6', padding: '3px 6px', textAlign: h === 'Required' || h === 'In Stock' ? 'right' : h === '✔' ? 'center' : 'left', color: '#000', fontSize: '10px' }}>{h}</th>
+                                      {['Component', 'Variant', 'Required', 'In Stock', 'Source'].map(h => (
+                                          <th key={h} style={{ border: classic ? '1px solid #808080' : '1px solid #dee2e6', padding: '3px 6px', textAlign: h === 'Required' || h === 'In Stock' ? 'right' : 'left', color: '#000', fontSize: '10px' }}>{h}</th>
                                       ))}
                                   </tr>
                               </thead>
@@ -659,17 +659,13 @@ export default function ManufacturingView({
                                               </td>
                                               <td style={{ border: classic ? '1px solid #c0bdb5' : '1px solid #dee2e6', padding: '3px 6px', color: '#333', fontSize: '10px' }}>{attrLabel || '—'}</td>
                                               <td style={{ border: classic ? '1px solid #c0bdb5' : '1px solid #dee2e6', padding: '3px 6px', textAlign: 'right', fontFamily: 'monospace', color: '#000', fontWeight: 'bold' }}>{req.toFixed(2)}</td>
-                                              <td style={{ border: classic ? '1px solid #c0bdb5' : '1px solid #dee2e6', padding: '3px 6px', textAlign: 'right', fontFamily: 'monospace', color: isEnough ? '#004400' : available > 0 ? '#664400' : '#880000', fontWeight: 'bold' }}>{available.toFixed(2)}</td>
-                                              <td style={{ border: classic ? '1px solid #c0bdb5' : '1px solid #dee2e6', padding: '3px 6px', textAlign: 'center' }}>
-                                                  {hasSubBOM ? (
-                                                      <span style={{ color: '#b8860b' }}>⟳</span>
-                                                  ) : (
-                                                      <div style={{ display: 'flex', alignItems: 'center', gap: 3, justifyContent: 'center' }}>
-                                                          <span style={{ display: 'inline-block', width: 9, height: 9, background: dc.dot, border: `1px solid ${dc.border}`, flexShrink: 0 }} />
-                                                          {stockLevel === 'low' && <span style={{ fontSize: 8, background: '#886600', color: '#fff', padding: '0 3px', fontWeight: 'bold' }}>Low</span>}
-                                                          {stockLevel === 'out' && <span style={{ fontSize: 8, background: '#880000', color: '#fff', padding: '0 3px', fontWeight: 'bold' }}>Out</span>}
-                                                      </div>
-                                                  )}
+                                              <td style={{ border: classic ? '1px solid #c0bdb5' : '1px solid #dee2e6', padding: '3px 6px', textAlign: 'right' }}>
+                                                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 4 }}>
+                                                      <span style={{ fontFamily: 'monospace', color: isEnough ? '#004400' : available > 0 ? '#664400' : '#880000', fontWeight: 'bold' }}>{available.toFixed(2)}</span>
+                                                      <span style={{ display: 'inline-block', width: 8, height: 8, background: dc.dot, border: `1px solid ${dc.border}`, flexShrink: 0 }} />
+                                                      {stockLevel === 'low' && <span style={{ fontSize: 8, background: '#886600', color: '#fff', padding: '0 3px', fontWeight: 'bold' }}>Low</span>}
+                                                      {stockLevel === 'out' && <span style={{ fontSize: 8, background: '#880000', color: '#fff', padding: '0 3px', fontWeight: 'bold' }}>Out</span>}
+                                                  </div>
                                               </td>
                                               <td style={{ border: classic ? '1px solid #c0bdb5' : '1px solid #dee2e6', padding: '3px 6px', color: '#444', fontSize: '10px' }}>{getLocationName(locId)}</td>
                                           </tr>
@@ -1455,18 +1451,6 @@ export default function ManufacturingView({
                                                                           : <span className="ms-2 badge bg-info bg-opacity-10 text-info border border-info border-opacity-25" style={{fontSize: '0.65rem'}}>NESTED ({wo.child_mos.length})</span>
                                                                   )}
                                                               </div>
-                                                              {wo.status === 'PENDING' && (
-                                                                  currentStyle === 'classic' ? (
-                                                                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3 }}>
-                                                                          <span style={{ display: 'inline-block', width: 8, height: 8, background: wo.is_material_available === false ? '#cc0000' : '#00aa00', border: `1px solid ${wo.is_material_available === false ? '#660000' : '#005500'}`, flexShrink: 0 }} />
-                                                                          {wo.is_material_available === false && <span style={{ fontSize: '8px', background: '#880000', border: '1px solid #660000', color: '#fff', padding: '0 3px', fontWeight: 'bold' }}>LOW STOCK</span>}
-                                                                      </span>
-                                                                  ) : (
-                                                                      wo.is_material_available === false
-                                                                          ? <span className="badge bg-danger p-1 extra-small mt-1">LOW STOCK</span>
-                                                                          : null
-                                                                  )
-                                                              )}
                                                           </div>
                                                       </div>
                                                   </td>
@@ -1566,6 +1550,7 @@ export default function ManufacturingView({
                   onClose={() => setCompletionMO(null)}
                   onSaved={(updated) => {
                       setCompletionMO(null);
+                      fetchData('work-orders');
                   }}
               />
           )}
