@@ -362,6 +362,12 @@ export default function ManufacturingView({
           const found = findNodeByCodeInTree(wo, code);
           if (found) return found;
       }
+      // Also search shared component MOs from production runs
+      for (const pr of productionRuns) {
+          for (const mo of (pr.manufacturing_orders || [])) {
+              if (mo.is_shared_component && mo.code === code) return mo;
+          }
+      }
       return null;
   };
 
@@ -374,10 +380,17 @@ export default function ManufacturingView({
       return null;
   };
 
-  const flattenTree = (node: any, level = 0): Array<{wo: any; level: number}> => {
-      const result: Array<{wo: any; level: number}> = [{wo: node, level}];
+  const flattenTree = (node: any, level = 0, moMap: Record<string, any> = {}, isShared = false): Array<{wo: any; level: number; isShared: boolean}> => {
+      const result: Array<{wo: any; level: number; isShared: boolean}> = [{wo: node, level, isShared}];
       for (const child of (node.child_mos || [])) {
-          result.push(...flattenTree(child, level + 1));
+          result.push(...flattenTree(child, level + 1, moMap, false));
+      }
+      // Include shared component MOs linked via mo_dependencies
+      for (const reqId of (node.required_mo_ids || [])) {
+          const reqMO = moMap[reqId];
+          if (reqMO) {
+              result.push(...flattenTree(reqMO, level + 1, moMap, true));
+          }
       }
       return result;
   };
@@ -535,9 +548,29 @@ export default function ManufacturingView({
   // --- Work Order Expanded Panel (Tree + Detail) ---
   const WOExpandedPanel = ({ wo }: { wo: any }) => {
       const selectedNodeId = selectedTreeNodes[wo.id] ?? wo.id;
-      const selectedNode = findNodeById(wo, selectedNodeId) ?? wo;
+
+      // Build a map of all MOs in the same PR so required component MOs appear in the tree
+      const moMap: Record<string, any> = {};
+      if (wo.production_run_id) {
+          const pr = productionRuns.find((p: any) => p.id === wo.production_run_id);
+          if (pr) {
+              for (const mo of (pr.manufacturing_orders || [])) {
+                  moMap[mo.id] = mo;
+              }
+          }
+      }
+
+      const treeNodes = flattenTree(wo, 0, moMap);
+
+      // findNodeById must also search moMap for shared component MOs
+      const findNodeInTree = (id: string): any => {
+          const inTree = findNodeById(wo, id);
+          if (inTree) return inTree;
+          return moMap[id] ?? null;
+      };
+
+      const selectedNode = findNodeInTree(selectedNodeId) ?? wo;
       const bom = boms.find((b: any) => b.id === selectedNode.bom_id);
-      const treeNodes = flattenTree(wo);
       const isScanActive = scanningWOId === wo.id;
       const classic = currentStyle === 'classic';
 
@@ -565,7 +598,7 @@ export default function ManufacturingView({
                       <i className="bi bi-diagram-3-fill me-2"></i>MO Tree
                   </div>
                   <div style={{ padding: '4px', overflowY: 'auto', flex: 1 }}>
-                      {treeNodes.map(({ wo: node, level }: { wo: any; level: number }) => {
+                      {treeNodes.map(({ wo: node, level, isShared }: { wo: any; level: number; isShared: boolean }) => {
                           const isActive = node.id === selectedNodeId;
                           const statusColor = node.status === 'COMPLETED' ? '#2d7a2d' : node.status === 'IN_PROGRESS' ? (classic ? '#0058e6' : '#fd7e14') : '#6c757d';
                           return (
@@ -578,13 +611,13 @@ export default function ManufacturingView({
                                       cursor: 'pointer', borderRadius: classic ? '0' : '3px',
                                       background: isActive ? (classic ? '#316ac5' : '#0d6efd') : 'transparent',
                                       color: isActive ? '#fff' : '#000',
-                                      border: isActive ? (classic ? '1px solid #003080' : 'none') : '1px solid transparent',
+                                      border: isActive ? (classic ? '1px solid #003080' : 'none') : (isShared ? '1px dashed #999' : '1px solid transparent'),
                                       marginBottom: '1px',
                                       userSelect: 'none'
                                   }}
                               >
                                   <span style={{ fontSize: '10px', color: isActive ? '#cce0ff' : '#888', minWidth: '10px', marginTop: '1px' }}>
-                                      {level === 0 ? '●' : '└'}
+                                      {level === 0 ? '●' : (isShared ? '⇒' : '└')}
                                   </span>
                                   <div style={{ flex: 1, overflow: 'hidden' }}>
                                       <div style={{ fontFamily: 'monospace', fontSize: '10px', fontWeight: 'bold', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
