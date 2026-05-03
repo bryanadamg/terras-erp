@@ -5,10 +5,11 @@ from sqlalchemy.orm import joinedload, selectinload
 from app.db.session import get_async_db
 from uuid import UUID
 from app.models.production_run import ProductionRun
-from app.models.manufacturing import ManufacturingOrder
+from app.models.manufacturing import ManufacturingOrder, MODependency
 from app.models.bom import BOM, BOMLine, BOMSize
 from app.models.work_order import WorkOrder as WorkOrderModel
 from app.models.location import Location
+from app.models.batch import BatchConsumption
 from app.schemas import (
     ProductionRunCreate, ProductionRunResponse,
     PaginatedProductionRunResponse, ManufacturingOrderCreate,
@@ -27,6 +28,82 @@ from datetime import datetime
 
 router = APIRouter()
 
+
+async def _create_consolidated_component_mos(
+    db: AsyncSession,
+    bom: BOM,
+    root_mos: list,
+    location,
+    source_location,
+    sales_order_id,
+    production_run_id,
+    target_start_date,
+    target_end_date,
+    user_id,
+):
+    """Pass 2 of PR creation: walk the shared BOM, aggregate component demand across all
+    root MOs, create ONE consolidated component MO per unique sub-assembly, and write
+    mo_dependencies pegging records (with per-root qty contributions)."""
+    bom_result = await db.execute(
+        select(BOM).options(selectinload(BOM.lines)).filter(BOM.id == bom.id)
+    )
+    bom_with_lines = bom_result.scalars().first()
+    if not bom_with_lines:
+        return
+
+    # Aggregate demand: (item_id, sub_bom_id, src_loc_id) → {sub_bom_id, total_qty, contributions}
+    demand: dict[tuple, dict] = {}
+    for line in bom_with_lines.lines:
+        if not line.percentage:
+            continue
+        sub_bom_result = await db.execute(
+            select(BOM).filter(BOM.item_id == line.item_id, BOM.active == True).limit(1)
+        )
+        sub_bom = sub_bom_result.scalars().first()
+        if not sub_bom:
+            continue
+
+        src_loc_id = line.source_location_id or (source_location.id if source_location else None)
+        key = (str(line.item_id), str(sub_bom.id), str(src_loc_id))
+
+        if key not in demand:
+            demand[key] = {"sub_bom_id": sub_bom.id, "total_qty": 0.0, "src_loc_id": src_loc_id, "contributions": {}}
+
+        for root_mo in root_mos:
+            contrib_qty = (float(root_mo.qty) * float(line.percentage)) / 100
+            demand[key]["total_qty"] += contrib_qty
+            # Use dict to accumulate per root MO — prevents duplicate MODependency rows if
+            # the same component appears on multiple BOM lines (same item_id, sub_bom_id)
+            demand[key]["contributions"][root_mo.id] = demand[key]["contributions"].get(root_mo.id, 0.0) + contrib_qty
+
+    # Create one consolidated component MO per unique component, write pegging records
+    for data in demand.values():
+        component_mo = await create_mo_recursive(
+            db,
+            data["sub_bom_id"],
+            data["total_qty"],
+            location.id,
+            user_id,
+            parent_mo_id=None,
+            source_location_id=data["src_loc_id"],
+            sales_order_id=None,  # component MOs are not directly tied to a single SO
+            production_run_id=production_run_id,
+            target_start_date=target_start_date,
+            target_end_date=target_end_date,
+            create_children=True,  # sub-assemblies of the component recurse normally
+        )
+        component_mo.is_shared_component = True
+        await db.flush()
+
+        for root_mo_id, contrib_qty in data["contributions"].items():
+            db.add(MODependency(
+                dependent_mo_id=root_mo_id,
+                required_mo_id=component_mo.id,
+                qty=contrib_qty,
+            ))
+
+    await db.flush()
+
 def _pr_load_options():
     mos = selectinload(ProductionRun.manufacturing_orders)
     return [
@@ -43,6 +120,10 @@ def _pr_load_options():
         mos.selectinload(ManufacturingOrder.item),
         mos.selectinload(ManufacturingOrder.attribute_values),
         mos.selectinload(ManufacturingOrder.child_mos),
+        mos.selectinload(ManufacturingOrder.required_dependencies),
+        mos.selectinload(ManufacturingOrder.completions),
+        mos.selectinload(ManufacturingOrder.batch_consumptions).selectinload(BatchConsumption.input_batch),
+        mos.selectinload(ManufacturingOrder.batch_consumptions).selectinload(BatchConsumption.output_batch),
         mos.selectinload(ManufacturingOrder.work_orders),
         mos.selectinload(ManufacturingOrder.bom).selectinload(BOM.item),
         mos.selectinload(ManufacturingOrder.bom).selectinload(BOM.attribute_values),
@@ -53,6 +134,13 @@ def _pr_load_options():
         mos.selectinload(ManufacturingOrder.bom).selectinload(BOM.operations),
         mos.selectinload(ManufacturingOrder.bom).selectinload(BOM.sizes).selectinload(BOMSize.size),
     ]
+
+
+def _post_process_pr(pr: ProductionRun):
+    """Populate all calculated fields on every MO within a PR after eager loading."""
+    from app.api.manufacturing import populate_mo_ids
+    for mo in pr.manufacturing_orders:
+        populate_mo_ids(mo)
 
 @router.get("/production-runs/available-code")
 async def get_available_pr_code(
@@ -85,6 +173,8 @@ async def list_production_runs(
         .limit(limit)
     )
     prs = result.unique().scalars().all()
+    for pr in prs:
+        _post_process_pr(pr)
     page = (skip // limit) + 1
     return {"items": prs, "total": total, "page": page, "size": limit}
 
@@ -100,6 +190,7 @@ async def get_production_run(
     pr = result.scalars().first()
     if not pr:
         raise HTTPException(status_code=404, detail="Production Run not found")
+    _post_process_pr(pr)
     return pr
 
 @router.get("/production-runs/{pr_id}/material-requirements", response_model=list[PRMaterialRequirementItem])
@@ -233,17 +324,16 @@ async def create_production_run(
     db.add(pr)
     await db.flush()
 
-    # Create one MO tree per size entry via create_mo_recursive
+    # ── Pass 1: Create root MOs only (no BOM explosion) ───────────────────────
     from app.models.bom import BOMSize
+    root_mos: list[ManufacturingOrder] = []
+
     for i, size_entry in enumerate(payload.sizes):
         if size_entry.qty <= 0:
             continue
 
         size_result = await db.execute(
-            select(BOMSize).filter(
-                BOMSize.id == size_entry.bom_size_id,
-                BOMSize.bom_id == bom.id
-            )
+            select(BOMSize).filter(BOMSize.id == size_entry.bom_size_id, BOMSize.bom_id == bom.id)
         )
         bom_size = size_result.scalars().first()
         if not bom_size:
@@ -253,37 +343,42 @@ async def create_production_run(
         mo_code = f"{payload.code}-{size_label.upper()}"
 
         root_mo = await create_mo_recursive(
-            db,
-            bom.id,
-            float(size_entry.qty),
-            location.id,
-            current_user.id,
+            db, bom.id, float(size_entry.qty), location.id, current_user.id,
             source_location_id=source_location.id if source_location else None,
             sales_order_id=payload.sales_order_id,
             production_run_id=pr.id,
             target_start_date=payload.target_start_date,
             target_end_date=payload.target_end_date,
             bom_size_id=size_entry.bom_size_id,
+            create_children=False,
         )
         root_mo.code = mo_code
+        root_mos.append(root_mo)
         await db.flush()
 
-    # No-size BOM: create single MO tree using total_qty
+    # No-size BOM: single root MO
     if not payload.sizes and payload.total_qty and payload.total_qty > 0:
         root_mo = await create_mo_recursive(
-            db,
-            bom.id,
-            float(payload.total_qty),
-            location.id,
-            current_user.id,
+            db, bom.id, float(payload.total_qty), location.id, current_user.id,
             source_location_id=source_location.id if source_location else None,
             sales_order_id=payload.sales_order_id,
             production_run_id=pr.id,
             target_start_date=payload.target_start_date,
             target_end_date=payload.target_end_date,
+            create_children=False,
         )
         root_mo.code = f"{payload.code}-001"
+        root_mos.append(root_mo)
         await db.flush()
+
+    # ── Pass 2: Aggregate component demand across root MOs, create shared MOs ──
+    if root_mos:
+        await _create_consolidated_component_mos(
+            db, bom, root_mos, location, source_location,
+            payload.sales_order_id, pr.id,
+            payload.target_start_date, payload.target_end_date,
+            current_user.id,
+        )
 
     await db.commit()
 
@@ -291,11 +386,12 @@ async def create_production_run(
         select(ProductionRun).options(*_pr_load_options()).filter(ProductionRun.id == pr.id)
     )
     pr = result.unique().scalars().first()
+    _post_process_pr(pr)
 
     await audit_service.log_activity(
         db, user_id=current_user.id, action="CREATE",
         entity_type="PRODUCTION_RUN", entity_id=str(pr.id),
-        details=f"Created Production Run {pr.code} with {len(payload.sizes)} MOs",
+        details=f"Created Production Run {pr.code} with {len(payload.sizes)} root MOs",
         changes=payload.model_dump()
     )
     await manager.broadcast({"type": "PRODUCTION_RUN_UPDATE", "pr_id": str(pr.id), "status": "PENDING"})
@@ -331,7 +427,9 @@ async def update_production_run_status(
     result = await db.execute(
         select(ProductionRun).options(*_pr_load_options()).filter(ProductionRun.id == pr_id)
     )
-    return result.unique().scalars().first()
+    pr = result.unique().scalars().first()
+    _post_process_pr(pr)
+    return pr
 
 @router.delete("/production-runs/{pr_id}")
 async def delete_production_run(

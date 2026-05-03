@@ -1,4 +1,4 @@
-from sqlalchemy import String, ForeignKey, Numeric, DateTime, Table, Column
+from sqlalchemy import String, ForeignKey, Numeric, DateTime, Table, Column, Boolean
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.db.base import Base
@@ -18,6 +18,24 @@ manufacturing_order_values = Table(
     Column("manufacturing_order_id", UUID(as_uuid=True), ForeignKey("manufacturing_orders.id"), primary_key=True),
     Column("attribute_value_id", UUID(as_uuid=True), ForeignKey("attribute_values.id"), primary_key=True),
 )
+
+
+class MODependency(Base):
+    """Pegging record: a root MO (dependent) requires a shared component MO (required).
+    qty = how much of the required MO's output this dependent MO contributes."""
+    __tablename__ = "mo_dependencies"
+
+    dependent_mo_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("manufacturing_orders.id", ondelete="CASCADE"), primary_key=True
+    )
+    required_mo_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("manufacturing_orders.id", ondelete="CASCADE"), primary_key=True
+    )
+    qty: Mapped[float] = mapped_column(Numeric(14, 4), nullable=False)
+
+    dependent_mo = relationship("ManufacturingOrder", foreign_keys=[dependent_mo_id], back_populates="required_dependencies")
+    required_mo = relationship("ManufacturingOrder", foreign_keys=[required_mo_id], back_populates="dependent_dependencies")
+
 
 class ManufacturingOrder(Base):
     __tablename__ = "manufacturing_orders"
@@ -62,6 +80,9 @@ class ManufacturingOrder(Base):
     qty: Mapped[float] = mapped_column(Numeric(14, 4))
     status: Mapped[str] = mapped_column(String(32), default="PENDING", index=True)
 
+    # True for consolidated component MOs shared across multiple root MOs in a PR
+    is_shared_component: Mapped[bool] = mapped_column(Boolean, default=False, server_default="false", nullable=False)
+
     # Lifecycle Timestamps
     target_start_date: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
     target_end_date: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
@@ -100,12 +121,24 @@ class ManufacturingOrder(Base):
         primaryjoin="ManufacturingOrder.id == foreign(BatchConsumption.manufacturing_order_id)",
         lazy="noload",
     )
-
     completions: Mapped[List["MOCompletion"]] = relationship(
         "MOCompletion",
         back_populates="mo",
         order_by="MOCompletion.created_at",
         cascade="all, delete-orphan",
+        lazy="noload",
+    )
+    # Dependency relationships (MRP pegging)
+    required_dependencies: Mapped[List["MODependency"]] = relationship(
+        "MODependency",
+        foreign_keys="MODependency.dependent_mo_id",
+        back_populates="dependent_mo",
+        lazy="noload",
+    )
+    dependent_dependencies: Mapped[List["MODependency"]] = relationship(
+        "MODependency",
+        foreign_keys="MODependency.required_mo_id",
+        back_populates="required_mo",
         lazy="noload",
     )
 

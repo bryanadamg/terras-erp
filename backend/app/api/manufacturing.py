@@ -4,7 +4,7 @@ from sqlalchemy import select, func, or_, inspect
 from sqlalchemy.orm import selectinload, joinedload, attributes as sa_attributes
 from collections import defaultdict
 from app.db.session import get_async_db
-from app.models.manufacturing import ManufacturingOrder, MOCompletion
+from app.models.manufacturing import ManufacturingOrder, MOCompletion, MODependency
 from app.models.work_order import WorkOrder as WorkOrderModel  # noqa: F401 — eager load
 from app.models.bom import BOM, BOMLine, BOMSize
 from app.models.location import Location
@@ -37,6 +37,7 @@ def get_mo_options():
         selectinload(ManufacturingOrder.attribute_values),
         selectinload(ManufacturingOrder.work_orders),
         selectinload(ManufacturingOrder.sales_order),
+        selectinload(ManufacturingOrder.required_dependencies),
         selectinload(ManufacturingOrder.bom).selectinload(BOM.item),
         selectinload(ManufacturingOrder.bom).selectinload(BOM.attribute_values),
         selectinload(ManufacturingOrder.bom).selectinload(BOM.operations),
@@ -129,8 +130,14 @@ def populate_mo_ids(mo: ManufacturingOrder):
         for child in mo.child_mos:
             populate_mo_ids(child)
     else:
-        # Prevent Pydantic from triggering a lazy-load in async context
         sa_attributes.set_committed_value(mo, "child_mos", [])
+
+    # 5. Populate required_mo_ids from dependency pegging records (if loaded)
+    if "required_dependencies" not in insp.unloaded:
+        mo.required_mo_ids = [dep.required_mo_id for dep in mo.required_dependencies]
+    else:
+        mo.required_mo_ids = []
+        sa_attributes.set_committed_value(mo, "required_dependencies", [])
 
 async def load_mo_tree(db: AsyncSession, root_ids: list) -> dict:
     """
@@ -164,6 +171,7 @@ async def load_mo_tree(db: AsyncSession, root_ids: list) -> dict:
             selectinload(ManufacturingOrder.item),
             selectinload(ManufacturingOrder.attribute_values),
             selectinload(ManufacturingOrder.sales_order),
+            selectinload(ManufacturingOrder.required_dependencies),
             selectinload(ManufacturingOrder.work_orders).selectinload(WorkOrderModel.work_center),
             selectinload(ManufacturingOrder.bom).selectinload(BOM.item),
             selectinload(ManufacturingOrder.bom).selectinload(BOM.attribute_values),
@@ -207,8 +215,10 @@ async def create_mo_recursive(
     target_start_date: Optional[datetime] = None,
     target_end_date: Optional[datetime] = None,
     bom_size_id: Optional[uuid.UUID] = None,
+    create_children: bool = True,
 ) -> ManufacturingOrder:
-    """Recursively creates manufacturing orders for sub-assemblies."""
+    """Recursively creates manufacturing orders for sub-assemblies.
+    Pass create_children=False to create only the root MO (used in two-pass PR creation)."""
     # 1. Fetch BOM with lines
     result = await db.execute(
         select(BOM)
@@ -255,29 +265,30 @@ async def create_mo_recursive(
     await db.flush()
 
     # 4. Look for sub-BOMs in lines — only active BOMs, percentage-based qty
-    for line in bom.lines:
-        if not line.percentage:
-            continue  # 0% or null = not needed
-        sub_bom_result = await db.execute(
-            select(BOM).filter(BOM.item_id == line.item_id, BOM.active == True).limit(1)
-        )
-        sub_bom = sub_bom_result.scalars().first()
-
-        if sub_bom:
-            sub_qty = (qty * float(line.percentage)) / 100
-            await create_mo_recursive(
-                db,
-                sub_bom.id,
-                sub_qty,
-                location_id,
-                user_id,
-                parent_mo_id=mo.id,
-                source_location_id=source_location_id,
-                sales_order_id=sales_order_id,
-                production_run_id=production_run_id,
-                target_start_date=target_start_date,
-                target_end_date=target_end_date,
+    if create_children:
+        for line in bom.lines:
+            if not line.percentage:
+                continue  # 0% or null = not needed
+            sub_bom_result = await db.execute(
+                select(BOM).filter(BOM.item_id == line.item_id, BOM.active == True).limit(1)
             )
+            sub_bom = sub_bom_result.scalars().first()
+
+            if sub_bom:
+                sub_qty = (qty * float(line.percentage)) / 100
+                await create_mo_recursive(
+                    db,
+                    sub_bom.id,
+                    sub_qty,
+                    location_id,
+                    user_id,
+                    parent_mo_id=mo.id,
+                    source_location_id=source_location_id,
+                    sales_order_id=sales_order_id,
+                    production_run_id=production_run_id,
+                    target_start_date=target_start_date,
+                    target_end_date=target_end_date,
+                )
 
     return mo
 
@@ -385,9 +396,12 @@ async def get_manufacturing_orders(
     # Build a lightweight query for root MO IDs only (used for count + pagination)
     id_query = select(ManufacturingOrder.id)
 
-    # Filter only root MOs by default to avoid clutter
+    # Filter only root MOs by default — exclude shared component MOs (they appear under PR view)
     if not all_levels:
-        id_query = id_query.filter(ManufacturingOrder.parent_mo_id == None)
+        id_query = id_query.filter(
+            ManufacturingOrder.parent_mo_id == None,
+            ManufacturingOrder.is_shared_component == False,
+        )
 
     if start_date:
         id_query = id_query.filter(ManufacturingOrder.created_at >= start_date)
@@ -465,10 +479,25 @@ async def update_manufacturing_order_status(mo_id: str, status: str, db: AsyncSe
         raise HTTPException(status_code=400, detail="Invalid status")
 
     if status in ("IN_PROGRESS", "COMPLETED") and previous_status not in ("IN_PROGRESS", "COMPLETED"):
+        # Check traditional child MOs (single-parent, created via create_mo_recursive)
         incomplete_children = [c for c in mo.child_mos if c.status != "COMPLETED"]
         if incomplete_children:
             codes = ", ".join(c.code for c in incomplete_children)
             raise HTTPException(status_code=400, detail=f"Child MOs must be completed first: {codes}")
+
+        # Check shared component MOs linked via mo_dependencies
+        dep_ids_result = await db.execute(
+            select(MODependency.required_mo_id).filter(MODependency.dependent_mo_id == mo.id)
+        )
+        required_dep_ids = [row[0] for row in dep_ids_result.fetchall()]
+        if required_dep_ids:
+            incomplete_dep_result = await db.execute(
+                select(ManufacturingOrder.code)
+                .filter(ManufacturingOrder.id.in_(required_dep_ids), ManufacturingOrder.status != "COMPLETED")
+            )
+            incomplete_dep_codes = [row[0] for row in incomplete_dep_result.fetchall()]
+            if incomplete_dep_codes:
+                raise HTTPException(status_code=400, detail=f"Required component MOs must be completed first: {', '.join(incomplete_dep_codes)}")
 
     if status == "IN_PROGRESS" and previous_status != "IN_PROGRESS":
         if mo.bom:
@@ -562,11 +591,25 @@ async def add_mo_completion(
     if payload.qty_completed <= 0:
         raise HTTPException(status_code=400, detail="qty_completed must be positive")
 
-    # All child MOs must be completed before parent can be logged
+    # Check traditional child MOs
     incomplete_children = [c for c in mo.child_mos if c.status != "COMPLETED"]
     if incomplete_children:
         codes = ", ".join(c.code for c in incomplete_children)
         raise HTTPException(status_code=400, detail=f"Child MOs must be completed first: {codes}")
+
+    # Check shared component MOs linked via mo_dependencies
+    dep_ids_result = await db.execute(
+        select(MODependency.required_mo_id).filter(MODependency.dependent_mo_id == mo.id)
+    )
+    required_dep_ids = [row[0] for row in dep_ids_result.fetchall()]
+    if required_dep_ids:
+        incomplete_dep_result = await db.execute(
+            select(ManufacturingOrder.code)
+            .filter(ManufacturingOrder.id.in_(required_dep_ids), ManufacturingOrder.status != "COMPLETED")
+        )
+        incomplete_dep_codes = [row[0] for row in incomplete_dep_result.fetchall()]
+        if incomplete_dep_codes:
+            raise HTTPException(status_code=400, detail=f"Required component MOs must be completed first: {', '.join(incomplete_dep_codes)}")
 
     # Auto-start if PENDING — pre-check stock before committing
     if mo.status == "PENDING":

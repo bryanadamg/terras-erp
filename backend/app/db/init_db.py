@@ -442,6 +442,32 @@ def run_migrations():
                 conn.rollback()
                 logger.warning(f"Drop bom_lines.is_percentage failed: {e}")
 
+            # ── MO Dependencies (shared component consolidation) ──────────────────
+            try:
+                conn.execute(text("""
+                    CREATE TABLE IF NOT EXISTS mo_dependencies (
+                        dependent_mo_id UUID NOT NULL REFERENCES manufacturing_orders(id) ON DELETE CASCADE,
+                        required_mo_id UUID NOT NULL REFERENCES manufacturing_orders(id) ON DELETE CASCADE,
+                        qty NUMERIC(14, 4) NOT NULL,
+                        PRIMARY KEY (dependent_mo_id, required_mo_id)
+                    )
+                """))
+                conn.commit()
+                logger.info("Migration: Created mo_dependencies table")
+            except Exception as e:
+                conn.rollback()
+                logger.warning(f"mo_dependencies table creation failed: {e}")
+
+            try:
+                res = conn.execute(text("SELECT column_name FROM information_schema.columns WHERE table_name='manufacturing_orders' AND column_name='is_shared_component'"))
+                if not res.fetchone():
+                    conn.execute(text("ALTER TABLE manufacturing_orders ADD COLUMN is_shared_component BOOLEAN NOT NULL DEFAULT FALSE"))
+                    conn.commit()
+                    logger.info("Migration: Added is_shared_component to manufacturing_orders")
+            except Exception as e:
+                conn.rollback()
+                logger.warning(f"is_shared_component migration failed: {e}")
+
             # ── MO Incremental Completions ────────────────────────────────────────────
             try:
                 conn.execute(text("""

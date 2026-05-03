@@ -229,7 +229,8 @@ class ManufacturingOrderResponse(BaseModel):
     parent_mo_id: UUID | None = None
     production_run_id: UUID | None = None
     bom_size_id: UUID | None = None
-    attribute_value_ids: list[UUID] = [] # We'll populate this in the API
+    is_shared_component: bool = False
+    attribute_value_ids: list[UUID] = []
     location_id: UUID
     source_location_id: UUID | None = None
     qty: float
@@ -239,10 +240,10 @@ class ManufacturingOrderResponse(BaseModel):
     actual_start_date: datetime | None
     actual_end_date: datetime | None
     created_at: datetime
-    is_material_available: bool = True # Calculated field
-    qty_completed_total: float = 0.0  # Populated in API
+    is_material_available: bool = True
+    qty_completed_total: float = 0.0
+    required_mo_ids: list[UUID] = []  # IDs of shared component MOs this MO depends on (populated in API)
 
-    # We need to include BOM data for expansion
     bom: Optional[BOMResponse] = None
     child_mos: list['ManufacturingOrderResponse'] = []
     work_orders: list['WorkOrderResponse'] = []
