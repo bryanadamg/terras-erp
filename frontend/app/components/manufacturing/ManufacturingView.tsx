@@ -208,7 +208,16 @@ export default function ManufacturingView({
       for (const woId of expandedIds) {
           const wo = manufacturingOrders.find((w: any) => w.id === woId);
           if (!wo) continue;
-          const nodes = flattenTree(wo);
+          const moMap: Record<string, any> = {};
+          if (wo.production_run_id) {
+              const pr = productionRuns.find((p: any) => p.id === wo.production_run_id);
+              if (pr) {
+                  for (const mo of (pr.manufacturing_orders || [])) {
+                      moMap[mo.id] = mo;
+                  }
+              }
+          }
+          const nodes = flattenTree(wo, 0, moMap);
           for (const { wo: node } of nodes) {
               if (!qrDataUrls[node.code]) {
                   QRCode.toDataURL(node.code, { margin: 1, width: 160 })
@@ -217,7 +226,7 @@ export default function ManufacturingView({
               }
           }
       }
-  }, [expandedRows, manufacturingOrders]);
+  }, [expandedRows, manufacturingOrders, productionRuns]);
 
   const buildWOBasePattern = (bomId: string, config = codeConfig) => {
       const bom = boms.find((b: any) => b.id === bomId);

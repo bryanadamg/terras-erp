@@ -215,7 +215,8 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
             const responses = await Promise.all(requests);
             const newMasterData: any = {};
             for (let i = 0; i < responses.length; i++) {
-                const res = responses[i]; const type = requestTypes[i]; if (!res.ok) continue;
+                const res = responses[i]; const type = requestTypes[i];
+                if (!res.ok) { console.warn(`[DataContext] ${type} fetch failed: HTTP ${res.status} ${res.url}`); continue; }
                 const data = await res.json();
                 switch(type) {
                     case 'locations': setLocations(data); newMasterData.locations = data; break;

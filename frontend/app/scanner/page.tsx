@@ -30,7 +30,7 @@ export default function ScannerPage() {
                     authFetch(`${API_BASE}/boms`),
                     authFetch(`${API_BASE}/stock/balance`),
                 ]);
-                if (woRes.ok) { const d = await woRes.json(); setLocalWorkOrders(d.items || []); }
+                if (woRes.ok) { const d = await woRes.json(); setLocalWorkOrders(Array.isArray(d) ? d : (d.items || [])); }
                 if (bomsRes.ok) { setLocalBoms(await bomsRes.json()); }
                 if (balanceRes.ok) { setLocalStockBalance(await balanceRes.json()); }
             } finally {

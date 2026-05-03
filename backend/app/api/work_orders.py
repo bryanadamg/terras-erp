@@ -1,7 +1,8 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from sqlalchemy.orm import joinedload
+from typing import Optional
 from app.db.session import get_async_db
 from app.models.work_order import WorkOrder
 from app.models.manufacturing import ManufacturingOrder
@@ -19,16 +20,16 @@ def _wo_options():
 
 @router.get("/work-orders", response_model=list[WorkOrderResponse])
 async def list_work_orders(
-    manufacturing_order_id: str,
+    manufacturing_order_id: Optional[str] = Query(None),
+    skip: int = 0,
+    limit: int = 9999,
     db: AsyncSession = Depends(get_async_db),
     current_user: User = Depends(get_current_user),
 ):
-    result = await db.execute(
-        select(WorkOrder)
-        .options(*_wo_options())
-        .filter(WorkOrder.manufacturing_order_id == manufacturing_order_id)
-        .order_by(WorkOrder.sequence)
-    )
+    q = select(WorkOrder).options(*_wo_options()).order_by(WorkOrder.sequence)
+    if manufacturing_order_id:
+        q = q.filter(WorkOrder.manufacturing_order_id == manufacturing_order_id)
+    result = await db.execute(q.offset(skip).limit(limit))
     return result.scalars().all()
 
 @router.post("/work-orders", response_model=WorkOrderResponse)
