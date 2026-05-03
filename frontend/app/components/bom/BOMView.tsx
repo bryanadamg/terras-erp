@@ -7,14 +7,6 @@ import ProductionRunModal from '../manufacturing/ProductionRunModal';
 import { useToast } from '../shared/Toast';
 import { useLanguage } from '../../context/LanguageContext';
 
-type StockLevel = 'ok' | 'low' | 'out';
-
-const stockColors = {
-    ok:  { dot: '#00aa00', border: '#005500', text: '#004400' },
-    low: { dot: '#ccaa00', border: '#886600', text: '#664400' },
-    out: { dot: '#cc0000', border: '#660000', text: '#880000' },
-};
-
 const xpTh: React.CSSProperties = {
     background: 'linear-gradient(to bottom, #fff, #d4d0c8)',
     border: '1px solid #808080',
@@ -79,38 +71,11 @@ export default function BOMView({
     // Inline detail panel state
     const [expandedBOMRows, setExpandedBOMRows] = useState<Record<string, boolean>>({});
     const [selectedBOMNodes, setSelectedBOMNodes] = useState<Record<string, string>>({});
-    const [stockMap, setStockMap] = useState<Record<string, number>>({});
-    const [stockLoading, setStockLoading] = useState(false);
-    const [stockFetched, setStockFetched] = useState(false);
-
-    const fetchStock = async () => {
-        if (stockFetched) return;
-        setStockLoading(true);
-        try {
-            const token = localStorage.getItem('access_token');
-            const base = (process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:8000/api').replace(/\/api$/, '');
-            const res = await fetch(`${base}/api/stock/balance`, { headers: { Authorization: `Bearer ${token}` } });
-            if (res.ok) {
-                const balances: any[] = await res.json();
-                const map: Record<string, number> = {};
-                for (const b of balances) {
-                    const id = String(b.item_id);
-                    map[id] = (map[id] || 0) + (b.qty || 0);
-                }
-                setStockMap(map);
-                setStockFetched(true);
-            }
-        } catch (_) {}
-        setStockLoading(false);
-    };
 
     const toggleBOMRow = (bomId: string, bomItemId: string) => {
         setExpandedBOMRows(prev => {
             const opening = !prev[bomId];
-            if (opening) {
-                fetchStock();
-                setSelectedBOMNodes(p => ({ ...p, [bomId]: bomItemId }));
-            }
+            if (opening) setSelectedBOMNodes(p => ({ ...p, [bomId]: bomItemId }));
             return { ...prev, [bomId]: opening };
         });
     };
@@ -154,14 +119,6 @@ export default function BOMView({
             if (val) return val.value;
         }
         return valId;
-    };
-
-    const getStockLevel = (line: any): StockLevel => {
-        if (stockLoading) return 'ok';
-        const onHand = stockMap[String(line.item_id)] ?? null;
-        if (onHand === null) return 'ok';
-        if (onHand === 0) return 'out';
-        return 'ok';
     };
 
     // Item IDs that appear as components in any BOM — these are sub-BOMs
@@ -393,7 +350,7 @@ export default function BOMView({
                     <div style={{ display: 'flex', height: 420, background: '#ece9d8', borderTop: '2px solid #0058e6', fontFamily: 'Tahoma, Arial, sans-serif', fontSize: 11 }}>
 
                         {/* LEFT: Tree */}
-                        <div style={{ width: 210, flexShrink: 0, borderRight: '2px solid #aca899', display: 'flex', flexDirection: 'column', background: '#ddd9c8' }}>
+                        <div style={{ width: 260, flexShrink: 0, borderRight: '2px solid #aca899', display: 'flex', flexDirection: 'column', background: '#ddd9c8' }}>
                             <div style={{ background: 'linear-gradient(to bottom, #4a78c8, #2a54a8)', color: '#fff', fontSize: 11, fontWeight: 'bold', padding: '3px 8px', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                                 <span><i className="bi bi-diagram-3-fill" style={{ marginRight: 4 }} />BOM Structure</span>
                                 <span style={{ background: 'rgba(255,255,255,0.2)', color: '#fff', fontSize: 9, padding: '0 5px', borderRadius: 2 }}>{nodeCount} nodes</span>
@@ -459,15 +416,11 @@ export default function BOMView({
                                                 <tr>
                                                     <th style={xpTh}>Item</th>
                                                     <th style={{ ...xpTh, textAlign: 'right' }}>%</th>
-                                                    <th style={xpTh}>Stock</th>
                                                     <th style={xpTh}>Attributes</th>
                                                 </tr>
                                             </thead>
                                             <tbody>
                                                 {lines.map((line: any, i: number) => {
-                                                    const level = getStockLevel(line);
-                                                    const sc = stockColors[level];
-                                                    const onHand = stockMap[String(line.item_id)];
                                                     const isSubBOM = !!findSubBOM(line);
                                                     return (
                                                         <tr key={line.id} style={{ background: i % 2 === 0 ? '#fff' : '#f5f3ee' }}>
@@ -485,18 +438,6 @@ export default function BOMView({
                                                                     <span style={{ background: '#b46a00', color: '#fff', fontSize: 9, padding: '1px 5px', fontWeight: 'bold' }}>{line.percentage}%</span>
                                                                 ) : <span style={{ color: '#888' }}>—</span>}
                                                             </td>
-                                                            <td style={xpTd}>
-                                                                {stockLoading ? (
-                                                                    <span style={{ color: '#666', fontSize: 10 }}>…</span>
-                                                                ) : (
-                                                                    <div style={{ display: 'flex', alignItems: 'center', gap: 4, whiteSpace: 'nowrap' }}>
-                                                                        <span style={{ display: 'inline-block', width: 9, height: 9, background: sc.dot, border: `1px solid ${sc.border}`, flexShrink: 0 }} />
-                                                                        <span style={{ fontSize: 11, fontWeight: 'bold', color: sc.text }}>
-                                                                            {onHand !== undefined ? Number(onHand).toFixed(0) : '—'}
-                                                                        </span>
-                                                                    </div>
-                                                                )}
-                                                            </td>
                                                             <td style={{ ...xpTd, fontSize: 10, color: '#444' }}>{getAttrValues(line.attribute_value_ids || [])}</td>
                                                         </tr>
                                                     );
@@ -504,7 +445,7 @@ export default function BOMView({
                                             </tbody>
                                             <tfoot>
                                                 <tr>
-                                                    <td colSpan={4} style={{ ...xpFooterTd, textAlign: 'right' }}>
+                                                    <td colSpan={3} style={{ ...xpFooterTd, textAlign: 'right' }}>
                                                         {lines.length} component{lines.length !== 1 ? 's' : ''}
                                                         {hasPct && (
                                                             <> · Total %: <span style={{ fontWeight: 'bold', color: Math.abs(totalPct - 100) < 0.01 ? '#004400' : '#880000' }}>{totalPct.toFixed(1)}%</span></>
