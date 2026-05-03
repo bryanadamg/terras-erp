@@ -115,7 +115,7 @@ export default function MOCompletionModal({ mo, onClose, onSaved }: MOCompletion
                                         : 'repeating-linear-gradient(45deg, #000080, #000080 4px, #1565c0 4px, #1565c0 8px)',
                                     transition: 'width 0.2s',
                                 }} />
-                                <span style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 9, fontWeight: 'bold', color: pct > 45 ? '#fff' : '#000080', mixBlendMode: 'difference' }}>
+                                <span style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 9, fontWeight: 'bold', color: pct > 50 ? '#fff' : '#000080', textShadow: pct > 50 ? '0 0 3px rgba(0,0,0,0.8)' : 'none' }}>
                                     {totalCompleted.toFixed(2)} / {target} ({pct}%)
                                 </span>
                             </div>
