@@ -33,7 +33,7 @@ export default function SalesOrdersPage() {
         if (res.ok) fetchData();
     };
 
-    const handleGenerateWO = (so: any, line: any) => {
+    const handleGeneratePR = (so: any, line: any) => {
         const lineAttrIds = line.attribute_value_ids || [];
         const matchingBOM = boms.find((b: any) => {
             if (b.item_id !== line.item_id) return false;
@@ -43,14 +43,22 @@ export default function SalesOrdersPage() {
         });
 
         if (matchingBOM) {
+            // Collect ALL lines from this SO that share the same BOM to pre-fill sizes
+            const soLines: any[] = so.lines || [];
+            const sizes = soLines
+                .filter((l: any) => {
+                    if (l.item_id !== matchingBOM.item_id) return false;
+                    if (!l.bom_size_id) return false;
+                    return true;
+                })
+                .map((l: any) => ({ bom_size_id: l.bom_size_id, qty: l.qty }));
+
             const params: Record<string, string> = {
-                action: 'create_wo',
+                action: 'create_pr',
                 sales_order_id: so.id,
-                item_id: line.item_id,
-                qty: line.qty.toString(),
                 bom_id: matchingBOM.id,
+                sizes: encodeURIComponent(JSON.stringify(sizes)),
             };
-            if (line.bom_size_id) params.bom_size_id = line.bom_size_id;
             router.push(`/manufacturing-orders?${new URLSearchParams(params).toString()}`);
         } else {
             showToast('No matching BOM found. Please create a recipe first.', 'warning');
@@ -84,6 +92,6 @@ export default function SalesOrdersPage() {
                 onCreateSO={handleCreateSO}
                 onDeleteSO={handleDeleteSO}
                 onUpdateSOStatus={handleUpdateSOStatus}
-                onGenerateWO={handleGenerateWO}
+                onGenerateWO={handleGeneratePR}
             />
     );}

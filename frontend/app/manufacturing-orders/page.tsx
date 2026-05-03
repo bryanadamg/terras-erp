@@ -26,11 +26,15 @@ export default function ManufacturingOrdersPage() {
     const searchParams = useSearchParams();
     const router = useRouter();
     const [initialCreateState, setInitialCreateState] = useState<any>(null);
+    const [initialPRState, setInitialPRState] = useState<any>(null);
     const consumedSOIdRef = useRef<string | null>(null);
 
     useEffect(() => {
         const soId = searchParams.get('sales_order_id');
-        if (searchParams.get('action') === 'create_wo' && soId !== consumedSOIdRef.current) {
+        const action = searchParams.get('action');
+        if (soId === consumedSOIdRef.current) return;
+
+        if (action === 'create_wo') {
             consumedSOIdRef.current = soId;
             setInitialCreateState({
                 sales_order_id: soId,
@@ -38,6 +42,15 @@ export default function ManufacturingOrdersPage() {
                 qty: parseFloat(searchParams.get('qty') || '0'),
                 bom_id: searchParams.get('bom_id'),
                 bom_size_id: searchParams.get('bom_size_id') || null,
+            });
+            router.replace('/manufacturing-orders');
+        } else if (action === 'create_pr') {
+            consumedSOIdRef.current = soId;
+            const sizesRaw = searchParams.get('sizes');
+            setInitialPRState({
+                sales_order_id: soId,
+                bom_id: searchParams.get('bom_id'),
+                sizes: sizesRaw ? JSON.parse(decodeURIComponent(sizesRaw)) : [],
             });
             router.replace('/manufacturing-orders');
         }
@@ -129,6 +142,7 @@ export default function ManufacturingOrdersPage() {
     }
 
     const handleClearInitialState = useCallback(() => setInitialCreateState(null), []);
+    const handleClearInitialPRState = useCallback(() => setInitialPRState(null), []);
 
     return (
         <ManufacturingView
@@ -160,7 +174,9 @@ export default function ManufacturingOrdersPage() {
             setPrPage={setPrPage}
             initialCreateState={initialCreateState}
             onClearInitialState={handleClearInitialState}
-            initialTab="manufacturing-orders"
+            initialPRState={initialPRState}
+            onClearInitialPRState={handleClearInitialPRState}
+            initialTab={initialPRState ? 'production-runs' : 'manufacturing-orders'}
             showTabSwitcher={false}
         />
     );

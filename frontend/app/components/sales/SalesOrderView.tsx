@@ -1221,13 +1221,13 @@ export default function SalesOrderView({ items, attributes, boms, salesOrders, p
                                                    </div>
                                                    {so.status === 'PENDING' && (
                                                        classic ? (
-                                                           <button title="Create Manufacturing Order" onClick={() => onGenerateWO(so, line)}
+                                                           <button title="Create Production Run" onClick={() => onGenerateWO(so, line)}
                                                                style={{ fontFamily:'Tahoma,Arial,sans-serif', fontSize:'9px', padding:'1px 5px', cursor:'pointer', whiteSpace:'nowrap' as const, background:'linear-gradient(to bottom,#5a9ae0,#0058e6)', border:'1px solid', borderColor:'#003080 #001840 #001840 #003080', color:'#fff', fontWeight:'bold', flexShrink:0 }}>
-                                                               <i className="bi bi-gear-wide-connected" style={{ marginRight:2 }}></i>MO
+                                                               <i className="bi bi-collection-play" style={{ marginRight:2 }}></i>PR
                                                            </button>
                                                        ) : (
-                                                           <button className="btn btn-sm btn-primary py-0 px-2" style={{ fontSize:10, whiteSpace:'nowrap', flexShrink:0 }} title="Create Manufacturing Order" onClick={() => onGenerateWO(so, line)}>
-                                                               <i className="bi bi-gear-wide-connected me-1"></i>MO
+                                                           <button className="btn btn-sm btn-primary py-0 px-2" style={{ fontSize:10, whiteSpace:'nowrap', flexShrink:0 }} title="Create Production Run" onClick={() => onGenerateWO(so, line)}>
+                                                               <i className="bi bi-collection-play me-1"></i>PR
                                                            </button>
                                                        )
                                                    )}

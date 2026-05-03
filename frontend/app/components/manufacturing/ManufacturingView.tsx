@@ -47,6 +47,8 @@ export default function ManufacturingView({
     setPrPage,
     initialCreateState,
     onClearInitialState,
+    initialPRState,
+    onClearInitialPRState,
     initialTab,
     showTabSwitcher = true
 }: any) {
@@ -65,6 +67,9 @@ export default function ManufacturingView({
   // Tab state: 'production-runs' | 'manufacturing-orders'
   const [activeTab, setActiveTab] = useState<'production-runs' | 'manufacturing-orders'>(initialTab || 'production-runs');
   const [isPRModalOpen, setIsPRModalOpen] = useState(false);
+  const [prModalBom, setPrModalBom] = useState<any>(null);
+  const [prModalInitialSizes, setPrModalInitialSizes] = useState<Record<string, string> | undefined>(undefined);
+  const [prModalSalesOrderId, setPrModalSalesOrderId] = useState<string | undefined>(undefined);
 
   // Derived Pagination
   const totalPages = Math.ceil(totalItems / pageSize);
@@ -158,6 +163,28 @@ export default function ManufacturingView({
           }
       }
   }, [initialCreateState, items, boms, onClearInitialState]);
+
+  // Handle PR creation pre-fill from Sales Order
+  useEffect(() => {
+      if (initialPRState && boms.length > 0) {
+          const { bom_id, sizes, sales_order_id } = initialPRState;
+          const bom = boms.find((b: any) => b.id === bom_id);
+          if (bom) {
+              const sizeMap: Record<string, string> = {};
+              (sizes || []).forEach((s: any) => { sizeMap[s.bom_size_id] = String(s.qty); });
+              setActiveTab('production-runs');
+              setPrModalBom(bom);
+              setPrModalInitialSizes(sizeMap);
+              setPrModalSalesOrderId(sales_order_id || undefined);
+              setIsPRModalOpen(true);
+              onClearInitialPRState?.();
+              showToast('Production Run pre-filled from Sales Order', 'info');
+          } else {
+              showToast('No matching BOM found for Production Run.', 'warning');
+              onClearInitialPRState?.();
+          }
+      }
+  }, [initialPRState, boms]);
 
   useEffect(() => {
       const savedConfig = localStorage.getItem('mo_code_config');
@@ -1647,10 +1674,13 @@ export default function ManufacturingView({
 
           {isPRModalOpen && (
               <ProductionRunModal
+                  bom={prModalBom || undefined}
                   boms={boms}
                   locations={locations}
                   onSave={onCreateProductionRun}
-                  onClose={() => setIsPRModalOpen(false)}
+                  onClose={() => { setIsPRModalOpen(false); setPrModalBom(null); setPrModalInitialSizes(undefined); setPrModalSalesOrderId(undefined); }}
+                  initialSizes={prModalInitialSizes}
+                  salesOrderId={prModalSalesOrderId}
               />
           )}
 

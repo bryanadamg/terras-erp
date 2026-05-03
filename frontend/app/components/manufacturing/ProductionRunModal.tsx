@@ -18,16 +18,18 @@ interface Props {
     locations: any[];
     onSave: (payload: any) => Promise<any>;
     onClose: () => void;
+    initialSizes?: Record<string, string>;
+    salesOrderId?: string;
 }
 
-export default function ProductionRunModal({ bom: initialBom, boms, locations, onSave, onClose }: Props) {
+export default function ProductionRunModal({ bom: initialBom, boms, locations, onSave, onClose, initialSizes, salesOrderId }: Props) {
     const [code, setCode] = useState('');
     const [selectedBom, setSelectedBom] = useState<any>(initialBom || null);
     const [locationCode, setLocationCode] = useState('');
     const [sourceLocationCode, setSourceLocationCode] = useState('');
     const [targetStart, setTargetStart] = useState('');
     const [targetEnd, setTargetEnd] = useState('');
-    const [sizeQtys, setSizeQtys] = useState<Record<string, string>>({});
+    const [sizeQtys, setSizeQtys] = useState<Record<string, string>>(initialSizes || {});
     const [isSaving, setIsSaving] = useState(false);
     const [error, setError] = useState('');
 
@@ -37,6 +39,10 @@ export default function ProductionRunModal({ bom: initialBom, boms, locations, o
             setCode(`PR-${item.toUpperCase().replace(/\s+/g, '-').slice(0, 12)}-001`);
         }
     }, [selectedBom]);
+
+    useEffect(() => {
+        if (initialSizes) setSizeQtys(initialSizes);
+    }, [initialSizes]);
 
     const sizes = selectedBom?.sizes || [];
 
@@ -60,6 +66,7 @@ export default function ProductionRunModal({ bom: initialBom, boms, locations, o
                 target_start_date: targetStart || undefined,
                 target_end_date: targetEnd || undefined,
                 sizes: sizeEntries,
+                sales_order_id: salesOrderId || undefined,
             });
             if (res && !res.ok) {
                 const err = await res.json().catch(() => ({}));
