@@ -1100,8 +1100,8 @@ export default function ManufacturingView({
                               textShadow: currentStyle === 'classic' ? '1px 1px 1px rgba(0,0,0,0.4)' : undefined,
                               letterSpacing: currentStyle === 'classic' ? '0.3px' : undefined,
                           }}>
-                              <i className="bi bi-play-circle-fill me-2" style={{ fontSize: '13px' }}></i>
-                              {t('production_schedule')}
+                              <i className={`bi ${activeTab === 'manufacturing-orders' ? 'bi-list-task' : 'bi-collection-play'} me-2`} style={{ fontSize: '13px' }}></i>
+                              {activeTab === 'manufacturing-orders' ? (t('manufacturing_orders') || 'Manufacturing Orders') : 'Production Runs'}
                           </span>
 
                           {/* View-mode buttons */}
@@ -1301,8 +1301,11 @@ export default function ManufacturingView({
                                                           <td style={{ ...tdStyle, fontFamily: 'monospace', fontWeight: 'bold' }}>{pr.code}</td>
                                                           <td style={tdStyle}>
                                                               <div style={{ fontWeight: 'bold', fontSize: currentStyle === 'classic' ? '11px' : undefined }}>
-                                                                  {pr.bom_code || pr.bom_id}
+                                                                  {pr.bom?.item_name || pr.bom?.item_code || pr.bom?.code || pr.bom_id}
                                                               </div>
+                                                              {pr.bom?.code && (
+                                                                  <div style={{ fontSize: 9, color: '#666', fontFamily: 'monospace' }}>{pr.bom.code}</div>
+                                                              )}
                                                           </td>
                                                           <td style={{ ...tdStyle, textAlign: 'center' }}>{total}</td>
                                                           <td style={{ ...tdStyle, minWidth: 120 }}>
