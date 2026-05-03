@@ -3,6 +3,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func
 from sqlalchemy.orm import joinedload, selectinload
 from app.db.session import get_async_db
+from uuid import UUID
 from app.models.production_run import ProductionRun
 from app.models.manufacturing import ManufacturingOrder
 from app.models.bom import BOM, BOMLine, BOMSize
@@ -10,8 +11,12 @@ from app.models.work_order import WorkOrder as WorkOrderModel
 from app.models.location import Location
 from app.schemas import (
     ProductionRunCreate, ProductionRunResponse,
-    PaginatedProductionRunResponse, ManufacturingOrderCreate
+    PaginatedProductionRunResponse, ManufacturingOrderCreate,
+    PRMaterialRequirementItem, PRMOContribution,
 )
+from app.models.item import Item
+from app.services import stock_service
+from collections import defaultdict
 from app.models.auth import User
 from app.api.auth import get_current_user
 from app.services import audit_service
@@ -95,6 +100,88 @@ async def get_production_run(
     if not pr:
         raise HTTPException(status_code=404, detail="Production Run not found")
     return pr
+
+@router.get("/production-runs/{pr_id}/material-requirements", response_model=list[PRMaterialRequirementItem])
+async def get_production_run_material_requirements(
+    pr_id: str,
+    db: AsyncSession = Depends(get_async_db),
+    current_user: User = Depends(get_current_user),
+):
+    result = await db.execute(
+        select(ProductionRun).options(*_pr_load_options()).filter(ProductionRun.id == pr_id)
+    )
+    pr = result.unique().scalars().first()
+    if not pr:
+        raise HTTPException(status_code=404, detail="Production Run not found")
+
+    # Aggregate requirements: key = (item_id, attr_key, location_id)
+    # value = { total_required, location_id, mo_contributions }
+    agg: dict[tuple, dict] = defaultdict(lambda: {"total_required": 0.0, "mo_contributions": []})
+
+    for mo in pr.manufacturing_orders:
+        if not mo.bom:
+            continue
+        for line in mo.bom.lines:
+            if not line.percentage and not line.qty:
+                continue
+            req = (float(mo.qty) * float(line.percentage)) / 100 if line.percentage else float(mo.qty) * float(line.qty)
+            tol = float(mo.bom.tolerance_percentage or 0)
+            if tol > 0:
+                req *= (1 + tol / 100)
+
+            attr_ids = sorted([str(v.id) for v in line.attribute_values])
+            attr_key = ",".join(attr_ids)
+            loc_id = line.source_location_id or mo.source_location_id or mo.location_id or pr.source_location_id or pr.location_id
+            key = (str(line.item_id), attr_key, str(loc_id))
+
+            agg[key]["item_id"] = line.item_id
+            agg[key]["attr_ids"] = attr_ids
+            agg[key]["location_id"] = loc_id
+            agg[key]["total_required"] += req
+            agg[key]["mo_contributions"].append(PRMOContribution(
+                mo_id=mo.id,
+                mo_code=mo.code,
+                mo_qty=float(mo.qty),
+                required_qty=req,
+            ))
+
+    if not agg:
+        return []
+
+    # Batch-fetch items
+    item_ids = {v["item_id"] for v in agg.values()}
+    item_result = await db.execute(select(Item).filter(Item.id.in_(item_ids)))
+    item_map = {i.id: i for i in item_result.scalars().all()}
+
+    # Batch-fetch stock balances
+    requirements = [
+        {"item_id": v["item_id"], "location_id": v["location_id"], "attribute_value_ids": v["attr_ids"]}
+        for v in agg.values()
+    ]
+    balances_map = await stock_service.get_batch_stock_balances(db, requirements)
+
+    results = []
+    for (item_id_str, attr_key, loc_id_str), data in agg.items():
+        item = item_map.get(data["item_id"])
+        v_key = ",".join(sorted(data["attr_ids"]))
+        available = balances_map.get((item_id_str, loc_id_str, v_key), 0.0)
+        total = data["total_required"]
+        results.append(PRMaterialRequirementItem(
+            item_id=data["item_id"],
+            item_code=item.code if item else str(data["item_id"]),
+            item_name=item.name if item else str(data["item_id"]),
+            uom=item.uom if item else "",
+            attribute_value_ids=[UUID(a) for a in data["attr_ids"]],
+            location_id=data["location_id"],
+            total_required=total,
+            qty_available=available,
+            shortfall=max(0.0, total - available),
+            mo_contributions=data["mo_contributions"],
+        ))
+
+    results.sort(key=lambda r: (r.shortfall > 0, r.item_code))
+    return results
+
 
 @router.post("/production-runs", response_model=ProductionRunResponse)
 async def create_production_run(

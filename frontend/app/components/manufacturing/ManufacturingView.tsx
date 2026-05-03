@@ -91,6 +91,9 @@ export default function ManufacturingView({
   const [printHideChildren, setPrintHideChildren] = useState(false);
   
   const [expandedRows, setExpandedRows] = useState<Record<string, boolean>>({});
+  const [expandedPRs, setExpandedPRs] = useState<Record<string, boolean>>({});
+  const [prMaterialReqs, setPrMaterialReqs] = useState<Record<string, any[]>>({});
+  const [prMaterialReqsLoading, setPrMaterialReqsLoading] = useState<Record<string, boolean>>({});
   const [selectedTreeNodes, setSelectedTreeNodes] = useState<Record<string, string>>({});
   const [qrDataUrls, setQrDataUrls] = useState<Record<string, string>>({});
   const [scanningWOId, setScanningWOId] = useState<string | null>(null);
@@ -434,6 +437,27 @@ export default function ManufacturingView({
       });
       const available = matchingEntries.reduce((sum: number, e: any) => sum + parseFloat(e.qty), 0);
       return { available, isEnough: available >= required_qty };
+  };
+
+  const fetchPRMaterialRequirements = async (prId: string) => {
+      setPrMaterialReqsLoading(prev => ({ ...prev, [prId]: true }));
+      try {
+          const res = await authFetch(`${API_BASE}/production-runs/${prId}/material-requirements`);
+          if (res.ok) {
+              const data = await res.json();
+              setPrMaterialReqs(prev => ({ ...prev, [prId]: data }));
+          }
+      } finally {
+          setPrMaterialReqsLoading(prev => ({ ...prev, [prId]: false }));
+      }
+  };
+
+  const togglePR = (prId: string) => {
+      setExpandedPRs(prev => {
+          const expanding = !prev[prId];
+          if (expanding && !prMaterialReqs[prId]) fetchPRMaterialRequirements(prId);
+          return { ...prev, [prId]: expanding };
+      });
   };
 
   // --- Inline QR Scanner Widget ---
@@ -1238,8 +1262,13 @@ export default function ManufacturingView({
                                                   const tdStyle: React.CSSProperties = currentStyle === 'classic' ? {
                                                       border: '1px solid #c0bdb5', padding: '4px 8px', color: '#000', verticalAlign: 'middle',
                                                   } : {};
+                                                  const isExpanded = !!expandedPRs[pr.id];
+                                                  const reqs: any[] = prMaterialReqs[pr.id] || [];
+                                                  const isLoading = !!prMaterialReqsLoading[pr.id];
+                                                  const hasShortfall = reqs.some((r: any) => r.shortfall > 0);
                                                   return (
-                                                      <tr key={pr.id} style={{ background: rowBg }}>
+                                                      <React.Fragment key={pr.id}>
+                                                      <tr style={{ background: rowBg }}>
                                                           <td style={{ ...tdStyle, fontFamily: 'monospace', fontWeight: 'bold' }}>{pr.code}</td>
                                                           <td style={tdStyle}>
                                                               <div style={{ fontWeight: 'bold', fontSize: currentStyle === 'classic' ? '11px' : undefined }}>
@@ -1276,7 +1305,22 @@ export default function ManufacturingView({
                                                               )}
                                                           </td>
                                                           <td style={{ ...tdStyle, fontSize: 10 }}>{formatDate(pr.target_end_date)}</td>
-                                                          <td style={{ ...tdStyle, textAlign: 'right' }}>
+                                                          <td style={{ ...tdStyle, textAlign: 'right', whiteSpace: 'nowrap' }}>
+                                                              <button
+                                                                  onClick={() => togglePR(pr.id)}
+                                                                  title="Material Requirements"
+                                                                  style={currentStyle === 'classic' ? {
+                                                                      fontFamily: 'Tahoma, Arial, sans-serif', fontSize: '10px',
+                                                                      padding: '2px 7px', cursor: 'pointer', border: '1px solid',
+                                                                      background: isExpanded ? 'linear-gradient(to bottom,#d4d0c8,#fff)' : 'linear-gradient(to bottom,#fff,#d4d0c8)',
+                                                                      borderColor: '#dfdfdf #808080 #808080 #dfdfdf',
+                                                                      color: hasShortfall && isExpanded ? '#c00000' : '#000', marginRight: 4,
+                                                                  } : { marginRight: 4 }}
+                                                                  className={currentStyle === 'classic' ? '' : `btn btn-sm btn-link p-0 ${hasShortfall && isExpanded ? 'text-danger' : 'text-secondary'}`}
+                                                              >
+                                                                  <i className={`bi ${isExpanded ? 'bi-chevron-up' : 'bi-list-check'}`}></i>
+                                                                  {currentStyle === 'classic' && <span style={{ marginLeft: 3 }}>Materials</span>}
+                                                              </button>
                                                               {currentStyle === 'classic' ? (
                                                                   <button onClick={() => onDeleteProductionRun(pr.id)} style={{
                                                                       fontFamily: 'Tahoma, Arial, sans-serif', fontSize: '10px',
@@ -1292,6 +1336,72 @@ export default function ManufacturingView({
                                                               )}
                                                           </td>
                                                       </tr>
+                                                      {isExpanded && (
+                                                          <tr style={{ background: currentStyle === 'classic' ? '#f0ede8' : '#f8f9fa' }}>
+                                                              <td colSpan={7} style={{
+                                                                  padding: currentStyle === 'classic' ? '6px 12px' : '8px 16px',
+                                                                  border: currentStyle === 'classic' ? '1px solid #c0bdb5' : undefined,
+                                                              }}>
+                                                                  {isLoading ? (
+                                                                      <span style={{ fontSize: 11, color: '#666', fontFamily: currentStyle === 'classic' ? 'Tahoma, Arial, sans-serif' : undefined }}>
+                                                                          Loading material requirements...
+                                                                      </span>
+                                                                  ) : reqs.length === 0 ? (
+                                                                      <span style={{ fontSize: 11, color: '#999', fontFamily: currentStyle === 'classic' ? 'Tahoma, Arial, sans-serif' : undefined }}>
+                                                                          No component requirements found for this Production Run.
+                                                                      </span>
+                                                                  ) : (
+                                                                      <div>
+                                                                          <div style={{ fontSize: currentStyle === 'classic' ? 10 : 11, fontWeight: 'bold', marginBottom: 4, fontFamily: currentStyle === 'classic' ? 'Tahoma, Arial, sans-serif' : undefined, color: '#333' }}>
+                                                                              Consolidated Material Requirements — {reqs.length} component{reqs.length !== 1 ? 's' : ''}
+                                                                              {hasShortfall && <span style={{ marginLeft: 8, color: '#c00000', fontWeight: 'bold' }}>SHORTFALL DETECTED</span>}
+                                                                          </div>
+                                                                          <table style={{
+                                                                              width: '100%', borderCollapse: 'collapse', fontSize: currentStyle === 'classic' ? 10 : 12,
+                                                                              fontFamily: currentStyle === 'classic' ? 'Tahoma, Arial, sans-serif' : undefined,
+                                                                          }}>
+                                                                              <thead>
+                                                                                  <tr style={{ background: currentStyle === 'classic' ? '#d4d0c8' : '#e9ecef' }}>
+                                                                                      {['Item Code', 'Item Name', 'UOM', 'Total Required', 'Available', 'Shortfall', 'Contributing MOs'].map(h => (
+                                                                                          <th key={h} style={{ padding: '2px 6px', textAlign: h === 'Total Required' || h === 'Available' || h === 'Shortfall' ? 'right' : 'left', border: currentStyle === 'classic' ? '1px solid #808080' : '1px solid #dee2e6', fontWeight: 'bold' }}>{h}</th>
+                                                                                      ))}
+                                                                                  </tr>
+                                                                              </thead>
+                                                                              <tbody>
+                                                                                  {reqs.map((req: any, ri: number) => {
+                                                                                      const short = req.shortfall > 0;
+                                                                                      const rowColor = currentStyle === 'classic'
+                                                                                          ? (short ? '#fff0f0' : ri % 2 === 0 ? '#fff' : '#f5f3ee')
+                                                                                          : (short ? '#fff5f5' : ri % 2 === 0 ? '#fff' : '#f8f9fa');
+                                                                                      const cellStyle: React.CSSProperties = {
+                                                                                          padding: '2px 6px', border: currentStyle === 'classic' ? '1px solid #c0bdb5' : '1px solid #dee2e6',
+                                                                                          background: rowColor, verticalAlign: 'middle',
+                                                                                      };
+                                                                                      const moSummary = (req.mo_contributions || []).map((c: any) => `${c.mo_code} (${parseFloat(c.required_qty).toFixed(2)})`).join(', ');
+                                                                                      return (
+                                                                                          <tr key={ri}>
+                                                                                              <td style={{ ...cellStyle, fontFamily: 'monospace', fontWeight: 'bold' }}>{req.item_code}</td>
+                                                                                              <td style={cellStyle}>{req.item_name}</td>
+                                                                                              <td style={cellStyle}>{req.uom}</td>
+                                                                                              <td style={{ ...cellStyle, textAlign: 'right', fontFamily: 'monospace' }}>{parseFloat(req.total_required).toFixed(2)}</td>
+                                                                                              <td style={{ ...cellStyle, textAlign: 'right', fontFamily: 'monospace', color: short ? '#c00000' : '#2d7a2d', fontWeight: short ? 'bold' : undefined }}>
+                                                                                                  {parseFloat(req.qty_available).toFixed(2)}
+                                                                                              </td>
+                                                                                              <td style={{ ...cellStyle, textAlign: 'right', fontFamily: 'monospace', color: short ? '#c00000' : '#2d7a2d', fontWeight: short ? 'bold' : undefined }}>
+                                                                                                  {short ? `-${parseFloat(req.shortfall).toFixed(2)}` : 'OK'}
+                                                                                              </td>
+                                                                                              <td style={{ ...cellStyle, fontSize: currentStyle === 'classic' ? 9 : 11, color: '#555' }}>{moSummary}</td>
+                                                                                          </tr>
+                                                                                      );
+                                                                                  })}
+                                                                              </tbody>
+                                                                          </table>
+                                                                      </div>
+                                                                  )}
+                                                              </td>
+                                                          </tr>
+                                                      )}
+                                                      </React.Fragment>
                                                   );
                                               })}
                                           </tbody>

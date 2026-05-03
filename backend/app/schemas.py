@@ -298,6 +298,24 @@ class PaginatedProductionRunResponse(BaseModel):
     page: int
     size: int
 
+class PRMOContribution(BaseModel):
+    mo_id: UUID
+    mo_code: str
+    mo_qty: float
+    required_qty: float
+
+class PRMaterialRequirementItem(BaseModel):
+    item_id: UUID
+    item_code: str
+    item_name: str
+    uom: str
+    attribute_value_ids: list[UUID]
+    location_id: UUID
+    total_required: float
+    qty_available: float
+    shortfall: float
+    mo_contributions: list[PRMOContribution]
+
 # --- Work Order (operation step) Schemas ---
 
 class WorkOrderCreate(BaseModel):
