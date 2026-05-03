@@ -10,7 +10,7 @@ interface ModalWrapperProps {
     children: React.ReactNode;
     footer?: React.ReactNode;
     level?: 1 | 2 | 3;
-    size?: 'sm' | 'md' | 'lg' | 'xl';
+    size?: 'sm' | 'md' | 'lg' | 'xl' | 'xxl';
     variant?: 'primary' | 'success' | 'warning' | 'info' | 'danger' | 'dark';
 }
 
@@ -28,7 +28,7 @@ const xpTitleBorders: Record<string, string> = {
     info: '#004a5e', danger: '#5e0000', dark: '#0a0a1e',
 };
 
-const xpSizeWidths: Record<string, number> = { sm: 340, md: 480, lg: 640, xl: 820 };
+const xpSizeWidths: Record<string, number> = { sm: 340, md: 480, lg: 640, xl: 820, xxl: 1100 };
 
 export default function ModalWrapper({
     isOpen, onClose, title, children, footer,
@@ -148,7 +148,7 @@ export default function ModalWrapper({
             onMouseDown={e => { backdropMouseDown.current = e.target === e.currentTarget; }}
             onClick={() => { if (backdropMouseDown.current) onClose(); }}
         >
-            <div className={`modal-dialog modal-${size} modal-dialog-centered`} onClick={e => e.stopPropagation()}>
+            <div className={`modal-dialog modal-${size === 'xxl' ? 'xl' : size} modal-dialog-centered`} style={size === 'xxl' ? { maxWidth: 1100 } : undefined} onClick={e => e.stopPropagation()}>
                 <div className="modal-content shadow-lg border-0 overflow-hidden">
                     <div className={`modal-header py-2 px-3 border-bottom ${headerClasses[variant]}`}>
                         <h5 className="modal-title small fw-bold d-flex align-items-center gap-2">{title}</h5>

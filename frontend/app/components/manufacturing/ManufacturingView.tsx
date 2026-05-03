@@ -16,6 +16,7 @@ import WOPrintModal, { PrintSettings } from './WOPrintModal';
 import ProductionRunModal from './ProductionRunModal';
 import WorkOrderPanel from './WorkOrderPanel';
 import MOCompletionModal from './MOCompletionModal';
+import MOCreationPreview from './MOCreationPreview';
 
 export default function ManufacturingView({
     items,
@@ -407,11 +408,11 @@ export default function ManufacturingView({
   };
 
   const calculateRequiredQty = (baseQty: number, line: any, bom: any) => {
-      let required = parseFloat(line.qty);
-      if (line.is_percentage) {
-          required = (baseQty * required) / 100;
+      let required: number;
+      if (line.percentage > 0) {
+          required = (baseQty * line.percentage) / 100;
       } else {
-          required = baseQty * required;
+          required = baseQty * parseFloat(line.qty || 0);
       }
       const tolerance = parseFloat(bom?.tolerance_percentage || 0);
       if (tolerance > 0) {
@@ -832,7 +833,7 @@ export default function ManufacturingView({
               onClose={() => setIsCreateOpen(false)}
               title={<><i className="bi bi-gear-wide-connected me-1"></i> NEW MANUFACTURING ORDER</>}
               variant="success"
-              size="lg"
+              size="xxl"
               footer={
                   <>
                       <button type="button" className="btn btn-sm btn-link text-muted text-decoration-none" onClick={() => setIsCreateOpen(false)}>{t('cancel')}</button>
@@ -840,114 +841,157 @@ export default function ManufacturingView({
                   </>
               }
           >
-              {/* Product variant context — shown when triggered from SO with color/size */}
-              {(() => {
-                  const bom = boms.find((b: any) => b.id === newWO.bom_id);
-                  const attrNames: string[] = bom ? (bom.attribute_value_ids || []).map(getAttributeValueName).filter(Boolean) : [];
-                  const sizeLabel = bom && newWO.bom_size_id ? getBomSizeLabel(bom.id, newWO.bom_size_id) : '';
-                  if (!attrNames.length && !sizeLabel) return null;
-                  return (
-                      <div className="mb-3 px-2 py-2 rounded" style={{ background: '#f6f8ff', border: '1px solid #c8d8f8' }}>
-                          <div className="extra-small fw-bold text-muted mb-1" style={{ letterSpacing: '0.04em', textTransform: 'uppercase' }}>
-                              <i className="bi bi-tag-fill me-1 text-primary opacity-75"></i>Product Variant
-                          </div>
-                          <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap', alignItems: 'center' }}>
-                              {attrNames.map((name: string, i: number) => (
-                                  <span key={i} style={{ fontSize: 10, padding: '2px 8px', background: '#dbeafe', color: '#1d4ed8', border: '1px solid #93c5fd', borderRadius: 3, fontWeight: 700 }}>
-                                      {name}
-                                  </span>
-                              ))}
-                              {sizeLabel && (
-                                  <span style={{ fontSize: 10, padding: '2px 8px', background: '#dcfce7', color: '#15803d', border: '1px solid #86efac', borderRadius: 3, fontWeight: 700 }}>
-                                      <i className="bi bi-rulers me-1"></i>{sizeLabel}
-                                  </span>
-                              )}
+              {/* Two-panel layout: left=form, right=live preview */}
+              <div style={{ display: 'flex', gap: 0, alignItems: 'flex-start' }}>
+
+                  {/* ── LEFT: Form ── */}
+                  <div style={{
+                      width: 380, minWidth: 380, flexShrink: 0,
+                      paddingRight: 20,
+                      borderRight: `1px solid ${currentStyle === 'classic' ? '#aca899' : '#e2e8f0'}`,
+                  }}>
+                      {/* Variant context badge */}
+                      {(() => {
+                          const bom = boms.find((b: any) => b.id === newWO.bom_id);
+                          const attrNames: string[] = bom ? (bom.attribute_value_ids || []).map(getAttributeValueName).filter(Boolean) : [];
+                          const sizeLabel = bom && newWO.bom_size_id ? getBomSizeLabel(bom.id, newWO.bom_size_id) : '';
+                          if (!attrNames.length && !sizeLabel) return null;
+                          return (
+                              <div className="mb-2 px-2 py-1 rounded" style={{ background: '#f6f8ff', border: '1px solid #c8d8f8' }}>
+                                  <div className="extra-small fw-bold text-muted mb-1" style={{ letterSpacing: '0.04em', textTransform: 'uppercase' }}>
+                                      <i className="bi bi-tag-fill me-1 text-primary opacity-75"></i>Product Variant
+                                  </div>
+                                  <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap', alignItems: 'center' }}>
+                                      {attrNames.map((name: string, i: number) => (
+                                          <span key={i} style={{ fontSize: 10, padding: '1px 6px', background: '#dbeafe', color: '#1d4ed8', border: '1px solid #93c5fd', borderRadius: 3, fontWeight: 700 }}>{name}</span>
+                                      ))}
+                                      {sizeLabel && (
+                                          <span style={{ fontSize: 10, padding: '1px 6px', background: '#dcfce7', color: '#15803d', border: '1px solid #86efac', borderRadius: 3, fontWeight: 700 }}>
+                                              <i className="bi bi-rulers me-1"></i>{sizeLabel}
+                                          </span>
+                                      )}
+                                  </div>
+                              </div>
+                          );
+                      })()}
+
+                      {/* MO Details */}
+                      <div style={{ fontSize: 9, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase' as const, color: '#888', borderBottom: `1px solid ${currentStyle === 'classic' ? '#c0bdb5' : '#e2e8f0'}`, paddingBottom: 2, marginBottom: 8 }}>MO Details</div>
+
+                      <div className="mb-2">
+                          <label className="form-label extra-small fw-bold text-muted uppercase mb-1">MO Reference Code</label>
+                          <div style={{ display: 'flex' }}>
+                              <input
+                                  placeholder="Auto-generated"
+                                  value={newWO.code}
+                                  onChange={e => setNewWO({...newWO, code: e.target.value})}
+                                  required
+                                  style={{ flex: 1, fontFamily: 'Tahoma, "Segoe UI", sans-serif', fontSize: 11, border: '1px solid #7f9db9', borderRight: 'none', background: 'white', height: 24, padding: '0 4px', outline: 'none', borderRadius: 0, boxSizing: 'border-box' as const }}
+                              />
+                              <button
+                                  type="button"
+                                  onClick={() => setIsConfigOpen(true)}
+                                  style={{ fontFamily: 'Tahoma, "Segoe UI", sans-serif', fontSize: 11, height: 24, padding: '0 7px', background: 'linear-gradient(to bottom, #f0efe6, #dddbd0)', border: '1px solid', borderColor: '#dfdfdf #808080 #808080 #dfdfdf', borderRadius: 0, cursor: 'pointer', boxSizing: 'border-box' as const }}
+                                  title="Configure code format"
+                              ><i className="bi bi-gear-fill" style={{ fontSize: 10 }}></i></button>
                           </div>
                       </div>
-                  );
-              })()}
 
-              <div className="row g-3 mb-3">
-                  <div className="col-md-6">
-                      <label className="form-label extra-small fw-bold text-muted uppercase">MO Reference Code</label>
-                      <div style={{ display: 'flex' }}>
-                          <input
-                              placeholder="Auto-generated"
-                              value={newWO.code}
-                              onChange={e => setNewWO({...newWO, code: e.target.value})}
+                      <div className="mb-2">
+                          <label className="form-label extra-small fw-bold text-muted uppercase mb-1">Target Quantity</label>
+                          <input type="number" className="form-control form-control-sm" value={newWO.qty} onChange={e => setNewWO({...newWO, qty: parseFloat(e.target.value)})} required />
+                      </div>
+
+                      <div className="mb-2">
+                          <label className="form-label extra-small fw-bold text-muted uppercase mb-1">Product Recipe (BOM)</label>
+                          <SearchableSelect
+                              options={boms.map((b: any) => ({ value: b.id, label: `[${b.code}]  ${getItemName(b.item_id)}` }))}
+                              value={newWO.bom_id}
+                              onChange={handleBOMChange}
                               required
-                              style={{ flex: 1, fontFamily: 'Tahoma, "Segoe UI", sans-serif', fontSize: 11, border: '1px solid #7f9db9', borderRight: 'none', background: 'white', height: 24, padding: '0 4px', outline: 'none', borderRadius: 0, boxSizing: 'border-box' }}
+                              placeholder="Choose a product recipe..."
                           />
-                          <button
-                              type="button"
-                              onClick={() => setIsConfigOpen(true)}
-                              style={{ fontFamily: 'Tahoma, "Segoe UI", sans-serif', fontSize: 11, height: 24, padding: '0 7px', background: 'linear-gradient(to bottom, #f0efe6, #dddbd0)', border: '1px solid', borderColor: '#dfdfdf #808080 #808080 #dfdfdf', borderRadius: 0, cursor: 'pointer', boxSizing: 'border-box' }}
-                              title="Configure code format"
-                          ><i className="bi bi-gear-fill" style={{ fontSize: 10 }}></i></button>
+                      </div>
+
+                      {/* Schedule */}
+                      <div style={{ fontSize: 9, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase' as const, color: '#888', borderBottom: `1px solid ${currentStyle === 'classic' ? '#c0bdb5' : '#e2e8f0'}`, paddingBottom: 2, marginBottom: 8, marginTop: 14 }}>Schedule</div>
+                      <div className="row g-2 mb-2">
+                          <div className="col-6">
+                              <label className="form-label extra-small fw-bold text-muted uppercase mb-1">Start Date</label>
+                              <input type="date" className="form-control form-control-sm" value={newWO.target_start_date} onChange={e => setNewWO({...newWO, target_start_date: e.target.value})} />
+                          </div>
+                          <div className="col-6">
+                              <label className="form-label extra-small fw-bold text-muted uppercase mb-1">End Date</label>
+                              <input type="date" className="form-control form-control-sm" value={newWO.target_end_date} onChange={e => setNewWO({...newWO, target_end_date: e.target.value})} />
+                          </div>
+                      </div>
+
+                      {/* Locations */}
+                      <div style={{ fontSize: 9, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase' as const, color: '#888', borderBottom: `1px solid ${currentStyle === 'classic' ? '#c0bdb5' : '#e2e8f0'}`, paddingBottom: 2, marginBottom: 8, marginTop: 14 }}>Locations</div>
+                      <div className="mb-2">
+                          <label className="form-label extra-small fw-bold text-muted uppercase mb-1">Output Target</label>
+                          <select className="form-select form-select-sm" value={newWO.location_code} onChange={e => setNewWO({...newWO, location_code: e.target.value})} required>
+                              <option value="">Select...</option>
+                              {locations.map((loc: any) => <option key={loc.id} value={loc.code}>{loc.name}</option>)}
+                          </select>
+                      </div>
+                      <div className="mb-2">
+                          <label className="form-label extra-small fw-bold text-muted uppercase mb-1">Material Source</label>
+                          <select className="form-select form-select-sm" value={newWO.source_location_code} onChange={e => setNewWO({...newWO, source_location_code: e.target.value})}>
+                              <option value="">Same as Production</option>
+                              {locations.map((loc: any) => <option key={loc.id} value={loc.code}>{loc.name}</option>)}
+                          </select>
+                      </div>
+
+                      {/* Nested toggle — clean */}
+                      <div style={{ marginTop: 14, paddingTop: 10, borderTop: `1px solid ${currentStyle === 'classic' ? '#aca899' : '#e2e8f0'}` }}>
+                          <label style={{ display: 'flex', gap: 8, alignItems: 'flex-start', cursor: 'pointer', margin: 0 }}>
+                              <input
+                                  type="checkbox"
+                                  checked={newWO.create_nested}
+                                  onChange={e => setNewWO({...newWO, create_nested: e.target.checked})}
+                                  style={{ marginTop: 2, cursor: 'pointer', flexShrink: 0 }}
+                              />
+                              <div>
+                                  <div style={{ fontSize: 11, fontWeight: 600, color: currentStyle === 'classic' ? '#000084' : '#1e40af' }}>
+                                      <i className="bi bi-diagram-3-fill me-1"></i>
+                                      Create child MOs for nested BOMs
+                                  </div>
+                                  <div style={{ fontSize: 9, color: '#888', marginTop: 2 }}>
+                                      Auto-generates sub-assembly orders for all nested recipes
+                                  </div>
+                              </div>
+                          </label>
                       </div>
                   </div>
-                  <div className="col-md-6">
-                      <label className="form-label extra-small fw-bold text-muted uppercase">Target Quantity</label>
-                      <input type="number" className="form-control form-control-sm" value={newWO.qty} onChange={e => setNewWO({...newWO, qty: parseFloat(e.target.value)})} required />
-                  </div>
-              </div>
 
-              <div className="mb-3">
-                  <label className="form-label extra-small fw-bold text-muted uppercase">Product Recipe (BOM)</label>
-                  <SearchableSelect
-                      options={boms.map((b: any) => ({ value: b.id, label: `[${b.code}]  ${getItemName(b.item_id)}` }))}
-                      value={newWO.bom_id}
-                      onChange={handleBOMChange}
-                      required
-                      placeholder="Choose a product recipe..."
-                  />
-              </div>
+                  {/* ── RIGHT: Live Preview ── */}
+                  <div style={{ flex: 1, paddingLeft: 20, minHeight: 280 }}>
+                      {newWO.bom_id && newWO.qty > 0 ? (
+                          <MOCreationPreview
+                              bomId={newWO.bom_id}
+                              qty={newWO.qty}
+                              locationCode={newWO.location_code}
+                              sourceLocationCode={newWO.source_location_code}
+                              createNested={newWO.create_nested}
+                              boms={boms}
+                              locations={locations}
+                              stockBalance={stockBalance}
+                          />
+                      ) : (
+                          <div style={{
+                              display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+                              height: '100%', minHeight: 280, gap: 10,
+                              color: currentStyle === 'classic' ? '#888' : '#94a3b8',
+                          }}>
+                              <i className="bi bi-diagram-3" style={{ fontSize: 40, opacity: 0.35 }}></i>
+                              <div style={{ fontSize: 12, textAlign: 'center', maxWidth: 200 }}>
+                                  Select a BOM and enter quantity to preview the MO
+                              </div>
+                          </div>
+                      )}
+                  </div>
 
-              <div className="row g-3 mb-3">
-                  <div className="col-md-6">
-                      <label className="form-label extra-small fw-bold text-muted uppercase">Target Start Date</label>
-                      <input type="date" className="form-control form-control-sm" value={newWO.target_start_date} onChange={e => setNewWO({...newWO, target_start_date: e.target.value})} />
-                  </div>
-                  <div className="col-md-6">
-                      <label className="form-label extra-small fw-bold text-muted uppercase">Target End Date</label>
-                      <input type="date" className="form-control form-control-sm" value={newWO.target_end_date} onChange={e => setNewWO({...newWO, target_end_date: e.target.value})} />
-                  </div>
-              </div>
-
-              <div className="row g-2 mb-3">
-                  <div className="col-6">
-                      <label className="form-label extra-small fw-bold text-muted uppercase">Output Target Location</label>
-                      <select className="form-select form-select-sm" value={newWO.location_code} onChange={e => setNewWO({...newWO, location_code: e.target.value})} required>
-                          <option value="">Select...</option>
-                          {locations.map((loc: any) => <option key={loc.id} value={loc.code}>{loc.name}</option>)}
-                      </select>
-                  </div>
-                  <div className="col-6">
-                      <label className="form-label extra-small fw-bold text-muted uppercase">Material Source Location</label>
-                      <select className="form-select form-select-sm" value={newWO.source_location_code} onChange={e => setNewWO({...newWO, source_location_code: e.target.value})}>
-                          <option value="">Same as Production</option>
-                          {locations.map((loc: any) => <option key={loc.id} value={loc.code}>{loc.name}</option>)}
-                      </select>
-                  </div>
-              </div>
-
-              <div className="mb-3 p-2 bg-info bg-opacity-10 border border-info border-opacity-25 rounded">
-                  <div className="form-check form-switch">
-                      <input 
-                          className="form-check-input" 
-                          type="checkbox" 
-                          id="nested-wo-switch"
-                          checked={newWO.create_nested}
-                          onChange={e => setNewWO({...newWO, create_nested: e.target.checked})}
-                      />
-                      <label className="form-check-label small fw-bold text-info-emphasis" htmlFor="nested-wo-switch">
-                          <i className="bi bi-diagram-3-fill me-2"></i>
-                          Create child Manufacturing Orders for all nested BOMs
-                      </label>
-                  </div>
-                  <div className="extra-small text-muted mt-1 ms-4 ps-1">
-                      Automatically generate manufacturing orders for every sub-assembly in the recipe.
-                  </div>
               </div>
           </ModalWrapper>
 
