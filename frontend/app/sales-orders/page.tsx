@@ -59,7 +59,7 @@ export default function SalesOrdersPage() {
                 bom_id: matchingBOM.id,
                 sizes: encodeURIComponent(JSON.stringify(sizes)),
             };
-            router.push(`/manufacturing-orders?${new URLSearchParams(params).toString()}`);
+            router.push(`/production-runs?${new URLSearchParams(params).toString()}`);
         } else {
             showToast('No matching BOM found. Please create a recipe first.', 'warning');
             const params = new URLSearchParams({

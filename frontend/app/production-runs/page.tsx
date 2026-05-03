@@ -9,7 +9,7 @@ import { useConfirm } from '../context/ConfirmContext';
 import { useIsMobile } from '../hooks/useIsMobile';
 import { useSearchParams, useRouter } from 'next/navigation';
 
-export default function ManufacturingOrdersPage() {
+export default function ProductionRunsPage() {
     const {
         items, attributes, sizes, boms,
         manufacturingOrders,
@@ -25,33 +25,30 @@ export default function ManufacturingOrdersPage() {
     const isMobile = useIsMobile();
     const searchParams = useSearchParams();
     const router = useRouter();
-    const [initialCreateState, setInitialCreateState] = useState<any>(null);
+    const [initialPRState, setInitialPRState] = useState<any>(null);
     const consumedSOIdRef = useRef<string | null>(null);
 
     useEffect(() => {
         const soId = searchParams.get('sales_order_id');
-        if (searchParams.get('action') === 'create_wo' && soId !== consumedSOIdRef.current) {
+        const action = searchParams.get('action');
+        if (action === 'create_pr' && soId !== consumedSOIdRef.current) {
             consumedSOIdRef.current = soId;
-            setInitialCreateState({
+            const sizesRaw = searchParams.get('sizes');
+            setInitialPRState({
                 sales_order_id: soId,
-                item_id: searchParams.get('item_id'),
-                qty: parseFloat(searchParams.get('qty') || '0'),
                 bom_id: searchParams.get('bom_id'),
-                bom_size_id: searchParams.get('bom_size_id') || null,
+                sizes: sizesRaw ? JSON.parse(decodeURIComponent(sizesRaw)) : [],
             });
-            router.replace('/manufacturing-orders');
+            router.replace('/production-runs');
         }
     }, [searchParams]);
 
     const envBase = process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:8000/api';
     const API_BASE = envBase.endsWith('/api') ? envBase : `${envBase}/api`;
 
-    // Manufacturing Order handlers
     const handleCreateMO = async (payload: any) => {
         const res = await authFetch(`${API_BASE}/manufacturing-orders`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(payload)
+            method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload)
         });
         fetchData();
         return res;
@@ -66,17 +63,15 @@ export default function ManufacturingOrdersPage() {
     const handleDeleteMO = async (moId: string) => {
         const confirmed = await confirm({
             title: 'Delete Manufacturing Order',
-            message: 'Are you sure you want to delete this manufacturing order? This will remove it from the schedule.',
+            message: 'Are you sure you want to delete this manufacturing order?',
             confirmText: 'Delete',
             variant: 'danger'
         });
         if (!confirmed) return;
-
         const res = await authFetch(`${API_BASE}/manufacturing-orders/${moId}`, { method: 'DELETE' });
         if (res.ok) { showToast('Manufacturing Order deleted', 'success'); fetchData(); }
     };
 
-    // Production Run handlers
     const handleCreateProductionRun = async (p: any) => {
         const res = await authFetch(`${API_BASE}/production-runs`, {
             method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(p)
@@ -96,7 +91,6 @@ export default function ManufacturingOrdersPage() {
         return res;
     };
 
-    // Work Order (operation step) handlers
     const handleCreateWO = async (payload: any) => {
         const res = await authFetch(`${API_BASE}/work-orders`, {
             method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload)
@@ -128,7 +122,7 @@ export default function ManufacturingOrdersPage() {
         return <MobileManufacturingView workOrders={manufacturingOrders} items={items} />;
     }
 
-    const handleClearInitialState = useCallback(() => setInitialCreateState(null), []);
+    const handleClearInitialPRState = useCallback(() => setInitialPRState(null), []);
 
     return (
         <ManufacturingView
@@ -158,9 +152,9 @@ export default function ManufacturingOrdersPage() {
             prPage={prPage}
             prTotal={prTotal}
             setPrPage={setPrPage}
-            initialCreateState={initialCreateState}
-            onClearInitialState={handleClearInitialState}
-            initialTab="manufacturing-orders"
+            initialPRState={initialPRState}
+            onClearInitialPRState={handleClearInitialPRState}
+            initialTab="production-runs"
             showTabSwitcher={false}
         />
     );
