@@ -3,7 +3,8 @@ import SearchableSelect from '../shared/SearchableSelect';
 import { useLanguage } from '../../context/LanguageContext';
 import { useTheme } from '../../context/ThemeContext';
 
-export default function StockEntryView({ items, locations, attributes, stockBalance, onRecordStock }: any) {
+export default function StockEntryView({ items, selectItems, onSearchItems, locations, attributes, stockBalance, onRecordStock }: any) {
+  const itemOptions = (selectItems ?? items);
   const { t } = useLanguage();
   const [stockEntry, setStockEntry] = useState({ item_code: '', location_code: '', attribute_value_ids: [] as string[], qty: 0 });
   const [balanceSearch, setBalanceSearch] = useState('');
@@ -112,7 +113,8 @@ export default function StockEntryView({ items, locations, attributes, stockBala
                                   <label style={xpLabel}>Item</label>
                                   <div style={{ marginBottom: 6 }}>
                                       <SearchableSelect
-                                          options={items.map((item: any) => ({ value: item.code, label: item.name, subLabel: item.code }))}
+                                          options={itemOptions.map((item: any) => ({ value: item.code, label: item.name, subLabel: item.code }))}
+                                          onSearch={onSearchItems}
                                           value={stockEntry.item_code}
                                           onChange={(code: string) => setStockEntry({ ...stockEntry, item_code: code, attribute_value_ids: [] })}
                                           required
@@ -255,7 +257,8 @@ export default function StockEntryView({ items, locations, attributes, stockBala
                               <label className="form-label text-muted text-uppercase small fw-bold mb-3">{t('item_inventory')}</label>
                               <div className="mb-3">
                                   <SearchableSelect
-                                      options={items.map((item: any) => ({ value: item.code, label: item.name, subLabel: item.code }))}
+                                      options={itemOptions.map((item: any) => ({ value: item.code, label: item.name, subLabel: item.code }))}
+                                      onSearch={onSearchItems}
                                       value={stockEntry.item_code}
                                       onChange={(code: string) => setStockEntry({ ...stockEntry, item_code: code, attribute_value_ids: [] })}
                                       required
