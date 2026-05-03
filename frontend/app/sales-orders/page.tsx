@@ -7,7 +7,7 @@ import { useToast } from '../components/shared/Toast';
 import { useConfirm } from '../context/ConfirmContext';
 
 export default function SalesOrdersPage() {
-    const { items, attributes, salesOrders, partners, boms, fetchData, authFetch } = useData();
+    const { items, attributes, salesOrders, partners, boms, productionRuns, fetchData, authFetch } = useData();
     const { showToast } = useToast();
     const { confirm } = useConfirm();
     const router = useRouter();
@@ -43,23 +43,64 @@ export default function SalesOrdersPage() {
         });
 
         if (matchingBOM) {
-            // Collect ALL lines from this SO that share the same BOM to pre-fill sizes
+            const bomHasSizes = (matchingBOM.sizes || []).length > 0;
             const soLines: any[] = so.lines || [];
-            const sizes = soLines
-                .filter((l: any) => {
-                    if (l.item_id !== matchingBOM.item_id) return false;
-                    if (!l.bom_size_id) return false;
-                    return true;
-                })
-                .map((l: any) => ({ bom_size_id: l.bom_size_id, qty: l.qty }));
 
-            const params: Record<string, string> = {
-                action: 'create_pr',
-                sales_order_id: so.id,
-                bom_id: matchingBOM.id,
-                sizes: encodeURIComponent(JSON.stringify(sizes)),
-            };
-            router.push(`/production-runs?${new URLSearchParams(params).toString()}`);
+            if (bomHasSizes) {
+                // Determine which bom_size_ids already have a PR for this SO
+                const coveredSizeIds = new Set<string>();
+                (productionRuns || []).forEach((pr: any) => {
+                    if (String(pr.sales_order_id) !== String(so.id)) return;
+                    (pr.manufacturing_orders || []).forEach((mo: any) => {
+                        if (mo.bom_size_id) coveredSizeIds.add(String(mo.bom_size_id));
+                    });
+                });
+
+                // Collect uncovered lines sharing this BOM
+                const sizes = soLines
+                    .filter((l: any) => {
+                        if (l.item_id !== matchingBOM.item_id) return false;
+                        if (!l.bom_size_id) return false;
+                        if (coveredSizeIds.has(String(l.bom_size_id))) return false;
+                        return true;
+                    })
+                    .map((l: any) => ({ bom_size_id: l.bom_size_id, qty: l.qty }));
+
+                if (sizes.length === 0) {
+                    showToast('All sizes for this item already have a Production Run.', 'info');
+                    return;
+                }
+
+                const params: Record<string, string> = {
+                    action: 'create_pr',
+                    sales_order_id: so.id,
+                    bom_id: matchingBOM.id,
+                    sizes: encodeURIComponent(JSON.stringify(sizes)),
+                };
+                router.push(`/production-runs?${new URLSearchParams(params).toString()}`);
+            } else {
+                // No-size BOM: check coverage by bom_id
+                const covered = (productionRuns || []).some((pr: any) =>
+                    String(pr.sales_order_id) === String(so.id) &&
+                    String(pr.bom_id) === String(matchingBOM.id)
+                );
+                if (covered) {
+                    showToast('This item already has a Production Run.', 'info');
+                    return;
+                }
+
+                const totalQty = soLines
+                    .filter((l: any) => l.item_id === matchingBOM.item_id)
+                    .reduce((acc: number, l: any) => acc + (parseFloat(l.qty) || 0), 0);
+
+                const params: Record<string, string> = {
+                    action: 'create_pr',
+                    sales_order_id: so.id,
+                    bom_id: matchingBOM.id,
+                    total_qty: String(totalQty),
+                };
+                router.push(`/production-runs?${new URLSearchParams(params).toString()}`);
+            }
         } else {
             showToast('No matching BOM found. Please create a recipe first.', 'warning');
             const params = new URLSearchParams({
@@ -93,5 +134,6 @@ export default function SalesOrdersPage() {
                 onDeleteSO={handleDeleteSO}
                 onUpdateSOStatus={handleUpdateSOStatus}
                 onGenerateWO={handleGeneratePR}
+                productionRuns={productionRuns}
             />
     );}

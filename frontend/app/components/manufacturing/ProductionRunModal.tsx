@@ -19,10 +19,11 @@ interface Props {
     onSave: (payload: any) => Promise<any>;
     onClose: () => void;
     initialSizes?: Record<string, string>;
+    initialTotalQty?: string;
     salesOrderId?: string;
 }
 
-export default function ProductionRunModal({ bom: initialBom, boms, locations, onSave, onClose, initialSizes, salesOrderId }: Props) {
+export default function ProductionRunModal({ bom: initialBom, boms, locations, onSave, onClose, initialSizes, initialTotalQty, salesOrderId }: Props) {
     const [code, setCode] = useState('');
     const [selectedBom, setSelectedBom] = useState<any>(initialBom || null);
     const [locationCode, setLocationCode] = useState('');
@@ -30,6 +31,7 @@ export default function ProductionRunModal({ bom: initialBom, boms, locations, o
     const [targetStart, setTargetStart] = useState('');
     const [targetEnd, setTargetEnd] = useState('');
     const [sizeQtys, setSizeQtys] = useState<Record<string, string>>(initialSizes || {});
+    const [totalQty, setTotalQty] = useState(initialTotalQty || '');
     const [isSaving, setIsSaving] = useState(false);
     const [error, setError] = useState('');
 
@@ -43,6 +45,10 @@ export default function ProductionRunModal({ bom: initialBom, boms, locations, o
     useEffect(() => {
         if (initialSizes) setSizeQtys(initialSizes);
     }, [initialSizes]);
+
+    useEffect(() => {
+        if (initialTotalQty !== undefined) setTotalQty(initialTotalQty);
+    }, [initialTotalQty]);
 
     const sizes = selectedBom?.sizes || [];
 
@@ -58,6 +64,8 @@ export default function ProductionRunModal({ bom: initialBom, boms, locations, o
                 .filter((s: any) => parseFloat(sizeQtys[s.id] || '0') > 0)
                 .map((s: any) => ({ bom_size_id: s.id, qty: parseFloat(sizeQtys[s.id]) }));
 
+            const parsedTotalQty = parseFloat(totalQty || '0');
+
             const res = await onSave({
                 code,
                 bom_id: selectedBom.id,
@@ -66,6 +74,7 @@ export default function ProductionRunModal({ bom: initialBom, boms, locations, o
                 target_start_date: targetStart || undefined,
                 target_end_date: targetEnd || undefined,
                 sizes: sizeEntries,
+                total_qty: sizes.length === 0 && parsedTotalQty > 0 ? parsedTotalQty : undefined,
                 sales_order_id: salesOrderId || undefined,
             });
             if (res && !res.ok) {
@@ -149,7 +158,7 @@ export default function ProductionRunModal({ bom: initialBom, boms, locations, o
                                 {sizes.map((s: any) => (
                                     <div key={s.id}>
                                         <label style={{ ...xpLabel, fontWeight: 'bold', fontSize: 10 }}>
-                                            {s.size_name || s.label || s.size?.name || `Size ${s.id.slice(0, 4)}`}
+                                            {s.label || s.size?.name || s.size_name || (s.target_measurement ? String(s.target_measurement) : `S${s.id.slice(0, 4)}`)}
                                         </label>
                                         <input
                                             type="number" min="0" style={xpInput}
@@ -167,8 +176,22 @@ export default function ProductionRunModal({ bom: initialBom, boms, locations, o
                     )}
 
                     {sizes.length === 0 && selectedBom && (
-                        <div style={{ fontSize: 10, color: '#888', fontStyle: 'italic', padding: 4 }}>
-                            This BOM has no size entries. A single Manufacturing Order will be created.
+                        <div style={{ border: '1px solid #aca899', borderRadius: 3, padding: '10px 8px 8px', background: '#f5f4ee', position: 'relative' }}>
+                            <span style={{ position: 'absolute', top: -8, left: 8, background: '#f5f4ee', padding: '0 4px', fontSize: 10, fontWeight: 'bold', color: '#000080' }}>
+                                Production Qty
+                            </span>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                                <label style={xpLabel}>Total Quantity</label>
+                                <input
+                                    type="number" min="0" style={{ ...xpInput, width: 100 }}
+                                    placeholder="0"
+                                    value={totalQty}
+                                    onChange={e => setTotalQty(e.target.value)}
+                                />
+                            </div>
+                            <div style={{ fontSize: 9, color: '#666', marginTop: 4 }}>
+                                No sizes defined. One Manufacturing Order will be created for this total qty.
+                            </div>
                         </div>
                     )}
 

@@ -273,6 +273,7 @@ class ProductionRunCreate(BaseModel):
     target_end_date: datetime | None = None
     notes: str | None = None
     sizes: list[ProductionRunSizeEntry] = []
+    total_qty: float | None = None  # used when BOM has no sizes
 
 class ProductionRunResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)

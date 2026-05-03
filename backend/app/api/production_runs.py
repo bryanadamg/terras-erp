@@ -268,6 +268,25 @@ async def create_production_run(
         mo.attribute_values = list(bom.attribute_values)
         db.add(mo)
 
+    # No-size BOM: create single MO using total_qty
+    if not payload.sizes and payload.total_qty and payload.total_qty > 0:
+        mo = ManufacturingOrder(
+            code=f"{payload.code}-001",
+            bom_id=bom.id,
+            item_id=bom.item_id,
+            location_id=location.id,
+            source_location_id=source_location.id if source_location else None,
+            sales_order_id=payload.sales_order_id,
+            qty=payload.total_qty,
+            status="PENDING",
+            target_start_date=payload.target_start_date,
+            target_end_date=payload.target_end_date,
+            production_run_id=pr.id,
+            bom_size_id=None,
+        )
+        mo.attribute_values = list(bom.attribute_values)
+        db.add(mo)
+
     await db.commit()
 
     result = await db.execute(

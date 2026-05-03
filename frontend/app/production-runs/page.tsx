@@ -34,10 +34,12 @@ export default function ProductionRunsPage() {
         if (action === 'create_pr' && soId !== consumedSOIdRef.current) {
             consumedSOIdRef.current = soId;
             const sizesRaw = searchParams.get('sizes');
+            const totalQtyRaw = searchParams.get('total_qty');
             setInitialPRState({
                 sales_order_id: soId,
                 bom_id: searchParams.get('bom_id'),
                 sizes: sizesRaw ? JSON.parse(decodeURIComponent(sizesRaw)) : [],
+                total_qty: totalQtyRaw ? parseFloat(totalQtyRaw) : undefined,
             });
             router.replace('/production-runs');
         }
