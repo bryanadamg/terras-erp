@@ -43,11 +43,13 @@ export default function SalesOrdersPage() {
         });
 
         if (matchingBOM) {
-            const bomHasSizes = (matchingBOM.sizes || []).length > 0;
             const soLines: any[] = so.lines || [];
+            const linesForBOM = soLines.filter((l: any) => l.item_id === matchingBOM.item_id);
+            const linesWithSizeId = linesForBOM.filter((l: any) => !!l.bom_size_id);
+            const useSizedPath = linesWithSizeId.length > 0;
 
-            if (bomHasSizes) {
-                // Determine which bom_size_ids already have a PR for this SO
+            if (useSizedPath) {
+                // Per bom_size_id coverage check
                 const coveredSizeIds = new Set<string>();
                 (productionRuns || []).forEach((pr: any) => {
                     if (String(pr.sales_order_id) !== String(so.id)) return;
@@ -56,14 +58,8 @@ export default function SalesOrdersPage() {
                     });
                 });
 
-                // Collect uncovered lines sharing this BOM
-                const sizes = soLines
-                    .filter((l: any) => {
-                        if (l.item_id !== matchingBOM.item_id) return false;
-                        if (!l.bom_size_id) return false;
-                        if (coveredSizeIds.has(String(l.bom_size_id))) return false;
-                        return true;
-                    })
+                const sizes = linesWithSizeId
+                    .filter((l: any) => !coveredSizeIds.has(String(l.bom_size_id)))
                     .map((l: any) => ({ bom_size_id: l.bom_size_id, qty: l.qty }));
 
                 if (sizes.length === 0) {
@@ -79,7 +75,7 @@ export default function SalesOrdersPage() {
                 };
                 router.push(`/production-runs?${new URLSearchParams(params).toString()}`);
             } else {
-                // No-size BOM: check coverage by bom_id
+                // No-size or free-measurement BOM where lines have no bom_size_id
                 const covered = (productionRuns || []).some((pr: any) =>
                     String(pr.sales_order_id) === String(so.id) &&
                     String(pr.bom_id) === String(matchingBOM.id)
@@ -89,8 +85,7 @@ export default function SalesOrdersPage() {
                     return;
                 }
 
-                const totalQty = soLines
-                    .filter((l: any) => l.item_id === matchingBOM.item_id)
+                const totalQty = linesForBOM
                     .reduce((acc: number, l: any) => acc + (parseFloat(l.qty) || 0), 0);
 
                 const params: Record<string, string> = {
