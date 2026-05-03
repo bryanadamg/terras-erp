@@ -422,10 +422,16 @@ export default function ManufacturingView({
   };
 
   const checkStockAvailability = (item_id: string, location_id: string, attribute_value_ids: string[] = [], required_qty: number) => {
-      const targetIds = attribute_value_ids || [];
-      const matchingEntries = stockBalance.filter((s: any) => 
-          String(s.item_id) === String(item_id) && String(s.location_id) === String(location_id)
-      );
+      const targetKey = [...attribute_value_ids].map(String).sort().join(',');
+      const matchingEntries = stockBalance.filter((s: any) => {
+          if (String(s.item_id) !== String(item_id)) return false;
+          if (String(s.location_id) !== String(location_id)) return false;
+          if (attribute_value_ids.length > 0) {
+              const sKey = [...(s.attribute_value_ids || [])].map(String).sort().join(',');
+              return sKey === targetKey;
+          }
+          return true;
+      });
       const available = matchingEntries.reduce((sum: number, e: any) => sum + parseFloat(e.qty), 0);
       return { available, isEnough: available >= required_qty };
   };
@@ -637,6 +643,13 @@ export default function ManufacturingView({
                                       const hasSubBOM = boms.some((b: any) => b.item_id === line.item_id && b.active !== false);
                                       const attrLabel = (line.attribute_value_ids || []).map(getAttributeValueName).filter(Boolean).join(', ');
                                       const rowBg = i % 2 === 0 ? '#fff' : (classic ? '#f5f3ee' : '#f8f9fa');
+                                      const stockLevel = isEnough ? 'ok' : available > 0 ? 'low' : 'out';
+                                      const dotStyle: Record<string, { dot: string; border: string }> = {
+                                          ok:  { dot: '#00aa00', border: '#005500' },
+                                          low: { dot: '#ccaa00', border: '#886600' },
+                                          out: { dot: '#cc0000', border: '#660000' },
+                                      };
+                                      const dc = dotStyle[stockLevel];
                                       return (
                                           <tr key={line.id} style={{ background: rowBg }}>
                                               <td style={{ border: classic ? '1px solid #c0bdb5' : '1px solid #dee2e6', padding: '3px 6px', color: '#000' }}>
@@ -646,9 +659,17 @@ export default function ManufacturingView({
                                               </td>
                                               <td style={{ border: classic ? '1px solid #c0bdb5' : '1px solid #dee2e6', padding: '3px 6px', color: '#333', fontSize: '10px' }}>{attrLabel || '—'}</td>
                                               <td style={{ border: classic ? '1px solid #c0bdb5' : '1px solid #dee2e6', padding: '3px 6px', textAlign: 'right', fontFamily: 'monospace', color: '#000', fontWeight: 'bold' }}>{req.toFixed(2)}</td>
-                                              <td style={{ border: classic ? '1px solid #c0bdb5' : '1px solid #dee2e6', padding: '3px 6px', textAlign: 'right', fontFamily: 'monospace', color: isEnough ? '#1a6e1a' : '#c00000', fontWeight: 'bold' }}>{available.toFixed(2)}</td>
+                                              <td style={{ border: classic ? '1px solid #c0bdb5' : '1px solid #dee2e6', padding: '3px 6px', textAlign: 'right', fontFamily: 'monospace', color: isEnough ? '#004400' : available > 0 ? '#664400' : '#880000', fontWeight: 'bold' }}>{available.toFixed(2)}</td>
                                               <td style={{ border: classic ? '1px solid #c0bdb5' : '1px solid #dee2e6', padding: '3px 6px', textAlign: 'center' }}>
-                                                  {hasSubBOM ? <span style={{ color: '#b8860b' }}>⟳</span> : isEnough ? <i className="bi bi-check-circle-fill text-success"></i> : <i className="bi bi-x-circle-fill text-danger"></i>}
+                                                  {hasSubBOM ? (
+                                                      <span style={{ color: '#b8860b' }}>⟳</span>
+                                                  ) : (
+                                                      <div style={{ display: 'flex', alignItems: 'center', gap: 3, justifyContent: 'center' }}>
+                                                          <span style={{ display: 'inline-block', width: 9, height: 9, background: dc.dot, border: `1px solid ${dc.border}`, flexShrink: 0 }} />
+                                                          {stockLevel === 'low' && <span style={{ fontSize: 8, background: '#886600', color: '#fff', padding: '0 3px', fontWeight: 'bold' }}>Low</span>}
+                                                          {stockLevel === 'out' && <span style={{ fontSize: 8, background: '#880000', color: '#fff', padding: '0 3px', fontWeight: 'bold' }}>Out</span>}
+                                                      </div>
+                                                  )}
                                               </td>
                                               <td style={{ border: classic ? '1px solid #c0bdb5' : '1px solid #dee2e6', padding: '3px 6px', color: '#444', fontSize: '10px' }}>{getLocationName(locId)}</td>
                                           </tr>
@@ -1434,10 +1455,17 @@ export default function ManufacturingView({
                                                                           : <span className="ms-2 badge bg-info bg-opacity-10 text-info border border-info border-opacity-25" style={{fontSize: '0.65rem'}}>NESTED ({wo.child_mos.length})</span>
                                                                   )}
                                                               </div>
-                                                              {wo.status === 'PENDING' && wo.is_material_available === false && (
-                                                                  currentStyle === 'classic'
-                                                                      ? <span style={{ fontSize: '8px', background: '#c00000', border: '1px solid #800000', color: '#fff', padding: '0 4px', fontWeight: 'bold' }}>LOW STOCK</span>
-                                                                      : <span className="badge bg-danger p-1 extra-small mt-1">LOW STOCK</span>
+                                                              {wo.status === 'PENDING' && (
+                                                                  currentStyle === 'classic' ? (
+                                                                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3 }}>
+                                                                          <span style={{ display: 'inline-block', width: 8, height: 8, background: wo.is_material_available === false ? '#cc0000' : '#00aa00', border: `1px solid ${wo.is_material_available === false ? '#660000' : '#005500'}`, flexShrink: 0 }} />
+                                                                          {wo.is_material_available === false && <span style={{ fontSize: '8px', background: '#880000', border: '1px solid #660000', color: '#fff', padding: '0 3px', fontWeight: 'bold' }}>LOW STOCK</span>}
+                                                                      </span>
+                                                                  ) : (
+                                                                      wo.is_material_available === false
+                                                                          ? <span className="badge bg-danger p-1 extra-small mt-1">LOW STOCK</span>
+                                                                          : null
+                                                                  )
                                                               )}
                                                           </div>
                                                       </div>

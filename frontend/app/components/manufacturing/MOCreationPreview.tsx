@@ -30,10 +30,19 @@ function calcRequired(parentQty: number, line: any, bom: any): number {
     return req;
 }
 
-function getAvailable(stockBalance: any[], itemId: string, locationId: string): number {
+function getAvailable(stockBalance: any[], itemId: string, locationId: string, attributeValueIds: string[] = []): number {
     if (!locationId) return 0;
+    const targetKey = [...attributeValueIds].map(String).sort().join(',');
     return stockBalance
-        .filter((s: any) => String(s.item_id) === String(itemId) && String(s.location_id) === String(locationId))
+        .filter((s: any) => {
+            if (String(s.item_id) !== String(itemId)) return false;
+            if (String(s.location_id) !== String(locationId)) return false;
+            if (attributeValueIds.length > 0) {
+                const sKey = [...(s.attribute_value_ids || [])].map(String).sort().join(',');
+                return sKey === targetKey;
+            }
+            return true;
+        })
         .reduce((sum: number, s: any) => sum + parseFloat(s.qty), 0);
 }
 
@@ -65,7 +74,7 @@ export default function MOCreationPreview({
     const lineData = bom.lines.map((line: any) => {
         const req = calcRequired(qty, line, bom);
         const lineLocId = line.source_location_id || sourceLocId || outputLocId;
-        const available = getAvailable(stockBalance, line.item_id, lineLocId);
+        const available = getAvailable(stockBalance, line.item_id, lineLocId, line.attribute_value_ids || []);
         const isEnough = available >= req;
         const subBOM = createNested
             ? boms.find((b: any) => b.item_id === line.item_id && b.active !== false)
@@ -210,7 +219,15 @@ export default function MOCreationPreview({
                             </tr>
                         </thead>
                         <tbody>
-                            {lineData.map(({ line, req, available, isEnough, subBOM, lineLoc }: any, i: number) => (
+                            {lineData.map(({ line, req, available, isEnough, subBOM, lineLoc }: any, i: number) => {
+                                const stockLevel = isEnough ? 'ok' : available > 0 ? 'low' : 'out';
+                                const dotStyle: Record<string, { dot: string; border: string }> = {
+                                    ok:  { dot: '#00aa00', border: '#005500' },
+                                    low: { dot: '#ccaa00', border: '#886600' },
+                                    out: { dot: '#cc0000', border: '#660000' },
+                                };
+                                const dc = dotStyle[stockLevel];
+                                return (
                                 <tr key={line.id} style={{
                                     borderBottom: `1px solid ${rowSep}`,
                                     background: i % 2 === 0 ? 'transparent' : oddRowBg,
@@ -229,24 +246,28 @@ export default function MOCreationPreview({
                                         {req.toFixed(2)}
                                     </td>
                                     {/* In stock */}
-                                    <td style={{ padding: '4px 5px', textAlign: 'right', fontFamily: 'monospace', fontWeight: 700, color: subBOM ? '#64748b' : (isEnough ? '#15803d' : '#dc2626') }}>
+                                    <td style={{ padding: '4px 5px', textAlign: 'right', fontFamily: 'monospace', fontWeight: 700, color: subBOM ? '#64748b' : (isEnough ? '#004400' : available > 0 ? '#664400' : '#880000') }}>
                                         {subBOM ? '—' : available.toFixed(2)}
                                     </td>
-                                    {/* OK indicator */}
+                                    {/* Stock indicator */}
                                     <td style={{ padding: '4px 5px', textAlign: 'center', width: 20 }}>
-                                        {subBOM
-                                            ? <i className="bi bi-arrow-return-right" style={{ fontSize: 10, color: '#3b82f6' }}></i>
-                                            : isEnough
-                                                ? <i className="bi bi-check-circle-fill" style={{ fontSize: 11, color: '#16a34a' }}></i>
-                                                : <i className="bi bi-x-circle-fill" style={{ fontSize: 11, color: '#dc2626' }}></i>
-                                        }
+                                        {subBOM ? (
+                                            <i className="bi bi-arrow-return-right" style={{ fontSize: 10, color: '#3b82f6' }}></i>
+                                        ) : (
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: 3, justifyContent: 'center' }}>
+                                                <span style={{ display: 'inline-block', width: 9, height: 9, background: dc.dot, border: `1px solid ${dc.border}`, flexShrink: 0 }} />
+                                                {stockLevel === 'low' && <span style={{ fontSize: 8, background: '#886600', color: '#fff', padding: '0 3px', fontWeight: 'bold' }}>Low</span>}
+                                                {stockLevel === 'out' && <span style={{ fontSize: 8, background: '#880000', color: '#fff', padding: '0 3px', fontWeight: 'bold' }}>Out</span>}
+                                            </div>
+                                        )}
                                     </td>
                                     {/* Source location */}
                                     <td style={{ padding: '4px 0', fontSize: 10, color: '#64748b' }}>
                                         {lineLoc?.name || (line.source_location_id ? '?' : '—')}
                                     </td>
                                 </tr>
-                            ))}
+                                );
+                            })}
                         </tbody>
                     </table>
                 </div>
