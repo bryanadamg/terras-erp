@@ -16,6 +16,7 @@ from app.schemas import (
 )
 from app.models.item import Item
 from app.services import stock_service
+from app.api.manufacturing import create_mo_recursive
 from collections import defaultdict
 from app.models.auth import User
 from app.api.auth import get_current_user
@@ -232,7 +233,7 @@ async def create_production_run(
     db.add(pr)
     await db.flush()
 
-    # Create one MO per size entry
+    # Create one MO tree per size entry via create_mo_recursive
     from app.models.bom import BOMSize
     for i, size_entry in enumerate(payload.sizes):
         if size_entry.qty <= 0:
@@ -251,41 +252,38 @@ async def create_production_run(
         size_label = bom_size.label or f"S{i+1}"
         mo_code = f"{payload.code}-{size_label.upper()}"
 
-        mo = ManufacturingOrder(
-            code=mo_code,
-            bom_id=bom.id,
-            item_id=bom.item_id,
-            location_id=location.id,
+        root_mo = await create_mo_recursive(
+            db,
+            bom.id,
+            float(size_entry.qty),
+            location.id,
+            current_user.id,
             source_location_id=source_location.id if source_location else None,
             sales_order_id=payload.sales_order_id,
-            qty=size_entry.qty,
-            status="PENDING",
+            production_run_id=pr.id,
             target_start_date=payload.target_start_date,
             target_end_date=payload.target_end_date,
-            production_run_id=pr.id,
             bom_size_id=size_entry.bom_size_id,
         )
-        mo.attribute_values = list(bom.attribute_values)
-        db.add(mo)
+        root_mo.code = mo_code
+        await db.flush()
 
-    # No-size BOM: create single MO using total_qty
+    # No-size BOM: create single MO tree using total_qty
     if not payload.sizes and payload.total_qty and payload.total_qty > 0:
-        mo = ManufacturingOrder(
-            code=f"{payload.code}-001",
-            bom_id=bom.id,
-            item_id=bom.item_id,
-            location_id=location.id,
+        root_mo = await create_mo_recursive(
+            db,
+            bom.id,
+            float(payload.total_qty),
+            location.id,
+            current_user.id,
             source_location_id=source_location.id if source_location else None,
             sales_order_id=payload.sales_order_id,
-            qty=payload.total_qty,
-            status="PENDING",
+            production_run_id=pr.id,
             target_start_date=payload.target_start_date,
             target_end_date=payload.target_end_date,
-            production_run_id=pr.id,
-            bom_size_id=None,
         )
-        mo.attribute_values = list(bom.attribute_values)
-        db.add(mo)
+        root_mo.code = f"{payload.code}-001"
+        await db.flush()
 
     await db.commit()
 

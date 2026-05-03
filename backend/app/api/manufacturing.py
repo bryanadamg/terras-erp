@@ -201,7 +201,9 @@ async def create_mo_recursive(
     location_id: uuid.UUID,
     user_id: uuid.UUID,
     parent_mo_id: Optional[uuid.UUID] = None,
+    source_location_id: Optional[uuid.UUID] = None,
     sales_order_id: Optional[uuid.UUID] = None,
+    production_run_id: Optional[uuid.UUID] = None,
     target_start_date: Optional[datetime] = None,
     target_end_date: Optional[datetime] = None,
     bom_size_id: Optional[uuid.UUID] = None,
@@ -238,8 +240,9 @@ async def create_mo_recursive(
         bom_id=bom.id,
         item_id=bom.item_id,
         location_id=location_id,
-        source_location_id=location_id,
+        source_location_id=source_location_id or location_id,
         sales_order_id=sales_order_id,
+        production_run_id=production_run_id,
         parent_mo_id=parent_mo_id,
         bom_size_id=bom_size_id if parent_mo_id is None else None,
         qty=qty,
@@ -247,22 +250,21 @@ async def create_mo_recursive(
         target_end_date=target_end_date,
         status="PENDING"
     )
-    mo.attribute_values = bom.attribute_values
+    mo.attribute_values = list(bom.attribute_values)
     db.add(mo)
-    await db.flush() # Get ID without committing
+    await db.flush()
 
-    # 4. Look for sub-BOMs in lines
+    # 4. Look for sub-BOMs in lines — only active BOMs, percentage-based qty
     for line in bom.lines:
-        # Check if this material has its own BOM
+        if not line.percentage:
+            continue  # 0% or null = not needed
         sub_bom_result = await db.execute(
-            select(BOM).filter(BOM.item_id == line.item_id).limit(1)
+            select(BOM).filter(BOM.item_id == line.item_id, BOM.active == True).limit(1)
         )
         sub_bom = sub_bom_result.scalars().first()
 
         if sub_bom:
-            sub_qty = (qty * float(line.percentage)) / 100 if line.percentage else qty
-
-            # Recursive call
+            sub_qty = (qty * float(line.percentage)) / 100
             await create_mo_recursive(
                 db,
                 sub_bom.id,
@@ -270,9 +272,11 @@ async def create_mo_recursive(
                 location_id,
                 user_id,
                 parent_mo_id=mo.id,
+                source_location_id=source_location_id,
                 sales_order_id=sales_order_id,
+                production_run_id=production_run_id,
                 target_start_date=target_start_date,
-                target_end_date=target_end_date
+                target_end_date=target_end_date,
             )
 
     return mo
@@ -290,6 +294,11 @@ async def create_manufacturing_order(payload: ManufacturingOrderCreate, db: Asyn
     if not location:
         raise HTTPException(status_code=404, detail="Location not found")
 
+    source_location = None
+    if payload.source_location_code:
+        src_result = await db.execute(select(Location).filter(Location.code == payload.source_location_code))
+        source_location = src_result.scalars().first()
+
     # 2. Logic: Regular or Nested
     if payload.create_nested:
         try:
@@ -299,6 +308,7 @@ async def create_manufacturing_order(payload: ManufacturingOrderCreate, db: Asyn
                 payload.qty,
                 location.id,
                 current_user.id,
+                source_location_id=source_location.id if source_location else None,
                 sales_order_id=payload.sales_order_id,
                 target_start_date=payload.target_start_date,
                 target_end_date=payload.target_end_date,
