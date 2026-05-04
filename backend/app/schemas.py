@@ -325,6 +325,7 @@ class WorkOrderCreate(BaseModel):
     sequence: int = 1
     name: str
     work_center_id: UUID | None = None
+    qty: float | None = None
     planned_duration_hours: float | None = None
     notes: str | None = None
     target_start_date: datetime | None = None
@@ -338,6 +339,7 @@ class WorkOrderResponse(BaseModel):
     name: str
     work_center_id: UUID | None = None
     work_center_name: str | None = None
+    qty: float | None = None
     status: str
     planned_duration_hours: float | None = None
     actual_duration_hours: float | None = None

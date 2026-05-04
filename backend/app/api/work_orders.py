@@ -49,6 +49,7 @@ async def create_work_order(
         sequence=payload.sequence,
         name=payload.name,
         work_center_id=payload.work_center_id,
+        qty=payload.qty,
         planned_duration_hours=payload.planned_duration_hours,
         notes=payload.notes,
         target_start_date=payload.target_start_date,
@@ -89,6 +90,7 @@ async def update_work_order(
     wo.sequence = payload.sequence
     wo.name = payload.name
     wo.work_center_id = payload.work_center_id
+    wo.qty = payload.qty
     wo.planned_duration_hours = payload.planned_duration_hours
     wo.notes = payload.notes
     wo.target_start_date = payload.target_start_date

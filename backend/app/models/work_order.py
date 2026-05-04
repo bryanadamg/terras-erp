@@ -22,6 +22,7 @@ class WorkOrder(Base):
     work_center_id: Mapped[Optional[uuid.UUID]] = mapped_column(
         UUID(as_uuid=True), ForeignKey("work_centers.id", ondelete="SET NULL"), nullable=True
     )
+    qty: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
     status: Mapped[str] = mapped_column(String(32), default="PENDING", index=True)
     planned_duration_hours: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
     actual_duration_hours: Mapped[Optional[float]] = mapped_column(Float, nullable=True)

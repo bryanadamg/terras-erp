@@ -125,7 +125,16 @@ export default function ManufacturingOrdersPage() {
     };
 
     if (isMobile) {
-        return <MobileManufacturingView workOrders={manufacturingOrders} items={items} />;
+        return (
+            <MobileManufacturingView
+                manufacturingOrders={manufacturingOrders}
+                items={items}
+                workCenters={workCenters}
+                boms={boms}
+                authFetch={authFetch}
+                onRefresh={fetchData}
+            />
+        );
     }
 
     const handleClearInitialState = useCallback(() => setInitialCreateState(null), []);

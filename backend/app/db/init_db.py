@@ -229,6 +229,7 @@ def run_migrations():
                 ("bom_sizes", "label", "VARCHAR(128)"),
                 ("manufacturing_orders", "production_run_id", "UUID REFERENCES production_runs(id) ON DELETE SET NULL"),
                 ("manufacturing_orders", "bom_size_id", "UUID REFERENCES bom_sizes(id) ON DELETE SET NULL"),
+                ("work_orders", "qty", "NUMERIC(14, 4)"),
                 ("items", "created_at", "TIMESTAMPTZ NOT NULL DEFAULT NOW()"),
                 ("boms", "created_at", "TIMESTAMPTZ NOT NULL DEFAULT NOW()"),
             ]
