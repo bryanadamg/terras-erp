@@ -507,14 +507,14 @@ export default function DyeingOrdersTab({ items, recipes, authFetch }: DyeingOrd
                                 <div style={{ ...colHeaderStyle, display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 6 }}>
                                     <span>Baths ({sum.runs.length})</span>
                                     {canManage && (
-                                        <button
-                                            type="button"
-                                            onClick={() => handleOpenCreateRun(wo)}
-                                            style={{ fontFamily: xpFont, fontSize: 8, padding: '0 6px', cursor: 'pointer', background: 'linear-gradient(to bottom,#fff,#d4d0c8)', border: '1px solid #808080', color: '#000040', textTransform: 'none', letterSpacing: 0 }}
+                                        <XPActionButton
+                                            classic={classic}
+                                            tone="success"
+                                            icon="bi-plus-lg"
+                                            label="Create Run"
                                             title="Cut an extra bath by hand — runs are normally created with the work order"
-                                        >
-                                            + Create Run
-                                        </button>
+                                            onClick={() => handleOpenCreateRun(wo)}
+                                        />
                                     )}
                                 </div>
                                 {runsLoading && !sum.runs.length ? (
@@ -864,6 +864,7 @@ export default function DyeingOrdersTab({ items, recipes, authFetch }: DyeingOrd
                     onClose={() => { setCreateWo(null); setCreateForm(emptyCreateForm); setErrorMsg(null); }}
                     title={`New Dyeing Run — ${createWo.code || createWo.name}`}
                     size="lg"
+                    modeless
                     footer={<>
                         <button className={XP_BTN} style={classic ? { ...xpPrimaryBtn, padding: '3px 16px' } : { ...xpPrimaryBtn, padding: '6px 18px' }} onClick={handleSaveRun} disabled={saving}>
                             {saving ? 'Saving...' : 'Save Run'}
