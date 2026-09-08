@@ -36,6 +36,7 @@ interface QueueMaterial {
     item_id: string;
     item_code: string | null;
     item_name: string | null;
+    uom: string | null;
     required_qty: number;
     staged_qty: number;
     on_hand_qty: number;
@@ -61,6 +62,7 @@ interface MaterialSummary {
     item_id: string;
     item_code: string | null;
     item_name: string | null;
+    uom: string | null;
     on_hand_qty: number;
     required_total: number;
     allocated_total: number;
@@ -98,6 +100,7 @@ interface QueueRow {
     verdict: string;
     verdict_detail: string | null;
     substrate_item_code: string | null;
+    substrate_uom: string | null;
     substrate_is_beam: boolean;
     substrate_required_qty: number;
     substrate_available_qty: number;
@@ -130,6 +133,14 @@ const HINT_LABEL: Record<string, string> = {
 };
 
 const num = fmtQtyCompact;
+// The unit is declared once per row, on its leading qty — Item.uom is per item, so
+// every other figure on the same row reads in it. Repeating it six times is noise.
+const withUom = (v: number, uom: string | null | undefined, classic: boolean) => (
+    <>
+        {num(v)}
+        {uom ? <span style={{ color: '#888', marginLeft: 3, fontSize: classic ? 9 : 10 }}>{uom}</span> : null}
+    </>
+);
 
 // Where the queue date came from. The PIC must be able to tell a real plan date
 // from a stand-in — "created" means nobody scheduled the order and the row is
@@ -326,7 +337,7 @@ export default function WorkQueueView() {
                                         <strong>{m.item_code || '—'}</strong>
                                         <span style={{ color: '#666', marginLeft: 6 }}>{m.item_name}</span>
                                     </td>
-                                    <td style={{ ...lvTd(classic), textAlign: 'right' }}>{num(m.on_hand_qty)}</td>
+                                    <td style={{ ...lvTd(classic), textAlign: 'right' }}>{withUom(m.on_hand_qty, m.uom, classic)}</td>
                                     <td style={{ ...lvTd(classic), textAlign: 'right', color: '#666' }}>
                                         {num(m.staged_total)}
                                     </td>
@@ -420,16 +431,33 @@ export default function WorkQueueView() {
                                 </td>
                                 {m.is_beam ? (
                                     <>
-                                        <td style={{ ...lvSubTd(classic), textAlign: 'right' }}>{m.required_pcs} pcs</td>
-                                        <td style={{ ...lvSubTd(classic), textAlign: 'right' }}>{m.mounted_pcs} pcs</td>
+                                        {/* Warp is loom-mounted, never staged to the WO, so Staged is
+                                            n/a and Free pool / Allocated are the kg left on the mounts.
+                                            Slot counts are deliberately not shown. */}
+                                        <td style={{ ...lvSubTd(classic), textAlign: 'right' }}>{withUom(m.required_qty, m.uom, classic)}</td>
+                                        <td style={{ ...lvSubTd(classic), textAlign: 'right' }}>{'—'}</td>
                                         <td style={{ ...lvSubTd(classic), textAlign: 'right' }}>{num(m.on_hand_qty)}</td>
-                                        <td style={{ ...lvSubTd(classic), textAlign: 'right' }}>{'—'}</td>
-                                        <td style={{ ...lvSubTd(classic), textAlign: 'right' }}>{'—'}</td>
-                                        <td style={lvSubTd(classic)}>mounted on loom</td>
+                                        <td style={{ ...lvSubTd(classic), textAlign: 'right' }}>{num(m.allocated_qty)}</td>
+                                        <td style={{
+                                            ...lvSubTd(classic), textAlign: 'right',
+                                            // Amber, not red: a warp running out mid-run is normal — the
+                                            // floor mounts the next beam — so it must not read like a
+                                            // blocking substrate shortfall.
+                                            color: m.required_qty - m.on_hand_qty > 1e-6 ? '#b8860b' : undefined,
+                                        }}>
+                                            {m.required_qty - m.on_hand_qty > 1e-6
+                                                ? num(m.required_qty - m.on_hand_qty)
+                                                : '—'}
+                                        </td>
+                                        <td style={lvSubTd(classic)}>
+                                            {m.required_qty - m.on_hand_qty > 1e-6
+                                                ? 'mounted · runs out mid-order'
+                                                : 'mounted on loom'}
+                                        </td>
                                     </>
                                 ) : (
                                     <>
-                                        <td style={{ ...lvSubTd(classic), textAlign: 'right' }}>{num(m.required_qty)}</td>
+                                        <td style={{ ...lvSubTd(classic), textAlign: 'right' }}>{withUom(m.required_qty, m.uom, classic)}</td>
                                         <td style={{ ...lvSubTd(classic), textAlign: 'right' }}>{num(m.staged_qty)}</td>
                                         <td style={{ ...lvSubTd(classic), textAlign: 'right' }}>{num(m.on_hand_qty)}</td>
                                         <td style={{ ...lvSubTd(classic), textAlign: 'right' }}>{num(m.allocated_qty)}</td>
@@ -574,18 +602,14 @@ export default function WorkQueueView() {
                                             )}
                                         </td>
                                         <td style={{ ...lvTd(classic), textAlign: 'right' }}>
-                                            {r.substrate_is_beam
-                                                ? `${r.substrate_required_qty} pcs`
-                                                : num(r.substrate_required_qty)}
+                                            {withUom(r.substrate_required_qty, r.substrate_uom, classic)}
                                         </td>
                                         <td style={{
                                             ...lvTd(classic), textAlign: 'right',
                                             color: short > 1e-6 ? statusColor('SHORT') : undefined,
                                             fontWeight: short > 1e-6 ? 'bold' : 'normal',
                                         }}>
-                                            {r.substrate_is_beam
-                                                ? `${r.substrate_available_qty} pcs`
-                                                : num(r.substrate_available_qty)}
+                                            {num(r.substrate_available_qty)}
                                         </td>
                                         <td style={lvTd(classic)} title={DATE_SOURCE_LABEL[r.date_source] || r.date_source}>
                                             <span style={{

@@ -1209,6 +1209,7 @@ async def _wo_required_rows(db: AsyncSession, wo: WorkOrder, mo: ManufacturingOr
             item_code=it.code if it else None,
             item_name=it.name if it else None,
             attribute_value_ids=[uuid.UUID(s) for s in attrs],
+            uom=it.uom if it else None,
             required_qty=req,
             source_location_id=src,
             source_location_name=loc_names.get(str(src)),

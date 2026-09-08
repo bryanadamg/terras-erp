@@ -927,6 +927,7 @@ class WORequiredMaterial(BaseModel):
     item_code: str | None = None
     item_name: str | None = None
     attribute_value_ids: list[UUID] = []
+    uom: str | None = None
     required_qty: float
     source_location_id: UUID | None = None
     source_location_name: str | None = None
@@ -4125,6 +4126,8 @@ class WorkQueueMaterial(BaseModel):
     item_id: UUID
     item_code: str | None = None
     item_name: str | None = None
+    # Item.uom is a plain string on the item, so every qty on this row reads in it.
+    uom: str | None = None
     required_qty: float = 0
     staged_qty: float = 0
     # Free pool at the moment THIS work order's turn came in the priority walk,
@@ -4179,9 +4182,12 @@ class WorkQueueRow(BaseModel):
     verdict: str
     verdict_detail: str | None = None
     substrate_item_code: str | None = None
-    # Beam-gated rows are counted in pieces against WorkCenter.beam_slots; every
-    # other row's substrate figures are in the item's base UOM.
+    # Always the item's base UOM, beam rows included: what the order actually eats
+    # vs what is actually there. Beam readiness is still a pcs gate internally (a
+    # warp is up or it isn't) but slot counts are not reported here — the planner
+    # asked for the substrate requirement, not the loom's slot config.
     substrate_is_beam: bool = False
+    substrate_uom: str | None = None
     substrate_required_qty: float = 0
     substrate_available_qty: float = 0
     chemical_shortfall_count: int = 0
@@ -4201,6 +4207,7 @@ class WorkQueueMaterialSummary(BaseModel):
     item_id: UUID
     item_code: str | None = None
     item_name: str | None = None
+    uom: str | None = None
     on_hand_qty: float = 0
     required_total: float = 0
     allocated_total: float = 0
