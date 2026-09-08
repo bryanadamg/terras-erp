@@ -155,6 +155,12 @@ const DATE_SOURCE_LABEL: Record<string, string> = {
 };
 
 const ellipsis: React.CSSProperties = { overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' };
+// The CHIP has to do its own clipping, not the cell around it: CodeChip pops the
+// full code out on hover only when its own span overflows, and a wrapper div that
+// clips instead leaves the chip measuring as if it fit. A truncated code is no code.
+const codeClip: React.CSSProperties = {
+    display: 'block', minWidth: 0, maxWidth: '100%', overflow: 'hidden', textOverflow: 'ellipsis',
+};
 
 export default function WorkQueueView() {
     const { uiStyle } = useTheme();
@@ -566,7 +572,9 @@ export default function WorkQueueView() {
                                         <td style={{ ...lvTd(classic), overflow: 'hidden' }}>
                                             {r.is_released ? (
                                                 <>
-                                                    <div style={ellipsis}><CodeChip code={r.work_order_code || '—'} classic={classic} /></div>
+                                                    <div style={{ minWidth: 0 }}>
+                                                        <CodeChip code={r.work_order_code || '—'} classic={classic} style={codeClip} />
+                                                    </div>
                                                     <div style={{ ...ellipsis, fontSize: classic ? 10 : 11, color: '#666' }}>{r.work_order_name}</div>
                                                 </>
                                             ) : (
@@ -582,7 +590,9 @@ export default function WorkQueueView() {
                                             )}
                                         </td>
                                         <td style={{ ...lvTd(classic), overflow: 'hidden' }}>
-                                            <div style={ellipsis}><CodeChip code={r.mo_code || '—'} classic={classic} tier={2} /></div>
+                                            <div style={{ minWidth: 0 }}>
+                                                <CodeChip code={r.mo_code || '—'} classic={classic} tier={2} style={codeClip} />
+                                            </div>
                                             <div style={{ ...ellipsis, fontSize: classic ? 10 : 11, color: '#666' }}>
                                                 {r.item_code} {r.item_name ? `· ${r.item_name}` : ''}
                                             </div>
