@@ -473,12 +473,29 @@ async def get_dye_recipe_doses(
 @router.get("/dyeing-runs", response_model=list[DyeingRunResponse])
 async def list_dyeing_runs(
     work_order_id: Optional[str] = Query(None),
+    work_order_ids: str = Query(
+        "",
+        description="Comma-separated WO ids — the baths of one page of dyeing work "
+                    "orders in a single call. Bounded by the caller's page size.",
+    ),
     db: AsyncSession = Depends(get_async_db),
     current_user: User = Depends(require_any_permission("dye_order.view", "dye_recipe.view", "work_order.view")),
 ):
+    """The baths, for one WO or for a page of them.
+
+    `work_order_ids` exists because the supervisory list shows each WO's recipe,
+    bath and shade on its own row: fetching those one WO at a time is 20 requests
+    per page, and fetching every run in the plant to filter client-side grows
+    without bound. The window is the caller's page, so the set stays small.
+    """
     q = select(DyeingRun).options(*_dyeing_run_opts()).order_by(DyeingRun.created_at)
     if work_order_id:
         q = q.filter(DyeingRun.work_order_id == work_order_id)
+    elif work_order_ids.strip():
+        ids = [i for i in (x.strip() for x in work_order_ids.split(",")) if i]
+        if not ids:
+            return []
+        q = q.filter(DyeingRun.work_order_id.in_(ids))
     result = await db.execute(q)
     return [_enrich_dyeing_run(r) for r in result.scalars().all()]
 
