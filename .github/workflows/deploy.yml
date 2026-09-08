@@ -10,7 +10,13 @@ jobs:
     steps:
       - name: Deploy to Pi
         uses: appleboy/ssh-action@v1.0.3
+        env:
+          # Frontend npm ci pulls @bryanadamg/terras-ui from GitHub Packages.
+          NODE_AUTH_TOKEN: ${{ secrets.NODE_AUTH_TOKEN }}
         with:
+          # Forward the token into the Pi's shell so the compose build secret
+          # can read it; it is never written to disk on the Pi.
+          envs: NODE_AUTH_TOKEN
           host: ${{ secrets.PI_HOST }}
           username: ${{ secrets.PI_USER }}
           key: ${{ secrets.PI_SSH_KEY }}
@@ -20,4 +26,5 @@ jobs:
           script: |
             cd /home/raspberrypi/Projects/teras-erp
             git pull origin main
-            sudo docker compose up -d --build
+            # sudo strips the environment, so hand the token over explicitly.
+            sudo NODE_AUTH_TOKEN="$NODE_AUTH_TOKEN" docker compose up -d --build
