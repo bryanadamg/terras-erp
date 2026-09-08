@@ -958,12 +958,28 @@ async def complete_dyeing_run(
 @router.get("/setting-runs", response_model=list[SettingRunResponse])
 async def list_setting_runs(
     work_order_id: Optional[str] = Query(None),
+    work_order_ids: str = Query(
+        "",
+        description="Comma-separated WO ids — the runs of one page of setting work "
+                    "orders in a single call. Bounded by the caller's page size.",
+    ),
     db: AsyncSession = Depends(get_async_db),
     current_user: User = Depends(require_any_permission("setting_order.view", "dye_recipe.view", "work_order.view")),
 ):
+    """The runs, for one WO or for a page of them.
+
+    `work_order_ids` mirrors the dyeing side: the supervisory list shows each WO's
+    machine, setting parameters and measured output on its own row, and fetching
+    those one WO at a time is a request per row.
+    """
     q = select(SettingRun).options(*_setting_run_opts()).order_by(SettingRun.created_at)
     if work_order_id:
         q = q.filter(SettingRun.work_order_id == work_order_id)
+    elif work_order_ids.strip():
+        ids = [i for i in (x.strip() for x in work_order_ids.split(",")) if i]
+        if not ids:
+            return []
+        q = q.filter(SettingRun.work_order_id.in_(ids))
     result = await db.execute(q)
     return [_enrich_setting_run(r) for r in result.scalars().all()]
 
