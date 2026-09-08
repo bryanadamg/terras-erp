@@ -41,6 +41,15 @@
      loads, or the Terras wordmark on the sign-in screen renders in the body
      font instead of IBM Plex Sans JP. */
   --terras-font-display: var(--font-display);
+
+  /* The package's viewport hooks. It defaults them to raw 100dvh/100vw, which is
+     wrong here for the same reason a raw vh is wrong anywhere in this file:
+     `html { zoom }` scales them, so a full-height package surface came up short
+     by exactly (1 - ui-zoom) — a white band under the sign-in screen at any
+     scale below 100%. tokens.css documents these as indirection hooks meant to
+     be redefined per app; these are the divided-out values to redefine them to. */
+  --terras-app-vh: var(--app-vh);
+  --terras-app-vw: var(--app-vw);
 }
 html { zoom: var(--ui-zoom); }
 html[data-ui-scale="70"]  { --ui-zoom: 0.7; }
