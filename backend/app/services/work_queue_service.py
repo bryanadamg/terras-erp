@@ -642,6 +642,7 @@ async def build_queue(
                     "item_id": c.item_id,
                     "item_code": c.item.code if c.item else None,
                     "item_name": c.item.name if c.item else None,
+                    "uom": c.item.uom if c.item else None,
                     "required_qty": m["required"], "staged_qty": 0.0,
                     "on_hand_qty": kg, "allocated_qty": kg, "shortfall_qty": 0.0,
                     "is_beam": True, "is_substrate": gates,
@@ -662,6 +663,7 @@ async def build_queue(
                 "item_id": c.item_id,
                 "item_code": c.item.code if c.item else None,
                 "item_name": c.item.name if c.item else None,
+                "uom": c.item.uom if c.item else None,
                 "required_qty": m["required"],
                 "staged_qty": m["staged"],
                 # on_hand is what was free when THIS row's turn came, not the raw
@@ -718,19 +720,21 @@ async def build_queue(
             "verdict": verdict,
             "verdict_detail": detail,
             "substrate_item_code": (substrate and substrate["comp"].item and substrate["comp"].item.code) or None,
-            # A beam-gated row is measured in PIECES, not kg — a warp is either up or
-            # it isn't. Reporting its kg requirement here would render as a permanent
-            # shortfall on a fully-warped loom.
+            # Beam rows report kg like every other substrate: the run's warp
+            # requirement against the kg left on the mounted beams. Readiness still
+            # gates on pieces inside _verdict (a warp is up or it isn't), but the
+            # slot count is not surfaced — it answers a question nobody asked.
             "substrate_is_beam": bool(substrate and substrate["is_beam"]),
-            "substrate_required_qty": (
-                float(slots)
-                if substrate and substrate["is_beam"]
-                else (substrate["required"] if substrate else 0.0)
+            "substrate_uom": (
+                (substrate["comp"].item.uom if substrate["comp"].item else None)
+                if substrate else None
             ),
+            "substrate_required_qty": float(substrate["required"]) if substrate else 0.0,
             "substrate_available_qty": (
-                float(substrate.get("mounted_pcs", 0)) if substrate and substrate["is_beam"]
+                float(beam_state.get((str(wc_id), str(substrate["comp"].item_id)), (0, 0.0))[1])
+                if substrate and substrate["is_beam"] and wc_id
                 else (allocated_map.get(str(substrate["comp"].item_id), 0.0) + substrate["staged"]
-                      if substrate else 0.0)
+                      if substrate and not substrate["is_beam"] else 0.0)
             ),
             "chemical_shortfall_count": len(chem_short),
             "materials": materials_out,
@@ -805,6 +809,7 @@ async def _gating_material_summary(db: AsyncSession, rows: list[dict],
             item_id = str(m["item_id"])
             a = agg.setdefault(item_id, {
                 "item_id": m["item_id"], "item_code": m["item_code"], "item_name": m["item_name"],
+                "uom": m.get("uom"),
                 "required_total": 0.0, "allocated_total": 0.0, "staged_total": 0.0,
                 "shortfall_total": 0.0, "orders_waiting": 0, "orders_total": 0,
                 "free_qty": 0.0, "lots": [],
@@ -896,7 +901,7 @@ def _unreleased_verdict(substrate: Optional[dict], materials: list[dict],
         return VERDICT_NOT_RELEASED, "No work order"
 
     if row["is_beam"]:
-        mat = f"{row['mounted_pcs']}/{max(1, int(row['required_pcs'] or 1))} beams mounted"
+        mat = "beam mounted" if row["mounted_pcs"] > 0 else "no beam mounted"
     elif row["shortfall_qty"] <= EPS:
         mat = "material ready"
     elif row["allocated_qty"] > EPS:
@@ -922,12 +927,14 @@ def _verdict(wo: WorkOrder, substrate: Optional[dict], materials: list[dict]) ->
         return VERDICT_NO_MATERIALS, None
 
     if row["is_beam"]:
+        # beam_slots still decides READY vs PARTIAL — it is the only honest measure
+        # of a warped loom — but the number itself stays out of the detail line.
         need_pcs = max(1, int(row["required_pcs"] or 1))
         if row["mounted_pcs"] >= need_pcs:
-            return VERDICT_STAGED, f"{row['mounted_pcs']}/{need_pcs} beams mounted"
+            return VERDICT_STAGED, "warp mounted"
         if row["mounted_pcs"] > 0:
-            return VERDICT_PARTIAL, f"{row['mounted_pcs']}/{need_pcs} beams mounted"
-        return VERDICT_SHORT, f"0/{need_pcs} beams mounted"
+            return VERDICT_PARTIAL, "warp partly mounted"
+        return VERDICT_SHORT, "no warp mounted"
 
     need = row["required_qty"] - row["staged_qty"]
     if need <= EPS:

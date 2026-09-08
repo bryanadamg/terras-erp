@@ -28,6 +28,7 @@ interface RequiredMaterial {
     item_code: string | null;
     item_name: string | null;
     attribute_value_ids: string[];
+    uom: string | null;
     required_qty: number;
     source_location_id: string | null;
     source_location_name: string | null;
@@ -526,9 +527,16 @@ export default function WOStagingModal({ wo, onClose, onStaged, onScanMode }: Pr
                                                             <div style={{ fontWeight: 'bold' }}>
                                                                 {Math.max(1, r.required_pcs)} pcs
                                                             </div>
-                                                            <div style={{ color: '#777' }}>{r.required_qty.toFixed(1)} kg</div>
+                                                            <div style={{ color: '#777' }}>
+                                                                {r.required_qty.toFixed(1)}{r.uom ? ` ${r.uom}` : ''}
+                                                            </div>
                                                         </>
-                                                    ) : r.required_qty.toFixed(2)}
+                                                    ) : (
+                                                        <>
+                                                            {r.required_qty.toFixed(2)}
+                                                            {r.uom && <span style={{ color: '#888', marginLeft: 3, fontSize: 9 }}>{r.uom}</span>}
+                                                        </>
+                                                    )}
                                                 </td>
                                                 <td style={{ padding: '3px 5px', textAlign: 'right', color: short ? '#b00' : '#333' }}>
                                                     {r.on_hand.toFixed(2)}

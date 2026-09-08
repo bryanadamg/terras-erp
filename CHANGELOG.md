@@ -15,6 +15,20 @@ on `main`:
 
 ## [Unreleased]
 
+## [0.26.0] - 2026-09-08
+
+### Added
+- Dyeing and Setting orders tabs rebuilt as a work-order list with an expandable supervisory row per order, matching the rest of the app's list views instead of their prior bespoke layout
+
+### Changed
+- The sign-in screen now uses the shared Terras login component, keeping look and behavior consistent with other Terras apps
+- Create Run is now a shared action button, and its modal is modeless so it can stay open while working the rest of the screen
+
+### Fixed
+- The sign-in screen showed a white band at the bottom on any UI scale below 100% — its viewport now lines up with the app's zoom
+- Work queue's clipped order codes now pop out in full on hover instead of staying truncated
+- Work queue reports the real substrate requirement in the item's own unit instead of a raw beam-slot count, for beam-gated rows too
+
 ## [0.25.0] - 2026-09-07
 
 ### Added

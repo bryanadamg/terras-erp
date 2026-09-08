@@ -1,5 +1,12 @@
 import 'bootstrap/dist/css/bootstrap.min.css';
 import 'bootstrap-icons/font/bootstrap-icons.css';
+// terras-ui ships its --terras-* custom properties and the :hover/:focus rules
+// its components hang off. Both are required whenever a package component is
+// rendered, and both are namespaced (--terras-* / .terras-*), so they add to the
+// cascade rather than collide with globals.css. Imported before globals.css so
+// an app rule still wins any specificity tie.
+import '@bryanadamg/terras-ui/css';
+import '@bryanadamg/terras-ui/chrome';
 import './globals.css';
 import { ToastProvider } from './components/shared/Toast';
 import { ConfirmProvider } from './context/ConfirmContext';

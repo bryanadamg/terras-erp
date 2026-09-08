@@ -35,6 +35,21 @@
   --app-vh: calc(100vh / var(--ui-zoom));
   --app-dvh: calc(100dvh / var(--ui-zoom));
   --app-vw: calc(100vw / var(--ui-zoom));
+
+  /* terras-ui paints its wordmark from --terras-font-display, which defaults to
+     its own modern stack. Point it at the display face layout.tsx actually
+     loads, or the Terras wordmark on the sign-in screen renders in the body
+     font instead of IBM Plex Sans JP. */
+  --terras-font-display: var(--font-display);
+
+  /* The package's viewport hooks. It defaults them to raw 100dvh/100vw, which is
+     wrong here for the same reason a raw vh is wrong anywhere in this file:
+     `html { zoom }` scales them, so a full-height package surface came up short
+     by exactly (1 - ui-zoom) — a white band under the sign-in screen at any
+     scale below 100%. tokens.css documents these as indirection hooks meant to
+     be redefined per app; these are the divided-out values to redefine them to. */
+  --terras-app-vh: var(--app-vh);
+  --terras-app-vw: var(--app-vw);
 }
 html { zoom: var(--ui-zoom); }
 html[data-ui-scale="70"]  { --ui-zoom: 0.7; }
@@ -1994,93 +2009,10 @@ textarea {
   .av-stage-live { box-shadow: 0 0 0 2px rgba(13, 110, 253, 0.34); }
 }
 
-/* ── Login step transition (username → password) ─────────────────────────────
-   The two-step sign-in swaps one field for another in place, which read as a
-   hard cut: nothing told the user the screen had advanced rather than
-   re-rendered. Direction carries the meaning — forward slides in from the
-   right, Back mirrors it — so the animation is a wayfinding cue, not decoration.
-
-   Enter-only by design: the outgoing field unmounts immediately (React has no
-   exit phase without keeping a ghost node around, and a 2-field auth form does
-   not justify that machinery). The incoming pane is remounted via `key={step}`,
-   which is what restarts the animation. */
-@keyframes login-step-in-right {
-  from { opacity: 0; transform: translateX(20px); }
-  to   { opacity: 1; transform: none; }
-}
-@keyframes login-step-in-left {
-  from { opacity: 0; transform: translateX(-20px); }
-  to   { opacity: 1; transform: none; }
-}
-@keyframes login-fade-up {
-  from { opacity: 0; transform: translateY(7px); }
-  to   { opacity: 1; transform: none; }
-}
-.login-step {
-  animation: login-step-in-right 280ms cubic-bezier(0.22, 0.61, 0.36, 1) both;
-}
-.login-step-back {
-  animation-name: login-step-in-left;
-}
-/* Trails the field by a beat so the eye lands on the input first. */
-.login-identity {
-  animation: login-fade-up 300ms cubic-bezier(0.22, 0.61, 0.36, 1) 60ms both;
-}
-@media (prefers-reduced-motion: reduce) {
-  .login-step, .login-step-back, .login-identity {
-    animation: none;
-  }
-}
-
-/* "View Documentation" pill (login header/footer, both echoed on the docs
-   header's "Sign In" pill) - a plain glow on hover, not a travelling effect,
-   so it needs no reduced-motion guard the way the badge glimmer below does. */
-.login-docs-link {
-  transition: box-shadow 0.15s ease, border-color 0.15s ease, background-color 0.15s ease, color 0.15s ease;
-}
-.login-docs-link:hover {
-  border-color: rgba(122,176,232,0.75);
-  background: rgba(122,176,232,0.14);
-  color: #dcefff;
-  box-shadow: 0 0 10px rgba(122,176,232,0.55), 0 0 22px rgba(122,176,232,0.25);
-}
-
-/* -- Login staff ID card (password step) ------------------------------------
-   The card's own motion lives in inline transitions on the component (the card
-   face, the frame re-shape, the avatar's glide from centre to the left edge),
-   because they all animate ONE persistent set of nodes. Keyframes were the wrong
-   tool: the earlier build swapped a bare avatar for a card-mounted one, and no
-   animation can bridge an unmount - the face blinked out and faded back in at a
-   new size. What stays here is the part CSS alone can do: the hover glimmer,
-   which needs a pseudo-element, and the reduced-motion opt-out. */
-.login-badge {
-  position: relative;
-}
-/* Glimmer: a light band raked across the card face on hover, the way a real
-   laminated badge catches a ceiling light. A pseudo-element because the card's
-   own background is an inline gradient carrying the card stock - this overlays
-   it instead of fighting it for the same property. Parked off-canvas at rest so
-   nothing paints until hover, and pointer-events: none so it never eats a click
-   meant for the card. Gated on `.login-badge-open` so a closed (invisible)
-   badge cannot glimmer, while `.login-badge` itself is always present - the
-   reduced-motion rule below has to be able to reach the card in both states. */
-.login-badge-open::after {
-  content: '';
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-  background: linear-gradient(105deg,
-    transparent 38%,
-    rgba(255, 255, 255, 0.28) 46%,
-    rgba(255, 255, 255, 0.72) 50%,
-    rgba(255, 255, 255, 0.28) 54%,
-    transparent 62%);
-  transform: translateX(-120%);
-  opacity: 0;
-}
-.login-badge-open:hover::after {
-  animation: login-badge-glimmer 850ms cubic-bezier(0.3, 0.1, 0.3, 1);
-}
+/* Kept after the sign-in screen moved to terras-ui (which ships its own
+   .terras-login-* chrome): the sidebar footer's badge below is the same object
+   and still animates with this keyframe. The `login-` name stays so the shared
+   origin is visible rather than looking like a sidebar-only effect. */
 @keyframes login-badge-glimmer {
   0%   { transform: translateX(-120%); opacity: 0; }
   12%  { opacity: 1; }
@@ -2088,20 +2020,10 @@ textarea {
   100% { transform: translateX(120%); opacity: 0; }
 }
 
-@media (prefers-reduced-motion: reduce) {
-  /* The card still appears - it carries information. Only the travel goes, and
-     the glimmer is pure decoration, so it goes entirely. Killing the inline
-     transitions needs !important: an inline style outranks any rule here. */
-  .login-badge, .login-badge * {
-    transition: none !important;
-  }
-  .login-badge-open:hover::after { animation: none; }
-}
-
 /* Sidebar footer's own copy of the badge - always "open" (no closed/idle
    state to gate on, unlike the login card), so the pseudo-element sits
-   directly on the class instead of an -open variant. Same keyframe as the
-   login card: it's the same object, see Sidebar.tsx footer comment. */
+   directly on the class instead of an -open variant. Shares the keyframe above
+   with terras-ui's sign-in badge: it's the same object, see Sidebar.tsx. */
 .sidebar-id-card::after {
   content: '';
   position: absolute;
