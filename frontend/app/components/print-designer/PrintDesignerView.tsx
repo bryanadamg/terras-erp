@@ -342,9 +342,11 @@ export default function PrintDesignerView() {
     };
 
     return (
-        // ui-scale-exempt: the canvas drag math mixes screen-px measurements with
-        // layout-px writes, which only agree at 1:1 — see globals.css.
-        <ShellWindow classic={classic} className="ui-scale-exempt">
+        // The window itself follows the app's interface scale like every other page.
+        // Only the sheet below opts out to 1:1 (see the `ui-scale-exempt` comments
+        // there) — exempting the whole window left the toolbar, band list and
+        // inspector rendering 20% larger than the chrome around them.
+        <ShellWindow classic={classic}>
             <ShellTitleBar
                 classic={classic}
                 icon="bi-printer"
@@ -536,7 +538,10 @@ export default function PrintDesignerView() {
                         // doesn't resize under the designer when the sample WO lands.
                         <div>
                             <div style={{ height: 10, marginBottom: 4 }} />
-                            <div style={{
+                            {/* ui-scale-exempt on the placeholder too, or it stands at 80%
+                                and the sheet jumps size when the sample WO lands — the very
+                                resize this placeholder exists to prevent. */}
+                            <div className="ui-scale-exempt" style={{
                                 background: '#fff', boxShadow: '0 2px 12px rgba(0,0,0,0.35)',
                                 width: `${paperW}mm`, height: `${paperH}mm`,
                                 padding: `${draft.paper.marginMm}mm`, boxSizing: 'border-box',
@@ -556,8 +561,19 @@ export default function PrintDesignerView() {
                             </div>
                             {/* True-size sheet. The inner box is the printable area: the page
                                 margin is drawn as the gap, so what is inside is exactly what
-                                the printer can reach. */}
+                                the printer can reach.
+
+                                ui-scale-exempt is load-bearing here, and this is the whole of
+                                the page that needs it. Two reasons: a sheet quoted in mm is
+                                only honest at 1:1, and DesignerCanvas measures with
+                                getBoundingClientRect (screen px) then writes straight into
+                                style.left/top (layout px) — units that agree only at effective
+                                zoom 1, or every grip and drop target lands off by the scale.
+                                The canvas renders inside `paperRef` and measures everything
+                                relative to it (no portal, nothing fixed), so the whole drag
+                                layer sits inside this boundary. */}
                             <div
+                                className="ui-scale-exempt"
                                 onClick={() => setSelection({ bandId: null })}
                                 style={{
                                     background: '#fff', boxShadow: '0 2px 12px rgba(0,0,0,0.35)',
