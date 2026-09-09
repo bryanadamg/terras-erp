@@ -135,6 +135,17 @@ export default function WOBulkPrintModal({
         return () => { cancelled = true; };
     }, [selectedWOs, hasDyeingWO, authFetch, API_BASE]);
 
+    // Which of the sidebar's band checkboxes actually do anything for this selection.
+    // A checkbox can only *drop* a band, never add one back (see TemplateRenderer), so
+    // one pointing at a band the saved layout already hides is a dead control — and a
+    // ticked dead control is indistinguishable from "the designer's change was ignored".
+    const bandVisibleInTemplate = (bandId: string) => selectedWOs.some(wo => {
+        const layout = resolveLayout(docTypeForWorkCenter(wo?.work_center_type), printTemplates);
+        return !!layout?.bands.some(b => b.id === bandId && b.show !== false);
+    });
+    const materialsInTemplate = bandVisibleInTemplate('materials');
+    const signatureInTemplate = bandVisibleInTemplate('signature');
+
     const update = (patch: Partial<PrintSettings>) => {
         const next = { ...settings, ...patch };
         setSettings(next);
@@ -182,12 +193,18 @@ export default function WOBulkPrintModal({
                             <div>
                                 <div style={{ fontSize: '10px', fontWeight: 'bold', textTransform: 'uppercase', color: '#212529', letterSpacing: '0.5px', marginBottom: '6px' }}>Sections</div>
                                 <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
-                                    <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '12px', color: '#212529', cursor: 'pointer' }}>
-                                        <input type="checkbox" checked={settings.showMaterials} onChange={e => update({ showMaterials: e.target.checked })} />
+                                    <label
+                                        title={materialsInTemplate ? undefined : 'Hidden by the saved print layout — change it in Print Layouts.'}
+                                        style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '12px', color: materialsInTemplate ? '#212529' : '#adb5bd', cursor: materialsInTemplate ? 'pointer' : 'default' }}
+                                    >
+                                        <input type="checkbox" disabled={!materialsInTemplate} checked={materialsInTemplate && settings.showMaterials} onChange={e => update({ showMaterials: e.target.checked })} />
                                         Step Materials
                                     </label>
-                                    <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '12px', color: '#212529', cursor: 'pointer' }}>
-                                        <input type="checkbox" checked={settings.showSignature} onChange={e => update({ showSignature: e.target.checked })} />
+                                    <label
+                                        title={signatureInTemplate ? undefined : 'Hidden by the saved print layout — change it in Print Layouts.'}
+                                        style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '12px', color: signatureInTemplate ? '#212529' : '#adb5bd', cursor: signatureInTemplate ? 'pointer' : 'default' }}
+                                    >
+                                        <input type="checkbox" disabled={!signatureInTemplate} checked={signatureInTemplate && settings.showSignature} onChange={e => update({ showSignature: e.target.checked })} />
                                         Signature Line
                                     </label>
                                 </div>

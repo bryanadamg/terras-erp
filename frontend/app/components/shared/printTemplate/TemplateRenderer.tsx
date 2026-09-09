@@ -35,7 +35,9 @@ const MINI_LABEL: React.CSSProperties = {
 };
 const UNIT: React.CSSProperties = { fontSize: 9, color: '#666', fontWeight: 'normal' };
 const TH: React.CSSProperties = { border: '1px solid #bbb', padding: '2px 5px' };
-const TD: React.CSSProperties = { border: '1px solid #bbb', padding: '2px 5px' };
+// `wordBreak` matters under the fixed table layout a set column width switches on:
+// without it a long unbroken item code overflows its cell instead of widening it.
+const TD: React.CSSProperties = { border: '1px solid #bbb', padding: '2px 5px', wordBreak: 'break-word' };
 
 const EM_DASH = '—';
 
@@ -315,7 +317,15 @@ function TableBandView({ band, ctx, rows, onSelect }: {
     const fontSize = band.fontSize ?? 9;
 
     return (
-        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize }}>
+        <table style={{
+            width: '100%', borderCollapse: 'collapse', fontSize,
+            // A `width` on a th is only a suggestion under the auto table algorithm —
+            // the browser widens the column anyway once the content doesn't fit, which
+            // is most rows on an A6 card. So a width dragged in the designer printed
+            // back at whatever the content wanted. Fixed layout only when the client
+            // actually set one, so untouched tables keep sizing to their content.
+            ...(band.columns.some(c => c.width) ? { tableLayout: 'fixed' as const } : {}),
+        }}>
             <thead>
                 <tr style={{ background: '#f0f0f0' }}>
                     {band.columns.map((col, ci) => (
@@ -392,7 +402,14 @@ function TallyBandView({ band }: { band: TallyBand }) {
     const fontSize = band.fontSize ?? 9;
 
     return (
-        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize }}>
+        <table style={{
+            width: '100%', borderCollapse: 'collapse', fontSize,
+            // Same reason as the data table: a set column width has to be honoured, or
+            // the designer's column-border drag doesn't survive the print. Empty
+            // hand-fill cells make this especially visible — with the auto algorithm
+            // they all collapse to equal widths regardless of what was set.
+            ...(cols.some(c => c.width) ? { tableLayout: 'fixed' as const } : {}),
+        }}>
             <thead>
                 <tr style={{ background: '#f0f0f0' }}>
                     {cols.map((c, i) => (
@@ -481,8 +498,11 @@ function BandView(props: {
     const { band, ctx, docType, selectedId, onSelect } = props;
 
     if (band.type === 'spacer') {
+        // Returns before the wrapper below (a spacer has no caption or border to
+        // draw), so it has to carry its own gap — the inspector edits it like any
+        // other band's.
         const spacer = band as SpacerBand;
-        return <div style={{ flexGrow: 1, minHeight: spacer.minHeight ?? 6 }} />;
+        return <div style={{ flexGrow: 1, minHeight: spacer.minHeight ?? 6, marginBottom: band.marginBottom ?? 0 }} />;
     }
 
     // Table bands resolve their rows HERE, not inside TableBandView. The child
@@ -544,8 +564,13 @@ function BandView(props: {
                     {title}
                 </div>
             )}
+            {/* Longhands come after the `border` shorthand so they win when a band sets
+                both. `borderTop` was missing here, which silently dropped the rule above
+                every default's signature band and made the inspector's "Rule above"
+                field edit nothing. */}
             <div style={{
                 border: band.box,
+                borderTop: band.borderTop,
                 borderBottom: band.borderBottom,
                 padding: band.padding,
             }}>
@@ -574,9 +599,13 @@ export default function TemplateRenderer({
             boxSizing: 'border-box',
         }}>
             {layout.bands.map(band => {
-                const override = bandOverrides?.[band.id];
-                const show = override !== undefined ? override : (band.show !== false);
-                if (!show) return null;
+                // A print-time override can only SUBTRACT a band, never resurrect one
+                // the saved layout hides. It used to outrank `show`, and since the
+                // modal's checkboxes default to `true` (and persist in localStorage),
+                // that made "hide this band" in the designer a no-op on paper for
+                // exactly the two bands the modal names.
+                if (band.show === false) return null;
+                if (bandOverrides?.[band.id] === false) return null;
                 return (
                     <BandView
                         key={band.id}
