@@ -7,19 +7,24 @@ import { useTimezone } from '../../context/TimezoneContext';
 import { useToast } from '../shared/Toast';
 import { useConfirm } from '../../context/ConfirmContext';
 import { ShellWindow, ShellTitleBar, xpToolbar, ToolbarButton } from '../shared/shellTheme';
-import { PanelSkeleton, XPActionButton, Chip, familyTint, xpFont } from '../shared/xpTheme';
+import {
+    PanelSkeleton, XPActionButton, Chip, familyTint, xpFont,
+    useFloatingMenu, FloatingMenu,
+} from '../shared/xpTheme';
 
 import TemplateRenderer from '../shared/printTemplate/TemplateRenderer';
 import { buildPrintContext } from '../shared/printTemplate/renderContext';
 import { fetchDyeingPrintData, isDyeingWorkOrder, type DyeingPrintData } from '../shared/printTemplate/dyeingPrintData';
-import type { PrintLayout, Band } from '../shared/printTemplate/types';
+import type { PrintLayout, Band, BandType } from '../shared/printTemplate/types';
 import { DOC_TYPE_LABELS, EDITABLE_DOC_TYPES, defaultLayout, resolveLayout, isCustomised } from '../shared/printTemplate/templateStore';
 import { docTypeForWorkCenter } from '../shared/printTemplate/defaults/kartuKerja';
 import { paperDimsMm, paperSizeLabel } from '../shared/printTemplate/paper';
 import { describeBand, bandTypeLabel } from '../shared/printTemplate/bandLabel';
+import { ADDABLE_BAND_TYPES, newBand, duplicateBand, appendField } from '../shared/printTemplate/bandOps';
 import InspectorPanel, { type Selection } from './InspectorPanel';
 import DesignerCanvas from './DesignerCanvas';
 import DesignerTestPrint from './DesignerTestPrint';
+import FieldPalette from './FieldPalette';
 import { SelectField } from './controls';
 
 const API_BASE = (process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:8000/api')
@@ -83,6 +88,10 @@ export default function PrintDesignerView() {
     const [zoom, setZoom] = useState(1);
     const [alwaysHandles, setAlwaysHandles] = useState(false);
     const [testPrinting, setTestPrinting] = useState(false);
+
+    // "Add section" type picker. Shared menu primitive, so it closes on outside
+    // click/scroll like every other ⋯ menu in the app.
+    const addMenu = useFloatingMenu(190);
 
     // Sample work orders, grouped by the doc type they would print with, so the
     // preview always shows real content for the layout being edited.
@@ -309,6 +318,56 @@ export default function PrintDesignerView() {
         update(next);
     };
 
+    /** Insert a new section after the selected one, or at the end. */
+    const addBand = (type: BandType) => {
+        if (!draft) return;
+        const next = clone(draft);
+        const at = next.bands.findIndex(b => b.id === selection.bandId);
+        const band = newBand(type, docType);
+        next.bands.splice(at < 0 ? next.bands.length : at + 1, 0, band);
+        update(next);
+        setSelection({ bandId: band.id });
+    };
+
+    const duplicateSelectedBand = () => {
+        if (!draft || !selection.bandId) return;
+        const at = draft.bands.findIndex(b => b.id === selection.bandId);
+        if (at < 0) return;
+        const next = clone(draft);
+        const copy = duplicateBand(next.bands[at]);
+        next.bands.splice(at + 1, 0, copy);
+        update(next);
+        setSelection({ bandId: copy.id });
+    };
+
+    /**
+     * Delete the selected section. No confirm: Ctrl+Z and Revert both cover it, and
+     * the inspector already removes cells, rows and columns the same way. Selection
+     * moves to the neighbour so the inspector is never left pointing at nothing.
+     */
+    const deleteSelectedBand = () => {
+        if (!draft || !selection.bandId) return;
+        const at = draft.bands.findIndex(b => b.id === selection.bandId);
+        if (at < 0) return;
+        const next = clone(draft);
+        next.bands.splice(at, 1);
+        update(next);
+        const neighbour = next.bands[at] || next.bands[at - 1];
+        setSelection({ bandId: neighbour ? neighbour.id : null });
+    };
+
+    /** Place a palette field into the selected section. */
+    const placeField = (fieldKey: string) => {
+        if (!draft || !selection.bandId) return;
+        const at = draft.bands.findIndex(b => b.id === selection.bandId);
+        if (at < 0) return;
+        const next = clone(draft);
+        const index = appendField(next.bands[at], fieldKey);
+        if (index == null) return;
+        update(next);
+        setSelection({ bandId: next.bands[at].id, itemIndex: index });
+    };
+
     if (!draft) {
         return (
             <ShellWindow classic={classic}>
@@ -319,6 +378,8 @@ export default function PrintDesignerView() {
     }
 
     const { widthMm: paperW, heightMm: paperH } = paperDimsMm(draft.paper);
+
+    const selectedBand = draft.bands.find(b => b.id === selection.bandId) || null;
 
     const stepZoom = (dir: 1 | -1) => {
         const i = ZOOM_STEPS.findIndex(z => z >= zoom - 0.001);
@@ -474,11 +535,18 @@ export default function PrintDesignerView() {
                     background: paneBg, overflowY: 'auto', padding: 8,
                 }}>
                     <div style={{
+                        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
                         fontFamily: classic ? xpFont : undefined, fontSize: 10, fontWeight: 'bold',
                         textTransform: 'uppercase', letterSpacing: '0.4px',
                         color: classic ? '#4a4436' : '#6c757d', marginBottom: 5,
                     }}>
-                        Sections, top to bottom
+                        <span>Sections, top to bottom</span>
+                        {/* Adds after the selected section, so the menu doubles as "insert here". */}
+                        <XPActionButton
+                            classic={classic} icon="bi-plus-lg" label={<i className="bi bi-caret-down-fill" style={{ fontSize: 7 }} />}
+                            title="Add a section" className="xp-menu-trigger"
+                            onClick={e => addMenu.toggle('add-band', e)}
+                        />
                     </div>
 
                     <div
@@ -580,6 +648,36 @@ export default function PrintDesignerView() {
                             </div>
                         );
                     })}
+
+                    {/* Section-level actions act on the selection rather than adding two
+                        more buttons to each 210px row, which already carries a tick, an
+                        ordinal, a name, a type and two chevrons. */}
+                    <div style={{ display: 'flex', gap: 4, marginTop: 6 }}>
+                        <XPActionButton
+                            classic={classic} icon="bi-copy" label="Duplicate"
+                            title="Copy the selected section, with its design, below itself"
+                            onClick={duplicateSelectedBand} disabled={!selectedBand}
+                        />
+                        {/* The last section is not deletable: a layout with no sections
+                            prints a blank card, and the floor would find that before
+                            anyone noticed the save. Delete down to one, then replace it. */}
+                        <XPActionButton
+                            classic={classic} tone="danger" icon="bi-trash" label="Delete"
+                            title={draft.bands.length <= 1
+                                ? 'A layout needs at least one section'
+                                : 'Remove the selected section (Ctrl+Z undoes)'}
+                            onClick={deleteSelectedBand}
+                            disabled={!selectedBand || draft.bands.length <= 1}
+                        />
+                    </div>
+
+                    <FieldPalette
+                        docType={docType}
+                        bands={draft.bands}
+                        targetBand={selectedBand}
+                        classic={classic}
+                        onPlace={placeField}
+                    />
 
                     <div style={{
                         fontFamily: classic ? xpFont : undefined, fontSize: 10, color: '#888',
@@ -771,6 +869,19 @@ export default function PrintDesignerView() {
                 </span>
                 <span>{draft.bands.length} sections</span>
             </div>
+
+            {addMenu.openId === 'add-band' && (
+                <FloatingMenu
+                    pos={addMenu.pos}
+                    minWidth={190}
+                    items={ADDABLE_BAND_TYPES.map(t => ({
+                        key: t.type,
+                        label: t.label,
+                        title: t.hint,
+                        onClick: () => { addMenu.close(); addBand(t.type); },
+                    }))}
+                />
+            )}
 
             {/* Mounted only while printing: it adds a body class that hides the rest of
                 the page, so it must not exist a moment longer than the print. */}
