@@ -9,6 +9,15 @@ Faithful to the client's formula:
 A "working day" runs 24h (continuous 3-shift weaving). The production calendar
 (working_weekdays + holidays, per machine) decides which calendar days count, and
 WeavingRunPause intervals take back the days a parked run was not being woven.
+
+Elapsed counts only days that have FULLY passed: the run's current day is excluded
+while it is running, and its end_date is excluded once it is closed. Runs are
+recorded at date grain with no machine clock behind them, so a run's real start and
+end times inside those two days are unknown — charging them as whole days made a
+loom on its first day read at half its true efficiency. Counting whole elapsed days
+is the only honest scale the stored data supports. A run that starts and ends the
+same date therefore reports no efficiency rather than a fabricated one; weaving
+never does that in practice.
 """
 from datetime import date, timedelta
 from math import ceil
@@ -372,6 +381,10 @@ def compute_run_metrics(run, actual_kg: float, weekdays, holidays, today: date,
     window_end = run.end_date if run.end_date else today
     if window_end > today:
         window_end = today
+    # Exclusive of window_end: that day is in progress (a running run) or was cut
+    # short (the day the run was stopped), and nothing records when inside it either
+    # happened. Count only the days that fully elapsed. See the module docstring.
+    window_end -= timedelta(days=1)
     elapsed = count_working_days(weekdays, holidays, run.start_date, window_end)
     paused = paused_working_days(pauses, weekdays, holidays, window_end)
     # Never below zero: a pause opened before the run's start_date would otherwise
