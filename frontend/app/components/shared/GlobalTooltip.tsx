@@ -170,8 +170,13 @@ export default function GlobalTooltip() {
                     // container (the reader can already scroll it) or a whole
                     // paragraph is not — that would be a wall of text on hover.
                     if (t.length < 2 || t.length > MAX_CLIP_TEXT) continue;
-                    const ox = getComputedStyle(node).overflowX;
-                    if (ox === 'auto' || ox === 'scroll') continue;
+                    const cs = getComputedStyle(node);
+                    // Single-line ellipsis truncation only: a wrapping block's
+                    // scrollWidth can drift a few px past clientWidth from zoom
+                    // rounding alone (the login screen scales with CSS zoom) with
+                    // nothing actually cut off. nowrap is the real truncation signature.
+                    if (cs.whiteSpace !== 'nowrap') continue;
+                    if (cs.overflowX === 'auto' || cs.overflowX === 'scroll') continue;
                     el = node;
                     text = t;
                     break;
