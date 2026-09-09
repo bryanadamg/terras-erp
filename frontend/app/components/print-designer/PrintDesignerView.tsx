@@ -6,8 +6,8 @@ import { useTheme } from '../../context/ThemeContext';
 import { useTimezone } from '../../context/TimezoneContext';
 import { useToast } from '../shared/Toast';
 import { useConfirm } from '../../context/ConfirmContext';
-import { ShellWindow, ShellTitleBar, xpToolbar } from '../shared/shellTheme';
-import { PanelSkeleton, xpFont, CHIP_RADIUS } from '../shared/xpTheme';
+import { ShellWindow, ShellTitleBar, xpToolbar, ToolbarButton } from '../shared/shellTheme';
+import { PanelSkeleton, XPActionButton, Chip, familyTint, xpFont } from '../shared/xpTheme';
 
 import TemplateRenderer from '../shared/printTemplate/TemplateRenderer';
 import { buildPrintContext } from '../shared/printTemplate/renderContext';
@@ -348,54 +348,15 @@ export default function PrintDesignerView() {
     const paneBg = classic ? '#ece9d8' : '#f8f9fa';
     const paneBorder = classic ? '1px solid #b0a898' : '1px solid #dee2e6';
 
-    const btn = (label: string, onClick: () => void, opts: { tone?: 'green' | 'grey' | 'red'; disabled?: boolean; icon?: string } = {}) => {
-        const { tone = 'grey', disabled, icon } = opts;
-        const bg = classic
-            ? (tone === 'green' ? 'linear-gradient(to bottom,#5ec85e,#2d7a2d)'
-                : tone === 'red' ? 'linear-gradient(to bottom,#e88,#a33)'
-                    : 'linear-gradient(to bottom,#fff,#d4d0c8)')
-            : undefined;
-        const cls = classic ? undefined
-            : `btn btn-sm ${tone === 'green' ? 'btn-success' : tone === 'red' ? 'btn-outline-danger' : 'btn-secondary'}`;
-        return (
-            <button
-                onClick={onClick}
-                disabled={disabled}
-                className={cls}
-                style={classic ? {
-                    fontFamily: xpFont, fontSize: 11, padding: '3px 12px', borderRadius: 0,
-                    background: bg, border: '1px solid',
-                    borderColor: tone === 'green' ? '#1a5e1a #0a3e0a #0a3e0a #1a5e1a' : '#dfdfdf #808080 #808080 #dfdfdf',
-                    color: tone === 'green' ? '#fff' : '#000',
-                    fontWeight: tone === 'green' ? 'bold' : 'normal',
-                    cursor: disabled ? 'default' : 'pointer', opacity: disabled ? 0.5 : 1,
-                } : undefined}
-            >
-                {icon && <i className={`bi ${icon}`} style={{ marginRight: 4 }} />}{label}
-            </button>
-        );
-    };
-
-    // The zoom strip sits on the grey desk above the sheet, not in the toolbar: it is
-    // a view control, and it belongs next to the paper caption it qualifies.
-    const zoomBtnStyle: React.CSSProperties = {
-        fontFamily: classic ? xpFont : undefined, fontSize: 10, lineHeight: 1.4,
-        padding: '1px 4px', borderRadius: classic ? 0 : 3, cursor: 'pointer',
-        background: classic ? 'linear-gradient(to bottom,#fff,#d4d0c8)' : '#fff',
-        border: '1px solid', borderColor: classic ? '#dfdfdf #808080 #808080 #dfdfdf' : '#ced4da',
-        color: '#000', textShadow: 'none',
-    };
-
-    const zoomBtn = (icon: string, onClick: () => void, title: string, disabled: boolean) => (
-        <button
-            onClick={onClick}
-            disabled={disabled}
-            title={title}
-            style={{ ...zoomBtnStyle, opacity: disabled ? 0.4 : 1, cursor: disabled ? 'default' : 'pointer' }}
-        >
-            <i className={`bi ${icon}`} />
-        </button>
-    );
+    // Header and zoom-strip actions come from the shared primitives — this view used
+    // to hand-roll both, which is how it ended up with `borderRadius: 0` buttons next
+    // to the app's BUTTON_RADIUS ones and a modern `btn-secondary` where every other
+    // toolbar uses an outline.
+    //
+    // ToolbarButton for the header: labeled document actions, the same vocabulary as
+    // every list toolbar ("create" is its green CTA tone, which Save wants). The zoom
+    // strip takes XPActionButton instead — the compact flat one — because those are
+    // dense repeated controls, not document actions.
 
     return (
         // The window itself follows the app's interface scale like every other page.
@@ -410,26 +371,48 @@ export default function PrintDesignerView() {
                 subtitle="Choose which fields appear on each printed document, and how they are sized and placed."
                 right={
                     <span style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
-                        {btn('Undo', undo, { icon: 'bi-arrow-90deg-left', disabled: past.current.length === 0 })}
-                        {btn('Redo', redo, { icon: 'bi-arrow-90deg-right', disabled: future.current.length === 0 })}
-                        {dirty && btn('Revert', revertDraft, { icon: 'bi-arrow-counterclockwise' })}
+                        <ToolbarButton
+                            classic={classic} icon="bi-arrow-90deg-left"
+                            onClick={undo} disabled={past.current.length === 0}
+                        >
+                            Undo
+                        </ToolbarButton>
+                        <ToolbarButton
+                            classic={classic} icon="bi-arrow-90deg-right"
+                            onClick={redo} disabled={future.current.length === 0}
+                        >
+                            Redo
+                        </ToolbarButton>
+                        {dirty && (
+                            <ToolbarButton classic={classic} icon="bi-arrow-counterclockwise" onClick={revertDraft}>
+                                Revert
+                            </ToolbarButton>
+                        )}
                         {/* Prints the draft, so it needs no save first — that is the point. */}
-                        {btn('Test print', () => setTestPrinting(true), {
-                            icon: 'bi-printer', disabled: !active || testPrinting,
-                        })}
-                        {btn('Reset to default', reset, { tone: 'red', icon: 'bi-trash', disabled: !customised })}
+                        <ToolbarButton
+                            classic={classic} icon="bi-printer" printable
+                            onClick={() => setTestPrinting(true)}
+                            disabled={!active || testPrinting}
+                        >
+                            Test print
+                        </ToolbarButton>
+                        <ToolbarButton
+                            classic={classic} tone="danger" icon="bi-trash"
+                            onClick={reset} disabled={!customised}
+                        >
+                            Reset to default
+                        </ToolbarButton>
                         {/* Dirty state also sits in the status bar, but that is the far corner
                             from Save — the one place the state actually changes what you do. */}
                         {dirty && (
-                            <span style={{
-                                borderRadius: CHIP_RADIUS, fontFamily: classic ? xpFont : undefined,
-                                fontSize: 10, padding: '1px 6px', whiteSpace: 'nowrap',
-                                border: '1px solid #8a6d00', background: '#fff6d8', color: '#6b5500',
-                            }}>
-                                Unsaved
-                            </span>
+                            <Chip classic={classic} tone={familyTint('amber')}>Unsaved</Chip>
                         )}
-                        {btn(saving ? 'Saving...' : 'Save layout', save, { tone: 'green', icon: 'bi-check-lg', disabled: !dirty || saving })}
+                        <ToolbarButton
+                            classic={classic} tone="create" icon="bi-check-lg"
+                            onClick={save} disabled={!dirty || saving}
+                        >
+                            {saving ? 'Saving...' : 'Save layout'}
+                        </ToolbarButton>
                     </span>
                 }
             />
@@ -447,16 +430,9 @@ export default function PrintDesignerView() {
                         />
                     </div>
 
-                    <span style={{ borderRadius: CHIP_RADIUS,
-                        fontFamily: classic ? xpFont : undefined, fontSize: 10,
-                        padding: '1px 6px',
-                        border: '1px solid',
-                        borderColor: customised ? '#1a5e1a' : '#999',
-                        background: customised ? '#dff5df' : '#eee',
-                        color: customised ? '#1a5e1a' : '#555',
-                    }}>
+                    <Chip classic={classic} tone={familyTint(customised ? 'green' : 'gray')}>
                         {customised ? 'Customised' : 'Built-in default'}
-                    </span>
+                    </Chip>
 
                     <span style={{ flex: 1 }} />
 
@@ -653,24 +629,24 @@ export default function PrintDesignerView() {
                                 fontFamily: classic ? xpFont : undefined, fontSize: 10,
                                 color: '#fff', textShadow: '0 1px 2px rgba(0,0,0,0.5)',
                             }}>
-                                {zoomBtn('bi-dash-lg', () => stepZoom(-1), 'Zoom out', zoom <= ZOOM_MIN)}
-                                <button
-                                    onClick={() => setZoom(1)}
+                                <XPActionButton
+                                    classic={classic} icon="bi-dash-lg" title="Zoom out"
+                                    onClick={() => stepZoom(-1)} disabled={zoom <= ZOOM_MIN}
+                                />
+                                <XPActionButton
+                                    classic={classic} label={`${Math.round(zoom * 100)}%`}
                                     title="Back to true size (100%)"
-                                    style={{
-                                        ...zoomBtnStyle, width: 44, cursor: zoom === 1 ? 'default' : 'pointer',
-                                    }}
-                                >
-                                    {Math.round(zoom * 100)}%
-                                </button>
-                                {zoomBtn('bi-plus-lg', () => stepZoom(1), 'Zoom in', zoom >= ZOOM_MAX)}
-                                <button
-                                    onClick={fitZoom}
+                                    onClick={() => setZoom(1)} disabled={zoom === 1}
+                                />
+                                <XPActionButton
+                                    classic={classic} icon="bi-plus-lg" title="Zoom in"
+                                    onClick={() => stepZoom(1)} disabled={zoom >= ZOOM_MAX}
+                                />
+                                <XPActionButton
+                                    classic={classic} label="Fit"
                                     title="Scale the sheet to fit this pane"
-                                    style={{ ...zoomBtnStyle, padding: '1px 6px' }}
-                                >
-                                    Fit
-                                </button>
+                                    onClick={fitZoom}
+                                />
                                 <span style={{ opacity: 0.5 }}>|</span>
                                 <label
                                     title="Show every section's handles at once, instead of only the one under the pointer"
