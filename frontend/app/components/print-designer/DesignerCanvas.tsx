@@ -181,19 +181,39 @@ export default function DesignerCanvas({
         });
     };
 
-    /** Shared drag bootstrap: pointer capture via window listeners, Escape to cancel. */
+    /**
+     * Shared drag bootstrap: pointer capture via window listeners, Escape to cancel.
+     *
+     * `dx`/`dy` are the TOTAL offset from where the drag began, in the sheet's layout
+     * pixels — deliberately not `e.movementX/Y`. Two reasons, both of which showed up
+     * as a drag indicator sitting away from the pointer:
+     *
+     *  - `movementX/Y` are reported in screen pixels and ignore CSS `zoom`, which the
+     *    interface scale and `.ui-scale-exempt` both use, so an accumulated position
+     *    drifted from the cursor by the scale factor and no per-call division could
+     *    reconcile it (the divisor differs from the one the rects need).
+     *  - accumulating per-event deltas also drifts on its own, and a consumer that
+     *    reads `dx` as a total (the QR resize did) sees only the last mouse move.
+     *
+     * Deriving both from `clientX/Y` against the live paper rect makes one conversion
+     * path — `localPoint` — correct under any zoom/transform combination.
+     */
     const startDrag = (
         kind: string,
+        start: React.PointerEvent,
         onMove: (dx: number, dy: number, clientX: number, clientY: number) => void,
         onEnd: (cancelled: boolean) => void,
     ) => {
         dragKind.current = kind;
         let cancelled = false;
-        // Pointer movement is reported in screen pixels; every consumer applies it to
-        // layout-pixel geometry, so it is converted once here rather than at each of
-        // them. `clientX/Y` stay raw — those go through `localPoint`, which converts.
-        const move = (e: PointerEvent) =>
-            onMove(e.movementX / zoom, e.movementY / zoom, e.clientX, e.clientY);
+        // Anchored on the pointerdown, not on the first move: taking it from the first
+        // move loses however far the pointer travelled to produce that event, which is
+        // the same few pixels of offset this whole conversion exists to remove.
+        const origin = localPoint(start.clientX, start.clientY, paperRef.current!, zoom);
+        const move = (e: PointerEvent) => {
+            const here = localPoint(e.clientX, e.clientY, paperRef.current!, zoom);
+            onMove(here.x - origin.x, here.y - origin.y, e.clientX, e.clientY);
+        };
         const up = () => finish();
         const key = (e: KeyboardEvent) => { if (e.key === 'Escape') { cancelled = true; finish(); } };
         const finish = () => {
@@ -228,8 +248,8 @@ export default function DesignerCanvas({
         let gx = startRect.x, gy = startRect.y;
         let dropBandId = bandId, dropCol = item.col, dropRow = item.row;
 
-        startDrag('move-cell', (dx, dy) => {
-            gx += dx; gy += dy;
+        startDrag('move-cell', e, (dx, dy) => {
+            gx = startRect.x + dx; gy = startRect.y + dy;
             ghost.style.left = `${gx}px`;
             ghost.style.top = `${gy}px`;
 
@@ -289,7 +309,7 @@ export default function DesignerCanvas({
         const guide = guideRef.current!;
         guide.style.display = 'block';
 
-        startDrag('resize-span', (_dx, _dy, clientX) => {
+        startDrag('resize-span', e, (_dx, _dy, clientX) => {
             const { x } = localPoint(clientX, 0, paperRef.current!, zoom);
             const rightEdge = gridRect.x + (item.col - 1) * (colWidth + gap) + colWidth;
             const deltaCols = Math.round((x - rightEdge) / (colWidth + gap));
@@ -316,8 +336,11 @@ export default function DesignerCanvas({
         const start = target.qrSize ?? 140;
         let size = start;
 
-        startDrag('resize-qr', (dx, dy) => {
-            size = clamp(Math.round(start + (dx + dy) / 2 * 3), 40, 400);
+        // A QR is square, so the corner handle follows the average of both axes — and
+        // 1:1 with the pointer, now that `dx`/`dy` are the drag's total offset. The old
+        // 3x factor was compensating for per-event deltas that never accumulated.
+        startDrag('resize-qr', e, (dx, dy) => {
+            size = clamp(Math.round(start + (dx + dy) / 2), 40, 400);
         }, (cancelled) => {
             if (cancelled || size === start) return;
             onMutate(draft => {
@@ -338,7 +361,7 @@ export default function DesignerCanvas({
         let dropIndex = stackIndex;
 
         const line = lineRef.current!;
-        startDrag('reorder-stack', (_dx, _dy, _cx, clientY) => {
+        startDrag('reorder-stack', e, (_dx, _dy, _cx, clientY) => {
             const { y } = localPoint(0, clientY, paperRef.current!, zoom);
             dropIndex = siblingRects.findIndex(r => y < r.y + r.height / 2);
             if (dropIndex === -1) dropIndex = stack.length - 1;
@@ -368,7 +391,7 @@ export default function DesignerCanvas({
         let dropIndex = startIndex;
         const line = lineRef.current!;
 
-        startDrag('reorder-band', (_dx, _dy, _cx, clientY) => {
+        startDrag('reorder-band', e, (_dx, _dy, _cx, clientY) => {
             const { y } = localPoint(0, clientY, paperRef.current!, zoom);
             let idx = bandRects.findIndex(r => y < r.y + r.height / 2);
             if (idx === -1) idx = order.length - 1;
@@ -403,7 +426,7 @@ export default function DesignerCanvas({
         let dropIndex = listIndex;
         const line = lineRef.current!;
 
-        startDrag('reorder-hlist', (_dx, _dy, clientX) => {
+        startDrag('reorder-hlist', e, (_dx, _dy, clientX) => {
             const { x } = localPoint(clientX, 0, paperRef.current!, zoom);
             let idx = itemRects.findIndex(r => x < r.x + r.width / 2);
             if (idx === -1) idx = length - 1;
@@ -434,7 +457,7 @@ export default function DesignerCanvas({
         let dropIndex = rowIndex;
         const line = lineRef.current!;
 
-        startDrag('reorder-kv', (_dx, _dy, _cx, clientY) => {
+        startDrag('reorder-kv', e, (_dx, _dy, _cx, clientY) => {
             const { y } = localPoint(0, clientY, paperRef.current!, zoom);
             let idx = rowRects.findIndex(r => y < r.y + r.height / 2);
             if (idx === -1) idx = rowRects.length - 1;
@@ -474,7 +497,7 @@ export default function DesignerCanvas({
             // actually left, the same pattern as the table/tally branch below.
             let pct = clamp(parseFloat(bandById(bandId) && (bandById(bandId) as KeyValueBand).labelWidth || '24'), 10, 60);
 
-            startDrag('resize-kvlabel', (_dx, _dy, clientX) => {
+            startDrag('resize-kvlabel', e, (_dx, _dy, clientX) => {
                 const { x } = localPoint(clientX, 0, paperRef.current!, zoom);
                 pct = clamp(((x - anchorRect.x) / anchorRect.width) * 100, 10, 60);
                 guide.style.left = `${x}px`;
@@ -495,7 +518,7 @@ export default function DesignerCanvas({
             : Array.from(rects.tallyCols.entries()).filter(([k]) => k.startsWith(`${bandId}:`)).reduce((sum, [, r]) => sum + r.width, 0);
         let newWidthPx = colRect.width;
 
-        startDrag('resize-col', (_dx, _dy, clientX) => {
+        startDrag('resize-col', e, (_dx, _dy, clientX) => {
             const { x } = localPoint(clientX, 0, paperRef.current!, zoom);
             newWidthPx = clamp(x - colRect.x, 20, tableWidth - 20);
             guide.style.left = `${colRect.x + newWidthPx}px`;
