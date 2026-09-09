@@ -6,7 +6,10 @@ import type {
 } from '../shared/printTemplate/types';
 import { fieldDef } from '../shared/printTemplate/fieldRegistry';
 import type { Selection } from './InspectorPanel';
-import { clamp, parseTracks, xToColumn, yToRow, colWidthFromRect, rectRelativeTo, localPoint } from './dragGeometry';
+import {
+    clamp, parseTracks, trackOffsets, xToColumn, yToRow, colWidthFromRect,
+    rectRelativeTo, localPoint,
+} from './dragGeometry';
 
 /**
  * Direct-manipulation overlay for the print designer's paper preview.
@@ -266,7 +269,10 @@ export default function DesignerCanvas({
             }
             const gap = rects.gaps.get(hitBand) ?? 6;
             const colWidth = colWidthFromRect(hitRect.width, gap);
-            const col = xToColumn(cx - hitRect.x, colWidth, gap);
+            // Clamped here, not only at commit: the indicator IS the promise about
+            // where the cell lands, and an unclamped one drew the drop hanging off the
+            // right edge of the sheet — a column the commit was never going to use.
+            const col = clamp(xToColumn(cx - hitRect.x, colWidth, gap), 1, 13 - item.span);
 
             const gridEl = paperRef.current!.querySelector(`[data-tpl-grid="${hitBand}"]`) as HTMLElement;
             const rowTracks = gridEl ? parseTracks(getComputedStyle(gridEl).gridTemplateRows) : [];
@@ -274,10 +280,18 @@ export default function DesignerCanvas({
 
             dropBandId = hitBand; dropCol = col; dropRow = row;
 
+            // Vertical position of the row being dropped into. Pinning the indicator to
+            // the grid's top left it motionless while the drop row changed underneath.
+            // `yToRow` returns `tracks.length + 1` past the last track, whose offset is
+            // the trailing total — i.e. a new row below the grid, which is what the
+            // commit does with it too.
+            const rowOffsets = trackOffsets(rowTracks, gap);
+            const rowTop = hitRect.y + (rowOffsets[row - 1] ?? rowOffsets[rowOffsets.length - 1] ?? 0);
+
             const target = targetRef.current!;
             target.style.display = 'block';
             target.style.left = `${hitRect.x + (col - 1) * (colWidth + gap)}px`;
-            target.style.top = `${hitRect.y}px`;
+            target.style.top = `${rowTop}px`;
             target.style.width = `${colWidth * item.span + gap * (item.span - 1)}px`;
             target.style.height = `${startRect.height}px`;
         }, (cancelled) => {
