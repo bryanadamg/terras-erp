@@ -53,9 +53,34 @@ export function colWidthFromRect(rectWidth: number, gap: number, colCount = 12):
     return (rectWidth - gap * (colCount - 1)) / colCount;
 }
 
-/** Rect of `el`, expressed relative to `container`'s top-left corner. */
-export function rectRelativeTo(el: Element, container: Element): DOMRect {
+/**
+ * Rect of `el`, expressed relative to `container`'s top-left corner, in the
+ * container's own LAYOUT pixels.
+ *
+ * `zoom` is the designer's view scale (the `transform: scale()` on the sheet).
+ * `getBoundingClientRect` reports screen pixels, which a scaled ancestor has
+ * already multiplied — but the overlay writes these numbers straight back into
+ * `style.left`/`top`, which are layout pixels inside that same scaled box. Dividing
+ * here is what keeps the two unit systems in step; pass 1 (the default) when the
+ * surface is unscaled.
+ */
+export function rectRelativeTo(el: Element, container: Element, zoom = 1): DOMRect {
     const r = el.getBoundingClientRect();
     const c = container.getBoundingClientRect();
-    return new DOMRect(r.left - c.left, r.top - c.top, r.width, r.height);
+    const z = zoom || 1;
+    return new DOMRect(
+        (r.left - c.left) / z,
+        (r.top - c.top) / z,
+        r.width / z,
+        r.height / z,
+    );
+}
+
+/** A pointer position in `container`'s layout pixels. Same zoom caveat as above. */
+export function localPoint(
+    clientX: number, clientY: number, container: Element, zoom = 1,
+): { x: number; y: number } {
+    const c = container.getBoundingClientRect();
+    const z = zoom || 1;
+    return { x: (clientX - c.left) / z, y: (clientY - c.top) / z };
 }

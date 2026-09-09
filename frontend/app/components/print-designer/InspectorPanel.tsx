@@ -8,6 +8,7 @@ import type {
 import { FIELD_MANIFESTS } from '../shared/printTemplate/fieldRegistry';
 import { paperPortraitMm, CUSTOM_MIN_MM, CUSTOM_MAX_MM } from '../shared/printTemplate/paper';
 import { rowSource } from '../shared/printTemplate/rowSources';
+import { describeBand, bandTypeLabel } from '../shared/printTemplate/bandLabel';
 import { xpFont } from '../shared/xpTheme';
 import { Row, TextField, NumberField, CheckField, SelectField, InspectorGroup, ListRowControls } from './controls';
 
@@ -143,7 +144,7 @@ export default function InspectorPanel({ layout, docType, selection, onChange, o
                             onChange={v => { const n = clone(layout); n.paper.marginMm = v ?? 0; onChange(n); }}
                         />
                     </Row>
-                    <Row label="Content inset" classic={classic} title="Breathing room inside the page margin">
+                    <Row label="Inner padding" classic={classic} title="Breathing room the design asks for, inside the page margin the printer cannot reach">
                         <NumberField
                             classic={classic} suffix="mm" min={0} max={30}
                             value={layout.paddingMm}
@@ -172,54 +173,73 @@ export default function InspectorPanel({ layout, docType, selection, onChange, o
                     fontFamily: classic ? xpFont : undefined, fontSize: 10,
                     color: '#888', fontStyle: 'italic',
                 }}>
-                    Select a band on the left, or click any field in the preview, to edit it.
+                    Select a section on the left, or click any field on the paper, to edit it.
                 </div>
             </>
         );
     }
 
     // ── Band-level properties shared by every band type ───────────────────────
+    // Heading names the section the way the list does — "grid band" told you the
+    // shape of the thing you had just clicked, which you could already see.
     const bandCommon = (
-        <InspectorGroup title={`${band.type} band`} classic={classic}>
-            <Row label="Caption" classic={classic} title="Small heading above the band. Leave empty for none.">
-                <TextField
-                    classic={classic}
-                    value={band.title}
-                    placeholder="(none)"
-                    onChange={v => patchBand({ title: v || undefined })}
-                />
-            </Row>
-            {band.title && (
-                <CheckField
-                    classic={classic} label="Caption in CAPITALS"
-                    checked={!!band.titleUppercase}
-                    onChange={v => patchBand({ titleUppercase: v || undefined })}
-                />
-            )}
-            <Row label="Space below" classic={classic}>
-                <NumberField
-                    classic={classic} suffix="px" min={0} max={60}
-                    value={band.marginBottom}
-                    onChange={v => patchBand({ marginBottom: v })}
-                />
-            </Row>
-            <Row label="Border" classic={classic} title="CSS border, e.g. 1px solid #000">
-                <TextField classic={classic} value={band.box} placeholder="(none)" mono
-                    onChange={v => patchBand({ box: v || undefined })} />
-            </Row>
-            <Row label="Rule above" classic={classic}>
-                <TextField classic={classic} value={band.borderTop} placeholder="(none)" mono
-                    onChange={v => patchBand({ borderTop: v || undefined })} />
-            </Row>
-            <Row label="Rule below" classic={classic}>
-                <TextField classic={classic} value={band.borderBottom} placeholder="(none)" mono
-                    onChange={v => patchBand({ borderBottom: v || undefined })} />
-            </Row>
-            <Row label="Padding" classic={classic} title="CSS padding, e.g. 4px 8px">
-                <TextField classic={classic} value={band.padding} placeholder="(none)" mono
-                    onChange={v => patchBand({ padding: v || undefined })} />
-            </Row>
-        </InspectorGroup>
+        <>
+            <InspectorGroup
+                title={`Section ${bandIndex + 1} — ${bandTypeLabel(band)}`}
+                classic={classic}
+            >
+                <div style={{
+                    fontFamily: classic ? xpFont : undefined, fontSize: 11, fontWeight: 'bold',
+                    marginBottom: 5, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                }} title={describeBand(band, docType)}>
+                    {describeBand(band, docType)}
+                </div>
+                <Row label="Caption" classic={classic} title="Small heading printed above the section. Leave empty for none.">
+                    <TextField
+                        classic={classic}
+                        value={band.title}
+                        placeholder="(none)"
+                        onChange={v => patchBand({ title: v || undefined })}
+                    />
+                </Row>
+                {band.title && (
+                    <CheckField
+                        classic={classic} label="Caption in CAPITALS"
+                        checked={!!band.titleUppercase}
+                        onChange={v => patchBand({ titleUppercase: v || undefined })}
+                    />
+                )}
+                <Row label="Space below" classic={classic}>
+                    <NumberField
+                        classic={classic} suffix="px" min={0} max={60}
+                        value={band.marginBottom}
+                        onChange={v => patchBand({ marginBottom: v })}
+                    />
+                </Row>
+            </InspectorGroup>
+
+            {/* Raw CSS shorthands. Kept — they are the fastest way to draw a rule or a
+                box, and this page has one admin user — but demoted, because they were
+                the first four controls you met on selecting anything. */}
+            <InspectorGroup title="Frame (CSS)" classic={classic} collapsible>
+                <Row label="Border" classic={classic} title="CSS border, e.g. 1px solid #000">
+                    <TextField classic={classic} value={band.box} placeholder="(none)" mono
+                        onChange={v => patchBand({ box: v || undefined })} />
+                </Row>
+                <Row label="Rule above" classic={classic} title="CSS border, e.g. 1px solid #000">
+                    <TextField classic={classic} value={band.borderTop} placeholder="(none)" mono
+                        onChange={v => patchBand({ borderTop: v || undefined })} />
+                </Row>
+                <Row label="Rule below" classic={classic} title="CSS border, e.g. 1px solid #000">
+                    <TextField classic={classic} value={band.borderBottom} placeholder="(none)" mono
+                        onChange={v => patchBand({ borderBottom: v || undefined })} />
+                </Row>
+                <Row label="Padding" classic={classic} title="CSS padding, e.g. 4px 8px">
+                    <TextField classic={classic} value={band.padding} placeholder="(none)" mono
+                        onChange={v => patchBand({ padding: v || undefined })} />
+                </Row>
+            </InspectorGroup>
+        </>
     );
 
     // ── Grid band: cell list + selected-cell editor ───────────────────────────
@@ -667,7 +687,7 @@ export default function InspectorPanel({ layout, docType, selection, onChange, o
                         <NumberField classic={classic} suffix="px" min={4} max={24}
                             value={tb.fontSize} onChange={v => patchBand({ fontSize: v })} />
                     </Row>
-                    <CheckField classic={classic} label="Hide band when no rows" checked={tb.hideWhenEmpty !== false}
+                    <CheckField classic={classic} label="Hide section when no rows" checked={tb.hideWhenEmpty !== false}
                         onChange={v => patchBand({ hideWhenEmpty: v })} />
                     <div style={{ fontFamily: classic ? xpFont : undefined, fontSize: 10, color: '#888', fontStyle: 'italic' }}>
                         Rows come from: {source?.label || tb.source}. This table grows with the
