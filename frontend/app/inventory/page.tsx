@@ -76,6 +76,27 @@ export default function InventoryPage() {
         fetchData();
     };
 
+    // The import button is modeless — it hands the picked file straight here.
+    const handleImportItems = async (file: File) => {
+        const body = new FormData();
+        body.append('file', file);
+        const res = await authFetch(`${API_BASE}/items/import`, { method: 'POST', body });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) return { status: 'error', errors: [data.detail || 'Import failed'] };
+        return data;
+    };
+
+    const handleDownloadTemplate = () => {
+        // Header the CSV parser in import_service.import_items_csv expects.
+        const blob = new Blob(['Code,Name,UOM,Category\n'], { type: 'text/csv;charset=utf-8' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'item-import-template.csv';
+        a.click();
+        URL.revokeObjectURL(url);
+    };
+
     const handleAddVariant = async (itemId: string, p: any) => {
         const res = await authFetch(`${API_BASE}/items/${itemId}/variants`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(p) });
         if (res.ok) fetchData();
@@ -104,6 +125,8 @@ export default function InventoryPage() {
                 onDeleteMultipleItems={handleDeleteMultipleItems}
                 onAddVariant={handleAddVariant}
                 onDeleteVariant={handleDeleteVariant}
+                onImportItems={handleImportItems}
+                onDownloadTemplate={handleDownloadTemplate}
                 onRefresh={fetchData}
                 currentPage={pagination.itemPage}
                 totalItems={pagination.itemTotal}

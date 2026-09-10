@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useMemo, memo, useRef } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import CodeConfigModal, { CodeConfig, buildCodeWithCounter } from '../shared/CodeConfigModal';
-import BulkImportModal from './BulkImportModal';
 import HistoryPane from '../shared/HistoryPane';
 import ModalWrapper from '../shared/ModalWrapper';
 import Pager from '../shared/Pager';
@@ -181,10 +180,17 @@ export default function InventoryView({
   const { hasPermission, hasAnyPermission } = useUser();
   const canManage = hasAnyPermission('item.create', 'item.edit');
   const canDelete = hasPermission('item.delete');
+  const canImport = hasPermission('item.import');
   const { openId: openMenuId, pos: menuPos, toggle: toggleMenu, close: closeMenu } = useFloatingMenu();
   // UI State
   const [isCreateOpen, setIsCreateOpen] = useState(false);
-  const [isImportOpen, setIsImportOpen] = useState(false);
+  // Import is modeless: the toolbar button opens the OS file picker straight
+  // away and the upload starts on pick, so the only UI it owns is the result
+  // strip above the table. The old BulkImportModal was a dialog that did
+  // nothing but hold a file input and echo the same result.
+  const importInputRef = useRef<HTMLInputElement>(null);
+  const [importing, setImporting] = useState(false);
+  const [importResult, setImportResult] = useState<{ status?: string; imported?: number; errors?: string[] } | null>(null);
   const { uiStyle: currentStyle } = useTheme();
 
   // Config State
@@ -525,6 +531,24 @@ export default function InventoryView({
       }
   };
 
+  const handleImportPick = async (e: React.ChangeEvent<HTMLInputElement>) => {
+      const file = e.target.files?.[0];
+      // Cleared straight away so re-picking the same file still fires `change`.
+      e.target.value = '';
+      if (!file) return;
+      setImportResult(null);
+      setImporting(true);
+      try {
+          const res = await onImportItems?.(file);
+          setImportResult(res ?? { status: 'error', errors: ['Import is not available.'] });
+          if (res?.imported) onRefresh?.();
+      } catch {
+          setImportResult({ status: 'error', errors: ['Upload failed.'] });
+      } finally {
+          setImporting(false);
+      }
+  };
+
   const handleEdit = (item: any) => {
       setEditingItem({...item, attribute_ids: item.attribute_ids || [], packaging_factor_ids: (item.packaging_factor_ids || []).map(String)});
   };
@@ -613,14 +637,6 @@ export default function InventoryView({
            onSave={handleSaveConfig}
            initialConfig={codeConfig}
            attributes={attributes}
-       />
-
-       <BulkImportModal
-           isOpen={isImportOpen}
-           onClose={() => setIsImportOpen(false)}
-           onImport={onImportItems}
-           onDownloadTemplate={onDownloadTemplate}
-           title="Bulk Import Items"
        />
 
       {/* Create Modal */}
@@ -1104,10 +1120,31 @@ export default function InventoryView({
                   </div>
                   </>
                   )}
-                  {canManage && (
+                  {(canManage || canImport) && (
                   <div className={forcedCategory ? 'col-md-7 d-flex justify-content-end gap-2' : 'col-md-3 d-flex justify-content-end gap-2'}>
-                      <ToolbarButton classic={false} tone="neutral" icon="bi-upload" onClick={() => setIsImportOpen(true)}>Import</ToolbarButton>
-                      <ToolbarButton classic={false} tone="create" icon="bi-plus-lg" testId="create-item-btn" onClick={openCreateModal}>{t('create')}</ToolbarButton>
+                      {canImport && (
+                      <div style={{ display: 'flex' }}>
+                          <ToolbarButton
+                              classic={false}
+                              tone="neutral"
+                              icon={importing ? 'bi-hourglass-split' : 'bi-upload'}
+                              disabled={importing}
+                              onClick={() => importInputRef.current?.click()}
+                              style={{ borderTopRightRadius: 0, borderBottomRightRadius: 0 }}
+                          >{importing ? 'Importing…' : 'Import'}</ToolbarButton>
+                          <span className="xp-menu-trigger" style={{ display: 'inline-flex', marginLeft: -1 }}>
+                              <ToolbarButton
+                                  classic={false}
+                                  tone="neutral"
+                                  icon="bi-caret-down-fill"
+                                  title="Import options"
+                                  onClick={e => toggleMenu('import', e)}
+                                  style={{ borderTopLeftRadius: 0, borderBottomLeftRadius: 0, paddingLeft: 6, paddingRight: 2 }}
+                              >{null}</ToolbarButton>
+                          </span>
+                      </div>
+                  )}
+                      {canManage && <ToolbarButton classic={false} tone="create" icon="bi-plus-lg" testId="create-item-btn" onClick={openCreateModal}>{t('create')}</ToolbarButton>}
                   </div>
                   )}
               </div>
@@ -1142,14 +1179,71 @@ export default function InventoryView({
               <div style={{ marginLeft: 'auto', fontFamily: xpFont, fontSize: '10px', color: '#555555' }}>
                 {filteredItems.length} item{filteredItems.length !== 1 ? 's' : ''} on page
               </div>
-              {canManage && (
+              {(canManage || canImport) && (
                 <div style={{ display: 'flex', gap: 4 }}>
-                  <ToolbarButton classic tone="neutral" icon="bi-upload" onClick={() => setIsImportOpen(true)}>Import</ToolbarButton>
-                  <ToolbarButton classic tone="create" icon="bi-plus-lg" testId="create-item-btn" onClick={openCreateModal}>{t('create')}</ToolbarButton>
+                  {canImport && (
+                      <div style={{ display: 'flex' }}>
+                          <ToolbarButton
+                              classic
+                              tone="neutral"
+                              icon={importing ? 'bi-hourglass-split' : 'bi-upload'}
+                              disabled={importing}
+                              onClick={() => importInputRef.current?.click()}
+                              style={{ borderTopRightRadius: 0, borderBottomRightRadius: 0 }}
+                          >{importing ? 'Importing…' : 'Import'}</ToolbarButton>
+                          <span className="xp-menu-trigger" style={{ display: 'inline-flex', marginLeft: -1 }}>
+                              <ToolbarButton
+                                  classic
+                                  tone="neutral"
+                                  icon="bi-caret-down-fill"
+                                  title="Import options"
+                                  onClick={e => toggleMenu('import', e)}
+                                  style={{ borderTopLeftRadius: 0, borderBottomLeftRadius: 0, paddingLeft: 6, paddingRight: 2 }}
+                              >{null}</ToolbarButton>
+                          </span>
+                      </div>
+                  )}
+                  {canManage && <ToolbarButton classic tone="create" icon="bi-plus-lg" testId="create-item-btn" onClick={openCreateModal}>{t('create')}</ToolbarButton>}
                 </div>
               )}
             </div>
           )}
+
+          {/* ── Import result strip (the modeless import's only output) ── */}
+          {importResult && (() => {
+              const errs = importResult.errors || [];
+              const tone = importResult.status === 'success' ? { bg: '#e8f5e9', border: '#2e7d32', fg: '#1b4620', icon: 'bi-check-circle-fill' }
+                  : importResult.status === 'partial_success' ? { bg: '#fffbe6', border: '#c77800', fg: '#4a3000', icon: 'bi-exclamation-triangle-fill' }
+                  : { bg: '#fdecea', border: '#b71c1c', fg: '#6b0000', icon: 'bi-x-octagon-fill' };
+              const headline = importResult.status === 'success'
+                  ? `${importResult.imported ?? 0} item${importResult.imported === 1 ? '' : 's'} imported.`
+                  : importResult.status === 'partial_success'
+                      ? `${importResult.imported ?? 0} imported, ${errs.length} row${errs.length === 1 ? '' : 's'} failed.`
+                      : 'Import failed.';
+              return (
+                  <div style={{
+                      background: tone.bg, borderTop: `1px solid ${tone.border}`, borderBottom: `1px solid ${tone.border}`,
+                      borderLeft: `4px solid ${tone.border}`, color: tone.fg,
+                      padding: '6px 10px', fontFamily: classic ? xpFont : undefined, fontSize: classic ? 11 : 13,
+                  }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                          <i className={`bi ${tone.icon}`}></i>
+                          <span style={{ fontWeight: 'bold' }}>{headline}</span>
+                          <button
+                              type="button"
+                              title="Dismiss"
+                              onClick={() => setImportResult(null)}
+                              style={{ marginLeft: 'auto', background: 'none', border: 'none', cursor: 'pointer', color: tone.fg, padding: 0, lineHeight: 1 }}
+                          ><i className="bi bi-x-lg"></i></button>
+                      </div>
+                      {errs.length > 0 && (
+                          <ul style={{ margin: '4px 0 0', paddingLeft: 24, maxHeight: 120, overflowY: 'auto' }}>
+                              {errs.map((err: string, i: number) => <li key={i}>{err}</li>)}
+                          </ul>
+                      )}
+                  </div>
+              );
+          })()}
 
           {/* ── Table ── */}
           <div className={classic ? '' : 'card-body p-0'} style={{ flex: 1, overflowY: 'auto', minHeight: 0 }}>
@@ -1535,7 +1629,24 @@ export default function InventoryView({
           )}
       </ModalWrapper>
 
-      {openMenuId && (() => {
+      <input
+          type="file"
+          accept=".csv"
+          hidden
+          ref={importInputRef}
+          onChange={handleImportPick}
+      />
+
+      {openMenuId === 'import' && (
+          <FloatingMenu
+              pos={menuPos}
+              items={[
+                  { key: 'template', label: 'Download Template', icon: 'bi-download', onClick: () => { closeMenu(); onDownloadTemplate?.(); } },
+              ]}
+          />
+      )}
+
+      {openMenuId && openMenuId !== 'import' && (() => {
           const menuItem = sortedItems.find((i: any) => String(i.id) === openMenuId);
           if (!menuItem) return null;
           return (
