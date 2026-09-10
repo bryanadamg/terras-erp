@@ -145,12 +145,17 @@ function packProgress(po: any, it?: any) {
  *  Packing Order modal captured. An order with no alt unit draws the base row
  *  alone, which is exactly what the single bar used to be.
  */
-function PackProgressBars({ prog, uom, height = 6, fontSize = 9, hatched = false }: {
+function PackProgressBars({ prog, uom, height = 6, fontSize = 9, hatched = false, only }: {
     prog: ReturnType<typeof packProgress>;
     uom: string;
     height?: number;
     fontSize?: number;
     hatched?: boolean;
+    /** Draw one of the pair instead of both — the list table gives each its own
+     *  column, so the two bars sit side by side there rather than stacked. An
+     *  `only="alt"` order with no alt unit draws nothing and the cell reads as
+     *  empty, which is honest: there is no piece count to be at 40% of. */
+    only?: 'alt' | 'base';
 }) {
     const rows: { key: string; pct: number; done: string; goal: string; unit: string }[] = [];
     if (prog.pctAlt !== null) {
@@ -169,9 +174,11 @@ function PackProgressBars({ prog, uom, height = 6, fontSize = 9, hatched = false
         goal: prog.target.toFixed(2),
         unit: uom,
     });
+    const shown = only ? rows.filter(r => r.key === only) : rows;
+    if (!shown.length) return <span style={{ color: '#bbb' }}>—</span>;
     return (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 5, minWidth: 0, width: '100%' }}>
-            {rows.map(r => (
+            {shown.map(r => (
                 /* Figures sit ON THEIR OWN LINE above the bar, not beside it: in a
                    130px column a trailing "100% · 2,880 / 2,880 Pcs" left the track
                    a ~30px stub that read as noise rather than as progress. Stacked,
@@ -320,7 +327,7 @@ export default function PackingOrderView({ initialCreateState, onClearInitialSta
     const pages = Math.max(1, Math.ceil(total / PO_PAGE_SIZE));
     const clampedPage = Math.min(page, pages);
 
-    const PO_COLS = 11; // chevron + 9 data cols + actions
+    const PO_COLS = 10; // chevron + 8 data cols + actions
 
     // Expanded row — same three-pane shape as the WO list detail panel (info,
     // outputs, log), so a supervisor reads a packing order the way they read a WO.
@@ -599,9 +606,13 @@ export default function PackingOrderView({ initialCreateState, onClearInitialSta
                             <th style={xpTableHeader}>Item</th>
                             <th style={xpTableHeader}>Sales Order</th>
                             <th style={xpTableHeader}>Status</th>
-                            <th style={{ ...xpTableHeader, textAlign: 'right' }}>Target</th>
-                            <th style={{ ...xpTableHeader, textAlign: 'right' }}>Packed</th>
-                            <th style={{ ...xpTableHeader, width: 150 }}>Progress</th>
+                            {/* No Target/Packed columns: each bar's own line already reads
+                                "packed / target unit", so the two number columns restated
+                                the pair the packer was going to read off the bar anyway.
+                                One column per unit — the selling unit the order is judged
+                                in, and the stock UOM the scale and the ledger work in. */}
+                            <th style={{ ...xpTableHeader, width: 135 }}>Selling Unit</th>
+                            <th style={{ ...xpTableHeader, width: 135 }}>Stock UOM</th>
                             <th style={{ ...xpTableHeader, textAlign: 'right' }}>Cartons</th>
                             <th style={xpTableHeader}>Created</th>
                             <th style={{ ...xpTableHeader, textAlign: 'right' }}>Actions</th>
@@ -617,7 +628,6 @@ export default function PackingOrderView({ initialCreateState, onClearInitialSta
                         ))}
                         {orders.map((po: any, idx: number) => {
                             const it = itemById[String(po.item_id)];
-                            const shortfall = num(po.qty_packed) < num(po.qty_target);
                             // Same helper the pack modal's header bar reads, so the row
                             // and the modal always show the same percentage.
                             const prog = packProgress(po, it);
@@ -657,18 +667,18 @@ export default function PackingOrderView({ initialCreateState, onClearInitialSta
                                         ) : <span style={{ color: '#888' }}>to stock</span>}
                                     </td>
                                     <td style={td}><StatusChip status={po.status} /></td>
-                                    <td style={{ ...td, textAlign: 'right' }}>{num(po.qty_target).toLocaleString()} {po.item_uom || it?.uom}</td>
-                                    <td style={{ ...td, textAlign: 'right', color: shortfall ? '#c77800' : '#0a3e0a' }}>{num(po.qty_packed).toLocaleString()}</td>
-                                    {/* Both progress bars — pieces over kilos. The run is
-                                        weighed and the piece count is that weight read through
-                                        the order's sampled unit weight, so neither figure alone
-                                        tells the packer where the order stands: a light run
-                                        finishes its pieces before its kilos. Thin bars + qty
-                                        line, matching the SO table's MO progress cell
-                                        (MOProgressLink/moProgressCell in SalesOrderView) instead
-                                        of a hatched pill — one progress look across the app. */}
+                                    {/* The same run measured twice, one column each. The boxes
+                                        are weighed and the piece count is that weight read
+                                        through the order's sampled unit weight, so neither
+                                        figure alone tells the packer where the order stands: a
+                                        light run finishes its pieces before its kilos. Thin bar
+                                        + qty line, matching the SO table's MO progress cell
+                                        (MOProgressLink/moProgressCell in SalesOrderView). */}
                                     <td style={td}>
-                                        <PackProgressBars prog={prog} uom={po.item_uom || it?.uom || ''} height={6} />
+                                        <PackProgressBars prog={prog} uom={po.item_uom || it?.uom || ''} height={6} only="alt" />
+                                    </td>
+                                    <td style={td}>
+                                        <PackProgressBars prog={prog} uom={po.item_uom || it?.uom || ''} height={6} only="base" />
                                     </td>
                                     <td style={{ ...td, textAlign: 'right' }}>{po.package_count || 0}</td>
                                     <td style={td}>{po.created_at ? tzDate(po.created_at) : '—'}</td>
