@@ -1647,7 +1647,12 @@ function PackingOrderDetail({ po: initialPo, itemById, locationById, locPickerTr
     // a 0.5 kg thirteenth box on a 130 kg draw and labels reading 11.8 Pcs. The
     // order's own stated count is preferred; `pack_size` is divided back only for a
     // pre-feature order that has no count stored.
-    const [boxSize, setBoxSize] = useState<string>(() => {
+    //
+    // Read off the ORDER, never typed here: the pack modal has no box-size field.
+    // It was a shortcut for filling the carton lines, and those lines are directly
+    // editable — count, qty each and box are all on the row — so a second control
+    // that silently re-splits them was one more thing to keep in step.
+    const boxSize: string = useMemo(() => {
         // On a weighed order the split is by kilos — that is the number the packer
         // sets the scale to, and splitting by pieces would hand them a box target
         // they cannot weigh out.
@@ -1655,7 +1660,8 @@ function PackingOrderDetail({ po: initialPo, itemById, locationById, locPickerTr
         const alt = hasAlt ? orderBoxSizeAlt(po, altFactor) : null;
         if (alt) return String(alt);
         return !hasAlt && num(po.pack_size) > 0 ? String(num(po.pack_size)) : '';
-    });
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [po.pack_size, po.pack_size_alt, weighBasis, hasAlt, altFactor]);
     // Loose scrap found during this pack event — offcuts, stained ends, material
     // that came out of the source bin and never made it into a box. It has to be
     // stated because it physically LEFT the bin: omitting it would leave the
@@ -1933,16 +1939,6 @@ function PackingOrderDetail({ po: initialPo, itemById, locationById, locPickerTr
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [remaining]);
 
-    // Regenerate re-splits what is currently listed at the stated box size —
-    // "I have 24 kg down, break it into 4 kg boxes", or "144 Pcs down, break it
-    // into 12s". Falls back to the order's remaining when the list is empty, which
-    // is the only figure left to split. Weights already keyed in are kept
-    // positionally: re-splitting after a typo shouldn't wipe the scale readings.
-    const regenerateBoxes = () =>
-        setBoxGroups(prev => {
-            const listed = expandBoxGroups(prev).reduce((t, b) => t + num(b.qty), 0);
-            return seedFrom(listed > 0 ? listed : remaining, prev);
-        });
     const updateGroup = (i: number, patch: Partial<BoxGroup>) =>
         setBoxGroups(prev => prev.map((g, idx) => (idx === i ? { ...g, ...patch } : g)));
     const removeGroup = (i: number) => setBoxGroups(prev => prev.filter((_, idx) => idx !== i));
@@ -2215,7 +2211,7 @@ function PackingOrderDetail({ po: initialPo, itemById, locationById, locPickerTr
         } finally { setRejecting(false); }
     };
 
-    // xl, not md: the Cartons to be Made grid is eight columns wide (count, qty
+    // xl, not md: the To Pack grid is eight columns wide (count, qty
     // each, unit, kg each, packaging, tare, line total, remove) and at 480px it
     // scrolled sideways, which put the packaging picker and the tare — both
     // required before the log button unlocks — off the edge of the panel the
@@ -2343,39 +2339,6 @@ function PackingOrderDetail({ po: initialPo, itemById, locationById, locPickerTr
                                 second figure to keep equal to it was only ever a way to get
                                 out of step with it. No "still to pack" strip either — it
                                 restated the header's Remaining line word for word. */}
-                            <div style={{ display: 'flex', gap: 8, alignItems: 'flex-end' }}>
-                                <div style={{ flex: 1 }}>
-                                    <label
-                                        style={{ ...xpFormLabel, fontWeight: 'bold' }}
-                                        title={`A shortcut for filling the lines below — how many ${weighBasis || !hasAlt ? uom : altUom} go in one ${po.package_label.toLowerCase()}`}
-                                    >
-                                        Box size{hasAlt ? ` (${weighBasis ? uom : altUom} per ${po.package_label.toLowerCase()})` : ''}
-                                    </label>
-                                    {/* Stated in the counting unit: a carton holds 12 pieces, and
-                                        the kilos that comes to are what the scale then argues with.
-                                        Splitting by the kilos left a remainder box of 0.5 kg. */}
-                                    <input
-                                        type="number"
-                                        style={{ ...xpInput, width: '100%' }}
-                                        value={boxSize}
-                                        onChange={e => setBoxSize(e.target.value)}
-                                        min="0" step="any"
-                                        placeholder={weighBasis
-                                            ? `${uom} in one box`
-                                            : (hasAlt ? `${altUom} in one box` : 'whole qty in one box')}
-                                    />
-                                </div>
-                                <button
-                                    type="button"
-                                    className={XP_BTN}
-                                    onClick={regenerateBoxes}
-                                    title={`Refill the lines below: as many full ${po.package_label.toLowerCase()}s of Box size as fit, plus one for the remainder`}
-                                    style={{ ...xpBtn(), fontSize: 9, padding: '3px 8px', marginBottom: 1 }}
-                                >
-                                    Regenerate
-                                </button>
-                            </div>
-
                             <div>
                                 {/* A div, not a label. A <label> forwards a click anywhere in
                                     it to the first labelable element it contains, and <button>
@@ -2393,7 +2356,7 @@ function PackingOrderDetail({ po: initialPo, itemById, locationById, locPickerTr
                                         hasAlt ? `${altUom} per ${po.package_label.toLowerCase()} sets its ${uom}.` : '',
                                         qtyIsWeight ? `Weighed in ${uom}, so each ${po.package_label.toLowerCase()}'s qty is its net weight.` : '',
                                     ].filter(Boolean).join(' ')}>
-                                        {po.package_label}s to be Made
+                                        To Pack
                                     </span>
                                     <XPActionButton
                                         classic={CLASSIC}
@@ -2406,8 +2369,7 @@ function PackingOrderDetail({ po: initialPo, itemById, locationById, locPickerTr
                                 <div style={{ border: '1px solid #7f9db9', background: '#fff', maxHeight: 168, overflowY: 'auto' }}>
                                     {boxGroups.length === 0 && (
                                         <div style={{ fontSize: 10, color: '#888', padding: '4px 5px' }}>
-                                            No {po.package_label.toLowerCase()}s listed — set a box size and hit
-                                            Regenerate, or add a line with +.
+                                            No {po.package_label.toLowerCase()}s listed — add a line with +.
                                         </div>
                                     )}
                                     {boxGroups.length > 0 && (
@@ -2882,7 +2844,7 @@ function PackingOrderDetail({ po: initialPo, itemById, locationById, locPickerTr
                                                                         background: takeByBatch[id] ? '#d0f0d0' : '#eceae2',
                                                                         border: '1px solid #aca899', padding: '0 4px',
                                                                     }}>
-                                                                        take {(takeByBatch[id] || 0).toFixed(2)}
+                                                                        pack {(takeByBatch[id] || 0).toFixed(2)}
                                                                     </span>
                                                                 )}
                                                                 {b.location_name && <span style={{ color: '#0058e6' }}>@ {b.location_name}</span>}
