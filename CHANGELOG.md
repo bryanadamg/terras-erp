@@ -15,6 +15,26 @@ on `main`:
 
 ## [Unreleased]
 
+## [0.27.0] - 2026-09-10
+
+### Added
+- Packing orders support a weigh-only pack basis: goods cut to weight are logged by scale reading alone, with the piece count derived from the order's sampled g/y at the moment each carton is packed, instead of requiring a counted-pieces entry that doesn't exist on the floor for these lines
+- Packing list shows the order's own variant (with its colour swatch) in a dedicated column, and the picker surfaces the order line's selling unit and the piece-to-weight factor behind the carton totals
+- Item import runs as a modeless panel, so the inventory list stays usable while an import is in progress
+- Print layout designer: place fields onto a section from a palette, and name, link and zoom sections directly on the canvas
+
+### Changed
+- Item event log lives in an expandable row on the item list instead of its own view, and the item list's row actions move onto the shared action button, matching the rest of the app
+- Packing order and pack modals are pared down to the figures the floor actually needs: the packaging plan step, box-size field and explanatory captions are gone or moved into tooltips, and the carton list is retitled and grouped one progress column per unit
+- Print layout designer chrome is rebuilt from the shared UI primitives
+
+### Fixed
+- A saved print layout now actually reaches the printout: band-hide overrides, the signature band's top border, and drag-resized column widths were all being ignored at print time
+- Packing progress figures sit above their bar instead of squeezed beside it, so narrow columns don't clip the numbers
+- Print layout designer: the drop indicator snaps to the row/column it will use, dragging tracks pointer position instead of raw mouse movement, and the designer's chrome scales with the app's zoom level
+- Clipped text only offers an auto-tooltip when it's actually single-line truncated (`nowrap`), not whenever a wrapped block's measured width drifts a few px from zoom rounding
+- A weaving run's efficiency no longer counts its still-running first day or its already-ended last day as a full working day, which had been halving day-one efficiency numbers
+
 ## [0.26.0] - 2026-09-08
 
 ### Added
