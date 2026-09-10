@@ -2181,7 +2181,9 @@ function PackingOrderDetail({ po: initialPo, itemById, locationById, locPickerTr
                             ))}
                         </div>
                         <div style={{ fontSize: 10, color: '#555', display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap' }}>
-                            <span>
+                            <span title={hasAlt
+                                ? `1 ${altUom} = ${po.uom2_factor} ${altLength?.uom || 'Yd'} = ${altFactor} ${uom}`
+                                : undefined}>
                                 Remaining: <strong style={{ color: '#b46a00' }}>
                                     {hasAlt ? `${(remainingAlt ?? 0).toLocaleString()} ${altUom}` : remaining.toFixed(2)}
                                 </strong>
@@ -2218,41 +2220,15 @@ function PackingOrderDetail({ po: initialPo, itemById, locationById, locPickerTr
                         <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
                             {/* No "Qty to Pack" field: the list below states the pack, and a
                                 second figure to keep equal to it was only ever a way to get
-                                out of step with it. The order's outstanding qty is shown for
-                                reference and seeds the list. */}
-                            <div style={{
-                                display: 'flex', alignItems: 'center', gap: 6, fontSize: 10, color: '#555',
-                                background: '#f5f4ee', border: '1px solid #d8d5cc', padding: '3px 6px',
-                            }}>
-                                <span>Still to pack on this order:</span>
-                                {/* Leads in the selling unit on an alt-unit order — that is
-                                    what the packer counts into the boxes below — with the
-                                    stock figure kept beside it, because that is what the
-                                    carton lines are typed in and what stock moves in. */}
-                                <strong style={{ color: '#2e7d32' }}>
-                                    {hasAlt ? (remainingAlt ?? 0).toLocaleString() : remaining.toFixed(2)}
-                                </strong>
-                                {hasAlt
-                                    ? <span style={uomChip}>{altUom}</span>
-                                    : (uom && <span style={uomChip}>{uom}</span>)}
-                                {hasAlt && (
-                                    <span style={{ color: '#888' }}>
-                                        = <strong>{remaining.toFixed(2)}</strong> {uom}
-                                    </span>
-                                )}
-                                {hasAlt && (
-                                    <span style={{ color: '#888', fontSize: 9 }}>
-                                        1 {altUom} = {po.uom2_factor} {altLength?.uom || 'Yd'} = {altFactor} {uom}
-                                    </span>
-                                )}
-                            </div>
+                                out of step with it. No "still to pack" strip either — it
+                                restated the header's Remaining line word for word. */}
                             <div style={{ display: 'flex', gap: 8, alignItems: 'flex-end' }}>
                                 <div style={{ flex: 1 }}>
-                                    <label style={{ ...xpFormLabel, fontWeight: 'bold' }}>
+                                    <label
+                                        style={{ ...xpFormLabel, fontWeight: 'bold' }}
+                                        title={`A shortcut for filling the lines below — how many ${hasAlt ? altUom : uom} go in one ${po.package_label.toLowerCase()}`}
+                                    >
                                         Box size{hasAlt ? ` (${altUom} per ${po.package_label.toLowerCase()})` : ''}
-                                        <span style={{ fontWeight: 'normal', color: '#888', marginLeft: 5 }}>
-                                            — a shortcut for filling the lines below
-                                        </span>
                                     </label>
                                     {/* Stated in the counting unit: a carton holds 12 pieces, and
                                         the kilos that comes to are what the scale then argues with.
@@ -2285,21 +2261,16 @@ function PackingOrderDetail({ po: initialPo, itemById, locationById, locPickerTr
                                     (the grid below is a table of them), so the element was only
                                     ever borrowing the style. Same fix on the two headers below. */}
                                 <div style={{ ...xpFormLabel, fontWeight: 'bold', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                    <span>
+                                    {/* One tooltip, not three inline captions: the grid's own
+                                        column headers already say count / qty each / unit, so
+                                        the prose beside the title was read once and then sat
+                                        there taking a line off the box list forever. */}
+                                    <span title={[
+                                        `Count × qty each — these lines ARE the pack total.`,
+                                        hasAlt ? `${altUom} per ${po.package_label.toLowerCase()} sets its ${uom}.` : '',
+                                        qtyIsWeight ? `Weighed in ${uom}, so each ${po.package_label.toLowerCase()}'s qty is its net weight.` : '',
+                                    ].filter(Boolean).join(' ')}>
                                         {po.package_label}s to be Made
-                                        <span style={{ fontWeight: 'normal', color: '#888', marginLeft: 5 }}>
-                                            — count × qty each; these lines ARE the pack total
-                                        </span>
-                                        {hasAlt && (
-                                            <span style={{ fontWeight: 'normal', color: '#888', marginLeft: 5 }}>
-                                                ({altUom} per {po.package_label.toLowerCase()} sets its {uom})
-                                            </span>
-                                        )}
-                                        {qtyIsWeight && (
-                                            <span style={{ fontWeight: 'normal', color: '#888', marginLeft: 5 }}>
-                                                (weighed in {uom}, so each {po.package_label.toLowerCase()}&apos;s qty is its net weight)
-                                            </span>
-                                        )}
                                     </span>
                                     <XPActionButton
                                         classic={CLASSIC}
@@ -2562,12 +2533,11 @@ function PackingOrderDetail({ po: initialPo, itemById, locationById, locPickerTr
                                 other half of the same draw: the packer states what went into
                                 boxes, then what came out of the bin and didn't. */}
                             <div>
-                                <label style={{ ...xpFormLabel, fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: 6 }}>
+                                <label
+                                    style={{ ...xpFormLabel, fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: 6 }}
+                                    title={`Offcuts or damage that left ${sourceLocName || 'the pack-from bin'} but never became a ${po.package_label.toLowerCase()} — moved to the defect store, never counted as packed`}
+                                >
                                     <span>Rejected — not boxed</span>
-                                    <span style={{ fontWeight: 'normal', color: '#888' }}>
-                                        — offcuts or damage that left {sourceLocName || 'the pack-from bin'} but never
-                                        became a {po.package_label.toLowerCase()}
-                                    </span>
                                 </label>
                                 <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
                                     <input
@@ -2589,11 +2559,6 @@ function PackingOrderDetail({ po: initialPo, itemById, locationById, locPickerTr
                                         disabled={scrap <= 0}
                                     />
                                 </div>
-                                {scrap > 0 && (
-                                    <div style={{ fontSize: 9, color: '#7a4a00', marginTop: 2 }}>
-                                        Moves to the defect store and never counts toward {target.toFixed(2)} {uom} packed.
-                                    </div>
-                                )}
                             </div>
                             <div style={{
                                 background: locsMissing ? '#fff4e5' : '#eef7ee',
@@ -2635,7 +2600,13 @@ function PackingOrderDetail({ po: initialPo, itemById, locationById, locPickerTr
                                 {hasAlt && (
                                     <div style={{ flexBasis: '100%', display: 'flex', gap: 8, alignItems: 'flex-end', flexWrap: 'wrap', paddingTop: 4, borderTop: '1px solid #c8dcc8' }}>
                                         <div style={{ minWidth: 150 }}>
-                                            <label style={{ ...xpFormLabel, fontSize: 9, color: '#555' }}>Sampled weight</label>
+                                            <label
+                                                style={{ ...xpFormLabel, fontSize: 9, color: '#555' }}
+                                                title={`${po.sample_weight_per_unit != null
+                                                    ? `Sampled off these goods — 1 ${altUom} = ${altFactor} ${uom}.`
+                                                    : `Not sampled — converting through the item's estimate (1 ${altUom} = ${altFactor} ${uom}).`
+                                                } Saving restates the kg target and box size; packed ${po.package_label.toLowerCase()}s are untouched.`}
+                                            >Sampled weight</label>
                                             <div style={{ display: 'flex' }}>
                                                 <input
                                                     type="number" min="0" step="any"
@@ -2656,11 +2627,9 @@ function PackingOrderDetail({ po: initialPo, itemById, locationById, locPickerTr
                                                 </select>
                                             </div>
                                         </div>
-                                        <div style={{ flex: 1, minWidth: 180, color: '#555', paddingBottom: 2 }}>
-                                            {po.sample_weight_per_unit != null
-                                                ? `Sampled off these goods — 1 ${altUom} = ${altFactor} ${uom}.`
-                                                : `Not sampled — converting through the item's estimate (1 ${altUom} = ${altFactor} ${uom}).`}
-                                            {' '}Saving restates the kg target and box size; packed {po.package_label.toLowerCase()}s are untouched.
+                                        <div style={{ flex: 1, minWidth: 120, color: '#7a4a00', paddingBottom: 2 }}>
+                                            {po.sample_weight_per_unit == null
+                                                && `Not sampled — using the item's estimate.`}
                                         </div>
                                         {sampleDirty && (
                                             <button type="button" className={XP_BTN} onClick={saveSample}
@@ -2686,7 +2655,9 @@ function PackingOrderDetail({ po: initialPo, itemById, locationById, locPickerTr
                                 ) : (
                                     <div>
                                         <div style={{ ...xpFormLabel, fontWeight: 'bold', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                            <span>Lots to Pack From — {po.item_code || it?.code || ''}</span>
+                                            <span title={`Each lot is logged as its own pack event, and a ${po.package_label.toLowerCase()} that spans two lots of the same size is pegged to both. The variant is read from the lot's own stock row, the size off the lot itself.`}>
+                                                Lots to Pack From — {po.item_code || it?.code || ''}
+                                            </span>
                                             <span style={{ fontWeight: 'normal', color: short ? '#900' : '#555' }}>
                                                 {selectedLots.length} lot{selectedLots.length === 1 ? '' : 's'} · {selAvailable.toFixed(2)} available · drawing{' '}
                                                 <strong>{drawn.toFixed(2)}</strong>{short ? ` of ${drawTotal.toFixed(2)}` : ''}
@@ -2745,22 +2716,20 @@ function PackingOrderDetail({ po: initialPo, itemById, locationById, locPickerTr
                                                 log each size as its own entry.
                                             </div>
                                         )}
-                                        <div style={{ fontSize: 9, color: '#888', marginTop: 2 }}>
-                                            Each lot is logged as its own pack event, and a {po.package_label.toLowerCase()} that
-                                            spans two lots of the same size is pegged to both. The variant is read from the
-                                            lot&apos;s own stock row, the size off the lot itself.
-                                            {heldLotCount > 0 && (
-                                                <span style={{ color: '#7a4a00' }}>
-                                                    {' '}· {heldLotCount} more lot{heldLotCount === 1 ? '' : 's'} held in quarantine, not shown.
-                                                </span>
-                                            )}
-                                        </div>
+                                        {heldLotCount > 0 && (
+                                            <div style={{ fontSize: 9, color: '#7a4a00', marginTop: 2 }}>
+                                                {heldLotCount} more lot{heldLotCount === 1 ? '' : 's'} held in quarantine, not shown.
+                                            </div>
+                                        )}
                                     </div>
                                 )
                             )}
                             {!useLotPicker && (
-                                <div style={{ fontSize: 9, color: '#888' }}>
-                                    This item is not lot-tracked — the variant is taken from the stock at the pack-from location.
+                                <div
+                                    style={{ fontSize: 9, color: '#888' }}
+                                    title="The variant is taken from the stock at the pack-from location"
+                                >
+                                    Not lot-tracked.
                                 </div>
                             )}
 
