@@ -327,7 +327,44 @@ export default function PackingOrderView({ initialCreateState, onClearInitialSta
     const pages = Math.max(1, Math.ceil(total / PO_PAGE_SIZE));
     const clampedPage = Math.min(page, pages);
 
-    const PO_COLS = 10; // chevron + 8 data cols + actions
+    const PO_COLS = 11; // chevron + 9 data cols + actions
+
+    // Variant identity of one order, in the shape VariantChips wants. The order
+    // serves `attribute_value_ids` (not labels), so combo and the colour VARIANT
+    // are resolved against the attributes master by `system_role` — never by
+    // attribute name, per the system-attribute rule. The Color Library shade
+    // (color_code/hex) is already decorated server-side.
+    // Size is the SO line's plan when there is one; an order with no line is
+    // size-agnostic by design, so the cartons' own stamps stand in — collapsed to
+    // one chip because a run may legitimately hold several.
+    const attrValById = useMemo(() => {
+        const m: Record<string, { role: string | null; value: string; hex: string | null }> = {};
+        for (const a of (attributes || [])) {
+            for (const v of (a.values || [])) {
+                m[String(v.id)] = { role: a.system_role || null, value: v.value, hex: v.hex || null };
+            }
+        }
+        return m;
+    }, [attributes]);
+
+    const variantOf = (po: any) => {
+        let combo: string | null = null;
+        let colorVariant: string | null = null;
+        for (const vid of (po.attribute_value_ids || [])) {
+            const v = attrValById[String(vid)];
+            if (!v) continue;
+            if (v.role === 'combo' && !combo) combo = v.value;
+            else if (v.role === 'color' && !colorVariant) colorVariant = v.value;
+        }
+        let size: string | null = po.size_label || null;
+        if (!size) {
+            const stamped = Array.from(new Set(
+                (po.packed_units || []).map((u: any) => u.size_label).filter(Boolean)
+            )) as string[];
+            if (stamped.length) size = stamped.join(' / ');
+        }
+        return { combo, colorVariant, size };
+    };
 
     // Expanded row — same three-pane shape as the WO list detail panel (info,
     // outputs, log), so a supervisor reads a packing order the way they read a WO.
@@ -604,6 +641,10 @@ export default function PackingOrderView({ initialCreateState, onClearInitialSta
                             <th style={{ ...xpTableHeader, width: 22 }} />
                             <th style={xpTableHeader}>Code</th>
                             <th style={xpTableHeader}>Item</th>
+                            {/* Own column, same call as the WO list: a row can carry size +
+                                combo + colour variant + colour code at once, and squeezing
+                                that onto the right edge of Item left the item name a sliver. */}
+                            <th style={{ ...xpTableHeader, width: 160 }}>Variant</th>
                             <th style={xpTableHeader}>Sales Order</th>
                             <th style={xpTableHeader}>Status</th>
                             {/* No Target/Packed columns: each bar's own line already reads
@@ -615,7 +656,7 @@ export default function PackingOrderView({ initialCreateState, onClearInitialSta
                             <th style={{ ...xpTableHeader, width: 135 }}>Stock UOM</th>
                             <th style={{ ...xpTableHeader, textAlign: 'right' }}>Cartons</th>
                             <th style={xpTableHeader}>Created</th>
-                            <th style={{ ...xpTableHeader, textAlign: 'right' }}>Actions</th>
+                            <th style={{ ...xpTableHeader, textAlign: 'right', width: 96 }}>Actions</th>
                         </tr>
                     </thead>
                     <tbody ref={listBodyRef}>
@@ -643,17 +684,26 @@ export default function PackingOrderView({ initialCreateState, onClearInitialSta
                                         onToggle={() => setExpandedId(prev => prev === String(po.id) ? null : String(po.id))} />
                                     <td style={td}><CodeChip code={po.code} classic={CLASSIC} tone="accent" style={{ fontWeight: 'bold' }} /></td>
                                     <td style={td}>
-                                        <div style={{ display: 'flex', alignItems: 'center', gap: 4, overflow: 'hidden' }}>
-                                            <span style={{ flex: '1 1 auto', minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{po.item_name || it?.name || po.item_id}</span>
-                                            <VariantChips
-                                                colorCode={po.color_code}
-                                                colorName={po.color_name}
-                                                colorHex={po.color_hex}
-                                                scale="xs"
-                                                classic={CLASSIC}
-                                            />
-                                        </div>
+                                        <div style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{po.item_name || it?.name || po.item_id}</div>
                                         <div style={{ fontSize: 9, color: '#888' }}>{po.item_code || it?.code}</div>
+                                    </td>
+                                    <td style={{ ...td, overflow: 'hidden', whiteSpace: 'normal' }}>
+                                        {(() => {
+                                            const v = variantOf(po);
+                                            return (v.combo || v.size || v.colorVariant || po.color_code) ? (
+                                                <VariantChips
+                                                    combo={v.combo}
+                                                    size={v.size}
+                                                    colorVariant={v.colorVariant}
+                                                    colorCode={po.color_code}
+                                                    colorName={po.color_name}
+                                                    colorHex={po.color_hex}
+                                                    scale="xs"
+                                                    classic={CLASSIC}
+                                                    style={{ flexWrap: 'wrap', rowGap: 2 }}
+                                                />
+                                            ) : <span style={{ color: '#888' }}>—</span>;
+                                        })()}
                                     </td>
                                     <td style={td} onClick={e => e.stopPropagation()}>
                                         {po.sales_order_code ? (
@@ -661,7 +711,6 @@ export default function PackingOrderView({ initialCreateState, onClearInitialSta
                                                 code={po.sales_order_code}
                                                 classic={CLASSIC}
                                                 link
-                                                title={`Open Sales Order ${po.sales_order_code}`}
                                                 onClick={() => router.push(`/sales-orders?so=${encodeURIComponent(po.sales_order_code)}`)}
                                             />
                                         ) : <span style={{ color: '#888' }}>to stock</span>}

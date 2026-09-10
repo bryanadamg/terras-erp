@@ -3563,6 +3563,10 @@ class PackingOrderResponse(BaseModel):
     color_name: str | None = None
     color_code: str | None = None
     color_hex: str | None = None
+    # Size the SO line was raised for, decorated from `sales_order_line.bom_size`.
+    # The order itself carries no size (a run may pack several — see the model),
+    # so this is the plan; what the cartons were stamped with is on each unit.
+    size_label: str | None = None
     attribute_value_ids: list[UUID] = []
     # The order's variant identity in StockBalance form (attribute UUIDs + `c:<uuid>`).
     # Empty string = the order declares no variant, so any lot of the item at the

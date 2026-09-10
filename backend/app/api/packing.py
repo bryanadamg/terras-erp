@@ -20,6 +20,7 @@ from app.models.item import Item
 from app.models.location import Location
 from app.models.attribute import AttributeValue
 from app.models.sales import SalesOrder, SalesOrderLine
+from app.models.bom import BOMSize
 from app.models.stock_balance import StockBalance
 from app.models.routing import WorkCenter
 from app.models.uom import UOM, UOMFactor
@@ -40,7 +41,13 @@ router = APIRouter(prefix="/packing", tags=["packing"])
 def _load_options():
     return (
         selectinload(PackingOrder.sales_order),
-        selectinload(PackingOrder.sales_order_line),
+        # `bom_size -> size` rides along because the list row shows the size the
+        # order was raised for. The order itself is size-agnostic (see the model
+        # comment); this is the SO line's planned size, not a claim about what the
+        # cartons ended up stamped with.
+        selectinload(PackingOrder.sales_order_line)
+        .selectinload(SalesOrderLine.bom_size)
+        .selectinload(BOMSize.size),
         selectinload(PackingOrder.item),
         selectinload(PackingOrder.attribute_values),
         selectinload(PackingOrder.materials).selectinload(PackingOrderMaterial.item),
@@ -172,8 +179,12 @@ def _decorate(po: PackingOrder, units: list = None) -> PackingOrder:
     # a real column while decorating a response is a silent write waiting for the
     # next commit in the request, and an SO edited mid-run must not re-scale
     # cartons already minted.
+    po.size_label = None
     if po.sales_order_line:
         po.ket_stock = po.sales_order_line.ket_stock
+        bs = po.sales_order_line.bom_size
+        if bs is not None:
+            po.size_label = bs.size_name or bs.label
     # Resolved base-UOM qty per alt unit — served, not left to the client, so the
     # pack screens, the labels and this API agree on one conversion.
     po.uom2_base_factor = packing_service.order_base_per_alt(po)
