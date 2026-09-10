@@ -18,6 +18,8 @@ export interface VariantChipsProps {
     size?: string | null;
     /** `Colors` variant attribute value (e.g. "Black") — not the Color Library shade. */
     colorVariant?: string | null;
+    /** Hex on that attribute value, when it carries one — same swatch the shade chip gets. */
+    colorVariantHex?: string | null;
     /** Color Library shade this row produces. */
     colorCode?: string | null;
     colorName?: string | null;
@@ -30,7 +32,7 @@ export interface VariantChipsProps {
 }
 
 export default function VariantChips({
-    combo, size, colorVariant, colorCode, colorName, colorHex, labdipCode,
+    combo, size, colorVariant, colorVariantHex, colorCode, colorName, colorHex, labdipCode,
     scale = 'xs', classic, style,
 }: VariantChipsProps) {
     if (!combo && !size && !colorVariant && !colorCode && !labdipCode) return null;
@@ -44,7 +46,14 @@ export default function VariantChips({
                 <VariantChip kind="size" classic={classic} size={scale} title={`Size: ${size}`}>{size}</VariantChip>
             )}
             {colorVariant && (
-                <VariantChip kind="color" classic={classic} size={scale} icon={null} title={`Variant: ${colorVariant}`}>{colorVariant}</VariantChip>
+                <VariantChip
+                    kind="color" classic={classic} size={scale}
+                    // The attribute value carries its own hex on the Attributes page; a
+                    // colour chip with no swatch when one exists is just a lost cue.
+                    swatch={colorVariantHex || null}
+                    icon={null}
+                    title={`Variant: ${colorVariant}`}
+                >{colorVariant}</VariantChip>
             )}
             {colorCode ? (
                 <VariantChip

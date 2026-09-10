@@ -18,6 +18,8 @@ class WeavingRun(Base):
     Performance monitoring: faithful to the client's loom-efficiency formula.
     target_100_per_day_kg = (24*60) * rate_per_line_g_min * lines / 1000
     efficiency = actual_kg / (target_100_per_day_kg * elapsed_working_days)
+    elapsed_working_days counts only FULLY elapsed days — the current day of a running
+    run, and the end_date of a closed one, are excluded (weaving_service).
 
     A loom may carry SEVERAL concurrent runs: the same item is commonly woven for
     two combos at once, each on its own WO with its own line count. So `lines` is a

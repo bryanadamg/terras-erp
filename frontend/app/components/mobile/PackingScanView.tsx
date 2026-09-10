@@ -206,15 +206,30 @@ export default function PackingScanView({ authFetch, initialCode, onClose }: { a
     const altFactor = orderBasePerAlt(po);
     const hasAlt = !!(altUom && altFactor);
 
-    // Box size in the counting unit; see the seed in `resolveCode`.
-    const boxSizeAlt = hasAlt ? orderBoxSizeAlt(po, altFactor) : null;
+    // Cut-to-weight order: the packer weighs the box and the count is derived
+    // from this order's sampled g/y. Same rule and same one-way conversion as the
+    // desktop pack modal — the two screens log the same document, so a basis the
+    // floor screen ignored would put a counted figure on half the cartons.
+    const weighBasis = hasAlt && String(po?.pack_basis || '').toUpperCase() === 'WEIGHED';
+    // Whole pieces: a piece is a cut length, so a carton holds an integer of them.
+    const altFromBase = (kg: number) =>
+        (altFactor && altFactor > 0 && kg > 0 ? Math.round(kg / altFactor) : 0);
+
+    // Box size in the counting unit; see the seed in `resolveCode`. A weighed
+    // order splits by kilos instead — that is what the scale is set to.
+    const boxSizeAlt = hasAlt && !weighBasis ? orderBoxSizeAlt(po, altFactor) : null;
 
     const onQtyChange = (v: string) => {
         setQty(v);
-        setBoxGroups(prev => seedBoxGroups(
-            num(v), boxSizeAlt ? 0 : num(po?.pack_size), prev,
-            hasAlt ? altFactor : null, boxSizeAlt,
-        ));
+        setBoxGroups(prev => {
+            const seeded = seedBoxGroups(
+                num(v), boxSizeAlt ? 0 : num(po?.pack_size), prev,
+                hasAlt && !weighBasis ? altFactor : null, boxSizeAlt,
+            );
+            return weighBasis
+                ? seeded.map(g => ({ ...g, alt: num(g.qty) > 0 ? String(altFromBase(num(g.qty))) : '' }))
+                : seeded;
+        });
     };
     // Counting in the alt unit: the base qty follows the count, not the reverse.
     const onQtyAltChange = (v: string) => {
@@ -246,10 +261,17 @@ export default function PackingScanView({ authFetch, initialCode, onClose }: { a
     // count that isn't there yet — on a kg item the qty ends up being the scale
     // reading, which must not turn a box of 12 pieces into 11.8.
     const setGroupAlt = (i: number, val: string) => {
+        // Weighed: the count is derived and correctable, but correcting it never
+        // rewrites the scale reading it came from.
+        if (weighBasis) { updateGroup(i, { alt: val }); return; }
         const derived = altToBase(num(val), altFactor);
         updateGroup(i, { alt: val, ...(derived !== null && num(val) > 0 ? { qty: String(derived) } : {}) });
     };
     const setGroupQty = (i: number, val: string) => {
+        if (weighBasis) {
+            updateGroup(i, { qty: val, alt: num(val) > 0 ? String(altFromBase(num(val))) : '' });
+            return;
+        }
         const backfill = hasAlt && !(num(boxGroups[i]?.alt) > 0) ? baseToAlt(num(val), altFactor) : null;
         updateGroup(i, { qty: val, ...(backfill !== null ? { alt: String(backfill) } : {}) });
     };
@@ -432,7 +454,7 @@ export default function PackingScanView({ authFetch, initialCode, onClose }: { a
                     )}
 
                     <MobilePanel icon="bi-pencil-square" title="Log packing">
-                        {hasAlt && (
+                        {hasAlt && !weighBasis && (
                             <>
                                 <label style={xpLabel}>
                                     Qty packed ({altUom})
@@ -443,6 +465,12 @@ export default function PackingScanView({ authFetch, initialCode, onClose }: { a
                                 <input type="number" min={0} style={xpInput} value={qtyAlt}
                                     onChange={e => onQtyAltChange(e.target.value)} />
                             </>
+                        )}
+                        {weighBasis && (
+                            <MobileNotice tone="blue">
+                                Weigh only — type kilos, the {altUom} count follows at
+                                1 {altUom} = {altFactor} {po.item_uom || ''}.
+                            </MobileNotice>
                         )}
                         <label style={{ ...xpLabel, marginTop: hasAlt ? 8 : 0 }}>
                             Qty packed{hasAlt ? ` (${po.item_uom || 'base'})` : ''}
@@ -490,13 +518,21 @@ export default function PackingScanView({ authFetch, initialCode, onClose }: { a
                                             style={{ ...xpInput, width: 60, textAlign: 'right', fontWeight: 'bold' }}
                                             value={g.count} onChange={e => updateGroup(i, { count: e.target.value })} />
                                         <span style={{ fontSize: 13, color: '#777' }}>×</span>
-                                        {hasAlt && (
+                                        {hasAlt && !weighBasis && (
                                             <input type="number" min={0} step="any" className="xp-nospin" style={{ ...xpInput, flex: 1, minWidth: 0 }}
                                                 placeholder={altUom} value={g.alt}
                                                 onChange={e => setGroupAlt(i, e.target.value)} />
                                         )}
-                                        <input type="number" min={0} step="any" className="xp-nospin" style={{ ...xpInput, flex: 1, minWidth: 0 }}
+                                        <input type="number" min={0} step="any" className="xp-nospin"
+                                            style={{ ...xpInput, flex: 1, minWidth: 0, ...(weighBasis ? { fontWeight: 'bold' } : {}) }}
+                                            placeholder={weighBasis ? (po.item_uom || 'kg') : undefined}
                                             value={g.qty} onChange={e => setGroupQty(i, e.target.value)} />
+                                        {hasAlt && weighBasis && (
+                                            <input type="number" min={0} step="any" className="xp-nospin"
+                                                style={{ ...xpInput, flex: 1, minWidth: 0, color: '#555', background: '#faf9f4' }}
+                                                placeholder={altUom} value={g.alt}
+                                                onChange={e => setGroupAlt(i, e.target.value)} />
+                                        )}
                                         <span style={{
                                             fontSize: 11, fontWeight: 'bold', whiteSpace: 'nowrap',
                                             color: lineTotal > 0 ? '#0a3e0a' : '#aaa',

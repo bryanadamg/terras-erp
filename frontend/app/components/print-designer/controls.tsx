@@ -131,25 +131,47 @@ export function SelectField<T extends string>({ value, options, onChange, classi
     );
 }
 
-/** Section divider inside the inspector column. */
-export function InspectorGroup({ title, classic, children, right }: {
-    title: string; classic: boolean; children: React.ReactNode; right?: React.ReactNode;
+/**
+ * Section divider inside the inspector column.
+ *
+ * `collapsible` groups start closed: they hold the properties that are correct to
+ * expose but wrong to lead with (raw CSS shorthands), and an inspector that opens on
+ * six blank CSS boxes reads as a form to fill in rather than as chrome to ignore.
+ */
+export function InspectorGroup({ title, classic, children, right, collapsible }: {
+    title: string; classic: boolean; children: React.ReactNode;
+    right?: React.ReactNode;
+    collapsible?: boolean;
 }) {
+    const [open, setOpen] = React.useState(false);
+    const shown = !collapsible || open;
     return (
         <div style={{ marginBottom: 10 }}>
-            <div style={{
-                display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-                fontFamily: classic ? xpFont : undefined,
-                fontSize: 10, fontWeight: 'bold', textTransform: 'uppercase',
-                letterSpacing: '0.4px',
-                color: classic ? '#4a4436' : '#6c757d',
-                borderBottom: classic ? '1px solid #c0bdb5' : '1px solid #dee2e6',
-                paddingBottom: 2, marginBottom: 5,
-            }}>
-                <span>{title}</span>
+            <div
+                onClick={collapsible ? () => setOpen(o => !o) : undefined}
+                style={{
+                    display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                    fontFamily: classic ? xpFont : undefined,
+                    fontSize: 10, fontWeight: 'bold', textTransform: 'uppercase',
+                    letterSpacing: '0.4px',
+                    color: classic ? '#4a4436' : '#6c757d',
+                    borderBottom: classic ? '1px solid #c0bdb5' : '1px solid #dee2e6',
+                    paddingBottom: 2, marginBottom: shown ? 5 : 0,
+                    cursor: collapsible ? 'pointer' : undefined,
+                }}
+            >
+                <span>
+                    {collapsible && (
+                        <i
+                            className={`bi ${open ? 'bi-chevron-down' : 'bi-chevron-right'}`}
+                            style={{ marginRight: 3, fontSize: 8 }}
+                        />
+                    )}
+                    {title}
+                </span>
                 {right}
             </div>
-            {children}
+            {shown && children}
         </div>
     );
 }

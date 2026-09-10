@@ -101,8 +101,9 @@ def test_no_pauses_is_zero():
 def test_elapsed_days_exclude_the_paused_window():
     """The whole point: a deprioritized WO stops accruing elapsed working days.
 
-    Run starts Mon 2nd, today is Fri 13th → 10 working days. Paused Mon 9th and
-    never resumed → 5 of those days are excluded, leaving 5.
+    Run starts Mon 2nd, today is Fri 13th → Mon 2nd..Thu 12th fully elapsed = 9
+    working days (today itself never counts). Paused Mon 9th and never resumed →
+    Mon 9th..Thu 12th are excluded, leaving 5.
     """
     run = _run(start_date="2026-03-02")
     metrics = weaving_service.compute_run_metrics(
@@ -110,7 +111,7 @@ def test_elapsed_days_exclude_the_paused_window():
         pauses=[_pause("2026-03-09")],
     )
     assert metrics["elapsed_working_days"] == 5
-    assert metrics["paused_working_days"] == 5
+    assert metrics["paused_working_days"] == 4
     # 2 lines * 5 g/min * 1440 min = 14.4 kg/day at 100%.
     assert metrics["theoretical_100_kg"] == 72.0
     assert metrics["efficiency_pct"] == 69.4  # 50 / 72
@@ -133,16 +134,59 @@ def test_efficiency_is_frozen_while_paused():
     assert first["efficiency_pct"] == later["efficiency_pct"]
 
 
-def test_unpaused_run_is_unchanged():
-    """No pauses: the numbers are exactly what they were before this feature."""
+def test_unpaused_run_counts_only_fully_elapsed_days():
+    """No pauses: Mon 2nd..Thu 12th = 9 days. Fri 13th is today, still in progress."""
     run = _run(start_date="2026-03-02")
     metrics = weaving_service.compute_run_metrics(
         run, 50.0, WEEKDAYS, [], date(2026, 3, 13))
-    assert metrics["elapsed_working_days"] == 10
+    assert metrics["elapsed_working_days"] == 9
     assert metrics["paused_working_days"] == 0
-    assert metrics["theoretical_100_kg"] == 144.0
-    assert metrics["efficiency_pct"] == 34.7  # 50 / 144
+    assert metrics["theoretical_100_kg"] == 129.6
+    assert metrics["efficiency_pct"] == 38.6  # 50 / 129.6
     assert metrics["is_paused"] is False
+
+
+def test_the_current_day_never_counts():
+    """A run started yesterday has one elapsed day, not two.
+
+    Runs are stored at date grain with no machine clock behind them, so today is an
+    unknown fraction of a day. Charging it whole is what made a loom on its first
+    day read at half its real efficiency.
+    """
+    run = _run(start_date="2026-03-11")  # Wed
+    metrics = weaving_service.compute_run_metrics(
+        run, 14.4, WEEKDAYS, [], date(2026, 3, 12))  # Thu
+    assert metrics["elapsed_working_days"] == 1
+    assert metrics["theoretical_100_kg"] == 14.4
+    assert metrics["efficiency_pct"] == 100.0
+    assert metrics["actual_daily_rate_kg"] == 14.4
+
+
+def test_a_run_on_its_first_day_reports_no_efficiency():
+    """Started today: nothing has elapsed, so there is no denominator to divide by.
+
+    None, not 0% — the loom is not failing, it has not been measured yet.
+    """
+    run = _run(start_date="2026-03-11")
+    metrics = weaving_service.compute_run_metrics(
+        run, 5.0, WEEKDAYS, [], date(2026, 3, 11))
+    assert metrics["elapsed_working_days"] == 0
+    assert metrics["efficiency_pct"] is None
+    assert metrics["actual_daily_rate_kg"] is None
+    assert metrics["on_target"] is None
+
+
+def test_a_closed_run_excludes_its_end_date():
+    """Mon 2nd → stopped Fri 6th: the stopping day was cut short at an unknown hour,
+    so it is excluded exactly like a running run's today. 4 days, not 5.
+
+    Today moving on afterwards must not change a closed run's numbers.
+    """
+    run = _run(start_date="2026-03-02", end_date="2026-03-06")
+    metrics = weaving_service.compute_run_metrics(
+        run, 50.0, WEEKDAYS, [], date(2026, 3, 20))
+    assert metrics["elapsed_working_days"] == 4
+    assert metrics["theoretical_100_kg"] == 57.6
 
 
 def test_fully_paused_run_reports_no_efficiency_rather_than_zero():
@@ -260,12 +304,12 @@ def test_at_most_one_open_pause_per_run(db_session):
 
 
 def test_resumed_run_accrues_again():
-    """Paused Mon 9th, resumed Wed 11th: only Mon+Tue lost out of the 10."""
+    """Paused Mon 9th, resumed Wed 11th: only Mon+Tue lost out of the 9 elapsed."""
     run = _run(start_date="2026-03-02")
     metrics = weaving_service.compute_run_metrics(
         run, 50.0, WEEKDAYS, [], date(2026, 3, 13),
         pauses=[_pause("2026-03-09", "2026-03-11")],
     )
-    assert metrics["elapsed_working_days"] == 8
+    assert metrics["elapsed_working_days"] == 7
     assert metrics["paused_working_days"] == 2
     assert metrics["is_paused"] is False

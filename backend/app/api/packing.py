@@ -20,6 +20,7 @@ from app.models.item import Item
 from app.models.location import Location
 from app.models.attribute import AttributeValue
 from app.models.sales import SalesOrder, SalesOrderLine
+from app.models.bom import BOMSize
 from app.models.stock_balance import StockBalance
 from app.models.routing import WorkCenter
 from app.models.uom import UOM, UOMFactor
@@ -40,7 +41,13 @@ router = APIRouter(prefix="/packing", tags=["packing"])
 def _load_options():
     return (
         selectinload(PackingOrder.sales_order),
-        selectinload(PackingOrder.sales_order_line),
+        # `bom_size -> size` rides along because the list row shows the size the
+        # order was raised for. The order itself is size-agnostic (see the model
+        # comment); this is the SO line's planned size, not a claim about what the
+        # cartons ended up stamped with.
+        selectinload(PackingOrder.sales_order_line)
+        .selectinload(SalesOrderLine.bom_size)
+        .selectinload(BOMSize.size),
         selectinload(PackingOrder.item),
         selectinload(PackingOrder.attribute_values),
         selectinload(PackingOrder.materials).selectinload(PackingOrderMaterial.item),
@@ -172,8 +179,12 @@ def _decorate(po: PackingOrder, units: list = None) -> PackingOrder:
     # a real column while decorating a response is a silent write waiting for the
     # next commit in the request, and an SO edited mid-run must not re-scale
     # cartons already minted.
+    po.size_label = None
     if po.sales_order_line:
         po.ket_stock = po.sales_order_line.ket_stock
+        bs = po.sales_order_line.bom_size
+        if bs is not None:
+            po.size_label = bs.size_name or bs.label
     # Resolved base-UOM qty per alt unit — served, not left to the client, so the
     # pack screens, the labels and this API agree on one conversion.
     po.uom2_base_factor = packing_service.order_base_per_alt(po)
@@ -376,6 +387,16 @@ def _sync_target_to_alt(po: PackingOrder, item=None) -> Optional[float]:
 # fabric width, so they are refused here rather than silently producing a figure
 # wrong by that width — the same refusal `packing_service.base_per_alt` makes.
 SAMPLE_WEIGHT_UNITS = ("g/y", "g/m")
+
+
+def _clean_basis(value: str | None) -> str:
+    """'WEIGHED' or 'COUNTED' — anything else is the counted default.
+
+    Rejecting an unknown string would fail a create over a typo in a field most
+    callers never send; the fallback is the behaviour every order had before the
+    column existed.
+    """
+    return "WEIGHED" if (value or "").strip().upper() == "WEIGHED" else "COUNTED"
 
 
 def _apply_sample_weight(po: PackingOrder, payload) -> None:
@@ -597,6 +618,7 @@ async def create_packing_order(
         pack_size=payload.pack_size,
         pack_size_alt=payload.pack_size_alt,
         package_label=payload.package_label or "Carton",
+        pack_basis=_clean_basis(payload.pack_basis),
         source_location_id=payload.source_location_id,
         output_location_id=payload.output_location_id,
         work_center_id=payload.work_center_id,
@@ -682,6 +704,9 @@ async def update_packing_order(
         raise HTTPException(status_code=400, detail=f"Cannot edit a {po.status} packing order")
 
     await _assert_work_center(db, payload.work_center_id)
+
+    if payload.pack_basis is not None:
+        po.pack_basis = _clean_basis(payload.pack_basis)
 
     for field in ("qty_target", "sales_order_id", "sales_order_line_id", "color_id",
                   "pack_size", "pack_size_alt", "package_label",

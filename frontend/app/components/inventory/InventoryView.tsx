@@ -1,21 +1,20 @@
 import React, { useState, useEffect, useMemo, memo, useRef } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import CodeConfigModal, { CodeConfig, buildCodeWithCounter } from '../shared/CodeConfigModal';
-import BulkImportModal from './BulkImportModal';
-import { layoutRectOf, layoutViewport } from '../shared/uiScale';
-import HistoryPane from '../shared/HistoryPane';
 import ModalWrapper from '../shared/ModalWrapper';
 import Pager from '../shared/Pager';
 import { useToast } from '../shared/Toast';
 import { useLanguage } from '../../context/LanguageContext';
 import { useTheme } from '../../context/ThemeContext';
+import { useTimezone } from '../../context/TimezoneContext';
 import { useData } from '../../context/DataContext';
 import { useUser } from '../../context/UserContext';
-import { XPEmptyState, TableSkeleton, useTableSkeletonMetrics, useSortable, FormSection, FieldLabel, StatusChip, CodeChip, xpFont, rowStateBg, CHIP_RADIUS, xpInput as xpInputBase, xpBtn as xpBtnBase, BTN_TONES, XP_BTN } from '../shared/xpTheme';
+import { API_BASE } from '../shared/apiBase';
+import { XPEmptyState, ExpandedRowPanel, CODE_FONT, TableSkeleton, useTableSkeletonMetrics, useSortable, MenuTriggerButton, FloatingMenu, useFloatingMenu, FormSection, FieldLabel, StatusChip, CodeChip, xpFont, rowStateBg, CHIP_RADIUS, xpInput as xpInputBase, xpBtn as xpBtnBase, BTN_TONES, XP_BTN } from '../shared/xpTheme';
 import { xpBevel as sharedXpBevel, xpTitleBar as sharedXpTitleBar, xpToolbar as sharedXpToolbar, SearchField, ToolbarButton, pageFillStyle } from '../shared/shellTheme';
 import TreeSelect, { buildCategoryTree, buildLocationPickerTree } from '../shared/TreeSelect';
 import { Tabs, TabDef } from '../shared/Tabs';
-import { lvThead, useRowSelection, RowCheckbox, SelectAllCheckbox, LV_CHECK_COL_W, SortableTh, lvThSticky, lvTdRuled, lvZebra, Dash } from '../shared/listViewTheme';
+import { lvThead, useRowSelection, RowCheckbox, SelectAllCheckbox, LV_CHECK_COL_W, LV_EXPANDER_COL_W, ExpanderCell, SortableTh, lvThSticky, lvTdRuled, lvZebra, lvSubTable, lvSubTh, lvSubTd, lvSubRow, Dash } from '../shared/listViewTheme';
 
 // XP-style category badge colours derived from category name
 function getCategoryTabIcon(name: string): string {
@@ -39,110 +38,103 @@ function getCategoryXPStyle(category: string): { bg: string; border: string; col
     return { bg: '#e8e8e8', border: '#6a6a6a', color: '#222222' };
 }
 
-// Floating [...] action menu — aggregates row actions (except the always-visible
-// Event Log button). Rendered in a fixed-position overlay so table overflow
-// never clips it.
-const RowActionMenu = memo(({ items, classic }: { items: { label: string; icon: string; danger?: boolean; onClick: () => void }[]; classic: boolean }) => {
-    const [open, setOpen] = useState(false);
-    const [pos, setPos] = useState<{ top: number; right: number } | null>(null);
-    const btnRef = useRef<HTMLButtonElement>(null);
-    const menuRef = useRef<HTMLDivElement>(null);
+// Check, expander, code, name, category, UOM, source sample, type, weight, actions.
+const ITEM_COL_SPAN = 10;
 
-    useEffect(() => {
-        if (!open) return;
-        const close = () => setOpen(false);
-        const onDocMouseDown = (e: MouseEvent) => {
-            const t = e.target as Node;
-            if (btnRef.current?.contains(t) || menuRef.current?.contains(t)) return;
-            setOpen(false);
-        };
-        window.addEventListener('scroll', close, true);
-        window.addEventListener('resize', close);
-        document.addEventListener('mousedown', onDocMouseDown);
-        return () => {
-            window.removeEventListener('scroll', close, true);
-            window.removeEventListener('resize', close);
-            document.removeEventListener('mousedown', onDocMouseDown);
-        };
-    }, [open]);
+// Item event log — the expanded-row panel that replaced the fixed HistoryPane
+// sidebar. Same audit feed, read in place under the row it belongs to, so the
+// item list expands like every other list in the app.
+type ItemHistoryState = { loading: boolean; logs: any[]; error?: boolean };
 
-    const toggle = (e: React.MouseEvent) => {
-        e.stopPropagation();
-        if (open) { setOpen(false); return; }
-        // Layout px — the menu is position:fixed. See uiScale.ts.
-        const r = btnRef.current ? layoutRectOf(btnRef.current) : null;
-        if (r) setPos({ top: r.bottom + 2, right: Math.max(4, layoutViewport().width - r.right) });
-        setOpen(true);
-    };
+const ItemEventLogPanel = memo(({ state, userNameById, classic }: { state?: ItemHistoryState; userNameById: Record<string, string>; classic: boolean }) => {
+    const { formatDateTime: tzDateTime } = useTimezone();
+    const [openChanges, setOpenChanges] = useState<string | null>(null);
+    const logs = state?.logs ?? [];
 
-    if (items.length === 0) return null;
-
-    const menu = open && pos ? (
-        <div
-            ref={menuRef}
-            onMouseDown={e => e.stopPropagation()}
-            style={{
-                position: 'fixed', top: pos.top, right: pos.right, zIndex: 1200, minWidth: 130,
-                background: '#fff',
-                border: classic ? '1px solid #808080' : '1px solid #d0d0d0',
-                boxShadow: '2px 3px 8px rgba(0,0,0,0.3)',
-                borderRadius: classic ? 0 : 4,
-                padding: '2px 0',
-                fontFamily: classic ? xpFont : undefined,
-                fontSize: classic ? '11px' : '13px',
-            }}
-        >
-            {items.map(it => (
-                <button
-                    key={it.label}
-                    onClick={e => { e.stopPropagation(); setOpen(false); it.onClick(); }}
-                    style={{
-                        display: 'flex', alignItems: 'center', gap: 8, width: '100%', textAlign: 'left',
-                        background: 'none', border: 'none', cursor: 'pointer',
-                        padding: classic ? '4px 12px' : '6px 14px',
-                        color: it.danger ? '#aa0000' : '#000',
-                    }}
-                    onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background = it.danger ? '#ffe8e8' : (classic ? '#316ac5' : '#eef3fb'); if (!it.danger && classic) (e.currentTarget as HTMLButtonElement).style.color = '#fff'; }}
-                    onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = 'none'; (e.currentTarget as HTMLButtonElement).style.color = it.danger ? '#aa0000' : '#000'; }}
-                >
-                    <i className={`bi ${it.icon}`}></i>
-                    <span>{it.label}</span>
-                </button>
-            ))}
+    const caption = (
+        <div style={{ fontWeight: 'bold', color: '#555', fontSize: classic ? 9 : 11, textTransform: 'uppercase', letterSpacing: 0.3, marginBottom: 6, display: 'flex', alignItems: 'center', gap: 6 }}>
+            <i className="bi bi-journal-text" />
+            Event Log
+            {!state?.loading && logs.length > 0 && (
+                <span style={{ marginLeft: 'auto', fontWeight: 'normal', textTransform: 'none', letterSpacing: 0, color: '#888' }}>
+                    {logs.length} event{logs.length === 1 ? '' : 's'}
+                </span>
+            )}
         </div>
-    ) : null;
+    );
 
     return (
-        <>
-            <button
-                ref={btnRef}
-                title="More actions"
-                onClick={toggle}
-                style={classic
-                    ? { background: open ? '#e8f0f8' : 'none', border: '1px solid ' + (open ? '#7f9db9' : 'transparent'), borderRadius: '2px', cursor: 'pointer', padding: '3px 6px', color: '#555', fontSize: '12px' }
-                    : undefined}
-                className={classic ? '' : 'btn btn-sm btn-link text-secondary p-0'}
-                onMouseEnter={classic ? (e => { (e.currentTarget as HTMLButtonElement).style.borderColor = '#7f9db9'; (e.currentTarget as HTMLButtonElement).style.background = '#e8f0f8'; }) : undefined}
-                onMouseLeave={classic ? (e => { if (!open) { (e.currentTarget as HTMLButtonElement).style.borderColor = 'transparent'; (e.currentTarget as HTMLButtonElement).style.background = 'none'; } }) : undefined}
-            >
-                <i className="bi bi-three-dots"></i>
-            </button>
-            {menu}
-        </>
+        <ExpandedRowPanel classic={classic} style={{ padding: classic ? '8px 10px' : '10px 14px', whiteSpace: 'normal' }}>
+            {caption}
+            {state?.loading ? (
+                <div style={{ color: '#888', padding: 6, fontFamily: classic ? xpFont : undefined, fontSize: classic ? 11 : 13 }}>Loading events…</div>
+            ) : state?.error ? (
+                <div style={{ color: '#8b0000', padding: 6, fontFamily: classic ? xpFont : undefined, fontSize: classic ? 11 : 13 }}>Could not load the event log.</div>
+            ) : logs.length === 0 ? (
+                <div style={{ color: '#888', padding: 6, fontFamily: classic ? xpFont : undefined, fontSize: classic ? 11 : 13, fontStyle: 'italic' }}>No events recorded for this item.</div>
+            ) : (
+                <table style={lvSubTable(classic)}>
+                    <thead>
+                        <tr>
+                            <th style={{ ...lvSubTh(classic, true), width: 150 }}>Date / Time</th>
+                            <th style={{ ...lvSubTh(classic, true), width: 130 }}>Action</th>
+                            <th style={{ ...lvSubTh(classic, true), width: 140 }}>Performed by</th>
+                            <th style={lvSubTh(classic, true)}>Description</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {logs.map((log: any, i: number) => {
+                            const open = openChanges === log.id;
+                            const hasChanges = log.changes && Object.keys(log.changes).length > 0;
+                            return (
+                                <React.Fragment key={log.id}>
+                                    <tr
+                                        style={{ ...lvSubRow(classic, i, { zebra: true }), cursor: hasChanges ? 'pointer' : 'default' }}
+                                        onClick={() => hasChanges && setOpenChanges(open ? null : log.id)}
+                                    >
+                                        <td style={{ ...lvSubTd(classic, true), whiteSpace: 'nowrap' }}>{tzDateTime(log.timestamp)}</td>
+                                        <td style={lvSubTd(classic, true)}>
+                                            <StatusChip status={log.action} title={String(log.action || '').replace(/_/g, ' ')} />
+                                        </td>
+                                        <td style={lvSubTd(classic, true)} title={log.user_id || undefined}>
+                                            {userNameById[log.user_id] || (log.user_id ? `User ${String(log.user_id).split('-')[0]}` : 'System')}
+                                        </td>
+                                        <td style={lvSubTd(classic, true)}>
+                                            {log.details || 'System activity'}
+                                            {hasChanges && <i className={`bi bi-chevron-${open ? 'up' : 'down'}`} style={{ marginLeft: 6, fontSize: 9, color: classic ? '#0058e6' : '#64748b' }} />}
+                                        </td>
+                                    </tr>
+                                    {open && hasChanges && (
+                                        <tr>
+                                            <td colSpan={4} style={{ padding: classic ? '4px 8px 6px' : '6px 12px 8px' }}>
+                                                <pre style={{
+                                                    margin: 0, fontFamily: CODE_FONT, fontSize: 10, background: '#fff',
+                                                    border: classic ? '1px solid #7f9db9' : '1px solid #dbe1ea',
+                                                    boxShadow: classic ? 'inset 1px 1px 0 rgba(0,0,0,0.1)' : undefined,
+                                                    padding: '4px 6px', maxHeight: 160, overflow: 'auto',
+                                                }}>{JSON.stringify(log.changes, null, 2)}</pre>
+                                            </td>
+                                        </tr>
+                                    )}
+                                </React.Fragment>
+                            );
+                        })}
+                    </tbody>
+                </table>
+            )}
+        </ExpandedRowPanel>
     );
 });
-RowActionMenu.displayName = 'RowActionMenu';
+ItemEventLogPanel.displayName = 'ItemEventLogPanel';
 
 // Memoized Row Component
-const InventoryRow = memo(({ item, rowIndex, isEditing, isSelected, onToggleSelect, onEdit, onDelete, onViewHistory, classic }: any) => {
-    const { hasPermission, hasAnyPermission } = useUser();
-    const canManage = hasAnyPermission('item.create', 'item.edit');
-    const canDelete = hasPermission('item.delete');
+const InventoryRow = memo(({ item, rowIndex, isEditing, isSelected, isExpanded, onToggleSelect, onToggleExpand, onMenu, historyState, userNameById, classic }: any) => {
     // Selected and being-edited are the two shared row states — same fills as
     // every other list (see rowStateBg). This row used to invert to XP selection
     // blue with white text, which meant re-colouring the code chip, the category
     // chip and every link inside it.
     const rowBg = isSelected ? rowStateBg('selected', classic)
+        : isExpanded ? rowStateBg('expanded', classic)
         : isEditing ? rowStateBg('highlighted', classic)
         : classic ? lvZebra(true, rowIndex) : undefined;
 
@@ -152,12 +144,25 @@ const InventoryRow = memo(({ item, rowIndex, isEditing, isSelected, onToggleSele
     const catStyle = classic ? getCategoryXPStyle(categoryDisplay) : null;
 
     return (
+        <>
         <tr
-            style={{ background: rowBg, ...(classic ? { borderBottom: '1px solid #c0bdb5' } : {}) }}
+            style={{ background: rowBg, cursor: 'pointer', ...(classic ? { borderBottom: '1px solid #c0bdb5' } : {}) }}
+            onClick={() => onToggleExpand(item)}
         >
-            <td style={classic ? { ...tdBase, width: LV_CHECK_COL_W, textAlign: 'center' } : { width: LV_CHECK_COL_W }} className={classic ? '' : 'ps-3'}>
+            <td
+                style={classic ? { ...tdBase, width: LV_CHECK_COL_W, textAlign: 'center' } : { width: LV_CHECK_COL_W }}
+                className={classic ? '' : 'ps-3'}
+                onClick={e => e.stopPropagation()}
+            >
                 <RowCheckbox classic={classic} checked={isSelected} onChange={() => onToggleSelect(item.id)} label={item.code} />
             </td>
+            <ExpanderCell
+                classic={classic}
+                expanded={!!isExpanded}
+                onToggle={() => onToggleExpand(item)}
+                label="event log"
+                tdStyle={classic ? tdBase : undefined}
+            />
             <td style={classic ? { ...tdBase, width: '110px' } : undefined} className={classic ? '' : 'ps-4'}>
                 <CodeChip code={item.code} classic={classic} />
             </td>
@@ -235,44 +240,23 @@ const InventoryRow = memo(({ item, rowIndex, isEditing, isSelected, onToggleSele
                     <Dash classic={classic} />
                 )}
             </td>
-            <td style={classic ? { ...tdBase, borderRight: 'none', textAlign: 'right' } : undefined}>
-                <div className={classic ? '' : 'd-flex gap-1'} style={classic ? { display: 'flex', gap: '2px', justifyContent: 'flex-end' } : undefined}>
-                    {classic ? (
-                        <>
-                            <button
-                                title="View History"
-                                onClick={() => onViewHistory(item.id)}
-                                style={{ background: 'none', border: '1px solid transparent', borderRadius: '2px', cursor: 'pointer', padding: '3px 6px', color: '#555', fontSize: '12px' }}
-                                onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.borderColor = '#7f9db9'; (e.currentTarget as HTMLButtonElement).style.background = '#e8f0f8'; }}
-                                onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.borderColor = 'transparent'; (e.currentTarget as HTMLButtonElement).style.background = 'none'; }}
-                            >
-                                <i className="bi bi-clock-history"></i>
-                            </button>
-                            <RowActionMenu
-                                classic={classic}
-                                items={[
-                                    ...(canManage ? [{ label: 'Edit', icon: 'bi-pencil-square', onClick: () => onEdit(item) }] : []),
-                                    ...(canDelete ? [{ label: 'Delete', icon: 'bi-trash', danger: true, onClick: () => onDelete(item.id) }] : []),
-                                ]}
-                            />
-                        </>
-                    ) : (
-                        <>
-                            <button className="btn btn-sm btn-link text-info p-0" title="View History" onClick={() => onViewHistory(item.id)}>
-                                <i className="bi bi-clock-history"></i>
-                            </button>
-                            <RowActionMenu
-                                classic={classic}
-                                items={[
-                                    ...(canManage ? [{ label: 'Edit', icon: 'bi-pencil-square', onClick: () => onEdit(item) }] : []),
-                                    ...(canDelete ? [{ label: 'Delete', icon: 'bi-trash', danger: true, onClick: () => onDelete(item.id) }] : []),
-                                ]}
-                            />
-                        </>
-                    )}
+            <td
+                style={classic ? { ...tdBase, borderRight: 'none', textAlign: 'right' } : undefined}
+                onClick={e => e.stopPropagation()}
+            >
+                <div className={classic ? '' : 'd-flex gap-1 justify-content-end'} style={classic ? { display: 'flex', gap: '2px', justifyContent: 'flex-end' } : undefined}>
+                    <MenuTriggerButton classic={classic} onClick={e => onMenu(String(item.id), e)} />
                 </div>
             </td>
         </tr>
+        {isExpanded && (
+            <tr>
+                <td colSpan={ITEM_COL_SPAN} style={{ padding: 0 }}>
+                    <ItemEventLogPanel state={historyState} userNameById={userNameById} classic={classic} />
+                </td>
+            </tr>
+        )}
+        </>
     );
 });
 
@@ -306,13 +290,28 @@ export default function InventoryView({
   const searchParams = useSearchParams();
   const router = useRouter();
 
-  const { categories, locations, loading: dataLoading, filters: { categoryL1, setCategoryL1, categoryL2, setCategoryL2, categoryL3, setCategoryL3, itemSearch, setItemSearch } } = useData();
-  const { hasPermission, hasAnyPermission } = useUser();
+  const { authFetch, categories, locations, loading: dataLoading, filters: { categoryL1, setCategoryL1, categoryL2, setCategoryL2, categoryL3, setCategoryL3, itemSearch, setItemSearch } } = useData();
+  const { hasPermission, hasAnyPermission, users, refreshUsers } = useUser();
   const canManage = hasAnyPermission('item.create', 'item.edit');
   const canDelete = hasPermission('item.delete');
+  const canImport = hasPermission('item.import');
+  const { openId: openMenuId, pos: menuPos, toggle: toggleMenu, close: closeMenu } = useFloatingMenu();
   // UI State
   const [isCreateOpen, setIsCreateOpen] = useState(false);
-  const [isImportOpen, setIsImportOpen] = useState(false);
+  // Import is modeless: the toolbar button opens the OS file picker straight
+  // away and the upload starts on pick, so the only UI it owns is the result
+  // strip above the table. The old BulkImportModal was a dialog that did
+  // nothing but hold a file input and echo the same result.
+  // Row expansion carries the item's audit trail, fetched lazily on open and
+  // cached per item — the list itself never loads it.
+  const [expandedItemId, setExpandedItemId] = useState<string | null>(null);
+  const [itemHistory, setItemHistory] = useState<Record<string, ItemHistoryState>>({});
+  const userNameById = useMemo(() => Object.fromEntries(
+      (users || []).map((u: any) => [u.id, u.full_name || u.username])
+  ), [users]);
+  const importInputRef = useRef<HTMLInputElement>(null);
+  const [importing, setImporting] = useState(false);
+  const [importResult, setImportResult] = useState<{ status?: string; imported?: number; errors?: string[] } | null>(null);
   const { uiStyle: currentStyle } = useTheme();
 
   // Config State
@@ -340,7 +339,6 @@ export default function InventoryView({
 
   // Editing State
   const [editingItem, setEditingItem] = useState<any>(null);
-  const [historyEntityId, setHistoryEntityId] = useState<string | null>(null);
 
   const [newCategoryName, setNewCategoryName] = useState('');
   const [showCatInput, setShowCatInput] = useState(false);
@@ -653,6 +651,46 @@ export default function InventoryView({
       }
   };
 
+  const toggleItemRow = (item: any) => {
+      const id = String(item.id);
+      if (expandedItemId === id) { setExpandedItemId(null); return; }
+      setExpandedItemId(id);
+      // Names for the "Performed by" column arrive with the users master list,
+      // which the items page has no other reason to load.
+      if (!users || users.length === 0) refreshUsers();
+      const cached = itemHistory[id];
+      if (cached && !cached.error) return;
+      setItemHistory(prev => ({ ...prev, [id]: { loading: true, logs: [] } }));
+      (async () => {
+          try {
+              const res = await authFetch(`${API_BASE}/audit-logs?entity_type=Item&entity_id=${id}&limit=50`);
+              if (!res.ok) throw new Error('failed');
+              const data = await res.json();
+              setItemHistory(prev => ({ ...prev, [id]: { loading: false, logs: data.items || [] } }));
+          } catch {
+              setItemHistory(prev => ({ ...prev, [id]: { loading: false, logs: [], error: true } }));
+          }
+      })();
+  };
+
+  const handleImportPick = async (e: React.ChangeEvent<HTMLInputElement>) => {
+      const file = e.target.files?.[0];
+      // Cleared straight away so re-picking the same file still fires `change`.
+      e.target.value = '';
+      if (!file) return;
+      setImportResult(null);
+      setImporting(true);
+      try {
+          const res = await onImportItems?.(file);
+          setImportResult(res ?? { status: 'error', errors: ['Import is not available.'] });
+          if (res?.imported) onRefresh?.();
+      } catch {
+          setImportResult({ status: 'error', errors: ['Upload failed.'] });
+      } finally {
+          setImporting(false);
+      }
+  };
+
   const handleEdit = (item: any) => {
       setEditingItem({...item, attribute_ids: item.attribute_ids || [], packaging_factor_ids: (item.packaging_factor_ids || []).map(String)});
   };
@@ -741,14 +779,6 @@ export default function InventoryView({
            onSave={handleSaveConfig}
            initialConfig={codeConfig}
            attributes={attributes}
-       />
-
-       <BulkImportModal
-           isOpen={isImportOpen}
-           onClose={() => setIsImportOpen(false)}
-           onImport={onImportItems}
-           onDownloadTemplate={onDownloadTemplate}
-           title="Bulk Import Items"
        />
 
       {/* Create Modal */}
@@ -1232,10 +1262,31 @@ export default function InventoryView({
                   </div>
                   </>
                   )}
-                  {canManage && (
+                  {(canManage || canImport) && (
                   <div className={forcedCategory ? 'col-md-7 d-flex justify-content-end gap-2' : 'col-md-3 d-flex justify-content-end gap-2'}>
-                      <ToolbarButton classic={false} tone="neutral" icon="bi-upload" onClick={() => setIsImportOpen(true)}>Import</ToolbarButton>
-                      <ToolbarButton classic={false} tone="create" icon="bi-plus-lg" testId="create-item-btn" onClick={openCreateModal}>{t('create')}</ToolbarButton>
+                      {canImport && (
+                      <div style={{ display: 'flex' }}>
+                          <ToolbarButton
+                              classic={false}
+                              tone="neutral"
+                              icon={importing ? 'bi-hourglass-split' : 'bi-upload'}
+                              disabled={importing}
+                              onClick={() => importInputRef.current?.click()}
+                              style={{ borderTopRightRadius: 0, borderBottomRightRadius: 0 }}
+                          >{importing ? 'Importing…' : 'Import'}</ToolbarButton>
+                          <span className="xp-menu-trigger" style={{ display: 'inline-flex', marginLeft: -1 }}>
+                              <ToolbarButton
+                                  classic={false}
+                                  tone="neutral"
+                                  icon="bi-caret-down-fill"
+                                  title="Import options"
+                                  onClick={e => toggleMenu('import', e)}
+                                  style={{ borderTopLeftRadius: 0, borderBottomLeftRadius: 0, paddingLeft: 6, paddingRight: 2 }}
+                              >{null}</ToolbarButton>
+                          </span>
+                      </div>
+                  )}
+                      {canManage && <ToolbarButton classic={false} tone="create" icon="bi-plus-lg" testId="create-item-btn" onClick={openCreateModal}>{t('create')}</ToolbarButton>}
                   </div>
                   )}
               </div>
@@ -1270,14 +1321,71 @@ export default function InventoryView({
               <div style={{ marginLeft: 'auto', fontFamily: xpFont, fontSize: '10px', color: '#555555' }}>
                 {filteredItems.length} item{filteredItems.length !== 1 ? 's' : ''} on page
               </div>
-              {canManage && (
+              {(canManage || canImport) && (
                 <div style={{ display: 'flex', gap: 4 }}>
-                  <ToolbarButton classic tone="neutral" icon="bi-upload" onClick={() => setIsImportOpen(true)}>Import</ToolbarButton>
-                  <ToolbarButton classic tone="create" icon="bi-plus-lg" testId="create-item-btn" onClick={openCreateModal}>{t('create')}</ToolbarButton>
+                  {canImport && (
+                      <div style={{ display: 'flex' }}>
+                          <ToolbarButton
+                              classic
+                              tone="neutral"
+                              icon={importing ? 'bi-hourglass-split' : 'bi-upload'}
+                              disabled={importing}
+                              onClick={() => importInputRef.current?.click()}
+                              style={{ borderTopRightRadius: 0, borderBottomRightRadius: 0 }}
+                          >{importing ? 'Importing…' : 'Import'}</ToolbarButton>
+                          <span className="xp-menu-trigger" style={{ display: 'inline-flex', marginLeft: -1 }}>
+                              <ToolbarButton
+                                  classic
+                                  tone="neutral"
+                                  icon="bi-caret-down-fill"
+                                  title="Import options"
+                                  onClick={e => toggleMenu('import', e)}
+                                  style={{ borderTopLeftRadius: 0, borderBottomLeftRadius: 0, paddingLeft: 6, paddingRight: 2 }}
+                              >{null}</ToolbarButton>
+                          </span>
+                      </div>
+                  )}
+                  {canManage && <ToolbarButton classic tone="create" icon="bi-plus-lg" testId="create-item-btn" onClick={openCreateModal}>{t('create')}</ToolbarButton>}
                 </div>
               )}
             </div>
           )}
+
+          {/* ── Import result strip (the modeless import's only output) ── */}
+          {importResult && (() => {
+              const errs = importResult.errors || [];
+              const tone = importResult.status === 'success' ? { bg: '#e8f5e9', border: '#2e7d32', fg: '#1b4620', icon: 'bi-check-circle-fill' }
+                  : importResult.status === 'partial_success' ? { bg: '#fffbe6', border: '#c77800', fg: '#4a3000', icon: 'bi-exclamation-triangle-fill' }
+                  : { bg: '#fdecea', border: '#b71c1c', fg: '#6b0000', icon: 'bi-x-octagon-fill' };
+              const headline = importResult.status === 'success'
+                  ? `${importResult.imported ?? 0} item${importResult.imported === 1 ? '' : 's'} imported.`
+                  : importResult.status === 'partial_success'
+                      ? `${importResult.imported ?? 0} imported, ${errs.length} row${errs.length === 1 ? '' : 's'} failed.`
+                      : 'Import failed.';
+              return (
+                  <div style={{
+                      background: tone.bg, borderTop: `1px solid ${tone.border}`, borderBottom: `1px solid ${tone.border}`,
+                      borderLeft: `4px solid ${tone.border}`, color: tone.fg,
+                      padding: '6px 10px', fontFamily: classic ? xpFont : undefined, fontSize: classic ? 11 : 13,
+                  }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                          <i className={`bi ${tone.icon}`}></i>
+                          <span style={{ fontWeight: 'bold' }}>{headline}</span>
+                          <button
+                              type="button"
+                              title="Dismiss"
+                              onClick={() => setImportResult(null)}
+                              style={{ marginLeft: 'auto', background: 'none', border: 'none', cursor: 'pointer', color: tone.fg, padding: 0, lineHeight: 1 }}
+                          ><i className="bi bi-x-lg"></i></button>
+                      </div>
+                      {errs.length > 0 && (
+                          <ul style={{ margin: '4px 0 0', paddingLeft: 24, maxHeight: 120, overflowY: 'auto' }}>
+                              {errs.map((err: string, i: number) => <li key={i}>{err}</li>)}
+                          </ul>
+                      )}
+                  </div>
+              );
+          })()}
 
           {/* ── Table ── */}
           <div className={classic ? '' : 'card-body p-0'} style={{ flex: 1, overflowY: 'auto', minHeight: 0 }}>
@@ -1301,6 +1409,7 @@ export default function InventoryView({
                     <th style={classic ? { ...xpThCell, width: LV_CHECK_COL_W, textAlign: 'center' } : { width: LV_CHECK_COL_W }} className={classic ? '' : 'ps-3'}>
                         <SelectAllCheckbox classic={classic} allSelected={sel.allPageSelected} someSelected={sel.someSelected} onChange={sel.togglePage} />
                     </th>
+                    <th style={classic ? { ...xpThCell, width: LV_EXPANDER_COL_W } : { width: LV_EXPANDER_COL_W }}></th>
                     <SortableTh sort={sort} colKey="code" onSort={toggleSort} style={classic ? { ...xpThCell, width: '110px' } : {}} className={classic ? '' : 'ps-4'}>{t('item_code')}</SortableTh>
                     <SortableTh sort={sort} colKey="name" onSort={toggleSort} style={classic ? { ...xpThCell } : {}}>{t('item_name')}</SortableTh>
                     <SortableTh sort={sort} colKey="category" onSort={toggleSort} style={classic ? { ...xpThCell, width: '110px' } : {}}>{t('categories')}</SortableTh>
@@ -1319,20 +1428,22 @@ export default function InventoryView({
                         rowIndex={idx}
                         isEditing={editingItem?.id === item.id}
                         isSelected={sel.isSelectedKey(item.id)}
+                        isExpanded={expandedItemId === String(item.id)}
                         onToggleSelect={sel.toggleKey}
-                        onEdit={handleEdit}
-                        onDelete={onDeleteItem}
-                        onViewHistory={setHistoryEntityId}
+                        onToggleExpand={toggleItemRow}
+                        onMenu={toggleMenu}
+                        historyState={expandedItemId === String(item.id) ? itemHistory[String(item.id)] : undefined}
+                        userNameById={userNameById}
                         classic={classic}
                     />
                   ))}
                   {filteredItems.length === 0 && dataLoading.items && (
-                    <TableSkeleton rows={8} cols={skel.cols ?? 9} classic={classic} rowHeight={skel.rowHeight} fillHeight={skel.fillHeight} />
+                    <TableSkeleton rows={8} cols={skel.cols ?? ITEM_COL_SPAN} classic={classic} rowHeight={skel.rowHeight} fillHeight={skel.fillHeight} />
                   )}
                   {filteredItems.length === 0 && !dataLoading.items && (
                     <tr>
                       <td
-                        colSpan={9}
+                        colSpan={ITEM_COL_SPAN}
                         style={classic ? { padding: 0, background: '#ffffff' } : undefined}
                         className={classic ? '' : 'text-center text-muted py-5'}
                       >
@@ -1664,13 +1775,37 @@ export default function InventoryView({
           )}
       </ModalWrapper>
 
-      {historyEntityId && (
-          <HistoryPane
-              entityType="Item"
-              entityId={historyEntityId}
-              onClose={() => setHistoryEntityId(null)}
+      <input
+          type="file"
+          accept=".csv"
+          hidden
+          ref={importInputRef}
+          onChange={handleImportPick}
+      />
+
+      {openMenuId === 'import' && (
+          <FloatingMenu
+              pos={menuPos}
+              items={[
+                  { key: 'template', label: 'Download Template', icon: 'bi-download', onClick: () => { closeMenu(); onDownloadTemplate?.(); } },
+              ]}
           />
       )}
+
+      {openMenuId && openMenuId !== 'import' && (() => {
+          const menuItem = sortedItems.find((i: any) => String(i.id) === openMenuId);
+          if (!menuItem) return null;
+          return (
+              <FloatingMenu
+                  pos={menuPos}
+                  items={[
+                      { key: 'edit', label: 'Edit', icon: 'bi-pencil-square', hidden: !canManage, onClick: () => { closeMenu(); handleEdit(menuItem); } },
+                      { key: 'delete', label: 'Delete', icon: 'bi-trash', danger: true, hidden: !canDelete, onClick: () => { closeMenu(); onDeleteItem(menuItem.id); } },
+                  ]}
+              />
+          );
+      })()}
+
     </div>
   );
 }

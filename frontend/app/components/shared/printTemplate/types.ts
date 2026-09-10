@@ -203,6 +203,9 @@ export type Band =
     | SignatureBand
     | SpacerBand;
 
+/** The discriminator on its own — for menus and factories over band types. */
+export type BandType = Band['type'];
+
 export type PaperSize = 'A4' | 'A5' | 'A6' | 'custom';
 
 export interface PaperSpec {

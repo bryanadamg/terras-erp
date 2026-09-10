@@ -6,33 +6,38 @@ import { useTheme } from '../../context/ThemeContext';
 import { useTimezone } from '../../context/TimezoneContext';
 import { useToast } from '../shared/Toast';
 import { useConfirm } from '../../context/ConfirmContext';
-import { ShellWindow, ShellTitleBar, xpToolbar } from '../shared/shellTheme';
-import { PanelSkeleton, xpFont, CHIP_RADIUS } from '../shared/xpTheme';
+import { ShellWindow, ShellTitleBar, xpToolbar, ToolbarButton } from '../shared/shellTheme';
+import {
+    PanelSkeleton, XPActionButton, Chip, familyTint, xpFont,
+    useFloatingMenu, FloatingMenu,
+} from '../shared/xpTheme';
 
 import TemplateRenderer from '../shared/printTemplate/TemplateRenderer';
 import { buildPrintContext } from '../shared/printTemplate/renderContext';
 import { fetchDyeingPrintData, isDyeingWorkOrder, type DyeingPrintData } from '../shared/printTemplate/dyeingPrintData';
-import type { PrintLayout, Band } from '../shared/printTemplate/types';
+import type { PrintLayout, Band, BandType } from '../shared/printTemplate/types';
 import { DOC_TYPE_LABELS, EDITABLE_DOC_TYPES, defaultLayout, resolveLayout, isCustomised } from '../shared/printTemplate/templateStore';
 import { docTypeForWorkCenter } from '../shared/printTemplate/defaults/kartuKerja';
 import { paperDimsMm, paperSizeLabel } from '../shared/printTemplate/paper';
+import { describeBand, bandTypeLabel } from '../shared/printTemplate/bandLabel';
+import { ADDABLE_BAND_TYPES, newBand, duplicateBand, appendField } from '../shared/printTemplate/bandOps';
 import InspectorPanel, { type Selection } from './InspectorPanel';
 import DesignerCanvas from './DesignerCanvas';
+import DesignerTestPrint from './DesignerTestPrint';
+import FieldPalette from './FieldPalette';
 import { SelectField } from './controls';
 
 const API_BASE = (process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:8000/api')
     .replace(/\/api$/, '') + '/api';
 
-const BAND_TYPE_LABEL: Record<string, string> = {
-    grid: 'Grid',
-    keyvalue: 'Label / value',
-    table: 'Data table',
-    tally: 'Hand fill-in',
-    signature: 'Signatures',
-    spacer: 'Spacer',
-};
-
 const clone = (l: PrintLayout): PrintLayout => JSON.parse(JSON.stringify(l));
+
+/** CSS pixels per millimetre at 96dpi — the sheet is quoted in mm, Fit works in px. */
+const MM_PX = 96 / 25.4;
+
+const ZOOM_STEPS = [0.5, 0.75, 1, 1.25, 1.5, 2, 3];
+const ZOOM_MIN = ZOOM_STEPS[0];
+const ZOOM_MAX = ZOOM_STEPS[ZOOM_STEPS.length - 1];
 
 /** Selection <-> the "bandId:itemIndex:stackIndex" id strings TemplateRenderer's
  *  click-to-select emits (DesignerCanvas's drag handles pass Selection objects
@@ -71,6 +76,22 @@ export default function PrintDesignerView() {
     const [saving, setSaving] = useState(false);
     const [selection, setSelection] = useState<Selection>({ bandId: null });
     const paperRef = useRef<HTMLDivElement>(null);
+    const canvasPaneRef = useRef<HTMLDivElement>(null);
+
+    // Which section the pointer is over, whether that pointer is on the paper or on
+    // the section list — one piece of state so both surfaces highlight together and
+    // the list stops being a column of unplaceable names.
+    const [hoverBandId, setHoverBandId] = useState<string | null>(null);
+
+    // View scale for the sheet. An A6 card at true size is ~10px per field, which is
+    // readable but not editable; the drag layer divides by this (see DesignerCanvas).
+    const [zoom, setZoom] = useState(1);
+    const [alwaysHandles, setAlwaysHandles] = useState(false);
+    const [testPrinting, setTestPrinting] = useState(false);
+
+    // "Add section" type picker. Shared menu primitive, so it closes on outside
+    // click/scroll like every other ⋯ menu in the app.
+    const addMenu = useFloatingMenu(190);
 
     // Sample work orders, grouped by the doc type they would print with, so the
     // preview always shows real content for the layout being edited.
@@ -297,6 +318,56 @@ export default function PrintDesignerView() {
         update(next);
     };
 
+    /** Insert a new section after the selected one, or at the end. */
+    const addBand = (type: BandType) => {
+        if (!draft) return;
+        const next = clone(draft);
+        const at = next.bands.findIndex(b => b.id === selection.bandId);
+        const band = newBand(type, docType);
+        next.bands.splice(at < 0 ? next.bands.length : at + 1, 0, band);
+        update(next);
+        setSelection({ bandId: band.id });
+    };
+
+    const duplicateSelectedBand = () => {
+        if (!draft || !selection.bandId) return;
+        const at = draft.bands.findIndex(b => b.id === selection.bandId);
+        if (at < 0) return;
+        const next = clone(draft);
+        const copy = duplicateBand(next.bands[at]);
+        next.bands.splice(at + 1, 0, copy);
+        update(next);
+        setSelection({ bandId: copy.id });
+    };
+
+    /**
+     * Delete the selected section. No confirm: Ctrl+Z and Revert both cover it, and
+     * the inspector already removes cells, rows and columns the same way. Selection
+     * moves to the neighbour so the inspector is never left pointing at nothing.
+     */
+    const deleteSelectedBand = () => {
+        if (!draft || !selection.bandId) return;
+        const at = draft.bands.findIndex(b => b.id === selection.bandId);
+        if (at < 0) return;
+        const next = clone(draft);
+        next.bands.splice(at, 1);
+        update(next);
+        const neighbour = next.bands[at] || next.bands[at - 1];
+        setSelection({ bandId: neighbour ? neighbour.id : null });
+    };
+
+    /** Place a palette field into the selected section. */
+    const placeField = (fieldKey: string) => {
+        if (!draft || !selection.bandId) return;
+        const at = draft.bands.findIndex(b => b.id === selection.bandId);
+        if (at < 0) return;
+        const next = clone(draft);
+        const index = appendField(next.bands[at], fieldKey);
+        if (index == null) return;
+        update(next);
+        setSelection({ bandId: next.bands[at].id, itemIndex: index });
+    };
+
     if (!draft) {
         return (
             <ShellWindow classic={classic}>
@@ -308,43 +379,52 @@ export default function PrintDesignerView() {
 
     const { widthMm: paperW, heightMm: paperH } = paperDimsMm(draft.paper);
 
+    const selectedBand = draft.bands.find(b => b.id === selection.bandId) || null;
+
+    const stepZoom = (dir: 1 | -1) => {
+        const i = ZOOM_STEPS.findIndex(z => z >= zoom - 0.001);
+        const next = ZOOM_STEPS[Math.min(ZOOM_STEPS.length - 1, Math.max(0, (i < 0 ? ZOOM_STEPS.length - 1 : i) + dir))];
+        setZoom(next);
+    };
+
+    /**
+     * Scale the sheet to the pane. Both sides are measured in *screen* pixels:
+     * `getBoundingClientRect` on the (app-scaled) pane already reports them, and the
+     * sheet is `ui-scale-exempt`, so its millimetres are true 96dpi CSS pixels.
+     */
+    const fitZoom = () => {
+        const pane = canvasPaneRef.current?.getBoundingClientRect();
+        if (!pane) return;
+        const padding = 40;   // the pane's own padding, both sides
+        const caption = 22;   // the paper-size caption above the sheet
+        const zw = (pane.width - padding) / (paperW * MM_PX);
+        const zh = (pane.height - padding - caption) / (paperH * MM_PX);
+        const z = Math.min(zw, zh);
+        if (!Number.isFinite(z) || z <= 0) return;
+        setZoom(Math.max(ZOOM_MIN, Math.min(ZOOM_MAX, Math.round(z * 100) / 100)));
+    };
+
     const customised = isCustomised(docType, printTemplates);
 
     const paneBg = classic ? '#ece9d8' : '#f8f9fa';
     const paneBorder = classic ? '1px solid #b0a898' : '1px solid #dee2e6';
 
-    const btn = (label: string, onClick: () => void, opts: { tone?: 'green' | 'grey' | 'red'; disabled?: boolean; icon?: string } = {}) => {
-        const { tone = 'grey', disabled, icon } = opts;
-        const bg = classic
-            ? (tone === 'green' ? 'linear-gradient(to bottom,#5ec85e,#2d7a2d)'
-                : tone === 'red' ? 'linear-gradient(to bottom,#e88,#a33)'
-                    : 'linear-gradient(to bottom,#fff,#d4d0c8)')
-            : undefined;
-        const cls = classic ? undefined
-            : `btn btn-sm ${tone === 'green' ? 'btn-success' : tone === 'red' ? 'btn-outline-danger' : 'btn-secondary'}`;
-        return (
-            <button
-                onClick={onClick}
-                disabled={disabled}
-                className={cls}
-                style={classic ? {
-                    fontFamily: xpFont, fontSize: 11, padding: '3px 12px', borderRadius: 0,
-                    background: bg, border: '1px solid',
-                    borderColor: tone === 'green' ? '#1a5e1a #0a3e0a #0a3e0a #1a5e1a' : '#dfdfdf #808080 #808080 #dfdfdf',
-                    color: tone === 'green' ? '#fff' : '#000',
-                    fontWeight: tone === 'green' ? 'bold' : 'normal',
-                    cursor: disabled ? 'default' : 'pointer', opacity: disabled ? 0.5 : 1,
-                } : undefined}
-            >
-                {icon && <i className={`bi ${icon}`} style={{ marginRight: 4 }} />}{label}
-            </button>
-        );
-    };
+    // Header and zoom-strip actions come from the shared primitives — this view used
+    // to hand-roll both, which is how it ended up with `borderRadius: 0` buttons next
+    // to the app's BUTTON_RADIUS ones and a modern `btn-secondary` where every other
+    // toolbar uses an outline.
+    //
+    // ToolbarButton for the header: labeled document actions, the same vocabulary as
+    // every list toolbar ("create" is its green CTA tone, which Save wants). The zoom
+    // strip takes XPActionButton instead — the compact flat one — because those are
+    // dense repeated controls, not document actions.
 
     return (
-        // ui-scale-exempt: the canvas drag math mixes screen-px measurements with
-        // layout-px writes, which only agree at 1:1 — see globals.css.
-        <ShellWindow classic={classic} className="ui-scale-exempt">
+        // The window itself follows the app's interface scale like every other page.
+        // Only the sheet below opts out to 1:1 (see the `ui-scale-exempt` comments
+        // there) — exempting the whole window left the toolbar, band list and
+        // inspector rendering 20% larger than the chrome around them.
+        <ShellWindow classic={classic}>
             <ShellTitleBar
                 classic={classic}
                 icon="bi-printer"
@@ -352,11 +432,48 @@ export default function PrintDesignerView() {
                 subtitle="Choose which fields appear on each printed document, and how they are sized and placed."
                 right={
                     <span style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
-                        {btn('Undo', undo, { icon: 'bi-arrow-90deg-left', disabled: past.current.length === 0 })}
-                        {btn('Redo', redo, { icon: 'bi-arrow-90deg-right', disabled: future.current.length === 0 })}
-                        {dirty && btn('Revert', revertDraft, { icon: 'bi-arrow-counterclockwise' })}
-                        {btn('Reset to default', reset, { tone: 'red', icon: 'bi-trash', disabled: !customised })}
-                        {btn(saving ? 'Saving...' : 'Save layout', save, { tone: 'green', icon: 'bi-check-lg', disabled: !dirty || saving })}
+                        <ToolbarButton
+                            classic={classic} icon="bi-arrow-90deg-left"
+                            onClick={undo} disabled={past.current.length === 0}
+                        >
+                            Undo
+                        </ToolbarButton>
+                        <ToolbarButton
+                            classic={classic} icon="bi-arrow-90deg-right"
+                            onClick={redo} disabled={future.current.length === 0}
+                        >
+                            Redo
+                        </ToolbarButton>
+                        {dirty && (
+                            <ToolbarButton classic={classic} icon="bi-arrow-counterclockwise" onClick={revertDraft}>
+                                Revert
+                            </ToolbarButton>
+                        )}
+                        {/* Prints the draft, so it needs no save first — that is the point. */}
+                        <ToolbarButton
+                            classic={classic} icon="bi-printer" printable
+                            onClick={() => setTestPrinting(true)}
+                            disabled={!active || testPrinting}
+                        >
+                            Test print
+                        </ToolbarButton>
+                        <ToolbarButton
+                            classic={classic} tone="danger" icon="bi-trash"
+                            onClick={reset} disabled={!customised}
+                        >
+                            Reset to default
+                        </ToolbarButton>
+                        {/* Dirty state also sits in the status bar, but that is the far corner
+                            from Save — the one place the state actually changes what you do. */}
+                        {dirty && (
+                            <Chip classic={classic} tone={familyTint('amber')}>Unsaved</Chip>
+                        )}
+                        <ToolbarButton
+                            classic={classic} tone="create" icon="bi-check-lg"
+                            onClick={save} disabled={!dirty || saving}
+                        >
+                            {saving ? 'Saving...' : 'Save layout'}
+                        </ToolbarButton>
                     </span>
                 }
             />
@@ -374,16 +491,9 @@ export default function PrintDesignerView() {
                         />
                     </div>
 
-                    <span style={{ borderRadius: CHIP_RADIUS,
-                        fontFamily: classic ? xpFont : undefined, fontSize: 10,
-                        padding: '1px 6px',
-                        border: '1px solid',
-                        borderColor: customised ? '#1a5e1a' : '#999',
-                        background: customised ? '#dff5df' : '#eee',
-                        color: customised ? '#1a5e1a' : '#555',
-                    }}>
+                    <Chip classic={classic} tone={familyTint(customised ? 'green' : 'gray')}>
                         {customised ? 'Customised' : 'Built-in default'}
-                    </span>
+                    </Chip>
 
                     <span style={{ flex: 1 }} />
 
@@ -425,11 +535,18 @@ export default function PrintDesignerView() {
                     background: paneBg, overflowY: 'auto', padding: 8,
                 }}>
                     <div style={{
+                        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
                         fontFamily: classic ? xpFont : undefined, fontSize: 10, fontWeight: 'bold',
                         textTransform: 'uppercase', letterSpacing: '0.4px',
                         color: classic ? '#4a4436' : '#6c757d', marginBottom: 5,
                     }}>
-                        Sections, top to bottom
+                        <span>Sections, top to bottom</span>
+                        {/* Adds after the selected section, so the menu doubles as "insert here". */}
+                        <XPActionButton
+                            classic={classic} icon="bi-plus-lg" label={<i className="bi bi-caret-down-fill" style={{ fontSize: 7 }} />}
+                            title="Add a section" className="xp-menu-trigger"
+                            onClick={e => addMenu.toggle('add-band', e)}
+                        />
                     </div>
 
                     <div
@@ -449,16 +566,21 @@ export default function PrintDesignerView() {
 
                     {draft.bands.map((band, i) => {
                         const selected = selection.bandId === band.id;
+                        const hovered = hoverBandId === band.id && !selected;
                         const hidden = band.show === false;
                         return (
                             <div
                                 key={band.id}
                                 onClick={() => setSelection({ bandId: band.id })}
+                                onMouseEnter={() => setHoverBandId(band.id)}
+                                onMouseLeave={() => setHoverBandId(cur => (cur === band.id ? null : cur))}
                                 style={{
                                     display: 'flex', alignItems: 'center', gap: 4, cursor: 'pointer',
                                     fontFamily: classic ? xpFont : undefined, fontSize: 11,
                                     padding: '3px 4px', marginBottom: 2,
-                                    background: selected ? (classic ? '#0058e6' : '#0d6efd') : 'transparent',
+                                    background: selected
+                                        ? (classic ? '#0058e6' : '#0d6efd')
+                                        : (hovered ? (classic ? '#d6e6ff' : '#e7f1ff') : 'transparent'),
                                     color: selected ? '#fff' : (hidden ? '#999' : (classic ? '#2b2822' : '#212529')),
                                 }}
                             >
@@ -469,15 +591,30 @@ export default function PrintDesignerView() {
                                     onChange={() => toggleBand(i)}
                                     title={hidden ? 'Show this section' : 'Hide this section'}
                                 />
+                                {/* The number is the print order, so the list reads against the
+                                    sheet without counting rows. */}
                                 <span style={{
-                                    flex: 1, minWidth: 0, overflow: 'hidden',
-                                    textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-                                    textDecoration: hidden ? 'line-through' : undefined,
+                                    flexShrink: 0, fontSize: 9, opacity: 0.55,
+                                    width: 12, textAlign: 'right',
                                 }}>
-                                    {band.title && band.title !== '{auto}' ? band.title : BAND_TYPE_LABEL[band.type] || band.type}
-                                    <span style={{ opacity: 0.6, marginLeft: 4, fontSize: 10 }}>
-                                        {BAND_TYPE_LABEL[band.type]}
-                                    </span>
+                                    {i + 1}
+                                </span>
+                                <span
+                                    title={describeBand(band, docType)}
+                                    style={{
+                                        flex: 1, minWidth: 0, overflow: 'hidden',
+                                        textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                                        textDecoration: hidden ? 'line-through' : undefined,
+                                    }}
+                                >
+                                    {describeBand(band, docType)}
+                                </span>
+                                {/* Shape, not name — appending it to the name is what produced
+                                    the "Grid Grid" rows this replaced. */}
+                                <span style={{
+                                    flexShrink: 0, fontSize: 9, opacity: 0.55, marginRight: 2,
+                                }}>
+                                    {bandTypeLabel(band)}
                                 </span>
                                 <span style={{ display: 'inline-flex', gap: 2, flexShrink: 0 }}>
                                     <button
@@ -512,31 +649,69 @@ export default function PrintDesignerView() {
                         );
                     })}
 
+                    {/* Section-level actions act on the selection rather than adding two
+                        more buttons to each 210px row, which already carries a tick, an
+                        ordinal, a name, a type and two chevrons. */}
+                    <div style={{ display: 'flex', gap: 4, marginTop: 6 }}>
+                        <XPActionButton
+                            classic={classic} icon="bi-copy" label="Duplicate"
+                            title="Copy the selected section, with its design, below itself"
+                            onClick={duplicateSelectedBand} disabled={!selectedBand}
+                        />
+                        {/* The last section is not deletable: a layout with no sections
+                            prints a blank card, and the floor would find that before
+                            anyone noticed the save. Delete down to one, then replace it. */}
+                        <XPActionButton
+                            classic={classic} tone="danger" icon="bi-trash" label="Delete"
+                            title={draft.bands.length <= 1
+                                ? 'A layout needs at least one section'
+                                : 'Remove the selected section (Ctrl+Z undoes)'}
+                            onClick={deleteSelectedBand}
+                            disabled={!selectedBand || draft.bands.length <= 1}
+                        />
+                    </div>
+
+                    <FieldPalette
+                        docType={docType}
+                        bands={draft.bands}
+                        targetBand={selectedBand}
+                        classic={classic}
+                        onPlace={placeField}
+                    />
+
                     <div style={{
                         fontFamily: classic ? xpFont : undefined, fontSize: 10, color: '#888',
                         fontStyle: 'italic', marginTop: 8, borderTop: paneBorder, paddingTop: 6,
                     }}>
-                        Unticking a section hides it from the printout but keeps its design, so you
-                        can bring it back later.
+                        Hovering a section here outlines it on the paper, and hovering the paper
+                        highlights it here. Unticking hides a section from the printout but keeps
+                        its design, so you can bring it back later.
                         <br /><br />
-                        On the paper: drag the <i className="bi bi-arrows-move" /> handle above a field
-                        to move it, its right-edge handle to resize, or the <i className="bi bi-grip-vertical" /> grip
+                        Handles appear on the section under the pointer: drag
+                        the <i className="bi bi-arrows-move" /> above a field to move it, its
+                        right-edge handle to resize, or the <i className="bi bi-grip-vertical" /> grip
                         on a row/column/section to reorder. Ctrl+Z undoes.
                     </div>
                 </div>
 
                 {/* ── Centre: paper ───────────────────────────────────────── */}
-                <div style={{
-                    flex: 1, minWidth: 0, background: classic ? '#808080' : '#e9ecef',
-                    overflow: 'auto', padding: 16,
-                    display: 'flex', justifyContent: 'center', alignItems: 'flex-start',
-                }}>
+                <div
+                    ref={canvasPaneRef}
+                    style={{
+                        flex: 1, minWidth: 0, background: classic ? '#808080' : '#e9ecef',
+                        overflow: 'auto', padding: 16,
+                        display: 'flex', justifyContent: 'center', alignItems: 'flex-start',
+                    }}
+                >
                     {loadingSamples ? (
                         // Sheet-shaped placeholder at the real paper size, so the canvas
                         // doesn't resize under the designer when the sample WO lands.
                         <div>
                             <div style={{ height: 10, marginBottom: 4 }} />
-                            <div style={{
+                            {/* ui-scale-exempt on the placeholder too, or it stands at 80%
+                                and the sheet jumps size when the sample WO lands — the very
+                                resize this placeholder exists to prevent. */}
+                            <div className="ui-scale-exempt" style={{
                                 background: '#fff', boxShadow: '0 2px 12px rgba(0,0,0,0.35)',
                                 width: `${paperW}mm`, height: `${paperH}mm`,
                                 padding: `${draft.paper.marginMm}mm`, boxSizing: 'border-box',
@@ -547,52 +722,117 @@ export default function PrintDesignerView() {
                     ) : (
                         <div>
                             <div style={{
+                                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                gap: 6, marginBottom: 4,
                                 fontFamily: classic ? xpFont : undefined, fontSize: 10,
-                                color: '#fff', textAlign: 'center', marginBottom: 4,
-                                textShadow: '0 1px 2px rgba(0,0,0,0.5)',
+                                color: '#fff', textShadow: '0 1px 2px rgba(0,0,0,0.5)',
                             }}>
-                                {paperSizeLabel(draft.paper)} {draft.paper.orientation} — {paperW} x {paperH}mm
-                                {draft.paper.marginMm ? ` (page margin ${draft.paper.marginMm}mm)` : ''}
+                                <XPActionButton
+                                    classic={classic} icon="bi-dash-lg" title="Zoom out"
+                                    onClick={() => stepZoom(-1)} disabled={zoom <= ZOOM_MIN}
+                                />
+                                <XPActionButton
+                                    classic={classic} label={`${Math.round(zoom * 100)}%`}
+                                    title="Back to true size (100%)"
+                                    onClick={() => setZoom(1)} disabled={zoom === 1}
+                                />
+                                <XPActionButton
+                                    classic={classic} icon="bi-plus-lg" title="Zoom in"
+                                    onClick={() => stepZoom(1)} disabled={zoom >= ZOOM_MAX}
+                                />
+                                <XPActionButton
+                                    classic={classic} label="Fit"
+                                    title="Scale the sheet to fit this pane"
+                                    onClick={fitZoom}
+                                />
+                                <span style={{ opacity: 0.5 }}>|</span>
+                                <label
+                                    title="Show every section's handles at once, instead of only the one under the pointer"
+                                    style={{ display: 'flex', alignItems: 'center', gap: 3, cursor: 'pointer' }}
+                                >
+                                    <input
+                                        type="checkbox"
+                                        checked={alwaysHandles}
+                                        onChange={e => setAlwaysHandles(e.target.checked)}
+                                    />
+                                    All handles
+                                </label>
+                                <span style={{ opacity: 0.5 }}>|</span>
+                                <span>
+                                    {paperSizeLabel(draft.paper)} {draft.paper.orientation} — {paperW} x {paperH}mm
+                                    {draft.paper.marginMm ? ` (page margin ${draft.paper.marginMm}mm)` : ''}
+                                </span>
                             </div>
-                            {/* True-size sheet. The inner box is the printable area: the page
-                                margin is drawn as the gap, so what is inside is exactly what
-                                the printer can reach. */}
+                            {/* True-size sheet, then scaled by the view zoom. The inner box is
+                                the printable area: the page margin is drawn as the gap, so what
+                                is inside is exactly what the printer can reach.
+
+                                ui-scale-exempt is load-bearing here, and this is the whole of
+                                the page that needs it. Two reasons: a sheet quoted in mm is
+                                only honest at 1:1, and DesignerCanvas measures with
+                                getBoundingClientRect (screen px) then writes straight into
+                                style.left/top (layout px) — units that agree only at effective
+                                zoom 1, or every grip and drop target lands off by the scale.
+                                The canvas renders inside `paperRef` and measures everything
+                                relative to it (no portal, nothing fixed), so the whole drag
+                                layer sits inside this boundary.
+
+                                The designer's own zoom is a `transform` on the sheet INSIDE that
+                                boundary, with the same factor handed to DesignerCanvas so it can
+                                divide measurements back into layout pixels. The app's interface
+                                scale stays cancelled either way — one known factor to correct for
+                                beats two multiplied ones. The outer box reserves the scaled
+                                footprint, or the pane would scroll to the 1:1 size. */}
                             <div
-                                onClick={() => setSelection({ bandId: null })}
+                                className="ui-scale-exempt"
                                 style={{
-                                    background: '#fff', boxShadow: '0 2px 12px rgba(0,0,0,0.35)',
-                                    width: `${paperW}mm`, height: `${paperH}mm`,
-                                    padding: `${draft.paper.marginMm}mm`,
-                                    boxSizing: 'border-box', display: 'flex', flexDirection: 'column',
+                                    width: `${paperW * zoom}mm`, height: `${paperH * zoom}mm`,
+                                    flexShrink: 0,
                                 }}
                             >
                                 <div
-                                    ref={paperRef}
+                                    onClick={() => setSelection({ bandId: null })}
                                     style={{
-                                        flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column',
-                                        outline: '1px dashed rgba(0,0,0,0.15)', outlineOffset: 0,
-                                        position: 'relative',
+                                        background: '#fff', boxShadow: '0 2px 12px rgba(0,0,0,0.35)',
+                                        width: `${paperW}mm`, height: `${paperH}mm`,
+                                        padding: `${draft.paper.marginMm}mm`,
+                                        boxSizing: 'border-box', display: 'flex', flexDirection: 'column',
+                                        transform: zoom === 1 ? undefined : `scale(${zoom})`,
+                                        transformOrigin: 'top left',
                                     }}
                                 >
-                                    <TemplateRenderer
-                                        layout={draft}
-                                        ctx={ctx}
-                                        docType={docType}
-                                        selectedId={selectionToId(selection)}
-                                        onSelect={id => setSelection(parseSelectId(id))}
-                                    />
-                                    {/* Drag/resize/reorder overlay — measures the TemplateRenderer
-                                        output above via its data-tpl-* attributes and sits on top of
-                                        it. See DesignerCanvas.tsx for why nothing here touches layout
-                                        state until pointer-up (one drag = one undo step). */}
-                                    <DesignerCanvas
-                                        layout={draft}
-                                        docType={docType}
-                                        paperRef={paperRef}
-                                        selection={selection}
-                                        onSelect={setSelection}
-                                        onMutate={mutate}
-                                    />
+                                    <div
+                                        ref={paperRef}
+                                        style={{
+                                            flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column',
+                                            outline: '1px dashed rgba(0,0,0,0.15)', outlineOffset: 0,
+                                            position: 'relative',
+                                        }}
+                                    >
+                                        <TemplateRenderer
+                                            layout={draft}
+                                            ctx={ctx}
+                                            docType={docType}
+                                            selectedId={selectionToId(selection)}
+                                            onSelect={id => setSelection(parseSelectId(id))}
+                                        />
+                                        {/* Drag/resize/reorder overlay — measures the TemplateRenderer
+                                            output above via its data-tpl-* attributes and sits on top of
+                                            it. See DesignerCanvas.tsx for why nothing here touches layout
+                                            state until pointer-up (one drag = one undo step). */}
+                                        <DesignerCanvas
+                                            layout={draft}
+                                            docType={docType}
+                                            paperRef={paperRef}
+                                            selection={selection}
+                                            onSelect={setSelection}
+                                            onMutate={mutate}
+                                            zoom={zoom}
+                                            hoverBandId={hoverBandId}
+                                            onHoverBand={setHoverBandId}
+                                            alwaysShowHandles={alwaysHandles}
+                                        />
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -629,6 +869,33 @@ export default function PrintDesignerView() {
                 </span>
                 <span>{draft.bands.length} sections</span>
             </div>
+
+            {addMenu.openId === 'add-band' && (
+                <FloatingMenu
+                    pos={addMenu.pos}
+                    minWidth={190}
+                    items={ADDABLE_BAND_TYPES.map(t => ({
+                        key: t.type,
+                        label: t.label,
+                        title: t.hint,
+                        onClick: () => { addMenu.close(); addBand(t.type); },
+                    }))}
+                />
+            )}
+
+            {/* Mounted only while printing: it adds a body class that hides the rest of
+                the page, so it must not exist a moment longer than the print. */}
+            {testPrinting && active && (
+                <DesignerTestPrint
+                    draft={draft}
+                    workOrder={active.wo}
+                    parentMO={active.mo}
+                    companyName={companyProfile?.name}
+                    attributes={attributes}
+                    dyeing={sampleDyeing}
+                    onDone={() => setTestPrinting(false)}
+                />
+            )}
         </ShellWindow>
     );
 }

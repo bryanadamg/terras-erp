@@ -1319,11 +1319,19 @@ export function SectionTitle({ icon, children, right }: { icon: string; children
 // Field label with optional muted/italic helper caption below it — keeps the
 // instruction text visually lighter than the label so a form of many fields
 // doesn't read as one dense block of same-weight text.
-export function FieldLabel({ children, hint, classic, right }: { children: React.ReactNode; hint?: string; classic: boolean; right?: React.ReactNode }) {
+//
+// `hint` renders; `title` hovers. A caption earns its line only when the reader
+// needs it every time (an empty-means-X rule they choose on, a figure they are
+// correcting); the explanation of WHY a field works the way it does is read once
+// and then costs a line forever, so it goes in `title` and the global tooltip
+// layer renders it. A form of ten fields with ten captions reads as prose, which
+// is the state this prop exists to get out of.
+export function FieldLabel({ children, hint, title, classic, right }: { children: React.ReactNode; hint?: string; title?: string; classic: boolean; right?: React.ReactNode }) {
     return (
         <>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 2 }}>
                 <label
+                    title={title}
                     style={classic ? { fontFamily: xpFont, fontSize: 11, fontWeight: 'bold', color: '#2b2822', margin: 0 } : undefined}
                     className={classic ? '' : 'form-label small fw-semibold mb-0'}
                 >
