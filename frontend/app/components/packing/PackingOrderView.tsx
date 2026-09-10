@@ -350,11 +350,12 @@ export default function PackingOrderView({ initialCreateState, onClearInitialSta
     const variantOf = (po: any) => {
         let combo: string | null = null;
         let colorVariant: string | null = null;
+        let colorVariantHex: string | null = null;
         for (const vid of (po.attribute_value_ids || [])) {
             const v = attrValById[String(vid)];
             if (!v) continue;
             if (v.role === 'combo' && !combo) combo = v.value;
-            else if (v.role === 'color' && !colorVariant) colorVariant = v.value;
+            else if (v.role === 'color' && !colorVariant) { colorVariant = v.value; colorVariantHex = v.hex; }
         }
         let size: string | null = po.size_label || null;
         if (!size) {
@@ -363,7 +364,7 @@ export default function PackingOrderView({ initialCreateState, onClearInitialSta
             )) as string[];
             if (stamped.length) size = stamped.join(' / ');
         }
-        return { combo, colorVariant, size };
+        return { combo, colorVariant, colorVariantHex, size };
     };
 
     // Expanded row — same three-pane shape as the WO list detail panel (info,
@@ -644,18 +645,18 @@ export default function PackingOrderView({ initialCreateState, onClearInitialSta
                             {/* Own column, same call as the WO list: a row can carry size +
                                 combo + colour variant + colour code at once, and squeezing
                                 that onto the right edge of Item left the item name a sliver. */}
-                            <th style={{ ...xpTableHeader, width: 160 }}>Variant</th>
-                            <th style={xpTableHeader}>Sales Order</th>
-                            <th style={xpTableHeader}>Status</th>
+                            <th style={{ ...xpTableHeader, width: 280 }}>Variant</th>
+                            <th style={{ ...xpTableHeader, width: 140 }}>Sales Order</th>
+                            <th style={{ ...xpTableHeader, width: 96 }}>Status</th>
                             {/* No Target/Packed columns: each bar's own line already reads
                                 "packed / target unit", so the two number columns restated
                                 the pair the packer was going to read off the bar anyway.
                                 One column per unit — the selling unit the order is judged
                                 in, and the stock UOM the scale and the ledger work in. */}
-                            <th style={{ ...xpTableHeader, width: 135 }}>Selling Unit</th>
-                            <th style={{ ...xpTableHeader, width: 135 }}>Stock UOM</th>
-                            <th style={{ ...xpTableHeader, textAlign: 'right' }}>Cartons</th>
-                            <th style={xpTableHeader}>Created</th>
+                            <th style={{ ...xpTableHeader, width: 145 }}>Selling Unit</th>
+                            <th style={{ ...xpTableHeader, width: 145 }}>Stock UOM</th>
+                            <th style={{ ...xpTableHeader, width: 100 }}>Cartons</th>
+                            <th style={{ ...xpTableHeader, width: 100 }}>Created</th>
                             <th style={{ ...xpTableHeader, textAlign: 'right', width: 96 }}>Actions</th>
                         </tr>
                     </thead>
@@ -695,6 +696,7 @@ export default function PackingOrderView({ initialCreateState, onClearInitialSta
                                                     combo={v.combo}
                                                     size={v.size}
                                                     colorVariant={v.colorVariant}
+                                                    colorVariantHex={v.colorVariantHex}
                                                     colorCode={po.color_code}
                                                     colorName={po.color_name}
                                                     colorHex={po.color_hex}
