@@ -1,19 +1,20 @@
 import React, { useState, useEffect, useMemo, memo, useRef } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import CodeConfigModal, { CodeConfig, buildCodeWithCounter } from '../shared/CodeConfigModal';
-import HistoryPane from '../shared/HistoryPane';
 import ModalWrapper from '../shared/ModalWrapper';
 import Pager from '../shared/Pager';
 import { useToast } from '../shared/Toast';
 import { useLanguage } from '../../context/LanguageContext';
 import { useTheme } from '../../context/ThemeContext';
+import { useTimezone } from '../../context/TimezoneContext';
 import { useData } from '../../context/DataContext';
 import { useUser } from '../../context/UserContext';
-import { XPEmptyState, TableSkeleton, useTableSkeletonMetrics, useSortable, XPActionButton, MenuTriggerButton, FloatingMenu, useFloatingMenu, FormSection, FieldLabel, StatusChip, CodeChip, xpFont, rowStateBg, CHIP_RADIUS, xpInput as xpInputBase, xpBtn as xpBtnBase, BTN_TONES, XP_BTN } from '../shared/xpTheme';
+import { API_BASE } from '../shared/apiBase';
+import { XPEmptyState, ExpandedRowPanel, CODE_FONT, TableSkeleton, useTableSkeletonMetrics, useSortable, MenuTriggerButton, FloatingMenu, useFloatingMenu, FormSection, FieldLabel, StatusChip, CodeChip, xpFont, rowStateBg, CHIP_RADIUS, xpInput as xpInputBase, xpBtn as xpBtnBase, BTN_TONES, XP_BTN } from '../shared/xpTheme';
 import { xpBevel as sharedXpBevel, xpTitleBar as sharedXpTitleBar, xpToolbar as sharedXpToolbar, SearchField, ToolbarButton, pageFillStyle } from '../shared/shellTheme';
 import TreeSelect, { buildCategoryTree, buildLocationPickerTree } from '../shared/TreeSelect';
 import { Tabs, TabDef } from '../shared/Tabs';
-import { lvThead, useRowSelection, RowCheckbox, SelectAllCheckbox, LV_CHECK_COL_W, SortableTh, lvThSticky, lvTdRuled, lvZebra, Dash } from '../shared/listViewTheme';
+import { lvThead, useRowSelection, RowCheckbox, SelectAllCheckbox, LV_CHECK_COL_W, LV_EXPANDER_COL_W, ExpanderCell, SortableTh, lvThSticky, lvTdRuled, lvZebra, lvSubTable, lvSubTh, lvSubTd, lvSubRow, Dash } from '../shared/listViewTheme';
 
 // XP-style category badge colours derived from category name
 function getCategoryTabIcon(name: string): string {
@@ -37,13 +38,103 @@ function getCategoryXPStyle(category: string): { bg: string; border: string; col
     return { bg: '#e8e8e8', border: '#6a6a6a', color: '#222222' };
 }
 
+// Check, expander, code, name, category, UOM, source sample, type, weight, actions.
+const ITEM_COL_SPAN = 10;
+
+// Item event log — the expanded-row panel that replaced the fixed HistoryPane
+// sidebar. Same audit feed, read in place under the row it belongs to, so the
+// item list expands like every other list in the app.
+type ItemHistoryState = { loading: boolean; logs: any[]; error?: boolean };
+
+const ItemEventLogPanel = memo(({ state, userNameById, classic }: { state?: ItemHistoryState; userNameById: Record<string, string>; classic: boolean }) => {
+    const { formatDateTime: tzDateTime } = useTimezone();
+    const [openChanges, setOpenChanges] = useState<string | null>(null);
+    const logs = state?.logs ?? [];
+
+    const caption = (
+        <div style={{ fontWeight: 'bold', color: '#555', fontSize: classic ? 9 : 11, textTransform: 'uppercase', letterSpacing: 0.3, marginBottom: 6, display: 'flex', alignItems: 'center', gap: 6 }}>
+            <i className="bi bi-journal-text" />
+            Event Log
+            {!state?.loading && logs.length > 0 && (
+                <span style={{ marginLeft: 'auto', fontWeight: 'normal', textTransform: 'none', letterSpacing: 0, color: '#888' }}>
+                    {logs.length} event{logs.length === 1 ? '' : 's'}
+                </span>
+            )}
+        </div>
+    );
+
+    return (
+        <ExpandedRowPanel classic={classic} style={{ padding: classic ? '8px 10px' : '10px 14px', whiteSpace: 'normal' }}>
+            {caption}
+            {state?.loading ? (
+                <div style={{ color: '#888', padding: 6, fontFamily: classic ? xpFont : undefined, fontSize: classic ? 11 : 13 }}>Loading events…</div>
+            ) : state?.error ? (
+                <div style={{ color: '#8b0000', padding: 6, fontFamily: classic ? xpFont : undefined, fontSize: classic ? 11 : 13 }}>Could not load the event log.</div>
+            ) : logs.length === 0 ? (
+                <div style={{ color: '#888', padding: 6, fontFamily: classic ? xpFont : undefined, fontSize: classic ? 11 : 13, fontStyle: 'italic' }}>No events recorded for this item.</div>
+            ) : (
+                <table style={lvSubTable(classic)}>
+                    <thead>
+                        <tr>
+                            <th style={{ ...lvSubTh(classic, true), width: 150 }}>Date / Time</th>
+                            <th style={{ ...lvSubTh(classic, true), width: 130 }}>Action</th>
+                            <th style={{ ...lvSubTh(classic, true), width: 140 }}>Performed by</th>
+                            <th style={lvSubTh(classic, true)}>Description</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {logs.map((log: any, i: number) => {
+                            const open = openChanges === log.id;
+                            const hasChanges = log.changes && Object.keys(log.changes).length > 0;
+                            return (
+                                <React.Fragment key={log.id}>
+                                    <tr
+                                        style={{ ...lvSubRow(classic, i, { zebra: true }), cursor: hasChanges ? 'pointer' : 'default' }}
+                                        onClick={() => hasChanges && setOpenChanges(open ? null : log.id)}
+                                    >
+                                        <td style={{ ...lvSubTd(classic, true), whiteSpace: 'nowrap' }}>{tzDateTime(log.timestamp)}</td>
+                                        <td style={lvSubTd(classic, true)}>
+                                            <StatusChip status={log.action} title={String(log.action || '').replace(/_/g, ' ')} />
+                                        </td>
+                                        <td style={lvSubTd(classic, true)} title={log.user_id || undefined}>
+                                            {userNameById[log.user_id] || (log.user_id ? `User ${String(log.user_id).split('-')[0]}` : 'System')}
+                                        </td>
+                                        <td style={lvSubTd(classic, true)}>
+                                            {log.details || 'System activity'}
+                                            {hasChanges && <i className={`bi bi-chevron-${open ? 'up' : 'down'}`} style={{ marginLeft: 6, fontSize: 9, color: classic ? '#0058e6' : '#64748b' }} />}
+                                        </td>
+                                    </tr>
+                                    {open && hasChanges && (
+                                        <tr>
+                                            <td colSpan={4} style={{ padding: classic ? '4px 8px 6px' : '6px 12px 8px' }}>
+                                                <pre style={{
+                                                    margin: 0, fontFamily: CODE_FONT, fontSize: 10, background: '#fff',
+                                                    border: classic ? '1px solid #7f9db9' : '1px solid #dbe1ea',
+                                                    boxShadow: classic ? 'inset 1px 1px 0 rgba(0,0,0,0.1)' : undefined,
+                                                    padding: '4px 6px', maxHeight: 160, overflow: 'auto',
+                                                }}>{JSON.stringify(log.changes, null, 2)}</pre>
+                                            </td>
+                                        </tr>
+                                    )}
+                                </React.Fragment>
+                            );
+                        })}
+                    </tbody>
+                </table>
+            )}
+        </ExpandedRowPanel>
+    );
+});
+ItemEventLogPanel.displayName = 'ItemEventLogPanel';
+
 // Memoized Row Component
-const InventoryRow = memo(({ item, rowIndex, isEditing, isSelected, onToggleSelect, onViewHistory, onMenu, classic }: any) => {
+const InventoryRow = memo(({ item, rowIndex, isEditing, isSelected, isExpanded, onToggleSelect, onToggleExpand, onMenu, historyState, userNameById, classic }: any) => {
     // Selected and being-edited are the two shared row states — same fills as
     // every other list (see rowStateBg). This row used to invert to XP selection
     // blue with white text, which meant re-colouring the code chip, the category
     // chip and every link inside it.
     const rowBg = isSelected ? rowStateBg('selected', classic)
+        : isExpanded ? rowStateBg('expanded', classic)
         : isEditing ? rowStateBg('highlighted', classic)
         : classic ? lvZebra(true, rowIndex) : undefined;
 
@@ -53,12 +144,25 @@ const InventoryRow = memo(({ item, rowIndex, isEditing, isSelected, onToggleSele
     const catStyle = classic ? getCategoryXPStyle(categoryDisplay) : null;
 
     return (
+        <>
         <tr
-            style={{ background: rowBg, ...(classic ? { borderBottom: '1px solid #c0bdb5' } : {}) }}
+            style={{ background: rowBg, cursor: 'pointer', ...(classic ? { borderBottom: '1px solid #c0bdb5' } : {}) }}
+            onClick={() => onToggleExpand(item)}
         >
-            <td style={classic ? { ...tdBase, width: LV_CHECK_COL_W, textAlign: 'center' } : { width: LV_CHECK_COL_W }} className={classic ? '' : 'ps-3'}>
+            <td
+                style={classic ? { ...tdBase, width: LV_CHECK_COL_W, textAlign: 'center' } : { width: LV_CHECK_COL_W }}
+                className={classic ? '' : 'ps-3'}
+                onClick={e => e.stopPropagation()}
+            >
                 <RowCheckbox classic={classic} checked={isSelected} onChange={() => onToggleSelect(item.id)} label={item.code} />
             </td>
+            <ExpanderCell
+                classic={classic}
+                expanded={!!isExpanded}
+                onToggle={() => onToggleExpand(item)}
+                label="event log"
+                tdStyle={classic ? tdBase : undefined}
+            />
             <td style={classic ? { ...tdBase, width: '110px' } : undefined} className={classic ? '' : 'ps-4'}>
                 <CodeChip code={item.code} classic={classic} />
             </td>
@@ -136,13 +240,23 @@ const InventoryRow = memo(({ item, rowIndex, isEditing, isSelected, onToggleSele
                     <Dash classic={classic} />
                 )}
             </td>
-            <td style={classic ? { ...tdBase, borderRight: 'none', textAlign: 'right' } : undefined}>
+            <td
+                style={classic ? { ...tdBase, borderRight: 'none', textAlign: 'right' } : undefined}
+                onClick={e => e.stopPropagation()}
+            >
                 <div className={classic ? '' : 'd-flex gap-1 justify-content-end'} style={classic ? { display: 'flex', gap: '2px', justifyContent: 'flex-end' } : undefined}>
-                    <XPActionButton classic={classic} tone="neutral" icon="bi-clock-history" title="View History" onClick={() => onViewHistory(item.id)} />
                     <MenuTriggerButton classic={classic} onClick={e => onMenu(String(item.id), e)} />
                 </div>
             </td>
         </tr>
+        {isExpanded && (
+            <tr>
+                <td colSpan={ITEM_COL_SPAN} style={{ padding: 0 }}>
+                    <ItemEventLogPanel state={historyState} userNameById={userNameById} classic={classic} />
+                </td>
+            </tr>
+        )}
+        </>
     );
 });
 
@@ -176,8 +290,8 @@ export default function InventoryView({
   const searchParams = useSearchParams();
   const router = useRouter();
 
-  const { categories, locations, loading: dataLoading, filters: { categoryL1, setCategoryL1, categoryL2, setCategoryL2, categoryL3, setCategoryL3, itemSearch, setItemSearch } } = useData();
-  const { hasPermission, hasAnyPermission } = useUser();
+  const { authFetch, categories, locations, loading: dataLoading, filters: { categoryL1, setCategoryL1, categoryL2, setCategoryL2, categoryL3, setCategoryL3, itemSearch, setItemSearch } } = useData();
+  const { hasPermission, hasAnyPermission, users, refreshUsers } = useUser();
   const canManage = hasAnyPermission('item.create', 'item.edit');
   const canDelete = hasPermission('item.delete');
   const canImport = hasPermission('item.import');
@@ -188,6 +302,13 @@ export default function InventoryView({
   // away and the upload starts on pick, so the only UI it owns is the result
   // strip above the table. The old BulkImportModal was a dialog that did
   // nothing but hold a file input and echo the same result.
+  // Row expansion carries the item's audit trail, fetched lazily on open and
+  // cached per item — the list itself never loads it.
+  const [expandedItemId, setExpandedItemId] = useState<string | null>(null);
+  const [itemHistory, setItemHistory] = useState<Record<string, ItemHistoryState>>({});
+  const userNameById = useMemo(() => Object.fromEntries(
+      (users || []).map((u: any) => [u.id, u.full_name || u.username])
+  ), [users]);
   const importInputRef = useRef<HTMLInputElement>(null);
   const [importing, setImporting] = useState(false);
   const [importResult, setImportResult] = useState<{ status?: string; imported?: number; errors?: string[] } | null>(null);
@@ -218,7 +339,6 @@ export default function InventoryView({
 
   // Editing State
   const [editingItem, setEditingItem] = useState<any>(null);
-  const [historyEntityId, setHistoryEntityId] = useState<string | null>(null);
 
   const [newCategoryName, setNewCategoryName] = useState('');
   const [showCatInput, setShowCatInput] = useState(false);
@@ -529,6 +649,28 @@ export default function InventoryView({
           await onDeleteMultipleItems(sel.keys);
           sel.clear();
       }
+  };
+
+  const toggleItemRow = (item: any) => {
+      const id = String(item.id);
+      if (expandedItemId === id) { setExpandedItemId(null); return; }
+      setExpandedItemId(id);
+      // Names for the "Performed by" column arrive with the users master list,
+      // which the items page has no other reason to load.
+      if (!users || users.length === 0) refreshUsers();
+      const cached = itemHistory[id];
+      if (cached && !cached.error) return;
+      setItemHistory(prev => ({ ...prev, [id]: { loading: true, logs: [] } }));
+      (async () => {
+          try {
+              const res = await authFetch(`${API_BASE}/audit-logs?entity_type=Item&entity_id=${id}&limit=50`);
+              if (!res.ok) throw new Error('failed');
+              const data = await res.json();
+              setItemHistory(prev => ({ ...prev, [id]: { loading: false, logs: data.items || [] } }));
+          } catch {
+              setItemHistory(prev => ({ ...prev, [id]: { loading: false, logs: [], error: true } }));
+          }
+      })();
   };
 
   const handleImportPick = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -1267,6 +1409,7 @@ export default function InventoryView({
                     <th style={classic ? { ...xpThCell, width: LV_CHECK_COL_W, textAlign: 'center' } : { width: LV_CHECK_COL_W }} className={classic ? '' : 'ps-3'}>
                         <SelectAllCheckbox classic={classic} allSelected={sel.allPageSelected} someSelected={sel.someSelected} onChange={sel.togglePage} />
                     </th>
+                    <th style={classic ? { ...xpThCell, width: LV_EXPANDER_COL_W } : { width: LV_EXPANDER_COL_W }}></th>
                     <SortableTh sort={sort} colKey="code" onSort={toggleSort} style={classic ? { ...xpThCell, width: '110px' } : {}} className={classic ? '' : 'ps-4'}>{t('item_code')}</SortableTh>
                     <SortableTh sort={sort} colKey="name" onSort={toggleSort} style={classic ? { ...xpThCell } : {}}>{t('item_name')}</SortableTh>
                     <SortableTh sort={sort} colKey="category" onSort={toggleSort} style={classic ? { ...xpThCell, width: '110px' } : {}}>{t('categories')}</SortableTh>
@@ -1285,19 +1428,22 @@ export default function InventoryView({
                         rowIndex={idx}
                         isEditing={editingItem?.id === item.id}
                         isSelected={sel.isSelectedKey(item.id)}
+                        isExpanded={expandedItemId === String(item.id)}
                         onToggleSelect={sel.toggleKey}
-                        onViewHistory={setHistoryEntityId}
+                        onToggleExpand={toggleItemRow}
                         onMenu={toggleMenu}
+                        historyState={expandedItemId === String(item.id) ? itemHistory[String(item.id)] : undefined}
+                        userNameById={userNameById}
                         classic={classic}
                     />
                   ))}
                   {filteredItems.length === 0 && dataLoading.items && (
-                    <TableSkeleton rows={8} cols={skel.cols ?? 9} classic={classic} rowHeight={skel.rowHeight} fillHeight={skel.fillHeight} />
+                    <TableSkeleton rows={8} cols={skel.cols ?? ITEM_COL_SPAN} classic={classic} rowHeight={skel.rowHeight} fillHeight={skel.fillHeight} />
                   )}
                   {filteredItems.length === 0 && !dataLoading.items && (
                     <tr>
                       <td
-                        colSpan={9}
+                        colSpan={ITEM_COL_SPAN}
                         style={classic ? { padding: 0, background: '#ffffff' } : undefined}
                         className={classic ? '' : 'text-center text-muted py-5'}
                       >
@@ -1660,13 +1806,6 @@ export default function InventoryView({
           );
       })()}
 
-      {historyEntityId && (
-          <HistoryPane
-              entityType="Item"
-              entityId={historyEntityId}
-              onClose={() => setHistoryEntityId(null)}
-          />
-      )}
     </div>
   );
 }
