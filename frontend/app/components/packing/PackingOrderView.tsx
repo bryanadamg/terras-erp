@@ -170,26 +170,27 @@ function PackProgressBars({ prog, uom, height = 6, fontSize = 9, hatched = false
         unit: uom,
     });
     return (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 2, minWidth: 0, width: '100%' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 5, minWidth: 0, width: '100%' }}>
             {rows.map(r => (
-                <div key={r.key} style={{ display: 'flex', alignItems: 'center', gap: 5, minWidth: 0 }}>
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                        <ProgressBar
-                            pct={r.pct}
-                            tone={r.pct >= 100 ? 'green' : r.pct > 0 ? 'blue' : 'gray'}
-                            hatched={hatched}
-                            height={height}
-                        />
-                    </div>
-                    {/* Fixed-width so the two lines' figures stack in a column
-                        instead of drifting with the length of each number. */}
+                /* Figures sit ON THEIR OWN LINE above the bar, not beside it: in a
+                   130px column a trailing "100% · 2,880 / 2,880 Pcs" left the track
+                   a ~30px stub that read as noise rather than as progress. Stacked,
+                   the bar spans the whole cell and the numbers still line up. */
+                <div key={r.key} style={{ minWidth: 0 }}>
                     <div style={{
-                        fontFamily: xpFont, fontSize, whiteSpace: 'nowrap', flexShrink: 0,
-                        textAlign: 'right', minWidth: 96,
+                        fontFamily: xpFont, fontSize, whiteSpace: 'nowrap',
+                        overflow: 'hidden', textOverflow: 'ellipsis',
+                        lineHeight: 1.3, marginBottom: 1,
                         color: r.pct >= 100 ? (CLASSIC ? '#1a5e1a' : '#166534') : '#777',
                     }}>
                         {r.pct}% · {r.done} / {r.goal} {r.unit}
                     </div>
+                    <ProgressBar
+                        pct={r.pct}
+                        tone={r.pct >= 100 ? 'green' : r.pct > 0 ? 'blue' : 'gray'}
+                        hatched={hatched}
+                        height={height}
+                    />
                 </div>
             ))}
         </div>
@@ -600,7 +601,7 @@ export default function PackingOrderView({ initialCreateState, onClearInitialSta
                             <th style={xpTableHeader}>Status</th>
                             <th style={{ ...xpTableHeader, textAlign: 'right' }}>Target</th>
                             <th style={{ ...xpTableHeader, textAlign: 'right' }}>Packed</th>
-                            <th style={{ ...xpTableHeader, width: 130 }}>Progress</th>
+                            <th style={{ ...xpTableHeader, width: 150 }}>Progress</th>
                             <th style={{ ...xpTableHeader, textAlign: 'right' }}>Cartons</th>
                             <th style={xpTableHeader}>Created</th>
                             <th style={{ ...xpTableHeader, textAlign: 'right' }}>Actions</th>
