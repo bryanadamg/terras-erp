@@ -2469,7 +2469,7 @@ function PackingOrderDetail({ po: initialPo, itemById, locationById, locPickerTr
                                     })}
                                 </div>
                                 <div style={{
-                                    display: 'flex', alignItems: 'center', gap: 6, fontSize: 10,
+                                    display: 'flex', alignItems: 'center', gap: 6, rowGap: 2, flexWrap: 'wrap', fontSize: 10,
                                     padding: '3px 5px', background: '#f0efe6', border: '1px solid #c0bdb5', borderTop: 'none',
                                 }}>
                                     <span style={{
@@ -2497,6 +2497,33 @@ function PackingOrderDetail({ po: initialPo, itemById, locationById, locPickerTr
                                             <span style={{ color: '#c0bdb5' }}>|</span>
                                             <span style={{ color: '#555' }}>Drawn:</span>
                                             <span style={{ fontWeight: 'bold' }}>{drawTotal.toFixed(2)}</span>
+                                        </>
+                                    )}
+                                    {/* The basis the two figures either side of it are converted
+                                        through. It rides here rather than in a tooltip because
+                                        this is the line where a piece count and a weight sit next
+                                        to each other and the packer has to trust one against the
+                                        other — a wrong factor shows up as a gross weight that
+                                        argues with the scale. */}
+                                    {hasAlt && (
+                                        <>
+                                            <span style={{ color: '#c0bdb5' }}>|</span>
+                                            <span
+                                                style={{ color: '#888' }}
+                                                title={po.sample_weight_per_unit != null
+                                                    ? 'Sampled off these goods — the middle term is the weight the sample gave'
+                                                    : "Not sampled — converting through the item's estimate"}
+                                            >
+                                                1 {altUom} = {po.uom2_factor} {altLength?.uom || 'Yd'}
+                                                {/* The sampled weight itself, not just what it works out
+                                                    to: the packer weighs the goods, so the g/y they
+                                                    measured is the term they can check this against. */}
+                                                {po.sample_weight_per_unit != null
+                                                    ? ` × ${po.sample_weight_per_unit} ${po.sample_weight_unit || 'g/y'}`
+                                                    : ''}
+                                                {' '}= {altFactor} {uom}
+                                                {po.sample_weight_per_unit == null ? ' (est.)' : ''}
+                                            </span>
                                         </>
                                     )}
                                     {/* No separate "<altUom>: n" segment — Boxed now leads with it. */}
