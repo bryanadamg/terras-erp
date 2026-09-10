@@ -378,6 +378,16 @@ def _sync_target_to_alt(po: PackingOrder, item=None) -> Optional[float]:
 SAMPLE_WEIGHT_UNITS = ("g/y", "g/m")
 
 
+def _clean_basis(value: str | None) -> str:
+    """'WEIGHED' or 'COUNTED' — anything else is the counted default.
+
+    Rejecting an unknown string would fail a create over a typo in a field most
+    callers never send; the fallback is the behaviour every order had before the
+    column existed.
+    """
+    return "WEIGHED" if (value or "").strip().upper() == "WEIGHED" else "COUNTED"
+
+
 def _apply_sample_weight(po: PackingOrder, payload) -> None:
     """Set the order's own sampled unit weight from a create/update payload.
 
@@ -597,6 +607,7 @@ async def create_packing_order(
         pack_size=payload.pack_size,
         pack_size_alt=payload.pack_size_alt,
         package_label=payload.package_label or "Carton",
+        pack_basis=_clean_basis(payload.pack_basis),
         source_location_id=payload.source_location_id,
         output_location_id=payload.output_location_id,
         work_center_id=payload.work_center_id,
@@ -682,6 +693,9 @@ async def update_packing_order(
         raise HTTPException(status_code=400, detail=f"Cannot edit a {po.status} packing order")
 
     await _assert_work_center(db, payload.work_center_id)
+
+    if payload.pack_basis is not None:
+        po.pack_basis = _clean_basis(payload.pack_basis)
 
     for field in ("qty_target", "sales_order_id", "sales_order_line_id", "color_id",
                   "pack_size", "pack_size_alt", "package_label",

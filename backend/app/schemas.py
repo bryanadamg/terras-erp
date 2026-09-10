@@ -3268,6 +3268,10 @@ class PackingOrderCreate(BaseModel):
     # Send both halves or neither; `g/y` and `g/m` only.
     sample_weight_per_unit: float | None = None
     sample_weight_unit: str | None = None
+    # 'COUNTED' (pieces counted into the box) or 'WEIGHED' (cut to weight: the
+    # scale reading is entered and the piece count is derived through this order's
+    # sampled g/y as each carton is logged). See PackingOrder.pack_basis.
+    pack_basis: str = "COUNTED"
     source_location_id: UUID | None = None
     output_location_id: UUID | None = None
     # Packing machine (WorkCenter MACHINE row) this order is dispatched to.
@@ -3296,6 +3300,10 @@ class PackingOrderUpdate(BaseModel):
     # Send both halves or neither; `g/y` and `g/m` only.
     sample_weight_per_unit: float | None = None
     sample_weight_unit: str | None = None
+    # 'COUNTED' (pieces counted into the box) or 'WEIGHED' (cut to weight: the
+    # scale reading is entered and the piece count is derived through this order's
+    # sampled g/y as each carton is logged). See PackingOrder.pack_basis.
+    pack_basis: str | None = None
     source_location_id: UUID | None = None
     output_location_id: UUID | None = None
     work_center_id: UUID | None = None
@@ -3545,6 +3553,10 @@ class PackingOrderResponse(BaseModel):
     # order has one — so a screen can say which basis its kilos came from.
     sample_weight_per_unit: float | None = None
     sample_weight_unit: str | None = None
+    # 'COUNTED' (pieces counted into the box) or 'WEIGHED' (cut to weight: the
+    # scale reading is entered and the piece count is derived through this order's
+    # sampled g/y as each carton is logged). See PackingOrder.pack_basis.
+    pack_basis: str = "COUNTED"
     # "Keterangan stock" free text on the SO line, printed alongside CONTENT.
     ket_stock: str | None = None
     color_id: UUID | None = None

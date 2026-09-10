@@ -113,6 +113,20 @@ class PackingOrder(Base):
     sample_weight_per_unit: Mapped[Optional[float]] = mapped_column(Numeric(14, 4), nullable=True)
     sample_weight_unit: Mapped[Optional[str]] = mapped_column(String(8), nullable=True)
 
+    # --- How the packer states a carton -------------------------------------
+    # 'COUNTED' (default): they count the pieces into the box and weigh it, so
+    # `Batch.alt_qty` is a counted figure and the kilos are a separate scale
+    # reading. 'WEIGHED': the goods are cut to a weight, not measured out yard by
+    # yard, so the scale reading is the ONLY thing entered and the piece count is
+    # that weight run through this order's sampled g/y at the moment the box is
+    # logged.
+    #
+    # This does NOT reopen dividing `qty_packed` by the factor — see
+    # `qty_packed_alt`. The conversion happens once per carton, against the sample
+    # in force when that box was packed, and is then stored on the carton like any
+    # counted figure. Re-sampling later restates nothing already packed.
+    pack_basis: Mapped[str] = mapped_column(String(16), default="COUNTED", server_default="COUNTED")
+
     source_location_id: Mapped[Optional[uuid.UUID]] = mapped_column(
         UUID(as_uuid=True), ForeignKey("locations.id", ondelete="SET NULL"), nullable=True
     )
