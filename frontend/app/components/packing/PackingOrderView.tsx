@@ -840,7 +840,6 @@ function PackingOrderForm({ locPickerTreeOptions, machineOptions, defaultSourceL
     const [soId, setSoId] = useState(initialValues?.sales_order_id || '');
     const [soLineId, setSoLineId] = useState(initialValues?.sales_order_line_id || '');
     const [notes, setNotes] = useState('');
-    const [materials, setMaterials] = useState<any[]>([]);
     const [sos, setSos] = useState<any[]>([]);
     const [saving, setSaving] = useState(false);
 
@@ -1124,9 +1123,6 @@ function PackingOrderForm({ locPickerTreeOptions, machineOptions, defaultSourceL
         [fgResults]
     );
 
-    const addMaterial = () => setMaterials(prev => [...prev, { item_id: '', qty_planned: '', location_id: '' }]);
-    const setMaterial = (idx: number, patch: any) => setMaterials(prev => prev.map((m, i) => i === idx ? { ...m, ...patch } : m));
-    const removeMaterial = (idx: number) => setMaterials(prev => prev.filter((_, i) => i !== idx));
 
     const submit = async () => {
         if (!itemId) { showToast('Pick an item to pack', 'warning'); return; }
@@ -1181,9 +1177,10 @@ function PackingOrderForm({ locPickerTreeOptions, machineOptions, defaultSourceL
                 color_id: initialValues?.color_id || null,
                 attribute_value_ids: initialValues?.combo_value_id ? [initialValues.combo_value_id] : [],
                 notes: notes || null,
-                materials: materials
-                    .filter(m => m.item_id && num(m.qty_planned) > 0)
-                    .map(m => ({ item_id: m.item_id, qty_planned: num(m.qty_planned), location_id: m.location_id || null })),
+                // No packaging plan on the order: the box is picked per carton line
+                // in the pack modal, where the packer is holding it. Planning it
+                // here meant naming a carton type before anyone knew how many
+                // cartons there would be, and `qty_consumed` then argued with it.
             };
             const res = await authFetch(`${API_BASE}/packing`, {
                 method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body),
@@ -1491,85 +1488,11 @@ function PackingOrderForm({ locPickerTreeOptions, machineOptions, defaultSourceL
                     </div>
                 </FormSection>
 
-                <FormSection
-                    classic={CLASSIC}
-                    title={
-                        <SectionTitle
-                            icon="bi-boxes"
-                            right={<XPActionButton classic={CLASSIC} icon="bi-plus-lg" label="Add Material" onClick={addMaterial} />}
-                        >
-                            Packaging Materials (optional)
-                        </SectionTitle>
-                    }
-                >
-                    {materials.length === 0 && <div style={hintText}>No packaging materials planned.</div>}
-                    {materials.length > 0 && (
-                        <div style={{ display: 'flex', gap: 8, marginBottom: 2 }}>
-                            <div style={{ flex: 1, minWidth: 200 }}><FieldLabel classic={CLASSIC}>Material</FieldLabel></div>
-                            <div style={{ width: 100 }}><FieldLabel classic={CLASSIC}>Qty</FieldLabel></div>
-                            <div style={{ width: 180 }}><FieldLabel classic={CLASSIC}>Take from</FieldLabel></div>
-                            <div style={{ width: 26 }} />
-                        </div>
-                    )}
-                    {materials.map((m, idx) => (
-                        <MaterialRow
-                            key={idx}
-                            row={m}
-                            authFetch={authFetch}
-                            locPickerTreeOptions={locPickerTreeOptions}
-                            onChange={(patch: any) => setMaterial(idx, patch)}
-                            onRemove={() => removeMaterial(idx)}
-                        />
-                    ))}
-                </FormSection>
-
                 <FormSection title={<SectionTitle icon="bi-sticky">Notes</SectionTitle>} classic={CLASSIC}>
                     <textarea style={{ ...xpInput, height: 50, width: '100%', resize: 'vertical', boxSizing: 'border-box' }} value={notes} onChange={e => setNotes(e.target.value)} />
                 </FormSection>
             </div>
         </ModalWrapper>
-    );
-}
-
-// Packaging materials are any item (cartons, poly bags, labels), not a scoped
-// category — so this uses the generic item search rather than the FG/RM hooks.
-function MaterialRow({ row, authFetch, locPickerTreeOptions, onChange, onRemove }: any) {
-    const [results, setResults] = useState<any[]>([]);
-    const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-    const fetchResults = useCallback(async (search = '') => {
-        const q = search ? `&search=${encodeURIComponent(search)}` : '';
-        const res = await authFetch(`${API_BASE}/items?limit=50${q}`);
-        if (res.ok) { const d = await res.json(); setResults(Array.isArray(d) ? d : (d.items || [])); }
-    }, [authFetch]);
-
-    useEffect(() => {
-        fetchResults();
-        return () => { if (timer.current) clearTimeout(timer.current); };
-    }, [fetchResults]);
-
-    const onSearch = (term: string) => {
-        if (timer.current) clearTimeout(timer.current);
-        timer.current = setTimeout(() => fetchResults(term), 300);
-    };
-
-    const options = useMemo(
-        () => (results || []).map((i: any) => ({ value: String(i.id), label: i.name, subLabel: i.code })),
-        [results]
-    );
-
-    return (
-        <div style={{ display: 'flex', gap: 8, alignItems: 'flex-end', marginBottom: 6 }}>
-            <div style={{ flex: 1, minWidth: 200 }}>
-                <SearchableSelect options={options} value={row.item_id} onChange={v => onChange({ item_id: v })} onSearch={onSearch} placeholder="Search material..." size="sm" />
-            </div>
-            <input type="number" min={0} style={{ ...xpInput, width: 100, textAlign: 'right' }} placeholder="Qty"
-                value={row.qty_planned} onChange={e => onChange({ qty_planned: e.target.value })} />
-            <div style={{ width: 180 }}>
-                <TreeSelect options={locPickerTreeOptions} value={row.location_id || ''} onChange={(id: string) => onChange({ location_id: id })} allowEmpty emptyLabel="(pack-from)" size="sm" style={{ width: '100%' }} />
-            </div>
-            <XPActionButton classic={CLASSIC} tone="danger" icon="bi-trash" title="Remove material" onClick={onRemove} />
-        </div>
     );
 }
 
