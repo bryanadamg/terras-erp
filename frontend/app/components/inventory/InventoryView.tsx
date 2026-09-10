@@ -2,7 +2,6 @@ import React, { useState, useEffect, useMemo, memo, useRef } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import CodeConfigModal, { CodeConfig, buildCodeWithCounter } from '../shared/CodeConfigModal';
 import BulkImportModal from './BulkImportModal';
-import { layoutRectOf, layoutViewport } from '../shared/uiScale';
 import HistoryPane from '../shared/HistoryPane';
 import ModalWrapper from '../shared/ModalWrapper';
 import Pager from '../shared/Pager';
@@ -11,7 +10,7 @@ import { useLanguage } from '../../context/LanguageContext';
 import { useTheme } from '../../context/ThemeContext';
 import { useData } from '../../context/DataContext';
 import { useUser } from '../../context/UserContext';
-import { XPEmptyState, TableSkeleton, useTableSkeletonMetrics, useSortable, FormSection, FieldLabel, StatusChip, CodeChip, xpFont, rowStateBg, CHIP_RADIUS, xpInput as xpInputBase, xpBtn as xpBtnBase, BTN_TONES, XP_BTN } from '../shared/xpTheme';
+import { XPEmptyState, TableSkeleton, useTableSkeletonMetrics, useSortable, XPActionButton, MenuTriggerButton, FloatingMenu, useFloatingMenu, FormSection, FieldLabel, StatusChip, CodeChip, xpFont, rowStateBg, CHIP_RADIUS, xpInput as xpInputBase, xpBtn as xpBtnBase, BTN_TONES, XP_BTN } from '../shared/xpTheme';
 import { xpBevel as sharedXpBevel, xpTitleBar as sharedXpTitleBar, xpToolbar as sharedXpToolbar, SearchField, ToolbarButton, pageFillStyle } from '../shared/shellTheme';
 import TreeSelect, { buildCategoryTree, buildLocationPickerTree } from '../shared/TreeSelect';
 import { Tabs, TabDef } from '../shared/Tabs';
@@ -39,105 +38,8 @@ function getCategoryXPStyle(category: string): { bg: string; border: string; col
     return { bg: '#e8e8e8', border: '#6a6a6a', color: '#222222' };
 }
 
-// Floating [...] action menu — aggregates row actions (except the always-visible
-// Event Log button). Rendered in a fixed-position overlay so table overflow
-// never clips it.
-const RowActionMenu = memo(({ items, classic }: { items: { label: string; icon: string; danger?: boolean; onClick: () => void }[]; classic: boolean }) => {
-    const [open, setOpen] = useState(false);
-    const [pos, setPos] = useState<{ top: number; right: number } | null>(null);
-    const btnRef = useRef<HTMLButtonElement>(null);
-    const menuRef = useRef<HTMLDivElement>(null);
-
-    useEffect(() => {
-        if (!open) return;
-        const close = () => setOpen(false);
-        const onDocMouseDown = (e: MouseEvent) => {
-            const t = e.target as Node;
-            if (btnRef.current?.contains(t) || menuRef.current?.contains(t)) return;
-            setOpen(false);
-        };
-        window.addEventListener('scroll', close, true);
-        window.addEventListener('resize', close);
-        document.addEventListener('mousedown', onDocMouseDown);
-        return () => {
-            window.removeEventListener('scroll', close, true);
-            window.removeEventListener('resize', close);
-            document.removeEventListener('mousedown', onDocMouseDown);
-        };
-    }, [open]);
-
-    const toggle = (e: React.MouseEvent) => {
-        e.stopPropagation();
-        if (open) { setOpen(false); return; }
-        // Layout px — the menu is position:fixed. See uiScale.ts.
-        const r = btnRef.current ? layoutRectOf(btnRef.current) : null;
-        if (r) setPos({ top: r.bottom + 2, right: Math.max(4, layoutViewport().width - r.right) });
-        setOpen(true);
-    };
-
-    if (items.length === 0) return null;
-
-    const menu = open && pos ? (
-        <div
-            ref={menuRef}
-            onMouseDown={e => e.stopPropagation()}
-            style={{
-                position: 'fixed', top: pos.top, right: pos.right, zIndex: 1200, minWidth: 130,
-                background: '#fff',
-                border: classic ? '1px solid #808080' : '1px solid #d0d0d0',
-                boxShadow: '2px 3px 8px rgba(0,0,0,0.3)',
-                borderRadius: classic ? 0 : 4,
-                padding: '2px 0',
-                fontFamily: classic ? xpFont : undefined,
-                fontSize: classic ? '11px' : '13px',
-            }}
-        >
-            {items.map(it => (
-                <button
-                    key={it.label}
-                    onClick={e => { e.stopPropagation(); setOpen(false); it.onClick(); }}
-                    style={{
-                        display: 'flex', alignItems: 'center', gap: 8, width: '100%', textAlign: 'left',
-                        background: 'none', border: 'none', cursor: 'pointer',
-                        padding: classic ? '4px 12px' : '6px 14px',
-                        color: it.danger ? '#aa0000' : '#000',
-                    }}
-                    onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background = it.danger ? '#ffe8e8' : (classic ? '#316ac5' : '#eef3fb'); if (!it.danger && classic) (e.currentTarget as HTMLButtonElement).style.color = '#fff'; }}
-                    onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = 'none'; (e.currentTarget as HTMLButtonElement).style.color = it.danger ? '#aa0000' : '#000'; }}
-                >
-                    <i className={`bi ${it.icon}`}></i>
-                    <span>{it.label}</span>
-                </button>
-            ))}
-        </div>
-    ) : null;
-
-    return (
-        <>
-            <button
-                ref={btnRef}
-                title="More actions"
-                onClick={toggle}
-                style={classic
-                    ? { background: open ? '#e8f0f8' : 'none', border: '1px solid ' + (open ? '#7f9db9' : 'transparent'), borderRadius: '2px', cursor: 'pointer', padding: '3px 6px', color: '#555', fontSize: '12px' }
-                    : undefined}
-                className={classic ? '' : 'btn btn-sm btn-link text-secondary p-0'}
-                onMouseEnter={classic ? (e => { (e.currentTarget as HTMLButtonElement).style.borderColor = '#7f9db9'; (e.currentTarget as HTMLButtonElement).style.background = '#e8f0f8'; }) : undefined}
-                onMouseLeave={classic ? (e => { if (!open) { (e.currentTarget as HTMLButtonElement).style.borderColor = 'transparent'; (e.currentTarget as HTMLButtonElement).style.background = 'none'; } }) : undefined}
-            >
-                <i className="bi bi-three-dots"></i>
-            </button>
-            {menu}
-        </>
-    );
-});
-RowActionMenu.displayName = 'RowActionMenu';
-
 // Memoized Row Component
-const InventoryRow = memo(({ item, rowIndex, isEditing, isSelected, onToggleSelect, onEdit, onDelete, onViewHistory, classic }: any) => {
-    const { hasPermission, hasAnyPermission } = useUser();
-    const canManage = hasAnyPermission('item.create', 'item.edit');
-    const canDelete = hasPermission('item.delete');
+const InventoryRow = memo(({ item, rowIndex, isEditing, isSelected, onToggleSelect, onViewHistory, onMenu, classic }: any) => {
     // Selected and being-edited are the two shared row states — same fills as
     // every other list (see rowStateBg). This row used to invert to XP selection
     // blue with white text, which meant re-colouring the code chip, the category
@@ -236,40 +138,9 @@ const InventoryRow = memo(({ item, rowIndex, isEditing, isSelected, onToggleSele
                 )}
             </td>
             <td style={classic ? { ...tdBase, borderRight: 'none', textAlign: 'right' } : undefined}>
-                <div className={classic ? '' : 'd-flex gap-1'} style={classic ? { display: 'flex', gap: '2px', justifyContent: 'flex-end' } : undefined}>
-                    {classic ? (
-                        <>
-                            <button
-                                title="View History"
-                                onClick={() => onViewHistory(item.id)}
-                                style={{ background: 'none', border: '1px solid transparent', borderRadius: '2px', cursor: 'pointer', padding: '3px 6px', color: '#555', fontSize: '12px' }}
-                                onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.borderColor = '#7f9db9'; (e.currentTarget as HTMLButtonElement).style.background = '#e8f0f8'; }}
-                                onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.borderColor = 'transparent'; (e.currentTarget as HTMLButtonElement).style.background = 'none'; }}
-                            >
-                                <i className="bi bi-clock-history"></i>
-                            </button>
-                            <RowActionMenu
-                                classic={classic}
-                                items={[
-                                    ...(canManage ? [{ label: 'Edit', icon: 'bi-pencil-square', onClick: () => onEdit(item) }] : []),
-                                    ...(canDelete ? [{ label: 'Delete', icon: 'bi-trash', danger: true, onClick: () => onDelete(item.id) }] : []),
-                                ]}
-                            />
-                        </>
-                    ) : (
-                        <>
-                            <button className="btn btn-sm btn-link text-info p-0" title="View History" onClick={() => onViewHistory(item.id)}>
-                                <i className="bi bi-clock-history"></i>
-                            </button>
-                            <RowActionMenu
-                                classic={classic}
-                                items={[
-                                    ...(canManage ? [{ label: 'Edit', icon: 'bi-pencil-square', onClick: () => onEdit(item) }] : []),
-                                    ...(canDelete ? [{ label: 'Delete', icon: 'bi-trash', danger: true, onClick: () => onDelete(item.id) }] : []),
-                                ]}
-                            />
-                        </>
-                    )}
+                <div className={classic ? '' : 'd-flex gap-1 justify-content-end'} style={classic ? { display: 'flex', gap: '2px', justifyContent: 'flex-end' } : undefined}>
+                    <XPActionButton classic={classic} tone="neutral" icon="bi-clock-history" title="View History" onClick={() => onViewHistory(item.id)} />
+                    <MenuTriggerButton classic={classic} onClick={e => onMenu(String(item.id), e)} />
                 </div>
             </td>
         </tr>
@@ -310,6 +181,7 @@ export default function InventoryView({
   const { hasPermission, hasAnyPermission } = useUser();
   const canManage = hasAnyPermission('item.create', 'item.edit');
   const canDelete = hasPermission('item.delete');
+  const { openId: openMenuId, pos: menuPos, toggle: toggleMenu, close: closeMenu } = useFloatingMenu();
   // UI State
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [isImportOpen, setIsImportOpen] = useState(false);
@@ -1320,9 +1192,8 @@ export default function InventoryView({
                         isEditing={editingItem?.id === item.id}
                         isSelected={sel.isSelectedKey(item.id)}
                         onToggleSelect={sel.toggleKey}
-                        onEdit={handleEdit}
-                        onDelete={onDeleteItem}
                         onViewHistory={setHistoryEntityId}
+                        onMenu={toggleMenu}
                         classic={classic}
                     />
                   ))}
@@ -1663,6 +1534,20 @@ export default function InventoryView({
                 </form>
           )}
       </ModalWrapper>
+
+      {openMenuId && (() => {
+          const menuItem = sortedItems.find((i: any) => String(i.id) === openMenuId);
+          if (!menuItem) return null;
+          return (
+              <FloatingMenu
+                  pos={menuPos}
+                  items={[
+                      { key: 'edit', label: 'Edit', icon: 'bi-pencil-square', hidden: !canManage, onClick: () => { closeMenu(); handleEdit(menuItem); } },
+                      { key: 'delete', label: 'Delete', icon: 'bi-trash', danger: true, hidden: !canDelete, onClick: () => { closeMenu(); onDeleteItem(menuItem.id); } },
+                  ]}
+              />
+          );
+      })()}
 
       {historyEntityId && (
           <HistoryPane
