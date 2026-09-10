@@ -1005,6 +1005,28 @@ function PackingOrderForm({ locPickerTreeOptions, machineOptions, defaultSourceL
         if (copyQty2 && line.qty2 != null && line.qty2 !== '') setQty2(String(line.qty2));
     };
 
+    // The line's own selling unit, for the picker row. A planner telling two lines
+    // of the same style apart reads the count the customer ordered in (12 Roll)
+    // before the yardage it converts to, and it is also the unit the cartons will
+    // be counted in — so it belongs on the row that fixes the item, not only in
+    // the alt-unit field it fills in below. The factor's length unit lives on the
+    // UOM master rather than on the line, resolved the same way `applyLineAltUnit`
+    // does; `uoms` may still be loading, in which case the tooltip drops the
+    // conversion and the chip itself is unaffected.
+    const lineAltUnit = (l: any): { text: string; title: string } | null => {
+        if (!l?.uom2 || l.qty2 == null || l.qty2 === '') return null;
+        const factor = l.uom2_factor != null ? parseFloat(String(l.uom2_factor)) : null;
+        const uomObj = (uoms || []).find((u: any) => u.name === l.uom2);
+        const factorObj = (uomObj?.factors || []).find((f: any) => parseFloat(f.value) === factor);
+        const lengthUom = factorObj?.to_uom_name || 'Yard';
+        return {
+            text: `${num(l.qty2).toLocaleString()} ${l.uom2}`,
+            title: factor
+                ? `Ordered in the customer's selling unit — 1 ${l.uom2} = ${factor} ${lengthUom}`
+                : `Ordered in the customer's selling unit`,
+        };
+    };
+
     const applySoLine = (lineId: string) => {
         setSoLineId(lineId);
         const line = soLines.find((l: any) => String(l.id) === lineId);
@@ -1221,6 +1243,14 @@ function PackingOrderForm({ locPickerTreeOptions, machineOptions, defaultSourceL
                                                             {num(l.qty_ordered_base).toLocaleString()} {l.base_uom}
                                                         </LotChip>
                                                     ) : null}
+                                                    {(() => {
+                                                        const alt = lineAltUnit(l);
+                                                        return alt ? (
+                                                            <LotChip tone="order" title={alt.title}>
+                                                                {alt.text}
+                                                            </LotChip>
+                                                        ) : null;
+                                                    })()}
                                                 </div>
                                                 <LotChips batch={l} />
                                             </div>
