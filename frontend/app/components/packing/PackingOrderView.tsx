@@ -1197,7 +1197,7 @@ function PackingOrderForm({ locPickerTreeOptions, machineOptions, defaultSourceL
                 <FormSection title={<SectionTitle icon="bi-receipt">Demand</SectionTitle>} classic={CLASSIC}>
                     <div style={{ ...fieldGrid, gridTemplateColumns: '1fr 1fr' }}>
                         <div>
-                            <FieldLabel classic={CLASSIC} hint="Leave empty to pack to stock">Sales Order</FieldLabel>
+                            <FieldLabel classic={CLASSIC} title="Leave empty to pack to stock">Sales Order</FieldLabel>
                             <SearchableSelect
                                 options={soOptions}
                                 value={soId}
@@ -1215,7 +1215,10 @@ function PackingOrderForm({ locPickerTreeOptions, machineOptions, defaultSourceL
                                 tell same-item lines apart while comparing them side by
                                 side. A checkbox-style picker (same row shape as the WO
                                 staging lot picker) shows every line's badges at once. */}
-                            <FieldLabel classic={CLASSIC} hint="Fixes the item being packed">Order line</FieldLabel>
+                            <FieldLabel
+                                classic={CLASSIC}
+                                title="Fixes the item being packed — colour and variant attributes are inherited from the line"
+                            >Order line</FieldLabel>
                             <div style={{
                                 border: '1px solid #7f9db9', background: 'white',
                                 maxHeight: 220, overflowY: 'auto',
@@ -1260,9 +1263,6 @@ function PackingOrderForm({ locPickerTreeOptions, machineOptions, defaultSourceL
                             </div>
                         </div>
                     )}
-                    {soLineId && (
-                        <div style={hintText}>Colour and variant attributes are inherited from the order line.</div>
-                    )}
                 </FormSection>
 
                 <FormSection title={<SectionTitle icon="bi-box2">What to Pack</SectionTitle>} classic={CLASSIC}>
@@ -1293,7 +1293,10 @@ function PackingOrderForm({ locPickerTreeOptions, machineOptions, defaultSourceL
                                 value={qtyTarget} onChange={e => setQtyTarget(e.target.value)} />
                         </div>
                         <div>
-                            <FieldLabel classic={CLASSIC}>
+                            <FieldLabel
+                                classic={CLASSIC}
+                                title="Splits the target into cartons — leave it empty to decide the carton count per pack event"
+                            >
                                 {altDrivesPackSize ? `${selectedItem?.uom || 'Qty'}/carton (est.)` : 'Qty per carton'}
                             </FieldLabel>
                             {/* Same rule as the target one field over: the carton holds a
@@ -1371,7 +1374,12 @@ function PackingOrderForm({ locPickerTreeOptions, machineOptions, defaultSourceL
                         says how many yards a piece is, this says what a yard weighs. */}
                     <div style={{ ...fieldGrid, gridTemplateColumns: 'minmax(220px, 1fr) 130px', marginTop: 8 }}>
                         <div>
-                            <FieldLabel classic={CLASSIC}>Sampled weight</FieldLabel>
+                            <FieldLabel
+                                classic={CLASSIC}
+                                title={useSample
+                                    ? 'Measured off the sampled goods — every kg figure on this order converts through it, not through the estimate on the item'
+                                    : 'Prefilled from the item as a sampling estimate. Replace it with the figure the operator measured off the actual goods.'}
+                            >Sampled weight</FieldLabel>
                             <div style={{ display: 'flex' }}>
                                 <input type="number" min={0} step="any"
                                     style={{ ...xpInput, flex: 1, minWidth: 0, borderRight: 'none', textAlign: 'right' }}
@@ -1395,20 +1403,16 @@ function PackingOrderForm({ locPickerTreeOptions, machineOptions, defaultSourceL
                             )}
                         </div>
                     </div>
-                    <div style={hintText}>
-                        {useSample
-                            ? 'Measured off the sampled goods — every kg figure on this order converts through it, '
-                              + 'not through the estimate on the item.'
-                            : 'Prefilled from the item as a sampling estimate. Replace it with the figure the '
-                              + 'operator measured off the actual goods.'}
-                    </div>
                     {/* Cut-to-weight vs cut-to-length. The customer's order is the same
                         either way (1 Pcs = 5 Yd); this says whether the floor will measure
                         that out per box or weigh to it, which decides which figure the pack
                         screen asks for and which one it derives. */}
                     {uom2 && (
                         <div style={{ marginTop: 8 }}>
-                            <FieldLabel classic={CLASSIC}>Pack basis</FieldLabel>
+                            <FieldLabel
+                                classic={CLASSIC}
+                                title="Whether the floor measures the goods out per box or weighs to it — it decides which figure the pack screen asks for and which one it derives"
+                            >Pack basis</FieldLabel>
                             <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
                                 {([
                                     ['COUNTED', `Count ${uom2}`, `The packer counts ${uom2} into each ${(packageLabel || 'carton').toLowerCase()} and weighs it`],
@@ -1431,16 +1435,8 @@ function PackingOrderForm({ locPickerTreeOptions, machineOptions, defaultSourceL
                                     );
                                 })}
                             </div>
-                            <div style={hintText}>
-                                {packBasis === 'WEIGHED'
-                                    ? `Cut to weight: the pack screen asks for kg per ${(packageLabel || 'carton').toLowerCase()} and states the ${uom2} count off the sampled weight. Sample the goods before packing — that figure is the conversion.`
-                                    : `Cut to length: the pack screen asks for ${uom2} per ${(packageLabel || 'carton').toLowerCase()} and the scale reading is entered beside it.`}
-                            </div>
                         </div>
                     )}
-                    <div style={hintText}>
-                        Qty per carton splits the target — leave it empty to decide the carton count per pack event.
-                    </div>
                     {uom2 && uom2Factor && !altBaseFactor && (
                         <div style={{ ...hintText, color: '#a00000', fontStyle: 'normal' }}>
                             {uom2} can&apos;t be converted into {selectedItem?.uom || 'the stock unit'}: a kg-stocked item
@@ -1449,36 +1445,39 @@ function PackingOrderForm({ locPickerTreeOptions, machineOptions, defaultSourceL
                             {selectedItem?.uom || 'the stock unit'} instead.
                         </div>
                     )}
+                    {/* The one caption of this section that is figures rather than prose:
+                        the chain every kg on the order is derived through, and the order's
+                        own totals in it. The estimate-vs-scale caveat rides in the tooltip
+                        — it is read once, the numbers are read every time. */}
                     {altBaseFactor && (
-                        <div style={hintText}>
+                        <div
+                            style={hintText}
+                            title={num(qty2) > 0
+                                ? `${num(qtyTarget).toLocaleString()} ${selectedItem?.uom || ''} is the estimate — the real weight is taken from the scale at pack time`
+                                : undefined}
+                        >
                             1 {uom2} = {uom2Factor} {uom2LengthUom || 'Yard'} = {altBaseFactor} {selectedItem?.uom || ''}
                             {num(qty2) > 0
-                                ? ` — this order is for ${num(qty2).toLocaleString()} ${uom2}; `
-                                  + `${num(qtyTarget).toLocaleString()} ${selectedItem?.uom || ''} is the estimate, `
-                                  + 'the scale decides at pack time'
+                                ? ` — ${num(qty2).toLocaleString()} ${uom2} ≈ ${num(qtyTarget).toLocaleString()} ${selectedItem?.uom || ''}`
                                 : ''}
                         </div>
                     )}
                 </FormSection>
 
-                <FormSection title={<SectionTitle icon="bi-geo-alt">Locations &amp; Machine</SectionTitle>} classic={CLASSIC}>
+                <FormSection title={<SectionTitle icon="bi-geo-alt"><span title="The variant is not asked for here — the packer picks the source lots at pack time, and each lot's own stock row states its variant">Locations &amp; Machine</span></SectionTitle>} classic={CLASSIC}>
                     <div style={{ ...fieldGrid, gridTemplateColumns: '1fr 1fr 1fr' }}>
                         <div>
-                            <FieldLabel classic={CLASSIC} hint="Bulk finished goods are drawn from here">Pack from</FieldLabel>
+                            <FieldLabel classic={CLASSIC} title="Bulk finished goods are drawn from here">Pack from</FieldLabel>
                             <TreeSelect options={locPickerTreeOptions} value={sourceLoc} onChange={setSourceLoc} allowEmpty emptyLabel="— select —" size="sm" style={{ width: '100%' }} />
                         </div>
                         <div>
-                            <FieldLabel classic={CLASSIC} hint="Sealed cartons land here">Store cartons at</FieldLabel>
+                            <FieldLabel classic={CLASSIC} title="Sealed cartons land here">Store cartons at</FieldLabel>
                             <TreeSelect options={locPickerTreeOptions} value={outputLoc} onChange={setOutputLoc} allowEmpty emptyLabel="— select —" size="sm" style={{ width: '100%' }} />
                         </div>
                         <div>
-                            <FieldLabel classic={CLASSIC} hint="Pre-fills every pack event">Machine</FieldLabel>
+                            <FieldLabel classic={CLASSIC} title="Pre-fills every pack event">Machine</FieldLabel>
                             <SearchableSelect options={machineOptions || []} value={workCenterId} onChange={setWorkCenterId} placeholder="— none —" size="sm" />
                         </div>
-                    </div>
-                    <div style={hintText}>
-                        The variant is not asked for here — the packer picks the source lots at pack time,
-                        and each lot&apos;s own stock row states its variant.
                     </div>
                 </FormSection>
 
