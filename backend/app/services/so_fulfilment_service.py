@@ -12,6 +12,24 @@ materialization in this codebase):
 `packed_available` is the READY driver: an order is shippable when every line has
 cartons physically in stock, not merely when the loom finished.
 
+Each of the four is reported TWICE: in the item's stock UoM, and in the line's own
+alt selling unit (`SalesOrderLine.uom2` -- Pcs, Pic, Gross). The alt count is the
+figure that is reported to the user: the customer ordered 2880 Pcs and is owed
+2880 Pcs, whatever they weighed, so it is what the fulfilment bar draws and what
+`derive_status` gates READY/SENT on. Kilos stay the unit stock actually moves in,
+so both are carried rather than one replacing the other; a line with no alt unit
+has None for all four and every consumer falls back to the base figures.
+
+Alt counts are SUMMED FROM CARTONS (`Batch.alt_qty`) wherever cartons exist --
+never divided out of the kilos. That is the same rule `packing_service` states for
+`PackingOrder.qty_packed_alt`: `uom2_factor` is a planning estimate off the item's
+g/y, the packer reweighs every box, and dividing the weight back by the factor
+reports a piece count nobody counted. Only `made` (bulk FG, no cartons yet) and an
+uncartonised bulk dispatch line are CONVERTED, through this line's own ordered
+pair (`qty2` : `ordered_base`) rather than through the UOM master -- those two
+figures are already locked to each other on the SO form, so no second conversion
+chain is needed and none can drift from it.
+
 `recompute_so_status` replaces the scattered `so.status = "READY"` writes that
 used to live in api/manufacturing.py and api/pick_lists.py. Those flipped the
 whole order the moment the *first* root MO delivered, so a multi-line SO read as
@@ -26,7 +44,7 @@ this resolves uniquely in practice; if two lines ever claim the same MO the qty
 is split pro-rata rather than double-counted.
 """
 
-from sqlalchemy import String, cast, func, select
+from sqlalchemy import String, case, cast, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import joinedload, selectinload
 
@@ -56,6 +74,20 @@ _ZERO = {
     # see `ordered_qty_in_stock_uom`.
     "ordered_base": None,
     "base_uom": "",
+    # --- The same four in the line's alt selling unit ------------------------
+    # None (not 0.0) means this line has no alt unit to count in at all, which is
+    # a different answer from "nothing packed yet" and is what makes a consumer
+    # fall back to the base figures rather than draw an empty bar. Seeded to 0.0
+    # in `fulfilment_map` for every line that does carry one.
+    "made_alt": None,
+    "packed_alt": None,
+    "packed_available_alt": None,
+    "dispatched_alt": None,
+    # What the customer ordered, in that unit: `SalesOrderLine.qty2` as it was
+    # keyed. Never re-derived from `ordered_base` -- the SO form locks the two
+    # together (`altCountForYd`/`deriveFromAlt`), so this IS the ordered figure.
+    "ordered_alt": None,
+    "alt_uom": "",
 }
 
 
@@ -133,6 +165,36 @@ def ordered_qty_in_stock_uom(
     return ordered
 
 
+# Carton quality states that never count as output, mirroring
+# `PackingOrder.qty_packed`/`qty_packed_alt` and the pickability gate.
+_REJECTED_CARTON = ("REJECTED", "REJECT_USABLE")
+
+
+def _to_alt(base_qty, ordered_base, ordered_alt) -> float | None:
+    """A base-UoM qty restated as an alt count, through this line's ordered pair.
+
+    Deliberately NOT `base_qty / base_per_alt(uom2_factor, ...)`. The SO form keys
+    `qty` (yards), `qty_kg` and `qty2` as one locked number, so `ordered_alt /
+    ordered_base` is this line's own effective pieces-per-kg and cannot disagree
+    with the denominator the bar is drawn against -- whereas re-running the UOM
+    master's factor through the item's g/y is a second chain that can, and would
+    make a 100%-made line read 97%.
+
+    Only for figures no carton exists for (`made`, a bulk dispatch line). Anything
+    packed is SUMMED from `Batch.alt_qty` instead -- see the module docstring.
+
+    None when there is no pair to scale through; 0.0 in, 0.0 out, so an untouched
+    line stays a real zero rather than an unknown.
+    """
+    qty = _f(base_qty)
+    if qty == 0:
+        return 0.0
+    ob, oa = _f(ordered_base), _f(ordered_alt)
+    if ob <= 0 or oa <= 0:
+        return None
+    return round(qty * oa / ob, 2)
+
+
 async def ordered_base_map(db: AsyncSession, line_ids: list) -> dict:
     """{str(so_line_id): ordered qty in the item's stock UoM (or None)}.
 
@@ -191,8 +253,8 @@ async def _line_rows(db: AsyncSession, so_ids: list) -> list:
     """Every line of these SOs, with the Item columns the denominator needs.
 
     Positional indices are load-bearing: 1..5 for `_mo_claimants`, 6..10 for
-    `ordered_qty_in_stock_uom`, 11..12 for the size token (`_size_tokenizer`).
-    One query for the whole page, never per order.
+    `ordered_qty_in_stock_uom`, 11..12 for the size token (`_size_tokenizer`),
+    13..14 for the alt selling unit. One query for the whole page, never per order.
     """
     return (
         await db.execute(
@@ -210,6 +272,8 @@ async def _line_rows(db: AsyncSession, so_ids: list) -> list:
                 Item.weight_unit,
                 SalesOrderLine.size_id,
                 SalesOrderLine.size_label,
+                SalesOrderLine.qty2,
+                SalesOrderLine.uom2,
             )
             .join(Item, Item.id == SalesOrderLine.item_id)
             .filter(SalesOrderLine.sales_order_id.in_(so_ids))
@@ -321,15 +385,38 @@ async def fulfilment_map(db: AsyncSession, so_ids: list) -> dict:
             r[6], r[8], qty_kg=r[7], weight_per_unit=r[9], weight_unit=r[10]
         )
         out[str(r[0])]["base_uom"] = (r[8] or "").strip()
+        # A line counts in its alt unit only when it states BOTH the unit and the
+        # count. A unit with no count is the free-text case ("600 yard" typed into
+        # uom2 with no factor) -- there is no denominator there, so the line stays
+        # on the base figures instead of drawing a bar against nothing.
+        alt_uom = (r[14] or "").strip()
+        ordered_alt = _f(r[13])
+        if alt_uom and ordered_alt > 0:
+            out[str(r[0])]["alt_uom"] = alt_uom
+            out[str(r[0])]["ordered_alt"] = ordered_alt
+            for k in ("made_alt", "packed_alt", "packed_available_alt", "dispatched_alt"):
+                out[str(r[0])][k] = 0.0
 
     # --- dispatched: only a DISPATCHED pick list has posted stock OUT ---
-    for sol_id, qty in (
+    #
+    # Three sums, not one. A pick list line is (SO line, carton), so the shipped
+    # piece count is the cartons' own `alt_qty` added up -- but a bulk line ships
+    # uncartonised (`batch_id` null, free qty) and has no count to add. Those are
+    # measured separately and converted below, so a mixed order neither loses the
+    # bulk qty nor restates the counted cartons through an estimate.
+    _has_alt = Batch.alt_qty.isnot(None)
+    for sol_id, qty, carton_alt, carton_base in (
         await db.execute(
             select(
                 PickListLine.sales_order_line_id,
                 func.coalesce(func.sum(PickListLine.qty_picked), 0),
+                func.coalesce(func.sum(Batch.alt_qty), 0),
+                func.coalesce(
+                    func.sum(case((_has_alt, PickListLine.qty_picked), else_=0)), 0
+                ),
             )
             .join(PickList, PickListLine.pick_list_id == PickList.id)
+            .outerjoin(Batch, Batch.id == PickListLine.batch_id)
             .filter(
                 PickList.sales_order_id.in_(so_ids),
                 PickList.status == "DISPATCHED",
@@ -337,8 +424,16 @@ async def fulfilment_map(db: AsyncSession, so_ids: list) -> dict:
             .group_by(PickListLine.sales_order_line_id)
         )
     ).all():
-        if str(sol_id) in out:
-            out[str(sol_id)]["dispatched"] = _f(qty)
+        key = str(sol_id)
+        if key not in out:
+            continue
+        out[key]["dispatched"] = _f(qty)
+        if out[key]["dispatched_alt"] is None:
+            continue
+        bulk = _to_alt(
+            _f(qty) - _f(carton_base), out[key]["ordered_base"], out[key]["ordered_alt"]
+        )
+        out[key]["dispatched_alt"] = round(_f(carton_alt) + _f(bulk), 2)
 
     # --- packed: every carton ever minted against the line ---
     for sol_id, qty in (
@@ -355,17 +450,44 @@ async def fulfilment_map(db: AsyncSession, so_ids: list) -> dict:
         if str(sol_id) in out:
             out[str(sol_id)]["packed"] = _f(qty)
 
+    # The same thing counted in pieces. A separate pass off the cartons rather
+    # than a second sum on the completion rows: `PackingCompletion` records the kg
+    # that left stock, and the piece count lives one level down on each carton it
+    # minted. Rejected cartons drop out here exactly as rejected completions drop
+    # out of `qty_packed` -- scrap was not packed.
+    for sol_id, alt in (
+        await db.execute(
+            select(
+                PackingOrder.sales_order_line_id,
+                func.coalesce(func.sum(Batch.alt_qty), 0),
+            )
+            .select_from(PackingOrder)
+            .join(Batch, Batch.packing_order_id == PackingOrder.id)
+            .filter(
+                PackingOrder.sales_order_line_id.in_(line_ids),
+                Batch.quality_status.notin_(_REJECTED_CARTON),
+            )
+            .group_by(PackingOrder.sales_order_line_id)
+        )
+    ).all():
+        if str(sol_id) in out and out[str(sol_id)]["packed_alt"] is not None:
+            out[str(sol_id)]["packed_alt"] = round(_f(alt), 2)
+
     # --- packed_available: cartons still holding stock. Carton qty lives only in
     # the StockBalance row keyed by the batch, never on the Batch itself.
     # `quality_status == "GOOD"` mirrors the same gate pick_lists.py uses to decide
     # what's pickable (readiness board query, carton-scan endpoint) — a rejected or
     # disposed carton still has StockBalance.qty > 0 sitting in the defect store,
     # but it can never be picked, so it must not count toward READY either.
-    for sol_id, qty in (
+    for sol_id, qty, alt in (
         await db.execute(
             select(
                 PackingOrder.sales_order_line_id,
                 func.coalesce(func.sum(StockBalance.qty), 0),
+                # The piece count of those same cartons, in the one pass -- the
+                # join is identical, so a second query would only be a second
+                # chance for the two to disagree about which cartons are in stock.
+                func.coalesce(func.sum(Batch.alt_qty), 0),
             )
             .select_from(PackingOrder)
             .join(Batch, Batch.packing_order_id == PackingOrder.id)
@@ -380,6 +502,8 @@ async def fulfilment_map(db: AsyncSession, so_ids: list) -> dict:
     ).all():
         if str(sol_id) in out:
             out[str(sol_id)]["packed_available"] = _f(qty)
+            if out[str(sol_id)]["packed_available_alt"] is not None:
+                out[str(sol_id)]["packed_available_alt"] = round(_f(alt), 2)
 
     # --- made: root MO completions, matched to lines on the variant tuple ---
     mo_rows = (
@@ -437,6 +561,16 @@ async def fulfilment_map(db: AsyncSession, so_ids: list) -> dict:
         else:
             for r in claimants:
                 out[str(r[0])]["made"] += produced * (_f(r[6]) / total)
+
+    # `made` is bulk finished goods -- it has not been cut into pieces yet, so
+    # there is no counted figure to sum and this is the one stage that must be
+    # converted. Done last, after the pro-rata split above has settled, so an
+    # ambiguous peg converts the share the line actually got.
+    for r in line_rows:
+        stat = out[str(r[0])]
+        if stat["made_alt"] is None:
+            continue
+        stat["made_alt"] = _to_alt(stat["made"], stat["ordered_base"], stat["ordered_alt"])
 
     return out
 
@@ -812,6 +946,14 @@ def derive_status(lines: list, fulfilment: dict) -> str:
     item's stock UoM while `qty` is in yards. A line whose denominator can't be
     derived is never counted as met: a stuck PENDING is recoverable by filling in
     the item's weight, a false SENT is a shipment nobody chases.
+
+    A line that counts in an alt unit is judged THERE instead. Same reasoning as
+    `packing_service.is_target_met`, one tier up: an order for 2880 Pcs is owed
+    2880 pieces whatever they weigh, and judged in kg against a target derived
+    from the item's g/y, a physically complete shipment of elastic cloth never
+    reached SENT — the cartons are reweighed and the cloth does not hold its
+    estimate. The base test stays the fallback, so a line with no alt unit (or one
+    whose cartons carry no count) is never judged less correctly than before.
     """
     if not lines:
         return "PENDING"
@@ -820,8 +962,11 @@ def derive_status(lines: list, fulfilment: dict) -> str:
         return fulfilment.get(str(line.id), _ZERO)
 
     def met(line, key: str) -> bool:
-        target = stat(line)["ordered_base"]
-        return target is not None and stat(line)[key] >= float(target) - EPS
+        st = stat(line)
+        target, got = st["ordered_alt"], st[f"{key}_alt"]
+        if target is None or got is None:
+            target, got = st["ordered_base"], st[key]
+        return target is not None and got is not None and got >= float(target) - EPS
 
     if all(met(l, "dispatched") for l in lines):
         return "SENT"

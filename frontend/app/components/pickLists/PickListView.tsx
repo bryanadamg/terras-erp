@@ -605,16 +605,32 @@ const coveragePct = (so: any) => num(so.qty_outstanding) > 0
 // Coverage answers "is there a carton for what's left"; this answers "how much of
 // the order is done" — the last carton of a barely-started order reads 100%
 // coverage, and only this tells it apart from one that is nearly shipped.
+//
+// Drawn in the ALT SELLING UNIT (Pcs, Pic) whenever the server could roll the
+// whole order up in one — that is what the customer ordered and what they are
+// owed, and it is the same unit the SO table's own bar now uses, so a planner
+// moving between the two pages reads one number. The server sends `alt_uom` null
+// for an order that mixes alt units or has a line without one, and the row then
+// falls back to the kilos rather than adding two unlike counts.
 const fulfilment = (so: any) => {
-    const ordered = num(so.qty_ordered_base);
+    const useAlt = !!so.alt_uom && num(so.qty_ordered_alt) > 0;
+    const ordered = useAlt ? num(so.qty_ordered_alt) : num(so.qty_ordered_base);
     const pct = (v: number) => (ordered > 0 ? Math.min(100, Math.round(v / ordered * 100)) : 0);
     return {
         ordered,
-        uom: so.base_uom ? ` ${so.base_uom}` : '',
-        made: num(so.qty_made),
-        packed: num(so.qty_packed),
-        dispatched: num(so.qty_dispatched),
-        unknown: Number(so.lines_unknown_base) || 0,
+        isAlt: useAlt,
+        uom: useAlt ? ` ${so.alt_uom}` : (so.base_uom ? ` ${so.base_uom}` : ''),
+        made: num(useAlt ? so.qty_made_alt : so.qty_made),
+        packed: num(useAlt ? so.qty_packed_alt : so.qty_packed),
+        dispatched: num(useAlt ? so.qty_dispatched_alt : so.qty_dispatched),
+        // The kilos behind an alt reading, for the tooltip's second line — the
+        // picker still moves weight even when the order is counted in pieces.
+        baseOrdered: num(so.qty_ordered_base),
+        baseDispatched: num(so.qty_dispatched),
+        baseUom: so.base_uom ? ` ${so.base_uom}` : '',
+        // Only meaningful for a base reading: an alt roll-up is all-or-nothing, so
+        // a line the server could not count sent the whole row back to the kilos.
+        unknown: useAlt ? 0 : (Number(so.lines_unknown_base) || 0),
         pct,
     };
 };
@@ -637,6 +653,10 @@ function fulfilmentCell(so: any) {
     const shipped = f.pct(f.dispatched), packed = f.pct(f.packed), made = f.pct(f.made);
     const title = `Made ${fmtQty(f.made)} · Packed ${fmtQty(f.packed)} · Shipped ${fmtQty(f.dispatched)}`
         + ` — of ${fmtQty(f.ordered)}${f.uom} ordered`
+        + (f.isAlt && f.baseOrdered > 0
+            ? `
+Shipped ${fmtQty(f.baseDispatched)}${f.baseUom} of ${fmtQty(f.baseOrdered)}${f.baseUom}`
+            : '')
         + (f.unknown > 0 ? ` (${f.unknown} line(s) excluded: no derivable weight)` : '');
     return (
         <div title={title} style={{ display: 'flex', flexDirection: 'column', gap: 2, minWidth: 78 }}>

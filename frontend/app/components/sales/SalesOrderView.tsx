@@ -1067,22 +1067,42 @@ export default function SalesOrderView({ items, attributes, boms, salesOrders, p
   // made >= packed >= in-stock/shipped, so the three are drawn as nested stages on
   // one track rather than stacked segments — they are not additive.
   //
-  // The denominator is `qty_ordered_base`, NOT `line.qty`: the four numbers are in
-  // the item's stock UoM (kg for most FG) while `qty` is the yardage the order was
-  // keyed in. Dividing by `qty` showed an 11 kg shipment of a 10 kg order as
-  // "11 / 10000" — 0.1% instead of complete. `qty_ordered_base` is null when the
-  // item is stocked by weight but has no weight-per-yard on its master; that is
-  // unknown, not zero, so the bar is withheld rather than drawn empty.
+  // MEASURED IN THE ALT SELLING UNIT whenever the line carries one. The customer
+  // ordered 2880 Pcs and is owed 2880 Pcs; the kilos are what stock happens to
+  // move in, and reading a bar in them answers a question nobody asked. It is also
+  // the only honest denominator for cloth that does not hold its estimated g/y —
+  // the packer reweighs every box, so a physically complete order reads 97% in kg
+  // forever. Same rule `packing_service.is_target_met` applies one tier down.
+  //
+  // The base pair is the fallback, and its own denominator is `qty_ordered_base`,
+  // NOT `line.qty`: those numbers are in the item's stock UoM (kg for most FG)
+  // while `qty` is the yardage the order was keyed in. Dividing by `qty` showed an
+  // 11 kg shipment of a 10 kg order as "11 / 10000" — 0.1% instead of complete.
+  // Either denominator is null when it can't be derived (weight-stocked item with
+  // no weight-per-yard); that is unknown, not zero, so the bar is withheld rather
+  // than drawn empty.
   const lineFulfilment = (line: any) => {
-      const base = line.qty_ordered_base;
+      // An alt reading needs the count AND every stage counted in it — the server
+      // sends null, not 0, for a stage it could not count, and mixing one counted
+      // stage with three converted ones would draw a bar out of two units.
+      const altOrdered = line.qty_ordered_alt;
+      const altStages = [line.qty_made_alt, line.qty_packed_alt, line.qty_packed_available_alt, line.qty_dispatched_alt];
+      const useAlt = altOrdered != null && Number(altOrdered) > 0 && altStages.every(v => v != null);
+      const base = useAlt ? altOrdered : line.qty_ordered_base;
       const ordered = base == null ? null : Number(base) || 0;
-      const uom = line.base_uom || '';
-      const made = Number(line.qty_made) || 0;
-      const packed = Number(line.qty_packed) || 0;
-      const available = Number(line.qty_packed_available) || 0;
-      const shipped = Number(line.qty_dispatched) || 0;
+      const uom = (useAlt ? line.alt_uom : line.base_uom) || '';
+      const made = Number(useAlt ? line.qty_made_alt : line.qty_made) || 0;
+      const packed = Number(useAlt ? line.qty_packed_alt : line.qty_packed) || 0;
+      const available = Number(useAlt ? line.qty_packed_available_alt : line.qty_packed_available) || 0;
+      const shipped = Number(useAlt ? line.qty_dispatched_alt : line.qty_dispatched) || 0;
       const pct = (v: number) => (ordered && ordered > 0 ? Math.min(100, Math.round((v / ordered) * 100)) : 0);
-      return { ordered, uom, made, packed, available, shipped, pct,
+      return { ordered, uom, made, packed, available, shipped, pct, isAlt: useAlt,
+          // The kilos still travel, for the tooltip's second line: the planner
+          // reading a piece count still has to know what leaves the warehouse.
+          baseOrdered: line.qty_ordered_base == null ? null : Number(line.qty_ordered_base) || 0,
+          baseUom: line.base_uom || '',
+          baseShipped: Number(line.qty_dispatched) || 0,
+          baseAvailable: Number(line.qty_packed_available) || 0,
           // Shippable = cartons actually in stock. Dispatched stock has left, so a
           // shipped line reads complete off `shipped`, not off what remains.
           isReady: !!ordered && ordered > 0 && (available >= ordered - 0.0001 || shipped >= ordered - 0.0001) };
@@ -1113,7 +1133,14 @@ export default function SalesOrderView({ items, attributes, boms, salesOrders, p
       }
       if (f.ordered <= 0) return <span style={{ fontFamily:xpFont, fontSize:'9px', color:'#ccc' }}>—</span>;
       const u = f.uom ? ` ${f.uom}` : '';
-      const title = `Made ${fmtQty(f.made)} · Packed ${fmtQty(f.packed)} · In stock ${fmtQty(f.available)} · Shipped ${fmtQty(f.shipped)} — of ${fmtQty(f.ordered)}${u} ordered`;
+      const bu = f.baseUom ? ` ${f.baseUom}` : '';
+      const title = `Made ${fmtQty(f.made)} · Packed ${fmtQty(f.packed)} · In stock ${fmtQty(f.available)} · Shipped ${fmtQty(f.shipped)} — of ${fmtQty(f.ordered)}${u} ordered`
+          // Second line only when the bar is in pieces: the kilos are then a
+          // different unit from everything above, and the picker still moves them.
+          + (f.isAlt && f.baseOrdered != null
+              ? `
+In stock ${fmtQty(f.baseAvailable)}${bu} · Shipped ${fmtQty(f.baseShipped)}${bu} — of ${fmtQty(f.baseOrdered)}${bu}`
+              : '');
       // shipped/packed/made nest (shipped<=packed<=made), so drawn as one stacked
       // bar: green=shipped, blue=packed-not-yet-shipped, gray=made-not-yet-packed.
       const shippedPct = f.pct(f.shipped);
@@ -1167,13 +1194,18 @@ export default function SalesOrderView({ items, attributes, boms, salesOrders, p
       }
       const f = lineFulfilment(line);
       const u = f.uom ? ` ${f.uom}` : '';
+      // MO-side quantities (`mp.mo_qty`, `m.made`) are always in the item's stock
+      // UoM — an MO is planned in kg however the customer counts — so they must
+      // never be labelled with `u`, which is the alt unit whenever the line has
+      // one. Only the `f.*` pair below follows the bar's unit.
+      const bu = f.baseUom ? ` ${f.baseUom}` : '';
       // Ordered qty is the denominator the client reads for finished goods ("how
       // much of my order exists"). It is null for a weight-stocked item with no
       // weight-per-yard on its master, so fall back to the MOs' own planned qty.
       const againstLine = f.ordered != null && f.ordered > 0;
       const outQty = againstLine
           ? `${fmtQty(f.made)} / ${fmtQty(f.ordered)}${u}`
-          : mp.mo_qty > 0 ? `${fmtQty(mp.made)} / ${fmtQty(mp.mo_qty)}${u}` : null;
+          : mp.mo_qty > 0 ? `${fmtQty(mp.made)} / ${fmtQty(mp.mo_qty)}${bu}` : null;
       const pct = mp.pct;
       const shipped = f.pct(f.made) >= 100;
       // Naming the blocking component only reads true for a single-MO line: the
@@ -1183,7 +1215,7 @@ export default function SalesOrderView({ items, attributes, boms, salesOrders, p
       const compLine = (c: any) => `  ${c.pct >= 100 ? '✓' : c.pct > 0 ? '▶' : '·'} ${c.mo_code} — ${fmtQty(c.made)} / ${fmtQty(c.need)} (${c.pct}%)`;
       const title = [
           ...(mp.mos || []).map((m: any) => {
-              const head = `${m.mo_code} (${m.mo_status}) — ${fmtQty(m.made)} / ${fmtQty(m.mo_qty)}${u} made`;
+              const head = `${m.mo_code} (${m.mo_status}) — ${fmtQty(m.made)} / ${fmtQty(m.mo_qty)}${bu} made`;
               return [head, ...(m.steps || []).map(stepLine), ...(m.components || []).map(compLine)].join('\n');
           }),
           `Click to open ${mp.mo_code}`,

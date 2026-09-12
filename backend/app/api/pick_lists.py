@@ -511,10 +511,32 @@ async def list_pickable_orders(
         f_ordered = f_made = f_packed = f_dispatched = 0.0
         unknown_base = 0
         base_uoms: set[str] = set()
+        # The same roll-up in the alt selling unit, which is what the row draws.
+        # `alt_ok` goes false the moment one line can't contribute — no alt unit,
+        # a different alt unit from its neighbours, or a stage with no count — and
+        # the row then falls back to the kilos. Partial is not an option: adding
+        # four lines of Pcs and leaving the fifth out understates the order
+        # silently, which is the failure `lines_unknown_base` exists to avoid.
+        a_ordered = a_made = a_packed = a_dispatched = 0.0
+        alt_uoms: set[str] = set()
+        alt_ok = bool(so.lines)
         for line in so.lines:
             stat = fulfilment.get(str(line.id))
             if not stat:
                 continue
+            alt_ordered = stat.get("ordered_alt")
+            alt_stages = [stat.get(k) for k in ("made_alt", "packed_alt", "dispatched_alt")]
+            if alt_ordered is None or any(v is None for v in alt_stages):
+                alt_ok = False
+            else:
+                a_ordered += float(alt_ordered)
+                a_made, a_packed, a_dispatched = (
+                    a_made + float(alt_stages[0]),
+                    a_packed + float(alt_stages[1]),
+                    a_dispatched + float(alt_stages[2]),
+                )
+                if stat.get("alt_uom"):
+                    alt_uoms.add(stat["alt_uom"])
             base = stat.get("ordered_base")
             if base is None:
                 unknown_base += 1
@@ -525,6 +547,7 @@ async def list_pickable_orders(
             f_dispatched += stat.get("dispatched", 0.0)
             if stat.get("base_uom"):
                 base_uoms.add(stat["base_uom"])
+        alt_ok = alt_ok and len(alt_uoms) == 1 and a_ordered > 0
 
         due = _so_due_date(so)
         out.append(PickableOrderResponse(
@@ -546,6 +569,11 @@ async def list_pickable_orders(
             qty_packed=round(f_packed, 4),
             qty_dispatched=round(f_dispatched, 4),
             base_uom=next(iter(base_uoms)) if len(base_uoms) == 1 else None,
+            qty_ordered_alt=round(a_ordered, 2) if alt_ok else None,
+            qty_made_alt=round(a_made, 2) if alt_ok else None,
+            qty_packed_alt=round(a_packed, 2) if alt_ok else None,
+            qty_dispatched_alt=round(a_dispatched, 2) if alt_ok else None,
+            alt_uom=next(iter(alt_uoms)) if alt_ok else None,
             lines_unknown_base=unknown_base,
             lines=out_lines,
         ))
