@@ -156,7 +156,7 @@ export const STATUS_FAMILY: Record<string, StatusFamily> = {
     CREATE: 'green', REACTIVATE: 'green', COMPLETE: 'green', COMPLETION: 'green', DISPATCH: 'green',
     UPDATE: 'amber',
     STATUS_CHANGE: 'blue', UPDATE_STATUS: 'blue', UPDATE_ITEM_STATUS: 'blue', UPDATE_COLOR_STATUS: 'blue',
-    UPDATE_DIP_STATUS: 'blue', STAGE: 'blue', TRANSFER: 'blue', IMPORT: 'blue',
+    UPDATE_DIP_STATUS: 'blue', STAGE: 'blue', TRANSFER: 'blue', IMPORT: 'blue', REASSIGN: 'blue',
     DELETE: 'red', DEACTIVATE: 'red', REJECT: 'red', DISPOSE: 'red',
     PRINT: 'gray', SPLIT: 'gray', ARCHIVE: 'gray', REBUILD: 'gray',
     // Scheduled Backups panel (Settings → Database & Backups): audit verbs for the

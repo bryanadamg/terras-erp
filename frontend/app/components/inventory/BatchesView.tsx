@@ -29,7 +29,7 @@ import { rejectGradeLabel } from '../shared/rejectDisplay';
 
 const REJECT_TITLE = 'QC reject — lot drops out of good stock; produced qty returns to its MO';
 const SPLIT_TITLE = 'Split — peel a portion off into a new lot (prints a label)';
-const DISPOSE_TITLE = 'Dispose rejected lot — physically write off its remaining stock (deducts from on-hand)';
+const DISPOSE_TITLE = 'Dispose rejected lot — write off its remaining stock, or reassign it to another item';
 
 // Either reject grade blocks split/re-reject and allows dispose — the grade only
 // changes whether pickers still offer the lot (see components/shared/rejectDisplay).
@@ -281,6 +281,40 @@ export default function BatchesView({ items, locations, categories, workCenters,
     setSplitReason('');
   };
 
+  // Disposition panel for a rejected lot: write off, or recycle into another item.
+  const [disposeBatch, setDisposeBatch] = useState<Batch | null>(null);
+  const [disposeMode, setDisposeMode] = useState<'writeoff' | 'reassign'>('writeoff');
+  const [disposeReason, setDisposeReason] = useState('');
+  const [reassignItemId, setReassignItemId] = useState('');
+  const [reassignQty, setReassignQty] = useState('');
+  const [reassignLocId, setReassignLocId] = useState('');
+  const [disposing, setDisposing] = useState(false);
+  // Same server typeahead as the create form — `items` is one page of /items, so
+  // the item this lot is being recycled into may not be in it.
+  const { results: reassignItemResults, onSearch: onSearchReassignItem, resolve: resolveReassignItem } =
+    useItemSearch({ seed: items, enabled: !!disposeBatch });
+  const reassignItemOptions = React.useMemo(
+    () => (reassignItemResults || []).filter((i: any) => String(i.id) !== String(disposeBatch?.item_id || '')).map(itemToOption),
+    [reassignItemResults, disposeBatch],
+  );
+
+  const openDispose = (b: Batch) => {
+    setDisposeBatch(b);
+    setDisposeMode('writeoff');
+    setDisposeReason('');
+    setReassignItemId('');
+    setReassignQty(b.remaining != null ? String(Number(b.remaining)) : '');
+    // Default: leave the goods where they are (the defect store). Picking the
+    // target item overrides this with its default putaway bin.
+    setReassignLocId('');
+  };
+
+  const onReassignItemChange = (id: string) => {
+    setReassignItemId(id);
+    const it: any = resolveReassignItem(id);
+    setReassignLocId(it?.default_putaway_location_id ? String(it.default_putaway_location_id) : '');
+  };
+
   const handleSplit = async () => {
     if (!splitBatch) return;
     const rem = Number(splitBatch.remaining ?? 0);
@@ -450,31 +484,60 @@ export default function BatchesView({ items, locations, categories, workCenters,
     }
   };
 
-  // Dispose a rejected lot: physically write off its remaining stock (deducts
-  // from on-hand), like a consumed beam. Only offered on REJECTED lots.
-  const handleDispose = async (batch: Batch) => {
-    const rem = Number(batch.remaining ?? 0);
-    const ok = await confirm({
-      title: 'Dispose Rejected Lot',
-      message: `Dispose lot ${batch.batch_number}? Its remaining ${rem.toFixed(2)} will be physically written off and deducted from stock on-hand. This cannot be undone.`,
-      confirmText: 'Dispose',
-      variant: 'danger',
-    });
-    if (!ok) return;
+  // Disposition of a rejected lot — two exits, one panel. Write-off physically
+  // scraps the remaining stock (deducts from on-hand, like a consumed beam);
+  // reassign recycles it into a different item instead, because reject is not
+  // always scrap (a beam rejected for one cloth still warps a coarser one).
+  const handleDispose = async () => {
+    if (!disposeBatch) return;
+    const batch = disposeBatch;
+    setDisposing(true);
     try {
+      if (disposeMode === 'reassign') {
+        const rem = Number(batch.remaining ?? 0);
+        const q = parseFloat(reassignQty);
+        if (!reassignItemId) { showToast('Pick the item to reassign this lot to', 'warning'); return; }
+        if (isNaN(q) || q <= 0) { showToast('Reassign qty must be positive', 'warning'); return; }
+        if (q > rem + 1e-9) { showToast(`Reassign qty exceeds remaining (${rem.toFixed(2)})`, 'warning'); return; }
+        const res = await authFetch(`${apiBase}/batches/${batch.id}/reassign`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            item_id: reassignItemId,
+            // Omit qty when it covers the whole balance — the server then moves
+            // exactly what's on hand rather than a client-rounded number.
+            qty: q < rem - 1e-9 ? q : null,
+            location_id: reassignLocId || null,
+            reason: disposeReason.trim() || null,
+          }),
+        });
+        if (!res.ok) {
+          const err = await res.json().catch(() => ({}));
+          throw new Error(err.detail || 'Failed to reassign lot');
+        }
+        const newLot = await res.json();
+        showToast(`Reassigned ${q.toFixed(2)} → ${newLot.batch_number} (${newLot.item_code || ''})`, 'success');
+        setDisposeBatch(null);
+        fetchBatches();
+        setLotLabels([newLot]);   // the recycled goods need a new label on the rack
+        return;
+      }
       const res = await authFetch(`${apiBase}/batches/${batch.id}/dispose`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ reason: null }),
+        body: JSON.stringify({ reason: disposeReason.trim() || null }),
       });
       if (!res.ok) {
         const err = await res.json().catch(() => ({}));
         throw new Error(err.detail || 'Failed to dispose lot');
       }
       showToast(`Lot ${batch.batch_number} disposed`, 'success');
+      setDisposeBatch(null);
       fetchBatches();
     } catch (err: any) {
       showToast(err.message, 'danger');
+    } finally {
+      setDisposing(false);
     }
   };
 
@@ -692,6 +755,7 @@ export default function BatchesView({ items, locations, categories, workCenters,
     GRG: { label: 'Greige',        bg: '#e8d8ff', fg: '#440099', border: '#c4a8ee', icon: 'bi-layers' },
     DYE: { label: 'Dyed Lot',      bg: '#cce4ff', fg: '#004b99', border: '#99c4ee', icon: 'bi-droplet-half' },
     PACK:{ label: 'Packaging',     bg: '#d4f0d4', fg: '#005500', border: '#99cc99', icon: 'bi-box-seam' },
+    RCY: { label: 'Recycled',      bg: '#ffe8cc', fg: '#8a4b00', border: '#e6b980', icon: 'bi-arrow-repeat' },
   };
   const DEFAULT_STAGE: StageMeta = { label: 'Lot', bg: '#e4e2dc', fg: '#444444', border: '#c4c2ba', icon: 'bi-tag' };
   const classifyLot = (batchNumber?: string | null): StageMeta => {
@@ -1003,7 +1067,7 @@ export default function BatchesView({ items, locations, categories, workCenters,
                             <XPActionButton classic tone="warning" icon="bi-slash-circle" title={REJECT_TITLE} onClick={() => openReject(b)} />
                           )}
                           {isRejectGrade(b.quality_status) && (b.remaining ?? 0) > 0 && (
-                            <XPActionButton classic tone="danger" icon="bi-trash" title={DISPOSE_TITLE} onClick={() => handleDispose(b)} />
+                            <XPActionButton classic tone="danger" icon="bi-trash" title={DISPOSE_TITLE} onClick={() => openDispose(b)} />
                           )}
                           <MenuTriggerButton classic onClick={e => toggle(b.id, e)} />
                         </div>
@@ -1126,7 +1190,7 @@ export default function BatchesView({ items, locations, categories, workCenters,
                             <XPActionButton classic={false} tone="warning" icon="bi-slash-circle" title={REJECT_TITLE} onClick={() => openReject(b)} />
                           )}
                           {isRejectGrade(b.quality_status) && (b.remaining ?? 0) > 0 && (
-                            <XPActionButton classic={false} tone="danger" icon="bi-trash" title={DISPOSE_TITLE} onClick={() => handleDispose(b)} />
+                            <XPActionButton classic={false} tone="danger" icon="bi-trash" title={DISPOSE_TITLE} onClick={() => openDispose(b)} />
                           )}
                           <MenuTriggerButton classic={false} onClick={e => toggle(b.id, e)} />
                         </div>
@@ -1372,6 +1436,146 @@ export default function BatchesView({ items, locations, categories, workCenters,
               value={splitReason}
               onChange={e => setSplitReason(e.target.value)}
               placeholder="Leftover after partial use..."
+            />
+          </div>
+        </ModalWrapper>
+        );
+      })()}
+
+      {/* ── Dispose / Reassign Modal (rejected lots) ── */}
+      {disposeBatch && (() => {
+        const rem = Number(disposeBatch.remaining ?? 0);
+        const q = parseFloat(reassignQty);
+        const reassign = disposeMode === 'reassign';
+        const qtyOk = !isNaN(q) && q > 0 && q <= rem + 1e-9;
+        const partial = qtyOk && q < rem - 1e-9;
+        const canSubmit = reassign ? (!!reassignItemId && qtyOk) : rem >= 0;
+        const targetItem: any = reassignItemId ? resolveReassignItem(reassignItemId) : null;
+        const destName = reassignLocId
+          ? ((locations || []).find((l: any) => String(l.id) === reassignLocId)?.name || '')
+          : '';
+        const hint = classic
+          ? { fontFamily: xpFont, fontSize: 10, color: '#555', marginTop: 2 }
+          : { fontSize: 12, color: '#666', marginTop: 2 };
+        const modeBtn = (mode: 'writeoff' | 'reassign', label: string, icon: string) => (
+          <button
+            type="button"
+            onClick={() => setDisposeMode(mode)}
+            style={classic
+              ? xpBtn(disposeMode === mode ? { fontWeight: 'bold', background: 'linear-gradient(to bottom, #ffffff, #d4d0c8)' } : {})
+              : undefined}
+            className={classic ? XP_BTN : `btn btn-sm ${disposeMode === mode ? 'btn-primary' : 'btn-outline-secondary'}`}
+          >
+            <i className={`bi ${icon}`} style={{ marginRight: 4 }} />{label}
+          </button>
+        );
+        return (
+        <ModalWrapper
+          isOpen={!!disposeBatch}
+          onClose={() => setDisposeBatch(null)}
+          title={`Dispose Rejected Lot ${disposeBatch.batch_number}`}
+          size="sm"
+          modeless
+          footer={<>
+            <button style={classic ? xpBtn() : undefined} className={classic ? XP_BTN : 'btn btn-sm btn-secondary'} onClick={() => setDisposeBatch(null)}>Cancel</button>
+            <button
+              style={classic ? xpBtn(reassign ? { fontWeight: 'bold' } : { ...BTN_TONES.danger }) : undefined}
+              className={classic ? XP_BTN : `btn btn-sm ${reassign ? 'btn-primary' : 'btn-danger'}`}
+              onClick={handleDispose}
+              disabled={disposing || !canSubmit}
+            >
+              {disposing ? 'Working...' : reassign ? 'Reassign Lot' : 'Write Off'}
+            </button>
+          </>}
+        >
+          <div className="mb-2" style={classic ? { fontFamily: xpFont, fontSize: 11 } : {}}>
+            <strong>{batchItemCode(disposeBatch)}</strong>
+            {disposeBatch.remaining != null && <> — {rem.toFixed(2)} remaining</>}
+            {disposeBatch.location_name && <> at {disposeBatch.location_name}</>}
+          </div>
+          <div className="mb-3" style={{ display: 'flex', gap: 6 }}>
+            {modeBtn('writeoff', 'Write off', 'bi-trash')}
+            {modeBtn('reassign', 'Assign to another item', 'bi-arrow-repeat')}
+          </div>
+
+          {!reassign && (
+            <div className="mb-3" style={classic ? { fontFamily: xpFont, fontSize: 10, color: '#663300' } : { fontSize: 13, color: '#664d03' }}>
+              The remaining {rem.toFixed(2)} is physically written off and deducted from stock on-hand, and the lot is marked DISPOSED. This cannot be undone.
+            </div>
+          )}
+
+          {reassign && (<>
+            <div className="mb-3" style={classic ? { fontFamily: xpFont, fontSize: 10, color: '#663300' } : { fontSize: 13, color: '#664d03' }}>
+              Recycle instead of scrap: the goods move onto a new GOOD lot under the item below, so they are pickable and count in availability again. The rejection stays on the record — this lot keeps its reject grade and the new lot traces back to it.
+            </div>
+            <div className="mb-3">
+              <label style={classic ? { fontFamily: xpFont, fontSize: 11 } : {}}>Reassign to item</label>
+              <div className="mt-1">
+                <SearchableSelect
+                  options={reassignItemOptions}
+                  value={reassignItemId}
+                  onChange={onReassignItemChange}
+                  onSearch={onSearchReassignItem}
+                  placeholder="Search item..."
+                  size="sm"
+                />
+              </div>
+              <div style={hint}>
+                {targetItem
+                  ? `New lot is created under ${targetItem.code}${targetItem.name ? ` — ${targetItem.name}` : ''}.`
+                  : 'The product this rejected material will be cycled into.'}
+              </div>
+            </div>
+            <div className="mb-3">
+              <label style={classic ? { fontFamily: xpFont, fontSize: 11 } : {}}>Quantity to reassign</label>
+              <input
+                type="number"
+                min={0}
+                max={rem}
+                step="any"
+                className={classic ? '' : 'form-control form-control-sm mt-1'}
+                style={classic ? { ...xpInput, width: '100%', height: 22 } : {}}
+                value={reassignQty}
+                onChange={e => setReassignQty(e.target.value)}
+                placeholder={`0 – ${rem.toFixed(2)}`}
+              />
+              <div style={hint}>
+                {partial
+                  ? `Moves ${q.toFixed(2)}; ${(rem - q).toFixed(2)} stays on the rejected lot for a later write-off.`
+                  : qtyOk
+                    ? 'Whole remaining balance — the rejected lot is left depleted.'
+                    : `Enter a qty between 0 and ${rem.toFixed(2)}.`}
+              </div>
+            </div>
+            <div className="mb-3">
+              <label style={classic ? { fontFamily: xpFont, fontSize: 11 } : {}}>Move to location</label>
+              <div className="mt-1">
+                <TreeSelect
+                  options={locationPickerTree}
+                  value={reassignLocId}
+                  onChange={setReassignLocId}
+                  allowEmpty
+                  emptyLabel="Leave where it is"
+                  size="sm"
+                  style={classic ? { width: '100%' } : undefined}
+                />
+              </div>
+              <div style={hint}>
+                {destName
+                  ? `Recycled stock is transferred into ${destName}.`
+                  : 'Stays in its current bin — usually the defect store, which is rarely where usable stock should sit.'}
+              </div>
+            </div>
+          </>)}
+
+          <div className="mb-3">
+            <label style={classic ? { fontFamily: xpFont, fontSize: 11 } : {}}>Reason (optional)</label>
+            <textarea
+              className={classic ? '' : 'form-control form-control-sm mt-1'}
+              style={classic ? { ...xpInput, width: '100%', height: 50, resize: 'vertical' } : {}}
+              value={disposeReason}
+              onChange={e => setDisposeReason(e.target.value)}
+              placeholder={reassign ? 'Re-warped for coarser cloth...' : 'Unusable, shade off...'}
             />
           </div>
         </ModalWrapper>

@@ -434,6 +434,22 @@ class BatchDispose(BaseModel):
     (posts it OUT of every balance row) and mark the lot DISPOSED. Irreversible."""
     reason: str | None = None
 
+
+class BatchReassign(BaseModel):
+    """Recycle a rejected lot into a different item instead of scrapping it: the
+    physical goods are fine for another product (a rejected warp beam re-warped
+    for a coarser cloth), so the stock moves to a new GOOD lot under `item_id`
+    rather than being written off."""
+    item_id: UUID
+    # Partial recycle: qty to move. None or >= remaining moves the whole balance,
+    # which leaves the rejected lot depleted; a smaller value leaves the rest on
+    # the rejected lot for a later dispose.
+    qty: float | None = None
+    # Where the recycled stock lands. Omit to leave it in whichever bin each
+    # source balance row sits in (usually the defect store).
+    location_id: UUID | None = None
+    reason: str | None = None
+
 class MOCompletionReject(BaseModel):
     """Completion-level reject (API/un-lotted outputs; lot page uses /batches/{id}/reject)."""
     reason: str | None = None
@@ -1935,6 +1951,22 @@ class SalesOrderLineResponse(SalesOrderLineCreate):
     # render that as unknown, never as 0%.
     qty_ordered_base: float | None = None
     base_uom: str | None = None
+    # --- The same fulfilment, counted in the line's alt selling unit ----------
+    # `uom2` is what the customer ordered in and is owed in (2880 Pcs, 40 Pic), so
+    # this is the pair the fulfilment bar draws and the pair READY/SENT gates on;
+    # the base figures above stay the unit stock moves in. Null on a line with no
+    # alt unit, or one that states a unit with no count — consumers fall back to
+    # the base pair rather than drawing a bar against nothing.
+    #
+    # Packed/available/shipped are SUMMED from the cartons' own `alt_qty`, never
+    # divided out of the kilos (see so_fulfilment_service). `qty_made_alt` is the
+    # one converted figure — bulk FG has not been cut into pieces yet.
+    qty_ordered_alt: float | None = None
+    alt_uom: str | None = None
+    qty_made_alt: float | None = None
+    qty_packed_alt: float | None = None
+    qty_packed_available_alt: float | None = None
+    qty_dispatched_alt: float | None = None
     # Production progress (qty made vs planned) of the MOs behind this line, plus
     # the stage the floor is on. Populated by the list endpoint only
     # (_populate_mo_progress); None means no MO exists for the line yet, which the
@@ -3876,6 +3908,16 @@ class PickableOrderResponse(BaseModel):
     qty_packed: float = 0
     qty_dispatched: float = 0
     base_uom: str | None = None
+    # The same roll-up in the alt selling unit, which is what the board draws —
+    # the customer is owed pieces, not kilos. Summed only over lines that count in
+    # ONE unit: `alt_uom` is null when the order mixes Pcs and Pic (or when any
+    # contributing line has no alt unit at all), and the row then falls back to the
+    # base figures rather than adding two unlike counts into one number.
+    qty_ordered_alt: float | None = None
+    qty_made_alt: float | None = None
+    qty_packed_alt: float | None = None
+    qty_dispatched_alt: float | None = None
+    alt_uom: str | None = None
     # Lines whose ordered qty can't be restated in the stock UoM (weight-stocked
     # item with no weight-per-yard on its master). They contribute nothing to the
     # four numbers above, so the bar understates the order — it is drawn with a
