@@ -1076,6 +1076,7 @@ function PickListEditor({ pl: initialPl, itemById, locPickerTreeOptions, authFet
     const [saving, setSaving] = useState(false);
     const [scanCode, setScanCode] = useState('');
     const [scanning, setScanning] = useState(false);
+    const [showOtherLines, setShowOtherLines] = useState(false);
     const scanRef = useRef<HTMLInputElement | null>(null);
 
     useEffect(() => {
@@ -1161,6 +1162,18 @@ function PickListEditor({ pl: initialPl, itemById, locPickerTreeOptions, authFet
         });
         return m;
     }, [lines]);
+
+    // The table is keyed on SO lines, not pick-list lines, because the picker may
+    // scan a carton this list never suggested and the row has to exist to hold it.
+    // But an order line nothing on this list covers is not part of THIS document —
+    // shown by default it filled a shipped pick list with red "No packed cartons
+    // available" rows describing items that were simply never on it. Folded away
+    // instead, with the count kept visible so a part-shipment is still legible.
+    // The guard matters: a list whose suggestion found nothing has no covered line
+    // at all, and hiding every row would leave an empty table with no explanation.
+    const coveredSoLines = soLines.filter((sl: any) => (linesBySoLine[String(sl.id)] || []).length > 0);
+    const otherSoLines = soLines.filter((sl: any) => (linesBySoLine[String(sl.id)] || []).length === 0);
+    const visibleSoLines = (showOtherLines || coveredSoLines.length === 0) ? soLines : coveredSoLines;
 
     const cartonLines = lines.filter(l => l.batch_id);
     const scannedCount = cartonLines.filter(l => l.picked_at).length;
@@ -1248,7 +1261,7 @@ function PickListEditor({ pl: initialPl, itemById, locPickerTreeOptions, authFet
                         {soLoading && (
                             <tr><td colSpan={9} style={{ ...td, textAlign: 'center', color: '#999' }}>Loading order lines...</td></tr>
                         )}
-                        {soLines.map((sl: any) => {
+                        {visibleSoLines.map((sl: any) => {
                             const it = itemById[String(sl.item_id)];
                             const rows = linesBySoLine[String(sl.id)] || [];
                             // Ordered qty in the item's STOCK UOM. `sl.qty` is not it —
@@ -1352,6 +1365,23 @@ function PickListEditor({ pl: initialPl, itemById, locPickerTreeOptions, authFet
                                 </React.Fragment>
                             );
                         })}
+                        {/* The rest of the order. Worth one line rather than nothing: on a
+                            part shipment "4 more lines still owed" is the difference between
+                            a short pick and a finished one, and scanning an unsuggested
+                            carton lands on one of these. Neutral grey, never the red the
+                            hidden rows used to shout — not being on this list is normal. */}
+                        {!soLoading && coveredSoLines.length > 0 && otherSoLines.length > 0 && (
+                            <tr>
+                                <td colSpan={9} style={{ ...td, background: '#faf9f5', color: '#666', fontSize: 10 }}>
+                                    {otherSoLines.length} other order line{otherSoLines.length === 1 ? '' : 's'} not on this pick list
+                                    {' — '}
+                                    <a href="#" style={{ color: '#00309c' }}
+                                        onClick={e => { e.preventDefault(); setShowOtherLines(v => !v); }}>
+                                        {showOtherLines ? 'hide' : 'show'}
+                                    </a>
+                                </td>
+                            </tr>
+                        )}
                     </tbody>
                 </table>
 
