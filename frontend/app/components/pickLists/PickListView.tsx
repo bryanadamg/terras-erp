@@ -1296,6 +1296,12 @@ function PickListEditor({ pl: initialPl, itemById, locPickerTreeOptions, authFet
                             const remRaw = remainingMap[String(sl.id)];
                             const rem = remRaw != null ? num(remRaw) : ordered;
                             const totalPicked = rows.reduce((s: number, r: any) => s + num(r.qty_picked), 0);
+                            // Ordered, remaining, the group total and every carton below are
+                            // all in the item's stock UoM (see qty_ordered_base above), so the
+                            // unit is written once and stamped on all four. Ordered carried it
+                            // alone, which left the neighbouring figures reading as a bare
+                            // count of something.
+                            const lineUom = sl.base_uom || it?.uom || '';
                             return (
                                 <React.Fragment key={sl.id}>
                                     <tr style={{ background: '#f5f4ef' }}>
@@ -1307,13 +1313,17 @@ function PickListEditor({ pl: initialPl, itemById, locPickerTreeOptions, authFet
                                         <td style={td} />
                                         <td style={{ ...td, textAlign: 'right' }}>
                                             {ordered !== null
-                                                ? `${ordered.toLocaleString()} ${sl.base_uom || it?.uom || ''}`
+                                                ? `${ordered.toLocaleString()} ${lineUom}`
                                                 : <span style={{ color: '#999' }} title="This item is stocked by weight but carries no g/y or g/m on its master, so the ordered yards cannot be restated in it">&mdash;</span>}
                                         </td>
                                         <td style={{ ...td, textAlign: 'right', color: rem !== null && rem > 0 ? '#0a3e0a' : '#999' }}>
-                                            {rem !== null ? rem.toLocaleString() : <span>&mdash;</span>}
+                                            {rem !== null
+                                                ? <>{rem.toLocaleString()} <span style={{ color: '#888' }}>{lineUom}</span></>
+                                                : <span>&mdash;</span>}
                                         </td>
-                                        <td style={{ ...td, textAlign: 'right', fontWeight: 'bold' }}>{totalPicked.toLocaleString()}</td>
+                                        <td style={{ ...td, textAlign: 'right', fontWeight: 'bold' }}>
+                                            {totalPicked.toLocaleString()} <span style={{ color: '#888', fontWeight: 'normal' }}>{lineUom}</span>
+                                        </td>
                                         <td style={td} colSpan={3}>
                                             {rows.length === 0 && <span style={{ fontSize: 10, color: '#c00' }}>No packed cartons available</span>}
                                         </td>
@@ -1356,11 +1366,21 @@ function PickListEditor({ pl: initialPl, itemById, locPickerTreeOptions, authFet
                                             <td style={td} />
                                             <td style={td} />
                                             <td style={{ ...td, textAlign: 'right' }}>
-                                                <input type="number" min={0}
-                                                    style={{ ...xpInput, width: '100%', textAlign: 'right' }}
-                                                    disabled={readOnly || !!r.batch_id}
-                                                    title={r.batch_id ? 'A carton ships whole — its qty comes from stock' : undefined}
-                                                    value={r.qty_picked ?? ''} onChange={e => setLineQty(r.__idx, e.target.value)} />
+                                                {/* A carton ships whole, so its qty is stock's answer and was
+                                                    already un-editable — rendered as a figure rather than a
+                                                    greyed input, which showed a number with no unit and invited
+                                                    a click that does nothing. Bulk lines keep the real field. */}
+                                                {r.batch_id ? (
+                                                    <span title="A carton ships whole — its qty comes from stock">
+                                                        {num(r.qty_picked).toLocaleString()}
+                                                        <span style={{ color: '#888', marginLeft: 3 }}>{lineUom}</span>
+                                                    </span>
+                                                ) : (
+                                                    <input type="number" min={0}
+                                                        style={{ ...xpInput, width: '100%', textAlign: 'right' }}
+                                                        disabled={readOnly}
+                                                        value={r.qty_picked ?? ''} onChange={e => setLineQty(r.__idx, e.target.value)} />
+                                                )}
                                             </td>
                                             <td style={td}>
                                                 <TreeSelect options={locPickerTreeOptions} value={r.source_location_id || ''} onChange={id => setLineLoc(r.__idx, id)} disabled={readOnly || !!r.batch_id} allowEmpty emptyLabel="(default)" size="sm" style={{ width: '100%' }} />
