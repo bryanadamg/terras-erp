@@ -885,6 +885,11 @@ export function LocationChip({
 const PROGRESS_FILL_DK: Record<StatusFamily, string> = { gray: '#c8c3b6', amber: '#c77800', blue: '#0058e6', green: '#2d7a2d', red: '#c00000' };
 const PROGRESS_FILL_LT: Record<StatusFamily, string> = { gray: '#e2ddd0', amber: '#f5d060', blue: '#4a8fe8', green: '#6fce6f', red: '#e88a8a' };
 
+/** The solid colour a `ProgressBar` segment paints, for a legend or key that sits
+ *  beside one. Exported so a caller names the bar's own colour instead of
+ *  hand-copying a hex that then drifts when the palette moves. */
+export const progressToneColor = (tone: StatusFamily) => PROGRESS_FILL_DK[tone];
+
 function progressBarFill(tone: StatusFamily, hatched: boolean): string {
     if (!hatched) return PROGRESS_FILL_DK[tone];
     return `repeating-linear-gradient(45deg,${PROGRESS_FILL_DK[tone]},${PROGRESS_FILL_DK[tone]} 3px,${PROGRESS_FILL_LT[tone]} 3px,${PROGRESS_FILL_LT[tone]} 6px)`;

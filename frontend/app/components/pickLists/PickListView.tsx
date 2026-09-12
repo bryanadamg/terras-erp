@@ -10,7 +10,7 @@ import { useTimezone } from '../../context/TimezoneContext';
 import { useToast } from '../shared/Toast';
 import { useConfirm } from '../../context/ConfirmContext';
 import { LotChip, LotChips, LotChipRow } from '../shared/LotChips';
-import { XPStatusBar, XPEmptyState, TableSkeleton, useTableSkeletonMetrics, StatusChip, useFloatingMenu, MenuTriggerButton, FloatingMenu, ExpandedRowPanel, XPActionButton, CODE_FONT, rowStateBg, CHIP_RADIUS, XP_BTN, ProgressBar, useSortable } from '../shared/xpTheme';
+import { XPStatusBar, XPEmptyState, TableSkeleton, useTableSkeletonMetrics, StatusChip, useFloatingMenu, MenuTriggerButton, FloatingMenu, ExpandedRowPanel, XPActionButton, CODE_FONT, rowStateBg, CHIP_RADIUS, XP_BTN, ProgressBar, progressToneColor, useSortable } from '../shared/xpTheme';
 import { LV_XP_FONT, lvBtn, lvInput, lvTd, lvLabel, lvRow, lvSubTh, lvSubTd, lvSubRow, ExpanderCell, lvThSticky, lvSubTable, RowCheckboxCell, LV_CHECK_COL_W, SortableTh } from '../shared/listViewTheme';
 import { ShellWindow, ShellTitleBar, xpToolbar } from '../shared/shellTheme';
 import Pager from '../shared/Pager';
@@ -829,6 +829,24 @@ function SOPickerBoard({ pickableSOs, loading, tzDate, canManage, onRefresh, onP
     );
 }
 
+/** One swatch + caption under a stacked ProgressBar. The swatch reads its colour
+ *  from the bar's own palette (`progressToneColor`), so a segment and its key can
+ *  never end up different greens. */
+function LegendKey({ tone, label }: { tone: 'green' | 'blue' | 'red' | 'track'; label: string }) {
+    return (
+        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3 }}>
+            <span style={{
+                width: 8, height: 8, borderRadius: 2,
+                // 'track' is the unfilled remainder — the bar's own background, which
+                // is not a tone at all, so it can't come from the tone table.
+                background: tone === 'track' ? '#e9e9e9' : progressToneColor(tone),
+                border: '1px solid #7f9db9',
+            }} />
+            {label}
+        </span>
+    );
+}
+
 /**
  * Preview of what "Pick" would auto-fill, before anything is written. Every
  * carton the server's FIFO suggestion found starts checked — the planner only
@@ -909,13 +927,36 @@ function PickListSuggestionModal({ so, groups, loading, creating, itemById, onCl
                         // checked carton carries a count AND counted it in the unit this
                         // line is sold in. Part-counted, or a box packed in Pcs against a
                         // line ordered in Gross, would print a total the boxes don't hold;
-                        // the kilos beside it are the whole truth either way, and overshoot
-                        // is judged on them.
+                        // the kilos beside it are the whole truth either way.
                         const altUom = g.alt_uom || '';
                         const selectedAlt = altUom && sel.length
                             && sel.every((c: any) => c.alt_qty != null && c.alt_uom === altUom)
                             ? sel.reduce((s: number, c: any) => s + num(c.alt_qty), 0)
                             : null;
+
+                        // --- Coverage bar ------------------------------------------------
+                        // Measured against what the CUSTOMER ordered, in the unit they
+                        // ordered it in — an order for 2880 Pcs is owed 2880 Pcs whatever
+                        // it weighs, so a kilo-denominated bar answers a question nobody
+                        // asked. Lines with no alt unit fall back to the stock UoM rather
+                        // than lose the bar.
+                        const onAlt = !!altUom && g.ordered_alt != null && g.remaining_alt != null;
+                        const barUom = onAlt ? altUom : uom;
+                        const target = onAlt ? num(g.ordered_alt) : num(g.ordered_qty);
+                        const stillOwed = onAlt ? num(g.remaining_alt) : num(g.remaining_qty);
+                        // Already committed on earlier (non-cancelled) pick lists — the
+                        // subtraction `remaining` is already built from, not a second rule.
+                        const covered = Math.max(0, target - stillOwed);
+                        // What this pick would add on top. Null when the bar is in the alt
+                        // unit but the checked cartons can't be counted in it (uncounted
+                        // box, or one packed in a different unit): a projection nobody can
+                        // stand behind is worse than no projection, so the segment is
+                        // dropped and the legend says why.
+                        const projected = onAlt ? selectedAlt : selectedQty;
+                        const barOver = projected != null && covered + projected > target + 1e-6;
+                        const coveredPct = target > 0 ? (covered / target) * 100 : 0;
+                        const projPct = target > 0 && projected != null ? (projected / target) * 100 : 0;
+                        const shortfall = Math.max(0, target - covered - (projected || 0));
                         return (
                             <div key={g.sales_order_line_id} style={{ marginBottom: 12, border: '1px solid #c8c4b8' }}>
                                 <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8, background: '#f5f4ef', padding: '4px 8px', fontSize: 11 }}>
@@ -941,6 +982,36 @@ function PickListSuggestionModal({ so, groups, loading, creating, itemById, onCl
                                         {over && <span style={{ color: '#a00000' }}> (overshoots)</span>}
                                     </span>
                                 </div>
+                                {target > 0 && (
+                                    <div style={{ padding: '5px 8px 6px', borderBottom: '1px solid #e4e0d4', background: '#fbfaf6' }}>
+                                        <ProgressBar
+                                            pct={coveredPct}
+                                            tone="green"
+                                            secondaryPct={projPct}
+                                            secondaryTone={barOver ? 'red' : 'blue'}
+                                            height={11}
+                                            title={
+                                                `Ordered ${target.toLocaleString()} ${barUom}\n`
+                                                + `Already picked ${covered.toLocaleString()} ${barUom}\n`
+                                                + (projected != null
+                                                    ? `This pick would add ${projected.toLocaleString()} ${barUom}\n`
+                                                    : 'This pick cannot be counted in this unit\n')
+                                                + `Still owed after it: ${shortfall.toLocaleString()} ${barUom}`
+                                            }
+                                        />
+                                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10, fontSize: 9, color: '#666', marginTop: 3 }}>
+                                            <LegendKey tone="green" label={`picked ${covered.toLocaleString()}`} />
+                                            {projected != null
+                                                ? <LegendKey tone={barOver ? 'red' : 'blue'} label={`this pick ${projected.toLocaleString()}`} />
+                                                : <span style={{ fontStyle: 'italic' }}>this pick not countable in {barUom}</span>}
+                                            <LegendKey tone="track" label={`still owed ${shortfall.toLocaleString()}`} />
+                                            <span style={{ marginLeft: 'auto' }}>
+                                                target <b>{target.toLocaleString()} {barUom}</b>
+                                                {!onAlt && <span style={{ fontStyle: 'italic' }}> (no selling unit on this line)</span>}
+                                            </span>
+                                        </div>
+                                    </div>
+                                )}
                                 <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                                     <tbody>
                                         {(g.cartons || []).map((c: any) => (
