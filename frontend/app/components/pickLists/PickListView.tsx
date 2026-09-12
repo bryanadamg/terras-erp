@@ -1202,7 +1202,7 @@ function PickListEditor({ pl: initialPl, itemById, locPickerTreeOptions, authFet
             isOpen
             onClose={onClose}
             title={`Pick List ${pl.code} — SO ${pl.sales_order_code || so?.po_number || ''}`}
-            size="xl"
+            size="xxl"
             modeless
             footer={
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%' }}>
@@ -1266,6 +1266,7 @@ function PickListEditor({ pl: initialPl, itemById, locPickerTreeOptions, authFet
                             <th style={{ ...xpTableHeader, width: LV_CHECK_COL_W }} />
                             <th style={xpTableHeader}>Item / Carton</th>
                             <th style={{ ...xpTableHeader, width: 50, textAlign: 'center' }}>#</th>
+                            <th style={xpTableHeader}>Contents</th>
                             <th style={{ ...xpTableHeader, textAlign: 'right' }}>Ordered</th>
                             <th style={{ ...xpTableHeader, textAlign: 'right' }}>Remaining</th>
                             <th style={{ ...xpTableHeader, width: 110, textAlign: 'right' }}>Qty</th>
@@ -1276,7 +1277,7 @@ function PickListEditor({ pl: initialPl, itemById, locPickerTreeOptions, authFet
                     </thead>
                     <tbody>
                         {soLoading && (
-                            <tr><td colSpan={9} style={{ ...td, textAlign: 'center', color: '#999' }}>Loading order lines...</td></tr>
+                            <tr><td colSpan={10} style={{ ...td, textAlign: 'center', color: '#999' }}>Loading order lines...</td></tr>
                         )}
                         {visibleSoLines.map((sl: any) => {
                             const it = itemById[String(sl.item_id)];
@@ -1312,6 +1313,7 @@ function PickListEditor({ pl: initialPl, itemById, locPickerTreeOptions, authFet
                                             {it?.name || sl.item_name || sl.item_id}
                                             <span style={{ fontSize: 9, color: '#888', marginLeft: 6 }}>{it?.code || sl.item_code}</span>
                                         </td>
+                                        <td style={td} />
                                         <td style={td} />
                                         <td style={{ ...td, textAlign: 'right' }}>
                                             {ordered !== null
@@ -1359,22 +1361,28 @@ function PickListEditor({ pl: initialPl, itemById, locPickerTreeOptions, authFet
                                                     tdStyle={td}
                                                 />
                                             )}
-                                            {/* What is actually IN this box — size, combo, shade (with its
-                                                hex swatch) and any other variant attribute, off the carton's
-                                                own stock key rather than off what the line ordered. The two
-                                                can differ when a box was packed from a substituted lot, and
-                                                the picker holding it is the one person able to catch that. */}
                                             <td style={{ ...td, paddingLeft: 22 }}>
                                                 {r.batch_id
                                                     ? <span style={{ color: '#00309c' }}>{r.batch_number}</span>
                                                     : <span style={{ color: '#888' }}>Bulk (no carton)</span>}
+                                            </td>
+                                            <td style={{ ...td, textAlign: 'center' }}>{r.package_no ? `#${r.package_no}` : '—'}</td>
+                                            {/* What is actually IN this box — size, combo, shade (with its
+                                                hex swatch) and any other variant attribute, off the carton's
+                                                own stock key rather than off what the line ordered. The two
+                                                can differ when a box was packed from a substituted lot, and
+                                                the picker holding it is the one person able to catch that.
+                                                Its own column rather than a second line under the carton
+                                                number: a box can carry four or five attributes, and stacked
+                                                under the code they set the row height by how much the packer
+                                                happened to record. */}
+                                            <td style={td}>
                                                 {r.carton_identity && (
-                                                    <LotChipRow style={{ marginTop: 2 }}>
+                                                    <LotChipRow>
                                                         <LotChips batch={r.carton_identity} />
                                                     </LotChipRow>
                                                 )}
                                             </td>
-                                            <td style={{ ...td, textAlign: 'center' }}>{r.package_no ? `#${r.package_no}` : '—'}</td>
                                             <td style={td} />
                                             <td style={td} />
                                             <td style={{ ...td, textAlign: 'right' }}>
@@ -1442,7 +1450,7 @@ function PickListEditor({ pl: initialPl, itemById, locPickerTreeOptions, authFet
                             hidden rows used to shout — not being on this list is normal. */}
                         {!soLoading && coveredSoLines.length > 0 && otherSoLines.length > 0 && (
                             <tr>
-                                <td colSpan={9} style={{ ...td, background: '#faf9f5', color: '#666', fontSize: 10 }}>
+                                <td colSpan={10} style={{ ...td, background: '#faf9f5', color: '#666', fontSize: 10 }}>
                                     {otherSoLines.length} other order line{otherSoLines.length === 1 ? '' : 's'} not on this pick list
                                     {' — '}
                                     <a href="#" style={{ color: '#00309c' }}
