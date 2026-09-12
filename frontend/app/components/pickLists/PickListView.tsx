@@ -601,7 +601,14 @@ const coveragePct = (so: any) => num(so.qty_outstanding) > 0
     : 0;
 
 function SOPickerBoard({ pickableSOs, loading, tzDate, canManage, onRefresh, onPick }: any) {
-    const { sorted, sort, toggle: toggleSort } = useSortable(pickableSOs, {
+    // "Ready" filter — hides orders with nothing packed yet, since those can't
+    // be picked at all today; the planner's actual queue is the rest.
+    const [readyOnly, setReadyOnly] = useState(false);
+    const filtered = useMemo(
+        () => readyOnly ? pickableSOs.filter((so: any) => num(so.cartons_ready) > 0) : pickableSOs,
+        [pickableSOs, readyOnly],
+    );
+    const { sorted, sort, toggle: toggleSort } = useSortable(filtered, {
         po: (so: any) => so.po_number,
         customer: (so: any) => so.customer_name,
         due: (so: any) => so.days_to_due,
@@ -615,20 +622,26 @@ function SOPickerBoard({ pickableSOs, loading, tzDate, canManage, onRefresh, onP
                 <button className={XP_BTN} style={xpBtn()} onClick={onRefresh} title="Re-score open orders">
                     <i className="bi bi-arrow-clockwise" style={{ marginRight: 4 }} />Refresh
                 </button>
+                <label style={{ display: 'flex', alignItems: 'center', gap: 4, fontFamily: xpFont, fontSize: 11, color: '#000', cursor: 'pointer', whiteSpace: 'nowrap', marginLeft: 10 }}
+                    title="Hide orders with nothing packed yet — nothing there can be picked today">
+                    <input type="checkbox" checked={readyOnly} onChange={e => setReadyOnly(e.target.checked)} style={{ margin: 0 }} />
+                    Ready to pick only
+                </label>
                 <span style={{ fontSize: 10, color: '#666', marginLeft: 8, maxWidth: 620, lineHeight: 1.3 }}>
                     Soonest delivery first. &quot;Ready&quot; counts whole cartons already packed and not on
                     another pick list — cartons are suggested oldest-first, and the last one may overshoot
                     since a carton is never split.
                 </span>
                 <span style={{ marginLeft: 'auto', fontSize: 11, color: '#333', whiteSpace: 'nowrap' }}>
-                    {pickableSOs.length.toLocaleString()} open order{pickableSOs.length !== 1 ? 's' : ''}
+                    {filtered.length.toLocaleString()} order{filtered.length !== 1 ? 's' : ''}
+                    {readyOnly ? '' : ` (of ${pickableSOs.length.toLocaleString()})`}
                 </span>
             </div>
             <div style={{ flex: 1, overflowY: 'auto', background: '#fff', minHeight: 0, fontFamily: xpFont }}>
                 {loading
                     ? <div style={{ fontSize: 11, color: '#888', padding: '12px 8px' }}>Scoring open orders...</div>
                     : sorted.length === 0
-                    ? <XPEmptyState icon="bi-inbox" message="No open sales orders with anything outstanding." />
+                    ? <XPEmptyState icon="bi-inbox" message={readyOnly ? "No orders ready to pick right now." : "No open sales orders with anything outstanding."} />
                     : (
                         <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                             <thead>
