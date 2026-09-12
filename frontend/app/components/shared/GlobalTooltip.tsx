@@ -45,10 +45,13 @@
 
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { useTheme } from '../../context/ThemeContext';
-import { AnchorRect, FloatingLayer, TooltipSurface, isClipped } from './Tooltip';
+import { AnchorRect, FloatingLayer, TIP_DELAY, TooltipSurface, isClipped } from './Tooltip';
 import { layoutRectOf } from './uiScale';
 
-const DELAY_MS = 380;
+/** Shared with `<Tooltip>` so the same hover never feels faster on one surface
+ *  than the other. This layer fires on ANY titled or clipped node in the document,
+ *  so it is the one most sensitive to being too eager. */
+const DELAY_MS = TIP_DELAY;
 /** How far up from the hovered node to look for a clipped box. Text is usually
  *  clipped by its own span or the cell one or two levels up, never further. */
 const CLIP_DEPTH = 3;

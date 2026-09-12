@@ -35,6 +35,20 @@ import { TOOLTIP_Z } from './zLayers';
 
 export type AnchorRect = { top: number; left: number; right: number; bottom: number; width: number; height: number };
 
+/** Hover dwell before a TEXT bubble opens, everywhere (this file, GlobalTooltip,
+ *  a chip's title surface). Deliberately near the native tooltip's own delay: a
+ *  bubble is an answer to "what is this?", and anything faster fires on the mouse
+ *  merely crossing a dense table on its way somewhere else, which is what made the
+ *  old 260-380ms spread feel like the UI was talking over the user.
+ *
+ *  NOT used for the clipped-chip popout — see POPOUT_DELAY. */
+export const TIP_DELAY = 650;
+
+/** Dwell before a clipped chip re-draws itself unclipped. Much shorter on purpose:
+ *  it is not an explanation, it is the label the reader is already trying to read
+ *  finishing itself in place. */
+export const POPOUT_DELAY = 260;
+
 /** Hover/focus state machine for anything that floats off an element.
  *
  * Measures the trigger at hover time (never on render — a table row measured on
@@ -42,12 +56,14 @@ export type AnchorRect = { top: number; left: number; right: number; bottom: num
  * px. `shouldOpen` is the escape hatch the popout needs: it only wants to appear
  * when the label is actually clipped, which can only be known from the live DOM. */
 export function useHoverAnchor(opts?: {
-    delay?: number;
+    /** A function is read AFTER `shouldOpen` has run, so a caller that picks its
+     *  surface there (chip popout vs. tooltip) can pick the matching dwell too. */
+    delay?: number | (() => number);
     enabled?: boolean;
     /** Called with the trigger on hover; return false to suppress this open. */
     shouldOpen?: (el: HTMLElement) => boolean;
 }) {
-    const { delay = 320, enabled = true, shouldOpen } = opts || {};
+    const { delay = TIP_DELAY, enabled = true, shouldOpen } = opts || {};
     // The anchor ELEMENT rides along with its rect: the layer re-measures it at
     // layout time to place itself exactly on top (see FloatingLayer). A rect alone
     // is a snapshot in one unit space; the element is the ground truth.
@@ -81,7 +97,8 @@ export function useHoverAnchor(opts?: {
         if (!enabled || !el) return;
         if (shouldOpen && !shouldOpen(el)) return;
         clear();
-        timer.current = setTimeout(() => setOpen({ el, rect: layoutRectOf(el) }), delay);
+        const ms = typeof delay === 'function' ? delay() : delay;
+        timer.current = setTimeout(() => setOpen({ el, rect: layoutRectOf(el) }), ms);
     }, [enabled, delay, shouldOpen]);
 
     const handlers = {
@@ -223,7 +240,7 @@ const chain = (...fns: (((e: any) => void) | undefined)[]) => (e: any) => fns.fo
  * table and flex layouts are untouched. The child must be a DOM element (or a
  * component that forwards mouse/focus props).
  */
-export function Tooltip({ content, children, placement = 'bottom', align = 'start', delay = 320, disabled = false, maxWidth }: {
+export function Tooltip({ content, children, placement = 'bottom', align = 'start', delay = TIP_DELAY, disabled = false, maxWidth }: {
     content: React.ReactNode;
     children: React.ReactElement;
     placement?: 'bottom' | 'top';

@@ -3,7 +3,7 @@
 import React, { useMemo, useState, useEffect, useCallback, useRef } from 'react';
 import { layoutRectOf, layoutScroll } from './uiScale';
 import { xpFont, modernFont, CODE_FONT, PRINT_FONT, PRINT_SERIF_FONT } from './typography';
-import { FloatingLayer, Tooltip, TooltipSurface, useHoverAnchor, isClipped } from './Tooltip';
+import { FloatingLayer, POPOUT_DELAY, TIP_DELAY, Tooltip, TooltipSurface, useHoverAnchor, isClipped } from './Tooltip';
 import UIToggleChip from '@bryanadamg/terras-ui/components/ToggleChip';
 
 /**
@@ -49,7 +49,9 @@ export function CodeChip({ code, classic, tier = 1, tone = 'default', link = fal
     // unclipped one only floats a tooltip if the caller wrote something the code
     // itself doesn't already say.
     const { rect, anchorEl, handlers } = useHoverAnchor({
-        delay: 260,
+        // Read after shouldOpen, so the popout keeps its quick dwell while the
+        // title bubble waits as long as every other bubble in the app.
+        delay: () => (mode.current === 'pop' ? POPOUT_DELAY : TIP_DELAY),
         shouldOpen: () => {
             if (isClipped(selfRef.current)) { mode.current = 'pop'; return true; }
             if (title) { mode.current = 'tip'; return true; }
@@ -140,6 +142,11 @@ export const STATUS_FAMILY: Record<string, StatusFamily> = {
     // Pick list: PICKING is work in flight, PICKED means every carton is scanned
     // and the list is waiting on QC/dispatch — attention, not done.
     PICKING: 'blue', PICKED: 'amber',
+    // One carton's scan state on a pick-list line — a finer grain than the list's
+    // own PICKED above, which needs every carton in. UNSCANNED is amber rather
+    // than PENDING's gray because it blocks dispatch: it is work still owed, not
+    // an order nobody has started.
+    SCANNED: 'green', UNSCANNED: 'amber',
     // A packed carton that still has stock at its location. Consumed cartons fall
     // through to DISPATCHED/SENT via the pick list that took them.
     IN_STOCK: 'green',
@@ -363,7 +370,7 @@ export function Chip({
     // then the rect state has committed, so the ref is already correct.
     const mode = useRef<'pop' | 'tip' | null>(null);
     const { rect, anchorEl, handlers } = useHoverAnchor({
-        delay: 260,
+        delay: () => (mode.current === 'pop' ? POPOUT_DELAY : TIP_DELAY),
         enabled: !!truncate || !!title,
         shouldOpen: () => {
             // A clipped chip completes itself; an unclipped one with a title
