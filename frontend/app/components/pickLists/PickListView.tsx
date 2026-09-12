@@ -179,11 +179,13 @@ export default function PickListView() {
             if (res.ok) {
                 const pl = await res.json();
                 // The order just consumed cartons — re-score the board before the
-                // planner returns to it, and land them on the list they just cut.
+                // planner returns to it. They stay ON the board: creating a pick
+                // list is one step of working down a queue of orders, and jumping
+                // to the Lists tab with the new list open made every planner close
+                // a modal and navigate back to cut the next one.
                 await Promise.all([loadAll(), loadPickable()]);
                 setSuggestFor(null);
-                setTab('lists');
-                setEditing(pl);
+                showToast(`Pick list ${pl.code} created`, 'success');
             } else {
                 const err = await res.json().catch(() => ({}));
                 showToast(`Error: ${err.detail || 'could not create'}`, 'danger');
