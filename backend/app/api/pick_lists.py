@@ -450,6 +450,10 @@ async def list_pickable_orders(
     index = await _ready_carton_index(db)
     today = datetime.utcnow().date()
 
+    # Whole-order fulfilment for the page in one batched pass — four grouped
+    # aggregates for the entire board, not one query per order.
+    fulfilment = await so_fulfilment_service.fulfilment_map(db, [s.id for s in so_rows])
+
     # One resolve of every ordered variant on the board — shade/combo chips are
     # per line, and a per-line lookup here would be an N+1 over the order book.
     variants = await stock_service.describe_variant_keys(
@@ -500,6 +504,28 @@ async def list_pickable_orders(
 
         if qty_outstanding <= 0:
             continue
+
+        # Fulfilment spans the WHOLE order, so it rolls up every line — including
+        # the ones already fully shipped, which is exactly what "overall" means
+        # and what the outstanding-only loop above skips.
+        f_ordered = f_made = f_packed = f_dispatched = 0.0
+        unknown_base = 0
+        base_uoms: set[str] = set()
+        for line in so.lines:
+            stat = fulfilment.get(str(line.id))
+            if not stat:
+                continue
+            base = stat.get("ordered_base")
+            if base is None:
+                unknown_base += 1
+                continue
+            f_ordered += float(base)
+            f_made += stat.get("made", 0.0)
+            f_packed += stat.get("packed", 0.0)
+            f_dispatched += stat.get("dispatched", 0.0)
+            if stat.get("base_uom"):
+                base_uoms.add(stat["base_uom"])
+
         due = _so_due_date(so)
         out.append(PickableOrderResponse(
             id=so.id,
@@ -515,6 +541,12 @@ async def list_pickable_orders(
             qty_ready=round(qty_ready, 4),
             cartons_ready=cartons_ready,
             has_open_pick_list=str(so.id) in draft_so_ids,
+            qty_ordered_base=round(f_ordered, 4),
+            qty_made=round(f_made, 4),
+            qty_packed=round(f_packed, 4),
+            qty_dispatched=round(f_dispatched, 4),
+            base_uom=next(iter(base_uoms)) if len(base_uoms) == 1 else None,
+            lines_unknown_base=unknown_base,
             lines=out_lines,
         ))
     return out

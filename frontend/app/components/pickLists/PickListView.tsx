@@ -600,6 +600,63 @@ const coveragePct = (so: any) => num(so.qty_outstanding) > 0
     ? Math.min(100, Math.round(num(so.qty_ready) / num(so.qty_outstanding) * 100))
     : 0;
 
+// Whole-order fulfilment, in the same three nested stages the SO table draws
+// (made >= packed >= dispatched, so they stack on one track rather than add up).
+// Coverage answers "is there a carton for what's left"; this answers "how much of
+// the order is done" — the last carton of a barely-started order reads 100%
+// coverage, and only this tells it apart from one that is nearly shipped.
+const fulfilment = (so: any) => {
+    const ordered = num(so.qty_ordered_base);
+    const pct = (v: number) => (ordered > 0 ? Math.min(100, Math.round(v / ordered * 100)) : 0);
+    return {
+        ordered,
+        uom: so.base_uom ? ` ${so.base_uom}` : '',
+        made: num(so.qty_made),
+        packed: num(so.qty_packed),
+        dispatched: num(so.qty_dispatched),
+        unknown: Number(so.lines_unknown_base) || 0,
+        pct,
+    };
+};
+
+const fmtQty = (v: number) => (Math.round(v * 100) / 100).toLocaleString(undefined, { maximumFractionDigits: 2 });
+
+function fulfilmentCell(so: any) {
+    const f = fulfilment(so);
+    // No derivable denominator on any line (weight-stocked item with no
+    // weight-per-yard): say so rather than draw a 0% bar, since the fix is on the
+    // item master, not on this order.
+    if (f.ordered <= 0) {
+        return f.unknown > 0
+            ? <span title="Ordered qty can't be restated in the stock UoM — set weight per unit on the item master"
+                style={{ fontSize: 9, color: '#8a6d00', display: 'inline-flex', alignItems: 'center', gap: 3 }}>
+                <i className="bi bi-exclamation-triangle" style={{ fontSize: 8 }} />no weight
+            </span>
+            : <span style={{ fontSize: 9, color: '#ccc' }}>—</span>;
+    }
+    const shipped = f.pct(f.dispatched), packed = f.pct(f.packed), made = f.pct(f.made);
+    const title = `Made ${fmtQty(f.made)} · Packed ${fmtQty(f.packed)} · Shipped ${fmtQty(f.dispatched)}`
+        + ` — of ${fmtQty(f.ordered)}${f.uom} ordered`
+        + (f.unknown > 0 ? ` (${f.unknown} line(s) excluded: no derivable weight)` : '');
+    return (
+        <div title={title} style={{ display: 'flex', flexDirection: 'column', gap: 2, minWidth: 78 }}>
+            <ProgressBar
+                pct={shipped} tone="green"
+                secondaryPct={Math.max(0, packed - shipped)} secondaryTone="blue"
+                tertiaryPct={Math.max(0, made - packed)} tertiaryTone="gray"
+                width={70} height={8}
+            />
+            <div style={{ fontSize: 9, color: shipped >= 100 ? '#0a3e0a' : '#777' }}>
+                {f.dispatched > 0
+                    ? `${shipped}% shipped`
+                    : f.packed > 0 ? `${packed}% packed`
+                    : f.made > 0 ? `${made}% made` : 'not started'}
+                {f.unknown > 0 && <i className="bi bi-exclamation-triangle" style={{ fontSize: 8, color: '#8a6d00', marginLeft: 3 }} />}
+            </div>
+        </div>
+    );
+}
+
 function SOPickerBoard({ pickableSOs, loading, tzDate, canManage, onRefresh, onPick }: any) {
     // "Ready" filter — hides orders with nothing packed yet, since those can't
     // be picked at all today; the planner's actual queue is the rest.
@@ -615,6 +672,7 @@ function SOPickerBoard({ pickableSOs, loading, tzDate, canManage, onRefresh, onP
         outstanding: (so: any) => num(so.qty_outstanding),
         ready: (so: any) => num(so.qty_ready),
         coverage: (so: any) => coveragePct(so),
+        fulfilment: (so: any) => { const f = fulfilment(so); return f.pct(f.dispatched); },
     });
     return (
         <>
@@ -652,7 +710,10 @@ function SOPickerBoard({ pickableSOs, loading, tzDate, canManage, onRefresh, onP
                                     <SortableTh sort={sort} colKey="due" onSort={toggleSort} style={xpTableHeader}>Delivery due</SortableTh>
                                     <SortableTh sort={sort} colKey="outstanding" onSort={toggleSort} style={{ ...xpTableHeader, textAlign: 'right' }}>Outstanding</SortableTh>
                                     <SortableTh sort={sort} colKey="ready" onSort={toggleSort} style={{ ...xpTableHeader, textAlign: 'right' }}>Ready</SortableTh>
-                                    <SortableTh sort={sort} colKey="coverage" onSort={toggleSort} style={xpTableHeader}>Coverage</SortableTh>
+                                    <SortableTh sort={sort} colKey="coverage" onSort={toggleSort} style={xpTableHeader}
+                                        title="Sort — of what this order still owes, how much is packed and waiting">Coverage</SortableTh>
+                                    <SortableTh sort={sort} colKey="fulfilment" onSort={toggleSort} style={xpTableHeader}
+                                        title="Sort — how much of the whole order is made, packed and shipped">Fulfilment</SortableTh>
                                     <th style={{ ...xpTableHeader, textAlign: 'right' }}></th>
                                 </tr>
                             </thead>
@@ -723,6 +784,7 @@ function SOPickerBoard({ pickableSOs, loading, tzDate, canManage, onRefresh, onP
                                             <td style={td}>
                                                 <ProgressBar pct={pct} tone={pct >= 100 ? 'green' : 'blue'} width={70} height={8} label="outside" />
                                             </td>
+                                            <td style={td}>{fulfilmentCell(so)}</td>
                                             <td style={{ ...td, textAlign: 'right', whiteSpace: 'nowrap' }}>
                                                 {so.has_open_pick_list && (
                                                     <span style={{ fontSize: 9, color: '#b8860b', marginRight: 8 }}>open pick list</span>

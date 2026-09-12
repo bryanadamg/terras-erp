@@ -3861,6 +3861,26 @@ class PickableOrderResponse(BaseModel):
     qty_ready: float = 0
     cartons_ready: int = 0
     has_open_pick_list: bool = False
+    # --- Whole-order fulfilment (so_fulfilment_service.fulfilment_map) ---------
+    # Coverage above answers "of what this order still OWES, how much is packed
+    # and waiting"; these answer "where does the WHOLE order stand" — an order
+    # 90% shipped and one 0% shipped both read 100% coverage on their last
+    # carton, and only this pair tells them apart.
+    #
+    # Summed over every line, in each line's own stock UoM — the same mixed-unit
+    # sum `qty_outstanding`/`qty_ready` above already are. `base_uom` is set only
+    # when every line agrees on one unit, so a mixed order labels the figure with
+    # no unit rather than the wrong one.
+    qty_ordered_base: float = 0
+    qty_made: float = 0
+    qty_packed: float = 0
+    qty_dispatched: float = 0
+    base_uom: str | None = None
+    # Lines whose ordered qty can't be restated in the stock UoM (weight-stocked
+    # item with no weight-per-yard on its master). They contribute nothing to the
+    # four numbers above, so the bar understates the order — it is drawn with a
+    # warning rather than silently.
+    lines_unknown_base: int = 0
     # Per-line breakdown of the same numbers, so the board can show what the
     # order is made of. Must be declared here or response_model drops it.
     lines: list[PickableOrderLine] = []
