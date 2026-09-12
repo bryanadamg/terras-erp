@@ -10,8 +10,8 @@ import { useTimezone } from '../../context/TimezoneContext';
 import { useToast } from '../shared/Toast';
 import { useConfirm } from '../../context/ConfirmContext';
 import { LotChip, LotChips, LotChipRow } from '../shared/LotChips';
-import { XPStatusBar, XPEmptyState, TableSkeleton, useTableSkeletonMetrics, StatusChip, useFloatingMenu, MenuTriggerButton, FloatingMenu, ExpandedRowPanel, XPActionButton, CODE_FONT, rowStateBg, CHIP_RADIUS, XP_BTN, ProgressBar } from '../shared/xpTheme';
-import { LV_XP_FONT, lvBtn, lvInput, lvTd, lvLabel, lvRow, lvSubTh, lvSubTd, lvSubRow, ExpanderCell, lvThSticky, lvSubTable, RowCheckboxCell, LV_CHECK_COL_W } from '../shared/listViewTheme';
+import { XPStatusBar, XPEmptyState, TableSkeleton, useTableSkeletonMetrics, StatusChip, useFloatingMenu, MenuTriggerButton, FloatingMenu, ExpandedRowPanel, XPActionButton, CODE_FONT, rowStateBg, CHIP_RADIUS, XP_BTN, ProgressBar, useSortable } from '../shared/xpTheme';
+import { LV_XP_FONT, lvBtn, lvInput, lvTd, lvLabel, lvRow, lvSubTh, lvSubTd, lvSubRow, ExpanderCell, lvThSticky, lvSubTable, RowCheckboxCell, LV_CHECK_COL_W, SortableTh } from '../shared/listViewTheme';
 import { ShellWindow, ShellTitleBar, xpToolbar } from '../shared/shellTheme';
 import Pager from '../shared/Pager';
 import ModalWrapper from '../shared/ModalWrapper';
@@ -595,7 +595,20 @@ function dueChip(days: number | null | undefined) {
  * order with nothing packed cannot be picked at all (the server rejects it too;
  * this just says so before the click).
  */
+// Coverage % — same formula the row itself renders the progress bar with.
+const coveragePct = (so: any) => num(so.qty_outstanding) > 0
+    ? Math.min(100, Math.round(num(so.qty_ready) / num(so.qty_outstanding) * 100))
+    : 0;
+
 function SOPickerBoard({ pickableSOs, loading, tzDate, canManage, onRefresh, onPick }: any) {
+    const { sorted, sort, toggle: toggleSort } = useSortable(pickableSOs, {
+        po: (so: any) => so.po_number,
+        customer: (so: any) => so.customer_name,
+        due: (so: any) => so.days_to_due,
+        outstanding: (so: any) => num(so.qty_outstanding),
+        ready: (so: any) => num(so.qty_ready),
+        coverage: (so: any) => coveragePct(so),
+    });
     return (
         <>
             <div style={xpToolbar()}>
@@ -614,29 +627,27 @@ function SOPickerBoard({ pickableSOs, loading, tzDate, canManage, onRefresh, onP
             <div style={{ flex: 1, overflowY: 'auto', background: '#fff', minHeight: 0, fontFamily: xpFont }}>
                 {loading
                     ? <div style={{ fontSize: 11, color: '#888', padding: '12px 8px' }}>Scoring open orders...</div>
-                    : pickableSOs.length === 0
+                    : sorted.length === 0
                     ? <XPEmptyState icon="bi-inbox" message="No open sales orders with anything outstanding." />
                     : (
                         <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                             <thead>
                                 <tr>
-                                    <th style={xpTableHeader}>Sales Order</th>
-                                    <th style={xpTableHeader}>Customer</th>
+                                    <SortableTh sort={sort} colKey="po" onSort={toggleSort} style={xpTableHeader}>Sales Order</SortableTh>
+                                    <SortableTh sort={sort} colKey="customer" onSort={toggleSort} style={xpTableHeader}>Customer</SortableTh>
                                     <th style={xpTableHeader}>Items</th>
-                                    <th style={xpTableHeader}>Delivery due</th>
-                                    <th style={{ ...xpTableHeader, textAlign: 'right' }}>Outstanding</th>
-                                    <th style={{ ...xpTableHeader, textAlign: 'right' }}>Ready</th>
-                                    <th style={xpTableHeader}>Coverage</th>
+                                    <SortableTh sort={sort} colKey="due" onSort={toggleSort} style={xpTableHeader}>Delivery due</SortableTh>
+                                    <SortableTh sort={sort} colKey="outstanding" onSort={toggleSort} style={{ ...xpTableHeader, textAlign: 'right' }}>Outstanding</SortableTh>
+                                    <SortableTh sort={sort} colKey="ready" onSort={toggleSort} style={{ ...xpTableHeader, textAlign: 'right' }}>Ready</SortableTh>
+                                    <SortableTh sort={sort} colKey="coverage" onSort={toggleSort} style={xpTableHeader}>Coverage</SortableTh>
                                     <th style={{ ...xpTableHeader, textAlign: 'right' }}></th>
                                 </tr>
                             </thead>
                             <tbody>
-                                {pickableSOs.map((so: any, idx: number) => {
+                                {sorted.map((so: any, idx: number) => {
                                     const chip = dueChip(so.days_to_due);
                                     const ready = num(so.cartons_ready) > 0;
-                                    const pct = num(so.qty_outstanding) > 0
-                                        ? Math.min(100, Math.round(num(so.qty_ready) / num(so.qty_outstanding) * 100))
-                                        : 0;
+                                    const pct = coveragePct(so);
                                     return (
                                         <tr key={so.id} style={{ ...rowStyle(idx), opacity: ready ? 1 : 0.6 }}>
                                             <td style={{ ...td, fontWeight: 'bold', color: '#00309c' }}>
