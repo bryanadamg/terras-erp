@@ -10,7 +10,7 @@ import { useTimezone } from '../../context/TimezoneContext';
 import { useToast } from '../shared/Toast';
 import { useConfirm } from '../../context/ConfirmContext';
 import { LotChip, LotChips, LotChipRow } from '../shared/LotChips';
-import { XPStatusBar, XPEmptyState, TableSkeleton, useTableSkeletonMetrics, StatusChip, useFloatingMenu, MenuTriggerButton, FloatingMenu, ExpandedRowPanel, XPActionButton, CODE_FONT, rowStateBg, CHIP_RADIUS, XP_BTN, ProgressBar, progressToneColor, useSortable } from '../shared/xpTheme';
+import { XPStatusBar, XPEmptyState, TableSkeleton, useTableSkeletonMetrics, StatusChip, Chip, statusTint, useFloatingMenu, MenuTriggerButton, FloatingMenu, ExpandedRowPanel, XPActionButton, CODE_FONT, rowStateBg, CHIP_RADIUS, XP_BTN, ProgressBar, progressToneColor, useSortable } from '../shared/xpTheme';
 import { LV_XP_FONT, lvBtn, lvInput, lvTd, lvLabel, lvRow, lvSubTh, lvSubTd, lvSubRow, ExpanderCell, lvThSticky, lvSubTable, RowCheckboxCell, LV_CHECK_COL_W, SortableTh } from '../shared/listViewTheme';
 import { ShellWindow, ShellTitleBar, xpToolbar } from '../shared/shellTheme';
 import Pager from '../shared/Pager';
@@ -1385,12 +1385,25 @@ function PickListEditor({ pl: initialPl, itemById, locPickerTreeOptions, authFet
                                             <td style={td}>
                                                 <TreeSelect options={locPickerTreeOptions} value={r.source_location_id || ''} onChange={id => setLineLoc(r.__idx, id)} disabled={readOnly || !!r.batch_id} allowEmpty emptyLabel="(default)" size="sm" style={{ width: '100%' }} />
                                             </td>
+                                            {/* Scan state as a chip off the shared family palette, not loose
+                                                coloured text — it is the column a supervisor scans down before
+                                                releasing the list, and green-vs-amber only reads as a state
+                                                when it is bounded. A bulk line has no carton to scan, so it
+                                                stays plain text: an absence, not a state. */}
                                             <td style={td}>
-                                                {!r.batch_id
-                                                    ? <span style={{ fontSize: 10, color: '#bbb' }}>n/a</span>
-                                                    : r.picked_at
-                                                        ? <span style={{ fontSize: 10, color: '#0a3e0a' }}><i className="bi bi-check-lg" /> {r.picked_by || 'yes'}</span>
-                                                        : <span style={{ fontSize: 10, color: '#c77800' }}>pending</span>}
+                                                {!r.batch_id ? (
+                                                    <span style={{ fontSize: 10, color: '#bbb' }}>n/a</span>
+                                                ) : r.picked_at ? (
+                                                    <Chip classic size="xs" icon="bi-check-lg" tone={statusTint('SCANNED')}
+                                                        title={`Scanned by ${r.picked_by || 'an operator'}`}>
+                                                        {r.picked_by || 'scanned'}
+                                                    </Chip>
+                                                ) : (
+                                                    <Chip classic size="xs" tone={statusTint('UNSCANNED')}
+                                                        title="Not yet scanned — this carton blocks dispatch">
+                                                        pending
+                                                    </Chip>
+                                                )}
                                             </td>
                                             <td style={{ ...td, textAlign: 'center' }}>
                                                 {!readOnly && (
