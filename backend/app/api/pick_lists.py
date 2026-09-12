@@ -73,6 +73,23 @@ def _decorate(pl: PickList) -> PickList:
     if pl.shipment:
         pl.shipment_code = pl.shipment.code
         pl.shipment_status = pl.shipment.status
+    # Stable line order. The `lines` relationship carries no ORDER BY, so
+    # Postgres hands back heap order — and confirming a carton UPDATEs
+    # `picked_at`, which rewrites the row's tuple and moved it to the end of the
+    # heap. Every carton the picker ticked jumped to the bottom of the table
+    # under them. Sorted on the carton's own identity (never on `picked_at`), so
+    # scanning can't reorder anything; bulk lines, which have no carton, sort
+    # last within their SO line. In place via `list.sort` on purpose: rebinding
+    # `pl.lines` would fire the delete-orphan cascade's collection events for a
+    # pure display concern.
+    if pl.lines:
+        pl.lines.sort(key=lambda l: (
+            str(l.sales_order_line_id),
+            l.batch is None,
+            l.batch.package_no if (l.batch and l.batch.package_no is not None) else 0,
+            (l.batch.batch_number if l.batch else None) or "",
+            str(l.id),
+        ))
     for line in (pl.lines or []):
         sol = line.sales_order_line
         color = sol.color if sol else None

@@ -1224,18 +1224,29 @@ function PickListEditor({ pl: initialPl, itemById, locPickerTreeOptions, authFet
                                             {/* Manual fallback for a scanner-less floor or a damaged label —
                                                 ticking confirms the same carton scanning would, via its known
                                                 batch number. No unpick: once confirmed, only removing the line
-                                                undoes it. Bulk (uncartonised) lines have nothing to confirm. */}
-                                            {r.batch_id ? (
+                                                undoes it. Bulk (uncartonised) lines have nothing to confirm.
+
+                                                A confirmed carton shows a green check, NOT a checked-and-
+                                                disabled box: a greyed tick is the browser's "you may not have
+                                                this" and read as the pick having been refused, which is the
+                                                opposite of what it means. Greying is kept only for a pending
+                                                box during an in-flight scan, where unavailable is the truth. */}
+                                            {!r.batch_id ? (
+                                                <td style={td} />
+                                            ) : r.picked_at ? (
+                                                <td style={{ ...td, width: LV_CHECK_COL_W, textAlign: 'center', color: '#0a3e0a' }}
+                                                    title={`Carton ${r.batch_number} confirmed${r.picked_by ? ` by ${r.picked_by}` : ''} — remove the line to undo`}>
+                                                    <i className="bi bi-check-lg" />
+                                                </td>
+                                            ) : (
                                                 <RowCheckboxCell
                                                     classic
-                                                    checked={!!r.picked_at}
-                                                    disabled={readOnly || !!r.picked_at || scanning}
+                                                    checked={false}
+                                                    disabled={readOnly || scanning}
                                                     onChange={() => scan(r.batch_number)}
                                                     label={`carton ${r.batch_number}`}
                                                     tdStyle={td}
                                                 />
-                                            ) : (
-                                                <td style={td} />
                                             )}
                                             <td style={{ ...td, paddingLeft: 22 }}>
                                                 {r.batch_id
