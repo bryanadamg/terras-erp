@@ -901,10 +901,21 @@ function PickListSuggestionModal({ so, groups, loading, creating, itemById, onCl
                 ) : (
                     (groups || []).filter((g: any) => (g.cartons || []).length > 0).map((g: any) => {
                         const it = itemById[String(g.item_id)];
-                        const selectedQty = (g.cartons || [])
-                            .filter((c: any) => checked[String(c.batch_id)])
-                            .reduce((s: number, c: any) => s + num(c.qty), 0);
+                        const uom = it?.uom || g.item_uom || '';
+                        const sel = (g.cartons || []).filter((c: any) => checked[String(c.batch_id)]);
+                        const selectedQty = sel.reduce((s: number, c: any) => s + num(c.qty), 0);
                         const over = selectedQty > num(g.remaining_qty) + 1e-6;
+                        // A selected total in the alt unit is only reported when EVERY
+                        // checked carton carries a count AND counted it in the unit this
+                        // line is sold in. Part-counted, or a box packed in Pcs against a
+                        // line ordered in Gross, would print a total the boxes don't hold;
+                        // the kilos beside it are the whole truth either way, and overshoot
+                        // is judged on them.
+                        const altUom = g.alt_uom || '';
+                        const selectedAlt = altUom && sel.length
+                            && sel.every((c: any) => c.alt_qty != null && c.alt_uom === altUom)
+                            ? sel.reduce((s: number, c: any) => s + num(c.alt_qty), 0)
+                            : null;
                         return (
                             <div key={g.sales_order_line_id} style={{ marginBottom: 12, border: '1px solid #c8c4b8' }}>
                                 <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8, background: '#f5f4ef', padding: '4px 8px', fontSize: 11 }}>
@@ -918,10 +929,14 @@ function PickListSuggestionModal({ so, groups, loading, creating, itemById, onCl
                                         </LotChipRow>
                                     </span>
                                     <span style={{ whiteSpace: 'nowrap' }}>
-                                        Remaining <b>{num(g.remaining_qty).toLocaleString()}</b> {it?.uom || g.item_uom}
+                                        Remaining <b>{num(g.remaining_qty).toLocaleString()}</b> {uom}
+                                        {altUom && g.remaining_alt != null && (
+                                            <span style={{ color: '#888' }}> ({num(g.remaining_alt).toLocaleString()} {altUom})</span>
+                                        )}
                                         {' · '}
                                         <span style={{ color: over ? '#a00000' : '#0a3e0a', fontWeight: 'bold' }}>
-                                            selected {selectedQty.toLocaleString()}
+                                            selected {selectedQty.toLocaleString()} {uom}
+                                            {selectedAlt != null && ` (${selectedAlt.toLocaleString()} ${altUom})`}
                                         </span>
                                         {over && <span style={{ color: '#a00000' }}> (overshoots)</span>}
                                     </span>
@@ -943,7 +958,15 @@ function PickListSuggestionModal({ so, groups, loading, creating, itemById, onCl
                                                         <LotChips batch={c} />
                                                     </LotChipRow>
                                                 </td>
-                                                <td style={{ ...td, textAlign: 'right' }}>{num(c.qty).toLocaleString()}</td>
+                                                <td style={{ ...td, textAlign: 'right', whiteSpace: 'nowrap' }}>
+                                                    {num(c.qty).toLocaleString()}
+                                                    <span style={{ color: '#888', marginLeft: 3 }}>{uom}</span>
+                                                    {c.alt_qty != null && c.alt_uom && (
+                                                        <span style={{ color: '#888' }}>
+                                                            {' · '}{num(c.alt_qty).toLocaleString()} {c.alt_uom}
+                                                        </span>
+                                                    )}
+                                                </td>
                                             </tr>
                                         ))}
                                     </tbody>

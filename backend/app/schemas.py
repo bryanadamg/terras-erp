@@ -3935,6 +3935,12 @@ class PickListSuggestedCarton(BaseModel):
     package_no: int | None = None
     qty: float
     source_location_id: UUID | None = None
+    # The box's count in the line's alt selling unit — `Batch.alt_qty`, what the
+    # packer counted into it, never `qty / uom2_factor`. Null when the carton was
+    # packed without one, or the line has no alt unit at all; the row then reads
+    # in stock UoM alone.
+    alt_qty: float | None = None
+    alt_uom: str | None = None
 
     # --- Variant identity ---------------------------------------------------
     # Same field names as PackedUnitResponse / a lot, so `LotChips` labels a
@@ -3963,6 +3969,13 @@ class PickListSuggestedLine(BaseModel):
     item_uom: str | None = None
     ordered_qty: float = 0
     remaining_qty: float = 0
+    # The same two in the line's alt selling unit (`SalesOrderLine.uom2` — Pcs,
+    # Pic, Gross): the figure the customer ordered in and is owed in. None means
+    # the line has no alt unit, which is a different answer from zero and is what
+    # makes the modal fall back to kilos alone.
+    ordered_alt: float | None = None
+    remaining_alt: float | None = None
+    alt_uom: str | None = None
     # What the LINE ordered (shade/combo/size), against which the cartons below
     # carry what is physically in each box — they can differ, and the planner
     # unchecking a carton is exactly who needs to see that.

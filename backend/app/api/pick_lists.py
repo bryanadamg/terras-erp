@@ -167,6 +167,53 @@ async def _remaining_by_so_line(db: AsyncSession, so: SalesOrder, exclude_pl_id=
     return remaining
 
 
+async def _remaining_alt_by_so_line(db: AsyncSession, so: SalesOrder) -> dict:
+    """The same "ordered - already picked" subtraction as `_remaining_by_so_line`,
+    but counted in the line's own alt selling unit (`SalesOrderLine.uom2`).
+
+    `{line_id: (remaining_alt, alt_uom)}`; absent for a line with no alt unit, so
+    a consumer falls back to the base figure rather than drawing a bare 0.
+
+    Ordered is `qty2` as it was keyed — never re-derived from the kilos, per
+    so_fulfilment_service: the SO form locks the pair together. Picked is SUMMED
+    FROM `Batch.alt_qty` (the count the packer actually put in the box) for the
+    same reason — dividing picked kilograms by `uom2_factor` reports 11.8 Pcs out
+    of a carton that holds 12. A carton packed with no alt count contributes
+    nothing, which can only understate what is left, never over-pick it.
+    """
+    rows = (await db.execute(
+        select(PickListLine.sales_order_line_id, func.coalesce(func.sum(Batch.alt_qty), 0))
+        .join(PickList, PickListLine.pick_list_id == PickList.id)
+        .join(Batch, PickListLine.batch_id == Batch.id)
+        .filter(PickList.sales_order_id == so.id, PickList.status != "CANCELLED")
+        .group_by(PickListLine.sales_order_line_id)
+    )).all()
+    picked_map = {str(sol_id): float(qty) for sol_id, qty in rows}
+    out = {}
+    for line in so.lines:
+        uom2 = (line.uom2 or "").strip()
+        if not uom2 or line.qty2 is None:
+            continue
+        out[str(line.id)] = (
+            max(0.0, float(line.qty2) - picked_map.get(str(line.id), 0.0)),
+            uom2,
+        )
+    return out
+
+
+async def _packing_order_alt_uoms(db: AsyncSession, po_ids: list) -> dict:
+    """`{packing_order_id: uom2}` — the unit each carton's `alt_qty` was counted
+    in, in one query rather than a hop per box."""
+    from app.models.packing import PackingOrder
+    ids = {str(p) for p in po_ids if p}
+    if not ids:
+        return {}
+    rows = (await db.execute(
+        select(PackingOrder.id, PackingOrder.uom2).filter(PackingOrder.id.in_(ids))
+    )).all()
+    return {str(pid): (u or "").strip() for pid, u in rows}
+
+
 def _line_variant_key(so_line: SalesOrderLine) -> str:
     """The stock variant key an SO line's own ordered identity folds down to.
 
@@ -258,6 +305,7 @@ async def _suggest_cartons(db: AsyncSession, so: SalesOrder, source_location_id=
     a hole.)
     """
     remaining = await _remaining_by_so_line(db, so)
+    remaining_alt = await _remaining_alt_by_so_line(db, so)
     ordered_map = await so_fulfilment_service.ordered_base_map(db, [line.id for line in so.lines])
     taken = await packing_service.allocated_unit_ids(db)
 
@@ -286,18 +334,31 @@ async def _suggest_cartons(db: AsyncSession, so: SalesOrder, source_location_id=
     balances = await _carton_stock_rows(
         db, [pu.id for _l, _r, units in picked for pu, _q in units]
     )
+    # A carton's alt count was counted in ITS packing order's unit, which is not
+    # necessarily the unit this line is sold in (packed in Pcs, ordered in Gross).
+    # Carry the box's own label rather than restating it in the line's — the two
+    # are only summed together where they agree.
+    carton_alt_uom = await _packing_order_alt_uoms(
+        db, [pu.packing_order_id for _l, _r, units in picked for pu, _q in units]
+    )
     keys = {bal.variant_key for bal in balances.values() if bal.variant_key}
     keys.update(k for k in (_line_variant_key(l) for l, _r, _u in picked) if k)
     variants = await stock_service.describe_variant_keys(db, keys)
 
     out: list[PickListSuggestedLine] = []
     for so_line, rem, units in picked:
+        rem_alt, alt_uom = remaining_alt.get(str(so_line.id), (None, ""))
         cartons: list[PickListSuggestedCarton] = []
         for pu, qty in units:
             bal = balances.get(str(pu.id))
             cartons.append(PickListSuggestedCarton(
                 batch_id=pu.id, batch_number=pu.batch_number,
                 package_no=pu.package_no, qty=qty,
+                # The packer's own count for this box, not qty/factor. Null on a
+                # carton packed with no alt unit even when the line has one — the
+                # modal then shows kilos alone for that row rather than a zero.
+                alt_qty=float(pu.alt_qty) if pu.alt_qty is not None else None,
+                alt_uom=carton_alt_uom.get(str(pu.packing_order_id)) or None,
                 source_location_id=bal.location_id if bal else None,
                 **_carton_identity(pu, bal, variants),
             ))
@@ -310,6 +371,9 @@ async def _suggest_cartons(db: AsyncSession, so: SalesOrder, source_location_id=
             item_uom=it.uom if it else None,
             ordered_qty=ordered_map.get(str(so_line.id), 0.0),
             remaining_qty=rem,
+            ordered_alt=float(so_line.qty2) if so_line.qty2 is not None else None,
+            remaining_alt=rem_alt,
+            alt_uom=alt_uom or None,
             cartons=cartons,
             **_ordered_identity(so_line, variants),
         ))
