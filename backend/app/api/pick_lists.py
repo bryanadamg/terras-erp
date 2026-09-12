@@ -10,7 +10,7 @@ from app.db.session import get_async_db
 from app.schemas import (
     PickListCreate, PickListUpdate, PickListResponse, PickListListResponse,
     PickListScanPayload, PickableOrderResponse, PickableOrderLine,
-    PickListSuggestedLine, PickListSuggestedCarton,
+    PickListSuggestedLine, PickListSuggestedCarton, PickListCartonIdentity,
 )
 from app.models.pick_list import PickList, PickListLine
 from app.models.batch import Batch
@@ -113,6 +113,53 @@ def _decorate(pl: PickList) -> PickList:
                 float(line.batch.gross_weight_kg) if line.batch.gross_weight_kg is not None else None
             )
     return pl
+
+
+async def _decorate_all(db: AsyncSession, pls: list) -> list:
+    """`_decorate` over a set of pick lists, plus the one piece of a line's
+    identity that needs the database: what is physically in the picked carton.
+
+    Shade and combo are not columns on a Batch — they live only in the carton's
+    StockBalance row (`variant_key`), so unlike size and the weights they cannot
+    be read off the already-loaded tree. Resolved here for every carton on every
+    list in two queries, never one per line.
+
+    The balance row is read with NO `qty > 0` filter on purpose: a dispatched
+    carton's row sits at zero, and a shipped pick list still has to be able to
+    say what colour went out.
+    """
+    from app.models.stock_balance import StockBalance
+    lines = [l for pl in pls for l in (pl.lines or []) if l.batch_id]
+    if lines:
+        rows = (await db.execute(
+            select(StockBalance.batch_key, StockBalance.variant_key)
+            .filter(StockBalance.batch_key.in_([str(l.batch_id) for l in lines]))
+        )).all()
+        # A carton can hold rows at more than one location; they are the same box,
+        # so any row with a key answers for it and an empty key never displaces one.
+        key_by_batch: dict = {}
+        for bk, vk in rows:
+            if vk and not key_by_batch.get(bk):
+                key_by_batch[bk] = vk
+        variants = await stock_service.describe_variant_keys(db, set(key_by_batch.values()))
+        for l in lines:
+            vkey = key_by_batch.get(str(l.batch_id))
+            v = variants.get(vkey) or {}
+            b = l.batch
+            l.carton_identity = PickListCartonIdentity(
+                variant_key=vkey or None,
+                variant_attributes=v.get("variant_attributes") or None,
+                color_id=v.get("color_id"),
+                color_name=v.get("color_name"),
+                color_code=v.get("color_code"),
+                color_hex=v.get("color_hex"),
+                bom_size_id=b.bom_size_id if b is not None else None,
+                bom_size_snapshot=b.bom_size_snapshot if b is not None else None,
+                size_label=stock_service._bom_size_label(b.bom_size_snapshot) if b is not None else None,
+            )
+    for pl in pls:
+        _decorate(pl)
+    return pls
 
 
 async def _next_code(db: AsyncSession) -> str:
@@ -486,8 +533,7 @@ async def list_pick_lists(
     total = (await db.execute(count_query)).scalar() or 0
     result = await db.execute(window.apply(query.order_by(PickList.created_at.desc())))
     orders = result.scalars().all()
-    for pl in orders:
-        _decorate(pl)
+    await _decorate_all(db, list(orders))
     return window.envelope(orders, total)
 
 
@@ -718,7 +764,7 @@ async def resolve_pick_list(
     pl = result.scalars().first()
     if not pl:
         raise HTTPException(status_code=404, detail=f"No pick list found for '{wanted}'")
-    return _decorate(pl)
+    return (await _decorate_all(db, [pl]))[0]
 
 
 @router.get("/{pl_id}", response_model=PickListResponse)
@@ -730,7 +776,7 @@ async def get_pick_list(
     pl = await _load(db, pl_id)
     if not pl:
         raise HTTPException(status_code=404, detail="Pick list not found")
-    return _decorate(pl)
+    return (await _decorate_all(db, [pl]))[0]
 
 
 @router.get("/{pl_id}/remaining")
@@ -846,7 +892,7 @@ async def create_pick_list(
         pass
 
     pl = await _load(db, pl.id)
-    return _decorate(pl)
+    return (await _decorate_all(db, [pl]))[0]
 
 
 @router.put("/{pl_id}", response_model=PickListResponse)
@@ -919,7 +965,7 @@ async def update_pick_list(
     )
 
     pl = await _load(db, pl_id)
-    return _decorate(pl)
+    return (await _decorate_all(db, [pl]))[0]
 
 
 @router.post("/{pl_id}/scan", response_model=PickListResponse)
@@ -1015,7 +1061,7 @@ async def scan_pick_list_unit(
     )
 
     pl = await _load(db, pl_id)
-    return _decorate(pl)
+    return (await _decorate_all(db, [pl]))[0]
 
 
 # NOTE: `POST /pick-lists/{id}/dispatch` was removed when the loading-deck gate

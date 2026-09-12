@@ -3679,6 +3679,28 @@ class PickListScanPayload(BaseModel):
     code: str
     picked_by: str | None = None
 
+class PickListCartonIdentity(BaseModel):
+    """What is physically IN a picked carton — shade/combo off its StockBalance
+    row's `variant_key`, size off the Batch row it was stamped with at mint.
+    Field names are a lot's, so `LotChips` labels a pick line exactly the way the
+    carton list, the Kartu Packing and the suggestion modal already do.
+
+    A nested object rather than more columns on the line, because the line's own
+    `color_name`/`color_code` are the ORDERED shade and print in the Surat Jalan's
+    WARNA column: a box packed from a substituted lot must be visible to the
+    picker without being able to rewrite the delivery note.
+    """
+    variant_key: str | None = None
+    variant_attributes: list[BatchVariantAttr] | None = None
+    color_id: UUID | None = None
+    color_name: str | None = None
+    color_code: str | None = None
+    color_hex: str | None = None
+    bom_size_id: UUID | None = None
+    bom_size_snapshot: dict | None = None
+    size_label: str | None = None
+
+
 class PickListLineResponse(BaseModel):
     id: UUID
     sales_order_line_id: UUID
@@ -3708,6 +3730,9 @@ class PickListLineResponse(BaseModel):
     packaging_type_name: str | None = None
     net_weight_kg: float | None = None
     gross_weight_kg: float | None = None
+    # Resolved at read time, null on a bulk (cartonless) line. See the class docs
+    # for why this is not flattened onto the fields above.
+    carton_identity: PickListCartonIdentity | None = None
     class Config:
         from_attributes = True
 

@@ -1357,10 +1357,20 @@ function PickListEditor({ pl: initialPl, itemById, locPickerTreeOptions, authFet
                                                     tdStyle={td}
                                                 />
                                             )}
+                                            {/* What is actually IN this box — size, combo, shade (with its
+                                                hex swatch) and any other variant attribute, off the carton's
+                                                own stock key rather than off what the line ordered. The two
+                                                can differ when a box was packed from a substituted lot, and
+                                                the picker holding it is the one person able to catch that. */}
                                             <td style={{ ...td, paddingLeft: 22 }}>
                                                 {r.batch_id
                                                     ? <span style={{ color: '#00309c' }}>{r.batch_number}</span>
                                                     : <span style={{ color: '#888' }}>Bulk (no carton)</span>}
+                                                {r.carton_identity && (
+                                                    <LotChipRow style={{ marginTop: 2 }}>
+                                                        <LotChips batch={r.carton_identity} />
+                                                    </LotChipRow>
+                                                )}
                                             </td>
                                             <td style={{ ...td, textAlign: 'center' }}>{r.package_no ? `#${r.package_no}` : '—'}</td>
                                             <td style={td} />
