@@ -1053,7 +1053,7 @@ function PickListSuggestionModal({ so, groups, loading, creating, itemById, onCl
 
 // ── editor ───────────────────────────────────────────────────────────────────
 function PickListEditor({ pl: initialPl, itemById, locPickerTreeOptions, authFetch, onClose, onSaved, showToast }: any) {
-    const { hasPermission } = useUser();
+    const { hasPermission, currentUser } = useUser();
     const canManage = hasPermission('sales.manage');
 
     // Lines are server-owned here: scanning mutates them on the backend and the
@@ -1078,6 +1078,21 @@ function PickListEditor({ pl: initialPl, itemById, locPickerTreeOptions, authFet
     const [scanning, setScanning] = useState(false);
     const [showOtherLines, setShowOtherLines] = useState(false);
     const scanRef = useRef<HTMLInputElement | null>(null);
+
+    // The QC inspector is whoever is at the screen, so it is prefilled rather
+    // than typed — a free-text gate field collected blanks and initials. Runs
+    // off an effect because `currentUser` is not resolved at first render, and
+    // once only: a name already on the row wins, and clearing the field must
+    // stay cleared rather than be refilled out from under the user.
+    const prefilledInspector = useRef(false);
+    useEffect(() => {
+        if (prefilledInspector.current || readOnly) return;
+        if (initialPl.qc_inspector) { prefilledInspector.current = true; return; }
+        if (currentUser?.username) {
+            setQcInspector(currentUser.username);
+            prefilledInspector.current = true;
+        }
+    }, [readOnly, currentUser, initialPl.qc_inspector]);
 
     useEffect(() => {
         let cancelled = false;
@@ -1254,7 +1269,7 @@ function PickListEditor({ pl: initialPl, itemById, locPickerTreeOptions, authFet
                             <th style={{ ...xpTableHeader, width: 110, textAlign: 'right' }}>Qty</th>
                             <th style={{ ...xpTableHeader, width: 160 }}>Pick-from</th>
                             <th style={{ ...xpTableHeader, width: 110 }}>Scanned</th>
-                            <th style={{ ...xpTableHeader, width: 60 }}></th>
+                            <th style={{ ...xpTableHeader, width: 34 }}></th>
                         </tr>
                     </thead>
                     <tbody>
@@ -1357,8 +1372,18 @@ function PickListEditor({ pl: initialPl, itemById, locPickerTreeOptions, authFet
                                                         ? <span style={{ fontSize: 10, color: '#0a3e0a' }}><i className="bi bi-check-lg" /> {r.picked_by || 'yes'}</span>
                                                         : <span style={{ fontSize: 10, color: '#c77800' }}>pending</span>}
                                             </td>
-                                            <td style={{ ...td, textAlign: 'right' }}>
-                                                {!readOnly && <button className={XP_BTN} style={xpBtn({ color: '#a00' })} onClick={() => removeLine(r.__idx)}>Remove</button>}
+                                            <td style={{ ...td, textAlign: 'center' }}>
+                                                {!readOnly && (
+                                                    <XPActionButton
+                                                        classic
+                                                        tone="danger"
+                                                        icon="bi-x"
+                                                        title={r.batch_id
+                                                            ? `Remove carton ${r.batch_number} from this pick list`
+                                                            : 'Remove this line'}
+                                                        onClick={() => removeLine(r.__idx)}
+                                                    />
+                                                )}
                                             </td>
                                         </tr>
                                     ))}
