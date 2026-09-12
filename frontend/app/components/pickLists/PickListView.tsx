@@ -322,8 +322,9 @@ export default function PickListView() {
                                                     <th style={{ ...th, width: 24 }}>#</th>
                                                     <th style={th}>Lot</th>
                                                     <th style={th}>Item</th>
+                                                    <th style={th}>Contents</th>
                                                     <th style={{ ...th, width: 78 }}>Packaging</th>
-                                                    <th style={{ ...th, textAlign: 'right', width: 54 }}>Qty</th>
+                                                    <th style={{ ...th, textAlign: 'right', width: 72 }}>Qty</th>
                                                     {/* Brutto per carton — the figure the loading deck counts
                                                         the load by and the carrier bills on. */}
                                                     <th style={{ ...th, textAlign: 'right', width: 62 }}>Gross</th>
@@ -344,18 +345,34 @@ export default function PickListView() {
                                                         <td style={{ ...td, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: 130 }}
                                                             title={l.item_name || undefined}>
                                                             {l.item_code || itemById[String(l.item_id)]?.code || '—'}
-                                                            {/* Size of the CARTON, not of the order line: an SO running
-                                                                several sizes ships them out of one pick list, and the
-                                                                colour column above is the ordered shade. */}
-                                                            {l.size_label && (
+                                                        </td>
+                                                        {/* What is in the CARTON, not what the order line asked for:
+                                                            an SO running several sizes or shades ships them out of
+                                                            one pick list, and the colour on the line above is the
+                                                            ordered one. Same chips as the editor modal and the
+                                                            Kartu Packing, off the carton's own stock key. A bulk
+                                                            line has no carton, so its stamped size is all there is. */}
+                                                        <td style={td}>
+                                                            {l.carton_identity ? (
+                                                                <LotChipRow>
+                                                                    <LotChips batch={l.carton_identity} />
+                                                                </LotChipRow>
+                                                            ) : l.size_label ? (
                                                                 <LotChip tone="size" title={`Size: ${l.size_label}`}>{l.size_label}</LotChip>
+                                                            ) : (
+                                                                <span style={{ color: '#bbb' }}>—</span>
                                                             )}
                                                         </td>
                                                         <td style={{ ...td, color: '#555', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: 78 }}
                                                             title={l.packaging_type_name || undefined}>
                                                             {l.packaging_type_name || '—'}
                                                         </td>
-                                                        <td style={{ ...td, textAlign: 'right', fontWeight: 'bold' }}>{num(l.qty_picked).toFixed(2)}</td>
+                                                        <td style={{ ...td, textAlign: 'right', fontWeight: 'bold', whiteSpace: 'nowrap' }}>
+                                                            {num(l.qty_picked).toFixed(2)}
+                                                            <span style={{ color: '#888', fontWeight: 'normal', marginLeft: 2 }}>
+                                                                {l.item_uom || itemById[String(l.item_id)]?.uom || ''}
+                                                            </span>
+                                                        </td>
                                                         <td style={{ ...td, textAlign: 'right', color: '#555', whiteSpace: 'nowrap' }}
                                                             title={l.gross_weight_kg != null && l.net_weight_kg != null
                                                                 ? `Net ${num(l.net_weight_kg).toFixed(2)} kg + tare` : undefined}>
