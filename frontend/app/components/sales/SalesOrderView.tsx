@@ -2028,7 +2028,7 @@ In stock ${fmtQty(f.baseAvailable)}${bu} · Shipped ${fmtQty(f.baseShipped)}${bu
                                    })()}
                                    {line.no_color_swatch && <div style={{color:'#a33',fontSize:classic?'10px':'',fontWeight:'bold'}} className={classic?'':'small fw-semibold'}><i className="bi bi-palette me-1"></i>No Color Swatch</div>}
                                </div>
-                               <div style={{display:'flex',alignItems:'center',gap:classic?6:10,flexWrap:'wrap' as const}}>
+                               <div style={{display:'flex',alignItems:'flex-end',gap:classic?6:10,flexWrap:'wrap' as const}}>
                                    <div style={{display:'flex',flexDirection:'column',gap:1}}>
                                        <span style={{color:classic?'#999':'',fontSize:'9px'}} className={classic?'':'text-muted'}>Req</span>
                                        <input type="date"
@@ -2049,15 +2049,20 @@ In stock ${fmtQty(f.baseAvailable)}${bu} · Shipped ${fmtQty(f.baseShipped)}${bu
                                            title="Delivery Confirmation date"
                                        />
                                    </div>
-                                   <span style={{fontWeight:'bold'}}>×</span>
-                                   <input type="number" min="0" step="any"
-                                       style={classic ? xpInput({width:70, textAlign:'right'}) : {width:80,textAlign:'right'}}
-                                       className={classic?'':'form-control form-control-sm'}
-                                       value={line.qty || ''}
-                                       onChange={e => handleLineQtyChange(idx, e.target.value)}
-                                       title="Quantity ordered (Yd)"
-                                   />
-                                   <span style={{color:classic?'#777':'',fontSize:classic?'10px':'',fontWeight:'normal'}} className={classic?'':'text-muted small'}>Yd</span>
+                                   <div style={{display:'flex',flexDirection:'column',gap:1}}>
+                                       <span style={{fontSize:'9px'}} aria-hidden="true">&nbsp;</span>
+                                       <div style={{display:'flex',alignItems:'center',gap:classic?6:10,height:classic?'20px':undefined}}>
+                                           <span style={{fontWeight:'bold'}}>×</span>
+                                           <input type="number" min="0" step="any"
+                                               style={classic ? xpInput({width:70, textAlign:'right'}) : {width:80,textAlign:'right'}}
+                                               className={classic?'':'form-control form-control-sm'}
+                                               value={line.qty || ''}
+                                               onChange={e => handleLineQtyChange(idx, e.target.value)}
+                                               title="Quantity ordered (Yd)"
+                                           />
+                                           <span style={{color:classic?'#777':'',fontSize:classic?'10px':'',fontWeight:'normal'}} className={classic?'':'text-muted small'}>Yd</span>
+                                       </div>
+                                   </div>
                                    {(() => {
                                        const lineUom = (uoms || []).find((u: any) => u.name === line.uom2);
                                        const lineFactors = lineUom?.factors || [];
@@ -2110,13 +2115,19 @@ In stock ${fmtQty(f.baseAvailable)}${bu} · Shipped ${fmtQty(f.baseShipped)}${bu
                                            </div>
                                        );
                                    })()}
-                                   <label style={{display:'flex',alignItems:'center',gap:3,cursor:'pointer',margin:0}} title="Customer has not supplied a physical color swatch — untick once it arrives">
-                                       <input type="checkbox" checked={!!line.no_color_swatch} onChange={() => handleLineSwatchToggle(idx)} className={classic?'':'form-check-input mt-0'} style={classic?{margin:0}:undefined} />
-                                       <span style={{color:classic?'#777':'',fontSize:'9px'}} className={classic?'':'text-muted'}>No swatch</span>
-                                   </label>
-                                   <button type="button" style={classic?{...xpBtn(),border:'1px solid transparent',background:'transparent',padding:'1px 5px'}:undefined} className={classic?XP_BTN:'btn btn-sm btn-link text-danger p-0'} onClick={() => handleRemoveLine(idx)}>
-                                       <i className="bi bi-x-circle" style={{color:classic?'#c00000':''}}></i>
-                                   </button>
+                                   <div style={{display:'flex',flexDirection:'column',gap:1}}>
+                                       <span style={{fontSize:'9px'}} aria-hidden="true">&nbsp;</span>
+                                       <label style={{display:'flex',alignItems:'center',gap:3,cursor:'pointer',margin:0,height:classic?'20px':undefined}} title="Customer has not supplied a physical color swatch — untick once it arrives">
+                                           <input type="checkbox" checked={!!line.no_color_swatch} onChange={() => handleLineSwatchToggle(idx)} className={classic?'':'form-check-input mt-0'} style={classic?{margin:0}:undefined} />
+                                           <span style={{color:classic?'#777':'',fontSize:'9px'}} className={classic?'':'text-muted'}>No swatch</span>
+                                       </label>
+                                   </div>
+                                   <div style={{display:'flex',flexDirection:'column',gap:1}}>
+                                       <span style={{fontSize:'9px'}} aria-hidden="true">&nbsp;</span>
+                                       <button type="button" style={classic?{...xpBtn(),border:'1px solid transparent',background:'transparent',padding:'1px 5px',height:'20px',lineHeight:'16px'}:undefined} className={classic?XP_BTN:'btn btn-sm btn-link text-danger p-0'} onClick={() => handleRemoveLine(idx)}>
+                                           <i className="bi bi-x-circle" style={{color:classic?'#c00000':''}}></i>
+                                       </button>
+                                   </div>
                                </div>
                            </div>
                        ))}
