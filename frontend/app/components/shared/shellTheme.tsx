@@ -1,6 +1,9 @@
 'use client';
 import React from 'react';
-import { xpFont, modernFont, ToggleChip, ChipTone, ChipSeg, BUTTON_RADIUS, PANEL_RADIUS, XP_BTN } from './xpTheme';
+import { xpFont, modernFont, ChipTone, ChipSeg, BUTTON_RADIUS, PANEL_RADIUS, XP_BTN } from './xpTheme';
+import UIFilterChipBar from '@bryanadamg/terras-ui/components/FilterChipBar';
+import UISegmentedBar from '@bryanadamg/terras-ui/components/SegmentedBar';
+import { segAt as uiSegAt } from '@bryanadamg/terras-ui/styles';
 
 // Shared "classic outer window" chrome — bevel container + colored title bar +
 // toolbar strip. Every dual-theme table/detail view (Sales Orders, Packing,
@@ -246,9 +249,10 @@ export type FilterChipOption = {
     disabled?: boolean;
 };
 
-/** Segment position for the i-th of `len` members of a flush group. */
-export const segAt = (i: number, len: number): ChipSeg =>
-    len === 1 ? 'only' : i === 0 ? 'first' : i === len - 1 ? 'last' : 'mid';
+/** Segment position for the i-th of `len` members of a flush group. Re-exported
+ *  from terras-ui so the two bars below and the package's own segment geometry
+ *  can't disagree about which end is which. */
+export const segAt = (i: number, len: number): ChipSeg => uiSegAt(i, len);
 
 /**
  * Status-filter row for a list toolbar — **segmented**: the buttons sit flush
@@ -264,9 +268,15 @@ export const segAt = (i: number, len: number): ChipSeg =>
  *
  * `value` takes an array for multi-select bars (the Calendar's status set); the
  * caller does the add/remove in `onChange`.
+ *
+ * Now a thin adapter over terras-ui's FilterChipBar, which was extracted from
+ * this one — identical option shape, identical geometry, and it builds on the
+ * same `ToggleChip` this app already gets from the package. The 23 call sites
+ * are untouched.
  */
-export function FilterChipBar({ classic, options, value, onChange, disabled, trailing, flat, style }: {
-    classic: boolean;
+export function FilterChipBar({ classic: _classic, options, value, onChange, disabled, trailing, flat, style }: {
+    /** @deprecated Inert — terras-ui reads the theme from `.ui-style-classic`. */
+    classic?: boolean;
     /** Plain strings, or `{ value, label, count, tone }` for a tally / coloured fill. */
     options: (string | FilterChipOption)[];
     /** Selected value, or the selected set when the bar is multi-select. */
@@ -281,73 +291,41 @@ export function FilterChipBar({ classic, options, value, onChange, disabled, tra
     flat?: boolean;
     style?: React.CSSProperties;
 }) {
-    const isOn = (v: string) => Array.isArray(value) ? value.includes(v) : value === v;
     return (
-        <div
-            className={classic ? undefined : 'btn-group btn-group-sm'}
-            role="group"
-            style={{ display: 'inline-flex', alignItems: 'center', flexWrap: 'nowrap', flexShrink: 0, ...style }}
-        >
-            {options.map((opt, i) => {
-                const o: FilterChipOption = typeof opt === 'string' ? { value: opt } : opt;
-                return (
-                    <ToggleChip
-                        key={o.value}
-                        on={isOn(o.value)}
-                        onClick={() => onChange(o.value)}
-                        classic={classic}
-                        disabled={disabled || o.disabled}
-                        seg={segAt(i, options.length)}
-                        tone={o.tone}
-                        title={o.title}
-                        flat={flat}
-                    >
-                        {o.label ?? o.value}
-                        {o.count !== undefined && (
-                            <span style={{ opacity: 0.75, fontWeight: 'normal', marginLeft: 4 }}>({o.count})</span>
-                        )}
-                    </ToggleChip>
-                );
-            })}
-            {trailing}
-        </div>
+        <UIFilterChipBar
+            options={options}
+            value={value}
+            onChange={onChange}
+            disabled={disabled}
+            trailing={trailing}
+            flat={flat}
+            style={style}
+        />
     );
 }
 
-export type SegmentedAction = { key: string; label: React.ReactNode; onClick: () => void; title?: string };
+export type SegmentedAction = { key: string; label: React.ReactNode; onClick: () => void; title?: string; disabled?: boolean };
 
 /**
  * The stateless sibling of `FilterChipBar`: a flush group of plain actions with
  * no selected member — the date-range presets ("Today | 7d | 30d | Month") that
  * ReportsView and MachineOutputReportView each hand-rolled twice (once per
  * theme). Same segment geometry, so a preset row and a filter row read as the
- * same control.
+ * same control. Also a terras-ui adapter; the package adds a whole-bar and a
+ * per-action `disabled` this never had.
+ *
+ * If a member should stay lit after the click it is a filter, not an action —
+ * use `FilterChipBar`.
  */
-export function SegmentedBar({ classic, actions, style }: {
-    classic: boolean;
+export function SegmentedBar({ classic: _classic, actions, disabled, style }: {
+    /** @deprecated Inert — terras-ui reads the theme from `.ui-style-classic`. */
+    classic?: boolean;
     actions: SegmentedAction[];
+    /** Disables every segment. */
+    disabled?: boolean;
     style?: React.CSSProperties;
 }) {
-    return (
-        <div
-            className={classic ? undefined : 'btn-group btn-group-sm'}
-            role="group"
-            style={{ display: 'inline-flex', alignItems: 'center', flexWrap: 'nowrap', flexShrink: 0, ...style }}
-        >
-            {actions.map((a, i) => (
-                <ToggleChip
-                    key={a.key}
-                    on={false}
-                    onClick={a.onClick}
-                    classic={classic}
-                    seg={segAt(i, actions.length)}
-                    title={a.title}
-                >
-                    {a.label}
-                </ToggleChip>
-            ))}
-        </div>
-    );
+    return <UISegmentedBar actions={actions} disabled={disabled} style={style} />;
 }
 
 export type ShellFill = 'page' | 'flex' | false;
