@@ -5,6 +5,7 @@ import { layoutRectOf, layoutScroll } from './uiScale';
 import { xpFont, modernFont, CODE_FONT, PRINT_FONT, PRINT_SERIF_FONT } from './typography';
 import { FloatingLayer, POPOUT_DELAY, TIP_DELAY, Tooltip, TooltipSurface, useHoverAnchor, isClipped } from './Tooltip';
 import UIToggleChip from '@bryanadamg/terras-ui/components/ToggleChip';
+import UIProgressBar, { progressToneColor as uiProgressToneColor } from '@bryanadamg/terras-ui/components/ProgressBar';
 
 /**
  * Shared Windows XP "classic" theme primitives.
@@ -889,26 +890,30 @@ export function LocationChip({
 // `secondaryPct`/`secondaryTone` stacks a second segment after the first
 // (e.g. "planned" after "done"). `label`: 'outside' = trailing "NN%" text,
 // 'inside' = centered overlay text, 'none' (default) = bar only.
-const PROGRESS_FILL_DK: Record<StatusFamily, string> = { gray: '#c8c3b6', amber: '#c77800', blue: '#0058e6', green: '#2d7a2d', red: '#c00000' };
-const PROGRESS_FILL_LT: Record<StatusFamily, string> = { gray: '#e2ddd0', amber: '#f5d060', blue: '#4a8fe8', green: '#6fce6f', red: '#e88a8a' };
+//
+// Now a thin adapter over terras-ui's ProgressBar, which was extracted from this
+// one — same geometry, same five tone hexes (as `--terras-progress-*`, whose
+// fallbacks are the literals this used to hold), same clamping of the stacked
+// segments. The package ships no tooltip, so it takes ours through its `tooltip`
+// slot; everything else is a straight pass-through and the ~20 call sites are
+// untouched.
 
 /** The solid colour a `ProgressBar` segment paints, for a legend or key that sits
  *  beside one. Exported so a caller names the bar's own colour instead of
- *  hand-copying a hex that then drifts when the palette moves. */
-export const progressToneColor = (tone: StatusFamily) => PROGRESS_FILL_DK[tone];
+ *  hand-copying a hex that then drifts when the palette moves. Returns the
+ *  `var(--terras-progress-*)` reference rather than a raw hex — usable anywhere a
+ *  CSS colour is, which is every current caller. */
+export const progressToneColor = (tone: StatusFamily) => uiProgressToneColor(tone);
 
-function progressBarFill(tone: StatusFamily, hatched: boolean): string {
-    if (!hatched) return PROGRESS_FILL_DK[tone];
-    return `repeating-linear-gradient(45deg,${PROGRESS_FILL_DK[tone]},${PROGRESS_FILL_DK[tone]} 3px,${PROGRESS_FILL_LT[tone]} 3px,${PROGRESS_FILL_LT[tone]} 6px)`;
-}
+/** Both the bar's own `title` and the marker's go through here. The bar carries
+ *  long, multi-line explanations (MO step lists, receiving breakdowns) — exactly
+ *  the content the OS tooltip renders worst — so it gets the themed surface with
+ *  the wide cap; a marker title is short and unaffected by a *max* width. */
+const progressTip = (node: React.ReactElement, content: string) => (
+    <Tooltip content={content} maxWidth={380}>{node}</Tooltip>
+);
 
-export function ProgressBar({
-    pct, tone, hatched = false, height = 10, width, title,
-    secondaryPct, secondaryTone = 'gray',
-    tertiaryPct, tertiaryTone = 'gray',
-    markerPct, markerTitle,
-    label = 'none',
-}: {
+export function ProgressBar(props: {
     pct: number;
     tone?: StatusFamily;
     hatched?: boolean;
@@ -928,57 +933,9 @@ export function ProgressBar({
     markerTitle?: string;
     /** 'outside' = bar + trailing "NN%" text (flex row); 'inside' = centered overlay label; 'none' (default) = bar only. */
     label?: 'outside' | 'inside' | 'none';
+    style?: React.CSSProperties;
 }) {
-    const t: StatusFamily = tone || (pct >= 100 ? 'green' : pct > 0 ? 'amber' : 'gray');
-    const clamped = Math.max(0, Math.min(100, pct));
-    const secClamped = secondaryPct != null ? Math.max(0, Math.min(100 - clamped, secondaryPct)) : 0;
-    const terClamped = tertiaryPct != null ? Math.max(0, Math.min(100 - clamped - secClamped, tertiaryPct)) : 0;
-    const pctLabel = Math.round(clamped);
-
-    const track = (
-        <div style={{ flex: label === 'outside' ? 1 : undefined, border: '1px solid #7f9db9', borderRadius: 3, height, width: label === 'outside' ? undefined : (width ?? '100%'), background: '#e9e9e9', position: 'relative', overflow: 'hidden' }}>
-            <div style={{ position: 'absolute', top: 0, left: 0, height: '100%', width: `${clamped}%`, background: progressBarFill(t, hatched), transition: 'width 0.2s' }} />
-            {secondaryPct != null && (
-                <div style={{ position: 'absolute', top: 0, left: `${clamped}%`, height: '100%', width: `${secClamped}%`, background: progressBarFill(secondaryTone, hatched), transition: 'width 0.2s, left 0.2s' }} />
-            )}
-            {tertiaryPct != null && (
-                <div style={{ position: 'absolute', top: 0, left: `${clamped + secClamped}%`, height: '100%', width: `${terClamped}%`, background: progressBarFill(tertiaryTone, hatched), transition: 'width 0.2s, left 0.2s' }} />
-            )}
-            {markerPct != null && (
-                <Tooltip content={markerTitle}>
-                    <div
-                        style={{
-                            position: 'absolute', top: 0, bottom: 0,
-                            left: `${Math.max(0, Math.min(100, markerPct))}%`,
-                            width: 2, background: '#000',
-                        }}
-                    />
-                </Tooltip>
-            )}
-            {label === 'inside' && (
-                <span style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                    <span style={{
-                        fontSize: Math.max(8, height - 7), fontWeight: 'bold', color: '#fff',
-                        background: 'rgba(0,0,0,0.45)', borderRadius: 3, padding: '0 5px', lineHeight: `${height - 4}px`,
-                    }}>
-                        {pctLabel}%
-                    </span>
-                </span>
-            )}
-        </div>
-    );
-
-    // The bar carries long, multi-line explanations (MO step lists, receiving
-    // breakdowns) — exactly the content the OS tooltip renders worst.
-    const tipped = title ? <Tooltip content={title} maxWidth={380}>{track}</Tooltip> : track;
-    if (label !== 'outside') return tipped;
-
-    return (
-        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-            {tipped}
-            <span style={{ fontSize: 10, fontFamily: CODE_FONT, minWidth: 32 }}>{pctLabel}%</span>
-        </div>
-    );
+    return <UIProgressBar {...props} tooltip={progressTip} />;
 }
 
 // ── Inline style helpers (XP widgets) ────────────────────────────────────────

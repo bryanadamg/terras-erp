@@ -17,6 +17,13 @@
      loads, or the Terras wordmark on the sign-in screen renders in the body
      font instead of IBM Plex Sans JP. */
   --terras-font-display: var(--font-display);
+
+  /* Same bridge for the package's mono stack, which every aligned number in its
+     components (a ProgressBar's trailing "NN%") is set in. It defaults to a
+     Consolas-first stack; this app has exactly ONE mono stack — CODE_FONT in
+     components/shared/typography.ts — and a second one would render the same
+     digits at a different width two cells apart. Keep the two literals equal. */
+  --terras-font-mono: 'Courier New', Consolas, monospace;
 }
 
 /* ============================================================
