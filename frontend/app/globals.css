@@ -1630,42 +1630,12 @@ table {
   .xp-skel { animation: none; }
 }
 
-/* Toast Styles */
-.toast {
-    background: white;
-    border-radius: 8px;
-    min-width: 250px;
-}
-
-.toast-type-success { border-left: 4px solid #10b981 !important; color: #065f46; }
-.toast-type-danger { border-left: 4px solid #ef4444 !important; color: #991b1b; }
-.toast-type-warning { border-left: 4px solid #f59e0b !important; color: #92400e; }
-.toast-type-info { border-left: 4px solid #3b82f6 !important; color: #1e40af; }
-
-/* Modern Theme Toasts */
-.ui-style-modern .toast {
-    border-radius: 3px;
-    backdrop-filter: blur(8px);
-    background: rgba(250, 252, 255, 0.96);
-}
-
-/* Classic Theme Toasts */
-.ui-style-classic .toast {
-    background-color: #ffffe1 !important;
-    border: 1px solid #000000 !important;
-    border-radius: 0 !important;
-    color: black !important;
-    font-family: var(--xp-font);
-    font-size: 11px;
-}
-/* Keep type distinguishable: XP tooltip body + colored left edge */
-.ui-style-classic .toast-type-success { border-left: 4px solid #2d7a2d !important; }
-.ui-style-classic .toast-type-danger  { border-left: 4px solid #c00000 !important; }
-.ui-style-classic .toast-type-warning { border-left: 4px solid #b8860b !important; }
-.ui-style-classic .toast-type-info    { border-left: 4px solid #0058e6 !important; }
-.ui-style-classic .toast {
-    box-shadow: 2px 2px 4px rgba(0,0,0,0.3) !important;
-}
+/* Toast chrome lives in terras-ui: the viewport's corner, stacking and entrance
+   in its chrome.css (`.terras-toast-viewport` / `.terras-toast`), the panel face
+   inline on the component. The Bootstrap `.toast` + `.toast-type-*` rules that
+   stood here went with the local implementation — nothing renders them now, and
+   a toast is a bevelled panel with a tone stripe rather than the XP tooltip body
+   it used to borrow. */
 
 /* Row / select-all multi-select checkboxes (RowCheckbox, SelectAllCheckbox in
    listViewTheme.tsx). Hover ring only — the box itself never moves, so a dense
