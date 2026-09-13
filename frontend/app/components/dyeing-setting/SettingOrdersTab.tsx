@@ -1,6 +1,5 @@
 'use client';
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
-import { useTheme } from '../../context/ThemeContext';
 import { useData } from '../../context/DataContext';
 import { usePaginatedFetch } from '../../context/usePaginatedList';
 import { useUser } from '../../context/UserContext';
@@ -32,9 +31,9 @@ const STATUSES = ['PENDING', 'IN_PROGRESS', 'COMPLETED', 'CANCELLED'];
 const COLS = 13;
 
 // ── Style helpers (theme-aware) ───────────────────────────────────────────────
-const xpInput = (classic: boolean): React.CSSProperties => lvInput(classic, classic ? { padding: '1px 4px', width: 'auto' } : { height: 'auto' });
-const xpBtn = (classic: boolean): React.CSSProperties => lvBtn(classic, 'default', classic ? { fontSize: 10, padding: '2px 8px' } : {});
-const xpBtnPrimary = (classic: boolean): React.CSSProperties => lvBtn(classic, 'primary', classic ? { fontSize: 10, padding: '2px 8px' } : {});
+const xpInput = (classic: boolean): React.CSSProperties => lvInput(true, { padding: '1px 4px', width: 'auto' });
+const xpBtn = (classic: boolean): React.CSSProperties => lvBtn(true, 'default', { fontSize: 10, padding: '2px 8px' });
+const xpBtnPrimary = (classic: boolean): React.CSSProperties => lvBtn(true, 'primary', { fontSize: 10, padding: '2px 8px' });
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 interface CreateForm {
@@ -100,10 +99,8 @@ function summarize(runs: any[]): RunSummary {
 }
 
 export default function SettingOrdersTab({ items, authFetch }: Props) {
-    const { uiStyle } = useTheme();
     const { workCenters } = useData();
     const { formatCustom: tzFmt } = useTimezone();
-    const classic = uiStyle === 'classic';
     const { hasPermission } = useUser();
     const canManage = hasPermission('work_order.log');
 
@@ -304,28 +301,19 @@ export default function SettingOrdersTab({ items, authFetch }: Props) {
     // ── Styles ────────────────────────────────────────────────────────────────
     // Full cell borders rather than lvTd's single rule — same call the Work Orders
     // list makes, and these rows carry the same density of numbers.
-    const thStyle: React.CSSProperties = classic
-        ? lvThSticky(true, { border: '1px solid #808080' })
-        : { fontSize: '9pt', fontWeight: 'bold', whiteSpace: 'nowrap' };
-    const tdBase: React.CSSProperties = classic
-        ? { ...lvTd(true), border: '1px solid #c0bdb5' }
-        : { verticalAlign: 'middle' };
+    const thStyle: React.CSSProperties = lvThSticky(true, { border: '1px solid #808080' });
+    const tdBase: React.CSSProperties = { ...lvTd(true), border: '1px solid #c0bdb5' };
 
-    const filterBarStyle: React.CSSProperties = classic ? {
+    const filterBarStyle: React.CSSProperties = {
         background: '#d4d0c8', borderBottom: '1px solid #808080',
         padding: '4px 8px', display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap',
-    } : {
-        background: '#f8f9fa', borderBottom: '1px solid #dee2e6',
-        padding: '6px 12px', display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap',
     };
 
-    const subTh = lvSubTh(classic, true);
-    const subTd = lvSubTd(classic, true);
+    const subTh = lvSubTh(true, true);
+    const subTd = lvSubTd(true, true);
 
-    const labelStyle: React.CSSProperties = classic ? {
+    const labelStyle: React.CSSProperties = {
         fontFamily: xpFont, fontSize: 10, color: '#000', display: 'block', marginBottom: 1,
-    } : {
-        fontFamily: modernFont, fontSize: 12, color: '#64748b', display: 'block', marginBottom: 3, fontWeight: 500,
     };
 
     const fieldRow = (label: string, field: keyof CreateForm, type = 'text', placeholder?: string) => (
@@ -333,7 +321,7 @@ export default function SettingOrdersTab({ items, authFetch }: Props) {
             <label style={labelStyle}>{label}</label>
             <input
                 type={type}
-                style={{ ...xpInput(classic), width: '100%' }}
+                style={{ ...xpInput(true), width: '100%' }}
                 value={createForm[field]}
                 placeholder={placeholder}
                 onChange={e => setCreateForm(f => ({ ...f, [field]: e.target.value }))}
@@ -357,10 +345,10 @@ export default function SettingOrdersTab({ items, authFetch }: Props) {
         return (
             <tr key={`${wo.id}-detail`}>
                 <td colSpan={COLS} style={{ padding: 0 }}>
-                    <ExpandedRowPanel classic={classic}>
+                    <ExpandedRowPanel classic>
                         <div style={{
                             display: 'grid', gridTemplateColumns: '270px minmax(0, 1fr)',
-                            border: classic ? '1px solid #7f9db9' : '1px solid #dee2e6',
+                            border: '1px solid #7f9db9',
                             fontFamily: xpFont, fontSize: 10,
                         }}>
                             {/* Order — the chain this run hangs off, so the measured
@@ -369,12 +357,12 @@ export default function SettingOrdersTab({ items, authFetch }: Props) {
                                 <div style={colHeaderStyle}>Order</div>
                                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 2, fontSize: 9 }}>
                                     <span style={{ color: '#888' }}>MO</span>
-                                    <CodeChip code={wo.mo_code} classic={classic} style={{ fontSize: 9 }} />
+                                    <CodeChip code={wo.mo_code} classic style={{ fontSize: 9 }} />
                                 </div>
                                 {wo.root_mo_code && wo.root_mo_code !== wo.mo_code && (
                                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 2, fontSize: 9 }}>
                                         <span style={{ color: '#888' }}>Root MO</span>
-                                        <CodeChip code={wo.root_mo_code} classic={classic} tier={2} style={{ fontSize: 9 }} />
+                                        <CodeChip code={wo.root_mo_code} classic tier={2} style={{ fontSize: 9 }} />
                                     </div>
                                 )}
                                 {infoRow('Product', wo.item_name || '—')}
@@ -411,7 +399,7 @@ export default function SettingOrdersTab({ items, authFetch }: Props) {
                                     <span>Runs ({sum.runs.length})</span>
                                     {canManage && (
                                         <XPActionButton
-                                            classic={classic}
+                                            classic
                                             tone="success"
                                             icon="bi-plus-lg"
                                             label="Create Run"
@@ -426,7 +414,7 @@ export default function SettingOrdersTab({ items, authFetch }: Props) {
                                     <div style={{ color: '#aaa', fontStyle: 'italic', fontSize: 9 }}>No runs on this work order.</div>
                                 ) : (
                                     <div style={{ maxHeight: 240, overflow: 'auto' }}>
-                                        <table style={{ ...lvSubTable(classic), border: 'none', minWidth: 940 }}>
+                                        <table style={{ ...lvSubTable(true), border: 'none', minWidth: 940 }}>
                                             <thead>
                                                 <tr>
                                                     <th style={{ ...subTh, width: 34 }}>Run</th>
@@ -448,10 +436,10 @@ export default function SettingOrdersTab({ items, authFetch }: Props) {
                                             </thead>
                                             <tbody>
                                                 {sum.runs.map((run: any, ri: number) => (
-                                                    <tr key={run.id} style={lvSubRow(classic, ri)}>
+                                                    <tr key={run.id} style={lvSubRow(true, ri)}>
                                                         <td style={{ ...subTd, fontWeight: 'bold' }}>#{run.run_number}</td>
                                                         <td style={{ ...subTd, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={run.machine_name || undefined}>
-                                                            {run.machine_name || <Dash classic={classic} />}
+                                                            {run.machine_name || <Dash classic />}
                                                         </td>
                                                         <td style={{ ...subTd, textAlign: 'right' }}>{fmtNum(run.substrate_qty)}</td>
                                                         <td style={{ ...subTd, textAlign: 'right' }}>{fmtNum(run.temperature_c, 1)}</td>
@@ -463,21 +451,21 @@ export default function SettingOrdersTab({ items, authFetch }: Props) {
                                                         <td style={{ ...subTd, textAlign: 'right', fontWeight: 'bold' }}>{fmtNum(run.actual_shrinkage_pct, 2)}</td>
                                                         <td style={subTd}><StatusChip status={run.status || 'PENDING'} tint /></td>
                                                         <td style={{ ...subTd, fontFamily: CODE_FONT, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }} title={run.output_batch_number || undefined}>
-                                                            {run.output_batch_number || <Dash classic={classic} />}
+                                                            {run.output_batch_number || <Dash classic />}
                                                         </td>
                                                         <td style={{ ...subTd, color: '#666', whiteSpace: 'nowrap' }}>{fmtDateTime(run.started_at)}</td>
                                                         <td style={{ ...subTd, color: '#666', whiteSpace: 'nowrap' }}>{fmtDateTime(run.completed_at)}</td>
                                                         <td style={{ ...subTd, textAlign: 'right' }}>
                                                             {canManage && (!run.status || run.status === 'PENDING') && (
                                                                 <XPActionButton
-                                                                    classic={classic} tone="primary" icon="bi-play-fill"
+                                                                    classic tone="primary" icon="bi-play-fill"
                                                                     title="Start this setting run"
                                                                     onClick={() => handleStartRun(run)}
                                                                 />
                                                             )}
                                                             {canManage && run.status === 'IN_PROGRESS' && (
                                                                 <XPActionButton
-                                                                    classic={classic} tone="success" icon="bi-check-lg"
+                                                                    classic tone="success" icon="bi-check-lg"
                                                                     title="Complete this run and record the output lot"
                                                                     onClick={() => { setShowCompleteModal(run); setCompleteForm(EMPTY_COMPLETE); setErrorMsg(null); }}
                                                                 />
@@ -499,31 +487,28 @@ export default function SettingOrdersTab({ items, authFetch }: Props) {
 
     // ── Render ────────────────────────────────────────────────────────────────
     return (
-        <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0, fontFamily: classic ? xpFont : modernFont }}>
+        <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0, fontFamily: xpFont}}>
             {/* Filter bar */}
             <div style={filterBarStyle}>
-                <label style={{ fontSize: classic ? 10 : 11, color: classic ? '#000' : '#555', whiteSpace: 'nowrap' }}>Filter:</label>
-                <SearchField classic={classic} value={searchInput} onChange={setSearch} placeholder="Search WO / MO..." width={classic ? 160 : 180} />
+                <label style={{ fontSize: 10, color: '#000', whiteSpace: 'nowrap' }}>Filter:</label>
+                <SearchField classic value={searchInput} onChange={setSearch} placeholder="Search WO / MO..." width={160} />
                 <select value={filterStatus} onChange={e => setFilterStatus(e.target.value)}
-                    style={classic ? { ...formInput, width: 110 } : { width: 130 }}
-                    className={classic ? '' : 'form-select form-select-sm'}>
+                    style={{ ...formInput, width: 110 }}>
                     <option value="">All Statuses</option>
                     {STATUSES.map(s => <option key={s} value={s}>{s.replace('_', ' ')}</option>)}
                 </select>
                 <select value={filterWC} onChange={e => setFilterWC(e.target.value)}
-                    style={classic ? { ...formInput, width: 150 } : { width: 170 }}
-                    className={classic ? '' : 'form-select form-select-sm'}>
+                    style={{ ...formInput, width: 150 }}>
                     <option value="">All Machines</option>
                     {setMachines.map((wc: any) => <option key={wc.id} value={wc.id}>{wc.name}</option>)}
                 </select>
                 {(filterStatus || filterWC || searchInput) && (
                     <button onClick={() => { setFilterStatus(''); setFilterWC(''); setSearch(''); }}
-                        style={classic ? { ...formInput, width: 'auto', cursor: 'pointer', height: 20 } : undefined}
-                        className={classic ? '' : 'btn btn-sm btn-outline-secondary'}>
+                        style={{ ...formInput, width: 'auto', cursor: 'pointer', height: 20 }}>
                         Clear
                     </button>
                 )}
-                <span style={{ marginLeft: 'auto', fontSize: classic ? 10 : 11, color: classic ? '#333' : '#888', whiteSpace: 'nowrap' }}>
+                <span style={{ marginLeft: 'auto', fontSize: 10, color: '#333', whiteSpace: 'nowrap' }}>
                     {loading ? 'Loading...' : `${woTotal} setting work order${woTotal === 1 ? '' : 's'}`}
                 </span>
             </div>
@@ -531,8 +516,7 @@ export default function SettingOrdersTab({ items, authFetch }: Props) {
             {/* Table */}
             <div className="table-responsive" style={{ flex: 1, overflow: 'auto', minHeight: 0, background: '#fff' }}>
                 <table
-                    style={{ width: '100%', minWidth: 1520, borderCollapse: 'collapse', tableLayout: 'fixed', fontSize: classic ? 11 : undefined, fontFamily: classic ? xpFont : undefined, background: classic ? '#fff' : undefined }}
-                    className={classic ? '' : 'table table-hover align-middle mb-0'}
+                    style={{ width: '100%', minWidth: 1520, borderCollapse: 'collapse', tableLayout: 'fixed', fontSize: 11, fontFamily: xpFont, background: '#fff'}}
                 >
                     <colgroup>
                         <col style={{ width: LV_EXPANDER_COL_W }} /> {/* chevron */}
@@ -550,8 +534,8 @@ export default function SettingOrdersTab({ items, authFetch }: Props) {
                         <col style={{ width: 52 }} />     {/* Actions */}
                     </colgroup>
                     <thead>
-                        <tr className={classic ? '' : 'table-light'}>
-                            <th style={{ ...thStyle, width: 22, padding: '3px 4px' }} className={classic ? '' : 'ps-3'} />
+                        <tr>
+                            <th style={{ ...thStyle, width: 22, padding: '3px 4px' }} />
                             {([
                                 ['WO', 'code'], ['MO', 'mo'], ['Product', 'product'], ['Variant', ''],
                                 ['Machine', 'wc'], ['Setting', ''], ['Width set / act', ''],
@@ -560,8 +544,7 @@ export default function SettingOrdersTab({ items, authFetch }: Props) {
                             ] as [string, string][]).map(([h, key], i) => (
                                 <SortableTh key={`${h}-${i}`}
                                     sort={sort} colKey={key || null} onSort={toggleSort}
-                                    style={{ ...thStyle, textAlign: h === '' ? 'right' : 'left' }}
-                                    className={classic ? '' : 'ps-3'}>
+                                    style={{ ...thStyle, textAlign: h === '' ? 'right' : 'left' }}>
                                     {h}
                                 </SortableTh>
                             ))}
@@ -569,13 +552,11 @@ export default function SettingOrdersTab({ items, authFetch }: Props) {
                     </thead>
                     <tbody ref={listBodyRef}>
                         {workOrders.length === 0 && (loading ? (
-                            <TableSkeleton rows={8} cols={skel.cols ?? COLS} classic={classic} tdStyle={tdBase} rowHeight={skel.rowHeight} fillHeight={skel.fillHeight} />
+                            <TableSkeleton rows={8} cols={skel.cols ?? COLS} classic tdStyle={tdBase} rowHeight={skel.rowHeight} fillHeight={skel.fillHeight} />
                         ) : (
                             <tr>
-                                <td colSpan={COLS} style={classic ? { padding: 0 } : { padding: 24, textAlign: 'center', color: '#888' }}>
-                                    {classic
-                                        ? <XPEmptyState message="No setting work orders found." icon="bi-thermometer-half" />
-                                        : 'No setting work orders found.'}
+                                <td colSpan={COLS} style={{ padding: 0 }}>
+                                    <XPEmptyState message="No setting work orders found." icon="bi-thermometer-half" />
                                 </td>
                             </tr>
                         ))}
@@ -589,16 +570,16 @@ export default function SettingOrdersTab({ items, authFetch }: Props) {
                                 <React.Fragment key={id}>
                                     <tr
                                         style={{
-                                            background: isExpanded ? rowStateBg('expanded', classic) : (classic ? lvZebra(true, idx) : undefined),
+                                            background: isExpanded ? rowStateBg('expanded', true) : (lvZebra(true, idx)),
                                             cursor: 'pointer',
                                         }}
                                         onClick={toggleRow}
                                     >
-                                        <ExpanderCell classic={classic} expanded={isExpanded} onToggle={toggleRow} tdStyle={tdBase} tdClassName={classic ? '' : 'ps-2'} label="setting order detail" />
+                                        <ExpanderCell classic expanded={isExpanded} onToggle={toggleRow} tdStyle={tdBase} tdClassName={''} label="setting order detail" />
                                         <td style={{ ...tdBase, overflow: 'hidden' }} title={wo.code || wo.name}>
                                             <CodeChip
                                                 code={wo.code || wo.name}
-                                                classic={classic}
+                                                classic
                                                 tone="accent"
                                                 style={{ fontWeight: 'bold', minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis' }}
                                             />
@@ -609,7 +590,7 @@ export default function SettingOrdersTab({ items, authFetch }: Props) {
                                         <td style={{ ...tdBase, overflow: 'hidden' }}>
                                             {wo.root_mo_code ? (
                                                 <div style={{ display: 'flex', alignItems: 'center', gap: 3, overflow: 'hidden' }}>
-                                                    <CodeChip code={wo.root_mo_code} classic={classic} tier={2} style={{ fontWeight: 'bold', overflow: 'hidden', textOverflow: 'ellipsis' }} />
+                                                    <CodeChip code={wo.root_mo_code} classic tier={2} style={{ fontWeight: 'bold', overflow: 'hidden', textOverflow: 'ellipsis' }} />
                                                     {(wo.root_mo_count ?? 0) > 1 && (
                                                         <span
                                                             title={`Shared component — feeds ${wo.root_mo_count} root MOs: ${(wo.root_mo_codes || []).join(', ')}`}
@@ -619,10 +600,10 @@ export default function SettingOrdersTab({ items, authFetch }: Props) {
                                                 </div>
                                             ) : <span style={{ color: '#bbb' }}>—</span>}
                                         </td>
-                                        <td style={{ ...tdBase, fontSize: classic ? 10 : 11, color: '#444', overflow: 'hidden' }} title={wo.item_name || ''}>
+                                        <td style={{ ...tdBase, fontSize: 10, color: '#444', overflow: 'hidden' }} title={wo.item_name || ''}>
                                             <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'block' }}>{wo.item_name || '—'}</span>
                                         </td>
-                                        <td style={{ ...tdBase, fontSize: classic ? 10 : 11, overflow: 'hidden', whiteSpace: 'normal' }}>
+                                        <td style={{ ...tdBase, fontSize: 10, overflow: 'hidden', whiteSpace: 'normal' }}>
                                             <VariantChips
                                                 combo={wo.combo_label}
                                                 size={wo.size_label}
@@ -631,14 +612,14 @@ export default function SettingOrdersTab({ items, authFetch }: Props) {
                                                 colorName={wo.color_name}
                                                 colorHex={wo.color_hex}
                                                 labdipCode={wo.labdip_variant_code}
-                                                classic={classic}
+                                                classic
                                                 style={{ flexWrap: 'wrap', rowGap: 2 }}
                                             />
                                         </td>
                                         {/* The work center the WO was dispatched to. The run's own
                                             free-text `machine_name` is a per-run note and lives in the
                                             expanded panel — the two are not the same field. */}
-                                        <td style={{ ...tdBase, fontSize: classic ? 10 : 11, overflow: 'hidden' }}>
+                                        <td style={{ ...tdBase, fontSize: 10, overflow: 'hidden' }}>
                                             {wo.work_center_name ? (() => {
                                                 const cs = getChipStyle(wo.work_center_type);
                                                 return (
@@ -656,7 +637,7 @@ export default function SettingOrdersTab({ items, authFetch }: Props) {
                                         </td>
                                         {/* Heat and speed off the current run — the two numbers that say
                                             what the machine is actually doing to the cloth. */}
-                                        <td style={{ ...tdBase, fontSize: classic ? 10 : 11, whiteSpace: 'nowrap' }}>
+                                        <td style={{ ...tdBase, fontSize: 10, whiteSpace: 'nowrap' }}>
                                             {cur && (cur.temperature_c != null || cur.speed_mpm != null) ? (
                                                 <span title="Set temperature and speed of the current run">
                                                     {cur.temperature_c != null ? `${fmtNum(cur.temperature_c, 0)}°C` : '—'}
@@ -667,7 +648,7 @@ export default function SettingOrdersTab({ items, authFetch }: Props) {
                                         </td>
                                         {/* Set width against measured width — the variance the setting
                                             step exists to control. */}
-                                        <td style={{ ...tdBase, fontSize: classic ? 10 : 11, whiteSpace: 'nowrap' }}>
+                                        <td style={{ ...tdBase, fontSize: 10, whiteSpace: 'nowrap' }}>
                                             {cur && (cur.width_cm != null || cur.actual_width_cm != null) ? (
                                                 <span title="Width the machine was set to, then the width measured off it">
                                                     <span style={{ color: '#666' }}>{fmtNum(cur.width_cm, 1)}</span>
@@ -676,7 +657,7 @@ export default function SettingOrdersTab({ items, authFetch }: Props) {
                                                 </span>
                                             ) : <span style={{ color: '#bbb' }}>—</span>}
                                         </td>
-                                        <td style={{ ...tdBase, fontSize: classic ? 10 : 11 }}>
+                                        <td style={{ ...tdBase, fontSize: 10}}>
                                             {wo.qty != null ? (() => {
                                                 const done = (wo.qty_completed_total ?? 0) >= wo.qty;
                                                 const pct = Math.min(100, ((wo.qty_completed_total ?? 0) / wo.qty) * 100);
@@ -690,21 +671,21 @@ export default function SettingOrdersTab({ items, authFetch }: Props) {
                                                 );
                                             })() : <span style={{ color: '#bbb' }}>—</span>}
                                         </td>
-                                        <td style={{ ...tdBase, fontSize: classic ? 10 : 11, textAlign: 'center', whiteSpace: 'nowrap' }}>
+                                        <td style={{ ...tdBase, fontSize: 10, textAlign: 'center', whiteSpace: 'nowrap' }}>
                                             {sum.runs.length === 0
                                                 ? <span style={{ color: '#bbb' }}>—</span>
                                                 : (
                                                     <span
                                                         title={`${sum.runs.length} run${sum.runs.length === 1 ? '' : 's'}, ${sum.completed} completed`}
-                                                        style={{ fontFamily: CODE_FONT, fontSize: classic ? 10 : 11, color: sum.open ? '#0058e6' : '#555' }}
+                                                        style={{ fontFamily: CODE_FONT, fontSize: 10, color: sum.open ? '#0058e6' : '#555' }}
                                                     >
                                                         {sum.completed}/{sum.runs.length}
                                                     </span>
                                                 )}
                                         </td>
-                                        <td style={{ ...tdBase, fontSize: classic ? 10 : 11, overflow: 'hidden' }} title={sum.outputLot || undefined}>
+                                        <td style={{ ...tdBase, fontSize: 10, overflow: 'hidden' }} title={sum.outputLot || undefined}>
                                             {sum.outputLot
-                                                ? <CodeChip code={sum.outputLot} classic={classic} tier={2} style={{ overflow: 'hidden', textOverflow: 'ellipsis' }} />
+                                                ? <CodeChip code={sum.outputLot} classic tier={2} style={{ overflow: 'hidden', textOverflow: 'ellipsis' }} />
                                                 : <span style={{ color: '#bbb' }}>—</span>}
                                         </td>
                                         <td style={tdBase}>
@@ -716,14 +697,14 @@ export default function SettingOrdersTab({ items, authFetch }: Props) {
                                                 cutting one is a deliberate act, from the panel. */}
                                             {canManage && sum.open && (!sum.open.status || sum.open.status === 'PENDING') && (
                                                 <XPActionButton
-                                                    classic={classic} tone="primary" icon="bi-play-fill"
+                                                    classic tone="primary" icon="bi-play-fill"
                                                     title={`Start run #${sum.open.run_number}`}
                                                     onClick={() => handleStartRun(sum.open)}
                                                 />
                                             )}
                                             {canManage && sum.open?.status === 'IN_PROGRESS' && (
                                                 <XPActionButton
-                                                    classic={classic} tone="success" icon="bi-check-lg"
+                                                    classic tone="success" icon="bi-check-lg"
                                                     title={`Complete run #${sum.open.run_number} and record the output lot`}
                                                     onClick={() => { setShowCompleteModal(sum.open); setCompleteForm(EMPTY_COMPLETE); setErrorMsg(null); }}
                                                 />
@@ -755,7 +736,7 @@ export default function SettingOrdersTab({ items, authFetch }: Props) {
                             className={XP_BTN}
                             onClick={handleCreateRun}
                             disabled={saving}
-                            style={classic ? { ...xpBtn(classic), padding: '3px 16px' } : { ...xpBtnPrimary(classic), padding: '6px 18px' }}
+                            style={{ ...xpBtn(true), padding: '3px 16px' }}
                         >
                             {saving ? 'Saving...' : 'Create Run'}
                         </button>
@@ -763,7 +744,7 @@ export default function SettingOrdersTab({ items, authFetch }: Props) {
                             className={XP_BTN}
                             onClick={() => { setCreateWo(null); setCreateForm(EMPTY_CREATE); setErrorMsg(null); }}
                             disabled={saving}
-                            style={classic ? { ...xpBtn(classic), padding: '3px 16px' } : { ...xpBtn(classic), padding: '6px 18px' }}
+                            style={{ ...xpBtn(true), padding: '3px 16px' }}
                         >
                             Cancel
                         </button>
@@ -771,9 +752,7 @@ export default function SettingOrdersTab({ items, authFetch }: Props) {
                 >
                     <div>
                         {errorMsg && (
-                            <div style={classic
-                                ? { background: '#fff3cd', border: '1px solid #ffc107', padding: '3px 8px', fontSize: 11, color: '#664d03', marginBottom: 6 }
-                                : { background: '#fef3cd', border: '1px solid #f0d98a', borderRadius: 7, padding: '6px 10px', fontSize: 13, color: '#854d0e', marginBottom: 10 }}>
+                            <div style={{ background: '#fff3cd', border: '1px solid #ffc107', padding: '3px 8px', fontSize: 11, color: '#664d03', marginBottom: 6 }}>
                                 {errorMsg}
                             </div>
                         )}
@@ -794,7 +773,7 @@ export default function SettingOrdersTab({ items, authFetch }: Props) {
                                 <div style={{ marginBottom: 6 }}>
                                     <label style={labelStyle}>Notes</label>
                                     <textarea
-                                        style={{ ...xpInput(classic), height: 38, width: '100%', resize: 'vertical', padding: classic ? '2px 4px' : '4px 8px' }}
+                                        style={{ ...xpInput(true), height: 38, width: '100%', resize: 'vertical', padding: '2px 4px'}}
                                         value={createForm.notes}
                                         onChange={e => setCreateForm(f => ({ ...f, notes: e.target.value }))}
                                     />
@@ -819,46 +798,38 @@ export default function SettingOrdersTab({ items, authFetch }: Props) {
                                 className={XP_BTN}
                                 onClick={handleCompleteRun}
                                 disabled={completing || !completeForm.output_batch_number.trim()}
-                                style={classic ? {
-                                    ...xpBtn(classic),
+                                style={{
+                                    ...xpBtn(true),
                                     background: !completeForm.output_batch_number.trim()
                                         ? '#d4d0c8'
                                         : 'linear-gradient(to bottom, #b0e8b0, #70c870)',
                                     borderColor: '#0a3e0a #1a5e1a #1a5e1a #0a3e0a',
                                     color: !completeForm.output_batch_number.trim() ? '#888' : '#004000',
                                     opacity: completing ? 0.7 : 1,
-                                } : {
-                                    ...xpBtnPrimary(classic),
-                                    background: !completeForm.output_batch_number.trim() ? '#cbd5e1' : '#2563eb',
-                                    color: !completeForm.output_batch_number.trim() ? '#94a3b8' : '#fff',
-                                    cursor: !completeForm.output_batch_number.trim() ? 'default' : 'pointer',
-                                    opacity: completing ? 0.7 : 1,
                                 }}
                             >
                                 {completing ? 'Completing...' : 'Complete Run'}
                             </button>
-                            <button className={XP_BTN} onClick={() => { setShowCompleteModal(null); setErrorMsg(null); }} style={xpBtn(classic)}>
+                            <button className={XP_BTN} onClick={() => { setShowCompleteModal(null); setErrorMsg(null); }} style={xpBtn(true)}>
                                 Cancel
                             </button>
                         </>
                     }
                 >
                     {errorMsg && (
-                        <div style={classic
-                            ? { background: '#fff3cd', border: '1px solid #ffc107', padding: '3px 8px', fontSize: 11, color: '#664d03', marginBottom: 6 }
-                            : { background: '#fef3cd', border: '1px solid #f0d98a', borderRadius: 7, padding: '6px 10px', fontSize: 13, color: '#854d0e', marginBottom: 10 }}>
+                        <div style={{ background: '#fff3cd', border: '1px solid #ffc107', padding: '3px 8px', fontSize: 11, color: '#664d03', marginBottom: 6 }}>
                             {errorMsg}
                         </div>
                     )}
                     {/* Output lot number — required */}
                     <div style={{ marginBottom: 8 }}>
                         <label style={labelStyle}>
-                            Output Lot Number <span style={{ color: classic ? '#c00' : '#dc2626' }}>*</span>
+                            Output Lot Number <span style={{ color: '#c00'}}>*</span>
                         </label>
                         <input
                             type="text"
                             autoFocus
-                            style={{ ...xpInput(classic), width: '100%' }}
+                            style={{ ...xpInput(true), width: '100%' }}
                             value={completeForm.output_batch_number}
                             onChange={e => setCompleteForm(f => ({ ...f, output_batch_number: e.target.value }))}
                         />
@@ -868,7 +839,7 @@ export default function SettingOrdersTab({ items, authFetch }: Props) {
                             <label style={labelStyle}>Actual Width (cm)</label>
                             <input
                                 type="number"
-                                style={{ ...xpInput(classic), width: '100%' }}
+                                style={{ ...xpInput(true), width: '100%' }}
                                 value={completeForm.actual_width_cm}
                                 onChange={e => setCompleteForm(f => ({ ...f, actual_width_cm: e.target.value }))}
                             />
@@ -877,7 +848,7 @@ export default function SettingOrdersTab({ items, authFetch }: Props) {
                             <label style={labelStyle}>Actual GSM</label>
                             <input
                                 type="number"
-                                style={{ ...xpInput(classic), width: '100%' }}
+                                style={{ ...xpInput(true), width: '100%' }}
                                 value={completeForm.actual_gsm}
                                 onChange={e => setCompleteForm(f => ({ ...f, actual_gsm: e.target.value }))}
                             />
@@ -886,7 +857,7 @@ export default function SettingOrdersTab({ items, authFetch }: Props) {
                             <label style={labelStyle}>Actual Shrinkage (%)</label>
                             <input
                                 type="number"
-                                style={{ ...xpInput(classic), width: '100%' }}
+                                style={{ ...xpInput(true), width: '100%' }}
                                 value={completeForm.actual_shrinkage_pct}
                                 onChange={e => setCompleteForm(f => ({ ...f, actual_shrinkage_pct: e.target.value }))}
                             />

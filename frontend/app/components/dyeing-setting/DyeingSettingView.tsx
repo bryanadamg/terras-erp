@@ -2,7 +2,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { useData } from '../../context/DataContext';
-import { useTheme } from '../../context/ThemeContext';
 import { Tabs, TabDef } from '../shared/Tabs';
 import DyeRecipeTab from './DyeRecipeTab';
 import DyeingOrdersTab from './DyeingOrdersTab';
@@ -34,8 +33,6 @@ const TABS: TabDef<TabKey>[] = [
 
 export default function DyeingSettingView() {
     const { authFetch, items, attributes } = useData();
-    const { uiStyle } = useTheme();
-    const classic = uiStyle === 'classic';
     const searchParams = useSearchParams();
     const router = useRouter();
     const [activeTab, setActiveTab] = useState<TabKey>('recipes');
@@ -76,14 +73,12 @@ export default function DyeingSettingView() {
 
     // ── Render ────────────────────────────────────────────────────────────────
     return (
-        <div style={viewShellStyle(classic, 'page', classic
-            ? { fontFamily: xpFont }
-            : { fontFamily: modernFont, background: '#fff', boxShadow: '0 1px 2px rgba(15,23,42,0.06)' })}>
+        <div style={viewShellStyle(true, 'page', { fontFamily: xpFont })}>
             {/* Title bar */}
-            <PageTitleBar classic={classic} icon="bi-droplet-fill" title="Dyeing & Setting" />
+            <PageTitleBar classic icon="bi-droplet-fill" title="Dyeing & Setting" />
 
             {/* Tabs bar */}
-            <Tabs tabs={TABS} activeKey={activeTab} onChange={handleTabChange} classic={classic} />
+            <Tabs tabs={TABS} activeKey={activeTab} onChange={handleTabChange} classic />
 
             {/* Content area */}
             <div style={{
