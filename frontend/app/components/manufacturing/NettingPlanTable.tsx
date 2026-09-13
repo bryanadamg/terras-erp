@@ -1,6 +1,5 @@
 'use client';
 import React from 'react';
-import { useTheme } from '../../context/ThemeContext';
 import { useData } from '../../context/DataContext';
 import { CodeChip, CODE_FONT, colorHexFor, CHIP_RADIUS, VariantChip, VariantKind } from '../shared/xpTheme';
 import { qtyFmt } from '../shared/format';
@@ -99,7 +98,7 @@ function IdentityChips({ chips, classic }: { chips?: NettingChip[]; classic: boo
                 const swatch = kind === 'color' ? (c.hex || colorHexFor(c.label)) : null;
                 return (
                     <VariantChip
-                        key={i} kind={kind} classic={classic} swatch={swatch}
+                        key={i} kind={kind} classic swatch={swatch}
                         title={c.group ? `${c.group}: ${c.label}` : c.label}
                     >
                         {kind === 'size' ? c.label.toUpperCase() : c.label}
@@ -113,12 +112,10 @@ function IdentityChips({ chips, classic }: { chips?: NettingChip[]; classic: boo
 export default function NettingPlanTable({
     nodes, loading, error,
 }: { nodes: NettingNode[]; loading?: boolean; error?: string | null }) {
-    const { uiStyle } = useTheme();
-    const classic = uiStyle === 'classic';
 
     const box: React.CSSProperties = {
-        border: classic ? '1px solid #808080' : '1px solid #e2e8f0',
-        borderRadius: classic ? 0 : 6, overflow: 'hidden', background: '#fff',
+        border: '1px solid #808080',
+        borderRadius: 0, overflow: 'hidden', background: '#fff',
     };
 
     if (loading) return <div style={{ ...box, padding: 14, fontSize: 12, color: '#64748b' }}>Calculating net requirements…</div>;
@@ -138,18 +135,18 @@ export default function NettingPlanTable({
 
     const th = (align: 'left' | 'right'): React.CSSProperties => ({
         padding: '4px 6px', fontSize: 10, fontWeight: 600, textAlign: align, whiteSpace: 'nowrap',
-        color: classic ? '#444' : '#94a3b8',
+        color: '#444',
     });
     const tdNum: React.CSSProperties = {
-        padding: '4px 6px', textAlign: 'right', fontFamily: CODE_FONT, color: classic ? '#000' : '#1e293b',
+        padding: '4px 6px', textAlign: 'right', fontFamily: CODE_FONT, color: '#000',
     };
 
     return (
         <div style={box}>
             <div style={{
                 display: 'flex', gap: 8, alignItems: 'center', padding: '6px 10px',
-                background: classic ? '#e8e6df' : '#f8fafc',
-                borderBottom: classic ? '1px solid #808080' : '1px solid #e2e8f0', fontSize: 11,
+                background: '#e8e6df',
+                borderBottom: '1px solid #808080', fontSize: 11,
             }}>
                 <strong style={{ fontSize: 11 }}>Creation plan</strong>
                 <span style={{ marginLeft: 'auto', color: '#15803d', fontWeight: 600 }}>{made} to make</span>
@@ -160,7 +157,7 @@ export default function NettingPlanTable({
             <div style={{ overflowX: 'auto' }}>
                 <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 11 }}>
                     <thead>
-                        <tr style={{ borderBottom: classic ? '1px solid #808080' : '1.5px solid #e2e8f0' }}>
+                        <tr style={{ borderBottom: '1px solid #808080'}}>
                             <th style={th('left')}>Component</th>
                             <th style={th('left')}>Decision</th>
                             <th style={th('left')}>Net from</th>
@@ -180,10 +177,10 @@ export default function NettingPlanTable({
                                     <td colSpan={8} style={{
                                         padding: '4px 10px', fontSize: 9, fontWeight: 700,
                                         letterSpacing: '0.06em', textTransform: 'uppercase',
-                                        color: classic ? '#666' : '#94a3b8',
-                                        background: classic ? '#e8e6df' : '#f1f5f9',
-                                        borderTop: classic ? '1px solid #808080' : '1px solid #e2e8f0',
-                                        borderBottom: classic ? '1px solid #c0bdb5' : '1px solid #e2e8f0',
+                                        color: '#666',
+                                        background: '#e8e6df',
+                                        borderTop: '1px solid #808080',
+                                        borderBottom: '1px solid #c0bdb5',
                                     }}>
                                         Shared components — consolidated across all finished goods above
                                     </td>
@@ -193,21 +190,21 @@ export default function NettingPlanTable({
                                 <React.Fragment key={i}>
                                 {divider}
                                 <tr style={{
-                                    borderBottom: `1px solid ${classic ? '#c0bdb5' : '#f1f5f9'}`,
-                                    background: i % 2 ? (classic ? '#f5f3ee' : '#fafbfc') : 'transparent',
+                                    borderBottom: `1px solid ${'#c0bdb5'}`,
+                                    background: i % 2 ? ('#f5f3ee') : 'transparent',
                                     opacity: dim ? 0.65 : 1,
                                 }}>
                                     <td style={{ padding: `4px 6px 4px ${8 + indentOf(n) * 16}px` }}>
                                         <div style={{
                                             fontWeight: n.is_root ? 700 : 500,
-                                            color: classic ? '#000' : '#1e293b',
+                                            color: '#000',
                                             textDecoration: dim ? 'line-through' : 'none',
                                         }}>
                                             {indentOf(n) > 0 && <span style={{ color: '#cbd5e1' }}>└ </span>}{n.item_name}
                                         </div>
                                         <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 3, marginTop: 1 }}>
-                                            <CodeChip code={n.item_code} classic={classic} tier={2} />
-                                            <IdentityChips chips={n.chips} classic={classic} />
+                                            <CodeChip code={n.item_code} classic tier={2} />
+                                            <IdentityChips chips={n.chips} classic />
                                         </div>
                                     </td>
                                     <td style={{ padding: '4px 6px' }}>
@@ -235,7 +232,7 @@ export default function NettingPlanTable({
                                         title={`on hand ${num(n.on_hand)} + incoming ${num(n.incoming)} − other orders ${num(n.required_other)} − reserved ${num(n.reserved_other || 0)}`}>
                                         {num(n.net_free)}
                                     </td>
-                                    <td style={{ ...tdNum, fontWeight: 700, color: n.net_qty > 0 ? (classic ? '#000' : '#0f172a') : '#cbd5e1' }}>
+                                    <td style={{ ...tdNum, fontWeight: 700, color: n.net_qty > 0 ? ('#000') : '#cbd5e1' }}>
                                         {num(n.net_qty)}
                                     </td>
                                 </tr>
@@ -248,7 +245,7 @@ export default function NettingPlanTable({
 
             <div style={{
                 padding: '5px 10px', fontSize: 9, color: '#94a3b8',
-                borderTop: classic ? '1px solid #c0bdb5' : '1px solid #f1f5f9',
+                borderTop: '1px solid #c0bdb5',
             }}>
                 Net free = on hand + incoming − demand from other open orders − stock reserved to other sales orders, at the source location (rolled up across its spots). Components covered by stock are not produced; on a sales-order run, the covered finished goods are reserved to that order so a later order cannot plan against the same stock. "Pooled separately" items are decoupling points — their demand is recorded but no order is created here; replenish them on a standalone pooled order.
             </div>

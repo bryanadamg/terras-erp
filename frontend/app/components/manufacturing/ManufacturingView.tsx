@@ -135,7 +135,6 @@ export default function ManufacturingView({
   }, []);
 
   const { uiStyle: currentStyle } = useTheme();
-  const classic = currentStyle === 'classic';
 
   const helpers = useManufacturingHelpers({ items, boms, locations, workCenters, attributes, stockBalance, itemIndex });
   const { getItemName, getAttributeValueName, getBomSizeLabel } = helpers;
@@ -352,7 +351,7 @@ export default function ManufacturingView({
               size="xxl"
               footer={
                   <ModalFooterActions
-                      classic={classic}
+                      classic
                       onCancel={() => setIsCreateOpen(false)}
                       cancelLabel={t('cancel')}
                       onSubmit={() => handleSubmit()}
@@ -370,7 +369,7 @@ export default function ManufacturingView({
                   <div style={{
                       width: 380, minWidth: 380, flexShrink: 0,
                       paddingRight: 20,
-                      borderRight: `1px solid ${classic ? '#aca899' : '#e2e8f0'}`,
+                      borderRight: `1px solid ${'#aca899'}`,
                   }}>
                       {/* Variant context badge */}
                       {(() => {
@@ -401,7 +400,7 @@ export default function ManufacturingView({
                       })()}
 
                       {/* MO Details */}
-                      <div style={{ fontSize: 9, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase' as const, color: '#888', borderBottom: `1px solid ${classic ? '#c0bdb5' : '#e2e8f0'}`, paddingBottom: 2, marginBottom: 8 }}>MO Details</div>
+                      <div style={{ fontSize: 9, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase' as const, color: '#888', borderBottom: `1px solid ${'#c0bdb5'}`, paddingBottom: 2, marginBottom: 8 }}>MO Details</div>
 
                       <div className="mb-2">
                           <label style={xpLabel()}>MO Reference Code</label>
@@ -439,7 +438,7 @@ export default function ManufacturingView({
                       </div>
 
                       {/* Schedule */}
-                      <div style={{ fontSize: 9, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase' as const, color: '#888', borderBottom: `1px solid ${classic ? '#c0bdb5' : '#e2e8f0'}`, paddingBottom: 2, marginBottom: 8, marginTop: 14 }}>Schedule</div>
+                      <div style={{ fontSize: 9, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase' as const, color: '#888', borderBottom: `1px solid ${'#c0bdb5'}`, paddingBottom: 2, marginBottom: 8, marginTop: 14 }}>Schedule</div>
                       <div className="row g-2 mb-2">
                           <div className="col-6">
                               <label style={xpLabel()}>Start Date</label>
@@ -456,7 +455,7 @@ export default function ManufacturingView({
                           item master default / BOM-line override, resolved at staging. */}
 
                       {/* Nested toggle — clean */}
-                      <div style={{ marginTop: 14, paddingTop: 10, borderTop: `1px solid ${classic ? '#aca899' : '#e2e8f0'}` }}>
+                      <div style={{ marginTop: 14, paddingTop: 10, borderTop: `1px solid ${'#aca899'}` }}>
                           <label style={{ display: 'flex', gap: 8, alignItems: 'flex-start', cursor: 'pointer', margin: 0 }}>
                               <input
                                   type="checkbox"
@@ -465,7 +464,7 @@ export default function ManufacturingView({
                                   style={{ marginTop: 2, cursor: 'pointer', flexShrink: 0 }}
                               />
                               <div>
-                                  <div style={{ fontSize: 11, fontWeight: 600, color: classic ? '#000084' : '#1e40af' }}>
+                                  <div style={{ fontSize: 11, fontWeight: 600, color: '#000084'}}>
                                       <i className="bi bi-diagram-3-fill me-1"></i>
                                       Create child MOs for nested BOMs
                                   </div>
@@ -494,7 +493,7 @@ export default function ManufacturingView({
                           <div style={{
                               display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
                               height: '100%', minHeight: 280, gap: 10,
-                              color: classic ? '#888' : '#94a3b8',
+                              color: '#888',
                           }}>
                               <i className="bi bi-diagram-3" style={{ fontSize: 40, opacity: 0.35 }}></i>
                               <div style={{ fontSize: 12, textAlign: 'center', maxWidth: 200 }}>
@@ -510,8 +509,7 @@ export default function ManufacturingView({
           <div className="col-12 flex-print-fill">
               {/* ── Outer window shell ── */}
               <div
-                  style={classic ? viewShellStyle(true) : pageFillStyle}
-                  className={classic ? '' : 'card h-100 border-0 shadow-sm shell-window'}
+                  style={viewShellStyle(true)}
               >
 
                   {/* ── Title bar ──
@@ -526,7 +524,7 @@ export default function ManufacturingView({
                       the sidebar's QUICK SCAN on every page, so a per-page copy of it is
                       just chrome in the ribbon. */}
                   <PageTitleBar
-                      classic={classic}
+                      classic
                       icon={activeTab === 'manufacturing-orders' ? 'bi-list-task' : 'bi-collection-play'}
                       title={activeTab === 'manufacturing-orders' ? (t('manufacturing_orders') || 'Manufacturing Orders') : 'Production Runs'}
                   />
@@ -540,12 +538,12 @@ export default function ManufacturingView({
                           ]}
                           activeKey={activeTab}
                           onChange={setActiveTab}
-                          classic={classic}
+                          classic
                       />
                   </div>}
 
                   {/* ── Body ── */}
-                  <div style={{ background: classic ? '#ece9d8' : undefined, flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', minHeight: 0 }} className={classic ? '' : 'card-body p-0'}>
+                  <div style={{ background: '#ece9d8', flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', minHeight: 0 }}>
 
                       {/* Production Runs tab content */}
                       {activeTab === 'production-runs' && (

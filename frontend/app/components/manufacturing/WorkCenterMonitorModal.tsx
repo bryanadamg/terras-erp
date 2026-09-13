@@ -15,7 +15,6 @@ import SearchableSelect from '../shared/SearchableSelect';
 import CameraScanner from '../shared/CameraScanner';
 import VariantChips from '../shared/VariantChips';
 import { useLanguage } from '../../context/LanguageContext';
-import { useTheme } from '../../context/ThemeContext';
 import { useUser } from '../../context/UserContext';
 import { useData } from '../../context/DataContext';
 import { useTimezone } from '../../context/TimezoneContext';
@@ -61,7 +60,6 @@ interface Props {
 
 export default function WorkCenterMonitorModal({ isOpen, onClose, workCenter, authFetch, apiBase }: Props) {
     const { t } = useLanguage();
-    const { uiStyle } = useTheme();
     const { hasPermission, hasAnyPermission } = useUser();
     const { locations } = useData();
     const { showToast } = useToast();
@@ -69,7 +67,6 @@ export default function WorkCenterMonitorModal({ isOpen, onClose, workCenter, au
     // Mounting is gated on what the endpoint enforces (work_order.edit), not on the
     // unmount permission — putting warp up and taking it down are different calls.
     const canMount = hasPermission('work_order.edit');
-    const cls = uiStyle === 'classic';
 
     // Stock lives only in leaf locations — same filter/label the PR modal uses.
     const leafLocations = useMemo(
@@ -540,30 +537,18 @@ export default function WorkCenterMonitorModal({ isOpen, onClose, workCenter, au
     // separately hand-rolled copies of the same sunken-white box before.
     const CardBox = ({ children, pad = '4px 8px' }: { children: React.ReactNode; pad?: string }) => (
         <div
-            className={cls ? '' : 'border rounded bg-white h-100'}
-            style={cls
-                ? { ...xpPanel({ background: '#fff' }), padding: pad }
-                : { padding: pad }}
+            style={{ ...xpPanel({ background: '#fff' }), padding: pad }}
         >
             {children}
         </div>
     );
 
-    const Stat = ({ label, value, unit, accent }: any) => cls ? (
-        <CardBox>
+    const Stat = ({ label, value, unit, accent }: any) => <CardBox>
             <div style={{ fontFamily: xpFont, fontSize: 9, color: '#666', textTransform: 'uppercase', letterSpacing: 0.3, whiteSpace: 'nowrap' }}>{label}</div>
             <div style={{ fontFamily: xpFont, fontSize: 14, fontWeight: 'bold', color: accent || '#000', lineHeight: 1.15 }}>
                 {value}{unit && <span style={{ fontSize: 9, fontWeight: 'normal', color: '#888', marginLeft: 2 }}>{unit}</span>}
             </div>
-        </CardBox>
-    ) : (
-        <div className="border rounded bg-light px-2 py-1 h-100">
-            <div className="text-uppercase text-secondary" style={{ fontSize: 10, letterSpacing: 0.3, whiteSpace: 'nowrap' }}>{label}</div>
-            <div className="fw-bold" style={{ fontSize: 15, color: accent || undefined, lineHeight: 1.15 }}>
-                {value}{unit && <span className="text-muted fw-normal ms-1" style={{ fontSize: 10 }}>{unit}</span>}
-            </div>
-        </div>
-    );
+        </CardBox>;
 
     const grid = (min: number): React.CSSProperties => ({ display: 'grid', gridTemplateColumns: `repeat(auto-fill, minmax(${min}px, 1fr))`, gap: 6 });
 
@@ -571,8 +556,8 @@ export default function WorkCenterMonitorModal({ isOpen, onClose, workCenter, au
     // modern. This form was bootstrap-only, so it rendered as rounded modern fields
     // inside XP chrome — the one form in the monitor that ignored the classic theme.
     const inputProps = {
-        className: cls ? undefined : 'form-control form-control-sm',
-        style: cls ? lvInput(true) : undefined,
+        className: undefined,
+        style: lvInput(true),
     };
 
     // ── Tab bar ──────────────────────────────────────────────────────────────
@@ -586,10 +571,10 @@ export default function WorkCenterMonitorModal({ isOpen, onClose, workCenter, au
             : []),
     ];
     const refreshBtn = (
-        <XPActionButton classic={cls} tone="neutral" icon="bi-arrow-clockwise" title="Refresh" disabled={loading} onClick={load} />
+        <XPActionButton classic tone="neutral" icon="bi-arrow-clockwise" title="Refresh" disabled={loading} onClick={load} />
     );
     const tabBar = (
-        <Tabs classic={cls} activeKey={tab} onChange={k => setTab(k as any)} tabs={tabs} right={refreshBtn} />
+        <Tabs classic activeKey={tab} onChange={k => setTab(k as any)} tabs={tabs} right={refreshBtn} />
     );
     // Fixed-height body so switching tabs (performance/calendar/beams) never
     // resizes the modal — each pane scrolls internally instead of the panel
@@ -625,10 +610,7 @@ export default function WorkCenterMonitorModal({ isOpen, onClose, workCenter, au
               <div style={{ padding: '4px 8px 8px' }}>
                 {late && (
                     <div
-                        className={cls ? '' : 'alert alert-danger py-2 px-3 mb-2'}
-                        style={cls
-                            ? { background: '#ffe6e6', border: `1px solid ${RED}`, color: RED, fontFamily: xpFont, fontSize: 11, fontWeight: 'bold', padding: '4px 8px', marginBottom: 8, display: 'flex', alignItems: 'center', gap: 6 }
-                            : { display: 'flex', alignItems: 'center', gap: 6, fontSize: 13 }}
+                        style={{ background: '#ffe6e6', border: `1px solid ${RED}`, color: RED, fontFamily: xpFont, fontSize: 11, fontWeight: 'bold', padding: '4px 8px', marginBottom: 8, display: 'flex', alignItems: 'center', gap: 6 }}
                     >
                         <i className="bi bi-exclamation-triangle-fill" />
                         <span>
@@ -685,9 +667,9 @@ export default function WorkCenterMonitorModal({ isOpen, onClose, workCenter, au
             <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap', marginBottom: 10 }}>
                 <StatusChip status={run.status} />
                 {run.wo_code && (
-                    <span style={{ fontFamily: cls ? xpFont : undefined, fontWeight: 'bold', color: BLUE }}>{run.wo_code}</span>
+                    <span style={{ fontFamily: xpFont, fontWeight: 'bold', color: BLUE }}>{run.wo_code}</span>
                 )}
-                <span style={{ fontFamily: cls ? xpFont : undefined, fontWeight: 'bold' }}>{run.mo_code}</span>
+                <span style={{ fontFamily: xpFont, fontWeight: 'bold' }}>{run.mo_code}</span>
                 <span><strong>{run.item_code}</strong> <span className="text-muted small">{run.item_name}</span></span>
                 <VariantChips
                     combo={run.combo_label}
@@ -697,7 +679,7 @@ export default function WorkCenterMonitorModal({ isOpen, onClose, workCenter, au
                     colorName={run.color_name}
                     colorHex={run.color_hex}
                     labdipCode={run.labdip_variant_code}
-                    classic={cls}
+                    classic
                     scale="sm"
                 />
                 <span className="text-muted small">
@@ -719,11 +701,11 @@ export default function WorkCenterMonitorModal({ isOpen, onClose, workCenter, au
                         {/* Park vs close. Pause keeps the run and its earned efficiency
                             and is the reprioritise action; Stop closes the run for good. */}
                         {run.is_paused ? (
-                            <XPActionButton classic={cls} tone="primary" icon="bi-play-fill" label={t('resume_run')} onClick={() => resumeRun(run.id)} />
+                            <XPActionButton classic tone="primary" icon="bi-play-fill" label={t('resume_run')} onClick={() => resumeRun(run.id)} />
                         ) : (
-                            <XPActionButton classic={cls} tone="warning" icon="bi-pause-fill" label={t('pause_run')} onClick={() => pauseRun(run.id)} />
+                            <XPActionButton classic tone="warning" icon="bi-pause-fill" label={t('pause_run')} onClick={() => pauseRun(run.id)} />
                         )}
-                        <XPActionButton classic={cls} tone="danger" icon="bi-stop-fill" label={t('stop_run')} onClick={() => stopRun(run.id)} />
+                        <XPActionButton classic tone="danger" icon="bi-stop-fill" label={t('stop_run')} onClick={() => stopRun(run.id)} />
                     </span>
                 )}
             </div>
@@ -731,7 +713,7 @@ export default function WorkCenterMonitorModal({ isOpen, onClose, workCenter, au
         return (
             <FormSection
                 title={header}
-                classic={cls}
+                classic
                 style={{
                     marginBottom: 14,
                     // Snap stop per run. `proximity` on the pane, so a run taller than the
@@ -739,7 +721,7 @@ export default function WorkCenterMonitorModal({ isOpen, onClose, workCenter, au
                     // its own content.
                     scrollSnapAlign: 'start', scrollMarginTop: 4,
                 }}
-                bodyStyle={{ background: cls ? '#f4f2ea' : '#f8fafc', padding: 0 }}
+                bodyStyle={{ background: '#f4f2ea', padding: 0 }}
             >
                 <div style={{ padding: '10px 10px 2px' }}>
                 {details}
@@ -749,11 +731,11 @@ export default function WorkCenterMonitorModal({ isOpen, onClose, workCenter, au
                     subsections nested inside it, so they stay visually lighter
                     rather than repeating that same blue bar three more times. */}
                 <LegendPanel title={<><i className="bi bi-speedometer2 me-1" />{t('performance')}</>} style={{ marginBottom: 10 }}>
-                <div style={{ padding: '4px 8px 8px', display: 'grid', gridTemplateColumns: cls ? '1.4fr 1fr 1fr' : 'repeat(auto-fit,minmax(170px,1fr))', gap: 8 }}>
+                <div style={{ padding: '4px 8px 8px', display: 'grid', gridTemplateColumns: '1.4fr 1fr 1fr', gap: 8 }}>
                     {/* Efficiency hero */}
                     <CardBox pad="8px 12px">
-                        <div style={{ fontFamily: cls ? xpFont : undefined, fontSize: 10, color: '#777', textTransform: 'uppercase', letterSpacing: 0.3 }}>{t('efficiency')}</div>
-                        <div style={{ fontFamily: cls ? xpFont : undefined, fontSize: 30, fontWeight: 800, color: effColor, lineHeight: 1.1 }}>
+                        <div style={{ fontFamily: xpFont, fontSize: 10, color: '#777', textTransform: 'uppercase', letterSpacing: 0.3 }}>{t('efficiency')}</div>
+                        <div style={{ fontFamily: xpFont, fontSize: 30, fontWeight: 800, color: effColor, lineHeight: 1.1 }}>
                             {fmt(run.efficiency_pct, 1)}<span style={{ fontSize: 15 }}>%</span>
                         </div>
                         {/* Efficiency vs target tick — same shared ProgressBar call as
@@ -767,18 +749,18 @@ export default function WorkCenterMonitorModal({ isOpen, onClose, workCenter, au
                                 height={9}
                             />
                         </div>
-                        <div style={{ fontFamily: cls ? xpFont : undefined, fontSize: 10, color: '#888', marginTop: 3, display: 'flex', alignItems: 'center', gap: 4 }}>
+                        <div style={{ fontFamily: xpFont, fontSize: 10, color: '#888', marginTop: 3, display: 'flex', alignItems: 'center', gap: 4 }}>
                             {editingTarget ? (
                                 <div className="d-flex gap-1 align-items-center">
                                     <input type="number" {...inputProps} style={{ ...(inputProps.style || {}), maxWidth: 70, height: 22, fontSize: 10 }} value={targetVal} onChange={e => setTargetVal(e.target.value)} />
-                                    <XPActionButton classic={cls} tone="success" icon="bi-check" onClick={() => saveTarget(run.id)} />
-                                    <XPActionButton classic={cls} tone="neutral" icon="bi-x" onClick={() => setTargetRunId(null)} />
+                                    <XPActionButton classic tone="success" icon="bi-check" onClick={() => saveTarget(run.id)} />
+                                    <XPActionButton classic tone="neutral" icon="bi-x" onClick={() => setTargetRunId(null)} />
                                 </div>
                             ) : (
                                 <>
                                     <span>{t('target')} {fmt(run.target_efficiency_pct, 0)}% · <span style={{ color: effColor, fontWeight: 'bold' }}>{onTarget ? t('on_target') : t('below_target')}</span></span>
                                     {canManage && (
-                                        <XPActionButton classic={cls} tone="neutral" icon="bi-pencil-square" title="Edit target" onClick={() => { setTargetVal(String(run.target_efficiency_pct ?? '')); setTargetRunId(run.id); }} />
+                                        <XPActionButton classic tone="neutral" icon="bi-pencil-square" title="Edit target" onClick={() => { setTargetVal(String(run.target_efficiency_pct ?? '')); setTargetRunId(run.id); }} />
                                     )}
                                 </>
                             )}
@@ -787,7 +769,7 @@ export default function WorkCenterMonitorModal({ isOpen, onClose, workCenter, au
 
                     {/* Actual produced (with override) */}
                     <CardBox pad="8px 12px">
-                        <div style={{ fontFamily: cls ? xpFont : undefined, fontSize: 10, color: '#777', textTransform: 'uppercase' }}>
+                        <div style={{ fontFamily: xpFont, fontSize: 10, color: '#777', textTransform: 'uppercase' }}>
                             {t('actual_produced')}
                             {run.actual_qty_override !== null && (
                                 <span style={{ marginLeft: 4 }}><StatusChip status="PARTIAL" label={t('manual')} tint /></span>
@@ -796,21 +778,21 @@ export default function WorkCenterMonitorModal({ isOpen, onClose, workCenter, au
                         {editingOverride ? (
                             <div className="d-flex gap-1 mt-1">
                                 <input type="number" {...inputProps} style={{ ...(inputProps.style || {}), maxWidth: 100 }} value={overrideVal} placeholder={String(run.actual_kg)} onChange={e => setOverrideVal(e.target.value)} />
-                                <XPActionButton classic={cls} tone="success" icon="bi-check" onClick={() => saveOverride(run.id)} />
-                                <XPActionButton classic={cls} tone="neutral" icon="bi-x" onClick={() => setOverrideRunId(null)} />
+                                <XPActionButton classic tone="success" icon="bi-check" onClick={() => saveOverride(run.id)} />
+                                <XPActionButton classic tone="neutral" icon="bi-x" onClick={() => setOverrideRunId(null)} />
                             </div>
                         ) : (
-                            <div style={{ fontFamily: cls ? xpFont : undefined, fontSize: 22, fontWeight: 700, display: 'flex', alignItems: 'center', gap: 6 }}>
+                            <div style={{ fontFamily: xpFont, fontSize: 22, fontWeight: 700, display: 'flex', alignItems: 'center', gap: 6 }}>
                                 <span>{fmt(run.actual_kg, 2)}<span style={{ fontSize: 11, color: '#888' }}> kg</span></span>
-                                <XPActionButton classic={cls} tone="neutral" icon="bi-pencil-square" title="Override" onClick={() => { setOverrideVal(run.actual_qty_override ?? ''); setOverrideRunId(run.id); }} />
+                                <XPActionButton classic tone="neutral" icon="bi-pencil-square" title="Override" onClick={() => { setOverrideVal(run.actual_qty_override ?? ''); setOverrideRunId(run.id); }} />
                             </div>
                         )}
                     </CardBox>
 
                     {/* Actual rate */}
                     <CardBox pad="8px 12px">
-                        <div style={{ fontFamily: cls ? xpFont : undefined, fontSize: 10, color: '#777', textTransform: 'uppercase' }}>{t('actual_rate')}</div>
-                        <div style={{ fontFamily: cls ? xpFont : undefined, fontSize: 22, fontWeight: 700 }}>
+                        <div style={{ fontFamily: xpFont, fontSize: 10, color: '#777', textTransform: 'uppercase' }}>{t('actual_rate')}</div>
+                        <div style={{ fontFamily: xpFont, fontSize: 22, fontWeight: 700 }}>
                             {fmt(run.actual_daily_rate_kg, 2)}<span style={{ fontSize: 11, color: '#888' }}> kg/day</span>
                         </div>
                     </CardBox>
@@ -823,25 +805,25 @@ export default function WorkCenterMonitorModal({ isOpen, onClose, workCenter, au
                         <Stat label={t('lines')} value={editingLines ? (
                             <div className="d-flex gap-1 align-items-center">
                                 <input type="number" min="1" {...inputProps} style={{ ...(inputProps.style || {}), maxWidth: 55, height: 22, fontSize: 12 }} value={linesVal} onChange={e => setLinesVal(e.target.value)} />
-                                <XPActionButton classic={cls} tone="success" icon="bi-check" onClick={() => saveLines(run.id)} />
-                                <XPActionButton classic={cls} tone="neutral" icon="bi-x" onClick={() => setLinesRunId(null)} />
+                                <XPActionButton classic tone="success" icon="bi-check" onClick={() => saveLines(run.id)} />
+                                <XPActionButton classic tone="neutral" icon="bi-x" onClick={() => setLinesRunId(null)} />
                             </div>
                         ) : (
                             <span className="d-flex align-items-center gap-1">
                                 {run.lines}
-                                {canManage && <XPActionButton classic={cls} tone="neutral" icon="bi-pencil-square" title="Edit lines" onClick={() => { setLinesVal(String(run.lines ?? '')); setLinesRunId(run.id); }} />}
+                                {canManage && <XPActionButton classic tone="neutral" icon="bi-pencil-square" title="Edit lines" onClick={() => { setLinesVal(String(run.lines ?? '')); setLinesRunId(run.id); }} />}
                             </span>
                         )} />
                         <Stat label={t('rate_per_line')} value={editingRate ? (
                             <div className="d-flex gap-1 align-items-center">
                                 <input type="number" {...inputProps} style={{ ...(inputProps.style || {}), maxWidth: 65, height: 22, fontSize: 12 }} value={rateVal} onChange={e => setRateVal(e.target.value)} />
-                                <XPActionButton classic={cls} tone="success" icon="bi-check" onClick={() => saveRate(run.id)} />
-                                <XPActionButton classic={cls} tone="neutral" icon="bi-x" onClick={() => setRateRunId(null)} />
+                                <XPActionButton classic tone="success" icon="bi-check" onClick={() => saveRate(run.id)} />
+                                <XPActionButton classic tone="neutral" icon="bi-x" onClick={() => setRateRunId(null)} />
                             </div>
                         ) : (
                             <span className="d-flex align-items-center gap-1">
                                 {fmt(run.rate_per_line_g_min, 2)}<span style={{ fontSize: 9, fontWeight: 'normal', color: '#888' }}>g/min</span>
-                                {canManage && <XPActionButton classic={cls} tone="neutral" icon="bi-pencil-square" title="Edit rate" onClick={() => { setRateVal(String(run.rate_per_line_g_min ?? '')); setRateRunId(run.id); }} />}
+                                {canManage && <XPActionButton classic tone="neutral" icon="bi-pencil-square" title="Edit rate" onClick={() => { setRateVal(String(run.rate_per_line_g_min ?? '')); setRateRunId(run.id); }} />}
                             </span>
                         )} />
                         <Stat label={t('target_100_day')} value={fmt(run.target_100_per_day_kg, 2)} unit="kg" />
@@ -876,7 +858,7 @@ export default function WorkCenterMonitorModal({ isOpen, onClose, workCenter, au
                     {/* First load of this machine: field-shaped placeholders rather than
                         a marquee — what arrives is a block of run/prep fields, so the
                         panel keeps its height and the content fades into it. */}
-                    {loading && !data && <PanelSkeleton sections={2} rows={4} classic={cls} />}
+                    {loading && !data && <PanelSkeleton sections={2} rows={4} classic />}
 
                     {/* No run: read-only viewers get the shared empty state; managers go
                         straight to the start-run form — no extra click to get there. */}
@@ -888,7 +870,7 @@ export default function WorkCenterMonitorModal({ isOpen, onClose, workCenter, au
                         (STAGED and later) — a machine with no beams tracked keeps the
                         plain start form it always had. */}
                     {!loading && !runs.length && loomStatus !== 'IDLE' && (
-                        <FormSection title={<SecTitle icon="bi-tools">{t('loom_prep')}</SecTitle>} classic={cls}>
+                        <FormSection title={<SecTitle icon="bi-tools">{t('loom_prep')}</SecTitle>} classic>
                             <div className="d-flex align-items-center gap-2 flex-wrap">
                                 <StatusChip status={loomStatus} label={stepLabel(loomStatus)} tint />
                                 <span style={{ fontSize: 11, color: '#666' }}>
@@ -898,7 +880,7 @@ export default function WorkCenterMonitorModal({ isOpen, onClose, workCenter, au
                                 </span>
                                 {canManage && nextLoomStep && (
                                     <XPActionButton
-                                        classic={cls}
+                                        classic
                                         tone={nextLoomStep === 'TUNING' ? 'warning' : 'primary'}
                                         icon={nextLoomStep === 'TUNING' ? 'bi-sliders' : 'bi-arrows-collapse-vertical'}
                                         label={stepLabel(nextLoomStep)}
@@ -908,7 +890,7 @@ export default function WorkCenterMonitorModal({ isOpen, onClose, workCenter, au
                                 )}
                                 {canManage && loomStatus !== 'STAGED' && (
                                     <XPActionButton
-                                        classic={cls}
+                                        classic
                                         tone="neutral"
                                         icon="bi-arrow-counterclockwise"
                                         label={t('prep_reset')}
@@ -927,7 +909,7 @@ export default function WorkCenterMonitorModal({ isOpen, onClose, workCenter, au
                     {!loading && canManage && runs.length > 0 && !startOpen && (
                         <div style={{ marginBottom: 10 }}>
                             <XPActionButton
-                                classic={cls}
+                                classic
                                 tone="success"
                                 icon="bi-plus-lg"
                                 label={t('start_another_run')}
@@ -939,7 +921,7 @@ export default function WorkCenterMonitorModal({ isOpen, onClose, workCenter, au
                     {!loading && canManage && (runs.length === 0 || startOpen) && (
                         <FormSection
                             title={<SecTitle icon="bi-play-circle">{runs.length ? t('start_another_run') : t('start_run')}</SecTitle>}
-                            classic={cls}
+                            classic
                         >
                             {/* Top-align, not bottom: the order column carries a helper
                                 line under its select, and align-items-end pushed every
@@ -949,7 +931,7 @@ export default function WorkCenterMonitorModal({ isOpen, onClose, workCenter, au
                                 <div className="col-md-5">
                                     {moMode ? (
                                         <>
-                                            <FieldLabel classic={cls}>{t('manufacturing_order')}</FieldLabel>
+                                            <FieldLabel classic>{t('manufacturing_order')}</FieldLabel>
                                             <SearchableSelect
                                                 options={moOptions}
                                                 value={moId}
@@ -985,7 +967,7 @@ export default function WorkCenterMonitorModal({ isOpen, onClose, workCenter, au
                                             {/* WO, not MO: two combos of one item are two WOs
                                                 on this loom, each with its own line count and
                                                 its own promised end date. */}
-                                            <FieldLabel classic={cls}>{t('work_order')}</FieldLabel>
+                                            <FieldLabel classic>{t('work_order')}</FieldLabel>
                                             <SearchableSelect
                                                 options={woOptions}
                                                 value={woId}
@@ -1008,27 +990,27 @@ export default function WorkCenterMonitorModal({ isOpen, onClose, workCenter, au
                                     )}
                                 </div>
                                 <div className="col-md-2 col-4">
-                                    <FieldLabel classic={cls}>{t('lines')}</FieldLabel>
+                                    <FieldLabel classic>{t('lines')}</FieldLabel>
                                     <input type="number" min="1" {...inputProps} value={lines} onChange={e => setLines(e.target.value)} />
                                 </div>
                                 <div className="col-md-2 col-4">
-                                    <FieldLabel classic={cls}>{t('rate_per_line')}</FieldLabel>
+                                    <FieldLabel classic>{t('rate_per_line')}</FieldLabel>
                                     <input type="number" {...inputProps} value={rate} onChange={e => setRate(e.target.value)} />
                                 </div>
                                 <div className="col-md-3 col-4">
-                                    <FieldLabel classic={cls}>{t('target_efficiency')}</FieldLabel>
+                                    <FieldLabel classic>{t('target_efficiency')}</FieldLabel>
                                     <input type="number" {...inputProps} value={eff} onChange={e => setEff(e.target.value)} />
                                 </div>
                                 <div className="col-md-4 col-6">
-                                    <FieldLabel classic={cls}>{t('start_date')}</FieldLabel>
+                                    <FieldLabel classic>{t('start_date')}</FieldLabel>
                                     <input type="date" {...inputProps} value={startDate} onChange={e => setStartDate(e.target.value)} />
                                 </div>
                                 <div className="col-md-8">
                                     {/* Empty label so the button lines up with the date
                                         input beside it, not with that input's label. */}
-                                    <FieldLabel classic={cls}>&nbsp;</FieldLabel>
+                                    <FieldLabel classic>&nbsp;</FieldLabel>
                                     <XPActionButton
-                                        classic={cls}
+                                        classic
                                         tone="success"
                                         icon="bi-play-fill"
                                         label={t('start')}
@@ -1038,7 +1020,7 @@ export default function WorkCenterMonitorModal({ isOpen, onClose, workCenter, au
                                     />
                                     {startOpen && (
                                         <span style={{ marginLeft: 6 }}>
-                                            <XPActionButton classic={cls} tone="neutral" icon="bi-x" label={t('cancel')} onClick={() => setStartOpen(false)} />
+                                            <XPActionButton classic tone="neutral" icon="bi-x" label={t('cancel')} onClick={() => setStartOpen(false)} />
                                         </span>
                                     )}
                                     {prepBlocksStart && (
@@ -1057,27 +1039,27 @@ export default function WorkCenterMonitorModal({ isOpen, onClose, workCenter, au
 
                     {/* History */}
                     {data?.history?.length > 0 && (
-                        <FormSection title={<SecTitle icon="bi-clock-history">{t('run_history')}</SecTitle>} classic={cls}>
+                        <FormSection title={<SecTitle icon="bi-clock-history">{t('run_history')}</SecTitle>} classic>
                             {/* Shared list-view table styling (lvTh/lvTd/lvRow) — same chrome as
                                 the beams table below and the group calendar's holiday table. */}
                             <div style={{ overflowX: 'auto' }}>
                                 <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                                     <thead>
-                                        <tr style={cls ? { background: '#d4d0c8' } : undefined}>
-                                            <th style={lvTh(cls)}>{t('manufacturing_order')}</th>
-                                            <th style={lvTh(cls)}>{t('item')}</th>
-                                            <th style={lvTh(cls)}>{t('start')}</th>
-                                            <th style={lvTh(cls)}>{t('end')}</th>
-                                            <th style={{ ...lvTh(cls), textAlign: 'right' }}>{t('actual')}</th>
-                                            <th style={{ ...lvTh(cls), textAlign: 'right' }}>{t('efficiency')}</th>
-                                            <th style={{ ...lvTh(cls), borderRight: 'none' }}>{t('status')}</th>
+                                        <tr style={{ background: '#d4d0c8' }}>
+                                            <th style={lvTh(true)}>{t('manufacturing_order')}</th>
+                                            <th style={lvTh(true)}>{t('item')}</th>
+                                            <th style={lvTh(true)}>{t('start')}</th>
+                                            <th style={lvTh(true)}>{t('end')}</th>
+                                            <th style={{ ...lvTh(true), textAlign: 'right' }}>{t('actual')}</th>
+                                            <th style={{ ...lvTh(true), textAlign: 'right' }}>{t('efficiency')}</th>
+                                            <th style={{ ...lvTh(true), borderRight: 'none' }}>{t('status')}</th>
                                         </tr>
                                     </thead>
                                     <tbody>
                                         {data.history.map((h: any, idx: number) => (
-                                            <tr key={h.id} style={lvRow(cls, idx)}>
-                                                <td style={lvTd(cls)}><CodeChip code={h.mo_code} classic={cls} /></td>
-                                                <td style={lvTd(cls)}>
+                                            <tr key={h.id} style={lvRow(true, idx)}>
+                                                <td style={lvTd(true)}><CodeChip code={h.mo_code} classic /></td>
+                                                <td style={lvTd(true)}>
                                                     <div className="d-flex align-items-center gap-2">
                                                         <span>{h.item_code}</span>
                                                         <VariantChips
@@ -1088,18 +1070,18 @@ export default function WorkCenterMonitorModal({ isOpen, onClose, workCenter, au
                                                             colorName={h.color_name}
                                                             colorHex={h.color_hex}
                                                             labdipCode={h.labdip_variant_code}
-                                                            classic={cls}
+                                                            classic
                                                         />
                                                     </div>
                                                 </td>
-                                                <td style={lvTd(cls)}>{fmtDate(h.start_date)}</td>
-                                                <td style={lvTd(cls)}>{fmtDate(h.end_date)}</td>
-                                                <td style={{ ...lvTd(cls), textAlign: 'right' }}>{fmt(h.actual_kg, 2)} kg</td>
-                                                <td style={{ ...lvTd(cls), textAlign: 'right', color: h.on_target ? GREEN : RED, fontWeight: 600 }}>{fmt(h.efficiency_pct, 1)}%</td>
+                                                <td style={lvTd(true)}>{fmtDate(h.start_date)}</td>
+                                                <td style={lvTd(true)}>{fmtDate(h.end_date)}</td>
+                                                <td style={{ ...lvTd(true), textAlign: 'right' }}>{fmt(h.actual_kg, 2)} kg</td>
+                                                <td style={{ ...lvTd(true), textAlign: 'right', color: h.on_target ? GREEN : RED, fontWeight: 600 }}>{fmt(h.efficiency_pct, 1)}%</td>
                                                 {/* StatusChip in both themes — the modern branch used a
                                                     bootstrap badge, so a DONE run read gray here and green
                                                     everywhere else. */}
-                                                <td style={{ ...lvTd(cls), borderRight: 'none' }}><StatusChip status={h.status} tint /></td>
+                                                <td style={{ ...lvTd(true), borderRight: 'none' }}><StatusChip status={h.status} tint /></td>
                                             </tr>
                                         ))}
                                     </tbody>
@@ -1116,14 +1098,14 @@ export default function WorkCenterMonitorModal({ isOpen, onClose, workCenter, au
             {tab === 'calendar' && (
                 <div>
                     <WorkingDaysSection
-                        classic={cls}
+                        classic
                         weekdays={weekdays}
                         onToggleWeekday={toggleWeekday}
                         canEdit={canManage}
                         onSave={saveCalendar}
                     />
                     <HolidayCalendarSection
-                        classic={cls}
+                        classic
                         month={calRef}
                         onMonthChange={setCalRef}
                         weekdays={weekdays}
@@ -1135,7 +1117,7 @@ export default function WorkCenterMonitorModal({ isOpen, onClose, workCenter, au
                             else addHolidayDate(ds, nat || null);
                         }}
                         headerAction={canManage ? (
-                            <XPActionButton classic={cls} tone="neutral" icon="bi-download"
+                            <XPActionButton classic tone="neutral" icon="bi-download"
                                 label={`${t('import_id_holidays')} ${calRef.getFullYear()}`} onClick={importNational} />
                         ) : undefined}
                     />
@@ -1147,18 +1129,18 @@ export default function WorkCenterMonitorModal({ isOpen, onClose, workCenter, au
                 const slots = loom?.beam_slots ?? 1;
                 const pcs = loom?.mounted_pcs ?? 0;
                 return (
-                    <div style={cls ? { fontFamily: xpFont, fontSize: 11 } : undefined}>
-                        <div className={cls ? '' : 'text-muted small mb-2'}
-                            style={cls ? { fontSize: 10, color: '#555', marginBottom: 8 } : undefined}>
+                    <div style={{ fontFamily: xpFont, fontSize: 11 }}>
+                        <div
+                            style={{ fontSize: 10, color: '#555', marginBottom: 8 }}>
                             {t('beam_loom_hint')}
                         </div>
 
-                        <div className={cls ? '' : 'mb-2'} style={{
+                        <div style={{
                             display: 'flex', alignItems: 'baseline', gap: 8,
-                            marginBottom: cls ? 8 : undefined,
+                            marginBottom: 8,
                         }}>
                             <span style={{
-                                fontSize: cls ? 18 : 22, fontWeight: 'bold',
+                                fontSize: 18, fontWeight: 'bold',
                                 color: pcs >= slots ? GREEN : pcs > 0 ? AMBER : '#888', lineHeight: 1,
                             }}>{pcs} / {slots}</span>
                             <span style={{ fontSize: 11, color: '#777' }}>
@@ -1167,7 +1149,7 @@ export default function WorkCenterMonitorModal({ isOpen, onClose, workCenter, au
                             {canMount && (
                                 <span style={{ marginLeft: 'auto', alignSelf: 'center' }}>
                                     <XPActionButton
-                                        classic={cls}
+                                        classic
                                         tone={mountOpen ? 'neutral' : 'primary'}
                                         icon="bi-arrow-bar-up"
                                         label={mountOpen ? t('cancel') : t('mount_beam')}
@@ -1183,14 +1165,14 @@ export default function WorkCenterMonitorModal({ isOpen, onClose, workCenter, au
                             what can go up, then what is up. */}
                         {mountOpen && canMount && (
                             <div style={{ marginBottom: 8 }}>
-                                <ExpandedRowPanel classic={cls}>
-                                    <ExpandedRowPanelBody classic={cls}>
+                                <ExpandedRowPanel classic>
+                                    <ExpandedRowPanelBody classic>
                                         <div
                                             style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}
                                             onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); handleBeamScan(beamSearch); } }}
                                         >
                                             <SearchField
-                                                classic={cls}
+                                                classic
                                                 value={beamSearch}
                                                 onChange={setBeamSearch}
                                                 placeholder={t('mount_beam_search')}
@@ -1198,7 +1180,7 @@ export default function WorkCenterMonitorModal({ isOpen, onClose, workCenter, au
                                                 width={220}
                                             />
                                             <XPActionButton
-                                                classic={cls}
+                                                classic
                                                 tone={beamCameraOn ? 'neutral' : 'primary'}
                                                 icon="bi-camera-video"
                                                 label={beamCameraOn ? t('scan_beam_stop') : t('scan_beam')}
@@ -1219,7 +1201,7 @@ export default function WorkCenterMonitorModal({ isOpen, onClose, workCenter, au
                                             </div>
                                         )}
                                         {freeLoading ? (
-                                            <PanelSkeleton classic={cls} rows={3} />
+                                            <PanelSkeleton classic rows={3} />
                                         ) : freeBeams.length === 0 ? (
                                             <XPEmptyState icon="bi-inboxes" message={t('no_free_beams')} />
                                         ) : (
@@ -1227,12 +1209,12 @@ export default function WorkCenterMonitorModal({ isOpen, onClose, workCenter, au
                                                 <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                                                     <tbody>
                                                         {freeBeams.map((b: any, idx: number) => (
-                                                            <tr key={b.batch_id} style={lvRow(cls, idx)}>
-                                                                <td style={{ ...lvTd(cls), fontWeight: 'bold', color: BLUE, whiteSpace: 'nowrap' }}>
+                                                            <tr key={b.batch_id} style={lvRow(true, idx)}>
+                                                                <td style={{ ...lvTd(true), fontWeight: 'bold', color: BLUE, whiteSpace: 'nowrap' }}>
                                                                     {b.beam_number}
                                                                     {b.is_leftover && (
                                                                         <Chip
-                                                                            classic={cls}
+                                                                            classic
                                                                             size="xs"
                                                                             tone={statusTint('PENDING')}
                                                                             title={b.parent_beam_number ? `${t('leftover_tag')} · ${b.parent_beam_number}` : t('leftover_tag')}
@@ -1240,13 +1222,13 @@ export default function WorkCenterMonitorModal({ isOpen, onClose, workCenter, au
                                                                         >{t('leftover_tag')}</Chip>
                                                                     )}
                                                                 </td>
-                                                                <td style={lvTd(cls)} title={b.item_name || undefined}>{b.item_code || '—'}</td>
-                                                                <td style={lvTd(cls)}>{b.ends ?? '—'}</td>
-                                                                <td style={{ ...lvTd(cls), textAlign: 'right', whiteSpace: 'nowrap' }}>{fmt(b.remaining, 1)} kg</td>
-                                                                <td style={{ ...lvTd(cls), color: '#666' }}>{b.location_code || '—'}</td>
-                                                                <td style={{ ...lvTd(cls), borderRight: 'none', textAlign: 'right' }}>
+                                                                <td style={lvTd(true)} title={b.item_name || undefined}>{b.item_code || '—'}</td>
+                                                                <td style={lvTd(true)}>{b.ends ?? '—'}</td>
+                                                                <td style={{ ...lvTd(true), textAlign: 'right', whiteSpace: 'nowrap' }}>{fmt(b.remaining, 1)} kg</td>
+                                                                <td style={{ ...lvTd(true), color: '#666' }}>{b.location_code || '—'}</td>
+                                                                <td style={{ ...lvTd(true), borderRight: 'none', textAlign: 'right' }}>
                                                                     <XPActionButton
-                                                                        classic={cls}
+                                                                        classic
                                                                         tone="primary"
                                                                         icon="bi-arrow-bar-up"
                                                                         label={mountingId === b.batch_id ? '...' : t('mount_confirm')}
@@ -1271,41 +1253,41 @@ export default function WorkCenterMonitorModal({ isOpen, onClose, workCenter, au
                             <div style={{ overflowX: 'auto' }}>
                                 <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                                     <thead>
-                                        <tr style={cls ? { background: '#d4d0c8' } : undefined}>
-                                            <th style={lvTh(cls)}>{t('lot')}</th>
-                                            <th style={lvTh(cls)}>{t('item')}</th>
-                                            <th style={lvTh(cls)}>{t('ends')}</th>
-                                            <th style={{ ...lvTh(cls), textAlign: 'right' }}>{t('remaining')}</th>
-                                            <th style={lvTh(cls)}>{t('mounted')}</th>
-                                            <th style={{ ...lvTh(cls), borderRight: 'none' }} />
+                                        <tr style={{ background: '#d4d0c8' }}>
+                                            <th style={lvTh(true)}>{t('lot')}</th>
+                                            <th style={lvTh(true)}>{t('item')}</th>
+                                            <th style={lvTh(true)}>{t('ends')}</th>
+                                            <th style={{ ...lvTh(true), textAlign: 'right' }}>{t('remaining')}</th>
+                                            <th style={lvTh(true)}>{t('mounted')}</th>
+                                            <th style={{ ...lvTh(true), borderRight: 'none' }} />
                                         </tr>
                                     </thead>
                                     <tbody>
                                         {mounts.map((m, idx) => (
                                             <React.Fragment key={m.id}>
-                                            <tr style={lvRow(cls, idx)}>
-                                                <td style={{ ...lvTd(cls), fontWeight: 'bold', color: BLUE }}>{m.beam_number || '—'}</td>
+                                            <tr style={lvRow(true, idx)}>
+                                                <td style={{ ...lvTd(true), fontWeight: 'bold', color: BLUE }}>{m.beam_number || '—'}</td>
                                                 {/* The article gets its own column: a beam usually carries no
                                                     size, combo or shade at all, so its item code is the only
                                                     thing that says which warp is up. The identity chips ride
                                                     beside it for the beams whose producing MO did carry them
                                                     — same shape as the run-history Item column above. */}
-                                                <td style={lvTd(cls)}>
+                                                <td style={lvTd(true)}>
                                                     <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap', minWidth: 0 }}>
                                                         <span title={m.item_name || undefined}>{m.item_code || '—'}</span>
                                                         <LotChips batch={m} />
                                                     </div>
                                                 </td>
-                                                <td style={lvTd(cls)}>{m.ends ?? '—'}</td>
-                                                <td style={{ ...lvTd(cls), textAlign: 'right' }}>{fmt(m.remaining, 1)} kg</td>
-                                                <td style={{ ...lvTd(cls), color: '#666' }}>
+                                                <td style={lvTd(true)}>{m.ends ?? '—'}</td>
+                                                <td style={{ ...lvTd(true), textAlign: 'right' }}>{fmt(m.remaining, 1)} kg</td>
+                                                <td style={{ ...lvTd(true), color: '#666' }}>
                                                     {fmtDate(m.mounted_at)}
                                                     {m.mounted_by ? ` · ${m.mounted_by}` : ''}
                                                 </td>
-                                                <td style={{ ...lvTd(cls), borderRight: 'none', textAlign: 'right' }}>
+                                                <td style={{ ...lvTd(true), borderRight: 'none', textAlign: 'right' }}>
                                                     {canManage && unmountingId !== m.id && (
                                                         <XPActionButton
-                                                            classic={cls}
+                                                            classic
                                                             tone="warning"
                                                             icon="bi-box-arrow-up"
                                                             label={t('dismount')}
@@ -1330,15 +1312,15 @@ export default function WorkCenterMonitorModal({ isOpen, onClose, workCenter, au
                                             </tr>
                                             {unmountingId === m.id && (
                                                 <tr>
-                                                    <td colSpan={6} style={{ padding: cls ? '4px 2px' : '4px 0' }}>
-                                                        <ExpandedRowPanel classic={cls}>
-                                                            <ExpandedRowPanelBody classic={cls}>
+                                                    <td colSpan={6} style={{ padding: '4px 2px'}}>
+                                                        <ExpandedRowPanel classic>
+                                                            <ExpandedRowPanelBody classic>
                                                                 {(() => {
                                                                     const sysLeft = Number(m.remaining || 0);
                                                                     const weighed = parseFloat(leftoverQty);
                                                                     const variance = !Number.isNaN(weighed) ? weighed - sysLeft : 0;
                                                                     return (
-                                                                <div style={{ display: 'flex', flexDirection: 'column', gap: 6, fontSize: cls ? 11 : 12 }}>
+                                                                <div style={{ display: 'flex', flexDirection: 'column', gap: 6, fontSize: 11}}>
                                                                     <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 8 }}>
                                                                         <span>
                                                                             <b style={{ color: BLUE }}>{m.beam_number || '—'}</b>
@@ -1348,8 +1330,8 @@ export default function WorkCenterMonitorModal({ isOpen, onClose, workCenter, au
                                                                         <select
                                                                             value={returnLoc}
                                                                             onChange={e => setReturnLoc(e.target.value)}
-                                                                            className={cls ? undefined : 'form-select form-select-sm w-auto'}
-                                                                            style={cls ? xpSelect() : undefined}
+                                                                            className={undefined}
+                                                                            style={xpSelect()}
                                                                         >
                                                                             <option value="">{t('unmount_leave_at_loom')}</option>
                                                                             {leafLocations.map((l: any) => (
@@ -1358,7 +1340,7 @@ export default function WorkCenterMonitorModal({ isOpen, onClose, workCenter, au
                                                                         </select>
                                                                         <div style={{ display: 'flex', gap: 6, marginLeft: 'auto' }}>
                                                                             <XPActionButton
-                                                                                classic={cls}
+                                                                                classic
                                                                                 tone="warning"
                                                                                 icon="bi-box-arrow-up"
                                                                                 label={dismounting === m.id ? '...' : t('unmount_confirm')}
@@ -1366,7 +1348,7 @@ export default function WorkCenterMonitorModal({ isOpen, onClose, workCenter, au
                                                                                 onClick={() => dismount(m, returnLoc)}
                                                                             />
                                                                             <XPActionButton
-                                                                                classic={cls}
+                                                                                classic
                                                                                 tone="neutral"
                                                                                 label={t('cancel')}
                                                                                 disabled={dismounting === m.id}
@@ -1388,8 +1370,8 @@ export default function WorkCenterMonitorModal({ isOpen, onClose, workCenter, au
                                                                                     type="number" min="0" step="any"
                                                                                     value={leftoverQty}
                                                                                     onChange={e => setLeftoverQty(e.target.value)}
-                                                                                    className={cls ? undefined : 'form-control form-control-sm w-auto'}
-                                                                                    style={cls ? { ...lvInput, width: 90, textAlign: 'right' } : { width: 90 }}
+                                                                                    className={undefined}
+                                                                                    style={{ ...lvInput, width: 90, textAlign: 'right' }}
                                                                                 />
                                                                             </label>
                                                                             <label style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
@@ -1398,8 +1380,8 @@ export default function WorkCenterMonitorModal({ isOpen, onClose, workCenter, au
                                                                                     type="number" min="1" step="1"
                                                                                     value={leftoverEnds}
                                                                                     onChange={e => setLeftoverEnds(e.target.value)}
-                                                                                    className={cls ? undefined : 'form-control form-control-sm w-auto'}
-                                                                                    style={cls ? { ...lvInput, width: 70, textAlign: 'right' } : { width: 70 }}
+                                                                                    className={undefined}
+                                                                                    style={{ ...lvInput, width: 70, textAlign: 'right' }}
                                                                                 />
                                                                             </label>
                                                                             <label style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
@@ -1409,8 +1391,8 @@ export default function WorkCenterMonitorModal({ isOpen, onClose, workCenter, au
                                                                                     value={leftoverLotNo}
                                                                                     onChange={e => setLeftoverLotNo(e.target.value)}
                                                                                     placeholder={t('leftover_lot_auto')}
-                                                                                    className={cls ? undefined : 'form-control form-control-sm w-auto'}
-                                                                                    style={cls ? { ...lvInput, width: 150 } : { width: 150 }}
+                                                                                    className={undefined}
+                                                                                    style={{ ...lvInput, width: 150 }}
                                                                                 />
                                                                             </label>
                                                                         </div>

@@ -2,7 +2,6 @@
 
 import React, { useState, useEffect, useMemo } from 'react';
 import { useData } from '../../context/DataContext';
-import { useTheme } from '../../context/ThemeContext';
 import { useToast } from '../shared/Toast';
 import ModalWrapper from '../shared/ModalWrapper';
 import {
@@ -32,9 +31,7 @@ interface Props {
 // merged pool, which stopped existing when beams became loom-mounted lots.
 export default function LeftoverBeamModal({ wo, onClose, onDone }: Props) {
     const { authFetch, locations } = useData() as any;
-    const { uiStyle } = useTheme();
     const { showToast } = useToast();
-    const classic = uiStyle === 'classic';
     const envBase = process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:8000/api';
     const API_BASE = envBase.endsWith('/api') ? envBase : `${envBase}/api`;
 
@@ -153,7 +150,7 @@ export default function LeftoverBeamModal({ wo, onClose, onDone }: Props) {
             size="sm"
             footer={
                 <ModalFooterActions
-                    classic={classic}
+                    classic
                     onCancel={onClose}
                     onSubmit={handleSubmit}
                     submitLabel="Unmount & Create Lot"
@@ -162,14 +159,14 @@ export default function LeftoverBeamModal({ wo, onClose, onDone }: Props) {
                 />
             }
         >
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 8, fontFamily: classic ? xpFont : undefined }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8, fontFamily: xpFont}}>
                 <div style={xpPanel({ fontSize: 10, color: '#555', padding: '4px 8px' })}>
                     Weigh the warp stripped off the beam. It becomes its own leftover lot that any
                     loom can mount later; this beam comes off the machine and is closed at 0, and
                     any difference against the system figure is written off on it.
                 </div>
 
-                <FormError classic={classic}>{error}</FormError>
+                <FormError classic>{error}</FormError>
 
                 {loading ? (
                     <XPLoading label="Loading beams on this machine..." />
@@ -178,7 +175,7 @@ export default function LeftoverBeamModal({ wo, onClose, onDone }: Props) {
                 ) : (
                     <>
                         <div>
-                            <FieldLabel classic={classic}>Beam on the loom</FieldLabel>
+                            <FieldLabel classic>Beam on the loom</FieldLabel>
                             <select
                                 style={xpSelect({ width: '100%' })}
                                 value={mountId}
@@ -201,7 +198,7 @@ export default function LeftoverBeamModal({ wo, onClose, onDone }: Props) {
                         <div style={{ display: 'flex', gap: 8 }}>
                             <div style={{ flex: 1 }}>
                                 <FieldLabel
-                                    classic={classic}
+                                    classic
                                     hint={selected
                                         ? `System says ${sysLeft.toFixed(2)} kg · variance ${variance > 0 ? '+' : ''}${variance.toFixed(2)} kg`
                                         : undefined}
@@ -211,13 +208,13 @@ export default function LeftoverBeamModal({ wo, onClose, onDone }: Props) {
                                 <input type="number" style={xpInput} value={qty} onChange={e => setQty(e.target.value)} min="0" step="any" autoFocus />
                             </div>
                             <div style={{ flex: 1 }}>
-                                <FieldLabel classic={classic}>Ends (utas)</FieldLabel>
+                                <FieldLabel classic>Ends (utas)</FieldLabel>
                                 <input type="number" style={xpInput} value={ends} onChange={e => setEnds(e.target.value)} min="1" step="1" placeholder="Optional" />
                             </div>
                         </div>
 
                         <div>
-                            <FieldLabel classic={classic}>Leftover goes to</FieldLabel>
+                            <FieldLabel classic>Leftover goes to</FieldLabel>
                             <select style={xpSelect({ width: '100%' })} value={returnLoc} onChange={e => setReturnLoc(e.target.value)}>
                                 <option value="">— leave parked at the machine —</option>
                                 {leafLocations.map((l: any) => (
@@ -227,12 +224,12 @@ export default function LeftoverBeamModal({ wo, onClose, onDone }: Props) {
                         </div>
 
                         <div>
-                            <FieldLabel classic={classic}>Leftover Lot No.</FieldLabel>
+                            <FieldLabel classic>Leftover Lot No.</FieldLabel>
                             <input type="text" style={xpInput} value={beamNumber} onChange={e => setBeamNumber(e.target.value)} placeholder="Leave empty to auto-generate (LFT-YYYYMMDD-NNNN)" />
                         </div>
 
                         <div>
-                            <FieldLabel classic={classic}>Notes</FieldLabel>
+                            <FieldLabel classic>Notes</FieldLabel>
                             <input type="text" style={xpInput} value={notes} onChange={e => setNotes(e.target.value)} placeholder="Optional" />
                         </div>
                     </>

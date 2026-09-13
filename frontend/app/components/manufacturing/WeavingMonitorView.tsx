@@ -3,7 +3,6 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useData } from '../../context/DataContext';
 import { useLanguage } from '../../context/LanguageContext';
-import { useTheme } from '../../context/ThemeContext';
 import { useUser } from '../../context/UserContext';
 import { xpFont, familyColor, StatusChip, XPEmptyState, XPActionButton, BUTTON_RADIUS, XP_BTN } from '../shared/xpTheme';
 import VariantChips from '../shared/VariantChips';
@@ -45,13 +44,11 @@ function runsOf(m: any): any[] {
 export default function WeavingMonitorView() {
     const { authFetch, subscribeLiveEvents } = useData();
     const { t } = useLanguage();
-    const { uiStyle } = useTheme();
     const { hasPermission } = useUser();
     const { showToast } = useToast();
     const canManage = hasPermission('calendar.edit');
     // Prep steps are floor dispatch decisions, same gate as starting a run.
     const canPrep = hasPermission('weaving_monitor.start');
-    const cls = uiStyle === 'classic';
 
     const envBase = process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:8000/api';
     const API_BASE = envBase.endsWith('/api') ? envBase : `${envBase}/api`;
@@ -154,7 +151,7 @@ export default function WeavingMonitorView() {
             colorName={run.color_name}
             colorHex={run.color_hex}
             labdipCode={run.labdip_variant_code}
-            classic={cls}
+            classic
             scale="sm"
             style={{ flexWrap: 'wrap', gap: 3 }}
         />
@@ -168,7 +165,7 @@ export default function WeavingMonitorView() {
         const slots = m.beam_slots ?? 1;
         const pcs = m.mounted_pcs ?? 0;
         const full = pcs >= slots;
-        const border = cls ? '#c8c4b8' : '#e3e3e3';
+        const border = '#c8c4b8';
         return (
             <div style={{ marginTop: 5, paddingTop: 4, borderTop: `1px solid ${border}`, fontSize: 10 }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', gap: 6 }}>
@@ -216,20 +213,20 @@ export default function WeavingMonitorView() {
     const summaryText = data ? (
         <>
             <span><b>{data.total}</b> {t('machines')}</span>
-            <span style={{ marginLeft: 12 }}><b style={{ color: cls ? '#9effa0' : GREEN }}>{data.running}</b> {t('running')}</span>
+            <span style={{ marginLeft: 12 }}><b style={{ color: '#9effa0'}}>{data.running}</b> {t('running')}</span>
             {data.avg_efficiency_pct !== null && data.avg_efficiency_pct !== undefined && (
                 <span style={{ marginLeft: 12 }}>{t('avg_efficiency')}: <b>{fmt(data.avg_efficiency_pct, 1)}%</b></span>
             )}
             {/* Plant-wide alarm counts, always visible regardless of the group filter. */}
             {plantBelowTarget > 0 && (
                 <span style={{ marginLeft: 12 }}>
-                    <b style={{ color: cls ? '#ffc9c9' : RED }}>{plantBelowTarget}</b> {t('below_target')}
+                    <b style={{ color: '#ffc9c9'}}>{plantBelowTarget}</b> {t('below_target')}
                 </span>
             )}
             {plantLate > 0 && (
                 <span style={{ marginLeft: 12 }}>
                     <i className="bi bi-exclamation-triangle-fill" style={{ marginRight: 4 }} />
-                    <b style={{ color: cls ? '#ffc9c9' : RED }}>{plantLate}</b> {t('behind_schedule')}
+                    <b style={{ color: '#ffc9c9'}}>{plantLate}</b> {t('behind_schedule')}
                 </span>
             )}
         </>
@@ -246,7 +243,7 @@ export default function WeavingMonitorView() {
         if (!run.wo_target_end_date && !run.reality_completion_date && !run.reality_unreachable) return null;
         const late = !!run.is_late;
         return (
-            <div style={{ marginTop: 4, fontSize: cls ? 10 : 11, lineHeight: 1.35 }}>
+            <div style={{ marginTop: 4, fontSize: 10, lineHeight: 1.35 }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', gap: 6 }}>
                     <span style={{ color: '#888' }}>{t('wo_due')}</span>
                     <b>{fmtDate(run.wo_target_end_date || run.target_completion_date)}</b>
@@ -259,7 +256,7 @@ export default function WeavingMonitorView() {
                 </div>
                 {late && (
                     <div style={{
-                        marginTop: 3, padding: '1px 5px', background: cls ? '#ffe6e6' : '#fdecea',
+                        marginTop: 3, padding: '1px 5px', background: '#ffe6e6',
                         border: `1px solid ${RED}`, color: RED, fontWeight: 'bold',
                         display: 'flex', alignItems: 'center', gap: 4,
                     }}>
@@ -282,7 +279,7 @@ export default function WeavingMonitorView() {
         const effColor = run.is_paused ? '#888' : run.on_target ? GREEN : RED;
         return (
             <>
-                <div style={{ fontSize: cls ? 10 : 12, color: '#555', marginBottom: 3, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                <div style={{ fontSize: 10, color: '#555', marginBottom: 3, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                     {/* WO first: with several runs on one loom the WO is what tells them
                         apart on the floor — the MO is shared by every combo. */}
                     {run.wo_code && <b style={{ color: BLUE }}>{run.wo_code} · </b>}
@@ -303,11 +300,11 @@ export default function WeavingMonitorView() {
                 )}
                 <div style={{ marginBottom: 4 }}><RunVariant run={run} /></div>
                 <div style={{ display: 'flex', alignItems: 'baseline', gap: 6 }}>
-                    <span style={{ fontSize: cls ? 24 : 26, fontWeight: 'bold', color: effColor, lineHeight: 1 }}>
-                        {fmt(run.efficiency_pct, 1)}<span style={{ fontSize: cls ? 12 : 13 }}>%</span>
+                    <span style={{ fontSize: 24, fontWeight: 'bold', color: effColor, lineHeight: 1 }}>
+                        {fmt(run.efficiency_pct, 1)}<span style={{ fontSize: 12}}>%</span>
                     </span>
-                    <span style={{ fontSize: cls ? 10 : 12, color: '#888' }}>{t('target')} {fmt(run.target_efficiency_pct, 0)}%</span>
-                    <span style={{ fontSize: cls ? 10 : 12, color: '#888', marginLeft: 'auto' }}>
+                    <span style={{ fontSize: 10, color: '#888' }}>{t('target')} {fmt(run.target_efficiency_pct, 0)}%</span>
+                    <span style={{ fontSize: 10, color: '#888', marginLeft: 'auto' }}>
                         {run.lines} {t('lines')}
                     </span>
                 </div>
@@ -315,7 +312,7 @@ export default function WeavingMonitorView() {
                     <EffBar eff={run.efficiency_pct} target={run.target_efficiency_pct}
                         label={`${t('target')} ${fmt(run.target_efficiency_pct, 0)}%`} />
                 </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: cls ? 10 : 12 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 10}}>
                     <span><span style={{ color: '#888' }}>{t('actual')}:</span> <b>{fmt(run.actual_kg, 1)}</b> / {fmt(run.target_qty, 0)} kg</span>
                     <span style={{ color: '#666' }}>{fmt(run.actual_daily_rate_kg, 1)} kg/d</span>
                 </div>
@@ -342,12 +339,10 @@ export default function WeavingMonitorView() {
             setRunSlide(prev => ({ ...prev, [m.id]: (n + total) % total }));
         };
         const navBtn = (dir: -1 | 1) => (
-            <button type="button" onClick={go(idx + dir)} className={cls ? XP_BTN : undefined}
+            <button type="button" onClick={go(idx + dir)} className={XP_BTN}
                 title={dir < 0 ? t('prev_run') : t('next_run')}
                 style={{
-                    ...(cls
-                        ? { background: 'linear-gradient(to bottom, #fdfdfd, #e3e1d8)', border: '1px solid', borderColor: '#dfdfdf #808080 #808080 #dfdfdf' }
-                        : { background: '#fff', border: '1px solid #d5dae1' }),
+                    ...({ background: 'linear-gradient(to bottom, #fdfdfd, #e3e1d8)', border: '1px solid', borderColor: '#dfdfdf #808080 #808080 #dfdfdf' }),
                     borderRadius: BUTTON_RADIUS, width: 18, height: 16, padding: 0, lineHeight: 1,
                     fontSize: 10, color: '#333', cursor: 'pointer', display: 'flex',
                     alignItems: 'center', justifyContent: 'center', flexShrink: 0,
@@ -359,7 +354,7 @@ export default function WeavingMonitorView() {
             <>
                 <div style={{
                     display: 'flex', alignItems: 'center', gap: 4, marginBottom: 4, paddingBottom: 3,
-                    borderBottom: `1px solid ${cls ? '#c8c4b8' : '#e3e3e3'}`,
+                    borderBottom: `1px solid ${'#c8c4b8'}`,
                 }}>
                     {navBtn(-1)}
                     <span style={{ fontSize: 10, fontWeight: 700, color: '#555', minWidth: 26, textAlign: 'center' }}>
@@ -372,7 +367,7 @@ export default function WeavingMonitorView() {
                                 title={`${r.wo_code || r.mo_code}${r.is_late ? ` · ${t('behind_schedule')}` : ''}`}
                                 style={{
                                     width: 7, height: 7, borderRadius: '50%', cursor: 'pointer',
-                                    background: i === idx ? (r.is_late ? RED : BLUE) : (r.is_late ? '#f3b0b0' : cls ? '#c8c4b8' : '#d8dde3'),
+                                    background: i === idx ? (r.is_late ? RED : BLUE) : (r.is_late ? '#f3b0b0' : '#c8c4b8'),
                                     border: i === idx ? '1px solid #00000055' : '1px solid transparent',
                                 }} />
                         ))}
@@ -389,9 +384,9 @@ export default function WeavingMonitorView() {
     const IdleBody = ({ status }: { status: string }) => {
         const prep = status !== 'IDLE';
         return (
-            <div style={{ fontSize: cls ? 11 : 12, color: prep ? '#555' : '#888', display: 'flex', flexDirection: 'column', gap: 3, justifyContent: 'center', flex: 1, minHeight: cls ? 64 : 70 }}>
+            <div style={{ fontSize: 11, color: prep ? '#555' : '#888', display: 'flex', flexDirection: 'column', gap: 3, justifyContent: 'center', flex: 1, minHeight: 64}}>
                 <span style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
-                    <i className={`bi ${prep ? 'bi-tools' : 'bi-pause-circle'}`} style={{ fontSize: cls ? 16 : 18 }} />
+                    <i className={`bi ${prep ? 'bi-tools' : 'bi-pause-circle'}`} style={{ fontSize: 16}} />
                     {prep ? loomLabel(status) : t('no_active_run')}
                 </span>
                 {prep && <span style={{ fontSize: 10, color: '#888' }}>{t('loom_prep_hint')}</span>}
@@ -408,13 +403,13 @@ export default function WeavingMonitorView() {
         const next: string | null = m.next_loom_step || null;
         if (!canPrep || status === 'RUNNING' || status === 'IDLE') return null;
         const busy = prepBusy === m.id;
-        const border = cls ? '#c8c4b8' : '#e3e3e3';
+        const border = '#c8c4b8';
         const stop = (fn: () => void) => (e: React.MouseEvent) => { e.stopPropagation(); fn(); };
         return (
             <div style={{ marginTop: 5, paddingTop: 5, borderTop: `1px solid ${border}`, display: 'flex', gap: 4, alignItems: 'center' }}>
                 {next && (
                     <XPActionButton
-                        classic={cls}
+                        classic
                         tone={next === 'TUNING' ? 'warning' : 'primary'}
                         icon={next === 'TUNING' ? 'bi-sliders' : 'bi-arrows-collapse-vertical'}
                         label={next === 'TUNING' ? t('tuning') : t('draw_in')}
@@ -424,7 +419,7 @@ export default function WeavingMonitorView() {
                 )}
                 {status !== 'STAGED' && (
                     <XPActionButton
-                        classic={cls}
+                        classic
                         tone="neutral"
                         icon="bi-arrow-counterclockwise"
                         title={t('prep_reset')}
@@ -449,7 +444,7 @@ export default function WeavingMonitorView() {
         return (
             <MachineCard
                 key={m.id}
-                classic={cls}
+                classic
                 code={m.code}
                 name={m.name}
                 status={loomStatus}
@@ -466,11 +461,11 @@ export default function WeavingMonitorView() {
         );
     };
 
-    const cardGrid = (list: any[]) => <CardGrid classic={cls}>{list.map(card)}</CardGrid>;
+    const cardGrid = (list: any[]) => <CardGrid classic>{list.map(card)}</CardGrid>;
 
     const chipBar = (
         <MonitorChipBar
-            classic={cls}
+            classic
             sections={sections}
             isGrouped={isGrouped}
             groupFilter={groupFilter}
@@ -488,7 +483,7 @@ export default function WeavingMonitorView() {
     );
 
     const body = loading ? (
-        <MonitorGridSkeleton classic={cls} />
+        <MonitorGridSkeleton classic />
     ) : machines.length === 0 ? (
         <XPEmptyState icon="bi-cpu" message={t('no_weaving_machines')} />
     ) : runningOnly && runningCount === 0 ? (
@@ -496,14 +491,14 @@ export default function WeavingMonitorView() {
     ) : !isGrouped ? (
         cardGrid(shown(machines))
     ) : (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: cls ? 10 : 20 }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 10}}>
             {/* A group with nothing running drops out entirely while the filter is on —
                 its band alone would read as a bank with a missing grid. Its alarms are
                 still on the chip bar, which is why hiding it is safe. */}
             {visibleSections.filter(sec => shown(sec.machines).length > 0).map(sec => (
                 <div key={sec.id || 'ungrouped'}>
                     <GroupHeader
-                        classic={cls}
+                        classic
                         sec={sec}
                         labels={{
                             machines: t('machines'), running: t('running'),
@@ -511,7 +506,7 @@ export default function WeavingMonitorView() {
                             late: t('behind_schedule'),
                         }}
                         action={sec.id && canManage ? (
-                            <XPActionButton classic={cls} tone="neutral" icon="bi-calendar3"
+                            <XPActionButton classic tone="neutral" icon="bi-calendar3"
                                 label={t('work_calendar')} onClick={() => setCalGroup(sec)} />
                         ) : null}
                     />
@@ -524,7 +519,7 @@ export default function WeavingMonitorView() {
     return (
         <>
             <MonitorShell
-                classic={cls}
+                classic
                 icon="bi-speedometer2"
                 title={t('weaving_monitor')}
                 summary={summaryText}

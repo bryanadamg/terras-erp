@@ -2,7 +2,6 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import ModalWrapper from '../shared/ModalWrapper';
-import { useTheme } from '../../context/ThemeContext';
 import { useLanguage } from '../../context/LanguageContext';
 import {
     xpFont, familyColor, FormSection, FieldLabel, XPActionButton,
@@ -35,9 +34,7 @@ interface Props {
  * re-applying here overwrites those per-machine tweaks, which is the point.
  */
 export default function GroupCalendarModal({ isOpen, onClose, group, authFetch, apiBase, onApplied }: Props) {
-    const { uiStyle } = useTheme();
     const { t } = useLanguage();
-    const classic = uiStyle === 'classic';
 
     const [loading, setLoading] = useState(false);
     const [saving, setSaving] = useState(false);
@@ -154,14 +151,14 @@ export default function GroupCalendarModal({ isOpen, onClose, group, authFetch, 
             title={<><i className="bi bi-calendar3 me-1" /> {t('work_calendar')} — {label}</>}
             footer={
                 <>
-                    <span style={{ marginRight: 'auto', fontSize: classic ? 11 : 12, color: '#666', fontFamily: classic ? xpFont : undefined }}>
+                    <span style={{ marginRight: 'auto', fontSize: 11, color: '#666', fontFamily: xpFont}}>
                         {machines.length} machine{machines.length !== 1 ? 's' : ''} in this group
                     </span>
                     {/* Shared modal footer (Cancel + solid submit) — a hand-rolled pair
                         here rendered flat gray in Classic, since the global .btn-primary
                         override strips the bevel gradient. */}
                     <ModalFooterActions
-                        classic={classic}
+                        classic
                         onCancel={onClose}
                         cancelLabel={t('cancel')}
                         onSubmit={apply}
@@ -177,7 +174,7 @@ export default function GroupCalendarModal({ isOpen, onClose, group, authFetch, 
             {/* Sectioned with the shared FormSection / FieldLabel / XPActionButton set —
                 the same chrome as the per-machine monitor modal this opens alongside,
                 so the two calendars don't read as two different products. */}
-            <div style={{ fontFamily: classic ? xpFont : undefined, fontSize: classic ? 11 : undefined }}>
+            <div style={{ fontFamily: xpFont, fontSize: 11}}>
                 {error && (
                     <div style={{ background: '#ffe8e8', border: `1px solid ${RED}55`, color: RED, padding: '4px 8px', marginBottom: 10 }}>{error}</div>
                 )}
@@ -189,14 +186,14 @@ export default function GroupCalendarModal({ isOpen, onClose, group, authFetch, 
                     a date field and a table — so the two screens taught two different
                     mental models of one setting. */}
                 <WorkingDaysSection
-                    classic={classic}
+                    classic
                     weekdays={weekdays}
                     onToggleWeekday={toggleWeekday}
                     canEdit
                 />
 
                 <HolidayCalendarSection
-                    classic={classic}
+                    classic
                     month={calRef}
                     onMonthChange={setCalRef}
                     weekdays={weekdays}
@@ -218,36 +215,36 @@ export default function GroupCalendarModal({ isOpen, onClose, group, authFetch, 
                         import, and the flat list of what will be written. */}
                     <div style={{ display: 'flex', gap: 6, alignItems: 'flex-end', flexWrap: 'wrap', margin: '10px 0 6px' }}>
                         <div>
-                            <FieldLabel classic={classic}>{t('date')}</FieldLabel>
-                            <input type="date" style={{ ...lvInput(classic), width: 140 }} value={newHoliday} onChange={e => setNewHoliday(e.target.value)} />
+                            <FieldLabel classic>{t('date')}</FieldLabel>
+                            <input type="date" style={{ ...lvInput(true), width: 140 }} value={newHoliday} onChange={e => setNewHoliday(e.target.value)} />
                         </div>
                         <div style={{ flex: 1, minWidth: 140 }}>
-                            <FieldLabel classic={classic}>{t('note')}</FieldLabel>
-                            <input style={lvInput(classic)} value={newHolidayNote} onChange={e => setNewHolidayNote(e.target.value)} placeholder="Cuti bersama" />
+                            <FieldLabel classic>{t('note')}</FieldLabel>
+                            <input style={lvInput(true)} value={newHolidayNote} onChange={e => setNewHolidayNote(e.target.value)} placeholder="Cuti bersama" />
                         </div>
-                        <XPActionButton classic={classic} tone="neutral" icon="bi-plus-lg" label={t('add')} disabled={!newHoliday} onClick={addHoliday} />
+                        <XPActionButton classic tone="neutral" icon="bi-plus-lg" label={t('add')} disabled={!newHoliday} onClick={addHoliday} />
                         <span style={{ width: 1, alignSelf: 'stretch', background: '#c8c4b8' }} />
-                        <XPActionButton classic={classic} tone="neutral" icon="bi-download"
+                        <XPActionButton classic tone="neutral" icon="bi-download"
                             label={`${t('import_id_holidays')} ${calRef.getFullYear()}`} onClick={importNational} />
                     </div>
 
-                    <div style={{ maxHeight: 190, overflow: 'auto', border: classic ? '1px solid #808080' : '1px solid #dbe1ea', background: '#fff' }}>
+                    <div style={{ maxHeight: 190, overflow: 'auto', border: '1px solid #808080', background: '#fff' }}>
                         <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                             <thead style={LV_STICKY_THEAD}>
-                                <tr style={classic ? { background: '#d4d0c8' } : undefined}>
-                                    <th style={{ ...lvTh(classic), width: 110 }}>{t('date')}</th>
-                                    <th style={lvTh(classic)}>{t('note')}</th>
-                                    <th style={{ ...lvTh(classic), width: 36, borderRight: 'none' }} />
+                                <tr style={{ background: '#d4d0c8' }}>
+                                    <th style={{ ...lvTh(true), width: 110 }}>{t('date')}</th>
+                                    <th style={lvTh(true)}>{t('note')}</th>
+                                    <th style={{ ...lvTh(true), width: 36, borderRight: 'none' }} />
                                 </tr>
                             </thead>
                             <tbody>
                                 {holidays.map((h, idx) => (
-                                    <tr key={h.holiday_date} style={lvRow(classic, idx)}>
-                                        <td style={lvTd(classic)}>{h.holiday_date}</td>
-                                        <td style={lvTd(classic)}>{h.note || ''}</td>
-                                        <td style={{ ...lvTd(classic), borderRight: 'none', textAlign: 'right' }}>
+                                    <tr key={h.holiday_date} style={lvRow(true, idx)}>
+                                        <td style={lvTd(true)}>{h.holiday_date}</td>
+                                        <td style={lvTd(true)}>{h.note || ''}</td>
+                                        <td style={{ ...lvTd(true), borderRight: 'none', textAlign: 'right' }}>
                                             <XPActionButton
-                                                classic={classic}
+                                                classic
                                                 tone="danger"
                                                 icon="bi-x"
                                                 title={t('remove')}
@@ -257,7 +254,7 @@ export default function GroupCalendarModal({ isOpen, onClose, group, authFetch, 
                                     </tr>
                                 ))}
                                 {holidays.length === 0 && (
-                                    <tr><td colSpan={3} style={{ ...lvTd(classic), borderRight: 'none', textAlign: 'center', padding: 12, color: '#888', fontStyle: 'italic' }}>
+                                    <tr><td colSpan={3} style={{ ...lvTd(true), borderRight: 'none', textAlign: 'center', padding: 12, color: '#888', fontStyle: 'italic' }}>
                                         {loading ? t('loading') : t('no_holidays')}
                                     </td></tr>
                                 )}
@@ -266,8 +263,8 @@ export default function GroupCalendarModal({ isOpen, onClose, group, authFetch, 
                     </div>
                 </HolidayCalendarSection>
 
-                <FormSection classic={classic} title={<SecTitle icon="bi-cpu">{t('machines_to_update')}</SecTitle>}>
-                    <div style={{ fontSize: classic ? 11 : 12, color: '#555', lineHeight: 1.5 }}>
+                <FormSection classic title={<SecTitle icon="bi-cpu">{t('machines_to_update')}</SecTitle>}>
+                    <div style={{ fontSize: 11, color: '#555', lineHeight: 1.5 }}>
                         {machines.length === 0
                             ? <span style={{ fontStyle: 'italic', color: '#888' }}>{t('no_machines_in_group')}</span>
                             : machines.map((m: any) => m.code).join(', ')}

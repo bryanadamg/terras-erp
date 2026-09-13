@@ -37,7 +37,6 @@ export default function WOBulkPrintModal({
 }) {
     const { companyProfile, attributes, authFetch, printTemplates } = useData() as any;
     const { uiStyle } = useTheme();
-    const isClassic = uiStyle === 'classic';
 
     const API_BASE = (process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:8000/api').replace(/\/api$/, '') + '/api';
     // Bulk print marks every included WO's card in one call.

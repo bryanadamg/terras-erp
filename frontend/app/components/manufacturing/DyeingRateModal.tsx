@@ -3,7 +3,6 @@
 import { useState, useEffect } from 'react';
 import ModalWrapper from '../shared/ModalWrapper';
 import { useLanguage } from '../../context/LanguageContext';
-import { useTheme } from '../../context/ThemeContext';
 import { useToast } from '../shared/Toast';
 import { xpFont, xpInput, FormSection, FieldLabel, XPActionButton, familyColor } from '../shared/xpTheme';
 
@@ -30,9 +29,7 @@ export default function DyeingRateModal({ isOpen, run, onClose, onSaved, authFet
     apiBase: string;
 }) {
     const { t } = useLanguage();
-    const { uiStyle } = useTheme();
     const { showToast } = useToast();
-    const cls = uiStyle === 'classic';
 
     const [rpm, setRpm] = useState('');
     const [lines, setLines] = useState('');
@@ -89,8 +86,8 @@ export default function DyeingRateModal({ isOpen, run, onClose, onSaved, authFet
             step={step}
             value={value}
             onChange={e => set(e.target.value)}
-            className={cls ? undefined : 'form-control form-control-sm'}
-            style={cls ? xpInput() : undefined}
+            className={undefined}
+            style={xpInput()}
         />
     );
 
@@ -104,33 +101,33 @@ export default function DyeingRateModal({ isOpen, run, onClose, onSaved, authFet
             modeless
             footer={
                 <div style={{ display: 'flex', gap: 6, justifyContent: 'flex-end' }}>
-                    <XPActionButton classic={cls} tone="neutral" label={t('cancel')} onClick={onClose} />
-                    <XPActionButton classic={cls} tone="primary" icon="bi-check-lg"
+                    <XPActionButton classic tone="neutral" label={t('cancel')} onClick={onClose} />
+                    <XPActionButton classic tone="primary" icon="bi-check-lg"
                         label={t('save')} disabled={saving} onClick={save} />
                 </div>
             }
         >
-            <div style={cls ? { fontFamily: xpFont } : undefined}>
-                <FormSection title={t('set_rate')} classic={cls}>
+            <div style={{ fontFamily: xpFont }}>
+                <FormSection title={t('set_rate')} classic>
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
                         <div>
-                            <FieldLabel classic={cls}>{t('rpm')}</FieldLabel>
+                            <FieldLabel classic>{t('rpm')}</FieldLabel>
                             {num(rpm, setRpm, '0', '1')}
                         </div>
                         <div>
-                            <FieldLabel classic={cls}>{t('lines')}</FieldLabel>
+                            <FieldLabel classic>{t('lines')}</FieldLabel>
                             {num(lines, setLines, '1', '1')}
                         </div>
                         <div>
-                            <FieldLabel classic={cls}>{t('target')} %</FieldLabel>
+                            <FieldLabel classic>{t('target')} %</FieldLabel>
                             {num(target, setTarget, '1', '1')}
                         </div>
                         <div>
-                            <FieldLabel classic={cls} hint={t('no_reel_measured_hint')}>
+                            <FieldLabel classic hint={t('no_reel_measured_hint')}>
                                 {t('yards_per_rev')}
                             </FieldLabel>
                             <div style={{
-                                fontSize: cls ? 11 : 13, fontWeight: 'bold', paddingTop: 3,
+                                fontSize: 11, fontWeight: 'bold', paddingTop: 3,
                                 color: yardsPerRev ? '#333' : '#8a6100',
                             }}>
                                 {yardsPerRev ?? t('no_reel_measured')}
@@ -138,8 +135,8 @@ export default function DyeingRateModal({ isOpen, run, onClose, onSaved, authFet
                         </div>
                     </div>
                     <div style={{
-                        marginTop: 8, paddingTop: 6, borderTop: `1px solid ${cls ? '#c8c4b8' : '#e3e3e3'}`,
-                        display: 'flex', justifyContent: 'space-between', fontSize: cls ? 11 : 12,
+                        marginTop: 8, paddingTop: 6, borderTop: `1px solid ${'#c8c4b8'}`,
+                        display: 'flex', justifyContent: 'space-between', fontSize: 11,
                     }}>
                         <span style={{ color: '#888' }}>
                             {t('rpm')} × {t('yards_per_rev')} × {t('lines')}

@@ -3,7 +3,6 @@ import React, { useState, useMemo, useEffect, useRef } from 'react';
 import QRCode from 'qrcode';
 import { useRouter } from 'next/navigation';
 import dynamic from 'next/dynamic';
-import { useTheme } from '../../context/ThemeContext';
 import { useUser } from '../../context/UserContext';
 import { useTimezone } from '../../context/TimezoneContext';
 
@@ -137,11 +136,9 @@ export default function WorkOrderListView({
     loading = false,
 }: Props) {
     const router = useRouter();
-    const { uiStyle } = useTheme();
-    const classic = uiStyle === 'classic';
     // Dense: the completion log shares its row with the other detail panes.
-    const subTh = lvSubTh(classic, true);
-    const subTd = lvSubTd(classic, true);
+    const subTh = lvSubTh(true, true);
+    const subTd = lvSubTd(true, true);
     const { hasPermission, hasAnyPermission } = useUser();
     const canManage = hasAnyPermission('work_order.edit', 'work_order.delete', 'work_order.print_card', 'work_order.stage');
     const { formatCustom: tzFmt } = useTimezone();
@@ -398,7 +395,7 @@ export default function WorkOrderListView({
 
         const panelStyle: React.CSSProperties = {
             display: 'grid', gridTemplateColumns: '110px 260px 220px minmax(200px, 1fr)',
-            border: classic ? '1px solid #7f9db9' : '1px solid #dee2e6',
+            border: '1px solid #7f9db9',
             fontFamily: xpFont, fontSize: 10,
         };
         const colHeaderStyle: React.CSSProperties = {
@@ -415,7 +412,7 @@ export default function WorkOrderListView({
         return (
             <tr key={`${wo.id}-detail`}>
                 <td colSpan={COLS} style={{ padding: 0 }}>
-                    <ExpandedRowPanel classic={classic}>
+                    <ExpandedRowPanel classic>
                     <div style={panelStyle}>
                         {/* QR Code */}
                         <div style={{ borderRight: '1px solid #c0bdb5', padding: '6px 6px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3, background: '#f5f4ef' }}>
@@ -434,7 +431,7 @@ export default function WorkOrderListView({
                                 <span style={{ color: '#888' }}>MO</span>
                                 <CodeChip
                                     code={wo.mo_code}
-                                    classic={classic}
+                                    classic
                                     link
                                     onClick={() => router.push(`/manufacturing-orders?mo=${encodeURIComponent(wo.mo_code)}`)}
                                     title={`Go to ${wo.mo_code}`}
@@ -523,7 +520,7 @@ export default function WorkOrderListView({
                                 <div style={{ color: '#aaa', fontStyle: 'italic', fontSize: 9 }}>No entries yet.</div>
                             ) : (
                                 <div style={{ maxHeight: 200, overflowY: 'auto' }}>
-                                    <table style={{ ...lvSubTable(classic), border: 'none' }}>
+                                    <table style={{ ...lvSubTable(true), border: 'none' }}>
                                         <thead>
                                             <tr>
                                                 <th style={{ ...subTh, width: 110 }}>Date / Time</th>
@@ -541,7 +538,7 @@ export default function WorkOrderListView({
                                                     <React.Fragment key={c.id || ci}>
                                                         {/* No zebra — the rejected-red fill is the only
                                                             meaningful row colour here. */}
-                                                        <tr style={lvSubRow(classic, ci, { fill: c.rejected ? '#fbe4e4' : undefined })}>
+                                                        <tr style={lvSubRow(true, ci, { fill: c.rejected ? '#fbe4e4' : undefined })}>
                                                             <td style={{ ...subTd, color: '#666', whiteSpace: 'nowrap' }}>{fmtDateTime(c.created_at)}</td>
                                                             <td
                                                                 style={{ ...subTd, fontWeight: 'bold', color: c.rejected ? '#900' : '#000080', textAlign: 'right', textDecoration: c.rejected ? 'line-through' : 'none' }}
@@ -617,72 +614,58 @@ export default function WorkOrderListView({
         );
     };
 
-    const containerStyle: React.CSSProperties = classic
-        ? viewShellStyle(true, 'page', { fontFamily: xpFont })
-        : pageFillStyle;
+    const containerStyle: React.CSSProperties = viewShellStyle(true, 'page', { fontFamily: xpFont });
 
-    const titleBarStyle: React.CSSProperties = classic ? xpTitleBar({
+    const titleBarStyle: React.CSSProperties = xpTitleBar({
         justifyContent: 'flex-start', gap: 8,
-    }) : {
-        background: '#fff', borderBottom: '1px solid #dee2e6',
-        padding: '8px 16px', display: 'flex', alignItems: 'center', gap: 8,
-    };
+    });
 
-    const filterBarStyle: React.CSSProperties = classic ? {
+    const filterBarStyle: React.CSSProperties = {
         background: '#d4d0c8', borderBottom: '1px solid #808080',
         padding: '4px 8px', display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap',
-    } : {
-        background: '#f8f9fa', borderBottom: '1px solid #dee2e6',
-        padding: '6px 12px', display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap',
     };
 
     // Full cell borders rather than lvTh/lvTd's single rule: 15 columns of dates
     // and quantities, where the verticals are what keep a row readable.
-    const thStyle: React.CSSProperties = classic
-        ? lvThSticky(true, { border: '1px solid #808080' })
-        : { fontSize: '9pt', fontWeight: 'bold', whiteSpace: 'nowrap' };
+    const thStyle: React.CSSProperties = lvThSticky(true, { border: '1px solid #808080' });
 
-    const tdBase: React.CSSProperties = classic
-        ? { ...lvTd(true), border: '1px solid #c0bdb5' }
-        : { verticalAlign: 'middle' };
+    const tdBase: React.CSSProperties = { ...lvTd(true), border: '1px solid #c0bdb5' };
 
     return (
         <>
         <div className="row g-4 fade-in">
             <div className="col-12">
-                <div style={containerStyle} className={classic ? '' : 'card h-100 border-0 shadow-sm shell-window'}>
+                <div style={containerStyle}>
 
                     {/* Title bar */}
                     <div style={titleBarStyle}>
-                        <i className="bi bi-list-task" style={{ color: classic ? '#fff' : '#000', fontSize: 14 }}></i>
-                        <span style={{ fontWeight: 'bold', fontSize: classic ? 12 : 14, color: classic ? '#fff' : '#000', textShadow: classic ? '1px 1px 1px rgba(0,0,0,0.4)' : undefined }}>
+                        <i className="bi bi-list-task" style={{ color: '#fff', fontSize: 14 }}></i>
+                        <span style={{ fontWeight: 'bold', fontSize: 12, color: '#fff', textShadow: '1px 1px 1px rgba(0,0,0,0.4)'}}>
                             Work Orders
                         </span>
-                        <span style={{ fontSize: classic ? 10 : 11, color: classic ? '#cce0ff' : '#888', marginLeft: 4 }}>
+                        <span style={{ fontSize: 10, color: '#cce0ff', marginLeft: 4 }}>
                             {filtered.length} of {flatWOs.length} steps
                         </span>
                         {sel.count > 0 && (
                             <button
                                 onClick={() => setBulkPrintOpen(true)}
-                                style={classic ? { fontFamily: xpFont, fontSize: 10, padding: '1px 8px', background: 'linear-gradient(to bottom,#b0e8b0,#70c870)', border: '1px solid #0a3e0a', cursor: 'pointer', color: '#004000', marginLeft: 8 } : undefined}
-                                className={classic ? '' : 'btn btn-sm btn-success ms-2'}
+                                style={{ fontFamily: xpFont, fontSize: 10, padding: '1px 8px', background: 'linear-gradient(to bottom,#b0e8b0,#70c870)', border: '1px solid #0a3e0a', cursor: 'pointer', color: '#004000', marginLeft: 8 }}
                             >
-                                {classic ? '' : <i className="bi bi-printer me-1" />}
+                                {''}
                                 Print Selected ({sel.count})
                             </button>
                         )}
                     </div>
 
                     {/* Tabs */}
-                    <Tabs<WOTabKey> tabs={WO_TABS} activeKey={activeTab as WOTabKey} onChange={onTabChange} classic={classic} />
+                    <Tabs<WOTabKey> tabs={WO_TABS} activeKey={activeTab as WOTabKey} onChange={onTabChange} classic />
 
                     {/* Filter bar */}
                     <div style={filterBarStyle}>
-                        <label style={{ fontSize: classic ? 10 : 11, color: classic ? '#000' : '#555', whiteSpace: 'nowrap' }}>Filter:</label>
-                        <SearchField classic={classic} value={woSearch} onChange={onSearch} placeholder="Search WO / MO..." width={classic ? 160 : 180} />
+                        <label style={{ fontSize: 10, color: '#000', whiteSpace: 'nowrap' }}>Filter:</label>
+                        <SearchField classic value={woSearch} onChange={onSearch} placeholder="Search WO / MO..." width={160} />
                         <select value={filterStatus} onChange={e => onFilterStatus(e.target.value)}
-                            style={classic ? { ...xpInput, width: 110 } : { width: 130 }}
-                            className={classic ? '' : 'form-select form-select-sm'}>
+                            style={{ ...xpInput, width: 110 }}>
                             <option value="">All Statuses</option>
                             {STATUSES.map(s => <option key={s} value={s}>{s.replace('_', ' ')}</option>)}
                         </select>
@@ -692,20 +675,20 @@ export default function WorkOrderListView({
                             onChange={onWCFilterChange}
                             allowEmpty
                             emptyLabel="All Work Centers"
-                            style={classic ? { width: 160 } : { width: 180 }}
+                            style={{ width: 160 }}
                         />
-                        <div style={{ width: classic ? 260 : 280 }}>
+                        <div style={{ width: 260}}>
                             <SearchableSelect
                                 options={componentOptions}
                                 value={filterComponentId}
                                 onChange={onFilterComponent}
                                 placeholder="All Components"
-                                size={classic ? 'sm' : 'md'}
+                                size={'sm'}
                             />
                         </div>
                         <label
                             title="Show only work orders whose Kartu Kerja card or bag labels are not yet printed"
-                            style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: classic ? 10 : 11, color: classic ? '#000' : '#555', whiteSpace: 'nowrap', cursor: 'pointer' }}>
+                            style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 10, color: '#000', whiteSpace: 'nowrap', cursor: 'pointer' }}>
                             <input
                                 type="checkbox"
                                 checked={filterUnprinted}
@@ -717,21 +700,19 @@ export default function WorkOrderListView({
                         </label>
                         {(filterStatus || filterGroup || filterWC || woSearch || filterComponentId || filterUnprinted) && (
                             <button onClick={onClearFilters}
-                                style={classic ? { ...xpInput, width: 'auto', cursor: 'pointer', height: 20 } : undefined}
-                                className={classic ? '' : 'btn btn-sm btn-outline-secondary'}>
+                                style={{ ...xpInput, width: 'auto', cursor: 'pointer', height: 20 }}>
                                 Clear
                             </button>
                         )}
                         {loading && (
-                            <span style={{ fontSize: classic ? 10 : 11, color: '#666', marginLeft: 4 }}>Loading...</span>
+                            <span style={{ fontSize: 10, color: '#666', marginLeft: 4 }}>Loading...</span>
                         )}
                     </div>
 
                     {/* Table */}
-                    <div className="table-responsive" style={{ flex: 1, overflow: 'auto', minHeight: 0, ...(classic ? { background: '#fff' } : {}) }}>
+                    <div className="table-responsive" style={{ flex: 1, overflow: 'auto', minHeight: 0, ...({ background: '#fff' }) }}>
                         <table
-                            style={{ width: '100%', minWidth: 1830, borderCollapse: 'collapse', tableLayout: 'fixed', fontSize: classic ? 11 : undefined, fontFamily: classic ? xpFont : undefined, background: classic ? '#fff' : undefined }}
-                            className={classic ? '' : 'table table-hover align-middle mb-0'}
+                            style={{ width: '100%', minWidth: 1830, borderCollapse: 'collapse', tableLayout: 'fixed', fontSize: 11, fontFamily: xpFont, background: '#fff'}}
                         >
                             <colgroup>
                                 <col style={{ width: LV_CHECK_COL_W }} />       {/* checkbox */}
@@ -752,16 +733,15 @@ export default function WorkOrderListView({
                                 <col style={{ width: 78 }} />   {/* Actions */}
                             </colgroup>
                             <thead>
-                                <tr className={classic ? '' : 'table-light'}>
+                                <tr>
                                     <th style={{ ...thStyle, width: 28, padding: '3px 6px' }}>
-                                        <SelectAllCheckbox classic={classic} allSelected={sel.allPageSelected} someSelected={sel.someSelected} onChange={sel.togglePage} title="Select all filtered" />
+                                        <SelectAllCheckbox classic allSelected={sel.allPageSelected} someSelected={sel.someSelected} onChange={sel.togglePage} title="Select all filtered" />
                                     </th>
-                                    <th style={{ ...thStyle, width: 22, padding: '3px 4px' }} className={classic ? '' : 'ps-3'} />
+                                    <th style={{ ...thStyle, width: 22, padding: '3px 4px' }} />
                                     {([['Root MO', 'rootmo'], ['#', 'sequence'], ['Name', 'name'], ['Product', 'product'], ['Variant', ''], ['Work Center', 'wc'], ['Target / Done', ''], ['Target Start', 'tstart'], ['Target End', 'tend'], ['Actual Start', 'astart'], ['Actual End', 'aend'], ['Created', 'created'], ['Status', 'status'], ['', '']] as [string, string][]).map(([h, key], i) => (
                                         <SortableTh key={`${h}-${i}`}
                                             sort={sort} colKey={key || null} onSort={toggleSort}
-                                            style={{ ...thStyle, textAlign: h === '' ? 'right' : 'left' }}
-                                            className={classic ? '' : 'ps-3'}>
+                                            style={{ ...thStyle, textAlign: h === '' ? 'right' : 'left' }}>
                                             {h}
                                         </SortableTh>
                                     ))}
@@ -769,27 +749,26 @@ export default function WorkOrderListView({
                             </thead>
                             <tbody ref={listBodyRef}>
                                 {filtered.length === 0 && (loading ? (
-                                    <TableSkeleton rows={8} cols={skel.cols ?? COLS} classic={classic} tdStyle={tdBase} rowHeight={skel.rowHeight} fillHeight={skel.fillHeight} />
+                                    <TableSkeleton rows={8} cols={skel.cols ?? COLS} classic tdStyle={tdBase} rowHeight={skel.rowHeight} fillHeight={skel.fillHeight} />
                                 ) : (
                                     <tr>
-                                        <td colSpan={COLS} style={classic ? { padding: 0 } : { padding: 24, textAlign: 'center', color: '#888' }}>
-                                            {classic ? <XPEmptyState message="No work orders found." icon="bi-tools" /> : 'No work orders found.'}
+                                        <td colSpan={COLS} style={{ padding: 0 }}>
+                                            {<XPEmptyState message="No work orders found." icon="bi-tools" />}
                                         </td>
                                     </tr>
                                 ))}
                                 {sortedWOs.map((wo, idx) => {
-                                    const rowBg = classic ? lvZebra(true, idx) : undefined;
+                                    const rowBg = lvZebra(true, idx);
                                     const isEditing = editId === wo.id;
                                     const isExpanded = expandedWOId === wo.id;
 
                                     if (isEditing) {
                                         return (
-                                            <tr key={wo.id} style={{ background: classic ? '#fffbe6' : undefined }}
-                                                className={classic ? '' : 'table-warning'}>
+                                            <tr key={wo.id} style={{ background: '#fffbe6'}}>
                                                 <td style={{ ...tdBase, padding: '3px 6px' }} />
                                                 <td style={tdBase} />
                                                 <td style={tdBase} />
-                                                <td style={tdBase} className={classic ? '' : 'ps-3'}>
+                                                <td style={tdBase}>
                                                     <input style={{ ...xpInput, width: 32 }} value={form.sequence}
                                                         onChange={e => setForm(f => ({ ...f, sequence: e.target.value }))} />
                                                 </td>
@@ -818,13 +797,11 @@ export default function WorkOrderListView({
                                                 <td style={tdBase} />
                                                 <td style={{ ...tdBase, textAlign: 'right', whiteSpace: 'nowrap' }}>
                                                     <button onClick={() => handleSave(wo)} disabled={isSaving}
-                                                        style={classic ? { fontFamily: xpFont, fontSize: 10, padding: '1px 8px', background: 'linear-gradient(to bottom,#b0e8b0,#70c870)', border: '1px solid #0a3e0a', cursor: 'pointer', marginRight: 4 } : undefined}
-                                                        className={classic ? '' : 'btn btn-sm btn-success me-1'}>
+                                                        style={{ fontFamily: xpFont, fontSize: 10, padding: '1px 8px', background: 'linear-gradient(to bottom,#b0e8b0,#70c870)', border: '1px solid #0a3e0a', cursor: 'pointer', marginRight: 4 }}>
                                                         {isSaving ? '...' : 'Save'}
                                                     </button>
                                                     <button onClick={() => setEditId(null)}
-                                                        style={classic ? { fontFamily: xpFont, fontSize: 10, padding: '1px 6px', background: 'linear-gradient(to bottom,#f0efe6,#dddbd0)', border: '1px solid #808080', cursor: 'pointer' } : undefined}
-                                                        className={classic ? '' : 'btn btn-sm btn-outline-secondary'}>
+                                                        style={{ fontFamily: xpFont, fontSize: 10, padding: '1px 6px', background: 'linear-gradient(to bottom,#f0efe6,#dddbd0)', border: '1px solid #808080', cursor: 'pointer' }}>
                                                         Cancel
                                                     </button>
                                                 </td>
@@ -838,7 +815,7 @@ export default function WorkOrderListView({
                                             <tr
                                                 ref={isHighlighted ? highlightedRowRef : null}
                                                 style={{
-                                                    background: isExpanded ? rowStateBg('expanded', classic) : rowBg,
+                                                    background: isExpanded ? rowStateBg('expanded', true) : rowBg,
                                                     cursor: 'pointer',
                                                     outline: isHighlighted ? '2px solid #0058e6' : undefined,
                                                     outlineOffset: isHighlighted ? '-2px' : undefined,
@@ -846,9 +823,9 @@ export default function WorkOrderListView({
                                                 onClick={() => setExpandedWOId(prev => prev === wo.id ? null : wo.id)}
                                             >
                                                 <td style={{ ...tdBase, padding: '3px 6px', width: 24 }} onClick={e => e.stopPropagation()}>
-                                                    <RowCheckbox classic={classic} checked={sel.isSelected(wo)} onChange={() => sel.toggle(wo)} label={`work order ${wo.name || wo.id}`} />
+                                                    <RowCheckbox classic checked={sel.isSelected(wo)} onChange={() => sel.toggle(wo)} label={`work order ${wo.name || wo.id}`} />
                                                 </td>
-                                                <ExpanderCell classic={classic} expanded={isExpanded} onToggle={() => setExpandedWOId(prev => prev === wo.id ? null : wo.id)} tdStyle={tdBase} tdClassName={classic ? '' : 'ps-2'} label="work order detail" />
+                                                <ExpanderCell classic expanded={isExpanded} onToggle={() => setExpandedWOId(prev => prev === wo.id ? null : wo.id)} tdStyle={tdBase} tdClassName={''} label="work order detail" />
                                                 {/* Root MO — top of the parent/pegging chain, not this WO's own MO.
                                                     A shared component MO feeds several roots; the first is shown and
                                                     the rest sit behind a +N marker. */}
@@ -857,7 +834,7 @@ export default function WorkOrderListView({
                                                         <div style={{ display: 'flex', alignItems: 'center', gap: 3, overflow: 'hidden' }}>
                                                             <CodeChip
                                                                 code={wo.root_mo_code}
-                                                                classic={classic}
+                                                                classic
                                                                 tier={2}
                                                                 link
                                                                 onClick={() => router.push(`/manufacturing-orders?mo=${encodeURIComponent(wo.root_mo_code!)}`)}
@@ -873,13 +850,13 @@ export default function WorkOrderListView({
                                                         </div>
                                                     ) : <span style={{ color: '#bbb' }}>—</span>}
                                                 </td>
-                                                <td style={{ ...tdBase, color: '#888', width: 36 }} className={classic ? '' : 'ps-3'}>{wo.sequence}</td>
+                                                <td style={{ ...tdBase, color: '#888', width: 36 }}>{wo.sequence}</td>
                                                 <td style={{ ...tdBase, overflow: 'hidden' }}
                                                     title={(wo as any).code || wo.name}>
                                                     <div style={{ display: 'flex', alignItems: 'center', gap: 4, overflow: 'hidden' }}>
                                                         <CodeChip
                                                             code={(wo as any).code || wo.name}
-                                                            classic={classic}
+                                                            classic
                                                             tone="accent"
                                                             style={{ fontWeight: 'bold', minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis' }}
                                                         />
@@ -888,7 +865,7 @@ export default function WorkOrderListView({
                                                         </span>
                                                     </div>
                                                 </td>
-                                                <td style={{ ...tdBase, fontSize: classic ? 10 : 11, color: '#444', overflow: 'hidden' }}
+                                                <td style={{ ...tdBase, fontSize: 10, color: '#444', overflow: 'hidden' }}
                                                     title={wo.item_name || ''}>
                                                     <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'block' }}>{wo.item_name || '—'}</span>
                                                 </td>
@@ -897,7 +874,7 @@ export default function WorkOrderListView({
                                                     squeezing that into a shared cell with the item name is what forced
                                                     the name into a 6-character sliver. Chips are allowed to wrap; the
                                                     table scrolls horizontally (table-responsive) rather than clip them. */}
-                                                <td style={{ ...tdBase, fontSize: classic ? 10 : 11, overflow: 'hidden', whiteSpace: 'normal' }}>
+                                                <td style={{ ...tdBase, fontSize: 10, overflow: 'hidden', whiteSpace: 'normal' }}>
                                                     <VariantChips
                                                         combo={wo.combo_label}
                                                         size={wo.size_label}
@@ -906,11 +883,11 @@ export default function WorkOrderListView({
                                                         colorName={wo.color_name}
                                                         colorHex={wo.color_hex}
                                                         labdipCode={wo.labdip_variant_code}
-                                                        classic={classic}
+                                                        classic
                                                         style={{ flexWrap: 'wrap', rowGap: 2 }}
                                                     />
                                                 </td>
-                                                <td style={{ ...tdBase, fontSize: classic ? 10 : 11, overflow: 'hidden' }}>
+                                                <td style={{ ...tdBase, fontSize: 10, overflow: 'hidden' }}>
                                                     {wo.work_center_name
                                                         ? (() => {
                                                             const cs = getChipStyle(wo.work_center_type);
@@ -930,7 +907,7 @@ export default function WorkOrderListView({
                                                         })()
                                                         : '—'}
                                                 </td>
-                                                <td style={{ ...tdBase, fontSize: classic ? 10 : 11 }}>
+                                                <td style={{ ...tdBase, fontSize: 10}}>
                                                     {wo.qty != null ? (() => {
                                                         const done = (wo.qty_completed_total ?? 0) >= wo.qty;
                                                         const pct = Math.min(100, ((wo.qty_completed_total ?? 0) / wo.qty) * 100);
@@ -955,11 +932,11 @@ export default function WorkOrderListView({
                                                         );
                                                     })() : <span style={{ color: '#bbb' }}>—</span>}
                                                 </td>
-                                                <td style={{ ...tdBase, fontSize: classic ? 10 : 11 }}>{fmtDate(wo.target_start_date)}</td>
-                                                <td style={{ ...tdBase, fontSize: classic ? 10 : 11 }}>{fmtDate(wo.target_end_date)}</td>
-                                                <td style={{ ...tdBase, fontSize: classic ? 10 : 11 }}>{fmtDateTime(wo.actual_start_date)}</td>
-                                                <td style={{ ...tdBase, fontSize: classic ? 10 : 11 }}>{fmtDateTime(wo.actual_end_date)}</td>
-                                                <td style={{ ...tdBase, fontSize: classic ? 10 : 11 }}>{fmtDateTime(wo.created_at)}</td>
+                                                <td style={{ ...tdBase, fontSize: 10}}>{fmtDate(wo.target_start_date)}</td>
+                                                <td style={{ ...tdBase, fontSize: 10}}>{fmtDate(wo.target_end_date)}</td>
+                                                <td style={{ ...tdBase, fontSize: 10}}>{fmtDateTime(wo.actual_start_date)}</td>
+                                                <td style={{ ...tdBase, fontSize: 10}}>{fmtDateTime(wo.actual_end_date)}</td>
+                                                <td style={{ ...tdBase, fontSize: 10}}>{fmtDateTime(wo.created_at)}</td>
                                                 <td style={tdBase} onClick={e => e.stopPropagation()}>
                                                     {(() => {
                                                         const hasStaging = woHasStaging(wo);
@@ -985,36 +962,16 @@ export default function WorkOrderListView({
                                                 <td style={{ ...tdBase, textAlign: 'right', whiteSpace: 'nowrap' }} onClick={e => e.stopPropagation()}>
                                                     {/* Fixed action slots — every row reserves the same slot per action so
                                                         icons line up in columns even when a row can't do that action. */}
-                                                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: classic ? 2 : 4 }}>
-                                                        {classic ? (
-                                                            <>
+                                                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 2}}>
+                                                        {<>
                                                                 <ActionSlot width={22} show={canStage(wo)}>
                                                                     <XPActionButton classic tone="primary" icon="bi-box-seam" title="Stage — issue this step's materials to the line" onClick={() => (canScanStage(wo) ? setScanStageWO(wo) : setStageWO(wo))} />
                                                                 </ActionSlot>
                                                                 <ActionSlot width={22} show={canManage && (wo.status === 'PENDING' || wo.status === 'IN_PROGRESS')}>
                                                                     <XPActionButton classic tone="success" icon="bi-plus-lg" title="Log production output" onClick={() => openLog(wo)} />
                                                                 </ActionSlot>
-                                                                <MenuTriggerButton classic={classic} onClick={(e) => toggleMenu(wo.id, e)} />
-                                                            </>
-                                                        ) : (
-                                                            <>
-                                                                <ActionSlot width={30} show={canStage(wo)}>
-                                                                    <button className="btn btn-sm btn-outline-primary py-0 px-2" title="Stage — issue this step's materials to the line" onClick={() => (canScanStage(wo) ? setScanStageWO(wo) : setStageWO(wo))}><i className="bi bi-box-seam" /></button>
-                                                                </ActionSlot>
-                                                                <ActionSlot width={30} show={canManage && wo.status === 'PENDING'}>
-                                                                    <button className="btn btn-sm btn-primary py-0 px-2" title="Start work order" onClick={() => onUpdateStatus(wo.id, 'IN_PROGRESS')}><i className="bi bi-play-fill" /></button>
-                                                                </ActionSlot>
-                                                                <ActionSlot width={30} show={canManage && (wo.status === 'PENDING' || wo.status === 'IN_PROGRESS')}>
-                                                                    <button className="btn btn-sm btn-success py-0 px-2" title="Log production output" onClick={() => openLog(wo)}><i className="bi bi-plus-lg" /></button>
-                                                                </ActionSlot>
-                                                                <ActionSlot width={30} show={canManage && wo.status === 'IN_PROGRESS'}>
-                                                                    <button className="btn btn-sm btn-outline-success py-0 px-2"
-                                                                        title={!canComplete(wo) ? `Target ${wo.qty} not reached — mark complete anyway` : 'Finish work order'}
-                                                                        onClick={() => handleComplete(wo)}><i className="bi bi-check-lg" /></button>
-                                                                </ActionSlot>
-                                                                <MenuTriggerButton classic={classic} onClick={(e) => toggleMenu(wo.id, e)} />
-                                                            </>
-                                                        )}
+                                                                <MenuTriggerButton classic onClick={(e) => toggleMenu(wo.id, e)} />
+                                                            </>}
                                                     </div>
                                                 </td>
                                             </tr>
@@ -1088,7 +1045,7 @@ export default function WorkOrderListView({
                     })()}
 
                     <Pager page={page} total={total} pageSize={pageSize} onPageChange={onPageChange} hideWhenEmpty />
-                    {classic && sel.count > 0 && (
+                    {sel.count > 0 && (
                         <XPStatusBar right={null}>
                             {`${sel.count} selected`}
                         </XPStatusBar>

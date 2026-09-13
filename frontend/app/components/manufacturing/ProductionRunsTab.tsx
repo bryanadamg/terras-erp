@@ -36,7 +36,7 @@ const PR_MATERIAL_COLUMNS: {
     { h: 'MOs', t: 'needs = MOs consuming this component. made = MOs producing it (logged / target).', num: false, wc: 150, wm: 176, bar: 120, sub: 104 },
 ];
 
-const prColWidth = (c: { wc?: number; wm?: number }, classic: boolean) => (classic ? c.wc : c.wm);
+const prColWidth = (c: { wc?: number; wm?: number }, classic: boolean) => (c.wc);
 
 // Measured height of a real material row, kept module-level so it survives the
 // panel unmounting: once the user has seen one loaded panel, every later skeleton
@@ -49,13 +49,13 @@ const PR_ROW_H: Record<'c' | 'm', number> = { c: 27, m: 36 };
 /** Placeholder body for the material table: same columns, same widths, same row
  *  height, and — when the batched Materials-column summary has already told us —
  *  the same NUMBER of rows as the table being fetched. */
-function PRMaterialSkeletonRows({ rows, classic, cellStyle, rowHeight }: {
-    rows: number; classic: boolean; cellStyle: React.CSSProperties; rowHeight: number;
+function PRMaterialSkeletonRows({ rows, cellStyle, rowHeight }: {
+    rows: number; cellStyle: React.CSSProperties; rowHeight: number;
 }) {
     return (
         <>
             {Array.from({ length: rows }, (_, r) => (
-                <tr key={`skel-${r}`} style={lvSubRow(classic, r, { zebra: true })}>
+                <tr key={`skel-${r}`} style={lvSubRow(true, r, { zebra: true })}>
                     {PR_MATERIAL_COLUMNS.map((c, ci) => {
                         // Deterministic, not random: the bars must not reshuffle on
                         // re-render while the fetch is in flight. Second lines land on
@@ -71,8 +71,8 @@ function PRMaterialSkeletonRows({ rows, classic, cellStyle, rowHeight }: {
                                     display: 'flex', flexDirection: 'column', gap: 2,
                                     alignItems: c.num ? 'flex-end' : 'flex-start',
                                 }}>
-                                    <SkeletonBar width={Math.round(c.bar * jitter)} height={classic ? 9 : 11} />
-                                    {showSub && <SkeletonBar width={Math.round((c.sub || 0) * jitter)} height={classic ? 7 : 9} />}
+                                    <SkeletonBar width={Math.round(c.bar * jitter)} height={9} />
+                                    {showSub && <SkeletonBar width={Math.round((c.sub || 0) * jitter)} height={7} />}
                                 </div>
                             </td>
                         );
@@ -126,7 +126,6 @@ export default function ProductionRunsTab({
     const [printPreviewPR, setPrintPreviewPR] = useState<any>(null);
     const { openId: openPrMenuId, pos: prMenuPos, toggle: togglePrMenu, close: closePrMenu } = useFloatingMenu();
 
-    const classic = currentStyle === 'classic';
     const filteredProductionRuns = productionRuns || [];
     // Both filters are server-side (see /production-runs has_sales_order + progress) —
     // client-side narrowing would only filter the current page, not the whole result set.
@@ -135,12 +134,12 @@ export default function ProductionRunsTab({
     // Skeleton row height: seeded from the module-level cache (so it is already
     // right on a remount), then corrected by measuring the first real row the user
     // sees. Re-seeded on a theme switch because classic rows are denser.
-    const [subRowHeight, setSubRowHeight] = useState<number>(PR_ROW_H[classic ? 'c' : 'm']);
-    useEffect(() => { setSubRowHeight(PR_ROW_H[classic ? 'c' : 'm']); }, [classic]);
+    const [subRowHeight, setSubRowHeight] = useState<number>(PR_ROW_H['c']);
+    useEffect(() => { setSubRowHeight(PR_ROW_H['c']); }, []);
     const measureSubRow = (el: HTMLTableRowElement | null) => {
         if (!el) return;
         const h = el.offsetHeight;
-        const k = classic ? 'c' : 'm';
+        const k = 'c';
         // Guarded so writing the measurement can't loop: only a real change lands.
         if (h > 8 && Math.abs(PR_ROW_H[k] - h) > 1) {
             PR_ROW_H[k] = h;
@@ -258,22 +257,21 @@ export default function ProductionRunsTab({
                     onChange={setPrSearch}
                     placeholder="Search by code, style, or BOM..."
                     total={prTotal}
-                    classic={classic}
                     showCount={filtersActive}
                     actions={
                         <>
                             {canManage && (
-                                <ToolbarButton classic={classic} tone="launch" icon="bi-collection-play" onClick={onNewProductionRun}>New Production Run</ToolbarButton>
+                                <ToolbarButton classic tone="launch" icon="bi-collection-play" onClick={onNewProductionRun}>New Production Run</ToolbarButton>
                             )}
                             {onPrint && (
-                                <ToolbarButton classic={classic} tone="neutral" icon="bi-printer" printable onClick={onPrint}>Print</ToolbarButton>
+                                <ToolbarButton classic tone="neutral" icon="bi-printer" printable onClick={onPrint}>Print</ToolbarButton>
                             )}
                         </>
                     }
                     filters={
                         <>
                             <FilterChipBar
-                                classic={classic}
+                                classic
                                 value={prSoFilter || ''}
                                 onChange={(v: string) => setPrSoFilter?.(v === prSoFilter ? '' : v)}
                                 options={[
@@ -283,7 +281,7 @@ export default function ProductionRunsTab({
                                 ]}
                             />
                             <FilterChipBar
-                                classic={classic}
+                                classic
                                 value={prProgressFilter || ''}
                                 onChange={(v: string) => setPrProgressFilter?.(v === prProgressFilter ? '' : v)}
                                 options={[
@@ -308,11 +306,11 @@ export default function ProductionRunsTab({
                         // when a PR has many linked MOs. BOM/Style has no width -> it flexes to
                         // absorb the remaining space.
                         tableLayout: 'fixed',
-                        fontFamily: classic ? xpFont : undefined,
-                        fontSize: classic ? '11px' : undefined,
-                        background: classic ? '#fff' : undefined,
-                    }} className={classic ? '' : 'table table-hover align-middle mb-0'}>
-                        <thead style={{ ...lvThead(classic, true), fontSize: classic ? '10px' : '9pt' }}>
+                        fontFamily: xpFont,
+                        fontSize: '11px',
+                        background: '#fff',
+                    }}>
+                        <thead style={{ ...lvThead(true, true), fontSize: '10px'}}>
                             <tr>
                                 {(() => {
                                     const colWidths: Record<string, string | undefined> = {
@@ -328,7 +326,7 @@ export default function ProductionRunsTab({
                                     };
                                     return ['', 'Code', 'BOM / Style', 'MOs', 'Progress', 'Status', 'Materials', 'Due Date', 'Actions'].map((h, i) => (
                                         <th key={h || `col-${i}`} style={{
-                                            ...lvTh(classic),
+                                            ...lvTh(true),
                                             textAlign: h === 'Actions' ? 'right' : 'left',
                                             width: colWidths[h],
                                         }}>{h}</th>
@@ -338,7 +336,7 @@ export default function ProductionRunsTab({
                         </thead>
                         <tbody ref={listBodyRef}>
                             {filteredProductionRuns.length === 0 && dataLoading.productionRuns && (
-                                <TableSkeleton rows={8} cols={skel.cols ?? 9} classic={classic} rowHeight={skel.rowHeight} fillHeight={skel.fillHeight} />
+                                <TableSkeleton rows={8} cols={skel.cols ?? 9} classic rowHeight={skel.rowHeight} fillHeight={skel.fillHeight} />
                             )}
                             {filteredProductionRuns.map((pr: any, rowIdx: number) => {
                                 const mos = pr.manufacturing_orders || [];
@@ -346,12 +344,10 @@ export default function ProductionRunsTab({
                                 const done = mos.filter((m: any) => ['COMPLETED', 'DELIVERED'].includes(m.status)).length;
                                 const total = mos.length;
                                 const pct = total > 0 ? Math.round((done / total) * 100) : 0;
-                                const rowBg = classic
-                                    ? lvZebra(true, rowIdx)
-                                    : undefined;
-                                const tdStyle: React.CSSProperties = classic ? {
+                                const rowBg = lvZebra(true, rowIdx);
+                                const tdStyle: React.CSSProperties = {
                                     border: '1px solid #c0bdb5', padding: '4px 8px', color: '#000', verticalAlign: 'middle',
-                                } : {};
+                                };
                                 const isExpanded = !!expandedPRs[pr.id];
                                 const reqs: any[] = prMaterialReqs[pr.id] || [];
                                 const isLoading = !!prMaterialReqsLoading[pr.id];
@@ -366,27 +362,24 @@ export default function ProductionRunsTab({
                                 const hasShortfall = mstat ? statusShort > 0 : reqs.some((r: any) => (r.status ? r.status === 'SHORT' : r.shortfall > 0.005));
                                 return (
                                     <React.Fragment key={pr.id}>
-                                    <tr style={{ background: isExpanded ? rowStateBg('expanded', classic) : rowBg, cursor: 'pointer' }} onClick={() => togglePR(pr.id)} title="Material Requirements">
-                                        <ExpanderCell classic={classic} expanded={isExpanded} onToggle={() => togglePR(pr.id)} tdStyle={tdStyle} tone={hasShortfall ? 'alert' : 'default'} label="material requirements" />
+                                    <tr style={{ background: isExpanded ? rowStateBg('expanded', true) : rowBg, cursor: 'pointer' }} onClick={() => togglePR(pr.id)} title="Material Requirements">
+                                        <ExpanderCell classic expanded={isExpanded} onToggle={() => togglePR(pr.id)} tdStyle={tdStyle} tone={hasShortfall ? 'alert' : 'default'} label="material requirements" />
                                         <td style={tdStyle}>
-                                            <CodeChip code={pr.code} classic={classic} style={{ fontWeight: 'bold' }} />
+                                            <CodeChip code={pr.code} classic style={{ fontWeight: 'bold' }} />
                                             {pr.sales_order_id && (
                                                 <div style={{ marginTop: 3 }}>
-                                                    <span style={classic ? {
+                                                    <span style={{
                                                         fontSize: '8px', background: '#dce8ff', border: '1px solid #9ab0e0',
                                                         color: '#003ea6', padding: '0 5px', fontWeight: 'bold', display: 'inline-flex', alignItems: 'center', fontFamily: xpFont,
-                                                    } : {
-                                                        fontSize: '0.65rem', background: '#cfe2ff', border: '1px solid #9ec5fe',
-                                                        color: '#0a58ca', padding: '1px 6px', borderRadius: CHIP_RADIUS, fontWeight: 'bold', display: 'inline-flex', alignItems: 'center',
                                                     }} title="Originating Sales Order">
-                                                        <i className="bi bi-receipt me-1" style={{ fontSize: classic ? '7px' : undefined }}></i>SO: {pr.sales_order_code || '—'}
+                                                        <i className="bi bi-receipt me-1" style={{ fontSize: '7px'}}></i>SO: {pr.sales_order_code || '—'}
                                                     </span>
                                                 </div>
                                             )}
                                         </td>
                                         <td style={{ ...tdStyle, overflow: 'hidden' }}>
                                             <div style={{
-                                                fontWeight: 'bold', fontSize: classic ? '11px' : undefined,
+                                                fontWeight: 'bold', fontSize: '11px',
                                                 overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
                                             }} title={pr.bom_entries?.length > 0
                                                 ? pr.bom_entries.map((e: any) => e.bom?.item_name || e.bom?.item_code || e.bom?.code).filter(Boolean).join(' / ')
@@ -400,7 +393,7 @@ export default function ProductionRunsTab({
                                                 : pr.bom?.code
                                             ) && (
                                                 <CodeChip
-                                                    classic={classic}
+                                                    classic
                                                     tier={2}
                                                     style={{
                                                         display: 'block', maxWidth: '100%',
@@ -444,27 +437,27 @@ export default function ProductionRunsTab({
                                         <td style={{ ...tdStyle, textAlign: 'right', whiteSpace: 'nowrap' }} onClick={(e) => e.stopPropagation()}>
                                             <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: '4px' }}>
                                                 <XPActionButton
-                                                    classic={classic}
+                                                    classic
                                                     tone="primary"
                                                     icon="bi-printer"
                                                     title="Print Material Pull Sheet"
                                                     onClick={() => handlePrintPR(pr)}
                                                 />
-                                                <MenuTriggerButton classic={classic} onClick={(e) => togglePrMenu(pr.id, e)} />
+                                                <MenuTriggerButton classic onClick={(e) => togglePrMenu(pr.id, e)} />
                                             </div>
                                         </td>
                                     </tr>
                                     {isExpanded && (
                                         <tr>
                                             <td colSpan={9} className="p-0 border-0">
-                                            <ExpandedRowPanel classic={classic}>
-                                            <ExpandedRowPanelBody classic={classic}>
+                                            <ExpandedRowPanel classic>
+                                            <ExpandedRowPanelBody classic>
                                                 {/* Empty message only once the pull has actually finished — while it
                                                     is in flight the real header renders over a skeleton body instead.
                                                     A background re-pull (list refresh) keeps the current rows on
                                                     screen and swaps them when the fresh ones land. */}
                                                 {reqs.length === 0 && !isLoading ? (
-                                                    <span style={{ fontSize: 11, color: '#999', fontFamily: classic ? xpFont : undefined }}>
+                                                    <span style={{ fontSize: 11, color: '#999', fontFamily: xpFont}}>
                                                         No component requirements found for this Production Run.
                                                     </span>
                                                 ) : (
@@ -474,7 +467,7 @@ export default function ProductionRunsTab({
                                                             if (rootMos.length === 0) return null;
                                                             return (
                                                                 <div style={{ marginBottom: 8, display: 'flex', alignItems: 'center', gap: 4, flexWrap: 'wrap' }}>
-                                                                    <span style={{ fontSize: classic ? 9 : 10, color: '#555', fontFamily: classic ? xpFont : undefined, marginRight: 2, whiteSpace: 'nowrap' }}>
+                                                                    <span style={{ fontSize: 9, color: '#555', fontFamily: xpFont, marginRight: 2, whiteSpace: 'nowrap' }}>
                                                                         Linked MOs:
                                                                     </span>
                                                                     {rootMos.map((mo: any) => (
@@ -484,13 +477,13 @@ export default function ProductionRunsTab({
                                                                                 title={`View ${mo.code} in Manufacturing Orders (${mo.status})`}
                                                                                 style={{ padding: 0, background: 'none', border: 'none', cursor: 'pointer' }}
                                                                             >
-                                                                                <CodeChip code={mo.code} classic={classic} link />
+                                                                                <CodeChip code={mo.code} classic link />
                                                                             </button>
                                                                         ))}
                                                                 </div>
                                                             );
                                                         })()}
-                                                        <div style={{ fontSize: classic ? 10 : 11, fontWeight: 'bold', marginBottom: 4, fontFamily: classic ? xpFont : undefined, color: '#333' }}>
+                                                        <div style={{ fontSize: 10, fontWeight: 'bold', marginBottom: 4, fontFamily: xpFont, color: '#333' }}>
                                                             {/* While the rows are in flight the count comes from the batched
                                                                 material-status summary, which counts the same components the
                                                                 detail rows are built from — so the caption doesn't have to
@@ -527,13 +520,13 @@ export default function ProductionRunsTab({
                                                             rather than from whatever the body happens to hold: the skeleton
                                                             and the loaded grid then occupy identical geometry and nothing
                                                             shifts when the figures arrive. */}
-                                                        <table style={{ ...lvSubTable(classic), tableLayout: 'fixed' }}>
+                                                        <table style={{ ...lvSubTable(true), tableLayout: 'fixed' }}>
                                                             <thead>
                                                                 <tr>
                                                                     {PR_MATERIAL_COLUMNS.map((col) => (
                                                                         // Full cell borders, not lvSubTd's single rule: at 10 columns
                                                                         // this reads as a grid and the verticals do real work.
-                                                                        <th key={col.h} title={col.t || undefined} style={{ ...lvSubTh(classic), textAlign: col.num ? 'right' : 'left', border: classic ? '1px solid #808080' : '1px solid #dee2e6', cursor: col.t ? 'help' : undefined, width: prColWidth(col, classic) }}>{col.h}</th>
+                                                                        <th key={col.h} title={col.t || undefined} style={{ ...lvSubTh(true), textAlign: col.num ? 'right' : 'left', border: '1px solid #808080', cursor: col.t ? 'help' : undefined, width: prColWidth(col, true) }}>{col.h}</th>
                                                                     ))}
                                                                 </tr>
                                                             </thead>
@@ -546,11 +539,10 @@ export default function ProductionRunsTab({
                                                                         // placeholder is as tall as the table replacing it. Only
                                                                         // when that summary is missing does it fall back to a guess.
                                                                         rows={Math.max(1, Math.min(statusTotal || 3, 30))}
-                                                                        classic={classic}
                                                                         rowHeight={subRowHeight}
                                                                         cellStyle={{
-                                                                            ...lvSubTd(classic),
-                                                                            border: classic ? '1px solid #c0bdb5' : '1px solid #dee2e6',
+                                                                            ...lvSubTd(true),
+                                                                            border: '1px solid #c0bdb5',
                                                                         }}
                                                                     />
                                                                 )}
@@ -561,13 +553,13 @@ export default function ProductionRunsTab({
                                                                     // Zebra is opt-in per sub-table; this grid is wide enough to earn
                                                                     // it. The shortage tint is passed as `fill` so it overrides the
                                                                     // stripe rather than alternating with it.
-                                                                    const rowStyle = lvSubRow(classic, ri, {
+                                                                    const rowStyle = lvSubRow(true, ri, {
                                                                         zebra: true,
-                                                                        fill: short ? (classic ? '#fff0f0' : '#fff5f5') : undefined,
+                                                                        fill: short ? ('#fff0f0') : undefined,
                                                                     });
                                                                     const cellStyle: React.CSSProperties = {
-                                                                        ...lvSubTd(classic),
-                                                                        border: classic ? '1px solid #c0bdb5' : '1px solid #dee2e6',
+                                                                        ...lvSubTd(true),
+                                                                        border: '1px solid #c0bdb5',
                                                                         verticalAlign: 'middle',
                                                                     };
                                                                     const gross = parseFloat(req.gross_required ?? req.total_required);
@@ -630,13 +622,13 @@ export default function ProductionRunsTab({
                                                                                 clip instead of letting CodeChip's nowrap span bleed
                                                                                 into Item Name (fixed layout won't grow the cell for it).
                                                                                 Full code still available via CodeChip's own title. */}
-                                                                            <td style={{ ...cellStyle, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}><CodeChip code={req.item_code} classic={classic} /></td>
+                                                                            <td style={{ ...cellStyle, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}><CodeChip code={req.item_code} classic /></td>
                                                                             <td style={cellStyle}>
                                                                                 {req.item_name}
                                                                                 {/* Netting is size-aware, so a sized component yields one
                                                                                     row per size — without the chip they read as duplicates. */}
                                                                                 {req.size_label && (
-                                                                                    <VariantChip kind="size" classic={classic}
+                                                                                    <VariantChip kind="size" classic
                                                                                         title={`Size: ${req.size_label} — netted separately from other sizes`}>
                                                                                         {req.size_label}
                                                                                     </VariantChip>
@@ -651,7 +643,7 @@ export default function ProductionRunsTab({
                                                                             >
                                                                                 {gross.toFixed(2)}
                                                                                 {issued > 0.0001 && (
-                                                                                    <div style={{ color: '#777', fontWeight: 'normal', fontSize: classic ? 9 : 10 }}>
+                                                                                    <div style={{ color: '#777', fontWeight: 'normal', fontSize: 9}}>
                                                                                         {net.toFixed(2)} net
                                                                                     </div>
                                                                                 )}
@@ -672,7 +664,7 @@ export default function ProductionRunsTab({
                                                                             >
                                                                                 {parseFloat(req.qty_available).toFixed(2)}
                                                                                 {(req.lots || []).length > 0 && (
-                                                                                    <div style={{ color: '#777', fontWeight: 'normal', fontSize: classic ? 9 : 10 }}>
+                                                                                    <div style={{ color: '#777', fontWeight: 'normal', fontSize: 9}}>
                                                                                         {(req.lots || []).length} lot{(req.lots || []).length === 1 ? '' : 's'}
                                                                                     </div>
                                                                                 )}
@@ -713,7 +705,7 @@ export default function ProductionRunsTab({
                                                                             >
                                                                                 {ui.text}
                                                                             </td>
-                                                                            <td style={{ ...cellStyle, fontSize: classic ? 9 : 11, color: '#555' }}>
+                                                                            <td style={{ ...cellStyle, fontSize: 9, color: '#555' }}>
                                                                                 <div title={needsDetail || undefined} style={{ cursor: needsList.length ? 'help' : undefined }}>
                                                                                     <span style={{ color: '#888' }}>needs:</span> {needsList.length} MO{needsList.length === 1 ? '' : 's'} ({needsTotal.toFixed(2)} total)
                                                                                 </div>
@@ -745,8 +737,8 @@ export default function ProductionRunsTab({
             ) : (
                 <div style={{
                     padding: '32px', textAlign: 'center',
-                    fontFamily: classic ? xpFont : undefined,
-                    fontSize: classic ? '11px' : undefined,
+                    fontFamily: xpFont,
+                    fontSize: '11px',
                     color: '#888',
                 }}>
                     <i className="bi bi-collection-play" style={{ fontSize: 32, display: 'block', marginBottom: 8, opacity: 0.4 }}></i>
