@@ -12,7 +12,7 @@ import { useConfirm } from '../../context/ConfirmContext';
 import { LotChip, LotChips, LotChipRow } from '../shared/LotChips';
 import { XPStatusBar, XPEmptyState, TableSkeleton, useTableSkeletonMetrics, StatusChip, Chip, statusTint, useFloatingMenu, MenuTriggerButton, FloatingMenu, ExpandedRowPanel, XPActionButton, CODE_FONT, rowStateBg, CHIP_RADIUS, XP_BTN, ProgressBar, progressToneColor, useSortable } from '../shared/xpTheme';
 import { LV_XP_FONT, lvBtn, lvInput, lvTd, lvLabel, lvRow, lvSubTh, lvSubTd, lvSubRow, ExpanderCell, lvThSticky, lvSubTable, RowCheckboxCell, LV_CHECK_COL_W, SortableTh } from '../shared/listViewTheme';
-import { ShellWindow, ShellTitleBar, xpToolbar } from '../shared/shellTheme';
+import { ShellWindow, ShellTitleBar, xpToolbar, FilterChipBar, ToolbarCount } from '../shared/shellTheme';
 import Pager from '../shared/Pager';
 import ModalWrapper from '../shared/ModalWrapper';
 import { Tabs } from '../shared/Tabs';
@@ -700,6 +700,10 @@ function SOPickerBoard({ pickableSOs, loading, tzDate, canManage, onRefresh, onP
     // "Ready" filter — hides orders with nothing packed yet, since those can't
     // be picked at all today; the planner's actual queue is the rest.
     const [readyOnly, setReadyOnly] = useState(false);
+    const readyCount = useMemo(
+        () => pickableSOs.filter((so: any) => num(so.cartons_ready) > 0).length,
+        [pickableSOs],
+    );
     const filtered = useMemo(
         () => readyOnly ? pickableSOs.filter((so: any) => num(so.cartons_ready) > 0) : pickableSOs,
         [pickableSOs, readyOnly],
@@ -719,20 +723,26 @@ function SOPickerBoard({ pickableSOs, loading, tzDate, canManage, onRefresh, onP
                 <button className={XP_BTN} style={xpBtn()} onClick={onRefresh} title="Re-score open orders">
                     <i className="bi bi-arrow-clockwise" style={{ marginRight: 4 }} />Refresh
                 </button>
-                <label style={{ display: 'flex', alignItems: 'center', gap: 4, fontFamily: xpFont, fontSize: 11, color: '#000', cursor: 'pointer', whiteSpace: 'nowrap', marginLeft: 10 }}
-                    title="Hide orders with nothing packed yet — nothing there can be picked today">
-                    <input type="checkbox" checked={readyOnly} onChange={e => setReadyOnly(e.target.checked)} style={{ margin: 0 }} />
-                    Ready to pick only
-                </label>
+                <FilterChipBar
+                    classic
+                    style={{ marginLeft: 10 }}
+                    value={readyOnly ? 'ready' : 'all'}
+                    onChange={v => setReadyOnly(v === 'ready')}
+                    options={[
+                        { value: 'all', label: 'All orders', count: pickableSOs.length,
+                          title: 'Every open order with anything outstanding' },
+                        { value: 'ready', label: 'Ready to pick', count: readyCount,
+                          title: 'Hide orders with nothing packed yet — nothing there can be picked today' },
+                    ]}
+                />
                 <span style={{ fontSize: 10, color: '#666', marginLeft: 8, maxWidth: 620, lineHeight: 1.3 }}>
                     Soonest delivery first. &quot;Ready&quot; counts whole cartons already packed and not on
                     another pick list — cartons are suggested oldest-first, and the last one may overshoot
                     since a carton is never split.
                 </span>
-                <span style={{ marginLeft: 'auto', fontSize: 11, color: '#333', whiteSpace: 'nowrap' }}>
+                <ToolbarCount classic right>
                     {filtered.length.toLocaleString()} order{filtered.length !== 1 ? 's' : ''}
-                    {readyOnly ? '' : ` (of ${pickableSOs.length.toLocaleString()})`}
-                </span>
+                </ToolbarCount>
             </div>
             <div style={{ flex: 1, overflowY: 'auto', background: '#fff', minHeight: 0, fontFamily: xpFont }}>
                 {loading
