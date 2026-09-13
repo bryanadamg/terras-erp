@@ -41,12 +41,12 @@ export const EffBar = ({ eff, target, label, height = 9 }: {
  * into its tracks with no shift. */
 export const gridColumns = (classic: boolean) => ({
     display: 'grid',
-    gridTemplateColumns: `repeat(auto-fill, minmax(${classic ? 240 : 250}px, 1fr))`,
-    gap: classic ? 8 : 12,
+    gridTemplateColumns: `repeat(auto-fill, minmax(${240}px, 1fr))`,
+    gap: 8,
 } as React.CSSProperties);
 
 export const CardGrid = ({ classic, children }: { classic: boolean; children: React.ReactNode }) => (
-    <div style={gridColumns(classic)}>{children}</div>
+    <div style={gridColumns(true)}>{children}</div>
 );
 
 /**
@@ -77,7 +77,7 @@ export const MachineCard = ({
     footer?: React.ReactNode;
     children: React.ReactNode;
 }) => {
-    if (classic) {
+    if (true) {
         return (
             <div onClick={onClick} title={title} className="tile-hover"
                 style={{
@@ -163,8 +163,7 @@ export const GroupHeader = <M,>({ classic, sec, labels, action }: {
         </>
     );
     const right = action ? <span style={{ marginLeft: 'auto' }}>{action}</span> : null;
-    return classic ? (
-        <div style={xpToolbar({
+    return <div style={xpToolbar({
             marginBottom: 6, border: '1px solid #b0a898', borderRadius: SECTION_RADIUS,
             fontFamily: xpFont, fontSize: 11, fontWeight: 'bold', color: familyColor('blue'),
         })}>
@@ -172,15 +171,7 @@ export const GroupHeader = <M,>({ classic, sec, labels, action }: {
             <span>{sectionLabel(sec)}</span>
             {health}
             {right}
-        </div>
-    ) : (
-        <div className="d-flex align-items-center gap-2 mb-2 pb-1 border-bottom small">
-            <i className="bi bi-collection text-secondary" />
-            <span className="fw-semibold">{sectionLabel(sec)}</span>
-            {health}
-            {right}
-        </div>
-    );
+        </div>;
 };
 
 /**
@@ -212,7 +203,7 @@ export const MonitorChipBar = <M,>({
     const runningToggle = (
         <span style={{ marginLeft: isGrouped ? 'auto' : undefined }}>
             <ToggleChip
-                classic={classic}
+                classic
                 on={runningOnly}
                 tone="green"
                 toneIdle
@@ -225,18 +216,16 @@ export const MonitorChipBar = <M,>({
         </span>
     );
     return (
-        <div style={classic
-            ? xpToolbar({ marginBottom: 8, border: '1px solid #b0a898', borderRadius: SECTION_RADIUS })
-            : { display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap', marginBottom: 12 }}>
+        <div style={xpToolbar({ marginBottom: 8, border: '1px solid #b0a898', borderRadius: SECTION_RADIUS })}>
             {!isGrouped ? runningToggle : null}
             {isGrouped && (
-                <span style={{ fontSize: classic ? 11 : 12, color: '#666', fontFamily: classic ? xpFont : undefined }}>
+                <span style={{ fontSize: 11, color: '#666', fontFamily: xpFont}}>
                     <i className="bi bi-funnel" style={{ marginRight: 4 }} />{labels.group}
                 </span>
             )}
             {isGrouped && (
                 <FilterChipBar
-                    classic={classic}
+                    classic
                     value={groupFilter ?? ALL_GROUPS}
                     onChange={v => onGroupChange(v === ALL_GROUPS || v === groupFilter ? null : v)}
                     options={[
