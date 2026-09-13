@@ -1111,31 +1111,76 @@ function PackingOrderForm({ locPickerTreeOptions, machineOptions, defaultSourceL
         }
     };
 
-    // Once an SO is picked (and the item is already fixed — from a Quarantine
-    // Packing deep link, or a prior manual pick), auto-select the order line
-    // that's unambiguous. Colour and combo are order/production-level picks,
-    // never baked into item_id (Item.variant_type just says which library the
-    // SO line's own color_id/attribute_values came from), so a style ordered in
-    // several colours/combos as separate lines needs those matched too, same as
-    // size. Each hint only narrows if the source lot actually carried it, and
-    // never past zero candidates — a hint that doesn't match anything present
-    // is dropped rather than blocking the match, since a stale attribute snapshot
-    // shouldn't defeat an otherwise-exact match. Ties are left for the planner.
-    useEffect(() => {
-        if (!soId || !itemId || soLineId) return;
-        let candidates = soLines.filter((l: any) => String(l.item_id) === String(itemId));
-        if (!candidates.length) return;
+    // Which order lines the stock being packed may be raised against.
+    //
+    // Opened from Quarantine Packing's Pack button, the modal is holding one
+    // physical group of lots, and that group's identity — size, colour, combo —
+    // decides the line. Packing an L lot against the XL line fulfils demand that
+    // was never made and leaves the real XL line looking shipped; nothing
+    // downstream re-checks the pairing, so it is a gate here, not a suggestion.
+    // Colour and combo are order/production-level picks, never baked into item_id
+    // (Item.variant_type just says which library the line's own
+    // color_id/attribute_values came from), so a style ordered in several
+    // colours/combos as separate lines needs those matched too, same as size.
+    //
+    // Size matches on the folded NAME, which is the size identity the rest of the
+    // plant nets on: a line states its size through `size_id` (the Size master)
+    // since the size/BOM decoupling and carries no BOMSize id, so the lot's
+    // `bom_size_id` can only match a legacy line. The id is still tried as a
+    // fallback for exactly those rows.
+    //
+    // Each hint only narrows while something still matches — a hint that matches
+    // no line at all is dropped rather than locking every line out, since a stale
+    // snapshot must not leave the planner with nothing to pick. `null` = packing
+    // to stock, or a manual New Packing Order: no lot, so no constraint.
+    const lotAllowedLineIds = useMemo<Set<string> | null>(() => {
+        const itemHint = initialValues?.item_id;
+        const sizeIdHint = initialValues?.bom_size_id;
+        const sizeTextHint = String(initialValues?.size_label || '').trim().toLowerCase();
+        const colorHint = initialValues?.color_id;
+        const comboHint = initialValues?.combo_value_id;
+        if (!itemHint && !sizeIdHint && !sizeTextHint && !colorHint && !comboHint) return null;
 
+        let candidates = soLines;
         const narrow = (pred: (l: any) => boolean) => {
             const next = candidates.filter(pred);
             if (next.length) candidates = next;
         };
-        const sizeHint = initialValues?.bom_size_id;
-        const colorHint = initialValues?.color_id;
-        const comboHint = initialValues?.combo_value_id;
-        if (sizeHint) narrow((l: any) => l.bom_size_id && String(l.bom_size_id) === String(sizeHint));
+        if (itemHint) narrow((l: any) => String(l.item_id) === String(itemHint));
+        if (sizeTextHint) {
+            narrow((l: any) => String(l.size_display || '').trim().toLowerCase() === sizeTextHint);
+        } else if (sizeIdHint) {
+            narrow((l: any) => l.bom_size_id && String(l.bom_size_id) === String(sizeIdHint));
+        }
         if (colorHint) narrow((l: any) => l.color_id && String(l.color_id) === String(colorHint));
         if (comboHint) narrow((l: any) => (l.attribute_value_ids || []).some((id: any) => String(id) === String(comboHint)));
+        return new Set(candidates.map((l: any) => String(l.id)));
+    }, [soLines, initialValues]);
+
+    const lockedLineTitle = 'This order line does not match the stock being packed — its size, colour or combo is different';
+
+    // What the lot is, in words, for the note above the picker. The colour hint is
+    // an id here (the deep link carries no code), so it is left to the chips on the
+    // rows themselves rather than printed as a UUID.
+    const lotHintText = [
+        initialValues?.size_label ? `size ${initialValues.size_label}` : '',
+    ].filter(Boolean).join(', ');
+
+    // A line the gate rules out can't stay ticked: the SO can land after the
+    // deep-link line id was seeded, and the planner can pick a line and then
+    // switch orders.
+    useEffect(() => {
+        if (soLineId && lotAllowedLineIds && !lotAllowedLineIds.has(String(soLineId))) setSoLineId('');
+    }, [lotAllowedLineIds, soLineId]);
+
+    // Once an SO is picked (and the item is already fixed — from a Quarantine
+    // Packing deep link, or a prior manual pick), auto-select the order line
+    // that's unambiguous. Ties are left for the planner.
+    useEffect(() => {
+        if (!soId || !itemId || soLineId) return;
+        let candidates = soLines.filter((l: any) => String(l.item_id) === String(itemId));
+        if (lotAllowedLineIds) candidates = candidates.filter((l: any) => lotAllowedLineIds.has(String(l.id)));
+        if (!candidates.length) return;
 
         if (candidates.length === 1) {
             applySoLine(String(candidates[0].id));
@@ -1151,7 +1196,7 @@ function PackingOrderForm({ locPickerTreeOptions, machineOptions, defaultSourceL
             && String(l.uom2_factor ?? '') === String(first.uom2_factor ?? ''));
         if (sameUnit && !uom2) applyLineAltUnit(first, false);
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [soId, itemId, soLines, soLineId]);
+    }, [soId, itemId, soLines, soLineId, lotAllowedLineIds]);
 
     // Backfill the factor's length unit once the UOM master lands.
     //
@@ -1277,6 +1322,15 @@ function PackingOrderForm({ locPickerTreeOptions, machineOptions, defaultSourceL
                                 classic={CLASSIC}
                                 title="Fixes the item being packed — colour and variant attributes are inherited from the line"
                             >Order line</FieldLabel>
+                            {/* Say why the greyed rows are greyed — a disabled checkbox
+                                with no reason reads as a bug. Only when the gate is
+                                actually holding something back. */}
+                            {lotAllowedLineIds && soLines.some((l: any) => !lotAllowedLineIds.has(String(l.id))) ? (
+                                <div style={{ fontSize: 10, color: '#777', marginBottom: 3 }}>
+                                    <i className="bi bi-lock-fill me-1" />
+                                    Only lines matching the stock being packed{lotHintText ? ` (${lotHintText})` : ''} can be picked
+                                </div>
+                            ) : null}
                             <div style={{
                                 border: '1px solid #7f9db9', background: 'white',
                                 maxHeight: 220, overflowY: 'auto',
@@ -1285,13 +1339,23 @@ function PackingOrderForm({ locPickerTreeOptions, machineOptions, defaultSourceL
                                     <div style={{ color: '#aaa', padding: '4px 6px', fontSize: 11 }}>— this order has no lines —</div>
                                 ) : soLines.map((l: any) => {
                                     const checked = String(l.id) === String(soLineId);
+                                    const locked = !!lotAllowedLineIds && !lotAllowedLineIds.has(String(l.id));
                                     return (
-                                        <label key={l.id} style={lvPickerRow(CLASSIC, checked)}>
+                                        <label
+                                            key={l.id}
+                                            title={locked ? lockedLineTitle : undefined}
+                                            style={{
+                                                ...lvPickerRow(CLASSIC, checked),
+                                                ...(locked ? { opacity: 0.45, cursor: 'not-allowed' } : null),
+                                            }}
+                                        >
                                             <RowCheckbox
                                                 classic={CLASSIC}
                                                 checked={checked}
+                                                disabled={locked}
+                                                title={locked ? lockedLineTitle : undefined}
                                                 label={l.item_name || l.item_code || 'line'}
-                                                onChange={() => applySoLine(checked ? '' : String(l.id))}
+                                                onChange={() => { if (!locked) applySoLine(checked ? '' : String(l.id)); }}
                                             />
                                             <div style={{ display: 'flex', flexDirection: 'column', gap: 2, minWidth: 0, flex: 1 }}>
                                                 <div style={{ display: 'flex', alignItems: 'center', gap: 4, flexWrap: 'wrap' }}>

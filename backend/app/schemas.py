@@ -4196,6 +4196,12 @@ class QuarantineGroupResponse(BaseModel):
     # The MO's sized-BOM pick, if any — lets the Packing form auto-match this
     # group to the one open SO line ordered in the same size/colour/combo.
     bom_size_id: UUID | None = None
+    # That same size as TEXT, off the MO's snapshot. The id alone cannot match an
+    # SO line: a line states its size through `size_id` (the Size master) since the
+    # size/BOM decoupling and carries no BOMSize id at all, and a BOMSize id is
+    # per-BOM anyway. Size identity across the plant is the folded NAME (see
+    # netting_service) — so this is what the Packing form compares.
+    size_label: str | None = None
     item_id: UUID
     item_code: str | None = None
     item_name: str | None = None
