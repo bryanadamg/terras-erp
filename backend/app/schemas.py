@@ -3718,6 +3718,10 @@ class PickListLineResponse(BaseModel):
     # Surat Jalan "WARNA" column — decorated from the SO line, not stored here.
     color_name: str | None = None
     color_code: str | None = None
+    # The ordered shade's swatch, off the Color Library row. Carried so a line
+    # whose carton has no resolvable identity of its own still draws a shade CHIP
+    # with its colour on it, the way every other list does, instead of bare text.
+    color_hex: str | None = None
     attribute_value_ids: list[UUID] = []
     # The picked CARTON's own size, off its Batch row. Colour above is what was
     # ordered; this is what is physically in the box, and it is the one identity

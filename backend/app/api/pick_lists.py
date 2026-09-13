@@ -97,6 +97,7 @@ def _decorate(pl: PickList) -> PickList:
         # Customers reference their own shade code on the delivery note when they
         # have one; ours is the fallback.
         line.color_code = (color.customer_color_code or color.code) if color else None
+        line.color_hex = color.hex if color else None
         line.attribute_value_ids = [v.id for v in (sol.attribute_values or [])] if sol else []
         # Size of the carton actually picked — stamped on the carton at packing
         # from the lot it was packed out of (packing_service.lot_size_identity).

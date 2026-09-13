@@ -16,6 +16,7 @@ import { LV_XP_FONT, lvBtn, lvInput, lvTd, lvLabel, lvRow, lvSubTh, lvSubTd, lvS
 import { ShellWindow, ShellTitleBar, SearchField, FilterChipBar, ToolbarCount, xpToolbar } from '../shared/shellTheme';
 import Pager from '../shared/Pager';
 import ModalWrapper from '../shared/ModalWrapper';
+import { LotChip, LotChips, LotChipRow, lotSizeLabel, lotComboLabel, lotColorLabel } from '../shared/LotChips';
 import { qtyFmt, toNum as num } from '../shared/format';
 const SuratJalanPrintModal = dynamic(() => import('./SuratJalanPrintModal'), { ssr: false });
 
@@ -560,7 +561,7 @@ function ShipmentDetail({ shp, tzDateTime, itemIndex }: any) {
                             <th style={subTh}>Pick List</th>
                             <th style={subTh}>SO</th>
                             <th style={subTh}>Item</th>
-                            <th style={subTh}>Colour</th>
+                            <th style={subTh}>Identity</th>
                             <th style={subTh}>Carton</th>
                             <th style={{ ...subTh, textAlign: 'right' }}>Qty</th>
                         </tr>
@@ -572,9 +573,7 @@ function ShipmentDetail({ shp, tzDateTime, itemIndex }: any) {
                                     <td style={subTd}><CodeChip code={pl.code} classic tier={2} /></td>
                                     <td style={subTd}>{pl.sales_order_code || '—'}</td>
                                     <td style={subTd}>{l.item_name || itemIndex?.[String(l.item_id)]?.name || '—'}</td>
-                                    <td style={subTd} title={colorTitle(l.color_code, l.color_name)}>
-                                        {colorLabel(l.color_code, l.color_name) || '—'}
-                                    </td>
+                                    <td style={subTd}>{cartonChips(l)}</td>
                                     <td style={subTd}>{l.batch_number ? <CodeChip code={l.batch_number} classic tier={2} /> : '—'}</td>
                                     <td style={{ ...subTd, textAlign: 'right' }}>{fmtQty(l.qty_picked)} {l.item_uom || ''}</td>
                                 </tr>
@@ -616,7 +615,7 @@ function DeckDetail({ row, pl, tzDate, itemIndex }: any) {
                         <thead>
                             <tr>
                                 <th style={subTh}>Item</th>
-                                <th style={subTh}>Colour</th>
+                                <th style={subTh}>Identity</th>
                                 <th style={subTh}>Carton</th>
                                 <th style={{ ...subTh, textAlign: 'right' }}>Qty</th>
                             </tr>
@@ -625,9 +624,7 @@ function DeckDetail({ row, pl, tzDate, itemIndex }: any) {
                             {lines.map((l: any) => (
                                 <tr key={String(l.id)}>
                                     <td style={subTd}>{l.item_name || itemIndex?.[String(l.item_id)]?.name || EMPTY_DASH}</td>
-                                    <td style={subTd} title={colorTitle(l.color_code, l.color_name)}>
-                                        {colorLabel(l.color_code, l.color_name) || EMPTY_DASH}
-                                    </td>
+                                    <td style={subTd}>{cartonChips(l)}</td>
                                     <td style={subTd}>{l.batch_number ? <CodeChip code={l.batch_number} classic tier={2} /> : EMPTY_DASH}</td>
                                     <td style={{ ...subTd, textAlign: 'right' }}>
                                         {fmtQty(l.qty_picked)} {l.item_uom || itemIndex?.[String(l.item_id)]?.uom || ''}
@@ -727,7 +724,40 @@ function EditShipmentModal({ shp, deck, authFetch, showToast, onClose, onSaved }
     );
 }
 
-// ── The deck check ─────────────────────────────────────────────────────────
+/**
+ * Identity chips for one carton on the deck check.
+ *
+ * `carton_identity` is present on every line the server could resolve, but a
+ * carton packed out of a plain unvariant lot (manual stock entry, an item with
+ * no variant_type, a pre-feature lot) resolves to an object whose fields are all
+ * null — `LotChips` correctly renders nothing for it, which left an empty cell
+ * that reads as a broken column rather than as "this box has no size or shade".
+ * So: carton first, the ORDERED shade + stamped size as fallback (that is all a
+ * bulk legacy line has), an explicit dash when the box genuinely has no identity.
+ */
+function cartonChips(c: any) {
+    const ci = c.carton_identity;
+    const hasCarton = !!ci && (
+        lotSizeLabel(ci) || lotComboLabel(ci) || lotColorLabel(ci) || (ci.variant_attributes || []).length > 0
+    );
+    if (hasCarton) return <LotChipRow><LotChips batch={ci} /></LotChipRow>;
+
+    const size = c.size_label || lotSizeLabel(ci || {});
+    const color = colorLabel(c.color_code, c.color_name);
+    if (!size && !color) return <span style={{ color: '#bbb' }}>{EMPTY_DASH}</span>;
+    return (
+        <LotChipRow>
+            {size && <LotChip tone="size" title={`Size: ${size}`}>{size}</LotChip>}
+            {color && (
+                <LotChip tone="color" swatch={c.color_hex || null} title={`Ordered shade: ${colorTitle(c.color_code, c.color_name)}`}>
+                    {color}
+                </LotChip>
+            )}
+        </LotChipRow>
+    );
+}
+
+// ── The deck check ─────────────────────────────────────────────────────
 function VerifyModal({ shp, onClose, onSubmit, showToast }: any) {
     const [notes, setNotes] = useState('');
     const [discrepancy, setDiscrepancy] = useState(false);
@@ -762,7 +792,7 @@ function VerifyModal({ shp, onClose, onSubmit, showToast }: any) {
 
     return (
         <ModalWrapper
-            isOpen onClose={onClose} title={`Verify Load — ${shp.code}`} size="lg" modeless variant="success"
+            isOpen onClose={onClose} title={`Verify Load — ${shp.code}`} size="xl" modeless variant="success"
             footer={
                 <>
                     <button className={XP_BTN} style={xpBtn()} onClick={onClose}>Cancel</button>
@@ -802,7 +832,7 @@ function VerifyModal({ shp, onClose, onSubmit, showToast }: any) {
                                 <th style={{ ...xpTableHeader, width: LV_CHECK_COL_W, textAlign: 'center' }} />
                                 <th style={xpTableHeader}>Carton</th>
                                 <th style={xpTableHeader}>Item</th>
-                                <th style={xpTableHeader}>Colour</th>
+                                <th style={xpTableHeader}>Identity</th>
                                 <th style={{ ...xpTableHeader, textAlign: 'right' }}>Qty</th>
                             </tr>
                         </thead>
@@ -816,8 +846,14 @@ function VerifyModal({ shp, onClose, onSubmit, showToast }: any) {
                                             onChange={() => setTicked(t => ({ ...t, [String(c.id)]: !t[String(c.id)] }))} />
                                     </td>
                                     <td style={td}><CodeChip code={c.batch_number} classic tier={2} /></td>
-                                    <td style={td}>{c.item_name}</td>
-                                    <td style={td}>{c.color_name || '—'}</td>
+                                    <td style={td}>{c.item_code || c.item_name}</td>
+                                    {/* What is in the BOX — size, combo, shade (with swatch) —
+                                        off the carton's own stock key, same chips the picker
+                                        confirmed on and the Kartu Packing carries. The line's
+                                        own `color_name` is the ORDERED shade and prints on the
+                                        Surat Jalan; a checker counting a substituted lot has to
+                                        see the real one, so the carton wins when it has one. */}
+                                    <td style={td}>{cartonChips(c)}</td>
                                     <td style={{ ...td, textAlign: 'right' }}>{fmtQty(c.qty_picked)} {c.item_uom || ''}</td>
                                 </tr>
                             ))}

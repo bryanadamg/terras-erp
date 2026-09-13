@@ -23,6 +23,7 @@ from app.core.pagination import PageParams, PageWindow
 from app.schemas import (
     ShipmentCreate, ShipmentUpdate, ShipmentVerifyPayload,
     ShipmentResponse, ShipmentListResponse, StageablePickListResponse,
+    PickListCartonIdentity,
 )
 from app.models.shipment import Shipment
 from app.models.pick_list import PickList, PickListLine
@@ -31,6 +32,7 @@ from app.api.auth import require_permission, require_any_permission, user_has_pe
 from app.models.auth import User
 from app.services import (
     audit_service, kpi_service, so_fulfilment_service, numbering_service, dispatch_service,
+    stock_service,
 )
 from app.core.ws_manager import manager
 
@@ -98,13 +100,66 @@ def _decorate_pick_list(pl: PickList) -> PickList:
         color = sol.color if sol else None
         line.color_name = color.name if color else None
         line.color_code = (color.customer_color_code or color.code) if color else None
+        line.color_hex = color.hex if color else None
         line.attribute_value_ids = [v.id for v in (sol.attribute_values or [])] if sol else []
         total += float(line.qty_picked or 0)
+        if line.batch is not None:
+            # Size of the carton actually picked, stamped on it at packing.
+            line.bom_size_snapshot = line.batch.bom_size_snapshot
+            line.size_label = stock_service._bom_size_label(line.batch.bom_size_snapshot)
         if line.batch_id:
             cartons += 1
     pl.carton_count = cartons
     pl.total_qty = total
     return pl
+
+
+async def _decorate_cartons(db: AsyncSession, shps: list[Shipment]) -> None:
+    """Resolve what is physically IN each picked carton, for every line on every
+    shipment passed, in two queries.
+
+    Mirrors `api/pick_lists._decorate_all` — shade and combo are not columns on a
+    Batch, they live only in the carton's StockBalance `variant_key`, so they
+    cannot be read off the already-loaded tree. The deck check labels a carton
+    exactly the way the pick list and the Kartu Packing do (`LotChips`), so the
+    checker is matching the same chips they see everywhere else.
+
+    No `qty > 0` filter: a dispatched carton's balance row sits at zero and a
+    shipped shipment still has to be able to say what went out.
+    """
+    from app.models.stock_balance import StockBalance
+    lines = [
+        l for shp in shps for pl in (shp.pick_lists or [])
+        for l in (pl.lines or []) if l.batch_id
+    ]
+    if not lines:
+        return
+    rows = (await db.execute(
+        select(StockBalance.batch_key, StockBalance.variant_key)
+        .filter(StockBalance.batch_key.in_([str(l.batch_id) for l in lines]))
+    )).all()
+    # A carton can hold rows at more than one location; they are the same box, so
+    # any row with a key answers for it and an empty key never displaces one.
+    key_by_batch: dict = {}
+    for bk, vk in rows:
+        if vk and not key_by_batch.get(bk):
+            key_by_batch[bk] = vk
+    variants = await stock_service.describe_variant_keys(db, set(key_by_batch.values()))
+    for l in lines:
+        vkey = key_by_batch.get(str(l.batch_id))
+        v = variants.get(vkey) or {}
+        b = l.batch
+        l.carton_identity = PickListCartonIdentity(
+            variant_key=vkey or None,
+            variant_attributes=v.get("variant_attributes") or None,
+            color_id=v.get("color_id"),
+            color_name=v.get("color_name"),
+            color_code=v.get("color_code"),
+            color_hex=v.get("color_hex"),
+            bom_size_id=b.bom_size_id if b is not None else None,
+            bom_size_snapshot=b.bom_size_snapshot if b is not None else None,
+            size_label=stock_service._bom_size_label(b.bom_size_snapshot) if b is not None else None,
+        )
 
 
 def _decorate(shp: Shipment) -> Shipment:
@@ -253,6 +308,7 @@ async def list_shipments(
     total = (await db.execute(count_q)).scalar() or 0
     query = window.apply(query.order_by(Shipment.created_at.desc()))
     rows = (await db.execute(query)).scalars().unique().all()
+    await _decorate_cartons(db, list(rows))
     return window.envelope([_decorate(s) for s in rows], total)
 
 
@@ -297,6 +353,7 @@ async def get_shipment(
     shp = await _load(db, shp_id)
     if not shp:
         raise HTTPException(status_code=404, detail="Shipment not found")
+    await _decorate_cartons(db, [shp])
     return _decorate(shp)
 
 
@@ -343,6 +400,7 @@ async def create_shipment(
         pass
 
     shp = await _load(db, shp.id)
+    await _decorate_cartons(db, [shp])
     return _decorate(shp)
 
 
@@ -392,6 +450,7 @@ async def update_shipment(
         pass
 
     shp = await _load(db, shp_id)
+    await _decorate_cartons(db, [shp])
     return _decorate(shp)
 
 
@@ -450,6 +509,7 @@ async def verify_shipment(
         pass
 
     shp = await _load(db, shp_id)
+    await _decorate_cartons(db, [shp])
     return _decorate(shp)
 
 
@@ -484,6 +544,7 @@ async def reopen_shipment(
         pass
 
     shp = await _load(db, shp_id)
+    await _decorate_cartons(db, [shp])
     return _decorate(shp)
 
 
@@ -581,6 +642,7 @@ async def dispatch_shipment(
         pass
 
     shp = await _load(db, shp_id)
+    await _decorate_cartons(db, [shp])
     return _decorate(shp)
 
 
@@ -612,6 +674,7 @@ async def cancel_shipment(
         pass
 
     shp = await _load(db, shp_id)
+    await _decorate_cartons(db, [shp])
     return _decorate(shp)
 
 
