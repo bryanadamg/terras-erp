@@ -127,7 +127,10 @@ export function FloatingLayer({ rect, anchorEl, placement = 'bottom', align = 's
     rect: AnchorRect;
     /** The live trigger. Preferred over `rect` when present — see above. */
     anchorEl?: HTMLElement | null;
-    placement?: 'bottom' | 'top' | 'over';
+    /** `side` puts the bubble BESIDE the anchor (right, flipping left) instead of
+     *  under it — the placement for a small icon control, whose vertical
+     *  neighbours are the next row's buttons and must stay visible. */
+    placement?: 'bottom' | 'top' | 'over' | 'side';
     align?: 'start' | 'center';
     offset?: number;
     zIndex?: number;
@@ -151,13 +154,19 @@ export function FloatingLayer({ rect, anchorEl, placement = 'bottom', align = 's
         const vw = window.innerWidth, vh = window.innerHeight;
 
         let top = placement === 'over' ? a.top
-            : placement === 'top' ? a.top - box.height - gap
-                : a.bottom + gap;
+            : placement === 'side' ? a.top + a.height / 2 - box.height / 2
+                : placement === 'top' ? a.top - box.height - gap
+                    : a.bottom + gap;
         if (placement === 'bottom' && top + box.height > vh - edge) top = a.top - box.height - gap;
         if (placement === 'top' && top < edge) top = a.bottom + gap;
         top = Math.max(edge, Math.min(top, Math.max(edge, vh - box.height - edge)));
 
-        let left = align === 'center' ? a.left + a.width / 2 - box.width / 2 : a.left;
+        let left = placement === 'side' ? a.right + gap
+            : align === 'center' ? a.left + a.width / 2 - box.width / 2
+                : a.left;
+        // Beside means beside: rather than clamp into the viewport (which would
+        // slide the bubble back OVER the anchor's column), flip to the other side.
+        if (placement === 'side' && left + box.width > vw - edge) left = a.left - box.width - gap;
         left = Math.max(edge, Math.min(left, Math.max(edge, vw - box.width - edge)));
 
         el.style.top = `${top / z}px`;
@@ -243,7 +252,7 @@ const chain = (...fns: (((e: any) => void) | undefined)[]) => (e: any) => fns.fo
 export function Tooltip({ content, children, placement = 'bottom', align = 'start', delay = TIP_DELAY, disabled = false, maxWidth }: {
     content: React.ReactNode;
     children: React.ReactElement;
-    placement?: 'bottom' | 'top';
+    placement?: 'bottom' | 'top' | 'side';
     align?: 'start' | 'center';
     delay?: number;
     disabled?: boolean;

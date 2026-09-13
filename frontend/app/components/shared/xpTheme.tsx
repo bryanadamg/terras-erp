@@ -1976,7 +1976,7 @@ export function useFloatingMenu(menuWidth = 175) {
 export function MenuTriggerButton({ classic, onClick, title = 'More actions' }: { classic: boolean; onClick: (e: React.MouseEvent) => void; title?: string }) {
     if (classic) {
         return (
-            <Tooltip content={title}><button
+            <Tooltip content={title} placement="side"><button
                 type="button"
                 className={`xp-menu-trigger ${XP_BTN}`}
                 onClick={onClick}
@@ -1989,7 +1989,7 @@ export function MenuTriggerButton({ classic, onClick, title = 'More actions' }: 
         );
     }
     return (
-        <Tooltip content={title}><button type="button" className="btn btn-sm btn-link text-muted p-0 d-inline-flex align-items-center justify-content-center xp-menu-trigger" style={{ width: 26, height: 26 }} onClick={onClick}>
+        <Tooltip content={title} placement="side"><button type="button" className="btn btn-sm btn-link text-muted p-0 d-inline-flex align-items-center justify-content-center xp-menu-trigger" style={{ width: 26, height: 26 }} onClick={onClick}>
             <i className="bi bi-three-dots fs-6"></i>
         </button></Tooltip>
     );
@@ -2035,7 +2035,12 @@ export function XPActionButton({
     // Icon-only action buttons are the densest tooltip consumer in the app (a whole
     // action column of them), so they take the styled surface rather than the OS
     // one that arrives a second later in a different font.
-    const tip = (btn: React.ReactElement) => title ? <Tooltip content={title}>{btn}</Tooltip> : btn;
+    // Icon-only ones also take the bubble BESIDE the button: underneath it is the
+    // next row's action button, which the bubble would hide just as the user aims
+    // at it. A labelled button is wide enough that below is still fine.
+    const tip = (btn: React.ReactElement) => title
+        ? <Tooltip content={title} placement={label ? 'bottom' : 'side'}>{btn}</Tooltip>
+        : btn;
     if (classic) {
         const t = XP_ACTION_TONES[tone];
         return tip(
