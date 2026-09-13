@@ -1313,7 +1313,11 @@ function PackingOrderForm({ locPickerTreeOptions, machineOptions, defaultSourceL
                                                         ) : null;
                                                     })()}
                                                 </div>
-                                                <LotChips batch={l} />
+                                                {/* `size_label` on an SO line is only the free-mode text; a sized
+                                                    line states its size through `size_id`, which the server resolves
+                                                    into `size_display`. Feed that in so the picker chips the size the
+                                                    same way the SO table does. */}
+                                                <LotChips batch={{ ...l, size_label: l.size_display || l.size_label }} />
                                             </div>
                                         </label>
                                     );
