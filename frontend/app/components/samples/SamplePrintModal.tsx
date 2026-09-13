@@ -266,13 +266,11 @@ function SPKDocument({
 export default function SamplePrintModal({
     sample,
     onClose,
-    currentStyle,
     companyProfile,
     getCustomerName,
 }: {
     sample: any;
     onClose: () => void;
-    currentStyle: string;
     companyProfile: any;
     getCustomerName: (id: string) => string;
 }) {
