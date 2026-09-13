@@ -3,7 +3,7 @@
 import React, { useMemo, useState, useEffect, useCallback, useRef } from 'react';
 import { layoutRectOf, layoutScroll } from './uiScale';
 import { xpFont, modernFont, CODE_FONT, PRINT_FONT, PRINT_SERIF_FONT } from './typography';
-import { FloatingLayer, Tooltip, TooltipSurface, useHoverAnchor, isClipped } from './Tooltip';
+import { FloatingLayer, POPOUT_DELAY, TIP_DELAY, Tooltip, TooltipSurface, useHoverAnchor, isClipped } from './Tooltip';
 import UIToggleChip from '@bryanadamg/terras-ui/components/ToggleChip';
 
 /**
@@ -49,7 +49,9 @@ export function CodeChip({ code, classic, tier = 1, tone = 'default', link = fal
     // unclipped one only floats a tooltip if the caller wrote something the code
     // itself doesn't already say.
     const { rect, anchorEl, handlers } = useHoverAnchor({
-        delay: 260,
+        // Read after shouldOpen, so the popout keeps its quick dwell while the
+        // title bubble waits as long as every other bubble in the app.
+        delay: () => (mode.current === 'pop' ? POPOUT_DELAY : TIP_DELAY),
         shouldOpen: () => {
             if (isClipped(selfRef.current)) { mode.current = 'pop'; return true; }
             if (title) { mode.current = 'tip'; return true; }
@@ -140,6 +142,11 @@ export const STATUS_FAMILY: Record<string, StatusFamily> = {
     // Pick list: PICKING is work in flight, PICKED means every carton is scanned
     // and the list is waiting on QC/dispatch — attention, not done.
     PICKING: 'blue', PICKED: 'amber',
+    // One carton's scan state on a pick-list line — a finer grain than the list's
+    // own PICKED above, which needs every carton in. UNSCANNED is amber rather
+    // than PENDING's gray because it blocks dispatch: it is work still owed, not
+    // an order nobody has started.
+    SCANNED: 'green', UNSCANNED: 'amber',
     // A packed carton that still has stock at its location. Consumed cartons fall
     // through to DISPATCHED/SENT via the pick list that took them.
     IN_STOCK: 'green',
@@ -156,7 +163,7 @@ export const STATUS_FAMILY: Record<string, StatusFamily> = {
     CREATE: 'green', REACTIVATE: 'green', COMPLETE: 'green', COMPLETION: 'green', DISPATCH: 'green',
     UPDATE: 'amber',
     STATUS_CHANGE: 'blue', UPDATE_STATUS: 'blue', UPDATE_ITEM_STATUS: 'blue', UPDATE_COLOR_STATUS: 'blue',
-    UPDATE_DIP_STATUS: 'blue', STAGE: 'blue', TRANSFER: 'blue', IMPORT: 'blue',
+    UPDATE_DIP_STATUS: 'blue', STAGE: 'blue', TRANSFER: 'blue', IMPORT: 'blue', REASSIGN: 'blue',
     DELETE: 'red', DEACTIVATE: 'red', REJECT: 'red', DISPOSE: 'red',
     PRINT: 'gray', SPLIT: 'gray', ARCHIVE: 'gray', REBUILD: 'gray',
     // Scheduled Backups panel (Settings → Database & Backups): audit verbs for the
@@ -363,7 +370,7 @@ export function Chip({
     // then the rect state has committed, so the ref is already correct.
     const mode = useRef<'pop' | 'tip' | null>(null);
     const { rect, anchorEl, handlers } = useHoverAnchor({
-        delay: 260,
+        delay: () => (mode.current === 'pop' ? POPOUT_DELAY : TIP_DELAY),
         enabled: !!truncate || !!title,
         shouldOpen: () => {
             // A clipped chip completes itself; an unclipped one with a title
@@ -884,6 +891,11 @@ export function LocationChip({
 // 'inside' = centered overlay text, 'none' (default) = bar only.
 const PROGRESS_FILL_DK: Record<StatusFamily, string> = { gray: '#c8c3b6', amber: '#c77800', blue: '#0058e6', green: '#2d7a2d', red: '#c00000' };
 const PROGRESS_FILL_LT: Record<StatusFamily, string> = { gray: '#e2ddd0', amber: '#f5d060', blue: '#4a8fe8', green: '#6fce6f', red: '#e88a8a' };
+
+/** The solid colour a `ProgressBar` segment paints, for a legend or key that sits
+ *  beside one. Exported so a caller names the bar's own colour instead of
+ *  hand-copying a hex that then drifts when the palette moves. */
+export const progressToneColor = (tone: StatusFamily) => PROGRESS_FILL_DK[tone];
 
 function progressBarFill(tone: StatusFamily, hatched: boolean): string {
     if (!hatched) return PROGRESS_FILL_DK[tone];
@@ -1964,7 +1976,7 @@ export function useFloatingMenu(menuWidth = 175) {
 export function MenuTriggerButton({ classic, onClick, title = 'More actions' }: { classic: boolean; onClick: (e: React.MouseEvent) => void; title?: string }) {
     if (classic) {
         return (
-            <Tooltip content={title}><button
+            <Tooltip content={title} placement="side"><button
                 type="button"
                 className={`xp-menu-trigger ${XP_BTN}`}
                 onClick={onClick}
@@ -1977,7 +1989,7 @@ export function MenuTriggerButton({ classic, onClick, title = 'More actions' }: 
         );
     }
     return (
-        <Tooltip content={title}><button type="button" className="btn btn-sm btn-link text-muted p-0 d-inline-flex align-items-center justify-content-center xp-menu-trigger" style={{ width: 26, height: 26 }} onClick={onClick}>
+        <Tooltip content={title} placement="side"><button type="button" className="btn btn-sm btn-link text-muted p-0 d-inline-flex align-items-center justify-content-center xp-menu-trigger" style={{ width: 26, height: 26 }} onClick={onClick}>
             <i className="bi bi-three-dots fs-6"></i>
         </button></Tooltip>
     );
@@ -2023,7 +2035,12 @@ export function XPActionButton({
     // Icon-only action buttons are the densest tooltip consumer in the app (a whole
     // action column of them), so they take the styled surface rather than the OS
     // one that arrives a second later in a different font.
-    const tip = (btn: React.ReactElement) => title ? <Tooltip content={title}>{btn}</Tooltip> : btn;
+    // Icon-only ones also take the bubble BESIDE the button: underneath it is the
+    // next row's action button, which the bubble would hide just as the user aims
+    // at it. A labelled button is wide enough that below is still fine.
+    const tip = (btn: React.ReactElement) => title
+        ? <Tooltip content={title} placement={label ? 'bottom' : 'side'}>{btn}</Tooltip>
+        : btn;
     if (classic) {
         const t = XP_ACTION_TONES[tone];
         return tip(

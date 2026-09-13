@@ -181,7 +181,8 @@ async def list_quarantine_stock(
     if wo_ids:
         for (wo_id, wo_code, mo_id, mo_code, mo_status, mo_qty, pr_code,
              mo_so_id, mo_so_code, pr_so_id, pr_so_code,
-             color_id, color_code, color_name, color_hex, labdip_code, bom_size_id) in (await db.execute(
+             color_id, color_code, color_name, color_hex, labdip_code, bom_size_id,
+             bom_size_snapshot) in (await db.execute(
             select(
                 WorkOrder.id, WorkOrder.code,
                 ManufacturingOrder.id, ManufacturingOrder.code,
@@ -192,6 +193,7 @@ async def list_quarantine_stock(
                 ManufacturingOrder.color_id, Color.code, Color.name, Color.hex,
                 ManufacturingOrder.labdip_variant_code,
                 ManufacturingOrder.bom_size_id,
+                ManufacturingOrder.bom_size_snapshot,
             )
             .join(ManufacturingOrder, ManufacturingOrder.id == WorkOrder.manufacturing_order_id)
             .outerjoin(ProductionRun, ProductionRun.id == ManufacturingOrder.production_run_id)
@@ -212,6 +214,14 @@ async def list_quarantine_stock(
                 # The MO's own sized-BOM pick — lets the packing form auto-match this
                 # group's stock to the one order line ordered in the same size.
                 "bom_size_id": bom_size_id,
+                # ...and that size as text, which is what the match actually runs
+                # on: an SO line states its size through the Size master, so it
+                # shares no id with a BOMSize row. Name only (no measurement) —
+                # it is compared against the line's `size_display`.
+                "size_label": (
+                    (bom_size_snapshot or {}).get("size_name")
+                    or (bom_size_snapshot or {}).get("label")
+                ),
             }
 
         # Combo is an attribute value on the MO (color-type FG uses color_id
@@ -371,6 +381,7 @@ async def list_quarantine_stock(
                 labdip_variant_code=info["labdip_variant_code"] if info else None,
                 combo_value_id=info["combo_value_id"] if info else None,
                 bom_size_id=info["bom_size_id"] if info else None,
+                size_label=info["size_label"] if info else None,
                 item_id=item.id, item_code=item.code, item_name=item.name, uom=item.uom,
                 qty_total=0.0, qty_released=0.0, qty_claimed=0.0, lot_count=0,
                 rollup_status="NONE", status_counts={}, lots=[],

@@ -10,9 +10,9 @@ import { useTimezone } from '../../context/TimezoneContext';
 import { useToast } from '../shared/Toast';
 import { useConfirm } from '../../context/ConfirmContext';
 import { LotChip, LotChips, LotChipRow } from '../shared/LotChips';
-import { XPStatusBar, XPEmptyState, TableSkeleton, useTableSkeletonMetrics, StatusChip, useFloatingMenu, MenuTriggerButton, FloatingMenu, ExpandedRowPanel, XPActionButton, CODE_FONT, rowStateBg, CHIP_RADIUS, XP_BTN, ProgressBar } from '../shared/xpTheme';
-import { LV_XP_FONT, lvBtn, lvInput, lvTd, lvLabel, lvRow, lvSubTh, lvSubTd, lvSubRow, ExpanderCell, lvThSticky, lvSubTable, RowCheckboxCell, LV_CHECK_COL_W } from '../shared/listViewTheme';
-import { ShellWindow, ShellTitleBar, xpToolbar } from '../shared/shellTheme';
+import { XPStatusBar, XPEmptyState, TableSkeleton, useTableSkeletonMetrics, StatusChip, Chip, statusTint, useFloatingMenu, MenuTriggerButton, FloatingMenu, ExpandedRowPanel, XPActionButton, CODE_FONT, rowStateBg, CHIP_RADIUS, XP_BTN, ProgressBar, progressToneColor, useSortable } from '../shared/xpTheme';
+import { LV_XP_FONT, lvBtn, lvInput, lvTd, lvLabel, lvRow, lvSubTh, lvSubTd, lvSubRow, ExpanderCell, lvThSticky, lvSubTable, RowCheckboxCell, LV_CHECK_COL_W, SortableTh } from '../shared/listViewTheme';
+import { ShellWindow, ShellTitleBar, xpToolbar, FilterChipBar, ToolbarCount } from '../shared/shellTheme';
 import Pager from '../shared/Pager';
 import ModalWrapper from '../shared/ModalWrapper';
 import { Tabs } from '../shared/Tabs';
@@ -179,11 +179,13 @@ export default function PickListView() {
             if (res.ok) {
                 const pl = await res.json();
                 // The order just consumed cartons — re-score the board before the
-                // planner returns to it, and land them on the list they just cut.
+                // planner returns to it. They stay ON the board: creating a pick
+                // list is one step of working down a queue of orders, and jumping
+                // to the Lists tab with the new list open made every planner close
+                // a modal and navigate back to cut the next one.
                 await Promise.all([loadAll(), loadPickable()]);
                 setSuggestFor(null);
-                setTab('lists');
-                setEditing(pl);
+                showToast(`Pick list ${pl.code} created`, 'success');
             } else {
                 const err = await res.json().catch(() => ({}));
                 showToast(`Error: ${err.detail || 'could not create'}`, 'danger');
@@ -320,8 +322,9 @@ export default function PickListView() {
                                                     <th style={{ ...th, width: 24 }}>#</th>
                                                     <th style={th}>Lot</th>
                                                     <th style={th}>Item</th>
+                                                    <th style={th}>Contents</th>
                                                     <th style={{ ...th, width: 78 }}>Packaging</th>
-                                                    <th style={{ ...th, textAlign: 'right', width: 54 }}>Qty</th>
+                                                    <th style={{ ...th, textAlign: 'right', width: 72 }}>Qty</th>
                                                     {/* Brutto per carton — the figure the loading deck counts
                                                         the load by and the carrier bills on. */}
                                                     <th style={{ ...th, textAlign: 'right', width: 62 }}>Gross</th>
@@ -342,18 +345,34 @@ export default function PickListView() {
                                                         <td style={{ ...td, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: 130 }}
                                                             title={l.item_name || undefined}>
                                                             {l.item_code || itemById[String(l.item_id)]?.code || '—'}
-                                                            {/* Size of the CARTON, not of the order line: an SO running
-                                                                several sizes ships them out of one pick list, and the
-                                                                colour column above is the ordered shade. */}
-                                                            {l.size_label && (
+                                                        </td>
+                                                        {/* What is in the CARTON, not what the order line asked for:
+                                                            an SO running several sizes or shades ships them out of
+                                                            one pick list, and the colour on the line above is the
+                                                            ordered one. Same chips as the editor modal and the
+                                                            Kartu Packing, off the carton's own stock key. A bulk
+                                                            line has no carton, so its stamped size is all there is. */}
+                                                        <td style={td}>
+                                                            {l.carton_identity ? (
+                                                                <LotChipRow>
+                                                                    <LotChips batch={l.carton_identity} />
+                                                                </LotChipRow>
+                                                            ) : l.size_label ? (
                                                                 <LotChip tone="size" title={`Size: ${l.size_label}`}>{l.size_label}</LotChip>
+                                                            ) : (
+                                                                <span style={{ color: '#bbb' }}>—</span>
                                                             )}
                                                         </td>
                                                         <td style={{ ...td, color: '#555', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: 78 }}
                                                             title={l.packaging_type_name || undefined}>
                                                             {l.packaging_type_name || '—'}
                                                         </td>
-                                                        <td style={{ ...td, textAlign: 'right', fontWeight: 'bold' }}>{num(l.qty_picked).toFixed(2)}</td>
+                                                        <td style={{ ...td, textAlign: 'right', fontWeight: 'bold', whiteSpace: 'nowrap' }}>
+                                                            {num(l.qty_picked).toFixed(2)}
+                                                            <span style={{ color: '#888', fontWeight: 'normal', marginLeft: 2 }}>
+                                                                {l.item_uom || itemById[String(l.item_id)]?.uom || ''}
+                                                            </span>
+                                                        </td>
                                                         <td style={{ ...td, textAlign: 'right', color: '#555', whiteSpace: 'nowrap' }}
                                                             title={l.gross_weight_kg != null && l.net_weight_kg != null
                                                                 ? `Net ${num(l.net_weight_kg).toFixed(2)} kg + tare` : undefined}>
@@ -595,48 +614,163 @@ function dueChip(days: number | null | undefined) {
  * order with nothing packed cannot be picked at all (the server rejects it too;
  * this just says so before the click).
  */
+// Coverage % — same formula the row itself renders the progress bar with.
+const coveragePct = (so: any) => num(so.qty_outstanding) > 0
+    ? Math.min(100, Math.round(num(so.qty_ready) / num(so.qty_outstanding) * 100))
+    : 0;
+
+// Whole-order fulfilment, in the same three nested stages the SO table draws
+// (made >= packed >= dispatched, so they stack on one track rather than add up).
+// Coverage answers "is there a carton for what's left"; this answers "how much of
+// the order is done" — the last carton of a barely-started order reads 100%
+// coverage, and only this tells it apart from one that is nearly shipped.
+//
+// Drawn in the ALT SELLING UNIT (Pcs, Pic) whenever the server could roll the
+// whole order up in one — that is what the customer ordered and what they are
+// owed, and it is the same unit the SO table's own bar now uses, so a planner
+// moving between the two pages reads one number. The server sends `alt_uom` null
+// for an order that mixes alt units or has a line without one, and the row then
+// falls back to the kilos rather than adding two unlike counts.
+const fulfilment = (so: any) => {
+    const useAlt = !!so.alt_uom && num(so.qty_ordered_alt) > 0;
+    const ordered = useAlt ? num(so.qty_ordered_alt) : num(so.qty_ordered_base);
+    const pct = (v: number) => (ordered > 0 ? Math.min(100, Math.round(v / ordered * 100)) : 0);
+    return {
+        ordered,
+        isAlt: useAlt,
+        uom: useAlt ? ` ${so.alt_uom}` : (so.base_uom ? ` ${so.base_uom}` : ''),
+        made: num(useAlt ? so.qty_made_alt : so.qty_made),
+        packed: num(useAlt ? so.qty_packed_alt : so.qty_packed),
+        dispatched: num(useAlt ? so.qty_dispatched_alt : so.qty_dispatched),
+        // The kilos behind an alt reading, for the tooltip's second line — the
+        // picker still moves weight even when the order is counted in pieces.
+        baseOrdered: num(so.qty_ordered_base),
+        baseDispatched: num(so.qty_dispatched),
+        baseUom: so.base_uom ? ` ${so.base_uom}` : '',
+        // Only meaningful for a base reading: an alt roll-up is all-or-nothing, so
+        // a line the server could not count sent the whole row back to the kilos.
+        unknown: useAlt ? 0 : (Number(so.lines_unknown_base) || 0),
+        pct,
+    };
+};
+
+const fmtQty = (v: number) => (Math.round(v * 100) / 100).toLocaleString(undefined, { maximumFractionDigits: 2 });
+
+function fulfilmentCell(so: any) {
+    const f = fulfilment(so);
+    // No derivable denominator on any line (weight-stocked item with no
+    // weight-per-yard): say so rather than draw a 0% bar, since the fix is on the
+    // item master, not on this order.
+    if (f.ordered <= 0) {
+        return f.unknown > 0
+            ? <span title="Ordered qty can't be restated in the stock UoM — set weight per unit on the item master"
+                style={{ fontSize: 9, color: '#8a6d00', display: 'inline-flex', alignItems: 'center', gap: 3 }}>
+                <i className="bi bi-exclamation-triangle" style={{ fontSize: 8 }} />no weight
+            </span>
+            : <span style={{ fontSize: 9, color: '#ccc' }}>—</span>;
+    }
+    const shipped = f.pct(f.dispatched), packed = f.pct(f.packed), made = f.pct(f.made);
+    const title = `Made ${fmtQty(f.made)} · Packed ${fmtQty(f.packed)} · Shipped ${fmtQty(f.dispatched)}`
+        + ` — of ${fmtQty(f.ordered)}${f.uom} ordered`
+        + (f.isAlt && f.baseOrdered > 0
+            ? `
+Shipped ${fmtQty(f.baseDispatched)}${f.baseUom} of ${fmtQty(f.baseOrdered)}${f.baseUom}`
+            : '')
+        + (f.unknown > 0 ? ` (${f.unknown} line(s) excluded: no derivable weight)` : '');
+    return (
+        <div title={title} style={{ display: 'flex', flexDirection: 'column', gap: 2, minWidth: 78 }}>
+            <ProgressBar
+                pct={shipped} tone="green"
+                secondaryPct={Math.max(0, packed - shipped)} secondaryTone="blue"
+                tertiaryPct={Math.max(0, made - packed)} tertiaryTone="gray"
+                width={70} height={8}
+            />
+            <div style={{ fontSize: 9, color: shipped >= 100 ? '#0a3e0a' : '#777' }}>
+                {f.dispatched > 0
+                    ? `${shipped}% shipped`
+                    : f.packed > 0 ? `${packed}% packed`
+                    : f.made > 0 ? `${made}% made` : 'not started'}
+                {f.unknown > 0 && <i className="bi bi-exclamation-triangle" style={{ fontSize: 8, color: '#8a6d00', marginLeft: 3 }} />}
+            </div>
+        </div>
+    );
+}
+
 function SOPickerBoard({ pickableSOs, loading, tzDate, canManage, onRefresh, onPick }: any) {
+    // "Ready" filter — hides orders with nothing packed yet, since those can't
+    // be picked at all today; the planner's actual queue is the rest.
+    const [readyOnly, setReadyOnly] = useState(false);
+    const readyCount = useMemo(
+        () => pickableSOs.filter((so: any) => num(so.cartons_ready) > 0).length,
+        [pickableSOs],
+    );
+    const filtered = useMemo(
+        () => readyOnly ? pickableSOs.filter((so: any) => num(so.cartons_ready) > 0) : pickableSOs,
+        [pickableSOs, readyOnly],
+    );
+    const { sorted, sort, toggle: toggleSort } = useSortable(filtered, {
+        po: (so: any) => so.po_number,
+        customer: (so: any) => so.customer_name,
+        due: (so: any) => so.days_to_due,
+        outstanding: (so: any) => num(so.qty_outstanding),
+        ready: (so: any) => num(so.qty_ready),
+        coverage: (so: any) => coveragePct(so),
+        fulfilment: (so: any) => { const f = fulfilment(so); return f.pct(f.dispatched); },
+    });
     return (
         <>
             <div style={xpToolbar()}>
                 <button className={XP_BTN} style={xpBtn()} onClick={onRefresh} title="Re-score open orders">
                     <i className="bi bi-arrow-clockwise" style={{ marginRight: 4 }} />Refresh
                 </button>
+                <FilterChipBar
+                    classic
+                    style={{ marginLeft: 10 }}
+                    value={readyOnly ? 'ready' : 'all'}
+                    onChange={v => setReadyOnly(v === 'ready')}
+                    options={[
+                        { value: 'all', label: 'All orders', count: pickableSOs.length,
+                          title: 'Every open order with anything outstanding' },
+                        { value: 'ready', label: 'Ready to pick', count: readyCount,
+                          title: 'Hide orders with nothing packed yet — nothing there can be picked today' },
+                    ]}
+                />
                 <span style={{ fontSize: 10, color: '#666', marginLeft: 8, maxWidth: 620, lineHeight: 1.3 }}>
                     Soonest delivery first. &quot;Ready&quot; counts whole cartons already packed and not on
                     another pick list — cartons are suggested oldest-first, and the last one may overshoot
                     since a carton is never split.
                 </span>
-                <span style={{ marginLeft: 'auto', fontSize: 11, color: '#333', whiteSpace: 'nowrap' }}>
-                    {pickableSOs.length.toLocaleString()} open order{pickableSOs.length !== 1 ? 's' : ''}
-                </span>
+                <ToolbarCount classic right>
+                    {filtered.length.toLocaleString()} order{filtered.length !== 1 ? 's' : ''}
+                </ToolbarCount>
             </div>
             <div style={{ flex: 1, overflowY: 'auto', background: '#fff', minHeight: 0, fontFamily: xpFont }}>
                 {loading
                     ? <div style={{ fontSize: 11, color: '#888', padding: '12px 8px' }}>Scoring open orders...</div>
-                    : pickableSOs.length === 0
-                    ? <XPEmptyState icon="bi-inbox" message="No open sales orders with anything outstanding." />
+                    : sorted.length === 0
+                    ? <XPEmptyState icon="bi-inbox" message={readyOnly ? "No orders ready to pick right now." : "No open sales orders with anything outstanding."} />
                     : (
                         <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                             <thead>
                                 <tr>
-                                    <th style={xpTableHeader}>Sales Order</th>
-                                    <th style={xpTableHeader}>Customer</th>
+                                    <SortableTh sort={sort} colKey="po" onSort={toggleSort} style={xpTableHeader}>Sales Order</SortableTh>
+                                    <SortableTh sort={sort} colKey="customer" onSort={toggleSort} style={xpTableHeader}>Customer</SortableTh>
                                     <th style={xpTableHeader}>Items</th>
-                                    <th style={xpTableHeader}>Delivery due</th>
-                                    <th style={{ ...xpTableHeader, textAlign: 'right' }}>Outstanding</th>
-                                    <th style={{ ...xpTableHeader, textAlign: 'right' }}>Ready</th>
-                                    <th style={xpTableHeader}>Coverage</th>
+                                    <SortableTh sort={sort} colKey="due" onSort={toggleSort} style={xpTableHeader}>Delivery due</SortableTh>
+                                    <SortableTh sort={sort} colKey="outstanding" onSort={toggleSort} style={{ ...xpTableHeader, textAlign: 'right' }}>Outstanding</SortableTh>
+                                    <SortableTh sort={sort} colKey="ready" onSort={toggleSort} style={{ ...xpTableHeader, textAlign: 'right' }}>Ready</SortableTh>
+                                    <SortableTh sort={sort} colKey="coverage" onSort={toggleSort} style={xpTableHeader}
+                                        title="Sort — of what this order still owes, how much is packed and waiting">Coverage</SortableTh>
+                                    <SortableTh sort={sort} colKey="fulfilment" onSort={toggleSort} style={xpTableHeader}
+                                        title="Sort — how much of the whole order is made, packed and shipped">Fulfilment</SortableTh>
                                     <th style={{ ...xpTableHeader, textAlign: 'right' }}></th>
                                 </tr>
                             </thead>
                             <tbody>
-                                {pickableSOs.map((so: any, idx: number) => {
+                                {sorted.map((so: any, idx: number) => {
                                     const chip = dueChip(so.days_to_due);
                                     const ready = num(so.cartons_ready) > 0;
-                                    const pct = num(so.qty_outstanding) > 0
-                                        ? Math.min(100, Math.round(num(so.qty_ready) / num(so.qty_outstanding) * 100))
-                                        : 0;
+                                    const pct = coveragePct(so);
                                     return (
                                         <tr key={so.id} style={{ ...rowStyle(idx), opacity: ready ? 1 : 0.6 }}>
                                             <td style={{ ...td, fontWeight: 'bold', color: '#00309c' }}>
@@ -699,6 +833,7 @@ function SOPickerBoard({ pickableSOs, loading, tzDate, canManage, onRefresh, onP
                                             <td style={td}>
                                                 <ProgressBar pct={pct} tone={pct >= 100 ? 'green' : 'blue'} width={70} height={8} label="outside" />
                                             </td>
+                                            <td style={td}>{fulfilmentCell(so)}</td>
                                             <td style={{ ...td, textAlign: 'right', whiteSpace: 'nowrap' }}>
                                                 {so.has_open_pick_list && (
                                                     <span style={{ fontSize: 9, color: '#b8860b', marginRight: 8 }}>open pick list</span>
@@ -720,6 +855,24 @@ function SOPickerBoard({ pickableSOs, loading, tzDate, canManage, onRefresh, onP
                     )}
             </div>
         </>
+    );
+}
+
+/** One swatch + caption under a stacked ProgressBar. The swatch reads its colour
+ *  from the bar's own palette (`progressToneColor`), so a segment and its key can
+ *  never end up different greens. */
+function LegendKey({ tone, label }: { tone: 'green' | 'blue' | 'red' | 'track'; label: string }) {
+    return (
+        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3 }}>
+            <span style={{
+                width: 8, height: 8, borderRadius: 2,
+                // 'track' is the unfilled remainder — the bar's own background, which
+                // is not a tone at all, so it can't come from the tone table.
+                background: tone === 'track' ? '#e9e9e9' : progressToneColor(tone),
+                border: '1px solid #7f9db9',
+            }} />
+            {label}
+        </span>
     );
 }
 
@@ -795,10 +948,44 @@ function PickListSuggestionModal({ so, groups, loading, creating, itemById, onCl
                 ) : (
                     (groups || []).filter((g: any) => (g.cartons || []).length > 0).map((g: any) => {
                         const it = itemById[String(g.item_id)];
-                        const selectedQty = (g.cartons || [])
-                            .filter((c: any) => checked[String(c.batch_id)])
-                            .reduce((s: number, c: any) => s + num(c.qty), 0);
+                        const uom = it?.uom || g.item_uom || '';
+                        const sel = (g.cartons || []).filter((c: any) => checked[String(c.batch_id)]);
+                        const selectedQty = sel.reduce((s: number, c: any) => s + num(c.qty), 0);
                         const over = selectedQty > num(g.remaining_qty) + 1e-6;
+                        // A selected total in the alt unit is only reported when EVERY
+                        // checked carton carries a count AND counted it in the unit this
+                        // line is sold in. Part-counted, or a box packed in Pcs against a
+                        // line ordered in Gross, would print a total the boxes don't hold;
+                        // the kilos beside it are the whole truth either way.
+                        const altUom = g.alt_uom || '';
+                        const selectedAlt = altUom && sel.length
+                            && sel.every((c: any) => c.alt_qty != null && c.alt_uom === altUom)
+                            ? sel.reduce((s: number, c: any) => s + num(c.alt_qty), 0)
+                            : null;
+
+                        // --- Coverage bar ------------------------------------------------
+                        // Measured against what the CUSTOMER ordered, in the unit they
+                        // ordered it in — an order for 2880 Pcs is owed 2880 Pcs whatever
+                        // it weighs, so a kilo-denominated bar answers a question nobody
+                        // asked. Lines with no alt unit fall back to the stock UoM rather
+                        // than lose the bar.
+                        const onAlt = !!altUom && g.ordered_alt != null && g.remaining_alt != null;
+                        const barUom = onAlt ? altUom : uom;
+                        const target = onAlt ? num(g.ordered_alt) : num(g.ordered_qty);
+                        const stillOwed = onAlt ? num(g.remaining_alt) : num(g.remaining_qty);
+                        // Already committed on earlier (non-cancelled) pick lists — the
+                        // subtraction `remaining` is already built from, not a second rule.
+                        const covered = Math.max(0, target - stillOwed);
+                        // What this pick would add on top. Null when the bar is in the alt
+                        // unit but the checked cartons can't be counted in it (uncounted
+                        // box, or one packed in a different unit): a projection nobody can
+                        // stand behind is worse than no projection, so the segment is
+                        // dropped and the legend says why.
+                        const projected = onAlt ? selectedAlt : selectedQty;
+                        const barOver = projected != null && covered + projected > target + 1e-6;
+                        const coveredPct = target > 0 ? (covered / target) * 100 : 0;
+                        const projPct = target > 0 && projected != null ? (projected / target) * 100 : 0;
+                        const shortfall = Math.max(0, target - covered - (projected || 0));
                         return (
                             <div key={g.sales_order_line_id} style={{ marginBottom: 12, border: '1px solid #c8c4b8' }}>
                                 <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8, background: '#f5f4ef', padding: '4px 8px', fontSize: 11 }}>
@@ -812,14 +999,48 @@ function PickListSuggestionModal({ so, groups, loading, creating, itemById, onCl
                                         </LotChipRow>
                                     </span>
                                     <span style={{ whiteSpace: 'nowrap' }}>
-                                        Remaining <b>{num(g.remaining_qty).toLocaleString()}</b> {it?.uom || g.item_uom}
+                                        Remaining <b>{num(g.remaining_qty).toLocaleString()}</b> {uom}
+                                        {altUom && g.remaining_alt != null && (
+                                            <span style={{ color: '#888' }}> ({num(g.remaining_alt).toLocaleString()} {altUom})</span>
+                                        )}
                                         {' · '}
                                         <span style={{ color: over ? '#a00000' : '#0a3e0a', fontWeight: 'bold' }}>
-                                            selected {selectedQty.toLocaleString()}
+                                            selected {selectedQty.toLocaleString()} {uom}
+                                            {selectedAlt != null && ` (${selectedAlt.toLocaleString()} ${altUom})`}
                                         </span>
                                         {over && <span style={{ color: '#a00000' }}> (overshoots)</span>}
                                     </span>
                                 </div>
+                                {target > 0 && (
+                                    <div style={{ padding: '5px 8px 6px', borderBottom: '1px solid #e4e0d4', background: '#fbfaf6' }}>
+                                        <ProgressBar
+                                            pct={coveredPct}
+                                            tone="green"
+                                            secondaryPct={projPct}
+                                            secondaryTone={barOver ? 'red' : 'blue'}
+                                            height={11}
+                                            title={
+                                                `Ordered ${target.toLocaleString()} ${barUom}\n`
+                                                + `Already picked ${covered.toLocaleString()} ${barUom}\n`
+                                                + (projected != null
+                                                    ? `This pick would add ${projected.toLocaleString()} ${barUom}\n`
+                                                    : 'This pick cannot be counted in this unit\n')
+                                                + `Still owed after it: ${shortfall.toLocaleString()} ${barUom}`
+                                            }
+                                        />
+                                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10, fontSize: 9, color: '#666', marginTop: 3 }}>
+                                            <LegendKey tone="green" label={`picked ${covered.toLocaleString()}`} />
+                                            {projected != null
+                                                ? <LegendKey tone={barOver ? 'red' : 'blue'} label={`this pick ${projected.toLocaleString()}`} />
+                                                : <span style={{ fontStyle: 'italic' }}>this pick not countable in {barUom}</span>}
+                                            <LegendKey tone="track" label={`still owed ${shortfall.toLocaleString()}`} />
+                                            <span style={{ marginLeft: 'auto' }}>
+                                                target <b>{target.toLocaleString()} {barUom}</b>
+                                                {!onAlt && <span style={{ fontStyle: 'italic' }}> (no selling unit on this line)</span>}
+                                            </span>
+                                        </div>
+                                    </div>
+                                )}
                                 <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                                     <tbody>
                                         {(g.cartons || []).map((c: any) => (
@@ -837,7 +1058,15 @@ function PickListSuggestionModal({ so, groups, loading, creating, itemById, onCl
                                                         <LotChips batch={c} />
                                                     </LotChipRow>
                                                 </td>
-                                                <td style={{ ...td, textAlign: 'right' }}>{num(c.qty).toLocaleString()}</td>
+                                                <td style={{ ...td, textAlign: 'right', whiteSpace: 'nowrap' }}>
+                                                    {num(c.qty).toLocaleString()}
+                                                    <span style={{ color: '#888', marginLeft: 3 }}>{uom}</span>
+                                                    {c.alt_qty != null && c.alt_uom && (
+                                                        <span style={{ color: '#888' }}>
+                                                            {' · '}{num(c.alt_qty).toLocaleString()} {c.alt_uom}
+                                                        </span>
+                                                    )}
+                                                </td>
                                             </tr>
                                         ))}
                                     </tbody>
@@ -853,7 +1082,7 @@ function PickListSuggestionModal({ so, groups, loading, creating, itemById, onCl
 
 // ── editor ───────────────────────────────────────────────────────────────────
 function PickListEditor({ pl: initialPl, itemById, locPickerTreeOptions, authFetch, onClose, onSaved, showToast }: any) {
-    const { hasPermission } = useUser();
+    const { hasPermission, currentUser } = useUser();
     const canManage = hasPermission('sales.manage');
 
     // Lines are server-owned here: scanning mutates them on the backend and the
@@ -876,7 +1105,23 @@ function PickListEditor({ pl: initialPl, itemById, locPickerTreeOptions, authFet
     const [saving, setSaving] = useState(false);
     const [scanCode, setScanCode] = useState('');
     const [scanning, setScanning] = useState(false);
+    const [showOtherLines, setShowOtherLines] = useState(false);
     const scanRef = useRef<HTMLInputElement | null>(null);
+
+    // The QC inspector is whoever is at the screen, so it is prefilled rather
+    // than typed — a free-text gate field collected blanks and initials. Runs
+    // off an effect because `currentUser` is not resolved at first render, and
+    // once only: a name already on the row wins, and clearing the field must
+    // stay cleared rather than be refilled out from under the user.
+    const prefilledInspector = useRef(false);
+    useEffect(() => {
+        if (prefilledInspector.current || readOnly) return;
+        if (initialPl.qc_inspector) { prefilledInspector.current = true; return; }
+        if (currentUser?.username) {
+            setQcInspector(currentUser.username);
+            prefilledInspector.current = true;
+        }
+    }, [readOnly, currentUser, initialPl.qc_inspector]);
 
     useEffect(() => {
         let cancelled = false;
@@ -962,6 +1207,18 @@ function PickListEditor({ pl: initialPl, itemById, locPickerTreeOptions, authFet
         return m;
     }, [lines]);
 
+    // The table is keyed on SO lines, not pick-list lines, because the picker may
+    // scan a carton this list never suggested and the row has to exist to hold it.
+    // But an order line nothing on this list covers is not part of THIS document —
+    // shown by default it filled a shipped pick list with red "No packed cartons
+    // available" rows describing items that were simply never on it. Folded away
+    // instead, with the count kept visible so a part-shipment is still legible.
+    // The guard matters: a list whose suggestion found nothing has no covered line
+    // at all, and hiding every row would leave an empty table with no explanation.
+    const coveredSoLines = soLines.filter((sl: any) => (linesBySoLine[String(sl.id)] || []).length > 0);
+    const otherSoLines = soLines.filter((sl: any) => (linesBySoLine[String(sl.id)] || []).length === 0);
+    const visibleSoLines = (showOtherLines || coveredSoLines.length === 0) ? soLines : coveredSoLines;
+
     const cartonLines = lines.filter(l => l.batch_id);
     const scannedCount = cartonLines.filter(l => l.picked_at).length;
 
@@ -972,7 +1229,7 @@ function PickListEditor({ pl: initialPl, itemById, locPickerTreeOptions, authFet
             isOpen
             onClose={onClose}
             title={`Pick List ${pl.code} — SO ${pl.sales_order_code || so?.po_number || ''}`}
-            size="xl"
+            size="xxl"
             modeless
             footer={
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%' }}>
@@ -1036,19 +1293,20 @@ function PickListEditor({ pl: initialPl, itemById, locPickerTreeOptions, authFet
                             <th style={{ ...xpTableHeader, width: LV_CHECK_COL_W }} />
                             <th style={xpTableHeader}>Item / Carton</th>
                             <th style={{ ...xpTableHeader, width: 50, textAlign: 'center' }}>#</th>
+                            <th style={xpTableHeader}>Contents</th>
                             <th style={{ ...xpTableHeader, textAlign: 'right' }}>Ordered</th>
                             <th style={{ ...xpTableHeader, textAlign: 'right' }}>Remaining</th>
                             <th style={{ ...xpTableHeader, width: 110, textAlign: 'right' }}>Qty</th>
                             <th style={{ ...xpTableHeader, width: 160 }}>Pick-from</th>
                             <th style={{ ...xpTableHeader, width: 110 }}>Scanned</th>
-                            <th style={{ ...xpTableHeader, width: 60 }}></th>
+                            <th style={{ ...xpTableHeader, width: 34 }}></th>
                         </tr>
                     </thead>
                     <tbody>
                         {soLoading && (
-                            <tr><td colSpan={9} style={{ ...td, textAlign: 'center', color: '#999' }}>Loading order lines...</td></tr>
+                            <tr><td colSpan={10} style={{ ...td, textAlign: 'center', color: '#999' }}>Loading order lines...</td></tr>
                         )}
-                        {soLines.map((sl: any) => {
+                        {visibleSoLines.map((sl: any) => {
                             const it = itemById[String(sl.item_id)];
                             const rows = linesBySoLine[String(sl.id)] || [];
                             // Ordered qty in the item's STOCK UOM. `sl.qty` is not it —
@@ -1068,6 +1326,12 @@ function PickListEditor({ pl: initialPl, itemById, locPickerTreeOptions, authFet
                             const remRaw = remainingMap[String(sl.id)];
                             const rem = remRaw != null ? num(remRaw) : ordered;
                             const totalPicked = rows.reduce((s: number, r: any) => s + num(r.qty_picked), 0);
+                            // Ordered, remaining, the group total and every carton below are
+                            // all in the item's stock UoM (see qty_ordered_base above), so the
+                            // unit is written once and stamped on all four. Ordered carried it
+                            // alone, which left the neighbouring figures reading as a bare
+                            // count of something.
+                            const lineUom = sl.base_uom || it?.uom || '';
                             return (
                                 <React.Fragment key={sl.id}>
                                     <tr style={{ background: '#f5f4ef' }}>
@@ -1077,15 +1341,20 @@ function PickListEditor({ pl: initialPl, itemById, locPickerTreeOptions, authFet
                                             <span style={{ fontSize: 9, color: '#888', marginLeft: 6 }}>{it?.code || sl.item_code}</span>
                                         </td>
                                         <td style={td} />
+                                        <td style={td} />
                                         <td style={{ ...td, textAlign: 'right' }}>
                                             {ordered !== null
-                                                ? `${ordered.toLocaleString()} ${sl.base_uom || it?.uom || ''}`
+                                                ? `${ordered.toLocaleString()} ${lineUom}`
                                                 : <span style={{ color: '#999' }} title="This item is stocked by weight but carries no g/y or g/m on its master, so the ordered yards cannot be restated in it">&mdash;</span>}
                                         </td>
                                         <td style={{ ...td, textAlign: 'right', color: rem !== null && rem > 0 ? '#0a3e0a' : '#999' }}>
-                                            {rem !== null ? rem.toLocaleString() : <span>&mdash;</span>}
+                                            {rem !== null
+                                                ? <>{rem.toLocaleString()} <span style={{ color: '#888' }}>{lineUom}</span></>
+                                                : <span>&mdash;</span>}
                                         </td>
-                                        <td style={{ ...td, textAlign: 'right', fontWeight: 'bold' }}>{totalPicked.toLocaleString()}</td>
+                                        <td style={{ ...td, textAlign: 'right', fontWeight: 'bold' }}>
+                                            {totalPicked.toLocaleString()} <span style={{ color: '#888', fontWeight: 'normal' }}>{lineUom}</span>
+                                        </td>
                                         <td style={td} colSpan={3}>
                                             {rows.length === 0 && <span style={{ fontSize: 10, color: '#c00' }}>No packed cartons available</span>}
                                         </td>
@@ -1095,18 +1364,29 @@ function PickListEditor({ pl: initialPl, itemById, locPickerTreeOptions, authFet
                                             {/* Manual fallback for a scanner-less floor or a damaged label —
                                                 ticking confirms the same carton scanning would, via its known
                                                 batch number. No unpick: once confirmed, only removing the line
-                                                undoes it. Bulk (uncartonised) lines have nothing to confirm. */}
-                                            {r.batch_id ? (
+                                                undoes it. Bulk (uncartonised) lines have nothing to confirm.
+
+                                                A confirmed carton shows a green check, NOT a checked-and-
+                                                disabled box: a greyed tick is the browser's "you may not have
+                                                this" and read as the pick having been refused, which is the
+                                                opposite of what it means. Greying is kept only for a pending
+                                                box during an in-flight scan, where unavailable is the truth. */}
+                                            {!r.batch_id ? (
+                                                <td style={td} />
+                                            ) : r.picked_at ? (
+                                                <td style={{ ...td, width: LV_CHECK_COL_W, textAlign: 'center', color: '#0a3e0a' }}
+                                                    title={`Carton ${r.batch_number} confirmed${r.picked_by ? ` by ${r.picked_by}` : ''} — remove the line to undo`}>
+                                                    <i className="bi bi-check-lg" />
+                                                </td>
+                                            ) : (
                                                 <RowCheckboxCell
                                                     classic
-                                                    checked={!!r.picked_at}
-                                                    disabled={readOnly || !!r.picked_at || scanning}
+                                                    checked={false}
+                                                    disabled={readOnly || scanning}
                                                     onChange={() => scan(r.batch_number)}
                                                     label={`carton ${r.batch_number}`}
                                                     tdStyle={td}
                                                 />
-                                            ) : (
-                                                <td style={td} />
                                             )}
                                             <td style={{ ...td, paddingLeft: 22 }}>
                                                 {r.batch_id
@@ -1114,33 +1394,99 @@ function PickListEditor({ pl: initialPl, itemById, locPickerTreeOptions, authFet
                                                     : <span style={{ color: '#888' }}>Bulk (no carton)</span>}
                                             </td>
                                             <td style={{ ...td, textAlign: 'center' }}>{r.package_no ? `#${r.package_no}` : '—'}</td>
+                                            {/* What is actually IN this box — size, combo, shade (with its
+                                                hex swatch) and any other variant attribute, off the carton's
+                                                own stock key rather than off what the line ordered. The two
+                                                can differ when a box was packed from a substituted lot, and
+                                                the picker holding it is the one person able to catch that.
+                                                Its own column rather than a second line under the carton
+                                                number: a box can carry four or five attributes, and stacked
+                                                under the code they set the row height by how much the packer
+                                                happened to record. */}
+                                            <td style={td}>
+                                                {r.carton_identity && (
+                                                    <LotChipRow>
+                                                        <LotChips batch={r.carton_identity} />
+                                                    </LotChipRow>
+                                                )}
+                                            </td>
                                             <td style={td} />
                                             <td style={td} />
                                             <td style={{ ...td, textAlign: 'right' }}>
-                                                <input type="number" min={0}
-                                                    style={{ ...xpInput, width: '100%', textAlign: 'right' }}
-                                                    disabled={readOnly || !!r.batch_id}
-                                                    title={r.batch_id ? 'A carton ships whole — its qty comes from stock' : undefined}
-                                                    value={r.qty_picked ?? ''} onChange={e => setLineQty(r.__idx, e.target.value)} />
+                                                {/* A carton ships whole, so its qty is stock's answer and was
+                                                    already un-editable — rendered as a figure rather than a
+                                                    greyed input, which showed a number with no unit and invited
+                                                    a click that does nothing. Bulk lines keep the real field. */}
+                                                {r.batch_id ? (
+                                                    <span title="A carton ships whole — its qty comes from stock">
+                                                        {num(r.qty_picked).toLocaleString()}
+                                                        <span style={{ color: '#888', marginLeft: 3 }}>{lineUom}</span>
+                                                    </span>
+                                                ) : (
+                                                    <input type="number" min={0}
+                                                        style={{ ...xpInput, width: '100%', textAlign: 'right' }}
+                                                        disabled={readOnly}
+                                                        value={r.qty_picked ?? ''} onChange={e => setLineQty(r.__idx, e.target.value)} />
+                                                )}
                                             </td>
                                             <td style={td}>
                                                 <TreeSelect options={locPickerTreeOptions} value={r.source_location_id || ''} onChange={id => setLineLoc(r.__idx, id)} disabled={readOnly || !!r.batch_id} allowEmpty emptyLabel="(default)" size="sm" style={{ width: '100%' }} />
                                             </td>
+                                            {/* Scan state as a chip off the shared family palette, not loose
+                                                coloured text — it is the column a supervisor scans down before
+                                                releasing the list, and green-vs-amber only reads as a state
+                                                when it is bounded. A bulk line has no carton to scan, so it
+                                                stays plain text: an absence, not a state. */}
                                             <td style={td}>
-                                                {!r.batch_id
-                                                    ? <span style={{ fontSize: 10, color: '#bbb' }}>n/a</span>
-                                                    : r.picked_at
-                                                        ? <span style={{ fontSize: 10, color: '#0a3e0a' }}><i className="bi bi-check-lg" /> {r.picked_by || 'yes'}</span>
-                                                        : <span style={{ fontSize: 10, color: '#c77800' }}>pending</span>}
+                                                {!r.batch_id ? (
+                                                    <span style={{ fontSize: 10, color: '#bbb' }}>n/a</span>
+                                                ) : r.picked_at ? (
+                                                    <Chip classic size="xs" icon="bi-check-lg" tone={statusTint('SCANNED')}
+                                                        title={`Scanned by ${r.picked_by || 'an operator'}`}>
+                                                        {r.picked_by || 'scanned'}
+                                                    </Chip>
+                                                ) : (
+                                                    <Chip classic size="xs" tone={statusTint('UNSCANNED')}
+                                                        title="Not yet scanned — this carton blocks dispatch">
+                                                        pending
+                                                    </Chip>
+                                                )}
                                             </td>
-                                            <td style={{ ...td, textAlign: 'right' }}>
-                                                {!readOnly && <button className={XP_BTN} style={xpBtn({ color: '#a00' })} onClick={() => removeLine(r.__idx)}>Remove</button>}
+                                            <td style={{ ...td, textAlign: 'center' }}>
+                                                {!readOnly && (
+                                                    <XPActionButton
+                                                        classic
+                                                        tone="danger"
+                                                        icon="bi-x"
+                                                        title={r.batch_id
+                                                            ? `Remove carton ${r.batch_number} from this pick list`
+                                                            : 'Remove this line'}
+                                                        onClick={() => removeLine(r.__idx)}
+                                                    />
+                                                )}
                                             </td>
                                         </tr>
                                     ))}
                                 </React.Fragment>
                             );
                         })}
+                        {/* The rest of the order. Worth one line rather than nothing: on a
+                            part shipment "4 more lines still owed" is the difference between
+                            a short pick and a finished one, and scanning an unsuggested
+                            carton lands on one of these. Neutral grey, never the red the
+                            hidden rows used to shout — not being on this list is normal. */}
+                        {!soLoading && coveredSoLines.length > 0 && otherSoLines.length > 0 && (
+                            <tr>
+                                <td colSpan={10} style={{ ...td, background: '#faf9f5', color: '#666', fontSize: 10 }}>
+                                    {otherSoLines.length} other order line{otherSoLines.length === 1 ? '' : 's'} not on this pick list
+                                    {' — '}
+                                    <a href="#" style={{ color: '#00309c' }}
+                                        onClick={e => { e.preventDefault(); setShowOtherLines(v => !v); }}>
+                                        {showOtherLines ? 'hide' : 'show'}
+                                    </a>
+                                </td>
+                            </tr>
+                        )}
                     </tbody>
                 </table>
 

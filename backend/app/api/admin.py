@@ -107,6 +107,15 @@ def download_snapshot(filename: str, current_user: User = Depends(get_current_ad
         raise HTTPException(status_code=404, detail="File not found")
     return FileResponse(path, filename=filename)
 
+@router.delete("/snapshots/{filename}")
+def delete_snapshot(filename: str, current_user: User = Depends(get_current_admin)):
+    path = db_manager.get_snapshot_path(filename)
+    if not path.exists():
+        raise HTTPException(status_code=404, detail="File not found")
+    path.unlink()
+    _log_admin_action(current_user.id, "DB_SNAPSHOT_DELETE", f"Deleted snapshot {path.name}")
+    return {"message": f"Snapshot {path.name} deleted", "status": True}
+
 @router.post("/snapshots/upload")
 async def upload_snapshot(file: UploadFile = File(...), current_user: User = Depends(get_current_admin)):
     safe_filename = Path(file.filename).name

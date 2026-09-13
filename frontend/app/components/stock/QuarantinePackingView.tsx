@@ -112,6 +112,7 @@ type Group = {
     labdip_variant_code: string | null;
     combo_value_id: string | null;
     bom_size_id: string | null;
+    size_label: string | null;
     item_id: string;
     item_code: string | null;
     item_name: string | null;
@@ -319,6 +320,9 @@ export default function QuarantinePackingView() {
         });
         if (g.sales_order_id) params.set('sales_order_id', g.sales_order_id);
         if (g.bom_size_id) params.set('bom_size_id', g.bom_size_id);
+        // The size as text as well as the id: an SO line carries a Size-master id,
+        // never a BOMSize one, so the name is the only thing the two sides share.
+        if (g.size_label) params.set('size_label', g.size_label);
         if (g.color_id) params.set('color_id', g.color_id);
         if (g.combo_value_id) params.set('combo_value_id', g.combo_value_id);
         router.push(`/packing?${params.toString()}`);

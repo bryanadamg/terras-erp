@@ -21,11 +21,24 @@ logger = logging.getLogger(__name__)
 # so the UI can tag scheduled vs. manual snapshots and retention can target only the
 # ones the scheduler itself created. Anything that doesn't match (e.g. an uploaded
 # file with an arbitrary name) is treated as "manual" — never auto-pruned.
-_SNAPSHOT_NAME_RE = re.compile(r"^snapshot_(?P<label>.+)_\d{8}_\d{6}\.\w+$")
+_SNAPSHOT_NAME_RE = re.compile(r"^snapshot_(?P<label>.+)_(?P<ts>\d{8}_\d{6})\.\w+$")
 
 def _label_for_filename(name: str) -> str:
     match = _SNAPSHOT_NAME_RE.match(name)
     return match.group("label") if match else "manual"
+
+def _created_at_for(path: Path) -> datetime:
+    """When the snapshot was taken. NOT st_ctime — that is the inode change time on
+    Linux, so copying the snapshots dir into a fresh container stamps every file with
+    the same rebuild timestamp. The filename carries the real wall clock; fall back to
+    mtime for uploaded files with arbitrary names."""
+    match = _SNAPSHOT_NAME_RE.match(path.name)
+    if match:
+        try:
+            return datetime.strptime(match.group("ts"), "%Y%m%d_%H%M%S")
+        except ValueError:
+            pass
+    return datetime.fromtimestamp(path.stat().st_mtime)
 
 class DatabaseManager:
     _instance = None
@@ -105,7 +118,7 @@ class DatabaseManager:
             files.append({
                 "name": f.name,
                 "size": stats.st_size,
-                "created_at": datetime.fromtimestamp(stats.st_ctime).isoformat(),
+                "created_at": _created_at_for(f).isoformat(),
                 "label": _label_for_filename(f.name),
             })
         return sorted(files, key=lambda x: x["created_at"], reverse=True)

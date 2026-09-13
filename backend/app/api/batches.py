@@ -18,7 +18,7 @@ from app.models.production_run import ProductionRun
 from app.models.sales import SalesOrder
 from app.models.goods_receipt import GoodsReceipt, GoodsReceiptLine
 from app.models.purchase import PurchaseOrder
-from app.schemas import BatchCreate, BatchReject, BatchSplit, BatchDispose, BatchResponse, BatchTraceResponse, BatchConsumptionResponse, BatchTraceBackNode, PaginatedBatchResponse
+from app.schemas import BatchCreate, BatchReject, BatchSplit, BatchDispose, BatchReassign, BatchResponse, BatchTraceResponse, BatchConsumptionResponse, BatchTraceBackNode, PaginatedBatchResponse
 from app.api.auth import get_current_user, require_permission, require_any_permission
 from app.models.auth import User
 from app.services import audit_service, kpi_service, stock_service, reject_service, numbering_service, quarantine_service, staging_service, work_center_service
@@ -1068,6 +1068,137 @@ async def dispose_batch(
     batch.item_code = batch.item.code if batch.item else None
     batch.item_name = batch.item.name if batch.item else None
     return batch
+
+
+@router.post("/{batch_id}/reassign", response_model=BatchResponse)
+async def reassign_batch(
+    batch_id: uuid.UUID,
+    payload: BatchReassign,
+    db: AsyncSession = Depends(get_async_db),
+    current_user: User = Depends(require_permission('lot.qc_reject')),
+):
+    """Recycle a rejected lot into a **different item** instead of disposing it.
+
+    Reject is not always scrap: a beam rejected for one cloth is often perfectly
+    good warp for a coarser one, and the floor re-cycles it rather than writing
+    it off. This moves the rejected lot's stock (all of it, or ``qty``) onto a
+    new GOOD lot under ``item_id`` — so the goods become normal, pickable,
+    nettable stock for the new product — while the rejection itself stays on the
+    record: the source lot keeps its reject grade, and the new lot carries both
+    ``parent_batch_id`` and a ``BatchConsumption`` row, the same two-way lineage
+    a split (``split_batch``) and a leftover beam (``beam_service.dismount``)
+    write, so trace-back walks the recycled lot up into the rejected one.
+
+    Deliberately not carried over to the new lot:
+    * **variant ids** — attribute values (colour/combo) belong to the source
+      item's variant space; the recycled goods land in the no-variant bucket,
+      like a manually created lot.
+    * **bom_size_snapshot** — size identity comes from the source item's BOM, and
+      the ``""`` bucket is substitutable both ways in size-aware netting.
+    ``ends`` and ``source_wo_id`` *do* carry: those are physical/origin facts
+    about the same goods, and they keep the lot's production origin traceable.
+    """
+    result = await db.execute(select(Batch).options(joinedload(Batch.item)).filter(Batch.id == batch_id))
+    batch = result.scalars().first()
+    if not batch:
+        raise HTTPException(status_code=404, detail="Lot not found")
+    if not reject_service.is_reject_grade(batch.quality_status):
+        raise HTTPException(status_code=400, detail="Only rejected lots can be reassigned to another item")
+    if str(payload.item_id) == str(batch.item_id):
+        raise HTTPException(status_code=400, detail="Pick a different item — the lot is already this item")
+
+    target = (await db.execute(select(Item).filter(Item.id == payload.item_id))).scalars().first()
+    if not target:
+        raise HTTPException(status_code=404, detail="Item not found")
+
+    dest_loc = None
+    if payload.location_id:
+        dest_loc = (await db.execute(
+            select(Location).filter(Location.id == payload.location_id)
+        )).scalars().first()
+        if not dest_loc:
+            raise HTTPException(status_code=404, detail="Location not found")
+
+    remaining = await _batch_remaining(db, batch.id)
+    if remaining <= 1e-9:
+        raise HTTPException(status_code=400, detail="Lot has no remaining stock to reassign")
+    qty = float(payload.qty) if payload.qty is not None else remaining
+    if qty <= 0:
+        raise HTTPException(status_code=400, detail="Reassign qty must be positive")
+    if qty > remaining + 1e-9:
+        raise HTTPException(status_code=400, detail=f"Reassign qty {qty:g} exceeds remaining {remaining:g}")
+    qty = min(qty, remaining)
+
+    reason = (payload.reason or "").strip() or None
+    new_lot = Batch(
+        batch_number=await generate_batch_number(db, prefix="RCY"),
+        item_id=target.id,
+        quality_status=reject_service.GOOD,
+        source_wo_id=batch.source_wo_id,
+        ends=batch.ends,
+        parent_batch_id=batch.id,
+        notes=(f"Recycled from rejected lot {batch.batch_number}"
+               + (f" ({batch.item.code})" if batch.item else "")
+               + (f": {reason}" if reason else "")),
+        created_by=current_user.username,
+    )
+    db.add(new_lot)
+    await db.flush()
+
+    # Cross-item move: the source rows are posted out under the OLD item (that's
+    # where the balance sits) and posted in under the NEW one, per source row so
+    # no row can go negative. Same-shape as _move_batch_stock, which can't be
+    # reused because it posts both sides against one item_id.
+    rows = (await db.execute(
+        select(StockBalance)
+        .filter(StockBalance.batch_key == str(batch.id), StockBalance.qty > 0)
+        .order_by(StockBalance.qty.desc())
+    )).scalars().all()
+    to_move = qty
+    moved = 0.0
+    for r in rows:
+        if to_move <= 1e-9:
+            break
+        portion = min(float(r.qty), to_move)
+        ids, cid = stock_service._parse_variant_key(r.variant_key)
+        await stock_service.add_stock_entry(
+            db, item_id=batch.item_id, location_id=r.location_id, qty_change=-portion,
+            reference_type="Lot Reassign", reference_id=new_lot.batch_number,
+            attribute_value_ids=ids, color_id=cid, batch_id=batch.id,
+        )
+        await stock_service.add_stock_entry(
+            db, item_id=target.id, location_id=(dest_loc.id if dest_loc else r.location_id),
+            qty_change=portion, reference_type="Lot Reassign", reference_id=new_lot.batch_number,
+            batch_id=new_lot.id,
+        )
+        to_move -= portion
+        moved += portion
+
+    db.add(BatchConsumption(
+        input_batch_id=batch.id,
+        output_batch_id=new_lot.id,
+        qty_consumed=moved,
+    ))
+    await db.commit()
+    await audit_service.log_activity(
+        db, current_user.id, "REASSIGN", "Batch", str(batch.id),
+        details=f"Reassigned {moved:g} of rejected lot {batch.batch_number}"
+        + (f" ({batch.item.code})" if batch.item else "")
+        + f" → new lot {new_lot.batch_number} ({target.code})"
+        + (f" at {dest_loc.name}" if dest_loc else "")
+        + (f": {reason}" if reason else ""),
+    )
+    await manager.broadcast({"type": "STOCK_UPDATE"})
+    try:
+        await kpi_service.invalidate_kpis_async(db)
+        await manager.broadcast({"type": "KPI_UPDATE"})
+    except Exception:
+        pass
+
+    reloaded = (await db.execute(
+        select(Batch).options(joinedload(Batch.item)).filter(Batch.id == new_lot.id)
+    )).scalars().first()
+    return (await _enrich_batches(db, [reloaded]))[0]
 
 
 @router.get("/{batch_id}/trace", response_model=BatchTraceResponse)

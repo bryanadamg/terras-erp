@@ -45,10 +45,13 @@
 
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { useTheme } from '../../context/ThemeContext';
-import { AnchorRect, FloatingLayer, TooltipSurface, isClipped } from './Tooltip';
+import { AnchorRect, FloatingLayer, TIP_DELAY, TooltipSurface, isClipped } from './Tooltip';
 import { layoutRectOf } from './uiScale';
 
-const DELAY_MS = 380;
+/** Shared with `<Tooltip>` so the same hover never feels faster on one surface
+ *  than the other. This layer fires on ANY titled or clipped node in the document,
+ *  so it is the one most sensitive to being too eager. */
+const DELAY_MS = TIP_DELAY;
 /** How far up from the hovered node to look for a clipped box. Text is usually
  *  clipped by its own span or the cell one or two levels up, never further. */
 const CLIP_DEPTH = 3;
@@ -61,6 +64,24 @@ const PARKED = 'data-original-title';
 const OWN_ARIA = 'data-tip-aria';
 
 type Live = { el: HTMLElement; rect: AnchorRect; text: string };
+
+/** Widest an anchor can be and still count as an icon-only control. */
+const ICON_BTN_MAX = 44;
+
+/**
+ * Small icon controls get the bubble BESIDE them, not under them.
+ *
+ * Row/toolbar action buttons sit in a column: the thing directly below a View
+ * button is the NEXT row's View button, so a bubble hung underneath hides the
+ * control the user is about to aim at. (It never blocked the click — the layer
+ * is `pointer-events: none` — it blocked the eye.) Anything wider is ordinary
+ * text or a labelled button, where "below" is still the right place.
+ */
+const sidePlaced = (el: HTMLElement) => {
+    if (el.closest('button,a,[role="button"]') !== el) return false;
+    const r = el.getBoundingClientRect();
+    return r.width > 0 && r.width <= ICON_BTN_MAX;
+};
 
 const TIP_ID = 'app-tooltip-surface';
 
@@ -229,7 +250,7 @@ export default function GlobalTooltip() {
 
     if (!live) return null;
     return (
-        <FloatingLayer rect={live.rect} anchorEl={live.el} className="tip-anim">
+        <FloatingLayer rect={live.rect} anchorEl={live.el} placement={sidePlaced(live.el) ? 'side' : 'bottom'} className="tip-anim">
             <TooltipSurface classic={classic} maxWidth={360} id={TIP_ID}>{live.text}</TooltipSurface>
         </FloatingLayer>
     );

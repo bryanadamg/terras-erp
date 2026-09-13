@@ -403,7 +403,7 @@ export default function PackingOrderView({ initialCreateState, onClearInitialSta
                 <td colSpan={PO_COLS} style={{ padding: 0 }}>
                     <ExpandedRowPanel classic={CLASSIC}>
                         <div style={{
-                            display: 'grid', gridTemplateColumns: '320px 300px minmax(260px, 1fr)',
+                            display: 'grid', gridTemplateColumns: '320px 250px minmax(360px, 1fr)',
                             border: '1px solid #7f9db9', fontFamily: xpFont, fontSize: 10,
                         }}>
                             {/* Info */}
@@ -479,58 +479,81 @@ export default function PackingOrderView({ initialCreateState, onClearInitialSta
                                 )}
                             </div>
 
-                            {/* Cartons minted by this order */}
+                            {/* Pack log — one row per PackingCompletion (one lot per event).
+                                The narrow pane: this list is bounded by the lots on the desk,
+                                while the carton list grows with every box packed. */}
                             <div style={{ borderRight: '1px solid #c0bdb5', padding: '6px 8px', background: '#f5f4ef', overflow: 'hidden' }}>
-                                <div style={colHeader}>{po.package_label}s ({units.length})</div>
-                                {units.length === 0 ? (
-                                    <div style={{ color: '#aaa', fontStyle: 'italic', fontSize: 9 }}>Nothing packed yet.</div>
+                                <div style={colHeader}>Pack Log ({comps.length})</div>
+                                {comps.length === 0 ? (
+                                    <div style={{ color: '#aaa', fontStyle: 'italic', fontSize: 9 }}>No entries yet.</div>
                                 ) : (
                                     <div style={{ maxHeight: 200, overflowY: 'auto' }}>
-                                        {units.map((u: any) => (
-                                            <div key={u.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 4, fontSize: 9, marginBottom: 2, paddingBottom: 2, borderBottom: '1px solid #e8e6e0' }}>
-                                                <span style={{ color: '#888', width: 18, flexShrink: 0 }}>#{u.package_no}</span>
-                                                <span style={{ flex: 1, minWidth: 0, overflow: 'hidden' }}>
-                                                    <CodeChip code={u.batch_number} classic={CLASSIC} link style={{ cursor: 'default', maxWidth: '100%', overflow: 'hidden', textOverflow: 'ellipsis' }} />
-                                                    {/* A carton is a lot and labels itself like one: shade/combo
-                                                        resolved from its stock key, size stamped on it at packing.
-                                                        Renders nothing when it carries no identity. */}
-                                                    <LotChips batch={u} showOtherAttrs={false} />
-                                                </span>
-                                                {/* The count that went in the box, when the order is
-                                                    counted in one. Read off the carton, not divided out
-                                                    of its qty. */}
-                                                {u.alt_qty != null && po.uom2 && (
-                                                    <span style={{ color: '#555' }}>{num(u.alt_qty)} {po.uom2}</span>
-                                                )}
-                                                {/* Which box it went into, and what the whole thing
-                                                    weighs — the two figures the delivery note carries.
-                                                    Both snapshotted on the carton at pack time, so an
-                                                    edited master never rewrites what shipped. */}
-                                                {u.packaging_type_name && (
-                                                    <Chip classic={CLASSIC} size="xs" truncate title={u.packaging_type_name} style={{ maxWidth: 74 }}>
-                                                        {u.packaging_type_name}
-                                                    </Chip>
-                                                )}
-                                                {u.gross_weight_kg != null && (
-                                                    <span style={{ color: '#555', whiteSpace: 'nowrap' }}
-                                                        title={`Gross ${num(u.gross_weight_kg).toFixed(2)} kg = net ${num(u.weight_kg).toFixed(2)} + tare ${num(u.tare_kg).toFixed(2)}`}>
-                                                        {num(u.gross_weight_kg).toFixed(2)} kg
+                                        {comps.map((c: any, ci: number) => (
+                                            <div key={c.id || ci} style={{
+                                                fontSize: 9, marginBottom: 2, paddingBottom: 2,
+                                                borderBottom: '1px solid #e8e6e0',
+                                                // The only row fill is the rejected-red marker, which carries meaning.
+                                                background: c.rejected ? '#fbe4e4' : undefined,
+                                            }}>
+                                                <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                                                    <span style={{ color: '#666', whiteSpace: 'nowrap' }}>
+                                                        {c.completed_at ? tzDateTime(c.completed_at) : '—'}
                                                     </span>
+                                                    <span style={{
+                                                        marginLeft: 'auto', fontWeight: 'bold',
+                                                        color: c.rejected ? '#900' : '#000080',
+                                                        textDecoration: c.rejected ? 'line-through' : 'none',
+                                                    }} title={c.reject_reason || undefined}>
+                                                        +{num(c.qty).toFixed(2)}
+                                                    </span>
+                                                    <span style={{ color: '#555', whiteSpace: 'nowrap' }}
+                                                        title={`${c.package_count} ${po.package_label.toLowerCase()}(s) packed in this entry`}>
+                                                        &#215;{c.package_count}
+                                                    </span>
+                                                    {unitsOfComp(c.id).length > 0 && (
+                                                        <button type="button" style={miniBtn}
+                                                            onClick={() => setPrintLabels({ order: po, units: unitsOfComp(c.id) })}
+                                                            title={`Print labels for the ${unitsOfComp(c.id).length} ${po.package_label.toLowerCase()}(s) of this entry`}>
+                                                            Labels
+                                                        </button>
+                                                    )}
+                                                </div>
+                                                <div style={{ display: 'flex', alignItems: 'center', gap: 4, color: '#555' }}>
+                                                    <span style={{
+                                                        fontFamily: c.source_batch_number ? CODE_FONT : undefined,
+                                                        overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                                                    }} title={c.source_batch_number || undefined}>
+                                                        {c.source_batch_number || '—'}
+                                                    </span>
+                                                    <span style={{ marginLeft: 'auto', color: '#333', whiteSpace: 'nowrap' }}>{c.operator || '—'}</span>
+                                                    {c.rejected && (
+                                                        <span style={{ borderRadius: CHIP_RADIUS, fontSize: 8, fontWeight: 'bold', color: '#900', border: '1px solid #c88', background: '#fff', padding: '0 3px' }}>REJECTED</span>
+                                                    )}
+                                                    {/* Partial reject: the entry stays live with its qty already
+                                                        trimmed, so the scrapped part only shows as its own marker. */}
+                                                    {!c.rejected && num(c.qty_rejected) > 0 && (
+                                                        <span title={c.reject_reason || 'Partially rejected'}
+                                                            style={{ borderRadius: CHIP_RADIUS, fontSize: 8, fontWeight: 'bold', color: '#900', border: '1px solid #c88', background: '#fff', padding: '0 3px' }}>
+                                                            -{num(c.qty_rejected).toFixed(2)} REJ
+                                                        </span>
+                                                    )}
+                                                </div>
+                                                {c.notes && (
+                                                    <div style={{ color: '#888', fontStyle: 'italic', paddingLeft: 8 }}>{c.notes}</div>
                                                 )}
-                                                {/* Zero on hand = the carton has left on a pick list. */}
-                                                <span style={{ fontWeight: 'bold', color: num(u.qty) > 0 ? '#0a3e0a' : '#999' }}>
-                                                    {num(u.qty) > 0 ? num(u.qty).toFixed(2) : 'shipped'}
-                                                </span>
                                             </div>
                                         ))}
                                     </div>
                                 )}
                             </div>
 
-                            {/* Pack log — one row per PackingCompletion (one per lot per event) */}
+                            {/* Cartons minted by this order — the wide pane, and the one with the
+                                table: there is one row per label printed, so this is the list that
+                                grows with the order. The pack log beside it is one row per lot
+                                consumed, which the desk bounds. */}
                             <div style={{ padding: '6px 8px', background: '#f5f4ef', overflow: 'hidden' }}>
                                 <div style={{ ...colHeader, display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 6 }}>
-                                    <span>Pack Log ({comps.length})</span>
+                                    <span>{po.package_label}s ({units.length})</span>
                                     {units.length > 0 && (
                                         <button type="button" onClick={() => setPrintLabels({ order: po, units })}
                                             style={miniBtn} title={`Print a label for every ${po.package_label.toLowerCase()} on this order`}>
@@ -538,72 +561,71 @@ export default function PackingOrderView({ initialCreateState, onClearInitialSta
                                         </button>
                                     )}
                                 </div>
-                                {comps.length === 0 ? (
-                                    <div style={{ color: '#aaa', fontStyle: 'italic', fontSize: 9 }}>No entries yet.</div>
+                                {units.length === 0 ? (
+                                    <div style={{ color: '#aaa', fontStyle: 'italic', fontSize: 9 }}>Nothing packed yet.</div>
                                 ) : (
                                     <div style={{ maxHeight: 200, overflowY: 'auto' }}>
                                         <table style={{ ...lvSubTable(true), border: 'none' }}>
                                             <thead>
                                                 <tr>
-                                                    <th style={{ ...th, width: 108 }}>Date / Time</th>
-                                                    <th style={{ ...th, textAlign: 'right', width: 50 }}>Qty</th>
-                                                    <th style={{ ...th, textAlign: 'right', width: 34 }}>{po.package_label.charAt(0)}s</th>
-                                                    <th style={th}>Source lot</th>
-                                                    <th style={th}>Operator</th>
+                                                    <th style={{ ...th, width: 26 }}>#</th>
+                                                    <th style={th}>Lot</th>
+                                                    {po.uom2 ? <th style={{ ...th, textAlign: 'right', width: 56 }}>{po.uom2}</th> : null}
+                                                    <th style={{ ...th, width: 74 }}>{po.package_label}</th>
+                                                    <th style={{ ...th, textAlign: 'right', width: 62 }}>Gross</th>
+                                                    <th style={{ ...th, textAlign: 'right', width: 60 }}>On hand</th>
                                                     <th style={{ ...th, width: 46 }} />
                                                 </tr>
                                             </thead>
                                             <tbody>
-                                                {/* No zebra — the only row fill is the rejected-red
-                                                    marker, which carries meaning. */}
-                                                {comps.map((c: any, ci: number) => (
-                                                    <React.Fragment key={c.id || ci}>
-                                                        <tr style={lvSubRow(true, ci, { fill: c.rejected ? '#fbe4e4' : undefined })}>
-                                                            <td style={{ ...td, color: '#666', whiteSpace: 'nowrap' }}>
-                                                                {c.completed_at ? tzDateTime(c.completed_at) : '—'}
+                                                {units.map((u: any, ui: number) => (
+                                                    <tr key={u.id} style={lvSubRow(true, ui)}>
+                                                        <td style={{ ...td, color: '#888' }}>#{u.package_no}</td>
+                                                        <td style={{ ...td, overflow: 'hidden' }}>
+                                                            <span style={{ display: 'flex', alignItems: 'center', gap: 3, flexWrap: 'wrap', minWidth: 0 }}>
+                                                                <CodeChip code={u.batch_number} classic={CLASSIC} link style={{ cursor: 'default', maxWidth: '100%', overflow: 'hidden', textOverflow: 'ellipsis' }} />
+                                                                {/* A carton is a lot and labels itself like one: shade/combo
+                                                                    resolved from its stock key, size stamped on it at packing.
+                                                                    Renders nothing when it carries no identity. */}
+                                                                <LotChips batch={u} showOtherAttrs={false} />
+                                                            </span>
+                                                        </td>
+                                                        {/* The count that went in the box, when the order is counted
+                                                            in one. Read off the carton, not divided out of its qty. */}
+                                                        {po.uom2 ? (
+                                                            <td style={{ ...td, textAlign: 'right', color: '#555' }}>
+                                                                {u.alt_qty != null ? `${num(u.alt_qty)} ${po.uom2}` : '—'}
                                                             </td>
-                                                            <td style={{
-                                                                ...td, textAlign: 'right', fontWeight: 'bold',
-                                                                color: c.rejected ? '#900' : '#000080',
-                                                                textDecoration: c.rejected ? 'line-through' : 'none',
-                                                            }} title={c.reject_reason || undefined}>
-                                                                +{num(c.qty).toFixed(2)}
-                                                            </td>
-                                                            <td style={{ ...td, textAlign: 'right', color: '#555' }}>{c.package_count}</td>
-                                                            <td style={{ ...td, color: '#555', fontFamily: c.source_batch_number ? CODE_FONT : undefined, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: 130 }}
-                                                                title={c.source_batch_number || undefined}>
-                                                                {c.source_batch_number || '—'}
-                                                            </td>
-                                                            <td style={{ ...td, color: '#333' }}>
-                                                                {c.operator || '—'}
-                                                                {c.rejected && (
-                                                                    <span style={{ borderRadius: CHIP_RADIUS, marginLeft: 5, fontSize: 8, fontWeight: 'bold', color: '#900', border: '1px solid #c88', background: '#fff', padding: '0 3px' }}>REJECTED</span>
-                                                                )}
-                                                                {/* Partial reject: the entry stays live with its qty already
-                                                                    trimmed, so the scrapped part only shows as its own marker. */}
-                                                                {!c.rejected && num(c.qty_rejected) > 0 && (
-                                                                    <span title={c.reject_reason || 'Partially rejected'}
-                                                                        style={{ borderRadius: CHIP_RADIUS, marginLeft: 5, fontSize: 8, fontWeight: 'bold', color: '#900', border: '1px solid #c88', background: '#fff', padding: '0 3px' }}>
-                                                                        -{num(c.qty_rejected).toFixed(2)} REJ
-                                                                    </span>
-                                                                )}
-                                                            </td>
-                                                            <td style={{ ...td, padding: '1px 4px', textAlign: 'right' }}>
-                                                                {unitsOfComp(c.id).length > 0 && (
-                                                                    <button type="button" style={miniBtn}
-                                                                        onClick={() => setPrintLabels({ order: po, units: unitsOfComp(c.id) })}
-                                                                        title={`Print labels for the ${unitsOfComp(c.id).length} ${po.package_label.toLowerCase()}(s) of this entry`}>
-                                                                        Labels
-                                                                    </button>
-                                                                )}
-                                                            </td>
-                                                        </tr>
-                                                        {c.notes && (
-                                                            <tr>
-                                                                <td colSpan={6} style={{ ...td, borderTop: 'none', padding: '0 5px 3px 12px', color: '#888', fontStyle: 'italic' }}>{c.notes}</td>
-                                                            </tr>
-                                                        )}
-                                                    </React.Fragment>
+                                                        ) : null}
+                                                        {/* Which box it went into, and what the whole thing weighs —
+                                                            the two figures the delivery note carries. Both snapshotted
+                                                            on the carton at pack time, so an edited master never
+                                                            rewrites what shipped. */}
+                                                        <td style={{ ...td, overflow: 'hidden' }}>
+                                                            {u.packaging_type_name ? (
+                                                                <Chip classic={CLASSIC} size="xs" truncate title={u.packaging_type_name} style={{ maxWidth: 70 }}>
+                                                                    {u.packaging_type_name}
+                                                                </Chip>
+                                                            ) : <span style={{ color: '#bbb' }}>—</span>}
+                                                        </td>
+                                                        <td style={{ ...td, textAlign: 'right', color: '#555', whiteSpace: 'nowrap' }}
+                                                            title={u.gross_weight_kg != null
+                                                                ? `Gross ${num(u.gross_weight_kg).toFixed(2)} kg = net ${num(u.weight_kg).toFixed(2)} + tare ${num(u.tare_kg).toFixed(2)}`
+                                                                : undefined}>
+                                                            {u.gross_weight_kg != null ? `${num(u.gross_weight_kg).toFixed(2)} kg` : '—'}
+                                                        </td>
+                                                        {/* Zero on hand = the carton has left on a pick list. */}
+                                                        <td style={{ ...td, textAlign: 'right', fontWeight: 'bold', color: num(u.qty) > 0 ? '#0a3e0a' : '#999' }}>
+                                                            {num(u.qty) > 0 ? num(u.qty).toFixed(2) : 'shipped'}
+                                                        </td>
+                                                        <td style={{ ...td, padding: '1px 4px', textAlign: 'right' }}>
+                                                            <button type="button" style={miniBtn}
+                                                                onClick={() => setPrintLabels({ order: po, units: [u] })}
+                                                                title={`Print the label for ${u.batch_number}`}>
+                                                                Label
+                                                            </button>
+                                                        </td>
+                                                    </tr>
                                                 ))}
                                             </tbody>
                                         </table>
@@ -1111,31 +1133,76 @@ function PackingOrderForm({ locPickerTreeOptions, machineOptions, defaultSourceL
         }
     };
 
-    // Once an SO is picked (and the item is already fixed — from a Quarantine
-    // Packing deep link, or a prior manual pick), auto-select the order line
-    // that's unambiguous. Colour and combo are order/production-level picks,
-    // never baked into item_id (Item.variant_type just says which library the
-    // SO line's own color_id/attribute_values came from), so a style ordered in
-    // several colours/combos as separate lines needs those matched too, same as
-    // size. Each hint only narrows if the source lot actually carried it, and
-    // never past zero candidates — a hint that doesn't match anything present
-    // is dropped rather than blocking the match, since a stale attribute snapshot
-    // shouldn't defeat an otherwise-exact match. Ties are left for the planner.
-    useEffect(() => {
-        if (!soId || !itemId || soLineId) return;
-        let candidates = soLines.filter((l: any) => String(l.item_id) === String(itemId));
-        if (!candidates.length) return;
+    // Which order lines the stock being packed may be raised against.
+    //
+    // Opened from Quarantine Packing's Pack button, the modal is holding one
+    // physical group of lots, and that group's identity — size, colour, combo —
+    // decides the line. Packing an L lot against the XL line fulfils demand that
+    // was never made and leaves the real XL line looking shipped; nothing
+    // downstream re-checks the pairing, so it is a gate here, not a suggestion.
+    // Colour and combo are order/production-level picks, never baked into item_id
+    // (Item.variant_type just says which library the line's own
+    // color_id/attribute_values came from), so a style ordered in several
+    // colours/combos as separate lines needs those matched too, same as size.
+    //
+    // Size matches on the folded NAME, which is the size identity the rest of the
+    // plant nets on: a line states its size through `size_id` (the Size master)
+    // since the size/BOM decoupling and carries no BOMSize id, so the lot's
+    // `bom_size_id` can only match a legacy line. The id is still tried as a
+    // fallback for exactly those rows.
+    //
+    // Each hint only narrows while something still matches — a hint that matches
+    // no line at all is dropped rather than locking every line out, since a stale
+    // snapshot must not leave the planner with nothing to pick. `null` = packing
+    // to stock, or a manual New Packing Order: no lot, so no constraint.
+    const lotAllowedLineIds = useMemo<Set<string> | null>(() => {
+        const itemHint = initialValues?.item_id;
+        const sizeIdHint = initialValues?.bom_size_id;
+        const sizeTextHint = String(initialValues?.size_label || '').trim().toLowerCase();
+        const colorHint = initialValues?.color_id;
+        const comboHint = initialValues?.combo_value_id;
+        if (!itemHint && !sizeIdHint && !sizeTextHint && !colorHint && !comboHint) return null;
 
+        let candidates = soLines;
         const narrow = (pred: (l: any) => boolean) => {
             const next = candidates.filter(pred);
             if (next.length) candidates = next;
         };
-        const sizeHint = initialValues?.bom_size_id;
-        const colorHint = initialValues?.color_id;
-        const comboHint = initialValues?.combo_value_id;
-        if (sizeHint) narrow((l: any) => l.bom_size_id && String(l.bom_size_id) === String(sizeHint));
+        if (itemHint) narrow((l: any) => String(l.item_id) === String(itemHint));
+        if (sizeTextHint) {
+            narrow((l: any) => String(l.size_display || '').trim().toLowerCase() === sizeTextHint);
+        } else if (sizeIdHint) {
+            narrow((l: any) => l.bom_size_id && String(l.bom_size_id) === String(sizeIdHint));
+        }
         if (colorHint) narrow((l: any) => l.color_id && String(l.color_id) === String(colorHint));
         if (comboHint) narrow((l: any) => (l.attribute_value_ids || []).some((id: any) => String(id) === String(comboHint)));
+        return new Set(candidates.map((l: any) => String(l.id)));
+    }, [soLines, initialValues]);
+
+    const lockedLineTitle = 'This order line does not match the stock being packed — its size, colour or combo is different';
+
+    // What the lot is, in words, for the note above the picker. The colour hint is
+    // an id here (the deep link carries no code), so it is left to the chips on the
+    // rows themselves rather than printed as a UUID.
+    const lotHintText = [
+        initialValues?.size_label ? `size ${initialValues.size_label}` : '',
+    ].filter(Boolean).join(', ');
+
+    // A line the gate rules out can't stay ticked: the SO can land after the
+    // deep-link line id was seeded, and the planner can pick a line and then
+    // switch orders.
+    useEffect(() => {
+        if (soLineId && lotAllowedLineIds && !lotAllowedLineIds.has(String(soLineId))) setSoLineId('');
+    }, [lotAllowedLineIds, soLineId]);
+
+    // Once an SO is picked (and the item is already fixed — from a Quarantine
+    // Packing deep link, or a prior manual pick), auto-select the order line
+    // that's unambiguous. Ties are left for the planner.
+    useEffect(() => {
+        if (!soId || !itemId || soLineId) return;
+        let candidates = soLines.filter((l: any) => String(l.item_id) === String(itemId));
+        if (lotAllowedLineIds) candidates = candidates.filter((l: any) => lotAllowedLineIds.has(String(l.id)));
+        if (!candidates.length) return;
 
         if (candidates.length === 1) {
             applySoLine(String(candidates[0].id));
@@ -1151,7 +1218,7 @@ function PackingOrderForm({ locPickerTreeOptions, machineOptions, defaultSourceL
             && String(l.uom2_factor ?? '') === String(first.uom2_factor ?? ''));
         if (sameUnit && !uom2) applyLineAltUnit(first, false);
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [soId, itemId, soLines, soLineId]);
+    }, [soId, itemId, soLines, soLineId, lotAllowedLineIds]);
 
     // Backfill the factor's length unit once the UOM master lands.
     //
@@ -1277,6 +1344,15 @@ function PackingOrderForm({ locPickerTreeOptions, machineOptions, defaultSourceL
                                 classic={CLASSIC}
                                 title="Fixes the item being packed — colour and variant attributes are inherited from the line"
                             >Order line</FieldLabel>
+                            {/* Say why the greyed rows are greyed — a disabled checkbox
+                                with no reason reads as a bug. Only when the gate is
+                                actually holding something back. */}
+                            {lotAllowedLineIds && soLines.some((l: any) => !lotAllowedLineIds.has(String(l.id))) ? (
+                                <div style={{ fontSize: 10, color: '#777', marginBottom: 3 }}>
+                                    <i className="bi bi-lock-fill me-1" />
+                                    Only lines matching the stock being packed{lotHintText ? ` (${lotHintText})` : ''} can be picked
+                                </div>
+                            ) : null}
                             <div style={{
                                 border: '1px solid #7f9db9', background: 'white',
                                 maxHeight: 220, overflowY: 'auto',
@@ -1285,13 +1361,23 @@ function PackingOrderForm({ locPickerTreeOptions, machineOptions, defaultSourceL
                                     <div style={{ color: '#aaa', padding: '4px 6px', fontSize: 11 }}>— this order has no lines —</div>
                                 ) : soLines.map((l: any) => {
                                     const checked = String(l.id) === String(soLineId);
+                                    const locked = !!lotAllowedLineIds && !lotAllowedLineIds.has(String(l.id));
                                     return (
-                                        <label key={l.id} style={lvPickerRow(CLASSIC, checked)}>
+                                        <label
+                                            key={l.id}
+                                            title={locked ? lockedLineTitle : undefined}
+                                            style={{
+                                                ...lvPickerRow(CLASSIC, checked),
+                                                ...(locked ? { opacity: 0.45, cursor: 'not-allowed' } : null),
+                                            }}
+                                        >
                                             <RowCheckbox
                                                 classic={CLASSIC}
                                                 checked={checked}
+                                                disabled={locked}
+                                                title={locked ? lockedLineTitle : undefined}
                                                 label={l.item_name || l.item_code || 'line'}
-                                                onChange={() => applySoLine(checked ? '' : String(l.id))}
+                                                onChange={() => { if (!locked) applySoLine(checked ? '' : String(l.id)); }}
                                             />
                                             <div style={{ display: 'flex', flexDirection: 'column', gap: 2, minWidth: 0, flex: 1 }}>
                                                 <div style={{ display: 'flex', alignItems: 'center', gap: 4, flexWrap: 'wrap' }}>
@@ -1313,7 +1399,11 @@ function PackingOrderForm({ locPickerTreeOptions, machineOptions, defaultSourceL
                                                         ) : null;
                                                     })()}
                                                 </div>
-                                                <LotChips batch={l} />
+                                                {/* `size_label` on an SO line is only the free-mode text; a sized
+                                                    line states its size through `size_id`, which the server resolves
+                                                    into `size_display`. Feed that in so the picker chips the size the
+                                                    same way the SO table does. */}
+                                                <LotChips batch={{ ...l, size_label: l.size_display || l.size_label }} />
                                             </div>
                                         </label>
                                     );

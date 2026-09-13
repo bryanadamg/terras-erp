@@ -10,7 +10,7 @@ from app.db.session import get_async_db
 from app.schemas import (
     PickListCreate, PickListUpdate, PickListResponse, PickListListResponse,
     PickListScanPayload, PickableOrderResponse, PickableOrderLine,
-    PickListSuggestedLine, PickListSuggestedCarton,
+    PickListSuggestedLine, PickListSuggestedCarton, PickListCartonIdentity,
 )
 from app.models.pick_list import PickList, PickListLine
 from app.models.batch import Batch
@@ -73,6 +73,23 @@ def _decorate(pl: PickList) -> PickList:
     if pl.shipment:
         pl.shipment_code = pl.shipment.code
         pl.shipment_status = pl.shipment.status
+    # Stable line order. The `lines` relationship carries no ORDER BY, so
+    # Postgres hands back heap order — and confirming a carton UPDATEs
+    # `picked_at`, which rewrites the row's tuple and moved it to the end of the
+    # heap. Every carton the picker ticked jumped to the bottom of the table
+    # under them. Sorted on the carton's own identity (never on `picked_at`), so
+    # scanning can't reorder anything; bulk lines, which have no carton, sort
+    # last within their SO line. In place via `list.sort` on purpose: rebinding
+    # `pl.lines` would fire the delete-orphan cascade's collection events for a
+    # pure display concern.
+    if pl.lines:
+        pl.lines.sort(key=lambda l: (
+            str(l.sales_order_line_id),
+            l.batch is None,
+            l.batch.package_no if (l.batch and l.batch.package_no is not None) else 0,
+            (l.batch.batch_number if l.batch else None) or "",
+            str(l.id),
+        ))
     for line in (pl.lines or []):
         sol = line.sales_order_line
         color = sol.color if sol else None
@@ -80,6 +97,7 @@ def _decorate(pl: PickList) -> PickList:
         # Customers reference their own shade code on the delivery note when they
         # have one; ours is the fallback.
         line.color_code = (color.customer_color_code or color.code) if color else None
+        line.color_hex = color.hex if color else None
         line.attribute_value_ids = [v.id for v in (sol.attribute_values or [])] if sol else []
         # Size of the carton actually picked — stamped on the carton at packing
         # from the lot it was packed out of (packing_service.lot_size_identity).
@@ -96,6 +114,53 @@ def _decorate(pl: PickList) -> PickList:
                 float(line.batch.gross_weight_kg) if line.batch.gross_weight_kg is not None else None
             )
     return pl
+
+
+async def _decorate_all(db: AsyncSession, pls: list) -> list:
+    """`_decorate` over a set of pick lists, plus the one piece of a line's
+    identity that needs the database: what is physically in the picked carton.
+
+    Shade and combo are not columns on a Batch — they live only in the carton's
+    StockBalance row (`variant_key`), so unlike size and the weights they cannot
+    be read off the already-loaded tree. Resolved here for every carton on every
+    list in two queries, never one per line.
+
+    The balance row is read with NO `qty > 0` filter on purpose: a dispatched
+    carton's row sits at zero, and a shipped pick list still has to be able to
+    say what colour went out.
+    """
+    from app.models.stock_balance import StockBalance
+    lines = [l for pl in pls for l in (pl.lines or []) if l.batch_id]
+    if lines:
+        rows = (await db.execute(
+            select(StockBalance.batch_key, StockBalance.variant_key)
+            .filter(StockBalance.batch_key.in_([str(l.batch_id) for l in lines]))
+        )).all()
+        # A carton can hold rows at more than one location; they are the same box,
+        # so any row with a key answers for it and an empty key never displaces one.
+        key_by_batch: dict = {}
+        for bk, vk in rows:
+            if vk and not key_by_batch.get(bk):
+                key_by_batch[bk] = vk
+        variants = await stock_service.describe_variant_keys(db, set(key_by_batch.values()))
+        for l in lines:
+            vkey = key_by_batch.get(str(l.batch_id))
+            v = variants.get(vkey) or {}
+            b = l.batch
+            l.carton_identity = PickListCartonIdentity(
+                variant_key=vkey or None,
+                variant_attributes=v.get("variant_attributes") or None,
+                color_id=v.get("color_id"),
+                color_name=v.get("color_name"),
+                color_code=v.get("color_code"),
+                color_hex=v.get("color_hex"),
+                bom_size_id=b.bom_size_id if b is not None else None,
+                bom_size_snapshot=b.bom_size_snapshot if b is not None else None,
+                size_label=stock_service._bom_size_label(b.bom_size_snapshot) if b is not None else None,
+            )
+    for pl in pls:
+        _decorate(pl)
+    return pls
 
 
 async def _next_code(db: AsyncSession) -> str:
@@ -165,6 +230,53 @@ async def _remaining_by_so_line(db: AsyncSession, so: SalesOrder, exclude_pl_id=
             else max(0.0, ordered - picked_map.get(str(line.id), 0.0))
         )
     return remaining
+
+
+async def _remaining_alt_by_so_line(db: AsyncSession, so: SalesOrder) -> dict:
+    """The same "ordered - already picked" subtraction as `_remaining_by_so_line`,
+    but counted in the line's own alt selling unit (`SalesOrderLine.uom2`).
+
+    `{line_id: (remaining_alt, alt_uom)}`; absent for a line with no alt unit, so
+    a consumer falls back to the base figure rather than drawing a bare 0.
+
+    Ordered is `qty2` as it was keyed — never re-derived from the kilos, per
+    so_fulfilment_service: the SO form locks the pair together. Picked is SUMMED
+    FROM `Batch.alt_qty` (the count the packer actually put in the box) for the
+    same reason — dividing picked kilograms by `uom2_factor` reports 11.8 Pcs out
+    of a carton that holds 12. A carton packed with no alt count contributes
+    nothing, which can only understate what is left, never over-pick it.
+    """
+    rows = (await db.execute(
+        select(PickListLine.sales_order_line_id, func.coalesce(func.sum(Batch.alt_qty), 0))
+        .join(PickList, PickListLine.pick_list_id == PickList.id)
+        .join(Batch, PickListLine.batch_id == Batch.id)
+        .filter(PickList.sales_order_id == so.id, PickList.status != "CANCELLED")
+        .group_by(PickListLine.sales_order_line_id)
+    )).all()
+    picked_map = {str(sol_id): float(qty) for sol_id, qty in rows}
+    out = {}
+    for line in so.lines:
+        uom2 = (line.uom2 or "").strip()
+        if not uom2 or line.qty2 is None:
+            continue
+        out[str(line.id)] = (
+            max(0.0, float(line.qty2) - picked_map.get(str(line.id), 0.0)),
+            uom2,
+        )
+    return out
+
+
+async def _packing_order_alt_uoms(db: AsyncSession, po_ids: list) -> dict:
+    """`{packing_order_id: uom2}` — the unit each carton's `alt_qty` was counted
+    in, in one query rather than a hop per box."""
+    from app.models.packing import PackingOrder
+    ids = {str(p) for p in po_ids if p}
+    if not ids:
+        return {}
+    rows = (await db.execute(
+        select(PackingOrder.id, PackingOrder.uom2).filter(PackingOrder.id.in_(ids))
+    )).all()
+    return {str(pid): (u or "").strip() for pid, u in rows}
 
 
 def _line_variant_key(so_line: SalesOrderLine) -> str:
@@ -258,6 +370,7 @@ async def _suggest_cartons(db: AsyncSession, so: SalesOrder, source_location_id=
     a hole.)
     """
     remaining = await _remaining_by_so_line(db, so)
+    remaining_alt = await _remaining_alt_by_so_line(db, so)
     ordered_map = await so_fulfilment_service.ordered_base_map(db, [line.id for line in so.lines])
     taken = await packing_service.allocated_unit_ids(db)
 
@@ -286,18 +399,31 @@ async def _suggest_cartons(db: AsyncSession, so: SalesOrder, source_location_id=
     balances = await _carton_stock_rows(
         db, [pu.id for _l, _r, units in picked for pu, _q in units]
     )
+    # A carton's alt count was counted in ITS packing order's unit, which is not
+    # necessarily the unit this line is sold in (packed in Pcs, ordered in Gross).
+    # Carry the box's own label rather than restating it in the line's — the two
+    # are only summed together where they agree.
+    carton_alt_uom = await _packing_order_alt_uoms(
+        db, [pu.packing_order_id for _l, _r, units in picked for pu, _q in units]
+    )
     keys = {bal.variant_key for bal in balances.values() if bal.variant_key}
     keys.update(k for k in (_line_variant_key(l) for l, _r, _u in picked) if k)
     variants = await stock_service.describe_variant_keys(db, keys)
 
     out: list[PickListSuggestedLine] = []
     for so_line, rem, units in picked:
+        rem_alt, alt_uom = remaining_alt.get(str(so_line.id), (None, ""))
         cartons: list[PickListSuggestedCarton] = []
         for pu, qty in units:
             bal = balances.get(str(pu.id))
             cartons.append(PickListSuggestedCarton(
                 batch_id=pu.id, batch_number=pu.batch_number,
                 package_no=pu.package_no, qty=qty,
+                # The packer's own count for this box, not qty/factor. Null on a
+                # carton packed with no alt unit even when the line has one — the
+                # modal then shows kilos alone for that row rather than a zero.
+                alt_qty=float(pu.alt_qty) if pu.alt_qty is not None else None,
+                alt_uom=carton_alt_uom.get(str(pu.packing_order_id)) or None,
                 source_location_id=bal.location_id if bal else None,
                 **_carton_identity(pu, bal, variants),
             ))
@@ -310,6 +436,9 @@ async def _suggest_cartons(db: AsyncSession, so: SalesOrder, source_location_id=
             item_uom=it.uom if it else None,
             ordered_qty=ordered_map.get(str(so_line.id), 0.0),
             remaining_qty=rem,
+            ordered_alt=float(so_line.qty2) if so_line.qty2 is not None else None,
+            remaining_alt=rem_alt,
+            alt_uom=alt_uom or None,
             cartons=cartons,
             **_ordered_identity(so_line, variants),
         ))
@@ -405,8 +534,7 @@ async def list_pick_lists(
     total = (await db.execute(count_query)).scalar() or 0
     result = await db.execute(window.apply(query.order_by(PickList.created_at.desc())))
     orders = result.scalars().all()
-    for pl in orders:
-        _decorate(pl)
+    await _decorate_all(db, list(orders))
     return window.envelope(orders, total)
 
 
@@ -449,6 +577,10 @@ async def list_pickable_orders(
 
     index = await _ready_carton_index(db)
     today = datetime.utcnow().date()
+
+    # Whole-order fulfilment for the page in one batched pass — four grouped
+    # aggregates for the entire board, not one query per order.
+    fulfilment = await so_fulfilment_service.fulfilment_map(db, [s.id for s in so_rows])
 
     # One resolve of every ordered variant on the board — shade/combo chips are
     # per line, and a per-line lookup here would be an N+1 over the order book.
@@ -500,6 +632,51 @@ async def list_pickable_orders(
 
         if qty_outstanding <= 0:
             continue
+
+        # Fulfilment spans the WHOLE order, so it rolls up every line — including
+        # the ones already fully shipped, which is exactly what "overall" means
+        # and what the outstanding-only loop above skips.
+        f_ordered = f_made = f_packed = f_dispatched = 0.0
+        unknown_base = 0
+        base_uoms: set[str] = set()
+        # The same roll-up in the alt selling unit, which is what the row draws.
+        # `alt_ok` goes false the moment one line can't contribute — no alt unit,
+        # a different alt unit from its neighbours, or a stage with no count — and
+        # the row then falls back to the kilos. Partial is not an option: adding
+        # four lines of Pcs and leaving the fifth out understates the order
+        # silently, which is the failure `lines_unknown_base` exists to avoid.
+        a_ordered = a_made = a_packed = a_dispatched = 0.0
+        alt_uoms: set[str] = set()
+        alt_ok = bool(so.lines)
+        for line in so.lines:
+            stat = fulfilment.get(str(line.id))
+            if not stat:
+                continue
+            alt_ordered = stat.get("ordered_alt")
+            alt_stages = [stat.get(k) for k in ("made_alt", "packed_alt", "dispatched_alt")]
+            if alt_ordered is None or any(v is None for v in alt_stages):
+                alt_ok = False
+            else:
+                a_ordered += float(alt_ordered)
+                a_made, a_packed, a_dispatched = (
+                    a_made + float(alt_stages[0]),
+                    a_packed + float(alt_stages[1]),
+                    a_dispatched + float(alt_stages[2]),
+                )
+                if stat.get("alt_uom"):
+                    alt_uoms.add(stat["alt_uom"])
+            base = stat.get("ordered_base")
+            if base is None:
+                unknown_base += 1
+                continue
+            f_ordered += float(base)
+            f_made += stat.get("made", 0.0)
+            f_packed += stat.get("packed", 0.0)
+            f_dispatched += stat.get("dispatched", 0.0)
+            if stat.get("base_uom"):
+                base_uoms.add(stat["base_uom"])
+        alt_ok = alt_ok and len(alt_uoms) == 1 and a_ordered > 0
+
         due = _so_due_date(so)
         out.append(PickableOrderResponse(
             id=so.id,
@@ -515,6 +692,17 @@ async def list_pickable_orders(
             qty_ready=round(qty_ready, 4),
             cartons_ready=cartons_ready,
             has_open_pick_list=str(so.id) in draft_so_ids,
+            qty_ordered_base=round(f_ordered, 4),
+            qty_made=round(f_made, 4),
+            qty_packed=round(f_packed, 4),
+            qty_dispatched=round(f_dispatched, 4),
+            base_uom=next(iter(base_uoms)) if len(base_uoms) == 1 else None,
+            qty_ordered_alt=round(a_ordered, 2) if alt_ok else None,
+            qty_made_alt=round(a_made, 2) if alt_ok else None,
+            qty_packed_alt=round(a_packed, 2) if alt_ok else None,
+            qty_dispatched_alt=round(a_dispatched, 2) if alt_ok else None,
+            alt_uom=next(iter(alt_uoms)) if alt_ok else None,
+            lines_unknown_base=unknown_base,
             lines=out_lines,
         ))
     return out
@@ -577,7 +765,7 @@ async def resolve_pick_list(
     pl = result.scalars().first()
     if not pl:
         raise HTTPException(status_code=404, detail=f"No pick list found for '{wanted}'")
-    return _decorate(pl)
+    return (await _decorate_all(db, [pl]))[0]
 
 
 @router.get("/{pl_id}", response_model=PickListResponse)
@@ -589,7 +777,7 @@ async def get_pick_list(
     pl = await _load(db, pl_id)
     if not pl:
         raise HTTPException(status_code=404, detail="Pick list not found")
-    return _decorate(pl)
+    return (await _decorate_all(db, [pl]))[0]
 
 
 @router.get("/{pl_id}/remaining")
@@ -705,7 +893,7 @@ async def create_pick_list(
         pass
 
     pl = await _load(db, pl.id)
-    return _decorate(pl)
+    return (await _decorate_all(db, [pl]))[0]
 
 
 @router.put("/{pl_id}", response_model=PickListResponse)
@@ -778,7 +966,7 @@ async def update_pick_list(
     )
 
     pl = await _load(db, pl_id)
-    return _decorate(pl)
+    return (await _decorate_all(db, [pl]))[0]
 
 
 @router.post("/{pl_id}/scan", response_model=PickListResponse)
@@ -874,7 +1062,7 @@ async def scan_pick_list_unit(
     )
 
     pl = await _load(db, pl_id)
-    return _decorate(pl)
+    return (await _decorate_all(db, [pl]))[0]
 
 
 # NOTE: `POST /pick-lists/{id}/dispatch` was removed when the loading-deck gate

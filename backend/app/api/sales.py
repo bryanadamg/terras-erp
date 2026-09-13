@@ -68,6 +68,15 @@ async def _populate_fulfilment(db: AsyncSession, orders: list) -> None:
             # so_fulfilment_service.ordered_qty_in_stock_uom. None = undrawable.
             line.qty_ordered_base = f.get("ordered_base")
             line.base_uom = f.get("base_uom", "")
+            # The same four in the line's alt selling unit — what the customer
+            # ordered in, and what the fulfilment bar draws. Null when the line
+            # has none; the bar then falls back to the base pair.
+            line.qty_ordered_alt = f.get("ordered_alt")
+            line.alt_uom = f.get("alt_uom", "")
+            line.qty_made_alt = f.get("made_alt")
+            line.qty_packed_alt = f.get("packed_alt")
+            line.qty_packed_available_alt = f.get("packed_available_alt")
+            line.qty_dispatched_alt = f.get("dispatched_alt")
 
 
 async def _populate_mo_progress(db: AsyncSession, orders: list) -> None:

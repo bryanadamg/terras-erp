@@ -434,6 +434,22 @@ class BatchDispose(BaseModel):
     (posts it OUT of every balance row) and mark the lot DISPOSED. Irreversible."""
     reason: str | None = None
 
+
+class BatchReassign(BaseModel):
+    """Recycle a rejected lot into a different item instead of scrapping it: the
+    physical goods are fine for another product (a rejected warp beam re-warped
+    for a coarser cloth), so the stock moves to a new GOOD lot under `item_id`
+    rather than being written off."""
+    item_id: UUID
+    # Partial recycle: qty to move. None or >= remaining moves the whole balance,
+    # which leaves the rejected lot depleted; a smaller value leaves the rest on
+    # the rejected lot for a later dispose.
+    qty: float | None = None
+    # Where the recycled stock lands. Omit to leave it in whichever bin each
+    # source balance row sits in (usually the defect store).
+    location_id: UUID | None = None
+    reason: str | None = None
+
 class MOCompletionReject(BaseModel):
     """Completion-level reject (API/un-lotted outputs; lot page uses /batches/{id}/reject)."""
     reason: str | None = None
@@ -1935,6 +1951,22 @@ class SalesOrderLineResponse(SalesOrderLineCreate):
     # render that as unknown, never as 0%.
     qty_ordered_base: float | None = None
     base_uom: str | None = None
+    # --- The same fulfilment, counted in the line's alt selling unit ----------
+    # `uom2` is what the customer ordered in and is owed in (2880 Pcs, 40 Pic), so
+    # this is the pair the fulfilment bar draws and the pair READY/SENT gates on;
+    # the base figures above stay the unit stock moves in. Null on a line with no
+    # alt unit, or one that states a unit with no count — consumers fall back to
+    # the base pair rather than drawing a bar against nothing.
+    #
+    # Packed/available/shipped are SUMMED from the cartons' own `alt_qty`, never
+    # divided out of the kilos (see so_fulfilment_service). `qty_made_alt` is the
+    # one converted figure — bulk FG has not been cut into pieces yet.
+    qty_ordered_alt: float | None = None
+    alt_uom: str | None = None
+    qty_made_alt: float | None = None
+    qty_packed_alt: float | None = None
+    qty_packed_available_alt: float | None = None
+    qty_dispatched_alt: float | None = None
     # Production progress (qty made vs planned) of the MOs behind this line, plus
     # the stage the floor is on. Populated by the list endpoint only
     # (_populate_mo_progress); None means no MO exists for the line yet, which the
@@ -3647,6 +3679,28 @@ class PickListScanPayload(BaseModel):
     code: str
     picked_by: str | None = None
 
+class PickListCartonIdentity(BaseModel):
+    """What is physically IN a picked carton — shade/combo off its StockBalance
+    row's `variant_key`, size off the Batch row it was stamped with at mint.
+    Field names are a lot's, so `LotChips` labels a pick line exactly the way the
+    carton list, the Kartu Packing and the suggestion modal already do.
+
+    A nested object rather than more columns on the line, because the line's own
+    `color_name`/`color_code` are the ORDERED shade and print in the Surat Jalan's
+    WARNA column: a box packed from a substituted lot must be visible to the
+    picker without being able to rewrite the delivery note.
+    """
+    variant_key: str | None = None
+    variant_attributes: list[BatchVariantAttr] | None = None
+    color_id: UUID | None = None
+    color_name: str | None = None
+    color_code: str | None = None
+    color_hex: str | None = None
+    bom_size_id: UUID | None = None
+    bom_size_snapshot: dict | None = None
+    size_label: str | None = None
+
+
 class PickListLineResponse(BaseModel):
     id: UUID
     sales_order_line_id: UUID
@@ -3664,6 +3718,10 @@ class PickListLineResponse(BaseModel):
     # Surat Jalan "WARNA" column — decorated from the SO line, not stored here.
     color_name: str | None = None
     color_code: str | None = None
+    # The ordered shade's swatch, off the Color Library row. Carried so a line
+    # whose carton has no resolvable identity of its own still draws a shade CHIP
+    # with its colour on it, the way every other list does, instead of bare text.
+    color_hex: str | None = None
     attribute_value_ids: list[UUID] = []
     # The picked CARTON's own size, off its Batch row. Colour above is what was
     # ordered; this is what is physically in the box, and it is the one identity
@@ -3676,6 +3734,9 @@ class PickListLineResponse(BaseModel):
     packaging_type_name: str | None = None
     net_weight_kg: float | None = None
     gross_weight_kg: float | None = None
+    # Resolved at read time, null on a bulk (cartonless) line. See the class docs
+    # for why this is not flattened onto the fields above.
+    carton_identity: PickListCartonIdentity | None = None
     class Config:
         from_attributes = True
 
@@ -3720,8 +3781,12 @@ class PickListListResponse(BaseModel):
 # See models/shipment.py for why the note lives here and not on PickList.
 
 class ShipmentCreate(BaseModel):
+    # No delivery_note_number: the Surat Jalan number is allocated from the
+    # SURAT_JALAN series at stage time and is never accepted from a client. A
+    # typed one is a one-off on the paper that came off the printer, not a record
+    # — saving it let a hand-typed string ("2343knlkn224") replace the series
+    # number that the ERP, its search box and the customer's own books refer to.
     pick_list_ids: list[UUID]
-    delivery_note_number: str | None = None
     delivery_date: datetime | None = None
     carrier: str | None = None
     vehicle_plate: str | None = None
@@ -3731,8 +3796,8 @@ class ShipmentCreate(BaseModel):
 class ShipmentUpdate(BaseModel):
     # None = leave alone. An empty list on pick_list_ids does mean "unload
     # everything", so it is distinguishable from omitting the field.
+    # delivery_note_number is absent on purpose — see ShipmentCreate.
     pick_list_ids: list[UUID] | None = None
-    delivery_note_number: str | None = None
     delivery_date: datetime | None = None
     carrier: str | None = None
     vehicle_plate: str | None = None
@@ -3861,6 +3926,36 @@ class PickableOrderResponse(BaseModel):
     qty_ready: float = 0
     cartons_ready: int = 0
     has_open_pick_list: bool = False
+    # --- Whole-order fulfilment (so_fulfilment_service.fulfilment_map) ---------
+    # Coverage above answers "of what this order still OWES, how much is packed
+    # and waiting"; these answer "where does the WHOLE order stand" — an order
+    # 90% shipped and one 0% shipped both read 100% coverage on their last
+    # carton, and only this pair tells them apart.
+    #
+    # Summed over every line, in each line's own stock UoM — the same mixed-unit
+    # sum `qty_outstanding`/`qty_ready` above already are. `base_uom` is set only
+    # when every line agrees on one unit, so a mixed order labels the figure with
+    # no unit rather than the wrong one.
+    qty_ordered_base: float = 0
+    qty_made: float = 0
+    qty_packed: float = 0
+    qty_dispatched: float = 0
+    base_uom: str | None = None
+    # The same roll-up in the alt selling unit, which is what the board draws —
+    # the customer is owed pieces, not kilos. Summed only over lines that count in
+    # ONE unit: `alt_uom` is null when the order mixes Pcs and Pic (or when any
+    # contributing line has no alt unit at all), and the row then falls back to the
+    # base figures rather than adding two unlike counts into one number.
+    qty_ordered_alt: float | None = None
+    qty_made_alt: float | None = None
+    qty_packed_alt: float | None = None
+    qty_dispatched_alt: float | None = None
+    alt_uom: str | None = None
+    # Lines whose ordered qty can't be restated in the stock UoM (weight-stocked
+    # item with no weight-per-yard on its master). They contribute nothing to the
+    # four numbers above, so the bar understates the order — it is drawn with a
+    # warning rather than silently.
+    lines_unknown_base: int = 0
     # Per-line breakdown of the same numbers, so the board can show what the
     # order is made of. Must be declared here or response_model drops it.
     lines: list[PickableOrderLine] = []
@@ -3873,6 +3968,12 @@ class PickListSuggestedCarton(BaseModel):
     package_no: int | None = None
     qty: float
     source_location_id: UUID | None = None
+    # The box's count in the line's alt selling unit — `Batch.alt_qty`, what the
+    # packer counted into it, never `qty / uom2_factor`. Null when the carton was
+    # packed without one, or the line has no alt unit at all; the row then reads
+    # in stock UoM alone.
+    alt_qty: float | None = None
+    alt_uom: str | None = None
 
     # --- Variant identity ---------------------------------------------------
     # Same field names as PackedUnitResponse / a lot, so `LotChips` labels a
@@ -3901,6 +4002,13 @@ class PickListSuggestedLine(BaseModel):
     item_uom: str | None = None
     ordered_qty: float = 0
     remaining_qty: float = 0
+    # The same two in the line's alt selling unit (`SalesOrderLine.uom2` — Pcs,
+    # Pic, Gross): the figure the customer ordered in and is owed in. None means
+    # the line has no alt unit, which is a different answer from zero and is what
+    # makes the modal fall back to kilos alone.
+    ordered_alt: float | None = None
+    remaining_alt: float | None = None
+    alt_uom: str | None = None
     # What the LINE ordered (shade/combo/size), against which the cartons below
     # carry what is physically in each box — they can differ, and the planner
     # unchecking a carton is exactly who needs to see that.
@@ -4096,6 +4204,12 @@ class QuarantineGroupResponse(BaseModel):
     # The MO's sized-BOM pick, if any — lets the Packing form auto-match this
     # group to the one open SO line ordered in the same size/colour/combo.
     bom_size_id: UUID | None = None
+    # That same size as TEXT, off the MO's snapshot. The id alone cannot match an
+    # SO line: a line states its size through `size_id` (the Size master) since the
+    # size/BOM decoupling and carries no BOMSize id at all, and a BOMSize id is
+    # per-BOM anyway. Size identity across the plant is the folded NAME (see
+    # netting_service) — so this is what the Packing form compares.
+    size_label: str | None = None
     item_id: UUID
     item_code: str | None = None
     item_name: str | None = None

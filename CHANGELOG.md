@@ -15,6 +15,29 @@ on `main`:
 
 ## [Unreleased]
 
+## [0.28.0] - 2026-09-13
+
+### Added
+- Sales-order and pick-list fulfilment is measured in the item's alt selling unit (e.g. yards) instead of raw kilos, end to end: the To Pick board, pick suggestion coverage bar, and carton quantities all read in the unit the order was written in
+- To Pick board shows whole-order fulfilment per row, sortable column headers, and a ready-to-pick filter as segmented chips instead of a single checkbox
+- A rejected lot can be reassigned to another item instead of only being disposed of
+- Picked cartons carry their own variant identity (colour/combo) through the pick list, and the dispatch deck shows carton identity chips at verify time
+- Pick list expanded rows and the pick modal show each carton's contents and quantity unit in their own column
+- Database snapshots can be deleted from Settings, and their row actions moved onto the shared action button
+
+### Changed
+- Packing and pick list detail panes are laid out so the carton table gets the primary space
+- Sales order line fields sit on one input row
+
+### Fixed
+- The Surat Jalan number is always issued from the numbering series; a typed value can no longer override it
+- Packing order line picker locks to the scanned lot's size, colour and combo, and shows the lot's size chip
+- Database snapshots sort by the timestamp in their filename instead of inode creation time, which drifted after a restore
+- Creating a pick list no longer bounces off the To Pick board
+- Pick-line scan state renders as a status chip, prefills the QC inspector, shows the stock UoM on every quantity, and hides order lines outside the pick list's own coverage
+- A confirmed pick carton no longer jumps to the bottom of the list and greys out as if the pick had been refused
+- Icon-button tooltips sit beside the button instead of covering the next action, and no longer fire on passing mouse travel
+
 ## [0.27.0] - 2026-09-10
 
 ### Added
