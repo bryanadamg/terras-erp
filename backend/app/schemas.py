@@ -3781,8 +3781,12 @@ class PickListListResponse(BaseModel):
 # See models/shipment.py for why the note lives here and not on PickList.
 
 class ShipmentCreate(BaseModel):
+    # No delivery_note_number: the Surat Jalan number is allocated from the
+    # SURAT_JALAN series at stage time and is never accepted from a client. A
+    # typed one is a one-off on the paper that came off the printer, not a record
+    # — saving it let a hand-typed string ("2343knlkn224") replace the series
+    # number that the ERP, its search box and the customer's own books refer to.
     pick_list_ids: list[UUID]
-    delivery_note_number: str | None = None
     delivery_date: datetime | None = None
     carrier: str | None = None
     vehicle_plate: str | None = None
@@ -3792,8 +3796,8 @@ class ShipmentCreate(BaseModel):
 class ShipmentUpdate(BaseModel):
     # None = leave alone. An empty list on pick_list_ids does mean "unload
     # everything", so it is distinguishable from omitting the field.
+    # delivery_note_number is absent on purpose — see ShipmentCreate.
     pick_list_ids: list[UUID] | None = None
-    delivery_note_number: str | None = None
     delivery_date: datetime | None = None
     carrier: str | None = None
     vehicle_plate: str | None = None

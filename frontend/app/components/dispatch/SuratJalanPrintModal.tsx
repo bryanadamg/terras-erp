@@ -301,7 +301,11 @@ export default function SuratJalanPrintModal({ shipment, attributes, companyProf
         const res = await authFetch(`${API_BASE}/shipments/${shipment.id}`, {
             method: 'PUT', headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-                delivery_note_number: sjNo.trim() || null,
+                // sjNo is NOT sent. The Surat Jalan number is minted once from the
+                // SURAT_JALAN series when the shipment is staged; typing over it
+                // here changes the paper coming off this printer and nothing else.
+                // The server rejects it either way — the field is not on
+                // ShipmentUpdate — so sending it would only look like it saved.
                 delivery_date: deliveryDate ? new Date(deliveryDate).toISOString() : null,
                 carrier: carrier || null,
                 vehicle_plate: vehicle || null,
@@ -351,7 +355,13 @@ export default function SuratJalanPrintModal({ shipment, attributes, companyProf
                 <div style={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
                     <div style={{ width: 220, borderRight: '1px solid #b0a898', background: '#f4f3ee', padding: 14, overflowY: 'auto' }}>
                         <div style={{ ...fieldLabel, marginTop: 0 }}>Surat Jalan No</div>
-                        <input style={xpInput} value={sjNo} onChange={e => setSjNo(e.target.value)} onBlur={persistDetails} placeholder="No" />
+                        <input style={xpInput} value={sjNo} onChange={e => setSjNo(e.target.value)} placeholder="No" />
+                        {/* No onBlur: this one prints, it does not save. */}
+                        <div style={{ fontSize: 10, color: '#555555', marginTop: 4 }}>
+                            {sjNo.trim() && sjNo.trim() !== (shipment.delivery_note_number || '')
+                                ? `Prints on this note only — the shipment keeps ${shipment.delivery_note_number || shipment.code}.`
+                                : 'Issued from the Surat Jalan series. An edit prints on this note only.'}
+                        </div>
                         <div style={fieldLabel}>Delivery Date</div>
                         <input type="date" style={xpInput} value={deliveryDate} onChange={e => setDeliveryDate(e.target.value)} onBlur={persistDetails} />
                         <div style={fieldLabel}>Vehicle No</div>

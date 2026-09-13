@@ -644,7 +644,6 @@ function DeckDetail({ row, pl, tzDate, itemIndex }: any) {
 
 // ── Edit a staged shipment's header / membership ───────────────────────────
 function EditShipmentModal({ shp, deck, authFetch, showToast, onClose, onSaved }: any) {
-    const [dn, setDn] = useState(shp.delivery_note_number || '');
     const [date, setDate] = useState(shp.delivery_date ? String(shp.delivery_date).slice(0, 10) : '');
     const [carrier, setCarrier] = useState(shp.carrier || '');
     const [vehicle, setVehicle] = useState(shp.vehicle_plate || '');
@@ -670,7 +669,8 @@ function EditShipmentModal({ shp, deck, authFetch, showToast, onClose, onSaved }
         const res = await authFetch(`${API_BASE}/shipments/${shp.id}`, {
             method: 'PUT', headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-                delivery_note_number: dn || null,
+                // The Surat Jalan number is not editable — minted from the
+                // SURAT_JALAN series at stage time and never overwritten.
                 delivery_date: date ? new Date(date).toISOString() : null,
                 carrier: carrier || null, vehicle_plate: vehicle || null, driver: driver || null,
                 notes: notes || null,
@@ -693,7 +693,11 @@ function EditShipmentModal({ shp, deck, authFetch, showToast, onClose, onSaved }
             <div style={{ fontFamily: xpFont, fontSize: 11, display: 'flex', gap: 16 }}>
                 <div style={{ flex: 1 }}>
                     <div style={xpLabel}>Surat Jalan no.</div>
-                    <input style={{ ...xpInput, width: '100%', marginBottom: 8 }} value={dn} onChange={e => setDn(e.target.value)} />
+                    {/* Read-only: the number is the series' to issue, not a field.
+                        It is what the customer's books and the SJ search refer to. */}
+                    <div style={{ fontFamily: CODE_FONT, padding: '3px 0 0', marginBottom: 8 }}>
+                        {shp.delivery_note_number || EMPTY_DASH}
+                    </div>
                     <div style={xpLabel}>Delivery date</div>
                     <input type="date" style={{ ...xpInput, width: '100%', marginBottom: 8 }} value={date} onChange={e => setDate(e.target.value)} />
                     <div style={xpLabel}>Carrier</div>

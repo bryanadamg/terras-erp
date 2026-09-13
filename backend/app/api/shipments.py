@@ -370,7 +370,7 @@ async def create_shipment(
 
     shp = Shipment(
         code=await _next_code(db),
-        delivery_note_number=payload.delivery_note_number or await _next_delivery_note(db, delivery_date),
+        delivery_note_number=await _next_delivery_note(db, delivery_date),
         delivery_date=delivery_date,
         customer_name=(members[0].sales_order.customer_name if members[0].sales_order else None),
         carrier=payload.carrier,
@@ -422,7 +422,9 @@ async def update_shipment(
             else f"Cannot edit a {shp.status} shipment",
         )
 
-    for field in ("delivery_note_number", "delivery_date", "carrier", "vehicle_plate", "driver", "notes"):
+    # delivery_note_number is deliberately not in this list: the number is minted
+    # once, at stage time, and nothing may overwrite it afterwards.
+    for field in ("delivery_date", "carrier", "vehicle_plate", "driver", "notes"):
         val = getattr(payload, field)
         if val is not None:
             setattr(shp, field, _naive(val) if isinstance(val, datetime) else val)
