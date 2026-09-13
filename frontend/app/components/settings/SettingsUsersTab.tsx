@@ -2,7 +2,6 @@
 
 import { Fragment, useMemo, useState, useEffect } from 'react';
 import { useToast } from '../shared/Toast';
-import { useTheme } from '../../context/ThemeContext';
 import { useTimezone } from '../../context/TimezoneContext';
 import { useUser, User } from '../../context/UserContext';
 import { useConfirm } from '../../context/ConfirmContext';
@@ -45,8 +44,6 @@ export default function SettingsUsersTab({
     const { showToast } = useToast();
     const { confirm } = useConfirm();
     const { users, setCurrentUser, currentUser, refreshUsers } = useUser();
-    const { uiStyle } = useTheme();
-    const classic = uiStyle === 'classic';
 
     const [formMode, setFormMode] = useState<'create' | 'edit' | null>(null);
     const [formUser, setFormUser] = useState<User | undefined>(undefined);
@@ -159,22 +156,20 @@ export default function SettingsUsersTab({
 
     return (
         <SettingsPanel
-            classic={classic}
             icon="bi-people-fill"
             title="Users"
             flush
             right={
                 <button
                     type="button"
-                    style={classic ? xpBtn({ padding: '1px 8px' }) : undefined}
-                    className={classic ? XP_BTN : 'btn btn-sm btn-outline-light py-0 px-2'}
+                    style={xpBtn({ padding: '1px 8px' })}
+                    className={XP_BTN}
                     onClick={() => { setFormUser(undefined); setFormMode('create'); }}
                 ><i className="bi bi-person-plus" style={{ marginRight: 4 }}></i>Add User</button>
             }
         >
             {/* Search + status filter toolbar */}
-            {classic ? (
-                <div style={{
+            {<div style={{
                     background: 'linear-gradient(to bottom, #f5f4ef, #e0dfd8)', borderBottom: '1px solid #b0a898',
                     padding: '3px 6px', display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' as const,
                 }}>
@@ -202,57 +197,23 @@ export default function SettingsUsersTab({
                     <ToolbarCount classic right>
                         {filteredUsers.length} of {users.length} user{users.length !== 1 ? 's' : ''}
                     </ToolbarCount>
-                </div>
-            ) : (
-                <div className="border-bottom p-2">
-                    <div className="row g-2 align-items-center">
-                        <div className="col-md-5">
-                            <SearchField classic={false} value={search} onChange={setSearch} placeholder="Search username or name…" width={400} grow style={{ display: 'flex', width: '100%' }} />
-                        </div>
-                        <div className="col-md-3">
-                            <FilterChipBar
-                                classic={false}
-                                options={USER_STATUS_FILTERS}
-                                value={statusFilter}
-                                onChange={v => setStatusFilter(v as StatusFilter)}
-                            />
-                        </div>
-                        {roleFilterName && (
-                            <div className="col-auto">
-                                <button
-                                    className="btn btn-sm btn-primary d-flex align-items-center gap-2 py-0"
-                                    onClick={onClearRoleFilter}
-                                    title="Clear role filter"
-                                    style={{ fontSize: '0.75rem' }}
-                                >
-                                    Role: {roleFilterName}
-                                    <i className="bi bi-x-lg" style={{ fontSize: 9 }} />
-                                </button>
-                            </div>
-                        )}
-                        <div className="col text-md-end small text-muted">
-                            {filteredUsers.length} of {users.length} user{users.length !== 1 ? 's' : ''}
-                        </div>
-                    </div>
-                </div>
-            )}
+                </div>}
 
             <div>
                 <div className="table-responsive">
                     <table
-                        style={classic ? { width: '100%', borderCollapse: 'collapse' as const, background: '#fff' } : undefined}
-                        className={classic ? '' : 'table table-hover align-middle mb-0'}
+                        style={{ width: '100%', borderCollapse: 'collapse' as const, background: '#fff' }}
                     >
-                        <thead style={classic ? xpTableHeader : undefined} className={classic ? '' : 'table-light'}>
+                        <thead style={xpTableHeader}>
                             <tr>
-                                <th style={classic ? { ...xpThCell, width: 36 } : undefined} className={classic ? '' : 'ps-4'} />
-                                <th style={classic ? xpThCell : undefined}>Username</th>
-                                <th style={classic ? xpThCell : undefined}>Full Name</th>
-                                <th style={classic ? xpThCell : undefined}>Role</th>
-                                <th style={classic ? xpThCell : undefined}>Permissions</th>
-                                <th style={classic ? xpThCell : undefined}>Last Login</th>
-                                <th style={classic ? xpThCell : undefined}>Status</th>
-                                <th style={classic ? { ...xpThCell, textAlign: 'right' as const, borderRight: 'none' } : undefined} className={classic ? '' : 'text-end pe-4'}>Actions</th>
+                                <th style={{ ...xpThCell, width: 36 }} />
+                                <th style={xpThCell}>Username</th>
+                                <th style={xpThCell}>Full Name</th>
+                                <th style={xpThCell}>Role</th>
+                                <th style={xpThCell}>Permissions</th>
+                                <th style={xpThCell}>Last Login</th>
+                                <th style={xpThCell}>Status</th>
+                                <th style={{ ...xpThCell, textAlign: 'right' as const, borderRight: 'none' }}>Actions</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -265,47 +226,39 @@ export default function SettingsUsersTab({
                                 return (
                                     <Fragment key={user.id}>
                                     <tr
-                                        style={classic
-                                            ? { background: isExpanded ? rowStateBg('expanded', true) : lvZebra(true, rowIndex), borderBottom: isExpanded ? 'none' : '1px solid #c0bdb5', opacity: user.is_active ? 1 : 0.6 }
-                                            : { background: isExpanded ? rowStateBg('expanded', false) : undefined, opacity: user.is_active ? 1 : 0.6 }}
+                                        style={{ background: isExpanded ? rowStateBg('expanded', true) : lvZebra(true, rowIndex), borderBottom: isExpanded ? 'none' : '1px solid #c0bdb5', opacity: user.is_active ? 1 : 0.6 }}
                                     >
-                                        <td style={classic ? { ...tdBase, textAlign: 'center' as const } : undefined} className={classic ? '' : 'ps-4'}>
-                                            <div style={classic ? { width: 28, height: 28, border: '1px solid', borderColor: '#fff #888 #888 #fff', background: '#e0dcd4', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' } : { width: 32, height: 32, border: '1px solid #dee2e6', borderRadius: 4, background: '#f8f9fa', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>
+                                        <td style={{ ...tdBase, textAlign: 'center' as const }}>
+                                            <div style={{ width: 28, height: 28, border: '1px solid', borderColor: '#fff #888 #888 #fff', background: '#e0dcd4', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>
                                                 <PixelAvatar avatarId={user.avatar_id} seed={user.username} template={user.role?.default_avatar_id} size={24} />
                                             </div>
                                         </td>
-                                        <td style={classic ? tdBase : undefined}>
-                                            <CodeChip code={user.username} classic={classic} />
-                                            {isSelf && <span className={classic ? '' : 'text-muted small ms-1'} style={classic ? { fontSize: 8, color: '#888', fontWeight: 'normal' } : undefined}> (you)</span>}
+                                        <td style={tdBase}>
+                                            <CodeChip code={user.username} classic />
+                                            {isSelf && <span style={{ fontSize: 8, color: '#888', fontWeight: 'normal' }}> (you)</span>}
                                         </td>
-                                        <td style={classic ? tdBase : undefined}>{user.full_name}</td>
-                                        <td style={classic ? tdBase : undefined}>
-                                            {classic ? (
-                                                <span style={{ borderRadius: CHIP_RADIUS, display: 'inline-block', width: 'fit-content', maxWidth: '100%', background: '#e8e8e8', border: '1px solid #6a6a6a', color: '#000', padding: '1px 5px', fontSize: '9px', fontFamily: xpFont, fontWeight: 'bold' }}>
+                                        <td style={tdBase}>{user.full_name}</td>
+                                        <td style={tdBase}>
+                                            {<span style={{ borderRadius: CHIP_RADIUS, display: 'inline-block', width: 'fit-content', maxWidth: '100%', background: '#e8e8e8', border: '1px solid #6a6a6a', color: '#000', padding: '1px 5px', fontSize: '9px', fontFamily: xpFont, fontWeight: 'bold' }}>
                                                     {user.role?.name || '—'}
-                                                </span>
-                                            ) : (
-                                                <span className="badge bg-secondary" style={{ whiteSpace: 'normal', wordBreak: 'break-word' }}>{user.role?.name || '—'}</span>
-                                            )}
+                                                </span>}
                                         </td>
-                                        <td style={classic ? tdBase : undefined}>
+                                        <td style={tdBase}>
                                             <EffectivePermissions
                                                 rolePermissions={user.role?.permissions || []}
                                                 directPermissions={user.permissions || []}
-                                                classic={classic}
                                                 expanded={isExpanded}
                                                 onToggle={() => toggleExpanded(user.id)}
                                             />
                                         </td>
-                                        <td style={classic ? { ...tdBase, fontSize: 9, whiteSpace: 'nowrap' as const } : undefined} className={classic ? '' : 'small text-muted'}>
+                                        <td style={{ ...tdBase, fontSize: 9, whiteSpace: 'nowrap' as const }}>
                                             {formatLastLogin(user.last_login_at)}
                                         </td>
-                                        <td style={classic ? tdBase : undefined}>
+                                        <td style={tdBase}>
                                             <StatusChip status={user.is_active ? 'ACTIVE' : 'INACTIVE'} tint />
                                         </td>
-                                        <td style={classic ? { ...tdBase, borderRight: 'none', textAlign: 'right' as const } : undefined} className={classic ? '' : 'text-end pe-4'}>
-                                            {classic ? (
-                                                <>
+                                        <td style={{ ...tdBase, borderRight: 'none', textAlign: 'right' as const }}>
+                                            {<>
                                                     <button
                                                         title="Edit"
                                                         onClick={() => { setFormUser(user); setFormMode('edit'); }}
@@ -322,29 +275,13 @@ export default function SettingsUsersTab({
                                                             onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.borderColor = 'transparent'; (e.currentTarget as HTMLButtonElement).style.background = 'none'; }}
                                                         ><i className={`bi ${user.is_active ? 'bi-person-dash' : 'bi-person-check'}`}></i></button>
                                                     )}
-                                                </>
-                                            ) : (
-                                                <>
-                                                    <button className="btn btn-sm btn-link" onClick={() => { setFormUser(user); setFormMode('edit'); }}>
-                                                        <i className="bi bi-pencil-square"></i>
-                                                    </button>
-                                                    {!isSelf && (
-                                                        <button
-                                                            className={`btn btn-sm btn-link ${user.is_active ? 'text-danger' : 'text-success'}`}
-                                                            title={user.is_active ? 'Deactivate' : 'Reactivate'}
-                                                            onClick={() => setUserActive(user, !user.is_active)}
-                                                        >
-                                                            <i className={`bi ${user.is_active ? 'bi-person-dash' : 'bi-person-check'}`}></i>
-                                                        </button>
-                                                    )}
-                                                </>
-                                            )}
+                                                </>}
                                         </td>
                                     </tr>
                                     {isExpanded && detailPermissions.length > 0 && (
                                         <tr style={{ opacity: user.is_active ? 1 : 0.6 }}>
                                             <td colSpan={8} style={{ padding: 0, border: 'none' }}>
-                                                <PermissionBreakdown permissions={detailPermissions} classic={classic} showDirect />
+                                                <PermissionBreakdown permissions={detailPermissions} showDirect />
                                             </td>
                                         </tr>
                                     )}
@@ -353,7 +290,7 @@ export default function SettingsUsersTab({
                             })}
                             {filteredUsers.length === 0 && (
                                 <tr>
-                                    <td colSpan={8} style={classic ? { ...tdBase, textAlign: 'center' as const, fontStyle: 'italic', color: '#888' } : undefined} className={classic ? '' : 'text-center text-muted py-4'}>
+                                    <td colSpan={8} style={{ ...tdBase, textAlign: 'center' as const, fontStyle: 'italic', color: '#888' }}>
                                         No users match this search/filter.
                                     </td>
                                 </tr>
@@ -366,7 +303,7 @@ export default function SettingsUsersTab({
                     total={filteredUsers.length}
                     pageSize={USERS_PAGE_SIZE}
                     onPageChange={setPage}
-                    leftContent={classic ? `${filteredUsers.length} of ${users.length} user${users.length !== 1 ? 's' : ''}` : undefined}
+                    leftContent={`${filteredUsers.length} of ${users.length} user${users.length !== 1 ? 's' : ''}`}
                 />
             </div>
 
@@ -377,7 +314,6 @@ export default function SettingsUsersTab({
                 user={formUser}
                 roles={roles}
                 allPermissions={allPermissions}
-                classic={classic}
                 onSubmit={(payload) => formMode === 'create' ? submitCreate(payload) : submitEdit(formUser!.id, payload)}
             />
         </SettingsPanel>

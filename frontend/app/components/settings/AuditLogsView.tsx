@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useMemo, memo, useRef } from 'react';
 import { useLanguage } from '../../context/LanguageContext';
-import { useTheme } from '../../context/ThemeContext';
 import { useTimezone } from '../../context/TimezoneContext';
 import { useUser } from '../../context/UserContext';
 import { xpToolbar as sharedXpToolbar, ShellWindow, ShellTitleBar } from '../shared/shellTheme';
@@ -20,13 +19,13 @@ function formatEntityType(entityType: string): string {
         .join(' ');
 }
 
-const AuditLogRow = memo(({ log, classic, rowIndex, userName }: any) => {
+const AuditLogRow = memo(({ log, rowIndex, userName }: any) => {
     const [showChanges, setShowChanges] = useState(false);
     const { formatDateTime: tzDateTime } = useTimezone();
     const userShort = log.user_id ? log.user_id.split('-')[0] : 'System';
     const userLabel = userName || (log.user_id ? `User ${userShort}` : 'System');
 
-    if (classic) {
+    if (true) {
         const rowStyle = { ...lvRow(true, rowIndex ?? 0), cursor: log.changes ? 'pointer' : 'default' };
         return (
             <>
@@ -105,8 +104,6 @@ AuditLogRow.displayName = 'AuditLogRow';
 
 export default function AuditLogsView({ auditLogs, currentPage, totalItems, pageSize, onPageChange, filterType, onFilterChange }: any) {
   const { t } = useLanguage();
-  const { uiStyle: currentStyle } = useTheme();
-  const classic = currentStyle === 'classic';
   const { users, refreshUsers } = useUser();
   const { loading: dataLoading, fetchData } = useData();
   const [refreshing, setRefreshing] = useState(false);
@@ -127,7 +124,7 @@ export default function AuditLogsView({ auditLogs, currentPage, totalItems, page
   // load are exactly as tall as the rows that replace them. Classic and modern
   // rows differ in height, so they cache under separate keys.
   const listBodyRef = useRef<HTMLTableSectionElement>(null);
-  const skel = useTableSkeletonMetrics(classic ? 'audit-logs-classic' : 'audit-logs', listBodyRef, auditLogs.length > 0);
+  const skel = useTableSkeletonMetrics('audit-logs-classic', listBodyRef, auditLogs.length > 0);
 
   // ── XP inline styles ─────────────────────────────────────────────────────
   const xpToolbar: React.CSSProperties = sharedXpToolbar();
@@ -153,28 +150,16 @@ export default function AuditLogsView({ auditLogs, currentPage, totalItems, page
   );
 
   return (
-      <ShellWindow classic={classic} fill="page" className="fade-in">
+      <ShellWindow classic fill="page" className="fade-in">
           <ShellTitleBar
-              classic={classic}
+              classic
               icon="bi-shield-check"
               title="System Audit Logs"
-              subtitle={classic ? undefined : 'Track all user activities and system changes. Click rows to see technical details.'}
-              right={classic ? undefined : (
-                  <div className="d-flex align-items-center gap-2">
-                      <div className="input-group input-group-sm" style={{ width: '180px' }}>
-                          <span className="input-group-text px-2"><i className="bi bi-funnel"></i></span>
-                          <select className="form-select" value={filterType} onChange={e => onFilterChange(e.target.value)}>
-                              {entityFilterOptions}
-                          </select>
-                      </div>
-                      <button className="btn btn-outline-secondary btn-sm" onClick={handleRefresh} disabled={refreshing} title="Refresh">
-                          <i className="bi bi-arrow-clockwise me-1" />{refreshing ? 'Refreshing…' : 'Refresh'}
-                      </button>
-                  </div>
-              )}
+              subtitle={undefined}
+              right={undefined}
           />
 
-          {classic && (
+          {(
               <div style={xpToolbar}>
                   <button className={XP_BTN} style={xpBtn()} onClick={handleRefresh} disabled={refreshing} title="Refresh">
                       <i className="bi bi-arrow-clockwise" style={{ marginRight: 4 }} />{refreshing ? 'Refreshing…' : 'Refresh'}
@@ -192,33 +177,29 @@ export default function AuditLogsView({ auditLogs, currentPage, totalItems, page
               </div>
           )}
 
-          <div style={{ flex: 1, minHeight: 0, background: classic ? '#ffffff' : undefined, overflowY: 'auto', overflowX: 'hidden' }}>
+          <div style={{ flex: 1, minHeight: 0, background: '#ffffff', overflowY: 'auto', overflowX: 'hidden' }}>
               <table
-                  className={classic ? undefined : 'table table-hover align-middle mb-0 small'}
-                  style={classic ? { width: '100%', borderCollapse: 'collapse', tableLayout: 'fixed' } : { tableLayout: 'fixed' }}
+                  className={undefined}
+                  style={{ width: '100%', borderCollapse: 'collapse', tableLayout: 'fixed' }}
               >
-                  <thead style={classic ? { ...lvThead(true), position: 'sticky', top: 0, zIndex: 1 } : { position: 'sticky', top: 0, zIndex: 1 }}>
+                  <thead style={{ ...lvThead(true), position: 'sticky', top: 0, zIndex: 1 }}>
                       <tr>
-                          <th style={{ ...lvTh(classic), width: 140 }} className={classic ? undefined : 'ps-4'}>Timestamp</th>
-                          <th style={{ ...lvTh(classic), width: 110 }}>User</th>
-                          <th style={{ ...lvTh(classic), width: 140 }}>Action</th>
-                          <th style={{ ...lvTh(classic), width: 160 }}>Entity</th>
-                          <th style={classic ? { ...lvTh(classic), borderRight: 'none' } : lvTh(classic)}>Details</th>
+                          <th style={{ ...lvTh(true), width: 140 }} className={undefined}>Timestamp</th>
+                          <th style={{ ...lvTh(true), width: 110 }}>User</th>
+                          <th style={{ ...lvTh(true), width: 140 }}>Action</th>
+                          <th style={{ ...lvTh(true), width: 160 }}>Entity</th>
+                          <th style={{ ...lvTh(true), borderRight: 'none' }}>Details</th>
                       </tr>
                   </thead>
                   <tbody ref={listBodyRef}>
                       {auditLogs.map((log: any, i: number) => (
-                          <AuditLogRow key={log.id} log={log} classic={classic} rowIndex={i} userName={userNameById[log.user_id]} />
+                          <AuditLogRow key={log.id} log={log} rowIndex={i} userName={userNameById[log.user_id]} />
                       ))}
                       {auditLogs.length === 0 && (dataLoading.auditLogs ? (
-                          <TableSkeleton rows={8} cols={skel.cols ?? 5} classic={classic} rowHeight={skel.rowHeight} fillHeight={skel.fillHeight} />
-                      ) : classic ? (
-                          <tr><td colSpan={5} style={{ textAlign: 'center', padding: '24px', fontFamily: xpFont, fontSize: '11px', color: '#666', fontStyle: 'italic' }}>
+                          <TableSkeleton rows={8} cols={skel.cols ?? 5} classic rowHeight={skel.rowHeight} fillHeight={skel.fillHeight} />
+                      ) : <tr><td colSpan={5} style={{ textAlign: 'center', padding: '24px', fontFamily: xpFont, fontSize: '11px', color: '#666', fontStyle: 'italic' }}>
                               No activity logs found
-                          </td></tr>
-                      ) : (
-                          <tr><td colSpan={5} className="text-center py-5 text-muted">No activity logs found</td></tr>
-                      ))}
+                          </td></tr>)}
                   </tbody>
               </table>
           </div>

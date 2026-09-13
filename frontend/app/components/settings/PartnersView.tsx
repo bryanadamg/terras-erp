@@ -5,7 +5,6 @@ import { useToast } from '../shared/Toast';
 import { useLanguage } from '../../context/LanguageContext';
 import ModalWrapper from '../shared/ModalWrapper';
 import Pager from '../shared/Pager';
-import { useTheme } from '../../context/ThemeContext';
 import { useUser } from '../../context/UserContext';
 import { StatusChip, useFloatingMenu, MenuTriggerButton, FloatingMenu, xpFont, TableSkeleton, useTableSkeletonMetrics, rowStateBg, BTN_TONES, XP_BTN } from '../shared/xpTheme';
 import { useData } from '../../context/DataContext';
@@ -54,7 +53,6 @@ export default function PartnersView({ type, onCreate, onUpdate, onDelete, onBul
     const [editingPartner, setEditingPartner] = useState<Partner | null>(null);
     const [newPartner, setNewPartner] = useState({ name: '', address: '', contact_person: '', phone: '', fax: '', email: '', type, active: true });
     const [deletingPartner, setDeletingPartner] = useState<Partner | null>(null);
-    const { uiStyle: currentStyle } = useTheme();
     const [showBulkDeleteConfirm, setShowBulkDeleteConfirm] = useState(false);
     const { openId: menuOpenId, pos: menuPos, toggle: menuToggle, close: menuClose } = useFloatingMenu(140);
 
@@ -78,16 +76,14 @@ export default function PartnersView({ type, onCreate, onUpdate, onDelete, onBul
         refetch();
     };
 
-    const classic = currentStyle === 'classic';
     const typeLabel = type === 'CUSTOMER' ? 'Customer' : 'Supplier';
     const { hasPermission, hasAnyPermission } = useUser();
     const canManage = type === 'CUSTOMER'
         ? hasAnyPermission('customer.create', 'customer.edit', 'customer.delete')
         : hasAnyPermission('supplier.create', 'supplier.edit', 'supplier.delete');
 
-    // Button/input/cell/label chrome sourced from the shared lv* helpers (pinned to
-    // classic=true — this constant is only ever used inside `classic ? ... : undefined`
-    // branches below) instead of re-declaring the same CSS values locally.
+    // Button/input/cell/label chrome sourced from the shared lv* helpers instead
+    // of re-declaring the same CSS values locally.
     const xpBtn = (extra: React.CSSProperties = {}): React.CSSProperties => lvBtn(true, 'default', extra);
     const xpInput: React.CSSProperties = lvInput(true);
     const xpSep: React.CSSProperties = {
@@ -155,9 +151,9 @@ export default function PartnersView({ type, onCreate, onUpdate, onDelete, onBul
     };
 
     return (
-        <ShellWindow classic={classic} fill="page" className="fade-in">
+        <ShellWindow classic fill="page" className="fade-in">
             <ShellTitleBar
-                classic={classic}
+                classic
                 icon="bi-people-fill"
                 title={`${typeLabel} Management`}
                 subtitle={`Maintain your network of ${typeLabel.toLowerCase()}s`}
@@ -165,25 +161,24 @@ export default function PartnersView({ type, onCreate, onUpdate, onDelete, onBul
 
                 {/* ── Secondary toolbar: search + count + actions ── */}
                 <div
-                    style={classic ? xpToolbar() : undefined}
-                    className={classic ? '' : 'px-3 py-2 border-bottom d-flex align-items-center gap-3 bg-white'}
+                    style={xpToolbar()}
                 >
                     {/* `searchInput` is the live echo; the hook debounces the committed
                         value it actually sends as `?search=`. No local timer here. */}
                     <SearchField
-                        classic={classic}
+                        classic
                         value={searchInput}
                         onChange={setSearch}
                         placeholder={`Search ${typeLabel.toLowerCase()}s…`}
                         width={280}
                         grow
                     />
-                    {classic && <div style={xpSep}></div>}
-                    <ToolbarCount classic={classic}>
+                    {<div style={xpSep}></div>}
+                    <ToolbarCount classic>
                         {total} {typeLabel}{total !== 1 ? 's' : ''}
                     </ToolbarCount>
                     {canManage && (
-                        <ToolbarButton classic={classic} tone="create" icon="bi-plus-lg" style={{ marginLeft: 'auto' }} onClick={() => setIsCreateOpen(true)}>
+                        <ToolbarButton classic tone="create" icon="bi-plus-lg" style={{ marginLeft: 'auto' }} onClick={() => setIsCreateOpen(true)}>
                             Add {typeLabel}
                         </ToolbarButton>
                     )}
@@ -191,8 +186,7 @@ export default function PartnersView({ type, onCreate, onUpdate, onDelete, onBul
 
                 {/* ── Bulk action bar ── */}
                 {canManage && sel.count > 0 && (
-                    classic ? (
-                        <div style={xpToolbar({ background: '#fff8e1', borderBottom: '1px solid #e0c060' })}>
+                    <div style={xpToolbar({ background: '#fff8e1', borderBottom: '1px solid #e0c060' })}>
                             <span style={{ fontFamily: xpFont, fontSize: '11px', color: '#665500', fontWeight: 'bold' }}>
                                 {sel.count} selected
                             </span>
@@ -209,70 +203,57 @@ export default function PartnersView({ type, onCreate, onUpdate, onDelete, onBul
                                 style={xpBtn()}
                                 onClick={sel.clear}
                             >Clear</button>
-                        </div>
-                    ) : (
-                        <div className="px-3 py-2 border-bottom d-flex align-items-center gap-3" style={{ background: '#fff8e1' }}>
-                            <span className="small fw-bold" style={{ color: '#665500' }}>{sel.count} selected</span>
-                            <button className="btn btn-sm btn-danger" onClick={() => setShowBulkDeleteConfirm(true)}>
-                                <i className="bi bi-trash me-1"></i>Delete Selected
-                            </button>
-                            <button className="btn btn-sm btn-link text-muted p-0" onClick={sel.clear}>Clear</button>
-                        </div>
-                    )
-                )}
+                        </div>)}
 
                 {/* ── Table ── */}
                 <div
-                    className={classic ? '' : 'card-body p-0'}
                     style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }}
                 >
                     <div className="table-responsive" style={{ flex: 1, minHeight: 0, overflowY: 'auto' }}>
                         <table
-                            className={classic ? '' : 'table table-hover align-middle mb-0'}
-                            style={classic ? { width: '100%', borderCollapse: 'collapse', background: '#fff' } : undefined}
+                            style={{ width: '100%', borderCollapse: 'collapse', background: '#fff' }}
                         >
-                            <thead style={classic ? xpTableHeader : LV_STICKY_THEAD} className={classic ? '' : 'table-light'}>
+                            <thead style={xpTableHeader}>
                                 <tr>
-                                    <th style={classic ? { ...xpThCell, width: '28px', textAlign: 'center' as const } : undefined} className={classic ? '' : 'ps-3'}>
-                                        <SelectAllCheckbox classic={classic} allSelected={sel.allPageSelected} someSelected={sel.someSelected} onChange={sel.togglePage} title="Select all" />
+                                    <th style={{ ...xpThCell, width: '28px', textAlign: 'center' as const }}>
+                                        <SelectAllCheckbox classic allSelected={sel.allPageSelected} someSelected={sel.someSelected} onChange={sel.togglePage} title="Select all" />
                                     </th>
-                                    <th style={classic ? { ...xpThCell, width: '30%' } : undefined} className={classic ? '' : 'ps-2'}>Name</th>
-                                    <th style={classic ? xpThCell : undefined}>Address</th>
-                                    <th style={classic ? { ...xpThCell, width: '80px' } : undefined}>Status</th>
-                                    <th style={classic ? { ...xpThCell, textAlign: 'right' as const, borderRight: 'none', width: '80px' } : undefined} className={classic ? '' : 'text-end pe-4'}>Actions</th>
+                                    <th style={{ ...xpThCell, width: '30%' }}>Name</th>
+                                    <th style={xpThCell}>Address</th>
+                                    <th style={{ ...xpThCell, width: '80px' }}>Status</th>
+                                    <th style={{ ...xpThCell, textAlign: 'right' as const, borderRight: 'none', width: '80px' }}>Actions</th>
                                 </tr>
                             </thead>
                             <tbody ref={listBodyRef}>
                                 {pagedPartners.map((p, rowIndex) => (
                                     <tr
                                         key={p.id}
-                                        style={classic ? { background: sel.isSelected(p) ? rowStateBg('selected', true) : lvZebra(true, rowIndex), borderBottom: '1px solid #c0bdb5' } : { background: sel.isSelected(p) ? rowStateBg('selected', false) : undefined }}
+                                        style={{ background: sel.isSelected(p) ? rowStateBg('selected', true) : lvZebra(true, rowIndex), borderBottom: '1px solid #c0bdb5' }}
                                     >
-                                        <td style={classic ? { ...tdBase, textAlign: 'center' as const } : undefined} className={classic ? '' : 'ps-3'}>
-                                            <RowCheckbox classic={classic} checked={sel.isSelected(p)} onChange={() => sel.toggle(p)} label={p.name} />
+                                        <td style={{ ...tdBase, textAlign: 'center' as const }}>
+                                            <RowCheckbox classic checked={sel.isSelected(p)} onChange={() => sel.toggle(p)} label={p.name} />
                                         </td>
-                                        <td style={classic ? { ...tdBase, fontWeight: 'bold' } : undefined} className={classic ? '' : 'ps-2 fw-bold'}>
+                                        <td style={{ ...tdBase, fontWeight: 'bold' }}>
                                             {p.name}
                                         </td>
-                                        <td style={classic ? { ...tdBase, color: '#555' } : undefined} className={classic ? '' : 'text-muted small'}>
-                                            {p.address || <span style={classic ? { color: '#aaa' } : undefined} className={classic ? '' : 'fst-italic'}>—</span>}
+                                        <td style={{ ...tdBase, color: '#555' }}>
+                                            {p.address || <span style={{ color: '#aaa' }}>—</span>}
                                         </td>
-                                        <td style={classic ? tdBase : undefined} className={classic ? '' : 'text-muted small'}>
+                                        <td style={tdBase}>
                                             <StatusChip status={p.active ? 'ACTIVE' : 'INACTIVE'} />
                                         </td>
-                                        <td style={classic ? { ...tdBase, borderRight: 'none', textAlign: 'right' as const } : undefined} className={classic ? '' : 'text-end pe-4'}>
-                                            {canManage && <MenuTriggerButton classic={classic} onClick={e => menuToggle(p.id, e)} />}
+                                        <td style={{ ...tdBase, borderRight: 'none', textAlign: 'right' as const }}>
+                                            {canManage && <MenuTriggerButton classic onClick={e => menuToggle(p.id, e)} />}
                                         </td>
                                     </tr>
                                 ))}
                                 {pagedPartners.length === 0 && (loading ? (
-                                    <TableSkeleton rows={8} cols={skel.cols ?? 5} classic={classic} tdStyle={tdBase} rowHeight={skel.rowHeight} fillHeight={skel.fillHeight} />
+                                    <TableSkeleton rows={8} cols={skel.cols ?? 5} classic tdStyle={tdBase} rowHeight={skel.rowHeight} fillHeight={skel.fillHeight} />
                                 ) : (
                                     <tr>
                                         <td
                                             colSpan={5}
-                                            style={classic ? { ...tdBase, borderRight: 'none', textAlign: 'center', padding: '24px 8px', color: '#888', fontStyle: 'italic' } : undefined}
-                                            className={classic ? '' : 'text-center py-5 text-muted'}
+                                            style={{ ...tdBase, borderRight: 'none', textAlign: 'center', padding: '24px 8px', color: '#888', fontStyle: 'italic' }}
                                         >
                                             {searchTerm
                                                 ? `No ${typeLabel.toLowerCase()}s match "${searchTerm}"`
@@ -288,7 +269,7 @@ export default function PartnersView({ type, onCreate, onUpdate, onDelete, onBul
                 <Pager page={page} total={total} pageSize={PARTNERS_PAGE_SIZE} onPageChange={setPage} hideWhenEmpty />
 
                 {/* ── Status bar ── */}
-                {classic && (
+                {(
                     <div style={{
                         background: 'linear-gradient(to bottom, #e8e6df, #d5d3cc)',
                         borderTop: '1px solid #b0a898',
@@ -333,14 +314,14 @@ export default function PartnersView({ type, onCreate, onUpdate, onDelete, onBul
                     <>
                         <button
                             type="button"
-                            style={classic ? xpBtn() : undefined}
-                            className={classic ? XP_BTN : 'btn btn-sm btn-link text-muted'}
+                            style={xpBtn()}
+                            className={XP_BTN}
                             onClick={() => setIsCreateOpen(false)}
                         >Cancel</button>
                         <button
                             type="button"
-                            style={classic ? xpBtn({ ...BTN_TONES.primary }) : undefined}
-                            className={classic ? XP_BTN : 'btn btn-sm btn-primary px-4 fw-bold'}
+                            style={xpBtn({ ...BTN_TONES.primary })}
+                            className={XP_BTN}
                             onClick={handleSubmit}
                         >CREATE {typeLabel.toUpperCase()}</button>
                     </>
@@ -348,12 +329,10 @@ export default function PartnersView({ type, onCreate, onUpdate, onDelete, onBul
             >
                 <div className="mb-3">
                     <label
-                        style={classic ? xpLabel : undefined}
-                        className={classic ? '' : 'form-label small fw-bold'}
+                        style={xpLabel}
                     >Name</label>
                     <input
-                        style={classic ? xpInput : undefined}
-                        className={classic ? '' : 'form-control'}
+                        style={xpInput}
                         value={newPartner.name}
                         onChange={e => setNewPartner({...newPartner, name: e.target.value})}
                         required
@@ -363,12 +342,10 @@ export default function PartnersView({ type, onCreate, onUpdate, onDelete, onBul
                 </div>
                 <div className="mb-3">
                     <label
-                        style={classic ? xpLabel : undefined}
-                        className={classic ? '' : 'form-label small fw-bold'}
-                    >Address <span style={classic ? { fontWeight: 'normal', color: '#666' } : undefined} className={classic ? '' : 'fw-normal text-muted'}>(Optional)</span></label>
+                        style={xpLabel}
+                    >Address <span style={{ fontWeight: 'normal', color: '#666' }}>(Optional)</span></label>
                     <textarea
-                        style={classic ? { ...xpInput, height: 'auto', padding: '4px 6px', width: '100%', resize: 'vertical' as const } : undefined}
-                        className={classic ? '' : 'form-control'}
+                        style={{ ...xpInput, height: 'auto', padding: '4px 6px', width: '100%', resize: 'vertical' as const }}
                         rows={3}
                         value={newPartner.address}
                         onChange={e => setNewPartner({...newPartner, address: e.target.value})}
@@ -376,22 +353,22 @@ export default function PartnersView({ type, onCreate, onUpdate, onDelete, onBul
                     ></textarea>
                 </div>
                 <div className="mb-3">
-                    <label style={classic ? xpLabel : undefined} className={classic ? '' : 'form-label small fw-bold'}>Contact Person <span style={classic ? { fontWeight: 'normal', color: '#666' } : undefined} className={classic ? '' : 'fw-normal text-muted'}>(Attn)</span></label>
-                    <input style={classic ? xpInput : undefined} className={classic ? '' : 'form-control'} value={newPartner.contact_person} onChange={e => setNewPartner({...newPartner, contact_person: e.target.value})} placeholder="e.g. Pak Nicolas" />
+                    <label style={xpLabel}>Contact Person <span style={{ fontWeight: 'normal', color: '#666' }}>(Attn)</span></label>
+                    <input style={xpInput} value={newPartner.contact_person} onChange={e => setNewPartner({...newPartner, contact_person: e.target.value})} placeholder="e.g. Pak Nicolas" />
                 </div>
                 <div className="row g-2 mb-3">
                     <div className="col-6">
-                        <label style={classic ? xpLabel : undefined} className={classic ? '' : 'form-label small fw-bold'}>Phone / Telp</label>
-                        <input style={classic ? xpInput : undefined} className={classic ? '' : 'form-control'} value={newPartner.phone} onChange={e => setNewPartner({...newPartner, phone: e.target.value})} placeholder="e.g. 021 5869948" />
+                        <label style={xpLabel}>Phone / Telp</label>
+                        <input style={xpInput} value={newPartner.phone} onChange={e => setNewPartner({...newPartner, phone: e.target.value})} placeholder="e.g. 021 5869948" />
                     </div>
                     <div className="col-6">
-                        <label style={classic ? xpLabel : undefined} className={classic ? '' : 'form-label small fw-bold'}>Fax</label>
-                        <input style={classic ? xpInput : undefined} className={classic ? '' : 'form-control'} value={newPartner.fax} onChange={e => setNewPartner({...newPartner, fax: e.target.value})} placeholder="e.g. 021 5868012" />
+                        <label style={xpLabel}>Fax</label>
+                        <input style={xpInput} value={newPartner.fax} onChange={e => setNewPartner({...newPartner, fax: e.target.value})} placeholder="e.g. 021 5868012" />
                     </div>
                 </div>
                 <div className="mb-3">
-                    <label style={classic ? xpLabel : undefined} className={classic ? '' : 'form-label small fw-bold'}>Email</label>
-                    <input style={classic ? xpInput : undefined} className={classic ? '' : 'form-control'} value={newPartner.email} onChange={e => setNewPartner({...newPartner, email: e.target.value})} placeholder="e.g. sales@supplier.com" />
+                    <label style={xpLabel}>Email</label>
+                    <input style={xpInput} value={newPartner.email} onChange={e => setNewPartner({...newPartner, email: e.target.value})} placeholder="e.g. sales@supplier.com" />
                 </div>
             </ModalWrapper>
 
@@ -406,20 +383,20 @@ export default function PartnersView({ type, onCreate, onUpdate, onDelete, onBul
                     <>
                         <button
                             type="button"
-                            style={classic ? xpBtn() : undefined}
-                            className={classic ? XP_BTN : 'btn btn-sm btn-link text-muted'}
+                            style={xpBtn()}
+                            className={XP_BTN}
                             onClick={() => setDeletingPartner(null)}
                         >Cancel</button>
                         <button
                             type="button"
-                            style={classic ? xpBtn({ ...BTN_TONES.danger }) : undefined}
-                            className={classic ? XP_BTN : 'btn btn-sm btn-danger px-4 fw-bold'}
+                            style={xpBtn({ ...BTN_TONES.danger })}
+                            className={XP_BTN}
                             onClick={confirmDelete}
                         >DELETE</button>
                     </>
                 }
             >
-                <p style={classic ? { fontFamily: xpFont, fontSize: '11px', margin: 0 } : undefined} className={classic ? '' : 'mb-0'}>
+                <p style={{ fontFamily: xpFont, fontSize: '11px', margin: 0 }}>
                     Delete <strong>{deletingPartner?.name}</strong>? This action cannot be undone.
                 </p>
             </ModalWrapper>
@@ -435,20 +412,20 @@ export default function PartnersView({ type, onCreate, onUpdate, onDelete, onBul
                     <>
                         <button
                             type="button"
-                            style={classic ? xpBtn() : undefined}
-                            className={classic ? XP_BTN : 'btn btn-sm btn-link text-muted'}
+                            style={xpBtn()}
+                            className={XP_BTN}
                             onClick={() => setShowBulkDeleteConfirm(false)}
                         >Cancel</button>
                         <button
                             type="button"
-                            style={classic ? xpBtn({ ...BTN_TONES.danger }) : undefined}
-                            className={classic ? XP_BTN : 'btn btn-sm btn-danger px-4 fw-bold'}
+                            style={xpBtn({ ...BTN_TONES.danger })}
+                            className={XP_BTN}
                             onClick={confirmBulkDelete}
                         >DELETE ALL</button>
                     </>
                 }
             >
-                <p style={classic ? { fontFamily: xpFont, fontSize: '11px', margin: 0 } : undefined} className={classic ? '' : 'mb-0'}>
+                <p style={{ fontFamily: xpFont, fontSize: '11px', margin: 0 }}>
                     Delete <strong>{sel.count} {typeLabel.toLowerCase()}{sel.count !== 1 ? 's' : ''}</strong>? This action cannot be undone.
                 </p>
             </ModalWrapper>
@@ -464,14 +441,14 @@ export default function PartnersView({ type, onCreate, onUpdate, onDelete, onBul
                     <>
                         <button
                             type="button"
-                            style={classic ? xpBtn() : undefined}
-                            className={classic ? XP_BTN : 'btn btn-sm btn-link text-muted'}
+                            style={xpBtn()}
+                            className={XP_BTN}
                             onClick={() => setEditingPartner(null)}
                         >Cancel</button>
                         <button
                             type="button"
-                            style={classic ? xpBtn({ background: 'linear-gradient(to bottom, #006e8e, #004a5e)', borderColor: '#004a5e #001a2e #001a2e #004a5e', color: '#ffffff', fontWeight: 'bold' }) : undefined}
-                            className={classic ? XP_BTN : 'btn btn-sm btn-info text-white px-4 fw-bold'}
+                            style={xpBtn({ background: 'linear-gradient(to bottom, #006e8e, #004a5e)', borderColor: '#004a5e #001a2e #001a2e #004a5e', color: '#ffffff', fontWeight: 'bold' })}
+                            className={XP_BTN}
                             onClick={handleUpdateSubmit}
                         >SAVE CHANGES</button>
                     </>
@@ -481,12 +458,10 @@ export default function PartnersView({ type, onCreate, onUpdate, onDelete, onBul
                     <>
                         <div className="mb-3">
                             <label
-                                style={classic ? xpLabel : undefined}
-                                className={classic ? '' : 'form-label small fw-bold'}
+                                style={xpLabel}
                             >Name</label>
                             <input
-                                style={classic ? xpInput : undefined}
-                                className={classic ? '' : 'form-control'}
+                                style={xpInput}
                                 value={editingPartner.name}
                                 onChange={e => setEditingPartner({...editingPartner, name: e.target.value})}
                                 required
@@ -494,47 +469,43 @@ export default function PartnersView({ type, onCreate, onUpdate, onDelete, onBul
                         </div>
                         <div className="mb-3">
                             <label
-                                style={classic ? xpLabel : undefined}
-                                className={classic ? '' : 'form-label small fw-bold'}
-                            >Address <span style={classic ? { fontWeight: 'normal', color: '#666' } : undefined} className={classic ? '' : 'fw-normal text-muted'}>(Optional)</span></label>
+                                style={xpLabel}
+                            >Address <span style={{ fontWeight: 'normal', color: '#666' }}>(Optional)</span></label>
                             <textarea
-                                style={classic ? { ...xpInput, height: 'auto', padding: '4px 6px', width: '100%', resize: 'vertical' as const } : undefined}
-                                className={classic ? '' : 'form-control'}
+                                style={{ ...xpInput, height: 'auto', padding: '4px 6px', width: '100%', resize: 'vertical' as const }}
                                 rows={3}
                                 value={editingPartner.address || ''}
                                 onChange={e => setEditingPartner({...editingPartner, address: e.target.value})}
                             ></textarea>
                         </div>
                         <div className="mb-3">
-                            <label style={classic ? xpLabel : undefined} className={classic ? '' : 'form-label small fw-bold'}>Contact Person <span style={classic ? { fontWeight: 'normal', color: '#666' } : undefined} className={classic ? '' : 'fw-normal text-muted'}>(Attn)</span></label>
-                            <input style={classic ? xpInput : undefined} className={classic ? '' : 'form-control'} value={editingPartner.contact_person || ''} onChange={e => setEditingPartner({...editingPartner, contact_person: e.target.value})} placeholder="e.g. Pak Nicolas" />
+                            <label style={xpLabel}>Contact Person <span style={{ fontWeight: 'normal', color: '#666' }}>(Attn)</span></label>
+                            <input style={xpInput} value={editingPartner.contact_person || ''} onChange={e => setEditingPartner({...editingPartner, contact_person: e.target.value})} placeholder="e.g. Pak Nicolas" />
                         </div>
                         <div className="row g-2 mb-3">
                             <div className="col-6">
-                                <label style={classic ? xpLabel : undefined} className={classic ? '' : 'form-label small fw-bold'}>Phone / Telp</label>
-                                <input style={classic ? xpInput : undefined} className={classic ? '' : 'form-control'} value={editingPartner.phone || ''} onChange={e => setEditingPartner({...editingPartner, phone: e.target.value})} placeholder="e.g. 021 5869948" />
+                                <label style={xpLabel}>Phone / Telp</label>
+                                <input style={xpInput} value={editingPartner.phone || ''} onChange={e => setEditingPartner({...editingPartner, phone: e.target.value})} placeholder="e.g. 021 5869948" />
                             </div>
                             <div className="col-6">
-                                <label style={classic ? xpLabel : undefined} className={classic ? '' : 'form-label small fw-bold'}>Fax</label>
-                                <input style={classic ? xpInput : undefined} className={classic ? '' : 'form-control'} value={editingPartner.fax || ''} onChange={e => setEditingPartner({...editingPartner, fax: e.target.value})} placeholder="e.g. 021 5868012" />
+                                <label style={xpLabel}>Fax</label>
+                                <input style={xpInput} value={editingPartner.fax || ''} onChange={e => setEditingPartner({...editingPartner, fax: e.target.value})} placeholder="e.g. 021 5868012" />
                             </div>
                         </div>
                         <div className="mb-3">
-                            <label style={classic ? xpLabel : undefined} className={classic ? '' : 'form-label small fw-bold'}>Email</label>
-                            <input style={classic ? xpInput : undefined} className={classic ? '' : 'form-control'} value={editingPartner.email || ''} onChange={e => setEditingPartner({...editingPartner, email: e.target.value})} placeholder="e.g. sales@supplier.com" />
+                            <label style={xpLabel}>Email</label>
+                            <input style={xpInput} value={editingPartner.email || ''} onChange={e => setEditingPartner({...editingPartner, email: e.target.value})} placeholder="e.g. sales@supplier.com" />
                         </div>
-                        <div style={classic ? { marginTop: 10, display: 'flex', alignItems: 'center', gap: 6 } : undefined} className={classic ? '' : 'form-check mt-3'}>
+                        <div style={{ marginTop: 10, display: 'flex', alignItems: 'center', gap: 6 }}>
                             <input
-                                style={classic ? { cursor: 'pointer' } : undefined}
-                                className={classic ? '' : 'form-check-input'}
+                                style={{ cursor: 'pointer' }}
                                 type="checkbox"
                                 id="activeCheck"
                                 checked={editingPartner.active}
                                 onChange={e => setEditingPartner({...editingPartner, active: e.target.checked})}
                             />
                             <label
-                                style={classic ? { fontFamily: xpFont, fontSize: '11px', color: '#000', cursor: 'pointer' } : undefined}
-                                className={classic ? '' : 'form-check-label small fw-bold'}
+                                style={{ fontFamily: xpFont, fontSize: '11px', color: '#000', cursor: 'pointer' }}
                                 htmlFor="activeCheck"
                             >Active {typeLabel}</label>
                         </div>

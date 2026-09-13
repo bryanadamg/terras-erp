@@ -20,7 +20,6 @@ export default function SettingsGeneralTab({
     const isAdmin = hasPermission('admin.access');
     const { uiStyle: currentStyle, uiScale, setUiScale } = useTheme();
     const { timezone, setTimezone } = useTimezone();
-    const classic = currentStyle === 'classic';
 
     const [name, setName] = useState(appName);
     const [tz, setTz] = useState(timezone);
@@ -40,27 +39,25 @@ export default function SettingsGeneralTab({
         // logo+address block each used the full page width and neither filled it.
         <div style={settingsColumns}>
             <div style={settingsCol(400, 1)}>
-                <SettingsPanel classic={classic} icon="bi-gear-fill" title="System Preferences">
+                <SettingsPanel icon="bi-gear-fill" title="System Preferences">
                     <form onSubmit={handleSubmitSystem}>
                         <div style={settingsGrid()}>
                             <div>
-                                <FieldLabel classic={classic}>Application Name</FieldLabel>
+                                <FieldLabel classic>Application Name</FieldLabel>
                                 <input
-                                    style={classic ? xpInput({ width: '100%' }) : undefined}
-                                    className={classic ? '' : 'form-control form-control-sm'}
+                                    style={xpInput({ width: '100%' })}
                                     value={name}
                                     onChange={e => setName(e.target.value)}
                                     disabled={!isAdmin}
                                 />
                                 {!isAdmin && (
-                                    <div style={settingsHint(classic)}>Only admins can change the application name.</div>
+                                    <div style={settingsHint(true)}>Only admins can change the application name.</div>
                                 )}
                             </div>
                             <div>
-                                <FieldLabel classic={classic}>Interface Scale</FieldLabel>
+                                <FieldLabel classic>Interface Scale</FieldLabel>
                                 <select
-                                    style={classic ? xpInput({ height: 'auto', padding: '2px 4px', width: '100%' }) : undefined}
-                                    className={classic ? '' : 'form-select form-select-sm'}
+                                    style={xpInput({ height: 'auto', padding: '2px 4px', width: '100%' })}
                                     value={scale}
                                     onChange={e => setScale(Number(e.target.value))}
                                 >
@@ -70,16 +67,15 @@ export default function SettingsGeneralTab({
                                         </option>
                                     ))}
                                 </select>
-                                <div style={settingsHint(classic)}>
+                                <div style={settingsHint(true)}>
                                     Fits more rows on screen without browser zoom. Applies on this
                                     device; phones and printouts always render at 100%.
                                 </div>
                             </div>
                             <div>
-                                <FieldLabel classic={classic}>Display Timezone</FieldLabel>
+                                <FieldLabel classic>Display Timezone</FieldLabel>
                                 <select
-                                    style={classic ? xpInput({ height: 'auto', padding: '2px 4px', width: '100%' }) : undefined}
-                                    className={classic ? '' : 'form-select form-select-sm'}
+                                    style={xpInput({ height: 'auto', padding: '2px 4px', width: '100%' })}
                                     value={tz}
                                     onChange={e => setTz(e.target.value)}
                                 >
@@ -87,18 +83,18 @@ export default function SettingsGeneralTab({
                                         <option key={z} value={z}>{z.replace(/_/g, ' ')}</option>
                                     ))}
                                 </select>
-                                <div style={settingsHint(classic)}>
+                                <div style={settingsHint(true)}>
                                     Dates &amp; times (e.g. stock ledger) display in this zone on this device.
                                 </div>
                             </div>
                         </div>
-                        <div style={settingsActions(classic)}>
+                        <div style={settingsActions(true)}>
                             <button
                                 type="submit"
-                                style={classic ? xpBtn({ ...BTN_TONES.primary, padding: '3px 14px', display: 'flex', alignItems: 'center', gap: 4 }) : undefined}
-                                className={classic ? XP_BTN : 'btn btn-sm btn-primary px-3'}
+                                style={xpBtn({ ...BTN_TONES.primary, padding: '3px 14px', display: 'flex', alignItems: 'center', gap: 4 })}
+                                className={XP_BTN}
                             >
-                                <i className="bi bi-save" style={classic ? { marginRight: 4 } : { marginRight: 4 }}></i>
+                                <i className="bi bi-save" style={{ marginRight: 4 }}></i>
                                 Save Preferences
                             </button>
                         </div>

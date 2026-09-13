@@ -1,7 +1,6 @@
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
-import { useTheme } from '../../context/ThemeContext';
 import { useUser } from '../../context/UserContext';
 import { CODE_FONT, xpFont, CHIP_RADIUS, xpInput as xpInputBase, xpBtn as xpBtnBase, BTN_TONES, XP_BTN } from '../shared/xpTheme';
 import { SearchField, ToolbarCount } from '../shared/shellTheme';
@@ -18,7 +17,6 @@ type Category = {
 
 interface CategoriesViewProps {
     categories: Category[];
-    classic?: boolean;
     onCreateCategory: (name: string, parentId?: string) => Promise<void>;
     onDeleteCategory: (id: string) => Promise<void>;
     onRenameCategory: (id: string, name: string) => Promise<void>;
@@ -53,8 +51,6 @@ export default function CategoriesView({
     onDeleteCategory,
     onRenameCategory,
 }: CategoriesViewProps) {
-    const { uiStyle: currentStyle } = useTheme();
-    const classic = currentStyle === 'classic';
     const { hasPermission, hasAnyPermission } = useUser();
     const canManage = hasAnyPermission('category.create', 'category.edit', 'category.delete');
 
@@ -153,15 +149,15 @@ export default function CategoriesView({
                 style={{
                     display: 'flex',
                     alignItems: 'center',
-                    padding: classic ? '1px 4px' : '3px 8px',
-                    paddingLeft: indent + (classic ? 4 : 8),
+                    padding: '1px 4px',
+                    paddingLeft: indent + (4),
                     gap: 4,
                 }}
             >
-                <span style={{ marginRight: classic ? 4 : 6, fontSize: classic ? 10 : 11, fontFamily: CODE_FONT, color: classic ? '#999' : '#bbb' }}>—</span>
+                <span style={{ marginRight: 4, fontSize: 10, fontFamily: CODE_FONT, color: '#999'}}>—</span>
                 <AutoFocusInput
-                    className={classic ? undefined : 'form-control form-control-sm'}
-                    style={classic ? { ...xpInput, flex: 1 } : { flex: 1, border: '1px dashed #0d6efd' }}
+                    className={undefined}
+                    style={{ ...xpInput, flex: 1 }}
                     placeholder="New category name..."
                     value={addingState?.value ?? ''}
                     onChange={e => setAddingState(s => s ? { ...s, value: e.target.value } : s)}
@@ -170,17 +166,10 @@ export default function CategoriesView({
                         if (e.key === 'Escape') { e.preventDefault(); setAddingState(null); }
                     }}
                 />
-                {classic ? (
-                    <>
+                {<>
                         <button className={XP_BTN} style={xpBtn()} onClick={handleConfirmAdd} title="Save">✓</button>
                         <button className={XP_BTN} style={xpBtn()} onClick={() => setAddingState(null)} title="Cancel">✕</button>
-                    </>
-                ) : (
-                    <>
-                        <button className="btn btn-sm btn-outline-primary" style={{ padding: '1px 6px' }} onClick={handleConfirmAdd} title="Save">✓</button>
-                        <button className="btn btn-sm btn-outline-secondary" style={{ padding: '1px 6px' }} onClick={() => setAddingState(null)} title="Cancel">✕</button>
-                    </>
-                )}
+                    </>}
             </div>
         );
     };
@@ -196,13 +185,9 @@ export default function CategoriesView({
         const hasChildren = (node.children?.length ?? 0) > 0;
         const isCollapsed = collapsedIds.has(node.id);
         const chevron = hasChildren ? (isCollapsed ? '▶' : '▼') : '—';
-        const chevronColor = classic
-            ? (isSelected ? '#fff' : (hasChildren ? '#444' : '#bbb'))
-            : (isSelected ? 'rgba(255,255,255,0.8)' : (hasChildren ? '#495057' : '#ced4da'));
+        const chevronColor = isSelected ? '#fff' : (hasChildren ? '#444' : '#bbb');
         const actionsOpacity = isHovered || isEditing ? 1 : 0;
-        const rowBg = classic
-            ? (isSelected ? '#316ac5' : (isHovered ? '#dde8fb' : (isEven ? '#fff' : '#f5f4ef')))
-            : (isSelected ? '#0d6efd' : (isHovered ? '#e8f0fe' : (isEven ? '#fff' : '#f8f9fa')));
+        const rowBg = isSelected ? '#316ac5' : (isHovered ? '#dde8fb' : (isEven ? '#fff' : '#f5f4ef'));
 
         if (isEditing) {
             return (
@@ -211,17 +196,17 @@ export default function CategoriesView({
                         style={{
                             display: 'flex',
                             alignItems: 'center',
-                            padding: classic ? '1px 4px' : '3px 8px',
-                            paddingLeft: indent + (classic ? 4 : 8),
-                            background: classic ? '#316ac5' : '#0d6efd',
-                            borderRadius: classic ? undefined : 4,
+                            padding: '1px 4px',
+                            paddingLeft: indent + (4),
+                            background: '#316ac5',
+                            borderRadius: undefined,
                             gap: 4,
                         }}
                     >
-                        <span style={{ marginRight: classic ? 4 : 6, fontSize: classic ? 10 : 11, color: classic ? '#fff' : 'rgba(255,255,255,0.8)', fontFamily: CODE_FONT }}>{chevron}</span>
+                        <span style={{ marginRight: 4, fontSize: 10, color: '#fff', fontFamily: CODE_FONT }}>{chevron}</span>
                         <AutoFocusInput
-                            className={classic ? undefined : 'form-control form-control-sm'}
-                            style={classic ? { ...xpInput, flex: 1 } : { flex: 1 }}
+                            className={undefined}
+                            style={{ ...xpInput, flex: 1 }}
                             value={editingState.value}
                             onChange={e => setEditingState(s => s ? { ...s, value: e.target.value } : s)}
                             onKeyDown={e => {
@@ -229,17 +214,10 @@ export default function CategoriesView({
                                 if (e.key === 'Escape') { e.preventDefault(); setEditingState(null); }
                             }}
                         />
-                        {classic ? (
-                            <>
+                        {<>
                                 <button className={XP_BTN} style={xpBtn()} onClick={handleConfirmRename} title="Save">✓</button>
                                 <button className={XP_BTN} style={xpBtn()} onClick={() => setEditingState(null)} title="Cancel">✕</button>
-                            </>
-                        ) : (
-                            <>
-                                <button className="btn btn-sm btn-light" style={{ padding: '1px 6px' }} onClick={handleConfirmRename} title="Save">✓</button>
-                                <button className="btn btn-sm btn-light" style={{ padding: '1px 6px' }} onClick={() => setEditingState(null)} title="Cancel">✕</button>
-                            </>
-                        )}
+                            </>}
                     </div>
                     {node.children?.map(child => renderNode(child))}
                     {addingState?.parentId === node.id && renderAddRow(node.level + 1)}
@@ -250,7 +228,7 @@ export default function CategoriesView({
         return (
             <div key={node.id}>
                 <div
-                    style={classic ? {
+                    style={{
                         display: 'flex',
                         alignItems: 'center',
                         padding: '1px 4px',
@@ -263,86 +241,37 @@ export default function CategoriesView({
                         color: isSelected ? '#fff' : '#000',
                         userSelect: 'none' as const,
                         position: 'relative',
-                    } : {
-                        display: 'flex',
-                        alignItems: 'center',
-                        padding: '3px 8px',
-                        paddingLeft: indent + 8,
-                        cursor: 'pointer',
-                        fontWeight: node.level === 1 ? 600 : 'normal',
-                        background: rowBg,
-                        color: isSelected ? '#fff' : '#212529',
-                        borderRadius: 4,
-                        userSelect: 'none' as const,
-                        fontSize: 13,
-                        position: 'relative',
                     }}
                     onClick={() => setSelectedId(node.id)}
                     onMouseEnter={() => setHoveredId(node.id)}
                     onMouseLeave={() => setHoveredId(null)}
                 >
                     <span
-                        style={classic
-                            ? { marginRight: 4, fontSize: 10, fontFamily: CODE_FONT, color: chevronColor, cursor: hasChildren ? 'pointer' : 'default' }
-                            : { marginRight: 6, fontFamily: CODE_FONT, fontSize: 11, color: chevronColor, cursor: hasChildren ? 'pointer' : 'default' }}
+                        style={{ marginRight: 4, fontSize: 10, fontFamily: CODE_FONT, color: chevronColor, cursor: hasChildren ? 'pointer' : 'default' }}
                         onClick={hasChildren ? e => { e.stopPropagation(); toggleCollapse(node.id); } : undefined}
                     >{chevron}</span>
                     <span style={{ flex: 1 }}>{node.name}</span>
                     {node.is_system && (
-                        classic ? (
-                            <span style={{ borderRadius: CHIP_RADIUS, fontFamily: xpFont, fontSize: 9, color: '#003080', background: '#dce8ff', border: '1px solid #7fa8e0', padding: '0 4px', marginRight: 4 }}>SYSTEM</span>
-                        ) : (
-                            <span className="badge bg-primary" style={{ fontSize: 10, marginRight: 6 }}>SYSTEM</span>
-                        )
-                    )}
+                        <span style={{ borderRadius: CHIP_RADIUS, fontFamily: xpFont, fontSize: 9, color: '#003080', background: '#dce8ff', border: '1px solid #7fa8e0', padding: '0 4px', marginRight: 4 }}>SYSTEM</span>)}
                     {canManage && (
                     <span style={{ display: 'flex', gap: 2, opacity: actionsOpacity, transition: 'opacity 0.1s' }}>
                         {node.level < 3 && (
-                            classic ? (
-                                <button
+                            <button
                                     style={xpIconBtn({ color: isSelected ? '#fff' : '#316ac5' })}
                                     title="Add child"
                                     onClick={e => { e.stopPropagation(); startAdd(node.id); }}
-                                >＋</button>
-                            ) : (
-                                <button
-                                    className="btn btn-sm"
-                                    style={{ padding: '0 4px', lineHeight: 1.2, fontSize: 13, color: isSelected ? '#fff' : '#0d6efd', background: 'none', border: 'none' }}
-                                    title="Add child"
-                                    onClick={e => { e.stopPropagation(); startAdd(node.id); }}
-                                >＋</button>
-                            )
-                        )}
-                        {classic ? (
-                            <button
+                                >＋</button>)}
+                        {<button
                                 style={xpIconBtn({ color: isSelected ? '#fff' : '#555' })}
                                 title="Rename"
                                 onClick={e => { e.stopPropagation(); startRename(node); }}
-                            ><i className="bi bi-pencil-fill" /></button>
-                        ) : (
-                            <button
-                                className="btn btn-sm"
-                                style={{ padding: '0 4px', lineHeight: 1.2, fontSize: 13, color: isSelected ? '#fff' : '#6c757d', background: 'none', border: 'none' }}
-                                title="Rename"
-                                onClick={e => { e.stopPropagation(); startRename(node); }}
-                            ><i className="bi bi-pencil-fill" /></button>
-                        )}
+                            ><i className="bi bi-pencil-fill" /></button>}
                         {!node.is_system && (
-                            classic ? (
-                                <button
+                            <button
                                     style={xpIconBtn({ color: isSelected ? '#ffc0c0' : '#c00' })}
                                     title="Delete"
                                     onClick={e => { e.stopPropagation(); handleDelete(node.id); }}
-                                >✕</button>
-                            ) : (
-                                <button
-                                    className="btn btn-sm"
-                                    style={{ padding: '0 4px', lineHeight: 1.2, fontSize: 13, color: isSelected ? '#ffc0c0' : '#dc3545', background: 'none', border: 'none' }}
-                                    title="Delete"
-                                    onClick={e => { e.stopPropagation(); handleDelete(node.id); }}
-                                >✕</button>
-                            )
-                        )}
+                                >✕</button>)}
                     </span>
                     )}
                 </div>
@@ -352,8 +281,7 @@ export default function CategoriesView({
         );
     };
 
-    return classic ? (
-        <div>
+    return <div>
             {/* Search toolbar */}
             <div style={xpToolbar}>
                 <SearchField classic value={search} onChange={setSearch} placeholder="Search categories..." width={200} />
@@ -422,52 +350,5 @@ export default function CategoriesView({
                     <span><b>{categories.length}</b> Total</span>
                 )}
             </div>
-        </div>
-    ) : (
-        <div>
-            {/* Search row */}
-            <SearchField classic={false} value={search} onChange={setSearch} placeholder="Search categories..." width={320} style={{ display: 'flex', marginBottom: 16 }} />
-
-            {/* Tree */}
-            <div style={{
-                border: '1px solid #dee2e6',
-                borderRadius: 4,
-                minHeight: 160,
-                maxHeight: 360,
-                overflow: 'auto',
-                padding: 8,
-            }}>
-                {tree.length === 0 && !addingState && (
-                    <div className="text-muted" style={{ fontSize: 13, padding: 8 }}>
-                        No categories found.
-                    </div>
-                )}
-                {(renderCounter.n = 0, tree.map(node => renderNode(node)))}
-            </div>
-
-            {/* Add row */}
-            {canManage && (
-            <form className="input-group mt-3" onSubmit={e => { e.preventDefault(); handleAddRoot(); }}>
-                <input
-                    className="form-control"
-                    placeholder="New category name..."
-                    value={newRootName}
-                    onChange={e => setNewRootName(e.target.value)}
-                />
-                <button type="submit" className="btn btn-success px-4">
-                    <i className="bi bi-plus-lg me-1"></i>Add
-                </button>
-            </form>
-            )}
-
-            {/* Status bar */}
-            <div className="text-muted" style={{ fontSize: 12, marginTop: 6 }}>
-                {selectedNode ? (
-                    <>Selected: <strong>{selectedNode.name}</strong> (Level {selectedNode.level}) — Path: {selectedNode.path_names.join(' / ')}</>
-                ) : (
-                    <>{categories.length} categories total</>
-                )}
-            </div>
-        </div>
-    );
+        </div>;
 }

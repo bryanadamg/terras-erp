@@ -37,14 +37,13 @@ export interface RoleLike {
 }
 
 export default function RoleFormModal({
-    isOpen, onClose, mode, role, allPermissions, classic, onSubmit,
+    isOpen, onClose, mode, role, allPermissions, onSubmit,
 }: {
     isOpen: boolean;
     onClose: () => void;
     mode: 'create' | 'edit';
     role?: RoleLike;
     allPermissions: PermissionOption[];
-    classic: boolean;
     onSubmit: (payload: RoleFormPayload) => Promise<{ ok: boolean; error?: string }>;
 }) {
     const { workCenters, categories, locations } = useData();
@@ -118,8 +117,8 @@ export default function RoleFormModal({
         <div style={{
             display: 'flex', flexWrap: 'wrap', gap: 4,
             background: '#ffffff',
-            border: classic ? '1px solid #b0a898' : '1px solid #dee2e6',
-            borderRadius: classic ? 0 : 4,
+            border: '1px solid #b0a898',
+            borderRadius: 0,
             padding: 6,
             ...(scroll ? { maxHeight: 160, overflowY: 'auto' as const } : {}),
         }}>{children}</div>
@@ -186,7 +185,7 @@ export default function RoleFormModal({
             size="xl"
             footer={
                 <ModalFooterActions
-                    classic={classic}
+                    classic
                     onCancel={onClose}
                     onSubmit={handleSubmit}
                     submitting={submitting}
@@ -195,13 +194,12 @@ export default function RoleFormModal({
                 />
             }
         >
-            <FormError classic={classic}>{error}</FormError>
+            <FormError classic>{error}</FormError>
 
             <div className="mb-3">
-                <FieldLabel classic={classic}>Role Name</FieldLabel>
+                <FieldLabel classic>Role Name</FieldLabel>
                 <input
-                    style={classic ? xpInput({ width: '100%' }) : undefined}
-                    className={classic ? '' : 'form-control form-control-sm'}
+                    style={xpInput({ width: '100%' })}
                     placeholder="e.g. Warehouse Supervisor"
                     value={name}
                     onChange={e => setName(e.target.value)}
@@ -209,10 +207,9 @@ export default function RoleFormModal({
             </div>
 
             <div className="mb-3">
-                <FieldLabel classic={classic}>Description</FieldLabel>
+                <FieldLabel classic>Description</FieldLabel>
                 <input
-                    style={classic ? xpInput({ width: '100%' }) : undefined}
-                    className={classic ? '' : 'form-control form-control-sm'}
+                    style={xpInput({ width: '100%' })}
                     placeholder="Optional"
                     value={description}
                     onChange={e => setDescription(e.target.value)}
@@ -220,18 +217,17 @@ export default function RoleFormModal({
             </div>
 
             <div className="mb-1">
-                <FieldLabel classic={classic}>Permissions</FieldLabel>
+                <FieldLabel classic>Permissions</FieldLabel>
                 <PermissionsPicker
                     allPermissions={allPermissions}
                     selectedIds={permissionIds}
                     onChange={setPermissionIds}
-                    classic={classic}
                 />
             </div>
 
             <div className="mt-3">
                 <FieldLabel
-                    classic={classic}
+                    classic
                     hint="Applies only to users in this role who haven't saved an avatar of their own; their own choice always wins. Only the pinned slots are stored — every user keeps their own face, so set the slots that must not be left to chance (hat and accessories on an executive role) and leave the rest on Auto."
                 >
                     Default Avatar
@@ -242,7 +238,7 @@ export default function RoleFormModal({
                     is the whole professional constraint and it leaves hair, eyes,
                     mouth and clothing to each user's own seed. */}
                 <div style={{ marginBottom: 6 }}>
-                    <ToggleChip on={isExecutive} onClick={toggleExecutive} classic={classic}
+                    <ToggleChip on={isExecutive} onClick={toggleExecutive} classic
                         title="Pin hat and accessories off, leaving every other slot to the user's own seed">
                         <i className="bi bi-briefcase-fill" style={{ marginRight: 4 }} />Executive
                     </ToggleChip>
@@ -251,7 +247,7 @@ export default function RoleFormModal({
                     value={defaultAvatarId}
                     onChange={setDefaultAvatarId}
                     seed={SAMPLE_SEEDS[0]}
-                    classic={classic}
+                    classic
                 />
                 <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 8, flexWrap: 'wrap' }}>
                     {/* The point of a template, shown rather than explained: three
@@ -272,22 +268,22 @@ export default function RoleFormModal({
 
             {hasWorkOrderPerm && wcTypes.length > 0 && (
                 <div className="mt-3">
-                    <FieldLabel classic={classic} hint="Leave all off to allow this role's Work Order actions on any station. Turn one or more on to restrict.">
+                    <FieldLabel classic hint="Leave all off to allow this role's Work Order actions on any station. Turn one or more on to restrict.">
                         Work Order Station Scope
                     </FieldLabel>
                     {scopeBox(false, wcTypes.map(t => (
-                        <ToggleChip key={t} on={allowedWcTypes.includes(t)} onClick={() => toggleWcType(t)} classic={classic}>{t}</ToggleChip>
+                        <ToggleChip key={t} on={allowedWcTypes.includes(t)} onClick={() => toggleWcType(t)} classic>{t}</ToggleChip>
                     )))}
                 </div>
             )}
 
             {hasCategoryScopedPerm && categories.length > 0 && (
                 <div className="mt-3">
-                    <FieldLabel classic={classic} hint="Leave all off to allow Item/Stock actions on any category. Turn one or more on to restrict.">
+                    <FieldLabel classic hint="Leave all off to allow Item/Stock actions on any category. Turn one or more on to restrict.">
                         Item/Stock Category Scope
                     </FieldLabel>
                     {scopeBox(true, categories.map((c: any) => (
-                        <ToggleChip key={c.id} on={allowedCategories.includes(c.id)} onClick={() => toggleCategory(c.id)} classic={classic}>
+                        <ToggleChip key={c.id} on={allowedCategories.includes(c.id)} onClick={() => toggleCategory(c.id)} classic>
                             {(c.path_names || [c.name]).join(' / ')}
                         </ToggleChip>
                     )))}
@@ -296,11 +292,11 @@ export default function RoleFormModal({
 
             {hasLocationScopedPerm && locations.length > 0 && (
                 <div className="mt-3">
-                    <FieldLabel classic={classic} hint="Leave all off to allow Lot actions at any location. Turn one or more on to restrict.">
+                    <FieldLabel classic hint="Leave all off to allow Lot actions at any location. Turn one or more on to restrict.">
                         Lot Management Location Scope
                     </FieldLabel>
                     {scopeBox(true, locations.map((l: any) => (
-                        <ToggleChip key={l.id} on={allowedLocations.includes(l.id)} onClick={() => toggleLocation(l.id)} classic={classic}>
+                        <ToggleChip key={l.id} on={allowedLocations.includes(l.id)} onClick={() => toggleLocation(l.id)} classic>
                             {l.full_path || l.name}
                         </ToggleChip>
                     )))}

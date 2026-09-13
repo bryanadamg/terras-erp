@@ -2,7 +2,6 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { useToast } from '../shared/Toast';
-import { useTheme } from '../../context/ThemeContext';
 import { useConfirm } from '../../context/ConfirmContext';
 import { useData } from '../../context/DataContext';
 import { useTimezone, AVAILABLE_TIMEZONES } from '../../context/TimezoneContext';
@@ -60,48 +59,42 @@ function fmtUptime(seconds: number | null | undefined): string {
 /** One number from the live-event bus. Same card shell as StatusTile, but these
  *  are counters rather than up/down states, so there is no status dot to show —
  *  `warn` tints the ones where any value above zero is worth a look. */
-function EventStat({ classic, label, value, warn }: {
-    classic: boolean; label: string; value: number | string | null | undefined; warn?: boolean;
+function EventStat({ label, value, warn }: { label: string; value: number | string | null | undefined; warn?: boolean;
 }) {
     return (
-        <div style={classic ? {
+        <div style={{
             background: '#fff', border: '1px solid #b0a898', padding: '6px 8px',
-        } : {
-            background: '#f8f9fa', border: '1px solid #e2e6ea', borderRadius: 6, padding: '8px 10px',
         }}>
             <div style={{
-                fontFamily: classic ? xpFont : undefined, fontSize: classic ? 14 : 16,
-                fontWeight: 700, color: warn ? '#c62828' : (classic ? '#333' : '#212529'),
+                fontFamily: xpFont, fontSize: 14,
+                fontWeight: 700, color: warn ? '#c62828' : ('#333'),
             }}>
                 {value ?? '—'}
             </div>
-            <div style={{ fontFamily: classic ? xpFont : undefined, fontSize: classic ? 10 : 11, color: '#888' }}>
+            <div style={{ fontFamily: xpFont, fontSize: 10, color: '#888' }}>
                 {label}
             </div>
         </div>
     );
 }
 
-function StatusTile({ classic, label, icon, ok, detail }: { classic: boolean; label: string; icon: string; ok: boolean | null; detail: string }) {
+function StatusTile({ label, icon, ok, detail }: { label: string; icon: string; ok: boolean | null; detail: string }) {
     const color = ok === null ? '#888' : ok ? '#2e7d32' : '#c62828';
     const dotBg = ok === null ? '#aaa' : ok ? '#4caf50' : '#e53935';
     return (
-        <div style={classic ? {
+        <div style={{
             background: '#fff', border: '1px solid #b0a898',
             padding: '6px 8px', display: 'flex', flexDirection: 'column' as const, gap: 2,
-        } : {
-            background: '#f8f9fa', border: '1px solid #e2e6ea',
-            borderRadius: 6, padding: '8px 10px', display: 'flex', flexDirection: 'column' as const, gap: 2,
         }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontFamily: classic ? xpFont : undefined, fontSize: classic ? 11 : 12, fontWeight: 'bold', color: classic ? '#333' : '#495057' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontFamily: xpFont, fontSize: 11, fontWeight: 'bold', color: '#333'}}>
                 <i className={`bi ${icon}`} />
                 <span>{label}</span>
                 <span style={{ width: 8, height: 8, borderRadius: '50%', background: dotBg, marginLeft: 'auto', flexShrink: 0 }} />
             </div>
-            <div style={{ fontFamily: classic ? xpFont : undefined, fontSize: classic ? 11 : 12, color, fontWeight: 600 }}>
+            <div style={{ fontFamily: xpFont, fontSize: 11, color, fontWeight: 600 }}>
                 {ok === null ? 'Checking…' : ok ? 'Online' : 'Offline'}
             </div>
-            <div style={{ fontFamily: classic ? xpFont : undefined, fontSize: classic ? 10 : 11, color: '#888' }}>{detail}</div>
+            <div style={{ fontFamily: xpFont, fontSize: 10, color: '#888' }}>{detail}</div>
         </div>
     );
 }
@@ -109,10 +102,8 @@ function StatusTile({ classic, label, icon, ok, detail }: { classic: boolean; la
 export default function SettingsDatabaseTab() {
     const { showToast } = useToast();
     const { confirm } = useConfirm();
-    const { uiStyle } = useTheme();
     const { formatDateTime: tzDateTime } = useTimezone();
     const { wsStatus } = useData();
-    const classic = uiStyle === 'classic';
 
     const [currentDbUrl, setCurrentDbUrl] = useState('');
     const [newDbUrl, setNewDbUrl] = useState('');
@@ -428,8 +419,8 @@ export default function SettingsDatabaseTab() {
     const refreshButton = (
         <button
             type="button"
-            style={classic ? xpBtn({ padding: '1px 8px' }) : undefined}
-            className={classic ? XP_BTN : 'btn btn-sm btn-outline-light py-0 px-2'}
+            style={xpBtn({ padding: '1px 8px' })}
+            className={XP_BTN}
             onClick={fetchSystemStatus}
             disabled={isStatusLoading}
         >
@@ -439,58 +430,58 @@ export default function SettingsDatabaseTab() {
 
     return (
         <div style={settingsStack}>
-            <SettingsPanel classic={classic} icon="bi-activity" title="System Status" right={refreshButton}>
+            <SettingsPanel icon="bi-activity" title="System Status" right={refreshButton}>
                 {/* Five tiles: auto-fit shares the row evenly instead of leaving
                     a 2-tile orphan row at intermediate widths. */}
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: 8 }}>
-                    <StatusTile classic={classic} label="WebSocket" icon="bi-broadcast"
+                    <StatusTile label="WebSocket" icon="bi-broadcast"
                         ok={wsStatus === 'open' ? true : wsStatus === 'closed' ? false : null}
                         detail={wsStatus === 'connecting' ? 'Connecting…' : 'Live event feed'} />
-                    <StatusTile classic={classic} label="Backend API" icon="bi-hdd-network"
+                    <StatusTile label="Backend API" icon="bi-hdd-network"
                         ok={beOnline}
                         detail={beOnline === false ? 'Unreachable' : 'REST API'} />
-                    <StatusTile classic={classic} label="Database" icon="bi-database"
+                    <StatusTile label="Database" icon="bi-database"
                         ok={dbPing?.ok ?? (beOnline === false ? false : null)}
                         detail={dbPing?.ok ? `${dbPing.latency_ms} ms` : 'PostgreSQL'} />
-                    <StatusTile classic={classic} label="Redis" icon="bi-lightning-charge"
+                    <StatusTile label="Redis" icon="bi-lightning-charge"
                         ok={redisPing?.ok ?? (beOnline === false ? false : null)}
                         detail={redisPing?.ok ? `${redisPing.latency_ms} ms` : 'Event bus'} />
-                    <StatusTile classic={classic} label="DB Storage" icon="bi-hdd-stack"
+                    <StatusTile label="DB Storage" icon="bi-hdd-stack"
                         ok={dbSizeBytes != null ? true : null}
                         detail={prettyBytes(dbSizeBytes)} />
                 </div>
                 {statusCheckedAt && (
-                    <div style={{ ...settingsHint(classic), marginTop: 6, textAlign: 'right' }}>
+                    <div style={{ ...settingsHint(true), marginTop: 6, textAlign: 'right' }}>
                         Last checked {statusCheckedAt.toLocaleTimeString()}
                     </div>
                 )}
             </SettingsPanel>
 
             {eventStats && (
-                <SettingsPanel classic={classic} icon="bi-broadcast-pin" title="Live Event Feed">
+                <SettingsPanel icon="bi-broadcast-pin" title="Live Event Feed">
                     {/* Counters reset when the API process restarts — they answer
                         "is the feed healthy right now", not "how much has ever
                         happened". Backlog is the one to watch: anything above zero
                         for more than a few seconds means events aren't reaching the
                         bus. */}
                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: 8 }}>
-                        <EventStat classic={classic} label="Connected clients" value={eventStats.connections?.current} />
-                        <EventStat classic={classic} label="Events published" value={eventStats.publish?.published} />
-                        <EventStat classic={classic} label="Events delivered" value={eventStats.delivery?.delivered} />
-                        <EventStat classic={classic} label="Unpublished backlog" value={eventStats.unpublished_backlog}
+                        <EventStat label="Connected clients" value={eventStats.connections?.current} />
+                        <EventStat label="Events published" value={eventStats.publish?.published} />
+                        <EventStat label="Events delivered" value={eventStats.delivery?.delivered} />
+                        <EventStat label="Unpublished backlog" value={eventStats.unpublished_backlog}
                             warn={(eventStats.unpublished_backlog ?? 0) > 0} />
-                        <EventStat classic={classic} label="Publish failures" value={eventStats.publish?.failures}
+                        <EventStat label="Publish failures" value={eventStats.publish?.failures}
                             warn={(eventStats.publish?.failures ?? 0) > 0} />
-                        <EventStat classic={classic} label="Relayed after failure" value={eventStats.publish?.relayed} />
-                        <EventStat classic={classic} label="Dropped (slow client)" value={eventStats.connections?.closed_backpressure}
+                        <EventStat label="Relayed after failure" value={eventStats.publish?.relayed} />
+                        <EventStat label="Dropped (slow client)" value={eventStats.connections?.closed_backpressure}
                             warn={(eventStats.connections?.closed_backpressure ?? 0) > 0} />
-                        <EventStat classic={classic} label="Rejected handshakes" value={eventStats.connections?.rejected} />
-                        <EventStat classic={classic} label="Resumes replayed" value={eventStats.resume?.events_replayed} />
-                        <EventStat classic={classic} label="Full resyncs" value={eventStats.resume?.resync_required} />
-                        <EventStat classic={classic} label="Publish time" value={fmtMs(eventStats.publish?.time?.avg_ms)} />
-                        <EventStat classic={classic} label="Delivery lag" value={fmtMs(eventStats.delivery?.lag?.avg_ms)} />
+                        <EventStat label="Rejected handshakes" value={eventStats.connections?.rejected} />
+                        <EventStat label="Resumes replayed" value={eventStats.resume?.events_replayed} />
+                        <EventStat label="Full resyncs" value={eventStats.resume?.resync_required} />
+                        <EventStat label="Publish time" value={fmtMs(eventStats.publish?.time?.avg_ms)} />
+                        <EventStat label="Delivery lag" value={fmtMs(eventStats.delivery?.lag?.avg_ms)} />
                     </div>
-                    <div style={{ ...settingsHint(classic), marginTop: 6 }}>
+                    <div style={{ ...settingsHint(true), marginTop: 6 }}>
                         Since the API last restarted ({fmtUptime(eventStats.uptime_seconds)} ago).
                     </div>
                 </SettingsPanel>
@@ -503,7 +494,7 @@ export default function SettingsDatabaseTab() {
                 snapshot list — share the wider one. */}
             <div style={settingsColumns}>
                 <div style={settingsCol(420, 1)}>
-                    <SettingsPanel classic={classic} icon="bi-clock-history" title="Scheduled Backups">
+                    <SettingsPanel icon="bi-clock-history" title="Scheduled Backups">
                         <form onSubmit={handleSaveSchedule}>
                             {/* One field per row, not `settingsGrid`'s auto-fit columns.
                                 This panel is the narrow column of the band, so auto-fit
@@ -513,24 +504,16 @@ export default function SettingsDatabaseTab() {
                                 A stack also keeps Keep Last's hint under its own field. */}
                             <div style={{ display: 'flex', flexDirection: 'column', gap: SETTINGS_FIELD_GAP }}>
                                 <div>
-                                    <FieldLabel classic={classic}>Enabled</FieldLabel>
-                                    {classic ? (
-                                        <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontFamily: xpFont, fontSize: 11 }}>
+                                    <FieldLabel classic>Enabled</FieldLabel>
+                                    {<label style={{ display: 'flex', alignItems: 'center', gap: 6, fontFamily: xpFont, fontSize: 11 }}>
                                             <input type="checkbox" checked={scheduleForm.enabled} onChange={e => setScheduleForm({ ...scheduleForm, enabled: e.target.checked })} />
                                             Run automatic backups
-                                        </label>
-                                    ) : (
-                                        <div className="form-check form-switch">
-                                            <input className="form-check-input" type="checkbox" role="switch" checked={scheduleForm.enabled} onChange={e => setScheduleForm({ ...scheduleForm, enabled: e.target.checked })} />
-                                            <label className="form-check-label small">Run automatic backups</label>
-                                        </div>
-                                    )}
+                                        </label>}
                                 </div>
                                 <div>
-                                    <FieldLabel classic={classic}>Frequency</FieldLabel>
+                                    <FieldLabel classic>Frequency</FieldLabel>
                                     <select
-                                        style={classic ? xpInput({ height: 'auto', padding: '2px 4px', width: '100%' }) : undefined}
-                                        className={classic ? '' : 'form-select form-select-sm'}
+                                        style={xpInput({ height: 'auto', padding: '2px 4px', width: '100%' })}
                                         value={scheduleForm.frequency}
                                         onChange={e => setScheduleForm({ ...scheduleForm, frequency: e.target.value })}
                                     >
@@ -540,10 +523,9 @@ export default function SettingsDatabaseTab() {
                                 </div>
                                 {scheduleForm.frequency === 'weekly' && (
                                     <div>
-                                        <FieldLabel classic={classic}>Day of Week</FieldLabel>
+                                        <FieldLabel classic>Day of Week</FieldLabel>
                                         <select
-                                            style={classic ? xpInput({ height: 'auto', padding: '2px 4px', width: '100%' }) : undefined}
-                                            className={classic ? '' : 'form-select form-select-sm'}
+                                            style={xpInput({ height: 'auto', padding: '2px 4px', width: '100%' })}
                                             value={scheduleForm.day_of_week}
                                             onChange={e => setScheduleForm({ ...scheduleForm, day_of_week: Number(e.target.value) })}
                                         >
@@ -552,11 +534,10 @@ export default function SettingsDatabaseTab() {
                                     </div>
                                 )}
                                 <div>
-                                    <FieldLabel classic={classic}>Time</FieldLabel>
+                                    <FieldLabel classic>Time</FieldLabel>
                                     <input
                                         type="time"
-                                        style={classic ? xpInput({ width: '100%' }) : undefined}
-                                        className={classic ? '' : 'form-control form-control-sm'}
+                                        style={xpInput({ width: '100%' })}
                                         value={`${pad2(scheduleForm.hour)}:${pad2(scheduleForm.minute)}`}
                                         onChange={e => {
                                             const [h, m] = e.target.value.split(':').map(Number);
@@ -565,10 +546,9 @@ export default function SettingsDatabaseTab() {
                                     />
                                 </div>
                                 <div>
-                                    <FieldLabel classic={classic}>Timezone</FieldLabel>
+                                    <FieldLabel classic>Timezone</FieldLabel>
                                     <select
-                                        style={classic ? xpInput({ height: 'auto', padding: '2px 4px', width: '100%' }) : undefined}
-                                        className={classic ? '' : 'form-select form-select-sm'}
+                                        style={xpInput({ height: 'auto', padding: '2px 4px', width: '100%' })}
                                         value={scheduleForm.timezone}
                                         onChange={e => setScheduleForm({ ...scheduleForm, timezone: e.target.value })}
                                     >
@@ -576,16 +556,15 @@ export default function SettingsDatabaseTab() {
                                     </select>
                                 </div>
                                 <div>
-                                    <FieldLabel classic={classic}>Keep Last</FieldLabel>
+                                    <FieldLabel classic>Keep Last</FieldLabel>
                                     <input
                                         type="number"
                                         min={1}
-                                        style={classic ? xpInput({ width: '100%' }) : undefined}
-                                        className={classic ? '' : 'form-control form-control-sm'}
+                                        style={xpInput({ width: '100%' })}
                                         value={scheduleForm.retain_count}
                                         onChange={e => setScheduleForm({ ...scheduleForm, retain_count: Math.max(1, Number(e.target.value)) })}
                                     />
-                                    <div style={settingsHint(classic)}>Oldest scheduled snapshots beyond this count are pruned automatically. Manual snapshots are never deleted.</div>
+                                    <div style={settingsHint(true)}>Oldest scheduled snapshots beyond this count are pruned automatically. Manual snapshots are never deleted.</div>
                                 </div>
                             </div>
 
@@ -594,20 +573,20 @@ export default function SettingsDatabaseTab() {
                                     {schedule.last_run_at && (
                                         <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
                                             <StatusChip status={schedule.last_run_status === 'failed' ? 'FAILED' : 'SUCCESS'} title={schedule.last_run_error || undefined} />
-                                            <span style={settingsHint(classic)}>Last run {tzDateTime(schedule.last_run_at)}</span>
+                                            <span style={settingsHint(true)}>Last run {tzDateTime(schedule.last_run_at)}</span>
                                         </span>
                                     )}
                                     {schedule.next_run_at && (
-                                        <span style={settingsHint(classic)}>Next run {tzDateTime(schedule.next_run_at)}</span>
+                                        <span style={settingsHint(true)}>Next run {tzDateTime(schedule.next_run_at)}</span>
                                     )}
                                 </div>
                             )}
 
-                            <div style={settingsActions(classic)}>
+                            <div style={settingsActions(true)}>
                                 <button
                                     type="button"
-                                    style={classic ? xpBtn({ padding: '3px 14px' }) : undefined}
-                                    className={classic ? XP_BTN : 'btn btn-sm btn-outline-secondary px-3'}
+                                    style={xpBtn({ padding: '3px 14px' })}
+                                    className={XP_BTN}
                                     onClick={handleRunNow}
                                     disabled={isRunningNow || isScheduleLoading}
                                 >
@@ -616,8 +595,8 @@ export default function SettingsDatabaseTab() {
                                 </button>
                                 <button
                                     type="submit"
-                                    style={classic ? xpBtn({ ...BTN_TONES.primary, padding: '3px 14px', display: 'flex', alignItems: 'center', gap: 4 }) : undefined}
-                                    className={classic ? XP_BTN : 'btn btn-sm btn-primary px-3'}
+                                    style={xpBtn({ ...BTN_TONES.primary, padding: '3px 14px', display: 'flex', alignItems: 'center', gap: 4 })}
+                                    className={XP_BTN}
                                     disabled={isSavingSchedule}
                                 >
                                     <i className="bi bi-save" style={{ marginRight: 4 }}></i>
@@ -630,26 +609,18 @@ export default function SettingsDatabaseTab() {
 
                 <div style={settingsCol(560, 1)}>
                     <SettingsPanel
-                        classic={classic}
                         icon="bi-database-fill-gear"
                         title={<span data-testid="db-infrastructure-header">Database Infrastructure</span>}
                         right="Admin only"
                     >
                         <div style={{ marginBottom: SETTINGS_FIELD_GAP }}>
-                            <FieldLabel classic={classic}>Current Connection</FieldLabel>
-                            {classic ? (
-                                <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                            <FieldLabel classic>Current Connection</FieldLabel>
+                            {<div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
                                     <span style={{ borderRadius: CHIP_RADIUS, background: '#e0dfd8', border: '1px solid #b0a898', padding: '1px 6px', fontFamily: xpFont, fontSize: '11px', color: '#333' }}>
                                         <i className="bi bi-link-45deg"></i>
                                     </span>
                                     <input style={xpInput({ flex: 1, fontFamily: CODE_FONT, background: '#f0ede6', boxShadow: 'inset 1px 1px 0 rgba(0,0,0,0.1)' })} value={currentDbUrl} readOnly />
-                                </div>
-                            ) : (
-                                <div className="input-group input-group-sm">
-                                    <span className="input-group-text bg-light"><i className="bi bi-link-45deg"></i></span>
-                                    <input className="form-control bg-light small" style={{ fontFamily: CODE_FONT }} value={currentDbUrl} readOnly />
-                                </div>
-                            )}
+                                </div>}
                         </div>
 
                         {/* Stacked, not a 7/5 split. This panel now shares its row with
@@ -658,9 +629,8 @@ export default function SettingsDatabaseTab() {
                             ellipsis. Reading order is the action, then the shortcut into it. */}
                         <div style={{ display: 'flex', flexDirection: 'column', gap: SETTINGS_FIELD_GAP }}>
                             <div>
-                                <FieldLabel classic={classic}>Switch to New Database</FieldLabel>
-                                {classic ? (
-                                    <div style={{ display: 'flex', gap: 4 }}>
+                                <FieldLabel classic>Switch to New Database</FieldLabel>
+                                {<div style={{ display: 'flex', gap: 4 }}>
                                         <input
                                             style={xpInput({ flex: 1, fontFamily: CODE_FONT, boxShadow: 'inset 1px 1px 0 rgba(0,0,0,0.1)' })}
                                             placeholder="postgresql+psycopg2://user:pass@host:port/db"
@@ -675,34 +645,15 @@ export default function SettingsDatabaseTab() {
                                         >
                                             {isDbLoading ? <span className="spinner-border spinner-border-sm"></span> : 'Switch Connection'}
                                         </button>
-                                    </div>
-                                ) : (
-                                    <div className="input-group input-group-sm">
-                                        <input
-                                            className="form-control small"
-                                            style={{ fontFamily: CODE_FONT }}
-                                            placeholder="postgresql+psycopg2://user:pass@host:port/db"
-                                            value={newDbUrl}
-                                            onChange={e => setNewDbUrl(e.target.value)}
-                                        />
-                                        <button
-                                            className="btn btn-primary"
-                                            onClick={() => handleSwitchDatabase(newDbUrl)}
-                                            disabled={!newDbUrl || isDbLoading}
-                                        >
-                                            {isDbLoading ? <span className="spinner-border spinner-border-sm"></span> : 'Switch Connection'}
-                                        </button>
-                                    </div>
-                                )}
-                                <div style={{ ...settingsHint(classic), color: '#8b0000' }}>
+                                    </div>}
+                                <div style={{ ...settingsHint(true), color: '#8b0000' }}>
                                     <i className="bi bi-exclamation-triangle-fill" style={{ marginRight: 4 }}></i>
                                     Switching databases changes the entire data context.
                                 </div>
                             </div>
                             <div>
-                                <FieldLabel classic={classic}>Saved Profiles</FieldLabel>
-                                {classic ? (
-                                    <div style={{ border: '1px solid #b0a898', background: '#ffffff', maxHeight: 118, overflowY: 'auto' as const }}>
+                                <FieldLabel classic>Saved Profiles</FieldLabel>
+                                {<div style={{ border: '1px solid #b0a898', background: '#ffffff', maxHeight: 118, overflowY: 'auto' as const }}>
                                         {dbProfiles.map((p, i) => (
                                             <button
                                                 key={i}
@@ -714,46 +665,29 @@ export default function SettingsDatabaseTab() {
                                             </button>
                                         ))}
                                         {dbProfiles.length === 0 && (
-                                            <div style={{ ...settingsHint(classic), padding: 8, margin: 0, textAlign: 'center', fontStyle: 'italic' }}>No saved profiles</div>
+                                            <div style={{ ...settingsHint(true), padding: 8, margin: 0, textAlign: 'center', fontStyle: 'italic' }}>No saved profiles</div>
                                         )}
-                                    </div>
-                                ) : (
-                                    <div className="list-group list-group-flush border rounded overflow-auto" style={{ maxHeight: 118 }}>
-                                        {dbProfiles.map((p, i) => (
-                                            <button
-                                                key={i}
-                                                className="list-group-item list-group-item-action d-flex justify-content-between align-items-center small"
-                                                onClick={() => setNewDbUrl(p.url)}
-                                            >
-                                                <span className="text-truncate" style={{ maxWidth: '80%' }}>{p.name}: {p.url}</span>
-                                                <i className="bi bi-arrow-right-short"></i>
-                                            </button>
-                                        ))}
-                                        {dbProfiles.length === 0 && <div className="p-3 text-center text-muted extra-small">No saved profiles</div>}
-                                    </div>
-                                )}
+                                    </div>}
                             </div>
                         </div>
                     </SettingsPanel>
 
                     <SettingsPanel
-                        classic={classic}
                         icon="bi-camera-fill"
                         title="Snapshots"
                         flush
                         right={
                             <span style={{ display: 'flex', gap: 4 }}>
                                 <label
-                                    style={classic ? xpBtn({ padding: '1px 8px', marginBottom: 0 }) : { cursor: 'pointer', marginBottom: 0 }}
-                                    className={classic ? '' : 'btn btn-sm btn-outline-light py-0 px-2'}
+                                    style={xpBtn({ padding: '1px 8px', marginBottom: 0 })}
                                 >
                                     <i className="bi bi-cloud-upload" style={{ marginRight: 4 }}></i>Upload
                                     <input type="file" hidden onChange={handleUploadSnapshot} disabled={isSnapshotLoading} />
                                 </label>
                                 <button
                                     type="button"
-                                    style={classic ? xpBtn({ padding: '1px 8px' }) : undefined}
-                                    className={classic ? XP_BTN : 'btn btn-sm btn-outline-light py-0 px-2'}
+                                    style={xpBtn({ padding: '1px 8px' })}
+                                    className={XP_BTN}
                                     onClick={handleCreateSnapshot}
                                     disabled={isSnapshotLoading}
                                 >
@@ -765,41 +699,40 @@ export default function SettingsDatabaseTab() {
                     >
                         <div className="table-responsive">
                                 <table
-                                    style={classic ? { width: '100%', borderCollapse: 'collapse' as const, background: '#fff' } : undefined}
-                                    className={classic ? '' : 'table table-hover align-middle mb-0 small'}
+                                    style={{ width: '100%', borderCollapse: 'collapse' as const, background: '#fff' }}
                                 >
-                                    <thead style={classic ? xpTableHeader : undefined} className={classic ? '' : 'table-light'}>
+                                    <thead style={xpTableHeader}>
                                         <tr>
-                                            <th style={classic ? { ...xpThCell } : undefined} className={classic ? '' : 'ps-4'}>Snapshot Filename</th>
-                                            <th style={classic ? xpThCell : undefined}>Origin</th>
-                                            <th style={classic ? xpThCell : undefined}>Created At</th>
-                                            <th style={classic ? xpThCell : undefined}>Size</th>
-                                            <th style={classic ? { ...xpThCell, textAlign: 'right' as const, borderRight: 'none' } : undefined} className={classic ? '' : 'text-end pe-4'}>Actions</th>
+                                            <th style={{ ...xpThCell }}>Snapshot Filename</th>
+                                            <th style={xpThCell}>Origin</th>
+                                            <th style={xpThCell}>Created At</th>
+                                            <th style={xpThCell}>Size</th>
+                                            <th style={{ ...xpThCell, textAlign: 'right' as const, borderRight: 'none' }}>Actions</th>
                                         </tr>
                                     </thead>
                                     <tbody>
                                         {snapshots.map((s, i) => (
                                             <tr
                                                 key={i}
-                                                style={classic ? { background: lvZebra(true, i), borderBottom: '1px solid #c0bdb5' } : undefined}
+                                                style={{ background: lvZebra(true, i), borderBottom: '1px solid #c0bdb5' }}
                                             >
-                                                <td style={classic ? tdBase : undefined} className={classic ? '' : 'ps-4'}><CodeChip code={s.name} classic={classic} /></td>
-                                                <td style={classic ? tdBase : undefined}><StatusChip status={(s.label || 'manual').toUpperCase()} /></td>
-                                                <td style={classic ? tdBase : undefined}>{tzDateTime(s.created_at)}</td>
-                                                <td style={classic ? tdBase : undefined}>{(s.size / 1024 / 1024).toFixed(2)} MB</td>
-                                                <td style={classic ? { ...tdBase, borderRight: 'none', textAlign: 'right' as const } : undefined} className={classic ? '' : 'text-end pe-4'}>
+                                                <td style={tdBase}><CodeChip code={s.name} classic /></td>
+                                                <td style={tdBase}><StatusChip status={(s.label || 'manual').toUpperCase()} /></td>
+                                                <td style={tdBase}>{tzDateTime(s.created_at)}</td>
+                                                <td style={tdBase}>{(s.size / 1024 / 1024).toFixed(2)} MB</td>
+                                                <td style={{ ...tdBase, borderRight: 'none', textAlign: 'right' as const }}>
                                                     <div style={{ display: 'flex', gap: 4, justifyContent: 'flex-end' }}>
                                                         <XPActionButton
-                                                            classic={classic} tone="primary" icon="bi-download" title="Export/Download"
+                                                            classic tone="primary" icon="bi-download" title="Export/Download"
                                                             onClick={() => handleDownloadSnapshot(s.name)}
                                                         />
                                                         <XPActionButton
-                                                            classic={classic} tone="success" icon="bi-arrow-counterclockwise" title="Restore/Rollback"
+                                                            classic tone="success" icon="bi-arrow-counterclockwise" title="Restore/Rollback"
                                                             onClick={() => handleRestoreSnapshot(s.name)}
                                                             disabled={isSnapshotLoading}
                                                         />
                                                         <XPActionButton
-                                                            classic={classic} tone="danger" icon="bi-trash" title="Delete snapshot file"
+                                                            classic tone="danger" icon="bi-trash" title="Delete snapshot file"
                                                             onClick={() => handleDeleteSnapshot(s.name)}
                                                             disabled={isSnapshotLoading}
                                                         />
@@ -811,8 +744,7 @@ export default function SettingsDatabaseTab() {
                                             <tr>
                                                 <td
                                                     colSpan={5}
-                                                    style={classic ? { ...tdBase, borderRight: 'none', textAlign: 'center', padding: '20px 8px', color: '#888', fontStyle: 'italic' } : undefined}
-                                                    className={classic ? '' : 'text-center py-4 text-muted'}
+                                                    style={{ ...tdBase, borderRight: 'none', textAlign: 'center', padding: '20px 8px', color: '#888', fontStyle: 'italic' }}
                                                 >No snapshots found. Create one to begin.</td>
                                             </tr>
                                         )}
@@ -823,33 +755,27 @@ export default function SettingsDatabaseTab() {
                 </div>
             </div>
 
-            <SettingsPanel classic={classic} icon="bi-exclamation-octagon-fill" title="Danger Zone">
+            <SettingsPanel icon="bi-exclamation-octagon-fill" title="Danger Zone">
                 {/* Severity is carried by the copy and the button, not by a red
                     window bar — the panel is a peer of the others, its action
                     is not. */}
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 12 }}>
                     <div style={{ flex: '1 1 340px', minWidth: 0 }}>
-                            <div style={classic ? { fontFamily: xpFont, fontSize: 12, fontWeight: 'bold', color: '#333' } : undefined} className={classic ? '' : 'fw-bold'}>
+                            <div style={{ fontFamily: xpFont, fontSize: 12, fontWeight: 'bold', color: '#333' }}>
                                 Wipe &amp; Reset Database
                             </div>
-                            <div style={{ ...settingsHint(classic), color: '#8b0000' }}>
+                            <div style={{ ...settingsHint(true), color: '#8b0000' }}>
                                 <i className="bi bi-exclamation-triangle-fill" style={{ marginRight: 4 }}></i>
                                 Permanently deletes every row in the current database, then rebuilds it blank (migrations + seed data). Use this before importing a snapshot from another environment. Cannot be undone.
                             </div>
                         </div>
-                        {classic ? (
-                            <button
+                        {<button
                                 className={XP_BTN}
                                 style={xpBtn({ ...BTN_TONES.danger })}
                                 onClick={() => setShowWipeModal(true)}
                             >
                                 <i className="bi bi-trash3-fill" style={{ marginRight: 4 }}></i>Wipe Database
-                            </button>
-                        ) : (
-                            <button className="btn btn-danger btn-sm" onClick={() => setShowWipeModal(true)}>
-                                <i className="bi bi-trash3-fill me-1"></i>Wipe Database
-                            </button>
-                        )}
+                            </button>}
                 </div>
             </SettingsPanel>
 
@@ -862,50 +788,27 @@ export default function SettingsDatabaseTab() {
                 modeless
                 footer={
                     <>
-                        {classic ? (
-                            <button type="button" style={xpCancelBtn} onClick={() => { setShowWipeModal(false); setWipePassword(''); }} disabled={isWiping}>Cancel</button>
-                        ) : (
-                            <button type="button" className="btn btn-sm btn-link text-muted text-decoration-none" onClick={() => { setShowWipeModal(false); setWipePassword(''); }} disabled={isWiping}>Cancel</button>
-                        )}
-                        {classic ? (
-                            <button type="button" style={xpDangerBtn} onClick={handleWipeDatabase} disabled={!wipePassword || isWiping}>
+                        {<button type="button" style={xpCancelBtn} onClick={() => { setShowWipeModal(false); setWipePassword(''); }} disabled={isWiping}>Cancel</button>}
+                        {<button type="button" style={xpDangerBtn} onClick={handleWipeDatabase} disabled={!wipePassword || isWiping}>
                                 {isWiping ? <span className="spinner-border spinner-border-sm"></span> : 'WIPE DATABASE'}
-                            </button>
-                        ) : (
-                            <button type="button" className="btn btn-sm btn-danger px-4 fw-bold shadow-sm" onClick={handleWipeDatabase} disabled={!wipePassword || isWiping}>
-                                {isWiping ? <span className="spinner-border spinner-border-sm me-1"></span> : null}
-                                WIPE DATABASE
-                            </button>
-                        )}
+                            </button>}
                     </>
                 }
             >
-                <p className={classic ? '' : 'small'} style={classic ? { fontFamily: xpFont, fontSize: 11, color: '#333' } : undefined}>
+                <p style={{ fontFamily: xpFont, fontSize: 11, color: '#333' }}>
                     This will <strong>permanently delete every row</strong> in the current database and rebuild it blank. Enter your password to confirm.
                 </p>
                 <label
-                    style={classic ? { fontFamily: xpFont, fontSize: 11, display: 'block', marginBottom: 2, fontWeight: 'bold' } : undefined}
-                    className={classic ? '' : 'form-label small fw-bold'}
+                    style={{ fontFamily: xpFont, fontSize: 11, display: 'block', marginBottom: 2, fontWeight: 'bold' }}
                 >Password</label>
-                {classic ? (
-                    <input
+                {<input
                         type="password"
                         style={xpInput({ width: '100%', boxShadow: 'inset 1px 1px 0 rgba(0,0,0,0.1)' })}
                         value={wipePassword}
                         onChange={e => setWipePassword(e.target.value)}
                         disabled={isWiping}
                         autoFocus
-                    />
-                ) : (
-                    <input
-                        type="password"
-                        className="form-control"
-                        value={wipePassword}
-                        onChange={e => setWipePassword(e.target.value)}
-                        disabled={isWiping}
-                        autoFocus
-                    />
-                )}
+                    />}
             </ModalWrapper>
         </div>
     );

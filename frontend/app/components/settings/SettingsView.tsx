@@ -1,7 +1,6 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import { useTheme } from '../../context/ThemeContext';
 import { useUser } from '../../context/UserContext';
 import { Tabs, TabDef } from '../shared/Tabs';
 import { PageTitleBar, ShellWindow, scrollAreaStyle } from '../shared/shellTheme';
@@ -18,8 +17,6 @@ export default function SettingsView({
     appName, onUpdateAppName,
     companyProfile, onUpdateCompanyProfile, onUploadLogo,
 }: any) {
-    const { uiStyle: currentStyle } = useTheme();
-    const classic = currentStyle === 'classic';
     const { hasPermission } = useUser();
     const isAdmin = hasPermission('admin.access');
 
@@ -49,18 +46,18 @@ export default function SettingsView({
                 moved between tabs — the title bar and tab strip jumping to a new
                 place each time. Hand-rolling the frame is also how this file ended up
                 on `borderRadius: 9`, one off the shell tier every other view uses. */}
-            <ShellWindow classic={classic} fill="page" style={classic ? undefined : { fontFamily: modernFont }}>
+            <ShellWindow classic fill="page" style={undefined}>
                 {/* Title bar */}
-                <PageTitleBar classic={classic} icon="bi-sliders" title="Settings" />
+                <PageTitleBar classic icon="bi-sliders" title="Settings" />
 
                 {/* Tabs bar */}
-                <Tabs tabs={tabs} activeKey={activeTab} onChange={(key) => setActiveTab(key)} classic={classic} />
+                <Tabs tabs={tabs} activeKey={activeTab} onChange={(key) => setActiveTab(key)} classic />
 
                 {/* Content area — the one scroll pane, so the chrome above it never moves */}
                 <div ref={paneRef} style={{
                     ...scrollAreaStyle,
                     padding: 16,
-                    background: classic ? '#ece9d8' : '#f7f9fc',
+                    background: '#ece9d8',
                 }}>
                     <div style={{ display: activeTab === 'general' ? 'block' : 'none' }}>
                         <SettingsGeneralTab

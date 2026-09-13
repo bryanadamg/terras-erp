@@ -9,30 +9,26 @@
  */
 
 import { useUser } from '../../context/UserContext';
-import { useTheme } from '../../context/ThemeContext';
 import { xpBtn, BTN_TONES, XP_BTN } from '../shared/xpTheme';
 import { QtyFormulaEditorFields, useQtyFormulaEditor } from '../shared/QtyFormulaEditor';
 import SettingsPanel from './SettingsPanel';
 import { settingsActions, settingsHint } from './settingsStyles';
 
 export default function QtyFormulaPanel() {
-    const { uiStyle } = useTheme();
     const { hasPermission } = useUser();
-    const classic = uiStyle === 'classic';
     const canEdit = hasPermission('admin.access');
     const editor = useQtyFormulaEditor();
 
     return (
         <SettingsPanel
-            classic={classic}
             icon="bi-calculator"
             title="Production Quantity Formula"
             right={canEdit ? (
                 <button
                     type="button"
                     onClick={editor.reset}
-                    style={classic ? xpBtn({ padding: '2px 8px' }) : undefined}
-                    className={classic ? XP_BTN : 'btn btn-sm btn-outline-secondary'}
+                    style={xpBtn({ padding: '2px 8px' })}
+                    className={XP_BTN}
                 >
                     <i className="bi bi-arrow-counterclockwise" style={{ marginRight: 4 }}></i>
                     Reset to default
@@ -41,19 +37,19 @@ export default function QtyFormulaPanel() {
         >
             <QtyFormulaEditorFields
                 editor={editor}
-                classic={classic}
+                classic
                 canEdit={canEdit}
-                hint={settingsHint(classic)}
+                hint={settingsHint(true)}
             />
 
             {canEdit && !editor.loading && (
-                <div style={settingsActions(classic)}>
+                <div style={settingsActions(true)}>
                     <button
                         type="button"
                         onClick={() => { editor.save(); }}
                         disabled={editor.saving || editor.hasErrors}
-                        style={classic ? xpBtn({ ...BTN_TONES.primary, padding: '3px 14px' }) : undefined}
-                        className={classic ? XP_BTN : 'btn btn-sm btn-primary px-3'}
+                        style={xpBtn({ ...BTN_TONES.primary, padding: '3px 14px' })}
+                        className={XP_BTN}
                     >
                         <i className="bi bi-save" style={{ marginRight: 4 }}></i>
                         {editor.saving ? 'Saving…' : 'Save Formula'}

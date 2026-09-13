@@ -25,11 +25,10 @@ export function effectivePermissionList(rolePermissions: Permission[], directPer
  * one-line summary; the caller expands it into a full-width detail row.
  */
 export default function EffectivePermissions({
-    rolePermissions, directPermissions, classic, expanded, onToggle,
+    rolePermissions, directPermissions, expanded, onToggle,
 }: {
     rolePermissions: Permission[];
     directPermissions: Permission[];
-    classic: boolean;
     expanded: boolean;
     onToggle: () => void;
 }) {
@@ -38,22 +37,14 @@ export default function EffectivePermissions({
     const isAdmin = rolePermissions.some(p => p.code === 'admin.access') || directPermissions.some(p => p.code === 'admin.access');
 
     if (isAdmin) {
-        return classic ? (
-            <span style={{ borderRadius: CHIP_RADIUS, background: '#e8e8e8', border: '1px solid #6a6a6a', color: '#000', padding: '0 4px', fontSize: '9px', fontFamily: xpFont, fontWeight: 'bold' }}>
+        return <span style={{ borderRadius: CHIP_RADIUS, background: '#e8e8e8', border: '1px solid #6a6a6a', color: '#000', padding: '0 4px', fontSize: '9px', fontFamily: xpFont, fontWeight: 'bold' }}>
                 All Permissions
-            </span>
-        ) : (
-            <span className="badge bg-dark bg-opacity-75">All Permissions</span>
-        );
+            </span>;
     }
 
     const total = inherited.length + directPermissions.length;
     if (total === 0) {
-        return classic ? (
-            <span style={{ fontSize: '9px', color: '#888', fontStyle: 'italic', fontFamily: xpFont }}>None</span>
-        ) : (
-            <span className="text-muted small fst-italic">None</span>
-        );
+        return <span style={{ fontSize: '9px', color: '#888', fontStyle: 'italic', fontFamily: xpFont }}>None</span>;
     }
 
     const summary = `${total} permission${total !== 1 ? 's' : ''}${directPermissions.length > 0 ? ` (${directPermissions.length} direct)` : ''}`;
@@ -61,11 +52,11 @@ export default function EffectivePermissions({
     return (
         <button
             onClick={onToggle}
-            style={classic ? {
+            style={{
                 background: 'none', border: 'none', padding: 0, cursor: 'pointer',
                 fontFamily: xpFont, fontSize: '10px', color: '#00006e',
                 display: 'flex', alignItems: 'center', gap: 4,
-            } : { background: 'none', border: 'none', padding: 0, cursor: 'pointer', fontSize: '0.8rem', color: '#0d6efd', display: 'flex', alignItems: 'center', gap: 4 }}
+            }}
         >
             <i className={`bi ${expanded ? 'bi-caret-down-fill' : 'bi-caret-right-fill'}`} style={{ fontSize: 8 }} />
             {summary}
