@@ -18,11 +18,15 @@ interface ThemeContextType {
 
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 
-// Only two interface styles are supported. Legacy values ('default', 'compact')
-// from older builds collapse onto 'modern' so no one gets stranded on a dead style.
-const VALID_STYLES = ['classic', 'modern'];
+// Classic (Windows XP) is the only interface style. Anything else in storage —
+// 'modern', or the older 'default'/'compact' — heals onto it so no one gets
+// stranded on a dead style. This stays a list rather than a constant because
+// uiStyle and the `ui-style-${uiStyle}` root class are the seam terras-ui
+// tokens theme through: a future style plugs in here.
+const VALID_STYLES = ['classic'];
+const DEFAULT_STYLE = 'classic';
 const normalizeStyle = (s: string | null): string =>
-    s && VALID_STYLES.includes(s) ? s : (s ? 'modern' : 'classic');
+    s && VALID_STYLES.includes(s) ? s : DEFAULT_STYLE;
 
 // Interface scale. The app's tables and toolbars were drawn dense, so the
 // browser's 100% leaves them looking oversized on a desktop monitor — 80% is

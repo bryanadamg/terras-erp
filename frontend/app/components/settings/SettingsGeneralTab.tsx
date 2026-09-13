@@ -12,7 +12,7 @@ import CompanyProfileView from './CompanyProfileView';
 import QtyFormulaPanel from './QtyFormulaPanel';
 
 export default function SettingsGeneralTab({
-    appName, onUpdateAppName, uiStyle, onUpdateUIStyle,
+    appName, onUpdateAppName,
     companyProfile, onUpdateCompanyProfile, onUploadLogo,
 }: any) {
     const { showToast } = useToast();
@@ -23,14 +23,12 @@ export default function SettingsGeneralTab({
     const classic = currentStyle === 'classic';
 
     const [name, setName] = useState(appName);
-    const [style, setStyle] = useState(uiStyle || currentStyle || 'classic');
     const [tz, setTz] = useState(timezone);
     const [scale, setScale] = useState(uiScale);
 
     const handleSubmitSystem = (e: React.FormEvent) => {
         e.preventDefault();
         if (onUpdateAppName && isAdmin) onUpdateAppName(name);
-        if (onUpdateUIStyle) onUpdateUIStyle(style);
         setTimezone(tz);
         setUiScale(scale);
         showToast('System preferences updated!', 'success');
@@ -38,8 +36,8 @@ export default function SettingsGeneralTab({
 
     return (
         // Two independent forms with their own submit buttons, so they sit side
-        // by side rather than stacked: four selects and a logo+address block
-        // each used the full page width and neither filled it.
+        // by side rather than stacked: a name field, two selects and a
+        // logo+address block each used the full page width and neither filled it.
         <div style={settingsColumns}>
             <div style={settingsCol(400, 1)}>
                 <SettingsPanel classic={classic} icon="bi-gear-fill" title="System Preferences">
@@ -57,18 +55,6 @@ export default function SettingsGeneralTab({
                                 {!isAdmin && (
                                     <div style={settingsHint(classic)}>Only admins can change the application name.</div>
                                 )}
-                            </div>
-                            <div>
-                                <FieldLabel classic={classic}>Interface Style</FieldLabel>
-                                <select
-                                    style={classic ? xpInput({ height: 'auto', padding: '2px 4px', width: '100%' }) : undefined}
-                                    className={classic ? '' : 'form-select form-select-sm'}
-                                    value={style}
-                                    onChange={e => setStyle(e.target.value)}
-                                >
-                                    <option value="classic">Classic (Windows XP)</option>
-                                    <option value="modern">Modern (Clean)</option>
-                                </select>
                             </div>
                             <div>
                                 <FieldLabel classic={classic}>Interface Scale</FieldLabel>

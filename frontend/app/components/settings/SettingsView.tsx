@@ -15,7 +15,7 @@ type TabKey = 'general' | 'account' | 'database' | 'access';
 const modernFont = 'system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif';
 
 export default function SettingsView({
-    appName, onUpdateAppName, uiStyle, onUpdateUIStyle,
+    appName, onUpdateAppName,
     companyProfile, onUpdateCompanyProfile, onUploadLogo,
 }: any) {
     const { uiStyle: currentStyle } = useTheme();
@@ -66,8 +66,6 @@ export default function SettingsView({
                         <SettingsGeneralTab
                             appName={appName}
                             onUpdateAppName={onUpdateAppName}
-                            uiStyle={uiStyle}
-                            onUpdateUIStyle={onUpdateUIStyle}
                             companyProfile={companyProfile}
                             onUpdateCompanyProfile={onUpdateCompanyProfile}
                             onUploadLogo={onUploadLogo}
