@@ -1,9 +1,16 @@
 /**
- * Interface-scale (root `zoom`) unit helpers.
+ * Interface-scale (root `zoom`) unit helpers — now a re-export of terras-ui's
+ * `scale` module, which owns both halves of the feature: the scale value (list,
+ * default, storage key, `<html>` attribute) and these unit converters. The
+ * package's copy was ported from this file, so the behaviour is unchanged; this
+ * module stays as the import path so the ~20 call sites are untouched.
  *
- * The app renders under a root zoom — see the "Interface scale" block in
- * globals.css. That splits the DOM's pixel APIs into two different units, and
- * mixing them silently misplaces things by the zoom factor:
+ * The CSS half is `@bryanadamg/terras-ui/scale.css`, imported in layout.tsx —
+ * import both or neither.
+ *
+ * Why the converters exist at all: under a root zoom the DOM's pixel APIs split
+ * into two different units, and mixing them silently misplaces things by the
+ * zoom factor.
  *
  *   SCREEN px (divided by zoom already — what the user physically sees)
  *     getBoundingClientRect(), MouseEvent.clientX/Y, window.innerWidth/Height,
@@ -15,59 +22,12 @@
  *
  * So a dropdown positioned with `top: rect.bottom` lands at 80% of the way down
  * the page at 80% scale. Convert first: `top: toLayoutPx(rect.bottom)`.
- *
- * Verified in Chrome — at zoom 0.8 a 100px box measures 80 via
- * getBoundingClientRect but still reports clientHeight 100.
  */
 
-let zoomProbe: HTMLDivElement | null = null;
-
-/** Fixed-layout-width probe pinned to <html>, used to measure zoom directly
- * instead of parsing getComputedStyle(...).zoom — older Chromium serializes
- * that computed value as a percentage string ("80%") rather than a unitless
- * number ("0.8"), which silently becomes NaN through Number() and disables
- * the zoom correction everywhere (every floating menu drifts by the scale
- * factor). The probe's screen-px width divided by its authored layout width
- * is the zoom ratio by construction, independent of that serialization. */
-function getZoomProbe(): HTMLDivElement {
-    if (zoomProbe && zoomProbe.isConnected) return zoomProbe;
-    const el = document.createElement('div');
-    el.style.cssText = 'position:fixed;top:-9999px;left:-9999px;width:1000px;height:1px;visibility:hidden;pointer-events:none;';
-    document.documentElement.appendChild(el);
-    zoomProbe = el;
-    return el;
-}
-
-/** Effective root zoom, e.g. 0.8 at 80% scale. Always 1 during SSR. */
-export function uiZoom(): number {
-    if (typeof document === 'undefined') return 1;
-    const z = getZoomProbe().getBoundingClientRect().width / 1000;
-    return Number.isFinite(z) && z > 0 ? z : 1;
-}
-
-/** Screen px → layout px. Use on every measured value before it becomes a CSS length. */
-export function toLayoutPx(px: number): number {
-    return px / uiZoom();
-}
-
-/** getBoundingClientRect() with every side already converted to layout px. */
-export function layoutRectOf(el: Element) {
-    const r = el.getBoundingClientRect();
-    const z = uiZoom();
-    return {
-        top: r.top / z, bottom: r.bottom / z, left: r.left / z, right: r.right / z,
-        width: r.width / z, height: r.height / z,
-    };
-}
-
-/** window.innerWidth/innerHeight in layout px. */
-export function layoutViewport(): { width: number; height: number } {
-    const z = uiZoom();
-    return { width: window.innerWidth / z, height: window.innerHeight / z };
-}
-
-/** window.scrollX/scrollY in layout px. */
-export function layoutScroll(): { x: number; y: number } {
-    const z = uiZoom();
-    return { x: window.scrollX / z, y: window.scrollY / z };
-}
+export {
+    uiZoom,
+    toLayoutPx,
+    layoutRectOf,
+    layoutViewport,
+    layoutScroll,
+} from '@bryanadamg/terras-ui/scale';

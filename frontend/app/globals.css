@@ -11,82 +11,35 @@
   --primary-dark: #4338ca;
   --bg-color: #f3f4f6;
   --text-color: #1f2937;
-}
-
-/* ============================================================
-   Interface scale — the app renders denser than the browser's
-   100%, so nobody has to reach for Ctrl+minus. `zoom` on the root
-   is the same mechanism as browser zoom: lengths shrink and the
-   layout genuinely reflows (unlike transform: scale), so more rows
-   fit and nothing overlaps.
-   The scale is a data attribute on <html> (set pre-paint by the
-   boot script in layout.tsx, then by ThemeContext) rather than an
-   inline style, so the mobile and print overrides below can still
-   win — an inline custom property would outrank them.
-   Caveat that comes with zoom: viewport units are NOT rescaled by
-   it, so a bare 100vh renders at 80% of the window (verified in
-   Chrome). Everything sizing to the window therefore goes through
-   var(--app-vh) / --app-dvh / --app-vw, which divide the zoom back
-   out — e.g. 70vh is written calc(var(--app-vh) * 70 / 100).
-   Never reintroduce a raw vh/vw unit.
-   ============================================================ */
-:root {
-  --ui-zoom: 1;
-  --app-vh: calc(100vh / var(--ui-zoom));
-  --app-dvh: calc(100dvh / var(--ui-zoom));
-  --app-vw: calc(100vw / var(--ui-zoom));
 
   /* terras-ui paints its wordmark from --terras-font-display, which defaults to
      its own modern stack. Point it at the display face layout.tsx actually
      loads, or the Terras wordmark on the sign-in screen renders in the body
      font instead of IBM Plex Sans JP. */
   --terras-font-display: var(--font-display);
-
-  /* The package's viewport hooks. It defaults them to raw 100dvh/100vw, which is
-     wrong here for the same reason a raw vh is wrong anywhere in this file:
-     `html { zoom }` scales them, so a full-height package surface came up short
-     by exactly (1 - ui-zoom) — a white band under the sign-in screen at any
-     scale below 100%. tokens.css documents these as indirection hooks meant to
-     be redefined per app; these are the divided-out values to redefine them to. */
-  --terras-app-vh: var(--app-vh);
-  --terras-app-vw: var(--app-vw);
-}
-html { zoom: var(--ui-zoom); }
-html[data-ui-scale="70"]  { --ui-zoom: 0.7; }
-html[data-ui-scale="75"]  { --ui-zoom: 0.75; }
-html[data-ui-scale="80"]  { --ui-zoom: 0.8; }
-html[data-ui-scale="90"]  { --ui-zoom: 0.9; }
-html[data-ui-scale="100"] { --ui-zoom: 1; }
-html[data-ui-scale="110"] { --ui-zoom: 1.1; }
-
-/* Opt a subtree back out to 1:1. Zoom is multiplicative down the
-   tree, so dividing by the root zoom cancels it exactly.
-   For the print designer this is load-bearing, not cosmetic: its
-   drag handlers measure with getBoundingClientRect (screen px) and
-   write the result straight back into style.left/top (layout px).
-   Those two units only agree at effective zoom 1 — at 80% every
-   guide line and drop target would land 20% off. Cancelling zoom
-   for the whole canvas keeps that math correct with no changes to
-   the handlers, and a WYSIWYG paper surface wants 1:1 regardless. */
-.ui-scale-exempt {
-  zoom: calc(1 / var(--ui-zoom));
-  /* Effective zoom is back to 1 in here, so the viewport units need no
-     correction — leaving the compensated ones would overshoot by 1/zoom. */
-  --app-vh: 100vh;
-  --app-dvh: 100dvh;
-  --app-vw: 100vw;
 }
 
-/* Phones drive the mobile shell, where 44px touch targets are the
-   point — never shrink those. Print goes to paper at 1:1 so the
-   print templates keep their A4 measurements. Both must sit after
-   the scale rules: equal specificity, last one wins. */
-@media (max-width: 767px) {
-  html[data-ui-scale] { --ui-zoom: 1; }
-}
-@media print {
-  html[data-ui-scale] { --ui-zoom: 1; }
-}
+/* ============================================================
+   Interface scale lives in @bryanadamg/terras-ui/scale.css, imported
+   in layout.tsx — this file's block moved there verbatim (same var
+   names, same steps), and the package bridges its own --terras-app-*
+   hooks to the divided-out units itself.
+   What that sheet gives this app, and the rules that come with it:
+     --ui-zoom            root zoom, off <html data-ui-scale>
+     --app-vh/-dvh/-vw    viewport units with the zoom divided back
+                          out. `zoom` does NOT rescale viewport units,
+                          so a bare 100vh renders at 80% of the window
+                          (verified in Chrome). Never reintroduce a raw
+                          vh/vw unit in this file — write 70vh as
+                          calc(var(--app-vh) * 70 / 100).
+     .ui-scale-exempt     opt a subtree back to 1:1. Load-bearing for
+                          the print designer, whose drag handlers
+                          measure in screen px and write layout px —
+                          two units that only agree at zoom 1 — and for
+                          a camera viewfinder that measures its own box.
+   Phones (44px touch targets) and print (A4 measurements) are pinned
+   back to 1 by that sheet.
+   ============================================================ */
 
 body {
   background-color: var(--bg-color);
