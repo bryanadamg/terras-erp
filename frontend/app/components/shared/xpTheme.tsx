@@ -6,6 +6,7 @@ import { xpFont, modernFont, CODE_FONT, PRINT_FONT, PRINT_SERIF_FONT } from './t
 import { FloatingLayer, POPOUT_DELAY, TIP_DELAY, Tooltip, TooltipSurface, useHoverAnchor, isClipped } from './Tooltip';
 import UIToggleChip from '@bryanadamg/terras-ui/components/ToggleChip';
 import UIProgressBar, { progressToneColor as uiProgressToneColor } from '@bryanadamg/terras-ui/components/ProgressBar';
+import { field as uiField } from '@bryanadamg/terras-ui/styles';
 
 /**
  * Shared Windows XP "classic" theme primitives.
@@ -970,17 +971,23 @@ export const xpBtn = (extra: React.CSSProperties = {}): React.CSSProperties => (
     ...extra,
 });
 
-export const xpInput = (extra: React.CSSProperties = {}): React.CSSProperties => ({
-    fontFamily: xpFont, fontSize: '11px', border: '1px solid #7f9db9', borderRadius: BUTTON_RADIUS,
-    padding: '1px 6px', background: '#ffffff', color: '#000000', height: '20px', outline: 'none',
-    ...extra,
-});
+// The recessed field face — blue-gray border over a white well, against the
+// raised bevel a button wears. Delegated to terras-ui's `field()`, which mirrors
+// this one value for value (same Tahoma, 11px, #7f9db9, 3px radius, 1px 6px
+// padding, 20px tall); it reads them from --terras-* tokens, so a palette move
+// lands here too. Still a STYLE, not the package's `<Input>` component: call
+// sites spread it onto their own native input inside their own theme branch, and
+// swapping them to a component is a different job from deduping the face.
+export const xpInput = (extra: React.CSSProperties = {}): React.CSSProperties =>
+    uiField(extra);
 
 export const xpLabel = (extra: React.CSSProperties = {}): React.CSSProperties => ({
     fontFamily: xpFont, fontSize: '11px', display: 'block', marginBottom: 2,
     ...extra,
 });
 
+// 22px, not the input's 20px: the native dropdown arrow clips on Windows without
+// the extra 2px.
 export const xpSelect = (extra: React.CSSProperties = {}): React.CSSProperties =>
     xpInput({ height: '22px', ...extra });
 

@@ -3,6 +3,7 @@ import React from 'react';
 import { xpFont, modernFont, ChipTone, ChipSeg, BUTTON_RADIUS, PANEL_RADIUS, XP_BTN } from './xpTheme';
 import UIFilterChipBar from '@bryanadamg/terras-ui/components/FilterChipBar';
 import UISegmentedBar from '@bryanadamg/terras-ui/components/SegmentedBar';
+import { SearchField as UISearchField } from '@bryanadamg/terras-ui/components/Field';
 import { segAt as uiSegAt } from '@bryanadamg/terras-ui/styles';
 
 // Shared "classic outer window" chrome — bevel container + colored title bar +
@@ -69,10 +70,11 @@ export const xpToolbar = (extra: React.CSSProperties = {}): React.CSSProperties 
  * row up to `width`; otherwise `width` is fixed.
  */
 export function SearchField({
-    classic, value, onChange, placeholder = 'Search...', width = 200, grow = false,
+    classic: _classic, value, onChange, placeholder = 'Search...', width = 200, grow = false,
     icon = 'bi-search', title, autoFocus = false, style,
 }: {
-    classic: boolean;
+    /** @deprecated Inert — the field is one shape now, in both themes. */
+    classic?: boolean;
     value: string;
     onChange: (v: string) => void;
     placeholder?: string;
@@ -86,52 +88,20 @@ export function SearchField({
     style?: React.CSSProperties;
 }) {
     return (
-        <div
-            style={{
-                position: 'relative', display: 'inline-flex', alignItems: 'center', flexShrink: 0,
-                ...(grow ? { flex: `1 1 ${Math.min(width, 160)}px`, maxWidth: width } : { width }),
-                ...style,
-            }}
-        >
-            <i
-                className={`bi ${icon}`}
-                style={{
-                    position: 'absolute', left: classic ? 5 : 8, top: '50%', transform: 'translateY(-50%)',
-                    fontSize: classic ? 11 : 12, color: classic ? '#666666' : '#94a3b8',
-                    pointerEvents: 'none',
-                }}
-            />
-            <input
-                type="text"
-                value={value}
-                onChange={e => onChange(e.target.value)}
-                placeholder={placeholder}
-                title={title}
-                autoFocus={autoFocus}
-                style={classic ? {
-                    fontFamily: xpFont, fontSize: 11, border: '1px solid #7f9db9', borderRadius: BUTTON_RADIUS,
-                    background: '#ffffff', color: '#000000', height: 20, outline: 'none',
-                    width: '100%', boxSizing: 'border-box', padding: '1px 20px 1px 20px',
-                } : {
-                    fontFamily: modernFont, fontSize: 13, border: '1px solid #cbd3df', borderRadius: 7,
-                    background: '#ffffff', color: '#1e293b', outline: 'none',
-                    width: '100%', boxSizing: 'border-box', padding: '4px 24px 4px 26px',
-                }}
-            />
-            {value && (
-                <button
-                    type="button"
-                    onClick={() => onChange('')}
-                    title="Clear search"
-                    style={{
-                        position: 'absolute', right: classic ? 3 : 5, top: '50%', transform: 'translateY(-50%)',
-                        border: 'none', background: 'transparent', cursor: 'pointer', padding: '0 3px',
-                        color: '#888888', fontSize: classic ? 12 : 14, lineHeight: 1,
-                        fontFamily: classic ? xpFont : modernFont,
-                    }}
-                >&times;</button>
-            )}
-        </div>
+        <UISearchField
+            value={value}
+            onChange={onChange}
+            placeholder={placeholder}
+            width={width}
+            grow={grow}
+            // The package takes the icon as a NODE (it ships no icon set); this app
+            // draws with bootstrap-icons, so the class string stays the prop the 36
+            // call sites pass and the element is built here.
+            icon={icon ? <i className={`bi ${icon}`} /> : undefined}
+            title={title}
+            autoFocus={autoFocus}
+            style={style}
+        />
     );
 }
 
