@@ -6,7 +6,7 @@ import { useTheme } from '../../context/ThemeContext';
 import { useConfirm } from '../../context/ConfirmContext';
 import { useData } from '../../context/DataContext';
 import { useTimezone, AVAILABLE_TIMEZONES } from '../../context/TimezoneContext';
-import { xpBtn, xpInput, CodeChip, StatusChip, CODE_FONT, FieldLabel, xpFont, CHIP_RADIUS, BTN_TONES, XP_BTN } from '../shared/xpTheme';
+import { xpBtn, xpInput, CodeChip, StatusChip, CODE_FONT, FieldLabel, xpFont, CHIP_RADIUS, BTN_TONES, XP_BTN, XPActionButton } from '../shared/xpTheme';
 import {
     xpTableHeader, xpThCell, tdBase,
     settingsStack, settingsActions, settingsHint, SETTINGS_FIELD_GAP,
@@ -369,6 +369,31 @@ export default function SettingsDatabaseTab() {
                 fetchSnapshots();
             }
         } catch (e) { showToast('Upload failed', 'danger'); }
+        finally { setIsSnapshotLoading(false); }
+    };
+
+    const handleDeleteSnapshot = async (filename: string) => {
+        const ok = await confirm({
+            title: 'Delete Snapshot?',
+            message: `Permanently delete "${filename}"? The snapshot file is removed from disk and cannot be recovered.`,
+            confirmText: 'Delete',
+            variant: 'danger',
+        });
+        if (!ok) return;
+        setIsSnapshotLoading(true);
+        try {
+            const res = await fetch(`${API_BASE}/admin/database/snapshots/${encodeURIComponent(filename)}`, {
+                method: 'DELETE',
+                headers: { 'Authorization': `Bearer ${localStorage.getItem('access_token')}` }
+            });
+            if (res.ok) {
+                showToast('Snapshot deleted', 'success');
+                fetchSnapshots();
+            } else {
+                const err = await res.json().catch(() => ({}));
+                showToast(`Delete failed: ${err.detail || res.status}`, 'danger');
+            }
+        } catch (e) { showToast('Delete failed', 'danger'); }
         finally { setIsSnapshotLoading(false); }
     };
 
@@ -763,34 +788,21 @@ export default function SettingsDatabaseTab() {
                                                 <td style={classic ? tdBase : undefined}>{tzDateTime(s.created_at)}</td>
                                                 <td style={classic ? tdBase : undefined}>{(s.size / 1024 / 1024).toFixed(2)} MB</td>
                                                 <td style={classic ? { ...tdBase, borderRight: 'none', textAlign: 'right' as const } : undefined} className={classic ? '' : 'text-end pe-4'}>
-                                                    <div style={classic ? { display: 'flex', gap: 4, justifyContent: 'flex-end' } : undefined} className={classic ? '' : 'd-flex gap-2 justify-content-end'}>
-                                                        {classic ? (
-                                                            <>
-                                                                <button
-                                                                    title="Export/Download"
-                                                                    onClick={() => handleDownloadSnapshot(s.name)}
-                                                                    style={{ background: 'none', border: '1px solid transparent', borderRadius: 2, cursor: 'pointer', padding: '1px 4px', color: '#0058e6', fontSize: '14px' }}
-                                                                    onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.borderColor = '#7f9db9'; (e.currentTarget as HTMLButtonElement).style.background = '#e8f0f8'; }}
-                                                                    onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.borderColor = 'transparent'; (e.currentTarget as HTMLButtonElement).style.background = 'none'; }}
-                                                                ><i className="bi bi-download"></i></button>
-                                                                <button
-                                                                    title="Restore/Rollback"
-                                                                    onClick={() => handleRestoreSnapshot(s.name)}
-                                                                    style={{ background: 'none', border: '1px solid transparent', borderRadius: 2, cursor: 'pointer', padding: '1px 4px', color: '#2e7d32', fontSize: '14px' }}
-                                                                    onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.borderColor = '#4caf50'; (e.currentTarget as HTMLButtonElement).style.background = '#e8f5e9'; }}
-                                                                    onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.borderColor = 'transparent'; (e.currentTarget as HTMLButtonElement).style.background = 'none'; }}
-                                                                ><i className="bi bi-arrow-counterclockwise"></i></button>
-                                                            </>
-                                                        ) : (
-                                                            <>
-                                                                <button className="btn btn-sm btn-link text-primary p-0" onClick={() => handleDownloadSnapshot(s.name)} title="Export/Download">
-                                                                    <i className="bi bi-download fs-5"></i>
-                                                                </button>
-                                                                <button className="btn btn-sm btn-link text-success p-0" onClick={() => handleRestoreSnapshot(s.name)} title="Restore/Rollback">
-                                                                    <i className="bi bi-arrow-counterclockwise fs-5"></i>
-                                                                </button>
-                                                            </>
-                                                        )}
+                                                    <div style={{ display: 'flex', gap: 4, justifyContent: 'flex-end' }}>
+                                                        <XPActionButton
+                                                            classic={classic} tone="primary" icon="bi-download" title="Export/Download"
+                                                            onClick={() => handleDownloadSnapshot(s.name)}
+                                                        />
+                                                        <XPActionButton
+                                                            classic={classic} tone="success" icon="bi-arrow-counterclockwise" title="Restore/Rollback"
+                                                            onClick={() => handleRestoreSnapshot(s.name)}
+                                                            disabled={isSnapshotLoading}
+                                                        />
+                                                        <XPActionButton
+                                                            classic={classic} tone="danger" icon="bi-trash" title="Delete snapshot file"
+                                                            onClick={() => handleDeleteSnapshot(s.name)}
+                                                            disabled={isSnapshotLoading}
+                                                        />
                                                     </div>
                                                 </td>
                                             </tr>
