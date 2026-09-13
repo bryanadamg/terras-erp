@@ -25,13 +25,12 @@ import { xpFont } from '../shared/xpTheme';
  * above the list so a click is never a guess.
  */
 export default function FieldPalette({
-    docType, bands, targetBand, classic, onPlace,
+    docType, bands, targetBand, onPlace,
 }: {
     docType: string;
     bands: Band[];
     /** The section a click adds to — the current selection. */
     targetBand: Band | null;
-    classic: boolean;
     onPlace: (fieldKey: string) => void;
 }) {
     const [search, setSearch] = useState('');
@@ -60,8 +59,8 @@ export default function FieldPalette({
     const canPlace = bandAcceptsFields(targetBand);
 
     const label = (text: string, extra?: React.CSSProperties) => ({
-        fontFamily: classic ? xpFont : undefined,
-        fontSize: 10, color: classic ? '#4a4436' : '#6c757d',
+        fontFamily: xpFont,
+        fontSize: 10, color: '#4a4436',
         ...extra,
     });
 
@@ -80,11 +79,11 @@ export default function FieldPalette({
                     display: 'flex', alignItems: 'center', gap: 4, width: '100%',
                     textAlign: 'left', background: 'none', border: 'none',
                     padding: '2px 3px 2px 10px', borderRadius: 0,
-                    fontFamily: classic ? xpFont : undefined, fontSize: 11,
-                    color: !canPlace ? '#aaa' : (already ? '#8a8a8a' : (classic ? '#2b2822' : '#212529')),
+                    fontFamily: xpFont, fontSize: 11,
+                    color: !canPlace ? '#aaa' : (already ? '#8a8a8a' : ('#2b2822')),
                     cursor: canPlace ? 'pointer' : 'default',
                 }}
-                onMouseEnter={e => { if (canPlace) e.currentTarget.style.background = classic ? '#d6e6ff' : '#e7f1ff'; }}
+                onMouseEnter={e => { if (canPlace) e.currentTarget.style.background = '#d6e6ff'; }}
                 onMouseLeave={e => { e.currentTarget.style.background = 'none'; }}
             >
                 <i className="bi bi-plus" style={{ flexShrink: 0, opacity: canPlace ? 0.7 : 0.3 }} />
@@ -97,7 +96,7 @@ export default function FieldPalette({
     };
 
     return (
-        <div style={{ marginTop: 10, borderTop: classic ? '1px solid #b0a898' : '1px solid #dee2e6', paddingTop: 6 }}>
+        <div style={{ marginTop: 10, borderTop: '1px solid #b0a898', paddingTop: 6 }}>
             <div style={label('', { fontWeight: 'bold', textTransform: 'uppercase', letterSpacing: '0.4px', marginBottom: 4 })}>
                 Add a field
             </div>
@@ -116,17 +115,11 @@ export default function FieldPalette({
                 value={search}
                 placeholder="Search fields..."
                 onChange={e => setSearch(e.target.value)}
-                style={classic
-                    ? {
+                style={{
                         fontFamily: xpFont, fontSize: 11, border: '1px solid #7f9db9',
                         boxShadow: 'inset 1px 1px 0 rgba(0,0,0,0.1)', padding: '1px 4px',
                         background: '#fff', color: '#000', height: 19, width: '100%',
                         boxSizing: 'border-box', outline: 'none', borderRadius: 0, marginBottom: 4,
-                    }
-                    : {
-                        fontSize: 12, border: '1px solid #ced4da', borderRadius: 4,
-                        padding: '2px 6px', width: '100%', boxSizing: 'border-box',
-                        color: '#000', marginBottom: 4,
                     }}
             />
 
@@ -145,8 +138,8 @@ export default function FieldPalette({
                                     display: 'flex', alignItems: 'center', gap: 3, width: '100%',
                                     textAlign: 'left', background: 'none', border: 'none',
                                     padding: '2px 3px', borderRadius: 0, cursor: 'pointer',
-                                    fontFamily: classic ? xpFont : undefined, fontSize: 11,
-                                    color: classic ? '#2b2822' : '#212529',
+                                    fontFamily: xpFont, fontSize: 11,
+                                    color: '#2b2822',
                                 }}
                             >
                                 <i className={`bi ${open ? 'bi-chevron-down' : 'bi-chevron-right'}`} style={{ fontSize: 8 }} />

@@ -2,7 +2,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import { useData } from '../../context/DataContext';
-import { useTheme } from '../../context/ThemeContext';
 import { useTimezone } from '../../context/TimezoneContext';
 import { useToast } from '../shared/Toast';
 import { useConfirm } from '../../context/ConfirmContext';
@@ -64,11 +63,9 @@ function selectionToId(sel: Selection): string | null {
  */
 export default function PrintDesignerView() {
     const { printTemplates, refreshPrintTemplates, companyProfile, attributes, authFetch } = useData() as any;
-    const { uiStyle } = useTheme();
     const { formatCustom } = useTimezone();
     const { showToast } = useToast();
     const { confirm } = useConfirm();
-    const classic = uiStyle === 'classic';
 
     const [docType, setDocType] = useState<string>(EDITABLE_DOC_TYPES[0]);
     const [draft, setDraft] = useState<PrintLayout | null>(null);
@@ -370,8 +367,8 @@ export default function PrintDesignerView() {
 
     if (!draft) {
         return (
-            <ShellWindow classic={classic}>
-                <ShellTitleBar classic={classic} icon="bi-printer" title="Print Layout Designer" />
+            <ShellWindow classic>
+                <ShellTitleBar classic icon="bi-printer" title="Print Layout Designer" />
                 <div style={{ padding: 24 }}>No editable document types are registered.</div>
             </ShellWindow>
         );
@@ -406,8 +403,8 @@ export default function PrintDesignerView() {
 
     const customised = isCustomised(docType, printTemplates);
 
-    const paneBg = classic ? '#ece9d8' : '#f8f9fa';
-    const paneBorder = classic ? '1px solid #b0a898' : '1px solid #dee2e6';
+    const paneBg = '#ece9d8';
+    const paneBorder = '1px solid #b0a898';
 
     // Header and zoom-strip actions come from the shared primitives — this view used
     // to hand-roll both, which is how it ended up with `borderRadius: 0` buttons next
@@ -424,41 +421,41 @@ export default function PrintDesignerView() {
         // Only the sheet below opts out to 1:1 (see the `ui-scale-exempt` comments
         // there) — exempting the whole window left the toolbar, band list and
         // inspector rendering 20% larger than the chrome around them.
-        <ShellWindow classic={classic}>
+        <ShellWindow classic>
             <ShellTitleBar
-                classic={classic}
+                classic
                 icon="bi-printer"
                 title="Print Layout Designer"
                 subtitle="Choose which fields appear on each printed document, and how they are sized and placed."
                 right={
                     <span style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
                         <ToolbarButton
-                            classic={classic} icon="bi-arrow-90deg-left"
+                            classic icon="bi-arrow-90deg-left"
                             onClick={undo} disabled={past.current.length === 0}
                         >
                             Undo
                         </ToolbarButton>
                         <ToolbarButton
-                            classic={classic} icon="bi-arrow-90deg-right"
+                            classic icon="bi-arrow-90deg-right"
                             onClick={redo} disabled={future.current.length === 0}
                         >
                             Redo
                         </ToolbarButton>
                         {dirty && (
-                            <ToolbarButton classic={classic} icon="bi-arrow-counterclockwise" onClick={revertDraft}>
+                            <ToolbarButton classic icon="bi-arrow-counterclockwise" onClick={revertDraft}>
                                 Revert
                             </ToolbarButton>
                         )}
                         {/* Prints the draft, so it needs no save first — that is the point. */}
                         <ToolbarButton
-                            classic={classic} icon="bi-printer" printable
+                            classic icon="bi-printer" printable
                             onClick={() => setTestPrinting(true)}
                             disabled={!active || testPrinting}
                         >
                             Test print
                         </ToolbarButton>
                         <ToolbarButton
-                            classic={classic} tone="danger" icon="bi-trash"
+                            classic tone="danger" icon="bi-trash"
                             onClick={reset} disabled={!customised}
                         >
                             Reset to default
@@ -466,10 +463,10 @@ export default function PrintDesignerView() {
                         {/* Dirty state also sits in the status bar, but that is the far corner
                             from Save — the one place the state actually changes what you do. */}
                         {dirty && (
-                            <Chip classic={classic} tone={familyTint('amber')}>Unsaved</Chip>
+                            <Chip classic tone={familyTint('amber')}>Unsaved</Chip>
                         )}
                         <ToolbarButton
-                            classic={classic} tone="create" icon="bi-check-lg"
+                            classic tone="create" icon="bi-check-lg"
                             onClick={save} disabled={!dirty || saving}
                         >
                             {saving ? 'Saving...' : 'Save layout'}
@@ -479,33 +476,31 @@ export default function PrintDesignerView() {
             />
 
             {/* Toolbar: which document, which work order to preview with */}
-            <div style={classic ? xpToolbar() : undefined} className={classic ? undefined : 'px-3 py-2 border-bottom bg-light'}>
+            <div style={xpToolbar()} className={undefined}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
-                    <span style={{ fontFamily: classic ? xpFont : undefined, fontSize: 11, fontWeight: 'bold' }}>Document:</span>
+                    <span style={{ fontFamily: xpFont, fontSize: 11, fontWeight: 'bold' }}>Document:</span>
                     <div style={{ width: 300 }}>
                         <SelectField
-                            classic={classic}
                             value={docType as any}
                             options={EDITABLE_DOC_TYPES.map(d => ({ value: d, label: DOC_TYPE_LABELS[d] || d }))}
                             onChange={v => switchDocType(v)}
                         />
                     </div>
 
-                    <Chip classic={classic} tone={familyTint(customised ? 'green' : 'gray')}>
+                    <Chip classic tone={familyTint(customised ? 'green' : 'gray')}>
                         {customised ? 'Customised' : 'Built-in default'}
                     </Chip>
 
                     <span style={{ flex: 1 }} />
 
-                    <span style={{ fontFamily: classic ? xpFont : undefined, fontSize: 11, fontWeight: 'bold' }}>Preview with:</span>
+                    <span style={{ fontFamily: xpFont, fontSize: 11, fontWeight: 'bold' }}>Preview with:</span>
                     <div style={{ width: 260 }}>
                         {loadingSamples ? (
-                            <span style={{ fontFamily: classic ? xpFont : undefined, fontSize: 11, color: '#666' }}>Loading work orders...</span>
+                            <span style={{ fontFamily: xpFont, fontSize: 11, color: '#666' }}>Loading work orders...</span>
                         ) : previewPool.length === 0 ? (
-                            <span style={{ fontFamily: classic ? xpFont : undefined, fontSize: 11, color: '#a33' }}>No work orders found</span>
+                            <span style={{ fontFamily: xpFont, fontSize: 11, color: '#a33' }}>No work orders found</span>
                         ) : (
                             <SelectField
-                                classic={classic}
                                 value={sampleId as any}
                                 options={previewPool.map(s => ({
                                     value: s.wo.id,
@@ -518,7 +513,7 @@ export default function PrintDesignerView() {
                 </div>
                 {!loadingSamples && matchingSamples.length === 0 && previewPool.length > 0 && (
                     <div style={{
-                        fontFamily: classic ? xpFont : undefined, fontSize: 10,
+                        fontFamily: xpFont, fontSize: 10,
                         color: '#8a6d00', marginTop: 4,
                     }}>
                         <i className="bi bi-exclamation-triangle" style={{ marginRight: 4 }} />
@@ -536,14 +531,14 @@ export default function PrintDesignerView() {
                 }}>
                     <div style={{
                         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                        fontFamily: classic ? xpFont : undefined, fontSize: 10, fontWeight: 'bold',
+                        fontFamily: xpFont, fontSize: 10, fontWeight: 'bold',
                         textTransform: 'uppercase', letterSpacing: '0.4px',
-                        color: classic ? '#4a4436' : '#6c757d', marginBottom: 5,
+                        color: '#4a4436', marginBottom: 5,
                     }}>
                         <span>Sections, top to bottom</span>
                         {/* Adds after the selected section, so the menu doubles as "insert here". */}
                         <XPActionButton
-                            classic={classic} icon="bi-plus-lg" label={<i className="bi bi-caret-down-fill" style={{ fontSize: 7 }} />}
+                            classic icon="bi-plus-lg" label={<i className="bi bi-caret-down-fill" style={{ fontSize: 7 }} />}
                             title="Add a section" className="xp-menu-trigger"
                             onClick={e => addMenu.toggle('add-band', e)}
                         />
@@ -553,10 +548,10 @@ export default function PrintDesignerView() {
                         onClick={() => setSelection({ bandId: null })}
                         style={{
                             display: 'flex', alignItems: 'center', gap: 4, cursor: 'pointer',
-                            fontFamily: classic ? xpFont : undefined, fontSize: 11,
+                            fontFamily: xpFont, fontSize: 11,
                             padding: '3px 4px', marginBottom: 4,
-                            background: selection.bandId === null ? (classic ? '#0058e6' : '#0d6efd') : 'transparent',
-                            color: selection.bandId === null ? '#fff' : (classic ? '#2b2822' : '#212529'),
+                            background: selection.bandId === null ? ('#0058e6') : 'transparent',
+                            color: selection.bandId === null ? '#fff' : ('#2b2822'),
                             fontWeight: 'bold',
                         }}
                     >
@@ -576,12 +571,12 @@ export default function PrintDesignerView() {
                                 onMouseLeave={() => setHoverBandId(cur => (cur === band.id ? null : cur))}
                                 style={{
                                     display: 'flex', alignItems: 'center', gap: 4, cursor: 'pointer',
-                                    fontFamily: classic ? xpFont : undefined, fontSize: 11,
+                                    fontFamily: xpFont, fontSize: 11,
                                     padding: '3px 4px', marginBottom: 2,
                                     background: selected
-                                        ? (classic ? '#0058e6' : '#0d6efd')
-                                        : (hovered ? (classic ? '#d6e6ff' : '#e7f1ff') : 'transparent'),
-                                    color: selected ? '#fff' : (hidden ? '#999' : (classic ? '#2b2822' : '#212529')),
+                                        ? ('#0058e6')
+                                        : (hovered ? ('#d6e6ff') : 'transparent'),
+                                    color: selected ? '#fff' : (hidden ? '#999' : ('#2b2822')),
                                 }}
                             >
                                 <input
@@ -624,8 +619,8 @@ export default function PrintDesignerView() {
                                         style={{
                                             fontSize: 10, lineHeight: 1, padding: '1px 3px', borderRadius: 0,
                                             cursor: i === 0 ? 'default' : 'pointer', opacity: i === 0 ? 0.35 : 1,
-                                            background: classic ? 'linear-gradient(to bottom,#fff,#d4d0c8)' : '#fff',
-                                            border: '1px solid', borderColor: classic ? '#dfdfdf #808080 #808080 #dfdfdf' : '#ced4da',
+                                            background: 'linear-gradient(to bottom,#fff,#d4d0c8)',
+                                            border: '1px solid', borderColor: '#dfdfdf #808080 #808080 #dfdfdf',
                                         }}
                                     >
                                         <i className="bi bi-chevron-up" />
@@ -638,8 +633,8 @@ export default function PrintDesignerView() {
                                             fontSize: 10, lineHeight: 1, padding: '1px 3px', borderRadius: 0,
                                             cursor: i === draft.bands.length - 1 ? 'default' : 'pointer',
                                             opacity: i === draft.bands.length - 1 ? 0.35 : 1,
-                                            background: classic ? 'linear-gradient(to bottom,#fff,#d4d0c8)' : '#fff',
-                                            border: '1px solid', borderColor: classic ? '#dfdfdf #808080 #808080 #dfdfdf' : '#ced4da',
+                                            background: 'linear-gradient(to bottom,#fff,#d4d0c8)',
+                                            border: '1px solid', borderColor: '#dfdfdf #808080 #808080 #dfdfdf',
                                         }}
                                     >
                                         <i className="bi bi-chevron-down" />
@@ -654,7 +649,7 @@ export default function PrintDesignerView() {
                         ordinal, a name, a type and two chevrons. */}
                     <div style={{ display: 'flex', gap: 4, marginTop: 6 }}>
                         <XPActionButton
-                            classic={classic} icon="bi-copy" label="Duplicate"
+                            classic icon="bi-copy" label="Duplicate"
                             title="Copy the selected section, with its design, below itself"
                             onClick={duplicateSelectedBand} disabled={!selectedBand}
                         />
@@ -662,7 +657,7 @@ export default function PrintDesignerView() {
                             prints a blank card, and the floor would find that before
                             anyone noticed the save. Delete down to one, then replace it. */}
                         <XPActionButton
-                            classic={classic} tone="danger" icon="bi-trash" label="Delete"
+                            classic tone="danger" icon="bi-trash" label="Delete"
                             title={draft.bands.length <= 1
                                 ? 'A layout needs at least one section'
                                 : 'Remove the selected section (Ctrl+Z undoes)'}
@@ -675,12 +670,11 @@ export default function PrintDesignerView() {
                         docType={docType}
                         bands={draft.bands}
                         targetBand={selectedBand}
-                        classic={classic}
                         onPlace={placeField}
                     />
 
                     <div style={{
-                        fontFamily: classic ? xpFont : undefined, fontSize: 10, color: '#888',
+                        fontFamily: xpFont, fontSize: 10, color: '#888',
                         fontStyle: 'italic', marginTop: 8, borderTop: paneBorder, paddingTop: 6,
                     }}>
                         Hovering a section here outlines it on the paper, and hovering the paper
@@ -698,7 +692,7 @@ export default function PrintDesignerView() {
                 <div
                     ref={canvasPaneRef}
                     style={{
-                        flex: 1, minWidth: 0, background: classic ? '#808080' : '#e9ecef',
+                        flex: 1, minWidth: 0, background: '#808080',
                         overflow: 'auto', padding: 16,
                         display: 'flex', justifyContent: 'center', alignItems: 'flex-start',
                     }}
@@ -716,7 +710,7 @@ export default function PrintDesignerView() {
                                 width: `${paperW}mm`, height: `${paperH}mm`,
                                 padding: `${draft.paper.marginMm}mm`, boxSizing: 'border-box',
                             }}>
-                                <PanelSkeleton sections={3} rows={4} classic={classic} caption />
+                                <PanelSkeleton sections={3} rows={4} classic caption />
                             </div>
                         </div>
                     ) : (
@@ -724,24 +718,24 @@ export default function PrintDesignerView() {
                             <div style={{
                                 display: 'flex', alignItems: 'center', justifyContent: 'center',
                                 gap: 6, marginBottom: 4,
-                                fontFamily: classic ? xpFont : undefined, fontSize: 10,
+                                fontFamily: xpFont, fontSize: 10,
                                 color: '#fff', textShadow: '0 1px 2px rgba(0,0,0,0.5)',
                             }}>
                                 <XPActionButton
-                                    classic={classic} icon="bi-dash-lg" title="Zoom out"
+                                    classic icon="bi-dash-lg" title="Zoom out"
                                     onClick={() => stepZoom(-1)} disabled={zoom <= ZOOM_MIN}
                                 />
                                 <XPActionButton
-                                    classic={classic} label={`${Math.round(zoom * 100)}%`}
+                                    classic label={`${Math.round(zoom * 100)}%`}
                                     title="Back to true size (100%)"
                                     onClick={() => setZoom(1)} disabled={zoom === 1}
                                 />
                                 <XPActionButton
-                                    classic={classic} icon="bi-plus-lg" title="Zoom in"
+                                    classic icon="bi-plus-lg" title="Zoom in"
                                     onClick={() => stepZoom(1)} disabled={zoom >= ZOOM_MAX}
                                 />
                                 <XPActionButton
-                                    classic={classic} label="Fit"
+                                    classic label="Fit"
                                     title="Scale the sheet to fit this pane"
                                     onClick={fitZoom}
                                 />
@@ -850,15 +844,14 @@ export default function PrintDesignerView() {
                         selection={selection}
                         onChange={update}
                         onSelect={setSelection}
-                        classic={classic}
                     />
                 </div>
             </div>
 
             <div style={{
                 padding: '4px 10px', borderTop: paneBorder,
-                background: classic ? 'linear-gradient(to bottom,#f4f2ea,#e3e1d6)' : '#f8f9fa',
-                fontFamily: classic ? xpFont : undefined, fontSize: 10,
+                background: 'linear-gradient(to bottom,#f4f2ea,#e3e1d6)',
+                fontFamily: xpFont, fontSize: 10,
                 color: dirty ? '#8a6d00' : '#666',
                 display: 'flex', justifyContent: 'space-between',
             }}>
