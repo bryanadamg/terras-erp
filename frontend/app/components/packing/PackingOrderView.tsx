@@ -403,7 +403,7 @@ export default function PackingOrderView({ initialCreateState, onClearInitialSta
                 <td colSpan={PO_COLS} style={{ padding: 0 }}>
                     <ExpandedRowPanel classic={CLASSIC}>
                         <div style={{
-                            display: 'grid', gridTemplateColumns: '320px 300px minmax(260px, 1fr)',
+                            display: 'grid', gridTemplateColumns: '320px 250px minmax(360px, 1fr)',
                             border: '1px solid #7f9db9', fontFamily: xpFont, fontSize: 10,
                         }}>
                             {/* Info */}
@@ -479,58 +479,81 @@ export default function PackingOrderView({ initialCreateState, onClearInitialSta
                                 )}
                             </div>
 
-                            {/* Cartons minted by this order */}
+                            {/* Pack log — one row per PackingCompletion (one lot per event).
+                                The narrow pane: this list is bounded by the lots on the desk,
+                                while the carton list grows with every box packed. */}
                             <div style={{ borderRight: '1px solid #c0bdb5', padding: '6px 8px', background: '#f5f4ef', overflow: 'hidden' }}>
-                                <div style={colHeader}>{po.package_label}s ({units.length})</div>
-                                {units.length === 0 ? (
-                                    <div style={{ color: '#aaa', fontStyle: 'italic', fontSize: 9 }}>Nothing packed yet.</div>
+                                <div style={colHeader}>Pack Log ({comps.length})</div>
+                                {comps.length === 0 ? (
+                                    <div style={{ color: '#aaa', fontStyle: 'italic', fontSize: 9 }}>No entries yet.</div>
                                 ) : (
                                     <div style={{ maxHeight: 200, overflowY: 'auto' }}>
-                                        {units.map((u: any) => (
-                                            <div key={u.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 4, fontSize: 9, marginBottom: 2, paddingBottom: 2, borderBottom: '1px solid #e8e6e0' }}>
-                                                <span style={{ color: '#888', width: 18, flexShrink: 0 }}>#{u.package_no}</span>
-                                                <span style={{ flex: 1, minWidth: 0, overflow: 'hidden' }}>
-                                                    <CodeChip code={u.batch_number} classic={CLASSIC} link style={{ cursor: 'default', maxWidth: '100%', overflow: 'hidden', textOverflow: 'ellipsis' }} />
-                                                    {/* A carton is a lot and labels itself like one: shade/combo
-                                                        resolved from its stock key, size stamped on it at packing.
-                                                        Renders nothing when it carries no identity. */}
-                                                    <LotChips batch={u} showOtherAttrs={false} />
-                                                </span>
-                                                {/* The count that went in the box, when the order is
-                                                    counted in one. Read off the carton, not divided out
-                                                    of its qty. */}
-                                                {u.alt_qty != null && po.uom2 && (
-                                                    <span style={{ color: '#555' }}>{num(u.alt_qty)} {po.uom2}</span>
-                                                )}
-                                                {/* Which box it went into, and what the whole thing
-                                                    weighs — the two figures the delivery note carries.
-                                                    Both snapshotted on the carton at pack time, so an
-                                                    edited master never rewrites what shipped. */}
-                                                {u.packaging_type_name && (
-                                                    <Chip classic={CLASSIC} size="xs" truncate title={u.packaging_type_name} style={{ maxWidth: 74 }}>
-                                                        {u.packaging_type_name}
-                                                    </Chip>
-                                                )}
-                                                {u.gross_weight_kg != null && (
-                                                    <span style={{ color: '#555', whiteSpace: 'nowrap' }}
-                                                        title={`Gross ${num(u.gross_weight_kg).toFixed(2)} kg = net ${num(u.weight_kg).toFixed(2)} + tare ${num(u.tare_kg).toFixed(2)}`}>
-                                                        {num(u.gross_weight_kg).toFixed(2)} kg
+                                        {comps.map((c: any, ci: number) => (
+                                            <div key={c.id || ci} style={{
+                                                fontSize: 9, marginBottom: 2, paddingBottom: 2,
+                                                borderBottom: '1px solid #e8e6e0',
+                                                // The only row fill is the rejected-red marker, which carries meaning.
+                                                background: c.rejected ? '#fbe4e4' : undefined,
+                                            }}>
+                                                <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                                                    <span style={{ color: '#666', whiteSpace: 'nowrap' }}>
+                                                        {c.completed_at ? tzDateTime(c.completed_at) : '—'}
                                                     </span>
+                                                    <span style={{
+                                                        marginLeft: 'auto', fontWeight: 'bold',
+                                                        color: c.rejected ? '#900' : '#000080',
+                                                        textDecoration: c.rejected ? 'line-through' : 'none',
+                                                    }} title={c.reject_reason || undefined}>
+                                                        +{num(c.qty).toFixed(2)}
+                                                    </span>
+                                                    <span style={{ color: '#555', whiteSpace: 'nowrap' }}
+                                                        title={`${c.package_count} ${po.package_label.toLowerCase()}(s) packed in this entry`}>
+                                                        &#215;{c.package_count}
+                                                    </span>
+                                                    {unitsOfComp(c.id).length > 0 && (
+                                                        <button type="button" style={miniBtn}
+                                                            onClick={() => setPrintLabels({ order: po, units: unitsOfComp(c.id) })}
+                                                            title={`Print labels for the ${unitsOfComp(c.id).length} ${po.package_label.toLowerCase()}(s) of this entry`}>
+                                                            Labels
+                                                        </button>
+                                                    )}
+                                                </div>
+                                                <div style={{ display: 'flex', alignItems: 'center', gap: 4, color: '#555' }}>
+                                                    <span style={{
+                                                        fontFamily: c.source_batch_number ? CODE_FONT : undefined,
+                                                        overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                                                    }} title={c.source_batch_number || undefined}>
+                                                        {c.source_batch_number || '—'}
+                                                    </span>
+                                                    <span style={{ marginLeft: 'auto', color: '#333', whiteSpace: 'nowrap' }}>{c.operator || '—'}</span>
+                                                    {c.rejected && (
+                                                        <span style={{ borderRadius: CHIP_RADIUS, fontSize: 8, fontWeight: 'bold', color: '#900', border: '1px solid #c88', background: '#fff', padding: '0 3px' }}>REJECTED</span>
+                                                    )}
+                                                    {/* Partial reject: the entry stays live with its qty already
+                                                        trimmed, so the scrapped part only shows as its own marker. */}
+                                                    {!c.rejected && num(c.qty_rejected) > 0 && (
+                                                        <span title={c.reject_reason || 'Partially rejected'}
+                                                            style={{ borderRadius: CHIP_RADIUS, fontSize: 8, fontWeight: 'bold', color: '#900', border: '1px solid #c88', background: '#fff', padding: '0 3px' }}>
+                                                            -{num(c.qty_rejected).toFixed(2)} REJ
+                                                        </span>
+                                                    )}
+                                                </div>
+                                                {c.notes && (
+                                                    <div style={{ color: '#888', fontStyle: 'italic', paddingLeft: 8 }}>{c.notes}</div>
                                                 )}
-                                                {/* Zero on hand = the carton has left on a pick list. */}
-                                                <span style={{ fontWeight: 'bold', color: num(u.qty) > 0 ? '#0a3e0a' : '#999' }}>
-                                                    {num(u.qty) > 0 ? num(u.qty).toFixed(2) : 'shipped'}
-                                                </span>
                                             </div>
                                         ))}
                                     </div>
                                 )}
                             </div>
 
-                            {/* Pack log — one row per PackingCompletion (one per lot per event) */}
+                            {/* Cartons minted by this order — the wide pane, and the one with the
+                                table: there is one row per label printed, so this is the list that
+                                grows with the order. The pack log beside it is one row per lot
+                                consumed, which the desk bounds. */}
                             <div style={{ padding: '6px 8px', background: '#f5f4ef', overflow: 'hidden' }}>
                                 <div style={{ ...colHeader, display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 6 }}>
-                                    <span>Pack Log ({comps.length})</span>
+                                    <span>{po.package_label}s ({units.length})</span>
                                     {units.length > 0 && (
                                         <button type="button" onClick={() => setPrintLabels({ order: po, units })}
                                             style={miniBtn} title={`Print a label for every ${po.package_label.toLowerCase()} on this order`}>
@@ -538,72 +561,71 @@ export default function PackingOrderView({ initialCreateState, onClearInitialSta
                                         </button>
                                     )}
                                 </div>
-                                {comps.length === 0 ? (
-                                    <div style={{ color: '#aaa', fontStyle: 'italic', fontSize: 9 }}>No entries yet.</div>
+                                {units.length === 0 ? (
+                                    <div style={{ color: '#aaa', fontStyle: 'italic', fontSize: 9 }}>Nothing packed yet.</div>
                                 ) : (
                                     <div style={{ maxHeight: 200, overflowY: 'auto' }}>
                                         <table style={{ ...lvSubTable(true), border: 'none' }}>
                                             <thead>
                                                 <tr>
-                                                    <th style={{ ...th, width: 108 }}>Date / Time</th>
-                                                    <th style={{ ...th, textAlign: 'right', width: 50 }}>Qty</th>
-                                                    <th style={{ ...th, textAlign: 'right', width: 34 }}>{po.package_label.charAt(0)}s</th>
-                                                    <th style={th}>Source lot</th>
-                                                    <th style={th}>Operator</th>
+                                                    <th style={{ ...th, width: 26 }}>#</th>
+                                                    <th style={th}>Lot</th>
+                                                    {po.uom2 ? <th style={{ ...th, textAlign: 'right', width: 56 }}>{po.uom2}</th> : null}
+                                                    <th style={{ ...th, width: 74 }}>{po.package_label}</th>
+                                                    <th style={{ ...th, textAlign: 'right', width: 62 }}>Gross</th>
+                                                    <th style={{ ...th, textAlign: 'right', width: 60 }}>On hand</th>
                                                     <th style={{ ...th, width: 46 }} />
                                                 </tr>
                                             </thead>
                                             <tbody>
-                                                {/* No zebra — the only row fill is the rejected-red
-                                                    marker, which carries meaning. */}
-                                                {comps.map((c: any, ci: number) => (
-                                                    <React.Fragment key={c.id || ci}>
-                                                        <tr style={lvSubRow(true, ci, { fill: c.rejected ? '#fbe4e4' : undefined })}>
-                                                            <td style={{ ...td, color: '#666', whiteSpace: 'nowrap' }}>
-                                                                {c.completed_at ? tzDateTime(c.completed_at) : '—'}
+                                                {units.map((u: any, ui: number) => (
+                                                    <tr key={u.id} style={lvSubRow(true, ui)}>
+                                                        <td style={{ ...td, color: '#888' }}>#{u.package_no}</td>
+                                                        <td style={{ ...td, overflow: 'hidden' }}>
+                                                            <span style={{ display: 'flex', alignItems: 'center', gap: 3, flexWrap: 'wrap', minWidth: 0 }}>
+                                                                <CodeChip code={u.batch_number} classic={CLASSIC} link style={{ cursor: 'default', maxWidth: '100%', overflow: 'hidden', textOverflow: 'ellipsis' }} />
+                                                                {/* A carton is a lot and labels itself like one: shade/combo
+                                                                    resolved from its stock key, size stamped on it at packing.
+                                                                    Renders nothing when it carries no identity. */}
+                                                                <LotChips batch={u} showOtherAttrs={false} />
+                                                            </span>
+                                                        </td>
+                                                        {/* The count that went in the box, when the order is counted
+                                                            in one. Read off the carton, not divided out of its qty. */}
+                                                        {po.uom2 ? (
+                                                            <td style={{ ...td, textAlign: 'right', color: '#555' }}>
+                                                                {u.alt_qty != null ? `${num(u.alt_qty)} ${po.uom2}` : '—'}
                                                             </td>
-                                                            <td style={{
-                                                                ...td, textAlign: 'right', fontWeight: 'bold',
-                                                                color: c.rejected ? '#900' : '#000080',
-                                                                textDecoration: c.rejected ? 'line-through' : 'none',
-                                                            }} title={c.reject_reason || undefined}>
-                                                                +{num(c.qty).toFixed(2)}
-                                                            </td>
-                                                            <td style={{ ...td, textAlign: 'right', color: '#555' }}>{c.package_count}</td>
-                                                            <td style={{ ...td, color: '#555', fontFamily: c.source_batch_number ? CODE_FONT : undefined, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: 130 }}
-                                                                title={c.source_batch_number || undefined}>
-                                                                {c.source_batch_number || '—'}
-                                                            </td>
-                                                            <td style={{ ...td, color: '#333' }}>
-                                                                {c.operator || '—'}
-                                                                {c.rejected && (
-                                                                    <span style={{ borderRadius: CHIP_RADIUS, marginLeft: 5, fontSize: 8, fontWeight: 'bold', color: '#900', border: '1px solid #c88', background: '#fff', padding: '0 3px' }}>REJECTED</span>
-                                                                )}
-                                                                {/* Partial reject: the entry stays live with its qty already
-                                                                    trimmed, so the scrapped part only shows as its own marker. */}
-                                                                {!c.rejected && num(c.qty_rejected) > 0 && (
-                                                                    <span title={c.reject_reason || 'Partially rejected'}
-                                                                        style={{ borderRadius: CHIP_RADIUS, marginLeft: 5, fontSize: 8, fontWeight: 'bold', color: '#900', border: '1px solid #c88', background: '#fff', padding: '0 3px' }}>
-                                                                        -{num(c.qty_rejected).toFixed(2)} REJ
-                                                                    </span>
-                                                                )}
-                                                            </td>
-                                                            <td style={{ ...td, padding: '1px 4px', textAlign: 'right' }}>
-                                                                {unitsOfComp(c.id).length > 0 && (
-                                                                    <button type="button" style={miniBtn}
-                                                                        onClick={() => setPrintLabels({ order: po, units: unitsOfComp(c.id) })}
-                                                                        title={`Print labels for the ${unitsOfComp(c.id).length} ${po.package_label.toLowerCase()}(s) of this entry`}>
-                                                                        Labels
-                                                                    </button>
-                                                                )}
-                                                            </td>
-                                                        </tr>
-                                                        {c.notes && (
-                                                            <tr>
-                                                                <td colSpan={6} style={{ ...td, borderTop: 'none', padding: '0 5px 3px 12px', color: '#888', fontStyle: 'italic' }}>{c.notes}</td>
-                                                            </tr>
-                                                        )}
-                                                    </React.Fragment>
+                                                        ) : null}
+                                                        {/* Which box it went into, and what the whole thing weighs —
+                                                            the two figures the delivery note carries. Both snapshotted
+                                                            on the carton at pack time, so an edited master never
+                                                            rewrites what shipped. */}
+                                                        <td style={{ ...td, overflow: 'hidden' }}>
+                                                            {u.packaging_type_name ? (
+                                                                <Chip classic={CLASSIC} size="xs" truncate title={u.packaging_type_name} style={{ maxWidth: 70 }}>
+                                                                    {u.packaging_type_name}
+                                                                </Chip>
+                                                            ) : <span style={{ color: '#bbb' }}>—</span>}
+                                                        </td>
+                                                        <td style={{ ...td, textAlign: 'right', color: '#555', whiteSpace: 'nowrap' }}
+                                                            title={u.gross_weight_kg != null
+                                                                ? `Gross ${num(u.gross_weight_kg).toFixed(2)} kg = net ${num(u.weight_kg).toFixed(2)} + tare ${num(u.tare_kg).toFixed(2)}`
+                                                                : undefined}>
+                                                            {u.gross_weight_kg != null ? `${num(u.gross_weight_kg).toFixed(2)} kg` : '—'}
+                                                        </td>
+                                                        {/* Zero on hand = the carton has left on a pick list. */}
+                                                        <td style={{ ...td, textAlign: 'right', fontWeight: 'bold', color: num(u.qty) > 0 ? '#0a3e0a' : '#999' }}>
+                                                            {num(u.qty) > 0 ? num(u.qty).toFixed(2) : 'shipped'}
+                                                        </td>
+                                                        <td style={{ ...td, padding: '1px 4px', textAlign: 'right' }}>
+                                                            <button type="button" style={miniBtn}
+                                                                onClick={() => setPrintLabels({ order: po, units: [u] })}
+                                                                title={`Print the label for ${u.batch_number}`}>
+                                                                Label
+                                                            </button>
+                                                        </td>
+                                                    </tr>
                                                 ))}
                                             </tbody>
                                         </table>
