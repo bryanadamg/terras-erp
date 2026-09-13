@@ -21,7 +21,6 @@
 // expanded panel answers "what was rejected and where did it go" in one place.
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useLanguage } from '../../context/LanguageContext';
-import { useTheme } from '../../context/ThemeContext';
 import { useTimezone } from '../../context/TimezoneContext';
 import { useData } from '../../context/DataContext';
 import { useUser } from '../../context/UserContext';
@@ -64,18 +63,16 @@ interface ReportColumn {
     align?: 'left' | 'right';
     width?: number;
     /** Cell body. `classic` lets a cell pick XP vs Bootstrap typography. */
-    render: (r: any, classic: boolean) => React.ReactNode;
+    render: (r: any) => React.ReactNode;
     /** Flat value for the CSV export. */
     csv: (r: any) => string | number;
 }
 
 export default function MachineOutputReportView() {
     const { t } = useLanguage();
-    const { uiStyle } = useTheme();
     const { formatDate: tzDate, formatTime: tzTime } = useTimezone();
     const { authFetch, workCenters = [] } = useData();
     const { hasPermission } = useUser();
-    const classic = uiStyle === 'classic';
     // Reading the report and taking it off the system are separate grants.
     const canExport = hasPermission('production_output.export');
 
@@ -231,10 +228,10 @@ export default function MachineOutputReportView() {
     const maxOutput = useMemo(() => Math.max(1, ...visibleRows.map((r: any) => r.qty_good || 0)), [visibleRows]);
 
     // ── Cell fragments shared by both themes ─────────────────────────────────
-    const twoLine = (main: React.ReactNode, sub: React.ReactNode, classicTheme: boolean) => (
+    const twoLine = (main: React.ReactNode, sub: React.ReactNode) => (
         <>
             <div style={{ fontWeight: 'bold' }}>{main}</div>
-            {sub ? <div style={{ fontSize: classicTheme ? 10 : 11, color: '#777' }}>{sub}</div> : null}
+            {sub ? <div style={{ fontSize: 10, color: '#777' }}>{sub}</div> : null}
         </>
     );
 
@@ -259,9 +256,9 @@ export default function MachineOutputReportView() {
         );
     };
 
-    const lastLogCell = (r: any, classicTheme: boolean) => (
+    const lastLogCell = (r: any) => (
         r.last_log
-            ? <><div>{tzDate(r.last_log)}</div><div style={{ fontSize: classicTheme ? 10 : 11, color: '#777' }}>{tzTime(r.last_log)}</div></>
+            ? <><div>{tzDate(r.last_log)}</div><div style={{ fontSize: 10, color: '#777' }}>{tzTime(r.last_log)}</div></>
             : <span style={{ color: '#aaa', fontSize: 10 }}>no activity</span>
     );
 
@@ -288,19 +285,18 @@ export default function MachineOutputReportView() {
         ];
         const lastLog: ReportColumn = {
             key: 'last', label: 'Last log', sortKey: 'last',
-            render: (r, c) => lastLogCell(r, c), csv: r => r.last_log || '',
+            render: r => lastLogCell(r), csv: r => r.last_log || '',
         };
 
         if (isOperator) {
             return [
                 {
                     key: 'name', label: 'Packer', sortKey: 'name',
-                    render: (r, c) => twoLine(
+                    render: r => twoLine(
                         r.operator_name,
                         // A log with no account behind it is named, not hidden: its
                         // qty is only as good as what someone typed in the box.
                         r.has_account ? (r.username || '') : 'typed name — no user account',
-                        c,
                     ),
                     csv: r => r.operator_name || '',
                 },
@@ -324,7 +320,7 @@ export default function MachineOutputReportView() {
                     // off on Tuesday is not averaged down by it.
                     key: 'perDay', label: 'Avg / day', sortKey: 'perDay', align: 'right',
                     render: r => (r.qty_per_day == null
-                        ? <Dash classic={classic} />
+                        ? <Dash classic />
                         : <><span style={{ fontWeight: 'bold' }}>{fmtQty(r.qty_per_day)}</span>
                             <span style={{ fontSize: 10, color: '#888', marginLeft: 3 }}>{uomOf(r)}</span></>),
                     csv: r => r.qty_per_day ?? '',
@@ -341,17 +337,17 @@ export default function MachineOutputReportView() {
             return [
                 {
                     key: 'name', label: 'Packing Order', sortKey: 'name',
-                    render: (r, c) => twoLine(r.po_code, [r.sales_order_code, r.customer_name].filter(Boolean).join(' · ') || 'to stock', c),
+                    render: r => twoLine(r.po_code, [r.sales_order_code, r.customer_name].filter(Boolean).join(' · ') || 'to stock'),
                     csv: r => r.po_code || '',
                 },
                 {
                     key: 'item', label: 'Item', sortKey: 'item',
-                    render: (r, c) => twoLine(r.item_code || '—', r.item_name, c),
+                    render: r => twoLine(r.item_code || '—', r.item_name),
                     csv: r => r.item_code || r.item_name || '',
                 },
                 {
                     key: 'status', label: 'Status', sortKey: 'status',
-                    render: r => (r.po_status ? <StatusChip status={r.po_status} tint /> : <Dash classic={classic} />),
+                    render: r => (r.po_status ? <StatusChip status={r.po_status} tint /> : <Dash classic />),
                     csv: r => r.po_status || '',
                 },
                 {
@@ -377,31 +373,30 @@ export default function MachineOutputReportView() {
             return [
                 {
                     key: 'name', label: 'Work Order', sortKey: 'name',
-                    render: (r, c) => twoLine(
+                    render: r => twoLine(
                         r.wo_code || '(MO-level log)',
                         [r.wo_name, r.mo_code].filter(Boolean).join(' · '),
-                        c,
                     ),
                     csv: r => r.wo_code || r.mo_code || '',
                 },
                 {
                     key: 'item', label: 'Item', sortKey: 'item',
-                    render: (r, c) => twoLine(r.item_code || '—', r.item_name, c),
+                    render: r => twoLine(r.item_code || '—', r.item_name),
                     csv: r => r.item_code || r.item_name || '',
                 },
                 {
                     key: 'machine', label: 'Machine', sortKey: 'machine',
-                    render: (r, c) => twoLine(r.work_center_name || '—', r.work_center_code, c),
+                    render: r => twoLine(r.work_center_name || '—', r.work_center_code),
                     csv: r => r.work_center_name || '',
                 },
                 {
                     key: 'status', label: 'Status', sortKey: 'status',
-                    render: r => (r.wo_status ? <StatusChip status={r.wo_status} tint /> : <Dash classic={classic} />),
+                    render: r => (r.wo_status ? <StatusChip status={r.wo_status} tint /> : <Dash classic />),
                     csv: r => r.wo_status || '',
                 },
                 {
                     key: 'target', label: 'Target', sortKey: 'target', align: 'right',
-                    render: r => (r.wo_qty != null ? fmtQty(r.wo_qty) : <Dash classic={classic} />),
+                    render: r => (r.wo_qty != null ? fmtQty(r.wo_qty) : <Dash classic />),
                     csv: r => r.wo_qty ?? '',
                 },
                 ...shared,
@@ -412,12 +407,11 @@ export default function MachineOutputReportView() {
         return [
             {
                 key: 'name', label: isGroupMode ? 'Group' : 'Machine', sortKey: 'name',
-                render: (r, c) => twoLine(
+                render: r => twoLine(
                     r.work_center_name,
                     `${r.work_center_code || ''}${isGroupMode
                         ? ` · ${r.machine_count || 0} machines`
                         : (r.group_name ? ` · ${r.group_name}` : (r.type_name ? ` · ${r.type_name}` : ''))}`,
-                    c,
                 ),
                 csv: r => r.work_center_name || '',
             },
@@ -425,7 +419,7 @@ export default function MachineOutputReportView() {
                 key: 'type', label: 'Type',
                 render: r => (r.center_type
                     ? <WorkCenterChip type={r.center_type} name={r.work_center_name} />
-                    : <Dash classic={classic} />),
+                    : <Dash classic />),
                 csv: r => r.center_type || '',
             },
             {
@@ -443,7 +437,7 @@ export default function MachineOutputReportView() {
             },
             lastLog,
         ];
-    }, [isOperator, isPacking, isWoMode, isGroupMode, maxOutput, classic, tzDate, tzTime]);
+    }, [isOperator, isPacking, isWoMode, isGroupMode, maxOutput, true, tzDate, tzTime]);
 
     const exportCsv = () => {
         const head = columns.filter(c => c.key !== 'share').map(c => c.label);
@@ -461,19 +455,19 @@ export default function MachineOutputReportView() {
 
     // ── Expanded detail (shared by both themes) ──────────────────────────────
     const detailPanel = (r: any) => {
-        const dth = lvSubTh(classic);
-        const dtd = lvSubTd(classic);
+        const dth = lvSubTh(true);
+        const dtd = lvSubTd(true);
         const block = (title: string, body: React.ReactNode) => (
             <div style={{ flex: 1, minWidth: 280 }}>
-                <div style={lvSubCaption(classic)}>{title}</div>
-                <div style={{ background: '#fff', border: classic ? '1px solid #a8a292' : '1px solid #dee2e6', maxHeight: 220, overflowY: 'auto' }}>
+                <div style={lvSubCaption(true)}>{title}</div>
+                <div style={{ background: '#fff', border: '1px solid #a8a292', maxHeight: 220, overflowY: 'auto' }}>
                     {body}
                 </div>
             </div>
         );
 
         const itemsTable = (
-            <table style={{ ...lvSubTable(classic), border: 'none' }}>
+            <table style={{ ...lvSubTable(true), border: 'none' }}>
                 <thead><tr>
                     <th style={dth}>Item</th>
                     <th style={{ ...dth, textAlign: 'right' }}>Output</th>
@@ -501,7 +495,7 @@ export default function MachineOutputReportView() {
         );
 
         const wosTable = (
-            <table style={{ ...lvSubTable(classic), border: 'none' }}>
+            <table style={{ ...lvSubTable(true), border: 'none' }}>
                 <thead><tr>
                     <th style={dth}>Work Order</th>
                     <th style={dth}>Item</th>
@@ -534,7 +528,7 @@ export default function MachineOutputReportView() {
         );
 
         const machinesTable = (
-            <table style={{ ...lvSubTable(classic), border: 'none' }}>
+            <table style={{ ...lvSubTable(true), border: 'none' }}>
                 <thead><tr>
                     <th style={dth}>Machine</th>
                     <th style={{ ...dth, textAlign: 'right' }}>Output</th>
@@ -567,7 +561,7 @@ export default function MachineOutputReportView() {
 
         // The payroll grain: what this packer put out on each day of the window.
         const daysTable = (
-            <table style={{ ...lvSubTable(classic), border: 'none' }}>
+            <table style={{ ...lvSubTable(true), border: 'none' }}>
                 <thead><tr>
                     <th style={dth}>Day</th>
                     <th style={{ ...dth, textAlign: 'right' }}>Output</th>
@@ -597,7 +591,7 @@ export default function MachineOutputReportView() {
         );
 
         const ordersTable = (
-            <table style={{ ...lvSubTable(classic), border: 'none' }}>
+            <table style={{ ...lvSubTable(true), border: 'none' }}>
                 <thead><tr>
                     <th style={dth}>Packing Order</th>
                     <th style={dth}>Item</th>
@@ -632,7 +626,7 @@ export default function MachineOutputReportView() {
         );
 
         const rejectsTable = (
-            <table style={{ ...lvSubTable(classic), border: 'none' }}>
+            <table style={{ ...lvSubTable(true), border: 'none' }}>
                 <thead><tr>
                     <th style={dth}>When</th>
                     {!isWoMode && !isPackingSource && <th style={dth}>Work Order</th>}
@@ -658,7 +652,7 @@ export default function MachineOutputReportView() {
                                     <div style={{ fontSize: 9, color: '#777' }}>{rj.mo_code}</div>
                                 </td>
                             )}
-                            {isOperator && <td style={dtd}>{rj.po_code || <Dash classic={classic} />}</td>}
+                            {isOperator && <td style={dtd}>{rj.po_code || <Dash classic />}</td>}
                             <td style={dtd}>
                                 {isPackingSource
                                     ? <span style={{ color: '#777' }}>{rj.cartons_rejected || 0} carton(s)</span>
@@ -687,7 +681,7 @@ export default function MachineOutputReportView() {
         );
 
         return (
-            <ExpandedRowPanel classic={classic} style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+            <ExpandedRowPanel classic style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
                 {isOperator && block(`By day (${(r.days || []).length})`, daysTable)}
                 {isOperator && block('By item', itemsTable)}
                 {isOperator && block(`Packing orders (${(r.orders || []).length})`, ordersTable)}
@@ -772,13 +766,10 @@ export default function MachineOutputReportView() {
     const lbl: React.CSSProperties = { fontFamily: xpFont, fontSize: '11px', color: '#444' };
 
     return (
-        <div className={classic ? 'fade-in' : 'card fade-in border-0 shadow-sm shell-window'} style={pageFillStyle}>
-            <div style={classic
-                ? sharedXpBevel(flexFillStyle)
-                : { display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0 }}
+        <div className={'fade-in'} style={pageFillStyle}>
+            <div style={sharedXpBevel(flexFillStyle)}
             >
-                {classic ? (
-                    <>
+                <>
                         <div style={sharedXpTitleBar()}>
                             <span><i className="bi bi-clipboard-data" style={{ marginRight: 6 }} />Production Output &amp; QC Reject</span>
                             <span style={{ fontSize: '10px', opacity: 0.85 }}>{periodLabel}</span>
@@ -834,78 +825,13 @@ export default function MachineOutputReportView() {
                             )}
                         </div>
                     </>
-                ) : (
-                    <div className="card-header bg-white border-bottom py-3">
-                        <div className="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
-                            <div>
-                                <h5 className="card-title mb-0">Production Output &amp; QC Reject</h5>
-                                <small className="text-muted">
-                                    {isOperator ? 'Packing output per packer' : isPacking ? 'Packing output per order' : isWoMode ? 'Output per work order' : 'Work order output per machine'} · {periodLabel}
-                                </small>
-                            </div>
-                            <div className="d-flex gap-1">
-                                <button className="btn btn-outline-secondary btn-sm" onClick={fetchReport} title="Refresh"><i className="bi bi-arrow-clockwise" /></button>
-                                {canExport && (
-                                    <button className="btn btn-outline-primary btn-sm" onClick={exportCsv} disabled={!sorted.length}><i className="bi bi-filetype-csv me-1" />CSV</button>
-                                )}
-                            </div>
-                        </div>
-                        <div className="row g-2 align-items-center">
-                            <div className="col-md-3">
-                                <TreeSelect
-                                    options={wcTreeOptions}
-                                    value={scope}
-                                    onChange={setScope}
-                                    allowEmpty
-                                    emptyLabel="All Work Centres"
-                                    size="sm"
-                                    disabled={isPackingSource}
-                                />
-                            </div>
-                            <div className="col-md-5">
-                                <FilterChipBar
-                                    classic={false}
-                                    options={modeTabs}
-                                    value={mode}
-                                    onChange={v => setMode(v as Mode)}
-                                    style={{ width: '100%' }}
-                                />
-                            </div>
-                            <div className="col-md-4 d-flex flex-wrap gap-3">
-                                {isWoMode && (
-                                    <div className="form-check form-switch">
-                                        <input className="form-check-input" type="checkbox" id="completedOnlySwitch" checked={completedOnly} onChange={e => setCompletedOnly(e.target.checked)} />
-                                        <label className="form-check-label small" htmlFor="completedOnlySwitch">Completed WOs only</label>
-                                    </div>
-                                )}
-                                {isMachineLevel && (
-                                    <div className="form-check form-switch">
-                                        <input className="form-check-input" type="checkbox" id="hideIdleSwitch" checked={hideIdle} onChange={e => setHideIdle(e.target.checked)} />
-                                        <label className="form-check-label small" htmlFor="hideIdleSwitch">Hide machines with no output</label>
-                                    </div>
-                                )}
-                                <div className="form-check form-switch">
-                                    <input className="form-check-input" type="checkbox" id="rejectsOnlySwitch" checked={rejectsOnly} onChange={e => setRejectsOnly(e.target.checked)} />
-                                    <label className="form-check-label small" htmlFor="rejectsOnlySwitch">With rejects only</label>
-                                </div>
-                            </div>
-                        </div>
-                        <div className="d-flex flex-wrap align-items-center gap-1 mt-2">
-                            <input type="date" className="form-control form-control-sm" style={{ width: 150 }} value={startDate} onChange={e => setStartDate(e.target.value)} />
-                            <input type="date" className="form-control form-control-sm me-1" style={{ width: 150 }} value={endDate} onChange={e => setEndDate(e.target.value)} />
-                            <SegmentedBar classic={false} actions={presetActions} />
-                            <span className="text-muted small ms-auto">{sorted.length} rows</span>
-                        </div>
-                    </div>
-                )}
 
                 {/* Summary strip — one map, per-tile markup differs by theme */}
                 <div
-                    className={classic ? undefined : 'row g-0 border-bottom text-center'}
-                    style={classic ? { display: 'flex', gap: 5, padding: '3px 6px', background: '#ece9d8', borderBottom: '1px solid #b0a898' } : undefined}
+                    className={undefined}
+                    style={{ display: 'flex', gap: 5, padding: '3px 6px', background: '#ece9d8', borderBottom: '1px solid #b0a898' }}
                 >
-                    {statTiles.map((s, i) => classic ? (
-                        <div key={s.label} style={{
+                    {statTiles.map((s, i) => <div key={s.label} style={{
                             flex: 1, minWidth: 96, background: '#ffffff',
                             border: '1px solid', borderColor: '#808080 #ffffff #ffffff #808080',
                             padding: '1px 8px', fontFamily: xpFont,
@@ -913,51 +839,34 @@ export default function MachineOutputReportView() {
                         }}>
                             <span style={{ fontSize: 9, color: '#777', textTransform: 'uppercase', letterSpacing: '0.5px' }}>{s.label}</span>
                             <span style={{ fontSize: 12, fontWeight: 'bold', color: s.color, marginLeft: 'auto' }}>{s.value}</span>
-                        </div>
-                    ) : (
-                        <div key={s.label} className={`col py-1 d-flex align-items-baseline justify-content-center gap-2 ${i > 0 ? 'border-start' : ''}`}>
-                            <span className="text-muted text-uppercase" style={{ fontSize: 10, letterSpacing: '0.5px' }}>{s.label}</span>
-                            <span className={`fw-bold ${s.cls}`}>{s.value}</span>
-                        </div>
-                    ))}
+                        </div>)}
                 </div>
 
                 <div
-                    className={classic ? undefined : 'card-body p-0'}
-                    style={classic
-                        ? { flex: 1, overflowY: 'auto', background: '#fff', minHeight: 0 }
-                        : { flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}
+                    className={undefined}
+                    style={{ flex: 1, overflowY: 'auto', background: '#fff', minHeight: 0 }}
                 >
                     {/* +1 for the leading expander column the real table renders. */}
-                    {loading ? <TableBlockSkeleton cols={columns.length + 1} rows={14} classic={classic} />
+                    {loading ? <TableBlockSkeleton cols={columns.length + 1} rows={14} classic />
                     : error ? (
-                        classic
-                            ? <XPEmptyState icon="bi-exclamation-triangle" message={`Could not load report — ${error}`} />
-                            : <div className="text-center py-5 text-danger"><i className="bi bi-exclamation-triangle me-2" />Could not load report — {error}</div>
-                    )
+                        <XPEmptyState icon="bi-exclamation-triangle" message={`Could not load report — ${error}`} />)
                     : sorted.length === 0 ? (
-                        classic
-                            ? <XPEmptyState icon={emptyIcon} message={emptyMessage} />
-                            : <div className="text-center py-5 text-muted"><i className={`bi ${emptyIcon} d-block fs-2 mb-2 opacity-50`} />{emptyMessage}</div>
-                    )
+                        <XPEmptyState icon={emptyIcon} message={emptyMessage} />)
                     : (
-                        <div className={classic ? undefined : 'table-responsive'} style={classic ? undefined : { flex: 1, overflowY: 'auto', minHeight: 0 }}>
-                            <table className={classic ? undefined : 'table table-hover align-middle mb-0'} style={classic ? { width: '100%', borderCollapse: 'collapse' } : undefined}>
-                                <thead className={classic ? undefined : 'table-light'} style={classic ? undefined : { position: 'sticky', top: 0, zIndex: 1 }}>
+                        <div className={undefined} style={undefined}>
+                            <table className={undefined} style={{ width: '100%', borderCollapse: 'collapse' }}>
+                                <thead className={undefined} style={undefined}>
                                     <tr>
-                                        <th style={classic ? { ...th, width: 22 } : { width: 28 }} />
+                                        <th style={{ ...th, width: 22 }} />
                                         {columns.map((c, ci) => (
                                             <SortableTh
                                                 key={c.key}
                                                 sort={sort} colKey={c.sortKey || null} onSort={toggle}
-                                                className={!classic && c.align === 'right' ? 'text-end' : undefined}
-                                                style={classic ? {
+                                                style={{
                                                     ...th,
                                                     ...(c.align === 'right' ? { textAlign: 'right' } : {}),
                                                     ...(c.width ? { width: c.width } : {}),
                                                     ...(ci === columns.length - 1 ? { borderRight: 'none' } : {}),
-                                                } : {
-                                                    ...(c.width ? { width: c.width + 10 } : {}),
                                                 }}
                                             >
                                                 {c.label}
@@ -972,32 +881,29 @@ export default function MachineOutputReportView() {
                                         return (
                                             <React.Fragment key={key}>
                                             <tr
-                                                style={classic
-                                                    ? { background: open ? rowStateBg('expanded', true) : lvZebra(true, i), borderBottom: '1px solid #e0ddd3', cursor: 'pointer' }
-                                                    : { background: open ? rowStateBg('expanded', false) : undefined, cursor: 'pointer' }}
+                                                style={{ background: open ? rowStateBg('expanded', true) : lvZebra(true, i), borderBottom: '1px solid #e0ddd3', cursor: 'pointer' }}
                                                 onClick={() => setExpanded(open ? null : key)}
                                             >
-                                                <ExpanderCell classic={classic} expanded={open} onToggle={() => setExpanded(open ? null : key)} tdStyle={classic ? td : undefined} label="machine detail" />
+                                                <ExpanderCell classic expanded={open} onToggle={() => setExpanded(open ? null : key)} tdStyle={td} label="machine detail" />
                                                 {columns.map((c, ci) => (
                                                     <td
                                                         key={c.key}
-                                                        className={!classic && c.align === 'right' ? 'text-end' : undefined}
-                                                        style={classic ? {
+                                                        style={{
                                                             ...td,
                                                             ...(c.align === 'right' ? { textAlign: 'right' } : {}),
                                                             ...(ci === columns.length - 1 ? { borderRight: 'none', whiteSpace: 'nowrap' } : {}),
-                                                        } : (ci === columns.length - 1 ? { whiteSpace: 'nowrap' } : undefined)}
+                                                        }}
                                                     >
-                                                        {c.render(r, classic)}
+                                                        {c.render(r)}
                                                     </td>
                                                 ))}
                                             </tr>
                                             {open && (
-                                                <tr style={classic ? { background: '#ece9d8' } : undefined}>
+                                                <tr style={{ background: '#ece9d8' }}>
                                                     <td
                                                         colSpan={columns.length + 1}
-                                                        className={classic ? undefined : 'p-2 bg-body-tertiary'}
-                                                        style={classic ? { padding: 6 } : undefined}
+                                                        className={undefined}
+                                                        style={{ padding: 6 }}
                                                     >
                                                         {detailPanel(r)}
                                                     </td>
