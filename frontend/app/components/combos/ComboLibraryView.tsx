@@ -1,13 +1,12 @@
 'use client';
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { useConfirm } from '../../context/ConfirmContext';
-import { useTheme } from '../../context/ThemeContext';
 import { useUser } from '../../context/UserContext';
 import ModalWrapper from '../shared/ModalWrapper';
 import { StatusChip, CodeChip, SwatchBox, CODE_FONT, TableSkeleton, useTableSkeletonMetrics, XP_BTN, useFloatingMenu, MenuTriggerButton, FloatingMenu } from '../shared/xpTheme';
 import { SearchField, FilterChipBar, ToolbarCount, ToolbarButton, viewShellStyle, PageTitleBar } from '../shared/shellTheme';
 import {
-    LV_XP_FONT, LV_MODERN_FONT, lvInput, lvBtn, lvPrimaryBtn, lvLabel, lvTh, lvTd, lvSep, lvRow, lvThead, TableEmpty,
+    LV_XP_FONT, lvInput, lvBtn, lvPrimaryBtn, lvLabel, lvTh, lvTd, lvSep, lvRow, lvThead, TableEmpty,
 } from '../shared/listViewTheme';
 import { ColorFamilyKey, COLOR_FAMILY_META, colorBandsFor, colorFamiliesIn, colorFamilyMembershipCounts } from '../shared/colorFamilies';
 
@@ -47,8 +46,6 @@ export default function ComboLibraryView({
     onSearchChange, onStatusChange, onCreate, onEdit, onDelete, embedded,
 }: Props) {
     const { confirm } = useConfirm();
-    const { uiStyle } = useTheme();
-    const classic = uiStyle === 'classic';
     const { hasPermission, hasAnyPermission } = useUser();
     const canManage = hasAnyPermission('combo_library.create', 'combo_library.edit', 'combo_library.delete');
 
@@ -171,29 +168,27 @@ export default function ComboLibraryView({
 
     return (
         <div style={embedded
-            ? { display: 'flex', flexDirection: 'column', height: '100%', minHeight: 0, fontFamily: classic ? LV_XP_FONT : LV_MODERN_FONT, background: '#fff' }
-            : viewShellStyle(classic, 'page', { fontFamily: classic ? LV_XP_FONT : LV_MODERN_FONT })}>
+            ? { display: 'flex', flexDirection: 'column', height: '100%', minHeight: 0, fontFamily: LV_XP_FONT, background: '#fff' }
+            : viewShellStyle(true, 'page', { fontFamily: LV_XP_FONT })}>
 
             {/* Title bar (hidden when embedded under a tab shell) */}
             {!embedded && (
-            <PageTitleBar classic={classic} icon="bi-grid-3x3-gap" title="Combo Library" />
+            <PageTitleBar classic icon="bi-grid-3x3-gap" title="Combo Library" />
             )}
 
             {/* Toolbar */}
-            <div style={classic
-                ? { background: 'linear-gradient(to bottom, #f5f4ef, #e0dfd8)', borderBottom: '1px solid #b0a898', padding: '4px 8px', display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap', flexShrink: 0 }
-                : { background: '#fff', borderBottom: '1px solid #dbe1ea', padding: '8px 10px', display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap', flexShrink: 0 }}>
-                <SearchField classic={classic} value={searchInput} onChange={setSearchInput} placeholder="Search code, name, description…" width={260} />
-                <span style={lvSep(classic)} />
+            <div style={{ background: 'linear-gradient(to bottom, #f5f4ef, #e0dfd8)', borderBottom: '1px solid #b0a898', padding: '4px 8px', display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap', flexShrink: 0 }}>
+                <SearchField classic value={searchInput} onChange={setSearchInput} placeholder="Search code, name, description…" width={260} />
+                <span style={lvSep(true)} />
                 <FilterChipBar
-                    classic={classic}
+                    classic
                     options={STATUS_FILTERS.map(s => ({ value: s, label: s === 'ALL' ? 'All' : s }))}
                     value={statusFilter}
                     onChange={onStatusChange}
                 />
-                <span style={lvSep(classic)} />
+                <span style={lvSep(true)} />
                 <FilterChipBar
-                    classic={classic}
+                    classic
                     value={view}
                     onChange={v => setView(v as ViewMode)}
                     options={[
@@ -203,26 +198,24 @@ export default function ComboLibraryView({
                         { value: 'grid', label: <><i className="bi bi-grid-3x3-gap-fill" style={{ marginRight: 4 }} />Swatches</>, title: 'Swatch grid' },
                     ]}
                 />
-                <ToolbarCount classic={classic} right>
+                <ToolbarCount classic right>
                     {filtered.length === total
                         ? `${total.toLocaleString()} combo${total !== 1 ? 's' : ''}`
                         : `${filtered.length.toLocaleString()} of ${total.toLocaleString()} combos`}
                 </ToolbarCount>
                 {canManage && (
                     <>
-                        <span style={lvSep(classic)} />
-                        <ToolbarButton classic={classic} tone="create" icon="bi-plus-lg" onClick={openCreate}>New Combo</ToolbarButton>
+                        <span style={lvSep(true)} />
+                        <ToolbarButton classic tone="create" icon="bi-plus-lg" onClick={openCreate}>New Combo</ToolbarButton>
                     </>
                 )}
             </div>
 
             {/* Colour-family chips, parsed from the combo names */}
             {familyCounts.length > 0 && (
-                <div style={classic
-                    ? { background: 'linear-gradient(to bottom, #f5f4ef, #e0dfd8)', borderBottom: '1px solid #b0a898', padding: '4px 8px', display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap', flexShrink: 0 }
-                    : { background: '#fff', borderBottom: '1px solid #dbe1ea', padding: '6px 10px', display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap', flexShrink: 0 }}>
+                <div style={{ background: 'linear-gradient(to bottom, #f5f4ef, #e0dfd8)', borderBottom: '1px solid #b0a898', padding: '4px 8px', display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap', flexShrink: 0 }}>
                     <FilterChipBar
-                        classic={classic}
+                        classic
                         flat
                         value={family}
                         onChange={v => setFamily(v as ColorFamilyKey | 'ALL')}
@@ -236,7 +229,7 @@ export default function ComboLibraryView({
             <div style={{ flex: 1, minHeight: 0, background: '#fff', overflow: 'auto' }}>
                 {view === 'grid' ? (
                     filtered.length === 0 ? (
-                        <div style={{ padding: 24, textAlign: 'center', fontSize: classic ? 11 : 13, color: classic ? '#666' : '#94a3b8' }}>
+                        <div style={{ padding: 24, textAlign: 'center', fontSize: 11, color: '#666' }}>
                             {loading ? 'Loading…' : emptyMessage}
                         </div>
                     ) : (
@@ -245,32 +238,30 @@ export default function ComboLibraryView({
                             gap: 8, padding: 10, alignContent: 'start',
                         }}>
                             {filtered.map((c: any) => (
-                                <div key={c.id} style={classic
-                                    ? { border: '1px solid #b0a898', background: '#fff' }
-                                    : { border: '1px solid #e2e8f0', borderRadius: 6, background: '#fff', overflow: 'hidden' }}>
+                                <div key={c.id} style={{ border: '1px solid #b0a898', background: '#fff' }}>
                                     <SwatchBox
                                         bands={colorBandsFor(c.code)}
-                                        classic={classic}
+                                        classic
                                         title={bandTitle(c.code)}
                                         style={{ display: 'block', width: '100%', height: 48, borderRadius: 0, borderWidth: '0 0 1px 0' }}
                                     />
                                     <div style={{ padding: '4px 6px 3px' }}>
                                         <div title={codeTitle(c) ?? c.code} style={{
-                                            fontFamily: CODE_FONT, fontSize: classic ? 10.5 : 11.5, fontWeight: 600,
-                                            color: classic ? '#000' : '#1e293b', lineHeight: 1.3,
+                                            fontFamily: CODE_FONT, fontSize: 10.5, fontWeight: 600,
+                                            color: '#000', lineHeight: 1.3,
                                             display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden',
-                                            minHeight: classic ? 27 : 30,
+                                            minHeight: 27,
                                         }}>{c.code}</div>
                                         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 4, marginTop: 2 }}>
                                             <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
                                                 <StatusChip status={c.status} tint />
                                                 {c.usage_count > 0 && (
-                                                    <span title={`Used by ${c.usage_count} record(s)`} style={{ fontSize: classic ? 9.5 : 10, color: classic ? '#555' : '#64748b' }}>
+                                                    <span title={`Used by ${c.usage_count} record(s)`} style={{ fontSize: 9.5, color: '#555' }}>
                                                         &times;{c.usage_count}
                                                     </span>
                                                 )}
                                             </span>
-                                            {canManage && <MenuTriggerButton classic={classic} onClick={e => menuToggle(c.id, e)} />}
+                                            {canManage && <MenuTriggerButton classic onClick={e => menuToggle(c.id, e)} />}
                                         </div>
                                     </div>
                                 </div>
@@ -279,33 +270,33 @@ export default function ComboLibraryView({
                     )
                 ) : (
                 <table style={{ width: '100%', borderCollapse: 'collapse', background: '#fff' }}>
-                    <thead style={lvThead(classic, true)}>
+                    <thead style={lvThead(true, true)}>
                         <tr>
-                            <th style={{ ...lvTh(classic), width: 70 }}>Colors</th>
-                            <th style={lvTh(classic)}>Code</th>
-                            <th style={{ ...lvTh(classic), width: 60, textAlign: 'center' }}>Usage</th>
-                            <th style={{ ...lvTh(classic), width: 80 }}>Status</th>
-                            <th style={{ ...lvTh(classic), width: 120, textAlign: 'right', borderRight: 'none' }}>Actions</th>
+                            <th style={{ ...lvTh(true), width: 70 }}>Colors</th>
+                            <th style={lvTh(true)}>Code</th>
+                            <th style={{ ...lvTh(true), width: 60, textAlign: 'center' }}>Usage</th>
+                            <th style={{ ...lvTh(true), width: 80 }}>Status</th>
+                            <th style={{ ...lvTh(true), width: 120, textAlign: 'right', borderRight: 'none' }}>Actions</th>
                         </tr>
                     </thead>
                     <tbody ref={listBodyRef}>
                         {filtered.length === 0 && (loading ? (
-                            <TableSkeleton rows={8} cols={skel.cols ?? 5} classic={classic} tdStyle={lvTd(classic)} rowHeight={skel.rowHeight} fillHeight={skel.fillHeight} />
+                            <TableSkeleton rows={8} cols={skel.cols ?? 5} classic tdStyle={lvTd(true)} rowHeight={skel.rowHeight} fillHeight={skel.fillHeight} />
                         ) : (
-                            <TableEmpty colSpan={5} classic={classic} tdStyle={lvTd(classic)} message={emptyMessage} />
+                            <TableEmpty colSpan={5} classic tdStyle={lvTd(true)} message={emptyMessage} />
                         ))}
                         {filtered.map((c: any, idx: number) => (
-                            <tr key={c.id} style={lvRow(classic, idx)}>
-                                <td style={lvTd(classic)}>
-                                    <SwatchBox bands={colorBandsFor(c.code)} classic={classic} title={bandTitle(c.code)} style={{ width: 44 }} />
+                            <tr key={c.id} style={lvRow(true, idx)}>
+                                <td style={lvTd(true)}>
+                                    <SwatchBox bands={colorBandsFor(c.code)} classic title={bandTitle(c.code)} style={{ width: 44 }} />
                                 </td>
-                                <td style={lvTd(classic)}>
-                                    <CodeChip code={c.code} classic={classic} tone="accent" title={codeTitle(c)} />
+                                <td style={lvTd(true)}>
+                                    <CodeChip code={c.code} classic tone="accent" title={codeTitle(c)} />
                                 </td>
-                                <td style={{ ...lvTd(classic), textAlign: 'center' }}>{c.usage_count || 0}</td>
-                                <td style={lvTd(classic)}><StatusChip status={c.status} /></td>
-                                <td style={{ ...lvTd(classic), borderRight: 'none', textAlign: 'right' }}>
-                                    {canManage && <MenuTriggerButton classic={classic} onClick={e => menuToggle(c.id, e)} />}
+                                <td style={{ ...lvTd(true), textAlign: 'center' }}>{c.usage_count || 0}</td>
+                                <td style={lvTd(true)}><StatusChip status={c.status} /></td>
+                                <td style={{ ...lvTd(true), borderRight: 'none', textAlign: 'right' }}>
+                                    {canManage && <MenuTriggerButton classic onClick={e => menuToggle(c.id, e)} />}
                                 </td>
                             </tr>
                         ))}
@@ -343,8 +334,8 @@ export default function ComboLibraryView({
                 modeless
                 footer={
                     <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
-                        <button type="button" className={XP_BTN} style={lvBtn(classic)} onClick={() => setIsModalOpen(false)}>Cancel</button>
-                        <button type="submit" form="combo-form" className={XP_BTN} style={lvPrimaryBtn(classic)}>
+                        <button type="button" className={XP_BTN} style={lvBtn(true)} onClick={() => setIsModalOpen(false)}>Cancel</button>
+                        <button type="submit" form="combo-form" className={XP_BTN} style={lvPrimaryBtn(true)}>
                             {editing ? 'Save' : 'Create'}
                         </button>
                     </div>
@@ -353,21 +344,21 @@ export default function ComboLibraryView({
                 <form id="combo-form" onSubmit={handleSubmit}>
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
                         <div>
-                            <label style={lvLabel(classic)}>Code *</label>
-                            <input value={form.code} onChange={e => setForm({ ...form, code: e.target.value })} style={lvInput(classic)} required />
+                            <label style={lvLabel(true)}>Code *</label>
+                            <input value={form.code} onChange={e => setForm({ ...form, code: e.target.value })} style={lvInput(true)} required />
                         </div>
                         <div>
-                            <label style={lvLabel(classic)}>Name *</label>
-                            <input value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} style={lvInput(classic)} required />
+                            <label style={lvLabel(true)}>Name *</label>
+                            <input value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} style={lvInput(true)} required />
                         </div>
                         <div style={{ gridColumn: '1 / -1' }}>
-                            <label style={lvLabel(classic)}>Description</label>
-                            <textarea value={form.description} onChange={e => setForm({ ...form, description: e.target.value })} rows={3} placeholder="Weave / yarn-color pattern notes…" style={{ ...lvInput(classic), height: 'auto', resize: 'vertical' }} />
+                            <label style={lvLabel(true)}>Description</label>
+                            <textarea value={form.description} onChange={e => setForm({ ...form, description: e.target.value })} rows={3} placeholder="Weave / yarn-color pattern notes…" style={{ ...lvInput(true), height: 'auto', resize: 'vertical' }} />
                         </div>
                         {editing && (
                             <div>
-                                <label style={lvLabel(classic)}>Status</label>
-                                <select value={form.status} onChange={e => setForm({ ...form, status: e.target.value })} style={lvInput(classic)}>
+                                <label style={lvLabel(true)}>Status</label>
+                                <select value={form.status} onChange={e => setForm({ ...form, status: e.target.value })} style={lvInput(true)}>
                                     <option value="active">active</option>
                                     <option value="archived">archived</option>
                                 </select>
