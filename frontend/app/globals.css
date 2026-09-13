@@ -202,17 +202,6 @@ body {
   height: 34px !important;
   color: #475569;
 }
-/* Logout — refined danger, matched shape + height */
-.ui-style-modern .app-header .btn-outline-danger {
-  background: #fff !important;
-  border: 1px solid #f0c2c2 !important;
-  color: #dc2626 !important;
-}
-.ui-style-modern .app-header .btn-outline-danger:hover {
-  background: #fef2f2 !important;
-  border-color: #e89393 !important;
-  color: #b91c1c !important;
-}
 
 /* Outer shell of a page/table view in the modern theme — the counterpart of the
    classic `xpBevel`, kept at PANEL_RADIUS (xpTheme.tsx) so a view frame reads the
@@ -512,21 +501,13 @@ body.window-chrome-inactive {
   box-shadow: inset 1px 1px 2px rgba(0,0,0,0.2) !important;
 }
 
-.classic-header .btn-outline-danger {
-  background: #ff4d4d !important;
-  color: white !important;
-  border: 1px solid #800000 !important;
-  border-radius: 3px !important;
-  height: 22px !important;
-  padding: 0 8px !important;
-  font-size: 10px !important;
-}
-
-.classic-header .btn-outline-danger:hover {
-  background: #cc0000 !important;
-  color: white !important;
-  border-color: #800000 !important;
-}
+/* The header's logout control is terras-ui's `LogoutButton` (MainLayout.tsx),
+   which carries this face inline — flat #ff4d4d over one #800000 border, 22px
+   against the 10px caps label, hover #cc0000 — off its own --terras-logout-*
+   tokens. The `.classic-header .btn-outline-danger` rules that painted it here,
+   and the `.ui-style-modern .app-header` pair that gave it a white outline face
+   in the other theme, both went with it: the control is flat chrome in the title
+   band whichever theme the app is wearing. */
 
 .classic-header .form-select-sm {
   background-color: white !important;

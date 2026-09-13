@@ -15,6 +15,7 @@ import { routeTitle, PREFETCH_ROUTES, ROUTE_PERMISSIONS } from './navConfig';
 import { useDocumentTitle } from '../../hooks/useDocumentTitle';
 import AccessDenied from './AccessDenied';
 import LiveFeedIndicator from './LiveFeedIndicator';
+import LogoutButton from '@bryanadamg/terras-ui/components/LogoutButton';
 
 export default function MainLayout({ children }: { children: React.ReactNode }) {
     const { currentUser, logout, loading, hasPermission, hasAnyPermission } = useUser();
@@ -147,10 +148,15 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
                             </select>
                         </div>
 
-                        <button data-testid="logout-btn" className={`btn btn-sm btn-outline-danger d-flex align-items-center gap-2`} onClick={logout} title="Terminate Session">
-                            <i className="bi bi-box-arrow-right"></i>
-                            <span className="small fw-bold d-none d-sm-inline">LOGOUT</span>
-                        </button>
+                        {/* terras-ui's own control: it carries the flat red face this
+                            header used to paint from globals.css, and defaults both
+                            `title` and `data-testid` so the three Terras apps can't
+                            word them differently. The icon is a slot and the label is
+                            children, so the narrow-header collapse stays a Bootstrap
+                            class here rather than moving into the package. */}
+                        <LogoutButton onClick={logout} icon={<i className="bi bi-box-arrow-right"></i>}>
+                            <span className="d-none d-sm-inline">LOGOUT</span>
+                        </LogoutButton>
                     </div>
                 </div>
 
