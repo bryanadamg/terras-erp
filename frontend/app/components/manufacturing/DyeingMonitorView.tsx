@@ -115,7 +115,6 @@ export default function DyeingMonitorView() {
             colorName={run.color_name}
             colorHex={run.color_hex}
             labdipCode={run.labdip_variant_code}
-            classic
             scale="sm"
             style={{ flexWrap: 'wrap', gap: 3 }}
         />

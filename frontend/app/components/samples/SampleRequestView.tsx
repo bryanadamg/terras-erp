@@ -1426,7 +1426,6 @@ export default function SampleRequestView({ samples, customers, onCreateSample, 
                                                    above the cell's inset shadow and would otherwise cover it */}
                                                <div style={{ position: 'absolute', top: 0, right: 0, bottom: 0, left: 4}}>
                                                    <RequestDetailPanel
-                                                       classic
                                                        leftTitle={<><i className="bi bi-palette" style={{ marginRight: 2 }} />Colors — {colors.length} total · {colors.filter((c: any) => c.status === 'APPROVED').length} approved</>}
                                                        leftWidth="56%"
                                                        columns={columns}

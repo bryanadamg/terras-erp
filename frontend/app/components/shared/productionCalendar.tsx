@@ -61,8 +61,7 @@ export function useNationalHolidays(
 }
 
 /** Working-weekday picker + its hint, in the standard section chrome. */
-export function WorkingDaysSection({ classic, weekdays, onToggleWeekday, canEdit, onSave }: {
-    classic: boolean;
+export function WorkingDaysSection({ weekdays, onToggleWeekday, canEdit, onSave }: {
     weekdays: number[];
     onToggleWeekday: (day: number) => void;
     canEdit: boolean;
@@ -91,8 +90,7 @@ export function WorkingDaysSection({ classic, weekdays, onToggleWeekday, canEdit
 }
 
 /** Month navigation strip (prev / label / next / today). */
-function MonthNav({ classic, month, onMonthChange }: {
-    classic: boolean;
+function MonthNav({ month, onMonthChange }: {
     month: Date;
     onMonthChange: (d: Date) => void;
 }) {
@@ -116,8 +114,7 @@ function MonthNav({ classic, month, onMonthChange }: {
  * `onToggleDay` — the caller decides whether that means an API call or a local
  * edit. Purely controlled: no fetching, no state beyond what is passed in.
  */
-export function HolidayMonthGrid({ classic, month, weekdays, holidays, national, onToggleDay, canEdit }: {
-    classic: boolean;
+export function HolidayMonthGrid({ month, weekdays, holidays, national, onToggleDay, canEdit }: {
     month: Date;
     weekdays: number[];
     holidays: CalendarHoliday[];
@@ -186,7 +183,7 @@ export function HolidayMonthGrid({ classic, month, weekdays, holidays, national,
 }
 
 /** Color key for the grid — kept next to the grid it explains. */
-function CalendarLegend({ classic }: { classic: boolean }) {
+function CalendarLegend() {
     const { t } = useLanguage();
     const swatches: [string, string][] = [
         ['#fff', t('working_day')],
@@ -212,10 +209,9 @@ function CalendarLegend({ classic }: { classic: boolean }) {
  * form's note-entry row and holiday table).
  */
 export function HolidayCalendarSection({
-    classic, month, onMonthChange, weekdays, holidays, national,
+    month, onMonthChange, weekdays, holidays, national,
     onToggleDay, canEdit, headerAction, children,
 }: {
-    classic: boolean;
     month: Date;
     onMonthChange: (d: Date) => void;
     weekdays: number[];
@@ -231,9 +227,8 @@ export function HolidayCalendarSection({
         <FormSection title={
             <SectionTitle icon="bi-calendar3" right={headerAction}>{t('holidays')}</SectionTitle>
         }>
-            <MonthNav classic month={month} onMonthChange={onMonthChange} />
+            <MonthNav month={month} onMonthChange={onMonthChange} />
             <HolidayMonthGrid
-                classic
                 month={month}
                 weekdays={weekdays}
                 holidays={holidays}
@@ -241,7 +236,7 @@ export function HolidayCalendarSection({
                 onToggleDay={onToggleDay}
                 canEdit={canEdit}
             />
-            <CalendarLegend classic />
+            <CalendarLegend />
             <p
                 style={{ fontFamily: xpFont, fontSize: 10, color: '#777', marginTop: 4 }}
             >

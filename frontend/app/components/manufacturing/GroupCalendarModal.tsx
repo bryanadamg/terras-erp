@@ -185,14 +185,12 @@ export default function GroupCalendarModal({ isOpen, onClose, group, authFetch, 
                     a date field and a table — so the two screens taught two different
                     mental models of one setting. */}
                 <WorkingDaysSection
-                    classic
                     weekdays={weekdays}
                     onToggleWeekday={toggleWeekday}
                     canEdit
                 />
 
                 <HolidayCalendarSection
-                    classic
                     month={calRef}
                     onMonthChange={setCalRef}
                     weekdays={weekdays}

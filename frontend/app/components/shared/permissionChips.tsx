@@ -29,12 +29,11 @@ export type PermissionChipState =
     /** granted, not interactive at all (read-only breakdown) */
     | 'static';
 
-export function PermissionChip({ label, code, state, classic, direct = false, title, onClick }: {
+export function PermissionChip({ label, code, state, direct = false, title, onClick }: {
     label: string;
     /** Permission code (`item.delete`) or bare action code (`delete`) — drives the tint. */
     code: string;
     state: PermissionChipState;
-    classic: boolean;
     /** User rows: granted directly rather than through the role. */
     direct?: boolean;
     title?: string;
@@ -95,11 +94,10 @@ export interface PermissionSectionRow {
  * per resource, resource stated once with its action chips beside it.
  */
 export function PermissionSectionTable({
-    title, right, classic, rows, labelWidth = '38%', rowPaddingLeft, onHeaderClick, headerActive = true, style,
+    title, right, rows, labelWidth = '38%', rowPaddingLeft, onHeaderClick, headerActive = true, style,
 }: {
     title: React.ReactNode;
     right?: React.ReactNode;
-    classic: boolean;
     rows: PermissionSectionRow[];
     labelWidth?: number | string;
     rowPaddingLeft?: number;
@@ -176,7 +174,7 @@ export function PermissionSectionTable({
 }
 
 /** Granted-of-total pill used in both permission panels' section headers. */
-export function PermissionCountPill({ granted, total, classic }: { granted: number; total: number; classic: boolean }) {
+export function PermissionCountPill({ granted, total }: { granted: number; total: number }) {
     return (
         <span style={{
             fontFamily: xpFont,

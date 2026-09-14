@@ -763,7 +763,6 @@ export default function LabDipRequestView({
                                             <td colSpan={10} style={{ padding: 0 }}>
                                                 <ExpandedRowPanel style={{ overflow: 'hidden' }}>
                                                     <RequestDetailPanel
-                                                        classic
                                                         leftTitle={<><i className="bi bi-box-seam" /> Variants — {total} total · {approved} approved</>}
                                                         leftWidth="62%"
                                                         columns={columns}

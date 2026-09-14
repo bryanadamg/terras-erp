@@ -41,7 +41,6 @@ export default function PermissionBreakdown({ permissions, showDirect = false }:
                     {sections.map(({ section, permissions: secPerms }) => (
                         <PermissionSectionTable
                             key={section}
-                            classic
                             title={section}
                             right={<span style={{ fontFamily: font, fontSize: 9, color: '#7b8794' }}>{secPerms.length}</span>}
                             rows={groupPermissionsByResource(secPerms).map(({ resource, permissions: resPerms }) => ({
@@ -55,7 +54,6 @@ export default function PermissionBreakdown({ permissions, showDirect = false }:
                                             label={action}
                                             code={p.code}
                                             state="static"
-                                            classic
                                             direct={showDirect && p._direct}
                                             title={showDirect ? `${p.code} (${p._direct ? 'direct grant' : 'via role'})` : p.code}
                                         />
@@ -67,7 +65,7 @@ export default function PermissionBreakdown({ permissions, showDirect = false }:
                 </div>
                 {showDirect && permissions.some(p => p._direct) && (
                     <div style={{ fontFamily: font, fontSize: 9, color: '#6b6558', marginTop: 6, display: 'flex', alignItems: 'center', gap: 5 }}>
-                        <PermissionChip label="Chip" code="edit" state="static" classic direct />
+                        <PermissionChip label="Chip" code="edit" state="static" direct />
                         outlined in blue = granted directly to this user, not through the role.
                     </div>
                 )}

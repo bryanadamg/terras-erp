@@ -747,7 +747,6 @@ export default function WOCompletionModal({ mo, onClose, onSaved, workOrder }: W
 
                                     {dyeBath.run.recipe_id ? (
                                         <DoseSheet
-                                            classic
                                             doses={dyeBath.doses}
                                             emptyHint={dyeBath.doses ? 'This recipe has no chemical lines to weigh out.' : 'Loading the recipe...'}
                                         />

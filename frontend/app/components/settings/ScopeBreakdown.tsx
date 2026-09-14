@@ -69,7 +69,6 @@ export default function ScopeBreakdown({ workCenterTypes, categories, locations}
         <ExpandedRowPanel>
             <ExpandedRowPanelBody>
                 <PermissionSectionTable
-                    classic
                     title="Scope Restrictions"
                     rows={rows}
                     labelWidth={140}

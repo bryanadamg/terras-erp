@@ -679,7 +679,6 @@ export default function WorkCenterMonitorModal({ isOpen, onClose, workCenter, au
                     colorName={run.color_name}
                     colorHex={run.color_hex}
                     labdipCode={run.labdip_variant_code}
-                    classic
                     scale="sm"
                 />
                 <span className="text-muted small">
@@ -1064,7 +1063,6 @@ export default function WorkCenterMonitorModal({ isOpen, onClose, workCenter, au
                                                             colorName={h.color_name}
                                                             colorHex={h.color_hex}
                                                             labdipCode={h.labdip_variant_code}
-                                                            classic
                                                         />
                                                     </div>
                                                 </td>
@@ -1092,14 +1090,12 @@ export default function WorkCenterMonitorModal({ isOpen, onClose, workCenter, au
             {tab === 'calendar' && (
                 <div>
                     <WorkingDaysSection
-                        classic
                         weekdays={weekdays}
                         onToggleWeekday={toggleWeekday}
                         canEdit={canManage}
                         onSave={saveCalendar}
                     />
                     <HolidayCalendarSection
-                        classic
                         month={calRef}
                         onMonthChange={setCalRef}
                         weekdays={weekdays}

@@ -37,7 +37,6 @@ export default function QtyFormulaPanel() {
         >
             <QtyFormulaEditorFields
                 editor={editor}
-                classic
                 canEdit={canEdit}
                 hint={settingsHint()}
             />

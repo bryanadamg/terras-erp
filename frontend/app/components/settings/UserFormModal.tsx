@@ -135,7 +135,7 @@ export default function UserFormModal({
                 hover-to-try-on stage) — don't add a second one here. */}
             <div className="mb-3">
                 <FieldLabel>Avatar</FieldLabel>
-                <AvatarPicker value={avatarId} onChange={setAvatarId} seed={username} template={roleAvatarTemplate} classic />
+                <AvatarPicker value={avatarId} onChange={setAvatarId} seed={username} template={roleAvatarTemplate} />
             </div>
 
             {/* Paired two-up: at xl these single-line fields each stretching the full

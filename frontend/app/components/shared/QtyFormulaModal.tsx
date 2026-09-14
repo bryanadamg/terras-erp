@@ -66,7 +66,7 @@ export default function QtyFormulaModal({ isOpen, onClose, canEdit, onSaved }: {
             }
         >
             <div style={{ padding: 8}}>
-                <QtyFormulaEditorFields editor={editor} classic canEdit={canEdit} hint={hint} />
+                <QtyFormulaEditorFields editor={editor} canEdit={canEdit} hint={hint} />
             </div>
         </ModalWrapper>
     );

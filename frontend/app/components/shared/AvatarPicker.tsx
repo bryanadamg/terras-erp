@@ -53,7 +53,7 @@ const STAGGER_CAP = 12;
 const optionDelay = (i: number) => `${Math.min(i, STAGGER_CAP) * STAGGER_MS}ms`;
 
 /** Selected / idle face of one option cell. Same bevel language as ToggleChip. */
-function optionChrome(isSelected: boolean, classic?: boolean): React.CSSProperties {
+function optionChrome(isSelected: boolean): React.CSSProperties {
     if (true) {
         return {
             background: isSelected ? '#c8d8f0' : 'linear-gradient(to bottom,#ffffff,#e4e0d8)',
@@ -76,10 +76,9 @@ function optionChrome(isSelected: boolean, classic?: boolean): React.CSSProperti
  * previews too — the same affordance, since the hover is the only thing telling
  * you what a variant name means.
  */
-function OptionCell({ title, isSelected, classic, width, delay, onClick, onPreview, children }: {
+function OptionCell({ title, isSelected, width, delay, onClick, onPreview, children }: {
     title: string;
     isSelected: boolean;
-    classic?: boolean;
     width: number;
     delay: string;
     onClick: () => void;
@@ -100,7 +99,7 @@ function OptionCell({ title, isSelected, classic, width, delay, onClick, onPrevi
                 width, height: THUMB + 10, padding: 3, cursor: 'pointer',
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
                 flexShrink: 0, position: 'relative', animationDelay: delay,
-                ...optionChrome(isSelected, classic),
+                ...optionChrome(isSelected),
             }}
         >
             {children}
@@ -120,7 +119,6 @@ interface AvatarPickerProps {
      * the user's own choice — after that the template no longer applies to them.
      */
     template?: string | null;
-    classic?: boolean;
 }
 
 /**
@@ -132,7 +130,7 @@ interface AvatarPickerProps {
  * hovering an option previews it: a preview the picker doesn't own can't show a
  * candidate.
  */
-export default function AvatarPicker({ value, onChange, seed, template, classic }: AvatarPickerProps) {
+export default function AvatarPicker({ value, onChange, seed, template }: AvatarPickerProps) {
     const [tab, setTab] = useState<TabKey>('hat');
     const recipe = useMemo(() => resolveRecipe(value, seed, template), [value, seed, template]);
 
@@ -362,7 +360,6 @@ export default function AvatarPicker({ value, onChange, seed, template, classic 
                                             key={variant}
                                             title={`${activeSlot.label} — ${variant}`}
                                             isSelected={recipe.features[activeSlot.key] === variant}
-                                            classic
                                             width={THUMB + 10}
                                             delay={optionDelay(i)}
                                             onClick={() => emit(candidate)}
@@ -403,7 +400,6 @@ export default function AvatarPicker({ value, onChange, seed, template, classic 
                                                     key={hex}
                                                     title={`${slot.label} — #${hex}`}
                                                     isSelected={recipe.colors[slot.key] === hex}
-                                                    classic
                                                     width={SWATCH + 8}
                                                     delay={optionDelay(i)}
                                                     onClick={() => emit(candidate)}

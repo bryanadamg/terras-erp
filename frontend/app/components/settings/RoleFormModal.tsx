@@ -245,7 +245,6 @@ export default function RoleFormModal({
                     value={defaultAvatarId}
                     onChange={setDefaultAvatarId}
                     seed={SAMPLE_SEEDS[0]}
-                    classic
                 />
                 <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 8, flexWrap: 'wrap' }}>
                     {/* The point of a template, shown rather than explained: three

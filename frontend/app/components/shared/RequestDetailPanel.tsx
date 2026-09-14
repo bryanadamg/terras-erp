@@ -49,7 +49,6 @@ export const getStatusStripe = (status: string): { borderLeftColor: string; back
 };
 
 interface Props {
-    classic: boolean;
     leftTitle: React.ReactNode;
     leftWidth?: string;                     // default '56%'
     columns: DetailColumn[];
@@ -62,7 +61,7 @@ interface Props {
 }
 
 export default function RequestDetailPanel({
-    classic, leftTitle, leftWidth = '56%', columns, rows, emptyText = 'No rows.', sections, rightHeader, minHeight = 160, height,
+    leftTitle, leftWidth = '56%', columns, rows, emptyText = 'No rows.', sections, rightHeader, minHeight = 160, height,
 }: Props) {
 
     // A fixed height clamps the panel and lets each pane scroll its own overflow;

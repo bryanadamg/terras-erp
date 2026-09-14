@@ -721,7 +721,6 @@ export default function PackingOrderView({ initialCreateState, onClearInitialSta
                                                     colorName={po.color_name}
                                                     colorHex={po.color_hex}
                                                     scale="xs"
-                                                    classic
                                                     style={{ flexWrap: 'wrap', rowGap: 2 }}
                                                 />
                                             ) : <span style={{ color: '#888' }}>—</span>;

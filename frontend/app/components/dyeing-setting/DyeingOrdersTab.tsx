@@ -722,7 +722,6 @@ export default function DyeingOrdersTab({ items, recipes, authFetch }: DyeingOrd
                                                 colorName={wo.color_name}
                                                 colorHex={wo.color_hex}
                                                 labdipCode={wo.labdip_variant_code}
-                                                classic
                                                 style={{ flexWrap: 'wrap', rowGap: 2 }}
                                             />
                                         </td>
@@ -932,7 +931,6 @@ export default function DyeingOrdersTab({ items, recipes, authFetch }: DyeingOrd
                         </div>
                         {createForm.recipe_id && (
                             <DoseSheet
-                                classic
                                 doses={dosePreview}
                                 emptyHint="This recipe has no chemical lines to weigh out."
                                 style={{ marginTop: 6}}
@@ -1045,7 +1043,6 @@ export default function DyeingOrdersTab({ items, recipes, authFetch }: DyeingOrd
 
                         {showCompleteModal.recipe_id && (
                             <DoseSheet
-                                classic
                                 doses={completeDoses}
                                 emptyHint={completeDoses
                                     ? 'This recipe has no chemical lines to weigh out.'

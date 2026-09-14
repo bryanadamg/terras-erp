@@ -61,9 +61,9 @@ export const BASIS_LABEL: Record<string, string> = {
 export const doseUnitFor = (doses: DosePreview | null, itemId: string) =>
     doses?.lines.find(l => String(l.item_id) === String(itemId))?.dose_unit ?? null;
 
-const panel = (classic: boolean): React.CSSProperties => ({ border: '1px solid #7f9db9', background: 'white' });
+const panel = (): React.CSSProperties => ({ border: '1px solid #7f9db9', background: 'white' });
 
-const sectionHeader = (classic: boolean): React.CSSProperties => ({
+const sectionHeader = (): React.CSSProperties => ({
     background: FORM_SECTION_BLUE, color: 'white', padding: '3px 8px',
     fontFamily: xpFont, fontSize: 11, fontWeight: 'bold',
 });
@@ -72,18 +72,17 @@ interface DoseSheetProps {
     doses: DosePreview | null;
     /** What to say when the recipe has no weighable lines (or is still loading). */
     emptyHint: string;
-    classic: boolean;
     /** Own the outer margin from the call site — this sits in three layouts. */
     style?: React.CSSProperties;
 }
 
-export default function DoseSheet({ doses, emptyHint, classic, style }: DoseSheetProps) {
+export default function DoseSheet({ doses, emptyHint, style }: DoseSheetProps) {
     const rows = doses?.lines ?? [];
     const noBath = !doses?.bath_volume_liters;
     const th = lvThBanded();
     return (
-        <div style={{ ...panel(true), overflow: undefined, ...style }}>
-            <div style={{ ...sectionHeader(true), display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
+        <div style={{ ...panel(), overflow: undefined, ...style }}>
+            <div style={{ ...sectionHeader(), display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
                 <span>Dye Weights for this Bath</span>
                 <span style={{ fontWeight: 400, fontSize: 10}}>
                     {doses?.bath_volume_liters != null

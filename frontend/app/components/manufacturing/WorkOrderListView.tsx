@@ -880,7 +880,6 @@ export default function WorkOrderListView({
                                                         colorName={wo.color_name}
                                                         colorHex={wo.color_hex}
                                                         labdipCode={wo.labdip_variant_code}
-                                                        classic
                                                         style={{ flexWrap: 'wrap', rowGap: 2 }}
                                                     />
                                                 </td>

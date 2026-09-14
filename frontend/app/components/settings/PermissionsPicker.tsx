@@ -166,7 +166,6 @@ export default function PermissionsPicker({
                                     key={id}
                                     label={action.label}
                                     code={code}
-                                    classic
                                     state={inherited || pinned ? 'locked' : selectedSet.has(id) ? 'on' : 'off'}
                                     onClick={() => toggle(id, r.resource, action.code)}
                                     title={
@@ -183,7 +182,6 @@ export default function PermissionsPicker({
                 return (
                     <PermissionSectionTable
                         key={section.section}
-                        classic
                         headerActive={grantedCount > 0}
                         onHeaderClick={() => toggleCollapse(section.section)}
                         labelWidth={160}
@@ -191,7 +189,7 @@ export default function PermissionsPicker({
                             <>
                                 <i className={`bi ${isCollapsed ? 'bi-caret-right-fill' : 'bi-caret-down-fill'}`} style={{ fontSize: 8, color: '#5a6472' }} />
                                 {section.section}
-                                <PermissionCountPill granted={grantedCount} total={secIds.length} classic />
+                                <PermissionCountPill granted={grantedCount} total={secIds.length} />
                             </>
                         }
                         right={

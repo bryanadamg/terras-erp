@@ -27,13 +27,12 @@ export interface VariantChipsProps {
     /** Pending lab dip code — shown only while the shade has no approved colour yet. */
     labdipCode?: string | null;
     scale?: 'xs' | 'sm';
-    classic?: boolean;
     style?: React.CSSProperties;
 }
 
 export default function VariantChips({
     combo, size, colorVariant, colorVariantHex, colorCode, colorName, colorHex, labdipCode,
-    scale = 'xs', classic, style,
+    scale = 'xs', style,
 }: VariantChipsProps) {
     if (!combo && !size && !colorVariant && !colorCode && !labdipCode) return null;
 

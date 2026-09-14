@@ -184,9 +184,8 @@ export function useQtyFormulaEditor(onSaved?: (rules: QtyFormulaRule[]) => void)
     };
 }
 
-export function QtyFormulaEditorFields({ editor, classic, canEdit, hint }: {
+export function QtyFormulaEditorFields({ editor, canEdit, hint }: {
     editor: QtyFormulaEditor;
-    classic: boolean;
     canEdit: boolean;
     /** Muted-text style from the caller, so a Settings panel and a dialog match their surroundings. */
     hint: React.CSSProperties;
