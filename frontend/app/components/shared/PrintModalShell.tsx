@@ -102,7 +102,7 @@ export default function PrintModalShell({
         >
             <div style={headerStyle} onPointerDown={floating ? startDrag : undefined}>
                 <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>{title}</span>
-                <WindowCloseButton onClose={onClose} white={false} />
+                <WindowCloseButton onClose={onClose} />
             </div>
             {children}
         </div>

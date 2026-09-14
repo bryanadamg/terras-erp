@@ -1,7 +1,6 @@
 'use client';
 
 import React, { useState, useRef, useEffect, useId } from 'react';
-import { useTheme } from '../../context/ThemeContext';
 import { useIsMobile } from '../../hooks/useIsMobile';
 import { toLayoutPx } from './uiScale';
 import { xpFont, BUTTON_RADIUS, XP_BTN, WINDOW_RADIUS, WINDOW_RADIUS_INNER } from './xpTheme';
@@ -67,26 +66,14 @@ export function useInactiveChromeWhileOpen(active: boolean) {
 
 /**
  * The window close button — one face for every window title bar (ModalWrapper's
- * dialogs AND PrintModalShell's print previews). Classic is the XP box: `.xp-btn`
- * lift/press animation, rounded to BUTTON_RADIUS, going red on hover; modern is
- * Bootstrap's `btn-close`. Print modals used to render a bare text glyph with no
+ * dialogs AND PrintModalShell's print previews) — the XP box: `.xp-btn`
+ * lift/press animation, rounded to BUTTON_RADIUS, going red on hover.
+ * Print modals used to render a bare text glyph with no
  * chrome at all, which is the drift this replaces — a print preview is a window,
  * so its close button is the same close button.
  */
-export function WindowCloseButton({ onClose, white = false }: { onClose: () => void; white?: boolean }) {
-    const { uiStyle } = useTheme();
+export function WindowCloseButton({ onClose }: { onClose: () => void }) {
     const [hov, setHov] = useState(false);
-
-    if (uiStyle !== 'classic') {
-        return (
-            <button
-                type="button"
-                className={`btn-close ${white ? 'btn-close-white' : ''}`}
-                onClick={onClose}
-                aria-label="Close"
-            />
-        );
-    }
 
     return (
         <button
@@ -174,7 +161,6 @@ export default function ModalWrapper({
     isOpen, onClose, title, children, footer, banner,
     level = 1, size = 'md', variant = 'primary', modeless = false, bodyScroll = true
 }: ModalWrapperProps) {
-    const { uiStyle: currentStyle } = useTheme();
     const isMobile = useIsMobile();
     const backdropMouseDown = useRef(false);
     const onCloseRef = useRef(onClose);
@@ -276,165 +262,105 @@ export default function ModalWrapper({
         margin: 0,
     };
 
-    // ── XP Dialog ──────────────────────────────────────────────────────────
-    if (currentStyle === 'classic') {
-        const dialog = (
+    const dialog = (
+        <div
+            ref={panelRef}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby={titleId}
+            tabIndex={-1}
+            style={{
+                width: xpSizeWidths[size] || 480, maxWidth: 'calc(var(--app-vw) * 96 / 100)',
+                border: '2px solid',
+                borderColor: '#dfdfdf #808080 #808080 #dfdfdf',
+                boxShadow: floating ? '5px 5px 16px rgba(0,0,0,0.45)' : '4px 4px 12px rgba(0,0,0,0.55)',
+                background: '#ece9d8',
+                borderRadius: WINDOW_RADIUS,
+                display: 'flex', flexDirection: 'column',
+                maxHeight: floating ? 'calc(var(--app-vh) - 80px)' : 'calc(var(--app-vh) * 92 / 100)',
+                ...(floating ? floatingPos : {}),
+            }}
+            onClick={e => e.stopPropagation()}
+        >
+            {/* XP Title Bar */}
             <div
-                ref={panelRef}
-                role="dialog"
-                aria-modal="true"
-                aria-labelledby={titleId}
-                tabIndex={-1}
-                style={{
-                    width: xpSizeWidths[size] || 480, maxWidth: 'calc(var(--app-vw) * 96 / 100)',
-                    border: '2px solid',
-                    borderColor: '#dfdfdf #808080 #808080 #dfdfdf',
-                    boxShadow: floating ? '5px 5px 16px rgba(0,0,0,0.45)' : '4px 4px 12px rgba(0,0,0,0.55)',
-                    background: '#ece9d8',
-                    borderRadius: WINDOW_RADIUS,
-                    display: 'flex', flexDirection: 'column',
-                    maxHeight: floating ? 'calc(var(--app-vh) - 80px)' : 'calc(var(--app-vh) * 92 / 100)',
-                    ...(floating ? floatingPos : {}),
-                }}
-                onClick={e => e.stopPropagation()}
-            >
-                {/* XP Title Bar */}
-                <div
-                    onPointerDown={floating ? startDrag : undefined}
-                    style={{
-                        background: xpTitleGradients[variant] || xpTitleGradients.primary,
-                        // Top corners follow the frame; the inner radius is the
-                        // frame's minus its 2px bevel so the two read as one curve.
-                        borderRadius: `${WINDOW_RADIUS_INNER}px ${WINDOW_RADIUS_INNER}px 0 0`,
-                        color: '#ffffff',
-                        fontFamily: xpFont,
-                        fontSize: '12px', fontWeight: 'bold',
-                        padding: '4px 6px 4px 8px',
-                        boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.3)',
-                        borderBottom: `1px solid ${xpTitleBorders[variant] || '#003080'}`,
-                        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                        minHeight: '26px', gap: 6,
-                        userSelect: 'none' as const,
-                        flexShrink: 0,
-                        cursor: floating ? 'move' : undefined,
-                        touchAction: floating ? 'none' : undefined,
-                    }}>
-                    <span id={titleId} style={{ display: 'flex', alignItems: 'center', gap: 6, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' as const }}>
-                        {title}
-                    </span>
-                    <WindowCloseButton onClose={onClose} />
-                </div>
-
-                {/* Full-bleed window chrome (tab strip, toolbar) — outside the body so
-                    its background reaches both frame edges. */}
-                {banner && <div className="ui-style-classic" style={{ flexShrink: 0 }}>{banner}</div>}
-
-                {/* Body — ui-style-classic triggers CSS overrides for Bootstrap controls */}
-                <div
-                    className="ui-style-classic"
-                    style={{
-                        padding: '12px 14px', overflowY: bodyScroll ? 'auto' : 'hidden',
-                        background: 'linear-gradient(to bottom, #f1efe5 0%, #e5e2d3 100%)', flex: 1,
-                        // Whichever surface sits last carries the bottom corners.
-                        ...(footer ? null : { borderRadius: `0 0 ${WINDOW_RADIUS_INNER}px ${WINDOW_RADIUS_INNER}px` }),
-                    }}
-                >
-                    {children}
-                </div>
-
-                {/* Footer */}
-                {footer && (
-                    <div style={{
-                        background: 'linear-gradient(to bottom, #f5f4ef, #e0dfd8)',
-                        borderTop: '1px solid #b0a898',
-                        borderRadius: `0 0 ${WINDOW_RADIUS_INNER}px ${WINDOW_RADIUS_INNER}px`,
-                        padding: '6px 10px',
-                        // Buttons no longer shrink (see lvBtn/xpBtn), so a footer too
-                        // narrow for them wraps to a second row instead of overflowing
-                        // the window. `alignItems: center` keeps a one-line button
-                        // aligned with a hint that has wrapped to two or three.
-                        display: 'flex', justifyContent: 'flex-end', alignItems: 'center',
-                        flexWrap: 'wrap', gap: 4, rowGap: 6,
-                        flexShrink: 0,
-                    }}>
-                        {footer}
-                    </div>
-                )}
-            </div>
-        );
-
-        if (floating) return dialog;
-
-        return (
-            <div
-                style={{
-                    position: 'fixed', inset: 0, zIndex: modalZIndex,
-                    backgroundColor: 'rgba(0,0,0,0.45)',
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                }}
-                onMouseDown={e => { backdropMouseDown.current = e.target === e.currentTarget; }}
-                onClick={() => { if (backdropMouseDown.current) onClose(); }}
-            >
-                {dialog}
-            </div>
-        );
-    }
-
-    // ── Modern (Bootstrap) ──────────────────────────────────────────────────
-    const headerClasses: Record<string, string> = {
-        primary: 'bg-primary bg-opacity-10 text-primary-emphasis',
-        success: 'bg-success bg-opacity-10 text-success-emphasis',
-        warning: 'bg-warning bg-opacity-10 text-warning-emphasis',
-        info:    'bg-info bg-opacity-10 text-info-emphasis',
-        danger:  'bg-danger bg-opacity-10 text-danger-emphasis',
-        dark:    'bg-dark text-white',
-        secondary: 'bg-secondary bg-opacity-10 text-secondary-emphasis',
-    };
-
-    const modernContent = (
-        // Radius comes from WINDOW_RADIUS, not Bootstrap's --bs-modal-border-radius:
-        // the classic branch and PrintModalShell already read that constant, and a
-        // hardcoded 0.5rem here is what let the two themes drift apart. `border-0`
-        // means there is no bevel to subtract, so the header/footer corners take the
-        // full WINDOW_RADIUS rather than WINDOW_RADIUS_INNER.
-        <div className="modal-content shadow-lg border-0" role="dialog" aria-modal="true" aria-labelledby={titleId} style={{ overflow: 'visible', borderRadius: WINDOW_RADIUS }}>
-            <div
-                className={`modal-header py-2 px-3 border-bottom ${headerClasses[variant]}`}
-                style={{ borderRadius: `${WINDOW_RADIUS}px ${WINDOW_RADIUS}px 0 0`, cursor: floating ? 'move' : undefined, touchAction: floating ? 'none' : undefined, userSelect: floating ? 'none' : undefined }}
                 onPointerDown={floating ? startDrag : undefined}
-            >
-                <h5 id={titleId} className="modal-title small fw-bold d-flex align-items-center gap-2">{title}</h5>
-                <WindowCloseButton onClose={onClose} white={variant === 'dark'} />
+                style={{
+                    background: xpTitleGradients[variant] || xpTitleGradients.primary,
+                    // Top corners follow the frame; the inner radius is the
+                    // frame's minus its 2px bevel so the two read as one curve.
+                    borderRadius: `${WINDOW_RADIUS_INNER}px ${WINDOW_RADIUS_INNER}px 0 0`,
+                    color: '#ffffff',
+                    fontFamily: xpFont,
+                    fontSize: '12px', fontWeight: 'bold',
+                    padding: '4px 6px 4px 8px',
+                    boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.3)',
+                    borderBottom: `1px solid ${xpTitleBorders[variant] || '#003080'}`,
+                    display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                    minHeight: '26px', gap: 6,
+                    userSelect: 'none' as const,
+                    flexShrink: 0,
+                    cursor: floating ? 'move' : undefined,
+                    touchAction: floating ? 'none' : undefined,
+                }}>
+                <span id={titleId} style={{ display: 'flex', alignItems: 'center', gap: 6, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' as const }}>
+                    {title}
+                </span>
+                <WindowCloseButton onClose={onClose} />
             </div>
-            {banner && <div style={{ flexShrink: 0 }}>{banner}</div>}
-            <div className="modal-body p-4" style={{ maxHeight: floating ? 'calc(var(--app-vh) - 160px)' : 'calc(var(--app-vh) * 85 / 100)', overflowY: bodyScroll ? 'auto' : 'hidden', background: 'white' }}>
+
+            {/* Full-bleed window chrome (tab strip, toolbar) — outside the body so
+                its background reaches both frame edges. */}
+            {banner && <div className="ui-style-classic" style={{ flexShrink: 0 }}>{banner}</div>}
+
+            {/* Body — ui-style-classic triggers CSS overrides for Bootstrap controls */}
+            <div
+                className="ui-style-classic"
+                style={{
+                    padding: '12px 14px', overflowY: bodyScroll ? 'auto' : 'hidden',
+                    background: 'linear-gradient(to bottom, #f1efe5 0%, #e5e2d3 100%)', flex: 1,
+                    // Whichever surface sits last carries the bottom corners.
+                    ...(footer ? null : { borderRadius: `0 0 ${WINDOW_RADIUS_INNER}px ${WINDOW_RADIUS_INNER}px` }),
+                }}
+            >
                 {children}
             </div>
+
+            {/* Footer */}
             {footer && (
-                <div className="modal-footer bg-light py-2 px-3 border-top" style={{ borderRadius: `0 0 ${WINDOW_RADIUS}px ${WINDOW_RADIUS}px` }}>{footer}</div>
+                <div style={{
+                    background: 'linear-gradient(to bottom, #f5f4ef, #e0dfd8)',
+                    borderTop: '1px solid #b0a898',
+                    borderRadius: `0 0 ${WINDOW_RADIUS_INNER}px ${WINDOW_RADIUS_INNER}px`,
+                    padding: '6px 10px',
+                    // Buttons no longer shrink (see lvBtn/xpBtn), so a footer too
+                    // narrow for them wraps to a second row instead of overflowing
+                    // the window. `alignItems: center` keeps a one-line button
+                    // aligned with a hint that has wrapped to two or three.
+                    display: 'flex', justifyContent: 'flex-end', alignItems: 'center',
+                    flexWrap: 'wrap', gap: 4, rowGap: 6,
+                    flexShrink: 0,
+                }}>
+                    {footer}
+                </div>
             )}
         </div>
     );
 
-    if (floating) {
-        const widths: Record<string, number> = { sm: 320, md: 520, lg: 760, xl: 960, xxl: 1100 };
-        return (
-            <div ref={panelRef} tabIndex={-1} style={{ ...floatingPos, width: widths[size] || 520, maxWidth: 'calc(var(--app-vw) * 96 / 100)', outline: 'none' }}>
-                {modernContent}
-            </div>
-        );
-    }
+    if (floating) return dialog;
 
     return (
         <div
-            className="modal d-block"
-            style={{ backgroundColor: 'rgba(0,0,0,0.5)', zIndex: modalZIndex, position: 'fixed', inset: 0, backdropFilter: 'blur(4px)' }}
+            style={{
+                position: 'fixed', inset: 0, zIndex: modalZIndex,
+                backgroundColor: 'rgba(0,0,0,0.45)',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+            }}
             onMouseDown={e => { backdropMouseDown.current = e.target === e.currentTarget; }}
             onClick={() => { if (backdropMouseDown.current) onClose(); }}
         >
-            <div ref={panelRef} tabIndex={-1} className={`modal-dialog modal-${size === 'xxl' ? 'xl' : size} modal-dialog-centered`} style={size === 'xxl' ? { maxWidth: 1100, outline: 'none' } : { outline: 'none' }} onClick={e => e.stopPropagation()}>
-                {modernContent}
-            </div>
+            {dialog}
         </div>
     );
+
 }
