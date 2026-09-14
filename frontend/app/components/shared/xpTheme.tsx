@@ -64,7 +64,7 @@ export function CodeChip({ code, classic, tier = 1, tone = 'default', link = fal
     const boxStyle: React.CSSProperties = link
         ? {
             ...base,
-            fontSize: classic ? 10 : 11,
+            fontSize: 10,
             fontWeight: 'bold',
             color: '#0058e6',
             background: '#e8f0fe',
@@ -76,10 +76,10 @@ export function CodeChip({ code, classic, tier = 1, tone = 'default', link = fal
             ...style,
         }
         : tier === 2
-            ? { ...base, fontSize: classic ? 9 : 10.5, color: '#666', ...style }
+            ? { ...base, fontSize: 9, color: '#666', ...style }
             : {
                 ...base,
-                fontSize: classic ? 11 : 12,
+                fontSize: 11,
                 fontWeight: 'bold',
                 color: tone === 'accent' ? '#000055' : '#000',
                 ...style,
@@ -102,14 +102,14 @@ export function CodeChip({ code, classic, tier = 1, tone = 'default', link = fal
                             // A tier-2/plain code has no fill of its own, so the
                             // popout has to supply one or it reads as text printed
                             // over the row underneath it.
-                            ...(link ? null : { background: classic ? '#ffffe1' : '#ffffff', border: '1px solid', borderColor: classic ? '#000' : '#cbd5e1', borderRadius: CODE_CHIP_RADIUS, padding: '0 5px' }),
+                            ...(link ? null : { background: '#ffffe1', border: '1px solid', borderColor: '#000', borderRadius: CODE_CHIP_RADIUS, padding: '0 5px' }),
                             boxShadow: '0 2px 8px rgba(0,0,0,0.22)',
                         }}>{code}</span>
                     </FloatingLayer>
                 )
                 : (
                     <FloatingLayer rect={rect} anchorEl={anchorEl} className="tip-anim">
-                        <TooltipSurface classic={classic}>{tip}</TooltipSurface>
+                        <TooltipSurface classic>{tip}</TooltipSurface>
                     </FloatingLayer>
                 ))}
         </>
@@ -365,7 +365,7 @@ export function Chip({
     truncate?: boolean;
     style?: React.CSSProperties;
 }) {
-    const fs = size === 'xs' ? (classic ? 9 : 9.5) : size === 'md' ? (classic ? 11 : 12) : (classic ? 10 : 11);
+    const fs = size === 'xs' ? (9) : size === 'md' ? (11) : (10);
     const labelRef = useRef<HTMLSpanElement>(null);
     // Which surface this hover wants. Decided in shouldOpen against the live DOM
     // (a chip is only clipped at some column widths), read back on render — by
@@ -386,13 +386,13 @@ export function Chip({
 
     const chipStyle: React.CSSProperties = {
         display: 'inline-flex', alignItems: 'center', gap: 4,
-        background: tone?.background ?? (classic ? '#f0ede4' : '#eef1f4'),
+        background: tone?.background ?? ('#f0ede4'),
         border: '1px solid',
-        borderColor: tone?.borderColor ?? (classic ? '#b0a898' : '#dee2e6'),
-        color: tone?.color ?? (classic ? '#333' : '#495057'),
+        borderColor: tone?.borderColor ?? ('#b0a898'),
+        color: tone?.color ?? ('#333'),
         borderRadius: CHIP_RADIUS,
         padding: size === 'md' ? '1px 7px' : '1px 6px',
-        fontFamily: classic ? xpFont : modernFont,
+        fontFamily: xpFont,
         fontSize: fs,
         fontWeight: bold ? 700 : 400,
         lineHeight: 1.45,
@@ -411,7 +411,7 @@ export function Chip({
                 : children}
             {onRemove && (
                 <button type="button" onClick={e => { e.stopPropagation(); onRemove(); }} title="Remove"
-                    style={{ background: 'none', border: 'none', cursor: 'pointer', color: classic ? '#a00' : '#dc2626', fontWeight: 'bold', lineHeight: 1, padding: 0, marginLeft: 1, fontSize: fs + 2 }}>×</button>
+                    style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#a00', fontWeight: 'bold', lineHeight: 1, padding: 0, marginLeft: 1, fontSize: fs + 2 }}>×</button>
             )}
         </>
     );
@@ -432,7 +432,7 @@ export function Chip({
                 )
                 : (
                     <FloatingLayer rect={rect} anchorEl={anchorEl} className="tip-anim">
-                        <TooltipSurface classic={!!classic}>{title}</TooltipSurface>
+                        <TooltipSurface classic>{title}</TooltipSurface>
                     </FloatingLayer>
                 ))}
         </>
@@ -518,7 +518,7 @@ export function VariantChip({
     const ic = icon === null ? undefined : (icon ?? (swatch ? undefined : VARIANT_ICON[kind]));
     return (
         <Chip
-            classic={classic}
+            classic
             tone={VARIANT_TONE[kind]}
             size={size}
             bold={bold}
@@ -568,7 +568,7 @@ export function OriginChip({ kind, code, classic, prefix = true, title, size = '
 }) {
     return (
         <Chip
-            classic={classic}
+            classic
             tone={ORIGIN_TONES[kind]}
             size={size}
             bold
@@ -617,13 +617,13 @@ export function StatusCountPill({ status, count, label, classic, title }: {
         <span
             style={{
                 display: 'inline-flex', alignItems: 'center', gap: 4,
-                padding: classic ? '0 6px' : '1px 9px',
+                padding: '0 6px',
                 borderRadius: CHIP_RADIUS,
                 border: '1px solid', borderColor: c.borderColor,
                 background: c.background, color: c.color,
-                fontFamily: classic ? xpFont : modernFont,
-                fontSize: classic ? 10 : 11,
-                lineHeight: classic ? '15px' : '17px',
+                fontFamily: xpFont,
+                fontSize: 10,
+                lineHeight: '15px',
                 whiteSpace: 'nowrap',
             }}
         >
@@ -746,7 +746,7 @@ export function SwatchBox({ hex, derived, bands, size = 18, classic, title, onPi
                 title={title ?? `${strip.length} colour${strip.length !== 1 ? 's' : ''}`}
                 style={{
                     display: 'inline-block', width: size, height: size, boxSizing: 'border-box',
-                    borderRadius: classic ? 2 : 4, verticalAlign: 'middle',
+                    borderRadius: 2, verticalAlign: 'middle',
                     border: '1px solid rgba(0,0,0,0.35)',
                     background: strip.length === 1
                         ? strip[0]
@@ -759,11 +759,11 @@ export function SwatchBox({ hex, derived, bands, size = 18, classic, title, onPi
     const shown = hex || derived || null;
     const face: React.CSSProperties = {
         display: 'inline-block', width: size, height: size, boxSizing: 'border-box',
-        borderRadius: classic ? 2 : 4, verticalAlign: 'middle', position: 'relative',
+        borderRadius: 2, verticalAlign: 'middle', position: 'relative',
         background: shown || 'transparent',
-        border: hex ? '1px solid rgba(0,0,0,0.35)' : `1px dashed ${classic ? '#a0988c' : '#94a3b8'}`,
+        border: hex ? '1px solid rgba(0,0,0,0.35)' : `1px dashed ${'#a0988c'}`,
         ...(shown ? null : {
-            border: `1px solid ${classic ? '#a0988c' : '#94a3b8'}`,
+            border: `1px solid ${'#a0988c'}`,
             backgroundImage: 'linear-gradient(45deg,#ccc 25%,transparent 25%,transparent 75%,#ccc 75%),linear-gradient(45deg,#ccc 25%,transparent 25%,transparent 75%,#ccc 75%)',
             backgroundSize: '8px 8px', backgroundPosition: '0 0, 4px 4px',
         }),
@@ -799,7 +799,7 @@ export function ColorSwatchChip({ label, classic, hex: hexOverride, onRemove, si
     return (
         <VariantChip
             kind="color"
-            classic={classic}
+            classic
             size={size}
             swatch={hexOverride ?? colorHexFor(label)}
             title={title ?? `Color: ${label}`}
@@ -868,7 +868,7 @@ export function LocationChip({
 }) {
     return (
         <Chip
-            classic={classic}
+            classic
             tone={LOCATION_CHIP_TONES[direction]}
             size={size}
             title={title}
@@ -943,7 +943,7 @@ export function ProgressBar(props: {
 
 // The four button intents. `default` is the bare XP face `xpBtn` already paints, so
 // it is empty; the other three are patches you spread over it (or hand to
-// `lvBtn(classic, tone)`, which owns the modern half). ~19 local copies used to
+// `lvBtn(true, tone)`, which owns the modern half). ~19 local copies used to
 // carry their own blue/green/red — three different blues and three different greens
 // across BOMDesigner, the WO modals and the print modals — which is why the faces
 // live here now. Adding a fifth tone is almost never the answer.
@@ -1038,7 +1038,7 @@ export function ModalFooterActions({
     onExtra?: () => void;
     extraLabel?: string;
 }) {
-    if (classic) {
+    if (true) {
         const tone = MODAL_FOOTER_CLASSIC_TONES[variant];
         return (
             <>
@@ -1132,16 +1132,12 @@ export function FormSection({ title, classic, children, style, bodyStyle }: {
     style?: React.CSSProperties;
     bodyStyle?: React.CSSProperties;
 }) {
-    const box: React.CSSProperties = classic
-        ? { border: '1px solid #c0bdb5', boxShadow: 'inset 1px 1px 0 #fff, 1px 1px 0 #c0bdb5', borderRadius: SECTION_RADIUS, overflow: 'hidden', marginBottom: 10, ...style }
-        : { background: '#fff', border: '1px solid #dbe1ea', borderRadius: SECTION_RADIUS, marginBottom: 10, overflow: 'hidden', ...style };
+    const box: React.CSSProperties = { border: '1px solid #c0bdb5', boxShadow: 'inset 1px 1px 0 #fff, 1px 1px 0 #c0bdb5', borderRadius: SECTION_RADIUS, overflow: 'hidden', marginBottom: 10, ...style };
     // Flat blue header in BOTH themes so every sectioned form reads the same. Solid,
     // not a gradient: the old left-to-right fade washed out to near-white by the right
     // edge, so a long title lost contrast halfway across and each box read as a
     // different colour depending on how wide it was.
-    const header: React.CSSProperties = classic
-        ? { background: FORM_SECTION_BLUE, color: '#fff', fontFamily: xpFont, fontSize: 10, fontWeight: 'bold', padding: '3px 8px', letterSpacing: '0.5px', textTransform: 'uppercase' as const }
-        : { background: FORM_SECTION_BLUE, color: '#fff', fontFamily: modernFont, fontSize: 11, fontWeight: 700, padding: '6px 12px', letterSpacing: '0.04em', textTransform: 'uppercase' as const };
+    const header: React.CSSProperties = { background: FORM_SECTION_BLUE, color: '#fff', fontFamily: xpFont, fontSize: 10, fontWeight: 'bold', padding: '3px 8px', letterSpacing: '0.5px', textTransform: 'uppercase' as const };
     return (
         <div style={box}>
             <div style={header}>{title}</div>
@@ -1269,9 +1265,9 @@ export function WeekdayToggle({ value, onToggle, classic, disabled = false }: {
                     key={label}
                     on={value.includes(idx)}
                     onClick={() => onToggle(idx)}
-                    classic={classic}
+                    classic
                     disabled={disabled}
-                    minWidth={classic ? 48 : 52}
+                    minWidth={48}
                 >
                     {label}
                 </ToggleChip>
@@ -1308,8 +1304,7 @@ export function FieldLabel({ children, hint, title, classic, right }: { children
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 2 }}>
                 <label
                     title={title}
-                    style={classic ? { fontFamily: xpFont, fontSize: 11, fontWeight: 'bold', color: '#2b2822', margin: 0 } : undefined}
-                    className={classic ? '' : 'form-label small fw-semibold mb-0'}
+                    style={{ fontFamily: xpFont, fontSize: 11, fontWeight: 'bold', color: '#2b2822', margin: 0 }}
                 >
                     {children}
                 </label>
@@ -1317,8 +1312,7 @@ export function FieldLabel({ children, hint, title, classic, right }: { children
             </div>
             {hint && (
                 <div
-                    style={classic ? { fontFamily: xpFont, fontSize: 10, color: '#938c76', fontStyle: 'italic', marginBottom: 3 } : undefined}
-                    className={classic ? '' : 'text-muted small fst-italic mb-1'}
+                    style={{ fontFamily: xpFont, fontSize: 10, color: '#938c76', fontStyle: 'italic', marginBottom: 3 }}
                 >
                     {hint}
                 </div>
@@ -1346,10 +1340,7 @@ export function FormError({ children, classic, style }: {
     return (
         <div
             role="alert"
-            className={classic ? '' : 'alert alert-danger py-2 small'}
-            style={classic
-                ? { background: '#f5e8e8', border: '1px solid #8e0000', color: '#8e0000', padding: '4px 8px', fontSize: 11, marginBottom: 10, fontFamily: xpFont, ...style }
-                : { marginBottom: 10, ...style }}
+            style={{ background: '#f5e8e8', border: '1px solid #8e0000', color: '#8e0000', padding: '4px 8px', fontSize: 11, marginBottom: 10, fontFamily: xpFont, ...style }}
         >
             {children}
         </div>
@@ -1411,7 +1402,7 @@ const skelWidth = (row: number, col: number) => SKEL_WIDTHS[(row * 3 + col * 5) 
  * the table's own columns — drop it straight into <tbody> in place of the
  * empty-state row.
  *
- * Pass the view's OWN cell style as `tdStyle` (its `tdBase`, `lvTd(classic)`,
+ * Pass the view's OWN cell style as `tdStyle` (its `tdBase`, `lvTd(true)`,
  * …) rather than letting this re-derive one: padding, borders and font size
  * then match the real rows by construction, not by a copied guess that drifts
  * when the view is restyled.
@@ -1435,16 +1426,16 @@ export function TableSkeleton({ rows = 6, cols, classic = false, tdStyle, rowHei
     fillHeight?: number;
 }) {
     const base: React.CSSProperties = tdStyle ?? {
-        padding: classic ? '4px 6px' : '8px 10px',
-        borderBottom: classic ? '1px solid #c0bdb5' : '1px solid #e6eaf1',
-        fontSize: classic ? 11 : 13,
+        padding: '4px 6px',
+        borderBottom: '1px solid #c0bdb5',
+        fontSize: 11,
     };
     // Falls back to a typical row before any measurement exists (first-ever view
     // of a table), so even that load is close rather than text-height thin.
-    const h = rowHeight ?? (typeof base.height === 'number' ? base.height : (classic ? 26 : 38));
+    const h = rowHeight ?? (typeof base.height === 'number' ? base.height : (26));
     // Bar tracks the row's text size, so a dense classic table doesn't get
     // modern-sized bars (and vice versa).
-    const fontPx = parseFloat(String(base.fontSize ?? (classic ? 11 : 13))) || (classic ? 11 : 13);
+    const fontPx = parseFloat(String(base.fontSize ?? (11))) || (11);
     const barHeight = Math.max(8, Math.round(fontPx * 0.8));
     // Fill the visible body rather than stopping mid-panel: a fixed row count
     // leaves dead space under the skeleton on a tall screen, which reads as "the
@@ -1456,7 +1447,7 @@ export function TableSkeleton({ rows = 6, cols, classic = false, tdStyle, rowHei
     return (
         <>
             {Array.from({ length: rowCount }, (_, r) => (
-                <tr key={`skel-${r}`} style={{ background: classic ? (r % 2 === 0 ? '#ffffff' : '#f5f3ee') : undefined }}>
+                <tr key={`skel-${r}`} style={{ background: r % 2 === 0 ? '#ffffff' : '#f5f3ee'}}>
                     {Array.from({ length: cols }, (_, c) => (
                         <td key={c} style={{ ...base, height: h, boxSizing: 'border-box', verticalAlign: 'middle' }}>
                             <SkeletonBar width={skelWidth(r, c)} height={barHeight} />
@@ -1510,35 +1501,33 @@ export function CardGridSkeleton({
             {Array.from({ length: count }, (_, i) => (
                 <div
                     key={i}
-                    style={classic
-                        ? { border: '2px solid', borderColor: '#ffffff #808080 #808080 #ffffff', background: '#ece9d8' }
-                        : { border: '1px solid #e2e8f0', borderRadius: 6, background: '#fff', overflow: 'hidden' }}
+                    style={{ border: '2px solid', borderColor: '#ffffff #808080 #808080 #ffffff', background: '#ece9d8' }}
                 >
                     {headerStrip && (
                         <div
                             style={{
                                 display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 6,
-                                padding: classic ? '4px 7px' : '8px 12px',
-                                background: classic ? '#a6a6a6' : '#f1f5f9',
-                                borderBottom: `1px solid ${classic ? '#00000033' : '#e2e8f0'}`,
+                                padding: '4px 7px',
+                                background: '#a6a6a6',
+                                borderBottom: `1px solid ${'#00000033'}`,
                             }}
                         >
-                            <SkeletonBar width={skelWidth(i, 0)} height={classic ? 9 : 11} />
-                            <SkeletonBar width={44} height={classic ? 9 : 11} />
+                            <SkeletonBar width={skelWidth(i, 0)} height={9} />
+                            <SkeletonBar width={44} height={9} />
                         </div>
                     )}
                     <div
                         style={{
-                            padding: classic ? '7px 8px' : '12px',
+                            padding: '7px 8px',
                             background: '#fff',
-                            display: 'flex', flexDirection: 'column', gap: classic ? 6 : 8,
+                            display: 'flex', flexDirection: 'column', gap: 6,
                             minHeight: bodyHeight,
                         }}
                     >
                         {Array.from({ length: bodyLines }, (_, l) => (
-                            <SkeletonBar key={l} width={skelWidth(i, l + 1)} height={classic ? 8 : 10} />
+                            <SkeletonBar key={l} width={skelWidth(i, l + 1)} height={8} />
                         ))}
-                        {bar && <SkeletonBar width="100%" height={classic ? 10 : 12} />}
+                        {bar && <SkeletonBar width="100%" height={10} />}
                     </div>
                 </div>
             ))}
@@ -1564,8 +1553,8 @@ export function TableBlockSkeleton({
     header?: boolean;
     rowHeight?: number;
 }) {
-    const h = rowHeight ?? (classic ? 22 : 38);
-    const pad = classic ? '4px 6px' : '8px 10px';
+    const h = rowHeight ?? (22);
+    const pad = '4px 6px';
     const cellWidths = ['62%', '78%', '45%', '70%', '52%', '84%', '58%', '40%'];
 
     return (
@@ -1574,13 +1563,13 @@ export function TableBlockSkeleton({
                 <div
                     style={{
                         display: 'flex', gap: 0,
-                        background: classic ? '#ece9d8' : '#f8fafc',
-                        borderBottom: `1px solid ${classic ? '#b0a898' : '#e2e8f0'}`,
+                        background: '#ece9d8',
+                        borderBottom: `1px solid ${'#b0a898'}`,
                     }}
                 >
                     {Array.from({ length: cols }, (_, c) => (
                         <div key={c} style={{ flex: 1, padding: pad, minWidth: 0 }}>
-                            <SkeletonBar width={cellWidths[(c * 3) % cellWidths.length]} height={classic ? 8 : 10} />
+                            <SkeletonBar width={cellWidths[(c * 3) % cellWidths.length]} height={8} />
                         </div>
                     ))}
                 </div>
@@ -1591,13 +1580,13 @@ export function TableBlockSkeleton({
                     style={{
                         display: 'flex',
                         height: h, alignItems: 'center',
-                        background: classic ? (r % 2 === 0 ? '#ffffff' : '#f5f3ee') : '#fff',
-                        borderBottom: `1px solid ${classic ? '#e3e1dc' : '#eef2f7'}`,
+                        background: r % 2 === 0 ? '#ffffff' : '#f5f3ee',
+                        borderBottom: `1px solid ${'#e3e1dc'}`,
                     }}
                 >
                     {Array.from({ length: cols }, (_, c) => (
                         <div key={c} style={{ flex: 1, padding: pad, minWidth: 0 }}>
-                            <SkeletonBar width={skelWidth(r, c)} height={classic ? 8 : 10} />
+                            <SkeletonBar width={skelWidth(r, c)} height={8} />
                         </div>
                     ))}
                 </div>
@@ -1621,26 +1610,26 @@ export function PanelSkeleton({
     caption?: boolean;
 }) {
     return (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: classic ? 12 : 18, padding: classic ? 8 : 12 }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 12, padding: 8}}>
             {Array.from({ length: sections }, (_, s) => (
                 <div key={s}>
                     {caption && (
                         <div
                             style={{
-                                padding: classic ? '3px 6px' : '0 0 8px',
-                                background: classic ? '#ece9d8' : undefined,
-                                borderBottom: `1px solid ${classic ? '#b0a898' : '#e2e8f0'}`,
-                                marginBottom: classic ? 8 : 10,
+                                padding: '3px 6px',
+                                background: '#ece9d8',
+                                borderBottom: `1px solid ${'#b0a898'}`,
+                                marginBottom: 8,
                             }}
                         >
-                            <SkeletonBar width={s % 2 ? 120 : 150} height={classic ? 9 : 11} />
+                            <SkeletonBar width={s % 2 ? 120 : 150} height={9} />
                         </div>
                     )}
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: classic ? 7 : 10 }}>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 7}}>
                         {Array.from({ length: rows }, (_, r) => (
                             <div key={r} style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
-                                <SkeletonBar width={classic ? 92 : 120} height={classic ? 8 : 10} />
-                                <SkeletonBar width={skelWidth(s + r, r)} height={classic ? 8 : 10} />
+                                <SkeletonBar width={92} height={8} />
+                                <SkeletonBar width={skelWidth(s + r, r)} height={8} />
                             </div>
                         ))}
                     </div>
@@ -1699,7 +1688,7 @@ function scrollParentOf(el: HTMLElement): HTMLElement | null {
  *   …
  *   <tbody ref={bodyRef}>
  *       {rows.length === 0 && (loading
- *           ? <TableSkeleton cols={skel.cols ?? 12} classic={classic} tdStyle={tdBase} rowHeight={skel.rowHeight} />
+ *           ? <TableSkeleton cols={skel.cols ?? 12} classic tdStyle={tdBase} rowHeight={skel.rowHeight} />
  *           : <tr>…</tr>)}
  *
  * `key` must be stable per table, and distinct between two tables whose rows
@@ -1938,7 +1927,7 @@ export function useFloatingMenu(menuWidth = 175) {
 
 /** "⋯" trigger button — square icon button in classic, link-style in modern. Always tagged .xp-menu-trigger so useFloatingMenu's outside-click check sees it. */
 export function MenuTriggerButton({ classic, onClick, title = 'More actions' }: { classic: boolean; onClick: (e: React.MouseEvent) => void; title?: string }) {
-    if (classic) {
+    if (true) {
         return (
             <Tooltip content={title} placement="side"><button
                 type="button"
@@ -2005,7 +1994,7 @@ export function XPActionButton({
     const tip = (btn: React.ReactElement) => title
         ? <Tooltip content={title} placement={label ? 'bottom' : 'side'}>{btn}</Tooltip>
         : btn;
-    if (classic) {
+    if (true) {
         const t = XP_ACTION_TONES[tone];
         return tip(
             <button
@@ -2103,11 +2092,11 @@ const RULE_W = 2;
 
 /** The rail + edge rules as a paint-only frame. Exported for the two views whose panel can't be a component (absolutely positioned, or a two-pane workspace keeping its own grounds) — they apply this to the `<td>` and must stay in sync with the component. `railColor` overrides the selection blue where the rail carries meaning (e.g. health on Booking Stock). */
 export function expandedRowFrame(classic: boolean, railColor?: string): React.CSSProperties {
-    const rail = classic ? RAIL_W.classic : RAIL_W.modern;
-    const rule = classic ? '#808080' : '#adb5bd';
+    const rail = RAIL_W.classic;
+    const rule = '#808080';
     return {
         boxShadow: [
-            `inset ${rail}px 0 0 0 ${railColor || (classic ? '#316ac5' : '#2f6feb')}`,
+            `inset ${rail}px 0 0 0 ${railColor || ('#316ac5')}`,
             `inset 0 ${RULE_W}px 0 0 ${rule}`,
             `inset 0 -${RULE_W}px 0 0 ${rule}`,
         ].join(', '),
@@ -2134,14 +2123,14 @@ const ROW_STATE_BG: Record<RowState, { classic: string; modern: string }> = {
 };
 
 export const rowStateBg = (state: RowState, classic: boolean): string =>
-    classic ? ROW_STATE_BG[state].classic : ROW_STATE_BG[state].modern;
+    ROW_STATE_BG[state].classic;
 
 export function ExpandedRowPanel({ classic, children, style }: { classic: boolean; children: React.ReactNode; style?: React.CSSProperties }) {
     return (
         <div style={{
-            ...expandedRowFrame(classic),
+            ...expandedRowFrame(true),
             background: '#fff',
-            padding: classic ? 5 : 6,
+            padding: 5,
             ...style,
         }}>
             {children}
@@ -2153,7 +2142,7 @@ export function ExpandedRowPanel({ classic, children, style }: { classic: boolea
 export function ExpandedRowPanelBody({ classic, children, style }: { classic: boolean; children: React.ReactNode; style?: React.CSSProperties }) {
     return (
         <div style={{
-            padding: classic ? '4px 8px' : '6px 12px',
+            padding: '4px 8px',
             ...style,
         }}>
             {children}
