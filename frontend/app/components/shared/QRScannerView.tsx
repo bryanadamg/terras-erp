@@ -195,183 +195,112 @@ export default function QRScannerView({
 
     const terminalId = useRef(Math.random().toString(36).substr(2, 6).toUpperCase());
 
-    if (true) {
-        return (
-            <div style={xpBevel} className="fade-in">
-                {/* XP Title Bar */}
-                <div style={xpTitleBar}>
-                    <span>
-                        <i className="bi bi-qr-code-scan" style={{ marginRight: 6, color: '#aaccff' }}></i>
-                        Operator Scan Terminal
-                    </span>
-                    <button className={XP_BTN} style={xpBtn({ padding: '0 6px', height: 20 })} type="button" onClick={onClose}>✕</button>
-                </div>
+    return (
+        <div style={xpBevel} className="fade-in">
+            {/* XP Title Bar */}
+            <div style={xpTitleBar}>
+                <span>
+                    <i className="bi bi-qr-code-scan" style={{ marginRight: 6, color: '#aaccff' }}></i>
+                    Operator Scan Terminal
+                </span>
+                <button className={XP_BTN} style={xpBtn({ padding: '0 6px', height: 20 })} type="button" onClick={onClose}>✕</button>
+            </div>
 
-                {/* XP Body */}
-                <div style={{ background: '#ece9d8', padding: '12px 14px' }}>
-                    {!scannedWO ? (
-                        <>
-                            <div style={{ display: 'flex', justifyContent: 'center' }}>
-                                <div id="reader" style={{ border: '2px solid #7f9db9', background: '#ffffff', width: '100%', maxWidth: '500px', overflow: 'hidden' }}></div>
-                            </div>
-                            <div style={{ textAlign: 'center', marginTop: 12 }}>
-                                <p style={{ fontFamily: xpFont, fontSize: '13px', fontWeight: 'bold', color: '#333', margin: '0 0 4px 0' }}>Ready to Scan</p>
-                                <span style={{ fontSize: '11px', color: '#666', fontFamily: xpFont }}>Point your camera at a Work Order QR Code</span>
-                                {error && (
-                                    <div style={{ background: '#fce8e8', border: '1px solid #cc0000', borderLeft: '4px solid #cc0000', padding: '6px 10px', marginTop: 10, fontFamily: xpFont, fontSize: '11px', color: '#6b0000' }}>
-                                        <i className="bi bi-exclamation-triangle-fill" style={{ marginRight: 4 }}></i>{error}
-                                    </div>
-                                )}
-                            </div>
-                        </>
-                    ) : (
-                        <div>
-                            {/* Active WO sub-panel */}
-                            <div style={{ background: '#f5f4ef', border: '2px solid', borderColor: '#dfdfdf #808080 #808080 #dfdfdf', padding: '8px 10px', marginBottom: 10, display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                                <div>
-                                    <div style={{ fontFamily: xpFont, fontSize: '9px', fontWeight: 'bold', textTransform: 'uppercase', color: '#666' }}>Active Work Order</div>
-                                    {/* Hero size — an operator reads this across a machine, so
-                                        it overrides the tier-1 step while keeping its face/color. */}
-                                    <CodeChip code={scannedWO.code} tone="accent" style={{ fontSize: 20 }} />
-                                    <div style={{ marginTop: 4 }}>
-                                        <span style={{ fontFamily: xpFont, fontSize: '11px', color: '#444', marginRight: 6 }}>{getItemName(scannedWO._mo?.item_id)}</span>
-                                        <span style={xpStatusBadge(scannedWO.status)}>{scannedWO.status}</span>
-                                    </div>
-                                </div>
-                                <button className={XP_BTN} style={xpBtn()} type="button" onClick={() => { setScannedWO(null); window.location.reload(); }}>
-                                    <i className="bi bi-arrow-repeat" style={{ marginRight: 4 }}></i>Reset
-                                </button>
-                            </div>
-
+            {/* XP Body */}
+            <div style={{ background: '#ece9d8', padding: '12px 14px' }}>
+                {!scannedWO ? (
+                    <>
+                        <div style={{ display: 'flex', justifyContent: 'center' }}>
+                            <div id="reader" style={{ border: '2px solid #7f9db9', background: '#ffffff', width: '100%', maxWidth: '500px', overflow: 'hidden' }}></div>
+                        </div>
+                        <div style={{ textAlign: 'center', marginTop: 12 }}>
+                            <p style={{ fontFamily: xpFont, fontSize: '13px', fontWeight: 'bold', color: '#333', margin: '0 0 4px 0' }}>Ready to Scan</p>
+                            <span style={{ fontSize: '11px', color: '#666', fontFamily: xpFont }}>Point your camera at a Work Order QR Code</span>
                             {error && (
-                                <div style={{ background: '#fce8e8', border: '1px solid #cc0000', borderLeft: '4px solid #cc0000', padding: '6px 10px', marginBottom: 10, fontFamily: xpFont, fontSize: '11px', color: '#6b0000' }}>
+                                <div style={{ background: '#fce8e8', border: '1px solid #cc0000', borderLeft: '4px solid #cc0000', padding: '6px 10px', marginTop: 10, fontFamily: xpFont, fontSize: '11px', color: '#6b0000' }}>
                                     <i className="bi bi-exclamation-triangle-fill" style={{ marginRight: 4 }}></i>{error}
                                 </div>
                             )}
-
-                            {/* Section label */}
-                            <div style={{ fontFamily: xpFont, fontSize: '10px', fontWeight: 'bold', textTransform: 'uppercase', letterSpacing: '0.5px', color: '#555', borderBottom: '1px solid #c0bdb5', paddingBottom: 3, marginBottom: 10 }}>
-                                Factory Floor Actions
-                            </div>
-
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                                {scannedWO.status === 'PENDING' && (
-                                    <button
-                                        className={XP_BTN}
-                                        style={xpBtn({ ...BTN_TONES.primary, padding: '10px 20px', fontSize: '14px', width: '100%', justifyContent: 'center', display: 'flex', alignItems: 'center', gap: 8 })}
-                                        type="button"
-                                        onClick={() => handleUpdate('IN_PROGRESS')}
-                                    >
-                                        <i className="bi bi-play-fill" style={{ fontSize: 18 }}></i> START PRODUCTION
-                                    </button>
-                                )}
-                                {scannedWO.status === 'IN_PROGRESS' && (
-                                    <button
-                                        className={XP_BTN}
-                                        style={xpBtn({ ...BTN_TONES.success, padding: '10px 20px', fontSize: '14px', width: '100%', justifyContent: 'center', display: 'flex', alignItems: 'center', gap: 8 })}
-                                        type="button"
-                                        onClick={() => handleUpdate('COMPLETED')}
-                                    >
-                                        <i className="bi bi-check-lg" style={{ fontSize: 18 }}></i> MARK AS COMPLETED
-                                    </button>
-                                )}
-                                {scannedWO.status === 'COMPLETED' && (
-                                    <div style={{ background: '#e8f5e9', border: '1px solid #2e7d32', padding: '20px', textAlign: 'center' }}>
-                                        <i className="bi bi-check-circle-fill" style={{ color: '#2e7d32', fontSize: 32, display: 'block', marginBottom: 8 }}></i>
-                                        <span style={{ fontFamily: xpFont, fontSize: '13px', fontWeight: 'bold', color: '#2e7d32' }}>PRODUCTION COMPLETE</span>
-                                        <br />
-                                        <span style={{ fontFamily: xpFont, fontSize: '11px', color: '#2e7d32', opacity: 0.85 }}>This order has been received into inventory.</span>
-                                    </div>
-                                )}
-                                <div style={{ textAlign: 'center', marginTop: 4 }}>
-                                    <button
-                                        style={{ background: 'none', border: 'none', color: '#cc0000', cursor: 'pointer', fontFamily: xpFont, fontSize: '11px', textDecoration: 'underline', marginTop: 8 }}
-                                        type="button"
-                                        onClick={() => handleUpdate('CANCELLED')}
-                                    >
-                                        Cancel This Order
-                                    </button>
-                                </div>
-                            </div>
                         </div>
-                    )}
-                </div>
-
-                {/* XP Footer */}
-                <div style={{ background: 'linear-gradient(to bottom, #e8e6df, #d5d3cc)', borderTop: '1px solid #b0a898', padding: '2px 8px', fontFamily: xpFont, fontSize: '10px', color: '#666', textAlign: 'center' }}>
-                    Terminal ID: {terminalId.current} | Secured by Terras Auth
-                </div>
-            </div>
-        );
-    }
-
-    return (
-        <div className="card border-0 shadow-lg fade-in">
-            <div className="card-header bg-dark text-white d-flex justify-content-between align-items-center">
-                <h5 className="mb-0 small fw-bold text-uppercase"><i className="bi bi-qr-code-scan me-2 text-info"></i>Operator Scan Terminal</h5>
-                <button className="btn btn-sm btn-outline-light py-0 border-0" type="button" onClick={onClose}><i className="bi bi-x-lg"></i></button>
-            </div>
-            <div className="card-body bg-light bg-opacity-50">
-                {!scannedWO ? (
-                    <div className="text-center py-4">
-                        <div id="reader" className="overflow-hidden rounded border bg-white" style={{ width: '100%', maxWidth: '500px', margin: '0 auto' }}></div>
-                        <div className="mt-4">
-                            <p className="lead text-muted mb-2">Ready to Scan</p>
-                            <small className="text-muted">Point your camera at a Work Order QR Code</small>
-                            {error && <div className="alert alert-danger py-2 mt-3 small shadow-sm border-0 border-start border-4 border-danger">{error}</div>}
-                        </div>
-                    </div>
+                    </>
                 ) : (
-                    <div className="py-2">
-                        <div className="d-flex align-items-center justify-content-between mb-4 bg-white p-3 rounded border shadow-sm">
+                    <div>
+                        {/* Active WO sub-panel */}
+                        <div style={{ background: '#f5f4ef', border: '2px solid', borderColor: '#dfdfdf #808080 #808080 #dfdfdf', padding: '8px 10px', marginBottom: 10, display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                             <div>
-                                <div className="extra-small text-muted text-uppercase fw-bold">Active Work Order</div>
-                                <h2 className="mb-0"><CodeChip code={scannedWO.code} tone="accent" style={{ fontSize: 24 }} /></h2>
-                                <div className="mt-1">
-                                    <span className="small text-muted me-2">{getItemName(scannedWO._mo?.item_id)}</span>
-                                    <span className={`badge ${scannedWO.status === 'COMPLETED' ? 'bg-success' : 'bg-warning text-dark'} extra-small`}>{scannedWO.status}</span>
+                                <div style={{ fontFamily: xpFont, fontSize: '9px', fontWeight: 'bold', textTransform: 'uppercase', color: '#666' }}>Active Work Order</div>
+                                {/* Hero size — an operator reads this across a machine, so
+                                    it overrides the tier-1 step while keeping its face/color. */}
+                                <CodeChip code={scannedWO.code} tone="accent" style={{ fontSize: 20 }} />
+                                <div style={{ marginTop: 4 }}>
+                                    <span style={{ fontFamily: xpFont, fontSize: '11px', color: '#444', marginRight: 6 }}>{getItemName(scannedWO._mo?.item_id)}</span>
+                                    <span style={xpStatusBadge(scannedWO.status)}>{scannedWO.status}</span>
                                 </div>
                             </div>
-                            <button className="btn btn-sm btn-outline-secondary" type="button" onClick={() => { setScannedWO(null); window.location.reload(); }}>
-                                <i className="bi bi-arrow-repeat me-1"></i>Reset
+                            <button className={XP_BTN} style={xpBtn()} type="button" onClick={() => { setScannedWO(null); window.location.reload(); }}>
+                                <i className="bi bi-arrow-repeat" style={{ marginRight: 4 }}></i>Reset
                             </button>
                         </div>
 
-                        {error && <div className="alert alert-danger py-3 mb-4 shadow-sm border-0 border-start border-4 border-danger fw-bold"><i className="bi bi-exclamation-octagon-fill me-2"></i>{error}</div>}
+                        {error && (
+                            <div style={{ background: '#fce8e8', border: '1px solid #cc0000', borderLeft: '4px solid #cc0000', padding: '6px 10px', marginBottom: 10, fontFamily: xpFont, fontSize: '11px', color: '#6b0000' }}>
+                                <i className="bi bi-exclamation-triangle-fill" style={{ marginRight: 4 }}></i>{error}
+                            </div>
+                        )}
 
-                        <div className="row g-3">
-                            <div className="col-12">
-                                <h6 className="small text-uppercase text-muted fw-bold mb-3 letter-spacing-1">Factory Floor Actions</h6>
-                                <div className="d-grid gap-3">
-                                    {scannedWO.status === 'PENDING' && (
-                                        <button className="btn btn-lg btn-primary shadow py-3 fw-bold" type="button" onClick={() => handleUpdate('IN_PROGRESS')}>
-                                            <i className="bi bi-play-fill me-2 fs-4"></i> START PRODUCTION
-                                        </button>
-                                    )}
-                                    {scannedWO.status === 'IN_PROGRESS' && (
-                                        <button className="btn btn-lg btn-success shadow py-3 fw-bold" type="button" onClick={() => handleUpdate('COMPLETED')}>
-                                            <i className="bi bi-check-lg me-2 fs-4"></i> MARK AS COMPLETED
-                                        </button>
-                                    )}
-                                    {scannedWO.status === 'COMPLETED' && (
-                                        <div className="card border-success border-opacity-25 bg-success bg-opacity-10 py-4 px-3 text-center">
-                                            <i className="bi bi-check-circle-fill text-success fs-1 mb-2"></i>
-                                            <h5 className="mb-0 fw-bold text-success">PRODUCTION COMPLETE</h5>
-                                            <small className="text-success opacity-75">This order has been received into inventory.</small>
-                                        </div>
-                                    )}
-                                    <button className="btn btn-sm btn-link text-danger mt-2" type="button" onClick={() => handleUpdate('CANCELLED')}>
-                                        Cancel This Order
-                                    </button>
+                        {/* Section label */}
+                        <div style={{ fontFamily: xpFont, fontSize: '10px', fontWeight: 'bold', textTransform: 'uppercase', letterSpacing: '0.5px', color: '#555', borderBottom: '1px solid #c0bdb5', paddingBottom: 3, marginBottom: 10 }}>
+                            Factory Floor Actions
+                        </div>
+
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                            {scannedWO.status === 'PENDING' && (
+                                <button
+                                    className={XP_BTN}
+                                    style={xpBtn({ ...BTN_TONES.primary, padding: '10px 20px', fontSize: '14px', width: '100%', justifyContent: 'center', display: 'flex', alignItems: 'center', gap: 8 })}
+                                    type="button"
+                                    onClick={() => handleUpdate('IN_PROGRESS')}
+                                >
+                                    <i className="bi bi-play-fill" style={{ fontSize: 18 }}></i> START PRODUCTION
+                                </button>
+                            )}
+                            {scannedWO.status === 'IN_PROGRESS' && (
+                                <button
+                                    className={XP_BTN}
+                                    style={xpBtn({ ...BTN_TONES.success, padding: '10px 20px', fontSize: '14px', width: '100%', justifyContent: 'center', display: 'flex', alignItems: 'center', gap: 8 })}
+                                    type="button"
+                                    onClick={() => handleUpdate('COMPLETED')}
+                                >
+                                    <i className="bi bi-check-lg" style={{ fontSize: 18 }}></i> MARK AS COMPLETED
+                                </button>
+                            )}
+                            {scannedWO.status === 'COMPLETED' && (
+                                <div style={{ background: '#e8f5e9', border: '1px solid #2e7d32', padding: '20px', textAlign: 'center' }}>
+                                    <i className="bi bi-check-circle-fill" style={{ color: '#2e7d32', fontSize: 32, display: 'block', marginBottom: 8 }}></i>
+                                    <span style={{ fontFamily: xpFont, fontSize: '13px', fontWeight: 'bold', color: '#2e7d32' }}>PRODUCTION COMPLETE</span>
+                                    <br />
+                                    <span style={{ fontFamily: xpFont, fontSize: '11px', color: '#2e7d32', opacity: 0.85 }}>This order has been received into inventory.</span>
                                 </div>
+                            )}
+                            <div style={{ textAlign: 'center', marginTop: 4 }}>
+                                <button
+                                    style={{ background: 'none', border: 'none', color: '#cc0000', cursor: 'pointer', fontFamily: xpFont, fontSize: '11px', textDecoration: 'underline', marginTop: 8 }}
+                                    type="button"
+                                    onClick={() => handleUpdate('CANCELLED')}
+                                >
+                                    Cancel This Order
+                                </button>
                             </div>
                         </div>
                     </div>
                 )}
             </div>
-            <div className="card-footer bg-white extra-small text-muted text-center py-2 border-top-0 opacity-75">
+
+            {/* XP Footer */}
+            <div style={{ background: 'linear-gradient(to bottom, #e8e6df, #d5d3cc)', borderTop: '1px solid #b0a898', padding: '2px 8px', fontFamily: xpFont, fontSize: '10px', color: '#666', textAlign: 'center' }}>
                 Terminal ID: {terminalId.current} | Secured by Terras Auth
             </div>
         </div>
     );
+
 }

@@ -54,18 +54,11 @@ const optionDelay = (i: number) => `${Math.min(i, STAGGER_CAP) * STAGGER_MS}ms`;
 
 /** Selected / idle face of one option cell. Same bevel language as ToggleChip. */
 function optionChrome(isSelected: boolean): React.CSSProperties {
-    if (true) {
-        return {
-            background: isSelected ? '#c8d8f0' : 'linear-gradient(to bottom,#ffffff,#e4e0d8)',
-            border: '2px solid',
-            borderColor: isSelected ? '#0a246a #00184a #00184a #0a246a' : '#fff #aaa #aaa #fff',
-            boxShadow: isSelected ? 'inset 1px 1px 0 #3a6ea8' : undefined,
-        };
-    }
     return {
-        background: isSelected ? '#e8f0fe' : '#fff',
-        border: isSelected ? '2px solid #0d6efd' : '2px solid #e4e8ee',
-        borderRadius: BUTTON_RADIUS,
+        background: isSelected ? '#c8d8f0' : 'linear-gradient(to bottom,#ffffff,#e4e0d8)',
+        border: '2px solid',
+        borderColor: isSelected ? '#0a246a #00184a #00184a #0a246a' : '#fff #aaa #aaa #fff',
+        boxShadow: isSelected ? 'inset 1px 1px 0 #3a6ea8' : undefined,
     };
 }
 

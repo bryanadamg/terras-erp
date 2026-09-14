@@ -938,14 +938,9 @@ export default function StockOnHandView({ locations, attributes, categories, ite
         const delta = newQty - t.qty;
         const modeBtn = (m: 'set' | 'delta', label: string) => {
             const active = adjustMode === m;
-            if (true) {
-                return (
-                    <button key={m} className={XP_BTN} style={xpBtn({ fontSize: '11px', flex: 1, fontWeight: active ? 'bold' : 'normal', background: active ? 'linear-gradient(to bottom,#cfe3ff,#a9c9f0)' : undefined })}
-                        onClick={() => fillAdjust(t, m)}>{label}</button>
-                );
-            }
             return (
-                <button key={m} className={`btn btn-sm flex-fill ${active ? 'btn-warning' : 'btn-outline-secondary'}`} onClick={() => fillAdjust(t, m)}>{label}</button>
+                <button key={m} className={XP_BTN} style={xpBtn({ fontSize: '11px', flex: 1, fontWeight: active ? 'bold' : 'normal', background: active ? 'linear-gradient(to bottom,#cfe3ff,#a9c9f0)' : undefined })}
+                    onClick={() => fillAdjust(t, m)}>{label}</button>
             );
         };
         const pkgLabel = adjustMode === 'set' ? 'Counted packaging' : 'Packaging change (+/-)';

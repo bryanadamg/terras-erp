@@ -1027,67 +1027,48 @@ export function ModalFooterActions({
     onExtra?: () => void;
     extraLabel?: string;
 }) {
-    if (true) {
-        const tone = MODAL_FOOTER_CLASSIC_TONES[variant];
-        return (
-            <>
-                {onExtra && extraLabel && (
-                    <button
-                        type="button"
-                        className={XP_BTN}
-                        onClick={onExtra}
-                        style={{
-                            fontFamily: xpFont, fontSize: 11, padding: '3px 16px', cursor: 'pointer',
-                            borderRadius: BUTTON_RADIUS, border: '1px solid', borderColor: '#dfdfdf #808080 #808080 #dfdfdf',
-                            background: 'linear-gradient(to bottom, #fff, #d4d0c8)', color: '#8a1a1a',
-                        }}
-                    >
-                        {extraLabel}
-                    </button>
-                )}
-                <button
-                    type="button"
-                    className={XP_BTN}
-                    onClick={onCancel}
-                    style={{
-                        fontFamily: xpFont, fontSize: 11, padding: '3px 16px', cursor: 'pointer',
-                        borderRadius: BUTTON_RADIUS, border: '1px solid', borderColor: '#dfdfdf #808080 #808080 #dfdfdf',
-                        background: 'linear-gradient(to bottom, #fff, #d4d0c8)', color: '#000',
-                    }}
-                >
-                    {cancelLabel}
-                </button>
-                {onSubmit && submitLabel && (
-                    <button
-                        type="button"
-                        className={XP_BTN}
-                        onClick={onSubmit}
-                        disabled={submitting || disabled}
-                        style={{
-                            fontFamily: xpFont, fontSize: 11, fontWeight: 'bold', padding: '3px 20px', cursor: submitting || disabled ? 'default' : 'pointer',
-                            borderRadius: BUTTON_RADIUS, border: '1px solid', opacity: submitting || disabled ? 0.6 : 1,
-                            ...tone,
-                        }}
-                    >
-                        {(submitting ? submittingLabel : submitLabel).toUpperCase()}
-                    </button>
-                )}
-            </>
-        );
-    }
+    const tone = MODAL_FOOTER_CLASSIC_TONES[variant];
     return (
         <>
             {onExtra && extraLabel && (
-                <button type="button" className="btn btn-sm btn-outline-danger" onClick={onExtra}>
+                <button
+                    type="button"
+                    className={XP_BTN}
+                    onClick={onExtra}
+                    style={{
+                        fontFamily: xpFont, fontSize: 11, padding: '3px 16px', cursor: 'pointer',
+                        borderRadius: BUTTON_RADIUS, border: '1px solid', borderColor: '#dfdfdf #808080 #808080 #dfdfdf',
+                        background: 'linear-gradient(to bottom, #fff, #d4d0c8)', color: '#8a1a1a',
+                    }}
+                >
                     {extraLabel}
                 </button>
             )}
-            <button type="button" className="btn btn-sm btn-link text-muted text-decoration-none" onClick={onCancel}>
+            <button
+                type="button"
+                className={XP_BTN}
+                onClick={onCancel}
+                style={{
+                    fontFamily: xpFont, fontSize: 11, padding: '3px 16px', cursor: 'pointer',
+                    borderRadius: BUTTON_RADIUS, border: '1px solid', borderColor: '#dfdfdf #808080 #808080 #dfdfdf',
+                    background: 'linear-gradient(to bottom, #fff, #d4d0c8)', color: '#000',
+                }}
+            >
                 {cancelLabel}
             </button>
             {onSubmit && submitLabel && (
-                <button type="button" className={`btn btn-sm btn-${variant} px-4 fw-bold shadow-sm`} onClick={onSubmit} disabled={submitting || disabled}>
-                    {submitting ? submittingLabel : submitLabel}
+                <button
+                    type="button"
+                    className={XP_BTN}
+                    onClick={onSubmit}
+                    disabled={submitting || disabled}
+                    style={{
+                        fontFamily: xpFont, fontSize: 11, fontWeight: 'bold', padding: '3px 20px', cursor: submitting || disabled ? 'default' : 'pointer',
+                        borderRadius: BUTTON_RADIUS, border: '1px solid', opacity: submitting || disabled ? 0.6 : 1,
+                        ...tone,
+                    }}
+                >
+                    {(submitting ? submittingLabel : submitLabel).toUpperCase()}
                 </button>
             )}
         </>
@@ -1905,23 +1886,16 @@ export function useFloatingMenu(menuWidth = 175) {
 
 /** "⋯" trigger button — square icon button in classic, link-style in modern. Always tagged .xp-menu-trigger so useFloatingMenu's outside-click check sees it. */
 export function MenuTriggerButton({ onClick, title = 'More actions' }: { onClick: (e: React.MouseEvent) => void; title?: string }) {
-    if (true) {
-        return (
-            <Tooltip content={title} placement="side"><button
-                type="button"
-                className={`xp-menu-trigger ${XP_BTN}`}
-                onClick={onClick}
-                style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 20, height: 20, background: 'none', border: '1px solid transparent', borderRadius: BUTTON_RADIUS, cursor: 'pointer', color: '#555', fontSize: '12px' }}
-                onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.borderColor = '#7f9db9'; (e.currentTarget as HTMLButtonElement).style.background = '#e8f0f8'; }}
-                onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.borderColor = 'transparent'; (e.currentTarget as HTMLButtonElement).style.background = 'none'; }}
-            >
-                <i className="bi bi-three-dots"></i>
-            </button></Tooltip>
-        );
-    }
     return (
-        <Tooltip content={title} placement="side"><button type="button" className="btn btn-sm btn-link text-muted p-0 d-inline-flex align-items-center justify-content-center xp-menu-trigger" style={{ width: 26, height: 26 }} onClick={onClick}>
-            <i className="bi bi-three-dots fs-6"></i>
+        <Tooltip content={title} placement="side"><button
+            type="button"
+            className={`xp-menu-trigger ${XP_BTN}`}
+            onClick={onClick}
+            style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 20, height: 20, background: 'none', border: '1px solid transparent', borderRadius: BUTTON_RADIUS, cursor: 'pointer', color: '#555', fontSize: '12px' }}
+            onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.borderColor = '#7f9db9'; (e.currentTarget as HTMLButtonElement).style.background = '#e8f0f8'; }}
+            onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.borderColor = 'transparent'; (e.currentTarget as HTMLButtonElement).style.background = 'none'; }}
+        >
+            <i className="bi bi-three-dots"></i>
         </button></Tooltip>
     );
 }
@@ -1971,32 +1945,19 @@ export function XPActionButton({
     const tip = (btn: React.ReactElement) => title
         ? <Tooltip content={title} placement={label ? 'bottom' : 'side'}>{btn}</Tooltip>
         : btn;
-    if (true) {
-        const t = XP_ACTION_TONES[tone];
-        return tip(
-            <button
-                type="button"
-                onClick={onClick}
-                disabled={disabled}
-                className={[XP_BTN, className].filter(Boolean).join(' ')}
-                style={{
-                    fontFamily: xpFont, fontSize: 11, lineHeight: 1, padding: '2px 4px',
-                    cursor: disabled ? 'default' : 'pointer', opacity: disabled ? 0.5 : 1,
-                    background: t.bg, border: `1px solid ${t.border}`, color: t.fg,
-                    display: 'inline-flex', alignItems: 'center', gap: 4, borderRadius: BUTTON_RADIUS,
-                }}
-            >
-                {iconEl}{label}
-            </button>
-        );
-    }
+    const t = XP_ACTION_TONES[tone];
     return tip(
         <button
             type="button"
-            className={`btn ${XP_ACTION_MODERN[tone]} d-inline-flex align-items-center py-0 px-1`}
-            style={{ fontSize: 11, gap: 4 }}
             onClick={onClick}
             disabled={disabled}
+            className={[XP_BTN, className].filter(Boolean).join(' ')}
+            style={{
+                fontFamily: xpFont, fontSize: 11, lineHeight: 1, padding: '2px 4px',
+                cursor: disabled ? 'default' : 'pointer', opacity: disabled ? 0.5 : 1,
+                background: t.bg, border: `1px solid ${t.border}`, color: t.fg,
+                display: 'inline-flex', alignItems: 'center', gap: 4, borderRadius: BUTTON_RADIUS,
+            }}
         >
             {iconEl}{label}
         </button>

@@ -42,29 +42,17 @@ const REJECT_REASONS = [
 ];
 
 const statusStyle = (status: string): React.CSSProperties => {
-    if (true) {
-        const map: Record<string, { bg: string; border: string; color: string }> = {
-            APPROVED:    { bg: '#d4edda', border: '#27713a', color: '#0c3a1a' },
-            REJECTED:    { bg: '#f8d7da', border: '#a01a1a', color: '#4a0000' },
-            SUBMITTED:   { bg: '#dce4f5', border: '#3a5faa', color: '#0d2a6e' },
-            RESUBMIT:    { bg: '#fff3cd', border: '#b8860b', color: '#3e2000' },
-            IN_PROGRESS: { bg: '#fff3cd', border: '#b8860b', color: '#3e2000' },
-            PENDING:     { bg: '#e8e8e8', border: '#7a7a7a', color: '#111' },
-        };
-        const s = map[status] || { bg: '#e8e8e8', border: '#7a7a7a', color: '#111' };
-        return { background: s.bg, border: `1px solid ${s.border}`, color: s.color, padding: '1px 5px', fontSize: 9, fontFamily: xpFont, fontWeight: 'bold', whiteSpace: 'nowrap' as const };
-    }
-    // Modern: semantic colors preserved, softer bg + matching text/border, rounded 6px.
     const map: Record<string, { bg: string; border: string; color: string }> = {
-        APPROVED:    { bg: '#ecfdf3', border: '#abdfc0', color: '#15803d' },
-        REJECTED:    { bg: '#fef2f2', border: '#f3c4c4', color: '#dc2626' },
-        SUBMITTED:   { bg: '#eff6ff', border: '#bfd3f5', color: '#1d4ed8' },
-        RESUBMIT:    { bg: '#fffbeb', border: '#fce3a6', color: '#b45309' },
-        IN_PROGRESS: { bg: '#fffbeb', border: '#fce3a6', color: '#b45309' },
-        PENDING:     { bg: '#f1f5f9', border: '#d4dce6', color: '#475569' },
+        APPROVED:    { bg: '#d4edda', border: '#27713a', color: '#0c3a1a' },
+        REJECTED:    { bg: '#f8d7da', border: '#a01a1a', color: '#4a0000' },
+        SUBMITTED:   { bg: '#dce4f5', border: '#3a5faa', color: '#0d2a6e' },
+        RESUBMIT:    { bg: '#fff3cd', border: '#b8860b', color: '#3e2000' },
+        IN_PROGRESS: { bg: '#fff3cd', border: '#b8860b', color: '#3e2000' },
+        PENDING:     { bg: '#e8e8e8', border: '#7a7a7a', color: '#111' },
     };
-    const s = map[status] || { bg: '#f1f5f9', border: '#d4dce6', color: '#475569' };
-    return { display: 'inline-block', background: s.bg, border: `1px solid ${s.border}`, color: s.color, borderRadius: CHIP_RADIUS, padding: '2px 8px', fontSize: 11, fontFamily: modernFont, fontWeight: 600, whiteSpace: 'nowrap' as const };
+    const s = map[status] || { bg: '#e8e8e8', border: '#7a7a7a', color: '#111' };
+    return { background: s.bg, border: `1px solid ${s.border}`, color: s.color, padding: '1px 5px', fontSize: 9, fontFamily: xpFont, fontWeight: 'bold', whiteSpace: 'nowrap' as const };
+    // Modern: semantic colors preserved, softer bg + matching text/border, rounded 6px.
 };
 
 const today = () => new Date().toISOString().split('T')[0];

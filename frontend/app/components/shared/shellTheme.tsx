@@ -164,39 +164,23 @@ export function ToolbarButton({
     title?: string;
     style?: React.CSSProperties;
 }) {
-    if (true) {
-        return (
-            <button
-                type="button"
-                data-testid={testId}
-                className={XP_BTN}
-                onClick={onClick}
-                disabled={disabled}
-                title={title}
-                style={{
-                    fontFamily: xpFont, fontSize: '11px', padding: '2px 10px',
-                    cursor: disabled ? 'default' : 'pointer', opacity: disabled ? 0.5 : 1,
-                    border: '1px solid', borderRadius: BUTTON_RADIUS,
-                    ...TOOLBAR_BTN_CLASSIC[tone],
-                    ...style,
-                }}
-            >
-                {icon && <i className={`bi ${icon}`} style={{ marginRight: 4 }}></i>}
-                {children}
-            </button>
-        );
-    }
     return (
         <button
             type="button"
             data-testid={testId}
-            className={`btn btn-sm ${TOOLBAR_BTN_MODERN[tone]}${printable ? ' btn-print' : ''}`}
+            className={XP_BTN}
             onClick={onClick}
             disabled={disabled}
             title={title}
-            style={style}
+            style={{
+                fontFamily: xpFont, fontSize: '11px', padding: '2px 10px',
+                cursor: disabled ? 'default' : 'pointer', opacity: disabled ? 0.5 : 1,
+                border: '1px solid', borderRadius: BUTTON_RADIUS,
+                ...TOOLBAR_BTN_CLASSIC[tone],
+                ...style,
+            }}
         >
-            {icon && <i className={`bi ${icon} me-2`}></i>}
+            {icon && <i className={`bi ${icon}`} style={{ marginRight: 4 }}></i>}
             {children}
         </button>
     );
@@ -415,20 +399,9 @@ export function ShellTitleBar({ icon, title, subtitle, right, tone = 'blue' }: {
     right?: React.ReactNode;      // action button(s) — e.g. "+ Add"
     tone?: ShellTone;             // classic-only bar color; modern keeps the white card-header
 }) {
-    if (true) {
-        return (
-            <div style={xpTitleBar({}, tone)}>
-                <span><i className={`bi ${icon}`} style={{ marginRight: 6 }} />{title}</span>
-                {right}
-            </div>
-        );
-    }
     return (
-        <div className="card-header bg-white d-flex justify-content-between align-items-center">
-            <div>
-                <h5 className="card-title mb-0"><i className={`bi ${icon} me-2`}></i>{title}</h5>
-                {subtitle && <p className="text-muted small mb-0 mt-1">{subtitle}</p>}
-            </div>
+        <div style={xpTitleBar({}, tone)}>
+            <span><i className={`bi ${icon}`} style={{ marginRight: 6 }} />{title}</span>
             {right}
         </div>
     );

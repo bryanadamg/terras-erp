@@ -76,51 +76,33 @@ export const MachineCard = ({
     footer?: React.ReactNode;
     children: React.ReactNode;
 }) => {
-    if (true) {
-        return (
-            <div onClick={onClick} title={title} className="tile-hover"
-                style={{
-                    border: '2px solid', borderColor: '#ffffff #808080 #808080 #ffffff',
-                    background: '#ece9d8', cursor: onClick ? 'pointer' : undefined,
-                    borderRadius: SECTION_RADIUS, overflow: 'hidden',
-                    display: 'flex', flexDirection: 'column',
-                }}>
-                <div style={{
-                    background: machineStrip(status), color: '#fff', fontFamily: xpFont,
-                    fontSize: 11, fontWeight: 'bold', padding: '2px 7px', display: 'flex',
-                    justifyContent: 'space-between', alignItems: 'center', gap: 6,
-                    borderBottom: '1px solid #00000033',
-                }}>
-                    <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                        {code} — {name}
-                    </span>
-                    <span style={{ fontSize: 9, flexShrink: 0, display: 'flex', alignItems: 'center', gap: 4 }}>
-                        {alarm && <i className="bi bi-exclamation-triangle-fill" />}
-                        {badge}
-                        {statusLabel.toUpperCase()}
-                    </span>
-                </div>
-                <div style={{
-                    padding: '6px 8px', background: '#fff', fontFamily: xpFont,
-                    flex: 1, display: 'flex', flexDirection: 'column',
-                }}>
-                    <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>{children}</div>
-                    {footer}
-                </div>
-            </div>
-        );
-    }
     return (
-        <div onClick={onClick} className="card h-100 shadow-sm border tile-hover"
-            style={{ cursor: onClick ? 'pointer' : undefined, borderRadius: SECTION_RADIUS }} title={title}>
-            <div className="card-body p-3 d-flex flex-column">
-                <div className="d-flex align-items-center gap-2 mb-2">
-                    <span style={{ fontWeight: 'bold', fontSize: 15 }}>{code}</span>
-                    <span className="text-muted small text-truncate" style={{ flex: 1 }}>{name}</span>
-                    {alarm && <i className="bi bi-exclamation-triangle-fill" style={{ color: RED }} />}
-                    {badge && <span className="text-muted" style={{ fontSize: 11 }}>{badge}</span>}
-                    <StatusChip status={machineChipStatus(status)} label={statusLabel} tint />
-                </div>
+        <div onClick={onClick} title={title} className="tile-hover"
+            style={{
+                border: '2px solid', borderColor: '#ffffff #808080 #808080 #ffffff',
+                background: '#ece9d8', cursor: onClick ? 'pointer' : undefined,
+                borderRadius: SECTION_RADIUS, overflow: 'hidden',
+                display: 'flex', flexDirection: 'column',
+            }}>
+            <div style={{
+                background: machineStrip(status), color: '#fff', fontFamily: xpFont,
+                fontSize: 11, fontWeight: 'bold', padding: '2px 7px', display: 'flex',
+                justifyContent: 'space-between', alignItems: 'center', gap: 6,
+                borderBottom: '1px solid #00000033',
+            }}>
+                <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    {code} — {name}
+                </span>
+                <span style={{ fontSize: 9, flexShrink: 0, display: 'flex', alignItems: 'center', gap: 4 }}>
+                    {alarm && <i className="bi bi-exclamation-triangle-fill" />}
+                    {badge}
+                    {statusLabel.toUpperCase()}
+                </span>
+            </div>
+            <div style={{
+                padding: '6px 8px', background: '#fff', fontFamily: xpFont,
+                flex: 1, display: 'flex', flexDirection: 'column',
+            }}>
                 <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>{children}</div>
                 {footer}
             </div>
