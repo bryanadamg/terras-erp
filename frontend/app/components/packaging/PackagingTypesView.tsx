@@ -104,7 +104,7 @@ export default function PackagingTypesView({ types, loading, onCreate, onEdit, o
             <PageTitleBar icon="bi-box2" title="Packaging Types" />
 
             <div style={{ background: 'linear-gradient(to bottom, #f5f4ef, #e0dfd8)', borderBottom: '1px solid #b0a898', padding: '4px 8px', display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap', flexShrink: 0 }}>
-                <SearchField classic value={search} onChange={setSearch} placeholder="Search code or name…" width={240} />
+                <SearchField value={search} onChange={setSearch} placeholder="Search code or name…" width={240} />
                 <ToolbarCount right>
                     {filtered.length === types.length
                         ? `${types.length} type${types.length !== 1 ? 's' : ''}`

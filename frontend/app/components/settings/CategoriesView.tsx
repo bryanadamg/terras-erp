@@ -284,7 +284,7 @@ export default function CategoriesView({
     return <div>
             {/* Search toolbar */}
             <div style={xpToolbar}>
-                <SearchField classic value={search} onChange={setSearch} placeholder="Search categories..." width={200} />
+                <SearchField value={search} onChange={setSearch} placeholder="Search categories..." width={200} />
                 <div style={{ width: 1, height: 20, background: '#a0988c', margin: '0 2px', flexShrink: 0 }} />
                 <ToolbarCount>
                     {categories.length} categor{categories.length === 1 ? 'y' : 'ies'}

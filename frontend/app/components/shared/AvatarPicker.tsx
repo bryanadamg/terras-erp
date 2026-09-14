@@ -240,7 +240,6 @@ export default function AvatarPicker({ value, onChange, seed, template, classic 
                     tabs={tabs}
                     activeKey={tab}
                     onChange={setTab}
-                    classic
                 />
             </div>
 
@@ -318,7 +317,6 @@ export default function AvatarPicker({ value, onChange, seed, template, classic 
                                 <ToggleChip
                                     on={recipe.features[activeSlot.key] === undefined}
                                     onClick={() => emit(setFeature(recipe, activeSlot.key, undefined))}
-                                    classic
                                     title="Let the seed choose this slot"
                                 >
                                     Auto
@@ -327,7 +325,6 @@ export default function AvatarPicker({ value, onChange, seed, template, classic 
                                     <ToggleChip
                                         on={recipe.features[activeSlot.key] === null}
                                         onClick={() => emit(setFeature(recipe, activeSlot.key, null))}
-                                        classic
                                         title={`No ${activeSlot.label.toLowerCase()} at all`}
                                     >
                                         None
@@ -392,7 +389,6 @@ export default function AvatarPicker({ value, onChange, seed, template, classic 
                                     <ToggleChip
                                         on={recipe.colors[slot.key] === undefined}
                                         onClick={() => emit(setColor(recipe, slot.key, undefined))}
-                                        classic
                                         title={`Let the seed choose the ${slot.label.toLowerCase()}`}
                                     >
                                         Auto

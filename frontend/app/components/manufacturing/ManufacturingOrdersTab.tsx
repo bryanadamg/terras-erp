@@ -411,7 +411,6 @@ export default function ManufacturingOrdersTab({
                 ]}
                 activeKey={detailTab}
                 onChange={setDetailTab}
-                classic
             />
 
             {detailTab === 'bom' && (
@@ -1024,7 +1023,6 @@ export default function ManufacturingOrdersTab({
                 // calendar with no way back to the table.
                 const viewToggle = (
                     <FilterChipBar
-                        classic
                         value={viewMode}
                         onChange={(v) => setViewMode(v as string)}
                         options={[

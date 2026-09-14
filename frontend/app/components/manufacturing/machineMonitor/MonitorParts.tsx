@@ -200,7 +200,6 @@ export const MonitorChipBar = <M,>({
     const runningToggle = (
         <span style={{ marginLeft: isGrouped ? 'auto' : undefined }}>
             <ToggleChip
-                classic
                 on={runningOnly}
                 tone="green"
                 toneIdle
@@ -222,7 +221,6 @@ export const MonitorChipBar = <M,>({
             )}
             {isGrouped && (
                 <FilterChipBar
-                    classic
                     value={groupFilter ?? ALL_GROUPS}
                     onChange={v => onGroupChange(v === ALL_GROUPS || v === groupFilter ? null : v)}
                     options={[

@@ -116,7 +116,7 @@ export default function AttributesLibraryView({
         <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
             {/* Toolbar */}
             <div style={{ background: 'linear-gradient(to bottom, #f5f4ef, #e0dfd8)', borderBottom: '1px solid #b0a898', padding: '4px 8px', display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap', flexShrink: 0 }}>
-                <SearchField classic value={search} onChange={setSearch} placeholder="Search attributes…" width={220} />
+                <SearchField value={search} onChange={setSearch} placeholder="Search attributes…" width={220} />
                 <ToolbarCount right>
                     {filtered.length} attribute{filtered.length !== 1 ? 's' : ''}
                 </ToolbarCount>

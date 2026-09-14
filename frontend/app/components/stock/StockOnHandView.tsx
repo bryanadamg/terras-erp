@@ -1124,7 +1124,7 @@ export default function StockOnHandView({ locations, attributes, categories, ite
     const toolbarControls = (
         <>
             {col('col-md-4',
-                <SearchField classic value={search} onChange={setSearch}
+                <SearchField value={search} onChange={setSearch}
                     placeholder={'Search item, location, lot, MO, WO, notes...'}
                     width={300}
                     {...({})}

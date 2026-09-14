@@ -173,9 +173,8 @@ export default function SettingsUsersTab({
                     background: 'linear-gradient(to bottom, #f5f4ef, #e0dfd8)', borderBottom: '1px solid #b0a898',
                     padding: '3px 6px', display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' as const,
                 }}>
-                    <SearchField classic value={search} onChange={setSearch} placeholder="Search username or name…" width={200} />
+                    <SearchField value={search} onChange={setSearch} placeholder="Search username or name…" width={200} />
                     <FilterChipBar
-                        classic
                         options={USER_STATUS_FILTERS}
                         value={statusFilter}
                         onChange={v => setStatusFilter(v as StatusFilter)}

@@ -599,7 +599,7 @@ export default function DyeingOrdersTab({ items, recipes, authFetch }: DyeingOrd
             {/* Filter bar */}
             <div style={filterBarStyle}>
                 <label style={{ fontSize: 10, color: '#000', whiteSpace: 'nowrap' }}>Filter:</label>
-                <SearchField classic value={searchInput} onChange={setSearch} placeholder="Search WO / MO..." width={160} />
+                <SearchField value={searchInput} onChange={setSearch} placeholder="Search WO / MO..." width={160} />
                 <select value={filterStatus} onChange={e => setFilterStatus(e.target.value)}
                     style={{ ...formInput, width: 110 }}>
                     <option value="">All Statuses</option>

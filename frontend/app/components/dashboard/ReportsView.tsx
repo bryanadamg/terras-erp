@@ -285,7 +285,7 @@ export default function ReportsView(_props: any) {
 
     // ── Filter toolbar rows — shared content, per-branch wrapper/controls ────
     const toolbarRow1 = <div style={toolbarTop} className="no-print">
-            <SearchField classic value={search} onChange={setSearch} placeholder="Search item or reference..." width={200} />
+            <SearchField value={search} onChange={setSearch} placeholder="Search item or reference..." width={200} />
             <div style={xpSep} />
             <TreeSelect
                 options={locFilterTreeOptions}
@@ -308,7 +308,6 @@ export default function ReportsView(_props: any) {
                 {refTypes.map(rt => <option key={rt} value={rt}>{refMeta(rt).label}</option>)}
             </select>
             <FilterChipBar
-                classic
                 options={directionOptions}
                 value={direction}
                 onChange={v => onFilter(setDirection)(v as '' | 'in' | 'out')}
@@ -321,7 +320,7 @@ export default function ReportsView(_props: any) {
             <input type="date" style={xpInput({ width: 122 })} value={startDate} onChange={e => onFilter(setStartDate)(e.target.value)} />
             <span style={lbl}>{t('to')}:</span>
             <input type="date" style={xpInput({ width: 122 })} value={endDate} onChange={e => onFilter(setEndDate)(e.target.value)} />
-            <SegmentedBar classic actions={presetActions} />
+            <SegmentedBar actions={presetActions} />
             <div style={{ flex: 1 }} />
             {hasFilters && <button className={XP_BTN} style={xpBtn({ fontSize: '10px', padding: '1px 6px' })} onClick={clearFilters} title="Clear filters"><i className="bi bi-x-lg" /></button>}
             <button className={XP_BTN} style={xpBtn({ padding: '1px 6px' })} onClick={fetchLedger} title="Refresh"><i className="bi bi-arrow-clockwise" /></button>

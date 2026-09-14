@@ -784,7 +784,6 @@ export default function SampleRequestView({ samples, customers, onCreateSample, 
                                </div>
                                {/* Tab bar */}
                                <Tabs
-                                   classic
                                    tabs={[
                                        { key: 'color', label: colorsAttrName || 'Colors' },
                                        { key: 'combo', label: comboAttrName || 'Combo' },
@@ -1046,9 +1045,9 @@ export default function SampleRequestView({ samples, customers, onCreateSample, 
 
            {/* ── Secondary toolbar: search + status filters + count ── */}
            <div style={xpToolbar()}>
-                   <SearchField classic value={searchTerm} onChange={setSearchTerm} placeholder="Search code, article, project…" width={200} />
+                   <SearchField value={searchTerm} onChange={setSearchTerm} placeholder="Search code, article, project…" width={200} />
                    <div style={xpSep}></div>
-                   <FilterChipBar classic options={STATUS_FILTER_OPTIONS} value={statusFilter} onChange={setStatusFilter} />
+                   <FilterChipBar options={STATUS_FILTER_OPTIONS} value={statusFilter} onChange={setStatusFilter} />
                    <div style={xpSep}></div>
                    <select
                        style={{ ...xpInput, width: 120 }}
@@ -1329,16 +1328,16 @@ export default function SampleRequestView({ samples, customers, onCreateSample, 
                                                            which is what the sample report counts. Only exit is back to In Production. */}
                                                        {canManage && (
                                                            <div style={{ marginTop: 4 }}>
-                                                               <ToggleChip on={false} onClick={() => onUpdateColorStatus(s.id, c.id, 'IN_PRODUCTION')} classic tone="amber" flat title="Reopen for another attempt (logs a new process run)">&#8635; Reopen</ToggleChip>
+                                                               <ToggleChip on={false} onClick={() => onUpdateColorStatus(s.id, c.id, 'IN_PRODUCTION')} tone="amber" flat title="Reopen for another attempt (logs a new process run)">&#8635; Reopen</ToggleChip>
                                                            </div>
                                                        )}
                                                    </div>
                                                ) : canManage ? (
                                                    <div className={undefined} role="group" style={{ display: 'inline-flex' }}>
-                                                       <ToggleChip on={isInProd} onClick={() => onUpdateColorStatus(s.id, c.id, isInProd ? 'PENDING' : 'IN_PRODUCTION')} classic tone="amber" flat seg="first" title={isInProd ? 'Reset to Pending' : 'Set In Production'}>&#9881; In Prod</ToggleChip>
-                                                       <ToggleChip on={isSent} onClick={() => onUpdateColorStatus(s.id, c.id, isSent ? 'PENDING' : 'SENT')} classic tone="blue" flat seg="mid" title={isSent ? 'Reset to Pending' : 'Mark Sent to Customer'}>&#187; Sent</ToggleChip>
-                                                       <ToggleChip on={false} onClick={() => handleApproveColor(s.id, c.id, c.name)} classic tone="green" flat seg="mid" title="Approve">&#10003; Approve</ToggleChip>
-                                                       <ToggleChip on={false} onClick={() => openRejectModal(s.id, c.id, c.name)} classic tone="red" flat seg="last" title="Reject">&#10007; Reject</ToggleChip>
+                                                       <ToggleChip on={isInProd} onClick={() => onUpdateColorStatus(s.id, c.id, isInProd ? 'PENDING' : 'IN_PRODUCTION')} tone="amber" flat seg="first" title={isInProd ? 'Reset to Pending' : 'Set In Production'}>&#9881; In Prod</ToggleChip>
+                                                       <ToggleChip on={isSent} onClick={() => onUpdateColorStatus(s.id, c.id, isSent ? 'PENDING' : 'SENT')} tone="blue" flat seg="mid" title={isSent ? 'Reset to Pending' : 'Mark Sent to Customer'}>&#187; Sent</ToggleChip>
+                                                       <ToggleChip on={false} onClick={() => handleApproveColor(s.id, c.id, c.name)} tone="green" flat seg="mid" title="Approve">&#10003; Approve</ToggleChip>
+                                                       <ToggleChip on={false} onClick={() => openRejectModal(s.id, c.id, c.name)} tone="red" flat seg="last" title="Reject">&#10007; Reject</ToggleChip>
                                                    </div>
                                                ) : null,
                                                // Photo column — only one side can be current, so this is whichever

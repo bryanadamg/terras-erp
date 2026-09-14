@@ -1091,12 +1091,12 @@ export default function InventoryView({
 
           {/* ── Category quick-filter tabs ── */}
           {!forcedCategory && (
-              <Tabs<string> tabs={categoryTabs} activeKey={categoryL1 || 'ALL'} onChange={handleCategoryTabChange} classic />
+              <Tabs<string> tabs={categoryTabs} activeKey={categoryL1 || 'ALL'} onChange={handleCategoryTabChange} />
           )}
 
           {/* ── XP Toolbar (search + filter) ── */}
           <div style={{ ...xpToolbar, gap: 8 }}>
-              <SearchField classic value={searchTerm} onChange={onSearchChange} placeholder={`${t('search')} items…`} width={200} />
+              <SearchField value={searchTerm} onChange={onSearchChange} placeholder={`${t('search')} items…`} width={200} />
               {!forcedCategory && (
                 <>
                   <span style={{ fontSize: 10, color: '#555', whiteSpace: 'nowrap', fontFamily: xpFont }}>Category:</span>

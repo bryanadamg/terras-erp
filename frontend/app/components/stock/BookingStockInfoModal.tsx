@@ -381,7 +381,6 @@ export default function BookingStockInfoModal({ isOpen, onClose }: {
             title={<><i className="bi bi-info-circle me-1" />{doc.title}</>}
             banner={
                 <Tabs<Lang>
-                    classic
                     activeKey={lang}
                     onChange={setLang}
                     tabs={[

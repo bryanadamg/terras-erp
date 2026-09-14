@@ -437,7 +437,6 @@ export default function PickListView() {
                 order on the board, so the Pick action lives on the row that says
                 whether the order can be picked at all. */}
             <Tabs<PLTab>
-                classic
                 activeKey={tab}
                 onChange={setTab}
                 tabs={[
@@ -721,7 +720,6 @@ function SOPickerBoard({ pickableSOs, loading, tzDate, canManage, onRefresh, onP
                     <i className="bi bi-arrow-clockwise" style={{ marginRight: 4 }} />Refresh
                 </button>
                 <FilterChipBar
-                    classic
                     style={{ marginLeft: 10 }}
                     value={readyOnly ? 'ready' : 'all'}
                     onChange={v => setReadyOnly(v === 'ready')}

@@ -165,7 +165,6 @@ export default function PartnersView({ type, onCreate, onUpdate, onDelete, onBul
                     {/* `searchInput` is the live echo; the hook debounces the committed
                         value it actually sends as `?search=`. No local timer here. */}
                     <SearchField
-                        classic
                         value={searchInput}
                         onChange={setSearch}
                         placeholder={`Search ${typeLabel.toLowerCase()}s…`}

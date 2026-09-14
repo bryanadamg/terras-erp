@@ -467,7 +467,6 @@ export default function QuarantinePackingView() {
             <div style={{ display: 'inline-flex', alignItems: 'center', opacity: off ? 0.75 : 1 }}
                 title={!canSetStatus ? 'Needs the Set Quarantine Status permission' : undefined}>
                 <FilterChipBar
-                    classic
                     options={options}
                     value={current ?? null}
                     disabled={off}
@@ -481,7 +480,6 @@ export default function QuarantinePackingView() {
                         <ToggleChip
                             on={false}
                             onClick={() => onPick(null, 'No status')}
-                            classic
                             disabled={off}
                             flat
                             seg="last"
@@ -832,7 +830,7 @@ export default function QuarantinePackingView() {
     // ── Toolbar ───────────────────────────────────────────────────────────────
     const toolbar = (
         <div style={sharedXpToolbar({ flexShrink: 0 })}>
-            <SearchField classic value={searchInput} onChange={setSearchInput} placeholder="MO, lot, item or SO..." width={230} />
+            <SearchField value={searchInput} onChange={setSearchInput} placeholder="MO, lot, item or SO..." width={230} />
             <div style={lvSep()} />
             <span style={{ ...lvLabel(), display: 'inline', marginBottom: 0 }}>Status</span>
             <select
@@ -851,7 +849,6 @@ export default function QuarantinePackingView() {
                 queue — but they are still this MO's history, and hiding them made
                 a lot look deleted the moment it was packed. */}
             <ToggleChip
-                classic
                 on={showPacked}
                 onClick={() => setShowPacked(v => !v)}
                 title={showPacked

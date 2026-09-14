@@ -76,7 +76,7 @@ export default function UOMLibraryView({ uoms, canManage, onCreateUOM, onDeleteU
                     </form>
                 )}
                 <span style={lvSep()} />
-                <SearchField classic value={search} onChange={setSearch} placeholder="Search units…" width={200} />
+                <SearchField value={search} onChange={setSearch} placeholder="Search units…" width={200} />
                 <ToolbarCount right>
                     {filtered.filter((u: any) => u.is_system).length} system &nbsp;+&nbsp; {filtered.filter((u: any) => !u.is_system).length} packaging
                 </ToolbarCount>

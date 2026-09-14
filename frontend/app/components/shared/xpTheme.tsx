@@ -1198,13 +1198,10 @@ export type ChipSeg = 'first' | 'mid' | 'last' | 'only';
 //   - modern is no longer bootstrap's solid/outline button pair — both themes now
 //     come off the same --terras-* tokens, retoned by `.ui-style-classic`.
 //
-// `classic` is still accepted so no call site had to change, but it is inert: the
 // theme is decided by the CSS class on the tree above, not by a prop.
-export function ToggleChip({ on, onClick, classic: _classic, disabled = false, minWidth, title, seg, tone = 'blue', flat = false, toneIdle = false, children }: {
+export function ToggleChip({ on, onClick, disabled = false, minWidth, title, seg, tone = 'blue', flat = false, toneIdle = false, children }: {
     on: boolean;
     onClick: () => void;
-    /** @deprecated Inert — terras-ui reads the theme from `.ui-style-classic`. */
-    classic?: boolean;
     disabled?: boolean;
     minWidth?: number;
     title?: string;
@@ -1252,7 +1249,6 @@ export function WeekdayToggle({ value, onToggle, disabled = false }: {
                     key={label}
                     on={value.includes(idx)}
                     onClick={() => onToggle(idx)}
-                    classic
                     disabled={disabled}
                     minWidth={48}
                 >

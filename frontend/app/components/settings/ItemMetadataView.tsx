@@ -55,7 +55,6 @@ export default function ItemMetadataView({
             <PageTitleBar icon="bi-tag" title="Attributes" />
 
             <Tabs
-                classic
                 activeKey={tab}
                 onChange={k => setTab(k as Tab)}
                 tabs={[

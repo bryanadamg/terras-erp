@@ -244,12 +244,10 @@ export default function WorkQueueView() {
 
     const Toolbar = (
         <div style={xpToolbar({ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' })}>
-            <SearchField
-                classic value={search} onChange={onSearch}
+            <SearchField value={search} onChange={onSearch}
                 placeholder="WO, order, item, colour..." width={220}
             />
             <FilterChipBar
-                classic
                 options={centerTypes.map(t => ({ value: t, label: t }))}
                 value={centerType}
                 onChange={onCenterType}
@@ -267,7 +265,6 @@ export default function WorkQueueView() {
             background: '#f4f2ec',
         }}>
             <FilterChipBar
-                classic
                 options={VERDICTS.filter(v => counts[v]).map(v => ({
                     value: v, label: v.replace(/_/g, ' '), count: counts[v],
                 }))}
@@ -276,7 +273,7 @@ export default function WorkQueueView() {
             />
             <span style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 10 }}>
                 {overdueCount > 0 && (
-                    <ToggleChip on={overdueOnly} onClick={onOverdueOnly} classic
+                    <ToggleChip on={overdueOnly} onClick={onOverdueOnly}
                         title="Only orders past their planned date and not yet started">
                         <span style={{ color: overdueOnly ? undefined : statusColor('SHORT'), fontWeight: 'bold' }}>
                             Overdue
@@ -286,7 +283,6 @@ export default function WorkQueueView() {
                 )}
                 <span style={{ fontFamily: font, fontSize: 11, color: '#555' }}>Sort</span>
                 <FilterChipBar
-                    classic
                     options={[{ value: 'date', label: 'By date' }, { value: 'readiness', label: 'By readiness' }]}
                     value={sort}
                     onChange={onSort}

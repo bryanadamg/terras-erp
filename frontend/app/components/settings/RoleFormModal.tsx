@@ -236,7 +236,7 @@ export default function RoleFormModal({
                     is the whole professional constraint and it leaves hair, eyes,
                     mouth and clothing to each user's own seed. */}
                 <div style={{ marginBottom: 6 }}>
-                    <ToggleChip on={isExecutive} onClick={toggleExecutive} classic
+                    <ToggleChip on={isExecutive} onClick={toggleExecutive}
                         title="Pin hat and accessories off, leaving every other slot to the user's own seed">
                         <i className="bi bi-briefcase-fill" style={{ marginRight: 4 }} />Executive
                     </ToggleChip>
@@ -270,7 +270,7 @@ export default function RoleFormModal({
                         Work Order Station Scope
                     </FieldLabel>
                     {scopeBox(false, wcTypes.map(t => (
-                        <ToggleChip key={t} on={allowedWcTypes.includes(t)} onClick={() => toggleWcType(t)} classic>{t}</ToggleChip>
+                        <ToggleChip key={t} on={allowedWcTypes.includes(t)} onClick={() => toggleWcType(t)}>{t}</ToggleChip>
                     )))}
                 </div>
             )}
@@ -281,7 +281,7 @@ export default function RoleFormModal({
                         Item/Stock Category Scope
                     </FieldLabel>
                     {scopeBox(true, categories.map((c: any) => (
-                        <ToggleChip key={c.id} on={allowedCategories.includes(c.id)} onClick={() => toggleCategory(c.id)} classic>
+                        <ToggleChip key={c.id} on={allowedCategories.includes(c.id)} onClick={() => toggleCategory(c.id)}>
                             {(c.path_names || [c.name]).join(' / ')}
                         </ToggleChip>
                     )))}
@@ -294,7 +294,7 @@ export default function RoleFormModal({
                         Lot Management Location Scope
                     </FieldLabel>
                     {scopeBox(true, locations.map((l: any) => (
-                        <ToggleChip key={l.id} on={allowedLocations.includes(l.id)} onClick={() => toggleLocation(l.id)} classic>
+                        <ToggleChip key={l.id} on={allowedLocations.includes(l.id)} onClick={() => toggleLocation(l.id)}>
                             {l.full_path || l.name}
                         </ToggleChip>
                     )))}

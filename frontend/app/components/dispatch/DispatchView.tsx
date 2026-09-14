@@ -272,13 +272,11 @@ export default function DispatchView() {
         <>
             <div style={{ ...xpToolbar(), gap: 6 }}>
                 <SearchField
-                    classic
                     value={searchInput}
                     onChange={setSearchInput}
                     placeholder="Search SJ no, code, vehicle..."
                 />
                 <FilterChipBar
-                    classic
                     options={STATUS_FILTERS}
                     value={statusFilter}
                     onChange={setStatusFilter}

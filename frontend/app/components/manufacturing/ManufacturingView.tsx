@@ -536,7 +536,6 @@ export default function ManufacturingView({
                           ]}
                           activeKey={activeTab}
                           onChange={setActiveTab}
-                          classic
                       />
                   </div>}
 

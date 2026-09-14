@@ -798,9 +798,8 @@ export default function BOMView({
 
                     {/* Toolbar: search + filter + selection + create */}
                     <div style={xpToolbar()}>
-                        <SearchField classic value={bomSearch} onChange={v => onBomSearch?.(v)} placeholder="Search BOMs..." width={200} />
+                        <SearchField value={bomSearch} onChange={v => onBomSearch?.(v)} placeholder="Search BOMs..." width={200} />
                         <FilterChipBar
-                            classic
                             options={BOM_SCOPE_FILTERS}
                             value={showRootOnly ? 'root' : 'all'}
                             onChange={v => setShowRootOnly?.(v === 'root')}

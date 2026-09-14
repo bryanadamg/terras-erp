@@ -412,7 +412,7 @@ export default function LocationsView({
           <div className={undefined} style={xpToolbar}>
             {<span style={{ fontFamily: xpFont, fontSize: 12, fontWeight: 'bold', color: '#003080' }}>{selectedZoneObj ? selectedZoneObj.name : 'Bins'}</span>}
             <div className={undefined} style={{ flex: 1 }} />
-            <SearchField classic value={searchTerm} onChange={setSearchTerm} placeholder="Search..." width={160} />
+            <SearchField value={searchTerm} onChange={setSearchTerm} placeholder="Search..." width={160} />
             {canManage && selectedZoneObj && (
               <button className={XP_BTN} style={xpBtn({ ...BTN_TONES.success })} onClick={() => setShowBinForm(v => !v)}><i className="bi bi-plus-lg" style={{ marginRight: 3 }} />Add bin</button>)}
           </div>

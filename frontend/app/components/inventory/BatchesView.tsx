@@ -963,10 +963,10 @@ export default function BatchesView({ items, locations, categories, workCenters,
             <span>Lot Management</span>
           </div>
           {/* ── Lot type tabs — classifies by the process that produced the lot ── */}
-          <Tabs<string> tabs={lotTypeTabs} activeKey={lotTypeFilter || 'ALL'} onChange={handleLotTypeTabChange} classic />
+          <Tabs<string> tabs={lotTypeTabs} activeKey={lotTypeFilter || 'ALL'} onChange={handleLotTypeTabChange} />
           {/* ── Filter/search bar + actions ── */}
           <div style={{ padding: '6px 8px', display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap', background: 'linear-gradient(to bottom, #f5f4ef, #e0dfd8)', borderBottom: '1px solid #b0a898', flexShrink: 0 }}>
-            <SearchField classic value={searchInput} onChange={setSearch} placeholder="Search lot, item, WO/MO/PR, SO..." width={240} />
+            <SearchField value={searchInput} onChange={setSearch} placeholder="Search lot, item, WO/MO/PR, SO..." width={240} />
             <span style={{ fontFamily: xpFont, fontSize: 11 }}>Item:</span>
             <div style={{ width: 200, flexShrink: 0 }}>
               <SearchableSelect options={itemFilterOptions} value={itemFilter} onChange={setItemFilter} placeholder="All Items" size="sm" />
@@ -992,7 +992,6 @@ export default function BatchesView({ items, locations, categories, workCenters,
             />
             <span style={{ fontFamily: xpFont, fontSize: 11 }}>Status:</span>
             <FilterChipBar
-              classic
               options={LOT_STATUS_FILTERS}
               value={statusFilter}
               onChange={v => setStatusFilter(v as '' | 'active' | 'depleted')}

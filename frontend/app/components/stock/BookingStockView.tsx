@@ -213,7 +213,7 @@ export default function BookingStockView() {
                 </div>
 
                 <div style={xpToolbar} className={undefined}>
-                    <SearchField classic value={searchInput} onChange={setSearch} placeholder="Search item..." width={200} />
+                    <SearchField value={searchInput} onChange={setSearch} placeholder="Search item..." width={200} />
                     <div style={xpSep} />
                     <button style={xpBtn()} className={XP_BTN} onClick={fetchAvailability} title={'Refresh'}>
                         <i className={'bi bi-arrow-clockwise'} style={{ marginRight: 4 }} />Refresh

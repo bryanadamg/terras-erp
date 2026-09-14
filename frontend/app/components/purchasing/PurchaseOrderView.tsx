@@ -783,10 +783,9 @@ export default function PurchaseOrderView({ items, itemResults, onSearchItems, a
            <div
                style={xpToolbar}
            >
-               <SearchField classic value={searchTerm} onChange={setSearchTerm} placeholder="Search PO# or supplier…" width={240} grow />
+               <SearchField value={searchTerm} onChange={setSearchTerm} placeholder="Search PO# or supplier…" width={240} grow />
                <div style={xpSep}></div>
                <FilterChipBar
-                   classic
                    options={STATUS_FILTERS.map(s => ({ value: s, count: statusCounts[s] }))}
                    value={statusFilter}
                    onChange={setStatusFilter}

@@ -78,7 +78,7 @@ export default function DyeingSettingView() {
             <PageTitleBar icon="bi-droplet-fill" title="Dyeing & Setting" />
 
             {/* Tabs bar */}
-            <Tabs tabs={TABS} activeKey={activeTab} onChange={handleTabChange} classic />
+            <Tabs tabs={TABS} activeKey={activeTab} onChange={handleTabChange} />
 
             {/* Content area */}
             <div style={{

@@ -70,11 +70,9 @@ export const xpToolbar = (extra: React.CSSProperties = {}): React.CSSProperties 
  * row up to `width`; otherwise `width` is fixed.
  */
 export function SearchField({
-    classic: _classic, value, onChange, placeholder = 'Search...', width = 200, grow = false,
+    value, onChange, placeholder = 'Search...', width = 200, grow = false,
     icon = 'bi-search', title, autoFocus = false, style,
 }: {
-    /** @deprecated Inert — the field is one shape now, in both themes. */
-    classic?: boolean;
     value: string;
     onChange: (v: string) => void;
     placeholder?: string;
@@ -240,9 +238,7 @@ export const segAt = (i: number, len: number): ChipSeg => uiSegAt(i, len);
  * same `ToggleChip` this app already gets from the package. The 23 call sites
  * are untouched.
  */
-export function FilterChipBar({ classic: _classic, options, value, onChange, disabled, trailing, flat, style }: {
-    /** @deprecated Inert — terras-ui reads the theme from `.ui-style-classic`. */
-    classic?: boolean;
+export function FilterChipBar({ options, value, onChange, disabled, trailing, flat, style }: {
     /** Plain strings, or `{ value, label, count, tone }` for a tally / coloured fill. */
     options: (string | FilterChipOption)[];
     /** Selected value, or the selected set when the bar is multi-select. */
@@ -283,9 +279,7 @@ export type SegmentedAction = { key: string; label: React.ReactNode; onClick: ()
  * If a member should stay lit after the click it is a filter, not an action —
  * use `FilterChipBar`.
  */
-export function SegmentedBar({ classic: _classic, actions, disabled, style }: {
-    /** @deprecated Inert — terras-ui reads the theme from `.ui-style-classic`. */
-    classic?: boolean;
+export function SegmentedBar({ actions, disabled, style }: {
     actions: SegmentedAction[];
     /** Disables every segment. */
     disabled?: boolean;

@@ -574,7 +574,7 @@ export default function WorkCenterMonitorModal({ isOpen, onClose, workCenter, au
         <XPActionButton tone="neutral" icon="bi-arrow-clockwise" title="Refresh" disabled={loading} onClick={load} />
     );
     const tabBar = (
-        <Tabs classic activeKey={tab} onChange={k => setTab(k as any)} tabs={tabs} right={refreshBtn} />
+        <Tabs activeKey={tab} onChange={k => setTab(k as any)} tabs={tabs} right={refreshBtn} />
     );
     // Fixed-height body so switching tabs (performance/calendar/beams) never
     // resizes the modal — each pane scrolls internally instead of the panel
@@ -1165,7 +1165,6 @@ export default function WorkCenterMonitorModal({ isOpen, onClose, workCenter, au
                                             onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); handleBeamScan(beamSearch); } }}
                                         >
                                             <SearchField
-                                                classic
                                                 value={beamSearch}
                                                 onChange={setBeamSearch}
                                                 placeholder={t('mount_beam_search')}

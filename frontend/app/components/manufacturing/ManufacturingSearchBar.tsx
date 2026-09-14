@@ -24,7 +24,7 @@ export default function ManufacturingSearchBar({
             background: '#ece9d8',
             display: 'flex', alignItems: 'center', gap: 8,
         }}>
-            <SearchField classic value={value} onChange={onChange} placeholder={placeholder} width={320} grow />
+            <SearchField value={value} onChange={onChange} placeholder={placeholder} width={320} grow />
             {filters}
             {(value || showCount) && (
                 <ToolbarCount>

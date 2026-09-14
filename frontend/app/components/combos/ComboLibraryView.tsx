@@ -178,17 +178,15 @@ export default function ComboLibraryView({
 
             {/* Toolbar */}
             <div style={{ background: 'linear-gradient(to bottom, #f5f4ef, #e0dfd8)', borderBottom: '1px solid #b0a898', padding: '4px 8px', display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap', flexShrink: 0 }}>
-                <SearchField classic value={searchInput} onChange={setSearchInput} placeholder="Search code, name, description…" width={260} />
+                <SearchField value={searchInput} onChange={setSearchInput} placeholder="Search code, name, description…" width={260} />
                 <span style={lvSep()} />
                 <FilterChipBar
-                    classic
                     options={STATUS_FILTERS.map(s => ({ value: s, label: s === 'ALL' ? 'All' : s }))}
                     value={statusFilter}
                     onChange={onStatusChange}
                 />
                 <span style={lvSep()} />
                 <FilterChipBar
-                    classic
                     value={view}
                     onChange={v => setView(v as ViewMode)}
                     options={[
@@ -215,7 +213,6 @@ export default function ComboLibraryView({
             {familyCounts.length > 0 && (
                 <div style={{ background: 'linear-gradient(to bottom, #f5f4ef, #e0dfd8)', borderBottom: '1px solid #b0a898', padding: '4px 8px', display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap', flexShrink: 0 }}>
                     <FilterChipBar
-                        classic
                         flat
                         value={family}
                         onChange={v => setFamily(v as ColorFamilyKey | 'ALL')}

@@ -789,7 +789,7 @@ export default function MachineOutputReportView() {
                             />
                             <div style={xpSep} />
                             <span style={lbl}>View:</span>
-                            <FilterChipBar classic options={modeTabs} value={mode} onChange={v => setMode(v as Mode)} />
+                            <FilterChipBar options={modeTabs} value={mode} onChange={v => setMode(v as Mode)} />
                             <div style={xpSep} />
                             {isWoMode && (
                                 <label style={{ ...lbl, display: 'flex', alignItems: 'center', gap: 4, whiteSpace: 'nowrap' }}>
@@ -816,7 +816,7 @@ export default function MachineOutputReportView() {
                             <input type="date" style={xpInput({ width: 122 })} value={startDate} onChange={e => setStartDate(e.target.value)} />
                             <span style={lbl}>{t('to')}:</span>
                             <input type="date" style={xpInput({ width: 122 })} value={endDate} onChange={e => setEndDate(e.target.value)} />
-                            <SegmentedBar classic actions={presetActions} />
+                            <SegmentedBar actions={presetActions} />
                             <div style={{ flex: 1 }} />
                             <span style={{ ...lbl, whiteSpace: 'nowrap' }}>{sorted.length} rows</span>
                             <button className={XP_BTN} style={xpBtn({ padding: '1px 6px' })} onClick={fetchReport} title="Refresh"><i className="bi bi-arrow-clockwise" /></button>

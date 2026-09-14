@@ -247,9 +247,8 @@ export default function CalendarView({
             className={'no-print'}
             style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 6, marginBottom: 6 }}
         >
-            <SearchField classic value={search} onChange={setSearch} placeholder="Search" width={160} />
+            <SearchField value={search} onChange={setSearch} placeholder="Search" width={160} />
             <FilterChipBar
-                classic
                 options={statusOptions.map(s => ({ value: s, label: s.replace(/_/g, ' ') }))}
                 value={Array.from(statusFilter)}
                 onChange={toggleStatus}

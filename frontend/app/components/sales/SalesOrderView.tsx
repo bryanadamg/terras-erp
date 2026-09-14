@@ -2067,10 +2067,10 @@ In stock ${fmtQty(f.baseAvailable)}${bu} · Shipped ${fmtQty(f.baseShipped)}${bu
            <div
                style={xpToolbar()}
            >
-               <SearchField classic value={searchTerm} onChange={setSearchTerm} placeholder="Search PO#…" width={200} grow />
-               <SearchField classic value={customerSearch} onChange={setCustomerSearch} placeholder="Search Customer…" icon="bi-person" width={200} grow />
+               <SearchField value={searchTerm} onChange={setSearchTerm} placeholder="Search PO#…" width={200} grow />
+               <SearchField value={customerSearch} onChange={setCustomerSearch} placeholder="Search Customer…" icon="bi-person" width={200} grow />
                <div style={xpSep}></div>
-               <FilterChipBar classic options={STATUS_FILTERS} value={statusFilter} onChange={setStatusFilter} />
+               <FilterChipBar options={STATUS_FILTERS} value={statusFilter} onChange={setStatusFilter} />
                <div style={xpSep}></div>
                <ToolbarCount>
                    {soTotal} order{soTotal !== 1 ? 's' : ''}

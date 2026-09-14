@@ -51,7 +51,7 @@ export default function SettingsView({
                 <PageTitleBar icon="bi-sliders" title="Settings" />
 
                 {/* Tabs bar */}
-                <Tabs tabs={tabs} activeKey={activeTab} onChange={(key) => setActiveTab(key)} classic />
+                <Tabs tabs={tabs} activeKey={activeTab} onChange={(key) => setActiveTab(key)} />
 
                 {/* Content area — the one scroll pane, so the chrome above it never moves */}
                 <div ref={paneRef} style={{

@@ -657,12 +657,12 @@ export default function WorkOrderListView({
                     </div>
 
                     {/* Tabs */}
-                    <Tabs<WOTabKey> tabs={WO_TABS} activeKey={activeTab as WOTabKey} onChange={onTabChange} classic />
+                    <Tabs<WOTabKey> tabs={WO_TABS} activeKey={activeTab as WOTabKey} onChange={onTabChange} />
 
                     {/* Filter bar */}
                     <div style={filterBarStyle}>
                         <label style={{ fontSize: 10, color: '#000', whiteSpace: 'nowrap' }}>Filter:</label>
-                        <SearchField classic value={woSearch} onChange={onSearch} placeholder="Search WO / MO..." width={160} />
+                        <SearchField value={woSearch} onChange={onSearch} placeholder="Search WO / MO..." width={160} />
                         <select value={filterStatus} onChange={e => onFilterStatus(e.target.value)}
                             style={{ ...xpInput, width: 110 }}>
                             <option value="">All Statuses</option>

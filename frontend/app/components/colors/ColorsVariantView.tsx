@@ -180,10 +180,9 @@ export default function ColorsVariantView({ values, canCreate, canEdit, canDelet
     return (
         <div style={{ display: 'flex', flexDirection: 'column', height: '100%', minHeight: 0 }}>
             <div style={{ ...rowStripe, padding: '4px 8px', display: 'flex', gap: 6, alignItems: 'center', flexShrink: 0 }}>
-                <SearchField classic value={search} onChange={handleSearchChange} placeholder="Search color…" width={220} />
+                <SearchField value={search} onChange={handleSearchChange} placeholder="Search color…" width={220} />
                 <span style={lvSep()} />
                 <FilterChipBar
-                    classic
                     value={view}
                     onChange={v => setView(v as ViewMode)}
                     options={[
@@ -209,7 +208,6 @@ export default function ColorsVariantView({ values, canCreate, canEdit, canDelet
             {sorted.length > 0 && (
                 <div style={{ ...rowStripe, padding: '4px 8px', display: 'flex', gap: 6, alignItems: 'center', flexShrink: 0, flexWrap: 'wrap' }}>
                     <FilterChipBar
-                        classic
                         flat
                         value={family}
                         onChange={v => setFamily(v as ColorFamilyKey | 'ALL')}
@@ -220,7 +218,6 @@ export default function ColorsVariantView({ values, canCreate, canEdit, canDelet
                     {/* Turns the mostly-empty swatch column into a work queue instead of
                         a defect: 124 of 139 values have no saved hex. */}
                     <FilterChipBar
-                        classic
                         flat
                         value={missingOnly ? 'missing' : null}
                         onChange={() => setMissingOnly(m => !m)}

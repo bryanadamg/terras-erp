@@ -271,7 +271,6 @@ export default function ProductionRunsTab({
                     filters={
                         <>
                             <FilterChipBar
-                                classic
                                 value={prSoFilter || ''}
                                 onChange={(v: string) => setPrSoFilter?.(v === prSoFilter ? '' : v)}
                                 options={[
@@ -281,7 +280,6 @@ export default function ProductionRunsTab({
                                 ]}
                             />
                             <FilterChipBar
-                                classic
                                 value={prProgressFilter || ''}
                                 onChange={(v: string) => setPrProgressFilter?.(v === prProgressFilter ? '' : v)}
                                 options={[

@@ -418,7 +418,7 @@ export default function RoutingView({ workCenters, operations, locations, onCrea
               padding: '4px 8px',
               display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' as const, flexShrink: 0,
           }}>
-              <SearchField classic value={wcSearch} onChange={setWcSearch} placeholder="Search work centers…" width={240} />
+              <SearchField value={wcSearch} onChange={setWcSearch} placeholder="Search work centers…" width={240} />
               <ToolbarCount right>
                   {filteredWCRows.length.toLocaleString()} station{filteredWCRows.length !== 1 ? 's' : ''}
               </ToolbarCount>
@@ -571,7 +571,7 @@ export default function RoutingView({ workCenters, operations, locations, onCrea
               padding: '4px 8px',
               display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' as const, flexShrink: 0,
           }}>
-              <SearchField classic value={opSearch} onChange={setOpSearch} placeholder="Search operations…" width={240} />
+              <SearchField value={opSearch} onChange={setOpSearch} placeholder="Search operations…" width={240} />
               <span style={lvSep()} />
               <ToolbarCount right>
                   {filteredOp.length.toLocaleString()} operation{filteredOp.length !== 1 ? 's' : ''}
@@ -632,7 +632,7 @@ export default function RoutingView({ workCenters, operations, locations, onCrea
               title={t('routing')}
               subtitle="Work centers and standard operations used across manufacturing routings"
           />
-          <Tabs tabs={TABS} activeKey={activeTab} onChange={(key) => setActiveTab(key)} classic />
+          <Tabs tabs={TABS} activeKey={activeTab} onChange={(key) => setActiveTab(key)} />
           <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', background: '#ece9d8'}}>
               <div style={{ display: activeTab === 'work_centers' ? 'flex' : 'none', flex: 1, minHeight: 0, flexDirection: 'column' }}>
                   {renderWorkCentersTab()}

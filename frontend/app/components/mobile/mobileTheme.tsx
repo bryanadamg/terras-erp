@@ -161,7 +161,7 @@ export function MobileSearchField(props: {
 }) {
     return (
         <div className="mobile-field" style={{ display: 'flex', flex: 1, minWidth: 0 }}>
-            <SearchField classic {...props} grow width={9999} style={{ flex: 1, maxWidth: 'none' }} />
+            <SearchField {...props} grow width={9999} style={{ flex: 1, maxWidth: 'none' }} />
         </div>
     );
 }
@@ -174,7 +174,7 @@ export function MobileFilterBar({ options, value, onChange }: {
 }) {
     return (
         <div className="mobile-seg" style={{ display: 'flex', width: '100%' }}>
-            <FilterChipBar classic options={options} value={value} onChange={onChange} style={{ flex: 1, display: 'flex' }} />
+            <FilterChipBar options={options} value={value} onChange={onChange} style={{ flex: 1, display: 'flex' }} />
         </div>
     );
 }

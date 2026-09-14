@@ -487,9 +487,9 @@ export default function LabDipRequestView({
 
             {/* Toolbar */}
             <div style={{ background: 'linear-gradient(to bottom, #f5f4ef, #e0dfd8)', borderBottom: '1px solid #b0a898', padding: '4px 8px', display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' as const, flexShrink: 0 }}>
-                <SearchField classic value={searchTerm} onChange={setSearchTerm} placeholder="Search code, color standard, article…" width={220} />
+                <SearchField value={searchTerm} onChange={setSearchTerm} placeholder="Search code, color standard, article…" width={220} />
                 <span style={{ width: 1, height: 20, background: '#a0988c', margin: '0 2px' }} />
-                <FilterChipBar classic options={STATUS_FILTERS} value={statusFilter} onChange={setStatusFilter} />
+                <FilterChipBar options={STATUS_FILTERS} value={statusFilter} onChange={setStatusFilter} />
                 <span style={{ width: 1, height: 20, background: '#a0988c', margin: '0 2px' }} />
                 <span style={{ fontSize: 11, color: '#333' }}>Created</span>
                 <input
@@ -678,7 +678,6 @@ export default function LabDipRequestView({
                                                     ) : <span style={{ color: '#aaa', fontSize: 11}}>—</span>,
                                                     canManage ? (
                                                         <FilterChipBar
-                                                            classic
                                                             disabled={locked}
                                                             flat
                                                             value={status === 'IN_PROGRESS' ? 'progress' : status === 'APPROVED' ? 'approved' : status === 'REJECTED' ? 'rejected' : null}
