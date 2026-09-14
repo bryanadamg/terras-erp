@@ -289,7 +289,7 @@ export default function LocationsView({
         }}
       >
         <td style={{ ...lvTd(), width: 24, textAlign: 'center' }}>
-          <i className={`bi bi-grip-vertical${''}`} style={{ color: '#aaa' }} />
+          <i className={'bi bi-grip-vertical'} style={{ color: '#aaa' }} />
         </td>
         <td style={{ ...lvTd(), width: 150, ...({ fontWeight: 'bold', color: '#00008b' }) }}>
           {loc.code}

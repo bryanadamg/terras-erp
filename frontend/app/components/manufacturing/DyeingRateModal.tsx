@@ -135,7 +135,7 @@ export default function DyeingRateModal({ isOpen, run, onClose, onSaved, authFet
                         </div>
                     </div>
                     <div style={{
-                        marginTop: 8, paddingTop: 6, borderTop: `1px solid ${'#c8c4b8'}`,
+                        marginTop: 8, paddingTop: 6, borderTop: '1px solid #c8c4b8',
                         display: 'flex', justifyContent: 'space-between', fontSize: 11,
                     }}>
                         <span style={{ color: '#888' }}>

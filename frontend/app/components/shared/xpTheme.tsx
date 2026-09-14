@@ -755,9 +755,9 @@ export function SwatchBox({ hex, derived, bands, size = 18, title, onPick, style
         display: 'inline-block', width: size, height: size, boxSizing: 'border-box',
         borderRadius: 2, verticalAlign: 'middle', position: 'relative',
         background: shown || 'transparent',
-        border: hex ? '1px solid rgba(0,0,0,0.35)' : `1px dashed ${'#a0988c'}`,
+        border: hex ? '1px solid rgba(0,0,0,0.35)' : '1px dashed #a0988c',
         ...(shown ? null : {
-            border: `1px solid ${'#a0988c'}`,
+            border: '1px solid #a0988c',
             backgroundImage: 'linear-gradient(45deg,#ccc 25%,transparent 25%,transparent 75%,#ccc 75%),linear-gradient(45deg,#ccc 25%,transparent 25%,transparent 75%,#ccc 75%)',
             backgroundSize: '8px 8px', backgroundPosition: '0 0, 4px 4px',
         }),
@@ -1489,7 +1489,7 @@ export function CardGridSkeleton({
                                 display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 6,
                                 padding: '4px 7px',
                                 background: '#a6a6a6',
-                                borderBottom: `1px solid ${'#00000033'}`,
+                                borderBottom: '1px solid #00000033',
                             }}
                         >
                             <SkeletonBar width={skelWidth(i, 0)} height={9} />
@@ -1543,7 +1543,7 @@ export function TableBlockSkeleton({
                     style={{
                         display: 'flex', gap: 0,
                         background: '#ece9d8',
-                        borderBottom: `1px solid ${'#b0a898'}`,
+                        borderBottom: '1px solid #b0a898',
                     }}
                 >
                     {Array.from({ length: cols }, (_, c) => (
@@ -1560,7 +1560,7 @@ export function TableBlockSkeleton({
                         display: 'flex',
                         height: h, alignItems: 'center',
                         background: r % 2 === 0 ? '#ffffff' : '#f5f3ee',
-                        borderBottom: `1px solid ${'#e3e1dc'}`,
+                        borderBottom: '1px solid #e3e1dc',
                     }}
                 >
                     {Array.from({ length: cols }, (_, c) => (
@@ -1596,7 +1596,7 @@ export function PanelSkeleton({
                             style={{
                                 padding: '3px 6px',
                                 background: '#ece9d8',
-                                borderBottom: `1px solid ${'#b0a898'}`,
+                                borderBottom: '1px solid #b0a898',
                                 marginBottom: 8,
                             }}
                         >

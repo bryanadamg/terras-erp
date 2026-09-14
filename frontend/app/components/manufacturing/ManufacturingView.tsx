@@ -368,7 +368,7 @@ export default function ManufacturingView({
                   <div style={{
                       width: 380, minWidth: 380, flexShrink: 0,
                       paddingRight: 20,
-                      borderRight: `1px solid ${'#aca899'}`,
+                      borderRight: '1px solid #aca899',
                   }}>
                       {/* Variant context badge */}
                       {(() => {
@@ -399,7 +399,7 @@ export default function ManufacturingView({
                       })()}
 
                       {/* MO Details */}
-                      <div style={{ fontSize: 9, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase' as const, color: '#888', borderBottom: `1px solid ${'#c0bdb5'}`, paddingBottom: 2, marginBottom: 8 }}>MO Details</div>
+                      <div style={{ fontSize: 9, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase' as const, color: '#888', borderBottom: '1px solid #c0bdb5', paddingBottom: 2, marginBottom: 8 }}>MO Details</div>
 
                       <div className="mb-2">
                           <label style={xpLabel()}>MO Reference Code</label>
@@ -437,7 +437,7 @@ export default function ManufacturingView({
                       </div>
 
                       {/* Schedule */}
-                      <div style={{ fontSize: 9, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase' as const, color: '#888', borderBottom: `1px solid ${'#c0bdb5'}`, paddingBottom: 2, marginBottom: 8, marginTop: 14 }}>Schedule</div>
+                      <div style={{ fontSize: 9, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase' as const, color: '#888', borderBottom: '1px solid #c0bdb5', paddingBottom: 2, marginBottom: 8, marginTop: 14 }}>Schedule</div>
                       <div className="row g-2 mb-2">
                           <div className="col-6">
                               <label style={xpLabel()}>Start Date</label>
@@ -454,7 +454,7 @@ export default function ManufacturingView({
                           item master default / BOM-line override, resolved at staging. */}
 
                       {/* Nested toggle — clean */}
-                      <div style={{ marginTop: 14, paddingTop: 10, borderTop: `1px solid ${'#aca899'}` }}>
+                      <div style={{ marginTop: 14, paddingTop: 10, borderTop: '1px solid #aca899' }}>
                           <label style={{ display: 'flex', gap: 8, alignItems: 'flex-start', cursor: 'pointer', margin: 0 }}>
                               <input
                                   type="checkbox"

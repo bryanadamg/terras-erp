@@ -94,7 +94,7 @@ export const settingsActions = (): React.CSSProperties => ({
     gap: 8,
     marginTop: SETTINGS_GAP,
     paddingTop: SETTINGS_FIELD_GAP,
-    borderTop: `1px solid ${'#dedbd2'}`,
+    borderTop: '1px solid #dedbd2',
 });
 
 /** Muted helper line under a field or beside an action. */

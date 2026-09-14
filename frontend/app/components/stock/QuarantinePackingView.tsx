@@ -566,7 +566,7 @@ export default function QuarantinePackingView() {
         background: awaiting ? ('#fff4d6') : ('#f2f0e8'),
         // One rule, not a top+bottom pair: the band is a divider inside a flat
         // table, not a second header competing with the real one above it.
-        borderTop: `1px solid ${'#c9c2ae'}`,
+        borderTop: '1px solid #c9c2ae',
         fontFamily: LV_XP_FONT,
         fontSize: 10,
         fontVariant: 'all-small-caps',
@@ -613,7 +613,7 @@ export default function QuarantinePackingView() {
                     display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap',
                     padding: '4px 8px', marginBottom: 4,
                     background: '#fffbe6',
-                    border: `1px solid ${'#d8c98a'}`,
+                    border: '1px solid #d8c98a',
                     fontFamily: LV_XP_FONT,
                     fontSize: 10, color: '#5c4a00',
                 }}>

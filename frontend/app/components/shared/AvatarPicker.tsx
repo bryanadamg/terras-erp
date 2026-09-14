@@ -219,7 +219,7 @@ export default function AvatarPicker({ value, onChange, seed, template }: Avatar
 
     return (
         <div style={{
-            border: `1px solid ${'#c0bdb5'}`,
+            border: '1px solid #c0bdb5',
             borderRadius: BUTTON_RADIUS,
             // Must clip, or the square tab strip pokes out of the rounded corners
             // — same rule as FormSection.

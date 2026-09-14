@@ -396,7 +396,7 @@ export default function BookingStockInfoModal({ isOpen, onClose }: {
             <div style={bodyStyle}>
                 {/* ── The formula itself ───────────────────────────────────────── */}
                 <div style={{
-                    border: `1px solid ${'#a8b4c8'}`,
+                    border: '1px solid #a8b4c8',
                     borderRadius: 6, background: '#fbfcfe',
                     padding: '10px 12px', marginBottom: 12,
                 }}>

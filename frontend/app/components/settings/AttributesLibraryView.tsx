@@ -155,7 +155,7 @@ export default function AttributesLibraryView({
                                     {attr.system_role ? (
                                         <span style={{
                                             fontSize: 9, background: '#dce8ff',
-                                            border: `1px solid ${'#7fa8e0'}`, color: '#003080',
+                                            border: '1px solid #7fa8e0', color: '#003080',
                                             padding: '1px 5px', borderRadius: CHIP_RADIUS,
                                         }}>{ROLE_LABELS[attr.system_role] || attr.system_role}</span>
                                     ) : <span style={{ color: '#aaa' }}>—</span>}
@@ -164,7 +164,7 @@ export default function AttributesLibraryView({
                                     <div style={{ display: 'flex', flexWrap: 'wrap', gap: 3 }}>
                                         {attr.values.slice(0, 8).map((v: any) => (
                                             <span key={v.id} style={{
-                                                background: '#dde8f5', border: `1px solid ${'#7f9db9'}`,
+                                                background: '#dde8f5', border: '1px solid #7f9db9',
                                                 padding: '0 4px', fontSize: 10, color: '#333',
                                             }}>{v.value}</span>
                                         ))}

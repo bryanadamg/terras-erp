@@ -353,7 +353,7 @@ export default function WeavingMonitorView() {
             <>
                 <div style={{
                     display: 'flex', alignItems: 'center', gap: 4, marginBottom: 4, paddingBottom: 3,
-                    borderBottom: `1px solid ${'#c8c4b8'}`,
+                    borderBottom: '1px solid #c8c4b8',
                 }}>
                     {navBtn(-1)}
                     <span style={{ fontSize: 10, fontWeight: 700, color: '#555', minWidth: 26, textAlign: 'center' }}>

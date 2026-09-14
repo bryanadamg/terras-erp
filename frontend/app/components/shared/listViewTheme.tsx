@@ -155,7 +155,7 @@ export const lvSubRow = (
 
 export const lvSubTable = (): React.CSSProperties => ({
     width: '100%', borderCollapse: 'collapse', background: '#fff',
-    border: `1px solid ${'#c0bdb5'}`,
+    border: '1px solid #c0bdb5',
 });
 
 // Small uppercase title above a sub-table. Distinct from LvSectionCaption, which
@@ -371,7 +371,7 @@ export function useRowSelection<T>(
 // dense and sit inside a form, where the full selection blue reads as an error.
 export const lvPickerRow = (on: boolean): React.CSSProperties => ({
     display: 'flex', alignItems: 'flex-start', gap: 5, padding: '3px 5px', cursor: 'pointer',
-    borderBottom: `1px solid ${'#eceae2'}`,
+    borderBottom: '1px solid #eceae2',
     background: on ? ('#e6f0ff') : 'transparent',
 });
 

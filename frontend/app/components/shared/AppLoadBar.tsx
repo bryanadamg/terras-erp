@@ -37,7 +37,7 @@ export default function AppLoadBar() {
                 gap: 10,
                 padding: '4px 12px',
                 background: '#ece9d8',
-                borderBottom: `1px solid ${'#b0aaa0'}`,
+                borderBottom: '1px solid #b0aaa0',
                 fontFamily: xpFont,
                 fontSize: 11,
                 color: '#33393f',

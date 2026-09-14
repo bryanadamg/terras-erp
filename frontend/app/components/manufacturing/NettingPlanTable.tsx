@@ -190,7 +190,7 @@ export default function NettingPlanTable({
                                 <React.Fragment key={i}>
                                 {divider}
                                 <tr style={{
-                                    borderBottom: `1px solid ${'#c0bdb5'}`,
+                                    borderBottom: '1px solid #c0bdb5',
                                     background: i % 2 ? ('#f5f3ee') : 'transparent',
                                     opacity: dim ? 0.65 : 1,
                                 }}>
