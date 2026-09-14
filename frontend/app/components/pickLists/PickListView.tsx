@@ -428,9 +428,8 @@ export default function PickListView() {
     };
 
     return (
-        <ShellWindow classic fill="page" className="fade-in" style={{ fontFamily: xpFont }}>
+        <ShellWindow fill="page" className="fade-in" style={{ fontFamily: xpFont }}>
             <ShellTitleBar
-                classic
                 icon="bi-clipboard-check"
                 title="Pick Lists & Dispatch"
             />
@@ -740,7 +739,7 @@ function SOPickerBoard({ pickableSOs, loading, tzDate, canManage, onRefresh, onP
                     another pick list — cartons are suggested oldest-first, and the last one may overshoot
                     since a carton is never split.
                 </span>
-                <ToolbarCount classic right>
+                <ToolbarCount right>
                     {filtered.length.toLocaleString()} order{filtered.length !== 1 ? 's' : ''}
                 </ToolbarCount>
             </div>

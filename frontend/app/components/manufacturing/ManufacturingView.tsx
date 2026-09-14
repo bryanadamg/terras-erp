@@ -509,7 +509,7 @@ export default function ManufacturingView({
           <div className="col-12 flex-print-fill">
               {/* ── Outer window shell ── */}
               <div
-                  style={viewShellStyle(true)}
+                  style={viewShellStyle()}
               >
 
                   {/* ── Title bar ──
@@ -524,7 +524,6 @@ export default function ManufacturingView({
                       the sidebar's QUICK SCAN on every page, so a per-page copy of it is
                       just chrome in the ribbon. */}
                   <PageTitleBar
-                      classic
                       icon={activeTab === 'manufacturing-orders' ? 'bi-list-task' : 'bi-collection-play'}
                       title={activeTab === 'manufacturing-orders' ? (t('manufacturing_orders') || 'Manufacturing Orders') : 'Production Runs'}
                   />

@@ -26,9 +26,8 @@ export const MonitorShell = ({
     children: React.ReactNode;
 }) => (
     <div className="fade-in" style={{ fontFamily: xpFont }}>
-        <ShellWindow classic fill="page">
+        <ShellWindow fill="page">
             <ShellTitleBar
-                classic
                 icon={icon}
                 title={title}
                 right={

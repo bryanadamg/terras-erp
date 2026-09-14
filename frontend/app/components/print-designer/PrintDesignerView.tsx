@@ -367,8 +367,8 @@ export default function PrintDesignerView() {
 
     if (!draft) {
         return (
-            <ShellWindow classic>
-                <ShellTitleBar classic icon="bi-printer" title="Print Layout Designer" />
+            <ShellWindow>
+                <ShellTitleBar icon="bi-printer" title="Print Layout Designer" />
                 <div style={{ padding: 24 }}>No editable document types are registered.</div>
             </ShellWindow>
         );
@@ -421,41 +421,36 @@ export default function PrintDesignerView() {
         // Only the sheet below opts out to 1:1 (see the `ui-scale-exempt` comments
         // there) — exempting the whole window left the toolbar, band list and
         // inspector rendering 20% larger than the chrome around them.
-        <ShellWindow classic>
+        <ShellWindow>
             <ShellTitleBar
-                classic
                 icon="bi-printer"
                 title="Print Layout Designer"
                 subtitle="Choose which fields appear on each printed document, and how they are sized and placed."
                 right={
                     <span style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
-                        <ToolbarButton
-                            classic icon="bi-arrow-90deg-left"
+                        <ToolbarButton icon="bi-arrow-90deg-left"
                             onClick={undo} disabled={past.current.length === 0}
                         >
                             Undo
                         </ToolbarButton>
-                        <ToolbarButton
-                            classic icon="bi-arrow-90deg-right"
+                        <ToolbarButton icon="bi-arrow-90deg-right"
                             onClick={redo} disabled={future.current.length === 0}
                         >
                             Redo
                         </ToolbarButton>
                         {dirty && (
-                            <ToolbarButton classic icon="bi-arrow-counterclockwise" onClick={revertDraft}>
+                            <ToolbarButton icon="bi-arrow-counterclockwise" onClick={revertDraft}>
                                 Revert
                             </ToolbarButton>
                         )}
                         {/* Prints the draft, so it needs no save first — that is the point. */}
-                        <ToolbarButton
-                            classic icon="bi-printer" printable
+                        <ToolbarButton icon="bi-printer" printable
                             onClick={() => setTestPrinting(true)}
                             disabled={!active || testPrinting}
                         >
                             Test print
                         </ToolbarButton>
-                        <ToolbarButton
-                            classic tone="danger" icon="bi-trash"
+                        <ToolbarButton tone="danger" icon="bi-trash"
                             onClick={reset} disabled={!customised}
                         >
                             Reset to default
@@ -465,8 +460,7 @@ export default function PrintDesignerView() {
                         {dirty && (
                             <Chip classic tone={familyTint('amber')}>Unsaved</Chip>
                         )}
-                        <ToolbarButton
-                            classic tone="create" icon="bi-check-lg"
+                        <ToolbarButton tone="create" icon="bi-check-lg"
                             onClick={save} disabled={!dirty || saving}
                         >
                             {saving ? 'Saving...' : 'Save layout'}

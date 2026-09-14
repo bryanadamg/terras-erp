@@ -109,8 +109,7 @@ export function SearchField({
  * The "N orders" / "N stations" tally that sits at the end of a list toolbar.
  * `right` pushes it to the far end of the flex row (the common case).
  */
-export function ToolbarCount({ classic, children, right = false, style }: {
-    classic: boolean;
+export function ToolbarCount({ children, right = false, style }: {
     children: React.ReactNode;
     right?: boolean;
     style?: React.CSSProperties;
@@ -150,9 +149,8 @@ const TOOLBAR_BTN_MODERN: Record<ToolbarButtonTone, string> = {
 };
 
 export function ToolbarButton({
-    classic, tone = 'neutral', icon, children, onClick, disabled = false, testId, printable = false, title, style,
+    tone = 'neutral', icon, children, onClick, disabled = false, testId, printable = false, title, style,
 }: {
-    classic: boolean;
     /** create = green CTA ("Add X"/"Create"/"New Lot"). launch = blue CTA for a
      * second, distinct create-like action on the same toolbar (e.g. "New
      * Production Run" next to a green "New MO"). neutral = Print/Import/Refresh. */
@@ -349,17 +347,15 @@ export const modernBevel = (extra: React.CSSProperties = {}): React.CSSPropertie
  * `borderRadius: 0` pinned) while every migrated view rounded.
  */
 export const viewShellStyle = (
-    classic: boolean, fill: ShellFill = 'page', extra: React.CSSProperties = {},
+    fill: ShellFill = 'page', extra: React.CSSProperties = {},
 ): React.CSSProperties => (xpBevel({ ...fillStyleFor(fill), ...extra }));
 
 /**
  * Outer-window shell: classic bevel or modern bootstrap card, sized per the
  * standing height convention. Replaces the
- * `style={classic ? xpBevel : undefined} className={classic ? '' : 'card border-0 shadow-sm'}`
- * block hand-copied at the top of ~20 views.
+ * `style={xpBevel}` block hand-copied at the top of ~20 views.
  */
-export function ShellWindow({ classic, fill = 'page', className, style, children }: {
-    classic: boolean;
+export function ShellWindow({ fill = 'page', className, style, children }: {
     /** 'page' = calc(var(--app-vh) - 80px) for a top-level route. 'flex' = flex:1 when nested
      *  under an already-sized parent. false = caller manages its own sizing. */
     fill?: ShellFill;
@@ -391,8 +387,7 @@ export function ShellWindow({ classic, fill = 'page', className, style, children
  * Use `ShellTitleBar` instead when the bar carries right-side actions or needs
  * the bootstrap card-header look in modern.
  */
-export function PageTitleBar({ classic, icon, title, right, style }: {
-    classic: boolean;
+export function PageTitleBar({ icon, title, right, style }: {
     icon: string;                 // bootstrap-icons class, e.g. "bi-palette2"
     title: React.ReactNode;
     right?: React.ReactNode;
@@ -419,8 +414,7 @@ export function PageTitleBar({ classic, icon, title, right, style }: {
  * card-header with an h5 + optional caption — matches SalesOrderView, PartnersView,
  * SampleRequestView, PackingView, BOMView, and the Settings tabs.
  */
-export function ShellTitleBar({ classic, icon, title, subtitle, right, tone = 'blue' }: {
-    classic: boolean;
+export function ShellTitleBar({ icon, title, subtitle, right, tone = 'blue' }: {
     icon: string;                 // bootstrap-icons class, e.g. "bi-people-fill"
     title: React.ReactNode;
     subtitle?: React.ReactNode;   // modern-only caption line under the title

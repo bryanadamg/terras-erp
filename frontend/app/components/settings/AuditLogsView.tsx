@@ -150,9 +150,8 @@ export default function AuditLogsView({ auditLogs, currentPage, totalItems, page
   );
 
   return (
-      <ShellWindow classic fill="page" className="fade-in">
+      <ShellWindow fill="page" className="fade-in">
           <ShellTitleBar
-              classic
               icon="bi-shield-check"
               title="System Audit Logs"
               subtitle={undefined}

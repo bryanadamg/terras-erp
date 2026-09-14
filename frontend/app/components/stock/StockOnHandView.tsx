@@ -1213,7 +1213,7 @@ export default function StockOnHandView({ locations, attributes, categories, ite
                 </button>
             )}
             {canEntry && col('col-md-2 ms-auto',
-                <ToolbarButton classic tone="create" icon="bi-plus-lg" style={{ marginLeft: 'auto' }} title="Add stock for an item (new manual entry)" onClick={openNew}>
+                <ToolbarButton tone="create" icon="bi-plus-lg" style={{ marginLeft: 'auto' }} title="Add stock for an item (new manual entry)" onClick={openNew}>
                     New Entry
                 </ToolbarButton>
             )}

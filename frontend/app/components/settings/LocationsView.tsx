@@ -348,8 +348,8 @@ export default function LocationsView({
   };
 
   return (
-    <ShellWindow classic fill="page" className="fade-in">
-      <ShellTitleBar classic icon="bi-geo-alt-fill" title={t('locations')} />
+    <ShellWindow fill="page" className="fade-in">
+      <ShellTitleBar icon="bi-geo-alt-fill" title={t('locations')} />
       <div className="locations-panes" style={{ flex: 1, minHeight: 0 }}>
 
         {/* LEFT: stores */}

@@ -151,9 +151,8 @@ export default function PartnersView({ type, onCreate, onUpdate, onDelete, onBul
     };
 
     return (
-        <ShellWindow classic fill="page" className="fade-in">
+        <ShellWindow fill="page" className="fade-in">
             <ShellTitleBar
-                classic
                 icon="bi-people-fill"
                 title={`${typeLabel} Management`}
                 subtitle={`Maintain your network of ${typeLabel.toLowerCase()}s`}
@@ -174,11 +173,11 @@ export default function PartnersView({ type, onCreate, onUpdate, onDelete, onBul
                         grow
                     />
                     {<div style={xpSep}></div>}
-                    <ToolbarCount classic>
+                    <ToolbarCount>
                         {total} {typeLabel}{total !== 1 ? 's' : ''}
                     </ToolbarCount>
                     {canManage && (
-                        <ToolbarButton classic tone="create" icon="bi-plus-lg" style={{ marginLeft: 'auto' }} onClick={() => setIsCreateOpen(true)}>
+                        <ToolbarButton tone="create" icon="bi-plus-lg" style={{ marginLeft: 'auto' }} onClick={() => setIsCreateOpen(true)}>
                             Add {typeLabel}
                         </ToolbarButton>
                     )}

@@ -225,8 +225,8 @@ export default function SampleReportView() {
                 <span style={inlineLabel}>
                     <b>{rows.length}</b> variant rows
                 </span>
-                <ToolbarButton classic tone="neutral" icon="bi-arrow-clockwise" title="Reload" onClick={load}>Refresh</ToolbarButton>
-                <ToolbarButton classic tone="neutral" icon="bi-download" disabled={!rows.length} title="Download the variant table as CSV" onClick={exportCsv}>Export CSV</ToolbarButton>
+                <ToolbarButton tone="neutral" icon="bi-arrow-clockwise" title="Reload" onClick={load}>Refresh</ToolbarButton>
+                <ToolbarButton tone="neutral" icon="bi-download" disabled={!rows.length} title="Download the variant table as CSV" onClick={exportCsv}>Export CSV</ToolbarButton>
             </div>
         </div>
     );
@@ -354,9 +354,8 @@ export default function SampleReportView() {
     const rangeLabel = `${dateFrom || 'start'} → ${dateTo || 'today'}`;
 
     return (
-        <ShellWindow classic fill="page" className="fade-in">
+        <ShellWindow fill="page" className="fade-in">
             <ShellTitleBar
-                classic
                 icon="bi-clipboard-data"
                 title="Sample Development Report"
                 subtitle="Attempt counts per variant over a date range — processes, rejections and approvals are event counts, so a remade variant contributes more than one."

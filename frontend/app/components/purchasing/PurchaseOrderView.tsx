@@ -792,11 +792,11 @@ export default function PurchaseOrderView({ items, itemResults, onSearchItems, a
                    onChange={setStatusFilter}
                />
                <div style={xpSep}></div>
-               <ToolbarCount classic>
+               <ToolbarCount>
                    {poRowTotal} order{poRowTotal !== 1 ? 's' : ''}
                </ToolbarCount>
                {canManage && (
-                   <ToolbarButton classic tone="create" icon="bi-plus-lg" style={{ marginLeft: 'auto' }} onClick={() => setIsCreateOpen(true)}>
+                   <ToolbarButton tone="create" icon="bi-plus-lg" style={{ marginLeft: 'auto' }} onClick={() => setIsCreateOpen(true)}>
                        {t('create')}
                    </ToolbarButton>
                )}

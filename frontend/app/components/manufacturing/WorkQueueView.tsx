@@ -254,7 +254,7 @@ export default function WorkQueueView() {
                 value={centerType}
                 onChange={onCenterType}
             />
-            <ToolbarCount classic right>
+            <ToolbarCount right>
                 {startable} startable · {blocked} blocked · {unreleasedCount} need a work order · {total} shown
             </ToolbarCount>
         </div>
@@ -488,9 +488,8 @@ export default function WorkQueueView() {
     );
 
     return (
-        <ShellWindow classic fill="page" className="fade-in">
+        <ShellWindow fill="page" className="fade-in">
             <ShellTitleBar
-                classic
                 icon="bi-list-ol"
                 title="Work Queue"
                 subtitle="Orders ready to start at each work centre. Material is allocated in scheduled order, so two orders never claim the same stock."

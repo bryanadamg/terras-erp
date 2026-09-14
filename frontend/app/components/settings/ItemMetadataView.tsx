@@ -50,9 +50,9 @@ export default function ItemMetadataView({
     const [tab, setTab] = useState<Tab>('attributes');
 
     return (
-        <div className="fade-in" style={viewShellStyle(true)}>
+        <div className="fade-in" style={viewShellStyle()}>
 
-            <PageTitleBar classic icon="bi-tag" title="Attributes" />
+            <PageTitleBar icon="bi-tag" title="Attributes" />
 
             <Tabs
                 classic

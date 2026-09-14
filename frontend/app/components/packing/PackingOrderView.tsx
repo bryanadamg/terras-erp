@@ -639,19 +639,18 @@ export default function PackingOrderView({ initialCreateState, onClearInitialSta
     };
 
     return (
-        <ShellWindow classic fill="page" className="fade-in" style={{ fontFamily: xpFont }}>
+        <ShellWindow fill="page" className="fade-in" style={{ fontFamily: xpFont }}>
             <ShellTitleBar
-                classic
                 icon="bi-box2"
                 title="Packing Orders"
             />
             <div style={xpToolbar()}>
-                <ToolbarButton classic tone="neutral" icon="bi-arrow-clockwise" onClick={loadAll}>Refresh</ToolbarButton>
+                <ToolbarButton tone="neutral" icon="bi-arrow-clockwise" onClick={loadAll}>Refresh</ToolbarButton>
                 <span style={{ marginLeft: 'auto', fontSize: 11, color: '#333' }}>
                     {total.toLocaleString()} order{total !== 1 ? 's' : ''}
                 </span>
                 {canManage && (
-                    <ToolbarButton classic tone="create" icon="bi-plus-lg" title="Order finished goods packed into cartons" onClick={() => setCreating(true)}>
+                    <ToolbarButton tone="create" icon="bi-plus-lg" title="Order finished goods packed into cartons" onClick={() => setCreating(true)}>
                         New Packing Order
                     </ToolbarButton>
                 )}

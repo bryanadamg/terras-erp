@@ -614,7 +614,7 @@ export default function WorkOrderListView({
         );
     };
 
-    const containerStyle: React.CSSProperties = viewShellStyle(true, 'page', { fontFamily: xpFont });
+    const containerStyle: React.CSSProperties = viewShellStyle('page', { fontFamily: xpFont });
 
     const titleBarStyle: React.CSSProperties = xpTitleBar({
         justifyContent: 'flex-start', gap: 8,

@@ -163,9 +163,9 @@ export default function ColorsPage() {
     };
 
     return (
-        <div style={viewShellStyle(classic)}>
+        <div style={viewShellStyle()}>
 
-            <PageTitleBar classic={classic} icon="bi-palette2" title="Colors" />
+            <PageTitleBar icon="bi-palette2" title="Colors" />
 
             <Tabs
                 classic={classic}

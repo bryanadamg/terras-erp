@@ -478,10 +478,9 @@ export default function LabDipRequestView({
     const displayCode = editing ? editing.code : nextCode;
 
     return (
-        <div style={viewShellStyle(true, 'page', { fontFamily: xpFont})}>
+        <div style={viewShellStyle('page', { fontFamily: xpFont})}>
             {/* Title bar */}
             <PageTitleBar
-                classic
                 icon={isYarn ? 'bi-droplet-half' : 'bi-droplet'}
                 title={isYarn ? 'Yarn Lab Dip Requests' : 'Lab Dip Requests'}
             />
@@ -511,11 +510,11 @@ export default function LabDipRequestView({
                 {hasActiveFilter && (
                     <button className={XP_BTN} style={xpBtn(true)} onClick={clearFilters} title="Clear all filters">Clear</button>
                 )}
-                <ToolbarCount classic right>{total} item{total !== 1 ? 's' : ''}</ToolbarCount>
+                <ToolbarCount right>{total} item{total !== 1 ? 's' : ''}</ToolbarCount>
                 {canManage && (
                     <>
                         <span style={{ width: 1, height: 20, background: '#a0988c', margin: '0 2px' }} />
-                        <ToolbarButton classic tone="create" icon="bi-plus-lg" onClick={openCreate}>New {requestNoun}</ToolbarButton>
+                        <ToolbarButton tone="create" icon="bi-plus-lg" onClick={openCreate}>New {requestNoun}</ToolbarButton>
                     </>
                 )}
             </div>

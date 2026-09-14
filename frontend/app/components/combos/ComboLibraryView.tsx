@@ -169,11 +169,11 @@ export default function ComboLibraryView({
     return (
         <div style={embedded
             ? { display: 'flex', flexDirection: 'column', height: '100%', minHeight: 0, fontFamily: LV_XP_FONT, background: '#fff' }
-            : viewShellStyle(true, 'page', { fontFamily: LV_XP_FONT })}>
+            : viewShellStyle('page', { fontFamily: LV_XP_FONT })}>
 
             {/* Title bar (hidden when embedded under a tab shell) */}
             {!embedded && (
-            <PageTitleBar classic icon="bi-grid-3x3-gap" title="Combo Library" />
+            <PageTitleBar icon="bi-grid-3x3-gap" title="Combo Library" />
             )}
 
             {/* Toolbar */}
@@ -198,7 +198,7 @@ export default function ComboLibraryView({
                         { value: 'grid', label: <><i className="bi bi-grid-3x3-gap-fill" style={{ marginRight: 4 }} />Swatches</>, title: 'Swatch grid' },
                     ]}
                 />
-                <ToolbarCount classic right>
+                <ToolbarCount right>
                     {filtered.length === total
                         ? `${total.toLocaleString()} combo${total !== 1 ? 's' : ''}`
                         : `${filtered.length.toLocaleString()} of ${total.toLocaleString()} combos`}
@@ -206,7 +206,7 @@ export default function ComboLibraryView({
                 {canManage && (
                     <>
                         <span style={lvSep()} />
-                        <ToolbarButton classic tone="create" icon="bi-plus-lg" onClick={openCreate}>New Combo</ToolbarButton>
+                        <ToolbarButton tone="create" icon="bi-plus-lg" onClick={openCreate}>New Combo</ToolbarButton>
                     </>
                 )}
             </div>

@@ -261,10 +261,10 @@ export default function ProductionRunsTab({
                     actions={
                         <>
                             {canManage && (
-                                <ToolbarButton classic tone="launch" icon="bi-collection-play" onClick={onNewProductionRun}>New Production Run</ToolbarButton>
+                                <ToolbarButton tone="launch" icon="bi-collection-play" onClick={onNewProductionRun}>New Production Run</ToolbarButton>
                             )}
                             {onPrint && (
-                                <ToolbarButton classic tone="neutral" icon="bi-printer" printable onClick={onPrint}>Print</ToolbarButton>
+                                <ToolbarButton tone="neutral" icon="bi-printer" printable onClick={onPrint}>Print</ToolbarButton>
                             )}
                         </>
                     }

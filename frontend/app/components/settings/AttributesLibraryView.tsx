@@ -117,13 +117,13 @@ export default function AttributesLibraryView({
             {/* Toolbar */}
             <div style={{ background: 'linear-gradient(to bottom, #f5f4ef, #e0dfd8)', borderBottom: '1px solid #b0a898', padding: '4px 8px', display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap', flexShrink: 0 }}>
                 <SearchField classic value={search} onChange={setSearch} placeholder="Search attributes…" width={220} />
-                <ToolbarCount classic right>
+                <ToolbarCount right>
                     {filtered.length} attribute{filtered.length !== 1 ? 's' : ''}
                 </ToolbarCount>
                 {canManage && (
                     <>
                         <span style={lvSep()} />
-                        <ToolbarButton classic tone="create" icon="bi-plus-lg" onClick={openCreate}>New Attribute</ToolbarButton>
+                        <ToolbarButton tone="create" icon="bi-plus-lg" onClick={openCreate}>New Attribute</ToolbarButton>
                     </>
                 )}
             </div>

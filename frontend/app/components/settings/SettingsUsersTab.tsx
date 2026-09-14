@@ -194,7 +194,7 @@ export default function SettingsUsersTab({
                             <i className="bi bi-x-lg" style={{ fontSize: 8 }} />
                         </button>
                     )}
-                    <ToolbarCount classic right>
+                    <ToolbarCount right>
                         {filteredUsers.length} of {users.length} user{users.length !== 1 ? 's' : ''}
                     </ToolbarCount>
                 </div>}

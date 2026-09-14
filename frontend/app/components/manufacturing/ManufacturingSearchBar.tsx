@@ -27,7 +27,7 @@ export default function ManufacturingSearchBar({
             <SearchField classic value={value} onChange={onChange} placeholder={placeholder} width={320} grow />
             {filters}
             {(value || showCount) && (
-                <ToolbarCount classic>
+                <ToolbarCount>
                     {total} result{total === 1 ? '' : 's'}
                 </ToolbarCount>
             )}

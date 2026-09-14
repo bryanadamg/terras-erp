@@ -100,12 +100,12 @@ export default function PackagingTypesView({ types, loading, onCreate, onEdit, o
         : 'No packaging types yet. Add the boxes the floor packs into, with the weight of each empty box.';
 
     return (
-        <div style={viewShellStyle(true, 'page', { fontFamily: LV_XP_FONT })}>
-            <PageTitleBar classic icon="bi-box2" title="Packaging Types" />
+        <div style={viewShellStyle('page', { fontFamily: LV_XP_FONT })}>
+            <PageTitleBar icon="bi-box2" title="Packaging Types" />
 
             <div style={{ background: 'linear-gradient(to bottom, #f5f4ef, #e0dfd8)', borderBottom: '1px solid #b0a898', padding: '4px 8px', display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap', flexShrink: 0 }}>
                 <SearchField classic value={search} onChange={setSearch} placeholder="Search code or name…" width={240} />
-                <ToolbarCount classic right>
+                <ToolbarCount right>
                     {filtered.length === types.length
                         ? `${types.length} type${types.length !== 1 ? 's' : ''}`
                         : `${filtered.length} of ${types.length} types`}
@@ -113,7 +113,7 @@ export default function PackagingTypesView({ types, loading, onCreate, onEdit, o
                 {canManage && (
                     <>
                         <span style={lvSep()} />
-                        <ToolbarButton classic tone="create" icon="bi-plus-lg" onClick={openCreate}>New Packaging Type</ToolbarButton>
+                        <ToolbarButton tone="create" icon="bi-plus-lg" onClick={openCreate}>New Packaging Type</ToolbarButton>
                     </>
                 )}
             </div>

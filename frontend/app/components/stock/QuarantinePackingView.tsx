@@ -870,7 +870,7 @@ export default function QuarantinePackingView() {
                     <i className="bi bi-lock" style={{ marginRight: 4 }} />Read-only — no Set Quarantine Status permission
                 </span>
             )}
-            <ToolbarCount classic right>
+            <ToolbarCount right>
                 {total.toLocaleString()} MO group{total === 1 ? '' : 's'}
             </ToolbarCount>
         </div>
@@ -1055,9 +1055,8 @@ export default function QuarantinePackingView() {
         [stableGroups]);
 
     return (
-        <ShellWindow classic fill="page" className="fade-in">
+        <ShellWindow fill="page" className="fade-in">
             <ShellTitleBar
-                classic
                 icon="bi-shield-exclamation"
                 title="Quarantine Packing"
                 subtitle="Stock held in quarantine, grouped by MO. Only lots set to OK can be packed."

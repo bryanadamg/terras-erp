@@ -419,13 +419,13 @@ export default function RoutingView({ workCenters, operations, locations, onCrea
               display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' as const, flexShrink: 0,
           }}>
               <SearchField classic value={wcSearch} onChange={setWcSearch} placeholder="Search work centers…" width={240} />
-              <ToolbarCount classic right>
+              <ToolbarCount right>
                   {filteredWCRows.length.toLocaleString()} station{filteredWCRows.length !== 1 ? 's' : ''}
               </ToolbarCount>
               {canManage && (
                   <>
                       <span style={lvSep()} />
-                      <ToolbarButton classic tone="create" icon="bi-plus-lg" onClick={() => { setNewWorkCenter({ ...emptyWC }); setIsCreateWCOpen(true); }}>
+                      <ToolbarButton tone="create" icon="bi-plus-lg" onClick={() => { setNewWorkCenter({ ...emptyWC }); setIsCreateWCOpen(true); }}>
                           New Work Center
                       </ToolbarButton>
                   </>
@@ -573,7 +573,7 @@ export default function RoutingView({ workCenters, operations, locations, onCrea
           }}>
               <SearchField classic value={opSearch} onChange={setOpSearch} placeholder="Search operations…" width={240} />
               <span style={lvSep()} />
-              <ToolbarCount classic right>
+              <ToolbarCount right>
                   {filteredOp.length.toLocaleString()} operation{filteredOp.length !== 1 ? 's' : ''}
               </ToolbarCount>
           </div>
@@ -626,9 +626,8 @@ export default function RoutingView({ workCenters, operations, locations, onCrea
 
   return (
       <>
-      <ShellWindow classic fill="page" className="fade-in">
+      <ShellWindow fill="page" className="fade-in">
           <ShellTitleBar
-              classic
               icon="bi-signpost-split-fill"
               title={t('routing')}
               subtitle="Work centers and standard operations used across manufacturing routings"

@@ -1037,9 +1037,8 @@ export default function SampleRequestView({ samples, customers, onCreateSample, 
        })()}
 
        {/* ── Outer shell ── */}
-       <ShellWindow classic fill="page" className="fade-in">
+       <ShellWindow fill="page" className="fade-in">
            <ShellTitleBar
-               classic
                icon="bi-eyedropper"
                title={t('sample_requests')}
                subtitle="Track prototype and sample approval workflow"
@@ -1090,14 +1089,14 @@ export default function SampleRequestView({ samples, customers, onCreateSample, 
                        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><circle cx="12" cy="12" r="10"/><path d="M8 12l2.5 2.5L16 9"/></svg>
                        Mark All as Read
                    </button>
-                   <ToolbarCount classic right>
+                   <ToolbarCount right>
                        {totalSamples} item{totalSamples !== 1 ? 's' : ''}
                        {unreadCount > 0 && (
                            <> · <span style={{ color: '#1c5bc8', fontWeight: 'bold' }}>{unreadCount} unread</span></>
                        )}
                    </ToolbarCount>
                    {canManage && (
-                       <ToolbarButton classic tone="create" icon="bi-plus-lg" onClick={openCreateModal}>
+                       <ToolbarButton tone="create" icon="bi-plus-lg" onClick={openCreateModal}>
                            {t('create')}
                        </ToolbarButton>
                    )}

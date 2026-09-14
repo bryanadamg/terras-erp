@@ -283,7 +283,7 @@ export default function DispatchView() {
                     value={statusFilter}
                     onChange={setStatusFilter}
                 />
-                <ToolbarCount classic right>
+                <ToolbarCount right>
                     {statusFilter === DECK_FILTER ? `${deckRows.length} on deck` : `${total} shipment(s)`}
                 </ToolbarCount>
             </div>
@@ -466,8 +466,8 @@ export default function DispatchView() {
     const menuShipment = shipments.find(s => String(s.id) === menuOpenId);
 
     return (
-        <ShellWindow classic fill="page" className="fade-in" style={{ fontFamily: xpFont }}>
-            <ShellTitleBar classic icon="bi-truck" title="Dispatch & Loading Deck" />
+        <ShellWindow fill="page" className="fade-in" style={{ fontFamily: xpFont }}>
+            <ShellTitleBar icon="bi-truck" title="Dispatch & Loading Deck" />
             {body}
 
             <XPStatusBar right={`${deck.length} waiting · ${total} shipment(s)`}>

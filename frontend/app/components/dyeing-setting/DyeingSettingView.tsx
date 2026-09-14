@@ -73,9 +73,9 @@ export default function DyeingSettingView() {
 
     // ── Render ────────────────────────────────────────────────────────────────
     return (
-        <div style={viewShellStyle(true, 'page', { fontFamily: xpFont })}>
+        <div style={viewShellStyle('page', { fontFamily: xpFont })}>
             {/* Title bar */}
-            <PageTitleBar classic icon="bi-droplet-fill" title="Dyeing & Setting" />
+            <PageTitleBar icon="bi-droplet-fill" title="Dyeing & Setting" />
 
             {/* Tabs bar */}
             <Tabs tabs={TABS} activeKey={activeTab} onChange={handleTabChange} classic />

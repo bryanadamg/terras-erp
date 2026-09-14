@@ -614,13 +614,13 @@ export default function DyeRecipeTab({ items, attributes, authFetch, initialColo
             {/* Toolbar */}
             <div style={{ background: 'linear-gradient(to bottom, #f5f4ef, #e0dfd8)', borderBottom: '1px solid #b0a898', padding: '4px 8px', display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap', flexShrink: 0 }}>
                 <SearchField classic value={searchText} onChange={setSearchText} placeholder="Search code or name…" width={240} />
-                <ToolbarCount classic right>
+                <ToolbarCount right>
                     {total.toLocaleString()} recipe{total !== 1 ? 's' : ''}
                 </ToolbarCount>
                 {canManage && (
                     <>
                         <span style={lvSep()} />
-                        <ToolbarButton classic tone="create" icon="bi-plus-lg" onClick={openCreate}>New Recipe</ToolbarButton>
+                        <ToolbarButton tone="create" icon="bi-plus-lg" onClick={openCreate}>New Recipe</ToolbarButton>
                     </>
                 )}
             </div>

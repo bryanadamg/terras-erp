@@ -1008,10 +1008,10 @@ export default function ManufacturingOrdersTab({
                 const moActions = canManage || onPrint ? (
                     <>
                         {canManage && (
-                            <ToolbarButton classic tone="create" icon="bi-plus-lg" onClick={onNewMO}>New MO</ToolbarButton>
+                            <ToolbarButton tone="create" icon="bi-plus-lg" onClick={onNewMO}>New MO</ToolbarButton>
                         )}
                         {onPrint && (
-                            <ToolbarButton classic tone="neutral" icon="bi-printer" printable onClick={onPrint}>Print</ToolbarButton>
+                            <ToolbarButton tone="neutral" icon="bi-printer" printable onClick={onPrint}>Print</ToolbarButton>
                         )}
                     </>
                 ) : null;

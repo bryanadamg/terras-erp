@@ -46,9 +46,9 @@ export default function SettingsView({
                 moved between tabs — the title bar and tab strip jumping to a new
                 place each time. Hand-rolling the frame is also how this file ended up
                 on `borderRadius: 9`, one off the shell tier every other view uses. */}
-            <ShellWindow classic fill="page" style={undefined}>
+            <ShellWindow fill="page" style={undefined}>
                 {/* Title bar */}
-                <PageTitleBar classic icon="bi-sliders" title="Settings" />
+                <PageTitleBar icon="bi-sliders" title="Settings" />
 
                 {/* Tabs bar */}
                 <Tabs tabs={tabs} activeKey={activeTab} onChange={(key) => setActiveTab(key)} classic />

@@ -189,11 +189,11 @@ export default function ColorLibraryView({
     return (
         <div style={embedded
             ? { display: 'flex', flexDirection: 'column', height: '100%', minHeight: 0, fontFamily: LV_XP_FONT, background: '#fff' }
-            : viewShellStyle(true, 'page', { fontFamily: LV_XP_FONT })}>
+            : viewShellStyle('page', { fontFamily: LV_XP_FONT })}>
 
             {/* Title bar (hidden when embedded under the Colors tab shell) */}
             {!embedded && (
-            <PageTitleBar classic icon="bi-palette2" title="Color Library" />
+            <PageTitleBar icon="bi-palette2" title="Color Library" />
             )}
 
             {/* Toolbar */}
@@ -230,7 +230,7 @@ export default function ColorLibraryView({
                 {canManage && (
                     <>
                         <span style={lvSep()} />
-                        <ToolbarButton classic tone="create" icon="bi-plus-lg" onClick={openCreate}>New Color</ToolbarButton>
+                        <ToolbarButton tone="create" icon="bi-plus-lg" onClick={openCreate}>New Color</ToolbarButton>
                     </>
                 )}
             </div>

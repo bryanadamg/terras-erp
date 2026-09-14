@@ -998,8 +998,8 @@ export default function BatchesView({ items, locations, categories, workCenters,
               onChange={v => setStatusFilter(v as '' | 'active' | 'depleted')}
             />
             <span style={{ display: 'inline-flex', gap: 4, marginLeft: 'auto' }}>
-              <ToolbarButton classic tone="neutral" icon="bi-arrow-clockwise" onClick={fetchBatches}>Refresh</ToolbarButton>
-              <ToolbarButton classic tone="create" icon="bi-plus" onClick={() => setIsCreateOpen(true)}>New Lot</ToolbarButton>
+              <ToolbarButton tone="neutral" icon="bi-arrow-clockwise" onClick={fetchBatches}>Refresh</ToolbarButton>
+              <ToolbarButton tone="create" icon="bi-plus" onClick={() => setIsCreateOpen(true)}>New Lot</ToolbarButton>
             </span>
           </div>
 

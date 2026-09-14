@@ -791,7 +791,7 @@ export default function BOMView({
 
             {/* BOM List */}
             <div className="col-12">
-                <div style={viewShellStyle(true)}>
+                <div style={viewShellStyle()}>
                     {/* Title bar */}
                     <div style={xpTitleBar({ justifyContent: 'flex-start' })}>
                         <span><i className="bi bi-diagram-3-fill" style={{ marginRight: '6px' }} />{t('active_boms')}</span>
@@ -816,7 +816,7 @@ export default function BOMView({
                             </div>
                         )}
                         {canManage && (
-                            <ToolbarButton classic tone="create" icon="bi-plus-lg" testId="create-bom-btn" style={{ marginLeft: 'auto' }} onClick={() => setIsDesignerOpen(true)}>
+                            <ToolbarButton tone="create" icon="bi-plus-lg" testId="create-bom-btn" style={{ marginLeft: 'auto' }} onClick={() => setIsDesignerOpen(true)}>
                                 {t('create_recipe')}
                             </ToolbarButton>
                         )}

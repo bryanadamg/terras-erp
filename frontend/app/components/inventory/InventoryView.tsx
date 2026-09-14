@@ -1121,7 +1121,6 @@ export default function InventoryView({
                   {canImport && (
                       <div style={{ display: 'flex' }}>
                           <ToolbarButton
-                              classic
                               tone="neutral"
                               icon={importing ? 'bi-hourglass-split' : 'bi-upload'}
                               disabled={importing}
@@ -1130,7 +1129,6 @@ export default function InventoryView({
                           >{importing ? 'Importing…' : 'Import'}</ToolbarButton>
                           <span className="xp-menu-trigger" style={{ display: 'inline-flex', marginLeft: -1 }}>
                               <ToolbarButton
-                                  classic
                                   tone="neutral"
                                   icon="bi-caret-down-fill"
                                   title="Import options"
@@ -1140,7 +1138,7 @@ export default function InventoryView({
                           </span>
                       </div>
                   )}
-                  {canManage && <ToolbarButton classic tone="create" icon="bi-plus-lg" testId="create-item-btn" onClick={openCreateModal}>{t('create')}</ToolbarButton>}
+                  {canManage && <ToolbarButton tone="create" icon="bi-plus-lg" testId="create-item-btn" onClick={openCreateModal}>{t('create')}</ToolbarButton>}
                 </div>
               )}
             </div>

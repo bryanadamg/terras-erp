@@ -2056,9 +2056,8 @@ In stock ${fmtQty(f.baseAvailable)}${bu} · Shipped ${fmtQty(f.baseShipped)}${bu
        </ModalWrapper>
 
        {/* ── Outer shell ── */}
-       <ShellWindow classic fill="page" className="fade-in">
+       <ShellWindow fill="page" className="fade-in">
            <ShellTitleBar
-               classic
                icon="bi-receipt-cutoff"
                title={t('sales_orders')}
                subtitle="Manage incoming customer orders"
@@ -2073,15 +2072,15 @@ In stock ${fmtQty(f.baseAvailable)}${bu} · Shipped ${fmtQty(f.baseShipped)}${bu
                <div style={xpSep}></div>
                <FilterChipBar classic options={STATUS_FILTERS} value={statusFilter} onChange={setStatusFilter} />
                <div style={xpSep}></div>
-               <ToolbarCount classic>
+               <ToolbarCount>
                    {soTotal} order{soTotal !== 1 ? 's' : ''}
                </ToolbarCount>
                <div style={{ display: 'flex', gap: 4, marginLeft: 'auto' }} className={undefined}>
-                   <ToolbarButton classic tone="neutral" icon="bi-printer" printable disabled={printLoading} onClick={handleOpenTablePrint}>
+                   <ToolbarButton tone="neutral" icon="bi-printer" printable disabled={printLoading} onClick={handleOpenTablePrint}>
                        {printLoading ? 'Loading…' : 'Print Table'}
                    </ToolbarButton>
                    {canManage && (
-                       <ToolbarButton classic tone="create" icon="bi-plus-lg" onClick={() => setIsCreateOpen(true)}>
+                       <ToolbarButton tone="create" icon="bi-plus-lg" onClick={() => setIsCreateOpen(true)}>
                            {t('create')}
                        </ToolbarButton>
                    )}

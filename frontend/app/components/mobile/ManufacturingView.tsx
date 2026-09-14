@@ -158,7 +158,7 @@ export default function MobileManufacturingView({
                     desktop list views use, one size up for a finger. */}
                 <MobileToolbar>
                     <MobileSearchField value={search} onChange={setSearch} placeholder="Search MO code or item..." />
-                    <ToolbarCount classic right>{filtered.length} MOs</ToolbarCount>
+                    <ToolbarCount right>{filtered.length} MOs</ToolbarCount>
                 </MobileToolbar>
                 <MobileToolbar>
                     <MobileFilterBar

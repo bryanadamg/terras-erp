@@ -193,7 +193,7 @@ export default function ColorsVariantView({ values, canCreate, canEdit, canDelet
                         { value: 'grid', label: <><i className="bi bi-grid-3x3-gap-fill" style={{ marginRight: 4 }} />Swatches</>, title: 'Swatch grid' },
                     ]}
                 />
-                <ToolbarCount classic right>
+                <ToolbarCount right>
                     {filtered.length === sorted.length
                         ? `${sorted.length} color${sorted.length !== 1 ? 's' : ''}`
                         : `${filtered.length} of ${sorted.length} colors`}
@@ -201,7 +201,7 @@ export default function ColorsVariantView({ values, canCreate, canEdit, canDelet
                 {canCreate && (
                     <>
                         <span style={lvSep()} />
-                        <ToolbarButton classic tone="create" icon="bi-plus-lg" onClick={openCreate}>New Color</ToolbarButton>
+                        <ToolbarButton tone="create" icon="bi-plus-lg" onClick={openCreate}>New Color</ToolbarButton>
                     </>
                 )}
             </div>

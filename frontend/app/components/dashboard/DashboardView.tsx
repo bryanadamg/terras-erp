@@ -394,9 +394,8 @@ export default function DashboardView({ items, locations, stockBalance, workOrde
 
                 {/* Drill-down panel */}
                 {drill && (
-                    <ShellWindow classic={false} fill={false} className="mb-4">
+                    <ShellWindow fill={false} className="mb-4">
                         <ShellTitleBar
-                            classic={false}
                             icon={drill === 'lowstock' ? 'bi-exclamation-triangle' : 'bi-receipt'}
                             title={drill === 'lowstock' ? `${t('low_stock')} — ${t('item')}s` : `${t('order_health')} — ${t('material_shortages_affecting')}`}
                             right={<button className="btn btn-sm btn-light" onClick={() => setDrill(null)} aria-label={t('cancel')}><i className="bi bi-x-lg"></i></button>}
@@ -430,8 +429,8 @@ export default function DashboardView({ items, locations, stockBalance, workOrde
                 {/* Charts + calendar + activity */}
                 <div className="row g-4 mb-4">
                     <div className="col-md-4">
-                        <ShellWindow classic={false} fill={false} className="h-100">
-                            <ShellTitleBar classic={false} icon="bi-building" title={t('warehouse_distribution')} />
+                        <ShellWindow fill={false} className="h-100">
+                            <ShellTitleBar icon="bi-building" title={t('warehouse_distribution')} />
                             <div className="card-body">
                                 {groupedStats.length === 0 ? (
                                     <div className="text-center py-5"><i className="bi bi-pie-chart text-muted opacity-25 display-1" aria-hidden="true"></i><p className="text-muted small mt-2">{t('no_inventory_recorded')}</p></div>
@@ -482,8 +481,8 @@ export default function DashboardView({ items, locations, stockBalance, workOrde
                         </ShellWindow>
                     </div>
                     <div className="col-md-4">
-                        <ShellWindow classic={false} fill={false} className="h-100">
-                            <ShellTitleBar classic={false} icon="bi-calendar-event" title={t('production_deadlines')} />
+                        <ShellWindow fill={false} className="h-100">
+                            <ShellTitleBar icon="bi-calendar-event" title={t('production_deadlines')} />
                             <div className="card-body">
                                 <CalendarView orders={workOrders} items={items} compact={true} />
                                 <div className="mt-3 d-flex flex-wrap gap-2 justify-content-center">
@@ -495,8 +494,8 @@ export default function DashboardView({ items, locations, stockBalance, workOrde
                         </ShellWindow>
                     </div>
                     <div className="col-md-4">
-                        <ShellWindow classic={false} fill={false} className="h-100">
-                            <ShellTitleBar classic={false} icon="bi-clock-history" title={t('recent_activity')} />
+                        <ShellWindow fill={false} className="h-100">
+                            <ShellTitleBar icon="bi-clock-history" title={t('recent_activity')} />
                             <div className="card-body p-0">
                                 <ul className="list-group list-group-flush">
                                     {recentActivity.map((entry: any) => (
@@ -520,8 +519,8 @@ export default function DashboardView({ items, locations, stockBalance, workOrde
                 {/* KPI Trends */}
                 <div className="row g-4 mb-4">
                     <div className="col-12">
-                        <ShellWindow classic={false} fill={false}>
-                            <ShellTitleBar classic={false} icon="bi-graph-up" title={t('kpi_trends')} />
+                        <ShellWindow fill={false}>
+                            <ShellTitleBar icon="bi-graph-up" title={t('kpi_trends')} />
                             <div className="card-body">
                                 <div className="row g-3">
                                     {TREND_METRICS.map((m) => {
@@ -555,9 +554,8 @@ export default function DashboardView({ items, locations, stockBalance, workOrde
                 {/* Manufacturing monitoring */}
                 <div className="row">
                     <div className="col-12">
-                        <ShellWindow classic={false} fill={false}>
+                        <ShellWindow fill={false}>
                             <ShellTitleBar
-                                classic={false}
                                 icon="bi-gear"
                                 title={t('manufacturing_monitoring')}
                                 right={<span className="small text-muted">{metrics.activeWO} {t('active_wo').toLowerCase()} · {metrics.pendingWO} {t('pending').toLowerCase()}</span>}
@@ -775,9 +773,8 @@ export default function DashboardView({ items, locations, stockBalance, workOrde
             <div style={{ display: 'flex', gap: '6px', marginBottom: '6px', height: '220px' }}>
 
                 {/* Action Items pane */}
-                <ShellWindow classic fill={false} style={{ width: '260px', flexShrink: 0, display: 'flex', flexDirection: 'column' }}>
+                <ShellWindow fill={false} style={{ width: '260px', flexShrink: 0, display: 'flex', flexDirection: 'column' }}>
                     <ShellTitleBar
-                        classic
                         tone="red"
                         icon="bi-list-check"
                         title={t('action_items')}
@@ -830,9 +827,8 @@ export default function DashboardView({ items, locations, stockBalance, workOrde
                 </ShellWindow>
 
                 {/* WO Table */}
-                <ShellWindow classic fill={false} style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column' }}>
+                <ShellWindow fill={false} style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column' }}>
                     <ShellTitleBar
-                        classic
                         tone="amber"
                         icon="bi-gear"
                         title={t('work_order_monitoring')}
@@ -894,8 +890,8 @@ export default function DashboardView({ items, locations, stockBalance, workOrde
             <div style={{ display: 'flex', gap: '6px', height: '200px' }}>
 
                 {/* Recent stock movements */}
-                <ShellWindow classic fill={false} style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column' }}>
-                    <ShellTitleBar classic tone="grey" icon="bi-clock-history" title={t('recent_stock_movements')} />
+                <ShellWindow fill={false} style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column' }}>
+                    <ShellTitleBar tone="grey" icon="bi-clock-history" title={t('recent_stock_movements')} />
                     <div style={{ overflow: 'auto', flex: 1, minHeight: 0 }}>
                         <table style={xpTable}>
                             <thead>
@@ -930,8 +926,8 @@ export default function DashboardView({ items, locations, stockBalance, workOrde
                 </ShellWindow>
 
                 {/* Warehouse distribution */}
-                <ShellWindow classic fill={false} style={{ width: '240px', flexShrink: 0, display: 'flex', flexDirection: 'column' }}>
-                    <ShellTitleBar classic tone="grey" icon="bi-building" title={t('warehouse_distribution')} />
+                <ShellWindow fill={false} style={{ width: '240px', flexShrink: 0, display: 'flex', flexDirection: 'column' }}>
+                    <ShellTitleBar tone="grey" icon="bi-building" title={t('warehouse_distribution')} />
                     <div style={{ padding: '6px 8px', background: '#f0efe8', flex: 1, overflowY: 'auto', minHeight: 0 }}>
                         {groupedStats.length === 0 ? (
                             <div style={{ textAlign: 'center', padding: '12px', color: '#888', fontStyle: 'italic', fontSize: '10px' }}>{t('no_inventory_recorded')}</div>
@@ -983,8 +979,8 @@ export default function DashboardView({ items, locations, stockBalance, workOrde
             </div>
 
             {/* ── Row 5: KPI Trends ── */}
-            <ShellWindow classic fill={false} style={{ marginTop: '6px' }}>
-                <ShellTitleBar classic tone="grey" icon="bi-graph-up" title={t('kpi_trends')} />
+            <ShellWindow fill={false} style={{ marginTop: '6px' }}>
+                <ShellTitleBar tone="grey" icon="bi-graph-up" title={t('kpi_trends')} />
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: '6px', padding: '8px', background: '#f0efe8' }}>
                     {TREND_METRICS.map((m) => {
                         const series = kpiHistory?.[m.key] || [];
