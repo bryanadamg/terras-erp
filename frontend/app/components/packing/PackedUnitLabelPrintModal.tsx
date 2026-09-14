@@ -3,7 +3,6 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { createPortal } from 'react-dom';
 import QRCode from 'qrcode';
 import JsBarcode from 'jsbarcode';
-import { useTheme } from '../../context/ThemeContext';
 import { useTimezone } from '../../context/TimezoneContext';
 import PrintModalShell, { PrintModalFooter } from '../shared/PrintModalShell';
 import { xpFont, PRINT_FONT } from '../shared/xpTheme';
@@ -75,7 +74,6 @@ export default function PackedUnitLabelPrintModal({
     companyProfile?: any;
     onClose: () => void;
 }) {
-    const { uiStyle } = useTheme();
     const { formatCustom: tzFmt } = useTimezone();
 
     const [qrUrls, setQrUrls] = useState<Record<string, string>>({});

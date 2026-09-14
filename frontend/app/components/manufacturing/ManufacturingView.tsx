@@ -3,7 +3,6 @@ import CodeConfigModal, { CodeConfig, buildCodeParts } from '../shared/CodeConfi
 import SearchableSelect from '../shared/SearchableSelect';
 import { useToast } from '../shared/Toast';
 import { useLanguage } from '../../context/LanguageContext';
-import { useTheme } from '../../context/ThemeContext';
 import { useData } from '../../context/DataContext';
 import { useDebouncedCommit } from '../../context/usePaginatedList';
 import { useUser } from '../../context/UserContext';
@@ -134,7 +133,6 @@ export default function ManufacturingView({
       // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const { uiStyle: currentStyle } = useTheme();
 
   const helpers = useManufacturingHelpers({ items, boms, locations, workCenters, attributes, stockBalance, itemIndex });
   const { getItemName, getAttributeValueName, getBomSizeLabel } = helpers;
@@ -557,7 +555,6 @@ export default function ManufacturingView({
                               prProgressFilter={prProgressFilter}
                               setPrProgressFilter={setPrProgressFilter}
                               onDeleteProductionRun={onDeleteProductionRun}
-                              currentStyle={currentStyle}
                               canManage={canManage}
                               companyProfile={companyProfile}
                               helpers={helpers}
@@ -590,7 +587,6 @@ export default function ManufacturingView({
                               setMoCodeFilter={setMoCodeFilter}
                               viewMode={viewMode}
                               setViewMode={setViewMode}
-                              currentStyle={currentStyle}
                               canManage={canManage}
                               companyProfile={companyProfile}
                               helpers={helpers}

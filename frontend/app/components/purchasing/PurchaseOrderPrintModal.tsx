@@ -297,11 +297,10 @@ function PODocument({
 }
 
 export default function PurchaseOrderPrintModal({
-    po, onClose, currentStyle, companyProfile, items, attributes, partners,
+    po, onClose, companyProfile, items, attributes, partners,
 }: {
     po: any;
     onClose: () => void;
-    currentStyle: string;
     companyProfile: any;
     items: any[];
     attributes: any[];

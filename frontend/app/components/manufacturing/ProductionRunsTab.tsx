@@ -96,7 +96,6 @@ export default function ProductionRunsTab({
     prProgressFilter,
     setPrProgressFilter,
     onDeleteProductionRun,
-    currentStyle,
     canManage,
     companyProfile,
     helpers,
@@ -243,7 +242,6 @@ export default function ProductionRunsTab({
                     pr={printPreviewPR}
                     reqs={prMaterialReqs[printPreviewPR.id] || []}
                     isLoading={!!prMaterialReqsLoading[printPreviewPR.id]}
-                    currentStyle={currentStyle}
                     companyProfile={companyProfile}
                     getLocationName={getLocationName}
                     getAttributeValueName={getAttributeValueName}

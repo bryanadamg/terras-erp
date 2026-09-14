@@ -4,7 +4,6 @@ import React, { useEffect, useMemo, useState, useCallback, useRef } from 'react'
 import dynamic from 'next/dynamic';
 import { useData } from '../../context/DataContext';
 import { usePaginatedFetch } from '../../context/usePaginatedList';
-import { useTheme } from '../../context/ThemeContext';
 import { useUser } from '../../context/UserContext';
 import { useTimezone } from '../../context/TimezoneContext';
 import { useToast } from '../shared/Toast';
@@ -45,7 +44,6 @@ export default function PickListView() {
     // master data (loaded on initial app load). Pick lists, sales orders and stock
     // balances are all fetched here scoped to what's actually on screen.
     const { partners, locations, attributes, companyProfile, itemIndex, authFetch } = useData();
-    const { uiStyle } = useTheme();
     const { formatDate: tzDate, formatDateTime: tzDateTime } = useTimezone();
     const { showToast } = useToast();
     const { confirm } = useConfirm();

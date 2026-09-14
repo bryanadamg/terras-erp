@@ -111,7 +111,6 @@ export default function MOPrintModal({
     onClose,
     printSettings,
     onPrintSettingsChange,
-    currentStyle,
     companyProfile,
     boms,
     getItemName,
@@ -126,7 +125,6 @@ export default function MOPrintModal({
     onClose: () => void;
     printSettings: PrintSettings;
     onPrintSettingsChange: (updated: PrintSettings) => void;
-    currentStyle: string;
     companyProfile: any;
     boms: any[];
     getItemName: (id: any) => string;

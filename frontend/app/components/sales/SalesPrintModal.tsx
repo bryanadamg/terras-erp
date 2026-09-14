@@ -234,11 +234,10 @@ function SODocument({
 }
 
 export default function SalesPrintModal({
-    so, onClose, currentStyle, companyProfile, items, attributes, partners,
+    so, onClose, companyProfile, items, attributes, partners,
 }: {
     so: any;
     onClose: () => void;
-    currentStyle: string;
     companyProfile: any;
     items: any[];
     attributes: any[];

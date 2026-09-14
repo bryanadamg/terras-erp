@@ -3,7 +3,6 @@ import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import QRCode from 'qrcode';
 import { useData } from '../../context/DataContext';
-import { useTheme } from '../../context/ThemeContext';
 import KartuKerjaTemplateCard from './KartuKerjaTemplateCard';
 import PrintModalShell, { PrintModalFooter } from '../shared/PrintModalShell';
 import { resolveLayout } from '../shared/printTemplate/templateStore';
@@ -36,7 +35,6 @@ export default function WOBulkPrintModal({
     onClose: () => void;
 }) {
     const { companyProfile, attributes, authFetch, printTemplates } = useData() as any;
-    const { uiStyle } = useTheme();
 
     const API_BASE = (process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:8000/api').replace(/\/api$/, '') + '/api';
     // Bulk print marks every included WO's card in one call.

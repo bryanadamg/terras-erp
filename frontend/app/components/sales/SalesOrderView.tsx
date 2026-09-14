@@ -7,7 +7,6 @@ import SearchableSelect from '../shared/SearchableSelect';
 import ModalWrapper from '../shared/ModalWrapper';
 const SalesPrintModal = dynamic(() => import('./SalesPrintModal'), { ssr: false });
 const SOTablePrintModal = dynamic(() => import('./SOTablePrintModal'), { ssr: false });
-import { useTheme } from '../../context/ThemeContext';
 import { useTimezone } from '../../context/TimezoneContext';
 import { useData } from '../../context/DataContext';
 import { useUser } from '../../context/UserContext';
@@ -88,7 +87,6 @@ export default function SalesOrderView({ items, attributes, boms, salesOrders, p
   const [isTablePrintOpen, setIsTablePrintOpen] = useState(false);
   const [printOrders, setPrintOrders] = useState<any[] | null>(null);
   const [printLoading, setPrintLoading] = useState(false);
-  const { uiStyle: currentStyle } = useTheme();
   const {
       companyProfile, uoms, authFetch, itemIndex, loading: dataLoading, soStatusCounts, soQuery,
       refreshSalesOrders,
@@ -1318,7 +1316,6 @@ In stock ${fmtQty(f.baseAvailable)}${bu} · Shipped ${fmtQty(f.baseShipped)}${bu
            <SOTablePrintModal
                salesOrders={printOrders || []}
                onClose={() => { setIsTablePrintOpen(false); setPrintOrders(null); }}
-               currentStyle={currentStyle}
                companyProfile={companyProfile}
                items={items}
                attributes={attributes}
@@ -1331,7 +1328,6 @@ In stock ${fmtQty(f.baseAvailable)}${bu} · Shipped ${fmtQty(f.baseShipped)}${bu
            <SalesPrintModal
                so={printingSO}
                onClose={() => setPrintingSO(null)}
-               currentStyle={currentStyle}
                companyProfile={companyProfile}
                items={items}
                attributes={attributes}

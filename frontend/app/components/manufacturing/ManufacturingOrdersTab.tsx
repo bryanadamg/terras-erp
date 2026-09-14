@@ -44,7 +44,6 @@ export default function ManufacturingOrdersTab({
     setMoCodeFilter,
     viewMode,
     setViewMode,
-    currentStyle,
     canManage,
     companyProfile,
     helpers,
@@ -988,7 +987,6 @@ export default function ManufacturingOrdersTab({
                   onClose={() => setPrintPreviewMO(null)}
                   printSettings={printSettings}
                   onPrintSettingsChange={setPrintSettings}
-                  currentStyle={currentStyle}
                   companyProfile={companyProfile}
                   boms={boms}
                   getItemName={getItemName}

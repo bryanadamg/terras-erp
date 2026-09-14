@@ -7,7 +7,6 @@ import SearchableSelect from '../shared/SearchableSelect';
 import TreeSelect, { buildLocationPickerTree } from '../shared/TreeSelect';
 const PurchaseOrderPrintModal = dynamic(() => import('./PurchaseOrderPrintModal'), { ssr: false });
 import ModalWrapper from '../shared/ModalWrapper';
-import { useTheme } from '../../context/ThemeContext';
 import { useTimezone } from '../../context/TimezoneContext';
 import { useData } from '../../context/DataContext';
 import { useUser } from '../../context/UserContext';
@@ -34,7 +33,6 @@ export default function PurchaseOrderView({ items, itemResults, onSearchItems, a
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [editingPOId, setEditingPOId] = useState<string | null>(null);
   const [printingPO, setPrintingPO] = useState<any>(null);
-  const { uiStyle: currentStyle } = useTheme();
   // Backend origin for static files (delivery-note attachments live at /static, not /api)
   const STATIC_BASE = (process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:8000/api').replace(/\/api$/, '');
 
@@ -449,7 +447,6 @@ export default function PurchaseOrderView({ items, itemResults, onSearchItems, a
            <PurchaseOrderPrintModal
                po={printingPO}
                onClose={() => setPrintingPO(null)}
-               currentStyle={currentStyle}
                companyProfile={companyProfile}
                items={items}
                attributes={attributes}

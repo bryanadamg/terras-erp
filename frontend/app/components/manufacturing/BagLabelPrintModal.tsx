@@ -4,7 +4,6 @@ import { createPortal } from 'react-dom';
 import QRCode from 'qrcode';
 import JsBarcode from 'jsbarcode';
 import { useData } from '../../context/DataContext';
-import { useTheme } from '../../context/ThemeContext';
 import BagLabelCard from './BagLabelCard';
 import BeamLabelCard from './BeamLabelCard';
 import PrintModalShell, { PrintModalFooter } from '../shared/PrintModalShell';
@@ -55,7 +54,6 @@ export default function BagLabelPrintModal({
     onClose: () => void;
 }) {
     const { companyProfile, attributes, authFetch } = useData() as any;
-    const { uiStyle } = useTheme();
 
     const API_BASE = (process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:8000/api').replace(/\/api$/, '') + '/api';
     // Stamp labels_printed_at when the operator prints. Compared against the newest

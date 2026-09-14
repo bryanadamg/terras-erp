@@ -18,7 +18,7 @@ export default function SettingsGeneralTab({
     const { showToast } = useToast();
     const { hasPermission } = useUser();
     const isAdmin = hasPermission('admin.access');
-    const { uiStyle: currentStyle, uiScale, setUiScale } = useTheme();
+    const { uiScale, setUiScale } = useTheme();
     const { timezone, setTimezone } = useTimezone();
 
     const [name, setName] = useState(appName);

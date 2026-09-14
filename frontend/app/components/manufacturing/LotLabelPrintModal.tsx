@@ -4,7 +4,6 @@ import { createPortal } from 'react-dom';
 import QRCode from 'qrcode';
 import JsBarcode from 'jsbarcode';
 import { useData } from '../../context/DataContext';
-import { useTheme } from '../../context/ThemeContext';
 import { useTimezone } from '../../context/TimezoneContext';
 import PrintModalShell, { PrintModalFooter } from '../shared/PrintModalShell';
 import { CODE_FONT, xpFont, PRINT_FONT } from '../shared/xpTheme';
@@ -38,7 +37,6 @@ export default function LotLabelPrintModal({
     onClose: () => void;
 }) {
     const { companyProfile } = useData() as any;
-    const { uiStyle } = useTheme();
     const { formatCustom: tzFmt } = useTimezone();
 
     const doPrint = () => {

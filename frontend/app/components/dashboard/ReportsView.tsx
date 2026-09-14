@@ -1,7 +1,6 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import dynamic from 'next/dynamic';
 import { useLanguage } from '../../context/LanguageContext';
-import { useTheme } from '../../context/ThemeContext';
 import { useTimezone } from '../../context/TimezoneContext';
 import { useData } from '../../context/DataContext';
 import {
@@ -57,7 +56,6 @@ const pkgDelta = (e: any): { n: number; label: string }[] => {
 
 export default function ReportsView(_props: any) {
     const { t } = useLanguage();
-    const { uiStyle } = useTheme();
     const { formatDate: tzDate, formatTime: tzTime } = useTimezone();
     const { authFetch, locations = [], attributes = [], categories = [], itemIndex, companyProfile } = useData();
 
@@ -466,7 +464,6 @@ export default function ReportsView(_props: any) {
                 locations={locations}
                 attributes={attributes}
                 companyProfile={companyProfile}
-                currentStyle={uiStyle}
                 periodLabel={periodLabel}
                 totals={{ total, totalIn, totalOut }}
                 filtersSummary={filtersSummary}

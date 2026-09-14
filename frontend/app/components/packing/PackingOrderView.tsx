@@ -5,7 +5,6 @@ import dynamic from 'next/dynamic';
 import { useRouter } from 'next/navigation';
 import { useData } from '../../context/DataContext';
 import { usePaginatedFetch } from '../../context/usePaginatedList';
-import { useTheme } from '../../context/ThemeContext';
 import { useUser } from '../../context/UserContext';
 import { useTimezone } from '../../context/TimezoneContext';
 import { useToast } from '../shared/Toast';
@@ -205,7 +204,6 @@ function PackProgressBars({ prog, uom, height = 6, fontSize = 9, hatched = false
 
 export default function PackingOrderView({ initialCreateState, onClearInitialState }: any = {}) {
     const { locations, attributes, companyProfile, itemIndex, workCenters, authFetch } = useData();
-    const { uiStyle } = useTheme();
     const { formatDate: tzDate, formatDateTime: tzDateTime } = useTimezone();
     const { showToast } = useToast();
     const { confirm } = useConfirm();
@@ -843,7 +841,6 @@ export default function PackingOrderView({ initialCreateState, onClearInitialSta
                     po={printCard}
                     attributes={attributes}
                     companyProfile={companyProfile}
-                    currentStyle={uiStyle}
                     authFetch={authFetch}
                     onClose={() => setPrintCard(null)}
                 />
