@@ -12,9 +12,8 @@ import { ShellWindow, ShellTitleBar } from '../../shared/shellTheme';
  * alarm badges stay on screen no matter how far down the grid you are.
  */
 export const MonitorShell = ({
-    classic, icon, title, summary, onRefresh, refreshTitle, loading, hasMachines, chipBar, children,
+    icon, title, summary, onRefresh, refreshTitle, loading, hasMachines, chipBar, children,
 }: {
-    classic: boolean;
     icon: string;
     title: string;
     summary: React.ReactNode;
@@ -63,7 +62,7 @@ export const MonitorShell = ({
  * real grid drops straight into the skeleton's tracks with no shift — a body deep
  * enough for the run readout plus whatever the domain hangs under it.
  */
-export const MonitorGridSkeleton = ({ classic, bodyHeight }: { classic: boolean; bodyHeight?: number }) => (
+export const MonitorGridSkeleton = ({ bodyHeight }: { bodyHeight?: number }) => (
     <CardGridSkeleton
         count={12}
         minWidth={240}

@@ -137,7 +137,7 @@ export default function SettingsAccountTab() {
 
             {/* One submit for all three groups, so it spans the columns — not
                 inside the password panel, where it would read as "save password". */}
-            <div style={{ ...settingsActions(true), marginTop: 0 }}>
+            <div style={{ ...settingsActions(), marginTop: 0 }}>
                 <button
                     type="submit"
                     style={xpBtn({ ...BTN_TONES.primary, padding: '3px 14px' })}

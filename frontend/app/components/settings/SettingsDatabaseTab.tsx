@@ -451,7 +451,7 @@ export default function SettingsDatabaseTab() {
                         detail={prettyBytes(dbSizeBytes)} />
                 </div>
                 {statusCheckedAt && (
-                    <div style={{ ...settingsHint(true), marginTop: 6, textAlign: 'right' }}>
+                    <div style={{ ...settingsHint(), marginTop: 6, textAlign: 'right' }}>
                         Last checked {statusCheckedAt.toLocaleTimeString()}
                     </div>
                 )}
@@ -481,7 +481,7 @@ export default function SettingsDatabaseTab() {
                         <EventStat label="Publish time" value={fmtMs(eventStats.publish?.time?.avg_ms)} />
                         <EventStat label="Delivery lag" value={fmtMs(eventStats.delivery?.lag?.avg_ms)} />
                     </div>
-                    <div style={{ ...settingsHint(true), marginTop: 6 }}>
+                    <div style={{ ...settingsHint(), marginTop: 6 }}>
                         Since the API last restarted ({fmtUptime(eventStats.uptime_seconds)} ago).
                     </div>
                 </SettingsPanel>
@@ -564,7 +564,7 @@ export default function SettingsDatabaseTab() {
                                         value={scheduleForm.retain_count}
                                         onChange={e => setScheduleForm({ ...scheduleForm, retain_count: Math.max(1, Number(e.target.value)) })}
                                     />
-                                    <div style={settingsHint(true)}>Oldest scheduled snapshots beyond this count are pruned automatically. Manual snapshots are never deleted.</div>
+                                    <div style={settingsHint()}>Oldest scheduled snapshots beyond this count are pruned automatically. Manual snapshots are never deleted.</div>
                                 </div>
                             </div>
 
@@ -573,16 +573,16 @@ export default function SettingsDatabaseTab() {
                                     {schedule.last_run_at && (
                                         <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
                                             <StatusChip status={schedule.last_run_status === 'failed' ? 'FAILED' : 'SUCCESS'} title={schedule.last_run_error || undefined} />
-                                            <span style={settingsHint(true)}>Last run {tzDateTime(schedule.last_run_at)}</span>
+                                            <span style={settingsHint()}>Last run {tzDateTime(schedule.last_run_at)}</span>
                                         </span>
                                     )}
                                     {schedule.next_run_at && (
-                                        <span style={settingsHint(true)}>Next run {tzDateTime(schedule.next_run_at)}</span>
+                                        <span style={settingsHint()}>Next run {tzDateTime(schedule.next_run_at)}</span>
                                     )}
                                 </div>
                             )}
 
-                            <div style={settingsActions(true)}>
+                            <div style={settingsActions()}>
                                 <button
                                     type="button"
                                     style={xpBtn({ padding: '3px 14px' })}
@@ -646,7 +646,7 @@ export default function SettingsDatabaseTab() {
                                             {isDbLoading ? <span className="spinner-border spinner-border-sm"></span> : 'Switch Connection'}
                                         </button>
                                     </div>}
-                                <div style={{ ...settingsHint(true), color: '#8b0000' }}>
+                                <div style={{ ...settingsHint(), color: '#8b0000' }}>
                                     <i className="bi bi-exclamation-triangle-fill" style={{ marginRight: 4 }}></i>
                                     Switching databases changes the entire data context.
                                 </div>
@@ -665,7 +665,7 @@ export default function SettingsDatabaseTab() {
                                             </button>
                                         ))}
                                         {dbProfiles.length === 0 && (
-                                            <div style={{ ...settingsHint(true), padding: 8, margin: 0, textAlign: 'center', fontStyle: 'italic' }}>No saved profiles</div>
+                                            <div style={{ ...settingsHint(), padding: 8, margin: 0, textAlign: 'center', fontStyle: 'italic' }}>No saved profiles</div>
                                         )}
                                     </div>}
                             </div>
@@ -761,7 +761,7 @@ export default function SettingsDatabaseTab() {
                             <div style={{ fontFamily: xpFont, fontSize: 12, fontWeight: 'bold', color: '#333' }}>
                                 Wipe &amp; Reset Database
                             </div>
-                            <div style={{ ...settingsHint(true), color: '#8b0000' }}>
+                            <div style={{ ...settingsHint(), color: '#8b0000' }}>
                                 <i className="bi bi-exclamation-triangle-fill" style={{ marginRight: 4 }}></i>
                                 Permanently deletes every row in the current database, then rebuilds it blank (migrations + seed data). Use this before importing a snapshot from another environment. Cannot be undone.
                             </div>

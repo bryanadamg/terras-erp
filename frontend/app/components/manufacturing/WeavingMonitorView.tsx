@@ -442,7 +442,6 @@ export default function WeavingMonitorView() {
         return (
             <MachineCard
                 key={m.id}
-                classic
                 code={m.code}
                 name={m.name}
                 status={loomStatus}
@@ -459,11 +458,10 @@ export default function WeavingMonitorView() {
         );
     };
 
-    const cardGrid = (list: any[]) => <CardGrid classic>{list.map(card)}</CardGrid>;
+    const cardGrid = (list: any[]) => <CardGrid>{list.map(card)}</CardGrid>;
 
     const chipBar = (
         <MonitorChipBar
-            classic
             sections={sections}
             isGrouped={isGrouped}
             groupFilter={groupFilter}
@@ -481,7 +479,7 @@ export default function WeavingMonitorView() {
     );
 
     const body = loading ? (
-        <MonitorGridSkeleton classic />
+        <MonitorGridSkeleton />
     ) : machines.length === 0 ? (
         <XPEmptyState icon="bi-cpu" message={t('no_weaving_machines')} />
     ) : runningOnly && runningCount === 0 ? (
@@ -496,7 +494,6 @@ export default function WeavingMonitorView() {
             {visibleSections.filter(sec => shown(sec.machines).length > 0).map(sec => (
                 <div key={sec.id || 'ungrouped'}>
                     <GroupHeader
-                        classic
                         sec={sec}
                         labels={{
                             machines: t('machines'), running: t('running'),
@@ -517,7 +514,6 @@ export default function WeavingMonitorView() {
     return (
         <>
             <MonitorShell
-                classic
                 icon="bi-speedometer2"
                 title={t('weaving_monitor')}
                 summary={summaryText}

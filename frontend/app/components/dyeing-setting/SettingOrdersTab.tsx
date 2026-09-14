@@ -31,9 +31,9 @@ const STATUSES = ['PENDING', 'IN_PROGRESS', 'COMPLETED', 'CANCELLED'];
 const COLS = 13;
 
 // ── Style helpers (theme-aware) ───────────────────────────────────────────────
-const xpInput = (classic: boolean): React.CSSProperties => lvInput({ padding: '1px 4px', width: 'auto' });
-const xpBtn = (classic: boolean): React.CSSProperties => lvBtn('default', { fontSize: 10, padding: '2px 8px' });
-const xpBtnPrimary = (classic: boolean): React.CSSProperties => lvBtn('primary', { fontSize: 10, padding: '2px 8px' });
+const xpInput = (): React.CSSProperties => lvInput({ padding: '1px 4px', width: 'auto' });
+const xpBtn = (): React.CSSProperties => lvBtn('default', { fontSize: 10, padding: '2px 8px' });
+const xpBtnPrimary = (): React.CSSProperties => lvBtn('primary', { fontSize: 10, padding: '2px 8px' });
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 interface CreateForm {
@@ -321,7 +321,7 @@ export default function SettingOrdersTab({ items, authFetch }: Props) {
             <label style={labelStyle}>{label}</label>
             <input
                 type={type}
-                style={{ ...xpInput(true), width: '100%' }}
+                style={{ ...xpInput(), width: '100%' }}
                 value={createForm[field]}
                 placeholder={placeholder}
                 onChange={e => setCreateForm(f => ({ ...f, [field]: e.target.value }))}
@@ -730,7 +730,7 @@ export default function SettingOrdersTab({ items, authFetch }: Props) {
                             className={XP_BTN}
                             onClick={handleCreateRun}
                             disabled={saving}
-                            style={{ ...xpBtn(true), padding: '3px 16px' }}
+                            style={{ ...xpBtn(), padding: '3px 16px' }}
                         >
                             {saving ? 'Saving...' : 'Create Run'}
                         </button>
@@ -738,7 +738,7 @@ export default function SettingOrdersTab({ items, authFetch }: Props) {
                             className={XP_BTN}
                             onClick={() => { setCreateWo(null); setCreateForm(EMPTY_CREATE); setErrorMsg(null); }}
                             disabled={saving}
-                            style={{ ...xpBtn(true), padding: '3px 16px' }}
+                            style={{ ...xpBtn(), padding: '3px 16px' }}
                         >
                             Cancel
                         </button>
@@ -767,7 +767,7 @@ export default function SettingOrdersTab({ items, authFetch }: Props) {
                                 <div style={{ marginBottom: 6 }}>
                                     <label style={labelStyle}>Notes</label>
                                     <textarea
-                                        style={{ ...xpInput(true), height: 38, width: '100%', resize: 'vertical', padding: '2px 4px'}}
+                                        style={{ ...xpInput(), height: 38, width: '100%', resize: 'vertical', padding: '2px 4px'}}
                                         value={createForm.notes}
                                         onChange={e => setCreateForm(f => ({ ...f, notes: e.target.value }))}
                                     />
@@ -793,7 +793,7 @@ export default function SettingOrdersTab({ items, authFetch }: Props) {
                                 onClick={handleCompleteRun}
                                 disabled={completing || !completeForm.output_batch_number.trim()}
                                 style={{
-                                    ...xpBtn(true),
+                                    ...xpBtn(),
                                     background: !completeForm.output_batch_number.trim()
                                         ? '#d4d0c8'
                                         : 'linear-gradient(to bottom, #b0e8b0, #70c870)',
@@ -804,7 +804,7 @@ export default function SettingOrdersTab({ items, authFetch }: Props) {
                             >
                                 {completing ? 'Completing...' : 'Complete Run'}
                             </button>
-                            <button className={XP_BTN} onClick={() => { setShowCompleteModal(null); setErrorMsg(null); }} style={xpBtn(true)}>
+                            <button className={XP_BTN} onClick={() => { setShowCompleteModal(null); setErrorMsg(null); }} style={xpBtn()}>
                                 Cancel
                             </button>
                         </>
@@ -823,7 +823,7 @@ export default function SettingOrdersTab({ items, authFetch }: Props) {
                         <input
                             type="text"
                             autoFocus
-                            style={{ ...xpInput(true), width: '100%' }}
+                            style={{ ...xpInput(), width: '100%' }}
                             value={completeForm.output_batch_number}
                             onChange={e => setCompleteForm(f => ({ ...f, output_batch_number: e.target.value }))}
                         />
@@ -833,7 +833,7 @@ export default function SettingOrdersTab({ items, authFetch }: Props) {
                             <label style={labelStyle}>Actual Width (cm)</label>
                             <input
                                 type="number"
-                                style={{ ...xpInput(true), width: '100%' }}
+                                style={{ ...xpInput(), width: '100%' }}
                                 value={completeForm.actual_width_cm}
                                 onChange={e => setCompleteForm(f => ({ ...f, actual_width_cm: e.target.value }))}
                             />
@@ -842,7 +842,7 @@ export default function SettingOrdersTab({ items, authFetch }: Props) {
                             <label style={labelStyle}>Actual GSM</label>
                             <input
                                 type="number"
-                                style={{ ...xpInput(true), width: '100%' }}
+                                style={{ ...xpInput(), width: '100%' }}
                                 value={completeForm.actual_gsm}
                                 onChange={e => setCompleteForm(f => ({ ...f, actual_gsm: e.target.value }))}
                             />
@@ -851,7 +851,7 @@ export default function SettingOrdersTab({ items, authFetch }: Props) {
                             <label style={labelStyle}>Actual Shrinkage (%)</label>
                             <input
                                 type="number"
-                                style={{ ...xpInput(true), width: '100%' }}
+                                style={{ ...xpInput(), width: '100%' }}
                                 value={completeForm.actual_shrinkage_pct}
                                 onChange={e => setCompleteForm(f => ({ ...f, actual_shrinkage_pct: e.target.value }))}
                             />

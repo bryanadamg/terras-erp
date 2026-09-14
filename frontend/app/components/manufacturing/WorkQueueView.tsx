@@ -134,7 +134,7 @@ const HINT_LABEL: Record<string, string> = {
 const num = fmtQtyCompact;
 // The unit is declared once per row, on its leading qty — Item.uom is per item, so
 // every other figure on the same row reads in it. Repeating it six times is noise.
-const withUom = (v: number, uom: string | null | undefined, classic: boolean) => (
+const withUom = (v: number, uom: string | null | undefined) => (
     <>
         {num(v)}
         {uom ? <span style={{ color: '#888', marginLeft: 3, fontSize: 9}}>{uom}</span> : null}
@@ -340,7 +340,7 @@ export default function WorkQueueView() {
                                         <strong>{m.item_code || '—'}</strong>
                                         <span style={{ color: '#666', marginLeft: 6 }}>{m.item_name}</span>
                                     </td>
-                                    <td style={{ ...lvTd(), textAlign: 'right' }}>{withUom(m.on_hand_qty, m.uom, true)}</td>
+                                    <td style={{ ...lvTd(), textAlign: 'right' }}>{withUom(m.on_hand_qty, m.uom)}</td>
                                     <td style={{ ...lvTd(), textAlign: 'right', color: '#666' }}>
                                         {num(m.staged_total)}
                                     </td>
@@ -436,7 +436,7 @@ export default function WorkQueueView() {
                                         {/* Warp is loom-mounted, never staged to the WO, so Staged is
                                             n/a and Free pool / Allocated are the kg left on the mounts.
                                             Slot counts are deliberately not shown. */}
-                                        <td style={{ ...lvSubTd(), textAlign: 'right' }}>{withUom(m.required_qty, m.uom, true)}</td>
+                                        <td style={{ ...lvSubTd(), textAlign: 'right' }}>{withUom(m.required_qty, m.uom)}</td>
                                         <td style={{ ...lvSubTd(), textAlign: 'right' }}>{'—'}</td>
                                         <td style={{ ...lvSubTd(), textAlign: 'right' }}>{num(m.on_hand_qty)}</td>
                                         <td style={{ ...lvSubTd(), textAlign: 'right' }}>{num(m.allocated_qty)}</td>
@@ -459,7 +459,7 @@ export default function WorkQueueView() {
                                     </>
                                 ) : (
                                     <>
-                                        <td style={{ ...lvSubTd(), textAlign: 'right' }}>{withUom(m.required_qty, m.uom, true)}</td>
+                                        <td style={{ ...lvSubTd(), textAlign: 'right' }}>{withUom(m.required_qty, m.uom)}</td>
                                         <td style={{ ...lvSubTd(), textAlign: 'right' }}>{num(m.staged_qty)}</td>
                                         <td style={{ ...lvSubTd(), textAlign: 'right' }}>{num(m.on_hand_qty)}</td>
                                         <td style={{ ...lvSubTd(), textAlign: 'right' }}>{num(m.allocated_qty)}</td>
@@ -607,7 +607,7 @@ export default function WorkQueueView() {
                                             )}
                                         </td>
                                         <td style={{ ...lvTd(), textAlign: 'right' }}>
-                                            {withUom(r.substrate_required_qty, r.substrate_uom, true)}
+                                            {withUom(r.substrate_required_qty, r.substrate_uom)}
                                         </td>
                                         <td style={{
                                             ...lvTd(), textAlign: 'right',

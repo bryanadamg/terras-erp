@@ -286,7 +286,6 @@ export default function DyeingMonitorView() {
         return (
             <MachineCard
                 key={m.id}
-                classic
                 code={m.code}
                 name={m.name}
                 status={status}
@@ -302,7 +301,7 @@ export default function DyeingMonitorView() {
         );
     };
 
-    const cardGrid = (list: any[]) => <CardGrid classic>{list.map(card)}</CardGrid>;
+    const cardGrid = (list: any[]) => <CardGrid>{list.map(card)}</CardGrid>;
 
     const summaryText = data ? (
         <>
@@ -329,7 +328,6 @@ export default function DyeingMonitorView() {
 
     const chipBar = (
         <MonitorChipBar
-            classic
             sections={sections}
             isGrouped={isGrouped}
             groupFilter={groupFilter}
@@ -347,7 +345,7 @@ export default function DyeingMonitorView() {
     );
 
     const body = loading ? (
-        <MonitorGridSkeleton classic />
+        <MonitorGridSkeleton />
     ) : machines.length === 0 ? (
         <XPEmptyState icon="bi-droplet" message={t('no_dyeing_machines')} />
     ) : runningOnly && runningCount === 0 ? (
@@ -359,7 +357,6 @@ export default function DyeingMonitorView() {
             {visibleSections.filter(sec => shown(sec.machines).length > 0).map(sec => (
                 <div key={sec.id || 'ungrouped'}>
                     <GroupHeader
-                        classic
                         sec={sec}
                         labels={{
                             machines: t('machines'), running: t('running'),
@@ -376,7 +373,6 @@ export default function DyeingMonitorView() {
     return (
         <>
             <MonitorShell
-                classic
                 icon="bi-droplet-half"
                 title={t('dyeing_monitor')}
                 summary={summaryText}

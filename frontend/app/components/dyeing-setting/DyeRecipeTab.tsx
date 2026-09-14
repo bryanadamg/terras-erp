@@ -47,9 +47,9 @@ const modernPanel: React.CSSProperties = {
     border: '1px solid #dbe1ea', background: '#fff', borderRadius: 9,
 };
 
-const inputStyle = (classic: boolean): React.CSSProperties => xpInput;
-const btnStyle = (classic: boolean): React.CSSProperties => xpBtn;
-const primaryBtnStyle = (classic: boolean): React.CSSProperties => xpBtn;
+const inputStyle = (): React.CSSProperties => xpInput;
+const btnStyle = (): React.CSSProperties => xpBtn;
+const primaryBtnStyle = (): React.CSSProperties => xpBtn;
 
 const LINE_TYPES = ['DYE', 'AUXILIARY', 'SALT', 'OTHER'];
 const RECIPE_PAGE_SIZE = 25;
@@ -776,7 +776,7 @@ export default function DyeRecipeTab({ items, attributes, authFetch, initialColo
                                     <div style={{ display: 'flex', gap: 4 }}>
                                         <input
                                             readOnly
-                                            style={{ ...inputStyle(true), flex: 1, background: '#ece9d8', color: '#333'}}
+                                            style={{ ...inputStyle(), flex: 1, background: '#ece9d8', color: '#333'}}
                                             value={form.code}
                                             placeholder="(auto)"
                                         />
@@ -792,7 +792,7 @@ export default function DyeRecipeTab({ items, attributes, authFetch, initialColo
                                     <label style={lvLabel()}>Color Standard</label>
                                     <input
                                         readOnly
-                                        style={{ ...inputStyle(true), width: '100%', boxSizing: 'border-box', background: '#ece9d8', color: '#333'}}
+                                        style={{ ...inputStyle(), width: '100%', boxSizing: 'border-box', background: '#ece9d8', color: '#333'}}
                                         value={form.color_standard || '—'}
                                     />
                                 </div>
@@ -802,7 +802,7 @@ export default function DyeRecipeTab({ items, attributes, authFetch, initialColo
                             <div>
                                 <label style={lvLabel()}>Substrate Type</label>
                                 <input
-                                    style={{ ...inputStyle(true), width: '100%', boxSizing: 'border-box' }}
+                                    style={{ ...inputStyle(), width: '100%', boxSizing: 'border-box' }}
                                     value={form.substrate_type}
                                     onChange={e => setForm(f => ({ ...f, substrate_type: e.target.value }))}
                                     placeholder="e.g. Cotton, Polyester"
@@ -816,7 +816,7 @@ export default function DyeRecipeTab({ items, attributes, authFetch, initialColo
                                 <label style={lvLabel()}>Liquor Ratio (1 : x)</label>
                                 <input
                                     type="number" min="0" step="any"
-                                    style={{ ...inputStyle(true), width: '100%', boxSizing: 'border-box' }}
+                                    style={{ ...inputStyle(), width: '100%', boxSizing: 'border-box' }}
                                     value={form.liquor_ratio}
                                     onChange={e => setForm(f => ({ ...f, liquor_ratio: e.target.value }))}
                                     placeholder="e.g. 10 = 10 L per kg"
@@ -839,7 +839,7 @@ export default function DyeRecipeTab({ items, attributes, authFetch, initialColo
                             <label style={lvLabel()}>Notes</label>
                             <textarea
                                 style={{
-                                    ...inputStyle(true), height: 'auto', width: '100%',
+                                    ...inputStyle(), height: 'auto', width: '100%',
                                     boxSizing: 'border-box', resize: 'vertical', minHeight: 48, padding: '2px 4px',
                                 }}
                                 value={form.notes}
@@ -884,7 +884,7 @@ export default function DyeRecipeTab({ items, attributes, authFetch, initialColo
                                             <td style={{ padding: '2px 4px', color: '#666', borderBottom: undefined}}>{idx + 1}</td>
                                             <td style={{ padding: '2px 4px', borderBottom: undefined}}>
                                                 <select
-                                                    style={{ ...inputStyle(true), height: 20, width: '100%' }}
+                                                    style={{ ...inputStyle(), height: 20, width: '100%' }}
                                                     value={line.chemical_type}
                                                     onChange={e => updateLine(idx, 'chemical_type', e.target.value)}
                                                 >
@@ -909,7 +909,7 @@ export default function DyeRecipeTab({ items, attributes, authFetch, initialColo
                                             <td style={{ padding: '2px 4px', borderBottom: undefined}}>
                                                 <input
                                                     type="number"
-                                                    style={{ ...inputStyle(true), width: '100%' }}
+                                                    style={{ ...inputStyle(), width: '100%' }}
                                                     value={line.qty_per_100kg}
                                                     onChange={e => updateLine(idx, 'qty_per_100kg', e.target.value)}
                                                     placeholder="0"
@@ -920,7 +920,7 @@ export default function DyeRecipeTab({ items, attributes, authFetch, initialColo
                                             <td style={{ padding: '2px 4px', borderBottom: undefined}}>
                                                 <input
                                                     type="number"
-                                                    style={{ ...inputStyle(true), width: '100%' }}
+                                                    style={{ ...inputStyle(), width: '100%' }}
                                                     value={line.qty_per_liter ?? ''}
                                                     onChange={e => updateLine(idx, 'qty_per_liter', e.target.value ? parseFloat(e.target.value) : null)}
                                                     placeholder="0"
@@ -931,7 +931,7 @@ export default function DyeRecipeTab({ items, attributes, authFetch, initialColo
                                             <td style={{ padding: '2px 4px', borderBottom: undefined}}>
                                                 <input
                                                     type="number"
-                                                    style={{ ...inputStyle(true), width: '100%' }}
+                                                    style={{ ...inputStyle(), width: '100%' }}
                                                     value={line.sort_order}
                                                     onChange={e => updateLine(idx, 'sort_order', e.target.value)}
                                                     placeholder={String(idx + 1)}
@@ -950,7 +950,7 @@ export default function DyeRecipeTab({ items, attributes, authFetch, initialColo
                                 </tbody>
                             </table>
                             <div style={{ padding: '4px 6px', borderTop: '1px solid #e8eef5', background: '#f7f9fc'}}>
-                                <button style={btnStyle(true)} onClick={addLine}>Add Line</button>
+                                <button style={btnStyle()} onClick={addLine}>Add Line</button>
                             </div>
                         </div>
                     </FormSection>
@@ -969,7 +969,7 @@ export default function DyeRecipeTab({ items, attributes, authFetch, initialColo
                                 {washBaths.map((wb, i) => (
                                     <tr key={i} style={{ background: i % 2 === 0 ? 'white' : '#f7f9fc'}}>
                                         <td style={{ padding: '2px 4px', borderBottom: undefined}}>
-                                            <input type="number" style={{ ...inputStyle(true), width: '100%' }}
+                                            <input type="number" style={{ ...inputStyle(), width: '100%' }}
                                                 value={wb.bath_number}
                                                 onChange={e => { const u = [...washBaths]; u[i] = { ...u[i], bath_number: parseInt(e.target.value) || i + 1 }; setWashBaths(u); }} />
                                         </td>
@@ -1066,7 +1066,7 @@ export default function DyeRecipeTab({ items, attributes, authFetch, initialColo
     );
 }
 
-function DetailField({ label, value, classic }: { label: string; value?: string | null; classic: boolean }) {
+function DetailField({ label, value }: { label: string; value?: string | null }) {
     return (
         <div>
             <div style={{ fontSize: 10, color: '#555', marginBottom: 1}}>{label}</div>

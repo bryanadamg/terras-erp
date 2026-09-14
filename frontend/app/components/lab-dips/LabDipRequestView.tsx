@@ -17,8 +17,8 @@ import { API_BASE, STATIC_BASE } from '../shared/apiBase';
 
 // ── XP style constants (consistent with DyeingSettingView) ──────────────────
 const modernFont = 'system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif';
-const xpInput = (classic: boolean): React.CSSProperties => lvInput({ width: 'auto' });
-const xpBtn = (classic: boolean, extra: React.CSSProperties = {}): React.CSSProperties => lvBtn('default', extra);
+const xpInput = (): React.CSSProperties => lvInput({ width: 'auto' });
+const xpBtn = (extra: React.CSSProperties = {}): React.CSSProperties => lvBtn('default', extra);
 // Modern primary-button overrides (Submit/Create/Add/New). Merged on top of the secondary base above.
 const modernPrimaryBtn: React.CSSProperties = {
     fontWeight: 600, background: '#2563eb', color: '#fff', border: 'none',
@@ -41,7 +41,7 @@ const REJECT_REASONS = [
     'Other',
 ];
 
-const statusStyle = (status: string, classic: boolean): React.CSSProperties => {
+const statusStyle = (status: string): React.CSSProperties => {
     if (true) {
         const map: Record<string, { bg: string; border: string; color: string }> = {
             APPROVED:    { bg: '#d4edda', border: '#27713a', color: '#0c3a1a' },
@@ -494,7 +494,7 @@ export default function LabDipRequestView({
                 <span style={{ fontSize: 11, color: '#333' }}>Created</span>
                 <input
                     type="date"
-                    style={{ ...xpInput(true), width: 130 }}
+                    style={{ ...xpInput(), width: 130 }}
                     value={createdFrom}
                     onChange={e => setCreatedFrom(e.target.value)}
                     title="Created from"
@@ -502,13 +502,13 @@ export default function LabDipRequestView({
                 <span style={{ fontSize: 11, color: '#333' }}>–</span>
                 <input
                     type="date"
-                    style={{ ...xpInput(true), width: 130 }}
+                    style={{ ...xpInput(), width: 130 }}
                     value={createdTo}
                     onChange={e => setCreatedTo(e.target.value)}
                     title="Created to"
                 />
                 {hasActiveFilter && (
-                    <button className={XP_BTN} style={xpBtn(true)} onClick={clearFilters} title="Clear all filters">Clear</button>
+                    <button className={XP_BTN} style={xpBtn()} onClick={clearFilters} title="Clear all filters">Clear</button>
                 )}
                 <ToolbarCount right>{total} item{total !== 1 ? 's' : ''}</ToolbarCount>
                 {canManage && (
@@ -599,7 +599,7 @@ export default function LabDipRequestView({
                                             })()}
                                         </td>
                                         <td style={lvTdRuled()}><span style={{ fontSize: 10}}>{r.request_type}</span></td>
-                                        <td style={lvTdRuled()}><span style={statusStyle(r.status, true)}>{r.status}</span></td>
+                                        <td style={lvTdRuled()}><span style={statusStyle(r.status)}>{r.status}</span></td>
                                         <td style={lvTdRuled()}>
                                             {total > 0 ? (
                                                 <span style={{ fontSize: 11}}>
@@ -706,7 +706,7 @@ export default function LabDipRequestView({
                                                             type="button"
                                                             title={`Open color code ${it.approved_color_code} in library`}
                                                             className={XP_BTN}
-                                                            style={{ ...xpBtn(true, { padding: '1px 5px', lineHeight: 1, color: '#0d3a8a'}) }}
+                                                            style={{ ...xpBtn({ padding: '1px 5px', lineHeight: 1, color: '#0d3a8a'}) }}
                                                             onClick={() => router.push(`/colors?search=${encodeURIComponent(it.approved_color_code)}`)}
                                                         >
                                                             <i className="bi bi-box-arrow-up-right" style={{ fontSize: 10}} />
@@ -716,7 +716,7 @@ export default function LabDipRequestView({
                                                             type="button"
                                                             title={`Reopen ${variantCode} for another round (keeps rejection history)`}
                                                             className={XP_BTN}
-                                                            style={{ ...xpBtn(true, { padding: '1px 5px', lineHeight: 1, color: '#a05a00'}) }}
+                                                            style={{ ...xpBtn({ padding: '1px 5px', lineHeight: 1, color: '#a05a00'}) }}
                                                             onClick={() => doUpdateItemStatus(r.id, it.id, 'IN_PROGRESS')}
                                                         >
                                                             <i className="bi bi-arrow-repeat" style={{ fontSize: 10}} />
@@ -753,7 +753,7 @@ export default function LabDipRequestView({
                                         const rightHeader = (
                                             <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '6px 10px', flexWrap: 'wrap' as const, borderBottom: '1px solid #d0cdc8', background: '#fff' }}>
                                                 <span style={{ fontSize: 10, fontWeight: 'bold', color: '#111'}}>Request Status:</span>
-                                                <select style={{ ...xpInput(true), width: 140 }} value={r.status} disabled={!canManage} onChange={e => doUpdateStatus(r.id, e.target.value)}>
+                                                <select style={{ ...xpInput(), width: 140 }} value={r.status} disabled={!canManage} onChange={e => doUpdateStatus(r.id, e.target.value)}>
                                                     {REQUEST_STATUSES.map(s => <option key={s} value={s}>{s}</option>)}
                                                 </select>
                                             </div>
@@ -827,8 +827,8 @@ export default function LabDipRequestView({
                 size="lg"
                 footer={
                     <>
-                        <button type="button" className={XP_BTN} style={xpBtn(true)} onClick={() => { setIsModalOpen(false); setEditing(null); }}>Cancel</button>
-                        <button type="button" className={XP_BTN} style={xpBtn(true, { ...BTN_TONES.primary })} onClick={handleSubmit as any}>
+                        <button type="button" className={XP_BTN} style={xpBtn()} onClick={() => { setIsModalOpen(false); setEditing(null); }}>Cancel</button>
+                        <button type="button" className={XP_BTN} style={xpBtn({ ...BTN_TONES.primary })} onClick={handleSubmit as any}>
                             {editing ? 'Save Changes' : 'Create Request'}
                         </button>
                     </>
@@ -864,7 +864,7 @@ export default function LabDipRequestView({
                                 </div>
                                 <div>
                                     <label style={xpLbl()}>Season / Project</label>
-                                    <input style={{ ...xpInput(true), width: '100%', boxSizing: 'border-box' as const }} value={form.season} onChange={e => setField('season', e.target.value)} placeholder="e.g. Spring 2026" />
+                                    <input style={{ ...xpInput(), width: '100%', boxSizing: 'border-box' as const }} value={form.season} onChange={e => setField('season', e.target.value)} placeholder="e.g. Spring 2026" />
                                 </div>
                             </div>
                     </FormSection>
@@ -883,7 +883,7 @@ export default function LabDipRequestView({
                                         size="sm"
                                     />
                                 </div>
-                                <button type="button" className={XP_BTN} style={xpBtn(true)} onClick={addItem}><i className="bi bi-plus-lg" /> Add Item</button>
+                                <button type="button" className={XP_BTN} style={xpBtn()} onClick={addItem}><i className="bi bi-plus-lg" /> Add Item</button>
                             </div>
 
                             {form.items.length === 0 && (
@@ -936,7 +936,7 @@ export default function LabDipRequestView({
                                         size="sm"
                                     />
                                 </div>
-                                <button type="button" className={XP_BTN} style={xpBtn(true)} onClick={addColor}><i className="bi bi-plus-lg" /> Add</button>
+                                <button type="button" className={XP_BTN} style={xpBtn()} onClick={addColor}><i className="bi bi-plus-lg" /> Add</button>
                             </div>
                             {form.legacyDips.length === 0 ? (
                                 <div style={{ fontSize: 11, color: '#999', fontStyle: 'italic', padding: '4px 2px' }}>
@@ -959,7 +959,7 @@ export default function LabDipRequestView({
                             </div>
                             <div>
                                 <label style={xpLbl()}>Notes</label>
-                                <textarea style={{ ...xpInput(true), height: 'auto', padding: '4px 6px', width: '100%', resize: 'vertical' as const, boxSizing: 'border-box' as const }} rows={2} value={form.notes} onChange={e => setField('notes', e.target.value)} />
+                                <textarea style={{ ...xpInput(), height: 'auto', padding: '4px 6px', width: '100%', resize: 'vertical' as const, boxSizing: 'border-box' as const }} rows={2} value={form.notes} onChange={e => setField('notes', e.target.value)} />
                             </div>
                     </FormSection>
                 </form>
@@ -975,8 +975,8 @@ export default function LabDipRequestView({
                 size="sm"
                 footer={
                     <>
-                        <button type="button" className={XP_BTN} style={xpBtn(true)} onClick={() => setApproval(null)}>Cancel</button>
-                        <button type="button" className={XP_BTN} disabled={!approvalSet.trim()} style={xpBtn(true, { background: 'linear-gradient(to bottom, #7bd88f, #1b7a34)', borderColor: '#0f5a22 #073d15 #073d15 #0f5a22', color: '#04220c', fontWeight: 'bold', opacity: approvalSet.trim() ? 1 : 0.55 })}
+                        <button type="button" className={XP_BTN} style={xpBtn()} onClick={() => setApproval(null)}>Cancel</button>
+                        <button type="button" className={XP_BTN} disabled={!approvalSet.trim()} style={xpBtn({ background: 'linear-gradient(to bottom, #7bd88f, #1b7a34)', borderColor: '#0f5a22 #073d15 #073d15 #0f5a22', color: '#04220c', fontWeight: 'bold', opacity: approvalSet.trim() ? 1 : 0.55 })}
                             onClick={confirmApproval}>
                             Approve &amp; Save Color
                         </button>
@@ -990,7 +990,7 @@ export default function LabDipRequestView({
                             <span style={{ ...seqBadge(), fontSize: 11}}>{approval.seq}</span>
                             <span style={{ ...variantBadge(), fontSize: 11}}>{approval.variant}</span>
                             <span style={{ fontFamily: CODE_FONT, fontWeight: 700, color: '#555'}}>–</span>
-                            <input autoFocus style={{ ...xpInput(true), width: 90 }} value={approvalSet}
+                            <input autoFocus style={{ ...xpInput(), width: 90 }} value={approvalSet}
                                 onChange={e => setApprovalSet(e.target.value)}
                                 onKeyDown={e => { if (e.key === 'Enter') confirmApproval(); }}
                                 placeholder="e.g. 5" />
@@ -1011,7 +1011,7 @@ export default function LabDipRequestView({
                             </div>
                         ) : (
                             <div style={{ marginBottom: 10 }}>
-                                <select style={{ ...xpInput(true), width: '100%', boxSizing: 'border-box' as const }}
+                                <select style={{ ...xpInput(), width: '100%', boxSizing: 'border-box' as const }}
                                     value={approvalVariantId} onChange={e => setApprovalVariantId(e.target.value)}>
                                     <option value="">Not linked to a variant</option>
                                     {approvalVariantOptions.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
@@ -1025,10 +1025,10 @@ export default function LabDipRequestView({
                             {approval.customerName || 'No customer on this request — saved as a House color.'}
                         </div>
                         <label style={xpLbl()}>Notes (optional)</label>
-                        <textarea style={{ ...xpInput(true), height: 'auto', padding: '4px 6px', width: '100%', resize: 'vertical' as const, boxSizing: 'border-box' as const }} rows={2} value={approvalNotes} onChange={e => setApprovalNotes(e.target.value)} placeholder="Optional note carried onto the color entry…" />
+                        <textarea style={{ ...xpInput(), height: 'auto', padding: '4px 6px', width: '100%', resize: 'vertical' as const, boxSizing: 'border-box' as const }} rows={2} value={approvalNotes} onChange={e => setApprovalNotes(e.target.value)} placeholder="Optional note carried onto the color entry…" />
                         <label style={{ ...xpLbl(), marginTop: 10 }}>Photo (optional)</label>
                         <input type="file" accept="image/*"
-                            style={{ ...xpInput(true), height: 'auto', padding: '3px 4px', width: '100%', boxSizing: 'border-box' as const }}
+                            style={{ ...xpInput(), height: 'auto', padding: '3px 4px', width: '100%', boxSizing: 'border-box' as const }}
                             onChange={e => setApprovalImage(e.target.files?.[0] || null)} />
                         {approvalImage && <div style={{ fontSize: 10, color: '#888', marginTop: 2 }}>{approvalImage.name}</div>}
                     </div>
@@ -1045,8 +1045,8 @@ export default function LabDipRequestView({
                 size="sm"
                 footer={
                     <>
-                        <button type="button" className={XP_BTN} style={xpBtn(true)} onClick={() => setReject(null)}>Cancel</button>
-                        <button type="button" className={XP_BTN} style={xpBtn(true, { background: 'linear-gradient(to bottom, #d32f2f, #8b0000)', borderColor: '#7f0000 #4a0000 #4a0000 #7f0000', color: '#fff', fontWeight: 'bold' })}
+                        <button type="button" className={XP_BTN} style={xpBtn()} onClick={() => setReject(null)}>Cancel</button>
+                        <button type="button" className={XP_BTN} style={xpBtn({ background: 'linear-gradient(to bottom, #d32f2f, #8b0000)', borderColor: '#7f0000 #4a0000 #4a0000 #7f0000', color: '#fff', fontWeight: 'bold' })}
                             onClick={confirmReject}>
                             Reject Variant
                         </button>
@@ -1063,17 +1063,17 @@ export default function LabDipRequestView({
                             This rejection is logged for traceability. The variant rests as Rejected — reopen it for another round when ready.
                         </div>
                         <label style={xpLbl()}>Rejection Reason</label>
-                        <select style={{ ...xpInput(true), width: '100%', boxSizing: 'border-box' as const, marginBottom: 10 }}
+                        <select style={{ ...xpInput(), width: '100%', boxSizing: 'border-box' as const, marginBottom: 10 }}
                             value={rejectReason} onChange={e => setRejectReason(e.target.value)}>
                             {REJECT_REASONS.map(r => <option key={r} value={r}>{r}</option>)}
                         </select>
                         <label style={xpLbl()}>Notes (optional)</label>
-                        <textarea style={{ ...xpInput(true), height: 'auto', padding: '4px 6px', width: '100%', resize: 'vertical' as const, boxSizing: 'border-box' as const }} rows={2}
+                        <textarea style={{ ...xpInput(), height: 'auto', padding: '4px 6px', width: '100%', resize: 'vertical' as const, boxSizing: 'border-box' as const }} rows={2}
                             value={rejectNotes} onChange={e => setRejectNotes(e.target.value)}
                             placeholder="Extra detail for this rejection…" />
                         <label style={{ ...xpLbl(), marginTop: 10 }}>Photo (optional)</label>
                         <input type="file" accept="image/*"
-                            style={{ ...xpInput(true), height: 'auto', padding: '3px 4px', width: '100%', boxSizing: 'border-box' as const }}
+                            style={{ ...xpInput(), height: 'auto', padding: '3px 4px', width: '100%', boxSizing: 'border-box' as const }}
                             onChange={e => setRejectImage(e.target.files?.[0] || null)} />
                         {rejectImage && <div style={{ fontSize: 10, color: '#888', marginTop: 2 }}>{rejectImage.name}</div>}
                     </div>
@@ -1093,8 +1093,8 @@ export default function LabDipRequestView({
                     footer={
                         <>
                             <span style={{ flex: 1, fontFamily: xpFont, fontSize: 10, color: '#666', textAlign: 'left' as const }}>{photoPreview.filename}</span>
-                            <button type="button" className={XP_BTN} style={xpBtn(true)} onClick={() => window.open(photoPreview.url, '_blank')}>Open Full View</button>
-                            <button type="button" className={XP_BTN} style={xpBtn(true)} onClick={() => setPhotoPreview(null)}>Close</button>
+                            <button type="button" className={XP_BTN} style={xpBtn()} onClick={() => window.open(photoPreview.url, '_blank')}>Open Full View</button>
+                            <button type="button" className={XP_BTN} style={xpBtn()} onClick={() => setPhotoPreview(null)}>Close</button>
                         </>
                     }
                 >
@@ -1115,7 +1115,7 @@ export default function LabDipRequestView({
                 onClose={() => setHistoryItem(null)}
                 title={<><i className="bi bi-clock-history me-2" />Rejection History</>}
                 size="sm"
-                footer={<button type="button" className={XP_BTN} style={xpBtn(true)} onClick={() => setHistoryItem(null)}>Close</button>}
+                footer={<button type="button" className={XP_BTN} style={xpBtn()} onClick={() => setHistoryItem(null)}>Close</button>}
             >
                 {historyItem && (
                     <div style={{ padding: '2px 2px 4px' }}>

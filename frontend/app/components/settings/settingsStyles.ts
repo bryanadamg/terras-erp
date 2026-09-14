@@ -86,9 +86,8 @@ export const settingsGrid = (min = 220): React.CSSProperties => ({
  * destructive-adjacent control to full bleed; the rule is right-aligned, sized
  * to its label, with generous space above the rule that separates it.
  */
-// `classic` is now ignored; the parameter stays until the shared/ slice
 // retires its last caller (shared/QtyFormulaEditor.tsx).
-export const settingsActions = (classic?: boolean): React.CSSProperties => ({
+export const settingsActions = (): React.CSSProperties => ({
     display: 'flex',
     justifyContent: 'flex-end',
     alignItems: 'center',
@@ -99,7 +98,7 @@ export const settingsActions = (classic?: boolean): React.CSSProperties => ({
 });
 
 /** Muted helper line under a field or beside an action. */
-export const settingsHint = (classic?: boolean): React.CSSProperties => ({
+export const settingsHint = (): React.CSSProperties => ({
     fontFamily: xpFont,
     fontSize: 10,
     color: '#6b6558',

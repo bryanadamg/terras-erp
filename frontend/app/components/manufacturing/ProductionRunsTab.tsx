@@ -36,7 +36,7 @@ const PR_MATERIAL_COLUMNS: {
     { h: 'MOs', t: 'needs = MOs consuming this component. made = MOs producing it (logged / target).', num: false, wc: 150, wm: 176, bar: 120, sub: 104 },
 ];
 
-const prColWidth = (c: { wc?: number; wm?: number }, classic: boolean) => (c.wc);
+const prColWidth = (c: { wc?: number; wm?: number }) => (c.wc);
 
 // Measured height of a real material row, kept module-level so it survives the
 // panel unmounting: once the user has seen one loaded panel, every later skeleton
@@ -524,7 +524,7 @@ export default function ProductionRunsTab({
                                                                     {PR_MATERIAL_COLUMNS.map((col) => (
                                                                         // Full cell borders, not lvSubTd's single rule: at 10 columns
                                                                         // this reads as a grid and the verticals do real work.
-                                                                        <th key={col.h} title={col.t || undefined} style={{ ...lvSubTh(), textAlign: col.num ? 'right' : 'left', border: '1px solid #808080', cursor: col.t ? 'help' : undefined, width: prColWidth(col, true) }}>{col.h}</th>
+                                                                        <th key={col.h} title={col.t || undefined} style={{ ...lvSubTh(), textAlign: col.num ? 'right' : 'left', border: '1px solid #808080', cursor: col.t ? 'help' : undefined, width: prColWidth(col) }}>{col.h}</th>
                                                                     ))}
                                                                 </tr>
                                                             </thead>

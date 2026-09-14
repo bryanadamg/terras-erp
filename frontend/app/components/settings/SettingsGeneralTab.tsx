@@ -51,7 +51,7 @@ export default function SettingsGeneralTab({
                                     disabled={!isAdmin}
                                 />
                                 {!isAdmin && (
-                                    <div style={settingsHint(true)}>Only admins can change the application name.</div>
+                                    <div style={settingsHint()}>Only admins can change the application name.</div>
                                 )}
                             </div>
                             <div>
@@ -67,7 +67,7 @@ export default function SettingsGeneralTab({
                                         </option>
                                     ))}
                                 </select>
-                                <div style={settingsHint(true)}>
+                                <div style={settingsHint()}>
                                     Fits more rows on screen without browser zoom. Applies on this
                                     device; phones and printouts always render at 100%.
                                 </div>
@@ -83,12 +83,12 @@ export default function SettingsGeneralTab({
                                         <option key={z} value={z}>{z.replace(/_/g, ' ')}</option>
                                     ))}
                                 </select>
-                                <div style={settingsHint(true)}>
+                                <div style={settingsHint()}>
                                     Dates &amp; times (e.g. stock ledger) display in this zone on this device.
                                 </div>
                             </div>
                         </div>
-                        <div style={settingsActions(true)}>
+                        <div style={settingsActions()}>
                             <button
                                 type="submit"
                                 style={xpBtn({ ...BTN_TONES.primary, padding: '3px 14px', display: 'flex', alignItems: 'center', gap: 4 })}

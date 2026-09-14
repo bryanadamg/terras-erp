@@ -41,11 +41,11 @@ const SHADE_COLORS: Record<string, { bg: string; color: string }> = {
 /** Worst-first: a WO with one FAIL bath is a FAIL row, whatever the others say. */
 const SHADE_RANK = ['FAIL', 'REWORK', 'PASS'];
 
-const makeInput = (classic: boolean): React.CSSProperties =>
+const makeInput = (): React.CSSProperties =>
     lvInput({ padding: '1px 4px', width: 'auto' });
-const makeBtn = (classic: boolean): React.CSSProperties =>
+const makeBtn = (): React.CSSProperties =>
     lvBtn('default', { fontSize: 10, padding: '2px 8px' });
-const makePrimaryBtn = (classic: boolean): React.CSSProperties =>
+const makePrimaryBtn = (): React.CSSProperties =>
     lvBtn('primary', { fontSize: 10, padding: '2px 8px' });
 
 /** Cutting an extra bath by hand. Runs are normally auto-created with the WO.
@@ -125,7 +125,7 @@ function summarize(runs: any[]): RunSummary {
     };
 }
 
-function ShadeChip({ shade, classic }: { shade: string; classic: boolean }) {
+function ShadeChip({ shade }: { shade: string }) {
     const c = SHADE_COLORS[shade] ?? { bg: '#eee', color: '#333' };
     return (
         <span style={{
@@ -147,9 +147,9 @@ export default function DyeingOrdersTab({ items, recipes, authFetch }: DyeingOrd
     const { hasPermission } = useUser();
     const canManage = hasPermission('work_order.log');
 
-    const xpInput = makeInput(true);
-    const xpBtn = makeBtn(true);
-    const xpPrimaryBtn = makePrimaryBtn(true);
+    const xpInput = makeInput();
+    const xpBtn = makeBtn();
+    const xpPrimaryBtn = makePrimaryBtn();
     const formInput: React.CSSProperties = xpInputBase({ padding: '1px 4px' });
 
     const [filterStatus, setFilterStatus] = useState('');
@@ -555,7 +555,7 @@ export default function DyeingOrdersTab({ items, recipes, authFetch }: DyeingOrd
                                                             <td style={subTd}><StatusChip status={run.status || 'PENDING'} tint /></td>
                                                             <td style={subTd}>
                                                                 {run.shade_result
-                                                                    ? <ShadeChip shade={run.shade_result} classic />
+                                                                    ? <ShadeChip shade={run.shade_result} />
                                                                     : <Dash />}
                                                             </td>
                                                             <td style={{ ...subTd, color: '#666', whiteSpace: 'nowrap' }}>{fmtDateTime(run.started_at)}</td>
@@ -796,7 +796,7 @@ export default function DyeingOrdersTab({ items, recipes, authFetch }: DyeingOrd
                                         </td>
                                         <td style={{ ...tdBase, whiteSpace: 'nowrap' }}>
                                             {sum.shade
-                                                ? <ShadeChip shade={sum.shade} classic />
+                                                ? <ShadeChip shade={sum.shade} />
                                                 : <span style={{ color: '#bbb' }}>—</span>}
                                         </td>
                                         <td style={tdBase}>

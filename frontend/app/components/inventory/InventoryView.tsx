@@ -45,7 +45,7 @@ const ITEM_COL_SPAN = 10;
 // item list expands like every other list in the app.
 type ItemHistoryState = { loading: boolean; logs: any[]; error?: boolean };
 
-const ItemEventLogPanel = memo(({ state, userNameById, classic }: { state?: ItemHistoryState; userNameById: Record<string, string>; classic: boolean }) => {
+const ItemEventLogPanel = memo(({ state, userNameById }: { state?: ItemHistoryState; userNameById: Record<string, string> }) => {
     const { formatDateTime: tzDateTime } = useTimezone();
     const [openChanges, setOpenChanges] = useState<string | null>(null);
     const logs = state?.logs ?? [];
@@ -127,7 +127,7 @@ const ItemEventLogPanel = memo(({ state, userNameById, classic }: { state?: Item
 ItemEventLogPanel.displayName = 'ItemEventLogPanel';
 
 // Memoized Row Component
-const InventoryRow = memo(({ item, rowIndex, isEditing, isSelected, isExpanded, onToggleSelect, onToggleExpand, onMenu, historyState, userNameById, classic }: any) => {
+const InventoryRow = memo(({ item, rowIndex, isEditing, isSelected, isExpanded, onToggleSelect, onToggleExpand, onMenu, historyState, userNameById }: any) => {
     // Selected and being-edited are the two shared row states — same fills as
     // every other list (see rowStateBg). This row used to invert to XP selection
     // blue with white text, which meant re-colouring the code chip, the category
@@ -224,7 +224,7 @@ const InventoryRow = memo(({ item, rowIndex, isEditing, isSelected, isExpanded, 
         {isExpanded && (
             <tr>
                 <td colSpan={ITEM_COL_SPAN} style={{ padding: 0 }}>
-                    <ItemEventLogPanel state={historyState} userNameById={userNameById} classic />
+                    <ItemEventLogPanel state={historyState} userNameById={userNameById} />
                 </td>
             </tr>
         )}
@@ -1224,7 +1224,6 @@ export default function InventoryView({
                         onMenu={toggleMenu}
                         historyState={expandedItemId === String(item.id) ? itemHistory[String(item.id)] : undefined}
                         userNameById={userNameById}
-                        classic
                     />
                   ))}
                   {filteredItems.length === 0 && dataLoading.items && (

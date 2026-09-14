@@ -89,7 +89,7 @@ const CHIP_KIND: Record<string, VariantKind> = {
     size: 'size', color: 'color', combo: 'combo', attr: 'material',
 };
 
-function IdentityChips({ chips, classic }: { chips?: NettingChip[]; classic: boolean }) {
+function IdentityChips({ chips }: { chips?: NettingChip[] }) {
     if (!chips || chips.length === 0) return null;
     return (
         <>
@@ -204,7 +204,7 @@ export default function NettingPlanTable({
                                         </div>
                                         <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 3, marginTop: 1 }}>
                                             <CodeChip code={n.item_code} tier={2} />
-                                            <IdentityChips chips={n.chips} classic />
+                                            <IdentityChips chips={n.chips} />
                                         </div>
                                     </td>
                                     <td style={{ padding: '4px 6px' }}>

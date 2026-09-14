@@ -39,14 +39,14 @@ export const EffBar = ({ eff, target, label, height = 9 }: {
 /** The `auto-fill` track both grids lay their cards on. Kept in one place so the
  * loading skeleton's geometry can quote the same numbers and the real grid drops
  * into its tracks with no shift. */
-export const gridColumns = (classic: boolean) => ({
+export const gridColumns = () => ({
     display: 'grid',
     gridTemplateColumns: `repeat(auto-fill, minmax(${240}px, 1fr))`,
     gap: 8,
 } as React.CSSProperties);
 
-export const CardGrid = ({ classic, children }: { classic: boolean; children: React.ReactNode }) => (
-    <div style={gridColumns(true)}>{children}</div>
+export const CardGrid = ({ children }: { children: React.ReactNode }) => (
+    <div style={gridColumns()}>{children}</div>
 );
 
 /**
@@ -58,9 +58,8 @@ export const CardGrid = ({ classic, children }: { classic: boolean; children: Re
  * line and leave bare bevel below.
  */
 export const MachineCard = ({
-    classic, code, name, status, statusLabel, alarm, badge, onClick, title, footer, children,
+    code, name, status, statusLabel, alarm, badge, onClick, title, footer, children,
 }: {
-    classic: boolean;
     code: string;
     name: string;
     /** IDLE | STAGED | DRAW_IN | TUNING | LOADED | RUNNING */
@@ -138,8 +137,7 @@ export const sectionLabel = (sec: { id: string | null; code: string; name: strin
  * the counts alone said nothing about whether the bank was in trouble. Classic
  * reuses the shared toolbar strip; modern keeps the underlined caption row.
  */
-export const GroupHeader = <M,>({ classic, sec, labels, action }: {
-    classic: boolean;
+export const GroupHeader = <M,>({ sec, labels, action }: {
     sec: MonitorSection<M>;
     labels: { machines: string; running: string; avgEfficiency: string; belowTarget: string; late: string };
     action?: React.ReactNode;
@@ -182,10 +180,9 @@ export const GroupHeader = <M,>({ classic, sec, labels, action }: {
  * is what property tabs would have cost.
  */
 export const MonitorChipBar = <M,>({
-    classic, sections, isGrouped, groupFilter, onGroupChange,
+    sections, isGrouped, groupFilter, onGroupChange,
     machineCount, runningOnly, runningCount, onRunningOnlyChange, labels,
 }: {
-    classic: boolean;
     sections: MonitorSection<M>[];
     isGrouped: boolean;
     groupFilter: string | null;

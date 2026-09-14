@@ -86,7 +86,7 @@ export default function CompanyProfileView({ profile, onUpdate, onUploadLogo, au
                             {profile?.logo_url ? (
                                 <img src={`${API_BASE}${profile.logo_url}`} alt="Logo" style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }} />
                             ) : (
-                                <span style={settingsHint(true)}>No logo uploaded</span>
+                                <span style={settingsHint()}>No logo uploaded</span>
                             )}
                         </div>
                         <label
@@ -96,7 +96,7 @@ export default function CompanyProfileView({ profile, onUpdate, onUploadLogo, au
                             <span style={{ marginLeft: 4 }}>Upload Logo</span>
                             <input type="file" hidden onChange={handleLogoUpload} disabled={isUploading} accept="image/*" />
                         </label>
-                        <div style={settingsHint(true)}>Transparent PNG, around 300 × 100 px.</div>
+                        <div style={settingsHint()}>Transparent PNG, around 300 × 100 px.</div>
                     </div>
 
                     <div style={{ flex: '1 1 340px', minWidth: 0, display: 'flex', flexDirection: 'column', gap: SETTINGS_FIELD_GAP }}>
@@ -135,7 +135,7 @@ export default function CompanyProfileView({ profile, onUpdate, onUploadLogo, au
                     </div>
                 </div>
 
-                <div style={settingsActions(true)}>
+                <div style={settingsActions()}>
                     <button
                         type="submit"
                         style={xpBtn({ ...BTN_TONES.primary, padding: '3px 14px', display: 'flex', alignItems: 'center', gap: 4 })}

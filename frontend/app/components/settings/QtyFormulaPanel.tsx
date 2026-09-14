@@ -39,11 +39,11 @@ export default function QtyFormulaPanel() {
                 editor={editor}
                 classic
                 canEdit={canEdit}
-                hint={settingsHint(true)}
+                hint={settingsHint()}
             />
 
             {canEdit && !editor.loading && (
-                <div style={settingsActions(true)}>
+                <div style={settingsActions()}>
                     <button
                         type="button"
                         onClick={() => { editor.save(); }}
