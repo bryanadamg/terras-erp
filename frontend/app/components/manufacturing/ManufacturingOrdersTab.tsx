@@ -732,13 +732,13 @@ export default function ManufacturingOrdersTab({
                     {/* Components table */}
                     <div style={{ flex: 1, overflowY: 'auto' }}>
                         {componentLines.length > 0 ? (
-                            <table style={lvSubTable(true)}>
+                            <table style={lvSubTable()}>
                                 <thead>
                                     <tr style={{ position: 'sticky', top: 0 }}>
                                         {['Component', 'Variant', 'Required', ...(showBreakdown ? ['Breakdown'] : []), 'In Stock', 'Available At'].map(h => (
                                             // Full cell borders rather than lvSubTd's single rule — this
                                             // is a grid, and the verticals separate the paired figures.
-                                            <th key={h} style={{ ...lvSubTh(true), border: '1px solid #808080', textAlign: h === 'Required' || h === 'In Stock' ? 'right' : 'left' }}>{h}</th>
+                                            <th key={h} style={{ ...lvSubTh(), border: '1px solid #808080', textAlign: h === 'Required' || h === 'In Stock' ? 'right' : 'left' }}>{h}</th>
                                         ))}
                                     </tr>
                                 </thead>
@@ -750,9 +750,9 @@ export default function ManufacturingOrdersTab({
                                         const attrLabel = (line.attribute_value_ids || []).map(getAttributeValueName).filter(Boolean).join(', ');
                                         // Zebra on: this is a wide grid, and the stripe is what keeps
                                         // a component's figures tracking across six columns.
-                                        const rowStyle = lvSubRow(true, i, { zebra: true });
+                                        const rowStyle = lvSubRow(i, { zebra: true });
                                         const cell: React.CSSProperties = {
-                                            ...lvSubTd(true),
+                                            ...lvSubTd(),
                                             border: '1px solid #c0bdb5',
                                         };
                                         const stockLevel = isEnough ? 'ok' : total > 0 ? 'low' : 'out';
@@ -1082,7 +1082,7 @@ export default function ManufacturingOrdersTab({
                             <col style={{ width: '90px' }} />
                             <col style={{ width: '78px' }} />
                         </colgroup>
-                        <thead style={{ ...lvThead(true), fontSize: '10px'}}>
+                        <thead style={{ ...lvThead(), fontSize: '10px'}}>
                             <tr>
                                 {[
                                     { label: '',                  align: 'left',   cls: '' },
@@ -1097,7 +1097,7 @@ export default function ManufacturingOrdersTab({
                                     { label: 'Actions',           align: 'right',  cls: 'pe-3 no-print' },
                                 ].map(({ label, align, cls }) => (
                                     <th key={label} className={cls} style={{
-                                        ...lvTh(true),
+                                        ...lvTh(),
                                         textAlign: align as any,
                                         overflow: 'hidden',
                                     }}>{label}</th>
@@ -1108,7 +1108,7 @@ export default function ManufacturingOrdersTab({
                             {manufacturingOrders.length === 0 && (dataLoading.manufacturingOrders ? (
                                 <TableSkeleton rows={8} cols={skel.cols ?? 10} classic rowHeight={skel.rowHeight} fillHeight={skel.fillHeight} />
                             ) : (
-                                <TableEmpty colSpan={10} classic
+                                <TableEmpty colSpan={10}
                                     message={moCodeFilter
                                         ? <>No Manufacturing Orders match &quot;<strong>{moCodeFilter}</strong>&quot;.</>
                                         : 'No Manufacturing Orders yet.'} />
@@ -1119,7 +1119,7 @@ export default function ManufacturingOrdersTab({
                                 const isHighlighted = !!moCodeFilter && mo.code.toLowerCase().includes(moCodeFilter.toLowerCase());
                                 const rowBg = isHighlighted ? rowStateBg('highlighted', true)
                                     : isExpanded ? rowStateBg('expanded', true)
-                                    : lvZebra(true, rowIdx);
+                                    : lvZebra(rowIdx);
                                 const tdStyle: React.CSSProperties = {
                                     border: '1px solid #c0bdb5',
                                     padding: '4px 8px',
@@ -1137,7 +1137,7 @@ export default function ManufacturingOrdersTab({
                                     <React.Fragment key={mo.id}>
                                     <tr id={`mo-row-${mo.id}`} style={{ background: rowBg, cursor: 'default' }}>
 
-                                        <ExpanderCell classic expanded={!!isExpanded} onToggle={() => toggleRow(mo.id)} label="order detail" tdStyle={tdStyle} />
+                                        <ExpanderCell expanded={!!isExpanded} onToggle={() => toggleRow(mo.id)} label="order detail" tdStyle={tdStyle} />
 
                                         {/* MO Code */}
                                         <td style={{ ...tdStyle, paddingLeft: '10px'}}>
@@ -1261,7 +1261,7 @@ export default function ManufacturingOrdersTab({
                                                     </div>
                                                 );
                                             })() : (
-                                                <Dash classic />
+                                                <Dash />
                                             )}
                                         </td>
 

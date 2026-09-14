@@ -31,9 +31,9 @@ const STATUSES = ['PENDING', 'IN_PROGRESS', 'COMPLETED', 'CANCELLED'];
 const COLS = 13;
 
 // ── Style helpers (theme-aware) ───────────────────────────────────────────────
-const xpInput = (classic: boolean): React.CSSProperties => lvInput(true, { padding: '1px 4px', width: 'auto' });
-const xpBtn = (classic: boolean): React.CSSProperties => lvBtn(true, 'default', { fontSize: 10, padding: '2px 8px' });
-const xpBtnPrimary = (classic: boolean): React.CSSProperties => lvBtn(true, 'primary', { fontSize: 10, padding: '2px 8px' });
+const xpInput = (classic: boolean): React.CSSProperties => lvInput({ padding: '1px 4px', width: 'auto' });
+const xpBtn = (classic: boolean): React.CSSProperties => lvBtn('default', { fontSize: 10, padding: '2px 8px' });
+const xpBtnPrimary = (classic: boolean): React.CSSProperties => lvBtn('primary', { fontSize: 10, padding: '2px 8px' });
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 interface CreateForm {
@@ -301,16 +301,16 @@ export default function SettingOrdersTab({ items, authFetch }: Props) {
     // ── Styles ────────────────────────────────────────────────────────────────
     // Full cell borders rather than lvTd's single rule — same call the Work Orders
     // list makes, and these rows carry the same density of numbers.
-    const thStyle: React.CSSProperties = lvThSticky(true, { border: '1px solid #808080' });
-    const tdBase: React.CSSProperties = { ...lvTd(true), border: '1px solid #c0bdb5' };
+    const thStyle: React.CSSProperties = lvThSticky({ border: '1px solid #808080' });
+    const tdBase: React.CSSProperties = { ...lvTd(), border: '1px solid #c0bdb5' };
 
     const filterBarStyle: React.CSSProperties = {
         background: '#d4d0c8', borderBottom: '1px solid #808080',
         padding: '4px 8px', display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap',
     };
 
-    const subTh = lvSubTh(true, true);
-    const subTd = lvSubTd(true, true);
+    const subTh = lvSubTh();
+    const subTd = lvSubTd();
 
     const labelStyle: React.CSSProperties = {
         fontFamily: xpFont, fontSize: 10, color: '#000', display: 'block', marginBottom: 1,
@@ -414,7 +414,7 @@ export default function SettingOrdersTab({ items, authFetch }: Props) {
                                     <div style={{ color: '#aaa', fontStyle: 'italic', fontSize: 9 }}>No runs on this work order.</div>
                                 ) : (
                                     <div style={{ maxHeight: 240, overflow: 'auto' }}>
-                                        <table style={{ ...lvSubTable(true), border: 'none', minWidth: 940 }}>
+                                        <table style={{ ...lvSubTable(), border: 'none', minWidth: 940 }}>
                                             <thead>
                                                 <tr>
                                                     <th style={{ ...subTh, width: 34 }}>Run</th>
@@ -436,10 +436,10 @@ export default function SettingOrdersTab({ items, authFetch }: Props) {
                                             </thead>
                                             <tbody>
                                                 {sum.runs.map((run: any, ri: number) => (
-                                                    <tr key={run.id} style={lvSubRow(true, ri)}>
+                                                    <tr key={run.id} style={lvSubRow(ri)}>
                                                         <td style={{ ...subTd, fontWeight: 'bold' }}>#{run.run_number}</td>
                                                         <td style={{ ...subTd, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={run.machine_name || undefined}>
-                                                            {run.machine_name || <Dash classic />}
+                                                            {run.machine_name || <Dash />}
                                                         </td>
                                                         <td style={{ ...subTd, textAlign: 'right' }}>{fmtNum(run.substrate_qty)}</td>
                                                         <td style={{ ...subTd, textAlign: 'right' }}>{fmtNum(run.temperature_c, 1)}</td>
@@ -451,7 +451,7 @@ export default function SettingOrdersTab({ items, authFetch }: Props) {
                                                         <td style={{ ...subTd, textAlign: 'right', fontWeight: 'bold' }}>{fmtNum(run.actual_shrinkage_pct, 2)}</td>
                                                         <td style={subTd}><StatusChip status={run.status || 'PENDING'} tint /></td>
                                                         <td style={{ ...subTd, fontFamily: CODE_FONT, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }} title={run.output_batch_number || undefined}>
-                                                            {run.output_batch_number || <Dash classic />}
+                                                            {run.output_batch_number || <Dash />}
                                                         </td>
                                                         <td style={{ ...subTd, color: '#666', whiteSpace: 'nowrap' }}>{fmtDateTime(run.started_at)}</td>
                                                         <td style={{ ...subTd, color: '#666', whiteSpace: 'nowrap' }}>{fmtDateTime(run.completed_at)}</td>
@@ -570,12 +570,12 @@ export default function SettingOrdersTab({ items, authFetch }: Props) {
                                 <React.Fragment key={id}>
                                     <tr
                                         style={{
-                                            background: isExpanded ? rowStateBg('expanded', true) : (lvZebra(true, idx)),
+                                            background: isExpanded ? rowStateBg('expanded', true) : (lvZebra(idx)),
                                             cursor: 'pointer',
                                         }}
                                         onClick={toggleRow}
                                     >
-                                        <ExpanderCell classic expanded={isExpanded} onToggle={toggleRow} tdStyle={tdBase} tdClassName={''} label="setting order detail" />
+                                        <ExpanderCell expanded={isExpanded} onToggle={toggleRow} tdStyle={tdBase} tdClassName={''} label="setting order detail" />
                                         <td style={{ ...tdBase, overflow: 'hidden' }} title={wo.code || wo.name}>
                                             <CodeChip
                                                 code={wo.code || wo.name}

@@ -594,9 +594,8 @@ export default function WOStagingModal({ wo, onClose, onStaged, onScanMode }: Pr
                                                             ) : (batchesByItem[r.item_id] || []).map((b: any) => {
                                                                 const checked = (batchByItem[r.item_id] || []).includes(b.id);
                                                                 return (
-                                                                    <label key={b.id} style={lvPickerRow(true, checked)}>
+                                                                    <label key={b.id} style={lvPickerRow(checked)}>
                                                                         <RowCheckbox
-                                                                            classic
                                                                             checked={checked}
                                                                             label={b.batch_number || 'lot'}
                                                                             onChange={() => setBatchByItem(p => {

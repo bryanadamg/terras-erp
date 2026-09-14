@@ -199,14 +199,14 @@ export default function ColorLibraryView({
             {/* Toolbar */}
             <div style={{ background: 'linear-gradient(to bottom, #f5f4ef, #e0dfd8)', borderBottom: '1px solid #b0a898', padding: '4px 8px', display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap', flexShrink: 0 }}>
                 <SearchField classic value={searchInput} onChange={setSearchInput} placeholder="Search code, name, Pantone, customer code…" width={260} />
-                <span style={lvSep(true)} />
+                <span style={lvSep()} />
                 <FilterChipBar
                     classic
                     options={STATUS_FILTERS.map(s => ({ value: s, label: s === 'ALL' ? 'All' : s }))}
                     value={statusFilter}
                     onChange={onStatusChange}
                 />
-                <span style={lvSep(true)} />
+                <span style={lvSep()} />
                 <div style={{ width: 170 }}>
                     <SearchableSelect options={variantFilterOptions} value={variantFilter || ''} onChange={v => onVariantFilterChange?.(v)} placeholder="All Color Variants" />
                 </div>
@@ -214,7 +214,7 @@ export default function ColorLibraryView({
                     <SearchableSelect options={customerFilterOptions} value={customerFilter || ''} onChange={v => onCustomerFilterChange?.(v)} placeholder="All Customers" />
                 </div>
                 <input
-                    style={{ ...lvInput(true), width: 170, flexBasis: 170 }}
+                    style={{ ...lvInput(), width: 170, flexBasis: 170 }}
                     placeholder="Search item…"
                     value={itemSearchInput}
                     onChange={e => setItemSearchInput(e.target.value)}
@@ -229,7 +229,7 @@ export default function ColorLibraryView({
                 </span>
                 {canManage && (
                     <>
-                        <span style={lvSep(true)} />
+                        <span style={lvSep()} />
                         <ToolbarButton classic tone="create" icon="bi-plus-lg" onClick={openCreate}>New Color</ToolbarButton>
                     </>
                 )}
@@ -238,50 +238,50 @@ export default function ColorLibraryView({
             {/* Table */}
             <div style={{ flex: 1, minHeight: 0, background: '#fff', overflow: 'auto' }}>
                 <table style={{ width: '100%', borderCollapse: 'collapse', background: '#fff' }}>
-                    <thead style={lvThead(true, true)}>
+                    <thead style={lvThead()}>
                         <tr>
-                            <th style={{ ...lvTh(true), width: 34 }}></th>
-                            <th style={{ ...lvTh(true), width: 130 }}>Code</th>
-                            <th style={lvTh(true)}>Name</th>
-                            <th style={{ ...lvTh(true), width: 130 }}>Color Variant</th>
-                            <th style={{ ...lvTh(true), width: 150 }}>Colour Index</th>
-                            <th style={{ ...lvTh(true), width: 130 }}>L*a*b*</th>
-                            <th style={{ ...lvTh(true), width: 120 }}>Customer</th>
-                            <th style={{ ...lvTh(true), width: 90 }}>Cust. Code</th>
-                            <th style={{ ...lvTh(true), width: 110 }}>From Lab Dip</th>
-                            <th style={{ ...lvTh(true), width: 140 }}>Item</th>
-                            <th style={{ ...lvTh(true), width: 60, textAlign: 'center' }}>Recipes</th>
-                            <th style={{ ...lvTh(true), width: 80 }}>Status</th>
-                            <th style={{ ...lvTh(true), width: 70, textAlign: 'right', borderRight: 'none' }}></th>
+                            <th style={{ ...lvTh(), width: 34 }}></th>
+                            <th style={{ ...lvTh(), width: 130 }}>Code</th>
+                            <th style={lvTh()}>Name</th>
+                            <th style={{ ...lvTh(), width: 130 }}>Color Variant</th>
+                            <th style={{ ...lvTh(), width: 150 }}>Colour Index</th>
+                            <th style={{ ...lvTh(), width: 130 }}>L*a*b*</th>
+                            <th style={{ ...lvTh(), width: 120 }}>Customer</th>
+                            <th style={{ ...lvTh(), width: 90 }}>Cust. Code</th>
+                            <th style={{ ...lvTh(), width: 110 }}>From Lab Dip</th>
+                            <th style={{ ...lvTh(), width: 140 }}>Item</th>
+                            <th style={{ ...lvTh(), width: 60, textAlign: 'center' }}>Recipes</th>
+                            <th style={{ ...lvTh(), width: 80 }}>Status</th>
+                            <th style={{ ...lvTh(), width: 70, textAlign: 'right', borderRight: 'none' }}></th>
                         </tr>
                     </thead>
                     <tbody ref={listBodyRef}>
                         {colors.length === 0 && (loading ? (
-                            <TableSkeleton rows={8} cols={skel.cols ?? 13} classic tdStyle={lvTd(true)} rowHeight={skel.rowHeight} fillHeight={skel.fillHeight} />
+                            <TableSkeleton rows={8} cols={skel.cols ?? 13} classic tdStyle={lvTd()} rowHeight={skel.rowHeight} fillHeight={skel.fillHeight} />
                         ) : (
-                            <TableEmpty colSpan={13} classic tdStyle={lvTd(true)} message="No colors found." />
+                            <TableEmpty colSpan={13} tdStyle={lvTd()} message="No colors found." />
                         ))}
                         {colors.map((c, idx) => (
-                            <tr key={c.id} style={lvRow(true, idx)}>
-                                <td style={{ ...lvTd(true), textAlign: 'center' }}><SwatchBox hex={c.hex} classic /></td>
-                                <td style={lvTd(true)}>
+                            <tr key={c.id} style={lvRow(idx)}>
+                                <td style={{ ...lvTd(), textAlign: 'center' }}><SwatchBox hex={c.hex} classic /></td>
+                                <td style={lvTd()}>
                                     <CodeChip code={c.code} classic tone="accent" style={{ fontWeight: 'bold' }} />
                                 </td>
-                                <td style={lvTd(true)}>{c.name}</td>
-                                <td style={lvTd(true)}>{c.variant_attribute_value_label
+                                <td style={lvTd()}>{c.name}</td>
+                                <td style={lvTd()}>{c.variant_attribute_value_label
                                     ? <ColorSwatchChip label={c.variant_attribute_value_label} classic hex={variantHexByLabel[c.variant_attribute_value_label]} />
                                     : <span style={{ color: '#aaa' }}>—</span>}</td>
-                                <td style={lvTd(true)}>{c.colour_index || <span style={{ color: '#aaa' }}>—</span>}</td>
-                                <td style={lvTd(true)}>
+                                <td style={lvTd()}>{c.colour_index || <span style={{ color: '#aaa' }}>—</span>}</td>
+                                <td style={lvTd()}>
                                     {c.l_star != null
                                         ? <span style={{ fontFamily: CODE_FONT, fontSize: 11 }}>
                                             {c.l_star}/{c.a_star ?? '—'}/{c.b_star ?? '—'}
                                           </span>
                                         : <span style={{ color: '#aaa' }}>—</span>}
                                 </td>
-                                <td style={lvTd(true)}>{c.customer_name || <span style={{ color: '#aaa', fontStyle: 'italic' }}>House</span>}</td>
-                                <td style={lvTd(true)}>{c.customer_color_code || <span style={{ color: '#aaa' }}>—</span>}</td>
-                                <td style={lvTd(true)}>{c.source_lab_dip_code
+                                <td style={lvTd()}>{c.customer_name || <span style={{ color: '#aaa', fontStyle: 'italic' }}>House</span>}</td>
+                                <td style={lvTd()}>{c.customer_color_code || <span style={{ color: '#aaa' }}>—</span>}</td>
+                                <td style={lvTd()}>{c.source_lab_dip_code
                                     ? <span
                                         title="Open this lab dip request"
                                         // The two lab dip books are separate pages, each listing only its own
@@ -289,12 +289,12 @@ export default function ColorLibraryView({
                                         onClick={e => { e.stopPropagation(); router.push(`${String(c.source_lab_dip_code).startsWith('LDY-') ? '/lab-dips-yarn' : '/lab-dips'}?open=${encodeURIComponent(c.source_lab_dip_request_id)}`); }}
                                         style={{ fontFamily: CODE_FONT, color: '#0058e6', fontSize: 9, cursor: 'pointer', textDecoration: 'underline' }}>{c.source_lab_dip_code}</span>
                                     : <span style={{ color: '#aaa' }}>—</span>}</td>
-                                <td style={lvTd(true)}>{c.source_item_name
+                                <td style={lvTd()}>{c.source_item_name
                                     ? <span title={c.source_item_code || undefined}>{c.source_item_name}</span>
                                     : <span style={{ color: '#aaa' }}>—</span>}</td>
-                                <td style={{ ...lvTd(true), textAlign: 'center' }}>{c.recipe_count || 0}</td>
-                                <td style={lvTd(true)}><StatusChip status={c.status} /></td>
-                                <td style={{ ...lvTd(true), borderRight: 'none', textAlign: 'right' }}>
+                                <td style={{ ...lvTd(), textAlign: 'center' }}>{c.recipe_count || 0}</td>
+                                <td style={lvTd()}><StatusChip status={c.status} /></td>
+                                <td style={{ ...lvTd(), borderRight: 'none', textAlign: 'right' }}>
                                     <div style={{ display: 'flex', gap: 3, justifyContent: 'flex-end', alignItems: 'center' }}>
                                         {canManage && c.l_star == null && (
                                         <XPActionButton
@@ -348,8 +348,8 @@ export default function ColorLibraryView({
                 modeless
                 footer={
                     <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
-                        <button type="button" className={XP_BTN} style={lvBtn(true)} onClick={() => setIsModalOpen(false)}>Cancel</button>
-                        <button type="submit" form="color-form" className={XP_BTN} style={lvPrimaryBtn(true)}>
+                        <button type="button" className={XP_BTN} style={lvBtn()} onClick={() => setIsModalOpen(false)}>Cancel</button>
+                        <button type="submit" form="color-form" className={XP_BTN} style={lvPrimaryBtn()}>
                             {editing ? 'Save' : 'Create'}
                         </button>
                     </div>
@@ -360,15 +360,15 @@ export default function ColorLibraryView({
                     <FormSection title="Identity" classic>
                         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
                             <div>
-                                <label style={lvLabel(true)}>Code *</label>
-                                <input value={form.code} onChange={e => setForm({ ...form, code: e.target.value })} style={lvInput(true)} required />
+                                <label style={lvLabel()}>Code *</label>
+                                <input value={form.code} onChange={e => setForm({ ...form, code: e.target.value })} style={lvInput()} required />
                             </div>
                             <div>
-                                <label style={lvLabel(true)}>Name *</label>
-                                <input value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} style={lvInput(true)} required />
+                                <label style={lvLabel()}>Name *</label>
+                                <input value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} style={lvInput()} required />
                             </div>
                             <div>
-                                <label style={lvLabel(true)}>Color Variant</label>
+                                <label style={lvLabel()}>Color Variant</label>
                                 <SearchableSelect
                                     options={variantOptions}
                                     value={form.variant_attribute_value_id}
@@ -378,8 +378,8 @@ export default function ColorLibraryView({
                             </div>
                             {editing && (
                                 <div>
-                                    <label style={lvLabel(true)}>Status</label>
-                                    <select value={form.status} onChange={e => setForm({ ...form, status: e.target.value })} style={lvInput(true)}>
+                                    <label style={lvLabel()}>Status</label>
+                                    <select value={form.status} onChange={e => setForm({ ...form, status: e.target.value })} style={lvInput()}>
                                         <option value="active">active</option>
                                         <option value="archived">archived</option>
                                     </select>
@@ -397,7 +397,7 @@ export default function ColorLibraryView({
                                 { key: 'b_star', axis: 'b*', hint: 'Blue ↔ Yellow · −128…127', min: -128, max: 127 },
                             ] as const).map(f => (
                                 <div key={f.key}>
-                                    <label style={{ ...lvLabel(true), display: 'flex', alignItems: 'baseline', gap: 5 }}>
+                                    <label style={{ ...lvLabel(), display: 'flex', alignItems: 'baseline', gap: 5 }}>
                                         <span style={{ fontWeight: 'bold', fontSize: 13, fontFamily: CODE_FONT, color: '#0047c8' }}>{f.axis}</span>
                                     </label>
                                     <input
@@ -405,18 +405,18 @@ export default function ColorLibraryView({
                                         value={(form as any)[f.key]}
                                         onChange={e => setForm({ ...form, [f.key]: e.target.value })}
                                         placeholder="—"
-                                        style={{ ...lvInput(true), textAlign: 'center', fontFamily: CODE_FONT, fontWeight: 700, fontSize: 13 }}
+                                        style={{ ...lvInput(), textAlign: 'center', fontFamily: CODE_FONT, fontWeight: 700, fontSize: 13 }}
                                     />
                                     <div style={{ marginTop: 3, fontSize: 9, color: '#556' }}>{f.hint}</div>
                                 </div>
                             ))}
                             <div>
-                                <label style={lvLabel(true)}>Illuminant / Observer</label>
+                                <label style={lvLabel()}>Illuminant / Observer</label>
                                 <input
                                     value={form.lab_illuminant}
                                     onChange={e => setForm({ ...form, lab_illuminant: e.target.value })}
                                     placeholder="e.g. D65 / 10°"
-                                    style={lvInput(true)}
+                                    style={lvInput()}
                                 />
                                 <div style={{ marginTop: 3, fontSize: 9, color: '#556' }}>Measurement condition</div>
                             </div>
@@ -427,39 +427,39 @@ export default function ColorLibraryView({
                     <FormSection title="Details" classic>
                         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
                             <div>
-                                <label style={lvLabel(true)}>Pantone Ref</label>
-                                <input value={form.pantone_ref} onChange={e => setForm({ ...form, pantone_ref: e.target.value })} placeholder="e.g. 19-4052 TCX" style={lvInput(true)} />
+                                <label style={lvLabel()}>Pantone Ref</label>
+                                <input value={form.pantone_ref} onChange={e => setForm({ ...form, pantone_ref: e.target.value })} placeholder="e.g. 19-4052 TCX" style={lvInput()} />
                             </div>
                             <div>
-                                <label style={lvLabel(true)}>Colour Index (C.I.)</label>
-                                <input value={form.colour_index} onChange={e => setForm({ ...form, colour_index: e.target.value })} placeholder="e.g. C.I. Reactive Blue 19" style={lvInput(true)} />
+                                <label style={lvLabel()}>Colour Index (C.I.)</label>
+                                <input value={form.colour_index} onChange={e => setForm({ ...form, colour_index: e.target.value })} placeholder="e.g. C.I. Reactive Blue 19" style={lvInput()} />
                             </div>
                             <div>
-                                <label style={lvLabel(true)}>Swatch (hex)</label>
+                                <label style={lvLabel()}>Swatch (hex)</label>
                                 <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
                                     <SwatchBox hex={form.hex || null} size={24} classic onPick={h => setForm({ ...form, hex: h })} />
-                                    <input value={form.hex} onChange={e => setForm({ ...form, hex: e.target.value })} placeholder="#RRGGBB" style={lvInput(true)} />
+                                    <input value={form.hex} onChange={e => setForm({ ...form, hex: e.target.value })} placeholder="#RRGGBB" style={lvInput()} />
                                 </div>
                             </div>
                             <div>
-                                <label style={lvLabel(true)}>Substrate</label>
-                                <input value={form.substrate} onChange={e => setForm({ ...form, substrate: e.target.value })} placeholder="e.g. CVC, 100% Cotton" style={lvInput(true)} />
+                                <label style={lvLabel()}>Substrate</label>
+                                <input value={form.substrate} onChange={e => setForm({ ...form, substrate: e.target.value })} placeholder="e.g. CVC, 100% Cotton" style={lvInput()} />
                             </div>
                             <div>
-                                <label style={lvLabel(true)}>Customer</label>
+                                <label style={lvLabel()}>Customer</label>
                                 <SearchableSelect options={customerOptions} value={form.customer_id} onChange={v => setForm({ ...form, customer_id: v })} placeholder="House color" />
                             </div>
                             <div>
-                                <label style={lvLabel(true)}>Customer Color Code</label>
-                                <input value={form.customer_color_code} onChange={e => setForm({ ...form, customer_color_code: e.target.value })} style={lvInput(true)} />
+                                <label style={lvLabel()}>Customer Color Code</label>
+                                <input value={form.customer_color_code} onChange={e => setForm({ ...form, customer_color_code: e.target.value })} style={lvInput()} />
                             </div>
                             <div style={{ gridColumn: '1 / -1' }}>
-                                <label style={lvLabel(true)}>Spectrophotometer Notes</label>
-                                <textarea value={form.spectro_notes} onChange={e => setForm({ ...form, spectro_notes: e.target.value })} rows={2} placeholder="Tolerance (ΔE), geometry, extra readings…" style={{ ...lvInput(true), height: 'auto', resize: 'vertical' }} />
+                                <label style={lvLabel()}>Spectrophotometer Notes</label>
+                                <textarea value={form.spectro_notes} onChange={e => setForm({ ...form, spectro_notes: e.target.value })} rows={2} placeholder="Tolerance (ΔE), geometry, extra readings…" style={{ ...lvInput(), height: 'auto', resize: 'vertical' }} />
                             </div>
                             <div style={{ gridColumn: '1 / -1' }}>
-                                <label style={lvLabel(true)}>Notes</label>
-                                <textarea value={form.notes} onChange={e => setForm({ ...form, notes: e.target.value })} rows={2} style={{ ...lvInput(true), height: 'auto', resize: 'vertical' }} />
+                                <label style={lvLabel()}>Notes</label>
+                                <textarea value={form.notes} onChange={e => setForm({ ...form, notes: e.target.value })} rows={2} style={{ ...lvInput(), height: 'auto', resize: 'vertical' }} />
                             </div>
                         </div>
                     </FormSection>

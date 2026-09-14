@@ -124,14 +124,14 @@ export default function BookingStockView() {
         // Shared sub-table chrome, with the header band recoloured per side: this
         // panel's whole point is demand (amber) vs supply (green), so the tint and
         // rule colour are the one thing that deliberately varies per instance.
-        const th: React.CSSProperties = { ...lvSubTh(true), background: tint, color, borderBottom: `1px solid ${color}` };
-        const td = lvSubTd(true);
+        const th: React.CSSProperties = { ...lvSubTh(), background: tint, color, borderBottom: `1px solid ${color}` };
+        const td = lvSubTd();
         return (
             <div style={{ flex: '1 1 260px', minWidth: 240 }}>
-                <div style={{ ...lvSubCaption(true), color }}>
+                <div style={{ ...lvSubCaption(), color }}>
                     {title} ({items.length})
                 </div>
-                <table style={lvSubTable(true)}>
+                <table style={lvSubTable()}>
                     <thead>
                         <tr>
                             <th style={th}>{codeLabel}</th>
@@ -142,7 +142,7 @@ export default function BookingStockView() {
                         {items.length === 0 ? (
                             <tr><td colSpan={2} style={{ ...td, color: '#999', fontStyle: 'italic' }}>—</td></tr>
                         ) : items.map((m, i) => (
-                            <tr key={m.mo_id} style={lvSubRow(true, i)}>
+                            <tr key={m.mo_id} style={lvSubRow(i)}>
                                 <td style={{ ...td, fontFamily: CODE_FONT, color: '#1a3d90' }}>{m.mo_code}</td>
                                 <td style={{ ...td, textAlign: 'right', color, whiteSpace: 'nowrap' }}>{sign}{fmtQty(m.qty)}</td>
                             </tr>
@@ -194,7 +194,7 @@ export default function BookingStockView() {
     const xpBevel: React.CSSProperties = sharedXpBevel();
     const xpTitleBar: React.CSSProperties = sharedXpTitleBar();
     const xpToolbar: React.CSSProperties = sharedXpToolbar({ gap: '6px' });
-    const xpTableHeader: React.CSSProperties = lvThSticky(true, { borderRight: '1px solid #b0aa9c' });
+    const xpTableHeader: React.CSSProperties = lvThSticky({ borderRight: '1px solid #b0aa9c' });
     const xpSep: React.CSSProperties = { width: '1px', height: '20px', background: '#a0988c', margin: '0 2px', flexShrink: 0 };
 
     const colLine: React.CSSProperties = { borderRight: '1px solid #d8d4c8' };
@@ -255,7 +255,7 @@ export default function BookingStockView() {
                                 const isOpen = expanded.has(k);
                                 const variant = variantLabel(r.attribute_value_ids);
                                 const h = healthOf(r.qty_net_free);
-                                const zebra = lvZebra(true, i);
+                                const zebra = lvZebra(i);
                                 return (
                                     <Fragment key={k}>
                                         <tr onClick={() => toggleRow(k)} title={'Click for MO breakdown'}
@@ -263,7 +263,7 @@ export default function BookingStockView() {
                                             className={undefined}>
                                             {/* The health stripe rides the row's leftmost cell, which is now the
                                                 chevron column. */}
-                                            <ExpanderCell classic expanded={isOpen} onToggle={() => toggleRow(k)} label="MO breakdown"
+                                            <ExpanderCell expanded={isOpen} onToggle={() => toggleRow(k)} label="MO breakdown"
                                                 tdStyle={{ borderLeft: `3px solid ${h.color}`, fontFamily: xpFont}} />
                                             <td style={{ padding: '4px 8px', fontFamily: xpFont }}>
                                                 <>
@@ -315,7 +315,7 @@ export default function BookingStockView() {
                                 );
                             })}
                             {!loading && sorted.length === 0 && (
-                                <TableEmpty colSpan={COLS.length + 1} classic
+                                <TableEmpty colSpan={COLS.length + 1}
                                     message="No components are currently demanded by ongoing MOs." />
                             )}
                             {/* Skeleton in both themes — the modern branch used to show a bare

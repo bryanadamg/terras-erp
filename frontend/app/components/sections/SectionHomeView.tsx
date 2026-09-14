@@ -253,7 +253,7 @@ export default function SectionHomeView({ sectionKey }: { sectionKey: string }) 
       {/* list panel */}
       {section.list && (
         <div style={{ border: '2px solid', borderColor: '#dfdfdf #808080 #808080 #dfdfdf', background: '#fff', marginBottom: 6 }}>
-          <div style={{ ...lvThead(true), padding: '3px 8px', fontWeight: 'bold', fontSize: 11 }}>
+          <div style={{ ...lvThead(), padding: '3px 8px', fontWeight: 'bold', fontSize: 11 }}>
             {section.list.title}
           </div>
           <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 10 }}>
@@ -267,7 +267,7 @@ export default function SectionHomeView({ sectionKey }: { sectionKey: string }) 
                 <tr><td colSpan={section.list.cols.length} style={{ padding: '10px', textAlign: 'center', color: '#888', fontStyle: 'italic' }}>No records</td></tr>
               )}
               {section.list.rows.map((r, i) => (
-                <tr key={i} style={{ background: lvZebra(true, i) }}>
+                <tr key={i} style={{ background: lvZebra(i) }}>
                   {r.code !== '' && <td style={{ padding: '3px 6px' }}><CodeChip code={r.code} classic /></td>}
                   <td style={{ padding: '3px 6px' }}>{r.primary}</td>
                   {r.status !== undefined && <td style={{ padding: '3px 6px' }}><StatusChip status={r.status} /></td>}

@@ -320,7 +320,7 @@ export default function MachineOutputReportView() {
                     // off on Tuesday is not averaged down by it.
                     key: 'perDay', label: 'Avg / day', sortKey: 'perDay', align: 'right',
                     render: r => (r.qty_per_day == null
-                        ? <Dash classic />
+                        ? <Dash />
                         : <><span style={{ fontWeight: 'bold' }}>{fmtQty(r.qty_per_day)}</span>
                             <span style={{ fontSize: 10, color: '#888', marginLeft: 3 }}>{uomOf(r)}</span></>),
                     csv: r => r.qty_per_day ?? '',
@@ -347,7 +347,7 @@ export default function MachineOutputReportView() {
                 },
                 {
                     key: 'status', label: 'Status', sortKey: 'status',
-                    render: r => (r.po_status ? <StatusChip status={r.po_status} tint /> : <Dash classic />),
+                    render: r => (r.po_status ? <StatusChip status={r.po_status} tint /> : <Dash />),
                     csv: r => r.po_status || '',
                 },
                 {
@@ -391,12 +391,12 @@ export default function MachineOutputReportView() {
                 },
                 {
                     key: 'status', label: 'Status', sortKey: 'status',
-                    render: r => (r.wo_status ? <StatusChip status={r.wo_status} tint /> : <Dash classic />),
+                    render: r => (r.wo_status ? <StatusChip status={r.wo_status} tint /> : <Dash />),
                     csv: r => r.wo_status || '',
                 },
                 {
                     key: 'target', label: 'Target', sortKey: 'target', align: 'right',
-                    render: r => (r.wo_qty != null ? fmtQty(r.wo_qty) : <Dash classic />),
+                    render: r => (r.wo_qty != null ? fmtQty(r.wo_qty) : <Dash />),
                     csv: r => r.wo_qty ?? '',
                 },
                 ...shared,
@@ -419,7 +419,7 @@ export default function MachineOutputReportView() {
                 key: 'type', label: 'Type',
                 render: r => (r.center_type
                     ? <WorkCenterChip type={r.center_type} name={r.work_center_name} />
-                    : <Dash classic />),
+                    : <Dash />),
                 csv: r => r.center_type || '',
             },
             {
@@ -455,11 +455,11 @@ export default function MachineOutputReportView() {
 
     // ── Expanded detail (shared by both themes) ──────────────────────────────
     const detailPanel = (r: any) => {
-        const dth = lvSubTh(true);
-        const dtd = lvSubTd(true);
+        const dth = lvSubTh();
+        const dtd = lvSubTd();
         const block = (title: string, body: React.ReactNode) => (
             <div style={{ flex: 1, minWidth: 280 }}>
-                <div style={lvSubCaption(true)}>{title}</div>
+                <div style={lvSubCaption()}>{title}</div>
                 <div style={{ background: '#fff', border: '1px solid #a8a292', maxHeight: 220, overflowY: 'auto' }}>
                     {body}
                 </div>
@@ -467,7 +467,7 @@ export default function MachineOutputReportView() {
         );
 
         const itemsTable = (
-            <table style={{ ...lvSubTable(true), border: 'none' }}>
+            <table style={{ ...lvSubTable(), border: 'none' }}>
                 <thead><tr>
                     <th style={dth}>Item</th>
                     <th style={{ ...dth, textAlign: 'right' }}>Output</th>
@@ -495,7 +495,7 @@ export default function MachineOutputReportView() {
         );
 
         const wosTable = (
-            <table style={{ ...lvSubTable(true), border: 'none' }}>
+            <table style={{ ...lvSubTable(), border: 'none' }}>
                 <thead><tr>
                     <th style={dth}>Work Order</th>
                     <th style={dth}>Item</th>
@@ -528,7 +528,7 @@ export default function MachineOutputReportView() {
         );
 
         const machinesTable = (
-            <table style={{ ...lvSubTable(true), border: 'none' }}>
+            <table style={{ ...lvSubTable(), border: 'none' }}>
                 <thead><tr>
                     <th style={dth}>Machine</th>
                     <th style={{ ...dth, textAlign: 'right' }}>Output</th>
@@ -561,7 +561,7 @@ export default function MachineOutputReportView() {
 
         // The payroll grain: what this packer put out on each day of the window.
         const daysTable = (
-            <table style={{ ...lvSubTable(true), border: 'none' }}>
+            <table style={{ ...lvSubTable(), border: 'none' }}>
                 <thead><tr>
                     <th style={dth}>Day</th>
                     <th style={{ ...dth, textAlign: 'right' }}>Output</th>
@@ -591,7 +591,7 @@ export default function MachineOutputReportView() {
         );
 
         const ordersTable = (
-            <table style={{ ...lvSubTable(true), border: 'none' }}>
+            <table style={{ ...lvSubTable(), border: 'none' }}>
                 <thead><tr>
                     <th style={dth}>Packing Order</th>
                     <th style={dth}>Item</th>
@@ -626,7 +626,7 @@ export default function MachineOutputReportView() {
         );
 
         const rejectsTable = (
-            <table style={{ ...lvSubTable(true), border: 'none' }}>
+            <table style={{ ...lvSubTable(), border: 'none' }}>
                 <thead><tr>
                     <th style={dth}>When</th>
                     {!isWoMode && !isPackingSource && <th style={dth}>Work Order</th>}
@@ -652,7 +652,7 @@ export default function MachineOutputReportView() {
                                     <div style={{ fontSize: 9, color: '#777' }}>{rj.mo_code}</div>
                                 </td>
                             )}
-                            {isOperator && <td style={dtd}>{rj.po_code || <Dash classic />}</td>}
+                            {isOperator && <td style={dtd}>{rj.po_code || <Dash />}</td>}
                             <td style={dtd}>
                                 {isPackingSource
                                     ? <span style={{ color: '#777' }}>{rj.cartons_rejected || 0} carton(s)</span>
@@ -758,7 +758,7 @@ export default function MachineOutputReportView() {
     const toolbar: React.CSSProperties = sharedXpToolbar({ padding: '4px 6px', gap: '5px', flexWrap: 'nowrap', overflowX: 'auto' });
     const toolbarTop: React.CSSProperties = { ...toolbar, borderBottom: 'none', paddingBottom: 0 };
     const th: React.CSSProperties = {
-        ...lvThead(true),
+        ...lvThead(),
         fontSize: '10px', fontWeight: 'bold', color: '#000', fontFamily: xpFont, padding: '3px 8px',
         position: 'sticky', top: 0, textAlign: 'left', borderRight: '1px solid #b0a898',
     };
@@ -881,10 +881,10 @@ export default function MachineOutputReportView() {
                                         return (
                                             <React.Fragment key={key}>
                                             <tr
-                                                style={{ background: open ? rowStateBg('expanded', true) : lvZebra(true, i), borderBottom: '1px solid #e0ddd3', cursor: 'pointer' }}
+                                                style={{ background: open ? rowStateBg('expanded', true) : lvZebra(i), borderBottom: '1px solid #e0ddd3', cursor: 'pointer' }}
                                                 onClick={() => setExpanded(open ? null : key)}
                                             >
-                                                <ExpanderCell classic expanded={open} onToggle={() => setExpanded(open ? null : key)} tdStyle={td} label="machine detail" />
+                                                <ExpanderCell expanded={open} onToggle={() => setExpanded(open ? null : key)} tdStyle={td} label="machine detail" />
                                                 {columns.map((c, ci) => (
                                                     <td
                                                         key={c.key}

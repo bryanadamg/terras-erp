@@ -279,29 +279,29 @@ export default function LocationsView({
         onMouseEnter={() => setHoveredBin(loc.id)}
         onMouseLeave={() => setHoveredBin(null)}
         style={{
-          ...lvRow(true, i),
+          ...lvRow(i),
           cursor: 'grab',
           background: draggingId === loc.id
             ? '#fff7d6'
             : (hoveredBin === loc.id)
               ? '#f0f6ff'
-              : lvRow(true, i).background,
+              : lvRow(i).background,
         }}
       >
-        <td style={{ ...lvTd(true), width: 24, textAlign: 'center' }}>
+        <td style={{ ...lvTd(), width: 24, textAlign: 'center' }}>
           <i className={`bi bi-grip-vertical${''}`} style={{ color: '#aaa' }} />
         </td>
-        <td style={{ ...lvTd(true), width: 150, ...({ fontWeight: 'bold', color: '#00008b' }) }}>
+        <td style={{ ...lvTd(), width: 150, ...({ fontWeight: 'bold', color: '#00008b' }) }}>
           {loc.code}
         </td>
-        <td style={lvTd(true)}>
+        <td style={lvTd()}>
           {renaming ? (
             <input autoFocus className={undefined} style={{ ...xpInput, width: '100%' }} value={renameValue} onChange={(e) => setRenameValue(e.target.value)} onBlur={commitRename} onKeyDown={(e) => { if (e.key === 'Enter') commitRename(); if (e.key === 'Escape') setRenamingId(null); }} />
           ) : (
             <span className={undefined} style={{ display: 'block', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{loc.name}</span>
           )}
         </td>
-        <td style={{ ...lvTd(true), width: 60, textAlign: 'right', ...({ borderRight: 'none' }) }} onClick={(e) => e.stopPropagation()}>
+        <td style={{ ...lvTd(), width: 60, textAlign: 'right', ...({ borderRight: 'none' }) }} onClick={(e) => e.stopPropagation()}>
           {canManage && (
             <span style={{ display: 'inline-flex', gap: 4 }}>
                 <XPActionButton classic icon="bi-pencil" title="Rename" onClick={() => startRename(loc)} />
@@ -334,12 +334,12 @@ export default function LocationsView({
     }
     return (
       <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-        <thead style={{ ...lvThead(true), position: 'sticky', top: 0 }}>
+        <thead style={{ ...lvThead(), position: 'sticky', top: 0 }}>
           <tr>
-            <th style={{ ...lvTh(true), width: 24 }}></th>
-            <th style={{ ...lvTh(true), width: 150 }}>Code</th>
-            <th style={lvTh(true)}>Name</th>
-            <th style={{ ...lvTh(true), width: 60, ...({ borderRight: 'none' }) }}></th>
+            <th style={{ ...lvTh(), width: 24 }}></th>
+            <th style={{ ...lvTh(), width: 150 }}>Code</th>
+            <th style={lvTh()}>Name</th>
+            <th style={{ ...lvTh(), width: 60, ...({ borderRight: 'none' }) }}></th>
           </tr>
         </thead>
         <tbody>{bins.map(binRow)}</tbody>

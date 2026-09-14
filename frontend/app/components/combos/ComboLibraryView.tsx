@@ -179,14 +179,14 @@ export default function ComboLibraryView({
             {/* Toolbar */}
             <div style={{ background: 'linear-gradient(to bottom, #f5f4ef, #e0dfd8)', borderBottom: '1px solid #b0a898', padding: '4px 8px', display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap', flexShrink: 0 }}>
                 <SearchField classic value={searchInput} onChange={setSearchInput} placeholder="Search code, name, description…" width={260} />
-                <span style={lvSep(true)} />
+                <span style={lvSep()} />
                 <FilterChipBar
                     classic
                     options={STATUS_FILTERS.map(s => ({ value: s, label: s === 'ALL' ? 'All' : s }))}
                     value={statusFilter}
                     onChange={onStatusChange}
                 />
-                <span style={lvSep(true)} />
+                <span style={lvSep()} />
                 <FilterChipBar
                     classic
                     value={view}
@@ -205,7 +205,7 @@ export default function ComboLibraryView({
                 </ToolbarCount>
                 {canManage && (
                     <>
-                        <span style={lvSep(true)} />
+                        <span style={lvSep()} />
                         <ToolbarButton classic tone="create" icon="bi-plus-lg" onClick={openCreate}>New Combo</ToolbarButton>
                     </>
                 )}
@@ -270,32 +270,32 @@ export default function ComboLibraryView({
                     )
                 ) : (
                 <table style={{ width: '100%', borderCollapse: 'collapse', background: '#fff' }}>
-                    <thead style={lvThead(true, true)}>
+                    <thead style={lvThead()}>
                         <tr>
-                            <th style={{ ...lvTh(true), width: 70 }}>Colors</th>
-                            <th style={lvTh(true)}>Code</th>
-                            <th style={{ ...lvTh(true), width: 60, textAlign: 'center' }}>Usage</th>
-                            <th style={{ ...lvTh(true), width: 80 }}>Status</th>
-                            <th style={{ ...lvTh(true), width: 120, textAlign: 'right', borderRight: 'none' }}>Actions</th>
+                            <th style={{ ...lvTh(), width: 70 }}>Colors</th>
+                            <th style={lvTh()}>Code</th>
+                            <th style={{ ...lvTh(), width: 60, textAlign: 'center' }}>Usage</th>
+                            <th style={{ ...lvTh(), width: 80 }}>Status</th>
+                            <th style={{ ...lvTh(), width: 120, textAlign: 'right', borderRight: 'none' }}>Actions</th>
                         </tr>
                     </thead>
                     <tbody ref={listBodyRef}>
                         {filtered.length === 0 && (loading ? (
-                            <TableSkeleton rows={8} cols={skel.cols ?? 5} classic tdStyle={lvTd(true)} rowHeight={skel.rowHeight} fillHeight={skel.fillHeight} />
+                            <TableSkeleton rows={8} cols={skel.cols ?? 5} classic tdStyle={lvTd()} rowHeight={skel.rowHeight} fillHeight={skel.fillHeight} />
                         ) : (
-                            <TableEmpty colSpan={5} classic tdStyle={lvTd(true)} message={emptyMessage} />
+                            <TableEmpty colSpan={5} tdStyle={lvTd()} message={emptyMessage} />
                         ))}
                         {filtered.map((c: any, idx: number) => (
-                            <tr key={c.id} style={lvRow(true, idx)}>
-                                <td style={lvTd(true)}>
+                            <tr key={c.id} style={lvRow(idx)}>
+                                <td style={lvTd()}>
                                     <SwatchBox bands={colorBandsFor(c.code)} classic title={bandTitle(c.code)} style={{ width: 44 }} />
                                 </td>
-                                <td style={lvTd(true)}>
+                                <td style={lvTd()}>
                                     <CodeChip code={c.code} classic tone="accent" title={codeTitle(c)} />
                                 </td>
-                                <td style={{ ...lvTd(true), textAlign: 'center' }}>{c.usage_count || 0}</td>
-                                <td style={lvTd(true)}><StatusChip status={c.status} /></td>
-                                <td style={{ ...lvTd(true), borderRight: 'none', textAlign: 'right' }}>
+                                <td style={{ ...lvTd(), textAlign: 'center' }}>{c.usage_count || 0}</td>
+                                <td style={lvTd()}><StatusChip status={c.status} /></td>
+                                <td style={{ ...lvTd(), borderRight: 'none', textAlign: 'right' }}>
                                     {canManage && <MenuTriggerButton classic onClick={e => menuToggle(c.id, e)} />}
                                 </td>
                             </tr>
@@ -334,8 +334,8 @@ export default function ComboLibraryView({
                 modeless
                 footer={
                     <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
-                        <button type="button" className={XP_BTN} style={lvBtn(true)} onClick={() => setIsModalOpen(false)}>Cancel</button>
-                        <button type="submit" form="combo-form" className={XP_BTN} style={lvPrimaryBtn(true)}>
+                        <button type="button" className={XP_BTN} style={lvBtn()} onClick={() => setIsModalOpen(false)}>Cancel</button>
+                        <button type="submit" form="combo-form" className={XP_BTN} style={lvPrimaryBtn()}>
                             {editing ? 'Save' : 'Create'}
                         </button>
                     </div>
@@ -344,21 +344,21 @@ export default function ComboLibraryView({
                 <form id="combo-form" onSubmit={handleSubmit}>
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
                         <div>
-                            <label style={lvLabel(true)}>Code *</label>
-                            <input value={form.code} onChange={e => setForm({ ...form, code: e.target.value })} style={lvInput(true)} required />
+                            <label style={lvLabel()}>Code *</label>
+                            <input value={form.code} onChange={e => setForm({ ...form, code: e.target.value })} style={lvInput()} required />
                         </div>
                         <div>
-                            <label style={lvLabel(true)}>Name *</label>
-                            <input value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} style={lvInput(true)} required />
+                            <label style={lvLabel()}>Name *</label>
+                            <input value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} style={lvInput()} required />
                         </div>
                         <div style={{ gridColumn: '1 / -1' }}>
-                            <label style={lvLabel(true)}>Description</label>
-                            <textarea value={form.description} onChange={e => setForm({ ...form, description: e.target.value })} rows={3} placeholder="Weave / yarn-color pattern notes…" style={{ ...lvInput(true), height: 'auto', resize: 'vertical' }} />
+                            <label style={lvLabel()}>Description</label>
+                            <textarea value={form.description} onChange={e => setForm({ ...form, description: e.target.value })} rows={3} placeholder="Weave / yarn-color pattern notes…" style={{ ...lvInput(), height: 'auto', resize: 'vertical' }} />
                         </div>
                         {editing && (
                             <div>
-                                <label style={lvLabel(true)}>Status</label>
-                                <select value={form.status} onChange={e => setForm({ ...form, status: e.target.value })} style={lvInput(true)}>
+                                <label style={lvLabel()}>Status</label>
+                                <select value={form.status} onChange={e => setForm({ ...form, status: e.target.value })} style={lvInput()}>
                                     <option value="active">active</option>
                                     <option value="archived">archived</option>
                                 </select>

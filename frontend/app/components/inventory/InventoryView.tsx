@@ -72,13 +72,13 @@ const ItemEventLogPanel = memo(({ state, userNameById, classic }: { state?: Item
             ) : logs.length === 0 ? (
                 <div style={{ color: '#888', padding: 6, fontFamily: xpFont, fontSize: 11, fontStyle: 'italic' }}>No events recorded for this item.</div>
             ) : (
-                <table style={lvSubTable(true)}>
+                <table style={lvSubTable()}>
                     <thead>
                         <tr>
-                            <th style={{ ...lvSubTh(true, true), width: 150 }}>Date / Time</th>
-                            <th style={{ ...lvSubTh(true, true), width: 130 }}>Action</th>
-                            <th style={{ ...lvSubTh(true, true), width: 140 }}>Performed by</th>
-                            <th style={lvSubTh(true, true)}>Description</th>
+                            <th style={{ ...lvSubTh(), width: 150 }}>Date / Time</th>
+                            <th style={{ ...lvSubTh(), width: 130 }}>Action</th>
+                            <th style={{ ...lvSubTh(), width: 140 }}>Performed by</th>
+                            <th style={lvSubTh()}>Description</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -88,17 +88,17 @@ const ItemEventLogPanel = memo(({ state, userNameById, classic }: { state?: Item
                             return (
                                 <React.Fragment key={log.id}>
                                     <tr
-                                        style={{ ...lvSubRow(true, i, { zebra: true }), cursor: hasChanges ? 'pointer' : 'default' }}
+                                        style={{ ...lvSubRow(i, { zebra: true }), cursor: hasChanges ? 'pointer' : 'default' }}
                                         onClick={() => hasChanges && setOpenChanges(open ? null : log.id)}
                                     >
-                                        <td style={{ ...lvSubTd(true, true), whiteSpace: 'nowrap' }}>{tzDateTime(log.timestamp)}</td>
-                                        <td style={lvSubTd(true, true)}>
+                                        <td style={{ ...lvSubTd(), whiteSpace: 'nowrap' }}>{tzDateTime(log.timestamp)}</td>
+                                        <td style={lvSubTd()}>
                                             <StatusChip status={log.action} title={String(log.action || '').replace(/_/g, ' ')} />
                                         </td>
-                                        <td style={lvSubTd(true, true)} title={log.user_id || undefined}>
+                                        <td style={lvSubTd()} title={log.user_id || undefined}>
                                             {userNameById[log.user_id] || (log.user_id ? `User ${String(log.user_id).split('-')[0]}` : 'System')}
                                         </td>
-                                        <td style={lvSubTd(true, true)}>
+                                        <td style={lvSubTd()}>
                                             {log.details || 'System activity'}
                                             {hasChanges && <i className={`bi bi-chevron-${open ? 'up' : 'down'}`} style={{ marginLeft: 6, fontSize: 9, color: '#0058e6'}} />}
                                         </td>
@@ -135,9 +135,9 @@ const InventoryRow = memo(({ item, rowIndex, isEditing, isSelected, isExpanded, 
     const rowBg = isSelected ? rowStateBg('selected', true)
         : isExpanded ? rowStateBg('expanded', true)
         : isEditing ? rowStateBg('highlighted', true)
-        : lvZebra(true, rowIndex);
+        : lvZebra(rowIndex);
 
-    const tdBase: React.CSSProperties = lvTdRuled(true);
+    const tdBase: React.CSSProperties = lvTdRuled();
 
     const categoryDisplay = item.category_path?.length ? item.category_path.join(' / ') : (item.category || '');
     const catStyle = getCategoryXPStyle(categoryDisplay);
@@ -152,10 +152,9 @@ const InventoryRow = memo(({ item, rowIndex, isEditing, isSelected, isExpanded, 
                 style={{ ...tdBase, width: LV_CHECK_COL_W, textAlign: 'center' }}
                 onClick={e => e.stopPropagation()}
             >
-                <RowCheckbox classic checked={isSelected} onChange={() => onToggleSelect(item.id)} label={item.code} />
+                <RowCheckbox checked={isSelected} onChange={() => onToggleSelect(item.id)} label={item.code} />
             </td>
             <ExpanderCell
-                classic
                 expanded={!!isExpanded}
                 onToggle={() => onToggleExpand(item)}
                 label="event log"
@@ -194,7 +193,7 @@ const InventoryRow = memo(({ item, rowIndex, isEditing, isSelected, isExpanded, 
                         >
                             ↖ {item.source_sample_code}{item.source_color_name ? ` · ${item.source_color_name}` : ''}
                         </a>) : (
-                    <Dash classic />
+                    <Dash />
                 )}
             </td>
             <td style={{ ...tdBase, width: '70px' }}>
@@ -210,7 +209,7 @@ const InventoryRow = memo(({ item, rowIndex, isEditing, isSelected, isExpanded, 
                     <span style={{ color: '#333', fontSize: '9px', whiteSpace: 'nowrap' }}>
                             {item.weight_per_unit} {item.weight_unit || ''}
                         </span>) : (
-                    <Dash classic />
+                    <Dash />
                 )}
             </td>
             <td
@@ -723,9 +722,9 @@ export default function InventoryView({
       flexShrink: 0,
   };
 
-  const xpTableHeader: React.CSSProperties = lvThead(true);
+  const xpTableHeader: React.CSSProperties = lvThead();
 
-  const xpThCell: React.CSSProperties = lvThSticky(true);
+  const xpThCell: React.CSSProperties = lvThSticky();
 
   const xpStatusBar: React.CSSProperties = {
       background: 'linear-gradient(to bottom, #e8e6df, #d5d3cc)',
@@ -1200,7 +1199,7 @@ export default function InventoryView({
                     style={xpTableHeader}
                   >
                     <th style={{ ...xpThCell, width: LV_CHECK_COL_W, textAlign: 'center' }}>
-                        <SelectAllCheckbox classic allSelected={sel.allPageSelected} someSelected={sel.someSelected} onChange={sel.togglePage} />
+                        <SelectAllCheckbox allSelected={sel.allPageSelected} someSelected={sel.someSelected} onChange={sel.togglePage} />
                     </th>
                     <th style={{ ...xpThCell, width: LV_EXPANDER_COL_W }}></th>
                     <SortableTh sort={sort} colKey="code" onSort={toggleSort} style={{ ...xpThCell, width: '110px' }}>{t('item_code')}</SortableTh>

@@ -181,7 +181,7 @@ export default function ColorsVariantView({ values, canCreate, canEdit, canDelet
         <div style={{ display: 'flex', flexDirection: 'column', height: '100%', minHeight: 0 }}>
             <div style={{ ...rowStripe, padding: '4px 8px', display: 'flex', gap: 6, alignItems: 'center', flexShrink: 0 }}>
                 <SearchField classic value={search} onChange={handleSearchChange} placeholder="Search color…" width={220} />
-                <span style={lvSep(true)} />
+                <span style={lvSep()} />
                 <FilterChipBar
                     classic
                     value={view}
@@ -200,7 +200,7 @@ export default function ColorsVariantView({ values, canCreate, canEdit, canDelet
                 </ToolbarCount>
                 {canCreate && (
                     <>
-                        <span style={lvSep(true)} />
+                        <span style={lvSep()} />
                         <ToolbarButton classic tone="create" icon="bi-plus-lg" onClick={openCreate}>New Color</ToolbarButton>
                     </>
                 )}
@@ -216,7 +216,7 @@ export default function ColorsVariantView({ values, canCreate, canEdit, canDelet
                         options={familyOptions}
                         style={{ flexWrap: 'wrap' }}
                     />
-                    <span style={lvSep(true)} />
+                    <span style={lvSep()} />
                     {/* Turns the mostly-empty swatch column into a work queue instead of
                         a defect: 124 of 139 values have no saved hex. */}
                     <FilterChipBar
@@ -274,24 +274,24 @@ export default function ColorsVariantView({ values, canCreate, canEdit, canDelet
                     </div>
                 ) : (
                     <table style={{ width: '100%', borderCollapse: 'collapse', background: '#fff' }}>
-                        <thead style={lvThead(true, true)}>
+                        <thead style={lvThead()}>
                             <tr>
-                                <th style={{ ...lvTh(true), width: 130 }}>Swatch</th>
-                                <th style={{ ...lvTh(true), width: 110 }}>Family</th>
-                                <th style={lvTh(true)}>Color</th>
-                                <th style={{ ...lvTh(true), width: 120, textAlign: 'right', borderRight: 'none' }}>Actions</th>
+                                <th style={{ ...lvTh(), width: 130 }}>Swatch</th>
+                                <th style={{ ...lvTh(), width: 110 }}>Family</th>
+                                <th style={lvTh()}>Color</th>
+                                <th style={{ ...lvTh(), width: 120, textAlign: 'right', borderRight: 'none' }}>Actions</th>
                             </tr>
                         </thead>
                         <tbody>
                             {filtered.length === 0 && (
-                                <TableEmpty colSpan={4} classic tdStyle={lvTd(true)} message={emptyMessage} />
+                                <TableEmpty colSpan={4} tdStyle={lvTd()} message={emptyMessage} />
                             )}
                             {filtered.map((v, idx) => {
                                 const derived = v.hex ? null : derivedColorHex(v.value);
                                 const fam = colorFamilyOf(v.value);
                                 return (
-                                    <tr key={v.id} style={lvRow(true, idx)}>
-                                        <td style={lvTd(true)}>
+                                    <tr key={v.id} style={lvRow(idx)}>
+                                        <td style={lvTd()}>
                                             <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                                                 {editingId === v.id ? (
                                                     <SwatchPicker hex={editHex} onChange={setEditHex} size={18} />
@@ -312,21 +312,21 @@ export default function ColorsVariantView({ values, canCreate, canEdit, canDelet
                                                 )}
                                             </div>
                                         </td>
-                                        <td style={{ ...lvTd(true), fontSize: 11, color: '#444' }}>
+                                        <td style={{ ...lvTd(), fontSize: 11, color: '#444' }}>
                                             {COLOR_FAMILY_META[fam].label}
                                         </td>
-                                        <td style={lvTd(true)}>
+                                        <td style={lvTd()}>
                                             {editingId === v.id ? (
                                                 <input
                                                     autoFocus
-                                                    style={{ ...lvInput(true), width: 240 }}
+                                                    style={{ ...lvInput(), width: 240 }}
                                                     value={editText}
                                                     onChange={e => setEditText(e.target.value)}
                                                     onKeyDown={e => { if (e.key === 'Enter') commitEdit(v); if (e.key === 'Escape') setEditingId(null); }}
                                                 />
                                             ) : v.value}
                                         </td>
-                                        <td style={{ ...lvTd(true), borderRight: 'none', textAlign: 'right' }}>
+                                        <td style={{ ...lvTd(), borderRight: 'none', textAlign: 'right' }}>
                                             {(canEdit || canDelete) && (
                                                 <div style={{ display: 'flex', gap: 3, justifyContent: 'flex-end', alignItems: 'center' }}>
                                                     {editingId === v.id ? (
@@ -375,8 +375,8 @@ export default function ColorsVariantView({ values, canCreate, canEdit, canDelet
                 modeless
                 footer={
                     <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
-                        <button type="button" className={XP_BTN} style={lvBtn(true)} onClick={() => setIsModalOpen(false)}>Cancel</button>
-                        <button type="submit" className={XP_BTN} form="color-variant-form" style={lvPrimaryBtn(true)} disabled={saving}>{saving ? 'Creating…' : 'Create'}</button>
+                        <button type="button" className={XP_BTN} style={lvBtn()} onClick={() => setIsModalOpen(false)}>Cancel</button>
+                        <button type="submit" className={XP_BTN} form="color-variant-form" style={lvPrimaryBtn()} disabled={saving}>{saving ? 'Creating…' : 'Create'}</button>
                     </div>
                 }
             >
@@ -384,17 +384,17 @@ export default function ColorsVariantView({ values, canCreate, canEdit, canDelet
                     <FormError classic>{formError}</FormError>
                     <FormSection title="Color" classic>
                         <div>
-                            <label style={lvLabel(true)}>Name *</label>
+                            <label style={lvLabel()}>Name *</label>
                             <input
                                 autoFocus
                                 value={newValue}
                                 onChange={e => { setNewValue(e.target.value); if (formError) setFormError(''); }}
-                                style={lvInput(true, { width: '100%', ...(formError ? { borderColor: '#8e0000' } : {}) })}
+                                style={lvInput({ width: '100%', ...(formError ? { borderColor: '#8e0000' } : {}) })}
                                 required
                             />
                         </div>
                         <div style={{ marginTop: 10 }}>
-                            <label style={lvLabel(true)}>Swatch</label>
+                            <label style={lvLabel()}>Swatch</label>
                             <SwatchPicker hex={newHex} onChange={setNewHex} />
                         </div>
                     </FormSection>
@@ -409,8 +409,8 @@ export default function ColorsVariantView({ values, canCreate, canEdit, canDelet
                 modeless
                 footer={
                     <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
-                        <button type="button" className={XP_BTN} style={lvBtn(true)} onClick={() => setEditModal(null)}>Cancel</button>
-                        <button type="submit" className={XP_BTN} form="color-variant-edit-form" style={lvPrimaryBtn(true)}>Save</button>
+                        <button type="button" className={XP_BTN} style={lvBtn()} onClick={() => setEditModal(null)}>Cancel</button>
+                        <button type="submit" className={XP_BTN} form="color-variant-edit-form" style={lvPrimaryBtn()}>Save</button>
                     </div>
                 }
             >
@@ -418,17 +418,17 @@ export default function ColorsVariantView({ values, canCreate, canEdit, canDelet
                     <FormError classic>{formError}</FormError>
                     <FormSection title="Color" classic>
                         <div>
-                            <label style={lvLabel(true)}>Name *</label>
+                            <label style={lvLabel()}>Name *</label>
                             <input
                                 autoFocus
                                 value={editText}
                                 onChange={e => { setEditText(e.target.value); if (formError) setFormError(''); }}
-                                style={lvInput(true, { width: '100%', ...(formError ? { borderColor: '#8e0000' } : {}) })}
+                                style={lvInput({ width: '100%', ...(formError ? { borderColor: '#8e0000' } : {}) })}
                                 required
                             />
                         </div>
                         <div style={{ marginTop: 10 }}>
-                            <label style={lvLabel(true)}>Swatch</label>
+                            <label style={lvLabel()}>Swatch</label>
                             <SwatchPicker hex={editHex} onChange={setEditHex} />
                         </div>
                     </FormSection>

@@ -292,11 +292,11 @@ export default function SalesOrderView({ items, attributes, boms, salesOrders, p
       flexShrink: 0,
   };
 
-  const xpTableHeader: React.CSSProperties = lvThead(true);
+  const xpTableHeader: React.CSSProperties = lvThead();
 
-  const xpThCell: React.CSSProperties = lvThSticky(true);
+  const xpThCell: React.CSSProperties = lvThSticky();
 
-  const tdBase: React.CSSProperties = lvTdRuled(true);
+  const tdBase: React.CSSProperties = lvTdRuled();
 
 
   const [newSO, setNewSO] = useState({
@@ -1933,7 +1933,7 @@ In stock ${fmtQty(f.baseAvailable)}${bu} · Shipped ${fmtQty(f.baseShipped)}${bu
                    {/* Lines list */}
                    <div>
                        {newSO.lines.map((line: any, idx) => (
-                           <div key={idx} style={{display:'flex',justifyContent:'space-between',alignItems:'center',padding:'3px 6px',background:lvZebra(true,idx),border:'1px solid #c0bdb5',marginBottom:2,fontFamily:xpFont,fontSize:'11px',flexWrap:'wrap' as const,gap:4}}>
+                           <div key={idx} style={{display:'flex',justifyContent:'space-between',alignItems:'center',padding:'3px 6px',background:lvZebra(idx),border:'1px solid #c0bdb5',marginBottom:2,fontFamily:xpFont,fontSize:'11px',flexWrap:'wrap' as const,gap:4}}>
                                <div>
                                    <span style={{fontWeight:'bold'}}>{getItemName(line.item_id, line.item_name)}</span>
                                    <CodeChip code={getItemCode(line.item_id, line.item_code)} classic tier={2} style={{ marginLeft: 8 }} />
@@ -2123,7 +2123,7 @@ In stock ${fmtQty(f.baseAvailable)}${bu} · Shipped ${fmtQty(f.baseShipped)}${bu
                        </thead>
                        <tbody ref={listBodyRef}>
                            {pageOrders.flatMap((so: any, rowIndex: number) => {
-                               const rowBg = lvZebra(true, rowIndex);
+                               const rowBg = lvZebra(rowIndex);
                                const soLines: any[] = so.lines;
                                const lineCount = Math.max(soLines.length, 1);
 

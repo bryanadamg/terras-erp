@@ -391,7 +391,7 @@ export default function BookingStockInfoModal({ isOpen, onClose }: {
                 />
             }
             footer={
-                <button type="button" className={XP_BTN} style={lvBtn(true)} onClick={onClose}>{doc.close}</button>
+                <button type="button" className={XP_BTN} style={lvBtn()} onClick={onClose}>{doc.close}</button>
             }
         >
             <div style={bodyStyle}>

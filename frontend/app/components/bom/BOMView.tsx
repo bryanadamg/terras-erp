@@ -486,28 +486,28 @@ export default function BOMView({
                                     ) : (
                                     <>
                                     <div style={{ flex: 1, overflowY: 'auto' }}>
-                                        <table style={{ ...lvSubTable(true), border: 'none' }}>
+                                        <table style={{ ...lvSubTable(), border: 'none' }}>
                                             <thead>
                                                 <tr>
-                                                    <th style={lvThBanded(true)}>Item</th>
-                                                    <th style={{ ...lvThBanded(true), textAlign: 'right' }}>Required</th>
-                                                    {beamBom && <th style={{ ...lvThBanded(true), textAlign: 'right' }}>Ends</th>}
-                                                    <th style={lvThBanded(true)}>Attributes</th>
+                                                    <th style={lvThBanded()}>Item</th>
+                                                    <th style={{ ...lvThBanded(), textAlign: 'right' }}>Required</th>
+                                                    {beamBom && <th style={{ ...lvThBanded(), textAlign: 'right' }}>Ends</th>}
+                                                    <th style={lvThBanded()}>Attributes</th>
                                                 </tr>
                                             </thead>
                                             <tbody>
                                                 {lines.map((line: any, i: number) => {
                                                     const isSubBOM = !!findSubBOM(line);
                                                     return (
-                                                        <tr key={line.id} style={lvSubRow(true, i, { zebra: true })}>
-                                                            <td style={lvSubTd(true)}>
+                                                        <tr key={line.id} style={lvSubRow(i, { zebra: true })}>
+                                                            <td style={lvSubTd()}>
                                                                 <CodeChip code={line.item_code} classic tone="accent" />
                                                                 <span style={{ marginLeft: 5, color: '#000' }}>{line.item_name}</span>
                                                                 {isSubBOM && (
                                                                     <span style={{ borderRadius: CHIP_RADIUS, marginLeft: 5, background: '#e6eeff', border: '1px solid #0058e6', color: '#003080', fontSize: 9, padding: '0 3px', fontWeight: 'bold' }}>Sub</span>
                                                                 )}
                                                             </td>
-                                                            <td style={{ ...lvSubTd(true), textAlign: 'right', whiteSpace: 'nowrap' }}>
+                                                            <td style={{ ...lvSubTd(), textAlign: 'right', whiteSpace: 'nowrap' }}>
                                                                 {(line.percentage || 0) > 0 ? (
                                                                     <span style={{ background: '#b46a00', color: '#fff', fontSize: 9, padding: '1px 5px', fontWeight: 'bold' }}>{line.percentage}%</span>
                                                                 ) : (line.qty || 0) > 0 ? (
@@ -518,13 +518,13 @@ export default function BOMView({
                                                                 )}
                                                             </td>
                                                             {beamBom && (
-                                                                <td style={{ ...lvSubTd(true), textAlign: 'right', whiteSpace: 'nowrap' }}>
+                                                                <td style={{ ...lvSubTd(), textAlign: 'right', whiteSpace: 'nowrap' }}>
                                                                     {(Number(line.qty) || 0) > 0
                                                                         ? <span style={{ borderRadius: CHIP_RADIUS, background: '#e6f4ea', border: '1px solid #4caf50', color: '#1a6e2e', fontWeight: 'bold', fontSize: 10, padding: '0 5px' }}>{Math.round(Number(line.qty))} ends</span>
                                                                         : <span style={{ color: '#888' }}>—</span>}
                                                                 </td>
                                                             )}
-                                                            <td style={lvSubTd(true)}>
+                                                            <td style={lvSubTd()}>
                                                                 {(line.attribute_value_ids || []).length > 0 ? renderVariantChips(line.attribute_value_ids) : <span style={{ color: '#888' }}>—</span>}
                                                             </td>
                                                         </tr>
@@ -533,7 +533,7 @@ export default function BOMView({
                                             </tbody>
                                         </table>
                                     </div>
-                                    <div style={{ ...lvSubTd(true), flexShrink: 0, background: 'linear-gradient(to bottom, #f5f4ef, #e0dfd8)', borderTop: '1px solid #808080', fontSize: 10, color: '#444', textAlign: 'right' }}>
+                                    <div style={{ ...lvSubTd(), flexShrink: 0, background: 'linear-gradient(to bottom, #f5f4ef, #e0dfd8)', borderTop: '1px solid #808080', fontSize: 10, color: '#444', textAlign: 'right' }}>
                                         {lines.length} component{lines.length !== 1 ? 's' : ''}
                                         {hasPct && (
                                             <> · Total %: <span style={{ fontWeight: 'bold', color: Math.abs(totalPct - 100) < 0.01 ? '#004400' : '#880000' }}>{totalPct.toFixed(1)}%</span></>
@@ -710,7 +710,7 @@ export default function BOMView({
                                                 </thead>
                                                 <tbody>
                                                     {(displayBOM.sizes || []).map((s: any, i: number) => (
-                                                        <tr key={i} style={{ background: lvZebra(true, i) }}>
+                                                        <tr key={i} style={{ background: lvZebra(i) }}>
                                                             <td style={{ padding: '1px 4px 1px 0', fontWeight: 'bold', fontSize: 10 }}>{s.size_name || s.label || `Row ${i + 1}`}</td>
                                                             <td style={{ padding: '1px 4px', textAlign: 'right', fontSize: 10, background: '#f8f7f2', border: '1px solid #e0ddd4' }}>{s.target_measurement != null ? s.target_measurement : '—'}</td>
                                                             <td style={{ padding: '1px 4px', textAlign: 'right', fontSize: 10, background: '#f8f7f2', border: '1px solid #e0ddd4', borderLeft: 'none' }}>{s.measurement_min != null ? s.measurement_min : '—'}</td>
@@ -832,9 +832,9 @@ export default function BOMView({
                                 style={{ width: '100%', borderCollapse: 'collapse', fontFamily: xpFont, fontSize: '11px', background: '#fff' }}
                             >
                                 <thead style={LV_STICKY_THEAD}>
-                                    <tr style={{ ...lvThead(true), fontSize: '10px', fontWeight: 'bold', color: '#000', letterSpacing: '0.2px' }}>
+                                    <tr style={{ ...lvThead(), fontSize: '10px', fontWeight: 'bold', color: '#000', letterSpacing: '0.2px' }}>
                                         <th style={{ width: LV_CHECK_COL_W, padding: '4px 6px', borderRight: '1px solid #b0aaa0' }}>
-                                            <SelectAllCheckbox classic allSelected={sel.allPageSelected} someSelected={sel.someSelected} onChange={sel.togglePage} />
+                                            <SelectAllCheckbox allSelected={sel.allPageSelected} someSelected={sel.someSelected} onChange={sel.togglePage} />
                                         </th>
                                         <th style={{ width: LV_EXPANDER_COL_W, padding: '4px 6px', borderRight: '1px solid #b0aaa0' }} />
                                         <th style={{ padding: '4px 6px', borderRight: '1px solid #b0aaa0' }}>BOM Code</th>
@@ -851,7 +851,7 @@ export default function BOMView({
                                     {boms.length === 0 && bomLoading ? (
                                         <TableSkeleton rows={8} cols={skel.cols ?? 9} classic rowHeight={skel.rowHeight} fillHeight={skel.fillHeight} />
                                     ) : boms.length === 0 ? (
-                                        <TableEmpty colSpan={9} classic
+                                        <TableEmpty colSpan={9}
                                             message={bomSearch.trim()
                                                 ? 'No BOMs match your search.'
                                                 : 'No BOMs yet. Click Create Recipe to get started.'} />
@@ -860,7 +860,7 @@ export default function BOMView({
                                             const isExpanded = expandedBOMRows[bom.id];
                                             const rowBg = sel.isSelected(bom) ? rowStateBg('selected', true)
                                                 : isExpanded ? rowStateBg('expanded', true)
-                                                : lvZebra(true, index);
+                                                : lvZebra(index);
 
                                             return (
                                                 <>
@@ -869,9 +869,9 @@ export default function BOMView({
                                                     style={{ background: rowBg, borderBottom: isExpanded ? 'none' : '1px solid #c0bdb5' }}
                                                 >
                                                     <td style={{ padding: '7px 6px', borderRight: '1px solid #c0bdb5', verticalAlign: 'middle' }}>
-                                                        <RowCheckbox classic checked={sel.isSelected(bom)} onChange={() => sel.toggle(bom)} label={`BOM ${bom.code}`} />
+                                                        <RowCheckbox checked={sel.isSelected(bom)} onChange={() => sel.toggle(bom)} label={`BOM ${bom.code}`} />
                                                     </td>
-                                                    <ExpanderCell classic expanded={!!isExpanded} onToggle={() => toggleBOMRow(bom.id, bom.item_id)} label="BOM details"
+                                                    <ExpanderCell expanded={!!isExpanded} onToggle={() => toggleBOMRow(bom.id, bom.item_id)} label="BOM details"
                                                         tdStyle={{ borderRight: '1px solid #c0bdb5' }} />
                                                     {/* BOM Code — click to expand */}
                                                     <td
@@ -906,7 +906,7 @@ export default function BOMView({
                                                         {(bom.attribute_value_ids || []).length > 0 ? (
                                                             renderVariantChips(bom.attribute_value_ids)
                                                         ) : (
-                                                            <Dash classic />
+                                                            <Dash />
                                                         )}
                                                     </td>
                                                     {/* Machine — hue-coded by work-center type */}
@@ -914,7 +914,7 @@ export default function BOMView({
                                                         {bom.work_center_name ? (
                                                             <span style={{ ...workCenterChipStyle(bom.work_center_type, bom.work_center_name), borderWidth: 1, borderStyle: 'solid', fontSize: 9, padding: '1px 6px', whiteSpace: 'nowrap', fontFamily: xpFont, fontWeight: 'bold' }}>{bom.work_center_name}</span>
                                                         ) : (
-                                                            <Dash classic />
+                                                            <Dash />
                                                         )}
                                                     </td>
                                                     {/* Smart stats — glyph shows only when it carries signal */}

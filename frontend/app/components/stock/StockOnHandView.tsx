@@ -556,7 +556,7 @@ export default function StockOnHandView({ locations, attributes, categories, ite
     const xpSelect: React.CSSProperties = { ...xpInput, height: '22px' };
     // Heavier divider than lvTh's: this is a 12-column grid and the verticals are
     // what keep a row's figures tracking across it.
-    const xpTableHeader: React.CSSProperties = lvThSticky(true, { borderRight: '1px solid #a8a29a' });
+    const xpTableHeader: React.CSSProperties = lvThSticky({ borderRight: '1px solid #a8a29a' });
     const colDivider: React.CSSProperties = { borderRight: '1px solid #c0bdb5' };
     const xpBtn = (extra: React.CSSProperties = {}): React.CSSProperties => xpBtnBase(extra);
     const xpSep: React.CSSProperties = {
@@ -615,7 +615,6 @@ export default function StockOnHandView({ locations, attributes, categories, ite
         const rk = rowKey(bal);
         const checkCell = (
             <RowCheckbox
-                classic
                 checked={sel.isSelectedKey(rk)}
                 disabled={!movable(bal)}
                 title={movable(bal) ? 'Select for a combined move' : 'Nothing on hand to move'}
@@ -628,7 +627,7 @@ export default function StockOnHandView({ locations, attributes, categories, ite
             <tr key={`${bal.item_id}-${bal.location_id}-${bal.batch_key}-${i}`}
                 className={undefined}
                 title={qStatus ? `Lot is QC ${qStatus} — physically in stock but excluded from netting and consumption pickers` : undefined}
-                style={{ background: sel.isSelectedKey(rk) ? rowStateBg('selected', true) : qStatus ? (i % 2 === 0 ? '#fdf0f0' : '#f8e8e8') : lvZebra(true, i), borderBottom: '1px solid #c0bdb5' }}>
+                style={{ background: sel.isSelectedKey(rk) ? rowStateBg('selected', true) : qStatus ? (i % 2 === 0 ? '#fdf0f0' : '#f8e8e8') : lvZebra(i), borderBottom: '1px solid #c0bdb5' }}>
                 <td className={undefined} style={{ padding: '4px 6px', textAlign: 'center', ...colDivider }}>{checkCell}</td>
                 <td style={{ padding: '4px 8px', fontFamily: xpFont, overflow: 'hidden', ...colDivider }}>
                     <div title={bal.item_name}
@@ -686,7 +685,7 @@ export default function StockOnHandView({ locations, attributes, categories, ite
                             )}
                         </div>
                     ) : (
-                        <Dash classic />
+                        <Dash />
                     )}
                 </td>
                 <td style={{ padding: '4px 8px', fontFamily: xpFont, fontSize: '11px', overflow: 'hidden', ...colDivider }}>
@@ -700,7 +699,7 @@ export default function StockOnHandView({ locations, attributes, categories, ite
                             MO {bal.mo_code}
                         </Chip>
                     ) : (
-                        <Dash classic />
+                        <Dash />
                     )}
                 </td>
                 <td style={{ padding: '4px 8px', fontFamily: xpFont, fontSize: '11px', overflow: 'hidden', ...colDivider }}>
@@ -714,7 +713,7 @@ export default function StockOnHandView({ locations, attributes, categories, ite
                             WO {bal.wo_code}
                         </Chip>
                     ) : (
-                        <Dash classic />
+                        <Dash />
                     )}
                 </td>
                 <td style={{ padding: '4px 8px', ...colDivider }}>
@@ -751,7 +750,7 @@ export default function StockOnHandView({ locations, attributes, categories, ite
                                 <Chip key={vid} classic size="xs">{getAttrValueName(vid)}</Chip>
                             ))}
                         {!bal.size_label && !getComboLabel(bal) && !colorInfo && !ownColorAttr && !bal.attribute_value_ids?.length && (
-                            <Dash classic />
+                            <Dash />
                         )}
                     </div>
                 </td>
@@ -764,7 +763,7 @@ export default function StockOnHandView({ locations, attributes, categories, ite
                 </td>
                 <td className={undefined} style={{ padding: '4px 8px', fontFamily: xpFont, fontSize: '10px', whiteSpace: 'nowrap', ...colDivider }}>
                     {pkgParts(bal).length === 0
-                        ? <Dash classic />
+                        ? <Dash />
                         : pkgParts(bal).map((p, idx) => (
                             <span key={idx}
                                 style={{ color: p.n < 0 ? '#c00000' : '#5a3c00' }}
@@ -781,7 +780,7 @@ export default function StockOnHandView({ locations, attributes, categories, ite
                             {bal.batch_notes}
                         </span>
                     ) : (
-                        <Dash classic />
+                        <Dash />
                     )}
                 </td>
                 <td style={{ padding: '2px 6px', whiteSpace: 'nowrap' }}>
@@ -1237,7 +1236,7 @@ export default function StockOnHandView({ locations, attributes, categories, ite
                         <thead className={undefined}>
                             <tr>
                                 <th className={undefined} style={{ ...xpTableHeader, width: COL_W.check, textAlign: 'center' }}>
-                                    <SelectAllCheckbox classic allSelected={sel.allPageSelected} someSelected={sel.someSelected}
+                                    <SelectAllCheckbox allSelected={sel.allPageSelected} someSelected={sel.someSelected}
                                         disabled={!sel.pageEligibleCount} onChange={sel.togglePage}
                                         title={sel.allPageSelected ? 'Clear selection on this page' : 'Select every movable row on this page'} />
                                 </th>

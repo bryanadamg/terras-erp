@@ -602,8 +602,8 @@ export default function WOCompletionModal({ mo, onClose, onSaved, workOrder }: W
                                             </div>
                                             <div style={{ border: '1px solid #7f9db9', background: '#fff', maxHeight: 150, overflowY: 'auto' }}>
                                                 {(batchesByItem[itemId] || []).map((b: any) => (
-                                                    <label key={b.id} style={{ ...lvPickerRow(true, selSet.has(b.id)), fontSize: 10 }}>
-                                                        <RowCheckbox classic checked={selSet.has(b.id)} label={b.batch_number || 'lot'}
+                                                    <label key={b.id} style={{ ...lvPickerRow(selSet.has(b.id)), fontSize: 10 }}>
+                                                        <RowCheckbox checked={selSet.has(b.id)} label={b.batch_number || 'lot'}
                                                             onChange={() => toggle(b.id, !selSet.has(b.id))} />
                                                         {/* Same lot identity chips as the staging picker: two lots of the
                                                             same item differ only by size / combo / shade. */}

@@ -137,8 +137,8 @@ export default function WorkOrderListView({
 }: Props) {
     const router = useRouter();
     // Dense: the completion log shares its row with the other detail panes.
-    const subTh = lvSubTh(true, true);
-    const subTd = lvSubTd(true, true);
+    const subTh = lvSubTh();
+    const subTd = lvSubTd();
     const { hasPermission, hasAnyPermission } = useUser();
     const canManage = hasAnyPermission('work_order.edit', 'work_order.delete', 'work_order.print_card', 'work_order.stage');
     const { formatCustom: tzFmt } = useTimezone();
@@ -520,7 +520,7 @@ export default function WorkOrderListView({
                                 <div style={{ color: '#aaa', fontStyle: 'italic', fontSize: 9 }}>No entries yet.</div>
                             ) : (
                                 <div style={{ maxHeight: 200, overflowY: 'auto' }}>
-                                    <table style={{ ...lvSubTable(true), border: 'none' }}>
+                                    <table style={{ ...lvSubTable(), border: 'none' }}>
                                         <thead>
                                             <tr>
                                                 <th style={{ ...subTh, width: 110 }}>Date / Time</th>
@@ -538,7 +538,7 @@ export default function WorkOrderListView({
                                                     <React.Fragment key={c.id || ci}>
                                                         {/* No zebra — the rejected-red fill is the only
                                                             meaningful row colour here. */}
-                                                        <tr style={lvSubRow(true, ci, { fill: c.rejected ? '#fbe4e4' : undefined })}>
+                                                        <tr style={lvSubRow(ci, { fill: c.rejected ? '#fbe4e4' : undefined })}>
                                                             <td style={{ ...subTd, color: '#666', whiteSpace: 'nowrap' }}>{fmtDateTime(c.created_at)}</td>
                                                             <td
                                                                 style={{ ...subTd, fontWeight: 'bold', color: c.rejected ? '#900' : '#000080', textAlign: 'right', textDecoration: c.rejected ? 'line-through' : 'none' }}
@@ -627,9 +627,9 @@ export default function WorkOrderListView({
 
     // Full cell borders rather than lvTh/lvTd's single rule: 15 columns of dates
     // and quantities, where the verticals are what keep a row readable.
-    const thStyle: React.CSSProperties = lvThSticky(true, { border: '1px solid #808080' });
+    const thStyle: React.CSSProperties = lvThSticky({ border: '1px solid #808080' });
 
-    const tdBase: React.CSSProperties = { ...lvTd(true), border: '1px solid #c0bdb5' };
+    const tdBase: React.CSSProperties = { ...lvTd(), border: '1px solid #c0bdb5' };
 
     return (
         <>
@@ -735,7 +735,7 @@ export default function WorkOrderListView({
                             <thead>
                                 <tr>
                                     <th style={{ ...thStyle, width: 28, padding: '3px 6px' }}>
-                                        <SelectAllCheckbox classic allSelected={sel.allPageSelected} someSelected={sel.someSelected} onChange={sel.togglePage} title="Select all filtered" />
+                                        <SelectAllCheckbox allSelected={sel.allPageSelected} someSelected={sel.someSelected} onChange={sel.togglePage} title="Select all filtered" />
                                     </th>
                                     <th style={{ ...thStyle, width: 22, padding: '3px 4px' }} />
                                     {([['Root MO', 'rootmo'], ['#', 'sequence'], ['Name', 'name'], ['Product', 'product'], ['Variant', ''], ['Work Center', 'wc'], ['Target / Done', ''], ['Target Start', 'tstart'], ['Target End', 'tend'], ['Actual Start', 'astart'], ['Actual End', 'aend'], ['Created', 'created'], ['Status', 'status'], ['', '']] as [string, string][]).map(([h, key], i) => (
@@ -758,7 +758,7 @@ export default function WorkOrderListView({
                                     </tr>
                                 ))}
                                 {sortedWOs.map((wo, idx) => {
-                                    const rowBg = lvZebra(true, idx);
+                                    const rowBg = lvZebra(idx);
                                     const isEditing = editId === wo.id;
                                     const isExpanded = expandedWOId === wo.id;
 
@@ -823,9 +823,9 @@ export default function WorkOrderListView({
                                                 onClick={() => setExpandedWOId(prev => prev === wo.id ? null : wo.id)}
                                             >
                                                 <td style={{ ...tdBase, padding: '3px 6px', width: 24 }} onClick={e => e.stopPropagation()}>
-                                                    <RowCheckbox classic checked={sel.isSelected(wo)} onChange={() => sel.toggle(wo)} label={`work order ${wo.name || wo.id}`} />
+                                                    <RowCheckbox checked={sel.isSelected(wo)} onChange={() => sel.toggle(wo)} label={`work order ${wo.name || wo.id}`} />
                                                 </td>
-                                                <ExpanderCell classic expanded={isExpanded} onToggle={() => setExpandedWOId(prev => prev === wo.id ? null : wo.id)} tdStyle={tdBase} tdClassName={''} label="work order detail" />
+                                                <ExpanderCell expanded={isExpanded} onToggle={() => setExpandedWOId(prev => prev === wo.id ? null : wo.id)} tdStyle={tdBase} tdClassName={''} label="work order detail" />
                                                 {/* Root MO — top of the parent/pegging chain, not this WO's own MO.
                                                     A shared component MO feeds several roots; the first is shown and
                                                     the rest sit behind a +N marker. */}

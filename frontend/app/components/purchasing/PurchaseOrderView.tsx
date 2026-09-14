@@ -126,17 +126,17 @@ export default function PurchaseOrderView({ items, itemResults, onSearchItems, a
       flexShrink: 0,
   };
 
-  const xpTableHeader: React.CSSProperties = lvThead(true);
+  const xpTableHeader: React.CSSProperties = lvThead();
 
-  const xpThCell: React.CSSProperties = lvThSticky(true);
+  const xpThCell: React.CSSProperties = lvThSticky();
 
-  const tdBase: React.CSSProperties = lvTdRuled(true);
+  const tdBase: React.CSSProperties = lvTdRuled();
 
   // Order-lines / receipt-history mini-tables inside the expanded row. These used
   // to be a classic-only const pair plus Bootstrap classNames for modern; both
   // themes now come from the shared sub-table helpers.
-  const subTh = lvSubTh(true);
-  const subTd = lvSubTd(true);
+  const subTh = lvSubTh();
+  const subTd = lvSubTd();
 
   const freshPO = () => ({
       po_number: '',
@@ -601,7 +601,7 @@ export default function PurchaseOrderView({ items, itemResults, onSearchItems, a
                    </div>
                    <div>
                        {newPO.lines.map((line: any, idx) => (
-                           <div key={idx} style={{display:'flex',justifyContent:'space-between',alignItems:'center',padding:'3px 6px',background:lvZebra(true,idx),border:'1px solid #c0bdb5',marginBottom:2,fontFamily:xpFont,fontSize:'11px'}}>
+                           <div key={idx} style={{display:'flex',justifyContent:'space-between',alignItems:'center',padding:'3px 6px',background:lvZebra(idx),border:'1px solid #c0bdb5',marginBottom:2,fontFamily:xpFont,fontSize:'11px'}}>
                                <div>
                                    <span style={{fontWeight:'bold'}}>{getItemName(line.item_id)}</span>
                                    <span style={{color:'#555',marginLeft:8,fontSize:'10px'}}>{getItemCode(line.item_id)}</span>
@@ -691,7 +691,7 @@ export default function PurchaseOrderView({ items, itemResults, onSearchItems, a
                        </thead>
                        <tbody>
                            {receiptTarget.lines.map((line: any, idx: number) => (
-                               <tr key={line.id} style={{background:lvZebra(true,idx),borderBottom:'1px solid #d0cdc8'}}>
+                               <tr key={line.id} style={{background:lvZebra(idx),borderBottom:'1px solid #d0cdc8'}}>
                                    <td style={tdBase}>
                                        <div style={{fontWeight:'bold'}}>{line.item_name || getItemName(line.item_id)}</div>
                                        <div style={{fontSize:'10px',color:'#666'}}>{line.item_code || getItemCode(line.item_id)}</div>
@@ -828,9 +828,9 @@ export default function PurchaseOrderView({ items, itemResults, onSearchItems, a
                                <>
                                <tr
                                    key={po.id}
-                                   style={{ background: expandedRows[po.id] ? rowStateBg('expanded', true) : lvZebra(true, rowIndex), borderBottom: expandedRows[po.id] ? 'none' : '1px solid #c0bdb5' }}
+                                   style={{ background: expandedRows[po.id] ? rowStateBg('expanded', true) : lvZebra(rowIndex), borderBottom: expandedRows[po.id] ? 'none' : '1px solid #c0bdb5' }}
                                >
-                                   <ExpanderCell classic expanded={!!expandedRows[po.id]} label="items & receipts"
+                                   <ExpanderCell expanded={!!expandedRows[po.id]} label="items & receipts"
                                        onToggle={() => setExpandedRows(prev => ({ ...prev, [po.id]: !prev[po.id] }))}
                                        tdStyle={tdBase} tdClassName={''} />
                                    <td style={tdBase}>
@@ -894,8 +894,8 @@ export default function PurchaseOrderView({ items, itemResults, onSearchItems, a
                                        <td colSpan={9} style={{ padding: 0 }}>
                                            <ExpandedRowPanel classic style={{ padding: '6px 16px 8px 20px', fontFamily: xpFont, fontSize: '11px' }}>
                                            <div style={{ marginBottom: 10 }}>
-                                               <div style={lvSubCaption(true)}>Order Lines</div>
-                                               <table style={{ ...lvSubTable(true), maxWidth: 560 }}>
+                                               <div style={lvSubCaption()}>Order Lines</div>
+                                               <table style={{ ...lvSubTable(), maxWidth: 560 }}>
                                                    <thead>
                                                        <tr>
                                                            <th style={subTh}>Item</th>
@@ -938,10 +938,10 @@ export default function PurchaseOrderView({ items, itemResults, onSearchItems, a
                                                const numR = { textAlign: 'right' as const };
                                                return (
                                                    <div>
-                                                       <div style={lvSubCaption(true)}>
+                                                       <div style={lvSubCaption()}>
                                                            Receipt History — {(po.receipts || []).length} {(po.receipts || []).length === 1 ? 'delivery' : 'deliveries'}
                                                        </div>
-                                                       <table style={{ ...lvSubTable(true), maxWidth: 760 }}>
+                                                       <table style={{ ...lvSubTable(), maxWidth: 760 }}>
                                                            <thead>
                                                                <tr>
                                                                    <th style={subTh}>Date</th>

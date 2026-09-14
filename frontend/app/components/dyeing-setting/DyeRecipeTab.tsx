@@ -468,7 +468,7 @@ export default function DyeRecipeTab({ items, attributes, authFetch, initialColo
     // Table header cells build on the shared listViewTheme `lvTh` so nested recipe
     // tables match the library tables; classic adds the XP thead gradient/underline
     // that lvTh leaves to the parent thead.
-    const thStyle = (extra?: React.CSSProperties): React.CSSProperties => ({ ...lvTh(true), ...lvThead(true), ...extra });
+    const thStyle = (extra?: React.CSSProperties): React.CSSProperties => ({ ...lvTh(), ...lvThead(), ...extra });
 
     // Expandable-row detail: full recipe breakdown (chemical lines, wash baths,
     // finishing, attribute matches) shown inline under the table row.
@@ -476,8 +476,8 @@ export default function DyeRecipeTab({ items, attributes, authFetch, initialColo
         // Dense inline panel — matches WorkOrderListView's expanded-row skin
         // (flat single-tone columns, tiny uppercase headers, no card chrome).
         // Dense sub-table: it occupies one column of the three-pane grid below.
-        const subTh = lvSubTh(true, true);
-        const subTd = lvSubTd(true, true);
+        const subTh = lvSubTh();
+        const subTd = lvSubTd();
         const panelStyle: React.CSSProperties = {
             display: 'grid', gridTemplateColumns: '260px minmax(180px, 1fr) 260px',
             border: '1px solid #7f9db9',
@@ -537,7 +537,7 @@ export default function DyeRecipeTab({ items, attributes, authFetch, initialColo
                         <div style={emptyStyle}>No chemical lines defined.</div>
                     ) : (
                         <div style={{ maxHeight: 200, overflowY: 'auto' }}>
-                            <table style={{ ...lvSubTable(true), border: 'none' }}>
+                            <table style={{ ...lvSubTable(), border: 'none' }}>
                                 <thead>
                                     <tr>
                                         <th style={{ ...subTh, width: 20 }}>#</th>
@@ -555,7 +555,7 @@ export default function DyeRecipeTab({ items, attributes, authFetch, initialColo
                                         const rate = line.qty_per_liter ?? line.qty_per_100kg ?? null;
                                         const rateUnit = line.uom_name || (line.qty_per_liter != null ? 'g/L' : line.qty_per_100kg != null ? '/100kg' : '—');
                                         return (
-                                            <tr key={idx} style={lvSubRow(true, idx)}>
+                                            <tr key={idx} style={lvSubRow(idx)}>
                                                 <td style={{ ...subTd, color: '#666' }}>{idx + 1}</td>
                                                 <td style={subTd}>
                                                     <span style={{ borderRadius: CHIP_RADIUS,
@@ -619,7 +619,7 @@ export default function DyeRecipeTab({ items, attributes, authFetch, initialColo
                 </ToolbarCount>
                 {canManage && (
                     <>
-                        <span style={lvSep(true)} />
+                        <span style={lvSep()} />
                         <ToolbarButton classic tone="create" icon="bi-plus-lg" onClick={openCreate}>New Recipe</ToolbarButton>
                     </>
                 )}
@@ -628,25 +628,25 @@ export default function DyeRecipeTab({ items, attributes, authFetch, initialColo
             {/* Table */}
             <div style={{ flex: 1, minHeight: 0, background: '#fff', overflow: 'auto' }}>
                 <table style={{ width: '100%', borderCollapse: 'collapse', background: '#fff' }}>
-                    <thead style={lvThead(true, true)}>
+                    <thead style={lvThead()}>
                         <tr>
-                            <th style={{ ...lvTh(true), width: 30 }}></th>
-                            <th style={{ ...lvTh(true), width: 150 }}>Code</th>
-                            <th style={{ ...lvTh(true), width: 130 }}>Color Code</th>
-                            <th style={{ ...lvTh(true), width: 150 }}>Color Variant</th>
-                            <th style={lvTh(true)}>Name</th>
-                            <th style={{ ...lvTh(true), width: 150 }}>Color Standard</th>
-                            <th style={{ ...lvTh(true), width: 110 }}>Substrate</th>
-                            <th style={{ ...lvTh(true), width: 55, textAlign: 'center' }}>Lines</th>
-                            <th style={{ ...lvTh(true), width: 80 }}>Status</th>
-                            <th style={{ ...lvTh(true), width: 44, textAlign: 'right', borderRight: 'none' }}></th>
+                            <th style={{ ...lvTh(), width: 30 }}></th>
+                            <th style={{ ...lvTh(), width: 150 }}>Code</th>
+                            <th style={{ ...lvTh(), width: 130 }}>Color Code</th>
+                            <th style={{ ...lvTh(), width: 150 }}>Color Variant</th>
+                            <th style={lvTh()}>Name</th>
+                            <th style={{ ...lvTh(), width: 150 }}>Color Standard</th>
+                            <th style={{ ...lvTh(), width: 110 }}>Substrate</th>
+                            <th style={{ ...lvTh(), width: 55, textAlign: 'center' }}>Lines</th>
+                            <th style={{ ...lvTh(), width: 80 }}>Status</th>
+                            <th style={{ ...lvTh(), width: 44, textAlign: 'right', borderRight: 'none' }}></th>
                         </tr>
                     </thead>
                     <tbody ref={listBodyRef}>
                         {recipes.length === 0 && (loading ? (
-                            <TableSkeleton rows={8} cols={skel.cols ?? 10} classic tdStyle={lvTd(true)} rowHeight={skel.rowHeight} fillHeight={skel.fillHeight} />
+                            <TableSkeleton rows={8} cols={skel.cols ?? 10} classic tdStyle={lvTd()} rowHeight={skel.rowHeight} fillHeight={skel.fillHeight} />
                         ) : (
-                            <TableEmpty colSpan={10} classic tdStyle={lvTd(true)} message="No recipes found." />
+                            <TableEmpty colSpan={10} tdStyle={lvTd()} message="No recipes found." />
                         ))}
                         {recipes.map((recipe: any, idx: number) => {
                             const rid = String(recipe.id);
@@ -654,12 +654,12 @@ export default function DyeRecipeTab({ items, attributes, authFetch, initialColo
                             const lineCount = (recipe.lines || []).length;
                             return (
                                 <React.Fragment key={rid}>
-                                    <tr style={{ ...lvRow(true, idx), ...(expanded ? { background: rowStateBg('expanded', true) } : {}), cursor: 'pointer' }} onClick={() => toggleExpand(rid)}>
-                                        <ExpanderCell classic expanded={expanded} onToggle={() => toggleExpand(rid)} label="recipe detail" />
-                                        <td style={lvTd(true)}>
+                                    <tr style={{ ...lvRow(idx), ...(expanded ? { background: rowStateBg('expanded', true) } : {}), cursor: 'pointer' }} onClick={() => toggleExpand(rid)}>
+                                        <ExpanderCell expanded={expanded} onToggle={() => toggleExpand(rid)} label="recipe detail" />
+                                        <td style={lvTd()}>
                                             <CodeChip code={recipe.code} classic tone="accent" />
                                         </td>
-                                        <td style={lvTd(true)}>
+                                        <td style={lvTd()}>
                                             {recipe.color_code ? (
                                                 <span
                                                     onClick={e => { e.stopPropagation(); router.push(`/colors?search=${encodeURIComponent(recipe.color_code)}`); }}
@@ -670,19 +670,19 @@ export default function DyeRecipeTab({ items, attributes, authFetch, initialColo
                                                 </span>
                                             ) : <span style={{ color: '#aaa' }}>—</span>}
                                         </td>
-                                        <td style={lvTd(true)}>
+                                        <td style={lvTd()}>
                                             {recipe.color_variant_label ? (
                                                 <ColorSwatchChip label={recipe.color_variant_label} classic hex={recipe.color_variant_hex} />
                                             ) : <span style={{ color: '#aaa' }}>—</span>}
                                         </td>
-                                        <td style={lvTd(true)}>{recipe.name}</td>
-                                        <td style={lvTd(true)}>{recipe.color_standard || <span style={{ color: '#aaa' }}>—</span>}</td>
-                                        <td style={lvTd(true)}>{recipe.substrate_type || <span style={{ color: '#aaa' }}>—</span>}</td>
-                                        <td style={{ ...lvTd(true), textAlign: 'center' }}>{lineCount}</td>
-                                        <td style={lvTd(true)}>
+                                        <td style={lvTd()}>{recipe.name}</td>
+                                        <td style={lvTd()}>{recipe.color_standard || <span style={{ color: '#aaa' }}>—</span>}</td>
+                                        <td style={lvTd()}>{recipe.substrate_type || <span style={{ color: '#aaa' }}>—</span>}</td>
+                                        <td style={{ ...lvTd(), textAlign: 'center' }}>{lineCount}</td>
+                                        <td style={lvTd()}>
                                             <StatusChip status={recipe.is_active !== false ? 'active' : 'inactive'} />
                                         </td>
-                                        <td style={{ ...lvTd(true), borderRight: 'none', textAlign: 'right' }} onClick={e => e.stopPropagation()}>
+                                        <td style={{ ...lvTd(), borderRight: 'none', textAlign: 'right' }} onClick={e => e.stopPropagation()}>
                                             <div style={{ display: 'flex', gap: 3, justifyContent: 'flex-end', alignItems: 'center' }}>
                                                 <MenuTriggerButton classic onClick={e => menuToggle(rid, e)} />
                                             </div>
@@ -756,7 +756,7 @@ export default function DyeRecipeTab({ items, attributes, authFetch, initialColo
                         panel only asks for the color plus recipe-specific fields. */}
                     <FormSection title="Recipe Info" classic>
                         <div style={{ marginBottom: 8 }}>
-                            <label style={lvLabel(true)}>
+                            <label style={lvLabel()}>
                                 Library Color <span style={{ color: 'red'}}>*</span>
                             </label>
                             <SearchableSelect
@@ -772,7 +772,7 @@ export default function DyeRecipeTab({ items, attributes, authFetch, initialColo
                         {form.color_id && (
                             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px 12px', marginBottom: 8 }}>
                                 <div>
-                                    <label style={lvLabel(true)}>Recipe Code</label>
+                                    <label style={lvLabel()}>Recipe Code</label>
                                     <div style={{ display: 'flex', gap: 4 }}>
                                         <input
                                             readOnly
@@ -789,7 +789,7 @@ export default function DyeRecipeTab({ items, attributes, authFetch, initialColo
                                     </div>
                                 </div>
                                 <div>
-                                    <label style={lvLabel(true)}>Color Standard</label>
+                                    <label style={lvLabel()}>Color Standard</label>
                                     <input
                                         readOnly
                                         style={{ ...inputStyle(true), width: '100%', boxSizing: 'border-box', background: '#ece9d8', color: '#333'}}
@@ -800,7 +800,7 @@ export default function DyeRecipeTab({ items, attributes, authFetch, initialColo
                         )}
                         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr auto', gap: '6px 12px' }}>
                             <div>
-                                <label style={lvLabel(true)}>Substrate Type</label>
+                                <label style={lvLabel()}>Substrate Type</label>
                                 <input
                                     style={{ ...inputStyle(true), width: '100%', boxSizing: 'border-box' }}
                                     value={form.substrate_type}
@@ -813,7 +813,7 @@ export default function DyeRecipeTab({ items, attributes, authFetch, initialColo
                                 propose the bath, which is what lets the Kartu Kerja print
                                 weighed grams for the g/L lines instead of bare rates. */}
                             <div>
-                                <label style={lvLabel(true)}>Liquor Ratio (1 : x)</label>
+                                <label style={lvLabel()}>Liquor Ratio (1 : x)</label>
                                 <input
                                     type="number" min="0" step="any"
                                     style={{ ...inputStyle(true), width: '100%', boxSizing: 'border-box' }}
@@ -836,7 +836,7 @@ export default function DyeRecipeTab({ items, attributes, authFetch, initialColo
                             </div>
                         </div>
                         <div style={{ marginTop: 8 }}>
-                            <label style={lvLabel(true)}>Notes</label>
+                            <label style={lvLabel()}>Notes</label>
                             <textarea
                                 style={{
                                     ...inputStyle(true), height: 'auto', width: '100%',

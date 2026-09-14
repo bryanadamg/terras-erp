@@ -281,11 +281,11 @@ export default function SampleRequestView({ samples, customers, onCreateSample, 
       flexShrink: 0,
   };
 
-  const xpTableHeader: React.CSSProperties = lvThead(true, true);
+  const xpTableHeader: React.CSSProperties = lvThead();
 
-  const xpThCell: React.CSSProperties = lvTh(true);
+  const xpThCell: React.CSSProperties = lvTh();
 
-  const tdBase: React.CSSProperties = lvTdRuled(true);
+  const tdBase: React.CSSProperties = lvTdRuled();
 
   const today = new Date().toISOString().split('T')[0];
   const emptyForm = () => ({
@@ -1140,13 +1140,13 @@ export default function SampleRequestView({ samples, customers, onCreateSample, 
                                        background: s.id === highlightId ? rowStateBg('highlighted', true)
                                            : expandedIds.has(s.id) ? rowStateBg('expanded', true)
                                            : s.is_unread ? ('#dde8fb')
-                                           : lvZebra(true, rowIndex),
+                                           : lvZebra(rowIndex),
                                        borderBottom: '1px solid #c0bdb5',
                                        cursor: 'pointer',
                                        outline: s.id === highlightId ? '2px solid #f0a000' : undefined,
                                    }}
                                >
-                                   <ExpanderCell classic expanded={expandedIds.has(s.id)} onToggle={() => toggleExpand(s.id)} label="sample detail"
+                                   <ExpanderCell expanded={expandedIds.has(s.id)} onToggle={() => toggleExpand(s.id)} label="sample detail"
                                        tdStyle={tdBase} />
                                    <td style={tdBase}>
                                        <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>

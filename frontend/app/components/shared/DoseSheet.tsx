@@ -80,7 +80,7 @@ interface DoseSheetProps {
 export default function DoseSheet({ doses, emptyHint, classic, style }: DoseSheetProps) {
     const rows = doses?.lines ?? [];
     const noBath = !doses?.bath_volume_liters;
-    const th = lvThBanded(true);
+    const th = lvThBanded();
     return (
         <div style={{ ...panel(true), overflow: undefined, ...style }}>
             <div style={{ ...sectionHeader(true), display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
@@ -119,7 +119,7 @@ export default function DoseSheet({ doses, emptyHint, classic, style }: DoseShee
                             </thead>
                             <tbody>
                                 {rows.map((l, idx) => (
-                                    <tr key={l.line_id} style={{ borderBottom: '1px solid #e0e0e0', background: lvZebra(true, idx) }}>
+                                    <tr key={l.line_id} style={{ borderBottom: '1px solid #e0e0e0', background: lvZebra(idx) }}>
                                         <td style={{ padding: '2px 6px' }}>
                                             {l.item_name ?? l.item_code ?? <Dash />}
                                         </td>

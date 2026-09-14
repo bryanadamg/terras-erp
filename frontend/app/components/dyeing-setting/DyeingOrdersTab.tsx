@@ -42,11 +42,11 @@ const SHADE_COLORS: Record<string, { bg: string; color: string }> = {
 const SHADE_RANK = ['FAIL', 'REWORK', 'PASS'];
 
 const makeInput = (classic: boolean): React.CSSProperties =>
-    lvInput(true, { padding: '1px 4px', width: 'auto' });
+    lvInput({ padding: '1px 4px', width: 'auto' });
 const makeBtn = (classic: boolean): React.CSSProperties =>
-    lvBtn(true, 'default', { fontSize: 10, padding: '2px 8px' });
+    lvBtn('default', { fontSize: 10, padding: '2px 8px' });
 const makePrimaryBtn = (classic: boolean): React.CSSProperties =>
-    lvBtn(true, 'primary', { fontSize: 10, padding: '2px 8px' });
+    lvBtn('primary', { fontSize: 10, padding: '2px 8px' });
 
 /** Cutting an extra bath by hand. Runs are normally auto-created with the WO.
  *
@@ -417,16 +417,16 @@ export default function DyeingOrdersTab({ items, recipes, authFetch }: DyeingOrd
 
     // Full cell borders rather than lvTd's single rule — same call the Work Orders
     // list makes, and these rows carry the same density of dates and quantities.
-    const thStyle: React.CSSProperties = lvThSticky(true, { border: '1px solid #808080' });
-    const tdBase: React.CSSProperties = { ...lvTd(true), border: '1px solid #c0bdb5' };
+    const thStyle: React.CSSProperties = lvThSticky({ border: '1px solid #808080' });
+    const tdBase: React.CSSProperties = { ...lvTd(), border: '1px solid #c0bdb5' };
 
     const filterBarStyle: React.CSSProperties = {
         background: '#d4d0c8', borderBottom: '1px solid #808080',
         padding: '4px 8px', display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap',
     };
 
-    const subTh = lvSubTh(true, true);
-    const subTd = lvSubTd(true, true);
+    const subTh = lvSubTh();
+    const subTd = lvSubTd();
 
     // ── Expanded row: the supervisory detail ──────────────────────────────────
     const renderDetailPanel = (wo: any, sum: RunSummary) => {
@@ -513,7 +513,7 @@ export default function DyeingOrdersTab({ items, recipes, authFetch }: DyeingOrd
                                     <div style={{ color: '#aaa', fontStyle: 'italic', fontSize: 9 }}>No baths on this work order.</div>
                                 ) : (
                                     <div style={{ maxHeight: 240, overflowY: 'auto' }}>
-                                        <table style={{ ...lvSubTable(true), border: 'none' }}>
+                                        <table style={{ ...lvSubTable(), border: 'none' }}>
                                             <thead>
                                                 <tr>
                                                     <th style={{ ...subTh, width: 34 }}>Run</th>
@@ -542,10 +542,10 @@ export default function DyeingOrdersTab({ items, recipes, authFetch }: DyeingOrd
                                                     const bathClosed = !!run.completed_at;
                                                     const bathFilled = !!run.started_at || run.volume_air_liters != null;
                                                     return (
-                                                        <tr key={run.id} style={lvSubRow(true, ri)}>
+                                                        <tr key={run.id} style={lvSubRow(ri)}>
                                                             <td style={{ ...subTd, fontWeight: 'bold' }}>#{run.run_number}</td>
                                                             <td style={{ ...subTd, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={recipeName || undefined}>
-                                                                {recipeName ?? <Dash classic />}
+                                                                {recipeName ?? <Dash />}
                                                             </td>
                                                             <td style={{ ...subTd, textAlign: 'right' }}>{fmtDose(run.substrate_qty, 2)}</td>
                                                             <td style={{ ...subTd, textAlign: 'right', color: '#666' }}>{fmtDose(run.planned_volume_air_liters, 1)}</td>
@@ -557,7 +557,7 @@ export default function DyeingOrdersTab({ items, recipes, authFetch }: DyeingOrd
                                                             <td style={subTd}>
                                                                 {run.shade_result
                                                                     ? <ShadeChip shade={run.shade_result} classic />
-                                                                    : <Dash classic />}
+                                                                    : <Dash />}
                                                             </td>
                                                             <td style={{ ...subTd, color: '#666', whiteSpace: 'nowrap' }}>{fmtDateTime(run.started_at)}</td>
                                                             <td style={{ ...subTd, color: '#666', whiteSpace: 'nowrap' }}>{fmtDateTime(run.completed_at)}</td>
@@ -681,12 +681,12 @@ export default function DyeingOrdersTab({ items, recipes, authFetch }: DyeingOrd
                                 <React.Fragment key={id}>
                                     <tr
                                         style={{
-                                            background: isExpanded ? rowStateBg('expanded', true) : (lvZebra(true, idx)),
+                                            background: isExpanded ? rowStateBg('expanded', true) : (lvZebra(idx)),
                                             cursor: 'pointer',
                                         }}
                                         onClick={toggleRow}
                                     >
-                                        <ExpanderCell classic expanded={isExpanded} onToggle={toggleRow} tdStyle={tdBase} tdClassName={''} label="dyeing order detail" />
+                                        <ExpanderCell expanded={isExpanded} onToggle={toggleRow} tdStyle={tdBase} tdClassName={''} label="dyeing order detail" />
                                         <td style={{ ...tdBase, overflow: 'hidden' }} title={wo.code || wo.name}>
                                             <CodeChip
                                                 code={wo.code || wo.name}
@@ -1091,15 +1091,15 @@ export default function DyeingOrdersTab({ items, recipes, authFetch }: DyeingOrd
                                             const actual = Number(c.actual_qty ?? 0);
                                             const variance = actual - planned;
                                             return (
-                                                <tr key={c.id ?? idx} style={lvSubRow(true, idx)}>
+                                                <tr key={c.id ?? idx} style={lvSubRow(idx)}>
                                                     <td style={subTd}>
-                                                        {c.item_name ?? items.find(it => String(it.id) === String(c.item_id))?.name ?? <Dash classic />}
+                                                        {c.item_name ?? items.find(it => String(it.id) === String(c.item_id))?.name ?? <Dash />}
                                                     </td>
                                                     <td style={{ ...subTd, textAlign: 'right', whiteSpace: 'nowrap', color: '#666' }}>
                                                         {fmtDose(planned, 3)}{unit ? ` ${unit}` : ''}
                                                     </td>
                                                     <td style={{ ...subTd, textAlign: 'right', whiteSpace: 'nowrap', fontWeight: 'bold' }}>
-                                                        {actual > 0 ? `${fmtDose(actual, 3)}${unit ? ` ${unit}` : ''}` : <Dash classic />}
+                                                        {actual > 0 ? `${fmtDose(actual, 3)}${unit ? ` ${unit}` : ''}` : <Dash />}
                                                     </td>
                                                     <td style={{
                                                         ...subTd, textAlign: 'right', whiteSpace: 'nowrap',

@@ -216,11 +216,11 @@ export default function GroupCalendarModal({ isOpen, onClose, group, authFetch, 
                     <div style={{ display: 'flex', gap: 6, alignItems: 'flex-end', flexWrap: 'wrap', margin: '10px 0 6px' }}>
                         <div>
                             <FieldLabel classic>{t('date')}</FieldLabel>
-                            <input type="date" style={{ ...lvInput(true), width: 140 }} value={newHoliday} onChange={e => setNewHoliday(e.target.value)} />
+                            <input type="date" style={{ ...lvInput(), width: 140 }} value={newHoliday} onChange={e => setNewHoliday(e.target.value)} />
                         </div>
                         <div style={{ flex: 1, minWidth: 140 }}>
                             <FieldLabel classic>{t('note')}</FieldLabel>
-                            <input style={lvInput(true)} value={newHolidayNote} onChange={e => setNewHolidayNote(e.target.value)} placeholder="Cuti bersama" />
+                            <input style={lvInput()} value={newHolidayNote} onChange={e => setNewHolidayNote(e.target.value)} placeholder="Cuti bersama" />
                         </div>
                         <XPActionButton classic tone="neutral" icon="bi-plus-lg" label={t('add')} disabled={!newHoliday} onClick={addHoliday} />
                         <span style={{ width: 1, alignSelf: 'stretch', background: '#c8c4b8' }} />
@@ -232,17 +232,17 @@ export default function GroupCalendarModal({ isOpen, onClose, group, authFetch, 
                         <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                             <thead style={LV_STICKY_THEAD}>
                                 <tr style={{ background: '#d4d0c8' }}>
-                                    <th style={{ ...lvTh(true), width: 110 }}>{t('date')}</th>
-                                    <th style={lvTh(true)}>{t('note')}</th>
-                                    <th style={{ ...lvTh(true), width: 36, borderRight: 'none' }} />
+                                    <th style={{ ...lvTh(), width: 110 }}>{t('date')}</th>
+                                    <th style={lvTh()}>{t('note')}</th>
+                                    <th style={{ ...lvTh(), width: 36, borderRight: 'none' }} />
                                 </tr>
                             </thead>
                             <tbody>
                                 {holidays.map((h, idx) => (
-                                    <tr key={h.holiday_date} style={lvRow(true, idx)}>
-                                        <td style={lvTd(true)}>{h.holiday_date}</td>
-                                        <td style={lvTd(true)}>{h.note || ''}</td>
-                                        <td style={{ ...lvTd(true), borderRight: 'none', textAlign: 'right' }}>
+                                    <tr key={h.holiday_date} style={lvRow(idx)}>
+                                        <td style={lvTd()}>{h.holiday_date}</td>
+                                        <td style={lvTd()}>{h.note || ''}</td>
+                                        <td style={{ ...lvTd(), borderRight: 'none', textAlign: 'right' }}>
                                             <XPActionButton
                                                 classic
                                                 tone="danger"
@@ -254,7 +254,7 @@ export default function GroupCalendarModal({ isOpen, onClose, group, authFetch, 
                                     </tr>
                                 ))}
                                 {holidays.length === 0 && (
-                                    <tr><td colSpan={3} style={{ ...lvTd(true), borderRight: 'none', textAlign: 'center', padding: 12, color: '#888', fontStyle: 'italic' }}>
+                                    <tr><td colSpan={3} style={{ ...lvTd(), borderRight: 'none', textAlign: 'center', padding: 12, color: '#888', fontStyle: 'italic' }}>
                                         {loading ? t('loading') : t('no_holidays')}
                                     </td></tr>
                                 )}

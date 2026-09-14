@@ -557,7 +557,7 @@ export default function WorkCenterMonitorModal({ isOpen, onClose, workCenter, au
     // inside XP chrome — the one form in the monitor that ignored the classic theme.
     const inputProps = {
         className: undefined,
-        style: lvInput(true),
+        style: lvInput(),
     };
 
     // ── Tab bar ──────────────────────────────────────────────────────────────
@@ -1046,20 +1046,20 @@ export default function WorkCenterMonitorModal({ isOpen, onClose, workCenter, au
                                 <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                                     <thead>
                                         <tr style={{ background: '#d4d0c8' }}>
-                                            <th style={lvTh(true)}>{t('manufacturing_order')}</th>
-                                            <th style={lvTh(true)}>{t('item')}</th>
-                                            <th style={lvTh(true)}>{t('start')}</th>
-                                            <th style={lvTh(true)}>{t('end')}</th>
-                                            <th style={{ ...lvTh(true), textAlign: 'right' }}>{t('actual')}</th>
-                                            <th style={{ ...lvTh(true), textAlign: 'right' }}>{t('efficiency')}</th>
-                                            <th style={{ ...lvTh(true), borderRight: 'none' }}>{t('status')}</th>
+                                            <th style={lvTh()}>{t('manufacturing_order')}</th>
+                                            <th style={lvTh()}>{t('item')}</th>
+                                            <th style={lvTh()}>{t('start')}</th>
+                                            <th style={lvTh()}>{t('end')}</th>
+                                            <th style={{ ...lvTh(), textAlign: 'right' }}>{t('actual')}</th>
+                                            <th style={{ ...lvTh(), textAlign: 'right' }}>{t('efficiency')}</th>
+                                            <th style={{ ...lvTh(), borderRight: 'none' }}>{t('status')}</th>
                                         </tr>
                                     </thead>
                                     <tbody>
                                         {data.history.map((h: any, idx: number) => (
-                                            <tr key={h.id} style={lvRow(true, idx)}>
-                                                <td style={lvTd(true)}><CodeChip code={h.mo_code} classic /></td>
-                                                <td style={lvTd(true)}>
+                                            <tr key={h.id} style={lvRow(idx)}>
+                                                <td style={lvTd()}><CodeChip code={h.mo_code} classic /></td>
+                                                <td style={lvTd()}>
                                                     <div className="d-flex align-items-center gap-2">
                                                         <span>{h.item_code}</span>
                                                         <VariantChips
@@ -1074,14 +1074,14 @@ export default function WorkCenterMonitorModal({ isOpen, onClose, workCenter, au
                                                         />
                                                     </div>
                                                 </td>
-                                                <td style={lvTd(true)}>{fmtDate(h.start_date)}</td>
-                                                <td style={lvTd(true)}>{fmtDate(h.end_date)}</td>
-                                                <td style={{ ...lvTd(true), textAlign: 'right' }}>{fmt(h.actual_kg, 2)} kg</td>
-                                                <td style={{ ...lvTd(true), textAlign: 'right', color: h.on_target ? GREEN : RED, fontWeight: 600 }}>{fmt(h.efficiency_pct, 1)}%</td>
+                                                <td style={lvTd()}>{fmtDate(h.start_date)}</td>
+                                                <td style={lvTd()}>{fmtDate(h.end_date)}</td>
+                                                <td style={{ ...lvTd(), textAlign: 'right' }}>{fmt(h.actual_kg, 2)} kg</td>
+                                                <td style={{ ...lvTd(), textAlign: 'right', color: h.on_target ? GREEN : RED, fontWeight: 600 }}>{fmt(h.efficiency_pct, 1)}%</td>
                                                 {/* StatusChip in both themes — the modern branch used a
                                                     bootstrap badge, so a DONE run read gray here and green
                                                     everywhere else. */}
-                                                <td style={{ ...lvTd(true), borderRight: 'none' }}><StatusChip status={h.status} tint /></td>
+                                                <td style={{ ...lvTd(), borderRight: 'none' }}><StatusChip status={h.status} tint /></td>
                                             </tr>
                                         ))}
                                     </tbody>
@@ -1209,8 +1209,8 @@ export default function WorkCenterMonitorModal({ isOpen, onClose, workCenter, au
                                                 <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                                                     <tbody>
                                                         {freeBeams.map((b: any, idx: number) => (
-                                                            <tr key={b.batch_id} style={lvRow(true, idx)}>
-                                                                <td style={{ ...lvTd(true), fontWeight: 'bold', color: BLUE, whiteSpace: 'nowrap' }}>
+                                                            <tr key={b.batch_id} style={lvRow(idx)}>
+                                                                <td style={{ ...lvTd(), fontWeight: 'bold', color: BLUE, whiteSpace: 'nowrap' }}>
                                                                     {b.beam_number}
                                                                     {b.is_leftover && (
                                                                         <Chip
@@ -1222,11 +1222,11 @@ export default function WorkCenterMonitorModal({ isOpen, onClose, workCenter, au
                                                                         >{t('leftover_tag')}</Chip>
                                                                     )}
                                                                 </td>
-                                                                <td style={lvTd(true)} title={b.item_name || undefined}>{b.item_code || '—'}</td>
-                                                                <td style={lvTd(true)}>{b.ends ?? '—'}</td>
-                                                                <td style={{ ...lvTd(true), textAlign: 'right', whiteSpace: 'nowrap' }}>{fmt(b.remaining, 1)} kg</td>
-                                                                <td style={{ ...lvTd(true), color: '#666' }}>{b.location_code || '—'}</td>
-                                                                <td style={{ ...lvTd(true), borderRight: 'none', textAlign: 'right' }}>
+                                                                <td style={lvTd()} title={b.item_name || undefined}>{b.item_code || '—'}</td>
+                                                                <td style={lvTd()}>{b.ends ?? '—'}</td>
+                                                                <td style={{ ...lvTd(), textAlign: 'right', whiteSpace: 'nowrap' }}>{fmt(b.remaining, 1)} kg</td>
+                                                                <td style={{ ...lvTd(), color: '#666' }}>{b.location_code || '—'}</td>
+                                                                <td style={{ ...lvTd(), borderRight: 'none', textAlign: 'right' }}>
                                                                     <XPActionButton
                                                                         classic
                                                                         tone="primary"
@@ -1254,37 +1254,37 @@ export default function WorkCenterMonitorModal({ isOpen, onClose, workCenter, au
                                 <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                                     <thead>
                                         <tr style={{ background: '#d4d0c8' }}>
-                                            <th style={lvTh(true)}>{t('lot')}</th>
-                                            <th style={lvTh(true)}>{t('item')}</th>
-                                            <th style={lvTh(true)}>{t('ends')}</th>
-                                            <th style={{ ...lvTh(true), textAlign: 'right' }}>{t('remaining')}</th>
-                                            <th style={lvTh(true)}>{t('mounted')}</th>
-                                            <th style={{ ...lvTh(true), borderRight: 'none' }} />
+                                            <th style={lvTh()}>{t('lot')}</th>
+                                            <th style={lvTh()}>{t('item')}</th>
+                                            <th style={lvTh()}>{t('ends')}</th>
+                                            <th style={{ ...lvTh(), textAlign: 'right' }}>{t('remaining')}</th>
+                                            <th style={lvTh()}>{t('mounted')}</th>
+                                            <th style={{ ...lvTh(), borderRight: 'none' }} />
                                         </tr>
                                     </thead>
                                     <tbody>
                                         {mounts.map((m, idx) => (
                                             <React.Fragment key={m.id}>
-                                            <tr style={lvRow(true, idx)}>
-                                                <td style={{ ...lvTd(true), fontWeight: 'bold', color: BLUE }}>{m.beam_number || '—'}</td>
+                                            <tr style={lvRow(idx)}>
+                                                <td style={{ ...lvTd(), fontWeight: 'bold', color: BLUE }}>{m.beam_number || '—'}</td>
                                                 {/* The article gets its own column: a beam usually carries no
                                                     size, combo or shade at all, so its item code is the only
                                                     thing that says which warp is up. The identity chips ride
                                                     beside it for the beams whose producing MO did carry them
                                                     — same shape as the run-history Item column above. */}
-                                                <td style={lvTd(true)}>
+                                                <td style={lvTd()}>
                                                     <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap', minWidth: 0 }}>
                                                         <span title={m.item_name || undefined}>{m.item_code || '—'}</span>
                                                         <LotChips batch={m} />
                                                     </div>
                                                 </td>
-                                                <td style={lvTd(true)}>{m.ends ?? '—'}</td>
-                                                <td style={{ ...lvTd(true), textAlign: 'right' }}>{fmt(m.remaining, 1)} kg</td>
-                                                <td style={{ ...lvTd(true), color: '#666' }}>
+                                                <td style={lvTd()}>{m.ends ?? '—'}</td>
+                                                <td style={{ ...lvTd(), textAlign: 'right' }}>{fmt(m.remaining, 1)} kg</td>
+                                                <td style={{ ...lvTd(), color: '#666' }}>
                                                     {fmtDate(m.mounted_at)}
                                                     {m.mounted_by ? ` · ${m.mounted_by}` : ''}
                                                 </td>
-                                                <td style={{ ...lvTd(true), borderRight: 'none', textAlign: 'right' }}>
+                                                <td style={{ ...lvTd(), borderRight: 'none', textAlign: 'right' }}>
                                                     {canManage && unmountingId !== m.id && (
                                                         <XPActionButton
                                                             classic

@@ -714,7 +714,7 @@ export default function SettingsDatabaseTab() {
                                         {snapshots.map((s, i) => (
                                             <tr
                                                 key={i}
-                                                style={{ background: lvZebra(true, i), borderBottom: '1px solid #c0bdb5' }}
+                                                style={{ background: lvZebra(i), borderBottom: '1px solid #c0bdb5' }}
                                             >
                                                 <td style={tdBase}><CodeChip code={s.name} classic /></td>
                                                 <td style={tdBase}><StatusChip status={(s.label || 'manual').toUpperCase()} /></td>

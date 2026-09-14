@@ -947,7 +947,7 @@ export default function BatchesView({ items, locations, categories, workCenters,
 
   const xpTd = (alt: boolean): React.CSSProperties => ({
     border: '1px solid #c8c8c8', padding: '2px 6px',
-    background: lvZebra(true, alt ? 1 : 0), verticalAlign: 'middle',
+    background: lvZebra(alt ? 1 : 0), verticalAlign: 'middle',
   });
 
   const colSpan = 14; // Chevron, Lot Number, Item, Ends, Attributes, Origin, WO, MO, PR, Location, Remaining, Notes, Created, Actions
@@ -1006,38 +1006,38 @@ export default function BatchesView({ items, locations, categories, workCenters,
           {/* ── Table ── */}
           <div style={{ flex: 1, overflowY: 'auto', overflowX: 'auto', minHeight: 0, background: '#ffffff', scrollbarGutter: 'stable' } as React.CSSProperties}>
             <table style={xpTable}>
-              <thead style={lvThead(true, true)}>
+              <thead style={lvThead()}>
                 <tr>
-                  <th style={{ ...lvTh(true), width: 20 }}></th>
-                  <SortableTh sort={sort} colKey="lot" onSort={toggleSort} style={lvTh(true)}>Lot Number</SortableTh>
-                  <SortableTh sort={sort} colKey="product" onSort={toggleSort} style={lvTh(true)}>Item</SortableTh>
-                  <SortableTh sort={sort} colKey="ends" onSort={toggleSort} style={{ ...lvTh(true), textAlign: 'right' }}>Ends</SortableTh>
-                  <th style={{ ...lvTh(true), width: ATTRS_COL_W, maxWidth: ATTRS_COL_W }}>Attributes</th>
-                  <SortableTh sort={sort} colKey="origin" onSort={toggleSort} style={lvTh(true)}>Origin</SortableTh>
-                  <SortableTh sort={sort} colKey="wo" onSort={toggleSort} style={{ ...lvTh(true), width: ORIGIN_COL_W, maxWidth: ORIGIN_COL_W }}>WO</SortableTh>
-                  <SortableTh sort={sort} colKey="mo" onSort={toggleSort} style={{ ...lvTh(true), width: ORIGIN_COL_W, maxWidth: ORIGIN_COL_W }}>MO</SortableTh>
-                  <SortableTh sort={sort} colKey="pr" onSort={toggleSort} style={{ ...lvTh(true), width: ORIGIN_COL_W, maxWidth: ORIGIN_COL_W }}>PR</SortableTh>
-                  <SortableTh sort={sort} colKey="location" onSort={toggleSort} style={lvTh(true)}>Location</SortableTh>
-                  <SortableTh sort={sort} colKey="remaining" onSort={toggleSort} style={{ ...lvTh(true), textAlign: 'right' }}>Remaining</SortableTh>
-                  <SortableTh sort={sort} colKey="notes" onSort={toggleSort} style={lvTh(true)}>Notes</SortableTh>
-                  <SortableTh sort={sort} colKey="created" onSort={toggleSort} style={lvTh(true)}>Created</SortableTh>
-                  <th style={{ ...lvTh(true), borderRight: 'none' }}></th>
+                  <th style={{ ...lvTh(), width: 20 }}></th>
+                  <SortableTh sort={sort} colKey="lot" onSort={toggleSort} style={lvTh()}>Lot Number</SortableTh>
+                  <SortableTh sort={sort} colKey="product" onSort={toggleSort} style={lvTh()}>Item</SortableTh>
+                  <SortableTh sort={sort} colKey="ends" onSort={toggleSort} style={{ ...lvTh(), textAlign: 'right' }}>Ends</SortableTh>
+                  <th style={{ ...lvTh(), width: ATTRS_COL_W, maxWidth: ATTRS_COL_W }}>Attributes</th>
+                  <SortableTh sort={sort} colKey="origin" onSort={toggleSort} style={lvTh()}>Origin</SortableTh>
+                  <SortableTh sort={sort} colKey="wo" onSort={toggleSort} style={{ ...lvTh(), width: ORIGIN_COL_W, maxWidth: ORIGIN_COL_W }}>WO</SortableTh>
+                  <SortableTh sort={sort} colKey="mo" onSort={toggleSort} style={{ ...lvTh(), width: ORIGIN_COL_W, maxWidth: ORIGIN_COL_W }}>MO</SortableTh>
+                  <SortableTh sort={sort} colKey="pr" onSort={toggleSort} style={{ ...lvTh(), width: ORIGIN_COL_W, maxWidth: ORIGIN_COL_W }}>PR</SortableTh>
+                  <SortableTh sort={sort} colKey="location" onSort={toggleSort} style={lvTh()}>Location</SortableTh>
+                  <SortableTh sort={sort} colKey="remaining" onSort={toggleSort} style={{ ...lvTh(), textAlign: 'right' }}>Remaining</SortableTh>
+                  <SortableTh sort={sort} colKey="notes" onSort={toggleSort} style={lvTh()}>Notes</SortableTh>
+                  <SortableTh sort={sort} colKey="created" onSort={toggleSort} style={lvTh()}>Created</SortableTh>
+                  <th style={{ ...lvTh(), borderRight: 'none' }}></th>
                 </tr>
               </thead>
               <tbody ref={listBodyRef}>
                 {loading && <TableSkeleton rows={8} cols={skel.cols ?? colSpan} classic tdStyle={xpTd(false)} rowHeight={skel.rowHeight} fillHeight={skel.fillHeight} />}
                 {!loading && batches.length === 0 && (
-                  <TableEmpty colSpan={colSpan} classic tdStyle={xpTd(false)} message="No lots found." />
+                  <TableEmpty colSpan={colSpan} tdStyle={xpTd(false)} message="No lots found." />
                 )}
                 {sortedBatches.map((b, i) => (
                   <>
                     <tr
                       key={b.id}
-                      style={{ background: expandedRows[b.id] ? rowStateBg('expanded', true) : lvZebra(true, i), cursor: 'pointer', color: isDepleted(b) ? '#9a9a9a' : undefined, height: ROW_H }}
+                      style={{ background: expandedRows[b.id] ? rowStateBg('expanded', true) : lvZebra(i), cursor: 'pointer', color: isDepleted(b) ? '#9a9a9a' : undefined, height: ROW_H }}
                       onClick={() => toggleExpand(b)}
                       title={isDepleted(b) ? 'Depleted lot — 0 remaining' : 'Show lot lineage'}
                     >
-                      <ExpanderCell classic expanded={!!expandedRows[b.id]} onToggle={() => toggleExpand(b)} label="lot lineage"
+                      <ExpanderCell expanded={!!expandedRows[b.id]} onToggle={() => toggleExpand(b)} label="lot lineage"
                         tdStyle={{ ...xpTd(i % 2 === 1), background: expandedRows[b.id] ? rowStateBg('expanded', true) : undefined }} />
                       <td style={{ ...xpTd(i % 2 === 1), background: expandedRows[b.id] ? rowStateBg('expanded', true) : undefined }}>
                         <strong>{b.batch_number}</strong>

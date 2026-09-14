@@ -17,8 +17,8 @@ import { API_BASE, STATIC_BASE } from '../shared/apiBase';
 
 // ── XP style constants (consistent with DyeingSettingView) ──────────────────
 const modernFont = 'system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif';
-const xpInput = (classic: boolean): React.CSSProperties => lvInput(true, { width: 'auto' });
-const xpBtn = (classic: boolean, extra: React.CSSProperties = {}): React.CSSProperties => lvBtn(true, 'default', extra);
+const xpInput = (classic: boolean): React.CSSProperties => lvInput({ width: 'auto' });
+const xpBtn = (classic: boolean, extra: React.CSSProperties = {}): React.CSSProperties => lvBtn('default', extra);
 // Modern primary-button overrides (Submit/Create/Add/New). Merged on top of the secondary base above.
 const modernPrimaryBtn: React.CSSProperties = {
     fontWeight: 600, background: '#2563eb', color: '#fff', border: 'none',
@@ -523,25 +523,25 @@ export default function LabDipRequestView({
             {/* Table */}
             <div style={{ flex: 1, background: '#fff', overflowY: 'auto' }}>
                 <table style={{ width: '100%', borderCollapse: 'collapse', background: '#fff' }}>
-                    <thead style={lvThead(true, true)}>
+                    <thead style={lvThead()}>
                         <tr>
-                            <th style={{ ...lvTh(true), width: LV_EXPANDER_COL_W }} />
-                            <SortableTh sort={sort} colKey="code" onSort={toggleSort} style={{ ...lvTh(true), width: 140 }}>Request Code</SortableTh>
-                            <SortableTh sort={sort} colKey="customer" onSort={toggleSort} style={{ ...lvTh(true), width: 120 }}>Customer</SortableTh>
-                            <th style={lvTh(true)}>Items</th>
-                            <th style={{ ...lvTh(true), width: 140 }}>{colorsAttrName}</th>
-                            <SortableTh sort={sort} colKey="type" onSort={toggleSort} style={{ ...lvTh(true), width: 90 }}>Type</SortableTh>
-                            <SortableTh sort={sort} colKey="status" onSort={toggleSort} style={{ ...lvTh(true), width: 110 }}>Status</SortableTh>
-                            <th style={{ ...lvTh(true), width: 90 }}>Variants</th>
-                            <SortableTh sort={sort} colKey="updated" onSort={toggleSort} style={{ ...lvTh(true), width: 128 }}>Updated</SortableTh>
-                            <th style={{ ...lvTh(true), width: 44, textAlign: 'right' as const, borderRight: 'none' }}></th>
+                            <th style={{ ...lvTh(), width: LV_EXPANDER_COL_W }} />
+                            <SortableTh sort={sort} colKey="code" onSort={toggleSort} style={{ ...lvTh(), width: 140 }}>Request Code</SortableTh>
+                            <SortableTh sort={sort} colKey="customer" onSort={toggleSort} style={{ ...lvTh(), width: 120 }}>Customer</SortableTh>
+                            <th style={lvTh()}>Items</th>
+                            <th style={{ ...lvTh(), width: 140 }}>{colorsAttrName}</th>
+                            <SortableTh sort={sort} colKey="type" onSort={toggleSort} style={{ ...lvTh(), width: 90 }}>Type</SortableTh>
+                            <SortableTh sort={sort} colKey="status" onSort={toggleSort} style={{ ...lvTh(), width: 110 }}>Status</SortableTh>
+                            <th style={{ ...lvTh(), width: 90 }}>Variants</th>
+                            <SortableTh sort={sort} colKey="updated" onSort={toggleSort} style={{ ...lvTh(), width: 128 }}>Updated</SortableTh>
+                            <th style={{ ...lvTh(), width: 44, textAlign: 'right' as const, borderRight: 'none' }}></th>
                         </tr>
                     </thead>
                     <tbody ref={listBodyRef}>
                         {labDips.length === 0 && (loading ? (
-                            <TableSkeleton rows={8} cols={skel.cols ?? 10} classic tdStyle={lvTdRuled(true)} rowHeight={skel.rowHeight} fillHeight={skel.fillHeight} />
+                            <TableSkeleton rows={8} cols={skel.cols ?? 10} classic tdStyle={lvTdRuled()} rowHeight={skel.rowHeight} fillHeight={skel.fillHeight} />
                         ) : (
-                            <TableEmpty colSpan={10} classic tdStyle={lvTdRuled(true)}
+                            <TableEmpty colSpan={10} tdStyle={lvTdRuled()}
                                 message={hasActiveFilter ? 'No requests match the current filter.' : isYarn ? 'No yarn lab dip requests yet.' : 'No lab dip requests yet.'} />
                         ))}
                         {sorted.map((r: any, idx: number) => {
@@ -552,13 +552,13 @@ export default function LabDipRequestView({
                                     <tr id={`labdip-row-${r.id}`} onClick={() => toggleExpand(r.id)} style={{
                                         background: String(r.id) === String(openRequestId) ? rowStateBg('highlighted', true)
                                             : expandedIds.has(r.id) ? rowStateBg('expanded', true)
-                                            : lvZebra(true, idx),
+                                            : lvZebra(idx),
                                         borderBottom: '1px solid #c0bdb5',
                                         cursor: 'pointer',
                                     }}>
-                                        <ExpanderCell classic expanded={expandedIds.has(r.id)} onToggle={() => toggleExpand(r.id)} label="lab dip detail"
-                                            tdStyle={lvTdRuled(true)} />
-                                        <td style={lvTdRuled(true)}>
+                                        <ExpanderCell expanded={expandedIds.has(r.id)} onToggle={() => toggleExpand(r.id)} label="lab dip detail"
+                                            tdStyle={lvTdRuled()} />
+                                        <td style={lvTdRuled()}>
                                             <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
                                                 <div>
                                                     <CodeChip code={r.code} classic tone="accent" style={{ fontWeight: 'bold' }} />
@@ -566,10 +566,10 @@ export default function LabDipRequestView({
                                                 </div>
                                             </div>
                                         </td>
-                                        <td style={lvTdRuled(true)}>
+                                        <td style={lvTdRuled()}>
                                             {r.customer_id ? getCustomerName(r.customer_id) : <span style={{ fontSize: 9, color: '#555', fontStyle: 'italic' }}>Internal</span>}
                                         </td>
-                                        <td style={lvTdRuled(true)}>
+                                        <td style={lvTdRuled()}>
                                             {(() => {
                                                 const its = r.items || [];
                                                 if (!its.length) return <span style={{ fontSize: 9, color: '#888', fontStyle: 'italic' }}>—</span>;
@@ -588,7 +588,7 @@ export default function LabDipRequestView({
                                                 );
                                             })()}
                                         </td>
-                                        <td style={lvTdRuled(true)}>
+                                        <td style={lvTdRuled()}>
                                             {(() => {
                                                 const dips = (r.dips || []).filter((d: any) => !d.lab_dip_item_id);
                                                 if (!dips.length) return <span style={{ fontSize: 9, color: '#888', fontStyle: 'italic' }}>—</span>;
@@ -599,9 +599,9 @@ export default function LabDipRequestView({
                                                 );
                                             })()}
                                         </td>
-                                        <td style={lvTdRuled(true)}><span style={{ fontSize: 10}}>{r.request_type}</span></td>
-                                        <td style={lvTdRuled(true)}><span style={statusStyle(r.status, true)}>{r.status}</span></td>
-                                        <td style={lvTdRuled(true)}>
+                                        <td style={lvTdRuled()}><span style={{ fontSize: 10}}>{r.request_type}</span></td>
+                                        <td style={lvTdRuled()}><span style={statusStyle(r.status, true)}>{r.status}</span></td>
+                                        <td style={lvTdRuled()}>
                                             {total > 0 ? (
                                                 <span style={{ fontSize: 11}}>
                                                     <span style={{ fontWeight: 'bold', color: approved === total ? ('#1a6e1a') : approved > 0 ? ('#0047c8') : ('#777') }}>{approved}</span>
@@ -610,12 +610,12 @@ export default function LabDipRequestView({
                                                 </span>
                                             ) : <span style={{ fontSize: 9, color: '#888', fontStyle: 'italic' }}>—</span>}
                                         </td>
-                                        <td style={lvTdRuled(true)}>
+                                        <td style={lvTdRuled()}>
                                             <span style={{ fontSize: 10, color: '#333', whiteSpace: 'nowrap' as const }}>
                                                 {r.updated_at ? tzDateTime(r.updated_at) : (r.created_at ? tzDateTime(r.created_at) : '—')}
                                             </span>
                                         </td>
-                                        <td style={{ ...lvTdRuled(true), borderRight: 'none', textAlign: 'right' as const }} onClick={e => e.stopPropagation()}>
+                                        <td style={{ ...lvTdRuled(), borderRight: 'none', textAlign: 'right' as const }} onClick={e => e.stopPropagation()}>
                                             <div style={{ display: 'flex', gap: 3, justifyContent: 'flex-end', alignItems: 'center' }}>
                                                 {canManage && (
                                                 <MenuTriggerButton classic onClick={e => menuToggle(String(r.id), e)} />

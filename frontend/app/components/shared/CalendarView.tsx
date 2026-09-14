@@ -281,7 +281,7 @@ export default function CalendarView({
                     </div>
                 </div>
                 <div style={xpBevel}>
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', ...lvThead(true) }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', ...lvThead() }}>
                         {['S', 'M', 'T', 'W', 'T', 'F', 'S'].map((d, i) => (
                             <div key={i} style={{ textAlign: 'center', padding: compact ? '2px 0' : '3px 0', fontFamily: xpFont, fontSize: '10px', fontWeight: 'bold', color: '#000', borderRight: i < 6 ? '1px solid #b0aaa0' : 'none' }}>{d}</div>
                         ))}

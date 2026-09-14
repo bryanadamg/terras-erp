@@ -65,17 +65,17 @@ export default function UOMLibraryView({ uoms, canManage, onCreateUOM, onDeleteU
                 {canManage && (
                     <form onSubmit={handleCreate} style={{ display: 'flex', gap: 6 }}>
                         <input
-                            style={{ ...lvInput(true), width: 180 }}
+                            style={{ ...lvInput(), width: 180 }}
                             placeholder="e.g. Dozen, kg…"
                             value={newName}
                             onChange={e => setNewName(e.target.value)}
                         />
-                        <button type="submit" className={XP_BTN} style={lvPrimaryBtn(true)} disabled={isSubmitting}>
+                        <button type="submit" className={XP_BTN} style={lvPrimaryBtn()} disabled={isSubmitting}>
                             <i className="bi bi-plus-lg" /> {isSubmitting ? '…' : 'New UOM'}
                         </button>
                     </form>
                 )}
-                <span style={lvSep(true)} />
+                <span style={lvSep()} />
                 <SearchField classic value={search} onChange={setSearch} placeholder="Search units…" width={200} />
                 <ToolbarCount classic right>
                     {filtered.filter((u: any) => u.is_system).length} system &nbsp;+&nbsp; {filtered.filter((u: any) => !u.is_system).length} packaging
@@ -85,17 +85,17 @@ export default function UOMLibraryView({ uoms, canManage, onCreateUOM, onDeleteU
             {/* Table */}
             <div style={{ flex: 1, minHeight: 0, background: '#fff', overflow: 'auto' }}>
                 <table style={{ width: '100%', borderCollapse: 'collapse', background: '#fff' }}>
-                    <thead style={lvThead(true, true)}>
+                    <thead style={lvThead()}>
                         <tr>
-                            <th style={{ ...lvTh(true), width: 34 }}></th>
-                            <th style={{ ...lvTh(true), width: 160 }}>Name</th>
-                            <th style={lvTh(true)}>Conversions</th>
-                            <th style={{ ...lvTh(true), width: 70, textAlign: 'right', borderRight: 'none' }}></th>
+                            <th style={{ ...lvTh(), width: 34 }}></th>
+                            <th style={{ ...lvTh(), width: 160 }}>Name</th>
+                            <th style={lvTh()}>Conversions</th>
+                            <th style={{ ...lvTh(), width: 70, textAlign: 'right', borderRight: 'none' }}></th>
                         </tr>
                     </thead>
                     <tbody>
                         {sorted.length === 0 && (
-                            <tr><td colSpan={4} style={{ ...lvTd(true), textAlign: 'center', color: '#888', fontStyle: 'italic', padding: 20 }}>
+                            <tr><td colSpan={4} style={{ ...lvTd(), textAlign: 'center', color: '#888', fontStyle: 'italic', padding: 20 }}>
                                 No units defined.
                             </td></tr>
                         )}
@@ -104,9 +104,9 @@ export default function UOMLibraryView({ uoms, canManage, onCreateUOM, onDeleteU
                             const factors: any[] = uom.factors || [];
                             return (
                                 <React.Fragment key={uom.id}>
-                                    <tr style={{ ...lvRow(true, idx), cursor: 'pointer', background: isExpanded ? rowStateBg('expanded', true) : lvRow(true, idx).background }} onClick={() => toggleExpand(uom)}>
-                                        <ExpanderCell classic expanded={isExpanded} onToggle={() => toggleExpand(uom)} label="conversion factors" />
-                                        <td style={lvTd(true)}>
+                                    <tr style={{ ...lvRow(idx), cursor: 'pointer', background: isExpanded ? rowStateBg('expanded', true) : lvRow(idx).background }} onClick={() => toggleExpand(uom)}>
+                                        <ExpanderCell expanded={isExpanded} onToggle={() => toggleExpand(uom)} label="conversion factors" />
+                                        <td style={lvTd()}>
                                             <span style={{ fontWeight: 'bold', fontVariant: 'all-small-caps'}}>{uom.name}</span>
                                             {uom.is_system && (
                                                 <Chip classic size="xs" style={{ marginLeft: 6 }} tone={{
@@ -116,7 +116,7 @@ export default function UOMLibraryView({ uoms, canManage, onCreateUOM, onDeleteU
                                                 }}>SYSTEM</Chip>
                                             )}
                                         </td>
-                                        <td style={lvTd(true)}>
+                                        <td style={lvTd()}>
                                             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
                                                 {factors.length > 0 ? factors.map((f: any) => (
                                                     <Chip key={f.id} classic tone={{
@@ -131,7 +131,7 @@ export default function UOMLibraryView({ uoms, canManage, onCreateUOM, onDeleteU
                                                 )}
                                             </div>
                                         </td>
-                                        <td style={{ ...lvTd(true), borderRight: 'none', textAlign: 'right' }} onClick={e => e.stopPropagation()}>
+                                        <td style={{ ...lvTd(), borderRight: 'none', textAlign: 'right' }} onClick={e => e.stopPropagation()}>
                                             {canManage && !uom.is_system && (
                                                 <button title="Delete" onClick={() => handleDelete(uom)} style={{ background: 'none', border: '1px solid transparent', cursor: 'pointer', padding: '1px 4px', color: '#a00', fontSize: 13 }}>
                                                     <i className="bi bi-trash" />
@@ -148,13 +148,13 @@ export default function UOMLibraryView({ uoms, canManage, onCreateUOM, onDeleteU
                                                             <span style={{ fontSize: 11, color: '#804800'}}>1 <b>{uom.name}</b> =</span>
                                                             <input
                                                                 type="number"
-                                                                style={{ ...lvInput(true), width: 90 }}
+                                                                style={{ ...lvInput(), width: 90 }}
                                                                 value={factorValue}
                                                                 onChange={e => setFactorValue(e.target.value)}
                                                                 placeholder="value"
                                                             />
                                                             <select
-                                                                style={{ ...lvInput(true), width: 160 }}
+                                                                style={{ ...lvInput(), width: 160 }}
                                                                 value={factorToUomId}
                                                                 onChange={e => setFactorToUomId(e.target.value)}
                                                             >
@@ -163,7 +163,7 @@ export default function UOMLibraryView({ uoms, canManage, onCreateUOM, onDeleteU
                                                                     <option key={u.id} value={u.id}>{u.name}</option>
                                                                 ))}
                                                             </select>
-                                                            <button className={XP_BTN} style={lvBtn(true)} onClick={() => handleAddFactor(uom)}>Add</button>
+                                                            <button className={XP_BTN} style={lvBtn()} onClick={() => handleAddFactor(uom)}>Add</button>
                                                             {factors.length > 0 && (
                                                                 <>
                                                                     <span style={{ width: 1, height: 18, background: '#c0a060'}} />

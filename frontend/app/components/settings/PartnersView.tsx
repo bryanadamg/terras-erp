@@ -84,8 +84,8 @@ export default function PartnersView({ type, onCreate, onUpdate, onDelete, onBul
 
     // Button/input/cell/label chrome sourced from the shared lv* helpers instead
     // of re-declaring the same CSS values locally.
-    const xpBtn = (extra: React.CSSProperties = {}): React.CSSProperties => lvBtn(true, 'default', extra);
-    const xpInput: React.CSSProperties = lvInput(true);
+    const xpBtn = (extra: React.CSSProperties = {}): React.CSSProperties => lvBtn('default', extra);
+    const xpInput: React.CSSProperties = lvInput();
     const xpSep: React.CSSProperties = {
         width: '1px',
         height: '20px',
@@ -93,10 +93,10 @@ export default function PartnersView({ type, onCreate, onUpdate, onDelete, onBul
         margin: '0 2px',
         flexShrink: 0,
     };
-    const xpThCell: React.CSSProperties = lvTh(true);
-    const xpTableHeader: React.CSSProperties = lvThead(true, true);
-    const tdBase: React.CSSProperties = lvTd(true);
-    const xpLabel: React.CSSProperties = lvLabel(true);
+    const xpThCell: React.CSSProperties = lvTh();
+    const xpTableHeader: React.CSSProperties = lvThead();
+    const tdBase: React.CSSProperties = lvTd();
+    const xpLabel: React.CSSProperties = lvLabel();
 
     // Skeleton sizing: measure one real row so the placeholders shown on the next
     // load are exactly as tall as the rows that replace them.
@@ -216,7 +216,7 @@ export default function PartnersView({ type, onCreate, onUpdate, onDelete, onBul
                             <thead style={xpTableHeader}>
                                 <tr>
                                     <th style={{ ...xpThCell, width: '28px', textAlign: 'center' as const }}>
-                                        <SelectAllCheckbox classic allSelected={sel.allPageSelected} someSelected={sel.someSelected} onChange={sel.togglePage} title="Select all" />
+                                        <SelectAllCheckbox allSelected={sel.allPageSelected} someSelected={sel.someSelected} onChange={sel.togglePage} title="Select all" />
                                     </th>
                                     <th style={{ ...xpThCell, width: '30%' }}>Name</th>
                                     <th style={xpThCell}>Address</th>
@@ -228,10 +228,10 @@ export default function PartnersView({ type, onCreate, onUpdate, onDelete, onBul
                                 {pagedPartners.map((p, rowIndex) => (
                                     <tr
                                         key={p.id}
-                                        style={{ background: sel.isSelected(p) ? rowStateBg('selected', true) : lvZebra(true, rowIndex), borderBottom: '1px solid #c0bdb5' }}
+                                        style={{ background: sel.isSelected(p) ? rowStateBg('selected', true) : lvZebra(rowIndex), borderBottom: '1px solid #c0bdb5' }}
                                     >
                                         <td style={{ ...tdBase, textAlign: 'center' as const }}>
-                                            <RowCheckbox classic checked={sel.isSelected(p)} onChange={() => sel.toggle(p)} label={p.name} />
+                                            <RowCheckbox checked={sel.isSelected(p)} onChange={() => sel.toggle(p)} label={p.name} />
                                         </td>
                                         <td style={{ ...tdBase, fontWeight: 'bold' }}>
                                             {p.name}

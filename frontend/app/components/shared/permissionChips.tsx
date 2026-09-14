@@ -147,7 +147,7 @@ export function PermissionSectionTable({
                         rendered as a table, not a data grid, so lvSubTd's uniform
                         text metrics would fight the chip column. */}
                     {rows.map((r, i) => (
-                        <tr key={r.key} style={lvSubRow(true, i, { zebra: true })}>
+                        <tr key={r.key} style={lvSubRow(i, { zebra: true })}>
                             <td style={{
                                 fontFamily: font, fontSize: size, color: '#000',
                                 lineHeight: 1.5,

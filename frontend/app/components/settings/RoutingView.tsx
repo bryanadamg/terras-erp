@@ -331,23 +331,23 @@ export default function RoutingView({ workCenters, operations, locations, onCrea
                   <form onSubmit={handleSaveEdit} style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
                       <div style={{ display: 'flex', gap: 6, alignItems: 'flex-end', flexWrap: 'wrap' as const }}>
                           <div>
-                              <label style={lvLabel(true)}>Code</label>
-                              <input style={{ ...lvInput(true), width: 80 }} value={editingWC.code} onChange={e => setEditingWC({ ...editingWC, code: e.target.value })} required />
+                              <label style={lvLabel()}>Code</label>
+                              <input style={{ ...lvInput(), width: 80 }} value={editingWC.code} onChange={e => setEditingWC({ ...editingWC, code: e.target.value })} required />
                           </div>
                           <div style={{ flex: 1, minWidth: 140 }}>
-                              <label style={lvLabel(true)}>{t('station_name')}</label>
-                              <input style={lvInput(true)} value={editingWC.name} onChange={e => setEditingWC({ ...editingWC, name: e.target.value })} required />
+                              <label style={lvLabel()}>{t('station_name')}</label>
+                              <input style={lvInput()} value={editingWC.name} onChange={e => setEditingWC({ ...editingWC, name: e.target.value })} required />
                           </div>
                           <div>
-                              <label style={lvLabel(true)}>Type</label>
-                              <select style={{ ...lvInput(true), width: 110 }} value={editingWC.center_type} onChange={e => setEditingWC({ ...editingWC, center_type: e.target.value })}>
+                              <label style={lvLabel()}>Type</label>
+                              <select style={{ ...lvInput(), width: 110 }} value={editingWC.center_type} onChange={e => setEditingWC({ ...editingWC, center_type: e.target.value })}>
                                   {CENTER_TYPES.map(ct => <option key={ct} value={ct}>{ct}</option>)}
                               </select>
                           </div>
                           <div>
-                              <label style={lvLabel(true)}>Level</label>
+                              <label style={lvLabel()}>Level</label>
                               <select
-                                  style={{ ...lvInput(true), width: 110 }}
+                                  style={{ ...lvInput(), width: 110 }}
                                   value={level}
                                   onChange={e => setEditingWC({ ...editingWC, node_type: e.target.value, parent_id: e.target.value === 'TYPE' ? '' : editingWC.parent_id })}
                               >
@@ -356,7 +356,7 @@ export default function RoutingView({ workCenters, operations, locations, onCrea
                           </div>
                           {level !== 'TYPE' && (
                               <div>
-                                  <label style={lvLabel(true)}>{level === 'GROUP' ? 'Under Type' : 'Under Type / Group'}</label>
+                                  <label style={lvLabel()}>{level === 'GROUP' ? 'Under Type' : 'Under Type / Group'}</label>
                                   <TreeSelect
                                       options={parentTreeFor(level, editingWC.id)}
                                       value={editingWC.parent_id || ''}
@@ -372,25 +372,25 @@ export default function RoutingView({ workCenters, operations, locations, onCrea
                           default its machines inherit when they leave theirs blank. */}
                       <div style={{ display: 'flex', gap: 6, alignItems: 'flex-end', flexWrap: 'wrap' as const }}>
                               <div style={{ flex: 1, minWidth: 160 }}>
-                                  <label style={lvLabel(true)}>Input Location{locEditHint(editingWC, 'input_location_id')}</label>
+                                  <label style={lvLabel()}>Input Location{locEditHint(editingWC, 'input_location_id')}</label>
                                   <TreeSelect options={locPickerTreeOptions} value={editingWC.input_location_id || ''} onChange={id => setEditingWC({ ...editingWC, input_location_id: id })} allowEmpty emptyLabel={locEmptyLabel(editingWC, 'input_location_id')} size="sm" style={{ width: '100%' }} />
                               </div>
                               <div style={{ flex: 1, minWidth: 160 }}>
-                                  <label style={lvLabel(true)}>Output Location{locEditHint(editingWC, 'output_location_id')}</label>
+                                  <label style={lvLabel()}>Output Location{locEditHint(editingWC, 'output_location_id')}</label>
                                   <TreeSelect options={locPickerTreeOptions} value={editingWC.output_location_id || ''} onChange={id => setEditingWC({ ...editingWC, output_location_id: id })} allowEmpty emptyLabel={locEmptyLabel(editingWC, 'output_location_id')} size="sm" style={{ width: '100%' }} />
                               </div>
                               <div style={{ flex: 1, minWidth: 160 }}>
-                                  <label style={lvLabel(true)} title="Defect store — QC-rejected output from this centre is moved here instead of staying on the good shelf">
+                                  <label style={lvLabel()} title="Defect store — QC-rejected output from this centre is moved here instead of staying on the good shelf">
                                       Reject Location{locEditHint(editingWC, 'reject_location_id')}
                                   </label>
                                   <TreeSelect options={locPickerTreeOptions} value={editingWC.reject_location_id || ''} onChange={id => setEditingWC({ ...editingWC, reject_location_id: id })} allowEmpty emptyLabel={locEmptyLabel(editingWC, 'reject_location_id')} size="sm" style={{ width: '100%' }} />
                               </div>
                               {isMachine && ['WEAVING', 'TENUN'].includes((editingWC.center_type || '').toUpperCase()) && (
                                   <div style={{ width: 120 }}>
-                                      <label style={lvLabel(true)}>Beam Slots</label>
+                                      <label style={lvLabel()}>Beam Slots</label>
                                       <input
                                           type="number" min={1} step={1}
-                                          style={{ ...lvInput(true), width: '100%' }}
+                                          style={{ ...lvInput(), width: '100%' }}
                                           value={editingWC.beam_slots ?? 1}
                                           onChange={e => setEditingWC({ ...editingWC, beam_slots: e.target.value })}
                                           title="Beam positions on this loom — a weaving WO is beam-ready when this many beams are mounted"
@@ -399,8 +399,8 @@ export default function RoutingView({ workCenters, operations, locations, onCrea
                               )}
                       </div>
                       <div style={{ display: 'flex', gap: 6 }}>
-                          <button type="submit" className={XP_BTN} style={lvPrimaryBtn(true)}>Save</button>
-                          <button type="button" className={XP_BTN} style={lvBtn(true)} onClick={() => setEditingWC(null)}>Cancel</button>
+                          <button type="submit" className={XP_BTN} style={lvPrimaryBtn()}>Save</button>
+                          <button type="button" className={XP_BTN} style={lvBtn()} onClick={() => setEditingWC(null)}>Cancel</button>
                       </div>
                   </form>
               </td>
@@ -424,7 +424,7 @@ export default function RoutingView({ workCenters, operations, locations, onCrea
               </ToolbarCount>
               {canManage && (
                   <>
-                      <span style={lvSep(true)} />
+                      <span style={lvSep()} />
                       <ToolbarButton classic tone="create" icon="bi-plus-lg" onClick={() => { setNewWorkCenter({ ...emptyWC }); setIsCreateWCOpen(true); }}>
                           New Work Center
                       </ToolbarButton>
@@ -435,15 +435,15 @@ export default function RoutingView({ workCenters, operations, locations, onCrea
           {/* Table */}
           <div style={{ flex: 1, minHeight: 0, overflow: 'auto', background: '#fff' }}>
               <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                  <thead style={lvThead(true, true)}>
+                  <thead style={lvThead()}>
                       <tr>
-                          <th style={{ ...lvTh(true), width: 140, paddingLeft: 10}}>Code</th>
-                          <th style={lvTh(true)}>{t('station_name')}</th>
-                          <th style={{ ...lvTh(true), width: 90 }}>Type</th>
-                          <th style={{ ...lvTh(true), width: 100 }}>In Loc</th>
-                          <th style={{ ...lvTh(true), width: 100 }}>Out Loc</th>
-                          <th style={{ ...lvTh(true), width: 100 }} title="Defect store for QC-rejected output">Reject Loc</th>
-                          <th style={{ ...lvTh(true), width: 40, textAlign: 'right', borderRight: 'none' }}></th>
+                          <th style={{ ...lvTh(), width: 140, paddingLeft: 10}}>Code</th>
+                          <th style={lvTh()}>{t('station_name')}</th>
+                          <th style={{ ...lvTh(), width: 90 }}>Type</th>
+                          <th style={{ ...lvTh(), width: 100 }}>In Loc</th>
+                          <th style={{ ...lvTh(), width: 100 }}>Out Loc</th>
+                          <th style={{ ...lvTh(), width: 100 }} title="Defect store for QC-rejected output">Reject Loc</th>
+                          <th style={{ ...lvTh(), width: 40, textAlign: 'right', borderRight: 'none' }}></th>
                       </tr>
                   </thead>
                   <tbody>
@@ -462,21 +462,21 @@ export default function RoutingView({ workCenters, operations, locations, onCrea
                                               ? { background: '#e8eaf6', borderBottom: '2px solid #9fa8da'}
                                               : level === 'GROUP'
                                                   ? { background: '#f2f3fa', borderBottom: '1px solid #c5cae9'}
-                                                  : lvRow(true, i)),
+                                                  : lvRow(i)),
                                           cursor: expandable ? 'pointer' : undefined,
                                       }}
                                       onClick={expandable ? () => toggleGroup(wc.id) : undefined}
                                   >
-                                      <td style={{ ...lvTd(true), paddingLeft: (10) + depth * step, fontWeight: 'bold', whiteSpace: 'nowrap', color: isContainer ? ('#1a237e') : ('#00008b') }}>
+                                      <td style={{ ...lvTd(), paddingLeft: (10) + depth * step, fontWeight: 'bold', whiteSpace: 'nowrap', color: isContainer ? ('#1a237e') : ('#00008b') }}>
                                           {isContainer && <i className={expandable ? (expanded ? 'bi bi-caret-down-fill' : 'bi bi-caret-right-fill') : 'bi bi-folder2'} style={{ marginRight: 5, fontSize: 9, color: expandable ? '#555' : undefined }}></i>}
                                           {!isContainer && <i className="bi bi-dash" style={{ marginRight: 2, fontSize: 10, color: '#888' }}></i>}
                                           {wc.code}
                                       </td>
-                                      <td style={{ ...lvTd(true), paddingLeft: depth * step || undefined, fontStyle: isContainer ? 'italic' : 'normal' }}>
+                                      <td style={{ ...lvTd(), paddingLeft: depth * step || undefined, fontStyle: isContainer ? 'italic' : 'normal' }}>
                                           {wc.name}
                                           {level === 'GROUP' && <span style={{ marginLeft: 6, fontSize: 9, fontStyle: 'normal', color: '#666' }}>GROUP</span>}
                                       </td>
-                                      <td style={lvTd(true)}>
+                                      <td style={lvTd()}>
                                           <span style={{ padding: '1px 6px', borderRadius: CHIP_RADIUS, fontSize: 10, ...getWcTypeChip(wc.center_type) }}>{wc.center_type || 'GENERAL'}</span>
                                       </td>
                                       {LOC_FIELDS.map(field => {
@@ -489,7 +489,7 @@ export default function RoutingView({ workCenters, operations, locations, onCrea
                                                   key={field}
                                                   title={eff && !own ? `Inherited from ${eff.from.code}` : undefined}
                                                   style={{
-                                                      ...lvTd(true),
+                                                      ...lvTd(),
                                                       color: own ? '#444' : '#777',
                                                       fontStyle: eff && !own ? 'italic' : 'normal',
                                                       whiteSpace: 'nowrap',
@@ -499,14 +499,14 @@ export default function RoutingView({ workCenters, operations, locations, onCrea
                                               </td>
                                           );
                                       })}
-                                      <td style={{ ...lvTd(true), borderRight: 'none', textAlign: 'right' }} onClick={e => e.stopPropagation()}>
+                                      <td style={{ ...lvTd(), borderRight: 'none', textAlign: 'right' }} onClick={e => e.stopPropagation()}>
                                           {canManage && <MenuTriggerButton classic onClick={e => wcMenuToggle(wc.id, e)} />}
                                       </td>
                                   </tr>
                               );
                       })}
                       {filteredWCRows.length === 0 && (
-                          <tr><td colSpan={WC_COL_COUNT} style={{ ...lvTd(true), borderRight: 'none', textAlign: 'center', padding: 20, color: '#888', fontStyle: 'italic' }}>No work centers defined</td></tr>
+                          <tr><td colSpan={WC_COL_COUNT} style={{ ...lvTd(), borderRight: 'none', textAlign: 'center', padding: 20, color: '#888', fontStyle: 'italic' }}>No work centers defined</td></tr>
                       )}
                   </tbody>
               </table>
@@ -550,14 +550,14 @@ export default function RoutingView({ workCenters, operations, locations, onCrea
               <div style={{ background: '#f5f4ef', borderBottom: '1px solid #b0a898', padding: '6px 8px'}}>
                   <form onSubmit={handleCreateOp} style={{ display: 'flex', gap: 6, alignItems: 'flex-end', flexWrap: 'wrap' as const }}>
                       <div>
-                          <label style={lvLabel(true)}>Code</label>
-                          <input style={{ ...lvInput(true), width: 80 }} placeholder="OP-10" value={newOperation.code} onChange={e => setNewOperation({ ...newOperation, code: e.target.value })} required />
+                          <label style={lvLabel()}>Code</label>
+                          <input style={{ ...lvInput(), width: 80 }} placeholder="OP-10" value={newOperation.code} onChange={e => setNewOperation({ ...newOperation, code: e.target.value })} required />
                       </div>
                       <div style={{ flex: 1, minWidth: 160 }}>
-                          <label style={lvLabel(true)}>{t('operation_name')}</label>
-                          <input style={lvInput(true)} placeholder="Cutting" value={newOperation.name} onChange={e => setNewOperation({ ...newOperation, name: e.target.value })} required />
+                          <label style={lvLabel()}>{t('operation_name')}</label>
+                          <input style={lvInput()} placeholder="Cutting" value={newOperation.name} onChange={e => setNewOperation({ ...newOperation, name: e.target.value })} required />
                       </div>
-                      <button type="submit" className={XP_BTN} style={lvPrimaryBtn(true)}>
+                      <button type="submit" className={XP_BTN} style={lvPrimaryBtn()}>
                           <i className="bi bi-plus-lg" style={{ marginRight: 4 }}></i>{t('add')}
                       </button>
                   </form>
@@ -572,7 +572,7 @@ export default function RoutingView({ workCenters, operations, locations, onCrea
               display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' as const, flexShrink: 0,
           }}>
               <SearchField classic value={opSearch} onChange={setOpSearch} placeholder="Search operations…" width={240} />
-              <span style={lvSep(true)} />
+              <span style={lvSep()} />
               <ToolbarCount classic right>
                   {filteredOp.length.toLocaleString()} operation{filteredOp.length !== 1 ? 's' : ''}
               </ToolbarCount>
@@ -581,22 +581,22 @@ export default function RoutingView({ workCenters, operations, locations, onCrea
           {/* Table */}
           <div style={{ flex: 1, minHeight: 0, overflow: 'auto', background: '#fff' }}>
               <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                  <thead style={lvThead(true, true)}>
+                  <thead style={lvThead()}>
                       <tr>
-                          <th style={{ ...lvTh(true), width: 100, paddingLeft: 10}}>Code</th>
-                          <th style={lvTh(true)}>{t('operation_name')}</th>
-                          <th style={{ ...lvTh(true), width: 50, textAlign: 'right', borderRight: 'none' }}></th>
+                          <th style={{ ...lvTh(), width: 100, paddingLeft: 10}}>Code</th>
+                          <th style={lvTh()}>{t('operation_name')}</th>
+                          <th style={{ ...lvTh(), width: 50, textAlign: 'right', borderRight: 'none' }}></th>
                       </tr>
                   </thead>
                   <tbody>
                       {pagedOp.map((op: any, i: number) => (
-                          <tr key={op.id} style={lvRow(true, i)}>
-                              <td style={{ ...lvTd(true), paddingLeft: 10, fontWeight: 'bold', color: '#1a5e1a'}}>
+                          <tr key={op.id} style={lvRow(i)}>
+                              <td style={{ ...lvTd(), paddingLeft: 10, fontWeight: 'bold', color: '#1a5e1a'}}>
                                   {op.code}
                                   {op.is_system && <span style={{ marginLeft: 5, fontSize: 9, fontWeight: 'bold', color: '#555', background: '#ddd', border: '1px solid #aaa', borderRadius: CHIP_RADIUS, padding: '0 3px' }}>sys</span>}
                               </td>
-                              <td style={lvTd(true)}>{op.name}</td>
-                              <td style={{ ...lvTd(true), borderRight: 'none', textAlign: 'right' }}>
+                              <td style={lvTd()}>{op.name}</td>
+                              <td style={{ ...lvTd(), borderRight: 'none', textAlign: 'right' }}>
                                   {!op.is_system && canManage && (
                                       <XPActionButton classic tone="danger" icon="bi-trash" title="Delete" onClick={() => onDeleteOperation && onDeleteOperation(op.id)} />
                                   )}
@@ -604,7 +604,7 @@ export default function RoutingView({ workCenters, operations, locations, onCrea
                           </tr>
                       ))}
                       {filteredOp.length === 0 && (
-                          <tr><td colSpan={3} style={{ ...lvTd(true), borderRight: 'none', textAlign: 'center', padding: 20, color: '#888', fontStyle: 'italic' }}>No operations defined</td></tr>
+                          <tr><td colSpan={3} style={{ ...lvTd(), borderRight: 'none', textAlign: 'center', padding: 20, color: '#888', fontStyle: 'italic' }}>No operations defined</td></tr>
                       )}
                   </tbody>
               </table>
@@ -661,8 +661,8 @@ export default function RoutingView({ workCenters, operations, locations, onCrea
                               : 'Code and name are required'}
                       </span>
                   )}
-                  <button type="button" className={XP_BTN} style={lvBtn(true)} onClick={() => setIsCreateWCOpen(false)}>Cancel</button>
-                  <button type="button" className={XP_BTN} style={{ ...lvPrimaryBtn(true), ...(createValid ? {} : { opacity: 0.5, cursor: 'not-allowed' }) }} onClick={handleCreateWC} disabled={!createValid}>
+                  <button type="button" className={XP_BTN} style={lvBtn()} onClick={() => setIsCreateWCOpen(false)}>Cancel</button>
+                  <button type="button" className={XP_BTN} style={{ ...lvPrimaryBtn(), ...(createValid ? {} : { opacity: 0.5, cursor: 'not-allowed' }) }} onClick={handleCreateWC} disabled={!createValid}>
                       <i className="bi bi-plus-lg" style={{ marginRight: 4 }}></i>{t('add')}
                   </button>
               </>
@@ -683,7 +683,7 @@ export default function RoutingView({ workCenters, operations, locations, onCrea
                                   type="button"
                                   className={XP_BTN}
                                   onClick={() => setNewWorkCenter({ ...newWorkCenter, node_type: l.value, parent_id: '', input_location_id: '', output_location_id: '' })}
-                                  style={{ ...(on ? lvPrimaryBtn(true) : lvBtn(true)), flex: 1, minWidth: 108, textAlign: 'center', padding: '4px 6px' }}
+                                  style={{ ...(on ? lvPrimaryBtn() : lvBtn()), flex: 1, minWidth: 108, textAlign: 'center', padding: '4px 6px' }}
                                   title={LEVEL_HINTS[l.value]}
                               >
                                   <i className={`bi ${LEVEL_ICONS[l.value]}`} style={{ marginRight: 4 }} />{l.label.replace(' (root)', '')}
@@ -747,12 +747,12 @@ export default function RoutingView({ workCenters, operations, locations, onCrea
                   <div style={{ display: 'flex', gap: 10 }}>
                       <div style={{ width: 110 }}>
                           <FieldLabel classic>Code <span style={{ color: '#c00' }}>*</span></FieldLabel>
-                          <input style={lvInput(true)} placeholder={newWorkCenter.node_type === 'MACHINE' ? 'W-01' : 'W'} value={newWorkCenter.code} onChange={e => setNewWorkCenter({ ...newWorkCenter, code: e.target.value })} required autoFocus />
+                          <input style={lvInput()} placeholder={newWorkCenter.node_type === 'MACHINE' ? 'W-01' : 'W'} value={newWorkCenter.code} onChange={e => setNewWorkCenter({ ...newWorkCenter, code: e.target.value })} required autoFocus />
                       </div>
                       <div style={{ flex: 1 }}>
                           <FieldLabel classic>{t('station_name')} <span style={{ color: '#c00' }}>*</span></FieldLabel>
                           <input
-                              style={lvInput(true)}
+                              style={lvInput()}
                               placeholder={newWorkCenter.node_type === 'TYPE' ? 'WEAVING' : newWorkCenter.node_type === 'GROUP' ? 'Hall A looms' : 'Loom 1'}
                               value={newWorkCenter.name}
                               onChange={e => setNewWorkCenter({ ...newWorkCenter, name: e.target.value })}
@@ -770,7 +770,7 @@ export default function RoutingView({ workCenters, operations, locations, onCrea
                           Center Type
                       </FieldLabel>
                       <select
-                          style={{ ...lvInput(true), ...(inheritedType ? { background: '#ece9d8', color: '#555' } : {}) }}
+                          style={{ ...lvInput(), ...(inheritedType ? { background: '#ece9d8', color: '#555' } : {}) }}
                           value={effectiveNewType}
                           disabled={!!inheritedType}
                           onChange={e => setNewWorkCenter({ ...newWorkCenter, center_type: e.target.value })}
@@ -829,7 +829,7 @@ export default function RoutingView({ workCenters, operations, locations, onCrea
                           <FieldLabel classic hint="Beam positions on this loom.">Beam Slots</FieldLabel>
                           <input
                               type="number" min={1} step={1}
-                              style={{ ...lvInput(true), width: '100%' }}
+                              style={{ ...lvInput(), width: '100%' }}
                               value={newWorkCenter.beam_slots}
                               onChange={e => setNewWorkCenter({ ...newWorkCenter, beam_slots: beamSlots(e.target.value) })}
                               title="A weaving WO is beam-ready when this many beams are mounted"

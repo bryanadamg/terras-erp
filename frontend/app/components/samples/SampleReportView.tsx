@@ -184,37 +184,37 @@ export default function SampleReportView() {
     // inline it here so a caption sits *beside* its field instead of pushing the row
     // taller, and drop the toolbar gradient so the bar reads as a flat strip.
     const inlineLabel: React.CSSProperties = {
-        ...lvLabel(true), display: 'inline-block', marginBottom: 0, whiteSpace: 'nowrap',
+        ...lvLabel(), display: 'inline-block', marginBottom: 0, whiteSpace: 'nowrap',
     };
 
     const Filters = () => (
         <div style={sharedXpToolbar({ background: '#ece9d8', padding: '5px 8px', gap: 5, flexShrink: 0 })}>
             <span style={inlineLabel}>From</span>
             <input type="date" value={dateFrom} onChange={e => setDateFrom(e.target.value)}
-                style={lvInput(true, { width: 128 })} />
+                style={lvInput({ width: 128 })} />
             <span style={inlineLabel}>To</span>
             <input type="date" value={dateTo} onChange={e => setDateTo(e.target.value)}
-                style={lvInput(true, { width: 128 })} />
+                style={lvInput({ width: 128 })} />
 
-            <div style={lvSep(true)} />
+            <div style={lvSep()} />
             {([['month', 'This Month'], ['last30', 'Last 30 Days'], ['quarter', 'This Quarter'], ['year', 'This Year']] as [Preset, string][]).map(([p, label]) => (
                 <button key={p} type="button" onClick={() => applyPreset(p)}
-                    style={lvBtn(true)} className={XP_BTN}>{label}</button>
+                    style={lvBtn()} className={XP_BTN}>{label}</button>
             ))}
 
-            <div style={lvSep(true)} />
+            <div style={lvSep()} />
             <select value={customerId} onChange={e => setCustomerId(e.target.value)}
-                style={lvInput(true, { width: 168 })}>
+                style={lvInput({ width: 168 })}>
                 <option value="">All Customers</option>
                 {customers.map((c: any) => <option key={c.id} value={c.id}>{c.name}</option>)}
             </select>
             <select value={categoryValueId} onChange={e => setCategoryValueId(e.target.value)}
-                style={lvInput(true, { width: 140 })}>
+                style={lvInput({ width: 140 })}>
                 <option value="ALL">All Categories</option>
                 {categoryOptions.map((c: any) => <option key={c.id} value={c.id}>{c.label}</option>)}
             </select>
             <select value={groupBy} onChange={e => setGroupBy(e.target.value as any)}
-                style={lvInput(true, { width: 132 })}
+                style={lvInput({ width: 132 })}
                 title="Summary grouping">
                 <option value="customer">By Customer</option>
                 <option value="category">By Category</option>
@@ -237,25 +237,25 @@ export default function SampleReportView() {
     // down to a two-row sliver.
     const SummaryTable = () => (
         <div style={{ display: 'flex', flexDirection: 'column', flexShrink: 0, maxHeight: '32%', minHeight: 92 }}>
-            <LvSectionCaption classic icon="bi-bar-chart-steps" right={`${groups.length} ${groups.length === 1 ? 'group' : 'groups'}`}>
+            <LvSectionCaption icon="bi-bar-chart-steps" right={`${groups.length} ${groups.length === 1 ? 'group' : 'groups'}`}>
                 Summary by {GROUP_LABEL[groupBy]}
             </LvSectionCaption>
             <div style={SCROLL_BODY}>
                 <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                    <thead style={lvThead(true, true)}>
+                    <thead style={lvThead()}>
                         <tr>
-                            <th style={lvTh(true)}>{GROUP_LABEL[groupBy]}</th>
-                            <th style={{ ...lvTh(true), width: 90, textAlign: 'right' }}>Variants</th>
-                            <th style={{ ...lvTh(true), width: 90, textAlign: 'right' }}>Processed</th>
-                            <th style={{ ...lvTh(true), width: 80, textAlign: 'right' }}>Sent</th>
-                            <th style={{ ...lvTh(true), width: 90, textAlign: 'right' }}>Approved</th>
-                            <th style={{ ...lvTh(true), width: 90, textAlign: 'right' }}>Rejected</th>
-                            <th style={{ ...lvTh(true), width: 110, textAlign: 'right', borderRight: 'none' }}>Approval %</th>
+                            <th style={lvTh()}>{GROUP_LABEL[groupBy]}</th>
+                            <th style={{ ...lvTh(), width: 90, textAlign: 'right' }}>Variants</th>
+                            <th style={{ ...lvTh(), width: 90, textAlign: 'right' }}>Processed</th>
+                            <th style={{ ...lvTh(), width: 80, textAlign: 'right' }}>Sent</th>
+                            <th style={{ ...lvTh(), width: 90, textAlign: 'right' }}>Approved</th>
+                            <th style={{ ...lvTh(), width: 90, textAlign: 'right' }}>Rejected</th>
+                            <th style={{ ...lvTh(), width: 110, textAlign: 'right', borderRight: 'none' }}>Approval %</th>
                         </tr>
                     </thead>
                     <tbody>
                         {groups.map((g: any, i: number) => (
-                            <tr key={g.label} style={lvRow(true, i)}>
+                            <tr key={g.label} style={lvRow(i)}>
                                 <td style={{ padding: '3px 8px', fontFamily: LV_XP_FONT, fontSize: 11, fontWeight: 'bold' }}>{g.label}</td>
                                 <td style={{ padding: '3px 8px', textAlign: 'right', fontSize: 11 }}>{g.variants}</td>
                                 <td style={{ padding: '3px 8px', textAlign: 'right', fontSize: 11 }}>{g.processes}</td>
@@ -278,7 +278,7 @@ export default function SampleReportView() {
 
     // ── Variant table ────────────────────────────────────────────────────────
     const Th = ({ colKey, label, width, align }: { colKey: string; label: string; width?: number; align?: 'right' }) => (
-        <SortableTh sort={sort} colKey={colKey} onSort={toggle} style={{ ...lvTh(true), width, textAlign: align }}>
+        <SortableTh sort={sort} colKey={colKey} onSort={toggle} style={{ ...lvTh(), width, textAlign: align }}>
             {label}
         </SortableTh>
     );
@@ -293,12 +293,12 @@ export default function SampleReportView() {
 
     const VariantTable = () => (
         <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 150 }}>
-            <LvSectionCaption classic icon="bi-list-ul" right={`${sorted.length} ${sorted.length === 1 ? 'row' : 'rows'}`}>
+            <LvSectionCaption icon="bi-list-ul" right={`${sorted.length} ${sorted.length === 1 ? 'row' : 'rows'}`}>
                 Variant Detail
             </LvSectionCaption>
             <div style={SCROLL_BODY}>
                 <table style={{ width: '100%', borderCollapse: 'collapse', tableLayout: 'fixed' }}>
-                    <thead style={lvThead(true, true)}>
+                    <thead style={lvThead()}>
                         <tr>
                             <Th colKey="sample_code" label="Sample" width={130} />
                             <Th colKey="customer_name" label="Customer" width={150} />
@@ -313,7 +313,7 @@ export default function SampleReportView() {
                     </thead>
                     <tbody>
                         {sorted.map((r: any, i: number) => (
-                            <tr key={r.color_id} style={lvRow(true, i)}>
+                            <tr key={r.color_id} style={lvRow(i)}>
                                 <td style={{ padding: '3px 8px', fontFamily: LV_XP_FONT, fontSize: 11, fontWeight: 'bold', color: familyColor('blue') }}>
                                     {r.sample_code}
                                 </td>

@@ -943,7 +943,7 @@ export function ProgressBar(props: {
 
 // The four button intents. `default` is the bare XP face `xpBtn` already paints, so
 // it is empty; the other three are patches you spread over it (or hand to
-// `lvBtn(true, tone)`, which owns the modern half). ~19 local copies used to
+// `lvBtn(tone)`, which owns the modern half). ~19 local copies used to
 // carry their own blue/green/red — three different blues and three different greens
 // across BOMDesigner, the WO modals and the print modals — which is why the faces
 // live here now. Adding a fifth tone is almost never the answer.
@@ -1402,7 +1402,7 @@ const skelWidth = (row: number, col: number) => SKEL_WIDTHS[(row * 3 + col * 5) 
  * the table's own columns — drop it straight into <tbody> in place of the
  * empty-state row.
  *
- * Pass the view's OWN cell style as `tdStyle` (its `tdBase`, `lvTd(true)`,
+ * Pass the view's OWN cell style as `tdStyle` (its `tdBase`, `lvTd()`,
  * …) rather than letting this re-derive one: padding, borders and font size
  * then match the real rows by construction, not by a copied guess that drifts
  * when the view is restyled.

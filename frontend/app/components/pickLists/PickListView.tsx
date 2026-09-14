@@ -26,14 +26,14 @@ const API_BASE = (process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:8000/api
 // regardless of the user's theme setting) — inherited from the packing view this
 // was split out of, tracked separately.
 const xpFont = LV_XP_FONT;
-const xpInput: React.CSSProperties = lvInput(true);
+const xpInput: React.CSSProperties = lvInput();
 const xpSelect: React.CSSProperties = { ...xpInput, height: 22 };
-const xpTableHeader: React.CSSProperties = lvThSticky(true);
-const xpBtn = (extra: React.CSSProperties = {}): React.CSSProperties => lvBtn(true, 'default', extra);
-const xpBtnGreen = (extra: React.CSSProperties = {}) => lvBtn(true, 'success', extra);
-const rowStyle = (idx: number): React.CSSProperties => lvRow(true, idx);
-const td: React.CSSProperties = lvTd(true);
-const xpLabel: React.CSSProperties = lvLabel(true);
+const xpTableHeader: React.CSSProperties = lvThSticky();
+const xpBtn = (extra: React.CSSProperties = {}): React.CSSProperties => lvBtn('default', extra);
+const xpBtnGreen = (extra: React.CSSProperties = {}) => lvBtn('success', extra);
+const rowStyle = (idx: number): React.CSSProperties => lvRow(idx);
+const td: React.CSSProperties = lvTd();
+const xpLabel: React.CSSProperties = lvLabel();
 
 const num = (v: any) => { const n = parseFloat(v); return isNaN(n) ? 0 : n; };
 const PL_PAGE_SIZE = 20;
@@ -258,8 +258,8 @@ export default function PickListView() {
             </div>
         );
         // Dense: this table shares its row with two other panes in the grid below.
-        const th = lvSubTh(true, true);
-        const td = lvSubTd(true, true);
+        const th = lvSubTh();
+        const td = lvSubTd();
 
         return (
             <tr key={`${pl.id}-detail`}>
@@ -316,7 +316,7 @@ export default function PickListView() {
                                     </div>
                                 ) : (
                                     <div style={{ maxHeight: 200, overflowY: 'auto' }}>
-                                        <table style={{ ...lvSubTable(true), border: 'none' }}>
+                                        <table style={{ ...lvSubTable(), border: 'none' }}>
                                             <thead>
                                                 <tr>
                                                     <th style={{ ...th, width: 24 }}>#</th>
@@ -335,7 +335,7 @@ export default function PickListView() {
                                                 {/* No zebra — the only row fill is the picked-green
                                                     confirmation, which is the floor's actual signal. */}
                                                 {lines.map((l: any, li: number) => (
-                                                    <tr key={l.id} style={lvSubRow(true, li, { fill: l.picked_at ? '#eef7ee' : undefined })}>
+                                                    <tr key={l.id} style={lvSubRow(li, { fill: l.picked_at ? '#eef7ee' : undefined })}>
                                                         <td style={{ ...td, color: '#888' }}>{l.package_no ?? '—'}</td>
                                                         <td style={{ ...td, fontFamily: CODE_FONT, color: '#00309c', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: 120 }}
                                                             title={l.batch_number || undefined}>
@@ -496,7 +496,7 @@ export default function PickListView() {
                                 style={{ ...rowStyle(idx), ...(isExpanded ? { background: rowStateBg('expanded', true) } : {}), cursor: 'pointer' }}
                                 onClick={() => setExpandedId(prev => prev === String(pl.id) ? null : String(pl.id))}
                             >
-                                <ExpanderCell classic expanded={isExpanded} tdStyle={td} label="pick list detail"
+                                <ExpanderCell expanded={isExpanded} tdStyle={td} label="pick list detail"
                                     onToggle={() => setExpandedId(prev => prev === String(pl.id) ? null : String(pl.id))} />
                                 <td style={{ ...td, fontWeight: 'bold', color: '#00309c' }}>{pl.code}</td>
                                 <td style={td}>{pl.sales_order_code || '—'}</td>
@@ -1380,7 +1380,6 @@ function PickListEditor({ pl: initialPl, itemById, locPickerTreeOptions, authFet
                                                 </td>
                                             ) : (
                                                 <RowCheckboxCell
-                                                    classic
                                                     checked={false}
                                                     disabled={readOnly || scanning}
                                                     onChange={() => scan(r.batch_number)}

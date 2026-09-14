@@ -112,7 +112,7 @@ export default function PackagingTypesView({ types, loading, onCreate, onEdit, o
                 </ToolbarCount>
                 {canManage && (
                     <>
-                        <span style={lvSep(true)} />
+                        <span style={lvSep()} />
                         <ToolbarButton classic tone="create" icon="bi-plus-lg" onClick={openCreate}>New Packaging Type</ToolbarButton>
                     </>
                 )}
@@ -120,26 +120,26 @@ export default function PackagingTypesView({ types, loading, onCreate, onEdit, o
 
             <div style={{ flex: 1, minHeight: 0, background: '#fff', overflow: 'auto' }}>
                 <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                    <thead style={lvThead(true)}>
+                    <thead style={lvThead()}>
                         <tr>
-                            <th style={{ ...lvTh(true), width: 120 }}>Code</th>
-                            <th style={lvTh(true)}>Name</th>
-                            <th style={{ ...lvTh(true), width: 150, textAlign: 'right' }}>Tare (kg)</th>
-                            <th style={{ ...lvTh(true), width: 80, textAlign: 'center' }}>Order</th>
-                            <th style={{ ...lvTh(true), width: 90 }}>Status</th>
-                            <th style={{ ...lvTh(true), width: 80, textAlign: 'right', borderRight: 'none' }}>Actions</th>
+                            <th style={{ ...lvTh(), width: 120 }}>Code</th>
+                            <th style={lvTh()}>Name</th>
+                            <th style={{ ...lvTh(), width: 150, textAlign: 'right' }}>Tare (kg)</th>
+                            <th style={{ ...lvTh(), width: 80, textAlign: 'center' }}>Order</th>
+                            <th style={{ ...lvTh(), width: 90 }}>Status</th>
+                            <th style={{ ...lvTh(), width: 80, textAlign: 'right', borderRight: 'none' }}>Actions</th>
                         </tr>
                     </thead>
                     <tbody>
                         {filtered.length === 0 && (
-                            <TableEmpty colSpan={6} classic tdStyle={lvTd(true)}
+                            <TableEmpty colSpan={6} tdStyle={lvTd()}
                                 message={loading ? 'Loading…' : emptyMessage} />
                         )}
                         {filtered.map((t: any, idx: number) => (
-                            <tr key={t.id} style={lvRow(true, idx)}>
-                                <td style={lvTd(true)}><CodeChip code={t.code} classic tone="accent" /></td>
-                                <td style={lvTd(true)}>{t.name}</td>
-                                <td style={{ ...lvTd(true), textAlign: 'right' }}>
+                            <tr key={t.id} style={lvRow(idx)}>
+                                <td style={lvTd()}><CodeChip code={t.code} classic tone="accent" /></td>
+                                <td style={lvTd()}>{t.name}</td>
+                                <td style={{ ...lvTd(), textAlign: 'right' }}>
                                     {/* A custom box has no stored tare BY DESIGN — the packer
                                         weighs the empty box at log time — so it reads as that
                                         rather than as a number someone forgot to fill in. */}
@@ -149,9 +149,9 @@ export default function PackagingTypesView({ types, loading, onCreate, onEdit, o
                                             ? Number(t.tare_kg).toFixed(3)
                                             : <span style={{ color: '#b8860b' }}>not set</span>}
                                 </td>
-                                <td style={{ ...lvTd(true), textAlign: 'center', color: '#888' }}>{t.sort_order ?? 0}</td>
-                                <td style={lvTd(true)}><StatusChip status={t.active === false ? 'archived' : 'active'} /></td>
-                                <td style={{ ...lvTd(true), borderRight: 'none', textAlign: 'right' }}>
+                                <td style={{ ...lvTd(), textAlign: 'center', color: '#888' }}>{t.sort_order ?? 0}</td>
+                                <td style={lvTd()}><StatusChip status={t.active === false ? 'archived' : 'active'} /></td>
+                                <td style={{ ...lvTd(), borderRight: 'none', textAlign: 'right' }}>
                                     {canManage && <MenuTriggerButton classic onClick={e => menuToggle(t.id, e)} />}
                                 </td>
                             </tr>
@@ -182,8 +182,8 @@ export default function PackagingTypesView({ types, loading, onCreate, onEdit, o
                 modeless
                 footer={
                     <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
-                        <button type="button" className={XP_BTN} style={lvBtn(true)} onClick={() => setIsModalOpen(false)}>Cancel</button>
-                        <button type="submit" form="packaging-type-form" className={XP_BTN} style={lvPrimaryBtn(true)}>
+                        <button type="button" className={XP_BTN} style={lvBtn()} onClick={() => setIsModalOpen(false)}>Cancel</button>
+                        <button type="submit" form="packaging-type-form" className={XP_BTN} style={lvPrimaryBtn()}>
                             {editing ? 'Save' : 'Create'}
                         </button>
                     </div>
@@ -192,15 +192,15 @@ export default function PackagingTypesView({ types, loading, onCreate, onEdit, o
                 <form id="packaging-type-form" onSubmit={handleSubmit}>
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
                         <div>
-                            <label style={lvLabel(true)}>Code *</label>
-                            <input value={form.code} onChange={e => setForm({ ...form, code: e.target.value })} style={lvInput(true)} required />
+                            <label style={lvLabel()}>Code *</label>
+                            <input value={form.code} onChange={e => setForm({ ...form, code: e.target.value })} style={lvInput()} required />
                         </div>
                         <div>
-                            <label style={lvLabel(true)}>Name *</label>
-                            <input value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} style={lvInput(true)} required />
+                            <label style={lvLabel()}>Name *</label>
+                            <input value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} style={lvInput()} required />
                         </div>
                         <div style={{ gridColumn: '1 / -1' }}>
-                            <label style={{ ...lvLabel(true), display: 'flex', alignItems: 'center', gap: 6 }}>
+                            <label style={{ ...lvLabel(), display: 'flex', alignItems: 'center', gap: 6 }}>
                                 <input type="checkbox" checked={form.is_custom}
                                     onChange={e => setForm({ ...form, is_custom: e.target.checked })} />
                                 <span>Weighed at packing (custom box)</span>
@@ -211,12 +211,12 @@ export default function PackagingTypesView({ types, loading, onCreate, onEdit, o
                             </div>
                         </div>
                         <div>
-                            <label style={lvLabel(true)}>Tare — weight of the empty box (kg)</label>
+                            <label style={lvLabel()}>Tare — weight of the empty box (kg)</label>
                             <input
                                 type="number" min="0" step="any"
                                 value={form.is_custom ? '' : form.tare_kg}
                                 onChange={e => setForm({ ...form, tare_kg: e.target.value })}
-                                style={lvInput(true)}
+                                style={lvInput()}
                                 disabled={form.is_custom}
                                 placeholder={form.is_custom ? 'weighed at packing' : '0.000'}
                             />
@@ -226,16 +226,16 @@ export default function PackagingTypesView({ types, loading, onCreate, onEdit, o
                             </div>
                         </div>
                         <div>
-                            <label style={lvLabel(true)}>Sort order</label>
+                            <label style={lvLabel()}>Sort order</label>
                             <input type="number" step="1" value={form.sort_order}
-                                onChange={e => setForm({ ...form, sort_order: e.target.value })} style={lvInput(true)} />
+                                onChange={e => setForm({ ...form, sort_order: e.target.value })} style={lvInput()} />
                         </div>
                         {editing && (
                             <div>
-                                <label style={lvLabel(true)}>Status</label>
+                                <label style={lvLabel()}>Status</label>
                                 <select value={form.active ? 'active' : 'archived'}
                                     onChange={e => setForm({ ...form, active: e.target.value === 'active' })}
-                                    style={lvInput(true)}>
+                                    style={lvInput()}>
                                     <option value="active">active</option>
                                     <option value="archived">archived</option>
                                 </select>

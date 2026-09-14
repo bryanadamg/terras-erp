@@ -19,8 +19,8 @@ const xpTable: React.CSSProperties = {
 };
 
 const stickyTh = (extra: React.CSSProperties = {}): React.CSSProperties => ({
-    ...lvTh(true),
-    ...lvThead(true),
+    ...lvTh(),
+    ...lvThead(),
     position: 'sticky', top: 0, zIndex: 1,
     ...extra,
 });
@@ -855,21 +855,21 @@ export default function DashboardView({ items, locations, stockBalance, workOrde
                                     const progTone: StatusFamily = wo.isOverdue ? 'red' : wo.progress >= 100 ? 'green' : wo.status === 'IN_PROGRESS' ? 'blue' : 'gray';
                                     const displayStatus = wo.isOverdue ? 'OVERDUE' : wo.status;
                                     return (
-                                        <tr key={wo.id} style={lvRow(true, idx)}>
-                                            <td style={lvTd(true)}><CodeChip code={wo.code} classic /></td>
-                                            <td style={{ ...lvTd(true), fontWeight: 'bold', color: '#000' }}>{wo.itemName}</td>
-                                            <td style={lvTd(true)}>
+                                        <tr key={wo.id} style={lvRow(idx)}>
+                                            <td style={lvTd()}><CodeChip code={wo.code} classic /></td>
+                                            <td style={{ ...lvTd(), fontWeight: 'bold', color: '#000' }}>{wo.itemName}</td>
+                                            <td style={lvTd()}>
                                                 <StatusChip
                                                     status={displayStatus}
                                                     label={displayStatus === 'IN_PROGRESS' ? 'IN PROG' : displayStatus === 'COMPLETED' ? 'DONE' : undefined}
                                                     tint
                                                 />
                                             </td>
-                                            <td style={lvTd(true)}>
+                                            <td style={lvTd()}>
                                                 <ProgressBar pct={wo.progress} tone={progTone} height={9} label="outside" />
                                             </td>
-                                            <td style={{ ...lvTd(true), textAlign: 'right', fontWeight: 'bold' }}>{wo.qty?.toLocaleString()}</td>
-                                            <td style={{ ...lvTd(true), borderRight: 'none', color: wo.isOverdue ? familyColor('red') : '#333', fontWeight: wo.isOverdue ? 'bold' : 'normal', fontSize: '9px' }}>
+                                            <td style={{ ...lvTd(), textAlign: 'right', fontWeight: 'bold' }}>{wo.qty?.toLocaleString()}</td>
+                                            <td style={{ ...lvTd(), borderRight: 'none', color: wo.isOverdue ? familyColor('red') : '#333', fontWeight: wo.isOverdue ? 'bold' : 'normal', fontSize: '9px' }}>
                                                 {wo.target_end_date ? `${wo.target_end_date.slice(0, 10)}${wo.isOverdue ? ' ●' : ''}` : '—'}
                                             </td>
                                         </tr>
@@ -908,15 +908,15 @@ export default function DashboardView({ items, locations, stockBalance, workOrde
                             </thead>
                             <tbody>
                                 {recentActivity.map((entry: any, idx: number) => (
-                                    <tr key={entry.key} style={lvRow(true, idx)}>
-                                        <td style={{ ...lvTd(true), fontWeight: 'bold', color: '#000' }}>{entry.itemName}</td>
-                                        <td style={{ ...lvTd(true), textAlign: 'right', fontWeight: 'bold', color: familyColor(entry.qty_change > 0 ? 'green' : 'red') }}>
+                                    <tr key={entry.key} style={lvRow(idx)}>
+                                        <td style={{ ...lvTd(), fontWeight: 'bold', color: '#000' }}>{entry.itemName}</td>
+                                        <td style={{ ...lvTd(), textAlign: 'right', fontWeight: 'bold', color: familyColor(entry.qty_change > 0 ? 'green' : 'red') }}>
                                             {entry.qty_change > 0 ? '+' : ''}{entry.qty_change}
                                         </td>
-                                        <td style={{ ...lvTd(true), fontSize: '9px', color: '#444' }}>
+                                        <td style={{ ...lvTd(), fontSize: '9px', color: '#444' }}>
                                             {entry.location_name || '—'}
                                         </td>
-                                        <td style={{ ...lvTd(true), fontSize: '9px', color: '#666', borderRight: 'none' }}>
+                                        <td style={{ ...lvTd(), fontSize: '9px', color: '#666', borderRight: 'none' }}>
                                             {tzFmt(entry.created_at, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
                                         </td>
                                     </tr>

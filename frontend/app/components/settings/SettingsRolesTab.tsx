@@ -175,7 +175,7 @@ export default function SettingsRolesTab({
                                 const hasScope = scopeCount > 0;
                                 return (
                                     <Fragment key={role.id}>
-                                    <tr style={{ background: isExpanded ? rowStateBg('expanded', true) : lvZebra(true, rowIndex), borderBottom: isExpanded ? 'none' : '1px solid #c0bdb5' }}>
+                                    <tr style={{ background: isExpanded ? rowStateBg('expanded', true) : lvZebra(rowIndex), borderBottom: isExpanded ? 'none' : '1px solid #c0bdb5' }}>
                                         <td style={{ ...tdBase, fontWeight: 'bold' }}>{role.name}</td>
                                         <td style={tdBase}>{role.description || '—'}</td>
                                         <td style={tdBase}>

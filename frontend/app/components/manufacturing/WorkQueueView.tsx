@@ -304,7 +304,7 @@ export default function WorkQueueView() {
                 onClick={() => setShowMaterials(v => !v)}
                 className={XP_BTN}
                 style={{
-                    ...lvBtn(true), width: '100%', textAlign: 'left', border: 'none',
+                    ...lvBtn(), width: '100%', textAlign: 'left', border: 'none',
                     background: '#ece9d8', padding: '4px 8px',
                     display: 'flex', alignItems: 'center', gap: 6,
                 }}
@@ -319,47 +319,47 @@ export default function WorkQueueView() {
             {showMaterials && (
                 <div style={{ maxHeight: 220, overflowY: 'auto', background: '#ffffff' }}>
                     <table style={{ width: '100%', borderCollapse: 'collapse', fontFamily: font, fontSize: 11}}>
-                        <thead style={lvThead(true, true)}>
+                        <thead style={lvThead()}>
                             <tr>
-                                <th style={lvTh(true)}>Material</th>
-                                <th style={{ ...lvTh(true), textAlign: 'right' }}>On hand</th>
-                                <th style={{ ...lvTh(true), textAlign: 'right' }}
+                                <th style={lvTh()}>Material</th>
+                                <th style={{ ...lvTh(), textAlign: 'right' }}>On hand</th>
+                                <th style={{ ...lvTh(), textAlign: 'right' }}
                                     title="Issued to a work order's input location. Counts material already consumed there, so it can exceed on-hand.">
                                     Staged</th>
-                                <th style={{ ...lvTh(true), textAlign: 'right' }}>Claimed</th>
-                                <th style={{ ...lvTh(true), textAlign: 'right' }}>Free</th>
-                                <th style={{ ...lvTh(true), textAlign: 'right' }}>Short</th>
-                                <th style={{ ...lvTh(true), textAlign: 'right' }}>Orders</th>
-                                <th style={lvTh(true)}>Lots</th>
+                                <th style={{ ...lvTh(), textAlign: 'right' }}>Claimed</th>
+                                <th style={{ ...lvTh(), textAlign: 'right' }}>Free</th>
+                                <th style={{ ...lvTh(), textAlign: 'right' }}>Short</th>
+                                <th style={{ ...lvTh(), textAlign: 'right' }}>Orders</th>
+                                <th style={lvTh()}>Lots</th>
                             </tr>
                         </thead>
                         <tbody>
                             {materials.map((m, i) => (
-                                <tr key={m.item_id} style={lvRow(true, i)}>
-                                    <td style={lvTd(true)}>
+                                <tr key={m.item_id} style={lvRow(i)}>
+                                    <td style={lvTd()}>
                                         <strong>{m.item_code || '—'}</strong>
                                         <span style={{ color: '#666', marginLeft: 6 }}>{m.item_name}</span>
                                     </td>
-                                    <td style={{ ...lvTd(true), textAlign: 'right' }}>{withUom(m.on_hand_qty, m.uom, true)}</td>
-                                    <td style={{ ...lvTd(true), textAlign: 'right', color: '#666' }}>
+                                    <td style={{ ...lvTd(), textAlign: 'right' }}>{withUom(m.on_hand_qty, m.uom, true)}</td>
+                                    <td style={{ ...lvTd(), textAlign: 'right', color: '#666' }}>
                                         {num(m.staged_total)}
                                     </td>
-                                    <td style={{ ...lvTd(true), textAlign: 'right' }}>{num(m.allocated_total)}</td>
+                                    <td style={{ ...lvTd(), textAlign: 'right' }}>{num(m.allocated_total)}</td>
                                     <td style={{
-                                        ...lvTd(true), textAlign: 'right', fontWeight: 'bold',
+                                        ...lvTd(), textAlign: 'right', fontWeight: 'bold',
                                         color: m.free_qty > 0 ? statusColor('READY') : '#888',
                                     }}>{num(m.free_qty)}</td>
                                     <td style={{
-                                        ...lvTd(true), textAlign: 'right',
+                                        ...lvTd(), textAlign: 'right',
                                         color: m.shortfall_total > 0 ? statusColor('SHORT') : undefined,
                                         fontWeight: m.shortfall_total > 0 ? 'bold' : 'normal',
                                     }}>{m.shortfall_total > 0 ? num(m.shortfall_total) : '—'}</td>
-                                    <td style={{ ...lvTd(true), textAlign: 'right' }}>
+                                    <td style={{ ...lvTd(), textAlign: 'right' }}>
                                         {m.orders_waiting > 0
                                             ? `${m.orders_waiting} / ${m.orders_total} waiting`
                                             : m.orders_total}
                                     </td>
-                                    <td style={lvTd(true)}>
+                                    <td style={lvTd()}>
                                         {m.lot_count === 0
                                             ? <span style={{ color: '#888' }}>not lotted</span>
                                             : m.lots.map(l => (
@@ -398,30 +398,29 @@ export default function WorkQueueView() {
     const renderMaterials = (r: QueueRow) => (
         <ExpandedRowPanel classic>
             <ExpandedRowPanelBody classic>
-                <table style={lvSubTable(true)}>
+                <table style={lvSubTable()}>
                     <thead>
                         <tr>
-                            <th style={lvSubTh(true)}>Material</th>
-                            <th style={{ ...lvSubTh(true), textAlign: 'right' }}>Required</th>
-                            <th style={{ ...lvSubTh(true), textAlign: 'right' }}>Staged</th>
-                            <th style={{ ...lvSubTh(true), textAlign: 'right' }}>Free pool</th>
-                            <th style={{ ...lvSubTh(true), textAlign: 'right' }}>Allocated</th>
-                            <th style={{ ...lvSubTh(true), textAlign: 'right' }}>Short</th>
-                            <th style={lvSubTh(true)}>Incoming</th>
+                            <th style={lvSubTh()}>Material</th>
+                            <th style={{ ...lvSubTh(), textAlign: 'right' }}>Required</th>
+                            <th style={{ ...lvSubTh(), textAlign: 'right' }}>Staged</th>
+                            <th style={{ ...lvSubTh(), textAlign: 'right' }}>Free pool</th>
+                            <th style={{ ...lvSubTh(), textAlign: 'right' }}>Allocated</th>
+                            <th style={{ ...lvSubTh(), textAlign: 'right' }}>Short</th>
+                            <th style={lvSubTh()}>Incoming</th>
                         </tr>
                     </thead>
                     <tbody>
                         {r.materials.length === 0 && (
                             <TableEmpty
                                 colSpan={7}
-                                classic
                                 message="No materials resolved for this step."
-                                tdStyle={lvSubTd(true)}
+                                tdStyle={lvSubTd()}
                             />
                         )}
                         {r.materials.map((m, i) => (
-                            <tr key={m.item_id + String(i)} style={lvSubRow(true, i)}>
-                                <td style={lvSubTd(true)}>
+                            <tr key={m.item_id + String(i)} style={lvSubRow(i)}>
+                                <td style={lvSubTd()}>
                                     <span style={{ fontWeight: m.is_substrate ? 'bold' : 'normal' }}>
                                         {m.item_code || '—'}
                                     </span>
@@ -437,12 +436,12 @@ export default function WorkQueueView() {
                                         {/* Warp is loom-mounted, never staged to the WO, so Staged is
                                             n/a and Free pool / Allocated are the kg left on the mounts.
                                             Slot counts are deliberately not shown. */}
-                                        <td style={{ ...lvSubTd(true), textAlign: 'right' }}>{withUom(m.required_qty, m.uom, true)}</td>
-                                        <td style={{ ...lvSubTd(true), textAlign: 'right' }}>{'—'}</td>
-                                        <td style={{ ...lvSubTd(true), textAlign: 'right' }}>{num(m.on_hand_qty)}</td>
-                                        <td style={{ ...lvSubTd(true), textAlign: 'right' }}>{num(m.allocated_qty)}</td>
+                                        <td style={{ ...lvSubTd(), textAlign: 'right' }}>{withUom(m.required_qty, m.uom, true)}</td>
+                                        <td style={{ ...lvSubTd(), textAlign: 'right' }}>{'—'}</td>
+                                        <td style={{ ...lvSubTd(), textAlign: 'right' }}>{num(m.on_hand_qty)}</td>
+                                        <td style={{ ...lvSubTd(), textAlign: 'right' }}>{num(m.allocated_qty)}</td>
                                         <td style={{
-                                            ...lvSubTd(true), textAlign: 'right',
+                                            ...lvSubTd(), textAlign: 'right',
                                             // Amber, not red: a warp running out mid-run is normal — the
                                             // floor mounts the next beam — so it must not read like a
                                             // blocking substrate shortfall.
@@ -452,7 +451,7 @@ export default function WorkQueueView() {
                                                 ? num(m.required_qty - m.on_hand_qty)
                                                 : '—'}
                                         </td>
-                                        <td style={lvSubTd(true)}>
+                                        <td style={lvSubTd()}>
                                             {m.required_qty - m.on_hand_qty > 1e-6
                                                 ? 'mounted · runs out mid-order'
                                                 : 'mounted on loom'}
@@ -460,16 +459,16 @@ export default function WorkQueueView() {
                                     </>
                                 ) : (
                                     <>
-                                        <td style={{ ...lvSubTd(true), textAlign: 'right' }}>{withUom(m.required_qty, m.uom, true)}</td>
-                                        <td style={{ ...lvSubTd(true), textAlign: 'right' }}>{num(m.staged_qty)}</td>
-                                        <td style={{ ...lvSubTd(true), textAlign: 'right' }}>{num(m.on_hand_qty)}</td>
-                                        <td style={{ ...lvSubTd(true), textAlign: 'right' }}>{num(m.allocated_qty)}</td>
+                                        <td style={{ ...lvSubTd(), textAlign: 'right' }}>{withUom(m.required_qty, m.uom, true)}</td>
+                                        <td style={{ ...lvSubTd(), textAlign: 'right' }}>{num(m.staged_qty)}</td>
+                                        <td style={{ ...lvSubTd(), textAlign: 'right' }}>{num(m.on_hand_qty)}</td>
+                                        <td style={{ ...lvSubTd(), textAlign: 'right' }}>{num(m.allocated_qty)}</td>
                                         <td style={{
-                                            ...lvSubTd(true), textAlign: 'right',
+                                            ...lvSubTd(), textAlign: 'right',
                                             color: m.shortfall_qty > 0 ? statusColor('SHORT') : undefined,
                                             fontWeight: m.shortfall_qty > 0 ? 'bold' : 'normal',
                                         }}>{m.shortfall_qty > 0 ? num(m.shortfall_qty) : '—'}</td>
-                                        <td style={lvSubTd(true)}>
+                                        <td style={lvSubTd()}>
                                             {m.incoming_qty > 0
                                                 ? `${num(m.incoming_qty)} on ${m.incoming_mo_code || 'order'}${m.incoming_eta ? ` · ${shortDate(m.incoming_eta)}` : ''}`
                                                 : '—'}
@@ -519,20 +518,20 @@ export default function WorkQueueView() {
                         <col style={{ width: 95 }} />
                         <col style={{ width: 150 }} />
                     </colgroup>
-                    <thead style={lvThead(true, true)}>
+                    <thead style={lvThead()}>
                         <tr>
-                            <th style={lvTh(true)}></th>
-                            <th style={{ ...lvTh(true), textAlign: 'right' }}>#</th>
-                            <th style={lvTh(true)}>Work Order</th>
-                            <th style={lvTh(true)}>Order / Item</th>
-                            <th style={lvTh(true)}>Colour</th>
-                            <th style={lvTh(true)}>Work Centre</th>
-                            <th style={{ ...lvTh(true), textAlign: 'right' }}>Qty</th>
-                            <th style={lvTh(true)}>Gating Material</th>
-                            <th style={{ ...lvTh(true), textAlign: 'right' }}>Need</th>
-                            <th style={{ ...lvTh(true), textAlign: 'right' }}>Have</th>
-                            <th style={lvTh(true)}>Scheduled</th>
-                            <th style={lvTh(true)}>Verdict</th>
+                            <th style={lvTh()}></th>
+                            <th style={{ ...lvTh(), textAlign: 'right' }}>#</th>
+                            <th style={lvTh()}>Work Order</th>
+                            <th style={lvTh()}>Order / Item</th>
+                            <th style={lvTh()}>Colour</th>
+                            <th style={lvTh()}>Work Centre</th>
+                            <th style={{ ...lvTh(), textAlign: 'right' }}>Qty</th>
+                            <th style={lvTh()}>Gating Material</th>
+                            <th style={{ ...lvTh(), textAlign: 'right' }}>Need</th>
+                            <th style={{ ...lvTh(), textAlign: 'right' }}>Have</th>
+                            <th style={lvTh()}>Scheduled</th>
+                            <th style={lvTh()}>Verdict</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -555,18 +554,18 @@ export default function WorkQueueView() {
                                 <React.Fragment key={rowKey}>
                                     <tr
                                         style={{
-                                            ...lvRow(true, i),
+                                            ...lvRow(i),
                                             ...(open ? { background: rowStateBg('expanded', true) } : {}),
                                             cursor: 'pointer',
                                             borderLeft: `3px solid ${statusColor(r.verdict)}`,
                                         }}
                                         onClick={() => setExpanded(open ? null : rowKey)}
                                     >
-                                        <ExpanderCell classic expanded={open} onToggle={() => setExpanded(open ? null : rowKey)} label="work order detail" />
-                                        <td style={{ ...lvTd(true), textAlign: 'right', color: '#888' }}>
+                                        <ExpanderCell expanded={open} onToggle={() => setExpanded(open ? null : rowKey)} label="work order detail" />
+                                        <td style={{ ...lvTd(), textAlign: 'right', color: '#888' }}>
                                             {(page - 1) * PAGE_SIZE + i + 1}
                                         </td>
-                                        <td style={{ ...lvTd(true), overflow: 'hidden' }}>
+                                        <td style={{ ...lvTd(), overflow: 'hidden' }}>
                                             {r.is_released ? (
                                                 <>
                                                     <div style={{ minWidth: 0 }}>
@@ -586,7 +585,7 @@ export default function WorkQueueView() {
                                                 </>
                                             )}
                                         </td>
-                                        <td style={{ ...lvTd(true), overflow: 'hidden' }}>
+                                        <td style={{ ...lvTd(), overflow: 'hidden' }}>
                                             <div style={{ minWidth: 0 }}>
                                                 <CodeChip code={r.mo_code || '—'} classic tier={2} style={codeClip} />
                                             </div>
@@ -594,12 +593,12 @@ export default function WorkQueueView() {
                                                 {r.item_code} {r.item_name ? `· ${r.item_name}` : ''}
                                             </div>
                                         </td>
-                                        <td style={{ ...lvTd(true), ...ellipsis }}>{r.color_name || '—'}</td>
-                                        <td style={{ ...lvTd(true), overflow: 'hidden' }}>
+                                        <td style={{ ...lvTd(), ...ellipsis }}>{r.color_name || '—'}</td>
+                                        <td style={{ ...lvTd(), overflow: 'hidden' }}>
                                             <WorkCenterChip type={r.work_center_type} name={r.work_center_name} />
                                         </td>
-                                        <td style={{ ...lvTd(true), textAlign: 'right' }}>{num(r.qty)}</td>
-                                        <td style={{ ...lvTd(true), ...ellipsis }}>
+                                        <td style={{ ...lvTd(), textAlign: 'right' }}>{num(r.qty)}</td>
+                                        <td style={{ ...lvTd(), ...ellipsis }}>
                                             {r.substrate_item_code || '—'}
                                             {r.chemical_shortfall_count > 0 && (
                                                 <span
@@ -608,17 +607,17 @@ export default function WorkQueueView() {
                                                 >+{r.chemical_shortfall_count} CHEM</span>
                                             )}
                                         </td>
-                                        <td style={{ ...lvTd(true), textAlign: 'right' }}>
+                                        <td style={{ ...lvTd(), textAlign: 'right' }}>
                                             {withUom(r.substrate_required_qty, r.substrate_uom, true)}
                                         </td>
                                         <td style={{
-                                            ...lvTd(true), textAlign: 'right',
+                                            ...lvTd(), textAlign: 'right',
                                             color: short > 1e-6 ? statusColor('SHORT') : undefined,
                                             fontWeight: short > 1e-6 ? 'bold' : 'normal',
                                         }}>
                                             {num(r.substrate_available_qty)}
                                         </td>
-                                        <td style={lvTd(true)} title={DATE_SOURCE_LABEL[r.date_source] || r.date_source}>
+                                        <td style={lvTd()} title={DATE_SOURCE_LABEL[r.date_source] || r.date_source}>
                                             <span style={{
                                                 color: r.is_overdue ? statusColor('SHORT') : undefined,
                                                 fontWeight: r.is_overdue ? 'bold' : 'normal',
@@ -631,7 +630,7 @@ export default function WorkQueueView() {
                                                 color: r.date_source === 'created' ? '#b8860b' : '#888',
                                             }}>{DATE_SOURCE_LABEL[r.date_source] || r.date_source}</div>
                                         </td>
-                                        <td style={lvTd(true)} title={VERDICT_HELP[r.verdict] || ''}>
+                                        <td style={lvTd()} title={VERDICT_HELP[r.verdict] || ''}>
                                             <StatusChip status={r.verdict} />
                                             {r.verdict_detail && (
                                                 <div style={{ fontSize: 10, color: '#666', marginTop: 2 }}>

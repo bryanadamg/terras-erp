@@ -122,7 +122,7 @@ export default function AttributesLibraryView({
                 </ToolbarCount>
                 {canManage && (
                     <>
-                        <span style={lvSep(true)} />
+                        <span style={lvSep()} />
                         <ToolbarButton classic tone="create" icon="bi-plus-lg" onClick={openCreate}>New Attribute</ToolbarButton>
                     </>
                 )}
@@ -131,27 +131,27 @@ export default function AttributesLibraryView({
             {/* Table */}
             <div style={{ flex: 1, minHeight: 0, background: '#fff', overflow: 'auto' }}>
                 <table style={{ width: '100%', borderCollapse: 'collapse', background: '#fff' }}>
-                    <thead style={lvThead(true, true)}>
+                    <thead style={lvThead()}>
                         <tr>
-                            <th style={{ ...lvTh(true), width: 200 }}>Name</th>
-                            <th style={{ ...lvTh(true), width: 140 }}>Role</th>
-                            <th style={lvTh(true)}>Values</th>
-                            <th style={{ ...lvTh(true), width: 90, textAlign: 'center' }}>Count</th>
-                            <th style={{ ...lvTh(true), width: 70, textAlign: 'right', borderRight: 'none' }}></th>
+                            <th style={{ ...lvTh(), width: 200 }}>Name</th>
+                            <th style={{ ...lvTh(), width: 140 }}>Role</th>
+                            <th style={lvTh()}>Values</th>
+                            <th style={{ ...lvTh(), width: 90, textAlign: 'center' }}>Count</th>
+                            <th style={{ ...lvTh(), width: 70, textAlign: 'right', borderRight: 'none' }}></th>
                         </tr>
                     </thead>
                     <tbody>
                         {filtered.length === 0 && (
-                            <tr><td colSpan={5} style={{ ...lvTd(true), textAlign: 'center', color: '#888', fontStyle: 'italic', padding: 20 }}>
+                            <tr><td colSpan={5} style={{ ...lvTd(), textAlign: 'center', color: '#888', fontStyle: 'italic', padding: 20 }}>
                                 No attributes defined.
                             </td></tr>
                         )}
                         {filtered.map((attr: any, idx: number) => (
-                            <tr key={attr.id} style={{ ...lvRow(true, idx), cursor: 'pointer' }} onClick={() => openEdit(attr)}>
-                                <td style={lvTd(true)}>
+                            <tr key={attr.id} style={{ ...lvRow(idx), cursor: 'pointer' }} onClick={() => openEdit(attr)}>
+                                <td style={lvTd()}>
                                     <span style={{ fontWeight: 'bold' }}>{attr.name}</span>
                                 </td>
-                                <td style={lvTd(true)}>
+                                <td style={lvTd()}>
                                     {attr.system_role ? (
                                         <span style={{
                                             fontSize: 9, background: '#dce8ff',
@@ -160,7 +160,7 @@ export default function AttributesLibraryView({
                                         }}>{ROLE_LABELS[attr.system_role] || attr.system_role}</span>
                                     ) : <span style={{ color: '#aaa' }}>—</span>}
                                 </td>
-                                <td style={lvTd(true)}>
+                                <td style={lvTd()}>
                                     <div style={{ display: 'flex', flexWrap: 'wrap', gap: 3 }}>
                                         {attr.values.slice(0, 8).map((v: any) => (
                                             <span key={v.id} style={{
@@ -172,8 +172,8 @@ export default function AttributesLibraryView({
                                         {attr.values.length === 0 && <span style={{ fontSize: 10, color: '#aaa', fontStyle: 'italic' }}>no values</span>}
                                     </div>
                                 </td>
-                                <td style={{ ...lvTd(true), textAlign: 'center' }}>{attr.values.length}</td>
-                                <td style={{ ...lvTd(true), borderRight: 'none', textAlign: 'right' }} onClick={e => e.stopPropagation()}>
+                                <td style={{ ...lvTd(), textAlign: 'center' }}>{attr.values.length}</td>
+                                <td style={{ ...lvTd(), borderRight: 'none', textAlign: 'right' }} onClick={e => e.stopPropagation()}>
                                     {canManage && <MenuTriggerButton classic onClick={e => menuToggle(String(attr.id), e)} />}
                                 </td>
                             </tr>
@@ -205,9 +205,9 @@ export default function AttributesLibraryView({
                 modeless
                 footer={
                     <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
-                        <button type="button" className={XP_BTN} style={lvBtn(true)} onClick={closeModal}>Cancel</button>
+                        <button type="button" className={XP_BTN} style={lvBtn()} onClick={closeModal}>Cancel</button>
                         {canManage && (!editing || !editing.is_system) && (
-                            <button type="submit" form="attribute-form" className={XP_BTN} style={lvPrimaryBtn(true)} disabled={isSubmitting}>
+                            <button type="submit" form="attribute-form" className={XP_BTN} style={lvPrimaryBtn()} disabled={isSubmitting}>
                                 {editing ? 'Save' : 'Create'}
                             </button>
                         )}
@@ -217,9 +217,9 @@ export default function AttributesLibraryView({
                 <form id="attribute-form" onSubmit={handleSubmit}>
                     <FormSection title="Identity" classic>
                         <div>
-                            <label style={lvLabel(true)}>Name *</label>
+                            <label style={lvLabel()}>Name *</label>
                             <input
-                                style={lvInput(true)}
+                                style={lvInput()}
                                 value={nameDraft}
                                 onChange={e => setNameDraft(e.target.value)}
                                 placeholder="e.g. Size, Fabric"
@@ -240,9 +240,9 @@ export default function AttributesLibraryView({
                             <>
                                 <div style={{ background: '#fff', border: '1px solid #7f9db9', maxHeight: 220, overflowY: 'auto', marginBottom: 8 }}>
                                     {editing.values.map((val: any, vi: number) => (
-                                        <div key={val.id} style={{ display: 'flex', alignItems: 'center', padding: '2px 4px', background: lvZebra(true, vi), borderBottom: '1px solid #e0dfd8' }}>
+                                        <div key={val.id} style={{ display: 'flex', alignItems: 'center', padding: '2px 4px', background: lvZebra(vi), borderBottom: '1px solid #e0dfd8' }}>
                                             <input
-                                                style={{ ...lvInput(true), flex: 1, border: 'none', boxShadow: 'none', background: 'transparent' }}
+                                                style={{ ...lvInput(), flex: 1, border: 'none', boxShadow: 'none', background: 'transparent' }}
                                                 defaultValue={val.value}
                                                 disabled={!canManage}
                                                 onBlur={e => { if (e.target.value !== val.value && e.target.value.trim()) onUpdateValue(val.id, e.target.value.trim()); }}
@@ -261,15 +261,15 @@ export default function AttributesLibraryView({
                                 {canManage && (
                                     <div style={{ display: 'flex', gap: 6 }}>
                                         <input
-                                            style={lvInput(true)}
+                                            style={lvInput()}
                                             placeholder="Add value…"
                                             value={valueDraft}
                                             onChange={e => setValueDraft(e.target.value)}
                                             onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); handleAddValueToExisting(); } }}
                                         />
-                                        <button type="button" className={XP_BTN} style={lvBtn(true)} onClick={handleAddValueToExisting}>Add</button>
+                                        <button type="button" className={XP_BTN} style={lvBtn()} onClick={handleAddValueToExisting}>Add</button>
                                         {nextVal !== null && (
-                                            <button type="button" className={XP_BTN} style={lvBtn(true)} onClick={handleAddNextToExisting}>+{nextVal}</button>
+                                            <button type="button" className={XP_BTN} style={lvBtn()} onClick={handleAddNextToExisting}>+{nextVal}</button>
                                         )}
                                     </div>
                                 )}
@@ -278,15 +278,15 @@ export default function AttributesLibraryView({
                             <>
                                 <div style={{ display: 'flex', gap: 6, marginBottom: 8 }}>
                                     <input
-                                        style={lvInput(true)}
+                                        style={lvInput()}
                                         placeholder="Value (e.g. S, M, L)"
                                         value={valueDraft}
                                         onChange={e => setValueDraft(e.target.value)}
                                         onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); addDraftValue(); } }}
                                     />
-                                    <button type="button" className={XP_BTN} style={lvBtn(true)} onClick={addDraftValue}>Add</button>
+                                    <button type="button" className={XP_BTN} style={lvBtn()} onClick={addDraftValue}>Add</button>
                                     {nextVal !== null && (
-                                        <button type="button" className={XP_BTN} style={lvBtn(true)} onClick={addNextDraftValue}>+{nextVal}</button>
+                                        <button type="button" className={XP_BTN} style={lvBtn()} onClick={addNextDraftValue}>+{nextVal}</button>
                                     )}
                                 </div>
                                 <div style={{ background: '#fff', border: '1px solid #7f9db9', minHeight: 32, padding: '4px 6px', display: 'flex', flexWrap: 'wrap', gap: 4 }}>

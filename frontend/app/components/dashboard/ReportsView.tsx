@@ -277,7 +277,7 @@ export default function ReportsView(_props: any) {
     const toolbar: React.CSSProperties = sharedXpToolbar({ padding: '4px 6px', gap: '5px', flexWrap: 'nowrap', overflowX: 'auto' });
     const toolbarTop: React.CSSProperties = { ...toolbar, borderBottom: 'none', paddingBottom: 0 };
     const th: React.CSSProperties = {
-        ...lvThead(true),
+        ...lvThead(),
         fontSize: '10px', fontWeight: 'bold', color: '#000', fontFamily: xpFont, padding: '3px 8px',
         position: 'sticky', top: 0, textAlign: 'left', borderRight: '1px solid #b0a898',
     };
@@ -341,7 +341,7 @@ export default function ReportsView(_props: any) {
         const rm = refMeta(e.reference_type);
         const up = e.qty_change >= 0;
         const pkg = pkgDelta(e);
-        return <tr key={e.id} style={{ background: lvZebra(true, i), borderBottom: '1px solid #e0ddd3' }}>
+        return <tr key={e.id} style={{ background: lvZebra(i), borderBottom: '1px solid #e0ddd3' }}>
                 <td style={{ ...xpCell, whiteSpace: 'nowrap' }}>
                     <div style={{ fontSize: '11px', color: '#000' }}>{tzDate(e.created_at)}</div>
                     <div style={{ fontSize: '10px', color: '#777' }}>{tzTime(e.created_at)}</div>
@@ -360,7 +360,7 @@ export default function ReportsView(_props: any) {
                 <td style={{ ...xpCell, fontSize: '11px' }}>
                     {e.item_category_name
                         ? <span title={e.item_category_name} style={{ borderRadius: CHIP_RADIUS, display: 'inline-block', maxWidth: '100%', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', verticalAlign: 'bottom', background: '#e4eef0', border: '1px solid #8fb3bb', padding: '0 5px', fontSize: '10px', color: '#2a464a' }}>{e.item_category_name}</span>
-                        : <Dash classic />}
+                        : <Dash />}
                 </td>
                 <td style={{ ...xpCell, fontSize: '11px' }}>
                     <div style={{ display: 'flex', flexWrap: 'wrap', gap: 3 }}>
@@ -377,7 +377,7 @@ export default function ReportsView(_props: any) {
                 <td style={{ ...xpCell, fontSize: '11px' }}>
                     {e.batch_number
                         ? <span style={{ borderRadius: CHIP_RADIUS, background: '#fff8dc', border: '1px solid #c8a000', padding: '0 5px', fontSize: '10px', color: '#5a3c00' }}>{e.batch_number}</span>
-                        : <Dash classic />}
+                        : <Dash />}
                 </td>
                 <td style={{ ...xpCell, textAlign: 'right', whiteSpace: 'nowrap' }}>
                     <span style={{ fontSize: '11px', fontWeight: 'bold', color: up ? '#1a5e1a' : '#c00000' }}>

@@ -577,8 +577,8 @@ export default function QuarantinePackingView() {
         color: awaiting ? '#9a6a00' : '#444',
     });
 
-    const lotTh = lvSubTh(true);
-    const lotTd = lvSubTd(true);
+    const lotTh = lvSubTh();
+    const lotTd = lvSubTd();
 
     // ── Per-lot detail table (both themes) ────────────────────────────────────
     const renderLots = (g: Group) => {
@@ -597,7 +597,7 @@ export default function QuarantinePackingView() {
         <ExpandedRowPanel classic style={{
             padding: '8px 12px 10px 18px',
         }}>
-            <div style={lvSubCaption(true)}>
+            <div style={lvSubCaption()}>
                 Lots on Hold — {g.lot_count} lot{g.lot_count === 1 ? '' : 's'}
                 {g.packed_lot_count > 0 && ` · ${g.packed_lot_count} packed (history)`}
             </div>
@@ -645,12 +645,11 @@ export default function QuarantinePackingView() {
                 </div>
             )}
 
-            <table style={lvSubTable(true)}>
+            <table style={lvSubTable()}>
                 <thead>
                     <tr>
                         <th style={{ ...lotTh, width: LV_CHECK_COL_W, textAlign: 'center' }}>
                             <SelectAllCheckbox
-                                classic
                                 allSelected={allChosen}
                                 someSelected={chosen.length > 0}
                                 disabled={pickDisabled || !groupIds.length}
@@ -681,7 +680,6 @@ export default function QuarantinePackingView() {
                                 {/* QC works the hold area a day at a time, so the band
                                     is the selection grain the floor actually asks for. */}
                                 <SelectAllCheckbox
-                                    classic
                                     allSelected={secAllChosen}
                                     someSelected={secChosen.length > 0}
                                     disabled={pickDisabled || !secIds.length}
@@ -719,7 +717,7 @@ export default function QuarantinePackingView() {
                             // No zebra. The only fills are the settled/claimed tint and
                             // the checked highlight — both semantic, both via lvSubRow.
                             style={{
-                                ...lvSubRow(true, i, {
+                                ...lvSubRow(i, {
                                     // Chosen = selected, so it takes the app-wide selection
                                     // fill; amber here read as a warning instead.
                                     fill: locked ? ('#f0efe9')
@@ -732,7 +730,6 @@ export default function QuarantinePackingView() {
                             <td style={{ ...lotTd, textAlign: 'center' }}>
                                 {selectable ? (
                                     <RowCheckbox
-                                        classic
                                         checked={isChosen}
                                         disabled={pickDisabled}
                                         label={l.batch_number || 'lot'}
@@ -837,12 +834,12 @@ export default function QuarantinePackingView() {
     const toolbar = (
         <div style={sharedXpToolbar({ flexShrink: 0 })}>
             <SearchField classic value={searchInput} onChange={setSearchInput} placeholder="MO, lot, item or SO..." width={230} />
-            <div style={lvSep(true)} />
-            <span style={{ ...lvLabel(true), display: 'inline', marginBottom: 0 }}>Status</span>
+            <div style={lvSep()} />
+            <span style={{ ...lvLabel(), display: 'inline', marginBottom: 0 }}>Status</span>
             <select
                 value={statusFilter}
                 onChange={e => setStatusFilter(e.target.value)}
-                style={lvInput(true, { width: 160 })}
+                style={lvInput({ width: 160 })}
             >
                 <option value="">All</option>
                 {DERIVED_FILTERS.map(f => <option key={f.key} value={f.key}>{f.label}</option>)}
@@ -850,7 +847,7 @@ export default function QuarantinePackingView() {
                     <option key={s.id} value={s.value.toUpperCase()}>{s.value}</option>
                 ))}
             </select>
-            <div style={lvSep(true)} />
+            <div style={lvSep()} />
             {/* Packed lots have left the hold area, so they are not part of the
                 queue — but they are still this MO's history, and hiding them made
                 a lot look deleted the moment it was packed. */}
@@ -864,8 +861,8 @@ export default function QuarantinePackingView() {
             >
                 <i className="bi bi-box-seam" style={{ marginRight: 4 }} />Show packed
             </ToggleChip>
-            <div style={lvSep(true)} />
-            <button className={XP_BTN} style={lvBtn(true)} onClick={() => refetch()} title="Refresh">
+            <div style={lvSep()} />
+            <button className={XP_BTN} style={lvBtn()} onClick={() => refetch()} title="Refresh">
                 <i className="bi bi-arrow-clockwise" style={{ marginRight: 4 }} />Refresh
             </button>
             {!canSetStatus && (
@@ -883,19 +880,19 @@ export default function QuarantinePackingView() {
     const body = (
         <div style={{ flex: 1, minHeight: 0, width: '100%', background: '#fff', overflow: 'auto' }}>
             <table style={{ width: '100%', borderCollapse: 'collapse', background: '#fff' }}>
-                <thead style={lvThead(true, true)}>
+                <thead style={lvThead()}>
                     <tr>
-                        <th style={{ ...lvTh(true), width: LV_EXPANDER_COL_W }} />
-                        <th style={lvTh(true)}>Item</th>
-                        <th style={lvTh(true)}>Manufacturing Order</th>
-                        <th style={{ ...lvTh(true), width: 130 }}>Sales Order</th>
-                        <th style={{ ...lvTh(true), width: 150 }}>Colour</th>
-                        <th style={{ ...lvTh(true), width: 130 }}>Variant</th>
-                        <th style={{ ...lvTh(true), width: 70, textAlign: 'right' }}>Lots</th>
-                        <th style={{ ...lvTh(true), width: 120, textAlign: 'right' }}>Qty Held</th>
-                        <th style={{ ...lvTh(true), width: 120, textAlign: 'right' }}>Released</th>
-                        <th style={{ ...lvTh(true), width: 140 }}>Status</th>
-                        <th style={{ ...lvTh(true), width: 110, borderRight: 'none' }}>Pack</th>
+                        <th style={{ ...lvTh(), width: LV_EXPANDER_COL_W }} />
+                        <th style={lvTh()}>Item</th>
+                        <th style={lvTh()}>Manufacturing Order</th>
+                        <th style={{ ...lvTh(), width: 130 }}>Sales Order</th>
+                        <th style={{ ...lvTh(), width: 150 }}>Colour</th>
+                        <th style={{ ...lvTh(), width: 130 }}>Variant</th>
+                        <th style={{ ...lvTh(), width: 70, textAlign: 'right' }}>Lots</th>
+                        <th style={{ ...lvTh(), width: 120, textAlign: 'right' }}>Qty Held</th>
+                        <th style={{ ...lvTh(), width: 120, textAlign: 'right' }}>Released</th>
+                        <th style={{ ...lvTh(), width: 140 }}>Status</th>
+                        <th style={{ ...lvTh(), width: 110, borderRight: 'none' }}>Pack</th>
                     </tr>
                 </thead>
                 <tbody ref={listBodyRef}>
@@ -913,7 +910,7 @@ export default function QuarantinePackingView() {
                                     onClick={() => toggleRow(g.key, g.lots)}
                                     title="Click to see the lots"
                                     style={{
-                                        ...lvRow(true, i),
+                                        ...lvRow(i),
                                         cursor: 'pointer',
                                         // Only override when open — `background: undefined` still wins over
                                         // the spread above (last key in the literal), which is what was
@@ -921,12 +918,12 @@ export default function QuarantinePackingView() {
                                         ...(open ? { background: rowStateBg('expanded', true) } : {}),
                                     }}
                                 >
-                                    <ExpanderCell classic expanded={open} onToggle={() => toggleRow(g.key, g.lots)} label="lots" />
-                                    <td style={lvTd(true)}>
+                                    <ExpanderCell expanded={open} onToggle={() => toggleRow(g.key, g.lots)} label="lots" />
+                                    <td style={lvTd()}>
                                         <span style={{ fontWeight: 'bold' }}>{g.item_name}</span>
                                         <div style={{ fontSize: 10, color: '#666', fontVariant: 'all-small-caps' }}>{g.item_code}</div>
                                     </td>
-                                    <td style={lvTd(true)}>
+                                    <td style={lvTd()}>
                                         <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                                             {g.mo_code
                                                 ? <CodeChip code={g.mo_code} classic tone="accent" />
@@ -939,19 +936,19 @@ export default function QuarantinePackingView() {
                                             </OriginChipRow>
                                         ) : <div style={{ fontSize: 10 }}>&nbsp;</div>}
                                     </td>
-                                    <td style={lvTd(true)}>
+                                    <td style={lvTd()}>
                                         {g.sales_order_code
                                             ? <OriginChip kind="so" code={g.sales_order_code} classic />
                                             : <span style={{ color: '#ccc' }}>—</span>}
                                     </td>
-                                    <td style={lvTd(true)}>
+                                    <td style={lvTd()}>
                                         {g.color_name
                                             ? <ColorSwatchChip classic label={colorLabel(g.color_code, g.color_name)} title={`Color: ${colorTitle(g.color_code, g.color_name)}`} hex={resolveColorHex(g.color_hex, g.lots?.[0]?.variant_attributes)} />
                                             : g.labdip_variant_code
                                                 ? <span style={{ fontSize: 10, color: '#9a6a00' }} title="Shade still awaiting lab-dip approval">{g.labdip_variant_code}</span>
                                                 : <span style={{ color: '#999', fontStyle: 'italic', fontSize: 10 }}>Greige</span>}
                                     </td>
-                                    <td style={lvTd(true)}>
+                                    <td style={lvTd()}>
                                         {(() => {
                                             // Size/combo are carried on the lot record, not the group —
                                             // but every lot in a group shares the same bom_size_id /
@@ -977,7 +974,7 @@ export default function QuarantinePackingView() {
                                             );
                                         })()}
                                     </td>
-                                    <td style={{ ...lvTd(true), textAlign: 'right' }}>
+                                    <td style={{ ...lvTd(), textAlign: 'right' }}>
                                         {g.lot_count}
                                         {g.packed_lot_count > 0 && (
                                             <div style={{ fontSize: 10, color: '#888' }}
@@ -986,16 +983,16 @@ export default function QuarantinePackingView() {
                                             </div>
                                         )}
                                     </td>
-                                    <td style={{ ...lvTd(true), textAlign: 'right', whiteSpace: 'nowrap' }}>
+                                    <td style={{ ...lvTd(), textAlign: 'right', whiteSpace: 'nowrap' }}>
                                         {fmtQty(g.qty_total)} <span style={{ color: '#999', fontSize: 10 }}>{g.uom}</span>
                                     </td>
                                     <td style={{
-                                        ...lvTd(true), textAlign: 'right', whiteSpace: 'nowrap', fontWeight: 'bold',
+                                        ...lvTd(), textAlign: 'right', whiteSpace: 'nowrap', fontWeight: 'bold',
                                         color: allReleased ? '#2d7a2d' : g.qty_released > 0 ? '#9a6a00' : '#999',
                                     }}>
                                         {fmtQty(g.qty_released)}
                                     </td>
-                                    <td style={lvTd(true)}>
+                                    <td style={lvTd()}>
                                         <StatusChip
                                             status={g.rollup_status}
                                             label={g.rollup_status === 'NONE' ? 'No status' : g.rollup_status.replace(/_/g, ' ')}
@@ -1003,7 +1000,7 @@ export default function QuarantinePackingView() {
                                                 .map(([k, n]) => `${n} × ${k === 'NONE' ? 'no status' : k}`).join(', ')}
                                         />
                                     </td>
-                                    <td style={{ ...lvTd(true), borderRight: 'none' }} onClick={e => e.stopPropagation()}>
+                                    <td style={{ ...lvTd(), borderRight: 'none' }} onClick={e => e.stopPropagation()}>
                                         <XPActionButton
                                             classic
                                             tone="success"
@@ -1031,7 +1028,7 @@ export default function QuarantinePackingView() {
                             </Fragment>
                         );
                     })}
-                    {showSkeleton && <TableSkeleton rows={7} cols={skel.cols ?? COL_COUNT} classic tdStyle={lvTd(true)} rowHeight={skel.rowHeight} fillHeight={skel.fillHeight} />}
+                    {showSkeleton && <TableSkeleton rows={7} cols={skel.cols ?? COL_COUNT} classic tdStyle={lvTd()} rowHeight={skel.rowHeight} fillHeight={skel.fillHeight} />}
                     {!loading && stableGroups.length === 0 && (
                         <tr>
                             <td colSpan={COL_COUNT} style={{ padding: 0 }}>

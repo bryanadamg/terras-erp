@@ -55,7 +55,7 @@ function PRMaterialSkeletonRows({ rows, cellStyle, rowHeight }: {
     return (
         <>
             {Array.from({ length: rows }, (_, r) => (
-                <tr key={`skel-${r}`} style={lvSubRow(true, r, { zebra: true })}>
+                <tr key={`skel-${r}`} style={lvSubRow(r, { zebra: true })}>
                     {PR_MATERIAL_COLUMNS.map((c, ci) => {
                         // Deterministic, not random: the bars must not reshuffle on
                         // re-render while the fetch is in flight. Second lines land on
@@ -310,7 +310,7 @@ export default function ProductionRunsTab({
                         fontSize: '11px',
                         background: '#fff',
                     }}>
-                        <thead style={{ ...lvThead(true, true), fontSize: '10px'}}>
+                        <thead style={{ ...lvThead(), fontSize: '10px'}}>
                             <tr>
                                 {(() => {
                                     const colWidths: Record<string, string | undefined> = {
@@ -326,7 +326,7 @@ export default function ProductionRunsTab({
                                     };
                                     return ['', 'Code', 'BOM / Style', 'MOs', 'Progress', 'Status', 'Materials', 'Due Date', 'Actions'].map((h, i) => (
                                         <th key={h || `col-${i}`} style={{
-                                            ...lvTh(true),
+                                            ...lvTh(),
                                             textAlign: h === 'Actions' ? 'right' : 'left',
                                             width: colWidths[h],
                                         }}>{h}</th>
@@ -344,7 +344,7 @@ export default function ProductionRunsTab({
                                 const done = mos.filter((m: any) => ['COMPLETED', 'DELIVERED'].includes(m.status)).length;
                                 const total = mos.length;
                                 const pct = total > 0 ? Math.round((done / total) * 100) : 0;
-                                const rowBg = lvZebra(true, rowIdx);
+                                const rowBg = lvZebra(rowIdx);
                                 const tdStyle: React.CSSProperties = {
                                     border: '1px solid #c0bdb5', padding: '4px 8px', color: '#000', verticalAlign: 'middle',
                                 };
@@ -363,7 +363,7 @@ export default function ProductionRunsTab({
                                 return (
                                     <React.Fragment key={pr.id}>
                                     <tr style={{ background: isExpanded ? rowStateBg('expanded', true) : rowBg, cursor: 'pointer' }} onClick={() => togglePR(pr.id)} title="Material Requirements">
-                                        <ExpanderCell classic expanded={isExpanded} onToggle={() => togglePR(pr.id)} tdStyle={tdStyle} tone={hasShortfall ? 'alert' : 'default'} label="material requirements" />
+                                        <ExpanderCell expanded={isExpanded} onToggle={() => togglePR(pr.id)} tdStyle={tdStyle} tone={hasShortfall ? 'alert' : 'default'} label="material requirements" />
                                         <td style={tdStyle}>
                                             <CodeChip code={pr.code} classic style={{ fontWeight: 'bold' }} />
                                             {pr.sales_order_id && (
@@ -520,13 +520,13 @@ export default function ProductionRunsTab({
                                                             rather than from whatever the body happens to hold: the skeleton
                                                             and the loaded grid then occupy identical geometry and nothing
                                                             shifts when the figures arrive. */}
-                                                        <table style={{ ...lvSubTable(true), tableLayout: 'fixed' }}>
+                                                        <table style={{ ...lvSubTable(), tableLayout: 'fixed' }}>
                                                             <thead>
                                                                 <tr>
                                                                     {PR_MATERIAL_COLUMNS.map((col) => (
                                                                         // Full cell borders, not lvSubTd's single rule: at 10 columns
                                                                         // this reads as a grid and the verticals do real work.
-                                                                        <th key={col.h} title={col.t || undefined} style={{ ...lvSubTh(true), textAlign: col.num ? 'right' : 'left', border: '1px solid #808080', cursor: col.t ? 'help' : undefined, width: prColWidth(col, true) }}>{col.h}</th>
+                                                                        <th key={col.h} title={col.t || undefined} style={{ ...lvSubTh(), textAlign: col.num ? 'right' : 'left', border: '1px solid #808080', cursor: col.t ? 'help' : undefined, width: prColWidth(col, true) }}>{col.h}</th>
                                                                     ))}
                                                                 </tr>
                                                             </thead>
@@ -541,7 +541,7 @@ export default function ProductionRunsTab({
                                                                         rows={Math.max(1, Math.min(statusTotal || 3, 30))}
                                                                         rowHeight={subRowHeight}
                                                                         cellStyle={{
-                                                                            ...lvSubTd(true),
+                                                                            ...lvSubTd(),
                                                                             border: '1px solid #c0bdb5',
                                                                         }}
                                                                     />
@@ -553,12 +553,12 @@ export default function ProductionRunsTab({
                                                                     // Zebra is opt-in per sub-table; this grid is wide enough to earn
                                                                     // it. The shortage tint is passed as `fill` so it overrides the
                                                                     // stripe rather than alternating with it.
-                                                                    const rowStyle = lvSubRow(true, ri, {
+                                                                    const rowStyle = lvSubRow(ri, {
                                                                         zebra: true,
                                                                         fill: short ? ('#fff0f0') : undefined,
                                                                     });
                                                                     const cellStyle: React.CSSProperties = {
-                                                                        ...lvSubTd(true),
+                                                                        ...lvSubTd(),
                                                                         border: '1px solid #c0bdb5',
                                                                         verticalAlign: 'middle',
                                                                     };

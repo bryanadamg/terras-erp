@@ -25,21 +25,21 @@ const API_BASE = (process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:8000/api
 // Classic-XP primitives, same set PickListView uses — the two pages are read by
 // the same warehouse staff minutes apart and must not drift apart visually.
 const xpFont = LV_XP_FONT;
-const xpInput: React.CSSProperties = lvInput(true);
-const xpTableHeader: React.CSSProperties = { ...lvTh(true), ...lvThead(true), position: 'sticky', top: 0 };
+const xpInput: React.CSSProperties = lvInput();
+const xpTableHeader: React.CSSProperties = { ...lvTh(), ...lvThead(), position: 'sticky', top: 0 };
 // One grid now carries both grains. Nine columns:
 // checkbox · Document · Reference · Customer · Vehicle · Cartons · Status · Checked by · menu
 const COLS = 9;
-const xpBtn = (extra: React.CSSProperties = {}): React.CSSProperties => lvBtn(true, 'default', extra);
-const xpBtnGreen = (extra: React.CSSProperties = {}) => lvBtn(true, 'success', extra);
-const rowStyle = (idx: number): React.CSSProperties => lvRow(true, idx);
-const td: React.CSSProperties = lvTd(true);
+const xpBtn = (extra: React.CSSProperties = {}): React.CSSProperties => lvBtn('default', extra);
+const xpBtnGreen = (extra: React.CSSProperties = {}) => lvBtn('success', extra);
+const rowStyle = (idx: number): React.CSSProperties => lvRow(idx);
+const td: React.CSSProperties = lvTd();
 // Expanded-row sub-table (shipment contents) — subordinate chrome, not the
 // main-list chrome above. Classic-only like the rest of this file.
-const subTh: React.CSSProperties = lvSubTh(true);
-const subTd: React.CSSProperties = lvSubTd(true);
-const subTable: React.CSSProperties = lvSubTable(true);
-const xpLabel: React.CSSProperties = lvLabel(true);
+const subTh: React.CSSProperties = lvSubTh();
+const subTd: React.CSSProperties = lvSubTd();
+const subTable: React.CSSProperties = lvSubTable();
+const xpLabel: React.CSSProperties = lvLabel();
 
 const fmtQty = qtyFmt(2, 'id-ID');   // the deck feeds a printed Surat Jalan
 const PAGE_SIZE = 20;
@@ -316,7 +316,7 @@ export default function DispatchView() {
                     <thead>
                         <tr>
                             <th style={{ ...xpTableHeader, width: LV_CHECK_COL_W, textAlign: 'center' }}>
-                                <SelectAllCheckbox classic allSelected={sel.allPageSelected} someSelected={sel.someSelected}
+                                <SelectAllCheckbox allSelected={sel.allPageSelected} someSelected={sel.someSelected}
                                     disabled={!sel.pageEligibleCount} onChange={sel.togglePage} />
                             </th>
                             <th style={xpTableHeader}>Document</th>
@@ -359,7 +359,7 @@ export default function DispatchView() {
                                         onClick={() => { toggleExpand(key); if (!open) loadDeckDetail(d.id); }}
                                     >
                                         <td style={{ ...td, ...deckMark, textAlign: 'center' }} onClick={e => e.stopPropagation()}>
-                                            <RowCheckbox classic checked={picked} onChange={() => sel.toggle(d)} label={`pick list ${d.code}`} />
+                                            <RowCheckbox checked={picked} onChange={() => sel.toggle(d)} label={`pick list ${d.code}`} />
                                         </td>
                                         <td style={td}><CodeChip code={d.code} classic tone="accent" /></td>
                                         <td style={td}>
@@ -714,7 +714,7 @@ function EditShipmentModal({ shp, deck, authFetch, showToast, onClose, onSaved }
                     <div style={{ maxHeight: 260, overflow: 'auto', border: '1px solid #b0a898', padding: 6, background: '#fff' }}>
                         {candidates.map((c: any) => (
                             <label key={String(c.id)} style={{ display: 'flex', gap: 6, alignItems: 'center', padding: '2px 0' }}>
-                                <RowCheckbox classic checked={!!members[String(c.id)]} label={`pick list ${c.code}`}
+                                <RowCheckbox checked={!!members[String(c.id)]} label={`pick list ${c.code}`}
                                     onChange={() => setMembers(m => ({ ...m, [String(c.id)]: !m[String(c.id)] }))} />
                                 <CodeChip code={c.code} classic tier={2} />
                                 <span style={{ color: '#555' }}>{c.sales_order_code} · {c.carton_count} ctn</span>
@@ -846,7 +846,7 @@ function VerifyModal({ shp, onClose, onSubmit, showToast }: any) {
                                     <td style={{ ...td, textAlign: 'center' }}>
                                         {/* Ticked one carton at a time by design — a select-all
                                             would defeat the second count. */}
-                                        <RowCheckbox classic checked={!!ticked[String(c.id)]} label={`carton ${c.batch_number}`}
+                                        <RowCheckbox checked={!!ticked[String(c.id)]} label={`carton ${c.batch_number}`}
                                             onChange={() => setTicked(t => ({ ...t, [String(c.id)]: !t[String(c.id)] }))} />
                                     </td>
                                     <td style={td}><CodeChip code={c.batch_number} classic tier={2} /></td>

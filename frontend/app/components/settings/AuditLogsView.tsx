@@ -26,7 +26,7 @@ const AuditLogRow = memo(({ log, rowIndex, userName }: any) => {
     const userLabel = userName || (log.user_id ? `User ${userShort}` : 'System');
 
     if (true) {
-        const rowStyle = { ...lvRow(true, rowIndex ?? 0), cursor: log.changes ? 'pointer' : 'default' };
+        const rowStyle = { ...lvRow(rowIndex ?? 0), cursor: log.changes ? 'pointer' : 'default' };
         return (
             <>
                 <tr
@@ -70,7 +70,7 @@ const AuditLogRow = memo(({ log, rowIndex, userName }: any) => {
 
     return (
         <>
-            <tr style={{ ...lvRow(false, rowIndex ?? 0), cursor: log.changes ? 'pointer' : 'default' }} onClick={() => log.changes && setShowChanges(!showChanges)}>
+            <tr style={{ ...lvRow(rowIndex ?? 0), cursor: log.changes ? 'pointer' : 'default' }} onClick={() => log.changes && setShowChanges(!showChanges)}>
                 <td className="ps-4 text-muted" style={{ fontFamily: CODE_FONT }}>{tzDateTime(log.timestamp)}</td>
                 <td><span className="fw-medium text-dark text-truncate d-inline-block" style={{ maxWidth: '100%' }} title={log.user_id}>{userLabel}</span></td>
                 <td style={{ overflow: 'hidden' }}>
@@ -182,13 +182,13 @@ export default function AuditLogsView({ auditLogs, currentPage, totalItems, page
                   className={undefined}
                   style={{ width: '100%', borderCollapse: 'collapse', tableLayout: 'fixed' }}
               >
-                  <thead style={{ ...lvThead(true), position: 'sticky', top: 0, zIndex: 1 }}>
+                  <thead style={{ ...lvThead(), position: 'sticky', top: 0, zIndex: 1 }}>
                       <tr>
-                          <th style={{ ...lvTh(true), width: 140 }} className={undefined}>Timestamp</th>
-                          <th style={{ ...lvTh(true), width: 110 }}>User</th>
-                          <th style={{ ...lvTh(true), width: 140 }}>Action</th>
-                          <th style={{ ...lvTh(true), width: 160 }}>Entity</th>
-                          <th style={{ ...lvTh(true), borderRight: 'none' }}>Details</th>
+                          <th style={{ ...lvTh(), width: 140 }} className={undefined}>Timestamp</th>
+                          <th style={{ ...lvTh(), width: 110 }}>User</th>
+                          <th style={{ ...lvTh(), width: 140 }}>Action</th>
+                          <th style={{ ...lvTh(), width: 160 }}>Entity</th>
+                          <th style={{ ...lvTh(), borderRight: 'none' }}>Details</th>
                       </tr>
                   </thead>
                   <tbody ref={listBodyRef}>
