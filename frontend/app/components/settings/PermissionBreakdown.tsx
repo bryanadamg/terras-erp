@@ -21,18 +21,17 @@ export interface BreakdownPermission {
  * the same object. Sections tile into a responsive grid; the resource is stated
  * once per row with its action chips beside it, never repeated per chip.
  */
-export default function PermissionBreakdown({ permissions, classic, showDirect = false }: {
+export default function PermissionBreakdown({ permissions, showDirect = false }: {
     permissions: BreakdownPermission[];
-    classic: boolean;
     /** Marks `_direct` permissions apart from role-inherited ones (user rows). */
     showDirect?: boolean;
 }) {
     const sections = groupPermissionsBySection(permissions);
-    const font = classic ? xpFont : undefined;
+    const font = xpFont;
 
     return (
-        <ExpandedRowPanel classic={classic}>
-            <ExpandedRowPanelBody classic={classic}>
+        <ExpandedRowPanel>
+            <ExpandedRowPanelBody>
                 <div style={{
                     display: 'grid',
                     gridTemplateColumns: 'repeat(auto-fill, minmax(360px, 1fr))',
@@ -42,9 +41,8 @@ export default function PermissionBreakdown({ permissions, classic, showDirect =
                     {sections.map(({ section, permissions: secPerms }) => (
                         <PermissionSectionTable
                             key={section}
-                            classic={classic}
                             title={section}
-                            right={<span style={{ fontFamily: font, fontSize: classic ? 9 : 10, color: '#7b8794' }}>{secPerms.length}</span>}
+                            right={<span style={{ fontFamily: font, fontSize: 9, color: '#7b8794' }}>{secPerms.length}</span>}
                             rows={groupPermissionsByResource(secPerms).map(({ resource, permissions: resPerms }) => ({
                                 key: resource,
                                 label: resource,
@@ -56,7 +54,6 @@ export default function PermissionBreakdown({ permissions, classic, showDirect =
                                             label={action}
                                             code={p.code}
                                             state="static"
-                                            classic={classic}
                                             direct={showDirect && p._direct}
                                             title={showDirect ? `${p.code} (${p._direct ? 'direct grant' : 'via role'})` : p.code}
                                         />
@@ -67,8 +64,8 @@ export default function PermissionBreakdown({ permissions, classic, showDirect =
                     ))}
                 </div>
                 {showDirect && permissions.some(p => p._direct) && (
-                    <div style={{ fontFamily: font, fontSize: classic ? 9 : 10, color: '#6b6558', marginTop: 6, display: 'flex', alignItems: 'center', gap: 5 }}>
-                        <PermissionChip label="Chip" code="edit" state="static" classic={classic} direct />
+                    <div style={{ fontFamily: font, fontSize: 9, color: '#6b6558', marginTop: 6, display: 'flex', alignItems: 'center', gap: 5 }}>
+                        <PermissionChip label="Chip" code="edit" state="static" direct />
                         outlined in blue = granted directly to this user, not through the role.
                     </div>
                 )}

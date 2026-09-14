@@ -1,7 +1,6 @@
 'use client';
 import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { createPortal } from 'react-dom';
-import { useTheme } from '../../context/ThemeContext';
 import { MODAL_REPOSITION_EVENT } from './ModalWrapper';
 import { layoutRectOf, layoutViewport } from './uiScale';
 import { xpFont, BUTTON_RADIUS } from './xpTheme';
@@ -62,8 +61,6 @@ export default function TreeSelect({
   style,
   className,
 }: Props) {
-  const { uiStyle } = useTheme();
-  const classic = uiStyle === 'classic';
 
   const [open, setOpen] = useState(false);
   const [expanded, setExpanded] = useState<Set<string>>(() => collectGroupValues(options));
@@ -183,110 +180,35 @@ export default function TreeSelect({
     const canSelect = opt.selectable !== false && !!opt.value;
     const isSelected = !!value && opt.value === value;
 
-    if (classic) {
-      return (
-        <div key={opt.value || `_d${depth}`}>
-          <div
-            style={{
-              ...xpFontStyle,
-              display: 'flex',
-              alignItems: 'center',
-              paddingLeft: 2 + depth * 14,
-              paddingRight: 4,
-              paddingTop: 2,
-              paddingBottom: 2,
-              margin: '0 2px',
-              borderRadius: BUTTON_RADIUS,
-              cursor: canSelect || hasKids ? 'pointer' : 'default',
-              background: isSelected ? 'linear-gradient(to bottom,#3c8cf0,#1a5fd0)' : 'transparent',
-              // A node that can't be picked (e.g. a transfer's own source location)
-              // is greyed but still expandable so its children stay reachable.
-              color: isSelected ? '#fff' : (canSelect || hasKids ? '#000' : '#9a9a9a'),
-              userSelect: 'none',
-              gap: 2,
-            }}
-            onMouseEnter={e => { if (!isSelected) (e.currentTarget as HTMLDivElement).style.background = '#dde8f8'; }}
-            onMouseLeave={e => { if (!isSelected) (e.currentTarget as HTMLDivElement).style.background = 'transparent'; }}
-            onClick={() => {
-              if (hasKids) toggleGroup(opt.value);
-              if (canSelect) select(opt.value);
-            }}
-          >
-            {/* Chevron or spacer */}
-            {hasKids ? (
-              <span
-                style={{ width: 14, flexShrink: 0, display: 'flex', alignItems: 'center', cursor: 'pointer' }}
-                onClick={e => { e.stopPropagation(); toggleGroup(opt.value); }}
-              >
-                <i
-                  className={`bi bi-chevron-${isExp ? 'down' : 'right'}`}
-                  style={{ fontSize: 8, color: isSelected ? '#cde' : '#555' }}
-                />
-              </span>
-            ) : (
-              <span style={{ width: 14, flexShrink: 0 }} />
-            )}
-
-            {/* L-line connector for children */}
-            {depth > 0 && (
-              <span style={{
-                width: 10, height: 10, flexShrink: 0, marginRight: 2,
-                borderLeft: `1px solid ${isSelected ? '#8ab' : '#ccc'}`,
-                borderBottom: `1px solid ${isSelected ? '#8ab' : '#ccc'}`,
-                marginBottom: 4,
-              }} />
-            )}
-
-            <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-              {opt.label}
-            </span>
-            {opt.subLabel && (
-              <span style={{ fontSize: 10, color: isSelected ? '#cde' : '#888', flexShrink: 0, marginLeft: 4 }}>
-                {opt.subLabel}
-              </span>
-            )}
-            {hasKids && (
-              <span style={{ fontSize: 9, color: isSelected ? '#cde' : '#aaa', flexShrink: 0, marginLeft: 2 }}>
-                ({opt.children!.length})
-              </span>
-            )}
-          </div>
-          {hasKids && isExp && opt.children!.map(c => renderNode(c, depth + 1))}
-        </div>
-      );
-    }
-
-    // Bootstrap
     return (
       <div key={opt.value || `_d${depth}`}>
         <div
           style={{
+            ...xpFontStyle,
             display: 'flex',
             alignItems: 'center',
-            paddingLeft: 4 + depth * 14,
-            paddingRight: 6,
-            paddingTop: 4,
-            paddingBottom: 4,
+            paddingLeft: 2 + depth * 14,
+            paddingRight: 4,
+            paddingTop: 2,
+            paddingBottom: 2,
             margin: '0 2px',
             borderRadius: BUTTON_RADIUS,
             cursor: canSelect || hasKids ? 'pointer' : 'default',
-            fontSize: size === 'sm' ? 12 : 13,
+            background: isSelected ? 'linear-gradient(to bottom,#3c8cf0,#1a5fd0)' : 'transparent',
+            // A node that can't be picked (e.g. a transfer's own source location)
+            // is greyed but still expandable so its children stay reachable.
+            color: isSelected ? '#fff' : (canSelect || hasKids ? '#000' : '#9a9a9a'),
             userSelect: 'none',
-            gap: 3,
-            background: isSelected ? '#0d6efd' : undefined,
-            color: isSelected ? '#fff' : (canSelect || hasKids ? undefined : '#9a9a9a'),
+            gap: 2,
           }}
-          onMouseEnter={e => {
-            if (!isSelected) (e.currentTarget as HTMLDivElement).style.background = '#f0f6ff';
-          }}
-          onMouseLeave={e => {
-            if (!isSelected) (e.currentTarget as HTMLDivElement).style.background = '';
-          }}
+          onMouseEnter={e => { if (!isSelected) (e.currentTarget as HTMLDivElement).style.background = '#dde8f8'; }}
+          onMouseLeave={e => { if (!isSelected) (e.currentTarget as HTMLDivElement).style.background = 'transparent'; }}
           onClick={() => {
             if (hasKids) toggleGroup(opt.value);
             if (canSelect) select(opt.value);
           }}
         >
+          {/* Chevron or spacer */}
           {hasKids ? (
             <span
               style={{ width: 14, flexShrink: 0, display: 'flex', alignItems: 'center', cursor: 'pointer' }}
@@ -294,18 +216,19 @@ export default function TreeSelect({
             >
               <i
                 className={`bi bi-chevron-${isExp ? 'down' : 'right'}`}
-                style={{ fontSize: 9, color: isSelected ? '#cde' : '#666' }}
+                style={{ fontSize: 8, color: isSelected ? '#cde' : '#555' }}
               />
             </span>
           ) : (
             <span style={{ width: 14, flexShrink: 0 }} />
           )}
 
+          {/* L-line connector for children */}
           {depth > 0 && (
             <span style={{
               width: 10, height: 10, flexShrink: 0, marginRight: 2,
-              borderLeft: `1px solid ${isSelected ? '#8ab4e8' : '#dee2e6'}`,
-              borderBottom: `1px solid ${isSelected ? '#8ab4e8' : '#dee2e6'}`,
+              borderLeft: `1px solid ${isSelected ? '#8ab' : '#ccc'}`,
+              borderBottom: `1px solid ${isSelected ? '#8ab' : '#ccc'}`,
               marginBottom: 4,
             }} />
           )}
@@ -314,12 +237,12 @@ export default function TreeSelect({
             {opt.label}
           </span>
           {opt.subLabel && (
-            <span style={{ fontSize: 11, color: isSelected ? 'rgba(255,255,255,0.7)' : '#888', flexShrink: 0 }}>
+            <span style={{ fontSize: 10, color: isSelected ? '#cde' : '#888', flexShrink: 0, marginLeft: 4 }}>
               {opt.subLabel}
             </span>
           )}
           {hasKids && (
-            <span style={{ fontSize: 10, color: isSelected ? 'rgba(255,255,255,0.6)' : '#aaa', flexShrink: 0 }}>
+            <span style={{ fontSize: 9, color: isSelected ? '#cde' : '#aaa', flexShrink: 0, marginLeft: 2 }}>
               ({opt.children!.length})
             </span>
           )}
@@ -327,12 +250,14 @@ export default function TreeSelect({
         {hasKids && isExp && opt.children!.map(c => renderNode(c, depth + 1))}
       </div>
     );
+
+    // Bootstrap
   };
 
   // ── Render ──────────────────────────────────────────────────────────────────
   const emptyRow = allowEmpty && (
     <div
-      style={classic ? {
+      style={{
         ...xpFontStyle,
         padding: '2px 4px',
         margin: '0 2px',
@@ -342,18 +267,8 @@ export default function TreeSelect({
         color: !value ? '#fff' : '#777',
         fontStyle: 'italic',
         userSelect: 'none',
-      } : {
-        padding: '4px 6px',
-        margin: '0 2px',
-        borderRadius: BUTTON_RADIUS,
-        fontSize: size === 'sm' ? 12 : 13,
-        cursor: 'pointer',
-        color: !value ? '#fff' : '#888',
-        background: !value ? '#0d6efd' : undefined,
-        fontStyle: 'italic',
-        userSelect: 'none',
       }}
-      onMouseEnter={e => { if (value) (e.currentTarget as HTMLDivElement).style.background = classic ? '#dde8f8' : '#f0f6ff'; }}
+      onMouseEnter={e => { if (value) (e.currentTarget as HTMLDivElement).style.background = '#dde8f8'; }}
       onMouseLeave={e => { if (value) (e.currentTarget as HTMLDivElement).style.background = ''; }}
       onClick={() => select('')}
     >
@@ -373,52 +288,14 @@ export default function TreeSelect({
     transform: dropPos.above ? 'translateY(-100%)' : undefined,
   };
 
-  if (classic) {
-    const panel = open ? createPortal(
-      <div ref={panelRef} style={{
-        ...portalStyle,
-        maxWidth: 400,
-        background: '#fff',
-        border: '1px solid #7f9db9',
-        borderRadius: BUTTON_RADIUS,
-        boxShadow: '2px 2px 4px rgba(0,0,0,0.25)',
-      }}>
-        {emptyRow}
-        {options.map(o => renderNode(o, 0))}
-      </div>,
-      document.body
-    ) : null;
-
-    return (
-      <div ref={ref} style={{ position: 'relative', ...style }} className={className}>
-        <button
-          ref={triggerRef}
-          type="button"
-          style={xpTrigger}
-          onClick={() => !disabled && setOpen(v => !v)}
-          disabled={disabled}
-        >
-          <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', ...xpFontStyle, color: (value || (allowEmpty && !value)) ? '#000' : '#777' }}>
-            {triggerLabel}
-          </span>
-          <i
-            className={`bi bi-chevron-${open ? 'up' : 'down'}`}
-            style={{ position: 'absolute', right: 4, top: '50%', transform: 'translateY(-50%)', fontSize: 9, color: '#555', pointerEvents: 'none' }}
-          />
-        </button>
-        {panel}
-      </div>
-    );
-  }
-
   const panel = open ? createPortal(
     <div ref={panelRef} style={{
       ...portalStyle,
-      maxWidth: 420,
+      maxWidth: 400,
       background: '#fff',
-      border: '1px solid #dee2e6',
+      border: '1px solid #7f9db9',
       borderRadius: BUTTON_RADIUS,
-      boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+      boxShadow: '2px 2px 4px rgba(0,0,0,0.25)',
     }}>
       {emptyRow}
       {options.map(o => renderNode(o, 0))}
@@ -431,18 +308,22 @@ export default function TreeSelect({
       <button
         ref={triggerRef}
         type="button"
-        className={`form-select text-start ${size === 'sm' ? 'form-select-sm' : ''}`}
-        style={{ cursor: disabled ? 'not-allowed' : 'pointer', color: value ? undefined : '#6c757d' }}
+        style={xpTrigger}
         onClick={() => !disabled && setOpen(v => !v)}
         disabled={disabled}
       >
-        <span className="d-block text-truncate" style={{ fontSize: size === 'sm' ? 12 : 14 }}>
+        <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', ...xpFontStyle, color: (value || (allowEmpty && !value)) ? '#000' : '#777' }}>
           {triggerLabel}
         </span>
+        <i
+          className={`bi bi-chevron-${open ? 'up' : 'down'}`}
+          style={{ position: 'absolute', right: 4, top: '50%', transform: 'translateY(-50%)', fontSize: 9, color: '#555', pointerEvents: 'none' }}
+        />
       </button>
       {panel}
     </div>
   );
+
 }
 
 // ── Tree builder helpers ──────────────────────────────────────────────────────

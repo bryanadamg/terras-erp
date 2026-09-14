@@ -2,7 +2,6 @@
 import React, { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useData } from '../../context/DataContext';
-import { useTheme } from '../../context/ThemeContext';
 import PrintModalShell, { PrintModalFooter } from '../shared/PrintModalShell';
 import { CODE_FONT, PRINT_FONT } from '../shared/xpTheme';
 import { useTimezone } from '../../context/TimezoneContext';
@@ -49,7 +48,6 @@ interface Props {
 export default function DyeRecipePrintView({ recipe, onClose }: Props) {
     const { companyProfile } = useData();
     const { formatCustom: tzFmt } = useTimezone();
-    const { uiStyle } = useTheme();
 
     const [showWashBaths, setShowWashBaths] = useState(true);
     const [showFinishing, setShowFinishing] = useState(true);

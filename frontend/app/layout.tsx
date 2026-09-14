@@ -7,6 +7,11 @@ import 'bootstrap-icons/font/bootstrap-icons.css';
 // an app rule still wins any specificity tie.
 import '@bryanadamg/terras-ui/css';
 import '@bryanadamg/terras-ui/chrome';
+// The interface-scale sheet (root `zoom` off <html data-ui-scale>, the viewport
+// units that divide it back out, .ui-scale-exempt, and the mobile/print pins).
+// Third by contract: it redefines terras-ui's own --terras-app-* hooks, so it
+// has to land after the tokens that declare them.
+import '@bryanadamg/terras-ui/scale.css';
 import './globals.css';
 import { ToastProvider } from './components/shared/Toast';
 import { ConfirmProvider } from './context/ConfirmContext';
@@ -20,6 +25,7 @@ import QueryProvider from './components/shared/QueryProvider';
 import MainLayout from './components/shared/MainLayout';
 import GlobalTooltip from './components/shared/GlobalTooltip';
 import SWRegister from './components/shared/SWRegister';
+import { bootScript } from '@bryanadamg/terras-ui/scale';
 import localFont from 'next/font/local';
 
 // Brand face, used only for the "Terras" wordmark (login screen, docs header).
@@ -76,12 +82,10 @@ export default function RootLayout({
         <meta name="mobile-web-app-capable" content="yes" />
         {/* Interface scale, applied before first paint so the UI never flashes
             at full size and then snaps down. ThemeContext owns the value after
-            hydration; the scale list here mirrors UI_SCALES there. */}
-        <script
-          dangerouslySetInnerHTML={{
-            __html: `(function(){try{var s=Number(localStorage.getItem('ui_scale'));if([70,75,80,90,100,110].indexOf(s)<0)s=80;document.documentElement.setAttribute('data-ui-scale',String(s));}catch(e){document.documentElement.setAttribute('data-ui-scale','80');}})();`,
-          }}
-        />
+            hydration. The script is terras-ui's, built from the same constants
+            that module and scale.css agree on, so the list can't drift from the
+            one the picker offers. */}
+        <script dangerouslySetInnerHTML={{ __html: bootScript }} />
       </head>
       <body>
         <SWRegister />

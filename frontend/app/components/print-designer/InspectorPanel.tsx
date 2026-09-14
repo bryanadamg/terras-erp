@@ -52,10 +52,9 @@ interface Props {
     selection: Selection;
     onChange: (next: PrintLayout) => void;
     onSelect: (sel: Selection) => void;
-    classic: boolean;
 }
 
-export default function InspectorPanel({ layout, docType, selection, onChange, onSelect, classic }: Props) {
+export default function InspectorPanel({ layout, docType, selection, onChange, onSelect}: Props) {
     const fields = FIELD_MANIFESTS[docType] || [];
     const fieldOpts = fields.map(f => ({ value: f.key, label: f.label }));
 
@@ -82,10 +81,9 @@ export default function InspectorPanel({ layout, docType, selection, onChange, o
     if (!band) {
         return (
             <>
-                <InspectorGroup title="Paper" classic={classic}>
-                    <Row label="Size" classic={classic}>
+                <InspectorGroup title="Paper">
+                    <Row label="Size">
                         <SelectField
-                            classic={classic}
                             value={layout.paper.size}
                             options={[
                                 { value: 'A4', label: 'A4 (210 x 297mm)' },
@@ -110,25 +108,22 @@ export default function InspectorPanel({ layout, docType, selection, onChange, o
                     </Row>
                     {layout.paper.size === 'custom' && (
                         <>
-                            <Row label="Width" classic={classic} title="Portrait sheet width — orientation swaps it">
-                                <NumberField
-                                    classic={classic} suffix="mm" min={CUSTOM_MIN_MM} max={CUSTOM_MAX_MM}
+                            <Row label="Width" title="Portrait sheet width — orientation swaps it">
+                                <NumberField suffix="mm" min={CUSTOM_MIN_MM} max={CUSTOM_MAX_MM}
                                     value={layout.paper.widthMm ?? paperPortraitMm(layout.paper)[0]}
                                     onChange={v => { const n = clone(layout); n.paper.widthMm = v; onChange(n); }}
                                 />
                             </Row>
-                            <Row label="Height" classic={classic} title="Portrait sheet height — orientation swaps it">
-                                <NumberField
-                                    classic={classic} suffix="mm" min={CUSTOM_MIN_MM} max={CUSTOM_MAX_MM}
+                            <Row label="Height" title="Portrait sheet height — orientation swaps it">
+                                <NumberField suffix="mm" min={CUSTOM_MIN_MM} max={CUSTOM_MAX_MM}
                                     value={layout.paper.heightMm ?? paperPortraitMm(layout.paper)[1]}
                                     onChange={v => { const n = clone(layout); n.paper.heightMm = v; onChange(n); }}
                                 />
                             </Row>
                         </>
                     )}
-                    <Row label="Orientation" classic={classic}>
+                    <Row label="Orientation">
                         <SelectField
-                            classic={classic}
                             value={layout.paper.orientation}
                             options={[
                                 { value: 'portrait', label: 'Portrait' },
@@ -137,26 +132,23 @@ export default function InspectorPanel({ layout, docType, selection, onChange, o
                             onChange={v => { const n = clone(layout); n.paper.orientation = v as any; onChange(n); }}
                         />
                     </Row>
-                    <Row label="Page margin" classic={classic} title="Area the printer cannot reach">
-                        <NumberField
-                            classic={classic} suffix="mm" min={0} max={30}
+                    <Row label="Page margin" title="Area the printer cannot reach">
+                        <NumberField suffix="mm" min={0} max={30}
                             value={layout.paper.marginMm}
                             onChange={v => { const n = clone(layout); n.paper.marginMm = v ?? 0; onChange(n); }}
                         />
                     </Row>
-                    <Row label="Inner padding" classic={classic} title="Breathing room the design asks for, inside the page margin the printer cannot reach">
-                        <NumberField
-                            classic={classic} suffix="mm" min={0} max={30}
+                    <Row label="Inner padding" title="Breathing room the design asks for, inside the page margin the printer cannot reach">
+                        <NumberField suffix="mm" min={0} max={30}
                             value={layout.paddingMm}
                             onChange={v => { const n = clone(layout); n.paddingMm = v; onChange(n); }}
                         />
                     </Row>
                 </InspectorGroup>
 
-                <InspectorGroup title="Type" classic={classic}>
-                    <Row label="Font" classic={classic}>
+                <InspectorGroup title="Type">
+                    <Row label="Font">
                         <SelectField
-                            classic={classic}
                             value={layout.fontFamily ?? 'Arial, sans-serif'}
                             options={[
                                 { value: 'Arial, sans-serif', label: 'Arial' },
@@ -170,7 +162,7 @@ export default function InspectorPanel({ layout, docType, selection, onChange, o
                 </InspectorGroup>
 
                 <div style={{
-                    fontFamily: classic ? xpFont : undefined, fontSize: 10,
+                    fontFamily: xpFont, fontSize: 10,
                     color: '#888', fontStyle: 'italic',
                 }}>
                     Select a section on the left, or click any field on the paper, to edit it.
@@ -186,32 +178,28 @@ export default function InspectorPanel({ layout, docType, selection, onChange, o
         <>
             <InspectorGroup
                 title={`Section ${bandIndex + 1} — ${bandTypeLabel(band)}`}
-                classic={classic}
             >
                 <div style={{
-                    fontFamily: classic ? xpFont : undefined, fontSize: 11, fontWeight: 'bold',
+                    fontFamily: xpFont, fontSize: 11, fontWeight: 'bold',
                     marginBottom: 5, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
                 }} title={describeBand(band, docType)}>
                     {describeBand(band, docType)}
                 </div>
-                <Row label="Caption" classic={classic} title="Small heading printed above the section. Leave empty for none.">
+                <Row label="Caption" title="Small heading printed above the section. Leave empty for none.">
                     <TextField
-                        classic={classic}
                         value={band.title}
                         placeholder="(none)"
                         onChange={v => patchBand({ title: v || undefined })}
                     />
                 </Row>
                 {band.title && (
-                    <CheckField
-                        classic={classic} label="Caption in CAPITALS"
+                    <CheckField label="Caption in CAPITALS"
                         checked={!!band.titleUppercase}
                         onChange={v => patchBand({ titleUppercase: v || undefined })}
                     />
                 )}
-                <Row label="Space below" classic={classic}>
-                    <NumberField
-                        classic={classic} suffix="px" min={0} max={60}
+                <Row label="Space below">
+                    <NumberField suffix="px" min={0} max={60}
                         value={band.marginBottom}
                         onChange={v => patchBand({ marginBottom: v })}
                     />
@@ -221,21 +209,21 @@ export default function InspectorPanel({ layout, docType, selection, onChange, o
             {/* Raw CSS shorthands. Kept — they are the fastest way to draw a rule or a
                 box, and this page has one admin user — but demoted, because they were
                 the first four controls you met on selecting anything. */}
-            <InspectorGroup title="Frame (CSS)" classic={classic} collapsible>
-                <Row label="Border" classic={classic} title="CSS border, e.g. 1px solid #000">
-                    <TextField classic={classic} value={band.box} placeholder="(none)" mono
+            <InspectorGroup title="Frame (CSS)" collapsible>
+                <Row label="Border" title="CSS border, e.g. 1px solid #000">
+                    <TextField value={band.box} placeholder="(none)" mono
                         onChange={v => patchBand({ box: v || undefined })} />
                 </Row>
-                <Row label="Rule above" classic={classic} title="CSS border, e.g. 1px solid #000">
-                    <TextField classic={classic} value={band.borderTop} placeholder="(none)" mono
+                <Row label="Rule above" title="CSS border, e.g. 1px solid #000">
+                    <TextField value={band.borderTop} placeholder="(none)" mono
                         onChange={v => patchBand({ borderTop: v || undefined })} />
                 </Row>
-                <Row label="Rule below" classic={classic} title="CSS border, e.g. 1px solid #000">
-                    <TextField classic={classic} value={band.borderBottom} placeholder="(none)" mono
+                <Row label="Rule below" title="CSS border, e.g. 1px solid #000">
+                    <TextField value={band.borderBottom} placeholder="(none)" mono
                         onChange={v => patchBand({ borderBottom: v || undefined })} />
                 </Row>
-                <Row label="Padding" classic={classic} title="CSS padding, e.g. 4px 8px">
-                    <TextField classic={classic} value={band.padding} placeholder="(none)" mono
+                <Row label="Padding" title="CSS padding, e.g. 4px 8px">
+                    <TextField value={band.padding} placeholder="(none)" mono
                         onChange={v => patchBand({ padding: v || undefined })} />
                 </Row>
             </InspectorGroup>
@@ -263,48 +251,48 @@ export default function InspectorPanel({ layout, docType, selection, onChange, o
         /** Styling controls shared by a plain cell and a stacked field. */
         const styleControls = (spec: FieldSpec | GridItem, apply: (p: Record<string, any>) => void) => (
             <>
-                <Row label="Field" classic={classic}>
-                    <SelectField classic={classic} value={spec.field as any} options={fieldOpts}
+                <Row label="Field">
+                    <SelectField value={spec.field as any} options={fieldOpts}
                         onChange={v => apply({ field: v })} />
                 </Row>
-                <Row label="Font size" classic={classic}>
-                    <NumberField classic={classic} suffix="px" min={4} max={72}
+                <Row label="Font size">
+                    <NumberField suffix="px" min={4} max={72}
                         value={spec.fontSize} onChange={v => apply({ fontSize: v })} />
                 </Row>
-                <Row label="Align" classic={classic}>
-                    <SelectField classic={classic} value={spec.align ?? 'left'} options={ALIGN_OPTS}
+                <Row label="Align">
+                    <SelectField value={spec.align ?? 'left'} options={ALIGN_OPTS}
                         onChange={v => apply({ align: v })} />
                 </Row>
-                <Row label="Colour" classic={classic}>
-                    <TextField classic={classic} value={spec.color} placeholder="#000" mono
+                <Row label="Colour">
+                    <TextField value={spec.color} placeholder="#000" mono
                         onChange={v => apply({ color: v || undefined })} />
                 </Row>
-                <CheckField classic={classic} label="Bold" checked={!!spec.bold}
+                <CheckField label="Bold" checked={!!spec.bold}
                     onChange={v => apply({ bold: v || undefined })} />
-                <CheckField classic={classic} label="Monospace" checked={!!spec.mono}
+                <CheckField label="Monospace" checked={!!spec.mono}
                     onChange={v => apply({ mono: v || undefined })} />
-                <CheckField classic={classic} label="Show caption above value" checked={!!spec.showLabel}
+                <CheckField label="Show caption above value" checked={!!spec.showLabel}
                     onChange={v => apply({ showLabel: v || undefined })} />
                 {spec.showLabel && (
-                    <Row label="Caption" classic={classic}>
-                        <TextField classic={classic} value={spec.label} placeholder="(field name)"
+                    <Row label="Caption">
+                        <TextField value={spec.label} placeholder="(field name)"
                             onChange={v => apply({ label: v || undefined })} />
                     </Row>
                 )}
-                <Row label="Unit" classic={classic} title="Printed after the value in small type. Empty removes it.">
-                    <TextField classic={classic} value={spec.unit} placeholder="(default)"
+                <Row label="Unit" title="Printed after the value in small type. Empty removes it.">
+                    <TextField value={spec.unit} placeholder="(default)"
                         onChange={v => apply({ unit: v })} />
                 </Row>
-                <CheckField classic={classic} label="Hide when empty (no dash)" checked={!!spec.hideWhenEmpty}
+                <CheckField label="Hide when empty (no dash)" checked={!!spec.hideWhenEmpty}
                     onChange={v => apply({ hideWhenEmpty: v || undefined })} />
                 {spec.field === 'wo.qr' && (
                     <>
-                        <Row label="QR size" classic={classic}>
-                            <NumberField classic={classic} suffix="px" min={40} max={400}
+                        <Row label="QR size">
+                            <NumberField suffix="px" min={40} max={400}
                                 value={spec.qrSize} onChange={v => apply({ qrSize: v })} />
                         </Row>
-                        <Row label="QR caption" classic={classic}>
-                            <TextField classic={classic} value={spec.qrCaption} placeholder="Scan in ERP Scanner"
+                        <Row label="QR caption">
+                            <TextField value={spec.qrCaption} placeholder="Scan in ERP Scanner"
                                 onChange={v => apply({ qrCaption: v })} />
                         </Row>
                     </>
@@ -316,7 +304,6 @@ export default function InspectorPanel({ layout, docType, selection, onChange, o
             <>
                 <InspectorGroup
                     title="Cells"
-                    classic={classic}
                     right={
                         <button
                             onClick={() => editBand(b => {
@@ -325,10 +312,10 @@ export default function InspectorPanel({ layout, docType, selection, onChange, o
                             })}
                             title="Add a cell"
                             style={{
-                                fontFamily: classic ? xpFont : undefined, fontSize: 10, lineHeight: 1,
+                                fontFamily: xpFont, fontSize: 10, lineHeight: 1,
                                 padding: '1px 4px', cursor: 'pointer', borderRadius: 3,
-                                background: classic ? 'linear-gradient(to bottom,#fff,#d4d0c8)' : '#f8f9fa',
-                                border: '1px solid', borderColor: classic ? '#dfdfdf #808080 #808080 #dfdfdf' : '#ced4da',
+                                background: 'linear-gradient(to bottom,#fff,#d4d0c8)',
+                                border: '1px solid', borderColor: '#dfdfdf #808080 #808080 #dfdfdf',
                             }}
                         >
                             <i className="bi bi-plus" /> Add
@@ -346,10 +333,10 @@ export default function InspectorPanel({ layout, docType, selection, onChange, o
                                     onClick={() => onSelect({ bandId: band.id, itemIndex: i })}
                                     style={{
                                         display: 'flex', alignItems: 'center', gap: 4, cursor: 'pointer',
-                                        fontFamily: classic ? xpFont : undefined, fontSize: 11,
+                                        fontFamily: xpFont, fontSize: 11,
                                         padding: '2px 3px', marginBottom: 1,
-                                        background: selected ? (classic ? '#0058e6' : '#0d6efd') : 'transparent',
-                                        color: selected ? '#fff' : (classic ? '#2b2822' : '#212529'),
+                                        background: selected ? ('#0058e6') : 'transparent',
+                                        color: selected ? '#fff' : ('#2b2822'),
                                     }}
                                 >
                                     <span style={{ flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
@@ -359,7 +346,6 @@ export default function InspectorPanel({ layout, docType, selection, onChange, o
                                         </span>
                                     </span>
                                     <ListRowControls
-                                        classic={classic}
                                         canUp={i > 0} canDown={i < g.items.length - 1}
                                         onUp={() => editBand(b => { b.items = move(b.items, i, i - 1); })}
                                         onDown={() => editBand(b => { b.items = move(b.items, i, i + 1); })}
@@ -378,9 +364,9 @@ export default function InspectorPanel({ layout, docType, selection, onChange, o
                                             onClick={() => onSelect({ bandId: band.id, itemIndex: i, stackIndex: si })}
                                             style={{
                                                 display: 'flex', alignItems: 'center', gap: 4, cursor: 'pointer',
-                                                fontFamily: classic ? xpFont : undefined, fontSize: 10.5,
+                                                fontFamily: xpFont, fontSize: 10.5,
                                                 padding: '1px 3px 1px 16px', marginBottom: 1,
-                                                background: sSel ? (classic ? '#0058e6' : '#0d6efd') : 'transparent',
+                                                background: sSel ? ('#0058e6') : 'transparent',
                                                 color: sSel ? '#fff' : '#555',
                                             }}
                                         >
@@ -388,7 +374,6 @@ export default function InspectorPanel({ layout, docType, selection, onChange, o
                                                 {fields.find(f => f.key === sf.field)?.label || sf.field}
                                             </span>
                                             <ListRowControls
-                                                classic={classic}
                                                 canUp={si > 0} canDown={si < it.stack!.length - 1}
                                                 onUp={() => editBand(b => { b.items[i].stack = move(b.items[i].stack, si, si - 1); })}
                                                 onDown={() => editBand(b => { b.items[i].stack = move(b.items[i].stack, si, si + 1); })}
@@ -405,17 +390,17 @@ export default function InspectorPanel({ layout, docType, selection, onChange, o
                     })}
                 </InspectorGroup>
 
-                <InspectorGroup title="Grid" classic={classic}>
-                    <Row label="Gap" classic={classic}>
-                        <NumberField classic={classic} suffix="px" min={0} max={40}
+                <InspectorGroup title="Grid">
+                    <Row label="Gap">
+                        <NumberField suffix="px" min={0} max={40}
                             value={g.gap} onChange={v => patchBand({ gap: v })} />
                     </Row>
-                    <Row label="Cell border" classic={classic} title="Draws a box around every cell (the Qty/Ends look)">
-                        <TextField classic={classic} value={g.cellBox} placeholder="(none)" mono
+                    <Row label="Cell border" title="Draws a box around every cell (the Qty/Ends look)">
+                        <TextField value={g.cellBox} placeholder="(none)" mono
                             onChange={v => patchBand({ cellBox: v || undefined })} />
                     </Row>
-                    <Row label="Vertical" classic={classic}>
-                        <SelectField classic={classic} value={g.alignItems ?? 'start'}
+                    <Row label="Vertical">
+                        <SelectField value={g.alignItems ?? 'start'}
                             options={[
                                 { value: 'start', label: 'Top' },
                                 { value: 'center', label: 'Middle' },
@@ -426,24 +411,24 @@ export default function InspectorPanel({ layout, docType, selection, onChange, o
                 </InspectorGroup>
 
                 {stackField && (
-                    <InspectorGroup title="Stacked field" classic={classic}>
+                    <InspectorGroup title="Stacked field">
                         {styleControls(stackField, patchStackField)}
                     </InspectorGroup>
                 )}
 
                 {item && !stackField && (
                     <>
-                        <InspectorGroup title="Position" classic={classic}>
-                            <Row label="Column" classic={classic} title="1-12 across the page">
-                                <NumberField classic={classic} min={1} max={12}
+                        <InspectorGroup title="Position">
+                            <Row label="Column" title="1-12 across the page">
+                                <NumberField min={1} max={12}
                                     value={item.col} onChange={v => patchItem({ col: v ?? 1 })} />
                             </Row>
-                            <Row label="Width" classic={classic} title="Number of the 12 columns this cell spans">
-                                <NumberField classic={classic} suffix="/12" min={1} max={12}
+                            <Row label="Width" title="Number of the 12 columns this cell spans">
+                                <NumberField suffix="/12" min={1} max={12}
                                     value={item.span} onChange={v => patchItem({ span: v ?? 1 })} />
                             </Row>
-                            <Row label="Row" classic={classic} title="Cells sharing a row sit side by side">
-                                <NumberField classic={classic} min={1} max={20}
+                            <Row label="Row" title="Cells sharing a row sit side by side">
+                                <NumberField min={1} max={20}
                                     value={item.row} onChange={v => patchItem({ row: v ?? 1 })} />
                             </Row>
                         </InspectorGroup>
@@ -451,36 +436,35 @@ export default function InspectorPanel({ layout, docType, selection, onChange, o
                         {item.stack ? (
                             <InspectorGroup
                                 title="Stack"
-                                classic={classic}
                                 right={
                                     <button
                                         onClick={() => editBand(b => { b.items[sel!].stack.push({ field: fields[0]?.key || '__blank' }); })}
                                         title="Add a field to this stack"
                                         style={{
-                                            fontFamily: classic ? xpFont : undefined, fontSize: 10, lineHeight: 1,
+                                            fontFamily: xpFont, fontSize: 10, lineHeight: 1,
                                             padding: '1px 4px', cursor: 'pointer', borderRadius: 3,
-                                            background: classic ? 'linear-gradient(to bottom,#fff,#d4d0c8)' : '#f8f9fa',
-                                            border: '1px solid', borderColor: classic ? '#dfdfdf #808080 #808080 #dfdfdf' : '#ced4da',
+                                            background: 'linear-gradient(to bottom,#fff,#d4d0c8)',
+                                            border: '1px solid', borderColor: '#dfdfdf #808080 #808080 #dfdfdf',
                                         }}
                                     >
                                         <i className="bi bi-plus" /> Field
                                     </button>
                                 }
                             >
-                                <Row label="Line gap" classic={classic}>
-                                    <NumberField classic={classic} suffix="px" min={0} max={20}
+                                <Row label="Line gap">
+                                    <NumberField suffix="px" min={0} max={20}
                                         value={item.stackGap} onChange={v => patchItem({ stackGap: v })} />
                                 </Row>
-                                <Row label="Align" classic={classic}>
-                                    <SelectField classic={classic} value={item.align ?? 'left'} options={ALIGN_OPTS}
+                                <Row label="Align">
+                                    <SelectField value={item.align ?? 'left'} options={ALIGN_OPTS}
                                         onChange={v => patchItem({ align: v })} />
                                 </Row>
-                                <div style={{ fontFamily: classic ? xpFont : undefined, fontSize: 10, color: '#888', fontStyle: 'italic' }}>
+                                <div style={{ fontFamily: xpFont, fontSize: 10, color: '#888', fontStyle: 'italic' }}>
                                     Pick a field under this stack in the Cells list to style it.
                                 </div>
                             </InspectorGroup>
                         ) : (
-                            <InspectorGroup title="Field" classic={classic}>
+                            <InspectorGroup title="Field">
                                 {styleControls(item, patchItem)}
                             </InspectorGroup>
                         )}
@@ -504,16 +488,15 @@ export default function InspectorPanel({ layout, docType, selection, onChange, o
             <>
                 <InspectorGroup
                     title="Rows"
-                    classic={classic}
                     right={
                         <button
                             onClick={() => editBand(b => b.rows.push({ field: fields[0]?.key || '__blank', span: 1 }))}
                             title="Add a row"
                             style={{
-                                fontFamily: classic ? xpFont : undefined, fontSize: 10, lineHeight: 1,
+                                fontFamily: xpFont, fontSize: 10, lineHeight: 1,
                                 padding: '1px 4px', cursor: 'pointer', borderRadius: 3,
-                                background: classic ? 'linear-gradient(to bottom,#fff,#d4d0c8)' : '#f8f9fa',
-                                border: '1px solid', borderColor: classic ? '#dfdfdf #808080 #808080 #dfdfdf' : '#ced4da',
+                                background: 'linear-gradient(to bottom,#fff,#d4d0c8)',
+                                border: '1px solid', borderColor: '#dfdfdf #808080 #808080 #dfdfdf',
                             }}
                         >
                             <i className="bi bi-plus" /> Add
@@ -528,10 +511,10 @@ export default function InspectorPanel({ layout, docType, selection, onChange, o
                                 onClick={() => onSelect({ bandId: band.id, itemIndex: i })}
                                 style={{
                                     display: 'flex', alignItems: 'center', gap: 4, cursor: 'pointer',
-                                    fontFamily: classic ? xpFont : undefined, fontSize: 11,
+                                    fontFamily: xpFont, fontSize: 11,
                                     padding: '2px 3px', marginBottom: 1,
-                                    background: selected ? (classic ? '#0058e6' : '#0d6efd') : 'transparent',
-                                    color: selected ? '#fff' : (classic ? '#2b2822' : '#212529'),
+                                    background: selected ? ('#0058e6') : 'transparent',
+                                    color: selected ? '#fff' : ('#2b2822'),
                                 }}
                             >
                                 <span style={{ flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
@@ -541,7 +524,6 @@ export default function InspectorPanel({ layout, docType, selection, onChange, o
                                     </span>
                                 </span>
                                 <ListRowControls
-                                    classic={classic}
                                     canUp={i > 0} canDown={i < kv.rows.length - 1}
                                     onUp={() => editBand(b => { b.rows = move(b.rows, i, i - 1); })}
                                     onDown={() => editBand(b => { b.rows = move(b.rows, i, i + 1); })}
@@ -555,50 +537,50 @@ export default function InspectorPanel({ layout, docType, selection, onChange, o
                     })}
                 </InspectorGroup>
 
-                <InspectorGroup title="Table" classic={classic}>
-                    <Row label="Label width" classic={classic}>
-                        <TextField classic={classic} value={kv.labelWidth} placeholder="24%"
+                <InspectorGroup title="Table">
+                    <Row label="Label width">
+                        <TextField value={kv.labelWidth} placeholder="24%"
                             onChange={v => patchBand({ labelWidth: v || undefined })} />
                     </Row>
-                    <Row label="Label size" classic={classic}>
-                        <NumberField classic={classic} suffix="px" min={4} max={24}
+                    <Row label="Label size">
+                        <NumberField suffix="px" min={4} max={24}
                             value={kv.labelFontSize} onChange={v => patchBand({ labelFontSize: v })} />
                     </Row>
-                    <Row label="Value size" classic={classic}>
-                        <NumberField classic={classic} suffix="px" min={4} max={24}
+                    <Row label="Value size">
+                        <NumberField suffix="px" min={4} max={24}
                             value={kv.valueFontSize} onChange={v => patchBand({ valueFontSize: v })} />
                     </Row>
                 </InspectorGroup>
 
                 {row && (
-                    <InspectorGroup title="Row" classic={classic}>
-                        <Row label="Field" classic={classic}>
-                            <SelectField classic={classic} value={row.field as any} options={fieldOpts}
+                    <InspectorGroup title="Row">
+                        <Row label="Field">
+                            <SelectField value={row.field as any} options={fieldOpts}
                                 onChange={v => patchRow({ field: v })} />
                         </Row>
-                        <Row label="Label" classic={classic}>
-                            <TextField classic={classic} value={row.label} placeholder="(field name)"
+                        <Row label="Label">
+                            <TextField value={row.label} placeholder="(field name)"
                                 onChange={v => patchRow({ label: v || undefined })} />
                         </Row>
-                        <Row label="Width" classic={classic} title="Full rows take a whole line; half rows pair up two per line">
-                            <SelectField classic={classic}
+                        <Row label="Width" title="Full rows take a whole line; half rows pair up two per line">
+                            <SelectField
                                 value={(row.span ?? 1) >= 3 ? 'full' : 'half'}
                                 options={[{ value: 'half', label: 'Half line (pairs up)' }, { value: 'full', label: 'Full line' }]}
                                 onChange={v => patchRow({ span: v === 'full' ? 3 : 1 })} />
                         </Row>
-                        <Row label="Font size" classic={classic}>
-                            <NumberField classic={classic} suffix="px" min={4} max={24}
+                        <Row label="Font size">
+                            <NumberField suffix="px" min={4} max={24}
                                 value={row.fontSize} onChange={v => patchRow({ fontSize: v })} />
                         </Row>
-                        <Row label="Unit" classic={classic}>
-                            <TextField classic={classic} value={row.unit} placeholder="(default)"
+                        <Row label="Unit">
+                            <TextField value={row.unit} placeholder="(default)"
                                 onChange={v => patchRow({ unit: v })} />
                         </Row>
-                        <CheckField classic={classic} label="Bold value" checked={!!row.bold}
+                        <CheckField label="Bold value" checked={!!row.bold}
                             onChange={v => patchRow({ bold: v || undefined })} />
-                        <CheckField classic={classic} label="Hide row when empty" checked={!!row.hideWhenEmpty}
+                        <CheckField label="Hide row when empty" checked={!!row.hideWhenEmpty}
                             onChange={v => patchRow({ hideWhenEmpty: v || undefined })} />
-                        <CheckField classic={classic} label="Underline for hand fill-in" checked={!!row.fill}
+                        <CheckField label="Underline for hand fill-in" checked={!!row.fill}
                             onChange={v => patchRow({ fill: v || undefined })} />
                     </InspectorGroup>
                 )}
@@ -621,7 +603,7 @@ export default function InspectorPanel({ layout, docType, selection, onChange, o
 
         return (
             <>
-                <InspectorGroup title="Columns" classic={classic}>
+                <InspectorGroup title="Columns">
                     {tb.columns.map((c, i) => {
                         const selected = sel === i;
                         return (
@@ -630,10 +612,10 @@ export default function InspectorPanel({ layout, docType, selection, onChange, o
                                 onClick={() => onSelect({ bandId: band.id, itemIndex: i })}
                                 style={{
                                     display: 'flex', alignItems: 'center', gap: 4, cursor: 'pointer',
-                                    fontFamily: classic ? xpFont : undefined, fontSize: 11,
+                                    fontFamily: xpFont, fontSize: 11,
                                     padding: '2px 3px', marginBottom: 1,
-                                    background: selected ? (classic ? '#0058e6' : '#0d6efd') : 'transparent',
-                                    color: selected ? '#fff' : (classic ? '#2b2822' : '#212529'),
+                                    background: selected ? ('#0058e6') : 'transparent',
+                                    color: selected ? '#fff' : ('#2b2822'),
                                 }}
                             >
                                 <span style={{ flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
@@ -641,7 +623,6 @@ export default function InspectorPanel({ layout, docType, selection, onChange, o
                                     {c.width && <span style={{ opacity: 0.6, marginLeft: 4 }}>{c.width}</span>}
                                 </span>
                                 <ListRowControls
-                                    classic={classic}
                                     canUp={i > 0} canDown={i < tb.columns.length - 1}
                                     onUp={() => editBand(b => { b.columns = move(b.columns, i, i - 1); })}
                                     onDown={() => editBand(b => { b.columns = move(b.columns, i, i + 1); })}
@@ -655,7 +636,7 @@ export default function InspectorPanel({ layout, docType, selection, onChange, o
                     })}
                     {unused.length > 0 && (
                         <div style={{ marginTop: 5 }}>
-                            <div style={{ fontFamily: classic ? xpFont : undefined, fontSize: 10, color: '#888', marginBottom: 2 }}>
+                            <div style={{ fontFamily: xpFont, fontSize: 10, color: '#888', marginBottom: 2 }}>
                                 Available:
                             </div>
                             {unused.map(a => (
@@ -667,12 +648,12 @@ export default function InspectorPanel({ layout, docType, selection, onChange, o
                                         ...(a.numeric ? { decimals: 2 } : {}),
                                     }))}
                                     style={{
-                                        fontFamily: classic ? xpFont : undefined, fontSize: 10,
+                                        fontFamily: xpFont, fontSize: 10,
                                         padding: '1px 4px', marginRight: 3, marginBottom: 3, cursor: 'pointer',
                                         borderRadius: 0,
-                                        background: classic ? 'linear-gradient(to bottom,#fff,#d4d0c8)' : '#f8f9fa',
+                                        background: 'linear-gradient(to bottom,#fff,#d4d0c8)',
                                         border: '1px solid',
-                                        borderColor: classic ? '#dfdfdf #808080 #808080 #dfdfdf' : '#ced4da',
+                                        borderColor: '#dfdfdf #808080 #808080 #dfdfdf',
                                     }}
                                 >
                                     <i className="bi bi-plus" /> {a.label}
@@ -682,42 +663,42 @@ export default function InspectorPanel({ layout, docType, selection, onChange, o
                     )}
                 </InspectorGroup>
 
-                <InspectorGroup title="Table" classic={classic}>
-                    <Row label="Font size" classic={classic}>
-                        <NumberField classic={classic} suffix="px" min={4} max={24}
+                <InspectorGroup title="Table">
+                    <Row label="Font size">
+                        <NumberField suffix="px" min={4} max={24}
                             value={tb.fontSize} onChange={v => patchBand({ fontSize: v })} />
                     </Row>
-                    <CheckField classic={classic} label="Hide section when no rows" checked={tb.hideWhenEmpty !== false}
+                    <CheckField label="Hide section when no rows" checked={tb.hideWhenEmpty !== false}
                         onChange={v => patchBand({ hideWhenEmpty: v })} />
-                    <div style={{ fontFamily: classic ? xpFont : undefined, fontSize: 10, color: '#888', fontStyle: 'italic' }}>
+                    <div style={{ fontFamily: xpFont, fontSize: 10, color: '#888', fontStyle: 'italic' }}>
                         Rows come from: {source?.label || tb.source}. This table grows with the
                         data and splits across pages on its own.
                     </div>
                 </InspectorGroup>
 
                 {col && (
-                    <InspectorGroup title="Column" classic={classic}>
-                        <Row label="Heading" classic={classic}>
-                            <TextField classic={classic} value={col.label}
+                    <InspectorGroup title="Column">
+                        <Row label="Heading">
+                            <TextField value={col.label}
                                 onChange={v => patchCol({ label: v })} />
                         </Row>
-                        <Row label="Width" classic={classic} title="Percentage, e.g. 22%. Empty shares the leftover space.">
-                            <TextField classic={classic} value={col.width} placeholder="(auto)"
+                        <Row label="Width" title="Percentage, e.g. 22%. Empty shares the leftover space.">
+                            <TextField value={col.width} placeholder="(auto)"
                                 onChange={v => patchCol({ width: v || undefined })} />
                         </Row>
-                        <Row label="Align" classic={classic}>
-                            <SelectField classic={classic} value={col.align ?? 'left'} options={ALIGN_OPTS}
+                        <Row label="Align">
+                            <SelectField value={col.align ?? 'left'} options={ALIGN_OPTS}
                                 onChange={v => patchCol({ align: v })} />
                         </Row>
-                        <Row label="Decimals" classic={classic}>
-                            <NumberField classic={classic} min={0} max={6}
+                        <Row label="Decimals">
+                            <NumberField min={0} max={6}
                                 value={col.decimals} onChange={v => patchCol({ decimals: v })} />
                         </Row>
-                        <Row label="When empty" classic={classic} title="Printed when there is no value. Empty string leaves the cell blank for hand entry.">
-                            <TextField classic={classic} value={col.emptyText} placeholder="—"
+                        <Row label="When empty" title="Printed when there is no value. Empty string leaves the cell blank for hand entry.">
+                            <TextField value={col.emptyText} placeholder="—"
                                 onChange={v => patchCol({ emptyText: v })} />
                         </Row>
-                        <CheckField classic={classic} label="Bold" checked={!!col.bold}
+                        <CheckField label="Bold" checked={!!col.bold}
                             onChange={v => patchCol({ bold: v || undefined })} />
                     </InspectorGroup>
                 )}
@@ -731,9 +712,9 @@ export default function InspectorPanel({ layout, docType, selection, onChange, o
         const isBoxes = !!tl.boxes;
         return (
             <>
-                <InspectorGroup title="Style" classic={classic}>
-                    <Row label="Kind" classic={classic}>
-                        <SelectField classic={classic}
+                <InspectorGroup title="Style">
+                    <Row label="Kind">
+                        <SelectField
                             value={isBoxes ? 'boxes' : 'columns'}
                             options={[
                                 { value: 'boxes', label: 'Numbered boxes' },
@@ -748,24 +729,24 @@ export default function InspectorPanel({ layout, docType, selection, onChange, o
                                 });
                             }} />
                     </Row>
-                    <Row label="Font size" classic={classic}>
-                        <NumberField classic={classic} suffix="px" min={4} max={24}
+                    <Row label="Font size">
+                        <NumberField suffix="px" min={4} max={24}
                             value={tl.fontSize} onChange={v => patchBand({ fontSize: v })} />
                     </Row>
-                    <Row label="Cell height" classic={classic} title="How much room the operator gets to write">
-                        <NumberField classic={classic} suffix="px" min={8} max={80}
+                    <Row label="Cell height" title="How much room the operator gets to write">
+                        <NumberField suffix="px" min={8} max={80}
                             value={tl.cellHeight} onChange={v => patchBand({ cellHeight: v })} />
                     </Row>
                 </InspectorGroup>
 
                 {isBoxes ? (
-                    <InspectorGroup title="Boxes" classic={classic}>
-                        <Row label="Count" classic={classic}>
-                            <NumberField classic={classic} min={1} max={60}
+                    <InspectorGroup title="Boxes">
+                        <Row label="Count">
+                            <NumberField min={1} max={60}
                                 value={tl.boxes} onChange={v => patchBand({ boxes: v ?? 1 })} />
                         </Row>
-                        <Row label="Per row" classic={classic}>
-                            <NumberField classic={classic} min={1} max={12}
+                        <Row label="Per row">
+                            <NumberField min={1} max={12}
                                 value={tl.boxesPerRow} onChange={v => patchBand({ boxesPerRow: v ?? 1 })} />
                         </Row>
                     </InspectorGroup>
@@ -773,16 +754,15 @@ export default function InspectorPanel({ layout, docType, selection, onChange, o
                     <>
                         <InspectorGroup
                             title="Columns"
-                            classic={classic}
                             right={
                                 <button
                                     onClick={() => editBand(b => b.columns.push({ label: 'Value' }))}
                                     title="Add a column"
                                     style={{
-                                        fontFamily: classic ? xpFont : undefined, fontSize: 10, lineHeight: 1,
+                                        fontFamily: xpFont, fontSize: 10, lineHeight: 1,
                                         padding: '1px 4px', cursor: 'pointer', borderRadius: 3,
-                                        background: classic ? 'linear-gradient(to bottom,#fff,#d4d0c8)' : '#f8f9fa',
-                                        border: '1px solid', borderColor: classic ? '#dfdfdf #808080 #808080 #dfdfdf' : '#ced4da',
+                                        background: 'linear-gradient(to bottom,#fff,#d4d0c8)',
+                                        border: '1px solid', borderColor: '#dfdfdf #808080 #808080 #dfdfdf',
                                     }}
                                 >
                                     <i className="bi bi-plus" /> Add
@@ -792,41 +772,40 @@ export default function InspectorPanel({ layout, docType, selection, onChange, o
                             {(tl.columns || []).map((c, i) => (
                                 <div key={i} style={{ marginBottom: 5, paddingBottom: 4, borderBottom: '1px dotted #ccc' }}>
                                     <div style={{ display: 'flex', gap: 4, alignItems: 'center', marginBottom: 3 }}>
-                                        <TextField classic={classic} value={c.label}
+                                        <TextField value={c.label}
                                             onChange={v => editBand(b => { b.columns[i].label = v; })} />
                                         <ListRowControls
-                                            classic={classic}
                                             canUp={i > 0} canDown={i < (tl.columns.length - 1)}
                                             onUp={() => editBand(b => { b.columns = move(b.columns, i, i - 1); })}
                                             onDown={() => editBand(b => { b.columns = move(b.columns, i, i + 1); })}
                                             onRemove={tl.columns.length > 1 ? () => editBand(b => { b.columns.splice(i, 1); }) : undefined}
                                         />
                                     </div>
-                                    <Row label="Width" classic={classic}>
-                                        <TextField classic={classic} value={c.width} placeholder="(auto)"
+                                    <Row label="Width">
+                                        <TextField value={c.width} placeholder="(auto)"
                                             onChange={v => editBand(b => { b.columns[i].width = v || undefined; })} />
                                     </Row>
-                                    <CheckField classic={classic} label="Pre-print row numbers" checked={!!c.autoNumber}
+                                    <CheckField label="Pre-print row numbers" checked={!!c.autoNumber}
                                         onChange={v => editBand(b => { b.columns[i].autoNumber = v || undefined; })} />
                                 </div>
                             ))}
                         </InspectorGroup>
 
-                        <InspectorGroup title="Rows" classic={classic}>
-                            <Row label="Count" classic={classic}>
-                                <NumberField classic={classic} min={1} max={40}
+                        <InspectorGroup title="Rows">
+                            <Row label="Count">
+                                <NumberField min={1} max={40}
                                     value={tl.rows} onChange={v => patchBand({ rows: v ?? 1 })} />
                             </Row>
-                            <CheckField classic={classic} label="Total row at the bottom" checked={!!tl.totalRow}
+                            <CheckField label="Total row at the bottom" checked={!!tl.totalRow}
                                 onChange={v => patchBand({ totalRow: v ? { label: 'Jumlah', totalLabel: 'Total' } : undefined })} />
                             {tl.totalRow && (
                                 <>
-                                    <Row label="Label" classic={classic}>
-                                        <TextField classic={classic} value={tl.totalRow.label}
+                                    <Row label="Label">
+                                        <TextField value={tl.totalRow.label}
                                             onChange={v => editBand(b => { b.totalRow.label = v; })} />
                                     </Row>
-                                    <Row label="Total label" classic={classic}>
-                                        <TextField classic={classic} value={tl.totalRow.totalLabel}
+                                    <Row label="Total label">
+                                        <TextField value={tl.totalRow.totalLabel}
                                             onChange={v => editBand(b => { b.totalRow.totalLabel = v; })} />
                                     </Row>
                                 </>
@@ -845,16 +824,15 @@ export default function InspectorPanel({ layout, docType, selection, onChange, o
             <>
                 <InspectorGroup
                     title="Signature boxes"
-                    classic={classic}
                     right={
                         <button
                             onClick={() => editBand(b => b.boxes.push({ caption: 'DISETUJUI', width: 100, height: 26 }))}
                             title="Add a signature box"
                             style={{
-                                fontFamily: classic ? xpFont : undefined, fontSize: 10, lineHeight: 1,
+                                fontFamily: xpFont, fontSize: 10, lineHeight: 1,
                                 padding: '1px 4px', cursor: 'pointer', borderRadius: 3,
-                                background: classic ? 'linear-gradient(to bottom,#fff,#d4d0c8)' : '#f8f9fa',
-                                border: '1px solid', borderColor: classic ? '#dfdfdf #808080 #808080 #dfdfdf' : '#ced4da',
+                                background: 'linear-gradient(to bottom,#fff,#d4d0c8)',
+                                border: '1px solid', borderColor: '#dfdfdf #808080 #808080 #dfdfdf',
                             }}
                         >
                             <i className="bi bi-plus" /> Add
@@ -864,39 +842,37 @@ export default function InspectorPanel({ layout, docType, selection, onChange, o
                     {sg.boxes.map((b2, i) => (
                         <div key={i} style={{ marginBottom: 5, paddingBottom: 4, borderBottom: '1px dotted #ccc' }}>
                             <div style={{ display: 'flex', gap: 4, alignItems: 'center', marginBottom: 3 }}>
-                                <TextField classic={classic} value={b2.caption}
+                                <TextField value={b2.caption}
                                     onChange={v => editBand(b => { b.boxes[i].caption = v; })} />
                                 <ListRowControls
-                                    classic={classic}
                                     canUp={i > 0} canDown={i < sg.boxes.length - 1}
                                     onUp={() => editBand(b => { b.boxes = move(b.boxes, i, i - 1); })}
                                     onDown={() => editBand(b => { b.boxes = move(b.boxes, i, i + 1); })}
                                     onRemove={() => editBand(b => { b.boxes.splice(i, 1); })}
                                 />
                             </div>
-                            <Row label="Width" classic={classic}>
-                                <NumberField classic={classic} suffix="px" min={30} max={300}
+                            <Row label="Width">
+                                <NumberField suffix="px" min={30} max={300}
                                     value={b2.width} onChange={v => editBand(b => { b.boxes[i].width = v; })} />
                             </Row>
-                            <Row label="Height" classic={classic}>
-                                <NumberField classic={classic} suffix="px" min={10} max={120}
+                            <Row label="Height">
+                                <NumberField suffix="px" min={10} max={120}
                                     value={b2.height} onChange={v => editBand(b => { b.boxes[i].height = v; })} />
                             </Row>
                         </div>
                     ))}
                 </InspectorGroup>
 
-                <InspectorGroup title="Small print (left)" classic={classic}>
+                <InspectorGroup title="Small print (left)">
                     {(sg.footerFields || []).map((f, i) => (
                         <div key={i} style={{ display: 'flex', gap: 4, alignItems: 'center', marginBottom: 3 }}>
-                            <SelectField classic={classic} value={f.field as any} options={fieldOpts}
+                            <SelectField value={f.field as any} options={fieldOpts}
                                 onChange={v => editBand(b => { b.footerFields[i].field = v; })} />
                             <div style={{ width: 52, flexShrink: 0 }}>
-                                <NumberField classic={classic} suffix="px" min={4} max={16}
+                                <NumberField suffix="px" min={4} max={16}
                                     value={f.fontSize} onChange={v => editBand(b => { b.footerFields[i].fontSize = v; })} />
                             </div>
-                            <ListRowControls
-                                classic={classic} canUp={false} canDown={false}
+                            <ListRowControls canUp={false} canDown={false}
                                 onUp={() => {}} onDown={() => {}}
                                 onRemove={() => editBand(b => { b.footerFields.splice(i, 1); })}
                             />
@@ -908,10 +884,10 @@ export default function InspectorPanel({ layout, docType, selection, onChange, o
                             b.footerFields.push({ field: fields[0]?.key || '__blank', fontSize: 6 });
                         })}
                         style={{
-                            fontFamily: classic ? xpFont : undefined, fontSize: 10,
+                            fontFamily: xpFont, fontSize: 10,
                             padding: '1px 4px', cursor: 'pointer', borderRadius: 3,
-                            background: classic ? 'linear-gradient(to bottom,#fff,#d4d0c8)' : '#f8f9fa',
-                            border: '1px solid', borderColor: classic ? '#dfdfdf #808080 #808080 #dfdfdf' : '#ced4da',
+                            background: 'linear-gradient(to bottom,#fff,#d4d0c8)',
+                            border: '1px solid', borderColor: '#dfdfdf #808080 #808080 #dfdfdf',
                         }}
                     >
                         <i className="bi bi-plus" /> Add line
@@ -922,13 +898,13 @@ export default function InspectorPanel({ layout, docType, selection, onChange, o
     };
 
     const spacerEditor = () => (
-        <InspectorGroup title="Spacer" classic={classic}>
-            <Row label="Min height" classic={classic}>
-                <NumberField classic={classic} suffix="px" min={0} max={200}
+        <InspectorGroup title="Spacer">
+            <Row label="Min height">
+                <NumberField suffix="px" min={0} max={200}
                     value={(band as SpacerBand).minHeight}
                     onChange={v => patchBand({ minHeight: v })} />
             </Row>
-            <div style={{ fontFamily: classic ? xpFont : undefined, fontSize: 10, color: '#888', fontStyle: 'italic' }}>
+            <div style={{ fontFamily: xpFont, fontSize: 10, color: '#888', fontStyle: 'italic' }}>
                 Absorbs leftover height so whatever follows sits at the bottom of the page.
             </div>
         </InspectorGroup>

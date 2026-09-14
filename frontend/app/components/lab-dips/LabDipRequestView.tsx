@@ -2,7 +2,6 @@
 import React, { useState, useMemo, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { useToast } from '../shared/Toast';
-import { useTheme } from '../../context/ThemeContext';
 import { useTimezone } from '../../context/TimezoneContext';
 import { useUser } from '../../context/UserContext';
 import { useData } from '../../context/DataContext';
@@ -18,15 +17,13 @@ import { API_BASE, STATIC_BASE } from '../shared/apiBase';
 
 // ── XP style constants (consistent with DyeingSettingView) ──────────────────
 const modernFont = 'system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif';
-const xpInput = (classic: boolean): React.CSSProperties => lvInput(classic, classic ? { width: 'auto' } : { height: 'auto' });
-const xpBtn = (classic: boolean, extra: React.CSSProperties = {}): React.CSSProperties => lvBtn(classic, 'default', extra);
+const xpInput = (): React.CSSProperties => lvInput({ width: 'auto' });
+const xpBtn = (extra: React.CSSProperties = {}): React.CSSProperties => lvBtn('default', extra);
 // Modern primary-button overrides (Submit/Create/Add/New). Merged on top of the secondary base above.
 const modernPrimaryBtn: React.CSSProperties = {
     fontWeight: 600, background: '#2563eb', color: '#fff', border: 'none',
 };
-const xpLbl = (classic: boolean): React.CSSProperties => classic
-    ? { fontFamily: xpFont, fontSize: 11, color: '#000', display: 'block', marginBottom: 2 }
-    : { fontFamily: modernFont, fontSize: 12, color: '#475569', fontWeight: 600, display: 'block', marginBottom: 3 };
+const xpLbl = (): React.CSSProperties => ({ fontFamily: xpFont, fontSize: 11, color: '#000', display: 'block', marginBottom: 2 });
 const REQUEST_TYPES = ['NEW', 'RESUBMIT', 'STRIKE_OFF'];
 const STATUS_FILTERS = ['ALL', 'DRAFT', 'SUBMITTED', 'APPROVED', 'REJECTED'];
 const REQUEST_STATUSES = ['DRAFT', 'SUBMITTED', 'APPROVED', 'REJECTED'];
@@ -44,30 +41,18 @@ const REJECT_REASONS = [
     'Other',
 ];
 
-const statusStyle = (status: string, classic: boolean): React.CSSProperties => {
-    if (classic) {
-        const map: Record<string, { bg: string; border: string; color: string }> = {
-            APPROVED:    { bg: '#d4edda', border: '#27713a', color: '#0c3a1a' },
-            REJECTED:    { bg: '#f8d7da', border: '#a01a1a', color: '#4a0000' },
-            SUBMITTED:   { bg: '#dce4f5', border: '#3a5faa', color: '#0d2a6e' },
-            RESUBMIT:    { bg: '#fff3cd', border: '#b8860b', color: '#3e2000' },
-            IN_PROGRESS: { bg: '#fff3cd', border: '#b8860b', color: '#3e2000' },
-            PENDING:     { bg: '#e8e8e8', border: '#7a7a7a', color: '#111' },
-        };
-        const s = map[status] || { bg: '#e8e8e8', border: '#7a7a7a', color: '#111' };
-        return { background: s.bg, border: `1px solid ${s.border}`, color: s.color, padding: '1px 5px', fontSize: 9, fontFamily: xpFont, fontWeight: 'bold', whiteSpace: 'nowrap' as const };
-    }
-    // Modern: semantic colors preserved, softer bg + matching text/border, rounded 6px.
+const statusStyle = (status: string): React.CSSProperties => {
     const map: Record<string, { bg: string; border: string; color: string }> = {
-        APPROVED:    { bg: '#ecfdf3', border: '#abdfc0', color: '#15803d' },
-        REJECTED:    { bg: '#fef2f2', border: '#f3c4c4', color: '#dc2626' },
-        SUBMITTED:   { bg: '#eff6ff', border: '#bfd3f5', color: '#1d4ed8' },
-        RESUBMIT:    { bg: '#fffbeb', border: '#fce3a6', color: '#b45309' },
-        IN_PROGRESS: { bg: '#fffbeb', border: '#fce3a6', color: '#b45309' },
-        PENDING:     { bg: '#f1f5f9', border: '#d4dce6', color: '#475569' },
+        APPROVED:    { bg: '#d4edda', border: '#27713a', color: '#0c3a1a' },
+        REJECTED:    { bg: '#f8d7da', border: '#a01a1a', color: '#4a0000' },
+        SUBMITTED:   { bg: '#dce4f5', border: '#3a5faa', color: '#0d2a6e' },
+        RESUBMIT:    { bg: '#fff3cd', border: '#b8860b', color: '#3e2000' },
+        IN_PROGRESS: { bg: '#fff3cd', border: '#b8860b', color: '#3e2000' },
+        PENDING:     { bg: '#e8e8e8', border: '#7a7a7a', color: '#111' },
     };
-    const s = map[status] || { bg: '#f1f5f9', border: '#d4dce6', color: '#475569' };
-    return { display: 'inline-block', background: s.bg, border: `1px solid ${s.border}`, color: s.color, borderRadius: CHIP_RADIUS, padding: '2px 8px', fontSize: 11, fontFamily: modernFont, fontWeight: 600, whiteSpace: 'nowrap' as const };
+    const s = map[status] || { bg: '#e8e8e8', border: '#7a7a7a', color: '#111' };
+    return { background: s.bg, border: `1px solid ${s.border}`, color: s.color, padding: '1px 5px', fontSize: 9, fontFamily: xpFont, fontWeight: 'bold', whiteSpace: 'nowrap' as const };
+    // Modern: semantic colors preserved, softer bg + matching text/border, rounded 6px.
 };
 
 const today = () => new Date().toISOString().split('T')[0];
@@ -106,20 +91,14 @@ const itemColorNames = (req: any, item: any): string[] => {
 };
 
 // Two distinct chips: the request sequence (neutral) and the item's variant letter (accent).
-const seqBadge = (classic: boolean): React.CSSProperties => classic ? {
+const seqBadge = (): React.CSSProperties => ({
     fontFamily: CODE_FONT, fontSize: 11, fontWeight: 'bold', color: '#333',
     background: '#e4e1d8', border: '1px solid #a0988c', borderRadius: CHIP_RADIUS, padding: '1px 7px', whiteSpace: 'nowrap' as const,
-} : {
-    fontFamily: CODE_FONT, fontSize: 12, fontWeight: 700, color: '#475569',
-    background: '#eef1f6', border: '1px solid #d4dce6', borderRadius: CHIP_RADIUS, padding: '2px 9px', whiteSpace: 'nowrap' as const,
-};
-const variantBadge = (classic: boolean): React.CSSProperties => classic ? {
+});
+const variantBadge = (): React.CSSProperties => ({
     fontFamily: xpFont, fontSize: 11, fontWeight: 'bold', color: '#fff',
     background: '#3a6fc4', border: '1px solid #1a4a8a', borderRadius: CHIP_RADIUS, padding: '1px 7px', whiteSpace: 'nowrap' as const,
-} : {
-    fontFamily: modernFont, fontSize: 12, fontWeight: 700, color: '#1e40af',
-    background: '#dbe7fb', border: '1px solid #bcd0f5', borderRadius: CHIP_RADIUS, padding: '2px 9px', whiteSpace: 'nowrap' as const,
-};
+});
 
 const emptyForm = () => ({
     request_date: today(),
@@ -154,9 +133,7 @@ export default function LabDipRequestView({
 }: any) {
     useToast();
     const router = useRouter();
-    const { uiStyle } = useTheme();
     const { formatDate: tzDate, formatDateTime: tzDateTime } = useTimezone();
-    const classic = uiStyle === 'classic';
     const { hasPermission, hasAnyPermission } = useUser();
     const canManage = hasAnyPermission('lab_dip_request.create', 'lab_dip_request.edit', 'lab_dip_request.delete');
     const { openId: menuOpenId, pos: menuPos, toggle: menuToggle, close: menuClose } = useFloatingMenu(160);
@@ -210,7 +187,7 @@ export default function LabDipRequestView({
     // Skeleton sizing: measure one real row so the placeholders shown on the next
     // load are exactly as tall as the rows that replace them.
     const listBodyRef = useRef<HTMLTableSectionElement>(null);
-    const skel = useTableSkeletonMetrics(classic ? 'lab-dips-classic' : 'lab-dips', listBodyRef, (labDips?.length ?? 0) > 0);
+    const skel = useTableSkeletonMetrics('lab-dips-classic', listBodyRef, (labDips?.length ?? 0) > 0);
 
     // Which numbering book this mount shows. Only the labels, the code preview and the
     // POST payload differ — the FG and yarn pages are the same component, one code path.
@@ -321,7 +298,7 @@ export default function LabDipRequestView({
         return (
             <img src={full} alt={label} title={`${label} — click to preview`}
                 onClick={() => setPhotoPreview({ url: full, filename })}
-                style={{ maxHeight: 40, maxWidth: 64, border: classic ? '1px solid #a0988c' : '1px solid #dbe1e8', borderRadius: classic ? 0 : 3, cursor: 'pointer', display: 'block', margin: '0 auto' }} />
+                style={{ maxHeight: 40, maxWidth: 64, border: '1px solid #a0988c', borderRadius: 0, cursor: 'pointer', display: 'block', margin: '0 auto' }} />
         );
     };
 
@@ -489,46 +466,43 @@ export default function LabDipRequestView({
     const displayCode = editing ? editing.code : nextCode;
 
     return (
-        <div style={viewShellStyle(classic, 'page', { fontFamily: classic ? xpFont : modernFont })}>
+        <div style={viewShellStyle('page', { fontFamily: xpFont})}>
             {/* Title bar */}
             <PageTitleBar
-                classic={classic}
                 icon={isYarn ? 'bi-droplet-half' : 'bi-droplet'}
                 title={isYarn ? 'Yarn Lab Dip Requests' : 'Lab Dip Requests'}
             />
 
             {/* Toolbar */}
-            <div style={classic
-                ? { background: 'linear-gradient(to bottom, #f5f4ef, #e0dfd8)', borderBottom: '1px solid #b0a898', padding: '4px 8px', display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' as const, flexShrink: 0 }
-                : { background: '#fff', borderBottom: '1px solid #dbe1ea', padding: '8px 10px', display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' as const, flexShrink: 0 }}>
-                <SearchField classic={classic} value={searchTerm} onChange={setSearchTerm} placeholder="Search code, color standard, article…" width={220} />
-                <span style={classic ? { width: 1, height: 20, background: '#a0988c', margin: '0 2px' } : { width: 1, height: 20, background: '#dbe1ea', margin: '0 2px' }} />
-                <FilterChipBar classic={classic} options={STATUS_FILTERS} value={statusFilter} onChange={setStatusFilter} />
-                <span style={classic ? { width: 1, height: 20, background: '#a0988c', margin: '0 2px' } : { width: 1, height: 20, background: '#dbe1ea', margin: '0 2px' }} />
-                <span style={classic ? { fontSize: 11, color: '#333' } : { fontSize: 12, color: '#64748b' }}>Created</span>
+            <div style={{ background: 'linear-gradient(to bottom, #f5f4ef, #e0dfd8)', borderBottom: '1px solid #b0a898', padding: '4px 8px', display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' as const, flexShrink: 0 }}>
+                <SearchField value={searchTerm} onChange={setSearchTerm} placeholder="Search code, color standard, article…" width={220} />
+                <span style={{ width: 1, height: 20, background: '#a0988c', margin: '0 2px' }} />
+                <FilterChipBar options={STATUS_FILTERS} value={statusFilter} onChange={setStatusFilter} />
+                <span style={{ width: 1, height: 20, background: '#a0988c', margin: '0 2px' }} />
+                <span style={{ fontSize: 11, color: '#333' }}>Created</span>
                 <input
                     type="date"
-                    style={{ ...xpInput(classic), width: 130 }}
+                    style={{ ...xpInput(), width: 130 }}
                     value={createdFrom}
                     onChange={e => setCreatedFrom(e.target.value)}
                     title="Created from"
                 />
-                <span style={classic ? { fontSize: 11, color: '#333' } : { fontSize: 12, color: '#64748b' }}>–</span>
+                <span style={{ fontSize: 11, color: '#333' }}>–</span>
                 <input
                     type="date"
-                    style={{ ...xpInput(classic), width: 130 }}
+                    style={{ ...xpInput(), width: 130 }}
                     value={createdTo}
                     onChange={e => setCreatedTo(e.target.value)}
                     title="Created to"
                 />
                 {hasActiveFilter && (
-                    <button className={XP_BTN} style={xpBtn(classic)} onClick={clearFilters} title="Clear all filters">Clear</button>
+                    <button className={XP_BTN} style={xpBtn()} onClick={clearFilters} title="Clear all filters">Clear</button>
                 )}
-                <ToolbarCount classic={classic} right>{total} item{total !== 1 ? 's' : ''}</ToolbarCount>
+                <ToolbarCount right>{total} item{total !== 1 ? 's' : ''}</ToolbarCount>
                 {canManage && (
                     <>
-                        <span style={classic ? { width: 1, height: 20, background: '#a0988c', margin: '0 2px' } : { width: 1, height: 20, background: '#dbe1ea', margin: '0 2px' }} />
-                        <ToolbarButton classic={classic} tone="create" icon="bi-plus-lg" onClick={openCreate}>New {requestNoun}</ToolbarButton>
+                        <span style={{ width: 1, height: 20, background: '#a0988c', margin: '0 2px' }} />
+                        <ToolbarButton tone="create" icon="bi-plus-lg" onClick={openCreate}>New {requestNoun}</ToolbarButton>
                     </>
                 )}
             </div>
@@ -536,25 +510,25 @@ export default function LabDipRequestView({
             {/* Table */}
             <div style={{ flex: 1, background: '#fff', overflowY: 'auto' }}>
                 <table style={{ width: '100%', borderCollapse: 'collapse', background: '#fff' }}>
-                    <thead style={lvThead(classic, true)}>
+                    <thead style={lvThead()}>
                         <tr>
-                            <th style={{ ...lvTh(classic), width: LV_EXPANDER_COL_W }} />
-                            <SortableTh sort={sort} colKey="code" onSort={toggleSort} style={{ ...lvTh(classic), width: 140 }}>Request Code</SortableTh>
-                            <SortableTh sort={sort} colKey="customer" onSort={toggleSort} style={{ ...lvTh(classic), width: 120 }}>Customer</SortableTh>
-                            <th style={lvTh(classic)}>Items</th>
-                            <th style={{ ...lvTh(classic), width: 140 }}>{colorsAttrName}</th>
-                            <SortableTh sort={sort} colKey="type" onSort={toggleSort} style={{ ...lvTh(classic), width: 90 }}>Type</SortableTh>
-                            <SortableTh sort={sort} colKey="status" onSort={toggleSort} style={{ ...lvTh(classic), width: 110 }}>Status</SortableTh>
-                            <th style={{ ...lvTh(classic), width: 90 }}>Variants</th>
-                            <SortableTh sort={sort} colKey="updated" onSort={toggleSort} style={{ ...lvTh(classic), width: 128 }}>Updated</SortableTh>
-                            <th style={{ ...lvTh(classic), width: 44, textAlign: 'right' as const, borderRight: 'none' }}></th>
+                            <th style={{ ...lvTh(), width: LV_EXPANDER_COL_W }} />
+                            <SortableTh sort={sort} colKey="code" onSort={toggleSort} style={{ ...lvTh(), width: 140 }}>Request Code</SortableTh>
+                            <SortableTh sort={sort} colKey="customer" onSort={toggleSort} style={{ ...lvTh(), width: 120 }}>Customer</SortableTh>
+                            <th style={lvTh()}>Items</th>
+                            <th style={{ ...lvTh(), width: 140 }}>{colorsAttrName}</th>
+                            <SortableTh sort={sort} colKey="type" onSort={toggleSort} style={{ ...lvTh(), width: 90 }}>Type</SortableTh>
+                            <SortableTh sort={sort} colKey="status" onSort={toggleSort} style={{ ...lvTh(), width: 110 }}>Status</SortableTh>
+                            <th style={{ ...lvTh(), width: 90 }}>Variants</th>
+                            <SortableTh sort={sort} colKey="updated" onSort={toggleSort} style={{ ...lvTh(), width: 128 }}>Updated</SortableTh>
+                            <th style={{ ...lvTh(), width: 44, textAlign: 'right' as const, borderRight: 'none' }}></th>
                         </tr>
                     </thead>
                     <tbody ref={listBodyRef}>
                         {labDips.length === 0 && (loading ? (
-                            <TableSkeleton rows={8} cols={skel.cols ?? 10} classic={classic} tdStyle={lvTdRuled(classic)} rowHeight={skel.rowHeight} fillHeight={skel.fillHeight} />
+                            <TableSkeleton rows={8} cols={skel.cols ?? 10} tdStyle={lvTdRuled()} rowHeight={skel.rowHeight} fillHeight={skel.fillHeight} />
                         ) : (
-                            <TableEmpty colSpan={10} classic={classic} tdStyle={lvTdRuled(classic)}
+                            <TableEmpty colSpan={10} tdStyle={lvTdRuled()}
                                 message={hasActiveFilter ? 'No requests match the current filter.' : isYarn ? 'No yarn lab dip requests yet.' : 'No lab dip requests yet.'} />
                         ))}
                         {sorted.map((r: any, idx: number) => {
@@ -563,75 +537,75 @@ export default function LabDipRequestView({
                             return (
                                 <React.Fragment key={r.id}>
                                     <tr id={`labdip-row-${r.id}`} onClick={() => toggleExpand(r.id)} style={{
-                                        background: String(r.id) === String(openRequestId) ? rowStateBg('highlighted', classic)
-                                            : expandedIds.has(r.id) ? rowStateBg('expanded', classic)
-                                            : lvZebra(classic, idx),
-                                        borderBottom: classic ? '1px solid #c0bdb5' : undefined,
+                                        background: String(r.id) === String(openRequestId) ? rowStateBg('highlighted')
+                                            : expandedIds.has(r.id) ? rowStateBg('expanded')
+                                            : lvZebra(idx),
+                                        borderBottom: '1px solid #c0bdb5',
                                         cursor: 'pointer',
                                     }}>
-                                        <ExpanderCell classic={classic} expanded={expandedIds.has(r.id)} onToggle={() => toggleExpand(r.id)} label="lab dip detail"
-                                            tdStyle={lvTdRuled(classic)} />
-                                        <td style={lvTdRuled(classic)}>
+                                        <ExpanderCell expanded={expandedIds.has(r.id)} onToggle={() => toggleExpand(r.id)} label="lab dip detail"
+                                            tdStyle={lvTdRuled()} />
+                                        <td style={lvTdRuled()}>
                                             <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
                                                 <div>
-                                                    <CodeChip code={r.code} classic={classic} tone="accent" style={{ fontWeight: 'bold' }} />
-                                                    <div style={{ fontSize: classic ? 9 : 11, color: classic ? '#555' : '#64748b' }}>{r.created_at ? tzDate(r.created_at) : ''}</div>
+                                                    <CodeChip code={r.code} tone="accent" style={{ fontWeight: 'bold' }} />
+                                                    <div style={{ fontSize: 9, color: '#555'}}>{r.created_at ? tzDate(r.created_at) : ''}</div>
                                                 </div>
                                             </div>
                                         </td>
-                                        <td style={lvTdRuled(classic)}>
-                                            {r.customer_id ? getCustomerName(r.customer_id) : <span style={{ fontSize: classic ? 9 : 12, color: classic ? '#555' : '#64748b', fontStyle: 'italic' }}>Internal</span>}
+                                        <td style={lvTdRuled()}>
+                                            {r.customer_id ? getCustomerName(r.customer_id) : <span style={{ fontSize: 9, color: '#555', fontStyle: 'italic' }}>Internal</span>}
                                         </td>
-                                        <td style={lvTdRuled(classic)}>
+                                        <td style={lvTdRuled()}>
                                             {(() => {
                                                 const its = r.items || [];
-                                                if (!its.length) return <span style={{ fontSize: classic ? 9 : 12, color: classic ? '#888' : '#94a3b8', fontStyle: 'italic' }}>—</span>;
+                                                if (!its.length) return <span style={{ fontSize: 9, color: '#888', fontStyle: 'italic' }}>—</span>;
                                                 const first = its[0];
                                                 const firstCode = first.variant_code || `${seqPart(r.code)}-${variantLetter(first.variant_seq ?? 0)}`;
                                                 const firstParts = splitVariantCode(firstCode);
                                                 return (
                                                     <>
                                                         <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                                                            <span style={{ ...seqBadge(classic), fontSize: classic ? 9 : 11, padding: '0 5px' }}>{firstParts.seq}</span>
-                                                            <span style={{ ...variantBadge(classic), fontSize: classic ? 9 : 11, padding: '0 5px' }}>{firstParts.variant}</span>
-                                                            <span style={{ fontWeight: 'bold', fontSize: classic ? 11 : 13, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' as const }}>{first.item_name || first.item_code || '—'}</span>
+                                                            <span style={{ ...seqBadge(), fontSize: 9, padding: '0 5px' }}>{firstParts.seq}</span>
+                                                            <span style={{ ...variantBadge(), fontSize: 9, padding: '0 5px' }}>{firstParts.variant}</span>
+                                                            <span style={{ fontWeight: 'bold', fontSize: 11, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' as const }}>{first.item_name || first.item_code || '—'}</span>
                                                         </div>
-                                                        {its.length > 1 && <div style={{ fontSize: classic ? 9 : 11, color: classic ? '#555' : '#64748b' }}>+{its.length - 1} more</div>}
+                                                        {its.length > 1 && <div style={{ fontSize: 9, color: '#555'}}>+{its.length - 1} more</div>}
                                                     </>
                                                 );
                                             })()}
                                         </td>
-                                        <td style={lvTdRuled(classic)}>
+                                        <td style={lvTdRuled()}>
                                             {(() => {
                                                 const dips = (r.dips || []).filter((d: any) => !d.lab_dip_item_id);
-                                                if (!dips.length) return <span style={{ fontSize: classic ? 9 : 12, color: classic ? '#888' : '#94a3b8', fontStyle: 'italic' }}>—</span>;
+                                                if (!dips.length) return <span style={{ fontSize: 9, color: '#888', fontStyle: 'italic' }}>—</span>;
                                                 return (
                                                     <div style={{ display: 'flex', flexWrap: 'wrap' as const, gap: 3 }}>
-                                                        {dips.map((d: any) => <ColorSwatchChip key={d.id || d.color_name} label={d.color_name} classic={classic} hex={hexByColorName[d.color_name]} />)}
+                                                        {dips.map((d: any) => <ColorSwatchChip key={d.id || d.color_name} label={d.color_name} hex={hexByColorName[d.color_name]} />)}
                                                     </div>
                                                 );
                                             })()}
                                         </td>
-                                        <td style={lvTdRuled(classic)}><span style={{ fontSize: classic ? 10 : 13 }}>{r.request_type}</span></td>
-                                        <td style={lvTdRuled(classic)}><span style={statusStyle(r.status, classic)}>{r.status}</span></td>
-                                        <td style={lvTdRuled(classic)}>
+                                        <td style={lvTdRuled()}><span style={{ fontSize: 10}}>{r.request_type}</span></td>
+                                        <td style={lvTdRuled()}><span style={statusStyle(r.status)}>{r.status}</span></td>
+                                        <td style={lvTdRuled()}>
                                             {total > 0 ? (
-                                                <span style={{ fontSize: classic ? 11 : 13 }}>
-                                                    <span style={{ fontWeight: 'bold', color: approved === total ? (classic ? '#1a6e1a' : '#15803d') : approved > 0 ? (classic ? '#0047c8' : '#2563eb') : (classic ? '#777' : '#94a3b8') }}>{approved}</span>
-                                                    <span style={{ color: classic ? '#777' : '#94a3b8' }}>/{total}</span>
-                                                    <span style={{ fontSize: classic ? 9 : 11, color: classic ? '#555' : '#64748b', marginLeft: 3 }}>approved</span>
+                                                <span style={{ fontSize: 11}}>
+                                                    <span style={{ fontWeight: 'bold', color: approved === total ? ('#1a6e1a') : approved > 0 ? ('#0047c8') : ('#777') }}>{approved}</span>
+                                                    <span style={{ color: '#777'}}>/{total}</span>
+                                                    <span style={{ fontSize: 9, color: '#555', marginLeft: 3 }}>approved</span>
                                                 </span>
-                                            ) : <span style={{ fontSize: classic ? 9 : 12, color: classic ? '#888' : '#94a3b8', fontStyle: 'italic' }}>—</span>}
+                                            ) : <span style={{ fontSize: 9, color: '#888', fontStyle: 'italic' }}>—</span>}
                                         </td>
-                                        <td style={lvTdRuled(classic)}>
-                                            <span style={{ fontSize: classic ? 10 : 12, color: classic ? '#333' : '#475569', whiteSpace: 'nowrap' as const }}>
+                                        <td style={lvTdRuled()}>
+                                            <span style={{ fontSize: 10, color: '#333', whiteSpace: 'nowrap' as const }}>
                                                 {r.updated_at ? tzDateTime(r.updated_at) : (r.created_at ? tzDateTime(r.created_at) : '—')}
                                             </span>
                                         </td>
-                                        <td style={{ ...lvTdRuled(classic), borderRight: 'none', textAlign: 'right' as const }} onClick={e => e.stopPropagation()}>
+                                        <td style={{ ...lvTdRuled(), borderRight: 'none', textAlign: 'right' as const }} onClick={e => e.stopPropagation()}>
                                             <div style={{ display: 'flex', gap: 3, justifyContent: 'flex-end', alignItems: 'center' }}>
                                                 {canManage && (
-                                                <MenuTriggerButton classic={classic} onClick={e => menuToggle(String(r.id), e)} />
+                                                <MenuTriggerButton onClick={e => menuToggle(String(r.id), e)} />
                                                 )}
                                             </div>
                                         </td>
@@ -669,12 +643,12 @@ export default function LabDipRequestView({
                                                 stripeColor: stripe.borderLeftColor,
                                                 background: stripe.background,
                                                 cells: [
-                                                    <span style={{ fontWeight: 'bold', color: classic ? '#0d3a8a' : '#1e293b', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' as const, display: 'block' }}>{it.item_name || it.item_code || '—'}</span>,
+                                                    <span style={{ fontWeight: 'bold', color: '#0d3a8a', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' as const, display: 'block' }}>{it.item_name || it.item_code || '—'}</span>,
                                                     // Color code + variant; the full approved code once approved.
                                                     it.approved_color_code ? (
-                                                        <span title="Approved color code (saved to library)" style={{ ...variantBadge(classic), fontSize: classic ? 9 : 11, padding: '0 6px', background: classic ? '#1b7a34' : '#dcfce7', color: classic ? '#fff' : '#166534', borderColor: classic ? '#0f5a22' : '#a7e3bf' }}>{it.approved_color_code}</span>
+                                                        <span title="Approved color code (saved to library)" style={{ ...variantBadge(), fontSize: 9, padding: '0 6px', background: '#1b7a34', color: '#fff', borderColor: '#0f5a22'}}>{it.approved_color_code}</span>
                                                     ) : (
-                                                        <span style={{ ...seqBadge(classic), fontFamily: CODE_FONT, fontSize: classic ? 10 : 11 }}>{variantCode}</span>
+                                                        <span style={{ ...seqBadge(), fontFamily: CODE_FONT, fontSize: 10}}>{variantCode}</span>
                                                     ),
                                                     <StatusChip status={status} tint />,
                                                     // Rejections column: a clear "log" button (icon + count) that opens the
@@ -684,15 +658,14 @@ export default function LabDipRequestView({
                                                             type="button"
                                                             title={`View ${it.rejection_count} rejection${it.rejection_count === 1 ? '' : 's'} — reasons & notes`}
                                                             onClick={() => setHistoryItem({ item: it, code: variantCode })}
-                                                            style={{ cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 4, border: classic ? '1px solid #a01a1a' : '1px solid #f3c4c4', background: classic ? '#f8d7da' : '#fef2f2', color: classic ? '#7f0000' : '#dc2626', borderRadius: CHIP_RADIUS, fontSize: classic ? 10 : 11, fontWeight: 'bold', lineHeight: 1.5, padding: '0 6px', textDecoration: 'underline', textUnderlineOffset: 2 }}
+                                                            style={{ cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 4, border: '1px solid #a01a1a', background: '#f8d7da', color: '#7f0000', borderRadius: CHIP_RADIUS, fontSize: 10, fontWeight: 'bold', lineHeight: 1.5, padding: '0 6px', textDecoration: 'underline', textUnderlineOffset: 2 }}
                                                         >
-                                                            <i className="bi bi-clock-history" style={{ fontSize: classic ? 10 : 12, textDecoration: 'none' }} />
+                                                            <i className="bi bi-clock-history" style={{ fontSize: 10, textDecoration: 'none' }} />
                                                             {it.rejection_count}x
                                                         </button>
-                                                    ) : <span style={{ color: classic ? '#aaa' : '#cbd5e1', fontSize: classic ? 11 : 12 }}>—</span>,
+                                                    ) : <span style={{ color: '#aaa', fontSize: 11}}>—</span>,
                                                     canManage ? (
                                                         <FilterChipBar
-                                                            classic={classic}
                                                             disabled={locked}
                                                             flat
                                                             value={status === 'IN_PROGRESS' ? 'progress' : status === 'APPROVED' ? 'approved' : status === 'REJECTED' ? 'rejected' : null}
@@ -713,27 +686,27 @@ export default function LabDipRequestView({
                                                     statusPhotoThumb(
                                                         status === 'APPROVED' ? it.approval_image_url : status === 'REJECTED' ? it.rejection_image_url : null,
                                                         status === 'APPROVED' ? 'Approval photo' : 'Rejection photo',
-                                                    ) || <span style={{ color: classic ? '#aaa' : '#cbd5e1', fontSize: classic ? 11 : 12 }}>—</span>,
+                                                    ) || <span style={{ color: '#aaa', fontSize: 11}}>—</span>,
                                                     // Jump to the minted color code in the Color Library (approved), or resubmit a fresh request (rejected).
                                                     (status === 'APPROVED' && it.approved_color_code) ? (
                                                         <button
                                                             type="button"
                                                             title={`Open color code ${it.approved_color_code} in library`}
                                                             className={XP_BTN}
-                                                            style={{ ...xpBtn(classic, { padding: classic ? '1px 5px' : '3px 7px', lineHeight: 1, color: classic ? '#0d3a8a' : '#2563eb' }) }}
+                                                            style={{ ...xpBtn({ padding: '1px 5px', lineHeight: 1, color: '#0d3a8a'}) }}
                                                             onClick={() => router.push(`/colors?search=${encodeURIComponent(it.approved_color_code)}`)}
                                                         >
-                                                            <i className="bi bi-box-arrow-up-right" style={{ fontSize: classic ? 10 : 12 }} />
+                                                            <i className="bi bi-box-arrow-up-right" style={{ fontSize: 10}} />
                                                         </button>
                                                     ) : (status === 'REJECTED' && canManage) ? (
                                                         <button
                                                             type="button"
                                                             title={`Reopen ${variantCode} for another round (keeps rejection history)`}
                                                             className={XP_BTN}
-                                                            style={{ ...xpBtn(classic, { padding: classic ? '1px 5px' : '3px 7px', lineHeight: 1, color: classic ? '#a05a00' : '#b45309' }) }}
+                                                            style={{ ...xpBtn({ padding: '1px 5px', lineHeight: 1, color: '#a05a00'}) }}
                                                             onClick={() => doUpdateItemStatus(r.id, it.id, 'IN_PROGRESS')}
                                                         >
-                                                            <i className="bi bi-arrow-repeat" style={{ fontSize: classic ? 10 : 12 }} />
+                                                            <i className="bi bi-arrow-repeat" style={{ fontSize: 10}} />
                                                         </button>
                                                     ) : <span style={{ color: '#bbb' }}>—</span>,
                                                 ],
@@ -753,7 +726,7 @@ export default function LabDipRequestView({
                                                     if (!dips.length) return '—';
                                                     return (
                                                         <div style={{ display: 'flex', flexWrap: 'wrap' as const, gap: 5 }}>
-                                                            {dips.map((d: any) => <ColorSwatchChip key={d.id || d.color_name} label={d.color_name} classic={classic} hex={hexByColorName[d.color_name]} />)}
+                                                            {dips.map((d: any) => <ColorSwatchChip key={d.id || d.color_name} label={d.color_name} hex={hexByColorName[d.color_name]} />)}
                                                         </div>
                                                     );
                                                 })(), full: true },
@@ -765,9 +738,9 @@ export default function LabDipRequestView({
                                         ];
 
                                         const rightHeader = (
-                                            <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '6px 10px', flexWrap: 'wrap' as const, borderBottom: classic ? '1px solid #d0cdc8' : '1px solid #dee2e6', background: '#fff' }}>
-                                                <span style={{ fontSize: classic ? 10 : 11, fontWeight: classic ? 'bold' : 600, color: classic ? '#111' : '#444' }}>Request Status:</span>
-                                                <select style={{ ...xpInput(classic), width: 140 }} value={r.status} disabled={!canManage} onChange={e => doUpdateStatus(r.id, e.target.value)}>
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '6px 10px', flexWrap: 'wrap' as const, borderBottom: '1px solid #d0cdc8', background: '#fff' }}>
+                                                <span style={{ fontSize: 10, fontWeight: 'bold', color: '#111'}}>Request Status:</span>
+                                                <select style={{ ...xpInput(), width: 140 }} value={r.status} disabled={!canManage} onChange={e => doUpdateStatus(r.id, e.target.value)}>
                                                     {REQUEST_STATUSES.map(s => <option key={s} value={s}>{s}</option>)}
                                                 </select>
                                             </div>
@@ -776,9 +749,8 @@ export default function LabDipRequestView({
                                         return (
                                         <tr>
                                             <td colSpan={10} style={{ padding: 0 }}>
-                                                <ExpandedRowPanel classic={classic} style={{ overflow: 'hidden' }}>
+                                                <ExpandedRowPanel style={{ overflow: 'hidden' }}>
                                                     <RequestDetailPanel
-                                                        classic={classic}
                                                         leftTitle={<><i className="bi bi-box-seam" /> Variants — {total} total · {approved} approved</>}
                                                         leftWidth="62%"
                                                         columns={columns}
@@ -802,17 +774,15 @@ export default function LabDipRequestView({
             <Pager page={page} total={total} pageSize={LABDIP_PAGE_SIZE} onPageChange={setPage} hideWhenEmpty />
 
             {/* ── Status bar: variant-grain tallies over the filtered set ── */}
-            <div style={classic
-                ? { background: 'linear-gradient(to bottom, #e8e6df, #d5d3cc)', borderTop: '1px solid #b0a898', padding: '3px 8px', display: 'flex', alignItems: 'center', gap: 5, flexWrap: 'wrap' as const, fontFamily: xpFont, fontSize: 10, color: '#333', flexShrink: 0 }
-                : { background: '#f7f9fc', borderTop: '1px solid #dbe1ea', padding: '6px 10px', display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' as const, fontFamily: modernFont, fontSize: 12, color: '#64748b', flexShrink: 0 }}>
+            <div style={{ background: 'linear-gradient(to bottom, #e8e6df, #d5d3cc)', borderTop: '1px solid #b0a898', padding: '3px 8px', display: 'flex', alignItems: 'center', gap: 5, flexWrap: 'wrap' as const, fontFamily: xpFont, fontSize: 10, color: '#333', flexShrink: 0 }}>
                 <span>
                     {total} request{total !== 1 ? 's' : ''} · {variantStats.total} variant{variantStats.total !== 1 ? 's' : ''}
                 </span>
-                <span style={{ width: 1, height: 15, background: classic ? '#a0988c' : '#dbe1ea', margin: '0 2px' }} />
-                <StatusCountPill classic={classic} status="PENDING" count={variantStats.PENDING} title="Variants not yet started" />
-                <StatusCountPill classic={classic} status="IN_PROGRESS" count={variantStats.IN_PROGRESS} title="Variants in progress" />
-                <StatusCountPill classic={classic} status="APPROVED" count={variantStats.APPROVED} title="Variants approved" />
-                <StatusCountPill classic={classic} status="REJECTED" count={variantStats.REJECTED} title="Variants rejected" />
+                <span style={{ width: 1, height: 15, background: '#a0988c', margin: '0 2px' }} />
+                <StatusCountPill status="PENDING" count={variantStats.PENDING} title="Variants not yet started" />
+                <StatusCountPill status="IN_PROGRESS" count={variantStats.IN_PROGRESS} title="Variants in progress" />
+                <StatusCountPill status="APPROVED" count={variantStats.APPROVED} title="Variants approved" />
+                <StatusCountPill status="REJECTED" count={variantStats.REJECTED} title="Variants rejected" />
                 {hasActiveFilter && <span style={{ marginLeft: 'auto', fontStyle: 'italic' }}>filtered</span>}
             </div>
 
@@ -843,10 +813,8 @@ export default function LabDipRequestView({
                 size="lg"
                 footer={
                     <>
-                        <button type="button" className={XP_BTN} style={xpBtn(classic)} onClick={() => { setIsModalOpen(false); setEditing(null); }}>Cancel</button>
-                        <button type="button" className={XP_BTN} style={classic
-                            ? xpBtn(true, { ...BTN_TONES.primary })
-                            : xpBtn(false, modernPrimaryBtn)} onClick={handleSubmit as any}>
+                        <button type="button" className={XP_BTN} style={xpBtn()} onClick={() => { setIsModalOpen(false); setEditing(null); }}>Cancel</button>
+                        <button type="button" className={XP_BTN} style={xpBtn({ ...BTN_TONES.primary })} onClick={handleSubmit as any}>
                             {editing ? 'Save Changes' : 'Create Request'}
                         </button>
                     </>
@@ -854,24 +822,22 @@ export default function LabDipRequestView({
             >
                 <form onSubmit={handleSubmit} id="create-lab-dip-form">
                     {/* Identity */}
-                    <FormSection title="Identity" classic={classic}>
+                    <FormSection title="Identity">
                             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px 12px' }}>
                                 <div>
-                                    <label style={xpLbl(classic)}>Request Code</label>
-                                    <div style={{ fontFamily: CODE_FONT, fontSize: classic ? 14 : 15, fontWeight: 'bold', color: '#000055', padding: classic ? '2px 0' : '3px 0' }}>
+                                    <label style={xpLbl()}>Request Code</label>
+                                    <div style={{ fontFamily: CODE_FONT, fontSize: 14, fontWeight: 'bold', color: '#000055', padding: '2px 0'}}>
                                         {displayCode}
-                                        {!editing && <span style={{ fontFamily: modernFont, fontSize: classic ? 9 : 10, fontWeight: 400, color: classic ? '#888' : '#94a3b8', marginLeft: 6 }}>(on save)</span>}
+                                        {!editing && <span style={{ fontFamily: modernFont, fontSize: 9, fontWeight: 400, color: '#888', marginLeft: 6 }}>(on save)</span>}
                                     </div>
                                 </div>
                                 <div>
-                                    <label style={xpLbl(classic)}>Request Type</label>
+                                    <label style={xpLbl()}>Request Type</label>
                                     <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' as const }}>
                                         {REQUEST_TYPES.map(t => {
                                             const active = form.request_type === t;
                                             return (
-                                                <button key={t} type="button" onClick={() => setField('request_type', t)} style={classic
-                                                    ? { fontFamily: xpFont, fontSize: 10, fontWeight: 'bold', padding: '2px 9px', cursor: 'pointer', border: '1px solid', background: active ? 'linear-gradient(to bottom, #316ac5, #1a4a8a)' : 'linear-gradient(to bottom, #ffffff, #d4d0c8)', borderColor: active ? '#1a3a7a #0a1a4a #0a1a4a #1a3a7a' : '#dfdfdf #808080 #808080 #dfdfdf', color: active ? '#fff' : '#333' }
-                                                    : { fontFamily: modernFont, fontSize: 12, fontWeight: 600, padding: '4px 11px', cursor: 'pointer', borderRadius: 999, border: '1px solid', background: active ? '#2563eb' : '#fff', borderColor: active ? '#2563eb' : '#cbd3df', color: active ? '#fff' : '#475569' }}>
+                                                <button key={t} type="button" onClick={() => setField('request_type', t)} style={{ fontFamily: xpFont, fontSize: 10, fontWeight: 'bold', padding: '2px 9px', cursor: 'pointer', border: '1px solid', background: active ? 'linear-gradient(to bottom, #316ac5, #1a4a8a)' : 'linear-gradient(to bottom, #ffffff, #d4d0c8)', borderColor: active ? '#1a3a7a #0a1a4a #0a1a4a #1a3a7a' : '#dfdfdf #808080 #808080 #dfdfdf', color: active ? '#fff' : '#333' }}>
                                                     {t}
                                                 </button>
                                             );
@@ -879,18 +845,18 @@ export default function LabDipRequestView({
                                     </div>
                                 </div>
                                 <div>
-                                    <label style={xpLbl(classic)}>Customer (Optional)</label>
+                                    <label style={xpLbl()}>Customer (Optional)</label>
                                     <SearchableSelect options={customerOptions} value={form.customer_id} onChange={(v: string) => setField('customer_id', v)} placeholder="Select customer…" />
                                 </div>
                                 <div>
-                                    <label style={xpLbl(classic)}>Season / Project</label>
-                                    <input style={{ ...xpInput(classic), width: '100%', boxSizing: 'border-box' as const }} value={form.season} onChange={e => setField('season', e.target.value)} placeholder="e.g. Spring 2026" />
+                                    <label style={xpLbl()}>Season / Project</label>
+                                    <input style={{ ...xpInput(), width: '100%', boxSizing: 'border-box' as const }} value={form.season} onChange={e => setField('season', e.target.value)} placeholder="e.g. Spring 2026" />
                                 </div>
                             </div>
                     </FormSection>
 
                     {/* Items */}
-                    <FormSection title="Items" classic={classic}>
+                    <FormSection title="Items">
                             {/* Add item — finished good on the FG book, yarn on the yarn book */}
                             <div style={{ display: 'flex', gap: 6, alignItems: 'center', marginBottom: 10 }}>
                                 <div style={{ flex: 1 }}>
@@ -903,11 +869,11 @@ export default function LabDipRequestView({
                                         size="sm"
                                     />
                                 </div>
-                                <button type="button" className={XP_BTN} style={classic ? xpBtn(true) : xpBtn(false, modernPrimaryBtn)} onClick={addItem}><i className="bi bi-plus-lg" /> Add Item</button>
+                                <button type="button" className={XP_BTN} style={xpBtn()} onClick={addItem}><i className="bi bi-plus-lg" /> Add Item</button>
                             </div>
 
                             {form.items.length === 0 && (
-                                <div style={{ fontSize: classic ? 11 : 13, color: classic ? '#999' : '#94a3b8', fontStyle: 'italic', padding: '4px 2px' }}>
+                                <div style={{ fontSize: 11, color: '#999', fontStyle: 'italic', padding: '4px 2px' }}>
                                     No items yet — add {isYarn ? 'yarn' : 'finished-good'} items; each is assigned a variant code.
                                 </div>
                             )}
@@ -920,26 +886,24 @@ export default function LabDipRequestView({
                                 return form.items.map(it => {
                                 const seq = it.variant_seq !== undefined ? it.variant_seq : np++;
                                 return (
-                                    <div key={it.item_id} style={classic
-                                        ? { border: '1px solid #b0c8e8', background: '#f5f9ff', marginBottom: 6, display: 'flex', alignItems: 'center', gap: 8, padding: '4px 8px' }
-                                        : { border: '1px solid #dbe1ea', background: '#fff', borderRadius: 8, marginBottom: 6, display: 'flex', alignItems: 'center', gap: 8, padding: '7px 10px' }}>
+                                    <div key={it.item_id} style={{ border: '1px solid #b0c8e8', background: '#f5f9ff', marginBottom: 6, display: 'flex', alignItems: 'center', gap: 8, padding: '4px 8px' }}>
                                         {/* Item name (left) */}
-                                        <span style={{ flex: 1, minWidth: 0, fontWeight: 700, fontSize: classic ? 11 : 13, color: classic ? '#0d3a8a' : '#1e293b', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' as const }}>
-                                            <i className="bi bi-box-seam" style={{ marginRight: 5, color: classic ? '#3a6fc4' : '#2563eb' }} />{it.item_label || it.item_id}
+                                        <span style={{ flex: 1, minWidth: 0, fontWeight: 700, fontSize: 11, color: '#0d3a8a', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' as const }}>
+                                            <i className="bi bi-box-seam" style={{ marginRight: 5, color: '#3a6fc4'}} />{it.item_label || it.item_id}
                                         </span>
                                         {/* Two distinct badges: sequence + variant (right) — or, for a resubmitted
                                             item, a single pinned badge showing the code it keeps from the rejected item. */}
                                         {it.locked_variant_code ? (
-                                            <span title="Pinned code (kept from the rejected item being resubmitted)" style={{ ...variantBadge(classic), background: classic ? '#c77800' : '#fef3c7', color: classic ? '#fff' : '#92400e', borderColor: classic ? '#7a4a00' : '#fde68a' }}>
-                                                <i className="bi bi-pin-angle-fill" style={{ marginRight: 3, fontSize: classic ? 9 : 10 }} />{it.locked_variant_code}
+                                            <span title="Pinned code (kept from the rejected item being resubmitted)" style={{ ...variantBadge(), background: '#c77800', color: '#fff', borderColor: '#7a4a00'}}>
+                                                <i className="bi bi-pin-angle-fill" style={{ marginRight: 3, fontSize: 9}} />{it.locked_variant_code}
                                             </span>
                                         ) : (
                                             <>
-                                                <span title="Request sequence" style={seqBadge(classic)}>{seqPart(displayCode)}</span>
-                                                <span title="Variant" style={variantBadge(classic)}>{variantLetter(seq)}</span>
+                                                <span title="Request sequence" style={seqBadge()}>{seqPart(displayCode)}</span>
+                                                <span title="Variant" style={variantBadge()}>{variantLetter(seq)}</span>
                                             </>
                                         )}
-                                        <button type="button" title="Remove item" onClick={() => removeItem(it.item_id)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: classic ? '#a00' : '#dc2626', fontSize: 15, fontWeight: 'bold', lineHeight: 1, padding: '0 2px' }}>×</button>
+                                        <button type="button" title="Remove item" onClick={() => removeItem(it.item_id)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#a00', fontSize: 15, fontWeight: 'bold', lineHeight: 1, padding: '0 2px' }}>×</button>
                                     </div>
                                 );
                                 });
@@ -947,7 +911,7 @@ export default function LabDipRequestView({
                     </FormSection>
 
                     {/* Colors — applies to all items on this request */}
-                    <FormSection title={colorsAttrName} classic={classic}>
+                    <FormSection title={colorsAttrName}>
                             <div style={{ display: 'flex', gap: 6, alignItems: 'center', marginBottom: 10 }}>
                                 <div style={{ flex: 1 }}>
                                     <SearchableSelect
@@ -958,30 +922,30 @@ export default function LabDipRequestView({
                                         size="sm"
                                     />
                                 </div>
-                                <button type="button" className={XP_BTN} style={classic ? xpBtn(true) : xpBtn(false, modernPrimaryBtn)} onClick={addColor}><i className="bi bi-plus-lg" /> Add</button>
+                                <button type="button" className={XP_BTN} style={xpBtn()} onClick={addColor}><i className="bi bi-plus-lg" /> Add</button>
                             </div>
                             {form.legacyDips.length === 0 ? (
-                                <div style={{ fontSize: classic ? 11 : 13, color: classic ? '#999' : '#94a3b8', fontStyle: 'italic', padding: '4px 2px' }}>
+                                <div style={{ fontSize: 11, color: '#999', fontStyle: 'italic', padding: '4px 2px' }}>
                                     No colors picked yet — applies to all items above.
                                 </div>
                             ) : (
                                 <div style={{ display: 'flex', flexWrap: 'wrap' as const, gap: 6 }}>
                                     {form.legacyDips.map(d => (
-                                        <ColorSwatchChip key={d.color_name} label={d.color_name} classic={classic} hex={hexByColorName[d.color_name]} onRemove={() => removeColor(d.color_name)} />
+                                        <ColorSwatchChip key={d.color_name} label={d.color_name} hex={hexByColorName[d.color_name]} onRemove={() => removeColor(d.color_name)} />
                                     ))}
                                 </div>
                             )}
                     </FormSection>
 
                     {/* Recipe link & notes */}
-                    <FormSection title="Approved Recipe & Notes" classic={classic}>
+                    <FormSection title="Approved Recipe & Notes">
                             <div style={{ marginBottom: 8 }}>
-                                <label style={xpLbl(classic)}>Approved Dye Recipe (Optional)</label>
+                                <label style={xpLbl()}>Approved Dye Recipe (Optional)</label>
                                 <SearchableSelect options={[{ value: '', label: 'Not yet linked' }, ...recipeOptions]} value={form.approved_recipe_id} onChange={(v: string) => setField('approved_recipe_id', v)} placeholder="Link approved recipe…" />
                             </div>
                             <div>
-                                <label style={xpLbl(classic)}>Notes</label>
-                                <textarea style={{ ...xpInput(classic), height: 'auto', padding: '4px 6px', width: '100%', resize: 'vertical' as const, boxSizing: 'border-box' as const }} rows={2} value={form.notes} onChange={e => setField('notes', e.target.value)} />
+                                <label style={xpLbl()}>Notes</label>
+                                <textarea style={{ ...xpInput(), height: 'auto', padding: '4px 6px', width: '100%', resize: 'vertical' as const, boxSizing: 'border-box' as const }} rows={2} value={form.notes} onChange={e => setField('notes', e.target.value)} />
                             </div>
                     </FormSection>
                 </form>
@@ -997,10 +961,8 @@ export default function LabDipRequestView({
                 size="sm"
                 footer={
                     <>
-                        <button type="button" className={XP_BTN} style={xpBtn(classic)} onClick={() => setApproval(null)}>Cancel</button>
-                        <button type="button" className={XP_BTN} disabled={!approvalSet.trim()} style={classic
-                            ? xpBtn(true, { background: 'linear-gradient(to bottom, #7bd88f, #1b7a34)', borderColor: '#0f5a22 #073d15 #073d15 #0f5a22', color: '#04220c', fontWeight: 'bold', opacity: approvalSet.trim() ? 1 : 0.55 })
-                            : xpBtn(false, { fontWeight: 600, background: '#16a34a', color: '#fff', border: 'none', opacity: approvalSet.trim() ? 1 : 0.55 })}
+                        <button type="button" className={XP_BTN} style={xpBtn()} onClick={() => setApproval(null)}>Cancel</button>
+                        <button type="button" className={XP_BTN} disabled={!approvalSet.trim()} style={xpBtn({ background: 'linear-gradient(to bottom, #7bd88f, #1b7a34)', borderColor: '#0f5a22 #073d15 #073d15 #0f5a22', color: '#04220c', fontWeight: 'bold', opacity: approvalSet.trim() ? 1 : 0.55 })}
                             onClick={confirmApproval}>
                             Approve &amp; Save Color
                         </button>
@@ -1009,33 +971,33 @@ export default function LabDipRequestView({
             >
                 {approval && (
                     <div style={{ padding: '2px 2px 4px' }}>
-                        <label style={xpLbl(classic)}>Set Index</label>
+                        <label style={xpLbl()}>Set Index</label>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4 }}>
-                            <span style={{ ...seqBadge(classic), fontSize: classic ? 11 : 13 }}>{approval.seq}</span>
-                            <span style={{ ...variantBadge(classic), fontSize: classic ? 11 : 13 }}>{approval.variant}</span>
-                            <span style={{ fontFamily: CODE_FONT, fontWeight: 700, color: classic ? '#555' : '#94a3b8' }}>–</span>
-                            <input autoFocus style={{ ...xpInput(classic), width: 90 }} value={approvalSet}
+                            <span style={{ ...seqBadge(), fontSize: 11}}>{approval.seq}</span>
+                            <span style={{ ...variantBadge(), fontSize: 11}}>{approval.variant}</span>
+                            <span style={{ fontFamily: CODE_FONT, fontWeight: 700, color: '#555'}}>–</span>
+                            <input autoFocus style={{ ...xpInput(), width: 90 }} value={approvalSet}
                                 onChange={e => setApprovalSet(e.target.value)}
                                 onKeyDown={e => { if (e.key === 'Enter') confirmApproval(); }}
                                 placeholder="e.g. 5" />
                         </div>
-                        <div style={{ fontSize: classic ? 11 : 12, color: classic ? '#555' : '#64748b', marginBottom: 10 }}>
+                        <div style={{ fontSize: 11, color: '#555', marginBottom: 10 }}>
                             Approved color code:{' '}
-                            <span style={{ fontFamily: CODE_FONT, fontWeight: 700, color: classic ? '#1b7a34' : '#16a34a' }}>
+                            <span style={{ fontFamily: CODE_FONT, fontWeight: 700, color: '#1b7a34'}}>
                                 {approval.seq}-{approval.variant}-{approvalSet.trim() || '…'}
                             </span>
                             {' '}— saved to the Color library.
                         </div>
                         {/* Color Variant carried onto the minted shade → shows in the Color Codes table.
                             Prefilled when the request picked exactly one color. */}
-                        <label style={xpLbl(classic)}>Color Variant</label>
+                        <label style={xpLbl()}>Color Variant</label>
                         {approvalVariantOptions.length === 0 ? (
-                            <div style={{ fontSize: classic ? 11 : 12, color: classic ? '#999' : '#94a3b8', fontStyle: 'italic', marginBottom: 10 }}>
+                            <div style={{ fontSize: 11, color: '#999', fontStyle: 'italic', marginBottom: 10 }}>
                                 No {colorsAttrName.toLowerCase()} picked on this request — the color will not be linked to a variant.
                             </div>
                         ) : (
                             <div style={{ marginBottom: 10 }}>
-                                <select style={{ ...xpInput(classic), width: '100%', boxSizing: 'border-box' as const }}
+                                <select style={{ ...xpInput(), width: '100%', boxSizing: 'border-box' as const }}
                                     value={approvalVariantId} onChange={e => setApprovalVariantId(e.target.value)}>
                                     <option value="">Not linked to a variant</option>
                                     {approvalVariantOptions.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
@@ -1044,17 +1006,17 @@ export default function LabDipRequestView({
                         )}
                         {/* Read-only: the request's customer is stamped on the minted shade
                             (House color when the request has none). */}
-                        <label style={xpLbl(classic)}>Customer</label>
-                        <div style={{ fontSize: classic ? 11 : 12, color: approval.customerName ? (classic ? '#333' : '#334155') : (classic ? '#999' : '#94a3b8'), fontStyle: approval.customerName ? 'normal' : 'italic', marginBottom: 10 }}>
+                        <label style={xpLbl()}>Customer</label>
+                        <div style={{ fontSize: 11, color: approval.customerName ? ('#333') : ('#999'), fontStyle: approval.customerName ? 'normal' : 'italic', marginBottom: 10 }}>
                             {approval.customerName || 'No customer on this request — saved as a House color.'}
                         </div>
-                        <label style={xpLbl(classic)}>Notes (optional)</label>
-                        <textarea style={{ ...xpInput(classic), height: 'auto', padding: '4px 6px', width: '100%', resize: 'vertical' as const, boxSizing: 'border-box' as const }} rows={2} value={approvalNotes} onChange={e => setApprovalNotes(e.target.value)} placeholder="Optional note carried onto the color entry…" />
-                        <label style={{ ...xpLbl(classic), marginTop: 10 }}>Photo (optional)</label>
+                        <label style={xpLbl()}>Notes (optional)</label>
+                        <textarea style={{ ...xpInput(), height: 'auto', padding: '4px 6px', width: '100%', resize: 'vertical' as const, boxSizing: 'border-box' as const }} rows={2} value={approvalNotes} onChange={e => setApprovalNotes(e.target.value)} placeholder="Optional note carried onto the color entry…" />
+                        <label style={{ ...xpLbl(), marginTop: 10 }}>Photo (optional)</label>
                         <input type="file" accept="image/*"
-                            style={{ ...xpInput(classic), height: 'auto', padding: '3px 4px', width: '100%', boxSizing: 'border-box' as const }}
+                            style={{ ...xpInput(), height: 'auto', padding: '3px 4px', width: '100%', boxSizing: 'border-box' as const }}
                             onChange={e => setApprovalImage(e.target.files?.[0] || null)} />
-                        {approvalImage && <div style={{ fontSize: classic ? 10 : 11, color: '#888', marginTop: 2 }}>{approvalImage.name}</div>}
+                        {approvalImage && <div style={{ fontSize: 10, color: '#888', marginTop: 2 }}>{approvalImage.name}</div>}
                     </div>
                 )}
             </ModalWrapper>
@@ -1069,10 +1031,8 @@ export default function LabDipRequestView({
                 size="sm"
                 footer={
                     <>
-                        <button type="button" className={XP_BTN} style={xpBtn(classic)} onClick={() => setReject(null)}>Cancel</button>
-                        <button type="button" className={XP_BTN} style={classic
-                            ? xpBtn(true, { background: 'linear-gradient(to bottom, #d32f2f, #8b0000)', borderColor: '#7f0000 #4a0000 #4a0000 #7f0000', color: '#fff', fontWeight: 'bold' })
-                            : xpBtn(false, { fontWeight: 600, background: '#dc2626', color: '#fff', border: 'none' })}
+                        <button type="button" className={XP_BTN} style={xpBtn()} onClick={() => setReject(null)}>Cancel</button>
+                        <button type="button" className={XP_BTN} style={xpBtn({ background: 'linear-gradient(to bottom, #d32f2f, #8b0000)', borderColor: '#7f0000 #4a0000 #4a0000 #7f0000', color: '#fff', fontWeight: 'bold' })}
                             onClick={confirmReject}>
                             Reject Variant
                         </button>
@@ -1082,26 +1042,26 @@ export default function LabDipRequestView({
                 {reject && (
                     <div style={{ padding: '2px 2px 4px' }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 10 }}>
-                            <span style={{ ...seqBadge(classic), fontSize: classic ? 11 : 13 }}>{reject.seq}</span>
-                            <span style={{ ...variantBadge(classic), fontSize: classic ? 11 : 13 }}>{reject.variant}</span>
+                            <span style={{ ...seqBadge(), fontSize: 11}}>{reject.seq}</span>
+                            <span style={{ ...variantBadge(), fontSize: 11}}>{reject.variant}</span>
                         </div>
-                        <div style={{ fontSize: classic ? 11 : 12, color: classic ? '#555' : '#64748b', marginBottom: 10 }}>
+                        <div style={{ fontSize: 11, color: '#555', marginBottom: 10 }}>
                             This rejection is logged for traceability. The variant rests as Rejected — reopen it for another round when ready.
                         </div>
-                        <label style={xpLbl(classic)}>Rejection Reason</label>
-                        <select style={{ ...xpInput(classic), width: '100%', boxSizing: 'border-box' as const, marginBottom: 10 }}
+                        <label style={xpLbl()}>Rejection Reason</label>
+                        <select style={{ ...xpInput(), width: '100%', boxSizing: 'border-box' as const, marginBottom: 10 }}
                             value={rejectReason} onChange={e => setRejectReason(e.target.value)}>
                             {REJECT_REASONS.map(r => <option key={r} value={r}>{r}</option>)}
                         </select>
-                        <label style={xpLbl(classic)}>Notes (optional)</label>
-                        <textarea style={{ ...xpInput(classic), height: 'auto', padding: '4px 6px', width: '100%', resize: 'vertical' as const, boxSizing: 'border-box' as const }} rows={2}
+                        <label style={xpLbl()}>Notes (optional)</label>
+                        <textarea style={{ ...xpInput(), height: 'auto', padding: '4px 6px', width: '100%', resize: 'vertical' as const, boxSizing: 'border-box' as const }} rows={2}
                             value={rejectNotes} onChange={e => setRejectNotes(e.target.value)}
                             placeholder="Extra detail for this rejection…" />
-                        <label style={{ ...xpLbl(classic), marginTop: 10 }}>Photo (optional)</label>
+                        <label style={{ ...xpLbl(), marginTop: 10 }}>Photo (optional)</label>
                         <input type="file" accept="image/*"
-                            style={{ ...xpInput(classic), height: 'auto', padding: '3px 4px', width: '100%', boxSizing: 'border-box' as const }}
+                            style={{ ...xpInput(), height: 'auto', padding: '3px 4px', width: '100%', boxSizing: 'border-box' as const }}
                             onChange={e => setRejectImage(e.target.files?.[0] || null)} />
-                        {rejectImage && <div style={{ fontSize: classic ? 10 : 11, color: '#888', marginTop: 2 }}>{rejectImage.name}</div>}
+                        {rejectImage && <div style={{ fontSize: 10, color: '#888', marginTop: 2 }}>{rejectImage.name}</div>}
                     </div>
                 )}
             </ModalWrapper>
@@ -1118,9 +1078,9 @@ export default function LabDipRequestView({
                     level={2}
                     footer={
                         <>
-                            <span style={{ flex: 1, fontFamily: classic ? xpFont : undefined, fontSize: classic ? 10 : 12, color: '#666', textAlign: 'left' as const }}>{photoPreview.filename}</span>
-                            <button type="button" className={XP_BTN} style={xpBtn(classic)} onClick={() => window.open(photoPreview.url, '_blank')}>Open Full View</button>
-                            <button type="button" className={XP_BTN} style={xpBtn(classic)} onClick={() => setPhotoPreview(null)}>Close</button>
+                            <span style={{ flex: 1, fontFamily: xpFont, fontSize: 10, color: '#666', textAlign: 'left' as const }}>{photoPreview.filename}</span>
+                            <button type="button" className={XP_BTN} style={xpBtn()} onClick={() => window.open(photoPreview.url, '_blank')}>Open Full View</button>
+                            <button type="button" className={XP_BTN} style={xpBtn()} onClick={() => setPhotoPreview(null)}>Close</button>
                         </>
                     }
                 >
@@ -1141,26 +1101,26 @@ export default function LabDipRequestView({
                 onClose={() => setHistoryItem(null)}
                 title={<><i className="bi bi-clock-history me-2" />Rejection History</>}
                 size="sm"
-                footer={<button type="button" className={XP_BTN} style={xpBtn(classic)} onClick={() => setHistoryItem(null)}>Close</button>}
+                footer={<button type="button" className={XP_BTN} style={xpBtn()} onClick={() => setHistoryItem(null)}>Close</button>}
             >
                 {historyItem && (
                     <div style={{ padding: '2px 2px 4px' }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 10 }}>
-                            <span style={{ fontWeight: 'bold', color: classic ? '#0d3a8a' : '#1e293b', fontSize: classic ? 12 : 13 }}>{historyItem.item.item_name || historyItem.item.item_code || '—'}</span>
-                            <span style={{ ...variantBadge(classic), fontSize: classic ? 10 : 12 }}>{historyItem.code}</span>
+                            <span style={{ fontWeight: 'bold', color: '#0d3a8a', fontSize: 12}}>{historyItem.item.item_name || historyItem.item.item_code || '—'}</span>
+                            <span style={{ ...variantBadge(), fontSize: 10}}>{historyItem.code}</span>
                         </div>
                         {(historyItem.item.rejections || []).length === 0 ? (
-                            <div style={{ fontSize: classic ? 11 : 12, color: '#888', fontStyle: 'italic' }}>No rejections recorded.</div>
+                            <div style={{ fontSize: 11, color: '#888', fontStyle: 'italic' }}>No rejections recorded.</div>
                         ) : (
                             <div style={{ display: 'flex', flexDirection: 'column' as const, gap: 6 }}>
                                 {(historyItem.item.rejections || []).map((rj: any) => (
-                                    <div key={rj.id} style={{ border: classic ? '1px solid #d9b8b8' : '1px solid #f3c4c4', background: classic ? '#fbeeee' : '#fef2f2', borderRadius: classic ? 0 : 4, padding: '5px 7px' }}>
+                                    <div key={rj.id} style={{ border: '1px solid #d9b8b8', background: '#fbeeee', borderRadius: 0, padding: '5px 7px' }}>
                                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8, marginBottom: 2 }}>
-                                            <span style={{ fontWeight: 'bold', fontSize: classic ? 10 : 11, color: classic ? '#7f0000' : '#dc2626' }}>Round {rj.round_no}</span>
-                                            <span style={{ fontSize: classic ? 9 : 10, color: '#888' }}>{rj.rejected_at ? new Date(rj.rejected_at).toLocaleString() : ''}</span>
+                                            <span style={{ fontWeight: 'bold', fontSize: 10, color: '#7f0000'}}>Round {rj.round_no}</span>
+                                            <span style={{ fontSize: 9, color: '#888' }}>{rj.rejected_at ? new Date(rj.rejected_at).toLocaleString() : ''}</span>
                                         </div>
-                                        <div style={{ fontSize: classic ? 11 : 12, color: classic ? '#333' : '#334155' }}>{rj.reason || '—'}</div>
-                                        {rj.notes && <div style={{ fontSize: classic ? 10 : 11, color: classic ? '#666' : '#64748b', marginTop: 2, whiteSpace: 'pre-wrap' as const }}>{rj.notes}</div>}
+                                        <div style={{ fontSize: 11, color: '#333'}}>{rj.reason || '—'}</div>
+                                        {rj.notes && <div style={{ fontSize: 10, color: '#666', marginTop: 2, whiteSpace: 'pre-wrap' as const }}>{rj.notes}</div>}
                                     </div>
                                 ))}
                             </div>

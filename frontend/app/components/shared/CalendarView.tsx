@@ -1,5 +1,4 @@
 import { useState, useEffect, useMemo } from 'react';
-import { useTheme } from '../../context/ThemeContext';
 import { useData } from '../../context/DataContext';
 import { statusColor, statusTint, xpFont, CHIP_RADIUS } from './xpTheme';
 import { xpBevel as sharedXpBevel, SearchField, FilterChipBar } from './shellTheme';
@@ -41,8 +40,6 @@ export default function CalendarView({
 }: any) {
     const { itemIndex, authFetch } = useData();
     const [currentDate, setCurrentDate] = useState(new Date());
-    const { uiStyle: currentStyle } = useTheme();
-    const classic = currentStyle === 'classic';
 
     const [statusFilter, setStatusFilter] = useState<Set<string>>(new Set());
     const [search, setSearch] = useState('');
@@ -134,10 +131,7 @@ export default function CalendarView({
     const emptyHatch = 'repeating-linear-gradient(45deg, #f7f5f0, #f7f5f0 6px, #f1eee7 6px, #f1eee7 12px)';
     for (let i = 0; i < firstDay; i++) {
         days.push(
-            classic
-                ? <div key={`empty-${i}`} style={{ background: emptyHatch, border: '1px solid #d8d4cc', minHeight: compact ? 34 : 100 }}></div>
-                : <div key={`empty-${i}`} className={`calendar-day empty border ${compact ? 'py-1' : ''}`} style={{ background: emptyHatch }}></div>
-        );
+            <div key={`empty-${i}`} style={{ background: emptyHatch, border: '1px solid #d8d4cc', minHeight: compact ? 34 : 100 }}></div>);
     }
 
     // Day cells
@@ -149,94 +143,49 @@ export default function CalendarView({
         const dayQty = showLoad ? dueOrders.reduce((a: number, w: any) => a + (Number(w.qty) || 0), 0) : 0;
         const loadPct = showLoad && maxLoad > 0 ? Math.max(8, Math.round((dayQty / maxLoad) * 100)) : 0;
 
-        if (classic) {
-            const bg = isToday ? '#dde8f5' : holidayName ? '#ffe9c7' : '#ffffff';
-            days.push(
-                <div key={day} title={holidayName || undefined}
-                    style={{ background: bg, border: isToday ? '1px solid #316ac5' : '1px solid #c0bdb5', minHeight: compact ? 34 : 100, padding: compact ? '2px 3px' : '4px 6px' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: compact ? 2 : 4, minHeight: compact ? undefined : 14 }}>
-                        <span style={{ fontFamily: xpFont, fontSize: compact ? '9px' : '11px', fontWeight: 'bold', color: holidayName ? '#994d00' : isToday ? '#0058e6' : '#555' }}>{day}</span>
-                        {!compact && dueOrders.length > 0 && (
-                            <span title={showLoad ? `${dueOrders.length} MO · qty ${dayQty}` : `${dueOrders.length} due`}
-                                style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                                {showLoad && maxLoad > 0 && (
-                                    <span style={{ display: 'inline-block', width: 22, height: 4, background: '#e2ddd2' }}>
-                                        <span style={{ display: 'block', height: '100%', width: `${loadPct}%`, background: statusColor('IN_PROGRESS') }}></span>
-                                    </span>
-                                )}
-                                <span style={{ fontFamily: xpFont, fontSize: '9px', fontWeight: 'bold', color: '#888' }}>{dueOrders.length}</span>
-                            </span>
-                        )}
-                    </div>
-                    <div style={{ display: 'flex', flexDirection: compact ? 'row' : 'column', gap: compact ? 2 : 3, overflow: 'hidden' }}>
-                        {compact ? (
-                            dueOrders.slice(0, 3).map((mo: any) => (
-                                <div key={mo.id} title={mo.code} style={{ width: 5, height: 5, background: dotColor(mo.status), border: '1px solid rgba(0,0,0,0.2)' }}></div>
-                            ))
-                        ) : (
-                            dueOrders.slice(0, MAX_VISIBLE).map((mo: any) => {
-                                const name = getItemName(mo.item_id);
-                                return (
-                                    <div key={mo.id} title={`${mo.code}${name ? ': ' + name : ''}`}
-                                        onClick={onMOClick ? () => onMOClick(mo.id) : undefined}
-                                        style={{ ...chipStyle(mo.status), padding: '2px 5px', fontFamily: xpFont, overflow: 'hidden', cursor: onMOClick ? 'pointer' : 'default' }}>
-                                        <div style={{ fontWeight: 'bold', fontSize: '9px', lineHeight: 1.3, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{mo.code}</div>
-                                        {name && <div style={{ fontSize: '9px', lineHeight: 1.3, opacity: 0.8, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{name}</div>}
-                                    </div>
-                                );
-                            })
-                        )}
-                        {compact && dueOrders.length > 3 && <span style={{ fontFamily: xpFont, fontSize: '8px', color: '#666' }}>+</span>}
-                        {!compact && dueOrders.length > MAX_VISIBLE && (
-                            <span style={{ fontFamily: xpFont, fontSize: '9px', color: '#888', paddingLeft: 2 }}>+{dueOrders.length - MAX_VISIBLE} more</span>
-                        )}
-                    </div>
+        const bg = isToday ? '#dde8f5' : holidayName ? '#ffe9c7' : '#ffffff';
+        days.push(
+            <div key={day} title={holidayName || undefined}
+                style={{ background: bg, border: isToday ? '1px solid #316ac5' : '1px solid #c0bdb5', minHeight: compact ? 34 : 100, padding: compact ? '2px 3px' : '4px 6px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: compact ? 2 : 4, minHeight: compact ? undefined : 14 }}>
+                    <span style={{ fontFamily: xpFont, fontSize: compact ? '9px' : '11px', fontWeight: 'bold', color: holidayName ? '#994d00' : isToday ? '#0058e6' : '#555' }}>{day}</span>
+                    {!compact && dueOrders.length > 0 && (
+                        <span title={showLoad ? `${dueOrders.length} MO · qty ${dayQty}` : `${dueOrders.length} due`}
+                            style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                            {showLoad && maxLoad > 0 && (
+                                <span style={{ display: 'inline-block', width: 22, height: 4, background: '#e2ddd2' }}>
+                                    <span style={{ display: 'block', height: '100%', width: `${loadPct}%`, background: statusColor('IN_PROGRESS') }}></span>
+                                </span>
+                            )}
+                            <span style={{ fontFamily: xpFont, fontSize: '9px', fontWeight: 'bold', color: '#888' }}>{dueOrders.length}</span>
+                        </span>
+                    )}
                 </div>
-            );
-        } else {
-            const bgCls = isToday ? 'bg-primary bg-opacity-10 border-primary' : holidayName ? 'bg-warning bg-opacity-10' : 'bg-white';
-            days.push(
-                <div key={day} className={`calendar-day border p-1 ${bgCls}`} style={{ minHeight: compact ? '40px' : '120px' }} title={holidayName || undefined}>
-                    <div className="d-flex justify-content-between align-items-center mb-1" style={{ minHeight: compact ? undefined : 16 }}>
-                        <span className={`fw-bold ${compact ? 'extra-small' : 'small'} ${holidayName ? 'text-warning' : isToday ? 'text-primary' : 'text-secondary'}`} style={{ fontSize: compact ? '0.6rem' : 'inherit' }}>{day}</span>
-                        {!compact && dueOrders.length > 0 && (
-                            <span className="d-flex align-items-center gap-1" title={showLoad ? `${dueOrders.length} MO · qty ${dayQty}` : `${dueOrders.length} due`}>
-                                {showLoad && maxLoad > 0 && (
-                                    <span style={{ display: 'inline-block', width: 22, height: 4, background: '#e5e7eb', borderRadius: 2 }}>
-                                        <span style={{ display: 'block', height: '100%', width: `${loadPct}%`, background: statusColor('IN_PROGRESS'), borderRadius: 2 }}></span>
-                                    </span>
-                                )}
-                                <span className="text-muted fw-bold" style={{ fontSize: '0.6rem' }}>{dueOrders.length}</span>
-                            </span>
-                        )}
-                    </div>
-                    <div className={`d-flex ${compact ? 'flex-row justify-content-center' : 'flex-column'} gap-1 overflow-hidden`}>
-                        {compact ? (
-                            dueOrders.slice(0, 3).map((mo: any) => (
-                                <div key={mo.id} className="rounded-circle" style={{ width: '4px', height: '4px', background: dotColor(mo.status) }} title={mo.code}></div>
-                            ))
-                        ) : (
-                            dueOrders.slice(0, MAX_VISIBLE).map((mo: any) => {
-                                const name = getItemName(mo.item_id);
-                                return (
-                                    <div key={mo.id} className="text-start text-truncate w-100"
-                                        style={{ ...chipStyle(mo.status), borderRadius: CHIP_RADIUS, padding: '2px 6px', cursor: onMOClick ? 'pointer' : 'default' }}
-                                        title={`${mo.code}${name ? ': ' + name : ''}`}
-                                        onClick={onMOClick ? () => onMOClick(mo.id) : undefined}>
-                                        <div className="text-truncate fw-bold" style={{ fontSize: '0.65rem', lineHeight: '1.3' }}>{mo.code}</div>
-                                        {name && <div className="text-truncate" style={{ fontSize: '0.68rem', lineHeight: '1.3', opacity: 0.8 }}>{name}</div>}
-                                    </div>
-                                );
-                            })
-                        )}
-                        {compact && dueOrders.length > 3 && <div className="text-muted" style={{ fontSize: '0.5rem' }}>+</div>}
-                        {!compact && dueOrders.length > MAX_VISIBLE && (
-                            <div className="text-muted" style={{ fontSize: '0.65rem' }}>+{dueOrders.length - MAX_VISIBLE} more</div>
-                        )}
-                    </div>
+                <div style={{ display: 'flex', flexDirection: compact ? 'row' : 'column', gap: compact ? 2 : 3, overflow: 'hidden' }}>
+                    {compact ? (
+                        dueOrders.slice(0, 3).map((mo: any) => (
+                            <div key={mo.id} title={mo.code} style={{ width: 5, height: 5, background: dotColor(mo.status), border: '1px solid rgba(0,0,0,0.2)' }}></div>
+                        ))
+                    ) : (
+                        dueOrders.slice(0, MAX_VISIBLE).map((mo: any) => {
+                            const name = getItemName(mo.item_id);
+                            return (
+                                <div key={mo.id} title={`${mo.code}${name ? ': ' + name : ''}`}
+                                    onClick={onMOClick ? () => onMOClick(mo.id) : undefined}
+                                    style={{ ...chipStyle(mo.status), padding: '2px 5px', fontFamily: xpFont, overflow: 'hidden', cursor: onMOClick ? 'pointer' : 'default' }}>
+                                    <div style={{ fontWeight: 'bold', fontSize: '9px', lineHeight: 1.3, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{mo.code}</div>
+                                    {name && <div style={{ fontSize: '9px', lineHeight: 1.3, opacity: 0.8, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{name}</div>}
+                                </div>
+                            );
+                        })
+                    )}
+                    {compact && dueOrders.length > 3 && <span style={{ fontFamily: xpFont, fontSize: '8px', color: '#666' }}>+</span>}
+                    {!compact && dueOrders.length > MAX_VISIBLE && (
+                        <span style={{ fontFamily: xpFont, fontSize: '9px', color: '#888', paddingLeft: 2 }}>+{dueOrders.length - MAX_VISIBLE} more</span>
+                    )}
                 </div>
-            );
-        }
+            </div>
+        );
     }
 
     // ── Filter bar ─────────────────────────────────────────────────────────
@@ -250,12 +199,11 @@ export default function CalendarView({
     // the whole selection and `toggleStatus` does the add/remove.
     const filterBar = filterable && !compact && (
         <div
-            className={classic ? 'no-print' : 'd-flex flex-wrap align-items-center gap-2 mb-2 no-print'}
-            style={classic ? { display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 6, marginBottom: 6 } : undefined}
+            className={'no-print'}
+            style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 6, marginBottom: 6 }}
         >
-            <SearchField classic={classic} value={search} onChange={setSearch} placeholder="Search" width={classic ? 160 : 180} />
+            <SearchField value={search} onChange={setSearch} placeholder="Search" width={160} />
             <FilterChipBar
-                classic={classic}
                 options={statusOptions.map(s => ({ value: s, label: s.replace(/_/g, ' ') }))}
                 value={Array.from(statusFilter)}
                 onChange={toggleStatus}
@@ -263,67 +211,38 @@ export default function CalendarView({
             {(statusFilter.size > 0 || search) && (
                 <button
                     onClick={() => { setStatusFilter(new Set()); setSearch(''); }}
-                    style={classic ? xpNavBtn() : undefined}
-                    className={classic ? undefined : 'btn btn-sm btn-light border'}
+                    style={xpNavBtn()}
+                    className={undefined}
                 >Clear</button>
             )}
         </div>
     );
 
     // ── Classic render ───────────────────────────────────────────────────────
-    if (classic) {
-        const xpBevel: React.CSSProperties = sharedXpBevel();
-        return (
-            <div className={`fade-in ${compact ? 'compact-calendar' : ''}`}>
-                {filterBar}
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }} className="no-print">
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                        <button style={xpNavBtn()} onClick={prevMonth}><i className="bi bi-chevron-left"></i></button>
-                        {!compact && <button style={xpNavBtn({ padding: '1px 8px' })} onClick={goToToday}>Today</button>}
-                        <button style={xpNavBtn()} onClick={nextMonth}><i className="bi bi-chevron-right"></i></button>
-                        <span style={{ fontFamily: xpFont, fontSize: compact ? '11px' : '12px', fontWeight: 'bold', color: '#0058e6', marginLeft: 4 }}>
-                            {currentDate.toLocaleDateString(undefined, { month: compact ? 'short' : 'long', year: 'numeric' })}
-                        </span>
-                    </div>
-                </div>
-                <div style={xpBevel}>
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', ...lvThead(true) }}>
-                        {['S', 'M', 'T', 'W', 'T', 'F', 'S'].map((d, i) => (
-                            <div key={i} style={{ textAlign: 'center', padding: compact ? '2px 0' : '3px 0', fontFamily: xpFont, fontSize: '10px', fontWeight: 'bold', color: '#000', borderRight: i < 6 ? '1px solid #b0aaa0' : 'none' }}>{d}</div>
-                        ))}
-                    </div>
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', backgroundColor: '#808080', gap: '1px' }}>{days}</div>
-                </div>
-            </div>
-        );
-    }
-
-    // ── Modern render ──────────────────────────────────────────────────────
+    const xpBevel: React.CSSProperties = sharedXpBevel();
     return (
         <div className={`fade-in ${compact ? 'compact-calendar' : ''}`}>
             {filterBar}
-            <div className="d-flex justify-content-between align-items-center mb-2 no-print">
-                <div className="d-flex align-items-center gap-2">
-                    <div className="btn-group">
-                        <button className="btn btn-xs btn-light border p-1" style={{ fontSize: '0.6rem' }} onClick={prevMonth}><i className="bi bi-chevron-left"></i></button>
-                        {compact ? null : <button className="btn btn-sm btn-light border" onClick={goToToday}>Today</button>}
-                        <button className="btn btn-xs btn-light border p-1" style={{ fontSize: '0.6rem' }} onClick={nextMonth}><i className="bi bi-chevron-right"></i></button>
-                    </div>
-                    <span className={`fw-bold text-primary ${compact ? 'small' : ''}`}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }} className="no-print">
+                <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                    <button style={xpNavBtn()} onClick={prevMonth}><i className="bi bi-chevron-left"></i></button>
+                    {!compact && <button style={xpNavBtn({ padding: '1px 8px' })} onClick={goToToday}>Today</button>}
+                    <button style={xpNavBtn()} onClick={nextMonth}><i className="bi bi-chevron-right"></i></button>
+                    <span style={{ fontFamily: xpFont, fontSize: compact ? '11px' : '12px', fontWeight: 'bold', color: '#0058e6', marginLeft: 4 }}>
                         {currentDate.toLocaleDateString(undefined, { month: compact ? 'short' : 'long', year: 'numeric' })}
                     </span>
                 </div>
             </div>
-            <div className="card border-0 shadow-sm overflow-hidden">
-                <div className="card-body p-0">
-                    <div className="d-grid text-center bg-light border-bottom" style={{ gridTemplateColumns: 'repeat(7, 1fr)' }}>
-                        {['S', 'M', 'T', 'W', 'T', 'F', 'S'].map(d => (
-                            <div key={d} className="py-1 fw-bold text-muted" style={{ fontSize: '0.6rem' }}>{d}</div>
-                        ))}
-                    </div>
-                    <div className="d-grid" style={{ gridTemplateColumns: 'repeat(7, 1fr)', backgroundColor: '#e5e7eb', gap: '1px' }}>{days}</div>
+            <div style={xpBevel}>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', ...lvThead() }}>
+                    {['S', 'M', 'T', 'W', 'T', 'F', 'S'].map((d, i) => (
+                        <div key={i} style={{ textAlign: 'center', padding: compact ? '2px 0' : '3px 0', fontFamily: xpFont, fontSize: '10px', fontWeight: 'bold', color: '#000', borderRight: i < 6 ? '1px solid #b0aaa0' : 'none' }}>{d}</div>
+                    ))}
                 </div>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', backgroundColor: '#808080', gap: '1px' }}>{days}</div>
             </div>
         </div>
     );
+
+    // ── Modern render ──────────────────────────────────────────────────────
 }

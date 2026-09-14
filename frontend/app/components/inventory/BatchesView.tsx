@@ -4,7 +4,6 @@ import React, { useState, useRef } from 'react';
 import { useToast } from '../shared/Toast';
 import ModalWrapper from '../shared/ModalWrapper';
 import Pager from '../shared/Pager';
-import { useTheme } from '../../context/ThemeContext';
 import { useTimezone } from '../../context/TimezoneContext';
 import { useConfirm } from '../../context/ConfirmContext';
 import { usePaginatedFetch } from '../../context/usePaginatedList';
@@ -116,10 +115,8 @@ interface BatchesViewProps {
 
 export default function BatchesView({ items, locations, categories, workCenters, authFetch, apiBase }: BatchesViewProps) {
   const { showToast } = useToast();
-  const { uiStyle } = useTheme();
   const { formatDate: tzDate } = useTimezone();
   const { confirm } = useConfirm();
-  const classic = uiStyle === 'classic';
 
   const PAGE_SIZE = 50;
   const [itemFilter, setItemFilter] = useState('');
@@ -600,7 +597,7 @@ export default function BatchesView({ items, locations, categories, workCenters,
   // Skeleton sizing: measure one real row so the placeholders shown on the next
   // load are exactly as tall as the rows that replace them.
   const listBodyRef = useRef<HTMLTableSectionElement>(null);
-  const skel = useTableSkeletonMetrics(classic ? 'lots-classic' : 'lots', listBodyRef, sortedBatches.length > 0);
+  const skel = useTableSkeletonMetrics('lots-classic', listBodyRef, sortedBatches.length > 0);
 
   // Small pill/chip — the shared shape for Origin (SO/PO), MO/PR, and Location
   // badges. Square in classic (XP), rounded in modern. Kept on a single line so
@@ -613,8 +610,8 @@ export default function BatchesView({ items, locations, categories, workCenters,
     <span
       title={opts.title}
       style={{
-        display: 'inline-block', fontSize: classic ? 9 : 10, fontWeight: 'bold',
-        padding: '0 5px', borderRadius: CHIP_RADIUS, lineHeight: classic ? '14px' : '16px',
+        display: 'inline-block', fontSize: 9, fontWeight: 'bold',
+        padding: '0 5px', borderRadius: CHIP_RADIUS, lineHeight: '14px',
         color: fg, background: bg, border: `1px solid ${border}`, whiteSpace: 'nowrap',
         fontFamily: opts.mono ? CODE_FONT : undefined,
       }}
@@ -634,17 +631,17 @@ export default function BatchesView({ items, locations, categories, workCenters,
   // Origin — customer/supplier source only (SO + PO), as badges.
   const originCell = (b: Batch) => {
     const chips: React.ReactNode[] = [];
-    if (b.sales_order_code) chips.push(<OriginChip kind="so" code={b.sales_order_code} classic={classic} />);
-    if (b.po_number) chips.push(<OriginChip kind="po" code={b.po_number} classic={classic}
+    if (b.sales_order_code) chips.push(<OriginChip kind="so" code={b.sales_order_code} />);
+    if (b.po_number) chips.push(<OriginChip kind="po" code={b.po_number}
       title={b.vendor_lot ? `Supplier Lot: ${b.vendor_lot}` : undefined} />);
     return chips.length ? chipRow(chips.map((c, i) => <React.Fragment key={i}>{c}</React.Fragment>)) : emDash;
   };
 
   // WO / MO / PR — internal production origin, one column each so a lot with
   // more than one of them doesn't crowd a single cell.
-  const woCell = (b: Batch) => b.wo_code ? <OriginChip kind="wo" code={b.wo_code} classic={classic} prefix={false} truncate /> : emDash;
-  const moCell = (b: Batch) => b.mo_code ? <OriginChip kind="mo" code={b.mo_code} classic={classic} prefix={false} truncate /> : emDash;
-  const prCell = (b: Batch) => b.production_run_code ? <OriginChip kind="pr" code={b.production_run_code} classic={classic} truncate /> : emDash;
+  const woCell = (b: Batch) => b.wo_code ? <OriginChip kind="wo" code={b.wo_code} prefix={false} truncate /> : emDash;
+  const moCell = (b: Batch) => b.mo_code ? <OriginChip kind="mo" code={b.mo_code} prefix={false} truncate /> : emDash;
+  const prCell = (b: Batch) => b.production_run_code ? <OriginChip kind="pr" code={b.production_run_code} truncate /> : emDash;
 
   // WO/MO/PR share one fixed width so the three origin columns line up — codes are
   // clipped with an ellipsis and pop out unclipped on hover (Chip's truncate prop).
@@ -714,11 +711,11 @@ export default function BatchesView({ items, locations, categories, workCenters,
     if (!sz && !combo && !shade) return emDash;
     return chipRow(
       <>
-        {sz && <VariantChip kind="size" classic={classic} title={`Size: ${sz}`}>{sz}</VariantChip>}
-        {combo && <VariantChip kind="combo" classic={classic} title={`Combo: ${combo}`}>{combo}</VariantChip>}
+        {sz && <VariantChip kind="size" title={`Size: ${sz}`}>{sz}</VariantChip>}
+        {combo && <VariantChip kind="combo" title={`Combo: ${combo}`}>{combo}</VariantChip>}
         {shade && (shade.pending
-          ? <VariantChip kind="pending" classic={classic} title={`Shade pending lab dip approval: ${shade.label}`}>{shade.label} (pending)</VariantChip>
-          : <VariantChip kind="color" classic={classic} swatch={shade.hex} title={`Color: ${shade.label}`}>{shade.label}</VariantChip>)}
+          ? <VariantChip kind="pending" title={`Shade pending lab dip approval: ${shade.label}`}>{shade.label} (pending)</VariantChip>
+          : <VariantChip kind="color" swatch={shade.hex} title={`Color: ${shade.label}`}>{shade.label}</VariantChip>)}
       </>,
     );
   };
@@ -779,7 +776,7 @@ export default function BatchesView({ items, locations, categories, workCenters,
 
   const renderExpandedPanel = (b: Batch) => {
     const state = rowTraceData[b.id];
-    const fnt: React.CSSProperties = classic ? { fontFamily: xpFont, fontSize: 11 } : { fontSize: 13 };
+    const fnt: React.CSSProperties = { fontFamily: xpFont, fontSize: 11 };
     const focalMeta = classifyLot(b.batch_number);
 
     // Ancestor levels: level 0 = immediate inputs, deepest last — reversed for
@@ -803,20 +800,20 @@ export default function BatchesView({ items, locations, categories, workCenters,
         border: `1px solid ${ghost ? '#c8c8c8' : meta.border}`,
         borderStyle: ghost ? 'dashed' : 'solid',
         borderWidth: focal ? 2 : 1,
-        background: ghost ? (classic ? '#f0ede4' : '#f8f9fa') : meta.bg,
+        background: ghost ? ('#f0ede4') : meta.bg,
         opacity: ghost ? 0.75 : 1,
-        boxShadow: focal ? '0 0 0 2px rgba(0,88,230,0.25)' : classic ? '1px 1px 2px rgba(0,0,0,0.15)' : '0 1px 2px rgba(0,0,0,0.08)',
+        boxShadow: focal ? '0 0 0 2px rgba(0,88,230,0.25)' : '1px 1px 2px rgba(0,0,0,0.15)',
         padding: '5px 8px',
       }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: classic ? 8 : 9, fontWeight: 'bold', textTransform: 'uppercase', color: ghost ? '#999' : meta.fg, letterSpacing: 0.3, marginBottom: 2 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 8, fontWeight: 'bold', textTransform: 'uppercase', color: ghost ? '#999' : meta.fg, letterSpacing: 0.3, marginBottom: 2 }}>
           <i className={`bi ${meta.icon}`} />
           {meta.label}
         </div>
         <div style={{ fontWeight: 'bold', color: ghost ? '#999' : '#000', fontStyle: ghost ? 'italic' : 'normal', wordBreak: 'break-word' }}>
           {title}
         </div>
-        {subtitle && <div style={{ color: '#666', fontSize: classic ? 9 : 11, marginTop: 1 }}>{subtitle}</div>}
-        {tag && <div style={{ color: '#888', fontSize: classic ? 9 : 11, marginTop: 1 }}>{tag}</div>}
+        {subtitle && <div style={{ color: '#666', fontSize: 9, marginTop: 1 }}>{subtitle}</div>}
+        {tag && <div style={{ color: '#888', fontSize: 9, marginTop: 1 }}>{tag}</div>}
       </div>
     );
 
@@ -831,12 +828,12 @@ export default function BatchesView({ items, locations, categories, workCenters,
     );
 
     return (
-      <ExpandedRowPanel classic={classic} style={{
+      <ExpandedRowPanel style={{
         padding: '12px 14px',
         whiteSpace: 'normal',   // table rows are nowrap; lineage boxes wrap normally
         ...fnt,
       }}>
-        <div style={{ fontWeight: 'bold', color: '#555', fontSize: classic ? 9 : 11, textTransform: 'uppercase', letterSpacing: 0.3, marginBottom: 8 }}>
+        <div style={{ fontWeight: 'bold', color: '#555', fontSize: 9, textTransform: 'uppercase', letterSpacing: 0.3, marginBottom: 8 }}>
           Lineage
         </div>
         {state?.loading ? (
@@ -930,47 +927,46 @@ export default function BatchesView({ items, locations, categories, workCenters,
   };
 
   // ── Styles ────────────────────────────────────────────────────────────────
-  const xpBevel: React.CSSProperties = classic ? sharedXpBevel() : {};
+  const xpBevel: React.CSSProperties = sharedXpBevel();
 
-  const xpTitleBar: React.CSSProperties = classic ? sharedXpTitleBar() : {};
+  const xpTitleBar: React.CSSProperties = sharedXpTitleBar();
 
   const xpBtn = (extra: React.CSSProperties = {}): React.CSSProperties =>
-    classic ? xpBtnBase(extra) : { cursor: 'pointer', ...extra };
+    xpBtnBase(extra);
 
-  const xpInput: React.CSSProperties = classic ? xpInputBase() : {};
+  const xpInput: React.CSSProperties = xpInputBase();
 
   // minWidth + nowrap: cells never wrap, the table scrolls sideways instead. Keeps
   // multi-chip rows (Product / WO-MO-PR / Location) one line tall.
   const TABLE_MIN_W = 1500 + ATTRS_COL_W;
 
-  const xpTable: React.CSSProperties = classic ? {
+  const xpTable: React.CSSProperties = {
     fontFamily: xpFont, fontSize: '11px', width: '100%', minWidth: TABLE_MIN_W,
     borderCollapse: 'collapse', whiteSpace: 'nowrap',
-  } : { width: '100%', minWidth: TABLE_MIN_W, whiteSpace: 'nowrap' };
+  };
 
-  const xpTd = (alt: boolean): React.CSSProperties => classic ? {
+  const xpTd = (alt: boolean): React.CSSProperties => ({
     border: '1px solid #c8c8c8', padding: '2px 6px',
-    background: lvZebra(true, alt ? 1 : 0), verticalAlign: 'middle',
-  } : { verticalAlign: 'middle' };
+    background: lvZebra(alt ? 1 : 0), verticalAlign: 'middle',
+  });
 
   const colSpan = 14; // Chevron, Lot Number, Item, Ends, Attributes, Origin, WO, MO, PR, Location, Remaining, Notes, Created, Actions
 
   // Fixed row height keeps the table visually even despite multi-badge cells.
-  const ROW_H = classic ? 40 : 44;
+  const ROW_H = 40;
 
   return (
     <div className="fade-in" style={pageFillStyle}>
-      {classic ? (
-        <div style={{ ...xpBevel, display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0 }}>
+      <div style={{ ...xpBevel, display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0 }}>
           {/* ── Title bar ── */}
           <div style={xpTitleBar}>
             <span>Lot Management</span>
           </div>
           {/* ── Lot type tabs — classifies by the process that produced the lot ── */}
-          <Tabs<string> tabs={lotTypeTabs} activeKey={lotTypeFilter || 'ALL'} onChange={handleLotTypeTabChange} classic />
+          <Tabs<string> tabs={lotTypeTabs} activeKey={lotTypeFilter || 'ALL'} onChange={handleLotTypeTabChange} />
           {/* ── Filter/search bar + actions ── */}
           <div style={{ padding: '6px 8px', display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap', background: 'linear-gradient(to bottom, #f5f4ef, #e0dfd8)', borderBottom: '1px solid #b0a898', flexShrink: 0 }}>
-            <SearchField classic value={searchInput} onChange={setSearch} placeholder="Search lot, item, WO/MO/PR, SO..." width={240} />
+            <SearchField value={searchInput} onChange={setSearch} placeholder="Search lot, item, WO/MO/PR, SO..." width={240} />
             <span style={{ fontFamily: xpFont, fontSize: 11 }}>Item:</span>
             <div style={{ width: 200, flexShrink: 0 }}>
               <SearchableSelect options={itemFilterOptions} value={itemFilter} onChange={setItemFilter} placeholder="All Items" size="sm" />
@@ -996,80 +992,79 @@ export default function BatchesView({ items, locations, categories, workCenters,
             />
             <span style={{ fontFamily: xpFont, fontSize: 11 }}>Status:</span>
             <FilterChipBar
-              classic
               options={LOT_STATUS_FILTERS}
               value={statusFilter}
               onChange={v => setStatusFilter(v as '' | 'active' | 'depleted')}
             />
             <span style={{ display: 'inline-flex', gap: 4, marginLeft: 'auto' }}>
-              <ToolbarButton classic tone="neutral" icon="bi-arrow-clockwise" onClick={fetchBatches}>Refresh</ToolbarButton>
-              <ToolbarButton classic tone="create" icon="bi-plus" onClick={() => setIsCreateOpen(true)}>New Lot</ToolbarButton>
+              <ToolbarButton tone="neutral" icon="bi-arrow-clockwise" onClick={fetchBatches}>Refresh</ToolbarButton>
+              <ToolbarButton tone="create" icon="bi-plus" onClick={() => setIsCreateOpen(true)}>New Lot</ToolbarButton>
             </span>
           </div>
 
           {/* ── Table ── */}
           <div style={{ flex: 1, overflowY: 'auto', overflowX: 'auto', minHeight: 0, background: '#ffffff', scrollbarGutter: 'stable' } as React.CSSProperties}>
             <table style={xpTable}>
-              <thead style={lvThead(true, true)}>
+              <thead style={lvThead()}>
                 <tr>
-                  <th style={{ ...lvTh(true), width: 20 }}></th>
-                  <SortableTh sort={sort} colKey="lot" onSort={toggleSort} style={lvTh(true)}>Lot Number</SortableTh>
-                  <SortableTh sort={sort} colKey="product" onSort={toggleSort} style={lvTh(true)}>Item</SortableTh>
-                  <SortableTh sort={sort} colKey="ends" onSort={toggleSort} style={{ ...lvTh(true), textAlign: 'right' }}>Ends</SortableTh>
-                  <th style={{ ...lvTh(true), width: ATTRS_COL_W, maxWidth: ATTRS_COL_W }}>Attributes</th>
-                  <SortableTh sort={sort} colKey="origin" onSort={toggleSort} style={lvTh(true)}>Origin</SortableTh>
-                  <SortableTh sort={sort} colKey="wo" onSort={toggleSort} style={{ ...lvTh(true), width: ORIGIN_COL_W, maxWidth: ORIGIN_COL_W }}>WO</SortableTh>
-                  <SortableTh sort={sort} colKey="mo" onSort={toggleSort} style={{ ...lvTh(true), width: ORIGIN_COL_W, maxWidth: ORIGIN_COL_W }}>MO</SortableTh>
-                  <SortableTh sort={sort} colKey="pr" onSort={toggleSort} style={{ ...lvTh(true), width: ORIGIN_COL_W, maxWidth: ORIGIN_COL_W }}>PR</SortableTh>
-                  <SortableTh sort={sort} colKey="location" onSort={toggleSort} style={lvTh(true)}>Location</SortableTh>
-                  <SortableTh sort={sort} colKey="remaining" onSort={toggleSort} style={{ ...lvTh(true), textAlign: 'right' }}>Remaining</SortableTh>
-                  <SortableTh sort={sort} colKey="notes" onSort={toggleSort} style={lvTh(true)}>Notes</SortableTh>
-                  <SortableTh sort={sort} colKey="created" onSort={toggleSort} style={lvTh(true)}>Created</SortableTh>
-                  <th style={{ ...lvTh(true), borderRight: 'none' }}></th>
+                  <th style={{ ...lvTh(), width: 20 }}></th>
+                  <SortableTh sort={sort} colKey="lot" onSort={toggleSort} style={lvTh()}>Lot Number</SortableTh>
+                  <SortableTh sort={sort} colKey="product" onSort={toggleSort} style={lvTh()}>Item</SortableTh>
+                  <SortableTh sort={sort} colKey="ends" onSort={toggleSort} style={{ ...lvTh(), textAlign: 'right' }}>Ends</SortableTh>
+                  <th style={{ ...lvTh(), width: ATTRS_COL_W, maxWidth: ATTRS_COL_W }}>Attributes</th>
+                  <SortableTh sort={sort} colKey="origin" onSort={toggleSort} style={lvTh()}>Origin</SortableTh>
+                  <SortableTh sort={sort} colKey="wo" onSort={toggleSort} style={{ ...lvTh(), width: ORIGIN_COL_W, maxWidth: ORIGIN_COL_W }}>WO</SortableTh>
+                  <SortableTh sort={sort} colKey="mo" onSort={toggleSort} style={{ ...lvTh(), width: ORIGIN_COL_W, maxWidth: ORIGIN_COL_W }}>MO</SortableTh>
+                  <SortableTh sort={sort} colKey="pr" onSort={toggleSort} style={{ ...lvTh(), width: ORIGIN_COL_W, maxWidth: ORIGIN_COL_W }}>PR</SortableTh>
+                  <SortableTh sort={sort} colKey="location" onSort={toggleSort} style={lvTh()}>Location</SortableTh>
+                  <SortableTh sort={sort} colKey="remaining" onSort={toggleSort} style={{ ...lvTh(), textAlign: 'right' }}>Remaining</SortableTh>
+                  <SortableTh sort={sort} colKey="notes" onSort={toggleSort} style={lvTh()}>Notes</SortableTh>
+                  <SortableTh sort={sort} colKey="created" onSort={toggleSort} style={lvTh()}>Created</SortableTh>
+                  <th style={{ ...lvTh(), borderRight: 'none' }}></th>
                 </tr>
               </thead>
               <tbody ref={listBodyRef}>
-                {loading && <TableSkeleton rows={8} cols={skel.cols ?? colSpan} classic tdStyle={xpTd(false)} rowHeight={skel.rowHeight} fillHeight={skel.fillHeight} />}
+                {loading && <TableSkeleton rows={8} cols={skel.cols ?? colSpan} tdStyle={xpTd(false)} rowHeight={skel.rowHeight} fillHeight={skel.fillHeight} />}
                 {!loading && batches.length === 0 && (
-                  <TableEmpty colSpan={colSpan} classic tdStyle={xpTd(false)} message="No lots found." />
+                  <TableEmpty colSpan={colSpan} tdStyle={xpTd(false)} message="No lots found." />
                 )}
                 {sortedBatches.map((b, i) => (
                   <>
                     <tr
                       key={b.id}
-                      style={{ background: expandedRows[b.id] ? rowStateBg('expanded', true) : lvZebra(true, i), cursor: 'pointer', color: isDepleted(b) ? '#9a9a9a' : undefined, height: ROW_H }}
+                      style={{ background: expandedRows[b.id] ? rowStateBg('expanded') : lvZebra(i), cursor: 'pointer', color: isDepleted(b) ? '#9a9a9a' : undefined, height: ROW_H }}
                       onClick={() => toggleExpand(b)}
                       title={isDepleted(b) ? 'Depleted lot — 0 remaining' : 'Show lot lineage'}
                     >
-                      <ExpanderCell classic expanded={!!expandedRows[b.id]} onToggle={() => toggleExpand(b)} label="lot lineage"
-                        tdStyle={{ ...xpTd(i % 2 === 1), background: expandedRows[b.id] ? rowStateBg('expanded', true) : undefined }} />
-                      <td style={{ ...xpTd(i % 2 === 1), background: expandedRows[b.id] ? rowStateBg('expanded', true) : undefined }}>
+                      <ExpanderCell expanded={!!expandedRows[b.id]} onToggle={() => toggleExpand(b)} label="lot lineage"
+                        tdStyle={{ ...xpTd(i % 2 === 1), background: expandedRows[b.id] ? rowStateBg('expanded') : undefined }} />
+                      <td style={{ ...xpTd(i % 2 === 1), background: expandedRows[b.id] ? rowStateBg('expanded') : undefined }}>
                         <strong>{b.batch_number}</strong>
                         {qualityChip(b)}
                       </td>
-                      <td style={{ ...xpTd(i % 2 === 1), background: expandedRows[b.id] ? rowStateBg('expanded', true) : undefined }}>{productCell(b)}</td>
-                      <td style={{ ...xpTd(i % 2 === 1), textAlign: 'right', background: expandedRows[b.id] ? rowStateBg('expanded', true) : undefined }}>{b.ends ?? '-'}</td>
-                      <td style={{ ...xpTd(i % 2 === 1), width: ATTRS_COL_W, maxWidth: ATTRS_COL_W, background: expandedRows[b.id] ? rowStateBg('expanded', true) : undefined }}>{attrsCell(b)}</td>
-                      <td style={{ ...xpTd(i % 2 === 1), background: expandedRows[b.id] ? rowStateBg('expanded', true) : undefined }}>{originCell(b)}</td>
-                      <td style={{ ...xpTd(i % 2 === 1), width: ORIGIN_COL_W, maxWidth: ORIGIN_COL_W, overflow: 'hidden', background: expandedRows[b.id] ? rowStateBg('expanded', true) : undefined }}>{woCell(b)}</td>
-                      <td style={{ ...xpTd(i % 2 === 1), width: ORIGIN_COL_W, maxWidth: ORIGIN_COL_W, overflow: 'hidden', background: expandedRows[b.id] ? rowStateBg('expanded', true) : undefined }}>{moCell(b)}</td>
-                      <td style={{ ...xpTd(i % 2 === 1), width: ORIGIN_COL_W, maxWidth: ORIGIN_COL_W, overflow: 'hidden', background: expandedRows[b.id] ? rowStateBg('expanded', true) : undefined }}>{prCell(b)}</td>
-                      <td style={{ ...xpTd(i % 2 === 1), background: expandedRows[b.id] ? rowStateBg('expanded', true) : undefined }}>{locationCell(b)}</td>
-                      <td style={{ ...xpTd(i % 2 === 1), textAlign: 'right', background: expandedRows[b.id] ? rowStateBg('expanded', true) : undefined, whiteSpace: 'nowrap' }}>{remainingCell(b)}</td>
-                      <td style={{ ...xpTd(i % 2 === 1), background: expandedRows[b.id] ? rowStateBg('expanded', true) : undefined }}>{notesCell(b)}</td>
-                      <td style={{ ...xpTd(i % 2 === 1), background: expandedRows[b.id] ? rowStateBg('expanded', true) : undefined }}>{createdCell(b)}</td>
-                      <td style={{ ...xpTd(i % 2 === 1), whiteSpace: 'nowrap', textAlign: 'right', background: expandedRows[b.id] ? rowStateBg('expanded', true) : undefined }} onClick={e => e.stopPropagation()}>
+                      <td style={{ ...xpTd(i % 2 === 1), background: expandedRows[b.id] ? rowStateBg('expanded') : undefined }}>{productCell(b)}</td>
+                      <td style={{ ...xpTd(i % 2 === 1), textAlign: 'right', background: expandedRows[b.id] ? rowStateBg('expanded') : undefined }}>{b.ends ?? '-'}</td>
+                      <td style={{ ...xpTd(i % 2 === 1), width: ATTRS_COL_W, maxWidth: ATTRS_COL_W, background: expandedRows[b.id] ? rowStateBg('expanded') : undefined }}>{attrsCell(b)}</td>
+                      <td style={{ ...xpTd(i % 2 === 1), background: expandedRows[b.id] ? rowStateBg('expanded') : undefined }}>{originCell(b)}</td>
+                      <td style={{ ...xpTd(i % 2 === 1), width: ORIGIN_COL_W, maxWidth: ORIGIN_COL_W, overflow: 'hidden', background: expandedRows[b.id] ? rowStateBg('expanded') : undefined }}>{woCell(b)}</td>
+                      <td style={{ ...xpTd(i % 2 === 1), width: ORIGIN_COL_W, maxWidth: ORIGIN_COL_W, overflow: 'hidden', background: expandedRows[b.id] ? rowStateBg('expanded') : undefined }}>{moCell(b)}</td>
+                      <td style={{ ...xpTd(i % 2 === 1), width: ORIGIN_COL_W, maxWidth: ORIGIN_COL_W, overflow: 'hidden', background: expandedRows[b.id] ? rowStateBg('expanded') : undefined }}>{prCell(b)}</td>
+                      <td style={{ ...xpTd(i % 2 === 1), background: expandedRows[b.id] ? rowStateBg('expanded') : undefined }}>{locationCell(b)}</td>
+                      <td style={{ ...xpTd(i % 2 === 1), textAlign: 'right', background: expandedRows[b.id] ? rowStateBg('expanded') : undefined, whiteSpace: 'nowrap' }}>{remainingCell(b)}</td>
+                      <td style={{ ...xpTd(i % 2 === 1), background: expandedRows[b.id] ? rowStateBg('expanded') : undefined }}>{notesCell(b)}</td>
+                      <td style={{ ...xpTd(i % 2 === 1), background: expandedRows[b.id] ? rowStateBg('expanded') : undefined }}>{createdCell(b)}</td>
+                      <td style={{ ...xpTd(i % 2 === 1), whiteSpace: 'nowrap', textAlign: 'right', background: expandedRows[b.id] ? rowStateBg('expanded') : undefined }} onClick={e => e.stopPropagation()}>
                         <div style={{ display: 'inline-flex', alignItems: 'center', gap: 4, justifyContent: 'flex-end' }}>
                           {!isRejectGrade(b.quality_status) && (b.remaining ?? 0) > 0 && (
-                            <XPActionButton classic tone="neutral" icon="bi-scissors" title={SPLIT_TITLE} onClick={() => openSplit(b)} />
+                            <XPActionButton tone="neutral" icon="bi-scissors" title={SPLIT_TITLE} onClick={() => openSplit(b)} />
                           )}
                           {!isRejectGrade(b.quality_status) && b.quality_status !== 'DISPOSED' && (
-                            <XPActionButton classic tone="warning" icon="bi-slash-circle" title={REJECT_TITLE} onClick={() => openReject(b)} />
+                            <XPActionButton tone="warning" icon="bi-slash-circle" title={REJECT_TITLE} onClick={() => openReject(b)} />
                           )}
                           {isRejectGrade(b.quality_status) && (b.remaining ?? 0) > 0 && (
-                            <XPActionButton classic tone="danger" icon="bi-trash" title={DISPOSE_TITLE} onClick={() => openDispose(b)} />
+                            <XPActionButton tone="danger" icon="bi-trash" title={DISPOSE_TITLE} onClick={() => openDispose(b)} />
                           )}
-                          <MenuTriggerButton classic onClick={e => toggle(b.id, e)} />
+                          <MenuTriggerButton onClick={e => toggle(b.id, e)} />
                         </div>
                       </td>
                     </tr>
@@ -1087,130 +1082,6 @@ export default function BatchesView({ items, locations, categories, workCenters,
           </div>
           <Pager page={page} total={total} pageSize={PAGE_SIZE} onPageChange={setPage} hideWhenEmpty />
         </div>
-      ) : (
-        <div className="card shadow-sm border-0 shell-window" style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0 }}>
-          {/* ── Title bar ── */}
-          <div className="card-header d-flex align-items-center gap-2" style={{ flexShrink: 0 }}>
-            <h5 className="mb-0 fw-bold">Lot Management</h5>
-          </div>
-          {/* ── Lot type tabs — classifies by the process that produced the lot ── */}
-          <Tabs<string> tabs={lotTypeTabs} activeKey={lotTypeFilter || 'ALL'} onChange={handleLotTypeTabChange} classic={false} />
-          {/* ── Filter/search bar + actions ── */}
-          <div className="d-flex align-items-center gap-2 flex-wrap px-3 py-2 border-bottom" style={{ flexShrink: 0, background: '#f8f9fa' }}>
-            <SearchField classic={false} value={searchInput} onChange={setSearch} placeholder="Search lot, item, WO/MO/PR, SO..." width={260} />
-            <div style={{ width: 200, flexShrink: 0 }}>
-              <SearchableSelect options={itemFilterOptions} value={itemFilter} onChange={setItemFilter} placeholder="All Items" size="sm" />
-            </div>
-            <TreeSelect
-              options={catTreeOptions}
-              value={selectedCat}
-              onChange={setSelectedCat}
-              allowEmpty
-              emptyLabel="All Categories"
-              placeholder="All Categories"
-              size="sm"
-              style={{ width: 180 }}
-            />
-            <TreeSelect
-              options={locationTree}
-              value={locationFilter}
-              onChange={setLocationFilter}
-              allowEmpty
-              emptyLabel="All Locations"
-              placeholder="All Locations"
-              size="sm"
-              style={{ width: 200 }}
-            />
-            <FilterChipBar
-              classic={false}
-              options={LOT_STATUS_FILTERS}
-              value={statusFilter}
-              onChange={v => setStatusFilter(v as '' | 'active' | 'depleted')}
-            />
-            <div className="ms-auto d-flex gap-2">
-              <ToolbarButton classic={false} tone="neutral" icon="bi-arrow-clockwise" onClick={fetchBatches}>Refresh</ToolbarButton>
-              <ToolbarButton classic={false} tone="create" icon="bi-plus" onClick={() => setIsCreateOpen(true)}>New Lot</ToolbarButton>
-            </div>
-          </div>
-
-          {/* ── Table ── */}
-          <div className="table-responsive" style={{ flex: 1, overflowY: 'auto', minHeight: 0, scrollbarGutter: 'stable' } as React.CSSProperties}>
-            <table className="table table-sm table-hover mb-0" style={xpTable}>
-              <thead style={lvThead(false, true)}>
-                <tr>
-                  <th style={{ ...lvTh(false), width: 24 }}></th>
-                  <SortableTh sort={sort} colKey="lot" onSort={toggleSort} style={lvTh(false)}>Lot Number</SortableTh>
-                  <SortableTh sort={sort} colKey="product" onSort={toggleSort} style={lvTh(false)}>Item</SortableTh>
-                  <SortableTh sort={sort} colKey="ends" onSort={toggleSort} style={{ ...lvTh(false), textAlign: 'right' }}>Ends</SortableTh>
-                  <th style={{ ...lvTh(false), width: ATTRS_COL_W, maxWidth: ATTRS_COL_W }}>Attributes</th>
-                  <SortableTh sort={sort} colKey="origin" onSort={toggleSort} style={lvTh(false)}>Origin</SortableTh>
-                  <SortableTh sort={sort} colKey="wo" onSort={toggleSort} style={{ ...lvTh(false), width: ORIGIN_COL_W, maxWidth: ORIGIN_COL_W }}>WO</SortableTh>
-                  <SortableTh sort={sort} colKey="mo" onSort={toggleSort} style={{ ...lvTh(false), width: ORIGIN_COL_W, maxWidth: ORIGIN_COL_W }}>MO</SortableTh>
-                  <SortableTh sort={sort} colKey="pr" onSort={toggleSort} style={{ ...lvTh(false), width: ORIGIN_COL_W, maxWidth: ORIGIN_COL_W }}>PR</SortableTh>
-                  <SortableTh sort={sort} colKey="location" onSort={toggleSort} style={lvTh(false)}>Location</SortableTh>
-                  <SortableTh sort={sort} colKey="remaining" onSort={toggleSort} style={{ ...lvTh(false), textAlign: 'right' }}>Remaining</SortableTh>
-                  <SortableTh sort={sort} colKey="notes" onSort={toggleSort} style={lvTh(false)}>Notes</SortableTh>
-                  <SortableTh sort={sort} colKey="created" onSort={toggleSort} style={lvTh(false)}>Created</SortableTh>
-                  <th style={{ ...lvTh(false), borderRight: 'none' }}></th>
-                </tr>
-              </thead>
-              <tbody ref={listBodyRef}>
-                {loading && <TableSkeleton rows={8} cols={skel.cols ?? colSpan} rowHeight={skel.rowHeight} fillHeight={skel.fillHeight} />}
-                {!loading && batches.length === 0 && <TableEmpty colSpan={colSpan} classic={false} message="No lots found." />}
-                {sortedBatches.map(b => (
-                  <>
-                    <tr
-                      key={b.id}
-                      style={{ background: expandedRows[b.id] ? rowStateBg('expanded', false) : undefined, cursor: 'pointer', color: isDepleted(b) ? '#9a9a9a' : undefined, height: ROW_H }}
-                      onClick={() => toggleExpand(b)}
-                      title={isDepleted(b) ? 'Depleted lot — 0 remaining' : 'Show lot lineage'}
-                    >
-                      <ExpanderCell classic={false} expanded={!!expandedRows[b.id]} onToggle={() => toggleExpand(b)} label="lot lineage" />
-                      <td>
-                        <strong>{b.batch_number}</strong>
-                        {qualityChip(b)}
-                      </td>
-                      <td>{productCell(b)}</td>
-                      <td className="text-end">{b.ends ?? '-'}</td>
-                      <td style={{ width: ATTRS_COL_W, maxWidth: ATTRS_COL_W }}>{attrsCell(b)}</td>
-                      <td>{originCell(b)}</td>
-                      <td style={{ width: ORIGIN_COL_W, maxWidth: ORIGIN_COL_W, overflow: 'hidden' }}>{woCell(b)}</td>
-                      <td style={{ width: ORIGIN_COL_W, maxWidth: ORIGIN_COL_W, overflow: 'hidden' }}>{moCell(b)}</td>
-                      <td style={{ width: ORIGIN_COL_W, maxWidth: ORIGIN_COL_W, overflow: 'hidden' }}>{prCell(b)}</td>
-                      <td>{locationCell(b)}</td>
-                      <td className="text-end" style={{ whiteSpace: 'nowrap' }}>{remainingCell(b)}</td>
-                      <td>{notesCell(b)}</td>
-                      <td>{createdCell(b)}</td>
-                      <td style={{ whiteSpace: 'nowrap', textAlign: 'right' }} onClick={e => e.stopPropagation()}>
-                        <div className="d-inline-flex align-items-center gap-1 justify-content-end">
-                          {!isRejectGrade(b.quality_status) && (b.remaining ?? 0) > 0 && (
-                            <XPActionButton classic={false} tone="neutral" icon="bi-scissors" title={SPLIT_TITLE} onClick={() => openSplit(b)} />
-                          )}
-                          {!isRejectGrade(b.quality_status) && b.quality_status !== 'DISPOSED' && (
-                            <XPActionButton classic={false} tone="warning" icon="bi-slash-circle" title={REJECT_TITLE} onClick={() => openReject(b)} />
-                          )}
-                          {isRejectGrade(b.quality_status) && (b.remaining ?? 0) > 0 && (
-                            <XPActionButton classic={false} tone="danger" icon="bi-trash" title={DISPOSE_TITLE} onClick={() => openDispose(b)} />
-                          )}
-                          <MenuTriggerButton classic={false} onClick={e => toggle(b.id, e)} />
-                        </div>
-                      </td>
-                    </tr>
-                    {expandedRows[b.id] && (
-                      <tr key={`${b.id}-detail`}>
-                        <td colSpan={colSpan} style={{ padding: 0 }}>
-                          {renderExpandedPanel(b)}
-                        </td>
-                      </tr>
-                    )}
-                  </>
-                ))}
-              </tbody>
-            </table>
-          </div>
-          <Pager page={page} total={total} pageSize={PAGE_SIZE} onPageChange={setPage} hideWhenEmpty />
-        </div>
-      )}
 
       {/* ── Create Modal ── */}
       {isCreateOpen && (
@@ -1221,14 +1092,14 @@ export default function BatchesView({ items, locations, categories, workCenters,
           size="sm"
           modeless
           footer={<>
-            <button style={classic ? xpBtn() : undefined} className={classic ? XP_BTN : 'btn btn-sm btn-secondary'} onClick={() => setIsCreateOpen(false)}>Cancel</button>
-            <button style={classic ? xpBtn() : undefined} className={classic ? XP_BTN : 'btn btn-sm btn-primary'} onClick={handleCreate} disabled={creating}>
+            <button style={xpBtn()} className={XP_BTN} onClick={() => setIsCreateOpen(false)}>Cancel</button>
+            <button style={xpBtn()} className={XP_BTN} onClick={handleCreate} disabled={creating}>
               {creating ? 'Creating...' : 'Create Lot'}
             </button>
           </>}
         >
           <div className="mb-3">
-            <label style={classic ? { fontFamily: xpFont, fontSize: 11 } : {}}>Item</label>
+            <label style={{ fontFamily: xpFont, fontSize: 11 }}>Item</label>
             <div className="mt-1">
               <SearchableSelect
                 options={createItemOptions}
@@ -1241,23 +1112,22 @@ export default function BatchesView({ items, locations, categories, workCenters,
             </div>
           </div>
           <div className="mb-3">
-            <label style={classic ? { fontFamily: xpFont, fontSize: 11 } : {}}>Quantity (optional)</label>
+            <label style={{ fontFamily: xpFont, fontSize: 11 }}>Quantity (optional)</label>
             <input
               type="number"
               min={0}
               step="any"
-              className={classic ? '' : 'form-control form-control-sm mt-1'}
-              style={classic ? { ...xpInput, width: '100%', height: 22 } : {}}
+              style={{ ...xpInput, width: '100%', height: 22 }}
               value={createQty}
               onChange={e => setCreateQty(e.target.value)}
               placeholder="0"
             />
-            <div style={classic ? { fontFamily: xpFont, fontSize: 10, color: '#555', marginTop: 2 } : { fontSize: 12, color: '#666', marginTop: 2 }}>
+            <div style={{ fontFamily: xpFont, fontSize: 10, color: '#555', marginTop: 2 }}>
               Books the lot into stock at the location below. Leave blank to create an empty lot.
             </div>
           </div>
           <div className="mb-3">
-            <label style={classic ? { fontFamily: xpFont, fontSize: 11 } : {}}>Location{createQty && parseFloat(createQty) > 0 ? '' : ' (optional)'}</label>
+            <label style={{ fontFamily: xpFont, fontSize: 11 }}>Location{createQty && parseFloat(createQty) > 0 ? '' : ' (optional)'}</label>
             <div className="mt-1">
               <TreeSelect
                 options={locationPickerTree}
@@ -1266,15 +1136,14 @@ export default function BatchesView({ items, locations, categories, workCenters,
                 allowEmpty
                 emptyLabel="-- Select Location --"
                 size="sm"
-                style={classic ? { width: '100%' } : undefined}
+                style={{ width: '100%' }}
               />
             </div>
           </div>
           <div className="mb-3">
-            <label style={classic ? { fontFamily: xpFont, fontSize: 11 } : {}}>Notes (optional)</label>
+            <label style={{ fontFamily: xpFont, fontSize: 11 }}>Notes (optional)</label>
             <textarea
-              className={classic ? '' : 'form-control form-control-sm mt-1'}
-              style={classic ? { ...xpInput, width: '100%', height: 60, resize: 'vertical' } : {}}
+              style={{ ...xpInput, width: '100%', height: 60, resize: 'vertical' }}
               value={createNotes}
               onChange={e => setCreateNotes(e.target.value)}
               placeholder="Optional notes..."
@@ -1297,10 +1166,10 @@ export default function BatchesView({ items, locations, categories, workCenters,
           size="sm"
           modeless
           footer={<>
-            <button style={classic ? xpBtn() : undefined} className={classic ? XP_BTN : 'btn btn-sm btn-secondary'} onClick={() => setRejectBatch(null)}>Cancel</button>
+            <button style={xpBtn()} className={XP_BTN} onClick={() => setRejectBatch(null)}>Cancel</button>
             <button
-              style={classic ? xpBtn({ ...BTN_TONES.danger }) : undefined}
-              className={classic ? XP_BTN : 'btn btn-sm btn-danger'}
+              style={xpBtn({ ...BTN_TONES.danger })}
+              className={XP_BTN}
               onClick={handleReject}
               disabled={rejecting}
             >
@@ -1308,31 +1177,30 @@ export default function BatchesView({ items, locations, categories, workCenters,
             </button>
           </>}
         >
-          <div className="mb-2" style={classic ? { fontFamily: xpFont, fontSize: 11 } : {}}>
+          <div className="mb-2" style={{ fontFamily: xpFont, fontSize: 11 }}>
             <strong>{batchItemCode(rejectBatch)}</strong>
             {rejectBatch.remaining != null && <> — {rem.toFixed(2)} remaining</>}
             {rejectBatch.mo_code && <> (MO {rejectBatch.mo_code})</>}
           </div>
           <div className="mb-3">
-            <label style={classic ? { fontFamily: xpFont, fontSize: 11 } : {}}>Reject quantity</label>
+            <label style={{ fontFamily: xpFont, fontSize: 11 }}>Reject quantity</label>
             <input
               type="number"
               min={0}
               max={rem}
               step="any"
-              className={classic ? '' : 'form-control form-control-sm mt-1'}
-              style={classic ? { ...xpInput, width: '100%', height: 22 } : {}}
+              style={{ ...xpInput, width: '100%', height: 22 }}
               value={rejectQty}
               onChange={e => setRejectQty(e.target.value)}
             />
-            <div style={classic ? { fontFamily: xpFont, fontSize: 10, color: '#555', marginTop: 2 } : { fontSize: 12, color: '#666', marginTop: 2 }}>
+            <div style={{ fontFamily: xpFont, fontSize: 10, color: '#555', marginTop: 2 }}>
               {partial
                 ? `Splits off ${q.toFixed(2)} into a REJECTED sub-lot; ${goodLeft.toFixed(2)} stays active.`
                 : 'Full quantity — rejects the whole lot.'}
             </div>
           </div>
           <div className="mb-3">
-            <label style={classic ? { fontFamily: xpFont, fontSize: 11 } : {}}>Move to defect store</label>
+            <label style={{ fontFamily: xpFont, fontSize: 11 }}>Move to defect store</label>
             <div className="mt-1">
               <TreeSelect
                 options={locationPickerTree}
@@ -1341,36 +1209,35 @@ export default function BatchesView({ items, locations, categories, workCenters,
                 allowEmpty
                 emptyLabel="Auto (routed by work centre / item)"
                 size="sm"
-                style={classic ? { width: '100%' } : undefined}
+                style={{ width: '100%' }}
               />
             </div>
-            <div style={classic ? { fontFamily: xpFont, fontSize: 10, color: '#555', marginTop: 2 } : { fontSize: 12, color: '#666', marginTop: 2 }}>
+            <div style={{ fontFamily: xpFont, fontSize: 10, color: '#555', marginTop: 2 }}>
               {rejectLocId
                 ? `Rejected stock is transferred out of ${rejectBatch.location_name || 'its current location'} into the selected store.`
                 : 'Routed automatically: the producing work centre’s reject location (inherited from its group/type), then the item’s default. With none configured the stock stays put, flagged.'}
             </div>
           </div>
           <div className="mb-3">
-            <label style={{ display: 'flex', alignItems: 'center', gap: 6, ...(classic ? { fontFamily: xpFont, fontSize: 11 } : {}) }}>
+            <label style={{ display: 'flex', alignItems: 'center', gap: 6, ...({ fontFamily: xpFont, fontSize: 11 }) }}>
               <input type="checkbox" checked={rejectUsable} onChange={e => setRejectUsable(e.target.checked)} />
               Still usable (downgrade, not scrap)
             </label>
-            <div style={classic ? { fontFamily: xpFont, fontSize: 10, color: '#555', marginTop: 2 } : { fontSize: 12, color: '#666', marginTop: 2 }}>
+            <div style={{ fontFamily: xpFont, fontSize: 10, color: '#555', marginTop: 2 }}>
               {rejectUsable
                 ? 'Quarantined and out of availability planning, but still offered in consumption and staging pickers — a rejected beam can be re-mounted for certain items.'
                 : 'Scrap-bound: excluded from availability and from every consumption picker.'}
             </div>
           </div>
-          <div className="mb-3" style={classic ? { fontFamily: xpFont, fontSize: 10, color: '#663300' } : { fontSize: 13, color: '#664d03' }}>
+          <div className="mb-3" style={{ fontFamily: xpFont, fontSize: 10, color: '#663300' }}>
             {partial
               ? `The rejected ${q.toFixed(2)} moves to a new REJECTED sub-lot (excluded from availability/consumption) and is physically pulled out; the rest stays GOOD. If produced by a work order, that qty returns to the MO's progress — add a WO to refill.`
               : `The lot is marked REJECTED: it stays in stock but is excluded from availability and consumption. If it was produced by a work order log, that quantity is returned to the MO's progress — create a new WO to refill the shortfall.`}
           </div>
           <div className="mb-3">
-            <label style={classic ? { fontFamily: xpFont, fontSize: 11 } : {}}>Reason</label>
+            <label style={{ fontFamily: xpFont, fontSize: 11 }}>Reason</label>
             <textarea
-              className={classic ? '' : 'form-control form-control-sm mt-1'}
-              style={classic ? { ...xpInput, width: '100%', height: 50, resize: 'vertical' } : {}}
+              style={{ ...xpInput, width: '100%', height: 50, resize: 'vertical' }}
               value={rejectReason}
               onChange={e => setRejectReason(e.target.value)}
               placeholder="Defect, shade off, width out of spec..."
@@ -1394,10 +1261,10 @@ export default function BatchesView({ items, locations, categories, workCenters,
           size="sm"
           modeless
           footer={<>
-            <button style={classic ? xpBtn() : undefined} className={classic ? XP_BTN : 'btn btn-sm btn-secondary'} onClick={() => setSplitBatch(null)}>Cancel</button>
+            <button style={xpBtn()} className={XP_BTN} onClick={() => setSplitBatch(null)}>Cancel</button>
             <button
-              style={classic ? xpBtn({ background: 'linear-gradient(to bottom, #ffffff, #d4d0c8)', fontWeight: 'bold' }) : undefined}
-              className={classic ? XP_BTN : 'btn btn-sm btn-primary'}
+              style={xpBtn({ background: 'linear-gradient(to bottom, #ffffff, #d4d0c8)', fontWeight: 'bold' })}
+              className={XP_BTN}
               onClick={handleSplit}
               disabled={splitting || !valid}
             >
@@ -1405,34 +1272,32 @@ export default function BatchesView({ items, locations, categories, workCenters,
             </button>
           </>}
         >
-          <div className="mb-2" style={classic ? { fontFamily: xpFont, fontSize: 11 } : {}}>
+          <div className="mb-2" style={{ fontFamily: xpFont, fontSize: 11 }}>
             <strong>{batchItemCode(splitBatch)}</strong>
             {splitBatch.remaining != null && <> — {rem.toFixed(2)} remaining</>}
           </div>
           <div className="mb-3">
-            <label style={classic ? { fontFamily: xpFont, fontSize: 11 } : {}}>Quantity to peel off</label>
+            <label style={{ fontFamily: xpFont, fontSize: 11 }}>Quantity to peel off</label>
             <input
               type="number"
               min={0}
               max={rem}
               step="any"
-              className={classic ? '' : 'form-control form-control-sm mt-1'}
-              style={classic ? { ...xpInput, width: '100%', height: 22 } : {}}
+              style={{ ...xpInput, width: '100%', height: 22 }}
               value={splitQty}
               onChange={e => setSplitQty(e.target.value)}
               placeholder={`0 – ${rem.toFixed(2)}`}
             />
-            <div style={classic ? { fontFamily: xpFont, fontSize: 10, color: '#555', marginTop: 2 } : { fontSize: 12, color: '#666', marginTop: 2 }}>
+            <div style={{ fontFamily: xpFont, fontSize: 10, color: '#555', marginTop: 2 }}>
               {valid
                 ? `Peels ${q.toFixed(2)} into a new GOOD lot; original keeps ${origLeft.toFixed(2)}.`
                 : `Enter a qty between 0 and ${rem.toFixed(2)}.`}
             </div>
           </div>
           <div className="mb-3">
-            <label style={classic ? { fontFamily: xpFont, fontSize: 11 } : {}}>Reason (optional)</label>
+            <label style={{ fontFamily: xpFont, fontSize: 11 }}>Reason (optional)</label>
             <textarea
-              className={classic ? '' : 'form-control form-control-sm mt-1'}
-              style={classic ? { ...xpInput, width: '100%', height: 50, resize: 'vertical' } : {}}
+              style={{ ...xpInput, width: '100%', height: 50, resize: 'vertical' }}
               value={splitReason}
               onChange={e => setSplitReason(e.target.value)}
               placeholder="Leftover after partial use..."
@@ -1454,17 +1319,13 @@ export default function BatchesView({ items, locations, categories, workCenters,
         const destName = reassignLocId
           ? ((locations || []).find((l: any) => String(l.id) === reassignLocId)?.name || '')
           : '';
-        const hint = classic
-          ? { fontFamily: xpFont, fontSize: 10, color: '#555', marginTop: 2 }
-          : { fontSize: 12, color: '#666', marginTop: 2 };
+        const hint = { fontFamily: xpFont, fontSize: 10, color: '#555', marginTop: 2 };
         const modeBtn = (mode: 'writeoff' | 'reassign', label: string, icon: string) => (
           <button
             type="button"
             onClick={() => setDisposeMode(mode)}
-            style={classic
-              ? xpBtn(disposeMode === mode ? { fontWeight: 'bold', background: 'linear-gradient(to bottom, #ffffff, #d4d0c8)' } : {})
-              : undefined}
-            className={classic ? XP_BTN : `btn btn-sm ${disposeMode === mode ? 'btn-primary' : 'btn-outline-secondary'}`}
+            style={xpBtn(disposeMode === mode ? { fontWeight: 'bold', background: 'linear-gradient(to bottom, #ffffff, #d4d0c8)' } : {})}
+            className={XP_BTN}
           >
             <i className={`bi ${icon}`} style={{ marginRight: 4 }} />{label}
           </button>
@@ -1477,10 +1338,10 @@ export default function BatchesView({ items, locations, categories, workCenters,
           size="sm"
           modeless
           footer={<>
-            <button style={classic ? xpBtn() : undefined} className={classic ? XP_BTN : 'btn btn-sm btn-secondary'} onClick={() => setDisposeBatch(null)}>Cancel</button>
+            <button style={xpBtn()} className={XP_BTN} onClick={() => setDisposeBatch(null)}>Cancel</button>
             <button
-              style={classic ? xpBtn(reassign ? { fontWeight: 'bold' } : { ...BTN_TONES.danger }) : undefined}
-              className={classic ? XP_BTN : `btn btn-sm ${reassign ? 'btn-primary' : 'btn-danger'}`}
+              style={xpBtn(reassign ? { fontWeight: 'bold' } : { ...BTN_TONES.danger })}
+              className={XP_BTN}
               onClick={handleDispose}
               disabled={disposing || !canSubmit}
             >
@@ -1488,7 +1349,7 @@ export default function BatchesView({ items, locations, categories, workCenters,
             </button>
           </>}
         >
-          <div className="mb-2" style={classic ? { fontFamily: xpFont, fontSize: 11 } : {}}>
+          <div className="mb-2" style={{ fontFamily: xpFont, fontSize: 11 }}>
             <strong>{batchItemCode(disposeBatch)}</strong>
             {disposeBatch.remaining != null && <> — {rem.toFixed(2)} remaining</>}
             {disposeBatch.location_name && <> at {disposeBatch.location_name}</>}
@@ -1499,17 +1360,17 @@ export default function BatchesView({ items, locations, categories, workCenters,
           </div>
 
           {!reassign && (
-            <div className="mb-3" style={classic ? { fontFamily: xpFont, fontSize: 10, color: '#663300' } : { fontSize: 13, color: '#664d03' }}>
+            <div className="mb-3" style={{ fontFamily: xpFont, fontSize: 10, color: '#663300' }}>
               The remaining {rem.toFixed(2)} is physically written off and deducted from stock on-hand, and the lot is marked DISPOSED. This cannot be undone.
             </div>
           )}
 
           {reassign && (<>
-            <div className="mb-3" style={classic ? { fontFamily: xpFont, fontSize: 10, color: '#663300' } : { fontSize: 13, color: '#664d03' }}>
+            <div className="mb-3" style={{ fontFamily: xpFont, fontSize: 10, color: '#663300' }}>
               Recycle instead of scrap: the goods move onto a new GOOD lot under the item below, so they are pickable and count in availability again. The rejection stays on the record — this lot keeps its reject grade and the new lot traces back to it.
             </div>
             <div className="mb-3">
-              <label style={classic ? { fontFamily: xpFont, fontSize: 11 } : {}}>Reassign to item</label>
+              <label style={{ fontFamily: xpFont, fontSize: 11 }}>Reassign to item</label>
               <div className="mt-1">
                 <SearchableSelect
                   options={reassignItemOptions}
@@ -1527,14 +1388,13 @@ export default function BatchesView({ items, locations, categories, workCenters,
               </div>
             </div>
             <div className="mb-3">
-              <label style={classic ? { fontFamily: xpFont, fontSize: 11 } : {}}>Quantity to reassign</label>
+              <label style={{ fontFamily: xpFont, fontSize: 11 }}>Quantity to reassign</label>
               <input
                 type="number"
                 min={0}
                 max={rem}
                 step="any"
-                className={classic ? '' : 'form-control form-control-sm mt-1'}
-                style={classic ? { ...xpInput, width: '100%', height: 22 } : {}}
+                style={{ ...xpInput, width: '100%', height: 22 }}
                 value={reassignQty}
                 onChange={e => setReassignQty(e.target.value)}
                 placeholder={`0 – ${rem.toFixed(2)}`}
@@ -1548,7 +1408,7 @@ export default function BatchesView({ items, locations, categories, workCenters,
               </div>
             </div>
             <div className="mb-3">
-              <label style={classic ? { fontFamily: xpFont, fontSize: 11 } : {}}>Move to location</label>
+              <label style={{ fontFamily: xpFont, fontSize: 11 }}>Move to location</label>
               <div className="mt-1">
                 <TreeSelect
                   options={locationPickerTree}
@@ -1557,7 +1417,7 @@ export default function BatchesView({ items, locations, categories, workCenters,
                   allowEmpty
                   emptyLabel="Leave where it is"
                   size="sm"
-                  style={classic ? { width: '100%' } : undefined}
+                  style={{ width: '100%' }}
                 />
               </div>
               <div style={hint}>
@@ -1569,10 +1429,9 @@ export default function BatchesView({ items, locations, categories, workCenters,
           </>)}
 
           <div className="mb-3">
-            <label style={classic ? { fontFamily: xpFont, fontSize: 11 } : {}}>Reason (optional)</label>
+            <label style={{ fontFamily: xpFont, fontSize: 11 }}>Reason (optional)</label>
             <textarea
-              className={classic ? '' : 'form-control form-control-sm mt-1'}
-              style={classic ? { ...xpInput, width: '100%', height: 50, resize: 'vertical' } : {}}
+              style={{ ...xpInput, width: '100%', height: 50, resize: 'vertical' }}
               value={disposeReason}
               onChange={e => setDisposeReason(e.target.value)}
               placeholder={reassign ? 'Re-warped for coarser cloth...' : 'Unusable, shade off...'}

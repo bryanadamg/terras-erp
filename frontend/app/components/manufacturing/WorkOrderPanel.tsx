@@ -544,7 +544,6 @@ export default function WorkOrderPanel({
                                     <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap', marginBottom: 4 }}>
                                         <CodeChip
                                             code={wo.code || `Step ${wo.sequence}`}
-                                            classic
                                             tier={2}
                                             style={{ minWidth: 90 }}
                                         />
@@ -701,7 +700,6 @@ export default function WorkOrderPanel({
                                         }} />
                                         <CodeChip
                                             code={wo.code || `Step ${wo.sequence}`}
-                                            classic
                                             link
                                             style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}
                                         />
@@ -731,10 +729,10 @@ export default function WorkOrderPanel({
                                     {/* Location flow chips */}
                                     {(wo.input_location || wo.output_location) ? (
                                         <span style={{ display: 'flex', alignItems: 'center', gap: 2, fontSize: 9, whiteSpace: 'nowrap', minWidth: 0 }}>
-                                            <LocationChip classic direction="in" code={wo.input_location?.code}
+                                            <LocationChip direction="in" code={wo.input_location?.code}
                                                 title={wo.input_location?.name || 'Input location'} />
                                             <span style={{ color: '#888' }}>&#8594;</span>
-                                            <LocationChip classic direction="out" code={wo.output_location?.code}
+                                            <LocationChip direction="out" code={wo.output_location?.code}
                                                 title={wo.output_location?.name || 'Output location'} />
                                         </span>
                                     ) : <span style={{ color: '#ccc', fontSize: 9 }}>—</span>}
@@ -795,7 +793,6 @@ export default function WorkOrderPanel({
                                     <div style={{ display: 'flex', alignItems: 'center', gap: 3, flexWrap: 'nowrap', justifyContent: 'flex-end', justifySelf: 'end' }}>
                                         {canEdit(wo) && woHasStaging(wo) && wo.status !== 'COMPLETED' && wo.status !== 'CANCELLED' && (
                                             <XPActionButton
-                                                classic
                                                 tone="primary"
                                                 icon={isWeaving(wo) ? 'bi-arrow-bar-up' : 'bi-box-seam'}
                                                 title={isWeaving(wo)
@@ -810,7 +807,6 @@ export default function WorkOrderPanel({
                                             Gated on beam.unmount for that reason, not on work_order.edit. */}
                                         {canUnmountBeam && isWeaving(wo) && (wo.status === 'IN_PROGRESS' || wo.status === 'COMPLETED') && (
                                             <XPActionButton
-                                                classic
                                                 tone="warning"
                                                 icon="bi-recycle"
                                                 title="Strip leftover warp: weigh it into its own lot and take the beam off the loom"
@@ -819,14 +815,13 @@ export default function WorkOrderPanel({
                                         )}
                                         {canLog(wo) && onLogWO && wo.status !== 'COMPLETED' && wo.status !== 'CANCELLED' && (
                                             <XPActionButton
-                                                classic
                                                 tone="success"
                                                 icon="bi-plus-lg"
                                                 title="Log production output"
                                                 onClick={() => onLogWO(wo)}
                                             />
                                         )}
-                                        <MenuTriggerButton classic onClick={(e) => toggleMenu(wo.id, e)} />
+                                        <MenuTriggerButton onClick={(e) => toggleMenu(wo.id, e)} />
                                     </div>
                                 </div>
                             )}
@@ -978,10 +973,10 @@ export default function WorkOrderPanel({
                             )}
                             {(form.input_location_id || form.output_location_id) && (
                                 <div style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 9, color: '#555', paddingLeft: 4 }}>
-                                    <LocationChip classic direction="in"
+                                    <LocationChip direction="in"
                                         code={locationList.find((l: any) => l.id === form.input_location_id)?.code} />
                                     <span>&#8594;</span>
-                                    <LocationChip classic direction="out"
+                                    <LocationChip direction="out"
                                         code={locationList.find((l: any) => l.id === form.output_location_id)?.code} />
                                     <span style={{ color: '#aaa' }}>(from work center)</span>
                                 </div>

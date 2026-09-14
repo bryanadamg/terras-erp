@@ -1,7 +1,6 @@
 'use client';
 
 import { useState } from 'react';
-import { useTheme } from '../../context/ThemeContext';
 import { useUser } from '../../context/UserContext';
 import CategoriesView from './CategoriesView';
 import UOMLibraryView from './UOMLibraryView';
@@ -41,8 +40,6 @@ export default function ItemMetadataView({
     onCreateAttribute, onUpdateAttribute, onDeleteAttribute,
     onAddValue, onUpdateValue, onDeleteValue,
 }: Props) {
-    const { uiStyle } = useTheme();
-    const classic = uiStyle === 'classic';
     const { hasPermission, hasAnyPermission } = useUser();
     const canManage = hasAnyPermission(
         'attribute.create', 'attribute.edit', 'attribute.delete',
@@ -53,12 +50,11 @@ export default function ItemMetadataView({
     const [tab, setTab] = useState<Tab>('attributes');
 
     return (
-        <div className="fade-in" style={viewShellStyle(classic)}>
+        <div className="fade-in" style={viewShellStyle()}>
 
-            <PageTitleBar classic={classic} icon="bi-tag" title="Attributes" />
+            <PageTitleBar icon="bi-tag" title="Attributes" />
 
             <Tabs
-                classic={classic}
                 activeKey={tab}
                 onChange={k => setTab(k as Tab)}
                 tabs={[

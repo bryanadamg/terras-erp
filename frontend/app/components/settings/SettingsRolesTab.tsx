@@ -2,7 +2,6 @@
 
 import { Fragment, useMemo, useState } from 'react';
 import { useToast } from '../shared/Toast';
-import { useTheme } from '../../context/ThemeContext';
 import { useUser } from '../../context/UserContext';
 import { useData } from '../../context/DataContext';
 import { useConfirm } from '../../context/ConfirmContext';
@@ -30,8 +29,6 @@ export default function SettingsRolesTab({
     const { confirm } = useConfirm();
     const { users } = useUser();
     const { categories, locations } = useData();
-    const { uiStyle } = useTheme();
-    const classic = uiStyle === 'classic';
 
     const [formMode, setFormMode] = useState<'create' | 'edit' | null>(null);
     const [formRole, setFormRole] = useState<RoleLike | undefined>(undefined);
@@ -138,32 +135,30 @@ export default function SettingsRolesTab({
 
     return (
         <SettingsPanel
-            classic={classic}
             icon="bi-diagram-3"
             title="Roles"
             flush
             right={
                 <button
                     type="button"
-                    style={classic ? xpBtn({ padding: '1px 8px' }) : undefined}
-                    className={classic ? XP_BTN : 'btn btn-sm btn-outline-light py-0 px-2'}
+                    style={xpBtn({ padding: '1px 8px' })}
+                    className={XP_BTN}
                     onClick={() => { setFormRole(undefined); setFormMode('create'); }}
                 ><i className="bi bi-plus-lg" style={{ marginRight: 4 }}></i>Add Role</button>
             }
         >
             <div className="table-responsive">
                     <table
-                        style={classic ? { width: '100%', borderCollapse: 'collapse' as const, background: '#fff' } : undefined}
-                        className={classic ? '' : 'table table-hover align-middle mb-0'}
+                        style={{ width: '100%', borderCollapse: 'collapse' as const, background: '#fff' }}
                     >
-                        <thead style={classic ? xpTableHeader : undefined} className={classic ? '' : 'table-light'}>
+                        <thead style={xpTableHeader}>
                             <tr>
-                                <th style={classic ? xpThCell : undefined} className={classic ? '' : 'ps-4'}>Name</th>
-                                <th style={classic ? xpThCell : undefined}>Description</th>
-                                <th style={classic ? xpThCell : undefined}>Permissions</th>
-                                <th style={classic ? xpThCell : undefined}>Scope</th>
-                                <th style={classic ? { ...xpThCell, width: 90, textAlign: 'center' as const } : undefined}>Users</th>
-                                <th style={classic ? { ...xpThCell, textAlign: 'right' as const, borderRight: 'none' } : undefined} className={classic ? '' : 'text-end pe-4'}>Actions</th>
+                                <th style={xpThCell}>Name</th>
+                                <th style={xpThCell}>Description</th>
+                                <th style={xpThCell}>Permissions</th>
+                                <th style={xpThCell}>Scope</th>
+                                <th style={{ ...xpThCell, width: 90, textAlign: 'center' as const }}>Users</th>
+                                <th style={{ ...xpThCell, textAlign: 'right' as const, borderRight: 'none' }}>Actions</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -180,76 +175,62 @@ export default function SettingsRolesTab({
                                 const hasScope = scopeCount > 0;
                                 return (
                                     <Fragment key={role.id}>
-                                    <tr style={classic
-                                        ? { background: isExpanded ? rowStateBg('expanded', true) : lvZebra(true, rowIndex), borderBottom: isExpanded ? 'none' : '1px solid #c0bdb5' }
-                                        : { background: isExpanded ? rowStateBg('expanded', false) : undefined }}>
-                                        <td style={classic ? { ...tdBase, fontWeight: 'bold' } : undefined} className={classic ? '' : 'fw-semibold ps-4'}>{role.name}</td>
-                                        <td style={classic ? tdBase : undefined} className={classic ? '' : 'text-muted small'}>{role.description || '—'}</td>
-                                        <td style={classic ? tdBase : undefined}>
+                                    <tr style={{ background: isExpanded ? rowStateBg('expanded') : lvZebra(rowIndex), borderBottom: isExpanded ? 'none' : '1px solid #c0bdb5' }}>
+                                        <td style={{ ...tdBase, fontWeight: 'bold' }}>{role.name}</td>
+                                        <td style={tdBase}>{role.description || '—'}</td>
+                                        <td style={tdBase}>
                                             {isAdminRole ? (
-                                                classic ? (
-                                                    <span style={{ borderRadius: CHIP_RADIUS, background: '#e8e8e8', border: '1px solid #6a6a6a', color: '#000', padding: '0 4px', fontSize: '9px', fontFamily: xpFont, fontWeight: 'bold' }}>All Permissions</span>
-                                                ) : (
-                                                    <span className="badge bg-dark bg-opacity-75">All Permissions</span>
-                                                )
-                                            ) : role.permissions.length === 0 ? (
-                                                <span style={classic ? { fontSize: '9px', color: '#888', fontStyle: 'italic', fontFamily: xpFont } : undefined} className={classic ? '' : 'text-muted small fst-italic'}>None</span>
+                                                <span style={{ borderRadius: CHIP_RADIUS, background: '#e8e8e8', border: '1px solid #6a6a6a', color: '#000', padding: '0 4px', fontSize: '9px', fontFamily: xpFont, fontWeight: 'bold' }}>All Permissions</span>) : role.permissions.length === 0 ? (
+                                                <span style={{ fontSize: '9px', color: '#888', fontStyle: 'italic', fontFamily: xpFont }}>None</span>
                                             ) : (
                                                 <button
                                                     onClick={() => toggleExpanded(role.id)}
-                                                    style={classic ? {
+                                                    style={{
                                                         background: 'none', border: 'none', padding: 0, cursor: 'pointer',
                                                         fontFamily: xpFont, fontSize: '10px', color: '#00006e',
                                                         display: 'flex', alignItems: 'center', gap: 4,
-                                                    } : { background: 'none', border: 'none', padding: 0, cursor: 'pointer', fontSize: '0.8rem', color: '#0d6efd', display: 'flex', alignItems: 'center', gap: 4 }}
+                                                    }}
                                                 >
                                                     <i className={`bi ${isExpanded ? 'bi-caret-down-fill' : 'bi-caret-right-fill'}`} style={{ fontSize: 8 }} />
                                                     {role.permissions.length} permission{role.permissions.length !== 1 ? 's' : ''}
                                                 </button>
                                             )}
                                         </td>
-                                        <td style={classic ? tdBase : undefined}>
+                                        <td style={tdBase}>
                                             {hasScope ? (
                                                 <button
                                                     onClick={() => toggleExpanded(role.id)}
-                                                    style={classic ? {
+                                                    style={{
                                                         background: 'none', border: 'none', padding: 0, cursor: 'pointer',
                                                         fontFamily: xpFont, fontSize: '10px', color: '#00006e',
                                                         display: 'flex', alignItems: 'center', gap: 4,
-                                                    } : { background: 'none', border: 'none', padding: 0, cursor: 'pointer', fontSize: '0.8rem', color: '#0d6efd', display: 'flex', alignItems: 'center', gap: 4 }}
+                                                    }}
                                                 >
                                                     <i className={`bi ${isExpanded ? 'bi-caret-down-fill' : 'bi-caret-right-fill'}`} style={{ fontSize: 8 }} />
                                                     Restricted ({scopeCount})
                                                 </button>
                                             ) : (
-                                                <span style={classic ? { fontSize: '9px', color: '#888', fontStyle: 'italic', fontFamily: xpFont } : undefined} className={classic ? '' : 'text-muted small fst-italic'}>Unrestricted</span>
+                                                <span style={{ fontSize: '9px', color: '#888', fontStyle: 'italic', fontFamily: xpFont }}>Unrestricted</span>
                                             )}
                                         </td>
-                                        <td style={classic ? { ...tdBase, textAlign: 'center' as const } : undefined} className={classic ? '' : 'text-center'}>
+                                        <td style={{ ...tdBase, textAlign: 'center' as const }}>
                                             {count === 0 ? (
-                                                classic ? (
-                                                    <span style={{ fontFamily: xpFont, fontSize: 10, color: '#888' }}>0</span>
-                                                ) : (
-                                                    <span className="badge bg-light text-muted border">0</span>
-                                                )
-                                            ) : (
+                                                <span style={{ fontFamily: xpFont, fontSize: 10, color: '#888' }}>0</span>) : (
                                                 /* Filters the users panel below to this role — the count was a dead end before. */
                                                 <button
                                                     title={isFiltered ? 'Clear filter on the users list below' : 'Show these users in the list below'}
                                                     onClick={() => onFilterUsers(role.id)}
-                                                    style={classic ? {
+                                                    style={{
                                                         fontFamily: xpFont, fontSize: 10, cursor: 'pointer',
                                                         background: isFiltered ? '#dde8f5' : 'none',
                                                         border: `1px solid ${isFiltered ? '#7f9db9' : 'transparent'}`,
                                                         color: '#00006e', padding: '0 5px', textDecoration: isFiltered ? 'none' : 'underline',
-                                                    } : undefined}
-                                                    className={classic ? '' : `btn btn-sm py-0 px-2 ${isFiltered ? 'btn-primary' : 'btn-outline-secondary'}`}
+                                                    }}
                                                 >{count}</button>
                                             )}
                                         </td>
-                                        <td style={classic ? { ...tdBase, borderRight: 'none', textAlign: 'right' as const } : undefined} className={classic ? '' : 'text-end pe-4'}>
-                                            {classic ? (
-                                                <>
+                                        <td style={{ ...tdBase, borderRight: 'none', textAlign: 'right' as const }}>
+                                            {<>
                                                     <button
                                                         title="Edit"
                                                         onClick={() => { setFormRole(role); setFormMode('edit'); }}
@@ -265,22 +246,7 @@ export default function SettingsRolesTab({
                                                         onMouseEnter={e => { if (count === 0) { (e.currentTarget as HTMLButtonElement).style.borderColor = '#7f9db9'; (e.currentTarget as HTMLButtonElement).style.background = '#e8f0f8'; } }}
                                                         onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.borderColor = 'transparent'; (e.currentTarget as HTMLButtonElement).style.background = 'none'; }}
                                                     ><i className="bi bi-trash"></i></button>
-                                                </>
-                                            ) : (
-                                                <>
-                                                    <button className="btn btn-sm btn-link" onClick={() => { setFormRole(role); setFormMode('edit'); }}>
-                                                        <i className="bi bi-pencil-square"></i>
-                                                    </button>
-                                                    <button
-                                                        className="btn btn-sm btn-link text-danger"
-                                                        title={count > 0 ? `Assigned to ${count} user(s)` : 'Delete'}
-                                                        disabled={count > 0}
-                                                        onClick={() => deleteRole(role)}
-                                                    >
-                                                        <i className="bi bi-trash"></i>
-                                                    </button>
-                                                </>
-                                            )}
+                                                </>}
                                         </td>
                                     </tr>
                                     {isExpanded && (sections.length > 0 || hasScope) && (
@@ -288,14 +254,13 @@ export default function SettingsRolesTab({
                                             <td colSpan={6} style={{ padding: 0, border: 'none' }}>
                                                 <div style={{ display: 'flex', flexDirection: 'column', gap: sections.length > 0 && hasScope ? 6 : 0 }}>
                                                     {sections.length > 0 && (
-                                                        <PermissionBreakdown permissions={role.permissions} classic={classic} />
+                                                        <PermissionBreakdown permissions={role.permissions} />
                                                     )}
                                                     {hasScope && (
                                                         <ScopeBreakdown
                                                             workCenterTypes={wcTypes}
                                                             categories={catIds.map(id => categoryName.get(id) || id)}
                                                             locations={locIds.map(id => locationName.get(id) || id)}
-                                                            classic={classic}
                                                         />
                                                     )}
                                                 </div>
@@ -307,7 +272,7 @@ export default function SettingsRolesTab({
                             })}
                             {roles.length === 0 && (
                                 <tr>
-                                    <td colSpan={6} style={classic ? { ...tdBase, textAlign: 'center' as const, fontStyle: 'italic', color: '#888' } : undefined} className={classic ? '' : 'text-center text-muted py-4'}>
+                                    <td colSpan={6} style={{ ...tdBase, textAlign: 'center' as const, fontStyle: 'italic', color: '#888' }}>
                                         No roles defined yet.
                                     </td>
                                 </tr>
@@ -322,7 +287,6 @@ export default function SettingsRolesTab({
                 mode={formMode || 'create'}
                 role={formRole}
                 allPermissions={allPermissions}
-                classic={classic}
                 onSubmit={(payload) => formMode === 'create' ? submitCreate(payload) : submitEdit(formRole!.id, payload)}
             />
         </SettingsPanel>

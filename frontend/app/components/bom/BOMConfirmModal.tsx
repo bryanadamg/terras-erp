@@ -133,7 +133,7 @@ const PlanNode = memo(({ node }: { node: BOMPlanNode }) => {
                     <span style={{ marginLeft: 'auto', fontSize: 10, color: '#333' }}>
                         {node.qtyLabel}
                     </span>
-                    <CodeChip code={node.bomCode || '(no code)'} classic tone="accent" />
+                    <CodeChip code={node.bomCode || '(no code)'} tone="accent" />
                 </div>
 
                 {node.skipReason && (

@@ -11,30 +11,6 @@
   --primary-dark: #4338ca;
   --bg-color: #f3f4f6;
   --text-color: #1f2937;
-}
-
-/* ============================================================
-   Interface scale — the app renders denser than the browser's
-   100%, so nobody has to reach for Ctrl+minus. `zoom` on the root
-   is the same mechanism as browser zoom: lengths shrink and the
-   layout genuinely reflows (unlike transform: scale), so more rows
-   fit and nothing overlaps.
-   The scale is a data attribute on <html> (set pre-paint by the
-   boot script in layout.tsx, then by ThemeContext) rather than an
-   inline style, so the mobile and print overrides below can still
-   win — an inline custom property would outrank them.
-   Caveat that comes with zoom: viewport units are NOT rescaled by
-   it, so a bare 100vh renders at 80% of the window (verified in
-   Chrome). Everything sizing to the window therefore goes through
-   var(--app-vh) / --app-dvh / --app-vw, which divide the zoom back
-   out — e.g. 70vh is written calc(var(--app-vh) * 70 / 100).
-   Never reintroduce a raw vh/vw unit.
-   ============================================================ */
-:root {
-  --ui-zoom: 1;
-  --app-vh: calc(100vh / var(--ui-zoom));
-  --app-dvh: calc(100dvh / var(--ui-zoom));
-  --app-vw: calc(100vw / var(--ui-zoom));
 
   /* terras-ui paints its wordmark from --terras-font-display, which defaults to
      its own modern stack. Point it at the display face layout.tsx actually
@@ -42,51 +18,35 @@
      font instead of IBM Plex Sans JP. */
   --terras-font-display: var(--font-display);
 
-  /* The package's viewport hooks. It defaults them to raw 100dvh/100vw, which is
-     wrong here for the same reason a raw vh is wrong anywhere in this file:
-     `html { zoom }` scales them, so a full-height package surface came up short
-     by exactly (1 - ui-zoom) — a white band under the sign-in screen at any
-     scale below 100%. tokens.css documents these as indirection hooks meant to
-     be redefined per app; these are the divided-out values to redefine them to. */
-  --terras-app-vh: var(--app-vh);
-  --terras-app-vw: var(--app-vw);
-}
-html { zoom: var(--ui-zoom); }
-html[data-ui-scale="70"]  { --ui-zoom: 0.7; }
-html[data-ui-scale="75"]  { --ui-zoom: 0.75; }
-html[data-ui-scale="80"]  { --ui-zoom: 0.8; }
-html[data-ui-scale="90"]  { --ui-zoom: 0.9; }
-html[data-ui-scale="100"] { --ui-zoom: 1; }
-html[data-ui-scale="110"] { --ui-zoom: 1.1; }
-
-/* Opt a subtree back out to 1:1. Zoom is multiplicative down the
-   tree, so dividing by the root zoom cancels it exactly.
-   For the print designer this is load-bearing, not cosmetic: its
-   drag handlers measure with getBoundingClientRect (screen px) and
-   write the result straight back into style.left/top (layout px).
-   Those two units only agree at effective zoom 1 — at 80% every
-   guide line and drop target would land 20% off. Cancelling zoom
-   for the whole canvas keeps that math correct with no changes to
-   the handlers, and a WYSIWYG paper surface wants 1:1 regardless. */
-.ui-scale-exempt {
-  zoom: calc(1 / var(--ui-zoom));
-  /* Effective zoom is back to 1 in here, so the viewport units need no
-     correction — leaving the compensated ones would overshoot by 1/zoom. */
-  --app-vh: 100vh;
-  --app-dvh: 100dvh;
-  --app-vw: 100vw;
+  /* Same bridge for the package's mono stack, which every aligned number in its
+     components (a ProgressBar's trailing "NN%") is set in. It defaults to a
+     Consolas-first stack; this app has exactly ONE mono stack — CODE_FONT in
+     components/shared/typography.ts — and a second one would render the same
+     digits at a different width two cells apart. Keep the two literals equal. */
+  --terras-font-mono: 'Courier New', Consolas, monospace;
 }
 
-/* Phones drive the mobile shell, where 44px touch targets are the
-   point — never shrink those. Print goes to paper at 1:1 so the
-   print templates keep their A4 measurements. Both must sit after
-   the scale rules: equal specificity, last one wins. */
-@media (max-width: 767px) {
-  html[data-ui-scale] { --ui-zoom: 1; }
-}
-@media print {
-  html[data-ui-scale] { --ui-zoom: 1; }
-}
+/* ============================================================
+   Interface scale lives in @bryanadamg/terras-ui/scale.css, imported
+   in layout.tsx — this file's block moved there verbatim (same var
+   names, same steps), and the package bridges its own --terras-app-*
+   hooks to the divided-out units itself.
+   What that sheet gives this app, and the rules that come with it:
+     --ui-zoom            root zoom, off <html data-ui-scale>
+     --app-vh/-dvh/-vw    viewport units with the zoom divided back
+                          out. `zoom` does NOT rescale viewport units,
+                          so a bare 100vh renders at 80% of the window
+                          (verified in Chrome). Never reintroduce a raw
+                          vh/vw unit in this file — write 70vh as
+                          calc(var(--app-vh) * 70 / 100).
+     .ui-scale-exempt     opt a subtree back to 1:1. Load-bearing for
+                          the print designer, whose drag handlers
+                          measure in screen px and write layout px —
+                          two units that only agree at zoom 1 — and for
+                          a camera viewfinder that measures its own box.
+   Phones (44px touch targets) and print (A4 measurements) are pinned
+   back to 1 by that sheet.
+   ============================================================ */
 
 body {
   background-color: var(--bg-color);
@@ -128,314 +88,16 @@ body {
   margin: 0;
 }
 
-/* ============================================================
-   UI Style: Modern — "Blueprint" engineering-drafting design system
-   Cool drafting paper, faint grid, drafting-blue accent, mono display
-   type + uppercase tracked labels, hairline borders, near-zero radius.
-   Scoped entirely under .ui-style-modern so Classic is never touched.
-   Setting the CSS custom props here cascades into the base component
-   rules (.btn-primary, .form-control:focus, etc.), so accent colour
-   flows through without per-component overrides.
-   ============================================================ */
-.ui-style-modern {
-  --sidebar-width: 200px;     /* match classic exactly → identical content width, tables fit the same */
-  --app-header-h: 56px;       /* shared with the sidebar brand block — see .ui-style-classic */
-  --primary-color: #1f5b8a;   /* drafting blue */
-  --primary-light: #2f6ea3;   /* lighter draft blue */
-  --primary-dark:  #174a73;   /* deep draft blue */
-  --primary-soft:  #e1ecf5;   /* pale blueprint wash */
-  --bg-color:      #eef2f7;   /* cool drafting paper */
-  --surface:       #fafcff;   /* near-white panel, faint cool cast */
-  --border:        #c5d1de;   /* blue-grey hairline */
-  --border-strong: #a9bacb;
-  --row-line:      #d2dde8;   /* table row separators */
-  --stripe:        #eef3f8;   /* zebra band */
-  --text:          #1d2733;   /* ink */
-  --text-muted:    #5d6e80;   /* blue-grey muted */
-  --grid-line:     rgba(31,91,138,0.05);  /* drafting grid */
-  --radius:        3px;       /* sharp drafting corners */
-  --radius-sm:     2px;
-  --font-mono: "Consolas", "Cascadia Mono", "SFMono-Regular", "Menlo", "Courier New", monospace;
-  /* Hairline, low-spread shadows — drawn lines, not floating cards */
-  --shadow-sm: 0 1px 0 rgba(31,91,138,0.10);
-  --shadow-md: 0 2px 6px rgba(31,91,138,0.12);
-
-  background-color: var(--bg-color);
-  color: var(--text);
-  font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-}
-
-/* Mono display type — headings & titles read as drafting annotations */
-.ui-style-modern h1, .ui-style-modern h2, .ui-style-modern h3,
-.ui-style-modern h4, .ui-style-modern h5, .ui-style-modern h6,
-.ui-style-modern .card-title, .ui-style-modern .modal-title {
-  font-family: var(--font-mono);
-  letter-spacing: 0.01em;
-}
-
-.ui-style-modern .main-content {
-  background:
-    linear-gradient(var(--grid-line) 1px, transparent 1px) 0 0 / 100% 24px,
-    linear-gradient(90deg, var(--grid-line) 1px, transparent 1px) 0 0 / 24px 100%,
-    var(--bg-color) !important;
-}
-
-/* Match Classic's 10px horizontal content gutter so tables get the same width */
-.ui-style-modern .main-content > .p-4 {
-  padding: 12px 10px !important;
-}
-
-/* Sidebar separation from the grey canvas */
-.ui-style-modern .sidebar {
-  border-right: 1px solid var(--border);
-  box-shadow: 1px 0 3px rgba(15,23,42,0.03);
-}
-
-/* App header (top bar) */
-.ui-style-modern .app-header {
-  height: var(--app-header-h);
-  background: var(--surface);
-  border-bottom: 1px solid var(--border);
-  box-shadow: var(--shadow-sm);
-}
-.ui-style-modern .app-header h5 {
-  color: var(--text);
-  font-weight: 700;
-}
-
-/* Top-bar controls — unify the scanner / settings / language / user / logout
-   cluster onto the modern system (kills the cyan-gear + grey + pill mismatch). */
-.ui-style-modern .app-header .btn {
-  height: 34px;
-  border-radius: 2px !important;
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  font-weight: 600;
-}
-/* Neutral action chips: scanner, settings gear, user pill */
-.ui-style-modern .app-header .btn-outline-secondary,
-.ui-style-modern .app-header .btn-outline-info,
-.ui-style-modern .app-header .btn-light,
-.ui-style-modern .app-header .dropdown > .btn {
-  background: #fff !important;
-  border: 1px solid var(--border) !important;
-  color: #475569 !important;
-}
-.ui-style-modern .app-header .btn-outline-secondary:hover,
-.ui-style-modern .app-header .btn-outline-info:hover,
-.ui-style-modern .app-header .btn-light:hover,
-.ui-style-modern .app-header .dropdown > .btn:hover {
-  background: var(--primary-soft) !important;
-  border-color: var(--primary-light) !important;
-  color: var(--primary-color) !important;
-}
-/* Username text stays dark on the user pill (icon hover handled above) */
-.ui-style-modern .app-header .dropdown > .btn {
-  color: var(--text) !important;
-}
-/* Language selector → same chip treatment, overrides the pill/bg-light utilities */
-.ui-style-modern .app-header .form-select {
-  background-color: var(--surface) !important;
-  border: 1px solid var(--border) !important;
-  border-radius: 2px !important;
-  height: 34px !important;
-  color: #475569;
-}
-/* Logout — refined danger, matched shape + height */
-.ui-style-modern .app-header .btn-outline-danger {
-  background: #fff !important;
-  border: 1px solid #f0c2c2 !important;
-  color: #dc2626 !important;
-}
-.ui-style-modern .app-header .btn-outline-danger:hover {
-  background: #fef2f2 !important;
-  border-color: #e89393 !important;
-  color: #b91c1c !important;
-}
-
-/* Outer shell of a page/table view in the modern theme — the counterpart of the
-   classic `xpBevel`, kept at PANEL_RADIUS (xpTheme.tsx) so a view frame reads the
-   same in both themes and stays one step ROUNDER than the FormSection boxes
-   inside it. Scoped to `.shell-window` rather than `.card` on purpose: a plain
-   `.card` is also every KPI tile and nested panel, and rounding those to the
-   frame radius flattens the nesting the scale exists to express. The clip is what
-   keeps the square title bar inside the rounded corner. NOT applied to
-   `.classic-header` / `.app-header` — that bar is full-bleed viewport chrome. */
-.card.shell-window,
-.ui-style-modern .card.shell-window {
+/* Outer shell of a page/table view — the CSS half of the classic `xpBevel`, kept
+   at PANEL_RADIUS (xpTheme.tsx) so a view frame stays one step ROUNDER than the
+   FormSection boxes inside it. Scoped to `.shell-window` rather than `.card` on
+   purpose: a plain `.card` is also every KPI tile and nested panel, and rounding
+   those to the frame radius flattens the nesting the scale exists to express. The
+   clip is what keeps the square title bar inside the rounded corner. NOT applied
+   to `.classic-header` / `.app-header` — that bar is full-bleed viewport chrome. */
+.card.shell-window {
   border-radius: 8px;
   overflow: hidden;
-}
-
-/* Cards / panels — calm, no hover lift, denser padding (ERP density) */
-.ui-style-modern .card {
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  box-shadow: var(--shadow-sm);
-  background: var(--surface);
-  margin-bottom: 16px;
-}
-.ui-style-modern .card:hover {
-  transform: none;
-  box-shadow: var(--shadow-md);
-}
-.ui-style-modern .card-header {
-  background: #e8eef5;
-  border-bottom: 1px solid var(--border-strong);
-  padding: 9px 14px;
-  border-radius: var(--radius) var(--radius) 0 0 !important;
-}
-.ui-style-modern .card-body {
-  padding: 13px 14px;
-}
-.ui-style-modern .card-title {
-  color: var(--text);
-  font-weight: 700;
-  font-size: 1rem;
-}
-
-/* Buttons */
-.ui-style-modern .btn {
-  border-radius: var(--radius-sm);
-  font-weight: 600;
-}
-.ui-style-modern .btn-primary {
-  background-color: var(--primary-color);
-  border-color: var(--primary-color);
-}
-.ui-style-modern .btn-primary:hover,
-.ui-style-modern .btn-primary:focus {
-  background-color: var(--primary-dark);
-  border-color: var(--primary-dark);
-}
-.ui-style-modern .btn-outline-primary {
-  color: var(--primary-color);
-  border-color: var(--primary-color);
-}
-.ui-style-modern .btn-outline-primary:hover {
-  background-color: var(--primary-color);
-  border-color: var(--primary-color);
-  color: #fff;
-}
-.ui-style-modern .text-primary {
-  color: var(--primary-color) !important;
-}
-.ui-style-modern a {
-  color: var(--primary-color);
-}
-
-/* Forms — tighter */
-.ui-style-modern .form-label {
-  font-weight: 700;
-  color: #3a4a5c;
-  font-size: 0.72rem;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-  margin-bottom: 0.3rem;
-}
-.ui-style-modern .form-control,
-.ui-style-modern .form-select {
-  border-radius: var(--radius-sm);
-  border: 1px solid var(--border-strong);
-  font-size: 0.85rem;
-  padding: 0.35rem 0.6rem;
-}
-.ui-style-modern .form-control:focus,
-.ui-style-modern .form-select:focus {
-  border-color: var(--primary-light);
-  box-shadow: 0 0 0 3px rgba(31,91,138,0.14);
-}
-
-/* Tables — dense rows, clear separators, zebra striping, blue hover */
-.ui-style-modern .table {
-  --bs-table-bg: transparent;
-}
-/* Body dimensions mirror Classic (padding 4px 8px, 11px head / 12px body) so
-   row width stays close. Headers go UPPERCASE tracked — the Blueprint look —
-   so a very wide table may gain a little header width vs Classic; spacing is
-   kept tight (.03em) to minimise it. */
-.ui-style-modern .table th {
-  text-transform: uppercase;
-  letter-spacing: 0.03em;
-  font-size: 11px;
-  color: #4a5d70;
-  background: #e4ebf3;
-  border-bottom: 1.5px solid var(--border-strong);
-  font-weight: 700;
-  padding: 4px 8px;
-}
-.ui-style-modern .table td {
-  color: #334155;
-  border-bottom: 1px solid var(--row-line);
-  padding: 4px 8px;
-  font-size: 12px;
-}
-.ui-style-modern .table > tbody > tr:nth-of-type(even) > * {
-  background-color: var(--stripe);
-}
-.ui-style-modern .table-hover > tbody > tr:hover > * {
-  background-color: #dce8f3;
-}
-
-/* Badges */
-.ui-style-modern .badge {
-  border-radius: var(--radius);
-  font-weight: 600;
-}
-
-/* Modals */
-.ui-style-modern .modal-content {
-  border: 1px solid var(--border-strong);
-  border-radius: 4px;
-  box-shadow: 0 18px 44px rgba(20,40,60,0.20);
-}
-.ui-style-modern .modal-header,
-.ui-style-modern .modal-footer {
-  border-color: var(--border);
-}
-
-/* Dropdown menus */
-.ui-style-modern .dropdown-menu {
-  border: 1px solid var(--border-strong);
-  border-radius: 3px;
-  box-shadow: var(--shadow-md);
-  padding: 5px;
-}
-.ui-style-modern .dropdown-item {
-  border-radius: 2px;
-  padding: 8px 10px;
-}
-.ui-style-modern .dropdown-item:hover,
-.ui-style-modern .dropdown-item:focus {
-  background: var(--primary-soft);
-  color: var(--primary-dark);
-}
-
-/* Slim scrollbars, thumb rounded to the shared BUTTON_RADIUS (xpTheme.tsx) */
-.ui-style-modern ::-webkit-scrollbar {
-  width: 10px;
-  height: 10px;
-}
-.ui-style-modern ::-webkit-scrollbar-thumb {
-  background: #aebfce;
-  border-radius: 3px;
-  border: 2px solid transparent;
-  background-clip: content-box;
-}
-.ui-style-modern ::-webkit-scrollbar-thumb:hover {
-  background: #8499ad;
-  background-clip: content-box;
-}
-.ui-style-modern ::-webkit-scrollbar-track {
-  background: transparent;
-}
-
-/* Clickable KPI cards: hover affordance without the floating-card lift
-   (the old base .card:hover transform was removed). */
-.ui-style-modern .kpi-clickable:hover {
-  box-shadow: var(--shadow-md);
-  background: var(--primary-soft);
 }
 
 /* UI Style: Classic (Windows XP) */
@@ -552,21 +214,11 @@ body.window-chrome-inactive {
   box-shadow: inset 1px 1px 2px rgba(0,0,0,0.2) !important;
 }
 
-.classic-header .btn-outline-danger {
-  background: #ff4d4d !important;
-  color: white !important;
-  border: 1px solid #800000 !important;
-  border-radius: 3px !important;
-  height: 22px !important;
-  padding: 0 8px !important;
-  font-size: 10px !important;
-}
-
-.classic-header .btn-outline-danger:hover {
-  background: #cc0000 !important;
-  color: white !important;
-  border-color: #800000 !important;
-}
+/* The header's logout control is terras-ui's `LogoutButton` (MainLayout.tsx),
+   which carries this face inline — flat #ff4d4d over one #800000 border, 22px
+   against the 10px caps label, hover #cc0000 — off its own --terras-logout-*
+   tokens. The `.classic-header .btn-outline-danger` rules that painted it here
+   went with it: the control is flat chrome in the title band. */
 
 .classic-header .form-select-sm {
   background-color: white !important;
@@ -1670,42 +1322,12 @@ table {
   .xp-skel { animation: none; }
 }
 
-/* Toast Styles */
-.toast {
-    background: white;
-    border-radius: 8px;
-    min-width: 250px;
-}
-
-.toast-type-success { border-left: 4px solid #10b981 !important; color: #065f46; }
-.toast-type-danger { border-left: 4px solid #ef4444 !important; color: #991b1b; }
-.toast-type-warning { border-left: 4px solid #f59e0b !important; color: #92400e; }
-.toast-type-info { border-left: 4px solid #3b82f6 !important; color: #1e40af; }
-
-/* Modern Theme Toasts */
-.ui-style-modern .toast {
-    border-radius: 3px;
-    backdrop-filter: blur(8px);
-    background: rgba(250, 252, 255, 0.96);
-}
-
-/* Classic Theme Toasts */
-.ui-style-classic .toast {
-    background-color: #ffffe1 !important;
-    border: 1px solid #000000 !important;
-    border-radius: 0 !important;
-    color: black !important;
-    font-family: var(--xp-font);
-    font-size: 11px;
-}
-/* Keep type distinguishable: XP tooltip body + colored left edge */
-.ui-style-classic .toast-type-success { border-left: 4px solid #2d7a2d !important; }
-.ui-style-classic .toast-type-danger  { border-left: 4px solid #c00000 !important; }
-.ui-style-classic .toast-type-warning { border-left: 4px solid #b8860b !important; }
-.ui-style-classic .toast-type-info    { border-left: 4px solid #0058e6 !important; }
-.ui-style-classic .toast {
-    box-shadow: 2px 2px 4px rgba(0,0,0,0.3) !important;
-}
+/* Toast chrome lives in terras-ui: the viewport's corner, stacking and entrance
+   in its chrome.css (`.terras-toast-viewport` / `.terras-toast`), the panel face
+   inline on the component. The Bootstrap `.toast` + `.toast-type-*` rules that
+   stood here went with the local implementation — nothing renders them now, and
+   a toast is a bevelled panel with a tone stripe rather than the XP tooltip body
+   it used to borrow. */
 
 /* Row / select-all multi-select checkboxes (RowCheckbox, SelectAllCheckbox in
    listViewTheme.tsx). Hover ring only — the box itself never moves, so a dense

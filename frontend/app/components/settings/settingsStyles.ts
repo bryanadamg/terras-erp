@@ -86,20 +86,21 @@ export const settingsGrid = (min = 220): React.CSSProperties => ({
  * destructive-adjacent control to full bleed; the rule is right-aligned, sized
  * to its label, with generous space above the rule that separates it.
  */
-export const settingsActions = (classic: boolean): React.CSSProperties => ({
+// retires its last caller (shared/QtyFormulaEditor.tsx).
+export const settingsActions = (): React.CSSProperties => ({
     display: 'flex',
     justifyContent: 'flex-end',
     alignItems: 'center',
     gap: 8,
     marginTop: SETTINGS_GAP,
     paddingTop: SETTINGS_FIELD_GAP,
-    borderTop: `1px solid ${classic ? '#dedbd2' : '#eef1f6'}`,
+    borderTop: '1px solid #dedbd2',
 });
 
 /** Muted helper line under a field or beside an action. */
-export const settingsHint = (classic: boolean): React.CSSProperties => ({
-    fontFamily: classic ? xpFont : undefined,
-    fontSize: classic ? 10 : 11,
+export const settingsHint = (): React.CSSProperties => ({
+    fontFamily: xpFont,
+    fontSize: 10,
     color: '#6b6558',
     marginTop: 3,
 });

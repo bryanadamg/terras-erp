@@ -7,7 +7,6 @@ import ColorsVariantView from '../components/colors/ColorsVariantView';
 import { useData } from '../context/DataContext';
 import { usePaginatedFetch } from '../context/usePaginatedList';
 import { useToast } from '../components/shared/Toast';
-import { useTheme } from '../context/ThemeContext';
 import { useUser } from '../context/UserContext';
 import { Tabs } from '../components/shared/Tabs';
 import { PageTitleBar, viewShellStyle } from '../components/shared/shellTheme';
@@ -18,8 +17,6 @@ export default function ColorsPage() {
     const { partners, attributes, authFetch, refreshItemMetadata } = useData();
     const customers = (partners || []).filter((p: any) => p.type === 'CUSTOMER');
     const { showToast } = useToast();
-    const { uiStyle } = useTheme();
-    const classic = uiStyle === 'classic';
     const { hasPermission } = useUser();
     const searchParams = useSearchParams();
     const router = useRouter();
@@ -163,12 +160,11 @@ export default function ColorsPage() {
     };
 
     return (
-        <div style={viewShellStyle(classic)}>
+        <div style={viewShellStyle()}>
 
-            <PageTitleBar classic={classic} icon="bi-palette2" title="Colors" />
+            <PageTitleBar icon="bi-palette2" title="Colors" />
 
             <Tabs
-                classic={classic}
                 activeKey={tab}
                 onChange={(k) => setTab(k as 'codes' | 'variant')}
                 tabs={[

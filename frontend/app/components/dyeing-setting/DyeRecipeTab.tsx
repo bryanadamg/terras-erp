@@ -5,7 +5,6 @@ import { useRouter } from 'next/navigation';
 import DyeRecipePrintView from './DyeRecipePrintView';
 import { useToast } from '../shared/Toast';
 import { useConfirm } from '../../context/ConfirmContext';
-import { useTheme } from '../../context/ThemeContext';
 import { usePaginatedFetch } from '../../context/usePaginatedList';
 import { useUser } from '../../context/UserContext';
 import CodeConfigModal, { CodeConfig } from '../shared/CodeConfigModal';
@@ -48,13 +47,9 @@ const modernPanel: React.CSSProperties = {
     border: '1px solid #dbe1ea', background: '#fff', borderRadius: 9,
 };
 
-const inputStyle = (classic: boolean): React.CSSProperties => classic ? xpInput : modernInput;
-const btnStyle = (classic: boolean): React.CSSProperties => classic ? xpBtn : modernBtn;
-const primaryBtnStyle = (classic: boolean): React.CSSProperties => classic ? xpBtn : {
-    fontFamily: modernFont, fontSize: 12.5, fontWeight: 600, padding: '5px 12px',
-    background: '#2563eb', color: '#fff', border: 'none',
-    borderRadius: 7, cursor: 'pointer',
-};
+const inputStyle = (): React.CSSProperties => xpInput;
+const btnStyle = (): React.CSSProperties => xpBtn;
+const primaryBtnStyle = (): React.CSSProperties => xpBtn;
 
 const LINE_TYPES = ['DYE', 'AUXILIARY', 'SALT', 'OTHER'];
 const RECIPE_PAGE_SIZE = 25;
@@ -107,9 +102,7 @@ interface Props {
 }
 
 export default function DyeRecipeTab({ items, attributes, authFetch, initialColorId, onColorConsumed }: Props) {
-    const { uiStyle } = useTheme();
     const router = useRouter();
-    const classic = uiStyle === 'classic';
     const { hasPermission, hasAnyPermission } = useUser();
     const canManage = hasAnyPermission('dye_recipe.create', 'dye_recipe.edit', 'dye_recipe.delete');
     const { showToast } = useToast();
@@ -475,9 +468,7 @@ export default function DyeRecipeTab({ items, attributes, authFetch, initialColo
     // Table header cells build on the shared listViewTheme `lvTh` so nested recipe
     // tables match the library tables; classic adds the XP thead gradient/underline
     // that lvTh leaves to the parent thead.
-    const thStyle = (extra?: React.CSSProperties): React.CSSProperties => classic
-        ? { ...lvTh(true), ...lvThead(true), ...extra }
-        : { ...lvTh(false), ...extra };
+    const thStyle = (extra?: React.CSSProperties): React.CSSProperties => ({ ...lvTh(), ...lvThead(), ...extra });
 
     // Expandable-row detail: full recipe breakdown (chemical lines, wash baths,
     // finishing, attribute matches) shown inline under the table row.
@@ -485,11 +476,11 @@ export default function DyeRecipeTab({ items, attributes, authFetch, initialColo
         // Dense inline panel — matches WorkOrderListView's expanded-row skin
         // (flat single-tone columns, tiny uppercase headers, no card chrome).
         // Dense sub-table: it occupies one column of the three-pane grid below.
-        const subTh = lvSubTh(classic, true);
-        const subTd = lvSubTd(classic, true);
+        const subTh = lvSubTh();
+        const subTd = lvSubTd();
         const panelStyle: React.CSSProperties = {
             display: 'grid', gridTemplateColumns: '260px minmax(180px, 1fr) 260px',
-            border: classic ? '1px solid #7f9db9' : '1px solid #dee2e6',
+            border: '1px solid #7f9db9',
             fontFamily: xpFont, fontSize: 10,
         };
         const colHeaderStyle: React.CSSProperties = {
@@ -546,7 +537,7 @@ export default function DyeRecipeTab({ items, attributes, authFetch, initialColo
                         <div style={emptyStyle}>No chemical lines defined.</div>
                     ) : (
                         <div style={{ maxHeight: 200, overflowY: 'auto' }}>
-                            <table style={{ ...lvSubTable(classic), border: 'none' }}>
+                            <table style={{ ...lvSubTable(), border: 'none' }}>
                                 <thead>
                                     <tr>
                                         <th style={{ ...subTh, width: 20 }}>#</th>
@@ -564,14 +555,14 @@ export default function DyeRecipeTab({ items, attributes, authFetch, initialColo
                                         const rate = line.qty_per_liter ?? line.qty_per_100kg ?? null;
                                         const rateUnit = line.uom_name || (line.qty_per_liter != null ? 'g/L' : line.qty_per_100kg != null ? '/100kg' : '—');
                                         return (
-                                            <tr key={idx} style={lvSubRow(classic, idx)}>
+                                            <tr key={idx} style={lvSubRow(idx)}>
                                                 <td style={{ ...subTd, color: '#666' }}>{idx + 1}</td>
                                                 <td style={subTd}>
                                                     <span style={{ borderRadius: CHIP_RADIUS,
-                                                        background: typeColor(line.chemical_type, classic).bg,
-                                                        color: typeColor(line.chemical_type, classic).fg,
+                                                        background: typeColor(line.chemical_type).bg,
+                                                        color: typeColor(line.chemical_type).fg,
                                                         padding: '0 4px', fontWeight: 'bold', fontSize: 8,
-                                                        border: `1px solid ${typeColor(line.chemical_type, classic).border}`,
+                                                        border: `1px solid ${typeColor(line.chemical_type).border}`,
                                                     }}>
                                                         {line.chemical_type || '—'}
                                                     </span>
@@ -619,22 +610,17 @@ export default function DyeRecipeTab({ items, attributes, authFetch, initialColo
 
     return (
         <>
-        <div style={classic
-            ? { display: 'flex', flexDirection: 'column', height: '100%', minHeight: 0, ...xpPanel, border: 'none' }
-            : { display: 'flex', flexDirection: 'column', height: '100%', minHeight: 0, background: '#fff' }
-        }>
+        <div style={{ display: 'flex', flexDirection: 'column', height: '100%', minHeight: 0, ...xpPanel, border: 'none' }}>
             {/* Toolbar */}
-            <div style={classic
-                ? { background: 'linear-gradient(to bottom, #f5f4ef, #e0dfd8)', borderBottom: '1px solid #b0a898', padding: '4px 8px', display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap', flexShrink: 0 }
-                : { background: '#fff', borderBottom: '1px solid #dbe1ea', padding: '8px 10px', display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap', flexShrink: 0 }}>
-                <SearchField classic={classic} value={searchText} onChange={setSearchText} placeholder="Search code or name…" width={240} />
-                <ToolbarCount classic={classic} right>
+            <div style={{ background: 'linear-gradient(to bottom, #f5f4ef, #e0dfd8)', borderBottom: '1px solid #b0a898', padding: '4px 8px', display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap', flexShrink: 0 }}>
+                <SearchField value={searchText} onChange={setSearchText} placeholder="Search code or name…" width={240} />
+                <ToolbarCount right>
                     {total.toLocaleString()} recipe{total !== 1 ? 's' : ''}
                 </ToolbarCount>
                 {canManage && (
                     <>
-                        <span style={lvSep(classic)} />
-                        <ToolbarButton classic={classic} tone="create" icon="bi-plus-lg" onClick={openCreate}>New Recipe</ToolbarButton>
+                        <span style={lvSep()} />
+                        <ToolbarButton tone="create" icon="bi-plus-lg" onClick={openCreate}>New Recipe</ToolbarButton>
                     </>
                 )}
             </div>
@@ -642,25 +628,25 @@ export default function DyeRecipeTab({ items, attributes, authFetch, initialColo
             {/* Table */}
             <div style={{ flex: 1, minHeight: 0, background: '#fff', overflow: 'auto' }}>
                 <table style={{ width: '100%', borderCollapse: 'collapse', background: '#fff' }}>
-                    <thead style={lvThead(classic, true)}>
+                    <thead style={lvThead()}>
                         <tr>
-                            <th style={{ ...lvTh(classic), width: 30 }}></th>
-                            <th style={{ ...lvTh(classic), width: 150 }}>Code</th>
-                            <th style={{ ...lvTh(classic), width: 130 }}>Color Code</th>
-                            <th style={{ ...lvTh(classic), width: 150 }}>Color Variant</th>
-                            <th style={lvTh(classic)}>Name</th>
-                            <th style={{ ...lvTh(classic), width: 150 }}>Color Standard</th>
-                            <th style={{ ...lvTh(classic), width: 110 }}>Substrate</th>
-                            <th style={{ ...lvTh(classic), width: 55, textAlign: 'center' }}>Lines</th>
-                            <th style={{ ...lvTh(classic), width: 80 }}>Status</th>
-                            <th style={{ ...lvTh(classic), width: 44, textAlign: 'right', borderRight: 'none' }}></th>
+                            <th style={{ ...lvTh(), width: 30 }}></th>
+                            <th style={{ ...lvTh(), width: 150 }}>Code</th>
+                            <th style={{ ...lvTh(), width: 130 }}>Color Code</th>
+                            <th style={{ ...lvTh(), width: 150 }}>Color Variant</th>
+                            <th style={lvTh()}>Name</th>
+                            <th style={{ ...lvTh(), width: 150 }}>Color Standard</th>
+                            <th style={{ ...lvTh(), width: 110 }}>Substrate</th>
+                            <th style={{ ...lvTh(), width: 55, textAlign: 'center' }}>Lines</th>
+                            <th style={{ ...lvTh(), width: 80 }}>Status</th>
+                            <th style={{ ...lvTh(), width: 44, textAlign: 'right', borderRight: 'none' }}></th>
                         </tr>
                     </thead>
                     <tbody ref={listBodyRef}>
                         {recipes.length === 0 && (loading ? (
-                            <TableSkeleton rows={8} cols={skel.cols ?? 10} classic={classic} tdStyle={lvTd(classic)} rowHeight={skel.rowHeight} fillHeight={skel.fillHeight} />
+                            <TableSkeleton rows={8} cols={skel.cols ?? 10} tdStyle={lvTd()} rowHeight={skel.rowHeight} fillHeight={skel.fillHeight} />
                         ) : (
-                            <TableEmpty colSpan={10} classic={classic} tdStyle={lvTd(classic)} message="No recipes found." />
+                            <TableEmpty colSpan={10} tdStyle={lvTd()} message="No recipes found." />
                         ))}
                         {recipes.map((recipe: any, idx: number) => {
                             const rid = String(recipe.id);
@@ -668,44 +654,44 @@ export default function DyeRecipeTab({ items, attributes, authFetch, initialColo
                             const lineCount = (recipe.lines || []).length;
                             return (
                                 <React.Fragment key={rid}>
-                                    <tr style={{ ...lvRow(classic, idx), ...(expanded ? { background: rowStateBg('expanded', classic) } : {}), cursor: 'pointer' }} onClick={() => toggleExpand(rid)}>
-                                        <ExpanderCell classic={classic} expanded={expanded} onToggle={() => toggleExpand(rid)} label="recipe detail" />
-                                        <td style={lvTd(classic)}>
-                                            <CodeChip code={recipe.code} classic={classic} tone="accent" />
+                                    <tr style={{ ...lvRow(idx), ...(expanded ? { background: rowStateBg('expanded') } : {}), cursor: 'pointer' }} onClick={() => toggleExpand(rid)}>
+                                        <ExpanderCell expanded={expanded} onToggle={() => toggleExpand(rid)} label="recipe detail" />
+                                        <td style={lvTd()}>
+                                            <CodeChip code={recipe.code} tone="accent" />
                                         </td>
-                                        <td style={lvTd(classic)}>
+                                        <td style={lvTd()}>
                                             {recipe.color_code ? (
                                                 <span
                                                     onClick={e => { e.stopPropagation(); router.push(`/colors?search=${encodeURIComponent(recipe.color_code)}`); }}
                                                     title={`Open ${recipe.color_code} in the Color Library`}
                                                     style={{ display: 'inline-flex', alignItems: 'center', cursor: 'pointer' }}
                                                 >
-                                                    <ColorSwatchChip label={recipe.color_code} classic={classic} hex={recipe.color_hex} title={`Open ${recipe.color_code} in the Color Library`} />
+                                                    <ColorSwatchChip label={recipe.color_code} hex={recipe.color_hex} title={`Open ${recipe.color_code} in the Color Library`} />
                                                 </span>
                                             ) : <span style={{ color: '#aaa' }}>—</span>}
                                         </td>
-                                        <td style={lvTd(classic)}>
+                                        <td style={lvTd()}>
                                             {recipe.color_variant_label ? (
-                                                <ColorSwatchChip label={recipe.color_variant_label} classic={classic} hex={recipe.color_variant_hex} />
+                                                <ColorSwatchChip label={recipe.color_variant_label} hex={recipe.color_variant_hex} />
                                             ) : <span style={{ color: '#aaa' }}>—</span>}
                                         </td>
-                                        <td style={lvTd(classic)}>{recipe.name}</td>
-                                        <td style={lvTd(classic)}>{recipe.color_standard || <span style={{ color: '#aaa' }}>—</span>}</td>
-                                        <td style={lvTd(classic)}>{recipe.substrate_type || <span style={{ color: '#aaa' }}>—</span>}</td>
-                                        <td style={{ ...lvTd(classic), textAlign: 'center' }}>{lineCount}</td>
-                                        <td style={lvTd(classic)}>
+                                        <td style={lvTd()}>{recipe.name}</td>
+                                        <td style={lvTd()}>{recipe.color_standard || <span style={{ color: '#aaa' }}>—</span>}</td>
+                                        <td style={lvTd()}>{recipe.substrate_type || <span style={{ color: '#aaa' }}>—</span>}</td>
+                                        <td style={{ ...lvTd(), textAlign: 'center' }}>{lineCount}</td>
+                                        <td style={lvTd()}>
                                             <StatusChip status={recipe.is_active !== false ? 'active' : 'inactive'} />
                                         </td>
-                                        <td style={{ ...lvTd(classic), borderRight: 'none', textAlign: 'right' }} onClick={e => e.stopPropagation()}>
+                                        <td style={{ ...lvTd(), borderRight: 'none', textAlign: 'right' }} onClick={e => e.stopPropagation()}>
                                             <div style={{ display: 'flex', gap: 3, justifyContent: 'flex-end', alignItems: 'center' }}>
-                                                <MenuTriggerButton classic={classic} onClick={e => menuToggle(rid, e)} />
+                                                <MenuTriggerButton onClick={e => menuToggle(rid, e)} />
                                             </div>
                                         </td>
                                     </tr>
                                     {expanded && (
                                         <tr>
                                             <td colSpan={10} style={{ padding: 0 }}>
-                                                <ExpandedRowPanel classic={classic}>
+                                                <ExpandedRowPanel>
                                                     {renderDetail(recipe)}
                                                 </ExpandedRowPanel>
                                             </td>
@@ -744,21 +730,17 @@ export default function DyeRecipeTab({ items, attributes, authFetch, initialColo
                     title={editingRecipe ? 'Edit Recipe' : 'New Recipe'}
                     footer={
                         <>
-                            <button style={classic ? { ...xpBtn, padding: '3px 10px' } : { ...modernBtn }} onClick={handleCancel} disabled={saving}>
+                            <button style={{ ...xpBtn, padding: '3px 10px' }} onClick={handleCancel} disabled={saving}>
                                 Cancel
                             </button>
                             <button
-                                style={classic ? {
+                                style={{
                                     ...xpBtn,
                                     background: saving ? '#b0b8d0' : 'linear-gradient(to bottom, #4a7fd0, #2a5ab0)',
                                     color: 'white',
                                     borderColor: '#1a3d90 #0a1e60 #0a1e60 #1a3d90',
                                     fontWeight: 'bold',
                                     padding: '3px 14px',
-                                } : {
-                                    ...primaryBtnStyle(false),
-                                    background: saving ? '#93b4f5' : '#2563eb',
-                                    cursor: saving ? 'default' : 'pointer',
                                 }}
                                 onClick={handleSave}
                                 disabled={saving}
@@ -772,10 +754,10 @@ export default function DyeRecipeTab({ items, attributes, authFetch, initialColo
                     {/* A recipe is made FOR one Library Color. The color drives the recipe
                         code + name + color standard, so those are read-only here — the
                         panel only asks for the color plus recipe-specific fields. */}
-                    <FormSection title="Recipe Info" classic={classic}>
+                    <FormSection title="Recipe Info">
                         <div style={{ marginBottom: 8 }}>
-                            <label style={lvLabel(classic)}>
-                                Library Color <span style={{ color: classic ? 'red' : '#dc2626' }}>*</span>
+                            <label style={lvLabel()}>
+                                Library Color <span style={{ color: 'red'}}>*</span>
                             </label>
                             <SearchableSelect
                                 options={colorOptions}
@@ -783,37 +765,34 @@ export default function DyeRecipeTab({ items, attributes, authFetch, initialColo
                                 onChange={(v: string) => setForm(f => ({ ...f, color_id: v }))}
                                 placeholder="Select color code to make recipe for…"
                             />
-                            <div style={{ fontSize: classic ? 10 : 12, color: classic ? '#666' : '#64748b', marginTop: 3 }}>
+                            <div style={{ fontSize: 10, color: '#666', marginTop: 3 }}>
                                 Recipe code, name and color standard are taken from the selected color.
                             </div>
                         </div>
                         {form.color_id && (
                             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px 12px', marginBottom: 8 }}>
                                 <div>
-                                    <label style={lvLabel(classic)}>Recipe Code</label>
+                                    <label style={lvLabel()}>Recipe Code</label>
                                     <div style={{ display: 'flex', gap: 4 }}>
                                         <input
                                             readOnly
-                                            style={{ ...inputStyle(classic), flex: 1, background: classic ? '#ece9d8' : '#f1f5f9', color: classic ? '#333' : '#475569' }}
+                                            style={{ ...inputStyle(), flex: 1, background: '#ece9d8', color: '#333'}}
                                             value={form.code}
                                             placeholder="(auto)"
                                         />
                                         <button
                                             type="button"
-                                            style={classic
-                                                ? { ...xpBtn, fontSize: 10, padding: '1px 6px', flexShrink: 0, whiteSpace: 'nowrap' }
-                                                : { ...modernBtn, flexShrink: 0, whiteSpace: 'nowrap' }
-                                            }
+                                            style={{ ...xpBtn, fontSize: 10, padding: '1px 6px', flexShrink: 0, whiteSpace: 'nowrap' }}
                                             onClick={() => setShowCodeConfig(true)}
                                             title="Configure code format"
                                         >Configure</button>
                                     </div>
                                 </div>
                                 <div>
-                                    <label style={lvLabel(classic)}>Color Standard</label>
+                                    <label style={lvLabel()}>Color Standard</label>
                                     <input
                                         readOnly
-                                        style={{ ...inputStyle(classic), width: '100%', boxSizing: 'border-box', background: classic ? '#ece9d8' : '#f1f5f9', color: classic ? '#333' : '#475569' }}
+                                        style={{ ...inputStyle(), width: '100%', boxSizing: 'border-box', background: '#ece9d8', color: '#333'}}
                                         value={form.color_standard || '—'}
                                     />
                                 </div>
@@ -821,9 +800,9 @@ export default function DyeRecipeTab({ items, attributes, authFetch, initialColo
                         )}
                         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr auto', gap: '6px 12px' }}>
                             <div>
-                                <label style={lvLabel(classic)}>Substrate Type</label>
+                                <label style={lvLabel()}>Substrate Type</label>
                                 <input
-                                    style={{ ...inputStyle(classic), width: '100%', boxSizing: 'border-box' }}
+                                    style={{ ...inputStyle(), width: '100%', boxSizing: 'border-box' }}
                                     value={form.substrate_type}
                                     onChange={e => setForm(f => ({ ...f, substrate_type: e.target.value }))}
                                     placeholder="e.g. Cotton, Polyester"
@@ -834,10 +813,10 @@ export default function DyeRecipeTab({ items, attributes, authFetch, initialColo
                                 propose the bath, which is what lets the Kartu Kerja print
                                 weighed grams for the g/L lines instead of bare rates. */}
                             <div>
-                                <label style={lvLabel(classic)}>Liquor Ratio (1 : x)</label>
+                                <label style={lvLabel()}>Liquor Ratio (1 : x)</label>
                                 <input
                                     type="number" min="0" step="any"
-                                    style={{ ...inputStyle(classic), width: '100%', boxSizing: 'border-box' }}
+                                    style={{ ...inputStyle(), width: '100%', boxSizing: 'border-box' }}
                                     value={form.liquor_ratio}
                                     onChange={e => setForm(f => ({ ...f, liquor_ratio: e.target.value }))}
                                     placeholder="e.g. 10 = 10 L per kg"
@@ -845,7 +824,7 @@ export default function DyeRecipeTab({ items, attributes, authFetch, initialColo
                                 />
                             </div>
                             <div style={{ display: 'flex', alignItems: 'flex-end', paddingBottom: 2 }}>
-                                <label style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer', color: classic ? '#333' : '#334155', fontSize: classic ? undefined : 13 }}>
+                                <label style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer', color: '#333', fontSize: undefined}}>
                                     <input
                                         type="checkbox"
                                         checked={form.is_active}
@@ -857,11 +836,11 @@ export default function DyeRecipeTab({ items, attributes, authFetch, initialColo
                             </div>
                         </div>
                         <div style={{ marginTop: 8 }}>
-                            <label style={lvLabel(classic)}>Notes</label>
+                            <label style={lvLabel()}>Notes</label>
                             <textarea
                                 style={{
-                                    ...inputStyle(classic), height: 'auto', width: '100%',
-                                    boxSizing: 'border-box', resize: 'vertical', minHeight: 48, padding: classic ? '2px 4px' : '4px 8px',
+                                    ...inputStyle(), height: 'auto', width: '100%',
+                                    boxSizing: 'border-box', resize: 'vertical', minHeight: 48, padding: '2px 4px',
                                 }}
                                 value={form.notes}
                                 onChange={e => setForm(f => ({ ...f, notes: e.target.value }))}
@@ -872,14 +851,11 @@ export default function DyeRecipeTab({ items, attributes, authFetch, initialColo
                     </FormSection>
 
                     {/* ── Chemical Lines ── */}
-                    <FormSection title="Chemical Lines" classic={classic}>
-                        <div style={classic
-                            ? { border: '1px solid #7f9db9' }
-                            : { border: '1px solid #dbe1ea', borderRadius: 9, overflow: 'hidden' }
-                        }>
-                            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: classic ? 10 : 13 }}>
+                    <FormSection title="Chemical Lines">
+                        <div style={{ border: '1px solid #7f9db9' }}>
+                            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 10}}>
                                 <thead>
-                                    <tr style={classic ? { background: '#eef2f8' } : {}}>
+                                    <tr style={{ background: '#eef2f8' }}>
                                         <th style={thStyle({ width: 24 })}>#</th>
                                         <th style={thStyle({ width: 80 })}>Type</th>
                                         <th style={thStyle()}>Item</th>
@@ -888,7 +864,7 @@ export default function DyeRecipeTab({ items, attributes, authFetch, initialColo
                                             title="Weight-on-fabric basis: the dose follows the substrate weight, not the bath. Use it for dyestuff. Fill this OR g/L, never both."
                                         >Qty/100kg</th>
                                         <th
-                                            style={thStyle({ width: 80, fontSize: classic ? 11 : 11 })}
+                                            style={thStyle({ width: 80, fontSize: 11})}
                                             title="Bath concentration: the dose is this rate times the run's bath volume (Volume Air). Use it for salt, soda ash, alkali, auxiliaries. Fill this OR Qty/100kg, never both."
                                         >g/L</th>
                                         <th style={thStyle({ width: 50 })}>Sort</th>
@@ -898,17 +874,17 @@ export default function DyeRecipeTab({ items, attributes, authFetch, initialColo
                                 <tbody>
                                     {form.lines.length === 0 && (
                                         <tr>
-                                            <td colSpan={7} style={{ padding: '6px', color: classic ? '#888' : '#64748b', textAlign: 'center' }}>
+                                            <td colSpan={7} style={{ padding: '6px', color: '#888', textAlign: 'center' }}>
                                                 No lines. Click "Add Line" to begin.
                                             </td>
                                         </tr>
                                     )}
                                     {form.lines.map((line, idx) => (
-                                        <tr key={idx} style={{ background: classic ? (idx % 2 === 0 ? 'white' : '#f7f9fc') : (idx % 2 === 0 ? '#fff' : '#f8fafc') }}>
-                                            <td style={{ padding: classic ? '2px 4px' : '6px 10px', color: classic ? '#666' : '#64748b', borderBottom: classic ? undefined : '1px solid #e6eaf1' }}>{idx + 1}</td>
-                                            <td style={{ padding: classic ? '2px 4px' : '6px 10px', borderBottom: classic ? undefined : '1px solid #e6eaf1' }}>
+                                        <tr key={idx} style={{ background: idx % 2 === 0 ? 'white' : '#f7f9fc'}}>
+                                            <td style={{ padding: '2px 4px', color: '#666', borderBottom: undefined}}>{idx + 1}</td>
+                                            <td style={{ padding: '2px 4px', borderBottom: undefined}}>
                                                 <select
-                                                    style={{ ...inputStyle(classic), height: classic ? 20 : 'auto', width: '100%' }}
+                                                    style={{ ...inputStyle(), height: 20, width: '100%' }}
                                                     value={line.chemical_type}
                                                     onChange={e => updateLine(idx, 'chemical_type', e.target.value)}
                                                 >
@@ -917,7 +893,7 @@ export default function DyeRecipeTab({ items, attributes, authFetch, initialColo
                                                     ))}
                                                 </select>
                                             </td>
-                                            <td style={{ padding: classic ? '2px 4px' : '6px 10px', borderBottom: classic ? undefined : '1px solid #e6eaf1' }}>
+                                            <td style={{ padding: '2px 4px', borderBottom: undefined}}>
                                                 <SearchableSelect
                                                     options={allChemicalItems.map((item: any) => ({
                                                         value: String(item.id),
@@ -930,10 +906,10 @@ export default function DyeRecipeTab({ items, attributes, authFetch, initialColo
                                                     size="sm"
                                                 />
                                             </td>
-                                            <td style={{ padding: classic ? '2px 4px' : '6px 10px', borderBottom: classic ? undefined : '1px solid #e6eaf1' }}>
+                                            <td style={{ padding: '2px 4px', borderBottom: undefined}}>
                                                 <input
                                                     type="number"
-                                                    style={{ ...inputStyle(classic), width: '100%' }}
+                                                    style={{ ...inputStyle(), width: '100%' }}
                                                     value={line.qty_per_100kg}
                                                     onChange={e => updateLine(idx, 'qty_per_100kg', e.target.value)}
                                                     placeholder="0"
@@ -941,10 +917,10 @@ export default function DyeRecipeTab({ items, attributes, authFetch, initialColo
                                                     step="any"
                                                 />
                                             </td>
-                                            <td style={{ padding: classic ? '2px 4px' : '6px 10px', borderBottom: classic ? undefined : '1px solid #e6eaf1' }}>
+                                            <td style={{ padding: '2px 4px', borderBottom: undefined}}>
                                                 <input
                                                     type="number"
-                                                    style={{ ...inputStyle(classic), width: '100%' }}
+                                                    style={{ ...inputStyle(), width: '100%' }}
                                                     value={line.qty_per_liter ?? ''}
                                                     onChange={e => updateLine(idx, 'qty_per_liter', e.target.value ? parseFloat(e.target.value) : null)}
                                                     placeholder="0"
@@ -952,22 +928,19 @@ export default function DyeRecipeTab({ items, attributes, authFetch, initialColo
                                                     step="any"
                                                 />
                                             </td>
-                                            <td style={{ padding: classic ? '2px 4px' : '6px 10px', borderBottom: classic ? undefined : '1px solid #e6eaf1' }}>
+                                            <td style={{ padding: '2px 4px', borderBottom: undefined}}>
                                                 <input
                                                     type="number"
-                                                    style={{ ...inputStyle(classic), width: '100%' }}
+                                                    style={{ ...inputStyle(), width: '100%' }}
                                                     value={line.sort_order}
                                                     onChange={e => updateLine(idx, 'sort_order', e.target.value)}
                                                     placeholder={String(idx + 1)}
                                                     min={1}
                                                 />
                                             </td>
-                                            <td style={{ padding: classic ? '2px 4px' : '6px 10px', textAlign: 'center', borderBottom: classic ? undefined : '1px solid #e6eaf1' }}>
+                                            <td style={{ padding: '2px 4px', textAlign: 'center', borderBottom: undefined}}>
                                                 <button
-                                                    style={classic
-                                                        ? { ...xpBtn, padding: '0px 5px', fontSize: 10, color: '#aa0000' }
-                                                        : { ...modernBtn, padding: '3px 8px', fontSize: 12, color: '#dc2626', borderColor: '#f0c5c5' }
-                                                    }
+                                                    style={{ ...xpBtn, padding: '0px 5px', fontSize: 10, color: '#aa0000' }}
                                                     onClick={() => removeLine(idx)}
                                                     title="Remove line"
                                                 >X</button>
@@ -976,17 +949,17 @@ export default function DyeRecipeTab({ items, attributes, authFetch, initialColo
                                     ))}
                                 </tbody>
                             </table>
-                            <div style={{ padding: '4px 6px', borderTop: classic ? '1px solid #e8eef5' : '1px solid #e6eaf1', background: classic ? '#f7f9fc' : '#f8fafc' }}>
-                                <button style={btnStyle(classic)} onClick={addLine}>Add Line</button>
+                            <div style={{ padding: '4px 6px', borderTop: '1px solid #e8eef5', background: '#f7f9fc'}}>
+                                <button style={btnStyle()} onClick={addLine}>Add Line</button>
                             </div>
                         </div>
                     </FormSection>
 
                     {/* ── Bak Cuci ── */}
-                    <FormSection title="Bak Cuci" classic={classic}>
-                        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: classic ? 10 : 13 }}>
+                    <FormSection title="Bak Cuci">
+                        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 10}}>
                             <thead>
-                                <tr style={classic ? { background: '#eef2f8' } : {}}>
+                                <tr style={{ background: '#eef2f8' }}>
                                     <th style={thStyle({ width: 50 })}>No.</th>
                                     <th style={thStyle()}>Description</th>
                                     <th style={thStyle({ width: 36 })}></th>
@@ -994,13 +967,13 @@ export default function DyeRecipeTab({ items, attributes, authFetch, initialColo
                             </thead>
                             <tbody>
                                 {washBaths.map((wb, i) => (
-                                    <tr key={i} style={{ background: classic ? (i % 2 === 0 ? 'white' : '#f7f9fc') : (i % 2 === 0 ? '#fff' : '#f8fafc') }}>
-                                        <td style={{ padding: classic ? '2px 4px' : '6px 10px', borderBottom: classic ? undefined : '1px solid #e6eaf1' }}>
-                                            <input type="number" style={{ ...inputStyle(classic), width: '100%' }}
+                                    <tr key={i} style={{ background: i % 2 === 0 ? 'white' : '#f7f9fc'}}>
+                                        <td style={{ padding: '2px 4px', borderBottom: undefined}}>
+                                            <input type="number" style={{ ...inputStyle(), width: '100%' }}
                                                 value={wb.bath_number}
                                                 onChange={e => { const u = [...washBaths]; u[i] = { ...u[i], bath_number: parseInt(e.target.value) || i + 1 }; setWashBaths(u); }} />
                                         </td>
-                                        <td style={{ padding: classic ? '2px 4px' : '6px 10px', borderBottom: classic ? undefined : '1px solid #e6eaf1' }}>
+                                        <td style={{ padding: '2px 4px', borderBottom: undefined}}>
                                             <SearchableSelect
                                                 options={washBathOptions}
                                                 value={wb.attribute_value_id}
@@ -1013,28 +986,25 @@ export default function DyeRecipeTab({ items, attributes, authFetch, initialColo
                                                 size="sm"
                                             />
                                         </td>
-                                        <td style={{ padding: classic ? '2px 4px' : '6px 10px', textAlign: 'center', borderBottom: classic ? undefined : '1px solid #e6eaf1' }}>
-                                            <button style={classic
-                                                ? { ...xpBtn, padding: '0px 5px', fontSize: 10, color: '#aa0000' }
-                                                : { ...modernBtn, padding: '3px 8px', fontSize: 12, color: '#dc2626', borderColor: '#f0c5c5' }
-                                            }
+                                        <td style={{ padding: '2px 4px', textAlign: 'center', borderBottom: undefined}}>
+                                            <button style={{ ...xpBtn, padding: '0px 5px', fontSize: 10, color: '#aa0000' }}
                                                 onClick={() => setWashBaths(washBaths.filter((_, j) => j !== i))}>×</button>
                                         </td>
                                     </tr>
                                 ))}
                             </tbody>
                         </table>
-                        <button style={classic ? { ...xpBtn, marginTop: 4, fontSize: 10 } : { ...modernBtn, marginTop: 4 }}
+                        <button style={{ ...xpBtn, marginTop: 4, fontSize: 10 }}
                             onClick={() => setWashBaths([...washBaths, { bath_number: washBaths.length + 1, attribute_value_id: '', description: '' }])}>+ Add Bath</button>
                         {washBathOptions.length <= 1 && (
-                            <div style={{ marginTop: 4, fontSize: classic ? 10 : 12, color: classic ? '#666' : '#64748b' }}>
+                            <div style={{ marginTop: 4, fontSize: 10, color: '#666'}}>
                                 No bath values defined yet — add them to the &quot;Wash Bath&quot; attribute under Inventory &gt; Item Metadata.
                             </div>
                         )}
                     </FormSection>
 
                     {/* ── Finishing ── */}
-                    <FormSection title="Finishing" classic={classic}>
+                    <FormSection title="Finishing">
                         {finishingSteps.map((fs, i) => (
                             <div key={i} style={{ display: 'flex', gap: 6, marginBottom: 4, alignItems: 'center' }}>
                                 <div style={{ flex: 1 }}>
@@ -1050,17 +1020,14 @@ export default function DyeRecipeTab({ items, attributes, authFetch, initialColo
                                         size="sm"
                                     />
                                 </div>
-                                <button style={classic
-                                    ? { ...xpBtn, padding: '0px 5px', fontSize: 10, color: '#aa0000', flexShrink: 0 }
-                                    : { ...modernBtn, padding: '3px 8px', fontSize: 12, color: '#dc2626', borderColor: '#f0c5c5', flexShrink: 0 }
-                                }
+                                <button style={{ ...xpBtn, padding: '0px 5px', fontSize: 10, color: '#aa0000', flexShrink: 0 }}
                                     onClick={() => setFinishingSteps(finishingSteps.filter((_, j) => j !== i))}>×</button>
                             </div>
                         ))}
-                        <button style={classic ? { ...xpBtn, fontSize: 10 } : { ...modernBtn }}
+                        <button style={{ ...xpBtn, fontSize: 10 }}
                             onClick={() => setFinishingSteps([...finishingSteps, { attribute_value_id: '', description: '', sort_order: finishingSteps.length }])}>+ Add Finishing Step</button>
                         {finishingOptions.length <= 1 && (
-                            <div style={{ marginTop: 4, fontSize: classic ? 10 : 12, color: classic ? '#666' : '#64748b' }}>
+                            <div style={{ marginTop: 4, fontSize: 10, color: '#666'}}>
                                 No finishing values defined yet — add them to the &quot;Finishing Step&quot; attribute under Inventory &gt; Item Metadata.
                             </div>
                         )}
@@ -1099,20 +1066,15 @@ export default function DyeRecipeTab({ items, attributes, authFetch, initialColo
     );
 }
 
-function DetailField({ label, value, classic }: { label: string; value?: string | null; classic: boolean }) {
+function DetailField({ label, value }: { label: string; value?: string | null }) {
     return (
         <div>
-            <div style={{ fontSize: classic ? 10 : 12, color: classic ? '#555' : '#64748b', marginBottom: classic ? 1 : 3 }}>{label}</div>
-            <div style={classic ? {
+            <div style={{ fontSize: 10, color: '#555', marginBottom: 1}}>{label}</div>
+            <div style={{
                 fontFamily: xpFont, fontSize: 11,
                 color: value ? '#1a1a1a' : '#aaa',
                 background: '#f7f9fc', border: '1px solid #c8d8e8',
                 padding: '1px 5px', minHeight: 18,
-            } : {
-                fontFamily: modernFont, fontSize: 13,
-                color: value ? '#1e293b' : '#94a3b8',
-                background: '#f8fafc', border: '1px solid #dbe1ea', borderRadius: 7,
-                padding: '4px 8px', minHeight: 18,
             }}>
                 {value || '—'}
             </div>
@@ -1120,15 +1082,7 @@ function DetailField({ label, value, classic }: { label: string; value?: string 
     );
 }
 
-function typeColor(type: string, classic: boolean): { bg: string; fg: string; border: string } {
-    if (!classic) {
-        switch ((type || '').toUpperCase()) {
-            case 'DYE':       return { bg: '#eff6ff', fg: '#1d4ed8', border: '#bfd3f5' };
-            case 'AUXILIARY': return { bg: '#ecfdf3', fg: '#16a34a', border: '#bbf0cc' };
-            case 'SALT':      return { bg: '#fef9ec', fg: '#b45309', border: '#f1dca0' };
-            default:          return { bg: '#f1f5f9', fg: '#64748b', border: '#cbd3df' };
-        }
-    }
+function typeColor(type: string): { bg: string; fg: string; border: string } {
     switch ((type || '').toUpperCase()) {
         case 'DYE':       return { bg: '#d0e4ff', fg: '#1a3d90', border: '#7fa8e8' };
         case 'AUXILIARY': return { bg: '#d8f0d8', fg: '#1a5a1a', border: '#7fbb7f' };

@@ -4,7 +4,6 @@ import { useEffect, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { useData } from '../../context/DataContext';
 import { useLanguage } from '../../context/LanguageContext';
-import { useTheme } from '../../context/ThemeContext';
 import { useTimezone } from '../../context/TimezoneContext';
 import { xpFont, StatusChip, CodeChip, CODE_FONT } from '../shared/xpTheme';
 import { NAV_SECTIONS, navLabel, NavSection } from '../shared/navConfig';
@@ -195,8 +194,6 @@ export default function SectionHomeView({ sectionKey }: { sectionKey: string }) 
   const data = useData();
   const router = useRouter();
   const { t } = useLanguage();
-  const { uiStyle } = useTheme();
-  const classic = uiStyle === 'classic';
   const { formatDate: tzDate } = useTimezone();
 
   const meta = SECTION_META[sectionKey];
@@ -214,132 +211,84 @@ export default function SectionHomeView({ sectionKey }: { sectionKey: string }) 
   if (!meta) return null;
 
   const go = (tab: string) => router.push(`/${tab}`);
-  const toneCls = (tone: Tone) =>
-    tone === 'crit' ? 'text-danger' : tone === 'warn' ? 'text-warning' : tone === 'ok' ? 'text-success' : 'text-primary';
 
   return (
-    <div className="fade-in" style={classic ? { fontFamily: xpFont, fontSize: 11, background: '#ece9d8', padding: 4 } : undefined}>
+    <div className="fade-in" style={{ fontFamily: xpFont, fontSize: 11, background: '#ece9d8', padding: 4 }}>
       {/* title bar */}
       <div
-        className={classic ? undefined : 'd-flex align-items-center gap-2 mb-3'}
-        style={classic ? {
+        style={{
           background: ACCENT_GRAD[meta.accent], color: '#fff', fontWeight: 'bold', fontSize: 12,
           padding: '4px 8px', display: 'flex', alignItems: 'center', gap: 6, marginBottom: 6,
           textShadow: '1px 1px 1px rgba(0,0,0,0.4)', border: `1px solid ${TITLE_TONES.blue.border}`,
-        } : undefined}
+        }}
       >
-        <i className={`bi ${meta.icon}${classic ? '' : ' fs-4 text-primary'}`} aria-hidden="true" />
-        {classic ? ` ${navLabel(t, meta)}` : <h4 className="fw-bold mb-0">{navLabel(t, meta)}</h4>}
+        <i className={`bi ${meta.icon}`} aria-hidden="true" />
+        {` ${navLabel(t, meta)}`}
       </div>
 
       {/* KPI strip */}
       {section.kpis.length > 0 && (
         <div
-          className={classic ? undefined : 'row g-3 mb-4'}
-          style={classic ? { display: 'grid', gridTemplateColumns: `repeat(${section.kpis.length},1fr)`, gap: 4, marginBottom: 6 } : undefined}
+          style={{ display: 'grid', gridTemplateColumns: `repeat(${section.kpis.length},1fr)`, gap: 4, marginBottom: 6 }}
         >
           {section.kpis.map((k, i) => (
-            classic ? (
-              <div key={i}
-                onClick={k.tab ? () => go(k.tab!) : undefined}
-                style={{
-                  border: '2px solid', borderColor: '#dfdfdf #808080 #808080 #dfdfdf',
-                  background: '#f5f4ef', textAlign: 'center', padding: '6px 4px',
-                  cursor: k.tab ? 'pointer' : 'default',
-                }}>
-                <div style={{ fontSize: 22, fontWeight: 'bold', fontFamily: CODE_FONT, color: toneColor(k.tone), lineHeight: 1.1 }}>
-                  {k.value}
-                </div>
-                <div style={{ fontSize: 8, color: '#444', textTransform: 'uppercase', letterSpacing: '0.5px', marginTop: 2 }}>
-                  {k.label}
-                </div>
+            <div key={i}
+              onClick={k.tab ? () => go(k.tab!) : undefined}
+              style={{
+                border: '2px solid', borderColor: '#dfdfdf #808080 #808080 #dfdfdf',
+                background: '#f5f4ef', textAlign: 'center', padding: '6px 4px',
+                cursor: k.tab ? 'pointer' : 'default',
+              }}>
+              <div style={{ fontSize: 22, fontWeight: 'bold', fontFamily: CODE_FONT, color: toneColor(k.tone), lineHeight: 1.1 }}>
+                {k.value}
               </div>
-            ) : (
-              <div key={i} className="col-6 col-md-3">
-                <div className={`card h-100 border-0 shadow-sm ${k.tab ? 'kpi-clickable' : ''}`}
-                  onClick={k.tab ? () => go(k.tab!) : undefined}
-                  role={k.tab ? 'button' : undefined}
-                  style={k.tab ? { cursor: 'pointer' } : undefined}>
-                  <div className="card-body p-3">
-                    <div className="text-uppercase fw-bold text-muted mb-1" style={{ fontSize: '0.7rem' }}>{k.label}</div>
-                    <h3 className={`fw-bold mb-0 ${toneCls(k.tone)}`}>{k.value}</h3>
-                  </div>
-                </div>
+              <div style={{ fontSize: 8, color: '#444', textTransform: 'uppercase', letterSpacing: '0.5px', marginTop: 2 }}>
+                {k.label}
               </div>
-            )
+            </div>
           ))}
         </div>
       )}
 
       {/* list panel */}
       {section.list && (
-        classic ? (
-          <div style={{ border: '2px solid', borderColor: '#dfdfdf #808080 #808080 #dfdfdf', background: '#fff', marginBottom: 6 }}>
-            <div style={{ ...lvThead(true), padding: '3px 8px', fontWeight: 'bold', fontSize: 11 }}>
-              {section.list.title}
-            </div>
-            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 10 }}>
-              <thead>
-                <tr>{section.list.cols.map((c, i) => (
-                  <th key={i} style={{ background: 'linear-gradient(to bottom, #ffffff, #d4d0c8)', borderBottom: '1px solid #b0aaa0', padding: '3px 6px', textAlign: 'left' }}>{c}</th>
-                ))}</tr>
-              </thead>
-              <tbody>
-                {section.list.rows.length === 0 && (
-                  <tr><td colSpan={section.list.cols.length} style={{ padding: '10px', textAlign: 'center', color: '#888', fontStyle: 'italic' }}>No records</td></tr>
-                )}
-                {section.list.rows.map((r, i) => (
-                  <tr key={i} style={{ background: lvZebra(true, i) }}>
-                    {r.code !== '' && <td style={{ padding: '3px 6px' }}><CodeChip code={r.code} classic /></td>}
-                    <td style={{ padding: '3px 6px' }}>{r.primary}</td>
-                    {r.status !== undefined && <td style={{ padding: '3px 6px' }}><StatusChip status={r.status} /></td>}
-                    {r.right !== undefined && <td style={{ padding: '3px 6px', textAlign: 'right' }}>{r.right}</td>}
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+        <div style={{ border: '2px solid', borderColor: '#dfdfdf #808080 #808080 #dfdfdf', background: '#fff', marginBottom: 6 }}>
+          <div style={{ ...lvThead(), padding: '3px 8px', fontWeight: 'bold', fontSize: 11 }}>
+            {section.list.title}
           </div>
-        ) : (
-          <div className="card border-0 shadow-sm mb-4">
-            <div className="card-header bg-white"><h6 className="mb-0">{section.list.title}</h6></div>
-            <div className="card-body p-0">
-              <div className="table-responsive">
-                <table className="table table-hover align-middle mb-0 small">
-                  <thead className="table-light"><tr>{section.list.cols.map((c, i) => <th key={i} className="px-3">{c}</th>)}</tr></thead>
-                  <tbody>
-                    {section.list.rows.length === 0 && (
-                      <tr><td colSpan={section.list.cols.length} className="text-center py-4 text-muted">No records</td></tr>
-                    )}
-                    {section.list.rows.map((r, i) => (
-                      <tr key={i}>
-                        {r.code !== '' && <td className="px-3"><CodeChip code={r.code} classic={false} /></td>}
-                        <td className="px-3">{r.primary}</td>
-                        {r.status !== undefined && <td className="px-3"><StatusChip status={r.status} /></td>}
-                        {r.right !== undefined && <td className="px-3 text-end">{r.right}</td>}
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          </div>
-        )
+          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 10 }}>
+            <thead>
+              <tr>{section.list.cols.map((c, i) => (
+                <th key={i} style={{ background: 'linear-gradient(to bottom, #ffffff, #d4d0c8)', borderBottom: '1px solid #b0aaa0', padding: '3px 6px', textAlign: 'left' }}>{c}</th>
+              ))}</tr>
+            </thead>
+            <tbody>
+              {section.list.rows.length === 0 && (
+                <tr><td colSpan={section.list.cols.length} style={{ padding: '10px', textAlign: 'center', color: '#888', fontStyle: 'italic' }}>No records</td></tr>
+              )}
+              {section.list.rows.map((r, i) => (
+                <tr key={i} style={{ background: lvZebra(i) }}>
+                  {r.code !== '' && <td style={{ padding: '3px 6px' }}><CodeChip code={r.code} /></td>}
+                  <td style={{ padding: '3px 6px' }}>{r.primary}</td>
+                  {r.status !== undefined && <td style={{ padding: '3px 6px' }}><StatusChip status={r.status} /></td>}
+                  {r.right !== undefined && <td style={{ padding: '3px 6px', textAlign: 'right' }}>{r.right}</td>}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       )}
 
       {/* quick links */}
-      <div
-        className={classic ? undefined : 'd-flex flex-wrap gap-2'}
-        style={classic ? { display: 'flex', flexWrap: 'wrap', gap: 4 } : undefined}
-      >
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
         {links.map((l) => (
           <button key={l.tab}
-            className={classic ? undefined : 'btn btn-outline-primary btn-sm d-flex align-items-center gap-2'}
             onClick={() => go(l.tab)}
-            style={classic ? {
+            style={{
               border: '2px solid', borderColor: '#dfdfdf #808080 #808080 #dfdfdf', background: '#ece9d8',
               padding: '5px 10px', fontFamily: xpFont, fontSize: 11, cursor: 'pointer',
               display: 'flex', alignItems: 'center', gap: 5, color: '#00309c',
-            } : undefined}>
+            }}>
             <i className={`bi ${l.icon}`} aria-hidden="true" /> {l.label}
           </button>
         ))}

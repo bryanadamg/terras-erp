@@ -3,7 +3,6 @@ import React, { useState, useEffect, useMemo, useRef } from 'react';
 import ModalWrapper from '../shared/ModalWrapper';
 import SearchableSelect from '../shared/SearchableSelect';
 import { useData } from '../../context/DataContext';
-import { useTheme } from '../../context/ThemeContext';
 import NettingPlanTable, { useNettingPreview } from './NettingPlanTable';
 import { xpFont, xpInput as _xpInput, xpLabel as _xpLabel, ModalFooterActions, CHIP_RADIUS, BUTTON_RADIUS, XP_BTN } from '../shared/xpTheme';
 import {
@@ -252,9 +251,7 @@ export default function ProductionRunModal({
     initialBomId, initialSizes, initialTotalQty, initialBomEntries, salesOrderId, salesOrderCode, productionRuns,
 }: Props) {
     const { authFetch } = useData();
-    const { uiStyle } = useTheme();
     const { hasPermission } = useUser();
-    const classic = uiStyle === 'classic';
     const [code, setCode] = useState('');
     const codeEdited = useRef(false);
     const [locationCode, setLocationCode] = useState('');
@@ -537,7 +534,6 @@ export default function ProductionRunModal({
             size="xxl"
             footer={
                 <ModalFooterActions
-                    classic={classic}
                     onCancel={onClose}
                     onSubmit={handleSave}
                     submitting={isSaving}

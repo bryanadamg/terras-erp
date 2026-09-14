@@ -412,7 +412,7 @@ export default function BagScanStageModal({ wo, onClose, onStaged, onManualMode 
                                     <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
                                         {(loom?.mounts || []).map(m => (
                                             <div key={m.id} style={{ display: 'flex', alignItems: 'center', gap: 4, flexWrap: 'wrap' }}>
-                                                <CodeChip code={m.beam_number || '—'} classic />
+                                                <CodeChip code={m.beam_number || '—'} />
                                                 {m.ends ? <LotChip tone="pending" title="Warp ends (utas)">{m.ends} utas</LotChip> : null}
                                                 <LotChip tone="qty" title="Warp remaining on this beam">{Number(m.remaining || 0).toFixed(1)} kg</LotChip>
                                             </div>
@@ -435,7 +435,7 @@ export default function BagScanStageModal({ wo, onClose, onStaged, onManualMode 
                                         const gone = sl.on_line + 1e-6 < sl.qty;
                                         return (
                                             <div key={sl.batch_id} style={{ display: 'flex', alignItems: 'center', gap: 4, flexWrap: 'wrap' }}>
-                                                <CodeChip code={sl.batch_number || '—'} classic />
+                                                <CodeChip code={sl.batch_number || '—'} />
                                                 <LotChip tone="qty" title="Quantity staged to this WO">{sl.qty.toFixed(1)}</LotChip>
                                                 {gone ? (
                                                     <LotChip tone="pending" title="Still at the input location — the rest was consumed or moved">
@@ -532,7 +532,7 @@ export default function BagScanStageModal({ wo, onClose, onStaged, onManualMode 
                                                 <td style={{ padding: '3px 5px', color: '#888' }}>{i + 1}</td>
                                                 <td style={{ padding: '3px 5px' }}>
                                                     <div style={{ display: 'flex', alignItems: 'center', gap: 4, flexWrap: 'wrap' }}>
-                                                        <CodeChip code={b.batch_number} classic />
+                                                        <CodeChip code={b.batch_number} />
                                                         {beam && (
                                                             <LotChip tone="location" icon="bi-arrow-bar-up" title="Mounts on the machine, not on this work order">
                                                                 BEAM

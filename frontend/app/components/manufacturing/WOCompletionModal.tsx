@@ -546,7 +546,7 @@ export default function WOCompletionModal({ mo, onClose, onSaved, workOrder }: W
                                         </div>
                                         {heldHere.map((b: any) => (
                                             <div key={b.id} style={{ display: 'flex', alignItems: 'center', gap: 4, flexWrap: 'wrap' }}>
-                                                <CodeChip code={b.batch_number} classic />
+                                                <CodeChip code={b.batch_number} />
                                                 <span>{Number(b.remaining ?? 0).toFixed(2)} kg</span>
                                                 <span>&rarr; {b.reserved_wo_code || 'other WO'}</span>
                                             </div>
@@ -602,14 +602,14 @@ export default function WOCompletionModal({ mo, onClose, onSaved, workOrder }: W
                                             </div>
                                             <div style={{ border: '1px solid #7f9db9', background: '#fff', maxHeight: 150, overflowY: 'auto' }}>
                                                 {(batchesByItem[itemId] || []).map((b: any) => (
-                                                    <label key={b.id} style={{ ...lvPickerRow(true, selSet.has(b.id)), fontSize: 10 }}>
-                                                        <RowCheckbox classic checked={selSet.has(b.id)} label={b.batch_number || 'lot'}
+                                                    <label key={b.id} style={{ ...lvPickerRow(selSet.has(b.id)), fontSize: 10 }}>
+                                                        <RowCheckbox checked={selSet.has(b.id)} label={b.batch_number || 'lot'}
                                                             onChange={() => toggle(b.id, !selSet.has(b.id))} />
                                                         {/* Same lot identity chips as the staging picker: two lots of the
                                                             same item differ only by size / combo / shade. */}
                                                         <div style={{ display: 'flex', flexDirection: 'column', gap: 2, minWidth: 0, flex: 1 }}>
                                                             <div style={{ display: 'flex', alignItems: 'center', gap: 4, flexWrap: 'wrap' }}>
-                                                                <CodeChip code={b.batch_number} classic />
+                                                                <CodeChip code={b.batch_number} />
                                                                 <span style={{ color: '#555' }}>{Number(b.remaining ?? 0).toFixed(2)} kg</span>
                                                                 {/* What this log actually takes off the lot — the rest stays
                                                                     on it for the next run. FIFO, so later lots may draw 0. */}
@@ -747,7 +747,6 @@ export default function WOCompletionModal({ mo, onClose, onSaved, workOrder }: W
 
                                     {dyeBath.run.recipe_id ? (
                                         <DoseSheet
-                                            classic
                                             doses={dyeBath.doses}
                                             emptyHint={dyeBath.doses ? 'This recipe has no chemical lines to weigh out.' : 'Loading the recipe...'}
                                         />

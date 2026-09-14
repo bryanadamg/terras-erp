@@ -53,19 +53,12 @@ const STAGGER_CAP = 12;
 const optionDelay = (i: number) => `${Math.min(i, STAGGER_CAP) * STAGGER_MS}ms`;
 
 /** Selected / idle face of one option cell. Same bevel language as ToggleChip. */
-function optionChrome(isSelected: boolean, classic?: boolean): React.CSSProperties {
-    if (classic) {
-        return {
-            background: isSelected ? '#c8d8f0' : 'linear-gradient(to bottom,#ffffff,#e4e0d8)',
-            border: '2px solid',
-            borderColor: isSelected ? '#0a246a #00184a #00184a #0a246a' : '#fff #aaa #aaa #fff',
-            boxShadow: isSelected ? 'inset 1px 1px 0 #3a6ea8' : undefined,
-        };
-    }
+function optionChrome(isSelected: boolean): React.CSSProperties {
     return {
-        background: isSelected ? '#e8f0fe' : '#fff',
-        border: isSelected ? '2px solid #0d6efd' : '2px solid #e4e8ee',
-        borderRadius: BUTTON_RADIUS,
+        background: isSelected ? '#c8d8f0' : 'linear-gradient(to bottom,#ffffff,#e4e0d8)',
+        border: '2px solid',
+        borderColor: isSelected ? '#0a246a #00184a #00184a #0a246a' : '#fff #aaa #aaa #fff',
+        boxShadow: isSelected ? 'inset 1px 1px 0 #3a6ea8' : undefined,
     };
 }
 
@@ -76,10 +69,9 @@ function optionChrome(isSelected: boolean, classic?: boolean): React.CSSProperti
  * previews too — the same affordance, since the hover is the only thing telling
  * you what a variant name means.
  */
-function OptionCell({ title, isSelected, classic, width, delay, onClick, onPreview, children }: {
+function OptionCell({ title, isSelected, width, delay, onClick, onPreview, children }: {
     title: string;
     isSelected: boolean;
-    classic?: boolean;
     width: number;
     delay: string;
     onClick: () => void;
@@ -100,7 +92,7 @@ function OptionCell({ title, isSelected, classic, width, delay, onClick, onPrevi
                 width, height: THUMB + 10, padding: 3, cursor: 'pointer',
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
                 flexShrink: 0, position: 'relative', animationDelay: delay,
-                ...optionChrome(isSelected, classic),
+                ...optionChrome(isSelected),
             }}
         >
             {children}
@@ -120,7 +112,6 @@ interface AvatarPickerProps {
      * the user's own choice — after that the template no longer applies to them.
      */
     template?: string | null;
-    classic?: boolean;
 }
 
 /**
@@ -132,7 +123,7 @@ interface AvatarPickerProps {
  * hovering an option previews it: a preview the picker doesn't own can't show a
  * candidate.
  */
-export default function AvatarPicker({ value, onChange, seed, template, classic }: AvatarPickerProps) {
+export default function AvatarPicker({ value, onChange, seed, template }: AvatarPickerProps) {
     const [tab, setTab] = useState<TabKey>('hat');
     const recipe = useMemo(() => resolveRecipe(value, seed, template), [value, seed, template]);
 
@@ -192,7 +183,7 @@ export default function AvatarPicker({ value, onChange, seed, template, classic 
                                 aria-hidden="true"
                                 style={{
                                     width: 5, height: 5, borderRadius: '50%', flexShrink: 0,
-                                    background: classic ? '#0a246a' : '#2563eb',
+                                    background: '#0a246a',
                                 }}
                             />
                         )}
@@ -204,8 +195,8 @@ export default function AvatarPicker({ value, onChange, seed, template, classic 
     const activeSlot = FEATURE_SLOTS.find(s => s.key === tab);
     const stageRecipe = preview?.recipe ?? recipe;
 
-    const font = classic ? xpFont : modernFont;
-    const muted = classic ? '#6b6558' : '#6c757d';
+    const font = xpFont;
+    const muted = '#6b6558';
 
     const smallBtn = (label: string, icon: string, title: string, onClick: () => void) => (
         <button
@@ -213,15 +204,7 @@ export default function AvatarPicker({ value, onChange, seed, template, classic 
             title={title}
             onClick={onClick}
             className={XP_BTN}
-            style={classic
-                ? xpBtn({ flexShrink: 0, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 4, width: '100%' })
-                : {
-                    fontFamily: modernFont, fontSize: 11, padding: '3px 9px', cursor: 'pointer',
-                    flexShrink: 0, display: 'inline-flex', alignItems: 'center', gap: 4,
-                    justifyContent: 'center', width: '100%',
-                    background: '#fff', border: '1px solid #dee2e6',
-                    borderRadius: BUTTON_RADIUS, color: '#212529',
-                }}
+            style={xpBtn({ flexShrink: 0, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 4, width: '100%' })}
         >
             <i className={`bi ${icon}`} style={{ fontSize: 10 }} />{label}
         </button>
@@ -229,12 +212,12 @@ export default function AvatarPicker({ value, onChange, seed, template, classic 
 
     return (
         <div style={{
-            border: `1px solid ${classic ? '#c0bdb5' : '#dbe1ea'}`,
+            border: '1px solid #c0bdb5',
             borderRadius: BUTTON_RADIUS,
             // Must clip, or the square tab strip pokes out of the rounded corners
             // — same rule as FormSection.
             overflow: 'hidden',
-            background: classic ? '#ece9d8' : '#fff',
+            background: '#ece9d8',
             fontFamily: font,
             minWidth: 0,
         }}>
@@ -248,7 +231,6 @@ export default function AvatarPicker({ value, onChange, seed, template, classic 
                     tabs={tabs}
                     activeKey={tab}
                     onChange={setTab}
-                    classic={!!classic}
                 />
             </div>
 
@@ -260,16 +242,11 @@ export default function AvatarPicker({ value, onChange, seed, template, classic 
                 }}>
                     <div
                         className={preview ? 'av-stage-live' : undefined}
-                        style={classic ? {
+                        style={{
                             width: STAGE + 12, height: STAGE + 12, display: 'flex',
                             alignItems: 'center', justifyContent: 'center',
                             border: '2px solid', borderColor: '#888 #fff #fff #888',
                             background: '#fff',
-                        } : {
-                            width: STAGE + 12, height: STAGE + 12, display: 'flex',
-                            alignItems: 'center', justifyContent: 'center',
-                            border: '1px solid #e4e8ee', borderRadius: BUTTON_RADIUS,
-                            background: '#f8fafc',
                         }}
                     >
                         <span
@@ -287,14 +264,13 @@ export default function AvatarPicker({ value, onChange, seed, template, classic 
                         </span>
                     </div>
                     <div style={{
-                        fontSize: classic ? 10 : 11, color: preview ? (classic ? '#00006e' : '#2563eb') : muted,
+                        fontSize: 10, color: preview ? ('#00006e') : muted,
                         textAlign: 'center', lineHeight: 1.25, minHeight: 26, width: '100%',
                         fontWeight: preview ? 700 : 400,
                     }}>
                         {preview ? preview.label : 'Preview'}
                     </div>
                     <Chip
-                        classic={classic}
                         size="xs"
                         icon={pinnedCount ? 'bi-pin-angle-fill' : 'bi-dice-3'}
                         title={pinnedCount
@@ -332,7 +308,6 @@ export default function AvatarPicker({ value, onChange, seed, template, classic 
                                 <ToggleChip
                                     on={recipe.features[activeSlot.key] === undefined}
                                     onClick={() => emit(setFeature(recipe, activeSlot.key, undefined))}
-                                    classic={!!classic}
                                     title="Let the seed choose this slot"
                                 >
                                     Auto
@@ -341,13 +316,12 @@ export default function AvatarPicker({ value, onChange, seed, template, classic 
                                     <ToggleChip
                                         on={recipe.features[activeSlot.key] === null}
                                         onClick={() => emit(setFeature(recipe, activeSlot.key, null))}
-                                        classic={!!classic}
                                         title={`No ${activeSlot.label.toLowerCase()} at all`}
                                     >
                                         None
                                     </ToggleChip>
                                 )}
-                                <span style={{ marginLeft: 'auto', fontSize: classic ? 10 : 11, color: muted }}>
+                                <span style={{ marginLeft: 'auto', fontSize: 10, color: muted }}>
                                     {activeSlot.variants.length} {activeSlot.label.toLowerCase()} options
                                 </span>
                             </div>
@@ -379,7 +353,6 @@ export default function AvatarPicker({ value, onChange, seed, template, classic 
                                             key={variant}
                                             title={`${activeSlot.label} — ${variant}`}
                                             isSelected={recipe.features[activeSlot.key] === variant}
-                                            classic={classic}
                                             width={THUMB + 10}
                                             delay={optionDelay(i)}
                                             onClick={() => emit(candidate)}
@@ -398,15 +371,14 @@ export default function AvatarPicker({ value, onChange, seed, template, classic 
                             {COLOR_SLOTS.map(slot => (
                                 <div key={slot.key} style={{ display: 'flex', alignItems: 'center', gap: 7, minWidth: 0 }}>
                                     <span style={{
-                                        fontSize: classic ? 11 : 11.5, width: 86, flexShrink: 0,
-                                        fontWeight: 'bold', color: classic ? '#2b2822' : '#495057',
+                                        fontSize: 11, width: 86, flexShrink: 0,
+                                        fontWeight: 'bold', color: '#2b2822',
                                     }}>
                                         {slot.label}
                                     </span>
                                     <ToggleChip
                                         on={recipe.colors[slot.key] === undefined}
                                         onClick={() => emit(setColor(recipe, slot.key, undefined))}
-                                        classic={!!classic}
                                         title={`Let the seed choose the ${slot.label.toLowerCase()}`}
                                     >
                                         Auto
@@ -421,7 +393,6 @@ export default function AvatarPicker({ value, onChange, seed, template, classic 
                                                     key={hex}
                                                     title={`${slot.label} — #${hex}`}
                                                     isSelected={recipe.colors[slot.key] === hex}
-                                                    classic={classic}
                                                     width={SWATCH + 8}
                                                     delay={optionDelay(i)}
                                                     onClick={() => emit(candidate)}

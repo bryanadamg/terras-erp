@@ -1,6 +1,10 @@
 'use client';
 import React from 'react';
-import { xpFont, modernFont, ToggleChip, ChipTone, ChipSeg, BUTTON_RADIUS, PANEL_RADIUS, XP_BTN } from './xpTheme';
+import { xpFont, modernFont, ChipTone, ChipSeg, BUTTON_RADIUS, PANEL_RADIUS, XP_BTN } from './xpTheme';
+import UIFilterChipBar from '@bryanadamg/terras-ui/components/FilterChipBar';
+import UISegmentedBar from '@bryanadamg/terras-ui/components/SegmentedBar';
+import { SearchField as UISearchField } from '@bryanadamg/terras-ui/components/Field';
+import { segAt as uiSegAt } from '@bryanadamg/terras-ui/styles';
 
 // Shared "classic outer window" chrome — bevel container + colored title bar +
 // toolbar strip. Every dual-theme table/detail view (Sales Orders, Packing,
@@ -66,10 +70,9 @@ export const xpToolbar = (extra: React.CSSProperties = {}): React.CSSProperties 
  * row up to `width`; otherwise `width` is fixed.
  */
 export function SearchField({
-    classic, value, onChange, placeholder = 'Search...', width = 200, grow = false,
+    value, onChange, placeholder = 'Search...', width = 200, grow = false,
     icon = 'bi-search', title, autoFocus = false, style,
 }: {
-    classic: boolean;
     value: string;
     onChange: (v: string) => void;
     placeholder?: string;
@@ -83,52 +86,20 @@ export function SearchField({
     style?: React.CSSProperties;
 }) {
     return (
-        <div
-            style={{
-                position: 'relative', display: 'inline-flex', alignItems: 'center', flexShrink: 0,
-                ...(grow ? { flex: `1 1 ${Math.min(width, 160)}px`, maxWidth: width } : { width }),
-                ...style,
-            }}
-        >
-            <i
-                className={`bi ${icon}`}
-                style={{
-                    position: 'absolute', left: classic ? 5 : 8, top: '50%', transform: 'translateY(-50%)',
-                    fontSize: classic ? 11 : 12, color: classic ? '#666666' : '#94a3b8',
-                    pointerEvents: 'none',
-                }}
-            />
-            <input
-                type="text"
-                value={value}
-                onChange={e => onChange(e.target.value)}
-                placeholder={placeholder}
-                title={title}
-                autoFocus={autoFocus}
-                style={classic ? {
-                    fontFamily: xpFont, fontSize: 11, border: '1px solid #7f9db9', borderRadius: BUTTON_RADIUS,
-                    background: '#ffffff', color: '#000000', height: 20, outline: 'none',
-                    width: '100%', boxSizing: 'border-box', padding: '1px 20px 1px 20px',
-                } : {
-                    fontFamily: modernFont, fontSize: 13, border: '1px solid #cbd3df', borderRadius: 7,
-                    background: '#ffffff', color: '#1e293b', outline: 'none',
-                    width: '100%', boxSizing: 'border-box', padding: '4px 24px 4px 26px',
-                }}
-            />
-            {value && (
-                <button
-                    type="button"
-                    onClick={() => onChange('')}
-                    title="Clear search"
-                    style={{
-                        position: 'absolute', right: classic ? 3 : 5, top: '50%', transform: 'translateY(-50%)',
-                        border: 'none', background: 'transparent', cursor: 'pointer', padding: '0 3px',
-                        color: '#888888', fontSize: classic ? 12 : 14, lineHeight: 1,
-                        fontFamily: classic ? xpFont : modernFont,
-                    }}
-                >&times;</button>
-            )}
-        </div>
+        <UISearchField
+            value={value}
+            onChange={onChange}
+            placeholder={placeholder}
+            width={width}
+            grow={grow}
+            // The package takes the icon as a NODE (it ships no icon set); this app
+            // draws with bootstrap-icons, so the class string stays the prop the 36
+            // call sites pass and the element is built here.
+            icon={icon ? <i className={`bi ${icon}`} /> : undefined}
+            title={title}
+            autoFocus={autoFocus}
+            style={style}
+        />
     );
 }
 
@@ -136,8 +107,7 @@ export function SearchField({
  * The "N orders" / "N stations" tally that sits at the end of a list toolbar.
  * `right` pushes it to the far end of the flex row (the common case).
  */
-export function ToolbarCount({ classic, children, right = false, style }: {
-    classic: boolean;
+export function ToolbarCount({ children, right = false, style }: {
     children: React.ReactNode;
     right?: boolean;
     style?: React.CSSProperties;
@@ -146,9 +116,7 @@ export function ToolbarCount({ classic, children, right = false, style }: {
         <span style={{
             flexShrink: 0, whiteSpace: 'nowrap',
             ...(right ? { marginLeft: 'auto' } : {}),
-            ...(classic
-                ? { fontFamily: xpFont, fontSize: 11, color: '#333333' }
-                : { fontFamily: modernFont, fontSize: 12, color: '#64748b' }),
+            ...({ fontFamily: xpFont, fontSize: 11, color: '#333333' }),
             ...style,
         }}>
             {children}
@@ -179,9 +147,8 @@ const TOOLBAR_BTN_MODERN: Record<ToolbarButtonTone, string> = {
 };
 
 export function ToolbarButton({
-    classic, tone = 'neutral', icon, children, onClick, disabled = false, testId, printable = false, title, style,
+    tone = 'neutral', icon, children, onClick, disabled = false, testId, printable = false, title, style,
 }: {
-    classic: boolean;
     /** create = green CTA ("Add X"/"Create"/"New Lot"). launch = blue CTA for a
      * second, distinct create-like action on the same toolbar (e.g. "New
      * Production Run" next to a green "New MO"). neutral = Print/Import/Refresh. */
@@ -197,39 +164,23 @@ export function ToolbarButton({
     title?: string;
     style?: React.CSSProperties;
 }) {
-    if (classic) {
-        return (
-            <button
-                type="button"
-                data-testid={testId}
-                className={XP_BTN}
-                onClick={onClick}
-                disabled={disabled}
-                title={title}
-                style={{
-                    fontFamily: xpFont, fontSize: '11px', padding: '2px 10px',
-                    cursor: disabled ? 'default' : 'pointer', opacity: disabled ? 0.5 : 1,
-                    border: '1px solid', borderRadius: BUTTON_RADIUS,
-                    ...TOOLBAR_BTN_CLASSIC[tone],
-                    ...style,
-                }}
-            >
-                {icon && <i className={`bi ${icon}`} style={{ marginRight: 4 }}></i>}
-                {children}
-            </button>
-        );
-    }
     return (
         <button
             type="button"
             data-testid={testId}
-            className={`btn btn-sm ${TOOLBAR_BTN_MODERN[tone]}${printable ? ' btn-print' : ''}`}
+            className={XP_BTN}
             onClick={onClick}
             disabled={disabled}
             title={title}
-            style={style}
+            style={{
+                fontFamily: xpFont, fontSize: '11px', padding: '2px 10px',
+                cursor: disabled ? 'default' : 'pointer', opacity: disabled ? 0.5 : 1,
+                border: '1px solid', borderRadius: BUTTON_RADIUS,
+                ...TOOLBAR_BTN_CLASSIC[tone],
+                ...style,
+            }}
         >
-            {icon && <i className={`bi ${icon} me-2`}></i>}
+            {icon && <i className={`bi ${icon}`} style={{ marginRight: 4 }}></i>}
             {children}
         </button>
     );
@@ -246,9 +197,10 @@ export type FilterChipOption = {
     disabled?: boolean;
 };
 
-/** Segment position for the i-th of `len` members of a flush group. */
-export const segAt = (i: number, len: number): ChipSeg =>
-    len === 1 ? 'only' : i === 0 ? 'first' : i === len - 1 ? 'last' : 'mid';
+/** Segment position for the i-th of `len` members of a flush group. Re-exported
+ *  from terras-ui so the two bars below and the package's own segment geometry
+ *  can't disagree about which end is which. */
+export const segAt = (i: number, len: number): ChipSeg => uiSegAt(i, len);
 
 /**
  * Status-filter row for a list toolbar — **segmented**: the buttons sit flush
@@ -264,9 +216,13 @@ export const segAt = (i: number, len: number): ChipSeg =>
  *
  * `value` takes an array for multi-select bars (the Calendar's status set); the
  * caller does the add/remove in `onChange`.
+ *
+ * Now a thin adapter over terras-ui's FilterChipBar, which was extracted from
+ * this one — identical option shape, identical geometry, and it builds on the
+ * same `ToggleChip` this app already gets from the package. The 23 call sites
+ * are untouched.
  */
-export function FilterChipBar({ classic, options, value, onChange, disabled, trailing, flat, style }: {
-    classic: boolean;
+export function FilterChipBar({ options, value, onChange, disabled, trailing, flat, style }: {
     /** Plain strings, or `{ value, label, count, tone }` for a tally / coloured fill. */
     options: (string | FilterChipOption)[];
     /** Selected value, or the selected set when the bar is multi-select. */
@@ -281,73 +237,39 @@ export function FilterChipBar({ classic, options, value, onChange, disabled, tra
     flat?: boolean;
     style?: React.CSSProperties;
 }) {
-    const isOn = (v: string) => Array.isArray(value) ? value.includes(v) : value === v;
     return (
-        <div
-            className={classic ? undefined : 'btn-group btn-group-sm'}
-            role="group"
-            style={{ display: 'inline-flex', alignItems: 'center', flexWrap: 'nowrap', flexShrink: 0, ...style }}
-        >
-            {options.map((opt, i) => {
-                const o: FilterChipOption = typeof opt === 'string' ? { value: opt } : opt;
-                return (
-                    <ToggleChip
-                        key={o.value}
-                        on={isOn(o.value)}
-                        onClick={() => onChange(o.value)}
-                        classic={classic}
-                        disabled={disabled || o.disabled}
-                        seg={segAt(i, options.length)}
-                        tone={o.tone}
-                        title={o.title}
-                        flat={flat}
-                    >
-                        {o.label ?? o.value}
-                        {o.count !== undefined && (
-                            <span style={{ opacity: 0.75, fontWeight: 'normal', marginLeft: 4 }}>({o.count})</span>
-                        )}
-                    </ToggleChip>
-                );
-            })}
-            {trailing}
-        </div>
+        <UIFilterChipBar
+            options={options}
+            value={value}
+            onChange={onChange}
+            disabled={disabled}
+            trailing={trailing}
+            flat={flat}
+            style={style}
+        />
     );
 }
 
-export type SegmentedAction = { key: string; label: React.ReactNode; onClick: () => void; title?: string };
+export type SegmentedAction = { key: string; label: React.ReactNode; onClick: () => void; title?: string; disabled?: boolean };
 
 /**
  * The stateless sibling of `FilterChipBar`: a flush group of plain actions with
  * no selected member — the date-range presets ("Today | 7d | 30d | Month") that
  * ReportsView and MachineOutputReportView each hand-rolled twice (once per
  * theme). Same segment geometry, so a preset row and a filter row read as the
- * same control.
+ * same control. Also a terras-ui adapter; the package adds a whole-bar and a
+ * per-action `disabled` this never had.
+ *
+ * If a member should stay lit after the click it is a filter, not an action —
+ * use `FilterChipBar`.
  */
-export function SegmentedBar({ classic, actions, style }: {
-    classic: boolean;
+export function SegmentedBar({ actions, disabled, style }: {
     actions: SegmentedAction[];
+    /** Disables every segment. */
+    disabled?: boolean;
     style?: React.CSSProperties;
 }) {
-    return (
-        <div
-            className={classic ? undefined : 'btn-group btn-group-sm'}
-            role="group"
-            style={{ display: 'inline-flex', alignItems: 'center', flexWrap: 'nowrap', flexShrink: 0, ...style }}
-        >
-            {actions.map((a, i) => (
-                <ToggleChip
-                    key={a.key}
-                    on={false}
-                    onClick={a.onClick}
-                    classic={classic}
-                    seg={segAt(i, actions.length)}
-                    title={a.title}
-                >
-                    {a.label}
-                </ToggleChip>
-            ))}
-        </div>
-    );
+    return <UISegmentedBar actions={actions} disabled={disabled} style={style} />;
 }
 
 export type ShellFill = 'page' | 'flex' | false;
@@ -403,19 +325,15 @@ export const modernBevel = (extra: React.CSSProperties = {}): React.CSSPropertie
  * `borderRadius: 0` pinned) while every migrated view rounded.
  */
 export const viewShellStyle = (
-    classic: boolean, fill: ShellFill = 'page', extra: React.CSSProperties = {},
-): React.CSSProperties => (classic
-    ? xpBevel({ ...fillStyleFor(fill), ...extra })
-    : modernBevel({ ...fillStyleFor(fill), ...extra }));
+    fill: ShellFill = 'page', extra: React.CSSProperties = {},
+): React.CSSProperties => (xpBevel({ ...fillStyleFor(fill), ...extra }));
 
 /**
  * Outer-window shell: classic bevel or modern bootstrap card, sized per the
  * standing height convention. Replaces the
- * `style={classic ? xpBevel : undefined} className={classic ? '' : 'card border-0 shadow-sm'}`
- * block hand-copied at the top of ~20 views.
+ * `style={xpBevel}` block hand-copied at the top of ~20 views.
  */
-export function ShellWindow({ classic, fill = 'page', className, style, children }: {
-    classic: boolean;
+export function ShellWindow({ fill = 'page', className, style, children }: {
     /** 'page' = calc(var(--app-vh) - 80px) for a top-level route. 'flex' = flex:1 when nested
      *  under an already-sized parent. false = caller manages its own sizing. */
     fill?: ShellFill;
@@ -426,8 +344,8 @@ export function ShellWindow({ classic, fill = 'page', className, style, children
     const fillStyle = fillStyleFor(fill);
     return (
         <div
-            style={classic ? { ...xpBevel(), ...fillStyle, ...style } : { ...fillStyle, ...style }}
-            className={classic ? className : `card border-0 shadow-sm shell-window ${className || ''}`.trim()}
+            style={{ ...xpBevel(), ...fillStyle, ...style }}
+            className={className}
         >
             {children}
         </div>
@@ -447,8 +365,7 @@ export function ShellWindow({ classic, fill = 'page', className, style, children
  * Use `ShellTitleBar` instead when the bar carries right-side actions or needs
  * the bootstrap card-header look in modern.
  */
-export function PageTitleBar({ classic, icon, title, right, style }: {
-    classic: boolean;
+export function PageTitleBar({ icon, title, right, style }: {
     icon: string;                 // bootstrap-icons class, e.g. "bi-palette2"
     title: React.ReactNode;
     right?: React.ReactNode;
@@ -459,16 +376,10 @@ export function PageTitleBar({ classic, icon, title, right, style }: {
     // the seven PageTitleBar pages (Colors, Color/Combo Library, Attributes, Lab
     // Dips, Dyeing & Setting, Settings) with a visibly taller bar than every
     // xpTitleBar page next to them. One bar height, app-wide.
-    const base: React.CSSProperties = classic
-        ? xpTitleBar({ justifyContent: 'flex-start', gap: 8, flexShrink: 0 })
-        : {
-            background: '#f7f9fc', color: '#1e293b', fontFamily: modernFont,
-            borderBottom: '1px solid #dbe1ea', padding: '8px 13px', fontSize: 14, fontWeight: 700,
-            display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0,
-        };
+    const base: React.CSSProperties = xpTitleBar({ justifyContent: 'flex-start', gap: 8, flexShrink: 0 });
     return (
         <div style={{ ...base, ...style }}>
-            <i className={`bi ${icon}`} style={classic ? undefined : { fontSize: 14, color: '#2563eb' }} />
+            <i className={`bi ${icon}`} style={undefined} />
             {title}
             {right && <span style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 6 }}>{right}</span>}
         </div>
@@ -481,28 +392,16 @@ export function PageTitleBar({ classic, icon, title, right, style }: {
  * card-header with an h5 + optional caption — matches SalesOrderView, PartnersView,
  * SampleRequestView, PackingView, BOMView, and the Settings tabs.
  */
-export function ShellTitleBar({ classic, icon, title, subtitle, right, tone = 'blue' }: {
-    classic: boolean;
+export function ShellTitleBar({ icon, title, subtitle, right, tone = 'blue' }: {
     icon: string;                 // bootstrap-icons class, e.g. "bi-people-fill"
     title: React.ReactNode;
     subtitle?: React.ReactNode;   // modern-only caption line under the title
     right?: React.ReactNode;      // action button(s) — e.g. "+ Add"
     tone?: ShellTone;             // classic-only bar color; modern keeps the white card-header
 }) {
-    if (classic) {
-        return (
-            <div style={xpTitleBar({}, tone)}>
-                <span><i className={`bi ${icon}`} style={{ marginRight: 6 }} />{title}</span>
-                {right}
-            </div>
-        );
-    }
     return (
-        <div className="card-header bg-white d-flex justify-content-between align-items-center">
-            <div>
-                <h5 className="card-title mb-0"><i className={`bi ${icon} me-2`}></i>{title}</h5>
-                {subtitle && <p className="text-muted small mb-0 mt-1">{subtitle}</p>}
-            </div>
+        <div style={xpTitleBar({}, tone)}>
+            <span><i className={`bi ${icon}`} style={{ marginRight: 6 }} />{title}</span>
             {right}
         </div>
     );

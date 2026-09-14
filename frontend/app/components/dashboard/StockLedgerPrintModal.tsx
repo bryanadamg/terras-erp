@@ -169,13 +169,12 @@ function LedgerDocument({ entries, locations, attributes, companyProfile, period
 }
 
 export default function StockLedgerPrintModal({
-    entries, locations, attributes, companyProfile, currentStyle, periodLabel, totals, filtersSummary, onClose,
+    entries, locations, attributes, companyProfile, periodLabel, totals, filtersSummary, onClose,
 }: {
     entries: any[];
     locations: any[];
     attributes: any[];
     companyProfile: any;
-    currentStyle: string;
     periodLabel: string;
     totals: { total: number; totalIn: number; totalOut: number };
     filtersSummary: string;

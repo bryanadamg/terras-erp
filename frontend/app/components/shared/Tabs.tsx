@@ -18,16 +18,13 @@ export type TabDef<K extends string = string> = { key: K; label: React.ReactNode
  * page chrome (title bars, bordered panels) stays with the caller since
  * different pages wrap their tabs differently.
  *
- * `classic` is still accepted so the 14 call sites did not have to change, but it
- * is inert — the strip retones itself off `.ui-style-classic` in CSS now, rather
+ * The strip retones itself off `.ui-style-classic` in CSS,
  * than forking the whole component on a prop.
  */
-export function Tabs<K extends string>({ tabs, activeKey, onChange, classic: _classic, right }: {
+export function Tabs<K extends string>({ tabs, activeKey, onChange, right }: {
     tabs: TabDef<K>[];
     activeKey: K;
     onChange: (key: K) => void;
-    /** @deprecated Inert — terras-ui reads the theme from `.ui-style-classic`. */
-    classic?: boolean;
     /** Optional trailing control (e.g. a refresh button) pushed to the far end of the strip. */
     right?: React.ReactNode;
 }) {

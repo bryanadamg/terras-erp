@@ -16,17 +16,15 @@ import { FormSection, SectionTitle } from '../shared/xpTheme';
  * `right` holds the group's own action (Refresh, Add User, Create Snapshot).
  * `flush` drops the body padding for a full-bleed table.
  */
-export default function SettingsPanel({ icon, title, right, flush = false, classic, children }: {
+export default function SettingsPanel({ icon, title, right, flush = false, children }: {
     icon: string;
     title: React.ReactNode;
     right?: React.ReactNode;
     flush?: boolean;
-    classic: boolean;
     children: React.ReactNode;
 }) {
     return (
         <FormSection
-            classic={classic}
             style={{ marginBottom: 0 }}
             bodyStyle={flush ? { padding: 0 } : undefined}
             title={<SectionTitle icon={icon} right={right}>{title}</SectionTitle>}

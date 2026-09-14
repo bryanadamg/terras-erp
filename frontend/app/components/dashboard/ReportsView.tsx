@@ -1,7 +1,6 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import dynamic from 'next/dynamic';
 import { useLanguage } from '../../context/LanguageContext';
-import { useTheme } from '../../context/ThemeContext';
 import { useTimezone } from '../../context/TimezoneContext';
 import { useData } from '../../context/DataContext';
 import {
@@ -57,10 +56,8 @@ const pkgDelta = (e: any): { n: number; label: string }[] => {
 
 export default function ReportsView(_props: any) {
     const { t } = useLanguage();
-    const { uiStyle } = useTheme();
     const { formatDate: tzDate, formatTime: tzTime } = useTimezone();
     const { authFetch, locations = [], attributes = [], categories = [], itemIndex, companyProfile } = useData();
-    const classic = uiStyle === 'classic';
 
     const API_BASE = useMemo(() => {
         const env = process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:8000/api';
@@ -169,7 +166,7 @@ export default function ReportsView(_props: any) {
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }), []);
     const { sorted: rows, sort, toggle } = useSortable(entries, sortCols);
-    const skel = useTableSkeletonMetrics(classic ? 'stock-ledger-classic' : 'stock-ledger', listBodyRef, rows.length > 0);
+    const skel = useTableSkeletonMetrics('stock-ledger-classic', listBodyRef, rows.length > 0);
 
     const net = totalIn + totalOut;
     const hasFilters = !!(debouncedSearch || startDate || endDate || locationFilter || categoryFilter || refTypeFilter || direction);
@@ -278,16 +275,15 @@ export default function ReportsView(_props: any) {
     const toolbar: React.CSSProperties = sharedXpToolbar({ padding: '4px 6px', gap: '5px', flexWrap: 'nowrap', overflowX: 'auto' });
     const toolbarTop: React.CSSProperties = { ...toolbar, borderBottom: 'none', paddingBottom: 0 };
     const th: React.CSSProperties = {
-        ...lvThead(true),
+        ...lvThead(),
         fontSize: '10px', fontWeight: 'bold', color: '#000', fontFamily: xpFont, padding: '3px 8px',
         position: 'sticky', top: 0, textAlign: 'left', borderRight: '1px solid #b0a898',
     };
     const lbl: React.CSSProperties = { fontFamily: xpFont, fontSize: '11px', color: '#444' };
 
     // ── Filter toolbar rows — shared content, per-branch wrapper/controls ────
-    const toolbarRow1 = classic ? (
-        <div style={toolbarTop} className="no-print">
-            <SearchField classic value={search} onChange={setSearch} placeholder="Search item or reference..." width={200} />
+    const toolbarRow1 = <div style={toolbarTop} className="no-print">
+            <SearchField value={search} onChange={setSearch} placeholder="Search item or reference..." width={200} />
             <div style={xpSep} />
             <TreeSelect
                 options={locFilterTreeOptions}
@@ -310,76 +306,24 @@ export default function ReportsView(_props: any) {
                 {refTypes.map(rt => <option key={rt} value={rt}>{refMeta(rt).label}</option>)}
             </select>
             <FilterChipBar
-                classic
                 options={directionOptions}
                 value={direction}
                 onChange={v => onFilter(setDirection)(v as '' | 'in' | 'out')}
             />
             <div style={{ flex: 1 }} />
-        </div>
-    ) : (
-        <div className="row g-2 align-items-center">
-            <div className="col-md-4">
-                <SearchField classic={false} value={search} onChange={setSearch} placeholder="Search item or reference..." width={320} grow style={{ display: 'flex', width: '100%' }} />
-            </div>
-            <div className="col-md-2">
-                <TreeSelect
-                    options={catFilterTreeOptions}
-                    value={categoryFilter}
-                    onChange={onFilter(setCategoryFilter)}
-                    allowEmpty
-                    emptyLabel="All Categories"
-                />
-            </div>
-            <div className="col-md-2">
-                <TreeSelect
-                    options={locFilterTreeOptions}
-                    value={locationFilter}
-                    onChange={onFilter(setLocationFilter)}
-                    allowEmpty
-                    emptyLabel="All Locations"
-                />
-            </div>
-            <div className="col-md-2">
-                <select className="form-select form-select-sm" value={refTypeFilter} onChange={e => onFilter(setRefTypeFilter)(e.target.value)}>
-                    <option value="">All Sources</option>
-                    {refTypes.map(rt => <option key={rt} value={rt}>{refMeta(rt).label}</option>)}
-                </select>
-            </div>
-            <div className="col-md-2">
-                <FilterChipBar
-                    classic={false}
-                    options={directionOptions}
-                    value={direction}
-                    onChange={v => onFilter(setDirection)(v as '' | 'in' | 'out')}
-                    style={{ width: '100%' }}
-                />
-            </div>
-        </div>
-    );
+        </div>;
 
-    const toolbarRow2 = classic ? (
-        <div style={toolbar} className="no-print">
+    const toolbarRow2 = <div style={toolbar} className="no-print">
             <span style={lbl}>{t('from')}:</span>
             <input type="date" style={xpInput({ width: 122 })} value={startDate} onChange={e => onFilter(setStartDate)(e.target.value)} />
             <span style={lbl}>{t('to')}:</span>
             <input type="date" style={xpInput({ width: 122 })} value={endDate} onChange={e => onFilter(setEndDate)(e.target.value)} />
-            <SegmentedBar classic actions={presetActions} />
+            <SegmentedBar actions={presetActions} />
             <div style={{ flex: 1 }} />
             {hasFilters && <button className={XP_BTN} style={xpBtn({ fontSize: '10px', padding: '1px 6px' })} onClick={clearFilters} title="Clear filters"><i className="bi bi-x-lg" /></button>}
             <button className={XP_BTN} style={xpBtn({ padding: '1px 6px' })} onClick={fetchLedger} title="Refresh"><i className="bi bi-arrow-clockwise" /></button>
             <button className={XP_BTN} style={xpBtn({ padding: '1px 6px' })} onClick={handlePrint} disabled={printLoading} title={printLoading ? 'Loading...' : t('print')}><i className={printLoading ? 'bi bi-hourglass-split' : 'bi bi-printer'} /></button>
-        </div>
-    ) : (
-        <div className="d-flex flex-wrap align-items-center gap-1 mt-2">
-            <input type="date" className="form-control form-control-sm" style={{ width: 150 }} value={startDate} onChange={e => onFilter(setStartDate)(e.target.value)} />
-            <input type="date" className="form-control form-control-sm me-1" style={{ width: 150 }} value={endDate} onChange={e => onFilter(setEndDate)(e.target.value)} />
-            <SegmentedBar classic={false} actions={presetActions} />
-            {hasFilters && <button className="btn btn-outline-secondary btn-sm py-0 ms-1" onClick={clearFilters} title="Clear filters"><i className="bi bi-x-lg" /></button>}
-            <button className="btn btn-outline-secondary btn-sm py-0 ms-auto" onClick={fetchLedger} title="Refresh"><i className="bi bi-arrow-clockwise" /></button>
-            <button className="btn btn-outline-primary btn-sm py-0" onClick={handlePrint} disabled={printLoading} title={printLoading ? 'Loading...' : t('print')}><i className={printLoading ? 'bi bi-hourglass-split' : 'bi bi-printer'} /></button>
-        </div>
-    );
+        </div>;
 
     // ── Summary strip — one stat list, per-branch tile rendering ─────────────
     const stats = [
@@ -394,8 +338,7 @@ export default function ReportsView(_props: any) {
         const rm = refMeta(e.reference_type);
         const up = e.qty_change >= 0;
         const pkg = pkgDelta(e);
-        return classic ? (
-            <tr key={e.id} style={{ background: lvZebra(true, i), borderBottom: '1px solid #e0ddd3' }}>
+        return <tr key={e.id} style={{ background: lvZebra(i), borderBottom: '1px solid #e0ddd3' }}>
                 <td style={{ ...xpCell, whiteSpace: 'nowrap' }}>
                     <div style={{ fontSize: '11px', color: '#000' }}>{tzDate(e.created_at)}</div>
                     <div style={{ fontSize: '10px', color: '#777' }}>{tzTime(e.created_at)}</div>
@@ -414,7 +357,7 @@ export default function ReportsView(_props: any) {
                 <td style={{ ...xpCell, fontSize: '11px' }}>
                     {e.item_category_name
                         ? <span title={e.item_category_name} style={{ borderRadius: CHIP_RADIUS, display: 'inline-block', maxWidth: '100%', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', verticalAlign: 'bottom', background: '#e4eef0', border: '1px solid #8fb3bb', padding: '0 5px', fontSize: '10px', color: '#2a464a' }}>{e.item_category_name}</span>
-                        : <Dash classic={classic} />}
+                        : <Dash />}
                 </td>
                 <td style={{ ...xpCell, fontSize: '11px' }}>
                     <div style={{ display: 'flex', flexWrap: 'wrap', gap: 3 }}>
@@ -431,7 +374,7 @@ export default function ReportsView(_props: any) {
                 <td style={{ ...xpCell, fontSize: '11px' }}>
                     {e.batch_number
                         ? <span style={{ borderRadius: CHIP_RADIUS, background: '#fff8dc', border: '1px solid #c8a000', padding: '0 5px', fontSize: '10px', color: '#5a3c00' }}>{e.batch_number}</span>
-                        : <Dash classic={classic} />}
+                        : <Dash />}
                 </td>
                 <td style={{ ...xpCell, textAlign: 'right', whiteSpace: 'nowrap' }}>
                     <span style={{ fontSize: '11px', fontWeight: 'bold', color: up ? '#1a5e1a' : '#c00000' }}>
@@ -449,92 +392,33 @@ export default function ReportsView(_props: any) {
                     <span style={{ borderRadius: CHIP_RADIUS, background: rm.classic.bg, border: `1px solid ${rm.classic.border}`, padding: '0 5px', fontSize: '10px', color: rm.classic.color }}>{rm.label}</span>
                     <span style={{ fontSize: '10px', color: '#999', marginLeft: 4 }} title={e.reference_id}>#{e.reference_label || shortRef(e.reference_id)}</span>
                 </td>
-            </tr>
-        ) : (
-            <tr key={e.id}>
-                <td className="ps-4" style={{ whiteSpace: 'nowrap' }}>
-                    <div className="small">{tzDate(e.created_at)}</div>
-                    <div className="text-muted" style={{ fontSize: 11 }}>{tzTime(e.created_at)}</div>
-                </td>
-                <td>
-                    <div className="fw-medium">{getItemName(e)}</div>
-                    <CodeChip code={getItemCode(e)} classic={false} tier={2} style={{ display: 'block' }} />
-                    {e.attribute_value_ids?.length > 0 && (
-                        <div className="d-flex flex-wrap gap-1 mt-1">
-                            {e.attribute_value_ids.map((vid: string) => <span key={vid} className="badge text-bg-light border" style={{ fontSize: 9 }}>{getAttrName(vid)}</span>)}
-                        </div>
-                    )}
-                </td>
-                <td>
-                    {e.item_category_name
-                        ? <span title={e.item_category_name} className="badge bg-info-subtle text-info-emphasis d-inline-block text-truncate mw-100 align-bottom">{e.item_category_name}</span>
-                        : <Dash classic={classic} />}
-                </td>
-                <td>
-                    <div className="d-flex flex-wrap gap-1">
-                        {getWarehouseName(e) && (
-                            <span className="badge bg-secondary-subtle text-secondary-emphasis">{getWarehouseName(e)}</span>
-                        )}
-                        <span className="badge bg-primary-subtle text-primary-emphasis">{getLocName(e)}</span>
-                    </div>
-                </td>
-                <td>{e.batch_number ? <span className="badge bg-warning text-dark">{e.batch_number}</span> : <Dash classic={classic} />}</td>
-                <td className="text-end" style={{ whiteSpace: 'nowrap' }}>
-                    <span className={`fw-bold ${up ? 'text-success' : 'text-danger'}`}>
-                        <i className={`bi ${up ? 'bi-caret-up-fill' : 'bi-caret-down-fill'} me-1`} style={{ fontSize: 10 }} />
-                        {up ? '+' : ''}{fmtQty(e.qty_change)}
-                        <span className="text-muted fw-normal small ms-1">{e.item_uom}</span>
-                    </span>
-                    {pkg.length > 0 && (
-                        <div className="text-muted" style={{ fontSize: 10 }}>
-                            {pkg.map((q, k) => <span key={k}>{k > 0 ? ', ' : ''}{q.n > 0 ? '+' : ''}{q.n} {q.label}</span>)}
-                        </div>
-                    )}
-                </td>
-                <td className="pe-4" style={{ whiteSpace: 'nowrap' }}>
-                    <span className={`badge ${rm.modern}`}>{rm.label}</span>
-                    <span className="ms-2 text-muted small" title={e.reference_id}>#{e.reference_label || shortRef(e.reference_id)}</span>
-                </td>
-            </tr>
-        );
+            </tr>;
     };
 
     // ── Table body — shared error/empty/rows ternary, per-branch chrome ──────
     const tableBody = error ? (
-        classic
-            ? <XPEmptyState icon="bi-exclamation-triangle" message={`Could not load ledger — ${error}`} />
-            : <div className="text-center py-5 text-danger"><i className="bi bi-exclamation-triangle me-2" />Could not load ledger — {error}</div>
-    ) : !loading && rows.length === 0 ? (
-        classic ? (
-            <XPEmptyState icon="bi-journal-x" message={hasFilters ? 'No movements match these filters' : 'No stock movements recorded yet'}>
+        <XPEmptyState icon="bi-exclamation-triangle" message={`Could not load ledger — ${error}`} />) : !loading && rows.length === 0 ? (
+        <XPEmptyState icon="bi-journal-x" message={hasFilters ? 'No movements match these filters' : 'No stock movements recorded yet'}>
                 {hasFilters && <button className={XP_BTN} style={{ ...xpBtn(), marginTop: 10 }} onClick={clearFilters}>Clear filters</button>}
-            </XPEmptyState>
-        ) : (
-            <div className="text-center py-5 text-muted">
-                <i className="bi bi-journal-x d-block fs-2 mb-2 opacity-50" />
-                {hasFilters ? 'No movements match these filters' : 'No stock movements recorded yet'}
-                {hasFilters && <div><button className="btn btn-sm btn-outline-secondary mt-3" onClick={clearFilters}>Clear filters</button></div>}
-            </div>
-        )
-    ) : (
-        <div className={classic ? undefined : 'table-responsive'} style={classic ? undefined : { flex: 1, overflowY: 'auto', minHeight: 0 }}>
-            <table className={classic ? undefined : 'table table-hover table-bordered align-middle mb-0'} style={classic ? { width: '100%', borderCollapse: 'collapse' } : undefined}>
-                <thead className={classic ? undefined : 'table-light'} style={classic ? undefined : { position: 'sticky', top: 0, zIndex: 1 }}>
+            </XPEmptyState>) : (
+        <div className={undefined} style={undefined}>
+            <table className={undefined} style={{ width: '100%', borderCollapse: 'collapse' }}>
+                <thead className={undefined} style={undefined}>
                     <tr>
-                        <SortableTh sort={sort} colKey="date" onSort={toggle} style={classic ? th : undefined} className={classic ? undefined : 'ps-4'}>{t('date')}</SortableTh>
-                        <SortableTh sort={sort} colKey="item" onSort={toggle} style={classic ? th : undefined}>Item</SortableTh>
-                        <SortableTh sort={sort} colKey="category" onSort={toggle} style={classic ? th : undefined}>Category</SortableTh>
-                        <SortableTh sort={sort} colKey="location" onSort={toggle} style={classic ? th : undefined}>{t('locations')}</SortableTh>
-                        <th style={classic ? th : undefined}>Lot</th>
-                        <SortableTh sort={sort} colKey="qty" onSort={toggle} className={classic ? undefined : 'text-end'} style={classic ? { ...th, textAlign: 'right' } : undefined}>Movement</SortableTh>
-                        <th className={classic ? undefined : 'pe-4'} style={classic ? { ...th, borderRight: 'none' } : undefined}>Source</th>
+                        <SortableTh sort={sort} colKey="date" onSort={toggle} style={th} className={undefined}>{t('date')}</SortableTh>
+                        <SortableTh sort={sort} colKey="item" onSort={toggle} style={th}>Item</SortableTh>
+                        <SortableTh sort={sort} colKey="category" onSort={toggle} style={th}>Category</SortableTh>
+                        <SortableTh sort={sort} colKey="location" onSort={toggle} style={th}>{t('locations')}</SortableTh>
+                        <th style={th}>Lot</th>
+                        <SortableTh sort={sort} colKey="qty" onSort={toggle} className={undefined} style={{ ...th, textAlign: 'right' }}>Movement</SortableTh>
+                        <th className={undefined} style={{ ...th, borderRight: 'none' }}>Source</th>
                     </tr>
                 </thead>
                 {/* Skeleton lives inside the real table so the header stays
                     put and the placeholder rows inherit its columns. */}
                 <tbody ref={listBodyRef}>
                     {loading
-                        ? <TableSkeleton rows={10} cols={skel.cols ?? 7} classic={classic} tdStyle={classic ? xpCell : undefined} rowHeight={skel.rowHeight} fillHeight={skel.fillHeight} />
+                        ? <TableSkeleton rows={10} cols={skel.cols ?? 7} tdStyle={xpCell} rowHeight={skel.rowHeight} fillHeight={skel.fillHeight} />
                         : rows.map((e: any, i: number) => renderRow(e, i))}
                 </tbody>
             </table>
@@ -543,57 +427,35 @@ export default function ReportsView(_props: any) {
 
     return (
         <>
-        <div className={classic ? 'fade-in print-container' : 'card fade-in border-0 shadow-sm shell-window print-container'} style={pageFillStyle}>
-            <div style={classic ? sharedXpBevel(flexFillStyle) : flexFillStyle}>
-                {classic ? (
-                    <div style={titleBar} className="no-print">
+        <div className={'fade-in print-container'} style={pageFillStyle}>
+            <div style={sharedXpBevel(flexFillStyle)}>
+                <div style={titleBar} className="no-print">
                         <span><i className="bi bi-journal-text" style={{ marginRight: 6 }} />{t('stock_ledger')}</span>
                         <span style={{ fontSize: '10px', opacity: 0.85 }}>{total.toLocaleString()} movements</span>
                     </div>
-                ) : (
-                    <div className="card-header bg-white border-bottom no-print py-3">
-                        <div className="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
-                            <div>
-                                <h5 className="card-title mb-0">{t('stock_ledger')}</h5>
-                                <small className="text-muted">Every stock movement, in and out</small>
-                            </div>
-                        </div>
-                        {toolbarRow1}
-                        {toolbarRow2}
-                    </div>
-                )}
-                {classic && toolbarRow1}
-                {classic && toolbarRow2}
+                {toolbarRow1}
+                {toolbarRow2}
 
                 {/* Summary strip */}
-                <div className={classic ? 'no-print' : 'row g-0 border-bottom text-center no-print'} style={classic ? { display: 'flex', gap: 5, padding: '3px 6px', background: '#ece9d8', borderBottom: '1px solid #b0a898' } : undefined}>
-                    {stats.map((s, i) => classic
-                        ? <div key={s.label}>{statTile(s.label, s.value, s.color)}</div>
-                        : (
-                            <div key={s.label} className={`col py-1 d-flex align-items-baseline justify-content-center gap-2 ${i > 0 ? 'border-start' : ''}`}>
-                                <span className="text-muted text-uppercase" style={{ fontSize: 10, letterSpacing: '0.5px' }}>{s.label}</span>
-                                <span className={`fw-bold ${s.cls}`}>{s.value}</span>
-                            </div>
-                        ))}
+                <div className={'no-print'} style={{ display: 'flex', gap: 5, padding: '3px 6px', background: '#ece9d8', borderBottom: '1px solid #b0a898' }}>
+                    {stats.map((s, i) => <div key={s.label}>{statTile(s.label, s.value, s.color)}</div>)}
                 </div>
 
                 {/* Print header */}
-                <div className={classic ? 'print-header d-none d-print-block' : 'print-header d-none d-print-block p-4 border-bottom'} style={classic ? { padding: '16px 12px 8px', borderBottom: '1px solid #b0a898' } : undefined}>
-                    <h2 style={classic ? { fontFamily: xpFont, marginBottom: 4 } : undefined} className={classic ? undefined : 'mb-1'}>{t('stock_ledger')}</h2>
-                    <p style={classic ? { fontFamily: xpFont, fontSize: '12px', color: '#444', margin: 0 } : undefined} className={classic ? undefined : 'text-muted mb-0'}>Period: {periodLabel}</p>
-                    <p style={classic ? { fontFamily: xpFont, fontSize: '11px', color: '#666', margin: 0 } : undefined} className={classic ? undefined : 'text-muted small mb-0'}>
-                        {classic
-                            ? <>{total} movements &nbsp;·&nbsp; In +{fmtQty(totalIn)} &nbsp;·&nbsp; Out {fmtQty(totalOut)} &nbsp;·&nbsp; Net {fmtQty(net)}</>
-                            : <>{total} movements · In +{fmtQty(totalIn)} · Out {fmtQty(totalOut)} · Net {fmtQty(net)}</>}
+                <div className={'print-header d-none d-print-block'} style={{ padding: '16px 12px 8px', borderBottom: '1px solid #b0a898' }}>
+                    <h2 style={{ fontFamily: xpFont, marginBottom: 4 }} className={undefined}>{t('stock_ledger')}</h2>
+                    <p style={{ fontFamily: xpFont, fontSize: '12px', color: '#444', margin: 0 }} className={undefined}>Period: {periodLabel}</p>
+                    <p style={{ fontFamily: xpFont, fontSize: '11px', color: '#666', margin: 0 }} className={undefined}>
+                        <>{total} movements &nbsp;·&nbsp; In +{fmtQty(totalIn)} &nbsp;·&nbsp; Out {fmtQty(totalOut)} &nbsp;·&nbsp; Net {fmtQty(net)}</>
                     </p>
                 </div>
 
                 {/* Table */}
-                <div className={classic ? undefined : 'card-body p-0'} style={classic ? { flex: 1, overflowY: 'auto', background: '#fff', minHeight: 0 } : { flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+                <div className={undefined} style={{ flex: 1, overflowY: 'auto', background: '#fff', minHeight: 0 }}>
                     {tableBody}
                 </div>
 
-                <Pager page={page} total={total} pageSize={PAGE_SIZE} onPageChange={setPage} className={classic ? 'no-print' : 'px-4 no-print'} />
+                <Pager page={page} total={total} pageSize={PAGE_SIZE} onPageChange={setPage} className={'no-print'} />
             </div>
         </div>
         {printOpen && (
@@ -602,7 +464,6 @@ export default function ReportsView(_props: any) {
                 locations={locations}
                 attributes={attributes}
                 companyProfile={companyProfile}
-                currentStyle={uiStyle}
                 periodLabel={periodLabel}
                 totals={{ total, totalIn, totalOut }}
                 filtersSummary={filtersSummary}

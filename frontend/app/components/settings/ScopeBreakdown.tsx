@@ -11,12 +11,12 @@ const SCOPE_TINT = {
     loc: { bg: '#f0e6ff', border: '#8f6ac8', fg: '#2a0a5e' },
 };
 
-function ScopeChip({ label, kind, classic }: { label: string; kind: keyof typeof SCOPE_TINT; classic: boolean }) {
+function ScopeChip({ label, kind }: { label: string; kind: keyof typeof SCOPE_TINT }) {
     const t = SCOPE_TINT[kind];
     return (
         <span style={{
-            fontFamily: classic ? xpFont : undefined,
-            fontSize: classic ? 9.5 : 10.5,
+            fontFamily: xpFont,
+            fontSize: 9.5,
             lineHeight: 1.6,
             background: t.bg,
             border: `1px solid ${t.border}`,
@@ -33,11 +33,10 @@ function ScopeChip({ label, kind, classic }: { label: string; kind: keyof typeof
  * Collapsed view shows a restriction count; this fills in what's actually restricted,
  * through the same `PermissionSectionTable` card the permission grid uses.
  */
-export default function ScopeBreakdown({ workCenterTypes, categories, locations, classic }: {
+export default function ScopeBreakdown({ workCenterTypes, categories, locations}: {
     workCenterTypes: string[];
     categories: string[];
     locations: string[];
-    classic: boolean;
 }) {
     const rows: PermissionSectionRow[] = [];
     if (workCenterTypes.length > 0) {
@@ -45,7 +44,7 @@ export default function ScopeBreakdown({ workCenterTypes, categories, locations,
             key: 'wc',
             label: 'Work Center Types',
             hint: `${workCenterTypes.length}`,
-            chips: workCenterTypes.map(t => <ScopeChip key={t} label={t} kind="wc" classic={classic} />),
+            chips: workCenterTypes.map(t => <ScopeChip key={t} label={t} kind="wc" />),
         });
     }
     if (categories.length > 0) {
@@ -53,7 +52,7 @@ export default function ScopeBreakdown({ workCenterTypes, categories, locations,
             key: 'cat',
             label: 'Categories',
             hint: `${categories.length}`,
-            chips: categories.map(c => <ScopeChip key={c} label={c} kind="cat" classic={classic} />),
+            chips: categories.map(c => <ScopeChip key={c} label={c} kind="cat" />),
         });
     }
     if (locations.length > 0) {
@@ -61,16 +60,15 @@ export default function ScopeBreakdown({ workCenterTypes, categories, locations,
             key: 'loc',
             label: 'Locations',
             hint: `${locations.length}`,
-            chips: locations.map(l => <ScopeChip key={l} label={l} kind="loc" classic={classic} />),
+            chips: locations.map(l => <ScopeChip key={l} label={l} kind="loc" />),
         });
     }
     if (rows.length === 0) return null;
 
     return (
-        <ExpandedRowPanel classic={classic}>
-            <ExpandedRowPanelBody classic={classic}>
+        <ExpandedRowPanel>
+            <ExpandedRowPanelBody>
                 <PermissionSectionTable
-                    classic={classic}
                     title="Scope Restrictions"
                     rows={rows}
                     labelWidth={140}

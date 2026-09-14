@@ -1,7 +1,6 @@
 'use client';
 import React, { useState } from 'react';
 import { useConfirm } from '../../context/ConfirmContext';
-import { useTheme } from '../../context/ThemeContext';
 import { lvInput, lvBtn, lvPrimaryBtn, lvTh, lvTd, lvSep, lvRow, lvThead, ExpanderCell } from '../shared/listViewTheme';
 import { ExpandedRowPanel, rowStateBg, Chip, XP_BTN } from '../shared/xpTheme';
 import { SearchField, ToolbarCount } from '../shared/shellTheme';
@@ -17,8 +16,6 @@ interface Props {
 
 export default function UOMLibraryView({ uoms, canManage, onCreateUOM, onDeleteUOM, onSaveUOMFactor, onDeleteUOMFactor }: Props) {
     const { confirm } = useConfirm();
-    const { uiStyle } = useTheme();
-    const classic = uiStyle === 'classic';
 
     const [search, setSearch] = useState('');
     const [newName, setNewName] = useState('');
@@ -64,25 +61,23 @@ export default function UOMLibraryView({ uoms, canManage, onCreateUOM, onDeleteU
     return (
         <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
             {/* Toolbar */}
-            <div style={classic
-                ? { background: 'linear-gradient(to bottom, #f5f4ef, #e0dfd8)', borderBottom: '1px solid #b0a898', padding: '4px 8px', display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap', flexShrink: 0 }
-                : { background: '#fff', borderBottom: '1px solid #dbe1ea', padding: '8px 10px', display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap', flexShrink: 0 }}>
+            <div style={{ background: 'linear-gradient(to bottom, #f5f4ef, #e0dfd8)', borderBottom: '1px solid #b0a898', padding: '4px 8px', display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap', flexShrink: 0 }}>
                 {canManage && (
                     <form onSubmit={handleCreate} style={{ display: 'flex', gap: 6 }}>
                         <input
-                            style={{ ...lvInput(classic), width: 180 }}
+                            style={{ ...lvInput(), width: 180 }}
                             placeholder="e.g. Dozen, kg…"
                             value={newName}
                             onChange={e => setNewName(e.target.value)}
                         />
-                        <button type="submit" className={XP_BTN} style={lvPrimaryBtn(classic)} disabled={isSubmitting}>
+                        <button type="submit" className={XP_BTN} style={lvPrimaryBtn()} disabled={isSubmitting}>
                             <i className="bi bi-plus-lg" /> {isSubmitting ? '…' : 'New UOM'}
                         </button>
                     </form>
                 )}
-                <span style={lvSep(classic)} />
-                <SearchField classic={classic} value={search} onChange={setSearch} placeholder="Search units…" width={200} />
-                <ToolbarCount classic={classic} right>
+                <span style={lvSep()} />
+                <SearchField value={search} onChange={setSearch} placeholder="Search units…" width={200} />
+                <ToolbarCount right>
                     {filtered.filter((u: any) => u.is_system).length} system &nbsp;+&nbsp; {filtered.filter((u: any) => !u.is_system).length} packaging
                 </ToolbarCount>
             </div>
@@ -90,17 +85,17 @@ export default function UOMLibraryView({ uoms, canManage, onCreateUOM, onDeleteU
             {/* Table */}
             <div style={{ flex: 1, minHeight: 0, background: '#fff', overflow: 'auto' }}>
                 <table style={{ width: '100%', borderCollapse: 'collapse', background: '#fff' }}>
-                    <thead style={lvThead(classic, true)}>
+                    <thead style={lvThead()}>
                         <tr>
-                            <th style={{ ...lvTh(classic), width: 34 }}></th>
-                            <th style={{ ...lvTh(classic), width: 160 }}>Name</th>
-                            <th style={lvTh(classic)}>Conversions</th>
-                            <th style={{ ...lvTh(classic), width: 70, textAlign: 'right', borderRight: 'none' }}></th>
+                            <th style={{ ...lvTh(), width: 34 }}></th>
+                            <th style={{ ...lvTh(), width: 160 }}>Name</th>
+                            <th style={lvTh()}>Conversions</th>
+                            <th style={{ ...lvTh(), width: 70, textAlign: 'right', borderRight: 'none' }}></th>
                         </tr>
                     </thead>
                     <tbody>
                         {sorted.length === 0 && (
-                            <tr><td colSpan={4} style={{ ...lvTd(classic), textAlign: 'center', color: classic ? '#888' : '#64748b', fontStyle: 'italic', padding: 20 }}>
+                            <tr><td colSpan={4} style={{ ...lvTd(), textAlign: 'center', color: '#888', fontStyle: 'italic', padding: 20 }}>
                                 No units defined.
                             </td></tr>
                         )}
@@ -109,36 +104,36 @@ export default function UOMLibraryView({ uoms, canManage, onCreateUOM, onDeleteU
                             const factors: any[] = uom.factors || [];
                             return (
                                 <React.Fragment key={uom.id}>
-                                    <tr style={{ ...lvRow(classic, idx), cursor: 'pointer', background: isExpanded ? rowStateBg('expanded', classic) : lvRow(classic, idx).background }} onClick={() => toggleExpand(uom)}>
-                                        <ExpanderCell classic={classic} expanded={isExpanded} onToggle={() => toggleExpand(uom)} label="conversion factors" />
-                                        <td style={lvTd(classic)}>
-                                            <span style={{ fontWeight: 'bold', fontVariant: classic ? 'all-small-caps' : undefined as any }}>{uom.name}</span>
+                                    <tr style={{ ...lvRow(idx), cursor: 'pointer', background: isExpanded ? rowStateBg('expanded') : lvRow(idx).background }} onClick={() => toggleExpand(uom)}>
+                                        <ExpanderCell expanded={isExpanded} onToggle={() => toggleExpand(uom)} label="conversion factors" />
+                                        <td style={lvTd()}>
+                                            <span style={{ fontWeight: 'bold', fontVariant: 'all-small-caps'}}>{uom.name}</span>
                                             {uom.is_system && (
-                                                <Chip classic={classic} size="xs" style={{ marginLeft: 6 }} tone={{
-                                                    background: classic ? '#dce8ff' : '#dbeafe',
-                                                    borderColor: classic ? '#7fa8e0' : '#93c5fd',
-                                                    color: classic ? '#003080' : '#1d4ed8',
+                                                <Chip size="xs" style={{ marginLeft: 6 }} tone={{
+                                                    background: '#dce8ff',
+                                                    borderColor: '#7fa8e0',
+                                                    color: '#003080',
                                                 }}>SYSTEM</Chip>
                                             )}
                                         </td>
-                                        <td style={lvTd(classic)}>
+                                        <td style={lvTd()}>
                                             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
                                                 {factors.length > 0 ? factors.map((f: any) => (
-                                                    <Chip key={f.id} classic={classic} tone={{
-                                                        background: classic ? '#fff3e0' : '#fff7ed',
-                                                        borderColor: classic ? '#f0a040' : '#fdba74',
-                                                        color: classic ? '#804800' : '#9a3412',
+                                                    <Chip key={f.id} tone={{
+                                                        background: '#fff3e0',
+                                                        borderColor: '#f0a040',
+                                                        color: '#804800',
                                                     }}>1 {uom.name} = {parseFloat(f.value)} {f.to_uom_name}</Chip>
                                                 )) : (
-                                                    <span style={{ fontSize: classic ? 10 : 11, color: '#aaa', fontStyle: 'italic' }}>
+                                                    <span style={{ fontSize: 10, color: '#aaa', fontStyle: 'italic' }}>
                                                         {uom.is_system ? 'base unit' : 'no conversion set'}
                                                     </span>
                                                 )}
                                             </div>
                                         </td>
-                                        <td style={{ ...lvTd(classic), borderRight: 'none', textAlign: 'right' }} onClick={e => e.stopPropagation()}>
+                                        <td style={{ ...lvTd(), borderRight: 'none', textAlign: 'right' }} onClick={e => e.stopPropagation()}>
                                             {canManage && !uom.is_system && (
-                                                <button title="Delete" onClick={() => handleDelete(uom)} style={{ background: 'none', border: '1px solid transparent', cursor: 'pointer', padding: '1px 4px', color: classic ? '#a00' : '#dc2626', fontSize: 13 }}>
+                                                <button title="Delete" onClick={() => handleDelete(uom)} style={{ background: 'none', border: '1px solid transparent', cursor: 'pointer', padding: '1px 4px', color: '#a00', fontSize: 13 }}>
                                                     <i className="bi bi-trash" />
                                                 </button>
                                             )}
@@ -147,19 +142,19 @@ export default function UOMLibraryView({ uoms, canManage, onCreateUOM, onDeleteU
                                     {isExpanded && (
                                         <tr>
                                             <td colSpan={4} style={{ padding: 0 }}>
-                                                <ExpandedRowPanel classic={classic} style={{ padding: '8px 12px 8px 28px' }}>
+                                                <ExpandedRowPanel style={{ padding: '8px 12px 8px 28px' }}>
                                                     {canManage ? (
                                                         <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
-                                                            <span style={{ fontSize: classic ? 11 : 12, color: classic ? '#804800' : '#9a3412' }}>1 <b>{uom.name}</b> =</span>
+                                                            <span style={{ fontSize: 11, color: '#804800'}}>1 <b>{uom.name}</b> =</span>
                                                             <input
                                                                 type="number"
-                                                                style={{ ...lvInput(classic), width: 90 }}
+                                                                style={{ ...lvInput(), width: 90 }}
                                                                 value={factorValue}
                                                                 onChange={e => setFactorValue(e.target.value)}
                                                                 placeholder="value"
                                                             />
                                                             <select
-                                                                style={{ ...lvInput(classic), width: 160 }}
+                                                                style={{ ...lvInput(), width: 160 }}
                                                                 value={factorToUomId}
                                                                 onChange={e => setFactorToUomId(e.target.value)}
                                                             >
@@ -168,15 +163,15 @@ export default function UOMLibraryView({ uoms, canManage, onCreateUOM, onDeleteU
                                                                     <option key={u.id} value={u.id}>{u.name}</option>
                                                                 ))}
                                                             </select>
-                                                            <button className={XP_BTN} style={lvBtn(classic)} onClick={() => handleAddFactor(uom)}>Add</button>
+                                                            <button className={XP_BTN} style={lvBtn()} onClick={() => handleAddFactor(uom)}>Add</button>
                                                             {factors.length > 0 && (
                                                                 <>
-                                                                    <span style={{ width: 1, height: 18, background: classic ? '#c0a060' : '#fde68a' }} />
+                                                                    <span style={{ width: 1, height: 18, background: '#c0a060'}} />
                                                                     {factors.map((f: any) => (
-                                                                        <Chip key={f.id} classic={classic} tone={{
-                                                                            background: classic ? '#fff3e0' : '#fff7ed',
-                                                                            borderColor: classic ? '#f0a040' : '#fdba74',
-                                                                            color: classic ? '#804800' : '#9a3412',
+                                                                        <Chip key={f.id} tone={{
+                                                                            background: '#fff3e0',
+                                                                            borderColor: '#f0a040',
+                                                                            color: '#804800',
                                                                         }} onRemove={() => onDeleteUOMFactor(uom.id, f.id)}>1 {uom.name} = {parseFloat(f.value)} {f.to_uom_name}</Chip>
                                                                     ))}
                                                                 </>

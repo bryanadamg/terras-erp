@@ -3,7 +3,6 @@
 import React, { useState } from 'react';
 import ModalWrapper from '../shared/ModalWrapper';
 import { Tabs } from '../shared/Tabs';
-import { useTheme } from '../../context/ThemeContext';
 import { useLanguage } from '../../context/LanguageContext';
 import { xpFont, modernFont, CODE_FONT, FormSection, CHIP_RADIUS, XP_BTN } from '../shared/xpTheme';
 import { lvBtn } from '../shared/listViewTheme';
@@ -331,9 +330,7 @@ export default function BookingStockInfoModal({ isOpen, onClose }: {
     isOpen: boolean;
     onClose: () => void;
 }) {
-    const { uiStyle } = useTheme();
     const { language } = useLanguage();
-    const classic = uiStyle === 'classic';
 
     // Opens on the tab matching the app's current language, so the usual reader
     // never has to switch — the other tab is there for the times a figure has to be
@@ -341,15 +338,15 @@ export default function BookingStockInfoModal({ isOpen, onClose }: {
     const [lang, setLang] = useState<Lang>(language === 'id' ? 'id' : 'en');
     const doc = DOCS[lang];
 
-    const font = classic ? xpFont : modernFont;
+    const font = xpFont;
     const bodyStyle: React.CSSProperties = {
-        fontFamily: font, fontSize: classic ? 11 : 12.5,
+        fontFamily: font, fontSize: 11,
         lineHeight: 1.55, color: '#2b2b2b',
     };
     // Formula fragments: monospace and tinted, so a reader can see at a glance that
     // these are the machine's rules rather than narrative.
     const codeBlock: React.CSSProperties = {
-        fontFamily: CODE_FONT, fontSize: classic ? 10.5 : 11.5,
+        fontFamily: CODE_FONT, fontSize: 10.5,
         background: '#f4f6fa', border: '1px solid #d5dbe6', borderRadius: CHIP_RADIUS,
         padding: '6px 9px', margin: '6px 0 7px', display: 'block',
         whiteSpace: 'pre-wrap', overflowX: 'auto', color: '#1a2c4a',
@@ -384,7 +381,6 @@ export default function BookingStockInfoModal({ isOpen, onClose }: {
             title={<><i className="bi bi-info-circle me-1" />{doc.title}</>}
             banner={
                 <Tabs<Lang>
-                    classic={classic}
                     activeKey={lang}
                     onChange={setLang}
                     tabs={[
@@ -394,18 +390,18 @@ export default function BookingStockInfoModal({ isOpen, onClose }: {
                 />
             }
             footer={
-                <button type="button" className={XP_BTN} style={lvBtn(classic)} onClick={onClose}>{doc.close}</button>
+                <button type="button" className={XP_BTN} style={lvBtn()} onClick={onClose}>{doc.close}</button>
             }
         >
             <div style={bodyStyle}>
                 {/* ── The formula itself ───────────────────────────────────────── */}
                 <div style={{
-                    border: `1px solid ${classic ? '#a8b4c8' : '#dbe1ea'}`,
+                    border: '1px solid #a8b4c8',
                     borderRadius: 6, background: '#fbfcfe',
-                    padding: classic ? '10px 12px' : '12px 14px', marginBottom: 12,
+                    padding: '10px 12px', marginBottom: 12,
                 }}>
                     <div style={{
-                        fontFamily: CODE_FONT, fontSize: classic ? 13 : 15,
+                        fontFamily: CODE_FONT, fontSize: 13,
                         textAlign: 'center', letterSpacing: '0.02em', color: '#1a2c4a',
                     }}>
                         <b>{doc.terms.netFree}</b>{'  =  '}
@@ -414,13 +410,13 @@ export default function BookingStockInfoModal({ isOpen, onClose }: {
                         <span style={kw(TERM.required)}>{doc.terms.required}</span>{'  −  '}
                         <span style={kw(TERM.reserved)}>{doc.terms.reserved}</span>
                     </div>
-                    <div style={{ marginTop: 8, fontSize: classic ? 10.5 : 12, color: '#555', textAlign: 'center' }}>
+                    <div style={{ marginTop: 8, fontSize: 10.5, color: '#555', textAlign: 'center' }}>
                         {doc.keying}
                     </div>
                     <div style={{
                         marginTop: 9, paddingTop: 8, borderTop: '1px dashed #ccd4e0',
                         display: 'flex', gap: 14, flexWrap: 'wrap', justifyContent: 'center',
-                        fontSize: classic ? 10 : 11.5,
+                        fontSize: 10,
                     }}>
                         {([
                             [HEALTH.short, doc.health.short],
@@ -437,13 +433,13 @@ export default function BookingStockInfoModal({ isOpen, onClose }: {
 
                 {/* ── The sections, in the selected language ───────────────────── */}
                 {doc.sections.map((sec, si) => (
-                    <FormSection key={sec.title} title={sec.title} classic={classic}
+                    <FormSection key={sec.title} title={sec.title}
                         style={si === doc.sections.length - 1 ? { marginBottom: 0 } : undefined}>
                         {sec.blocks.map((b, bi) => renderBlock(b, bi, bi === sec.blocks.length - 1))}
                     </FormSection>
                 ))}
 
-                <div style={{ marginTop: 8, fontSize: classic ? 10 : 11, color: '#777' }}>
+                <div style={{ marginTop: 8, fontSize: 10, color: '#777' }}>
                     <i className="bi bi-braces" style={{ marginRight: 5 }} />
                     <code style={{ fontFamily: CODE_FONT }}>backend/app/api/stock.py → _compute_booking_rows()</code>
                 </div>

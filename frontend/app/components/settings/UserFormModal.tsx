@@ -25,7 +25,7 @@ export interface UserFormPayload {
 }
 
 export default function UserFormModal({
-    isOpen, onClose, mode, user, roles, allPermissions, classic, onSubmit,
+    isOpen, onClose, mode, user, roles, allPermissions, onSubmit,
 }: {
     isOpen: boolean;
     onClose: () => void;
@@ -33,7 +33,6 @@ export default function UserFormModal({
     user?: User;
     roles: any[];
     allPermissions: PermissionOption[];
-    classic: boolean;
     onSubmit: (payload: UserFormPayload) => Promise<{ ok: boolean; error?: string }>;
 }) {
     const [username, setUsername] = useState('');
@@ -122,7 +121,6 @@ export default function UserFormModal({
             size="xl"
             footer={
                 <ModalFooterActions
-                    classic={classic}
                     onCancel={onClose}
                     onSubmit={handleSubmit}
                     submitting={submitting}
@@ -131,13 +129,13 @@ export default function UserFormModal({
                 />
             }
         >
-            <FormError classic={classic}>{error}</FormError>
+            <FormError>{error}</FormError>
 
             {/* Preview frame lives inside AvatarPicker (it has to, for the
                 hover-to-try-on stage) — don't add a second one here. */}
             <div className="mb-3">
-                <FieldLabel classic={classic}>Avatar</FieldLabel>
-                <AvatarPicker value={avatarId} onChange={setAvatarId} seed={username} template={roleAvatarTemplate} classic={classic} />
+                <FieldLabel>Avatar</FieldLabel>
+                <AvatarPicker value={avatarId} onChange={setAvatarId} seed={username} template={roleAvatarTemplate} />
             </div>
 
             {/* Paired two-up: at xl these single-line fields each stretching the full
@@ -145,19 +143,17 @@ export default function UserFormModal({
                 narrow screens. */}
             <div className="row g-2 mb-3">
                 <div className="col-md-6">
-                    <FieldLabel classic={classic}>Username</FieldLabel>
+                    <FieldLabel>Username</FieldLabel>
                     <input
-                        style={classic ? xpInput({ width: '100%', fontFamily: CODE_FONT }) : { fontFamily: CODE_FONT }}
-                        className={classic ? '' : 'form-control form-control-sm'}
+                        style={xpInput({ width: '100%', fontFamily: CODE_FONT })}
                         value={username}
                         onChange={e => setUsername(e.target.value)}
                     />
                 </div>
                 <div className="col-md-6">
-                    <FieldLabel classic={classic}>Full Name</FieldLabel>
+                    <FieldLabel>Full Name</FieldLabel>
                     <input
-                        style={classic ? xpInput({ width: '100%' }) : undefined}
-                        className={classic ? '' : 'form-control form-control-sm'}
+                        style={xpInput({ width: '100%' })}
                         value={fullName}
                         onChange={e => setFullName(e.target.value)}
                     />
@@ -166,10 +162,9 @@ export default function UserFormModal({
 
             <div className="row g-2 mb-3">
                 <div className="col-md-6">
-                    <FieldLabel classic={classic}>Role</FieldLabel>
+                    <FieldLabel>Role</FieldLabel>
                     <select
-                        style={classic ? xpInput({ height: 'auto', padding: '2px 4px', width: '100%' }) : undefined}
-                        className={classic ? '' : 'form-select form-select-sm'}
+                        style={xpInput({ height: 'auto', padding: '2px 4px', width: '100%' })}
                         value={roleId}
                         onChange={e => setRoleId(e.target.value)}
                     >
@@ -179,12 +174,11 @@ export default function UserFormModal({
                 </div>
                 <div className="col-md-6">
                     <FieldLabel
-                        classic={classic}
                         right={mode === 'edit' && !showPassword ? (
                             <button
                                 type="button"
-                                style={classic ? xpBtn({ padding: '1px 6px', fontSize: 10 }) : undefined}
-                                className={classic ? XP_BTN : 'btn btn-sm btn-link p-0'}
+                                style={xpBtn({ padding: '1px 6px', fontSize: 10 })}
+                                className={XP_BTN}
                                 onClick={() => setShowPassword(true)}
                             >Reset Password…</button>
                         ) : undefined}
@@ -194,8 +188,7 @@ export default function UserFormModal({
                             <div className="d-flex gap-1">
                                 <input
                                     type={passwordVisible ? 'text' : 'password'}
-                                    style={classic ? xpInput({ width: '100%', borderColor: '#cc6666' }) : undefined}
-                                    className={classic ? '' : 'form-control form-control-sm'}
+                                    style={xpInput({ width: '100%', borderColor: '#cc6666' })}
                                     placeholder={mode === 'create' ? 'Password' : 'New password'}
                                     value={password}
                                     onChange={e => setPassword(e.target.value)}
@@ -203,35 +196,35 @@ export default function UserFormModal({
                                 <button
                                     type="button"
                                     title={passwordVisible ? 'Hide' : 'Show'}
-                                    style={classic ? xpBtn({ padding: '1px 6px' }) : undefined}
-                                    className={classic ? XP_BTN : 'btn btn-sm btn-light border'}
+                                    style={xpBtn({ padding: '1px 6px' })}
+                                    className={XP_BTN}
                                     onClick={() => setPasswordVisible(v => !v)}
                                 ><i className={`bi ${passwordVisible ? 'bi-eye-slash' : 'bi-eye'}`}></i></button>
                                 <button
                                     type="button"
                                     title="Generate a random password"
-                                    style={classic ? xpBtn({ padding: '1px 6px' }) : undefined}
-                                    className={classic ? XP_BTN : 'btn btn-sm btn-light border'}
+                                    style={xpBtn({ padding: '1px 6px' })}
+                                    className={XP_BTN}
                                     onClick={handleGeneratePassword}
                                 ><i className="bi bi-shuffle"></i></button>
                                 {mode === 'edit' && (
                                     <button
                                         type="button"
                                         title="Cancel password reset"
-                                        style={classic ? xpBtn({ padding: '1px 6px' }) : undefined}
-                                        className={classic ? XP_BTN : 'btn btn-sm btn-light border'}
+                                        style={xpBtn({ padding: '1px 6px' })}
+                                        className={XP_BTN}
                                         onClick={() => { setShowPassword(false); setPassword(''); setPasswordVisible(false); }}
                                     ><i className="bi bi-x-lg"></i></button>
                                 )}
                             </div>
                             {passwordVisible && password && (
-                                <small className={classic ? '' : 'text-muted d-block mt-1'} style={classic ? { fontFamily: xpFont, fontSize: 9, color: '#888', display: 'block', marginTop: 2 } : undefined}>
+                                <small style={{ fontFamily: xpFont, fontSize: 9, color: '#888', display: 'block', marginTop: 2 }}>
                                     Copy this now — it won&apos;t be shown again after saving.
                                 </small>
                             )}
                         </>
                     ) : (
-                        <div style={classic ? { fontFamily: xpFont, fontSize: 10, color: '#888', fontStyle: 'italic' } : undefined} className={classic ? '' : 'small text-muted fst-italic'}>
+                        <div style={{ fontFamily: xpFont, fontSize: 10, color: '#888', fontStyle: 'italic' }}>
                             Leave unchanged, or reset it above.
                         </div>
                     )}
@@ -239,15 +232,14 @@ export default function UserFormModal({
             </div>
 
             <div className="mb-3">
-                <FieldLabel classic={classic}>Permissions</FieldLabel>
+                <FieldLabel>Permissions</FieldLabel>
                 <PermissionsPicker
                     allPermissions={allPermissions}
                     selectedIds={permissionIds}
                     onChange={setPermissionIds}
-                    classic={classic}
                     disabledIds={rolePermissionIds}
                 />
-                <small className={classic ? '' : 'text-muted d-block mt-1'} style={classic ? { fontFamily: xpFont, fontSize: 9, color: '#888', display: 'block', marginTop: 2 } : undefined}>
+                <small style={{ fontFamily: xpFont, fontSize: 9, color: '#888', display: 'block', marginTop: 2 }}>
                     Locked chips are already granted by the selected role. Category/location/station
                     scoping is configured on the Role, not per user.
                 </small>

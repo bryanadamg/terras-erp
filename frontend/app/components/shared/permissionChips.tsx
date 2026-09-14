@@ -29,12 +29,11 @@ export type PermissionChipState =
     /** granted, not interactive at all (read-only breakdown) */
     | 'static';
 
-export function PermissionChip({ label, code, state, classic, direct = false, title, onClick }: {
+export function PermissionChip({ label, code, state, direct = false, title, onClick }: {
     label: string;
     /** Permission code (`item.delete`) or bare action code (`delete`) — drives the tint. */
     code: string;
     state: PermissionChipState;
-    classic: boolean;
     /** User rows: granted directly rather than through the role. */
     direct?: boolean;
     title?: string;
@@ -44,8 +43,8 @@ export function PermissionChip({ label, code, state, classic, direct = false, ti
     const on = state !== 'off';
     const interactive = state === 'on' || state === 'off';
     const style: React.CSSProperties = {
-        fontFamily: classic ? xpFont : undefined,
-        fontSize: classic ? 9.5 : 10.5,
+        fontFamily: xpFont,
+        fontSize: 9.5,
         lineHeight: 1.6,
         display: 'inline-flex',
         alignItems: 'center',
@@ -95,11 +94,10 @@ export interface PermissionSectionRow {
  * per resource, resource stated once with its action chips beside it.
  */
 export function PermissionSectionTable({
-    title, right, classic, rows, labelWidth = '38%', rowPaddingLeft, onHeaderClick, headerActive = true, style,
+    title, right, rows, labelWidth = '38%', rowPaddingLeft, onHeaderClick, headerActive = true, style,
 }: {
     title: React.ReactNode;
     right?: React.ReactNode;
-    classic: boolean;
     rows: PermissionSectionRow[];
     labelWidth?: number | string;
     rowPaddingLeft?: number;
@@ -109,12 +107,12 @@ export function PermissionSectionTable({
     headerActive?: boolean;
     style?: React.CSSProperties;
 }) {
-    const font = classic ? xpFont : undefined;
-    const size = classic ? 10 : 11;
+    const font = xpFont;
+    const size = 10;
     return (
         <div style={{
             border: '1px solid #c0bdb5',
-            borderRadius: classic ? 0 : 3,
+            borderRadius: 0,
             background: '#fff',
             overflow: 'hidden',
             // Never let a flex-column parent squash a section down to its first
@@ -147,7 +145,7 @@ export function PermissionSectionTable({
                         rendered as a table, not a data grid, so lvSubTd's uniform
                         text metrics would fight the chip column. */}
                     {rows.map((r, i) => (
-                        <tr key={r.key} style={lvSubRow(classic, i, { zebra: true })}>
+                        <tr key={r.key} style={lvSubRow(i, { zebra: true })}>
                             <td style={{
                                 fontFamily: font, fontSize: size, color: '#000',
                                 lineHeight: 1.5,
@@ -161,7 +159,7 @@ export function PermissionSectionTable({
                             }}>
                                 {r.label}
                                 {r.hint && (
-                                    <div style={{ fontStyle: 'italic', color: '#9a948a', fontSize: classic ? 9 : 10 }}>{r.hint}</div>
+                                    <div style={{ fontStyle: 'italic', color: '#9a948a', fontSize: 9}}>{r.hint}</div>
                                 )}
                             </td>
                             <td style={{ padding: '5px 10px' }}>
@@ -176,11 +174,11 @@ export function PermissionSectionTable({
 }
 
 /** Granted-of-total pill used in both permission panels' section headers. */
-export function PermissionCountPill({ granted, total, classic }: { granted: number; total: number; classic: boolean }) {
+export function PermissionCountPill({ granted, total }: { granted: number; total: number }) {
     return (
         <span style={{
-            fontFamily: classic ? xpFont : undefined,
-            fontSize: classic ? 9 : 10,
+            fontFamily: xpFont,
+            fontSize: 9,
             color: granted ? '#1a3d7a' : '#8b8578',
             background: '#fff',
             border: `1px solid ${granted ? '#a9bdd6' : '#d5d1c6'}`,

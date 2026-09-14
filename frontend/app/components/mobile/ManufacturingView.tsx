@@ -158,7 +158,7 @@ export default function MobileManufacturingView({
                     desktop list views use, one size up for a finger. */}
                 <MobileToolbar>
                     <MobileSearchField value={search} onChange={setSearch} placeholder="Search MO code or item..." />
-                    <ToolbarCount classic right>{filtered.length} MOs</ToolbarCount>
+                    <ToolbarCount right>{filtered.length} MOs</ToolbarCount>
                 </MobileToolbar>
                 <MobileToolbar>
                     <MobileFilterBar
@@ -199,7 +199,7 @@ export default function MobileManufacturingView({
                                         <div style={{ minWidth: 0 }}>
                                             {/* Card title on a phone — one step up from the desktop tier-1
                                                 size so it stays readable at arm's length on the floor. */}
-                                            <CodeChip code={mo.code} classic tone="accent" style={{ display: 'block', fontSize: 15 }} />
+                                            <CodeChip code={mo.code} tone="accent" style={{ display: 'block', fontSize: 15 }} />
                                             <div style={{ fontFamily: XP_FONT, fontSize: 12, color: '#333', marginTop: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{mo.item_name || '—'}</div>
                                             <div style={{ fontFamily: XP_FONT, fontSize: 11, color: '#555', marginTop: 1 }}>
                                                 Qty: {parseFloat(mo.qty)}

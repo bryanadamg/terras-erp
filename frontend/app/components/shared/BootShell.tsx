@@ -3,7 +3,7 @@
 import React from 'react';
 import { useTheme } from '../../context/ThemeContext';
 import { SkeletonBar } from './xpTheme';
-import { SIDEBAR_BG, M_PRIMARY, M_PRIMARY_DK } from './Sidebar';
+import { SIDEBAR_BG } from './Sidebar';
 
 /**
  * App chrome, painted immediately while the session is still resolving.
@@ -30,28 +30,21 @@ const NAV_WIDTHS = ['64%', '48%', '72%', '55%', '68%', '43%', '76%', '52%', '60%
 
 export default function BootShell({ appName = 'Terras ERP' }: { appName?: string }) {
     const { uiStyle } = useTheme();
-    const classic = uiStyle === 'classic';
 
     return (
         <div className={`app-container ui-style-${uiStyle}`} aria-busy="true">
             <div
                 className="sidebar"
-                style={{ background: classic ? SIDEBAR_BG : '#ffffff' }}
+                style={{ background: SIDEBAR_BG }}
             >
                 {/* Same brand block as Sidebar.tsx: real height var, real colors, the
                     actual icon asset (a static file, so it needs no auth to draw). */}
                 <div
-                    style={classic ? {
+                    style={{
                         background: 'var(--xp-title-flat)',
                         padding: '0 10px',
                         borderBottom: '1px solid var(--xp-title-blue-border)',
                         boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.3)',
-                        display: 'flex', alignItems: 'center', flexShrink: 0,
-                        height: 'var(--app-header-h)',
-                    } : {
-                        background: M_PRIMARY,
-                        padding: '0 16px',
-                        borderBottom: `1px solid ${M_PRIMARY_DK}`,
                         display: 'flex', alignItems: 'center', flexShrink: 0,
                         height: 'var(--app-header-h)',
                     }}
@@ -61,25 +54,25 @@ export default function BootShell({ appName = 'Terras ERP' }: { appName?: string
                         src="/icons/icon-192.png"
                         alt={appName}
                         style={{
-                            width: classic ? 20 : 24,
-                            height: classic ? 20 : 24,
+                            width: 20,
+                            height: 20,
                             flexShrink: 0,
-                            borderRadius: classic ? 3 : 5,
+                            borderRadius: 3,
                         }}
                     />
                 </div>
 
-                <div style={{ padding: classic ? '8px 8px' : '12px 0' }}>
+                <div style={{ padding: '8px 8px' }}>
                     {NAV_WIDTHS.map((w, i) => (
                         <div
                             key={i}
                             style={{
                                 display: 'flex', alignItems: 'center', gap: 10,
-                                padding: classic ? '5px 6px' : '12px 24px',
+                                padding: '5px 6px',
                             }}
                         >
-                            <SkeletonBar width={classic ? 12 : 16} height={classic ? 12 : 16} />
-                            <SkeletonBar width={w} height={classic ? 8 : 10} />
+                            <SkeletonBar width={12} height={12} />
+                            <SkeletonBar width={w} height={8} />
                         </div>
                     ))}
                 </div>
@@ -87,30 +80,30 @@ export default function BootShell({ appName = 'Terras ERP' }: { appName?: string
 
             <div className="main-content flex-grow-1 overflow-y-auto overflow-x-hidden bg-light">
                 <div
-                    className={`app-header sticky-top bg-white border-bottom shadow-sm px-4 d-flex justify-content-between align-items-center no-print ${classic ? 'classic-header' : ''}`}
+                    className="app-header sticky-top bg-white border-bottom shadow-sm px-4 d-flex justify-content-between align-items-center no-print classic-header"
                 >
-                    <SkeletonBar width={160} height={classic ? 9 : 12} />
+                    <SkeletonBar width={160} height={9} />
                     <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                        <SkeletonBar width={28} height={classic ? 16 : 24} />
-                        <SkeletonBar width={40} height={classic ? 16 : 24} />
-                        <SkeletonBar width={90} height={classic ? 16 : 24} />
+                        <SkeletonBar width={28} height={16} />
+                        <SkeletonBar width={40} height={16} />
+                        <SkeletonBar width={90} height={16} />
                     </div>
                 </div>
 
                 <div className="px-0 py-3">
-                    <div style={{ padding: classic ? '0 10px' : '0 16px' }}>
+                    <div style={{ padding: '0 10px' }}>
                         {/* Toolbar strip: search + filters + action button */}
                         <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 14 }}>
-                            <SkeletonBar width={200} height={classic ? 18 : 26} />
-                            <SkeletonBar width={110} height={classic ? 18 : 26} />
+                            <SkeletonBar width={200} height={18} />
+                            <SkeletonBar width={110} height={18} />
                             <span style={{ flex: 1 }} />
-                            <SkeletonBar width={100} height={classic ? 18 : 26} />
+                            <SkeletonBar width={100} height={18} />
                         </div>
 
                         {/* Table body stand-in — generic, since the route isn't known yet */}
                         <div
                             style={{
-                                border: `1px solid ${classic ? '#919b9c' : '#e2e8f0'}`,
+                                border: '1px solid #919b9c',
                                 background: '#fff',
                             }}
                         >
@@ -119,15 +112,15 @@ export default function BootShell({ appName = 'Terras ERP' }: { appName?: string
                                     key={r}
                                     style={{
                                         display: 'flex', alignItems: 'center', gap: 16,
-                                        padding: classic ? '6px 8px' : '11px 12px',
-                                        borderBottom: `1px solid ${classic ? '#e3e1dc' : '#eef2f7'}`,
+                                        padding: '6px 8px',
+                                        borderBottom: '1px solid #e3e1dc',
                                     }}
                                 >
                                     {['18%', '26%', '14%', '20%', '12%'].map((w, c) => (
                                         <SkeletonBar
                                             key={c}
                                             width={w}
-                                            height={classic ? 8 : 10}
+                                            height={8}
                                         />
                                     ))}
                                 </div>

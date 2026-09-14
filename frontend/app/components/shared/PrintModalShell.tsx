@@ -1,6 +1,5 @@
 'use client';
 import React, { useRef } from 'react';
-import { useTheme } from '../../context/ThemeContext';
 import { useIsMobile } from '../../hooks/useIsMobile';
 import { MODAL_Z, MODAL_REPOSITION_EVENT, useInactiveChromeWhileOpen, WindowCloseButton } from './ModalWrapper';
 import { toLayoutPx } from './uiScale';
@@ -39,8 +38,6 @@ export default function PrintModalShell({
     width = 'calc(var(--app-vw) * 90 / 100)', maxWidth = 960, height = 'calc(var(--app-vh) * 88 / 100)',
     bevel = true, modeless = false,
 }: PrintModalShellProps) {
-    const { uiStyle } = useTheme();
-    const classic = uiStyle === 'classic';
     const isMobile = useIsMobile();
     const floating = modeless && !isMobile;
 
@@ -78,16 +75,11 @@ export default function PrintModalShell({
         window.addEventListener('pointerup', onUp);
     };
 
-    const headerStyle: React.CSSProperties = classic ? {
+    const headerStyle: React.CSSProperties = {
         background: 'linear-gradient(to right, #0058e6 0%, #08a5ff 100%)', color: '#fff',
         fontFamily: xpFont, fontSize: 12, fontWeight: 'bold',
         borderRadius: `${WINDOW_RADIUS_INNER}px ${WINDOW_RADIUS_INNER}px 0 0`,
         padding: '4px 8px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexShrink: 0,
-        cursor: floating ? 'move' : undefined, touchAction: floating ? 'none' : undefined, userSelect: floating ? 'none' : undefined,
-    } : {
-        background: '#0d6efd', color: '#fff', padding: '10px 14px',
-        borderRadius: `${WINDOW_RADIUS_INNER}px ${WINDOW_RADIUS_INNER}px 0 0`,
-        display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexShrink: 0,
         cursor: floating ? 'move' : undefined, touchAction: floating ? 'none' : undefined, userSelect: floating ? 'none' : undefined,
     };
 
@@ -110,7 +102,7 @@ export default function PrintModalShell({
         >
             <div style={headerStyle} onPointerDown={floating ? startDrag : undefined}>
                 <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>{title}</span>
-                <WindowCloseButton onClose={onClose} white={!classic} />
+                <WindowCloseButton onClose={onClose} />
             </div>
             {children}
         </div>
@@ -146,8 +138,6 @@ export function PrintModalFooter({ note, onClose, onPrint, printDisabled = false
     printLabel?: string;
     closeLabel?: string;
 }) {
-    const { uiStyle } = useTheme();
-    const classic = uiStyle === 'classic';
     const grey = xpBtn({ padding: '3px 12px' });
     const green = xpBtn({ ...BTN_TONES.success, padding: '3px 14px', opacity: printDisabled ? 0.5 : 1 });
     return (
@@ -157,21 +147,12 @@ export function PrintModalFooter({ note, onClose, onPrint, printDisabled = false
         }}>
             {note && <span style={{ fontSize: 10, color: '#666' }}>{note}</span>}
             <div style={{ display: 'flex', gap: 6 }}>
-                {classic ? (
-                    <>
+                {<>
                         <button type="button" className={XP_BTN} style={grey} onClick={onClose}>{closeLabel}</button>
                         <button type="button" className={XP_BTN} style={green} disabled={printDisabled} onClick={onPrint}>
                             <i className="bi bi-printer" style={{ marginRight: 4 }} />{printLabel}
                         </button>
-                    </>
-                ) : (
-                    <>
-                        <button type="button" className="btn btn-sm btn-secondary" onClick={onClose}>{closeLabel}</button>
-                        <button type="button" className="btn btn-sm btn-success" disabled={printDisabled} onClick={onPrint}>
-                            <i className="bi bi-printer me-1" />{printLabel}
-                        </button>
-                    </>
-                )}
+                    </>}
             </div>
         </div>
     );

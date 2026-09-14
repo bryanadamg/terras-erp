@@ -609,7 +609,6 @@ export default function MobileScannerView({
 
                                 {dyeBath.run.recipe_id ? (
                                     <DoseSheet
-                                        classic
                                         doses={dyeBath.doses}
                                         emptyHint={dyeBath.doses ? 'Resep ini tidak punya baris kimia.' : 'Memuat resep...'}
                                     />

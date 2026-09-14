@@ -1,21 +1,46 @@
 'use client';
 
-import React, { createContext, useContext, useState, useCallback } from 'react';
-import { ProgressBar } from './xpTheme';
+import React from 'react';
+import UIToastProvider, { useToast as usePackageToast } from '@bryanadamg/terras-ui/components/Toast';
+import type { ToastTone } from '@bryanadamg/terras-ui/components/Toast';
+
+/**
+ * Transient feedback — now a thin adapter over terras-ui's Toast, which was
+ * merged from this file and terras-sku's. What the package brings that this
+ * didn't have: a close button on every toast, a 4-visible cap that drops the
+ * oldest (never a running progress toast), per-tone durations (an error holds
+ * 7s against a success's 4s, because an error is read rather than glanced at),
+ * `role="alert"`/`aria-live="assertive"` on errors only, and ReactNode messages.
+ * The progress toast is this app's own, carried over unchanged.
+ *
+ * Kept as a local module with the old function names so the 56 call sites are
+ * untouched: `showToast(message, type)` and `showProgressToast(message, detail)`.
+ * The package's tones are colour words (its one vocabulary across every
+ * component); this file owns the semantic→colour map so no call site has to
+ * re-decide what "danger" looks like.
+ */
 
 type ToastType = 'success' | 'danger' | 'warning' | 'info' | 'error';
 
-interface Toast {
-    id: string;
-    message: string;
-    type: ToastType;
-    /** 0-100 while a long operation runs; null/undefined for a plain toast. */
-    progress?: number | null;
-    /** Detail line under the message, e.g. "3 of 7 · WIP CBG 9698/22". */
-    detail?: string;
-    /** Sticky toasts ignore the auto-dismiss timer until they are finished or failed. */
-    sticky?: boolean;
-}
+// 'error' is an alias for 'danger' — both were in use here before, and dropping
+// either would be a silent no-op at ~370 call sites.
+const TONE: Record<ToastType, ToastTone> = {
+    success: 'green',
+    danger: 'red',
+    error: 'red',
+    warning: 'amber',
+    info: 'blue',
+};
+
+// The package ships no icon set (sku draws these with lucide), so the tone→node
+// map is a slot. Colour has to be set here: the package paints only the toast's
+// left stripe in the tone, and leaves the icon to whatever it is handed.
+const ICONS: Record<ToastTone, React.ReactNode> = {
+    green: <i className="bi bi-check-circle-fill" style={{ color: 'var(--terras-status-green)' }} />,
+    red: <i className="bi bi-exclamation-triangle-fill" style={{ color: 'var(--terras-status-red)' }} />,
+    amber: <i className="bi bi-exclamation-circle-fill" style={{ color: 'var(--terras-status-amber)' }} />,
+    blue: <i className="bi bi-info-circle-fill" style={{ color: 'var(--terras-status-blue)' }} />,
+};
 
 /**
  * Handle for a single long-running operation's toast. One toast is created up front
@@ -25,102 +50,36 @@ export interface ProgressToastHandle {
     /** pct is 0-100. Pass a detail line to describe the current unit of work. */
     update: (pct: number, detail?: string) => void;
     /** Replace with a final success message and start the auto-dismiss timer. */
-    finish: (message: string, type?: ToastType) => void;
+    finish: (message: React.ReactNode, type?: ToastType) => void;
     /** Replace with a failure message (danger) and start the auto-dismiss timer. */
-    fail: (message: string) => void;
+    fail: (message: React.ReactNode) => void;
+    /** Drop it now, without a final message. */
+    dismiss: () => void;
 }
-
-interface ToastContextType {
-    showToast: (message: string, type?: ToastType) => void;
-    showProgressToast: (message: string, detail?: string) => ProgressToastHandle;
-}
-
-const ToastContext = createContext<ToastContextType | undefined>(undefined);
-
-const AUTO_DISMISS_MS = 4000;
 
 export function ToastProvider({ children }: { children: React.ReactNode }) {
-    const [toasts, setToasts] = useState<Toast[]>([]);
-
-    const dismissLater = useCallback((id: string) => {
-        setTimeout(() => {
-            setToasts((prev) => prev.filter((t) => t.id !== id));
-        }, AUTO_DISMISS_MS);
-    }, []);
-
-    const showToast = useCallback((message: string, type: ToastType = 'info') => {
-        const id = Math.random().toString(36).substring(2, 9);
-        // Normalize 'error' alias to 'danger' so it renders with danger styling/icon.
-        const resolved: ToastType = type === 'error' ? 'danger' : type;
-        setToasts((prev) => [...prev, { id, message, type: resolved }]);
-        dismissLater(id);
-    }, [dismissLater]);
-
-    const showProgressToast = useCallback((message: string, detail?: string): ProgressToastHandle => {
-        const id = Math.random().toString(36).substring(2, 9);
-        setToasts((prev) => [...prev, { id, message, type: 'info', progress: 0, detail, sticky: true }]);
-
-        const patch = (fields: Partial<Toast>) =>
-            setToasts((prev) => prev.map((t) => (t.id === id ? { ...t, ...fields } : t)));
-
-        return {
-            update: (pct, nextDetail) => patch({
-                progress: Math.max(0, Math.min(100, pct)),
-                ...(nextDetail !== undefined ? { detail: nextDetail } : {}),
-            }),
-            finish: (finalMessage, type: ToastType = 'success') => {
-                patch({ message: finalMessage, type: type === 'error' ? 'danger' : type, progress: null, detail: undefined, sticky: false });
-                dismissLater(id);
-            },
-            fail: (finalMessage) => {
-                patch({ message: finalMessage, type: 'danger', progress: null, detail: undefined, sticky: false });
-                dismissLater(id);
-            },
-        };
-    }, [dismissLater]);
-
-    return (
-        <ToastContext.Provider value={{ showToast, showProgressToast }}>
-            {children}
-            <div className="toast-container position-fixed bottom-0 end-0 p-3" style={{ zIndex: 99999 }}>
-                {toasts.map((toast) => (
-                    <div
-                        key={toast.id}
-                        className={`toast show border-0 shadow fade-in mb-2 toast-type-${toast.type}`}
-                        role="alert"
-                    >
-                        <div className="toast-body d-flex align-items-center gap-2">
-                            <i className={`bi ${getIcon(toast.type)}`}></i>
-                            <div style={{ flex: 1, minWidth: 190 }}>
-                                {toast.message}
-                                {toast.progress != null && (
-                                    <div style={{ marginTop: 4 }}>
-                                        <ProgressBar pct={toast.progress} tone="blue" height={10} label="outside" />
-                                        {toast.detail && (
-                                            <div style={{ fontSize: 10, opacity: 0.8, marginTop: 2 }}>{toast.detail}</div>
-                                        )}
-                                    </div>
-                                )}
-                            </div>
-                        </div>
-                    </div>
-                ))}
-            </div>
-        </ToastContext.Provider>
-    );
+    return <UIToastProvider icons={ICONS}>{children}</UIToastProvider>;
 }
 
-function getIcon(type: ToastType) {
-    switch(type) {
-        case 'success': return 'bi-check-circle-fill';
-        case 'danger': return 'bi-exclamation-triangle-fill';
-        case 'warning': return 'bi-exclamation-circle-fill';
-        default: return 'bi-info-circle-fill';
-    }
-}
+export function useToast() {
+    const toast = usePackageToast();
 
-export const useToast = () => {
-    const context = useContext(ToastContext);
-    if (!context) throw new Error('useToast must be used within ToastProvider');
-    return context;
-};
+    return React.useMemo(() => ({
+        // Type defaults to 'info', as it did here before the package landed —
+        // the package's own `show` defaults to green, and the ~37 single-argument
+        // calls in this app are all neutral notices.
+        showToast: (message: React.ReactNode, type: ToastType = 'info') =>
+            toast.show(message, TONE[type] ?? 'blue'),
+
+        showProgressToast: (message: React.ReactNode, detail?: string): ProgressToastHandle => {
+            const job = toast.progress(message, detail);
+            return {
+                update: job.update,
+                finish: (finalMessage, type: ToastType = 'success') =>
+                    job.finish(finalMessage, TONE[type] ?? 'green'),
+                fail: job.fail,
+                dismiss: job.dismiss,
+            };
+        },
+    }), [toast]);
+}

@@ -17,7 +17,6 @@ export default function PRMaterialPullSheetModal({
     pr,
     reqs,
     isLoading,
-    currentStyle,
     companyProfile,
     getLocationName,
     getAttributeValueName,
@@ -27,7 +26,6 @@ export default function PRMaterialPullSheetModal({
     pr: any;
     reqs: any[];
     isLoading: boolean;
-    currentStyle: string;
     companyProfile: any;
     getLocationName: (id: any) => string;
     getAttributeValueName: (id: any) => string;

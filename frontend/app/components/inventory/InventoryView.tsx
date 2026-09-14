@@ -5,7 +5,6 @@ import ModalWrapper from '../shared/ModalWrapper';
 import Pager from '../shared/Pager';
 import { useToast } from '../shared/Toast';
 import { useLanguage } from '../../context/LanguageContext';
-import { useTheme } from '../../context/ThemeContext';
 import { useTimezone } from '../../context/TimezoneContext';
 import { useData } from '../../context/DataContext';
 import { useUser } from '../../context/UserContext';
@@ -46,13 +45,13 @@ const ITEM_COL_SPAN = 10;
 // item list expands like every other list in the app.
 type ItemHistoryState = { loading: boolean; logs: any[]; error?: boolean };
 
-const ItemEventLogPanel = memo(({ state, userNameById, classic }: { state?: ItemHistoryState; userNameById: Record<string, string>; classic: boolean }) => {
+const ItemEventLogPanel = memo(({ state, userNameById }: { state?: ItemHistoryState; userNameById: Record<string, string> }) => {
     const { formatDateTime: tzDateTime } = useTimezone();
     const [openChanges, setOpenChanges] = useState<string | null>(null);
     const logs = state?.logs ?? [];
 
     const caption = (
-        <div style={{ fontWeight: 'bold', color: '#555', fontSize: classic ? 9 : 11, textTransform: 'uppercase', letterSpacing: 0.3, marginBottom: 6, display: 'flex', alignItems: 'center', gap: 6 }}>
+        <div style={{ fontWeight: 'bold', color: '#555', fontSize: 9, textTransform: 'uppercase', letterSpacing: 0.3, marginBottom: 6, display: 'flex', alignItems: 'center', gap: 6 }}>
             <i className="bi bi-journal-text" />
             Event Log
             {!state?.loading && logs.length > 0 && (
@@ -64,22 +63,22 @@ const ItemEventLogPanel = memo(({ state, userNameById, classic }: { state?: Item
     );
 
     return (
-        <ExpandedRowPanel classic={classic} style={{ padding: classic ? '8px 10px' : '10px 14px', whiteSpace: 'normal' }}>
+        <ExpandedRowPanel style={{ padding: '8px 10px', whiteSpace: 'normal' }}>
             {caption}
             {state?.loading ? (
-                <div style={{ color: '#888', padding: 6, fontFamily: classic ? xpFont : undefined, fontSize: classic ? 11 : 13 }}>Loading events…</div>
+                <div style={{ color: '#888', padding: 6, fontFamily: xpFont, fontSize: 11}}>Loading events…</div>
             ) : state?.error ? (
-                <div style={{ color: '#8b0000', padding: 6, fontFamily: classic ? xpFont : undefined, fontSize: classic ? 11 : 13 }}>Could not load the event log.</div>
+                <div style={{ color: '#8b0000', padding: 6, fontFamily: xpFont, fontSize: 11}}>Could not load the event log.</div>
             ) : logs.length === 0 ? (
-                <div style={{ color: '#888', padding: 6, fontFamily: classic ? xpFont : undefined, fontSize: classic ? 11 : 13, fontStyle: 'italic' }}>No events recorded for this item.</div>
+                <div style={{ color: '#888', padding: 6, fontFamily: xpFont, fontSize: 11, fontStyle: 'italic' }}>No events recorded for this item.</div>
             ) : (
-                <table style={lvSubTable(classic)}>
+                <table style={lvSubTable()}>
                     <thead>
                         <tr>
-                            <th style={{ ...lvSubTh(classic, true), width: 150 }}>Date / Time</th>
-                            <th style={{ ...lvSubTh(classic, true), width: 130 }}>Action</th>
-                            <th style={{ ...lvSubTh(classic, true), width: 140 }}>Performed by</th>
-                            <th style={lvSubTh(classic, true)}>Description</th>
+                            <th style={{ ...lvSubTh(), width: 150 }}>Date / Time</th>
+                            <th style={{ ...lvSubTh(), width: 130 }}>Action</th>
+                            <th style={{ ...lvSubTh(), width: 140 }}>Performed by</th>
+                            <th style={lvSubTh()}>Description</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -89,28 +88,28 @@ const ItemEventLogPanel = memo(({ state, userNameById, classic }: { state?: Item
                             return (
                                 <React.Fragment key={log.id}>
                                     <tr
-                                        style={{ ...lvSubRow(classic, i, { zebra: true }), cursor: hasChanges ? 'pointer' : 'default' }}
+                                        style={{ ...lvSubRow(i, { zebra: true }), cursor: hasChanges ? 'pointer' : 'default' }}
                                         onClick={() => hasChanges && setOpenChanges(open ? null : log.id)}
                                     >
-                                        <td style={{ ...lvSubTd(classic, true), whiteSpace: 'nowrap' }}>{tzDateTime(log.timestamp)}</td>
-                                        <td style={lvSubTd(classic, true)}>
+                                        <td style={{ ...lvSubTd(), whiteSpace: 'nowrap' }}>{tzDateTime(log.timestamp)}</td>
+                                        <td style={lvSubTd()}>
                                             <StatusChip status={log.action} title={String(log.action || '').replace(/_/g, ' ')} />
                                         </td>
-                                        <td style={lvSubTd(classic, true)} title={log.user_id || undefined}>
+                                        <td style={lvSubTd()} title={log.user_id || undefined}>
                                             {userNameById[log.user_id] || (log.user_id ? `User ${String(log.user_id).split('-')[0]}` : 'System')}
                                         </td>
-                                        <td style={lvSubTd(classic, true)}>
+                                        <td style={lvSubTd()}>
                                             {log.details || 'System activity'}
-                                            {hasChanges && <i className={`bi bi-chevron-${open ? 'up' : 'down'}`} style={{ marginLeft: 6, fontSize: 9, color: classic ? '#0058e6' : '#64748b' }} />}
+                                            {hasChanges && <i className={`bi bi-chevron-${open ? 'up' : 'down'}`} style={{ marginLeft: 6, fontSize: 9, color: '#0058e6'}} />}
                                         </td>
                                     </tr>
                                     {open && hasChanges && (
                                         <tr>
-                                            <td colSpan={4} style={{ padding: classic ? '4px 8px 6px' : '6px 12px 8px' }}>
+                                            <td colSpan={4} style={{ padding: '4px 8px 6px'}}>
                                                 <pre style={{
                                                     margin: 0, fontFamily: CODE_FONT, fontSize: 10, background: '#fff',
-                                                    border: classic ? '1px solid #7f9db9' : '1px solid #dbe1ea',
-                                                    boxShadow: classic ? 'inset 1px 1px 0 rgba(0,0,0,0.1)' : undefined,
+                                                    border: '1px solid #7f9db9',
+                                                    boxShadow: 'inset 1px 1px 0 rgba(0,0,0,0.1)',
                                                     padding: '4px 6px', maxHeight: 160, overflow: 'auto',
                                                 }}>{JSON.stringify(log.changes, null, 2)}</pre>
                                             </td>
@@ -128,51 +127,48 @@ const ItemEventLogPanel = memo(({ state, userNameById, classic }: { state?: Item
 ItemEventLogPanel.displayName = 'ItemEventLogPanel';
 
 // Memoized Row Component
-const InventoryRow = memo(({ item, rowIndex, isEditing, isSelected, isExpanded, onToggleSelect, onToggleExpand, onMenu, historyState, userNameById, classic }: any) => {
+const InventoryRow = memo(({ item, rowIndex, isEditing, isSelected, isExpanded, onToggleSelect, onToggleExpand, onMenu, historyState, userNameById }: any) => {
     // Selected and being-edited are the two shared row states — same fills as
     // every other list (see rowStateBg). This row used to invert to XP selection
     // blue with white text, which meant re-colouring the code chip, the category
     // chip and every link inside it.
-    const rowBg = isSelected ? rowStateBg('selected', classic)
-        : isExpanded ? rowStateBg('expanded', classic)
-        : isEditing ? rowStateBg('highlighted', classic)
-        : classic ? lvZebra(true, rowIndex) : undefined;
+    const rowBg = isSelected ? rowStateBg('selected')
+        : isExpanded ? rowStateBg('expanded')
+        : isEditing ? rowStateBg('highlighted')
+        : lvZebra(rowIndex);
 
-    const tdBase: React.CSSProperties = classic ? lvTdRuled(true) : {};
+    const tdBase: React.CSSProperties = lvTdRuled();
 
     const categoryDisplay = item.category_path?.length ? item.category_path.join(' / ') : (item.category || '');
-    const catStyle = classic ? getCategoryXPStyle(categoryDisplay) : null;
+    const catStyle = getCategoryXPStyle(categoryDisplay);
 
     return (
         <>
         <tr
-            style={{ background: rowBg, cursor: 'pointer', ...(classic ? { borderBottom: '1px solid #c0bdb5' } : {}) }}
+            style={{ background: rowBg, cursor: 'pointer', ...({ borderBottom: '1px solid #c0bdb5' }) }}
             onClick={() => onToggleExpand(item)}
         >
             <td
-                style={classic ? { ...tdBase, width: LV_CHECK_COL_W, textAlign: 'center' } : { width: LV_CHECK_COL_W }}
-                className={classic ? '' : 'ps-3'}
+                style={{ ...tdBase, width: LV_CHECK_COL_W, textAlign: 'center' }}
                 onClick={e => e.stopPropagation()}
             >
-                <RowCheckbox classic={classic} checked={isSelected} onChange={() => onToggleSelect(item.id)} label={item.code} />
+                <RowCheckbox checked={isSelected} onChange={() => onToggleSelect(item.id)} label={item.code} />
             </td>
             <ExpanderCell
-                classic={classic}
                 expanded={!!isExpanded}
                 onToggle={() => onToggleExpand(item)}
                 label="event log"
-                tdStyle={classic ? tdBase : undefined}
+                tdStyle={tdBase}
             />
-            <td style={classic ? { ...tdBase, width: '110px' } : undefined} className={classic ? '' : 'ps-4'}>
-                <CodeChip code={item.code} classic={classic} />
+            <td style={{ ...tdBase, width: '110px' }}>
+                <CodeChip code={item.code} />
             </td>
-            <td style={classic ? { ...tdBase, fontWeight: 'bold' } : undefined}>
+            <td style={{ ...tdBase, fontWeight: 'bold' }}>
                 {item.name}
             </td>
             <td style={tdBase}>
                 {categoryDisplay ? (
-                    classic ? (
-                        <span style={{ borderRadius: CHIP_RADIUS,
+                    <span style={{ borderRadius: CHIP_RADIUS,
                             background: catStyle!.bg,
                             border: `1px solid ${catStyle!.border}`,
                             color: catStyle!.color,
@@ -183,40 +179,21 @@ const InventoryRow = memo(({ item, rowIndex, isEditing, isSelected, isExpanded, 
                             whiteSpace: 'nowrap',
                         }}>
                             {categoryDisplay}
-                        </span>
-                    ) : (
-                        <span className="badge bg-light text-dark border">{categoryDisplay}</span>
-                    )
-                ) : null}
+                        </span>) : null}
             </td>
-            <td style={classic ? { ...tdBase, width: '55px' } : { width: '55px' }}>
-                {classic ? (
-                    <span style={{ color: '#333', fontSize: '9px' }}>{item.uom}</span>
-                ) : (
-                    <span className="text-muted small">{item.uom}</span>
-                )}
+            <td style={{ ...tdBase, width: '55px' }}>
+                <span style={{ color: '#333', fontSize: '9px' }}>{item.uom}</span>
             </td>
             <td style={tdBase}>
                 {item.source_sample_code ? (
-                    classic ? (
-                        <a
+                    <a
                             href={`/samples?highlight=${item.source_sample_id}`}
                             style={{ color: '#0047c8', fontSize: '9px', fontFamily: xpFont, textDecoration: 'underline', cursor: 'pointer' }}
                             onClick={e => e.stopPropagation()}
                         >
                             ↖ {item.source_sample_code}{item.source_color_name ? ` · ${item.source_color_name}` : ''}
-                        </a>
-                    ) : (
-                        <a
-                            href={`/samples?highlight=${item.source_sample_id}`}
-                            className="text-primary small fw-medium text-decoration-none"
-                            onClick={e => e.stopPropagation()}
-                        >
-                            <i className="bi bi-arrow-up-left"></i> {item.source_sample_code}{item.source_color_name ? ` · ${item.source_color_name}` : ''}
-                        </a>
-                    )
-                ) : (
-                    <Dash classic={classic} />
+                        </a>) : (
+                    <Dash />
                 )}
             </td>
             <td style={{ ...tdBase, width: '70px' }}>
@@ -229,30 +206,25 @@ const InventoryRow = memo(({ item, rowIndex, isEditing, isSelected, isExpanded, 
             </td>
             <td style={tdBase}>
                 {item.weight_per_unit != null ? (
-                    classic ? (
-                        <span style={{ color: '#333', fontSize: '9px', whiteSpace: 'nowrap' }}>
+                    <span style={{ color: '#333', fontSize: '9px', whiteSpace: 'nowrap' }}>
                             {item.weight_per_unit} {item.weight_unit || ''}
-                        </span>
-                    ) : (
-                        <span className="text-muted small">{item.weight_per_unit} {item.weight_unit || ''}</span>
-                    )
-                ) : (
-                    <Dash classic={classic} />
+                        </span>) : (
+                    <Dash />
                 )}
             </td>
             <td
-                style={classic ? { ...tdBase, borderRight: 'none', textAlign: 'right' } : undefined}
+                style={{ ...tdBase, borderRight: 'none', textAlign: 'right' }}
                 onClick={e => e.stopPropagation()}
             >
-                <div className={classic ? '' : 'd-flex gap-1 justify-content-end'} style={classic ? { display: 'flex', gap: '2px', justifyContent: 'flex-end' } : undefined}>
-                    <MenuTriggerButton classic={classic} onClick={e => onMenu(String(item.id), e)} />
+                <div style={{ display: 'flex', gap: '2px', justifyContent: 'flex-end' }}>
+                    <MenuTriggerButton onClick={e => onMenu(String(item.id), e)} />
                 </div>
             </td>
         </tr>
         {isExpanded && (
             <tr>
                 <td colSpan={ITEM_COL_SPAN} style={{ padding: 0 }}>
-                    <ItemEventLogPanel state={historyState} userNameById={userNameById} classic={classic} />
+                    <ItemEventLogPanel state={historyState} userNameById={userNameById} />
                 </td>
             </tr>
         )}
@@ -312,7 +284,6 @@ export default function InventoryView({
   const importInputRef = useRef<HTMLInputElement>(null);
   const [importing, setImporting] = useState(false);
   const [importResult, setImportResult] = useState<{ status?: string; imported?: number; errors?: string[] } | null>(null);
-  const { uiStyle: currentStyle } = useTheme();
 
   // Config State
   const [isConfigOpen, setIsConfigOpen] = useState(false);
@@ -695,7 +666,6 @@ export default function InventoryView({
       setEditingItem({...item, attribute_ids: item.attribute_ids || [], packaging_factor_ids: (item.packaging_factor_ids || []).map(String)});
   };
 
-  const classic = currentStyle === 'classic';
 
   // Variant Type selector (None / Color / Combo) — replaces the old per-item
   // attribute checkbox. 'color' -> SO picker reads the Color Library; 'combo' ->
@@ -712,19 +682,17 @@ export default function InventoryView({
                   <label
                       key={o.val || 'none'}
                       htmlFor={`${keyPrefix}-vt-${o.val || 'none'}`}
-                      style={classic ? { display: 'flex', alignItems: 'center', gap: 6, fontFamily: xpFont, fontSize: '11px', color: '#000', cursor: 'pointer' } : undefined}
-                      className={classic ? '' : 'form-check d-flex align-items-center gap-2'}
+                      style={{ display: 'flex', alignItems: 'center', gap: 6, fontFamily: xpFont, fontSize: '11px', color: '#000', cursor: 'pointer' }}
                   >
                       <input
                           type="radio"
                           id={`${keyPrefix}-vt-${o.val || 'none'}`}
                           name={`${keyPrefix}-variant-type`}
-                          className={classic ? '' : 'form-check-input'}
-                          style={classic ? { cursor: 'pointer', margin: 0 } : { marginTop: 0 }}
+                          style={{ cursor: 'pointer', margin: 0 }}
                           checked={(value || '') === o.val}
                           onChange={() => onChange(o.val)}
                       />
-                      <span><b>{o.label}</b> <span style={{ color: classic ? '#888' : undefined, fontSize: classic ? '10px' : undefined }} className={classic ? '' : 'text-muted small'}>— {o.hint}</span></span>
+                      <span><b>{o.label}</b> <span style={{ color: '#888', fontSize: '10px'}}>— {o.hint}</span></span>
                   </label>
               ))}
           </div>
@@ -754,9 +722,9 @@ export default function InventoryView({
       flexShrink: 0,
   };
 
-  const xpTableHeader: React.CSSProperties = lvThead(true);
+  const xpTableHeader: React.CSSProperties = lvThead();
 
-  const xpThCell: React.CSSProperties = lvThSticky(true);
+  const xpThCell: React.CSSProperties = lvThSticky();
 
   const xpStatusBar: React.CSSProperties = {
       background: 'linear-gradient(to bottom, #e8e6df, #d5d3cc)',
@@ -793,27 +761,27 @@ export default function InventoryView({
               <>
                   <button
                       type="button"
-                      style={classic ? xpBtn() : undefined}
-                      className={classic ? XP_BTN : 'btn btn-secondary'}
+                      style={xpBtn()}
+                      className={XP_BTN}
                       onClick={() => { setIsCreateOpen(false); setNameManuallyEdited(false); setFormCatL1(''); setFormCatL2(''); setFormCatL3(''); setCreateBeam(false); setBeamName(''); setBeamUom(''); setBeamNameManuallyEdited(false); }}
                   >{t('cancel')}</button>
                   <button
                       data-testid="submit-create-item"
                       type="button"
-                      style={classic ? xpBtn({ ...BTN_TONES.primary }) : undefined}
-                      className={classic ? XP_BTN : 'btn btn-primary fw-bold px-4'}
+                      style={xpBtn({ ...BTN_TONES.primary })}
+                      className={XP_BTN}
                       onClick={() => (document.getElementById('create-item-form') as HTMLFormElement)?.requestSubmit()}
                   >{createBeam && isRawMaterialCategory ? 'Create 2 Items' : t('create')}</button>
               </>
           }
       >
           <form id="create-item-form" onSubmit={handleSubmitItem} data-testid="create-item-modal">
-            <FormSection title="Basic Info" classic={classic}>
+            <FormSection title="Basic Info">
               <div className="mb-3" style={{ display: 'flex', gap: '12px' }}>
                   <div style={{ flex: 1, minWidth: 0 }}>
-                      <FieldLabel classic={classic}>{t('item_code')}</FieldLabel>
+                      <FieldLabel>{t('item_code')}</FieldLabel>
                       <div style={{ display: 'flex', gap: '4px', alignItems: 'center' }}>
-                          <input data-testid="item-code-input" style={classic ? { ...xpInput, flex: 1, minWidth: 0 } : undefined} className={classic ? '' : 'form-control'} placeholder="ITM-001" value={newItem.code} onChange={e => {
+                          <input data-testid="item-code-input" style={{ ...xpInput, flex: 1, minWidth: 0 }} placeholder="ITM-001" value={newItem.code} onChange={e => {
                               const code = e.target.value;
                               setNewItem(prev => ({ ...prev, code, name: nameManuallyEdited ? prev.name : code }));
                           }} required />
@@ -821,8 +789,8 @@ export default function InventoryView({
                       </div>
                   </div>
                   <div style={{ flex: 1, minWidth: 0 }}>
-                      <FieldLabel classic={classic}>{t('item_name')}</FieldLabel>
-                      <input data-testid="item-name-input" style={classic ? { ...xpInput, width: '100%' } : undefined} className={classic ? '' : 'form-control'} placeholder="Product Name" value={newItem.name} onChange={e => {
+                      <FieldLabel>{t('item_name')}</FieldLabel>
+                      <input data-testid="item-name-input" style={{ ...xpInput, width: '100%' }} placeholder="Product Name" value={newItem.name} onChange={e => {
                           setNameManuallyEdited(true);
                           setNewItem(prev => ({ ...prev, name: e.target.value }));
                       }} required />
@@ -830,7 +798,7 @@ export default function InventoryView({
               </div>
               <div className="mb-1" style={{ display: 'flex', gap: '12px' }}>
                   <div style={{ flex: 1, minWidth: 0 }}>
-                      <FieldLabel classic={classic}>{t('categories')}</FieldLabel>
+                      <FieldLabel>{t('categories')}</FieldLabel>
                       <TreeSelect
                           options={catTreeOptions}
                           value={effectiveFormCategoryId || ''}
@@ -842,8 +810,8 @@ export default function InventoryView({
                       />
                   </div>
                   <div style={{ flex: 1, minWidth: 0 }}>
-                      <FieldLabel classic={classic}>{t('uom')}</FieldLabel>
-                      <select data-testid="uom-select" style={classic ? { ...xpInput, height: 'auto', padding: '2px 4px', width: '100%' } : undefined} className={classic ? '' : 'form-select'} value={newItem.uom} onChange={e => setNewItem({...newItem, uom: e.target.value, packaging_factor_ids: []})} required>
+                      <FieldLabel>{t('uom')}</FieldLabel>
+                      <select data-testid="uom-select" style={{ ...xpInput, height: 'auto', padding: '2px 4px', width: '100%' }} value={newItem.uom} onChange={e => setNewItem({...newItem, uom: e.target.value, packaging_factor_ids: []})} required>
                           <option value="">Unit...</option>
                           {(uoms || []).map((u: any) => <option key={u.id} value={u.name}>{u.name}</option>)}
                       </select>
@@ -851,12 +819,11 @@ export default function InventoryView({
               </div>
             </FormSection>
 
-            <FormSection title="Packaging & Weight" classic={classic}>
+            <FormSection title="Packaging & Weight">
               {/* Packaging Units */}
               <div className="mb-3">
-                {classic ? (
-                  <div>
-                    <FieldLabel classic={classic} hint={!newItem.uom ? undefined : 'Extra units this item can also be counted/received in'}>Packaging Units</FieldLabel>
+                <div>
+                    <FieldLabel hint={!newItem.uom ? undefined : 'Extra units this item can also be counted/received in'}>Packaging Units</FieldLabel>
                     <div style={{ display: 'flex', flexDirection: 'column' as const, gap: 4 }}>
                       {(() => {
                         const factors = (uoms || []).flatMap((u: any) => (u.factors || []).filter((f: any) => f.to_uom_name === newItem.uom));
@@ -893,50 +860,13 @@ export default function InventoryView({
                       })()}
                     </div>
                   </div>
-                ) : (
-                  <div>
-                    <label className="form-label small text-muted">Packaging Units</label>
-                    <div className="border rounded p-2" style={{ background: '#f8f9fa' }}>
-                      {(() => {
-                        const factors = (uoms || []).flatMap((u: any) => (u.factors || []).filter((f: any) => f.to_uom_name === newItem.uom));
-                        if (!newItem.uom) return <small className="text-muted fst-italic">Select a UoM first</small>;
-                        if (factors.length === 0) return <small className="text-muted fst-italic">No packaging units defined for this UoM</small>;
-                        return (
-                          <div className="d-flex flex-column gap-1">
-                            {factors.map((f: any) => {
-                              const active = newItem.packaging_factor_ids.includes(String(f.id));
-                              return (
-                                <div key={f.id} style={{ display: 'grid', gridTemplateColumns: '56px 1fr', alignItems: 'center' }}>
-                                  <small className="text-muted">{f.from_uom_name}</small>
-                                  <button type="button"
-                                    className={`btn btn-sm ${active ? 'btn-primary' : 'btn-outline-secondary'}`}
-                                    style={{ fontSize: 10, padding: '1px 6px', width: 'fit-content' }}
-                                    onClick={() => setNewItem(prev => ({
-                                      ...prev,
-                                      packaging_factor_ids: active
-                                        ? prev.packaging_factor_ids.filter((id: string) => id !== String(f.id))
-                                        : [...prev.packaging_factor_ids, String(f.id)],
-                                    }))}
-                                  >
-                                    &times;{parseFloat(f.value)} {newItem.uom}
-                                  </button>
-                                </div>
-                              );
-                            })}
-                          </div>
-                        );
-                      })()}
-                    </div>
-                  </div>
-                )}
               </div>
 
               <div className="row g-2 mb-1">
                   <div className="col-5">
-                      <FieldLabel classic={classic}>Weight / Unit</FieldLabel>
+                      <FieldLabel>Weight / Unit</FieldLabel>
                       <input
-                          style={classic ? xpInput : undefined}
-                          className={classic ? '' : 'form-control'}
+                          style={xpInput}
                           type="number"
                           min="0"
                           step="0.01"
@@ -946,10 +876,9 @@ export default function InventoryView({
                       />
                   </div>
                   <div className="col-4">
-                      <FieldLabel classic={classic}>Unit</FieldLabel>
+                      <FieldLabel>Unit</FieldLabel>
                       <select
-                          style={classic ? { ...xpInput, height: 'auto', padding: '2px 4px', width: '100%' } : undefined}
-                          className={classic ? '' : 'form-select'}
+                          style={{ ...xpInput, height: 'auto', padding: '2px 4px', width: '100%' }}
                           value={newItem.weight_unit}
                           onChange={e => setNewItem({...newItem, weight_unit: e.target.value})}
                       >
@@ -962,57 +891,50 @@ export default function InventoryView({
               </div>
             </FormSection>
 
-            <FormSection title="Inventory Settings" classic={classic}>
+            <FormSection title="Inventory Settings">
               <div className="mb-1">
                   <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                       <input
-                          style={classic ? { cursor: 'pointer' } : undefined}
-                          className={classic ? '' : 'form-check-input'}
+                          style={{ cursor: 'pointer' }}
                           type="checkbox"
                           id="new-lot-tracked"
                           checked={newItem.lot_tracked}
                           onChange={e => setNewItem({ ...newItem, lot_tracked: e.target.checked })}
                       />
                       <label
-                          style={classic ? { fontFamily: xpFont, fontSize: '11px', fontWeight: 'bold', color: '#2b2822', cursor: 'pointer', margin: 0 } : { margin: 0 }}
-                          className={classic ? '' : 'form-check-label small fw-semibold'}
+                          style={{ fontFamily: xpFont, fontSize: '11px', fontWeight: 'bold', color: '#2b2822', cursor: 'pointer', margin: 0 }}
                           htmlFor="new-lot-tracked"
                       >Lot tracked</label>
                   </div>
                   <div
-                      style={classic ? { fontFamily: xpFont, fontSize: 10, color: '#938c76', fontStyle: 'italic', margin: '1px 0 3px 20px' } : undefined}
-                      className={classic ? '' : 'text-muted small fst-italic mb-1'}
+                      style={{ fontFamily: xpFont, fontSize: 10, color: '#938c76', fontStyle: 'italic', margin: '1px 0 3px 20px' }}
                   >Every receipt, production output and transfer requires a lot number</div>
               </div>
 
               <div className="mb-1">
                   <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                       <input
-                          style={classic ? { cursor: 'pointer' } : undefined}
-                          className={classic ? '' : 'form-check-input'}
+                          style={{ cursor: 'pointer' }}
                           type="checkbox"
                           id="new-decoupling-point"
                           checked={newItem.is_decoupling_point}
                           onChange={e => setNewItem({ ...newItem, is_decoupling_point: e.target.checked })}
                       />
                       <label
-                          style={classic ? { fontFamily: xpFont, fontSize: '11px', fontWeight: 'bold', color: '#2b2822', cursor: 'pointer', margin: 0 } : { margin: 0 }}
-                          className={classic ? '' : 'form-check-label small fw-semibold'}
+                          style={{ fontFamily: xpFont, fontSize: '11px', fontWeight: 'bold', color: '#2b2822', cursor: 'pointer', margin: 0 }}
                           htmlFor="new-decoupling-point"
                       >Make-to-stock (decoupling point)</label>
                   </div>
                   <div
-                      style={classic ? { fontFamily: xpFont, fontSize: 10, color: '#938c76', fontStyle: 'italic', margin: '1px 0 3px 20px' } : undefined}
-                      className={classic ? '' : 'text-muted small fst-italic mb-1'}
+                      style={{ fontFamily: xpFont, fontSize: 10, color: '#938c76', fontStyle: 'italic', margin: '1px 0 3px 20px' }}
                   >Never auto-planned inside a parent order — demand is pooled and produced on its own standalone order</div>
               </div>
 
               <div className="mb-3">
-                  <FieldLabel classic={classic} hint="Flags low stock when total on-hand drops below this. Blank = default (10).">Reorder point (min stock)</FieldLabel>
+                  <FieldLabel hint="Flags low stock when total on-hand drops below this. Blank = default (10).">Reorder point (min stock)</FieldLabel>
                   <input
                       type="number" min="0" step="any"
-                      style={classic ? { ...xpInput, height: 'auto', padding: '2px 4px', width: '100%' } : undefined}
-                      className={classic ? '' : 'form-control'}
+                      style={{ ...xpInput, height: 'auto', padding: '2px 4px', width: '100%' }}
                       value={newItem.min_stock_level}
                       onChange={e => setNewItem({ ...newItem, min_stock_level: e.target.value })}
                       placeholder="10"
@@ -1020,7 +942,7 @@ export default function InventoryView({
               </div>
 
               <div className="mb-1">
-                  <FieldLabel classic={classic} hint="Where this item is normally pulled from when staging to production">Default source location</FieldLabel>
+                  <FieldLabel hint="Where this item is normally pulled from when staging to production">Default source location</FieldLabel>
                   <TreeSelect
                       options={locPickerTreeOptions}
                       value={newItem.default_source_location_id}
@@ -1033,7 +955,7 @@ export default function InventoryView({
               </div>
 
               <div className="mb-1">
-                  <FieldLabel classic={classic} hint="Preferred bin for this item's production output — pre-fills the MO putaway suggestion">Default putaway location</FieldLabel>
+                  <FieldLabel hint="Preferred bin for this item's production output — pre-fills the MO putaway suggestion">Default putaway location</FieldLabel>
                   <TreeSelect
                       options={locPickerTreeOptions}
                       value={newItem.default_putaway_location_id}
@@ -1046,7 +968,7 @@ export default function InventoryView({
               </div>
 
               <div className="mb-1">
-                  <FieldLabel classic={classic} hint="Defect store for QC-rejected stock of this item — used when the producing work centre has no reject location of its own">Default reject location</FieldLabel>
+                  <FieldLabel hint="Defect store for QC-rejected stock of this item — used when the producing work centre has no reject location of its own">Default reject location</FieldLabel>
                   <TreeSelect
                       options={locPickerTreeOptions}
                       value={newItem.default_reject_location_id}
@@ -1060,30 +982,22 @@ export default function InventoryView({
             </FormSection>
 
             {isFinishedGoodsCategory && (
-              <FormSection title="Variant Type" classic={classic}>
+              <FormSection title="Variant Type">
                   {renderVariantTypeSelector(newItem.variant_type, (v) => setNewItem({ ...newItem, variant_type: v }), 'new')}
               </FormSection>
             )}
 
               {newItem.source_sample_id && (
                   <div className="mb-3">
-                      {classic ? (
-                          <div style={{ border: '1px solid #7f9db9', background: '#dce4f5', padding: '4px 8px', fontFamily: xpFont, fontSize: '11px', color: '#0d2a6e' }}>
+                      <div style={{ border: '1px solid #7f9db9', background: '#dce4f5', padding: '4px 8px', fontFamily: xpFont, fontSize: '11px', color: '#0d2a6e' }}>
                               ↖ Derived from sample: <strong>{newItem.source_sample_code}{newItem.source_color_name ? ` · ${newItem.source_color_name}` : ''}</strong>
                           </div>
-                      ) : (
-                          <div className="alert alert-info py-2 px-3 mb-0 small">
-                              <i className="bi bi-arrow-up-left me-1"></i>
-                              Derived from sample: <strong>{newItem.source_sample_code}{newItem.source_color_name ? ` · ${newItem.source_color_name}` : ''}</strong>
-                          </div>
-                      )}
                   </div>
               )}
 
               {isRawMaterialCategory && (
                   <div className="mb-0">
-                      {classic ? (
-                          <div style={{ border: '1px solid #aca899', borderRadius: 3, padding: '10px 8px 8px', background: '#f5f4ee', position: 'relative', marginTop: 4 }}>
+                      <div style={{ border: '1px solid #aca899', borderRadius: 3, padding: '10px 8px 8px', background: '#f5f4ee', position: 'relative', marginTop: 4 }}>
                               <span style={{ position: 'absolute', top: -8, left: 8, background: '#f5f4ee', padding: '0 4px', fontFamily: xpFont, fontSize: '10px', color: '#444' }}>Also Create Beam Item</span>
                               <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: createBeam ? 8 : 0 }}>
                                   <input
@@ -1127,49 +1041,6 @@ export default function InventoryView({
                                   </div>
                               )}
                           </div>
-                      ) : (
-                          <div className="border rounded p-2 bg-light">
-                              <div className="form-check mb-0">
-                                  <input
-                                      className="form-check-input"
-                                      type="checkbox"
-                                      id="create-beam-check"
-                                      checked={createBeam}
-                                      onChange={e => { setCreateBeam(e.target.checked); setBeamNameManuallyEdited(false); }}
-                                  />
-                                  <label className="form-check-label small" htmlFor="create-beam-check">
-                                      Also create beam item <strong>BEAM-{newItem.code || '...'}</strong>
-                                  </label>
-                              </div>
-                              {createBeam && (
-                                  <div className="mt-2 d-flex gap-2 align-items-end">
-                                      <div className="flex-grow-1">
-                                          <label className="form-label small text-muted mb-1">Beam Name</label>
-                                          <input
-                                              className="form-control form-control-sm"
-                                              value={beamName}
-                                              onChange={e => { setBeamNameManuallyEdited(true); setBeamName(e.target.value); }}
-                                              placeholder={`Beam - ${newItem.name}`}
-                                          />
-                                      </div>
-                                      <div style={{ width: 90 }}>
-                                          <label className="form-label small text-muted mb-1">UOM</label>
-                                          <select
-                                              className="form-select form-select-sm"
-                                              value={beamUom}
-                                              onChange={e => setBeamUom(e.target.value)}
-                                          >
-                                              <option value="">-- same --</option>
-                                              {(uoms || []).map((u: any) => <option key={u.id} value={u.name}>{u.name}</option>)}
-                                          </select>
-                                      </div>
-                                  </div>
-                              )}
-                              {createBeam && (
-                                  <small className="text-muted d-block mt-1">Code: BEAM-{newItem.code || '...'} · Category: Beam (WIP) · BOM defined manually</small>
-                              )}
-                          </div>
-                      )}
                   </div>
               )}
           </form>
@@ -1179,12 +1050,10 @@ export default function InventoryView({
       <div className="col-12 order-2 order-md-1">
         {/* ── Outer shell: XP bevel in classic, Bootstrap card in default ── */}
         <div
-          style={classic ? { ...xpBevel, ...pageFillStyle } : pageFillStyle}
-          className={classic ? '' : 'card h-100 border-0 shadow-sm shell-window'}
+          style={{ ...xpBevel, ...pageFillStyle }}
         >
           {/* ── Title bar ── */}
-          {classic ? (
-            <div style={xpTitleBar}>
+          <div style={xpTitleBar}>
               {/* Left: title + selection info */}
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                 <span>
@@ -1219,89 +1088,15 @@ export default function InventoryView({
                 )}
               </div>
             </div>
-          ) : (
-            <div className="card-header bg-white">
-              <div className="d-flex justify-content-between align-items-center mb-3">
-                  <div>
-                      <h5 className="card-title mb-0">{forcedCategory ? t('sample_masters') : t('item_inventory')}</h5>
-                      <p className="text-muted small mb-0 mt-1">
-                          {forcedCategory ? 'Manage product samples and prototypes' : 'Master list of all products and materials'}
-                      </p>
-                      {canDelete && sel.count > 0 && (
-                          <div className="d-flex align-items-center gap-2 mt-2">
-                              <span className="text-muted small">{sel.count} selected</span>
-                              <button className="btn btn-sm btn-danger" onClick={handleBulkDelete}>
-                                  <i className="bi bi-trash me-1"></i>Delete Selected
-                              </button>
-                              <button className="btn btn-sm btn-link text-secondary p-0" onClick={sel.clear}>
-                                  Clear
-                              </button>
-                          </div>
-                      )}
-                  </div>
-              </div>
-              {/* Filter Bar */}
-              <div className="row g-2 align-items-center bg-light p-2 rounded border">
-                  <div className="col-md-5">
-                      <SearchField classic={false} value={searchTerm} onChange={onSearchChange} placeholder={`${t('search')}...`} width={420} grow style={{ display: 'flex', width: '100%' }} />
-                  </div>
-                  {!forcedCategory && (
-                  <>
-                  <div className="col-md-3">
-                      <TreeSelect
-                          options={catTreeOptions}
-                          value={categoryL3 || categoryL2 || categoryL1}
-                          onChange={handleCategoryTreeChange}
-                          allowEmpty
-                          emptyLabel="All Categories"
-                          size="sm"
-                      />
-                  </div>
-                  <div className="col-md-1">
-                      <button className="btn btn-sm btn-outline-secondary w-100" onClick={() => { setCategoryL1(''); setCategoryL2(''); setCategoryL3(''); }} disabled={!categoryL1 && !categoryL2 && !categoryL3}>Clear</button>
-                  </div>
-                  </>
-                  )}
-                  {(canManage || canImport) && (
-                  <div className={forcedCategory ? 'col-md-7 d-flex justify-content-end gap-2' : 'col-md-3 d-flex justify-content-end gap-2'}>
-                      {canImport && (
-                      <div style={{ display: 'flex' }}>
-                          <ToolbarButton
-                              classic={false}
-                              tone="neutral"
-                              icon={importing ? 'bi-hourglass-split' : 'bi-upload'}
-                              disabled={importing}
-                              onClick={() => importInputRef.current?.click()}
-                              style={{ borderTopRightRadius: 0, borderBottomRightRadius: 0 }}
-                          >{importing ? 'Importing…' : 'Import'}</ToolbarButton>
-                          <span className="xp-menu-trigger" style={{ display: 'inline-flex', marginLeft: -1 }}>
-                              <ToolbarButton
-                                  classic={false}
-                                  tone="neutral"
-                                  icon="bi-caret-down-fill"
-                                  title="Import options"
-                                  onClick={e => toggleMenu('import', e)}
-                                  style={{ borderTopLeftRadius: 0, borderBottomLeftRadius: 0, paddingLeft: 6, paddingRight: 2 }}
-                              >{null}</ToolbarButton>
-                          </span>
-                      </div>
-                  )}
-                      {canManage && <ToolbarButton classic={false} tone="create" icon="bi-plus-lg" testId="create-item-btn" onClick={openCreateModal}>{t('create')}</ToolbarButton>}
-                  </div>
-                  )}
-              </div>
-            </div>
-          )}
 
           {/* ── Category quick-filter tabs ── */}
           {!forcedCategory && (
-              <Tabs<string> tabs={categoryTabs} activeKey={categoryL1 || 'ALL'} onChange={handleCategoryTabChange} classic={classic} />
+              <Tabs<string> tabs={categoryTabs} activeKey={categoryL1 || 'ALL'} onChange={handleCategoryTabChange} />
           )}
 
           {/* ── XP Toolbar (search + filter) ── */}
-          {classic && (
-            <div style={{ ...xpToolbar, gap: 8 }}>
-              <SearchField classic value={searchTerm} onChange={onSearchChange} placeholder={`${t('search')} items…`} width={200} />
+          <div style={{ ...xpToolbar, gap: 8 }}>
+              <SearchField value={searchTerm} onChange={onSearchChange} placeholder={`${t('search')} items…`} width={200} />
               {!forcedCategory && (
                 <>
                   <span style={{ fontSize: 10, color: '#555', whiteSpace: 'nowrap', fontFamily: xpFont }}>Category:</span>
@@ -1326,7 +1121,6 @@ export default function InventoryView({
                   {canImport && (
                       <div style={{ display: 'flex' }}>
                           <ToolbarButton
-                              classic
                               tone="neutral"
                               icon={importing ? 'bi-hourglass-split' : 'bi-upload'}
                               disabled={importing}
@@ -1335,7 +1129,6 @@ export default function InventoryView({
                           >{importing ? 'Importing…' : 'Import'}</ToolbarButton>
                           <span className="xp-menu-trigger" style={{ display: 'inline-flex', marginLeft: -1 }}>
                               <ToolbarButton
-                                  classic
                                   tone="neutral"
                                   icon="bi-caret-down-fill"
                                   title="Import options"
@@ -1345,11 +1138,10 @@ export default function InventoryView({
                           </span>
                       </div>
                   )}
-                  {canManage && <ToolbarButton classic tone="create" icon="bi-plus-lg" testId="create-item-btn" onClick={openCreateModal}>{t('create')}</ToolbarButton>}
+                  {canManage && <ToolbarButton tone="create" icon="bi-plus-lg" testId="create-item-btn" onClick={openCreateModal}>{t('create')}</ToolbarButton>}
                 </div>
               )}
             </div>
-          )}
 
           {/* ── Import result strip (the modeless import's only output) ── */}
           {importResult && (() => {
@@ -1366,7 +1158,7 @@ export default function InventoryView({
                   <div style={{
                       background: tone.bg, borderTop: `1px solid ${tone.border}`, borderBottom: `1px solid ${tone.border}`,
                       borderLeft: `4px solid ${tone.border}`, color: tone.fg,
-                      padding: '6px 10px', fontFamily: classic ? xpFont : undefined, fontSize: classic ? 11 : 13,
+                      padding: '6px 10px', fontFamily: xpFont, fontSize: 11,
                   }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                           <i className={`bi ${tone.icon}`}></i>
@@ -1388,36 +1180,34 @@ export default function InventoryView({
           })()}
 
           {/* ── Table ── */}
-          <div className={classic ? '' : 'card-body p-0'} style={{ flex: 1, overflowY: 'auto', minHeight: 0 }}>
-            <div className={classic ? '' : 'table-responsive'}>
+          <div style={{ flex: 1, overflowY: 'auto', minHeight: 0 }}>
+            <div>
               <table
-                className={classic ? '' : 'table table-hover align-middle mb-0'}
-                style={classic ? {
+                style={{
                     width: '100%',
                     borderCollapse: 'separate',
                     borderSpacing: 0,
                     fontFamily: xpFont,
                     fontSize: '11px',
                     background: '#ffffff',
-                } : undefined}
+                }}
               >
                 <thead>
                   <tr
-                    style={classic ? xpTableHeader : undefined}
-                    className={classic ? '' : 'table-light'}
+                    style={xpTableHeader}
                   >
-                    <th style={classic ? { ...xpThCell, width: LV_CHECK_COL_W, textAlign: 'center' } : { width: LV_CHECK_COL_W }} className={classic ? '' : 'ps-3'}>
-                        <SelectAllCheckbox classic={classic} allSelected={sel.allPageSelected} someSelected={sel.someSelected} onChange={sel.togglePage} />
+                    <th style={{ ...xpThCell, width: LV_CHECK_COL_W, textAlign: 'center' }}>
+                        <SelectAllCheckbox allSelected={sel.allPageSelected} someSelected={sel.someSelected} onChange={sel.togglePage} />
                     </th>
-                    <th style={classic ? { ...xpThCell, width: LV_EXPANDER_COL_W } : { width: LV_EXPANDER_COL_W }}></th>
-                    <SortableTh sort={sort} colKey="code" onSort={toggleSort} style={classic ? { ...xpThCell, width: '110px' } : {}} className={classic ? '' : 'ps-4'}>{t('item_code')}</SortableTh>
-                    <SortableTh sort={sort} colKey="name" onSort={toggleSort} style={classic ? { ...xpThCell } : {}}>{t('item_name')}</SortableTh>
-                    <SortableTh sort={sort} colKey="category" onSort={toggleSort} style={classic ? { ...xpThCell, width: '110px' } : {}}>{t('categories')}</SortableTh>
-                    <th style={classic ? { ...xpThCell, width: '55px' } : { width: '55px' }}>{t('uom')}</th>
-                    <th style={classic ? { ...xpThCell, width: '90px' } : undefined}>{t('source_sample')}</th>
-                    <th style={classic ? { ...xpThCell, width: '70px' } : { width: '70px' }}>{t('item_type')}</th>
-                    <SortableTh sort={sort} colKey="weight" onSort={toggleSort} style={classic ? { ...xpThCell, width: '90px' } : { width: '90px' }}>{t('weight_per_unit')}</SortableTh>
-                    <th style={classic ? { ...xpThCell, width: '80px', borderRight: 'none' } : { width: '80px' }}>{t('actions')}</th>
+                    <th style={{ ...xpThCell, width: LV_EXPANDER_COL_W }}></th>
+                    <SortableTh sort={sort} colKey="code" onSort={toggleSort} style={{ ...xpThCell, width: '110px' }}>{t('item_code')}</SortableTh>
+                    <SortableTh sort={sort} colKey="name" onSort={toggleSort} style={{ ...xpThCell }}>{t('item_name')}</SortableTh>
+                    <SortableTh sort={sort} colKey="category" onSort={toggleSort} style={{ ...xpThCell, width: '110px' }}>{t('categories')}</SortableTh>
+                    <th style={{ ...xpThCell, width: '55px' }}>{t('uom')}</th>
+                    <th style={{ ...xpThCell, width: '90px' }}>{t('source_sample')}</th>
+                    <th style={{ ...xpThCell, width: '70px' }}>{t('item_type')}</th>
+                    <SortableTh sort={sort} colKey="weight" onSort={toggleSort} style={{ ...xpThCell, width: '90px' }}>{t('weight_per_unit')}</SortableTh>
+                    <th style={{ ...xpThCell, width: '80px', borderRight: 'none' }}>{t('actions')}</th>
                   </tr>
                 </thead>
                 <tbody ref={listBodyRef}>
@@ -1434,26 +1224,22 @@ export default function InventoryView({
                         onMenu={toggleMenu}
                         historyState={expandedItemId === String(item.id) ? itemHistory[String(item.id)] : undefined}
                         userNameById={userNameById}
-                        classic={classic}
                     />
                   ))}
                   {filteredItems.length === 0 && dataLoading.items && (
-                    <TableSkeleton rows={8} cols={skel.cols ?? ITEM_COL_SPAN} classic={classic} rowHeight={skel.rowHeight} fillHeight={skel.fillHeight} />
+                    <TableSkeleton rows={8} cols={skel.cols ?? ITEM_COL_SPAN} rowHeight={skel.rowHeight} fillHeight={skel.fillHeight} />
                   )}
                   {filteredItems.length === 0 && !dataLoading.items && (
                     <tr>
                       <td
                         colSpan={ITEM_COL_SPAN}
-                        style={classic ? { padding: 0, background: '#ffffff' } : undefined}
-                        className={classic ? '' : 'text-center text-muted py-5'}
+                        style={{ padding: 0, background: '#ffffff' }}
                       >
-                        {classic ? (
-                          <XPEmptyState message="No items found" icon="bi-box-seam">
+                        <XPEmptyState message="No items found" icon="bi-box-seam">
                             <button className={XP_BTN} style={{ ...xpBtn(), marginTop: 10 }} onClick={openCreateModal}>
                               <i className="bi bi-plus-lg" style={{ marginRight: 4 }} />{t('create')}
                             </button>
                           </XPEmptyState>
-                        ) : 'No items found'}
                       </td>
                     </tr>
                   )}
@@ -1468,11 +1254,9 @@ export default function InventoryView({
             total={totalItems}
             pageSize={pageSize}
             onPageChange={onPageChange}
-            leftContent={classic
-              ? (sel.count > 0
+            leftContent={sel.count > 0
                   ? `${sel.count} of ${totalItems} item${totalItems !== 1 ? 's' : ''} selected`
-                  : `${totalItems} item${totalItems !== 1 ? 's' : ''} total`)
-              : undefined}
+                  : `${totalItems} item${totalItems !== 1 ? 's' : ''} total`}
           />
         </div>
       </div>
@@ -1486,8 +1270,7 @@ export default function InventoryView({
           variant="primary"
           size="md"
           footer={activeEditingItem ? (
-              classic ? (
-                <>
+              <>
                   <button type="button" className={XP_BTN} style={xpBtn()} onClick={() => setEditingItem(null)}>{t('cancel')}</button>
                   <button
                     type="button"
@@ -1495,44 +1278,31 @@ export default function InventoryView({
                     style={xpBtn({ ...BTN_TONES.success, padding: '2px 16px' })}
                     onClick={() => (document.getElementById('edit-item-form') as HTMLFormElement)?.requestSubmit()}
                   >{t('save')}</button>
-                </>
-              ) : (
-                <>
-                  <button type="button" className="btn btn-sm btn-light text-muted" onClick={() => setEditingItem(null)}>{t('cancel')}</button>
-                  <button
-                    type="button"
-                    className="btn btn-primary btn-sm px-3"
-                    onClick={() => (document.getElementById('edit-item-form') as HTMLFormElement)?.requestSubmit()}
-                  >{t('save')}</button>
-                </>
-              )
-          ) : undefined}
+                </>) : undefined}
       >
           {activeEditingItem && (
                 <form id="edit-item-form" onSubmit={handleUpdateItemSubmit}>
-                  <FormSection title="Basic Info" classic={classic}>
+                  <FormSection title="Basic Info">
                     <div className="mb-3">
-                        <FieldLabel classic={classic}>{t('item_code')}</FieldLabel>
+                        <FieldLabel>{t('item_code')}</FieldLabel>
                         <input
-                          className={classic ? '' : 'form-control'}
-                          style={classic ? { ...xpInput, width: '100%', boxSizing: 'border-box' } : undefined}
+                          style={{ ...xpInput, width: '100%', boxSizing: 'border-box' }}
                           value={editingItem.code}
                           onChange={e => setEditingItem({...editingItem, code: e.target.value})}
                           required
                         />
                     </div>
                     <div className="mb-3">
-                        <FieldLabel classic={classic}>{t('item_name')}</FieldLabel>
+                        <FieldLabel>{t('item_name')}</FieldLabel>
                         <input
-                          className={classic ? '' : 'form-control'}
-                          style={classic ? { ...xpInput, width: '100%', boxSizing: 'border-box' } : undefined}
+                          style={{ ...xpInput, width: '100%', boxSizing: 'border-box' }}
                           value={editingItem.name}
                           onChange={e => setEditingItem({...editingItem, name: e.target.value})}
                           required
                         />
                     </div>
                     <div className="mb-3">
-                        <FieldLabel classic={classic}>{t('categories')}</FieldLabel>
+                        <FieldLabel>{t('categories')}</FieldLabel>
                         <TreeSelect
                             options={catTreeOptions}
                             value={effectiveFormCategoryId || ''}
@@ -1544,10 +1314,9 @@ export default function InventoryView({
                         />
                     </div>
                     <div className="mb-1">
-                        <FieldLabel classic={classic}>{t('uom')}</FieldLabel>
+                        <FieldLabel>{t('uom')}</FieldLabel>
                         <select
-                          className={classic ? '' : 'form-select'}
-                          style={classic ? { ...xpSelect, width: '100%', boxSizing: 'border-box', height: '22px' } : undefined}
+                          style={{ ...xpSelect, width: '100%', boxSizing: 'border-box', height: '22px' }}
                           value={editingItem.uom}
                           onChange={e => setEditingItem({...editingItem, uom: e.target.value, packaging_factor_ids: []})}
                           required
@@ -1558,12 +1327,11 @@ export default function InventoryView({
                     </div>
                   </FormSection>
 
-                  <FormSection title="Packaging & Weight" classic={classic}>
+                  <FormSection title="Packaging & Weight">
                     {/* Packaging Units */}
                     <div className="mb-3">
-                      {classic ? (
-                        <div>
-                          <FieldLabel classic={classic}>Packaging Units</FieldLabel>
+                      <div>
+                          <FieldLabel>Packaging Units</FieldLabel>
                           <div style={{ display: 'flex', flexDirection: 'column' as const, gap: 4 }}>
                             {(() => {
                               const factors = (uoms || []).flatMap((u: any) => (u.factors || []).filter((f: any) => f.to_uom_name === editingItem.uom));
@@ -1600,50 +1368,13 @@ export default function InventoryView({
                             })()}
                           </div>
                         </div>
-                      ) : (
-                        <div>
-                          <label className="form-label small text-muted">Packaging Units</label>
-                          <div className="border rounded p-2" style={{ background: '#f8f9fa' }}>
-                            {(() => {
-                              const factors = (uoms || []).flatMap((u: any) => (u.factors || []).filter((f: any) => f.to_uom_name === editingItem.uom));
-                              if (!editingItem.uom) return <small className="text-muted fst-italic">Select a UoM first</small>;
-                              if (factors.length === 0) return <small className="text-muted fst-italic">No packaging units defined for this UoM</small>;
-                              return (
-                                <div className="d-flex flex-column gap-1">
-                                  {factors.map((f: any) => {
-                                    const active = (editingItem.packaging_factor_ids || []).includes(String(f.id));
-                                    return (
-                                      <div key={f.id} style={{ display: 'grid', gridTemplateColumns: '56px 1fr', alignItems: 'center' }}>
-                                        <small className="text-muted">{f.from_uom_name}</small>
-                                        <button type="button"
-                                          className={`btn btn-sm ${active ? 'btn-primary' : 'btn-outline-secondary'}`}
-                                          style={{ fontSize: 10, padding: '1px 6px', width: 'fit-content' }}
-                                          onClick={() => setEditingItem((prev: any) => ({
-                                            ...prev,
-                                            packaging_factor_ids: active
-                                              ? (prev.packaging_factor_ids || []).filter((id: string) => id !== String(f.id))
-                                              : [...(prev.packaging_factor_ids || []), String(f.id)],
-                                          }))}
-                                        >
-                                          &times;{parseFloat(f.value)} {editingItem.uom}
-                                        </button>
-                                      </div>
-                                    );
-                                  })}
-                                </div>
-                              );
-                            })()}
-                          </div>
-                        </div>
-                      )}
                     </div>
 
                     <div className="row g-2 mb-1">
                         <div className="col-6">
-                            <FieldLabel classic={classic}>Weight / Unit</FieldLabel>
+                            <FieldLabel>Weight / Unit</FieldLabel>
                             <input
-                              className={classic ? '' : 'form-control'}
-                              style={classic ? { ...xpInput, width: '100%', boxSizing: 'border-box' } : undefined}
+                              style={{ ...xpInput, width: '100%', boxSizing: 'border-box' }}
                               type="number"
                               min="0"
                               step="0.01"
@@ -1653,10 +1384,9 @@ export default function InventoryView({
                             />
                         </div>
                         <div className="col-6">
-                            <FieldLabel classic={classic}>Weight Unit</FieldLabel>
+                            <FieldLabel>Weight Unit</FieldLabel>
                             <select
-                              className={classic ? '' : 'form-select'}
-                              style={classic ? { ...xpSelect, width: '100%', boxSizing: 'border-box', height: '22px' } : undefined}
+                              style={{ ...xpSelect, width: '100%', boxSizing: 'border-box', height: '22px' }}
                               value={editingItem.weight_unit || 'gsm'}
                               onChange={e => setEditingItem({...editingItem, weight_unit: e.target.value})}
                             >
@@ -1669,57 +1399,50 @@ export default function InventoryView({
                     </div>
                   </FormSection>
 
-                  <FormSection title="Inventory Settings" classic={classic}>
+                  <FormSection title="Inventory Settings">
                     <div className="mb-1">
                         <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                             <input
-                              className={classic ? '' : 'form-check-input'}
-                              style={classic ? { cursor: 'pointer' } : undefined}
+                              style={{ cursor: 'pointer' }}
                               type="checkbox"
                               id="edit-lot-tracked"
                               checked={!!editingItem.lot_tracked}
                               onChange={e => setEditingItem({ ...editingItem, lot_tracked: e.target.checked })}
                             />
                             <label
-                              className={classic ? '' : 'form-check-label small fw-semibold'}
-                              style={classic ? { fontFamily: xpFont, fontSize: '11px', fontWeight: 'bold', color: '#2b2822', cursor: 'pointer', margin: 0 } : { margin: 0 }}
+                              style={{ fontFamily: xpFont, fontSize: '11px', fontWeight: 'bold', color: '#2b2822', cursor: 'pointer', margin: 0 }}
                               htmlFor="edit-lot-tracked"
                             >Lot tracked</label>
                         </div>
                         <div
-                          style={classic ? { fontFamily: xpFont, fontSize: 10, color: '#938c76', fontStyle: 'italic', margin: '1px 0 3px 20px' } : undefined}
-                          className={classic ? '' : 'text-muted small fst-italic mb-1'}
+                          style={{ fontFamily: xpFont, fontSize: 10, color: '#938c76', fontStyle: 'italic', margin: '1px 0 3px 20px' }}
                         >Every receipt, production output and transfer requires a lot number</div>
                     </div>
 
                     <div className="mb-1">
                         <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                             <input
-                              className={classic ? '' : 'form-check-input'}
-                              style={classic ? { cursor: 'pointer' } : undefined}
+                              style={{ cursor: 'pointer' }}
                               type="checkbox"
                               id="edit-decoupling-point"
                               checked={!!editingItem.is_decoupling_point}
                               onChange={e => setEditingItem({ ...editingItem, is_decoupling_point: e.target.checked })}
                             />
                             <label
-                              className={classic ? '' : 'form-check-label small fw-semibold'}
-                              style={classic ? { fontFamily: xpFont, fontSize: '11px', fontWeight: 'bold', color: '#2b2822', cursor: 'pointer', margin: 0 } : { margin: 0 }}
+                              style={{ fontFamily: xpFont, fontSize: '11px', fontWeight: 'bold', color: '#2b2822', cursor: 'pointer', margin: 0 }}
                               htmlFor="edit-decoupling-point"
                             >Make-to-stock (decoupling point)</label>
                         </div>
                         <div
-                          style={classic ? { fontFamily: xpFont, fontSize: 10, color: '#938c76', fontStyle: 'italic', margin: '1px 0 3px 20px' } : undefined}
-                          className={classic ? '' : 'text-muted small fst-italic mb-1'}
+                          style={{ fontFamily: xpFont, fontSize: 10, color: '#938c76', fontStyle: 'italic', margin: '1px 0 3px 20px' }}
                         >Never auto-planned inside a parent order — demand is pooled and produced on its own standalone order</div>
                     </div>
 
                     <div className="mb-3">
-                        <FieldLabel classic={classic} hint="Flags low stock when total on-hand drops below this. Blank = default (10).">Reorder point (min stock)</FieldLabel>
+                        <FieldLabel hint="Flags low stock when total on-hand drops below this. Blank = default (10).">Reorder point (min stock)</FieldLabel>
                         <input
                           type="number" min="0" step="any"
-                          className={classic ? '' : 'form-control'}
-                          style={classic ? { ...xpSelect, width: '100%', boxSizing: 'border-box', height: '22px' } : undefined}
+                          style={{ ...xpSelect, width: '100%', boxSizing: 'border-box', height: '22px' }}
                           value={editingItem.min_stock_level ?? ''}
                           onChange={e => setEditingItem({ ...editingItem, min_stock_level: e.target.value })}
                           placeholder="10"
@@ -1727,7 +1450,7 @@ export default function InventoryView({
                     </div>
 
                     <div className="mb-1">
-                        <FieldLabel classic={classic} hint="Where this item is normally pulled from when staging to production">Default source location</FieldLabel>
+                        <FieldLabel hint="Where this item is normally pulled from when staging to production">Default source location</FieldLabel>
                         <TreeSelect
                           options={locPickerTreeOptions}
                           value={editingItem.default_source_location_id ?? ''}
@@ -1740,7 +1463,7 @@ export default function InventoryView({
                     </div>
 
                     <div className="mb-1">
-                        <FieldLabel classic={classic} hint="Preferred bin for this item's production output — pre-fills the MO putaway suggestion">Default putaway location</FieldLabel>
+                        <FieldLabel hint="Preferred bin for this item's production output — pre-fills the MO putaway suggestion">Default putaway location</FieldLabel>
                         <TreeSelect
                           options={locPickerTreeOptions}
                           value={editingItem.default_putaway_location_id ?? ''}
@@ -1753,7 +1476,7 @@ export default function InventoryView({
                     </div>
 
                     <div className="mb-1">
-                        <FieldLabel classic={classic} hint="Defect store for QC-rejected stock of this item — used when the producing work centre has no reject location of its own">Default reject location</FieldLabel>
+                        <FieldLabel hint="Defect store for QC-rejected stock of this item — used when the producing work centre has no reject location of its own">Default reject location</FieldLabel>
                         <TreeSelect
                           options={locPickerTreeOptions}
                           value={editingItem.default_reject_location_id ?? ''}
@@ -1767,7 +1490,7 @@ export default function InventoryView({
                   </FormSection>
 
                   {(isFinishedGoodsCategory || editingItem.variant_type) && (
-                    <FormSection title="Variant Type" classic={classic}>
+                    <FormSection title="Variant Type">
                         {renderVariantTypeSelector(editingItem.variant_type || '', (v) => setEditingItem({ ...editingItem, variant_type: v }), 'edit')}
                     </FormSection>
                   )}

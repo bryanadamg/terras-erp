@@ -2,7 +2,6 @@
 
 import { useState, useCallback, useMemo, useRef, Fragment } from 'react';
 import { useLanguage } from '../../context/LanguageContext';
-import { useTheme } from '../../context/ThemeContext';
 import { useData } from '../../context/DataContext';
 import { usePaginatedFetch } from '../../context/usePaginatedList';
 import { xpFont, xpBtn, TableSkeleton, useTableSkeletonMetrics, useSortable, ExpandedRowPanel, expandedRowFrame, CodeChip, CODE_FONT, rowStateBg, CHIP_RADIUS, XP_BTN, VariantChip } from '../shared/xpTheme';
@@ -44,9 +43,7 @@ type Row = {
 
 export default function BookingStockView() {
     const { t } = useLanguage();
-    const { uiStyle } = useTheme();
     const { authFetch, attributes = [] } = useData();
-    const classic = uiStyle === 'classic';
 
     const API_BASE = useMemo(() => {
         const env = process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:8000/api';
@@ -127,14 +124,14 @@ export default function BookingStockView() {
         // Shared sub-table chrome, with the header band recoloured per side: this
         // panel's whole point is demand (amber) vs supply (green), so the tint and
         // rule colour are the one thing that deliberately varies per instance.
-        const th: React.CSSProperties = { ...lvSubTh(classic), background: tint, color, borderBottom: `1px solid ${color}` };
-        const td = lvSubTd(classic);
+        const th: React.CSSProperties = { ...lvSubTh(), background: tint, color, borderBottom: `1px solid ${color}` };
+        const td = lvSubTd();
         return (
             <div style={{ flex: '1 1 260px', minWidth: 240 }}>
-                <div style={{ ...lvSubCaption(classic), color }}>
+                <div style={{ ...lvSubCaption(), color }}>
                     {title} ({items.length})
                 </div>
-                <table style={lvSubTable(classic)}>
+                <table style={lvSubTable()}>
                     <thead>
                         <tr>
                             <th style={th}>{codeLabel}</th>
@@ -145,7 +142,7 @@ export default function BookingStockView() {
                         {items.length === 0 ? (
                             <tr><td colSpan={2} style={{ ...td, color: '#999', fontStyle: 'italic' }}>—</td></tr>
                         ) : items.map((m, i) => (
-                            <tr key={m.mo_id} style={lvSubRow(classic, i)}>
+                            <tr key={m.mo_id} style={lvSubRow(i)}>
                                 <td style={{ ...td, fontFamily: CODE_FONT, color: '#1a3d90' }}>{m.mo_code}</td>
                                 <td style={{ ...td, textAlign: 'right', color, whiteSpace: 'nowrap' }}>{sign}{fmtQty(m.qty)}</td>
                             </tr>
@@ -169,10 +166,10 @@ export default function BookingStockView() {
     // The rail is health-coded here rather than selection-blue: this table's whole
     // job is shortfall triage, so the panel inherits the row's health color.
     const renderDetail = (r: Row) => (
-        <ExpandedRowPanel classic={classic} style={{
+        <ExpandedRowPanel style={{
             display: 'flex', gap: 24, flexWrap: 'wrap',
-            ...expandedRowFrame(classic, healthOf(r.qty_net_free).color),
-            padding: classic ? '8px 12px 10px 20px' : '10px 16px',
+            ...expandedRowFrame(healthOf(r.qty_net_free).color),
+            padding: '8px 12px 10px 20px',
         }}>
             {detailSide(
                 t('demand_from_mos') || 'Required by', HEALTH.tight.color, '#fff3d6',
@@ -197,7 +194,7 @@ export default function BookingStockView() {
     const xpBevel: React.CSSProperties = sharedXpBevel();
     const xpTitleBar: React.CSSProperties = sharedXpTitleBar();
     const xpToolbar: React.CSSProperties = sharedXpToolbar({ gap: '6px' });
-    const xpTableHeader: React.CSSProperties = lvThSticky(true, { borderRight: '1px solid #b0aa9c' });
+    const xpTableHeader: React.CSSProperties = lvThSticky({ borderRight: '1px solid #b0aa9c' });
     const xpSep: React.CSSProperties = { width: '1px', height: '20px', background: '#a0988c', margin: '0 2px', flexShrink: 0 };
 
     const colLine: React.CSSProperties = { borderRight: '1px solid #d8d4c8' };
@@ -205,131 +202,111 @@ export default function BookingStockView() {
     const numCellM: React.CSSProperties = { whiteSpace: 'nowrap' };
 
     return (
-        <div className={classic ? 'fade-in' : 'fade-in p-2'} style={classic ? pageFillStyle : undefined}>
-            <div style={classic ? { ...xpBevel, display: 'flex', flexDirection: 'column', flex: 1 } : undefined} className={classic ? undefined : 'card shadow-sm shell-window'}>
-                <div style={classic ? xpTitleBar : undefined} className={classic ? undefined : 'card-header d-flex align-items-center justify-content-between py-2'}>
-                    <span className={classic ? undefined : 'fw-semibold'}>
-                        <i className={classic ? 'bi bi-bookmark-check' : 'bi bi-bookmark-check me-2'} style={classic ? { marginRight: 6 } : undefined} />
+        <div className={'fade-in'} style={pageFillStyle}>
+            <div style={{ ...xpBevel, display: 'flex', flexDirection: 'column', flex: 1 }} className={undefined}>
+                <div style={xpTitleBar} className={undefined}>
+                    <span className={undefined}>
+                        <i className={'bi bi-bookmark-check'} style={{ marginRight: 6 }} />
                         {t('booking_stock') || 'Booking Stock'}
                     </span>
-                    <span style={classic ? { fontSize: '10px', opacity: 0.85 } : undefined} className={classic ? undefined : 'badge bg-primary bg-opacity-25 text-primary-emphasis'}>{total} items</span>
+                    <span style={{ fontSize: '10px', opacity: 0.85 }} className={undefined}>{total} items</span>
                 </div>
 
-                <div style={classic ? xpToolbar : undefined} className={classic ? undefined : 'card-body py-2 d-flex flex-wrap align-items-center gap-2 border-bottom'}>
-                    <SearchField classic={classic} value={searchInput} onChange={setSearch} placeholder="Search item..." width={classic ? 200 : 240} />
-                    {classic && <div style={xpSep} />}
-                    <button style={classic ? xpBtn() : undefined} className={classic ? XP_BTN : 'btn btn-sm btn-outline-secondary'} onClick={fetchAvailability} title={classic ? 'Refresh' : undefined}>
-                        <i className={classic ? 'bi bi-arrow-clockwise' : 'bi bi-arrow-clockwise me-1'} style={classic ? { marginRight: 4 } : undefined} />Refresh
+                <div style={xpToolbar} className={undefined}>
+                    <SearchField value={searchInput} onChange={setSearch} placeholder="Search item..." width={200} />
+                    <div style={xpSep} />
+                    <button style={xpBtn()} className={XP_BTN} onClick={fetchAvailability} title={'Refresh'}>
+                        <i className={'bi bi-arrow-clockwise'} style={{ marginRight: 4 }} />Refresh
                     </button>
                     {/* Opens modeless, so the explanation can stay up while the reader
                         scrolls the table it describes. */}
-                    <button style={classic ? xpBtn() : undefined} className={classic ? XP_BTN : 'btn btn-sm btn-outline-info'}
+                    <button style={xpBtn()} className={XP_BTN}
                         onClick={() => setInfoOpen(true)}
                         title={t('how_booking_stock_calculated') || 'How is Booking Stock calculated?'}>
-                        <i className={classic ? 'bi bi-info-circle' : 'bi bi-info-circle me-1'} style={classic ? { marginRight: 4 } : undefined} />
+                        <i className={'bi bi-info-circle'} style={{ marginRight: 4 }} />
                         {t('how_calculated') || 'How is this calculated?'}
                     </button>
                     {/* Legend */}
-                    <span style={classic ? { marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 10, fontFamily: xpFont, fontSize: '10px', color: '#555' } : undefined} className={classic ? undefined : 'ms-auto small text-muted d-flex gap-3'}>
-                        <span><i className={classic ? 'bi bi-square-fill' : 'bi bi-square-fill me-1'} style={{ color: HEALTH.short.color, ...(classic ? { marginRight: 3 } : {}) }} />Shortfall</span>
-                        <span><i className={classic ? 'bi bi-square-fill' : 'bi bi-square-fill me-1'} style={{ color: HEALTH.tight.color, ...(classic ? { marginRight: 3 } : {}) }} />Tight</span>
-                        <span><i className={classic ? 'bi bi-square-fill' : 'bi bi-square-fill me-1'} style={{ color: HEALTH.ok.color, ...(classic ? { marginRight: 3 } : {}) }} />OK</span>
+                    <span style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 10, fontFamily: xpFont, fontSize: '10px', color: '#555' }} className={undefined}>
+                        <span><i className={'bi bi-square-fill'} style={{ color: HEALTH.short.color, ...({ marginRight: 3 }) }} />Shortfall</span>
+                        <span><i className={'bi bi-square-fill'} style={{ color: HEALTH.tight.color, ...({ marginRight: 3 }) }} />Tight</span>
+                        <span><i className={'bi bi-square-fill'} style={{ color: HEALTH.ok.color, ...({ marginRight: 3 }) }} />OK</span>
                     </span>
                 </div>
 
-                {!classic && error && <div className="alert alert-danger py-2 m-2 mb-0">{error}</div>}
 
-                <div style={classic ? { flex: 1, overflowY: 'auto', background: '#ffffff', maxHeight: 'calc(var(--app-vh) - 200px)' } : undefined} className={classic ? undefined : 'table-responsive'}>
-                    <table style={classic ? { width: '100%', borderCollapse: 'collapse' } : undefined} className={classic ? undefined : 'table table-sm table-hover align-middle mb-0'}>
-                        <thead className={classic ? undefined : 'table-light'}>
+                <div style={{ flex: 1, overflowY: 'auto', background: '#ffffff', maxHeight: 'calc(var(--app-vh) - 200px)' }} className={undefined}>
+                    <table style={{ width: '100%', borderCollapse: 'collapse' }} className={undefined}>
+                        <thead className={undefined}>
                             <tr>
-                                <th style={classic ? { ...xpTableHeader, width: LV_EXPANDER_COL_W } : { width: LV_EXPANDER_COL_W }} />
+                                <th style={{ ...xpTableHeader, width: LV_EXPANDER_COL_W }} />
                                 {COLS.map(c => (
                                     <SortableTh key={c.key} sort={sort} colKey={c.key} onSort={toggle}
-                                        style={classic ? { ...xpTableHeader, textAlign: c.align || 'left' } : undefined}
-                                        className={classic ? undefined : (c.align === 'right' ? 'text-end' : undefined)}>
+                                        style={{ ...xpTableHeader, textAlign: c.align || 'left' }}
+                                        className={undefined}>
                                         {c.label}
                                     </SortableTh>
                                 ))}
                             </tr>
                         </thead>
-                        <tbody ref={classic ? listBodyRef : undefined}>
+                        <tbody ref={listBodyRef}>
                             {sorted.map((r, i) => {
                                 const k = rowKey(r);
                                 const isOpen = expanded.has(k);
                                 const variant = variantLabel(r.attribute_value_ids);
                                 const h = healthOf(r.qty_net_free);
-                                const zebra = lvZebra(true, i);
+                                const zebra = lvZebra(i);
                                 return (
                                     <Fragment key={k}>
-                                        <tr onClick={() => toggleRow(k)} title={classic ? 'Click for MO breakdown' : undefined}
-                                            style={classic
-                                                ? { background: isOpen ? rowStateBg('expanded', true) : (h === HEALTH.short ? h.tint : zebra), borderBottom: '1px solid #c0bdb5', cursor: 'pointer' }
-                                                : { cursor: 'pointer' }}
-                                            className={classic ? undefined : (h === HEALTH.short ? 'table-danger' : undefined)}>
+                                        <tr onClick={() => toggleRow(k)} title={'Click for MO breakdown'}
+                                            style={{ background: isOpen ? rowStateBg('expanded') : (h === HEALTH.short ? h.tint : zebra), borderBottom: '1px solid #c0bdb5', cursor: 'pointer' }}
+                                            className={undefined}>
                                             {/* The health stripe rides the row's leftmost cell, which is now the
                                                 chevron column. */}
-                                            <ExpanderCell classic={classic} expanded={isOpen} onToggle={() => toggleRow(k)} label="MO breakdown"
-                                                tdStyle={{ borderLeft: `3px solid ${h.color}`, fontFamily: classic ? xpFont : undefined }} />
-                                            <td style={classic ? { padding: '4px 8px', fontFamily: xpFont } : undefined}>
-                                                {classic ? (
-                                                    <>
+                                            <ExpanderCell expanded={isOpen} onToggle={() => toggleRow(k)} label="MO breakdown"
+                                                tdStyle={{ borderLeft: `3px solid ${h.color}`, fontFamily: xpFont}} />
+                                            <td style={{ padding: '4px 8px', fontFamily: xpFont }}>
+                                                <>
                                                         <span style={{ fontSize: '11px', fontWeight: 'bold', color: '#000' }}>{r.item_name}</span>
                                                         <div style={{ fontSize: '10px', color: '#666', fontVariant: 'all-small-caps' }}>{r.item_code}</div>
                                                     </>
-                                                ) : (
-                                                    <>
-                                                        <span className="fw-medium">{r.item_name}</span>
-                                                        <CodeChip code={r.item_code} classic={false} tier={2} className="ms-2" />
-                                                    </>
-                                                )}
                                             </td>
-                                            <td style={classic ? { padding: '4px 8px', fontFamily: xpFont, fontSize: '11px' } : undefined}>
-                                                {classic ? (
-                                                    <span style={{ borderRadius: CHIP_RADIUS, background: '#e8e1f0', border: '1px solid #a890c0', padding: '0 5px', fontSize: '10px', color: '#3a2a4a' }} title="Netting is plant-wide, not per-location">
+                                            <td style={{ padding: '4px 8px', fontFamily: xpFont, fontSize: '11px' }}>
+                                                <span style={{ borderRadius: CHIP_RADIUS, background: '#e8e1f0', border: '1px solid #a890c0', padding: '0 5px', fontSize: '10px', color: '#3a2a4a' }} title="Netting is plant-wide, not per-location">
                                                         Plant-wide
                                                     </span>
-                                                ) : (
-                                                    <span className="badge bg-secondary-subtle text-secondary-emphasis" title="Netting is plant-wide, not per-location">Plant-wide</span>
-                                                )}
                                             </td>
-                                            <td style={classic ? { padding: '4px 8px', fontFamily: xpFont, fontSize: '10px' } : undefined} className={classic ? undefined : 'small'}>
+                                            <td style={{ padding: '4px 8px', fontFamily: xpFont, fontSize: '10px' }} className={undefined}>
                                                 {r.size_label && (
-                                                    <VariantChip kind="size" classic={classic}
+                                                    <VariantChip kind="size"
                                                         title={`Size: ${r.size_label} — netted separately from other sizes`}>
                                                         {r.size_label}
                                                     </VariantChip>
                                                 )}
                                                 {variant
-                                                    ? (classic
-                                                        ? <span style={{ background: '#dde8f5', border: '1px solid #7f9db9', padding: '0 5px', color: '#1a3d7a', marginLeft: r.size_label ? 4 : 0 }}>{variant}</span>
-                                                        : <span className={`badge bg-info-subtle text-info-emphasis${r.size_label ? ' ms-1' : ''}`}>{variant}</span>)
-                                                    : (!r.size_label && (classic
-                                                        ? <span style={{ color: '#999', fontStyle: 'italic' }}>Standard</span>
-                                                        : <span className="text-muted">Standard</span>))}
+                                                    ? (<span style={{ background: '#dde8f5', border: '1px solid #7f9db9', padding: '0 5px', color: '#1a3d7a', marginLeft: r.size_label ? 4 : 0 }}>{variant}</span>)
+                                                    : (!r.size_label && (<span style={{ color: '#999', fontStyle: 'italic' }}>Standard</span>))}
                                             </td>
-                                            <td style={{ ...(classic ? numCell : numCellM), color: TERM.onHand }} className={classic ? undefined : 'text-end'}>{fmtQty(r.qty_on_hand)}</td>
-                                            <td style={{ ...(classic ? numCell : numCellM), color: r.qty_incoming ? TERM.incoming : '#bbb' }} className={classic ? undefined : 'text-end'}>
+                                            <td style={{ ...(numCell), color: TERM.onHand }} className={undefined}>{fmtQty(r.qty_on_hand)}</td>
+                                            <td style={{ ...(numCell), color: r.qty_incoming ? TERM.incoming : '#bbb' }} className={undefined}>
                                                 {r.qty_incoming ? `+${fmtQty(r.qty_incoming)}` : '—'}
                                             </td>
-                                            <td style={{ ...(classic ? numCell : numCellM), color: TERM.required }} className={classic ? undefined : 'text-end'}>{fmtQty(r.qty_required)}</td>
+                                            <td style={{ ...(numCell), color: TERM.required }} className={undefined}>{fmtQty(r.qty_required)}</td>
                                             {/* Dimmed at zero, like Incoming: on most rows nothing is held, and a
                                                 column of bright 0.000s would pull the eye off the shortfalls. */}
-                                            <td style={{ ...(classic ? numCell : numCellM), color: r.qty_reserved ? TERM.reserved : '#bbb' }}
-                                                className={classic ? undefined : 'text-end'}
+                                            <td style={{ ...(numCell), color: r.qty_reserved ? TERM.reserved : '#bbb' }}
+                                                className={undefined}
                                                 title={r.qty_reserved ? 'On hand, but promised to a sales order — expand the row for which' : undefined}>
                                                 {r.qty_reserved ? `−${fmtQty(r.qty_reserved)}` : '—'}
                                             </td>
-                                            <td style={{ ...(classic ? numCell : numCellM), fontWeight: 'bold', color: h.color }} className={classic ? undefined : 'text-end fw-bold'}>
+                                            <td style={{ ...(numCell), fontWeight: 'bold', color: h.color }} className={undefined}>
                                                 {fmtQty(r.qty_net_free)}
-                                                {classic
-                                                    ? <span style={{ fontWeight: 'normal', fontSize: 9, color: '#999', marginLeft: 4 }}>{r.uom}</span>
-                                                    : <> <small className="text-muted fw-normal">{r.uom}</small></>}
+                                                <span style={{ fontWeight: 'normal', fontSize: 9, color: '#999', marginLeft: 4 }}>{r.uom}</span>
                                             </td>
                                         </tr>
                                         {isOpen && (
                                             <tr>
-                                                <td colSpan={COLS.length + 1} style={classic ? { padding: 0 } : undefined} className={classic ? undefined : 'p-0'}>
+                                                <td colSpan={COLS.length + 1} style={{ padding: 0 }} className={undefined}>
                                                     {renderDetail(r)}
                                                 </td>
                                             </tr>
@@ -338,36 +315,30 @@ export default function BookingStockView() {
                                 );
                             })}
                             {!loading && sorted.length === 0 && (
-                                <TableEmpty colSpan={COLS.length + 1} classic={classic}
+                                <TableEmpty colSpan={COLS.length + 1}
                                     message="No components are currently demanded by ongoing MOs." />
                             )}
                             {/* Skeleton in both themes — the modern branch used to show a bare
                                 "Loading..." line, which reads as a row rather than as a wait. */}
                             {loading && (
-                                <TableSkeleton rows={8} cols={skel.cols ?? COLS.length + 1} classic={classic}
+                                <TableSkeleton rows={8} cols={skel.cols ?? COLS.length + 1}
                                     rowHeight={skel.rowHeight} fillHeight={skel.fillHeight} />
                             )}
                         </tbody>
                     </table>
                 </div>
 
-                <div style={classic ? {
+                <div style={{
                     background: 'linear-gradient(to bottom, #e8e6df, #d5d3cc)', borderTop: '1px solid #b0a898',
                     padding: '2px 8px', display: 'flex', gap: 16, alignItems: 'center',
                     fontFamily: xpFont, fontSize: '11px', color: '#333',
-                } : undefined} className={classic ? undefined : 'card-footer d-flex gap-3 small text-muted align-items-center'}>
-                    {shortfallCount > 0 && <span style={classic ? { color: HEALTH.short.color } : undefined} className={classic ? undefined : 'text-danger'}><b>{shortfallCount}</b> shortfall</span>}
+                }} className={undefined}>
+                    {shortfallCount > 0 && <span style={{ color: HEALTH.short.color }} className={undefined}><b>{shortfallCount}</b> shortfall</span>}
                     {tightCount > 0 && <span style={{ color: HEALTH.tight.color }}><b>{tightCount}</b> tight</span>}
-                    {classic && error && <span style={{ color: '#c00000' }}>· {error}</span>}
-                    <span style={classic ? { marginLeft: 'auto', color: '#666' } : undefined} className={classic ? undefined : 'ms-auto'}>Net Free = On Hand + Incoming − Required</span>
+                    {error && <span style={{ color: '#c00000' }}>· {error}</span>}
+                    <span style={{ marginLeft: 'auto', color: '#666' }} className={undefined}>Net Free = On Hand + Incoming − Required</span>
                 </div>
-                {classic ? (
-                    <Pager page={page} total={total} pageSize={PAGE_SIZE} onPageChange={setPage} hideWhenEmpty />
-                ) : (
-                    <div className="card-footer pt-0">
-                        <Pager page={page} total={total} pageSize={PAGE_SIZE} onPageChange={setPage} hideWhenEmpty />
-                    </div>
-                )}
+                <Pager page={page} total={total} pageSize={PAGE_SIZE} onPageChange={setPage} hideWhenEmpty />
             </div>
 
             <BookingStockInfoModal isOpen={infoOpen} onClose={() => setInfoOpen(false)} />

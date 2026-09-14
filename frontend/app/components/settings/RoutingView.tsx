@@ -2,7 +2,6 @@
 
 import React, { useState, useEffect, useMemo } from 'react';
 import { useLanguage } from '../../context/LanguageContext';
-import { useTheme } from '../../context/ThemeContext';
 import { useUser } from '../../context/UserContext';
 import TreeSelect, { buildLocationPickerTree, TreeSelectOption } from '../shared/TreeSelect';
 import { ShellWindow, ShellTitleBar, SearchField, ToolbarCount, ToolbarButton } from '../shared/shellTheme';
@@ -118,8 +117,6 @@ export default function RoutingView({ workCenters, operations, locations, onCrea
   const { t } = useLanguage();
   const { hasPermission, hasAnyPermission } = useUser();
   const canManage = hasAnyPermission('routing.create', 'routing.edit', 'routing.delete');
-  const { uiStyle: currentStyle } = useTheme();
-  const classic = currentStyle === 'classic';
 
   const TABS: TabDef<TabKey>[] = [
       { key: 'work_centers', label: t('work_centers'), icon: 'bi-cpu-fill' },
@@ -195,7 +192,7 @@ export default function RoutingView({ workCenters, operations, locations, onCrea
       const inh = inheritedLoc(wcList, wc?.parent_id, field);
       if (!inh) return null;
       return (
-          <span style={{ marginLeft: 4, fontWeight: 'normal', color: classic ? '#666' : '#64748b' }}>
+          <span style={{ marginLeft: 4, fontWeight: 'normal', color: '#666'}}>
               (blank = {getLocName(inh.id)} from {inh.from.code})
           </span>
       );
@@ -329,28 +326,28 @@ export default function RoutingView({ workCenters, operations, locations, onCrea
       const level = nodeTypeOf(editingWC);
       const isMachine = level === 'MACHINE';
       return (
-          <tr style={{ background: classic ? '#fffde7' : '#fff8e1', borderBottom: classic ? '2px solid #0058e6' : '2px solid #2563eb' }}>
+          <tr style={{ background: '#fffde7', borderBottom: '2px solid #0058e6'}}>
               <td colSpan={colSpan} style={{ padding: '8px 10px' }}>
                   <form onSubmit={handleSaveEdit} style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
                       <div style={{ display: 'flex', gap: 6, alignItems: 'flex-end', flexWrap: 'wrap' as const }}>
                           <div>
-                              <label style={lvLabel(classic)}>Code</label>
-                              <input style={{ ...lvInput(classic), width: 80 }} value={editingWC.code} onChange={e => setEditingWC({ ...editingWC, code: e.target.value })} required />
+                              <label style={lvLabel()}>Code</label>
+                              <input style={{ ...lvInput(), width: 80 }} value={editingWC.code} onChange={e => setEditingWC({ ...editingWC, code: e.target.value })} required />
                           </div>
                           <div style={{ flex: 1, minWidth: 140 }}>
-                              <label style={lvLabel(classic)}>{t('station_name')}</label>
-                              <input style={lvInput(classic)} value={editingWC.name} onChange={e => setEditingWC({ ...editingWC, name: e.target.value })} required />
+                              <label style={lvLabel()}>{t('station_name')}</label>
+                              <input style={lvInput()} value={editingWC.name} onChange={e => setEditingWC({ ...editingWC, name: e.target.value })} required />
                           </div>
                           <div>
-                              <label style={lvLabel(classic)}>Type</label>
-                              <select style={{ ...lvInput(classic), width: 110 }} value={editingWC.center_type} onChange={e => setEditingWC({ ...editingWC, center_type: e.target.value })}>
+                              <label style={lvLabel()}>Type</label>
+                              <select style={{ ...lvInput(), width: 110 }} value={editingWC.center_type} onChange={e => setEditingWC({ ...editingWC, center_type: e.target.value })}>
                                   {CENTER_TYPES.map(ct => <option key={ct} value={ct}>{ct}</option>)}
                               </select>
                           </div>
                           <div>
-                              <label style={lvLabel(classic)}>Level</label>
+                              <label style={lvLabel()}>Level</label>
                               <select
-                                  style={{ ...lvInput(classic), width: 110 }}
+                                  style={{ ...lvInput(), width: 110 }}
                                   value={level}
                                   onChange={e => setEditingWC({ ...editingWC, node_type: e.target.value, parent_id: e.target.value === 'TYPE' ? '' : editingWC.parent_id })}
                               >
@@ -359,7 +356,7 @@ export default function RoutingView({ workCenters, operations, locations, onCrea
                           </div>
                           {level !== 'TYPE' && (
                               <div>
-                                  <label style={lvLabel(classic)}>{level === 'GROUP' ? 'Under Type' : 'Under Type / Group'}</label>
+                                  <label style={lvLabel()}>{level === 'GROUP' ? 'Under Type' : 'Under Type / Group'}</label>
                                   <TreeSelect
                                       options={parentTreeFor(level, editingWC.id)}
                                       value={editingWC.parent_id || ''}
@@ -375,25 +372,25 @@ export default function RoutingView({ workCenters, operations, locations, onCrea
                           default its machines inherit when they leave theirs blank. */}
                       <div style={{ display: 'flex', gap: 6, alignItems: 'flex-end', flexWrap: 'wrap' as const }}>
                               <div style={{ flex: 1, minWidth: 160 }}>
-                                  <label style={lvLabel(classic)}>Input Location{locEditHint(editingWC, 'input_location_id')}</label>
+                                  <label style={lvLabel()}>Input Location{locEditHint(editingWC, 'input_location_id')}</label>
                                   <TreeSelect options={locPickerTreeOptions} value={editingWC.input_location_id || ''} onChange={id => setEditingWC({ ...editingWC, input_location_id: id })} allowEmpty emptyLabel={locEmptyLabel(editingWC, 'input_location_id')} size="sm" style={{ width: '100%' }} />
                               </div>
                               <div style={{ flex: 1, minWidth: 160 }}>
-                                  <label style={lvLabel(classic)}>Output Location{locEditHint(editingWC, 'output_location_id')}</label>
+                                  <label style={lvLabel()}>Output Location{locEditHint(editingWC, 'output_location_id')}</label>
                                   <TreeSelect options={locPickerTreeOptions} value={editingWC.output_location_id || ''} onChange={id => setEditingWC({ ...editingWC, output_location_id: id })} allowEmpty emptyLabel={locEmptyLabel(editingWC, 'output_location_id')} size="sm" style={{ width: '100%' }} />
                               </div>
                               <div style={{ flex: 1, minWidth: 160 }}>
-                                  <label style={lvLabel(classic)} title="Defect store — QC-rejected output from this centre is moved here instead of staying on the good shelf">
+                                  <label style={lvLabel()} title="Defect store — QC-rejected output from this centre is moved here instead of staying on the good shelf">
                                       Reject Location{locEditHint(editingWC, 'reject_location_id')}
                                   </label>
                                   <TreeSelect options={locPickerTreeOptions} value={editingWC.reject_location_id || ''} onChange={id => setEditingWC({ ...editingWC, reject_location_id: id })} allowEmpty emptyLabel={locEmptyLabel(editingWC, 'reject_location_id')} size="sm" style={{ width: '100%' }} />
                               </div>
                               {isMachine && ['WEAVING', 'TENUN'].includes((editingWC.center_type || '').toUpperCase()) && (
                                   <div style={{ width: 120 }}>
-                                      <label style={lvLabel(classic)}>Beam Slots</label>
+                                      <label style={lvLabel()}>Beam Slots</label>
                                       <input
                                           type="number" min={1} step={1}
-                                          style={{ ...lvInput(classic), width: '100%' }}
+                                          style={{ ...lvInput(), width: '100%' }}
                                           value={editingWC.beam_slots ?? 1}
                                           onChange={e => setEditingWC({ ...editingWC, beam_slots: e.target.value })}
                                           title="Beam positions on this loom — a weaving WO is beam-ready when this many beams are mounted"
@@ -402,8 +399,8 @@ export default function RoutingView({ workCenters, operations, locations, onCrea
                               )}
                       </div>
                       <div style={{ display: 'flex', gap: 6 }}>
-                          <button type="submit" className={XP_BTN} style={lvPrimaryBtn(classic)}>Save</button>
-                          <button type="button" className={XP_BTN} style={lvBtn(classic)} onClick={() => setEditingWC(null)}>Cancel</button>
+                          <button type="submit" className={XP_BTN} style={lvPrimaryBtn()}>Save</button>
+                          <button type="button" className={XP_BTN} style={lvBtn()} onClick={() => setEditingWC(null)}>Cancel</button>
                       </div>
                   </form>
               </td>
@@ -416,19 +413,19 @@ export default function RoutingView({ workCenters, operations, locations, onCrea
       <div style={{ display: 'flex', flexDirection: 'column', height: '100%', minHeight: 0 }}>
           {/* Toolbar: add + search + count */}
           <div style={{
-              background: classic ? 'linear-gradient(to bottom, #f5f4ef, #e0dfd8)' : '#fff',
-              borderBottom: classic ? '1px solid #b0a898' : '1px solid #dbe1ea',
-              padding: classic ? '4px 8px' : '8px 10px',
+              background: 'linear-gradient(to bottom, #f5f4ef, #e0dfd8)',
+              borderBottom: '1px solid #b0a898',
+              padding: '4px 8px',
               display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' as const, flexShrink: 0,
           }}>
-              <SearchField classic={classic} value={wcSearch} onChange={setWcSearch} placeholder="Search work centers…" width={240} />
-              <ToolbarCount classic={classic} right>
+              <SearchField value={wcSearch} onChange={setWcSearch} placeholder="Search work centers…" width={240} />
+              <ToolbarCount right>
                   {filteredWCRows.length.toLocaleString()} station{filteredWCRows.length !== 1 ? 's' : ''}
               </ToolbarCount>
               {canManage && (
                   <>
-                      <span style={lvSep(classic)} />
-                      <ToolbarButton classic={classic} tone="create" icon="bi-plus-lg" onClick={() => { setNewWorkCenter({ ...emptyWC }); setIsCreateWCOpen(true); }}>
+                      <span style={lvSep()} />
+                      <ToolbarButton tone="create" icon="bi-plus-lg" onClick={() => { setNewWorkCenter({ ...emptyWC }); setIsCreateWCOpen(true); }}>
                           New Work Center
                       </ToolbarButton>
                   </>
@@ -438,15 +435,15 @@ export default function RoutingView({ workCenters, operations, locations, onCrea
           {/* Table */}
           <div style={{ flex: 1, minHeight: 0, overflow: 'auto', background: '#fff' }}>
               <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                  <thead style={lvThead(classic, true)}>
+                  <thead style={lvThead()}>
                       <tr>
-                          <th style={{ ...lvTh(classic), width: 140, paddingLeft: classic ? 10 : 14 }}>Code</th>
-                          <th style={lvTh(classic)}>{t('station_name')}</th>
-                          <th style={{ ...lvTh(classic), width: 90 }}>Type</th>
-                          <th style={{ ...lvTh(classic), width: 100 }}>In Loc</th>
-                          <th style={{ ...lvTh(classic), width: 100 }}>Out Loc</th>
-                          <th style={{ ...lvTh(classic), width: 100 }} title="Defect store for QC-rejected output">Reject Loc</th>
-                          <th style={{ ...lvTh(classic), width: 40, textAlign: 'right', borderRight: 'none' }}></th>
+                          <th style={{ ...lvTh(), width: 140, paddingLeft: 10}}>Code</th>
+                          <th style={lvTh()}>{t('station_name')}</th>
+                          <th style={{ ...lvTh(), width: 90 }}>Type</th>
+                          <th style={{ ...lvTh(), width: 100 }}>In Loc</th>
+                          <th style={{ ...lvTh(), width: 100 }}>Out Loc</th>
+                          <th style={{ ...lvTh(), width: 100 }} title="Defect store for QC-rejected output">Reject Loc</th>
+                          <th style={{ ...lvTh(), width: 40, textAlign: 'right', borderRight: 'none' }}></th>
                       </tr>
                   </thead>
                   <tbody>
@@ -454,7 +451,7 @@ export default function RoutingView({ workCenters, operations, locations, onCrea
                           const isContainer = level !== 'MACHINE';
                           const expandable = isContainer && hasChildren(wc.id);
                           const expanded = expandedGroupIds.has(wc.id);
-                          const step = classic ? 20 : 26;
+                          const step = 20;
                           return editingWC?.id === wc.id
                               ? <React.Fragment key={wc.id}>{renderEditRow(WC_COL_COUNT)}</React.Fragment>
                               : (
@@ -462,25 +459,25 @@ export default function RoutingView({ workCenters, operations, locations, onCrea
                                       key={wc.id}
                                       style={{
                                           ...(level === 'TYPE'
-                                              ? { background: classic ? '#e8eaf6' : '#eef1fb', borderBottom: classic ? '2px solid #9fa8da' : '2px solid #c7d2ee' }
+                                              ? { background: '#e8eaf6', borderBottom: '2px solid #9fa8da'}
                                               : level === 'GROUP'
-                                                  ? { background: classic ? '#f2f3fa' : '#f6f8fd', borderBottom: classic ? '1px solid #c5cae9' : '1px solid #dde4f5' }
-                                                  : lvRow(classic, i)),
+                                                  ? { background: '#f2f3fa', borderBottom: '1px solid #c5cae9'}
+                                                  : lvRow(i)),
                                           cursor: expandable ? 'pointer' : undefined,
                                       }}
                                       onClick={expandable ? () => toggleGroup(wc.id) : undefined}
                                   >
-                                      <td style={{ ...lvTd(classic), paddingLeft: (classic ? 10 : 14) + depth * step, fontWeight: 'bold', whiteSpace: 'nowrap', color: isContainer ? (classic ? '#1a237e' : '#1e293b') : (classic ? '#00008b' : '#2563eb') }}>
-                                          {isContainer && <i className={expandable ? (expanded ? 'bi bi-caret-down-fill' : 'bi bi-caret-right-fill') : 'bi bi-folder2'} style={{ marginRight: 5, fontSize: classic ? 9 : 11, color: expandable ? '#555' : undefined }}></i>}
-                                          {!isContainer && <i className="bi bi-dash" style={{ marginRight: 2, fontSize: classic ? 10 : 12, color: '#888' }}></i>}
+                                      <td style={{ ...lvTd(), paddingLeft: (10) + depth * step, fontWeight: 'bold', whiteSpace: 'nowrap', color: isContainer ? ('#1a237e') : ('#00008b') }}>
+                                          {isContainer && <i className={expandable ? (expanded ? 'bi bi-caret-down-fill' : 'bi bi-caret-right-fill') : 'bi bi-folder2'} style={{ marginRight: 5, fontSize: 9, color: expandable ? '#555' : undefined }}></i>}
+                                          {!isContainer && <i className="bi bi-dash" style={{ marginRight: 2, fontSize: 10, color: '#888' }}></i>}
                                           {wc.code}
                                       </td>
-                                      <td style={{ ...lvTd(classic), paddingLeft: depth * step || undefined, fontStyle: isContainer ? 'italic' : 'normal' }}>
+                                      <td style={{ ...lvTd(), paddingLeft: depth * step || undefined, fontStyle: isContainer ? 'italic' : 'normal' }}>
                                           {wc.name}
-                                          {level === 'GROUP' && <span style={{ marginLeft: 6, fontSize: classic ? 9 : 10, fontStyle: 'normal', color: '#666' }}>GROUP</span>}
+                                          {level === 'GROUP' && <span style={{ marginLeft: 6, fontSize: 9, fontStyle: 'normal', color: '#666' }}>GROUP</span>}
                                       </td>
-                                      <td style={lvTd(classic)}>
-                                          <span style={{ padding: '1px 6px', borderRadius: CHIP_RADIUS, fontSize: classic ? 10 : 11, ...getWcTypeChip(wc.center_type) }}>{wc.center_type || 'GENERAL'}</span>
+                                      <td style={lvTd()}>
+                                          <span style={{ padding: '1px 6px', borderRadius: CHIP_RADIUS, fontSize: 10, ...getWcTypeChip(wc.center_type) }}>{wc.center_type || 'GENERAL'}</span>
                                       </td>
                                       {LOC_FIELDS.map(field => {
                                           // Show what actually applies, italic when it comes from an
@@ -492,8 +489,8 @@ export default function RoutingView({ workCenters, operations, locations, onCrea
                                                   key={field}
                                                   title={eff && !own ? `Inherited from ${eff.from.code}` : undefined}
                                                   style={{
-                                                      ...lvTd(classic),
-                                                      color: classic ? (own ? '#444' : '#777') : (own ? '#64748b' : '#94a3b8'),
+                                                      ...lvTd(),
+                                                      color: own ? '#444' : '#777',
                                                       fontStyle: eff && !own ? 'italic' : 'normal',
                                                       whiteSpace: 'nowrap',
                                                   }}
@@ -502,14 +499,14 @@ export default function RoutingView({ workCenters, operations, locations, onCrea
                                               </td>
                                           );
                                       })}
-                                      <td style={{ ...lvTd(classic), borderRight: 'none', textAlign: 'right' }} onClick={e => e.stopPropagation()}>
-                                          {canManage && <MenuTriggerButton classic={classic} onClick={e => wcMenuToggle(wc.id, e)} />}
+                                      <td style={{ ...lvTd(), borderRight: 'none', textAlign: 'right' }} onClick={e => e.stopPropagation()}>
+                                          {canManage && <MenuTriggerButton onClick={e => wcMenuToggle(wc.id, e)} />}
                                       </td>
                                   </tr>
                               );
                       })}
                       {filteredWCRows.length === 0 && (
-                          <tr><td colSpan={WC_COL_COUNT} style={{ ...lvTd(classic), borderRight: 'none', textAlign: 'center', padding: 20, color: classic ? '#888' : '#64748b', fontStyle: 'italic' }}>No work centers defined</td></tr>
+                          <tr><td colSpan={WC_COL_COUNT} style={{ ...lvTd(), borderRight: 'none', textAlign: 'center', padding: 20, color: '#888', fontStyle: 'italic' }}>No work centers defined</td></tr>
                       )}
                   </tbody>
               </table>
@@ -531,7 +528,7 @@ export default function RoutingView({ workCenters, operations, locations, onCrea
               );
           })()}
 
-          {classic && (
+          {(
               <div style={{
                   background: 'linear-gradient(to bottom, #e8e6df, #d5d3cc)', borderTop: '1px solid #b0a898',
                   padding: '2px 8px', display: 'flex', gap: 16,
@@ -550,17 +547,17 @@ export default function RoutingView({ workCenters, operations, locations, onCrea
   const renderOperationsTab = () => (
       <div style={{ display: 'flex', flexDirection: 'column', height: '100%', minHeight: 0 }}>
           {canManage && (
-              <div style={{ background: classic ? '#f5f4ef' : '#fff', borderBottom: classic ? '1px solid #b0a898' : '1px solid #dbe1ea', padding: classic ? '6px 8px' : '10px 12px' }}>
+              <div style={{ background: '#f5f4ef', borderBottom: '1px solid #b0a898', padding: '6px 8px'}}>
                   <form onSubmit={handleCreateOp} style={{ display: 'flex', gap: 6, alignItems: 'flex-end', flexWrap: 'wrap' as const }}>
                       <div>
-                          <label style={lvLabel(classic)}>Code</label>
-                          <input style={{ ...lvInput(classic), width: 80 }} placeholder="OP-10" value={newOperation.code} onChange={e => setNewOperation({ ...newOperation, code: e.target.value })} required />
+                          <label style={lvLabel()}>Code</label>
+                          <input style={{ ...lvInput(), width: 80 }} placeholder="OP-10" value={newOperation.code} onChange={e => setNewOperation({ ...newOperation, code: e.target.value })} required />
                       </div>
                       <div style={{ flex: 1, minWidth: 160 }}>
-                          <label style={lvLabel(classic)}>{t('operation_name')}</label>
-                          <input style={lvInput(classic)} placeholder="Cutting" value={newOperation.name} onChange={e => setNewOperation({ ...newOperation, name: e.target.value })} required />
+                          <label style={lvLabel()}>{t('operation_name')}</label>
+                          <input style={lvInput()} placeholder="Cutting" value={newOperation.name} onChange={e => setNewOperation({ ...newOperation, name: e.target.value })} required />
                       </div>
-                      <button type="submit" className={XP_BTN} style={lvPrimaryBtn(classic)}>
+                      <button type="submit" className={XP_BTN} style={lvPrimaryBtn()}>
                           <i className="bi bi-plus-lg" style={{ marginRight: 4 }}></i>{t('add')}
                       </button>
                   </form>
@@ -569,14 +566,14 @@ export default function RoutingView({ workCenters, operations, locations, onCrea
 
           {/* Toolbar: search + count */}
           <div style={{
-              background: classic ? 'linear-gradient(to bottom, #f5f4ef, #e0dfd8)' : '#fff',
-              borderBottom: classic ? '1px solid #b0a898' : '1px solid #dbe1ea',
-              padding: classic ? '4px 8px' : '8px 10px',
+              background: 'linear-gradient(to bottom, #f5f4ef, #e0dfd8)',
+              borderBottom: '1px solid #b0a898',
+              padding: '4px 8px',
               display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' as const, flexShrink: 0,
           }}>
-              <SearchField classic={classic} value={opSearch} onChange={setOpSearch} placeholder="Search operations…" width={240} />
-              <span style={lvSep(classic)} />
-              <ToolbarCount classic={classic} right>
+              <SearchField value={opSearch} onChange={setOpSearch} placeholder="Search operations…" width={240} />
+              <span style={lvSep()} />
+              <ToolbarCount right>
                   {filteredOp.length.toLocaleString()} operation{filteredOp.length !== 1 ? 's' : ''}
               </ToolbarCount>
           </div>
@@ -584,30 +581,30 @@ export default function RoutingView({ workCenters, operations, locations, onCrea
           {/* Table */}
           <div style={{ flex: 1, minHeight: 0, overflow: 'auto', background: '#fff' }}>
               <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                  <thead style={lvThead(classic, true)}>
+                  <thead style={lvThead()}>
                       <tr>
-                          <th style={{ ...lvTh(classic), width: 100, paddingLeft: classic ? 10 : 14 }}>Code</th>
-                          <th style={lvTh(classic)}>{t('operation_name')}</th>
-                          <th style={{ ...lvTh(classic), width: 50, textAlign: 'right', borderRight: 'none' }}></th>
+                          <th style={{ ...lvTh(), width: 100, paddingLeft: 10}}>Code</th>
+                          <th style={lvTh()}>{t('operation_name')}</th>
+                          <th style={{ ...lvTh(), width: 50, textAlign: 'right', borderRight: 'none' }}></th>
                       </tr>
                   </thead>
                   <tbody>
                       {pagedOp.map((op: any, i: number) => (
-                          <tr key={op.id} style={lvRow(classic, i)}>
-                              <td style={{ ...lvTd(classic), paddingLeft: classic ? 10 : 14, fontWeight: 'bold', color: classic ? '#1a5e1a' : '#15803d' }}>
+                          <tr key={op.id} style={lvRow(i)}>
+                              <td style={{ ...lvTd(), paddingLeft: 10, fontWeight: 'bold', color: '#1a5e1a'}}>
                                   {op.code}
                                   {op.is_system && <span style={{ marginLeft: 5, fontSize: 9, fontWeight: 'bold', color: '#555', background: '#ddd', border: '1px solid #aaa', borderRadius: CHIP_RADIUS, padding: '0 3px' }}>sys</span>}
                               </td>
-                              <td style={lvTd(classic)}>{op.name}</td>
-                              <td style={{ ...lvTd(classic), borderRight: 'none', textAlign: 'right' }}>
+                              <td style={lvTd()}>{op.name}</td>
+                              <td style={{ ...lvTd(), borderRight: 'none', textAlign: 'right' }}>
                                   {!op.is_system && canManage && (
-                                      <XPActionButton classic={classic} tone="danger" icon="bi-trash" title="Delete" onClick={() => onDeleteOperation && onDeleteOperation(op.id)} />
+                                      <XPActionButton tone="danger" icon="bi-trash" title="Delete" onClick={() => onDeleteOperation && onDeleteOperation(op.id)} />
                                   )}
                               </td>
                           </tr>
                       ))}
                       {filteredOp.length === 0 && (
-                          <tr><td colSpan={3} style={{ ...lvTd(classic), borderRight: 'none', textAlign: 'center', padding: 20, color: classic ? '#888' : '#64748b', fontStyle: 'italic' }}>No operations defined</td></tr>
+                          <tr><td colSpan={3} style={{ ...lvTd(), borderRight: 'none', textAlign: 'center', padding: 20, color: '#888', fontStyle: 'italic' }}>No operations defined</td></tr>
                       )}
                   </tbody>
               </table>
@@ -615,7 +612,7 @@ export default function RoutingView({ workCenters, operations, locations, onCrea
 
           <Pager page={clampedOpPage} total={filteredOp.length} pageSize={OP_PAGE_SIZE} onPageChange={setOpPage} hideWhenEmpty />
 
-          {classic && (
+          {(
               <div style={{
                   background: 'linear-gradient(to bottom, #e8e6df, #d5d3cc)', borderTop: '1px solid #b0a898',
                   padding: '2px 8px', display: 'flex', gap: 16,
@@ -629,15 +626,14 @@ export default function RoutingView({ workCenters, operations, locations, onCrea
 
   return (
       <>
-      <ShellWindow classic={classic} fill="page" className="fade-in">
+      <ShellWindow fill="page" className="fade-in">
           <ShellTitleBar
-              classic={classic}
               icon="bi-signpost-split-fill"
               title={t('routing')}
               subtitle="Work centers and standard operations used across manufacturing routings"
           />
-          <Tabs tabs={TABS} activeKey={activeTab} onChange={(key) => setActiveTab(key)} classic={classic} />
-          <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', background: classic ? '#ece9d8' : '#fff' }}>
+          <Tabs tabs={TABS} activeKey={activeTab} onChange={(key) => setActiveTab(key)} />
+          <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', background: '#ece9d8'}}>
               <div style={{ display: activeTab === 'work_centers' ? 'flex' : 'none', flex: 1, minHeight: 0, flexDirection: 'column' }}>
                   {renderWorkCentersTab()}
               </div>
@@ -658,14 +654,14 @@ export default function RoutingView({ workCenters, operations, locations, onCrea
           footer={
               <>
                   {!createValid && (
-                      <span style={{ marginRight: 'auto', fontSize: classic ? 11 : 12, color: '#a06000' }}>
+                      <span style={{ marginRight: 'auto', fontSize: 11, color: '#a06000' }}>
                           {newWorkCenter.node_type !== 'TYPE' && !newWorkCenter.parent_id
                               ? `Choose where this ${newWorkCenter.node_type.toLowerCase()} sits first`
                               : 'Code and name are required'}
                       </span>
                   )}
-                  <button type="button" className={XP_BTN} style={lvBtn(classic)} onClick={() => setIsCreateWCOpen(false)}>Cancel</button>
-                  <button type="button" className={XP_BTN} style={{ ...lvPrimaryBtn(classic), ...(createValid ? {} : { opacity: 0.5, cursor: 'not-allowed' }) }} onClick={handleCreateWC} disabled={!createValid}>
+                  <button type="button" className={XP_BTN} style={lvBtn()} onClick={() => setIsCreateWCOpen(false)}>Cancel</button>
+                  <button type="button" className={XP_BTN} style={{ ...lvPrimaryBtn(), ...(createValid ? {} : { opacity: 0.5, cursor: 'not-allowed' }) }} onClick={handleCreateWC} disabled={!createValid}>
                       <i className="bi bi-plus-lg" style={{ marginRight: 4 }}></i>{t('add')}
                   </button>
               </>
@@ -673,8 +669,8 @@ export default function RoutingView({ workCenters, operations, locations, onCrea
       >
           <form onSubmit={handleCreateWC} style={{ display: 'flex', flexDirection: 'column' }}>
               {/* Level first: it decides which fields below even apply. */}
-              <FormSection classic={classic} title={<><i className="bi bi-diagram-3 me-1" />Placement</>}>
-                  <FieldLabel classic={classic} hint="A machine is what work orders, BOM routing and monitors point at. Types and groups only organize them.">
+              <FormSection title={<><i className="bi bi-diagram-3 me-1" />Placement</>}>
+                  <FieldLabel hint="A machine is what work orders, BOM routing and monitors point at. Types and groups only organize them.">
                       What are you adding?
                   </FieldLabel>
                   <div style={{ display: 'flex', gap: 6, marginBottom: 10, flexWrap: 'wrap' as const }}>
@@ -686,7 +682,7 @@ export default function RoutingView({ workCenters, operations, locations, onCrea
                                   type="button"
                                   className={XP_BTN}
                                   onClick={() => setNewWorkCenter({ ...newWorkCenter, node_type: l.value, parent_id: '', input_location_id: '', output_location_id: '' })}
-                                  style={{ ...(on ? lvPrimaryBtn(classic) : lvBtn(classic)), flex: 1, minWidth: 108, textAlign: 'center', padding: '4px 6px' }}
+                                  style={{ ...(on ? lvPrimaryBtn() : lvBtn()), flex: 1, minWidth: 108, textAlign: 'center', padding: '4px 6px' }}
                                   title={LEVEL_HINTS[l.value]}
                               >
                                   <i className={`bi ${LEVEL_ICONS[l.value]}`} style={{ marginRight: 4 }} />{l.label.replace(' (root)', '')}
@@ -694,14 +690,13 @@ export default function RoutingView({ workCenters, operations, locations, onCrea
                           );
                       })}
                   </div>
-                  <div style={{ fontSize: classic ? 10 : 11, color: classic ? '#665f4a' : '#64748b', marginBottom: newWorkCenter.node_type === 'TYPE' ? 0 : 10 }}>
+                  <div style={{ fontSize: 10, color: '#665f4a', marginBottom: newWorkCenter.node_type === 'TYPE' ? 0 : 10 }}>
                       {LEVEL_HINTS[newWorkCenter.node_type]}
                   </div>
 
                   {newWorkCenter.node_type !== 'TYPE' && (
                       <>
                           <FieldLabel
-                              classic={classic}
                               hint={newWorkCenter.node_type === 'GROUP'
                                   ? 'Groups sit inside one work center type.'
                                   : 'Pick a group to make the machine part of a batch-calendar group, or a type to leave it ungrouped.'}
@@ -732,30 +727,30 @@ export default function RoutingView({ workCenters, operations, locations, onCrea
                   {/* Where the new row lands, spelled out — the tree is 3 deep now. */}
                   <div style={{
                       marginTop: 10, padding: '4px 7px',
-                      background: classic ? '#fbfbf7' : '#f6f8fd',
-                      border: classic ? '1px solid #c0bdb5' : '1px solid #dde4f5',
-                      fontSize: classic ? 11 : 12, color: classic ? '#333' : '#334155',
+                      background: '#fbfbf7',
+                      border: '1px solid #c0bdb5',
+                      fontSize: 11, color: '#333',
                   }}>
                       <span style={{ color: '#888', marginRight: 4 }}>Will appear as</span>
                       {placementPreview.map((step, idx) => (
                           <span key={idx}>
                               {idx > 0 && <span style={{ color: '#aaa', margin: '0 4px' }}>›</span>}
-                              <span style={step.isNew ? { fontWeight: 'bold', color: classic ? '#00008b' : '#2563eb' } : undefined}>{step.label}</span>
+                              <span style={step.isNew ? { fontWeight: 'bold', color: '#00008b'} : undefined}>{step.label}</span>
                           </span>
                       ))}
                   </div>
               </FormSection>
 
-              <FormSection classic={classic} title={<><i className="bi bi-tag me-1" />Identity</>}>
+              <FormSection title={<><i className="bi bi-tag me-1" />Identity</>}>
                   <div style={{ display: 'flex', gap: 10 }}>
                       <div style={{ width: 110 }}>
-                          <FieldLabel classic={classic}>Code <span style={{ color: '#c00' }}>*</span></FieldLabel>
-                          <input style={lvInput(classic)} placeholder={newWorkCenter.node_type === 'MACHINE' ? 'W-01' : 'W'} value={newWorkCenter.code} onChange={e => setNewWorkCenter({ ...newWorkCenter, code: e.target.value })} required autoFocus />
+                          <FieldLabel>Code <span style={{ color: '#c00' }}>*</span></FieldLabel>
+                          <input style={lvInput()} placeholder={newWorkCenter.node_type === 'MACHINE' ? 'W-01' : 'W'} value={newWorkCenter.code} onChange={e => setNewWorkCenter({ ...newWorkCenter, code: e.target.value })} required autoFocus />
                       </div>
                       <div style={{ flex: 1 }}>
-                          <FieldLabel classic={classic}>{t('station_name')} <span style={{ color: '#c00' }}>*</span></FieldLabel>
+                          <FieldLabel>{t('station_name')} <span style={{ color: '#c00' }}>*</span></FieldLabel>
                           <input
-                              style={lvInput(classic)}
+                              style={lvInput()}
                               placeholder={newWorkCenter.node_type === 'TYPE' ? 'WEAVING' : newWorkCenter.node_type === 'GROUP' ? 'Hall A looms' : 'Loom 1'}
                               value={newWorkCenter.name}
                               onChange={e => setNewWorkCenter({ ...newWorkCenter, name: e.target.value })}
@@ -765,7 +760,6 @@ export default function RoutingView({ workCenters, operations, locations, onCrea
                   </div>
                   <div style={{ marginTop: 8 }}>
                       <FieldLabel
-                          classic={classic}
                           hint={inheritedType
                               ? `Follows ${selectedParent?.code} — everything under a type shares its type.`
                               : 'Drives routing, monitors and the type chip in lists.'}
@@ -773,7 +767,7 @@ export default function RoutingView({ workCenters, operations, locations, onCrea
                           Center Type
                       </FieldLabel>
                       <select
-                          style={{ ...lvInput(classic), ...(inheritedType ? { background: classic ? '#ece9d8' : '#eef1f6', color: '#555' } : {}) }}
+                          style={{ ...lvInput(), ...(inheritedType ? { background: '#ece9d8', color: '#555' } : {}) }}
                           value={effectiveNewType}
                           disabled={!!inheritedType}
                           onChange={e => setNewWorkCenter({ ...newWorkCenter, center_type: e.target.value })}
@@ -788,14 +782,12 @@ export default function RoutingView({ workCenters, operations, locations, onCrea
               {/* Locations live at every level. A group holds the pair its machines
                   inherit, so a machine only fills these in to override its group. */}
               <FormSection
-                  classic={classic}
                   title={<><i className={`bi ${newWorkCenter.node_type === 'MACHINE' ? 'bi-cpu' : 'bi-geo-alt'} me-1`} />
                       {newWorkCenter.node_type === 'MACHINE' ? 'Machine setup' : 'Default locations'}</>}
               >
                   <div style={{ display: 'flex', gap: 10 }}>
                       <div style={{ flex: 1 }}>
                           <FieldLabel
-                              classic={classic}
                               hint={newWorkCenter.node_type === 'MACHINE'
                                   ? 'Where staged material is moved to. Leave blank to use the group\'s.'
                                   : 'Where staged material is moved to — every machine inside inherits this.'}
@@ -806,7 +798,6 @@ export default function RoutingView({ workCenters, operations, locations, onCrea
                       </div>
                       <div style={{ flex: 1 }}>
                           <FieldLabel
-                              classic={classic}
                               hint={newWorkCenter.node_type === 'MACHINE'
                                   ? 'Where finished output is put away. Leave blank to use the group\'s.'
                                   : 'Where finished output is put away — every machine inside inherits this.'}
@@ -817,7 +808,6 @@ export default function RoutingView({ workCenters, operations, locations, onCrea
                       </div>
                       <div style={{ flex: 1 }}>
                           <FieldLabel
-                              classic={classic}
                               hint={newWorkCenter.node_type === 'MACHINE'
                                   ? 'Defect store for QC-rejected output. Leave blank to use the group\'s.'
                                   : 'Defect store for QC-rejected output — e.g. Gd Greige BS for weaving, Gd WiP Beam Reject for beaming.'}
@@ -829,10 +819,10 @@ export default function RoutingView({ workCenters, operations, locations, onCrea
                   </div>
                   {newWorkCenter.node_type === 'MACHINE' && ['WEAVING', 'TENUN'].includes((effectiveNewType || '').toUpperCase()) && (
                       <div style={{ width: 140, marginTop: 8 }}>
-                          <FieldLabel classic={classic} hint="Beam positions on this loom.">Beam Slots</FieldLabel>
+                          <FieldLabel hint="Beam positions on this loom.">Beam Slots</FieldLabel>
                           <input
                               type="number" min={1} step={1}
-                              style={{ ...lvInput(classic), width: '100%' }}
+                              style={{ ...lvInput(), width: '100%' }}
                               value={newWorkCenter.beam_slots}
                               onChange={e => setNewWorkCenter({ ...newWorkCenter, beam_slots: beamSlots(e.target.value) })}
                               title="A weaving WO is beam-ready when this many beams are mounted"

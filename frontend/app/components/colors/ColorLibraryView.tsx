@@ -2,7 +2,6 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { useConfirm } from '../../context/ConfirmContext';
-import { useTheme } from '../../context/ThemeContext';
 import { useUser } from '../../context/UserContext';
 import SearchableSelect from '../shared/SearchableSelect';
 import ModalWrapper from '../shared/ModalWrapper';
@@ -10,7 +9,7 @@ import Pager from '../shared/Pager';
 import { StatusChip, FormSection, useFloatingMenu, MenuTriggerButton, FloatingMenu, XPActionButton, ColorSwatchChip, CodeChip, CODE_FONT, SwatchBox, TableSkeleton, useTableSkeletonMetrics, XP_BTN } from '../shared/xpTheme';
 import { SearchField, FilterChipBar, ToolbarButton, viewShellStyle, PageTitleBar } from '../shared/shellTheme';
 import {
-    LV_XP_FONT, LV_MODERN_FONT, lvInput, lvBtn, lvPrimaryBtn, lvLabel, lvTh, lvTd, lvSep, lvRow, lvThead, TableEmpty,
+    LV_XP_FONT, lvInput, lvBtn, lvPrimaryBtn, lvLabel, lvTh, lvTd, lvSep, lvRow, lvThead, TableEmpty,
 } from '../shared/listViewTheme';
 
 const STATUS_FILTERS = ['ALL', 'active', 'archived'];
@@ -66,8 +65,6 @@ export default function ColorLibraryView({
     colorVariantValues,
 }: Props) {
     const { confirm } = useConfirm();
-    const { uiStyle } = useTheme();
-    const classic = uiStyle === 'classic';
     const { hasPermission, hasAnyPermission } = useUser();
     const canManage = hasAnyPermission('color_code.create', 'color_code.edit', 'color_code.archive');
     const router = useRouter();
@@ -191,27 +188,24 @@ export default function ColorLibraryView({
 
     return (
         <div style={embedded
-            ? { display: 'flex', flexDirection: 'column', height: '100%', minHeight: 0, fontFamily: classic ? LV_XP_FONT : LV_MODERN_FONT, background: '#fff' }
-            : viewShellStyle(classic, 'page', { fontFamily: classic ? LV_XP_FONT : LV_MODERN_FONT })}>
+            ? { display: 'flex', flexDirection: 'column', height: '100%', minHeight: 0, fontFamily: LV_XP_FONT, background: '#fff' }
+            : viewShellStyle('page', { fontFamily: LV_XP_FONT })}>
 
             {/* Title bar (hidden when embedded under the Colors tab shell) */}
             {!embedded && (
-            <PageTitleBar classic={classic} icon="bi-palette2" title="Color Library" />
+            <PageTitleBar icon="bi-palette2" title="Color Library" />
             )}
 
             {/* Toolbar */}
-            <div style={classic
-                ? { background: 'linear-gradient(to bottom, #f5f4ef, #e0dfd8)', borderBottom: '1px solid #b0a898', padding: '4px 8px', display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap', flexShrink: 0 }
-                : { background: '#fff', borderBottom: '1px solid #dbe1ea', padding: '8px 10px', display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap', flexShrink: 0 }}>
-                <SearchField classic={classic} value={searchInput} onChange={setSearchInput} placeholder="Search code, name, Pantone, customer code…" width={260} />
-                <span style={lvSep(classic)} />
+            <div style={{ background: 'linear-gradient(to bottom, #f5f4ef, #e0dfd8)', borderBottom: '1px solid #b0a898', padding: '4px 8px', display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap', flexShrink: 0 }}>
+                <SearchField value={searchInput} onChange={setSearchInput} placeholder="Search code, name, Pantone, customer code…" width={260} />
+                <span style={lvSep()} />
                 <FilterChipBar
-                    classic={classic}
                     options={STATUS_FILTERS.map(s => ({ value: s, label: s === 'ALL' ? 'All' : s }))}
                     value={statusFilter}
                     onChange={onStatusChange}
                 />
-                <span style={lvSep(classic)} />
+                <span style={lvSep()} />
                 <div style={{ width: 170 }}>
                     <SearchableSelect options={variantFilterOptions} value={variantFilter || ''} onChange={v => onVariantFilterChange?.(v)} placeholder="All Color Variants" />
                 </div>
@@ -219,7 +213,7 @@ export default function ColorLibraryView({
                     <SearchableSelect options={customerFilterOptions} value={customerFilter || ''} onChange={v => onCustomerFilterChange?.(v)} placeholder="All Customers" />
                 </div>
                 <input
-                    style={{ ...lvInput(classic), width: 170, flexBasis: 170 }}
+                    style={{ ...lvInput(), width: 170, flexBasis: 170 }}
                     placeholder="Search item…"
                     value={itemSearchInput}
                     onChange={e => setItemSearchInput(e.target.value)}
@@ -229,13 +223,13 @@ export default function ColorLibraryView({
                 <div style={{ width: 170 }}>
                     <SearchableSelect options={SOURCE_FILTER_OPTIONS} value={sourceFilter || ''} onChange={v => onSourceFilterChange?.(v)} placeholder="All Sources" />
                 </div>
-                <span style={classic ? { marginLeft: 'auto', fontSize: 11, color: '#333' } : { marginLeft: 'auto', fontSize: 12, color: '#64748b' }}>
+                <span style={{ marginLeft: 'auto', fontSize: 11, color: '#333' }}>
                     {total.toLocaleString()} color{total !== 1 ? 's' : ''}
                 </span>
                 {canManage && (
                     <>
-                        <span style={lvSep(classic)} />
-                        <ToolbarButton classic={classic} tone="create" icon="bi-plus-lg" onClick={openCreate}>New Color</ToolbarButton>
+                        <span style={lvSep()} />
+                        <ToolbarButton tone="create" icon="bi-plus-lg" onClick={openCreate}>New Color</ToolbarButton>
                     </>
                 )}
             </div>
@@ -243,67 +237,66 @@ export default function ColorLibraryView({
             {/* Table */}
             <div style={{ flex: 1, minHeight: 0, background: '#fff', overflow: 'auto' }}>
                 <table style={{ width: '100%', borderCollapse: 'collapse', background: '#fff' }}>
-                    <thead style={lvThead(classic, true)}>
+                    <thead style={lvThead()}>
                         <tr>
-                            <th style={{ ...lvTh(classic), width: 34 }}></th>
-                            <th style={{ ...lvTh(classic), width: 130 }}>Code</th>
-                            <th style={lvTh(classic)}>Name</th>
-                            <th style={{ ...lvTh(classic), width: 130 }}>Color Variant</th>
-                            <th style={{ ...lvTh(classic), width: 150 }}>Colour Index</th>
-                            <th style={{ ...lvTh(classic), width: 130 }}>L*a*b*</th>
-                            <th style={{ ...lvTh(classic), width: 120 }}>Customer</th>
-                            <th style={{ ...lvTh(classic), width: 90 }}>Cust. Code</th>
-                            <th style={{ ...lvTh(classic), width: 110 }}>From Lab Dip</th>
-                            <th style={{ ...lvTh(classic), width: 140 }}>Item</th>
-                            <th style={{ ...lvTh(classic), width: 60, textAlign: 'center' }}>Recipes</th>
-                            <th style={{ ...lvTh(classic), width: 80 }}>Status</th>
-                            <th style={{ ...lvTh(classic), width: 70, textAlign: 'right', borderRight: 'none' }}></th>
+                            <th style={{ ...lvTh(), width: 34 }}></th>
+                            <th style={{ ...lvTh(), width: 130 }}>Code</th>
+                            <th style={lvTh()}>Name</th>
+                            <th style={{ ...lvTh(), width: 130 }}>Color Variant</th>
+                            <th style={{ ...lvTh(), width: 150 }}>Colour Index</th>
+                            <th style={{ ...lvTh(), width: 130 }}>L*a*b*</th>
+                            <th style={{ ...lvTh(), width: 120 }}>Customer</th>
+                            <th style={{ ...lvTh(), width: 90 }}>Cust. Code</th>
+                            <th style={{ ...lvTh(), width: 110 }}>From Lab Dip</th>
+                            <th style={{ ...lvTh(), width: 140 }}>Item</th>
+                            <th style={{ ...lvTh(), width: 60, textAlign: 'center' }}>Recipes</th>
+                            <th style={{ ...lvTh(), width: 80 }}>Status</th>
+                            <th style={{ ...lvTh(), width: 70, textAlign: 'right', borderRight: 'none' }}></th>
                         </tr>
                     </thead>
                     <tbody ref={listBodyRef}>
                         {colors.length === 0 && (loading ? (
-                            <TableSkeleton rows={8} cols={skel.cols ?? 13} classic={classic} tdStyle={lvTd(classic)} rowHeight={skel.rowHeight} fillHeight={skel.fillHeight} />
+                            <TableSkeleton rows={8} cols={skel.cols ?? 13} tdStyle={lvTd()} rowHeight={skel.rowHeight} fillHeight={skel.fillHeight} />
                         ) : (
-                            <TableEmpty colSpan={13} classic={classic} tdStyle={lvTd(classic)} message="No colors found." />
+                            <TableEmpty colSpan={13} tdStyle={lvTd()} message="No colors found." />
                         ))}
                         {colors.map((c, idx) => (
-                            <tr key={c.id} style={lvRow(classic, idx)}>
-                                <td style={{ ...lvTd(classic), textAlign: 'center' }}><SwatchBox hex={c.hex} classic={classic} /></td>
-                                <td style={lvTd(classic)}>
-                                    <CodeChip code={c.code} classic={classic} tone="accent" style={{ fontWeight: 'bold' }} />
+                            <tr key={c.id} style={lvRow(idx)}>
+                                <td style={{ ...lvTd(), textAlign: 'center' }}><SwatchBox hex={c.hex} /></td>
+                                <td style={lvTd()}>
+                                    <CodeChip code={c.code} tone="accent" style={{ fontWeight: 'bold' }} />
                                 </td>
-                                <td style={lvTd(classic)}>{c.name}</td>
-                                <td style={lvTd(classic)}>{c.variant_attribute_value_label
-                                    ? <ColorSwatchChip label={c.variant_attribute_value_label} classic={classic} hex={variantHexByLabel[c.variant_attribute_value_label]} />
+                                <td style={lvTd()}>{c.name}</td>
+                                <td style={lvTd()}>{c.variant_attribute_value_label
+                                    ? <ColorSwatchChip label={c.variant_attribute_value_label} hex={variantHexByLabel[c.variant_attribute_value_label]} />
                                     : <span style={{ color: '#aaa' }}>—</span>}</td>
-                                <td style={lvTd(classic)}>{c.colour_index || <span style={{ color: '#aaa' }}>—</span>}</td>
-                                <td style={lvTd(classic)}>
+                                <td style={lvTd()}>{c.colour_index || <span style={{ color: '#aaa' }}>—</span>}</td>
+                                <td style={lvTd()}>
                                     {c.l_star != null
-                                        ? <span style={{ fontFamily: CODE_FONT, fontSize: classic ? 11 : 12 }}>
+                                        ? <span style={{ fontFamily: CODE_FONT, fontSize: 11 }}>
                                             {c.l_star}/{c.a_star ?? '—'}/{c.b_star ?? '—'}
                                           </span>
                                         : <span style={{ color: '#aaa' }}>—</span>}
                                 </td>
-                                <td style={lvTd(classic)}>{c.customer_name || <span style={{ color: '#aaa', fontStyle: 'italic' }}>House</span>}</td>
-                                <td style={lvTd(classic)}>{c.customer_color_code || <span style={{ color: '#aaa' }}>—</span>}</td>
-                                <td style={lvTd(classic)}>{c.source_lab_dip_code
+                                <td style={lvTd()}>{c.customer_name || <span style={{ color: '#aaa', fontStyle: 'italic' }}>House</span>}</td>
+                                <td style={lvTd()}>{c.customer_color_code || <span style={{ color: '#aaa' }}>—</span>}</td>
+                                <td style={lvTd()}>{c.source_lab_dip_code
                                     ? <span
                                         title="Open this lab dip request"
                                         // The two lab dip books are separate pages, each listing only its own
                                         // requests — route by the source code's prefix or the deep-link no-ops.
                                         onClick={e => { e.stopPropagation(); router.push(`${String(c.source_lab_dip_code).startsWith('LDY-') ? '/lab-dips-yarn' : '/lab-dips'}?open=${encodeURIComponent(c.source_lab_dip_request_id)}`); }}
-                                        style={{ fontFamily: CODE_FONT, color: '#0058e6', fontSize: classic ? 9 : 10.5, cursor: 'pointer', textDecoration: 'underline' }}>{c.source_lab_dip_code}</span>
+                                        style={{ fontFamily: CODE_FONT, color: '#0058e6', fontSize: 9, cursor: 'pointer', textDecoration: 'underline' }}>{c.source_lab_dip_code}</span>
                                     : <span style={{ color: '#aaa' }}>—</span>}</td>
-                                <td style={lvTd(classic)}>{c.source_item_name
+                                <td style={lvTd()}>{c.source_item_name
                                     ? <span title={c.source_item_code || undefined}>{c.source_item_name}</span>
                                     : <span style={{ color: '#aaa' }}>—</span>}</td>
-                                <td style={{ ...lvTd(classic), textAlign: 'center' }}>{c.recipe_count || 0}</td>
-                                <td style={lvTd(classic)}><StatusChip status={c.status} /></td>
-                                <td style={{ ...lvTd(classic), borderRight: 'none', textAlign: 'right' }}>
+                                <td style={{ ...lvTd(), textAlign: 'center' }}>{c.recipe_count || 0}</td>
+                                <td style={lvTd()}><StatusChip status={c.status} /></td>
+                                <td style={{ ...lvTd(), borderRight: 'none', textAlign: 'right' }}>
                                     <div style={{ display: 'flex', gap: 3, justifyContent: 'flex-end', alignItems: 'center' }}>
                                         {canManage && c.l_star == null && (
                                         <XPActionButton
-                                            classic={classic}
                                             tone="warning"
                                             icon="bi-rulers"
                                             title="Complete L*a*b* measurement for this color"
@@ -312,14 +305,13 @@ export default function ColorLibraryView({
                                         )}
                                         {canManage && (
                                         <XPActionButton
-                                            classic={classic}
                                             tone="primary"
                                             icon="bi-droplet-half"
                                             title="Create dyeing recipe for this color"
                                             onClick={() => createRecipeForColor(c)}
                                         />
                                         )}
-                                        <MenuTriggerButton classic={classic} onClick={e => menuToggle(String(c.id), e)} />
+                                        <MenuTriggerButton onClick={e => menuToggle(String(c.id), e)} />
                                     </div>
                                 </td>
                             </tr>
@@ -353,8 +345,8 @@ export default function ColorLibraryView({
                 modeless
                 footer={
                     <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
-                        <button type="button" className={XP_BTN} style={lvBtn(classic)} onClick={() => setIsModalOpen(false)}>Cancel</button>
-                        <button type="submit" form="color-form" className={XP_BTN} style={lvPrimaryBtn(classic)}>
+                        <button type="button" className={XP_BTN} style={lvBtn()} onClick={() => setIsModalOpen(false)}>Cancel</button>
+                        <button type="submit" form="color-form" className={XP_BTN} style={lvPrimaryBtn()}>
                             {editing ? 'Save' : 'Create'}
                         </button>
                     </div>
@@ -362,18 +354,18 @@ export default function ColorLibraryView({
             >
                 <form id="color-form" onSubmit={handleSubmit}>
                     {/* 1. Identity — code + name (+ status when editing) always top-most. */}
-                    <FormSection title="Identity" classic={classic}>
+                    <FormSection title="Identity">
                         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
                             <div>
-                                <label style={lvLabel(classic)}>Code *</label>
-                                <input value={form.code} onChange={e => setForm({ ...form, code: e.target.value })} style={lvInput(classic)} required />
+                                <label style={lvLabel()}>Code *</label>
+                                <input value={form.code} onChange={e => setForm({ ...form, code: e.target.value })} style={lvInput()} required />
                             </div>
                             <div>
-                                <label style={lvLabel(classic)}>Name *</label>
-                                <input value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} style={lvInput(classic)} required />
+                                <label style={lvLabel()}>Name *</label>
+                                <input value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} style={lvInput()} required />
                             </div>
                             <div>
-                                <label style={lvLabel(classic)}>Color Variant</label>
+                                <label style={lvLabel()}>Color Variant</label>
                                 <SearchableSelect
                                     options={variantOptions}
                                     value={form.variant_attribute_value_id}
@@ -383,8 +375,8 @@ export default function ColorLibraryView({
                             </div>
                             {editing && (
                                 <div>
-                                    <label style={lvLabel(classic)}>Status</label>
-                                    <select value={form.status} onChange={e => setForm({ ...form, status: e.target.value })} style={lvInput(classic)}>
+                                    <label style={lvLabel()}>Status</label>
+                                    <select value={form.status} onChange={e => setForm({ ...form, status: e.target.value })} style={lvInput()}>
                                         <option value="active">active</option>
                                         <option value="archived">archived</option>
                                     </select>
@@ -394,7 +386,7 @@ export default function ColorLibraryView({
                     </FormSection>
 
                     {/* 2. CIELAB — the structured shade identity the client completes after approval. */}
-                    <FormSection title="CIELAB (L*a*b*) — Objective Shade Identity" classic={classic}>
+                    <FormSection title="CIELAB (L*a*b*) — Objective Shade Identity">
                         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr) 1.3fr', gap: 10, alignItems: 'end' }}>
                             {([
                                 { key: 'l_star', axis: 'L*', hint: 'Lightness · 0–100', min: 0, max: 100 },
@@ -402,69 +394,69 @@ export default function ColorLibraryView({
                                 { key: 'b_star', axis: 'b*', hint: 'Blue ↔ Yellow · −128…127', min: -128, max: 127 },
                             ] as const).map(f => (
                                 <div key={f.key}>
-                                    <label style={{ ...lvLabel(classic), display: 'flex', alignItems: 'baseline', gap: 5 }}>
-                                        <span style={{ fontWeight: 'bold', fontSize: classic ? 13 : 15, fontFamily: CODE_FONT, color: classic ? '#0047c8' : '#2563eb' }}>{f.axis}</span>
+                                    <label style={{ ...lvLabel(), display: 'flex', alignItems: 'baseline', gap: 5 }}>
+                                        <span style={{ fontWeight: 'bold', fontSize: 13, fontFamily: CODE_FONT, color: '#0047c8' }}>{f.axis}</span>
                                     </label>
                                     <input
                                         type="number" inputMode="decimal" step="0.01" min={f.min} max={f.max}
                                         value={(form as any)[f.key]}
                                         onChange={e => setForm({ ...form, [f.key]: e.target.value })}
                                         placeholder="—"
-                                        style={{ ...lvInput(classic), textAlign: 'center', fontFamily: CODE_FONT, fontWeight: 700, fontSize: classic ? 13 : 15 }}
+                                        style={{ ...lvInput(), textAlign: 'center', fontFamily: CODE_FONT, fontWeight: 700, fontSize: 13 }}
                                     />
-                                    <div style={{ marginTop: 3, fontSize: classic ? 9 : 10, color: classic ? '#556' : '#64748b' }}>{f.hint}</div>
+                                    <div style={{ marginTop: 3, fontSize: 9, color: '#556' }}>{f.hint}</div>
                                 </div>
                             ))}
                             <div>
-                                <label style={lvLabel(classic)}>Illuminant / Observer</label>
+                                <label style={lvLabel()}>Illuminant / Observer</label>
                                 <input
                                     value={form.lab_illuminant}
                                     onChange={e => setForm({ ...form, lab_illuminant: e.target.value })}
                                     placeholder="e.g. D65 / 10°"
-                                    style={lvInput(classic)}
+                                    style={lvInput()}
                                 />
-                                <div style={{ marginTop: 3, fontSize: classic ? 9 : 10, color: classic ? '#556' : '#64748b' }}>Measurement condition</div>
+                                <div style={{ marginTop: 3, fontSize: 9, color: '#556' }}>Measurement condition</div>
                             </div>
                         </div>
                     </FormSection>
 
                     {/* 3. Details — everything else. */}
-                    <FormSection title="Details" classic={classic}>
+                    <FormSection title="Details">
                         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
                             <div>
-                                <label style={lvLabel(classic)}>Pantone Ref</label>
-                                <input value={form.pantone_ref} onChange={e => setForm({ ...form, pantone_ref: e.target.value })} placeholder="e.g. 19-4052 TCX" style={lvInput(classic)} />
+                                <label style={lvLabel()}>Pantone Ref</label>
+                                <input value={form.pantone_ref} onChange={e => setForm({ ...form, pantone_ref: e.target.value })} placeholder="e.g. 19-4052 TCX" style={lvInput()} />
                             </div>
                             <div>
-                                <label style={lvLabel(classic)}>Colour Index (C.I.)</label>
-                                <input value={form.colour_index} onChange={e => setForm({ ...form, colour_index: e.target.value })} placeholder="e.g. C.I. Reactive Blue 19" style={lvInput(classic)} />
+                                <label style={lvLabel()}>Colour Index (C.I.)</label>
+                                <input value={form.colour_index} onChange={e => setForm({ ...form, colour_index: e.target.value })} placeholder="e.g. C.I. Reactive Blue 19" style={lvInput()} />
                             </div>
                             <div>
-                                <label style={lvLabel(classic)}>Swatch (hex)</label>
+                                <label style={lvLabel()}>Swatch (hex)</label>
                                 <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
-                                    <SwatchBox hex={form.hex || null} size={24} classic={classic} onPick={h => setForm({ ...form, hex: h })} />
-                                    <input value={form.hex} onChange={e => setForm({ ...form, hex: e.target.value })} placeholder="#RRGGBB" style={lvInput(classic)} />
+                                    <SwatchBox hex={form.hex || null} size={24} onPick={h => setForm({ ...form, hex: h })} />
+                                    <input value={form.hex} onChange={e => setForm({ ...form, hex: e.target.value })} placeholder="#RRGGBB" style={lvInput()} />
                                 </div>
                             </div>
                             <div>
-                                <label style={lvLabel(classic)}>Substrate</label>
-                                <input value={form.substrate} onChange={e => setForm({ ...form, substrate: e.target.value })} placeholder="e.g. CVC, 100% Cotton" style={lvInput(classic)} />
+                                <label style={lvLabel()}>Substrate</label>
+                                <input value={form.substrate} onChange={e => setForm({ ...form, substrate: e.target.value })} placeholder="e.g. CVC, 100% Cotton" style={lvInput()} />
                             </div>
                             <div>
-                                <label style={lvLabel(classic)}>Customer</label>
+                                <label style={lvLabel()}>Customer</label>
                                 <SearchableSelect options={customerOptions} value={form.customer_id} onChange={v => setForm({ ...form, customer_id: v })} placeholder="House color" />
                             </div>
                             <div>
-                                <label style={lvLabel(classic)}>Customer Color Code</label>
-                                <input value={form.customer_color_code} onChange={e => setForm({ ...form, customer_color_code: e.target.value })} style={lvInput(classic)} />
+                                <label style={lvLabel()}>Customer Color Code</label>
+                                <input value={form.customer_color_code} onChange={e => setForm({ ...form, customer_color_code: e.target.value })} style={lvInput()} />
                             </div>
                             <div style={{ gridColumn: '1 / -1' }}>
-                                <label style={lvLabel(classic)}>Spectrophotometer Notes</label>
-                                <textarea value={form.spectro_notes} onChange={e => setForm({ ...form, spectro_notes: e.target.value })} rows={2} placeholder="Tolerance (ΔE), geometry, extra readings…" style={{ ...lvInput(classic), height: 'auto', resize: 'vertical' }} />
+                                <label style={lvLabel()}>Spectrophotometer Notes</label>
+                                <textarea value={form.spectro_notes} onChange={e => setForm({ ...form, spectro_notes: e.target.value })} rows={2} placeholder="Tolerance (ΔE), geometry, extra readings…" style={{ ...lvInput(), height: 'auto', resize: 'vertical' }} />
                             </div>
                             <div style={{ gridColumn: '1 / -1' }}>
-                                <label style={lvLabel(classic)}>Notes</label>
-                                <textarea value={form.notes} onChange={e => setForm({ ...form, notes: e.target.value })} rows={2} style={{ ...lvInput(classic), height: 'auto', resize: 'vertical' }} />
+                                <label style={lvLabel()}>Notes</label>
+                                <textarea value={form.notes} onChange={e => setForm({ ...form, notes: e.target.value })} rows={2} style={{ ...lvInput(), height: 'auto', resize: 'vertical' }} />
                             </div>
                         </div>
                     </FormSection>

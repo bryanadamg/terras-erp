@@ -7,7 +7,6 @@ import SearchableSelect from '../shared/SearchableSelect';
 import TreeSelect, { buildLocationPickerTree } from '../shared/TreeSelect';
 const PurchaseOrderPrintModal = dynamic(() => import('./PurchaseOrderPrintModal'), { ssr: false });
 import ModalWrapper from '../shared/ModalWrapper';
-import { useTheme } from '../../context/ThemeContext';
 import { useTimezone } from '../../context/TimezoneContext';
 import { useData } from '../../context/DataContext';
 import { useUser } from '../../context/UserContext';
@@ -34,8 +33,6 @@ export default function PurchaseOrderView({ items, itemResults, onSearchItems, a
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [editingPOId, setEditingPOId] = useState<string | null>(null);
   const [printingPO, setPrintingPO] = useState<any>(null);
-  const { uiStyle: currentStyle } = useTheme();
-  const classic = currentStyle === 'classic';
   // Backend origin for static files (delivery-note attachments live at /static, not /api)
   const STATIC_BASE = (process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:8000/api').replace(/\/api$/, '');
 
@@ -127,17 +124,17 @@ export default function PurchaseOrderView({ items, itemResults, onSearchItems, a
       flexShrink: 0,
   };
 
-  const xpTableHeader: React.CSSProperties = lvThead(true);
+  const xpTableHeader: React.CSSProperties = lvThead();
 
-  const xpThCell: React.CSSProperties = lvThSticky(true);
+  const xpThCell: React.CSSProperties = lvThSticky();
 
-  const tdBase: React.CSSProperties = lvTdRuled(true);
+  const tdBase: React.CSSProperties = lvTdRuled();
 
   // Order-lines / receipt-history mini-tables inside the expanded row. These used
   // to be a classic-only const pair plus Bootstrap classNames for modern; both
   // themes now come from the shared sub-table helpers.
-  const subTh = lvSubTh(classic);
-  const subTd = lvSubTd(classic);
+  const subTh = lvSubTh();
+  const subTd = lvSubTd();
 
   const freshPO = () => ({
       po_number: '',
@@ -450,7 +447,6 @@ export default function PurchaseOrderView({ items, itemResults, onSearchItems, a
            <PurchaseOrderPrintModal
                po={printingPO}
                onClose={() => setPrintingPO(null)}
-               currentStyle={currentStyle}
                companyProfile={companyProfile}
                items={items}
                attributes={attributes}
@@ -472,131 +468,124 @@ export default function PurchaseOrderView({ items, itemResults, onSearchItems, a
            isOpen={isCreateOpen}
            modeless
            onClose={closeModal}
-           title={<><i className={`bi ${editingPOId ? 'bi-pencil' : 'bi-cart-plus'}`} style={classic?{marginRight:6}:{marginRight:8}}></i>{editingPOId ? 'Edit Purchase Order' : 'Create Purchase Order'}</>}
+           title={<><i className={`bi ${editingPOId ? 'bi-pencil' : 'bi-cart-plus'}`} style={{marginRight:6}}></i>{editingPOId ? 'Edit Purchase Order' : 'Create Purchase Order'}</>}
            variant="success"
            size="xl"
-           footer={classic ? (
-               <>
+           footer={<>
                    <button type="button" className={XP_BTN} style={xpBtn()} onClick={closeModal}>{t('cancel')}</button>
                    <button type="submit" form="create-po-form" className={XP_BTN} style={xpBtn({ ...BTN_TONES.success, padding: '2px 16px' })}><i className="bi bi-floppy" style={{marginRight:4}}></i>{editingPOId ? 'Update' : t('save')} PO</button>
-               </>
-           ) : (
-               <>
-                   <button type="button" className="btn btn-sm btn-link text-muted" onClick={closeModal}>{t('cancel')}</button>
-                   <button type="submit" form="create-po-form" className="btn btn-sm btn-success px-4 fw-bold">{editingPOId ? 'Update' : t('save')} PO</button>
-               </>
-           )}
+               </>}
        >
            <form onSubmit={handleSubmit} id="create-po-form">
-               <FormSection title="Order Details" classic={classic}>
+               <FormSection title="Order Details">
                    <div className="row g-3">
                        <div className="col-md-4">
-                           <FieldLabel classic={classic} right={<i className="bi bi-gear-fill" style={{cursor:'pointer',color:classic?'#555':'',fontSize:classic?'11px':''}} onClick={() => setIsConfigOpen(true)} title="Configure Auto-Suggestion"></i>}>PO Number</FieldLabel>
-                           <input className="form-control" style={classic?xpInput():undefined} placeholder="Auto-generated" value={newPO.po_number} onChange={e => setNewPO({...newPO, po_number: e.target.value})} required />
+                           <FieldLabel right={<i className="bi bi-gear-fill" style={{cursor:'pointer',color:'#555',fontSize:'11px'}} onClick={() => setIsConfigOpen(true)} title="Configure Auto-Suggestion"></i>}>PO Number</FieldLabel>
+                           <input className="form-control" style={xpInput()} placeholder="Auto-generated" value={newPO.po_number} onChange={e => setNewPO({...newPO, po_number: e.target.value})} required />
                        </div>
                        <div className="col-md-5">
-                           <FieldLabel classic={classic}>Supplier</FieldLabel>
+                           <FieldLabel>Supplier</FieldLabel>
                            <SearchableSelect options={suppliers.map((c: any) => ({ value: c.id, label: c.name, subLabel: c.address }))} value={newPO.supplier_id} onChange={(val) => setNewPO({...newPO, supplier_id: val})} placeholder="Select Supplier…" required />
                        </div>
                        <div className="col-md-3">
-                           <FieldLabel classic={classic}>Date</FieldLabel>
-                           <input type="date" className="form-control" style={classic?xpInput({width:'100%',height:'22px'}):undefined} value={newPO.order_date} onChange={e => setNewPO({...newPO, order_date: e.target.value})} required />
+                           <FieldLabel>Date</FieldLabel>
+                           <input type="date" className="form-control" style={xpInput({width:'100%',height:'22px'})} value={newPO.order_date} onChange={e => setNewPO({...newPO, order_date: e.target.value})} required />
                        </div>
                        <div className="col-md-12">
-                           <FieldLabel classic={classic}>Receiving Warehouse</FieldLabel>
+                           <FieldLabel>Receiving Warehouse</FieldLabel>
                            <TreeSelect options={locPickerTreeOptions} value={newPO.target_location_id} onChange={(val) => setNewPO({...newPO, target_location_id: val})} placeholder="Select receiving location…" size="sm" style={{ width: '100%' }} />
                        </div>
                    </div>
                </FormSection>
 
                {/* ── PO Document Details (rendered on the printed PO) ── */}
-               <FormSection title="Document Details" classic={classic}>
+               <FormSection title="Document Details">
                    <div className="row g-2">
                        <div className="col-md-4">
-                           <FieldLabel classic={classic}>SSN</FieldLabel>
-                           <input className="form-control" style={classic?xpInput():undefined} placeholder="e.g. BI 084/KMK/26/06/09" value={newPO.ssn} onChange={e => setNewPO({...newPO, ssn: e.target.value})} />
+                           <FieldLabel>SSN</FieldLabel>
+                           <input className="form-control" style={xpInput()} placeholder="e.g. BI 084/KMK/26/06/09" value={newPO.ssn} onChange={e => setNewPO({...newPO, ssn: e.target.value})} />
                        </div>
                        <div className="col-md-4">
-                           <FieldLabel classic={classic}>Rate Variant</FieldLabel>
-                           <select className="form-select form-select-sm" style={classic?xpInput({height:'22px',borderRadius:0,width:'100%'}):undefined} value={newPO.rate_mode} onChange={e => setNewPO({...newPO, rate_mode: e.target.value})}>
+                           <FieldLabel>Rate Variant</FieldLabel>
+                           <select className="form-select form-select-sm" style={xpInput({height:'22px',borderRadius:0,width:'100%'})} value={newPO.rate_mode} onChange={e => setNewPO({...newPO, rate_mode: e.target.value})}>
                                <option value="kurs_pajak">Kurs Pajak</option>
                                <option value="ktbi">KTBI</option>
                            </select>
                        </div>
                        {newPO.rate_mode === 'ktbi' ? (
                            <div className="col-md-4">
-                               <FieldLabel classic={classic}>KTBI</FieldLabel>
-                               <input className="form-control" style={classic?xpInput():undefined} placeholder="e.g. KTBI value" value={newPO.ktbi} onChange={e => setNewPO({...newPO, ktbi: e.target.value})} />
+                               <FieldLabel>KTBI</FieldLabel>
+                               <input className="form-control" style={xpInput()} placeholder="e.g. KTBI value" value={newPO.ktbi} onChange={e => setNewPO({...newPO, ktbi: e.target.value})} />
                            </div>
                        ) : (
                            <div className="col-md-4">
-                               <FieldLabel classic={classic}>Kurs Pajak</FieldLabel>
-                               <input className="form-control" style={classic?xpInput():undefined} placeholder="e.g. Rp 17.805 (09.06.26)" value={newPO.kurs_pajak} onChange={e => setNewPO({...newPO, kurs_pajak: e.target.value})} />
+                               <FieldLabel>Kurs Pajak</FieldLabel>
+                               <input className="form-control" style={xpInput()} placeholder="e.g. Rp 17.805 (09.06.26)" value={newPO.kurs_pajak} onChange={e => setNewPO({...newPO, kurs_pajak: e.target.value})} />
                            </div>
                        )}
                        <div className="col-md-4">
-                           <FieldLabel classic={classic}>Code</FieldLabel>
-                           <input className="form-control" style={classic?xpInput():undefined} value={newPO.code} onChange={e => setNewPO({...newPO, code: e.target.value})} />
+                           <FieldLabel>Code</FieldLabel>
+                           <input className="form-control" style={xpInput()} value={newPO.code} onChange={e => setNewPO({...newPO, code: e.target.value})} />
                        </div>
                        <div className="col-md-4">
-                           <FieldLabel classic={classic}>Payment</FieldLabel>
-                           <input className="form-control" style={classic?xpInput():undefined} placeholder="e.g. Net 45 days" value={newPO.payment_term} onChange={e => setNewPO({...newPO, payment_term: e.target.value})} />
+                           <FieldLabel>Payment</FieldLabel>
+                           <input className="form-control" style={xpInput()} placeholder="e.g. Net 45 days" value={newPO.payment_term} onChange={e => setNewPO({...newPO, payment_term: e.target.value})} />
                        </div>
                        <div className="col-md-4">
-                           <FieldLabel classic={classic}>Category</FieldLabel>
-                           <input className="form-control" style={classic?xpInput():undefined} placeholder="e.g. dsc" value={newPO.category} onChange={e => setNewPO({...newPO, category: e.target.value})} />
+                           <FieldLabel>Category</FieldLabel>
+                           <input className="form-control" style={xpInput()} placeholder="e.g. dsc" value={newPO.category} onChange={e => setNewPO({...newPO, category: e.target.value})} />
                        </div>
                        <div className="col-md-3">
-                           <FieldLabel classic={classic} right={
-                               <label style={{display:'flex',alignItems:'center',gap:4,fontWeight:'normal',cursor:'pointer',fontSize:classic?'10px':'11px',color:classic?'#555':undefined}} className={classic?'':'text-muted'}>
+                           <FieldLabel right={
+                               <label style={{display:'flex',alignItems:'center',gap:4,fontWeight:'normal',cursor:'pointer',fontSize:'10px',color:'#555'}}>
                                    <input type="checkbox" checked={vatEnabled} onChange={e => setVatEnabled(e.target.checked)} />
                                    Include
                                </label>
                            }>VAT %</FieldLabel>
-                           <input type="number" className="form-control" disabled={!vatEnabled} style={classic?xpInput({opacity:vatEnabled?1:0.5}):undefined} value={newPO.vat_percent} onChange={e => setNewPO({...newPO, vat_percent: parseFloat(e.target.value) || 0})} />
+                           <input type="number" className="form-control" disabled={!vatEnabled} style={xpInput({opacity:vatEnabled?1:0.5})} value={newPO.vat_percent} onChange={e => setNewPO({...newPO, vat_percent: parseFloat(e.target.value) || 0})} />
                        </div>
                        <div className="col-md-3">
-                           <FieldLabel classic={classic}>Discount (Rp)</FieldLabel>
-                           <input type="number" className="form-control" style={classic?xpInput():undefined} value={newPO.discount} onChange={e => setNewPO({...newPO, discount: parseFloat(e.target.value) || 0})} />
+                           <FieldLabel>Discount (Rp)</FieldLabel>
+                           <input type="number" className="form-control" style={xpInput()} value={newPO.discount} onChange={e => setNewPO({...newPO, discount: parseFloat(e.target.value) || 0})} />
                        </div>
                        <div className="col-md-6">
-                           <FieldLabel classic={classic}>Notes</FieldLabel>
-                           <input className="form-control" style={classic?xpInput():undefined} placeholder="Optional notes printed on the PO" value={newPO.notes} onChange={e => setNewPO({...newPO, notes: e.target.value})} />
+                           <FieldLabel>Notes</FieldLabel>
+                           <input className="form-control" style={xpInput()} placeholder="Optional notes printed on the PO" value={newPO.notes} onChange={e => setNewPO({...newPO, notes: e.target.value})} />
                        </div>
                    </div>
                </FormSection>
 
-               <FormSection title="Order Items" classic={classic}>
+               <FormSection title="Order Items">
                    <div className="row g-2 mb-2">
                        <div className="col-4">
-                           <FieldLabel classic={classic}>Item</FieldLabel>
+                           <FieldLabel>Item</FieldLabel>
                            <SearchableSelect options={(itemResults || []).map((item: any) => ({ value: item.id, label: item.name, subLabel: item.code }))} value={newLine.item_id} onChange={(val) => setNewLine({...newLine, item_id: val, attribute_value_ids: []})} onSearch={onSearchItems} placeholder="Select Item…" />
                        </div>
                        <div className="col-2">
-                           <FieldLabel classic={classic}>Qty</FieldLabel>
-                           <input type="number" className="form-control" style={classic?xpInput():undefined} placeholder="0" value={newLine.qty || ''} onChange={e => setNewLine({...newLine, qty: parseFloat(e.target.value)})} />
+                           <FieldLabel>Qty</FieldLabel>
+                           <input type="number" className="form-control" style={xpInput()} placeholder="0" value={newLine.qty || ''} onChange={e => setNewLine({...newLine, qty: parseFloat(e.target.value)})} />
                        </div>
                        <div className="col-2">
-                           <FieldLabel classic={classic}>Price (Rp)</FieldLabel>
-                           <input type="number" min="0" step="0.01" className="form-control" style={classic?xpInput():undefined} placeholder="0.00" value={newLine.unit_price} onChange={e => setNewLine({...newLine, unit_price: e.target.value === '' ? '' : parseFloat(e.target.value)})} />
+                           <FieldLabel>Price (Rp)</FieldLabel>
+                           <input type="number" min="0" step="0.01" className="form-control" style={xpInput()} placeholder="0.00" value={newLine.unit_price} onChange={e => setNewLine({...newLine, unit_price: e.target.value === '' ? '' : parseFloat(e.target.value)})} />
                        </div>
                        <div className="col-2">
-                           <FieldLabel classic={classic}>Expected By</FieldLabel>
-                           <input type="date" className="form-control" style={classic?xpInput({width:'100%',height:'22px'}):undefined} value={newLine.due_date} onChange={e => setNewLine({...newLine, due_date: e.target.value})} />
+                           <FieldLabel>Expected By</FieldLabel>
+                           <input type="date" className="form-control" style={xpInput({width:'100%',height:'22px'})} value={newLine.due_date} onChange={e => setNewLine({...newLine, due_date: e.target.value})} />
                        </div>
                        <div className="col-2 d-flex align-items-end">
-                           <button type="button" style={classic ? xpBtn({ ...BTN_TONES.success, width: '100%', padding: '2px 6px' }) : undefined} className={classic?XP_BTN:'btn btn-success w-100'} onClick={handleAddLine} disabled={!newLine.item_id || newLine.qty <= 0}>
-                               <i className="bi bi-plus-lg" style={classic?{marginRight:3}:{marginRight:4}}></i>{classic?'Add':'Add Item'}
+                           <button type="button" style={xpBtn({ ...BTN_TONES.success, width: '100%', padding: '2px 6px' })} className={XP_BTN} onClick={handleAddLine} disabled={!newLine.item_id || newLine.qty <= 0}>
+                               <i className="bi bi-plus-lg" style={{marginRight:3}}></i>{'Add'}
                            </button>
                        </div>
                        {currentBoundAttrs.length > 0 && (
                            <div className="col-12 mt-1">
-                               <div style={{background:'#ffffff',border:classic?'1px solid #b0a898':'1px solid #dee2e6',padding:classic?'4px 6px':'8px'}}>
-                                   <div style={classic?{fontFamily:xpFont,fontSize:'10px',fontWeight:'bold',color:'#444',marginBottom:4}:undefined} className={classic?'':'text-muted fw-bold mb-2 small'}>Variants</div>
+                               <div style={{background:'#ffffff',border:'1px solid #b0a898',padding:'4px 6px'}}>
+                                   <div style={{fontFamily:xpFont,fontSize:'10px',fontWeight:'bold',color:'#444',marginBottom:4}}>Variants</div>
                                    <div className="row g-2">
                                        {currentBoundAttrs.map((attr: any) => (
                                            <div key={attr.id} className="col-md-4">
-                                               <select className="form-select form-select-sm" style={classic?{fontFamily:xpFont,fontSize:'11px',border:'1px solid #7f9db9',height:'22px',borderRadius:0,padding:'1px 4px',background:'#ffffff',outline:'none'}:undefined} value={newLine.attribute_value_ids.find(vid => attr.values.some((v: any) => v.id === vid)) || ''} onChange={e => handleValueChange(e.target.value, attr.id)}>
+                                               <select className="form-select form-select-sm" style={{fontFamily:xpFont,fontSize:'11px',border:'1px solid #7f9db9',height:'22px',borderRadius:0,padding:'1px 4px',background:'#ffffff',outline:'none'}} value={newLine.attribute_value_ids.find(vid => attr.values.some((v: any) => v.id === vid)) || ''} onChange={e => handleValueChange(e.target.value, attr.id)}>
                                                    <option value="">Any {attr.name}</option>
                                                    {attr.values.map((v: any) => <option key={v.id} value={v.id}>{v.value}</option>)}
                                                </select>
@@ -609,33 +598,32 @@ export default function PurchaseOrderView({ items, itemResults, onSearchItems, a
                    </div>
                    <div>
                        {newPO.lines.map((line: any, idx) => (
-                           <div key={idx} style={{display:'flex',justifyContent:'space-between',alignItems:'center',padding:classic?'3px 6px':'8px',background:classic?lvZebra(true,idx):'white',border:classic?'1px solid #c0bdb5':'1px solid #dee2e6',marginBottom:2,fontFamily:classic?xpFont:undefined,fontSize:classic?'11px':undefined}}>
+                           <div key={idx} style={{display:'flex',justifyContent:'space-between',alignItems:'center',padding:'3px 6px',background:lvZebra(idx),border:'1px solid #c0bdb5',marginBottom:2,fontFamily:xpFont,fontSize:'11px'}}>
                                <div>
                                    <span style={{fontWeight:'bold'}}>{getItemName(line.item_id)}</span>
-                                   <span style={{color:classic?'#555':'',marginLeft:8,fontSize:classic?'10px':''}}>{getItemCode(line.item_id)}</span>
+                                   <span style={{color:'#555',marginLeft:8,fontSize:'10px'}}>{getItemCode(line.item_id)}</span>
                                    {getItemUom(line.item_id) && <span style={{display:'inline-block',marginLeft:8,padding:'1px 6px',fontSize:'9px',fontWeight:'bold',background:'#dfe8f5',border:'1px solid #7f9db9',color:'#1a3d6b',borderRadius: CHIP_RADIUS,textTransform:'uppercase'}}>{getItemUom(line.item_id)}</span>}
                                    {getItemCatLabel(line.item_id) && <span style={{display:'inline-block',marginLeft:4,padding:'1px 6px',fontSize:'9px',fontWeight:'bold',background:'#f0e8d8',border:'1px solid #b8a060',color:'#6b4e1a',borderRadius: CHIP_RADIUS}}>{getItemCatLabel(line.item_id)}</span>}
-                                   {line.due_date && <span style={{color:classic?'#666':'',marginLeft:8,fontSize:classic?'10px':''}}><i className="bi bi-calendar2" style={{marginRight:3}}></i>{tzDate(line.due_date)}</span>}
-                                   {(line.attribute_value_ids||[]).length>0 && <div style={{color:classic?'#666':'',fontSize:classic?'10px':'',fontStyle:'italic'}}>{(line.attribute_value_ids||[]).map(getAttributeValueName).join(', ')}</div>}
+                                   {line.due_date && <span style={{color:'#666',marginLeft:8,fontSize:'10px'}}><i className="bi bi-calendar2" style={{marginRight:3}}></i>{tzDate(line.due_date)}</span>}
+                                   {(line.attribute_value_ids||[]).length>0 && <div style={{color:'#666',fontSize:'10px',fontStyle:'italic'}}>{(line.attribute_value_ids||[]).map(getAttributeValueName).join(', ')}</div>}
                                </div>
-                               <div style={{display:'flex',alignItems:'center',gap:classic?6:10}}>
-                                   {line.unit_price != null && line.unit_price !== '' && <span style={{color:classic?'#555':'',fontSize:classic?'10px':''}}>@ Rp {Number(line.unit_price).toLocaleString('en-US', {minimumFractionDigits:2, maximumFractionDigits:2})}</span>}
+                               <div style={{display:'flex',alignItems:'center',gap:6}}>
+                                   {line.unit_price != null && line.unit_price !== '' && <span style={{color:'#555',fontSize:'10px'}}>@ Rp {Number(line.unit_price).toLocaleString('en-US', {minimumFractionDigits:2, maximumFractionDigits:2})}</span>}
                                    <span style={{fontWeight:'bold'}}>×</span>
                                    <input type="number" min="0" step="any"
-                                       style={classic ? xpInput({width:70, textAlign:'right'}) : {width:80,textAlign:'right'}}
-                                       className={classic?'':'form-control form-control-sm'}
+                                       style={xpInput({width:70, textAlign:'right'})}
                                        value={line.qty || ''}
                                        onChange={e => handleLineQtyChange(idx, e.target.value)}
                                        title="Quantity ordered"
                                    />
-                                   {getItemUom(line.item_id) && <span style={{color:classic?'#777':'',fontSize:classic?'9px':'',fontWeight:'bold',textTransform:'uppercase'}} className={classic?'':'text-muted small'}>{getItemUom(line.item_id)}</span>}
-                                   <button type="button" style={classic?{...xpBtn(),border:'1px solid transparent',background:'transparent',padding:'1px 5px'}:undefined} className={classic?XP_BTN:'btn btn-sm btn-link text-danger p-0'} onClick={() => handleRemoveLine(idx)}>
-                                       <i className="bi bi-x-circle" style={{color:classic?'#c00000':''}}></i>
+                                   {getItemUom(line.item_id) && <span style={{color:'#777',fontSize:'9px',fontWeight:'bold',textTransform:'uppercase'}}>{getItemUom(line.item_id)}</span>}
+                                   <button type="button" style={{...xpBtn(),border:'1px solid transparent',background:'transparent',padding:'1px 5px'}} className={XP_BTN} onClick={() => handleRemoveLine(idx)}>
+                                       <i className="bi bi-x-circle" style={{color:'#c00000'}}></i>
                                    </button>
                                </div>
                            </div>
                        ))}
-                       {newPO.lines.length === 0 && <div style={{textAlign:'center',padding:'8px',fontFamily:classic?xpFont:'',fontSize:classic?'11px':'',color:classic?'#888':'',fontStyle:'italic'}}>No items added yet</div>}
+                       {newPO.lines.length === 0 && <div style={{textAlign:'center',padding:'8px',fontFamily:xpFont,fontSize:'11px',color:'#888',fontStyle:'italic'}}>No items added yet</div>}
                    </div>
                </FormSection>
            </form>
@@ -646,82 +634,74 @@ export default function PurchaseOrderView({ items, itemResults, onSearchItems, a
            isOpen={!!receiptTarget}
            modeless
            onClose={() => setReceiptTarget(null)}
-           title={<><i className="bi bi-box-arrow-in-down" style={classic?{marginRight:6}:{marginRight:8}}></i>Receive Goods — {receiptTarget?.po_number}</>}
+           title={<><i className="bi bi-box-arrow-in-down" style={{marginRight:6}}></i>Receive Goods — {receiptTarget?.po_number}</>}
            variant="success"
            size="xl"
-           footer={classic ? (
-               <>
+           footer={<>
                    <button type="button" className={XP_BTN} style={xpBtn()} onClick={() => setReceiptTarget(null)}>Cancel</button>
                    <button type="button" className={XP_BTN} style={xpBtn({ ...BTN_TONES.success, padding: '2px 16px' })} onClick={handleReceiptSubmit}><i className="bi bi-check-lg" style={{marginRight:4}}></i>Confirm Receipt</button>
-               </>
-           ) : (
-               <>
-                   <button type="button" className="btn btn-sm btn-link text-muted" onClick={() => setReceiptTarget(null)}>Cancel</button>
-                   <button type="button" className="btn btn-sm btn-success px-4 fw-bold" onClick={handleReceiptSubmit}>Confirm Receipt</button>
-               </>
-           )}
+               </>}
        >
            {receiptTarget && (
                <div>
                    <div className="row g-2 mb-3">
                        <div className="col-md-3">
-                           <label style={classic?{fontFamily:xpFont,fontSize:'11px',color:'#000',display:'block',marginBottom:2}:undefined} className={classic?'':'form-label small text-muted'}>Receipt Date</label>
-                           <input type="date" className="form-control" style={classic?xpInput({width:'100%',height:'22px'}):undefined} value={receiptDate} onChange={e => setReceiptDate(e.target.value)} />
+                           <label style={{fontFamily:xpFont,fontSize:'11px',color:'#000',display:'block',marginBottom:2}}>Receipt Date</label>
+                           <input type="date" className="form-control" style={xpInput({width:'100%',height:'22px'})} value={receiptDate} onChange={e => setReceiptDate(e.target.value)} />
                        </div>
                        <div className="col-md-4">
-                           <label style={classic?{fontFamily:xpFont,fontSize:'11px',color:'#000',display:'block',marginBottom:2}:undefined} className={classic?'':'form-label small text-muted'}>Receiving Warehouse</label>
+                           <label style={{fontFamily:xpFont,fontSize:'11px',color:'#000',display:'block',marginBottom:2}}>Receiving Warehouse</label>
                            <TreeSelect options={locPickerTreeOptions} value={receiptLocationId} onChange={(val) => setReceiptLocationId(val)} placeholder="Select warehouse…" size="sm" style={{ width: '100%' }} />
                        </div>
                        <div className="col-md-5">
-                           <label style={classic?{fontFamily:xpFont,fontSize:'11px',color:'#000',display:'block',marginBottom:2}:undefined} className={classic?'':'form-label small text-muted'}>Notes</label>
-                           <input type="text" className="form-control" style={classic?xpInput():undefined} placeholder="e.g. Short delivery, weighed on arrival" value={receiptNotes} onChange={e => setReceiptNotes(e.target.value)} />
+                           <label style={{fontFamily:xpFont,fontSize:'11px',color:'#000',display:'block',marginBottom:2}}>Notes</label>
+                           <input type="text" className="form-control" style={xpInput()} placeholder="e.g. Short delivery, weighed on arrival" value={receiptNotes} onChange={e => setReceiptNotes(e.target.value)} />
                        </div>
                    </div>
                    <div className="row g-2 mb-3">
                        <div className="col-md-3">
-                           <label style={classic?{fontFamily:xpFont,fontSize:'11px',color:'#000',display:'block',marginBottom:2}:undefined} className={classic?'':'form-label small text-muted'}>Delivery Note No. <span style={{color:'#888'}}>(Surat Jalan)</span></label>
-                           <input type="text" className="form-control" style={classic?xpInput({width:'100%'}):undefined} placeholder="Supplier's DN number" value={receiptDnNumber} onChange={e => setReceiptDnNumber(e.target.value)} />
+                           <label style={{fontFamily:xpFont,fontSize:'11px',color:'#000',display:'block',marginBottom:2}}>Delivery Note No. <span style={{color:'#888'}}>(Surat Jalan)</span></label>
+                           <input type="text" className="form-control" style={xpInput({width:'100%'})} placeholder="Supplier's DN number" value={receiptDnNumber} onChange={e => setReceiptDnNumber(e.target.value)} />
                        </div>
                        <div className="col-md-3">
-                           <label style={classic?{fontFamily:xpFont,fontSize:'11px',color:'#000',display:'block',marginBottom:2}:undefined} className={classic?'':'form-label small text-muted'}>Delivery Note Date</label>
-                           <input type="date" className="form-control" style={classic?xpInput({width:'100%',height:'22px'}):undefined} value={receiptDnDate} onChange={e => setReceiptDnDate(e.target.value)} />
+                           <label style={{fontFamily:xpFont,fontSize:'11px',color:'#000',display:'block',marginBottom:2}}>Delivery Note Date</label>
+                           <input type="date" className="form-control" style={xpInput({width:'100%',height:'22px'})} value={receiptDnDate} onChange={e => setReceiptDnDate(e.target.value)} />
                        </div>
                        <div className="col-md-6">
-                           <label style={classic?{fontFamily:xpFont,fontSize:'11px',color:'#000',display:'block',marginBottom:2}:undefined} className={classic?'':'form-label small text-muted'}>Attach Delivery Note <span style={{color:'#888'}}>(PDF / image)</span></label>
-                           <input type="file" accept=".pdf,.png,.jpg,.jpeg" className="form-control" style={classic?xpInput({width:'100%'}):undefined} onChange={e => setReceiptDnFile(e.target.files?.[0] || null)} />
+                           <label style={{fontFamily:xpFont,fontSize:'11px',color:'#000',display:'block',marginBottom:2}}>Attach Delivery Note <span style={{color:'#888'}}>(PDF / image)</span></label>
+                           <input type="file" accept=".pdf,.png,.jpg,.jpeg" className="form-control" style={xpInput({width:'100%'})} onChange={e => setReceiptDnFile(e.target.files?.[0] || null)} />
                        </div>
                    </div>
                    <div style={{overflowX:'auto'}}>
-                   <table className={classic?'':'table table-sm'} style={classic?{width:'100%',borderCollapse:'collapse',fontFamily:xpFont,fontSize:'11px'}:{minWidth:480}}>
+                   <table style={{width:'100%',borderCollapse:'collapse',fontFamily:xpFont,fontSize:'11px'}}>
                        <thead>
-                           <tr style={classic?{background:'linear-gradient(to bottom,#ffffff,#d4d0c8)',borderBottom:'2px solid #808080',fontSize:'10px',fontWeight:'bold'}:undefined} className={classic?'':'table-light'}>
-                               <th style={classic?xpThCell:undefined}>Item</th>
-                               <th style={classic?{...xpThCell,textAlign:'right' as const}:undefined} className={classic?'':'text-end'}>Ordered</th>
-                               <th style={classic?{...xpThCell,textAlign:'right' as const}:undefined} className={classic?'':'text-end'}>Rcvd So Far</th>
-                               <th style={classic?{...xpThCell,textAlign:'right' as const}:undefined} className={classic?'':'text-end'}>This Receipt</th>
-                               <th style={classic?{...xpThCell,textAlign:'right' as const}:undefined} className={classic?'':'text-end'}>Boxes</th>
-                               <th style={classic?{...xpThCell,textAlign:'right' as const}:undefined} className={classic?'':'text-end'}>Cones</th>
-                               <th style={classic?{...xpThCell,textAlign:'right' as const}:undefined} className={classic?'':'text-end'}>Drum</th>
-                               <th style={classic?{...xpThCell,borderRight:'none'}:undefined}>Lot No.</th>
+                           <tr style={{background:'linear-gradient(to bottom,#ffffff,#d4d0c8)',borderBottom:'2px solid #808080',fontSize:'10px',fontWeight:'bold'}}>
+                               <th style={xpThCell}>Item</th>
+                               <th style={{...xpThCell,textAlign:'right' as const}}>Ordered</th>
+                               <th style={{...xpThCell,textAlign:'right' as const}}>Rcvd So Far</th>
+                               <th style={{...xpThCell,textAlign:'right' as const}}>This Receipt</th>
+                               <th style={{...xpThCell,textAlign:'right' as const}}>Boxes</th>
+                               <th style={{...xpThCell,textAlign:'right' as const}}>Cones</th>
+                               <th style={{...xpThCell,textAlign:'right' as const}}>Drum</th>
+                               <th style={{...xpThCell,borderRight:'none'}}>Lot No.</th>
                            </tr>
                        </thead>
                        <tbody>
                            {receiptTarget.lines.map((line: any, idx: number) => (
-                               <tr key={line.id} style={classic?{background:lvZebra(true,idx),borderBottom:'1px solid #d0cdc8'}:undefined}>
-                                   <td style={classic?tdBase:undefined}>
-                                       <div style={classic?{fontWeight:'bold'}:undefined} className={classic?'':'fw-bold'}>{line.item_name || getItemName(line.item_id)}</div>
-                                       <div style={classic?{fontSize:'10px',color:'#666'}:undefined} className={classic?'':'small text-muted'}>{line.item_code || getItemCode(line.item_id)}</div>
+                               <tr key={line.id} style={{background:lvZebra(idx),borderBottom:'1px solid #d0cdc8'}}>
+                                   <td style={tdBase}>
+                                       <div style={{fontWeight:'bold'}}>{line.item_name || getItemName(line.item_id)}</div>
+                                       <div style={{fontSize:'10px',color:'#666'}}>{line.item_code || getItemCode(line.item_id)}</div>
                                    </td>
-                                   <td style={classic?{...tdBase,textAlign:'right' as const}:undefined} className={classic?'':'text-end'}>{line.qty}</td>
-                                   <td style={classic?{...tdBase,textAlign:'right' as const}:undefined} className={classic?'':'text-end text-muted'}>{line.qty_received || 0}</td>
-                                   <td style={classic?{...tdBase,textAlign:'right' as const}:undefined} className={classic?'':'text-end'}>
+                                   <td style={{...tdBase,textAlign:'right' as const}}>{line.qty}</td>
+                                   <td style={{...tdBase,textAlign:'right' as const}}>{line.qty_received || 0}</td>
+                                   <td style={{...tdBase,textAlign:'right' as const}}>
                                        <div style={{display:'flex',alignItems:'center',justifyContent:'flex-end',gap:4}}>
                                            <input
                                                type="number"
                                                min="0"
                                                step="0.001"
-                                               style={classic?xpInput({width:90,textAlign:'right'}):{width:100,textAlign:'right' as const}}
-                                               className={classic?'':'form-control form-control-sm'}
+                                               style={xpInput({width:90,textAlign:'right'})}
                                                placeholder="—"
                                                value={receiptLineQtys[line.id] ?? ''}
                                                onChange={e => setReceiptLineQtys(prev => ({ ...prev, [line.id]: e.target.value === '' ? '' : parseFloat(e.target.value) || 0 }))}
@@ -729,52 +709,48 @@ export default function PurchaseOrderView({ items, itemResults, onSearchItems, a
                                            <span style={{fontSize:'9px',fontWeight:'bold',color:'#1a3d6b',textTransform:'uppercase'}}>{line.item_uom || getItemUom(line.item_id)}</span>
                                        </div>
                                    </td>
-                                   <td style={classic?{...tdBase,textAlign:'right' as const}:undefined} className={classic?'':'text-end'}>
+                                   <td style={{...tdBase,textAlign:'right' as const}}>
                                        <input
                                            type="number"
                                            min="0"
                                            step="1"
                                            placeholder="—"
-                                           style={classic?xpInput({width:60,textAlign:'right'}):{width:80,textAlign:'right' as const}}
-                                           className={classic?'':'form-control form-control-sm'}
+                                           style={xpInput({width:60,textAlign:'right'})}
                                            value={receiptLineBoxes[line.id] ?? ''}
                                            onChange={e => setReceiptLineBoxes(prev => ({ ...prev, [line.id]: e.target.value === '' ? '' : parseInt(e.target.value) || 0 }))}
                                        />
                                    </td>
-                                   <td style={classic?{...tdBase,textAlign:'right' as const}:undefined} className={classic?'':'text-end'}>
+                                   <td style={{...tdBase,textAlign:'right' as const}}>
                                        {getItemCatType(line.item_id) === 'raw' ? (
                                            <input
                                                type="number"
                                                min="0"
                                                step="1"
                                                placeholder="—"
-                                               style={classic?xpInput({width:60,textAlign:'right'}):{width:80,textAlign:'right' as const}}
-                                               className={classic?'':'form-control form-control-sm'}
+                                               style={xpInput({width:60,textAlign:'right'})}
                                                value={receiptLineCones[line.id] ?? ''}
                                                onChange={e => setReceiptLineCones(prev => ({ ...prev, [line.id]: e.target.value === '' ? '' : parseInt(e.target.value) || 0 }))}
                                            />
                                        ) : <span style={{color:'#bbb'}}>—</span>}
                                    </td>
-                                   <td style={classic?{...tdBase,textAlign:'right' as const}:undefined} className={classic?'':'text-end'}>
+                                   <td style={{...tdBase,textAlign:'right' as const}}>
                                        {(getItemCatType(line.item_id) === 'chemical' || getItemCatType(line.item_id) === 'dye') ? (
                                            <input
                                                type="number"
                                                min="0"
                                                step="1"
                                                placeholder="—"
-                                               style={classic?xpInput({width:60,textAlign:'right'}):{width:80,textAlign:'right' as const}}
-                                               className={classic?'':'form-control form-control-sm'}
+                                               style={xpInput({width:60,textAlign:'right'})}
                                                value={receiptLineDrums[line.id] ?? ''}
                                                onChange={e => setReceiptLineDrums(prev => ({ ...prev, [line.id]: e.target.value === '' ? '' : parseInt(e.target.value) || 0 }))}
                                            />
                                        ) : <span style={{color:'#bbb'}}>—</span>}
                                    </td>
-                                   <td style={classic?{...tdBase,borderRight:'none'}:undefined}>
+                                   <td style={{...tdBase,borderRight:'none'}}>
                                        <input
                                            type="text"
                                            placeholder="Supplier lot (optional)"
-                                           style={classic?xpInput({width:120}):{width:140}}
-                                           className={classic?'':'form-control form-control-sm'}
+                                           style={xpInput({width:120})}
                                            value={receiptLineLots[line.id] ?? ''}
                                            onChange={e => setReceiptLineLots(prev => ({ ...prev, [line.id]: e.target.value }))}
                                        />
@@ -790,72 +766,57 @@ export default function PurchaseOrderView({ items, itemResults, onSearchItems, a
 
        {/* ── Outer shell ── */}
        <div
-           style={classic ? xpBevel : undefined}
-           className={classic ? '' : 'card border-0 shadow-sm shell-window'}
+           style={xpBevel}
        >
            {/* ── Title bar ── */}
-           {classic ? (
-               <div style={xpTitleBar}>
+           <div style={xpTitleBar}>
                    <span>
                        <i className="bi bi-truck" style={{ marginRight: 6 }}></i>
                        {t('purchase_orders')}
                    </span>
                </div>
-           ) : (
-               <div className="card-header bg-white d-flex justify-content-between align-items-center">
-                   <div>
-                       <h5 className="card-title mb-0">
-                           <i className="bi bi-truck me-2"></i>{t('purchase_orders')}
-                       </h5>
-                       <p className="text-muted small mb-0 mt-1">Manage outgoing supplier orders and stock receiving</p>
-                   </div>
-               </div>
-           )}
 
            {/* ── Secondary toolbar: search + status filters + count + actions ── */}
            <div
-               style={classic ? xpToolbar : undefined}
-               className={classic ? '' : 'px-3 py-2 border-bottom d-flex align-items-center gap-2 flex-wrap bg-white'}
+               style={xpToolbar}
            >
-               <SearchField classic={classic} value={searchTerm} onChange={setSearchTerm} placeholder="Search PO# or supplier…" width={240} grow />
-               {classic && <div style={xpSep}></div>}
+               <SearchField value={searchTerm} onChange={setSearchTerm} placeholder="Search PO# or supplier…" width={240} grow />
+               <div style={xpSep}></div>
                <FilterChipBar
-                   classic={classic}
                    options={STATUS_FILTERS.map(s => ({ value: s, count: statusCounts[s] }))}
                    value={statusFilter}
                    onChange={setStatusFilter}
                />
-               {classic && <div style={xpSep}></div>}
-               <ToolbarCount classic={classic}>
+               <div style={xpSep}></div>
+               <ToolbarCount>
                    {poRowTotal} order{poRowTotal !== 1 ? 's' : ''}
                </ToolbarCount>
                {canManage && (
-                   <ToolbarButton classic={classic} tone="create" icon="bi-plus-lg" style={{ marginLeft: 'auto' }} onClick={() => setIsCreateOpen(true)}>
+                   <ToolbarButton tone="create" icon="bi-plus-lg" style={{ marginLeft: 'auto' }} onClick={() => setIsCreateOpen(true)}>
                        {t('create')}
                    </ToolbarButton>
                )}
            </div>
 
            {/* ── Table ── */}
-           <div className={classic ? '' : 'card-body p-0'}>
+           <div>
                {/* vertical scroll must live on the same element as overflow-x,
                    otherwise sticky headers bind to the inner wrapper and never stick */}
-               <div className="table-responsive" style={classic ? { height: 'calc(var(--app-vh) - 160px)', overflowY: 'auto' } : undefined}>
+               <div className="table-responsive" style={{ height: 'calc(var(--app-vh) - 160px)', overflowY: 'auto' }}>
                    <table
-                       className={classic ? '' : 'table table-hover align-middle mb-0'}
-                       style={classic ? { width: '100%', borderCollapse: 'collapse', background: '#fff' } : undefined}
+                       style={{ width: '100%', borderCollapse: 'collapse', background: '#fff' }}
                    >
-                       <thead style={classic ? xpTableHeader : undefined} className={classic ? '' : 'table-light'}>
+                       <thead style={xpTableHeader}>
                            <tr>
-                               <th style={classic ? { ...xpThCell, width: '20px' } : undefined}></th>
-                               <SortableTh sort={poSort} colKey="po" onSort={togglePOSort} style={classic ? { ...xpThCell, width: '130px' } : {}} className={classic ? '' : 'ps-2'}>PO Number</SortableTh>
-                               <SortableTh sort={poSort} colKey="supplier" onSort={togglePOSort} style={classic ? { ...xpThCell } : {}}>Supplier</SortableTh>
-                               <SortableTh sort={poSort} colKey="date" onSort={togglePOSort} style={classic ? { ...xpThCell, width: '90px' } : {}}>Date</SortableTh>
-                               <th style={classic ? { ...xpThCell, width: '70px' } : { width: 70 }}>Items</th>
-                               <SortableTh sort={poSort} colKey="received" onSort={togglePOSort} style={classic ? { ...xpThCell, width: '150px' } : { width: 150 }}>Received</SortableTh>
-                               <SortableTh sort={poSort} colKey="total" onSort={togglePOSort} style={classic ? { ...xpThCell, width: '110px', textAlign: 'right' as const } : { textAlign: 'right' as const }}>Total</SortableTh>
-                               <SortableTh sort={poSort} colKey="status" onSort={togglePOSort} style={classic ? { ...xpThCell, width: '90px' } : {}}>Status</SortableTh>
-                               <th style={classic ? { ...xpThCell, textAlign: 'right' as const, borderRight: 'none', width: '96px' } : undefined} className={classic ? '' : 'text-end pe-3'}>Actions</th>
+                               <th style={{ ...xpThCell, width: '20px' }}></th>
+                               <SortableTh sort={poSort} colKey="po" onSort={togglePOSort} style={{ ...xpThCell, width: '130px' }}>PO Number</SortableTh>
+                               <SortableTh sort={poSort} colKey="supplier" onSort={togglePOSort} style={{ ...xpThCell }}>Supplier</SortableTh>
+                               <SortableTh sort={poSort} colKey="date" onSort={togglePOSort} style={{ ...xpThCell, width: '90px' }}>Date</SortableTh>
+                               <th style={{ ...xpThCell, width: '70px' }}>Items</th>
+                               <SortableTh sort={poSort} colKey="received" onSort={togglePOSort} style={{ ...xpThCell, width: '150px' }}>Received</SortableTh>
+                               <SortableTh sort={poSort} colKey="total" onSort={togglePOSort} style={{ ...xpThCell, width: '110px', textAlign: 'right' as const }}>Total</SortableTh>
+                               <SortableTh sort={poSort} colKey="status" onSort={togglePOSort} style={{ ...xpThCell, width: '90px' }}>Status</SortableTh>
+                               <th style={{ ...xpThCell, textAlign: 'right' as const, borderRight: 'none', width: '96px' }}>Actions</th>
                            </tr>
                        </thead>
                        <tbody ref={listBodyRef}>
@@ -863,41 +824,28 @@ export default function PurchaseOrderView({ items, itemResults, onSearchItems, a
                                <>
                                <tr
                                    key={po.id}
-                                   style={classic
-                                       ? { background: expandedRows[po.id] ? rowStateBg('expanded', true) : lvZebra(true, rowIndex), borderBottom: expandedRows[po.id] ? 'none' : '1px solid #c0bdb5' }
-                                       : { background: expandedRows[po.id] ? rowStateBg('expanded', false) : undefined }}
+                                   style={{ background: expandedRows[po.id] ? rowStateBg('expanded') : lvZebra(rowIndex), borderBottom: expandedRows[po.id] ? 'none' : '1px solid #c0bdb5' }}
                                >
-                                   <ExpanderCell classic={classic} expanded={!!expandedRows[po.id]} label="items & receipts"
+                                   <ExpanderCell expanded={!!expandedRows[po.id]} label="items & receipts"
                                        onToggle={() => setExpandedRows(prev => ({ ...prev, [po.id]: !prev[po.id] }))}
-                                       tdStyle={classic ? tdBase : undefined} tdClassName={classic ? '' : 'ps-3'} />
-                                   <td style={classic ? tdBase : undefined} className={classic ? '' : 'ps-2'}>
-                                       <CodeChip code={po.po_number} classic={classic} tone="accent" style={{ fontWeight: 'bold' }} />
+                                       tdStyle={tdBase} tdClassName={''} />
+                                   <td style={tdBase}>
+                                       <CodeChip code={po.po_number} tone="accent" style={{ fontWeight: 'bold' }} />
                                    </td>
-                                   <td style={classic ? tdBase : undefined}>{getSupplierName(po.supplier_id)}</td>
-                                   <td style={classic ? { ...tdBase, fontSize: '10px' } : undefined} className={classic ? '' : 'small'}>
+                                   <td style={tdBase}>{getSupplierName(po.supplier_id)}</td>
+                                   <td style={{ ...tdBase, fontSize: '10px' }}>
                                        {tzDate(po.order_date)}
                                    </td>
-                                   <td style={classic ? tdBase : undefined}>
-                                       {classic ? (
-                                           <span
+                                   <td style={tdBase}>
+                                       <span
                                                onClick={() => setExpandedRows(prev => ({ ...prev, [po.id]: !prev[po.id] }))}
                                                style={{ borderRadius: CHIP_RADIUS, background: '#e8e8e8', border: '1px solid #6a6a6a', color: '#222', padding: '1px 5px', fontSize: '9px', fontFamily: xpFont, fontWeight: 'bold', cursor: 'pointer' }}
                                                title="Click to view item breakdown"
                                            >
                                                {po.lines.length} item{po.lines.length !== 1 ? 's' : ''}
                                            </span>
-                                       ) : (
-                                           <span
-                                               className="badge bg-light text-dark border"
-                                               role="button"
-                                               onClick={() => setExpandedRows(prev => ({ ...prev, [po.id]: !prev[po.id] }))}
-                                               title="Click to view item breakdown"
-                                           >
-                                               {po.lines.length} item{po.lines.length !== 1 ? 's' : ''}
-                                           </span>
-                                       )}
                                    </td>
-                                   <td style={classic ? tdBase : undefined}>
+                                   <td style={tdBase}>
                                        {(() => {
                                            const { pct, fullLines, totalLines } = poProgress(po);
                                            return (
@@ -910,10 +858,10 @@ export default function PurchaseOrderView({ items, itemResults, onSearchItems, a
                                            );
                                        })()}
                                    </td>
-                                   <td style={classic ? { ...tdBase, textAlign: 'right' as const } : undefined} className={classic ? '' : 'text-end'}>
-                                       <span style={{ fontVariantNumeric: 'tabular-nums', fontSize: classic ? '10px' : undefined }}>{fmtRp(poTotal(po))}</span>
+                                   <td style={{ ...tdBase, textAlign: 'right' as const }}>
+                                       <span style={{ fontVariantNumeric: 'tabular-nums', fontSize: '10px'}}>{fmtRp(poTotal(po))}</span>
                                    </td>
-                                   <td style={classic ? tdBase : undefined}>
+                                   <td style={tdBase}>
                                        {statusBadge(po.status)}
                                        {poOverdueDays(po) != null && (
                                            <span style={{ display: 'block', color: '#c00000', fontSize: '9px', fontWeight: 'bold', marginTop: 2, fontFamily: xpFont }}>
@@ -921,30 +869,18 @@ export default function PurchaseOrderView({ items, itemResults, onSearchItems, a
                                            </span>
                                        )}
                                    </td>
-                                   <td style={classic ? { ...tdBase, borderRight: 'none', textAlign: 'right' as const } : undefined} className={classic ? '' : 'pe-4 text-end'}>
-                                       <div style={classic ? { display: 'flex', gap: 2, justifyContent: 'flex-end', alignItems: 'center' } : undefined} className={classic ? '' : 'd-flex justify-content-end align-items-center gap-2'}>
+                                   <td style={{ ...tdBase, borderRight: 'none', textAlign: 'right' as const }}>
+                                       <div style={{ display: 'flex', gap: 2, justifyContent: 'flex-end', alignItems: 'center' }}>
                                            {canManage && po.status !== 'RECEIVED' && (
-                                               classic ? (
-                                                   <button
+                                               <button
                                                        className={XP_BTN}
                                                        style={xpBtn({ ...BTN_TONES.success, padding: 0, width: 20, height: 20, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: '12px' })}
                                                        title="Receive Goods"
                                                        onClick={() => openReceiptModal(po)}
                                                    >
                                                        <i className="bi bi-box-arrow-in-down"></i>
-                                                   </button>
-                                               ) : (
-                                                   <button
-                                                       className="btn btn-sm btn-success text-white p-0 d-inline-flex align-items-center justify-content-center"
-                                                       style={{fontSize: 12, width: 26, height: 26}}
-                                                       title="Receive Goods"
-                                                       onClick={() => openReceiptModal(po)}
-                                                   >
-                                                       <i className="bi bi-box-arrow-in-down"></i>
-                                                   </button>
-                                               )
-                                           )}
-                                           <MenuTriggerButton classic={classic} onClick={(e) => toggleMenu(po.id, e)} />
+                                                   </button>)}
+                                           <MenuTriggerButton onClick={(e) => toggleMenu(po.id, e)} />
                                        </div>
                                    </td>
                                </tr>
@@ -952,12 +888,10 @@ export default function PurchaseOrderView({ items, itemResults, onSearchItems, a
                                {expandedRows[po.id] && (
                                    <tr key={`${po.id}-receipts`}>
                                        <td colSpan={9} style={{ padding: 0 }}>
-                                           <ExpandedRowPanel classic={classic} style={classic
-                                               ? { padding: '6px 16px 8px 20px', fontFamily: xpFont, fontSize: '11px' }
-                                               : { padding: '12px 16px' }}>
+                                           <ExpandedRowPanel style={{ padding: '6px 16px 8px 20px', fontFamily: xpFont, fontSize: '11px' }}>
                                            <div style={{ marginBottom: 10 }}>
-                                               <div style={lvSubCaption(classic)}>Order Lines</div>
-                                               <table style={{ ...lvSubTable(classic), maxWidth: 560 }}>
+                                               <div style={lvSubCaption()}>Order Lines</div>
+                                               <table style={{ ...lvSubTable(), maxWidth: 560 }}>
                                                    <thead>
                                                        <tr>
                                                            <th style={subTh}>Item</th>
@@ -984,7 +918,7 @@ export default function PurchaseOrderView({ items, itemResults, onSearchItems, a
                                                </table>
                                            </div>
                                            {(po.receipts || []).length === 0 ? (
-                                               <span style={classic ? { color: '#888', fontStyle: 'italic' } : undefined} className={classic ? '' : 'text-muted fst-italic small'}>No receipts recorded yet.</span>
+                                               <span style={{ color: '#888', fontStyle: 'italic' }}>No receipts recorded yet.</span>
                                            ) : (() => {
                                                // One row per delivered line, newest last — replaces a table-per-delivery
                                                // layout that repeated the same header 7x for 7 single-line deliveries.
@@ -1000,10 +934,10 @@ export default function PurchaseOrderView({ items, itemResults, onSearchItems, a
                                                const numR = { textAlign: 'right' as const };
                                                return (
                                                    <div>
-                                                       <div style={lvSubCaption(classic)}>
+                                                       <div style={lvSubCaption()}>
                                                            Receipt History — {(po.receipts || []).length} {(po.receipts || []).length === 1 ? 'delivery' : 'deliveries'}
                                                        </div>
-                                                       <table style={{ ...lvSubTable(classic), maxWidth: 760 }}>
+                                                       <table style={{ ...lvSubTable(), maxWidth: 760 }}>
                                                            <thead>
                                                                <tr>
                                                                    <th style={subTh}>Date</th>
@@ -1056,13 +990,12 @@ export default function PurchaseOrderView({ items, itemResults, onSearchItems, a
                                </>
                            ))}
                            {pageOrders.length === 0 && (dataLoading.purchaseOrders ? (
-                               <TableSkeleton rows={8} cols={skel.cols ?? 9} classic={classic} tdStyle={tdBase} rowHeight={skel.rowHeight} fillHeight={skel.fillHeight} />
+                               <TableSkeleton rows={8} cols={skel.cols ?? 9} tdStyle={tdBase} rowHeight={skel.rowHeight} fillHeight={skel.fillHeight} />
                            ) : (
                                <tr>
                                    <td
                                        colSpan={9}
-                                       style={classic ? { ...tdBase, borderRight: 'none', textAlign: 'center', padding: '24px 8px', color: '#888', fontStyle: 'italic' } : undefined}
-                                       className={classic ? '' : 'text-center py-5 text-muted'}
+                                       style={{ ...tdBase, borderRight: 'none', textAlign: 'center', padding: '24px 8px', color: '#888', fontStyle: 'italic' }}
                                    >
                                        {searchTerm || statusFilter !== 'ALL'
                                            ? 'No orders match the current filter.'
@@ -1111,8 +1044,7 @@ export default function PurchaseOrderView({ items, itemResults, onSearchItems, a
            <Pager page={poPage} total={poRowTotal} pageSize={poPageSize} onPageChange={setPoPage} hideWhenEmpty />
 
            {/* ── Status bar ── */}
-           {classic && (
-               <div style={{
+           <div style={{
                    background: 'linear-gradient(to bottom, #e8e6df, #d5d3cc)',
                    borderTop: '1px solid #b0a898',
                    padding: '2px 8px',
@@ -1130,7 +1062,6 @@ export default function PurchaseOrderView({ items, itemResults, onSearchItems, a
                    <span>|</span>
                    <span>{poStatusCounts.RECEIVED || 0} received</span>
                </div>
-           )}
        </div>
     </div>
   );

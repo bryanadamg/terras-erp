@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from 'react';
 import { useToast } from '../shared/Toast';
-import { useTheme } from '../../context/ThemeContext';
 import { useUser } from '../../context/UserContext';
 import { xpBtn, xpInput, FieldLabel, BTN_TONES, XP_BTN } from '../shared/xpTheme';
 import { settingsActions, settingsCol, settingsColumns, settingsGrid, settingsStack } from './settingsStyles';
@@ -13,8 +12,6 @@ import { API_BASE } from '../shared/apiBase';
 export default function SettingsAccountTab() {
     const { showToast } = useToast();
     const { currentUser, setCurrentUser } = useUser();
-    const { uiStyle } = useTheme();
-    const classic = uiStyle === 'classic';
 
     const [selfUsername, setSelfUsername] = useState('');
     const [selfFullName, setSelfFullName] = useState('');
@@ -77,34 +74,32 @@ export default function SettingsAccountTab() {
         <form onSubmit={handleSelfAccountUpdate} style={settingsStack}>
             <div style={settingsColumns}>
                 <div style={settingsCol(560, 2)}>
-                    <SettingsPanel classic={classic} icon="bi-person-badge" title="Avatar">
+                    <SettingsPanel icon="bi-person-badge" title="Avatar">
                         {/* No preview frame here: AvatarPicker owns the stage, because a
                             preview outside it can't show the candidate you are hovering. */}
-                        <FieldLabel classic={classic} hint="Hover an option to try it on; Shuffle rolls a whole new face.">
+                        <FieldLabel hint="Hover an option to try it on; Shuffle rolls a whole new face.">
                             Choose Avatar
                         </FieldLabel>
-                        <AvatarPicker value={selfAvatarId} onChange={setSelfAvatarId} seed={selfUsername} template={currentUser?.role?.default_avatar_id} classic={classic} />
+                        <AvatarPicker value={selfAvatarId} onChange={setSelfAvatarId} seed={selfUsername} template={currentUser?.role?.default_avatar_id} />
                     </SettingsPanel>
                 </div>
 
                 <div style={settingsCol(320, 1)}>
-                    <SettingsPanel classic={classic} icon="bi-person-fill" title="Profile">
+                    <SettingsPanel icon="bi-person-fill" title="Profile">
                         <div style={settingsGrid(200)}>
                             <div>
-                                <FieldLabel classic={classic}>Username</FieldLabel>
+                                <FieldLabel>Username</FieldLabel>
                                 <input
-                                    style={classic ? xpInput({ width: '100%' }) : undefined}
-                                    className={classic ? '' : 'form-control form-control-sm'}
+                                    style={xpInput({ width: '100%' })}
                                     value={selfUsername}
                                     onChange={e => setSelfUsername(e.target.value)}
                                     required
                                 />
                             </div>
                             <div>
-                                <FieldLabel classic={classic}>Full Name</FieldLabel>
+                                <FieldLabel>Full Name</FieldLabel>
                                 <input
-                                    style={classic ? xpInput({ width: '100%' }) : undefined}
-                                    className={classic ? '' : 'form-control form-control-sm'}
+                                    style={xpInput({ width: '100%' })}
                                     value={selfFullName}
                                     onChange={e => setSelfFullName(e.target.value)}
                                     required
@@ -113,25 +108,23 @@ export default function SettingsAccountTab() {
                         </div>
                     </SettingsPanel>
 
-                    <SettingsPanel classic={classic} icon="bi-key-fill" title="Password">
+                    <SettingsPanel icon="bi-key-fill" title="Password">
                         <div style={settingsGrid(200)}>
                             <div>
-                                <FieldLabel classic={classic} hint="Leave blank to keep your current password.">New Password</FieldLabel>
+                                <FieldLabel hint="Leave blank to keep your current password.">New Password</FieldLabel>
                                 <input
                                     type="password"
-                                    style={classic ? xpInput({ width: '100%' }) : undefined}
-                                    className={classic ? '' : 'form-control form-control-sm'}
+                                    style={xpInput({ width: '100%' })}
                                     value={selfPassword}
                                     onChange={e => setSelfPassword(e.target.value)}
                                     placeholder="••••••••"
                                 />
                             </div>
                             <div>
-                                <FieldLabel classic={classic}>Confirm New Password</FieldLabel>
+                                <FieldLabel>Confirm New Password</FieldLabel>
                                 <input
                                     type="password"
-                                    style={classic ? xpInput({ width: '100%' }) : undefined}
-                                    className={classic ? '' : 'form-control form-control-sm'}
+                                    style={xpInput({ width: '100%' })}
                                     value={selfConfirmPassword}
                                     onChange={e => setSelfConfirmPassword(e.target.value)}
                                     placeholder="••••••••"
@@ -144,11 +137,11 @@ export default function SettingsAccountTab() {
 
             {/* One submit for all three groups, so it spans the columns — not
                 inside the password panel, where it would read as "save password". */}
-            <div style={{ ...settingsActions(classic), marginTop: 0 }}>
+            <div style={{ ...settingsActions(), marginTop: 0 }}>
                 <button
                     type="submit"
-                    style={classic ? xpBtn({ ...BTN_TONES.primary, padding: '3px 14px' }) : undefined}
-                    className={classic ? XP_BTN : 'btn btn-sm btn-primary px-3'}
+                    style={xpBtn({ ...BTN_TONES.primary, padding: '3px 14px' })}
+                    className={XP_BTN}
                 >Save Account</button>
             </div>
         </form>

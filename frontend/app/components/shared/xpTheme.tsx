@@ -5,6 +5,8 @@ import { layoutRectOf, layoutScroll } from './uiScale';
 import { xpFont, modernFont, CODE_FONT, PRINT_FONT, PRINT_SERIF_FONT } from './typography';
 import { FloatingLayer, POPOUT_DELAY, TIP_DELAY, Tooltip, TooltipSurface, useHoverAnchor, isClipped } from './Tooltip';
 import UIToggleChip from '@bryanadamg/terras-ui/components/ToggleChip';
+import UIProgressBar, { progressToneColor as uiProgressToneColor } from '@bryanadamg/terras-ui/components/ProgressBar';
+import { field as uiField } from '@bryanadamg/terras-ui/styles';
 
 /**
  * Shared Windows XP "classic" theme primitives.
@@ -35,8 +37,8 @@ export { xpFont, modernFont, CODE_FONT, PRINT_FONT, PRINT_SERIF_FONT } from './t
 // underline in a dense table does not. It never collides with status color because
 // blue-on-pale-blue is not in STATUS_FAMILY's chip set at this size, and a nav code
 // always sits in its own column.
-export function CodeChip({ code, classic, tier = 1, tone = 'default', link = false, title, style, className, onClick }: {
-    code: React.ReactNode; classic: boolean; tier?: 1 | 2;
+export function CodeChip({ code, tier = 1, tone = 'default', link = false, title, style, className, onClick }: {
+    code: React.ReactNode; tier?: 1 | 2;
     tone?: 'default' | 'accent'; link?: boolean; title?: string;
     style?: React.CSSProperties; className?: string; onClick?: () => void;
 }) {
@@ -62,7 +64,7 @@ export function CodeChip({ code, classic, tier = 1, tone = 'default', link = fal
     const boxStyle: React.CSSProperties = link
         ? {
             ...base,
-            fontSize: classic ? 10 : 11,
+            fontSize: 10,
             fontWeight: 'bold',
             color: '#0058e6',
             background: '#e8f0fe',
@@ -74,10 +76,10 @@ export function CodeChip({ code, classic, tier = 1, tone = 'default', link = fal
             ...style,
         }
         : tier === 2
-            ? { ...base, fontSize: classic ? 9 : 10.5, color: '#666', ...style }
+            ? { ...base, fontSize: 9, color: '#666', ...style }
             : {
                 ...base,
-                fontSize: classic ? 11 : 12,
+                fontSize: 11,
                 fontWeight: 'bold',
                 color: tone === 'accent' ? '#000055' : '#000',
                 ...style,
@@ -100,14 +102,14 @@ export function CodeChip({ code, classic, tier = 1, tone = 'default', link = fal
                             // A tier-2/plain code has no fill of its own, so the
                             // popout has to supply one or it reads as text printed
                             // over the row underneath it.
-                            ...(link ? null : { background: classic ? '#ffffe1' : '#ffffff', border: '1px solid', borderColor: classic ? '#000' : '#cbd5e1', borderRadius: CODE_CHIP_RADIUS, padding: '0 5px' }),
+                            ...(link ? null : { background: '#ffffe1', border: '1px solid', borderColor: '#000', borderRadius: CODE_CHIP_RADIUS, padding: '0 5px' }),
                             boxShadow: '0 2px 8px rgba(0,0,0,0.22)',
                         }}>{code}</span>
                     </FloatingLayer>
                 )
                 : (
                     <FloatingLayer rect={rect} anchorEl={anchorEl} className="tip-anim">
-                        <TooltipSurface classic={classic}>{tip}</TooltipSurface>
+                        <TooltipSurface>{tip}</TooltipSurface>
                     </FloatingLayer>
                 ))}
         </>
@@ -345,10 +347,9 @@ export const statusChipStyle = (status?: string, extra: React.CSSProperties = {}
 // bootstrap-icon class, `swatch` for a colour dot, `onRemove` for a pick-list "x".
 // Don't re-roll a chip span in a view; if a variant is missing, add it here.
 export function Chip({
-    children, classic, tone, icon, swatch, title, onRemove, onClick, bold, size = 'sm', truncate, style,
+    children, tone, icon, swatch, title, onRemove, onClick, bold, size = 'sm', truncate, style,
 }: {
     children: React.ReactNode;
-    classic?: boolean;
     tone?: { background?: string; borderColor?: string; color?: string };
     icon?: string;
     swatch?: string | null;
@@ -363,7 +364,7 @@ export function Chip({
     truncate?: boolean;
     style?: React.CSSProperties;
 }) {
-    const fs = size === 'xs' ? (classic ? 9 : 9.5) : size === 'md' ? (classic ? 11 : 12) : (classic ? 10 : 11);
+    const fs = size === 'xs' ? (9) : size === 'md' ? (11) : (10);
     const labelRef = useRef<HTMLSpanElement>(null);
     // Which surface this hover wants. Decided in shouldOpen against the live DOM
     // (a chip is only clipped at some column widths), read back on render — by
@@ -384,13 +385,13 @@ export function Chip({
 
     const chipStyle: React.CSSProperties = {
         display: 'inline-flex', alignItems: 'center', gap: 4,
-        background: tone?.background ?? (classic ? '#f0ede4' : '#eef1f4'),
+        background: tone?.background ?? ('#f0ede4'),
         border: '1px solid',
-        borderColor: tone?.borderColor ?? (classic ? '#b0a898' : '#dee2e6'),
-        color: tone?.color ?? (classic ? '#333' : '#495057'),
+        borderColor: tone?.borderColor ?? ('#b0a898'),
+        color: tone?.color ?? ('#333'),
         borderRadius: CHIP_RADIUS,
         padding: size === 'md' ? '1px 7px' : '1px 6px',
-        fontFamily: classic ? xpFont : modernFont,
+        fontFamily: xpFont,
         fontSize: fs,
         fontWeight: bold ? 700 : 400,
         lineHeight: 1.45,
@@ -409,7 +410,7 @@ export function Chip({
                 : children}
             {onRemove && (
                 <button type="button" onClick={e => { e.stopPropagation(); onRemove(); }} title="Remove"
-                    style={{ background: 'none', border: 'none', cursor: 'pointer', color: classic ? '#a00' : '#dc2626', fontWeight: 'bold', lineHeight: 1, padding: 0, marginLeft: 1, fontSize: fs + 2 }}>×</button>
+                    style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#a00', fontWeight: 'bold', lineHeight: 1, padding: 0, marginLeft: 1, fontSize: fs + 2 }}>×</button>
             )}
         </>
     );
@@ -430,7 +431,7 @@ export function Chip({
                 )
                 : (
                     <FloatingLayer rect={rect} anchorEl={anchorEl} className="tip-anim">
-                        <TooltipSurface classic={!!classic}>{title}</TooltipSurface>
+                        <TooltipSurface>{title}</TooltipSurface>
                     </FloatingLayer>
                 ))}
         </>
@@ -493,11 +494,10 @@ const VARIANT_ICON: Partial<Record<VariantKind, string>> = {
 
 /** One variant-identity badge. Geometry comes from `Chip`, colour from `VARIANT_TONE`. */
 export function VariantChip({
-    kind, children, classic, swatch, icon, mono, title, size = 'xs', bold = true, onRemove, onClick, truncate, style,
+    kind, children, swatch, icon, mono, title, size = 'xs', bold = true, onRemove, onClick, truncate, style,
 }: {
     kind: VariantKind;
     children: React.ReactNode;
-    classic?: boolean;
     swatch?: string | null;
     /** Override the kind's default icon; `null` renders none. */
     icon?: string | null;
@@ -516,7 +516,6 @@ export function VariantChip({
     const ic = icon === null ? undefined : (icon ?? (swatch ? undefined : VARIANT_ICON[kind]));
     return (
         <Chip
-            classic={classic}
             tone={VARIANT_TONE[kind]}
             size={size}
             bold={bold}
@@ -553,10 +552,9 @@ const ORIGIN_TITLE: Record<OriginKind, string> = {
 
 /** One origin reference as a badge. `prefix` false drops the "PR "/"SO " label when
  *  the code already carries it (MO-00012) or the column header says which it is. */
-export function OriginChip({ kind, code, classic, prefix = true, title, size = 'xs', truncate, style }: {
+export function OriginChip({ kind, code, prefix = true, title, size = 'xs', truncate, style }: {
     kind: OriginKind;
     code: React.ReactNode;
-    classic?: boolean;
     prefix?: boolean;
     title?: string;
     size?: 'xs' | 'sm' | 'md';
@@ -566,7 +564,6 @@ export function OriginChip({ kind, code, classic, prefix = true, title, size = '
 }) {
     return (
         <Chip
-            classic={classic}
             tone={ORIGIN_TONES[kind]}
             size={size}
             bold
@@ -607,21 +604,21 @@ export function StatusChip({ status, label, style, tint, title }: { status: stri
 // separated by "|". For status-bar tallies where the reader scans for a status and
 // wants its number, not a sentence. Uses the same 5-family tint palette as
 // StatusChip, so a status reads the same color wherever it appears.
-export function StatusCountPill({ status, count, label, classic, title }: {
-    status: string; count: number; label?: string; classic?: boolean; title?: string;
+export function StatusCountPill({ status, count, label, title }: {
+    status: string; count: number; label?: string; title?: string;
 }) {
     const c = statusTint(status);
     const pill = (
         <span
             style={{
                 display: 'inline-flex', alignItems: 'center', gap: 4,
-                padding: classic ? '0 6px' : '1px 9px',
+                padding: '0 6px',
                 borderRadius: CHIP_RADIUS,
                 border: '1px solid', borderColor: c.borderColor,
                 background: c.background, color: c.color,
-                fontFamily: classic ? xpFont : modernFont,
-                fontSize: classic ? 10 : 11,
-                lineHeight: classic ? '15px' : '17px',
+                fontFamily: xpFont,
+                fontSize: 10,
+                lineHeight: '15px',
                 whiteSpace: 'nowrap',
             }}
         >
@@ -723,7 +720,7 @@ export const resolveColorHex = (
 // together ARE the thing (a combo's `BLACK WHITE`, `NVYRED`), drawn as hard-stop
 // bands. It keeps a SOLID border even though nothing is saved, because a combo has
 // no hex field to be missing — the strip is a depiction, not a stand-in for one.
-export function SwatchBox({ hex, derived, bands, size = 18, classic, title, onPick, style }: {
+export function SwatchBox({ hex, derived, bands, size = 18, title, onPick, style }: {
     hex?: string | null;
     /** Fallback shade implied by the name; rendered dashed to stay distinguishable. */
     derived?: string | null;
@@ -731,7 +728,6 @@ export function SwatchBox({ hex, derived, bands, size = 18, classic, title, onPi
      *  single entry just fills the box. Pair with a wider `style.width`. */
     bands?: string[];
     size?: number;
-    classic?: boolean;
     title?: string;
     onPick?: (hex: string) => void;
     style?: React.CSSProperties;
@@ -744,7 +740,7 @@ export function SwatchBox({ hex, derived, bands, size = 18, classic, title, onPi
                 title={title ?? `${strip.length} colour${strip.length !== 1 ? 's' : ''}`}
                 style={{
                     display: 'inline-block', width: size, height: size, boxSizing: 'border-box',
-                    borderRadius: classic ? 2 : 4, verticalAlign: 'middle',
+                    borderRadius: 2, verticalAlign: 'middle',
                     border: '1px solid rgba(0,0,0,0.35)',
                     background: strip.length === 1
                         ? strip[0]
@@ -757,11 +753,11 @@ export function SwatchBox({ hex, derived, bands, size = 18, classic, title, onPi
     const shown = hex || derived || null;
     const face: React.CSSProperties = {
         display: 'inline-block', width: size, height: size, boxSizing: 'border-box',
-        borderRadius: classic ? 2 : 4, verticalAlign: 'middle', position: 'relative',
+        borderRadius: 2, verticalAlign: 'middle', position: 'relative',
         background: shown || 'transparent',
-        border: hex ? '1px solid rgba(0,0,0,0.35)' : `1px dashed ${classic ? '#a0988c' : '#94a3b8'}`,
+        border: hex ? '1px solid rgba(0,0,0,0.35)' : '1px dashed #a0988c',
         ...(shown ? null : {
-            border: `1px solid ${classic ? '#a0988c' : '#94a3b8'}`,
+            border: '1px solid #a0988c',
             backgroundImage: 'linear-gradient(45deg,#ccc 25%,transparent 25%,transparent 75%,#ccc 75%),linear-gradient(45deg,#ccc 25%,transparent 25%,transparent 75%,#ccc 75%)',
             backgroundSize: '8px 8px', backgroundPosition: '0 0, 4px 4px',
         }),
@@ -790,14 +786,13 @@ export function SwatchBox({ hex, derived, bands, size = 18, classic, title, onPi
 // fallback: most callers hold a name and no hex, so the swatch is derived from the
 // name via `colorHexFor`. It used to carry its own beige/gray palette, which is why
 // the same shade read pink on the lot pickers and beige here.
-export function ColorSwatchChip({ label, classic, hex: hexOverride, onRemove, size = 'sm', title }: {
-    label: string; classic: boolean; hex?: string | null; onRemove?: () => void;
+export function ColorSwatchChip({ label, hex: hexOverride, onRemove, size = 'sm', title }: {
+    label: string; hex?: string | null; onRemove?: () => void;
     size?: 'xs' | 'sm' | 'md'; title?: string;
 }) {
     return (
         <VariantChip
             kind="color"
-            classic={classic}
             size={size}
             swatch={hexOverride ?? colorHexFor(label)}
             title={title ?? `Color: ${label}`}
@@ -852,12 +847,11 @@ const LOCATION_CHIP_TONES = {
 } as const;
 
 export function LocationChip({
-    code, direction = 'in', classic, title, size = 'xs', children, style,
+    code, direction = 'in', title, size = 'xs', children, style,
 }: {
     /** Location code. Renders '?' when absent, matching the WO route cell. */
     code?: string | null;
     direction?: keyof typeof LOCATION_CHIP_TONES;
-    classic?: boolean;
     title?: string;
     size?: 'xs' | 'sm' | 'md';
     /** Trailing detail inside the chip, e.g. the qty at that location. */
@@ -866,7 +860,6 @@ export function LocationChip({
 }) {
     return (
         <Chip
-            classic={classic}
             tone={LOCATION_CHIP_TONES[direction]}
             size={size}
             title={title}
@@ -889,26 +882,30 @@ export function LocationChip({
 // `secondaryPct`/`secondaryTone` stacks a second segment after the first
 // (e.g. "planned" after "done"). `label`: 'outside' = trailing "NN%" text,
 // 'inside' = centered overlay text, 'none' (default) = bar only.
-const PROGRESS_FILL_DK: Record<StatusFamily, string> = { gray: '#c8c3b6', amber: '#c77800', blue: '#0058e6', green: '#2d7a2d', red: '#c00000' };
-const PROGRESS_FILL_LT: Record<StatusFamily, string> = { gray: '#e2ddd0', amber: '#f5d060', blue: '#4a8fe8', green: '#6fce6f', red: '#e88a8a' };
+//
+// Now a thin adapter over terras-ui's ProgressBar, which was extracted from this
+// one — same geometry, same five tone hexes (as `--terras-progress-*`, whose
+// fallbacks are the literals this used to hold), same clamping of the stacked
+// segments. The package ships no tooltip, so it takes ours through its `tooltip`
+// slot; everything else is a straight pass-through and the ~20 call sites are
+// untouched.
 
 /** The solid colour a `ProgressBar` segment paints, for a legend or key that sits
  *  beside one. Exported so a caller names the bar's own colour instead of
- *  hand-copying a hex that then drifts when the palette moves. */
-export const progressToneColor = (tone: StatusFamily) => PROGRESS_FILL_DK[tone];
+ *  hand-copying a hex that then drifts when the palette moves. Returns the
+ *  `var(--terras-progress-*)` reference rather than a raw hex — usable anywhere a
+ *  CSS colour is, which is every current caller. */
+export const progressToneColor = (tone: StatusFamily) => uiProgressToneColor(tone);
 
-function progressBarFill(tone: StatusFamily, hatched: boolean): string {
-    if (!hatched) return PROGRESS_FILL_DK[tone];
-    return `repeating-linear-gradient(45deg,${PROGRESS_FILL_DK[tone]},${PROGRESS_FILL_DK[tone]} 3px,${PROGRESS_FILL_LT[tone]} 3px,${PROGRESS_FILL_LT[tone]} 6px)`;
-}
+/** Both the bar's own `title` and the marker's go through here. The bar carries
+ *  long, multi-line explanations (MO step lists, receiving breakdowns) — exactly
+ *  the content the OS tooltip renders worst — so it gets the themed surface with
+ *  the wide cap; a marker title is short and unaffected by a *max* width. */
+const progressTip = (node: React.ReactElement, content: string) => (
+    <Tooltip content={content} maxWidth={380}>{node}</Tooltip>
+);
 
-export function ProgressBar({
-    pct, tone, hatched = false, height = 10, width, title,
-    secondaryPct, secondaryTone = 'gray',
-    tertiaryPct, tertiaryTone = 'gray',
-    markerPct, markerTitle,
-    label = 'none',
-}: {
+export function ProgressBar(props: {
     pct: number;
     tone?: StatusFamily;
     hatched?: boolean;
@@ -928,64 +925,16 @@ export function ProgressBar({
     markerTitle?: string;
     /** 'outside' = bar + trailing "NN%" text (flex row); 'inside' = centered overlay label; 'none' (default) = bar only. */
     label?: 'outside' | 'inside' | 'none';
+    style?: React.CSSProperties;
 }) {
-    const t: StatusFamily = tone || (pct >= 100 ? 'green' : pct > 0 ? 'amber' : 'gray');
-    const clamped = Math.max(0, Math.min(100, pct));
-    const secClamped = secondaryPct != null ? Math.max(0, Math.min(100 - clamped, secondaryPct)) : 0;
-    const terClamped = tertiaryPct != null ? Math.max(0, Math.min(100 - clamped - secClamped, tertiaryPct)) : 0;
-    const pctLabel = Math.round(clamped);
-
-    const track = (
-        <div style={{ flex: label === 'outside' ? 1 : undefined, border: '1px solid #7f9db9', borderRadius: 3, height, width: label === 'outside' ? undefined : (width ?? '100%'), background: '#e9e9e9', position: 'relative', overflow: 'hidden' }}>
-            <div style={{ position: 'absolute', top: 0, left: 0, height: '100%', width: `${clamped}%`, background: progressBarFill(t, hatched), transition: 'width 0.2s' }} />
-            {secondaryPct != null && (
-                <div style={{ position: 'absolute', top: 0, left: `${clamped}%`, height: '100%', width: `${secClamped}%`, background: progressBarFill(secondaryTone, hatched), transition: 'width 0.2s, left 0.2s' }} />
-            )}
-            {tertiaryPct != null && (
-                <div style={{ position: 'absolute', top: 0, left: `${clamped + secClamped}%`, height: '100%', width: `${terClamped}%`, background: progressBarFill(tertiaryTone, hatched), transition: 'width 0.2s, left 0.2s' }} />
-            )}
-            {markerPct != null && (
-                <Tooltip content={markerTitle}>
-                    <div
-                        style={{
-                            position: 'absolute', top: 0, bottom: 0,
-                            left: `${Math.max(0, Math.min(100, markerPct))}%`,
-                            width: 2, background: '#000',
-                        }}
-                    />
-                </Tooltip>
-            )}
-            {label === 'inside' && (
-                <span style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                    <span style={{
-                        fontSize: Math.max(8, height - 7), fontWeight: 'bold', color: '#fff',
-                        background: 'rgba(0,0,0,0.45)', borderRadius: 3, padding: '0 5px', lineHeight: `${height - 4}px`,
-                    }}>
-                        {pctLabel}%
-                    </span>
-                </span>
-            )}
-        </div>
-    );
-
-    // The bar carries long, multi-line explanations (MO step lists, receiving
-    // breakdowns) — exactly the content the OS tooltip renders worst.
-    const tipped = title ? <Tooltip content={title} maxWidth={380}>{track}</Tooltip> : track;
-    if (label !== 'outside') return tipped;
-
-    return (
-        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-            {tipped}
-            <span style={{ fontSize: 10, fontFamily: CODE_FONT, minWidth: 32 }}>{pctLabel}%</span>
-        </div>
-    );
+    return <UIProgressBar {...props} tooltip={progressTip} />;
 }
 
 // ── Inline style helpers (XP widgets) ────────────────────────────────────────
 
 // The four button intents. `default` is the bare XP face `xpBtn` already paints, so
 // it is empty; the other three are patches you spread over it (or hand to
-// `lvBtn(classic, tone)`, which owns the modern half). ~19 local copies used to
+// `lvBtn(tone)`, which owns the modern half). ~19 local copies used to
 // carry their own blue/green/red — three different blues and three different greens
 // across BOMDesigner, the WO modals and the print modals — which is why the faces
 // live here now. Adding a fifth tone is almost never the answer.
@@ -1013,17 +962,23 @@ export const xpBtn = (extra: React.CSSProperties = {}): React.CSSProperties => (
     ...extra,
 });
 
-export const xpInput = (extra: React.CSSProperties = {}): React.CSSProperties => ({
-    fontFamily: xpFont, fontSize: '11px', border: '1px solid #7f9db9', borderRadius: BUTTON_RADIUS,
-    padding: '1px 6px', background: '#ffffff', color: '#000000', height: '20px', outline: 'none',
-    ...extra,
-});
+// The recessed field face — blue-gray border over a white well, against the
+// raised bevel a button wears. Delegated to terras-ui's `field()`, which mirrors
+// this one value for value (same Tahoma, 11px, #7f9db9, 3px radius, 1px 6px
+// padding, 20px tall); it reads them from --terras-* tokens, so a palette move
+// lands here too. Still a STYLE, not the package's `<Input>` component: call
+// sites spread it onto their own native input inside their own theme branch, and
+// swapping them to a component is a different job from deduping the face.
+export const xpInput = (extra: React.CSSProperties = {}): React.CSSProperties =>
+    uiField(extra);
 
 export const xpLabel = (extra: React.CSSProperties = {}): React.CSSProperties => ({
     fontFamily: xpFont, fontSize: '11px', display: 'block', marginBottom: 2,
     ...extra,
 });
 
+// 22px, not the input's 20px: the native dropdown arrow clips on Windows without
+// the extra 2px.
 export const xpSelect = (extra: React.CSSProperties = {}): React.CSSProperties =>
     xpInput({ height: '22px', ...extra });
 
@@ -1056,13 +1011,11 @@ const MODAL_FOOTER_CLASSIC_TONES: Record<'success' | 'primary' | 'danger', React
 // the modern branch as a `btn-outline-danger` with no classic counterpart, so in
 // Classic there was no way to clear a colour at all.
 export function ModalFooterActions({
-    classic,
     onCancel, cancelLabel = 'Cancel',
     onSubmit, submitLabel, submittingLabel = 'Saving...', submitting = false,
     variant = 'success', disabled = false,
     onExtra, extraLabel,
 }: {
-    classic: boolean;
     onCancel: () => void;
     cancelLabel?: string;
     onSubmit?: () => void;
@@ -1074,67 +1027,48 @@ export function ModalFooterActions({
     onExtra?: () => void;
     extraLabel?: string;
 }) {
-    if (classic) {
-        const tone = MODAL_FOOTER_CLASSIC_TONES[variant];
-        return (
-            <>
-                {onExtra && extraLabel && (
-                    <button
-                        type="button"
-                        className={XP_BTN}
-                        onClick={onExtra}
-                        style={{
-                            fontFamily: xpFont, fontSize: 11, padding: '3px 16px', cursor: 'pointer',
-                            borderRadius: BUTTON_RADIUS, border: '1px solid', borderColor: '#dfdfdf #808080 #808080 #dfdfdf',
-                            background: 'linear-gradient(to bottom, #fff, #d4d0c8)', color: '#8a1a1a',
-                        }}
-                    >
-                        {extraLabel}
-                    </button>
-                )}
-                <button
-                    type="button"
-                    className={XP_BTN}
-                    onClick={onCancel}
-                    style={{
-                        fontFamily: xpFont, fontSize: 11, padding: '3px 16px', cursor: 'pointer',
-                        borderRadius: BUTTON_RADIUS, border: '1px solid', borderColor: '#dfdfdf #808080 #808080 #dfdfdf',
-                        background: 'linear-gradient(to bottom, #fff, #d4d0c8)', color: '#000',
-                    }}
-                >
-                    {cancelLabel}
-                </button>
-                {onSubmit && submitLabel && (
-                    <button
-                        type="button"
-                        className={XP_BTN}
-                        onClick={onSubmit}
-                        disabled={submitting || disabled}
-                        style={{
-                            fontFamily: xpFont, fontSize: 11, fontWeight: 'bold', padding: '3px 20px', cursor: submitting || disabled ? 'default' : 'pointer',
-                            borderRadius: BUTTON_RADIUS, border: '1px solid', opacity: submitting || disabled ? 0.6 : 1,
-                            ...tone,
-                        }}
-                    >
-                        {(submitting ? submittingLabel : submitLabel).toUpperCase()}
-                    </button>
-                )}
-            </>
-        );
-    }
+    const tone = MODAL_FOOTER_CLASSIC_TONES[variant];
     return (
         <>
             {onExtra && extraLabel && (
-                <button type="button" className="btn btn-sm btn-outline-danger" onClick={onExtra}>
+                <button
+                    type="button"
+                    className={XP_BTN}
+                    onClick={onExtra}
+                    style={{
+                        fontFamily: xpFont, fontSize: 11, padding: '3px 16px', cursor: 'pointer',
+                        borderRadius: BUTTON_RADIUS, border: '1px solid', borderColor: '#dfdfdf #808080 #808080 #dfdfdf',
+                        background: 'linear-gradient(to bottom, #fff, #d4d0c8)', color: '#8a1a1a',
+                    }}
+                >
                     {extraLabel}
                 </button>
             )}
-            <button type="button" className="btn btn-sm btn-link text-muted text-decoration-none" onClick={onCancel}>
+            <button
+                type="button"
+                className={XP_BTN}
+                onClick={onCancel}
+                style={{
+                    fontFamily: xpFont, fontSize: 11, padding: '3px 16px', cursor: 'pointer',
+                    borderRadius: BUTTON_RADIUS, border: '1px solid', borderColor: '#dfdfdf #808080 #808080 #dfdfdf',
+                    background: 'linear-gradient(to bottom, #fff, #d4d0c8)', color: '#000',
+                }}
+            >
                 {cancelLabel}
             </button>
             {onSubmit && submitLabel && (
-                <button type="button" className={`btn btn-sm btn-${variant} px-4 fw-bold shadow-sm`} onClick={onSubmit} disabled={submitting || disabled}>
-                    {submitting ? submittingLabel : submitLabel}
+                <button
+                    type="button"
+                    className={XP_BTN}
+                    onClick={onSubmit}
+                    disabled={submitting || disabled}
+                    style={{
+                        fontFamily: xpFont, fontSize: 11, fontWeight: 'bold', padding: '3px 20px', cursor: submitting || disabled ? 'default' : 'pointer',
+                        borderRadius: BUTTON_RADIUS, border: '1px solid', opacity: submitting || disabled ? 0.6 : 1,
+                        ...tone,
+                    }}
+                >
+                    {(submitting ? submittingLabel : submitLabel).toUpperCase()}
                 </button>
             )}
         </>
@@ -1161,23 +1095,18 @@ export const SECTION_RADIUS = 6;
 // (a gap-spaced stack passes `marginBottom: 0`) or that put a full-bleed table
 // where the 10px form padding would inset it (`bodyStyle={{ padding: 0 }}`).
 // They are overrides on this one chrome — not a licence to re-declare the box.
-export function FormSection({ title, classic, children, style, bodyStyle }: {
+export function FormSection({ title, children, style, bodyStyle }: {
     title: React.ReactNode;
-    classic: boolean;
     children: React.ReactNode;
     style?: React.CSSProperties;
     bodyStyle?: React.CSSProperties;
 }) {
-    const box: React.CSSProperties = classic
-        ? { border: '1px solid #c0bdb5', boxShadow: 'inset 1px 1px 0 #fff, 1px 1px 0 #c0bdb5', borderRadius: SECTION_RADIUS, overflow: 'hidden', marginBottom: 10, ...style }
-        : { background: '#fff', border: '1px solid #dbe1ea', borderRadius: SECTION_RADIUS, marginBottom: 10, overflow: 'hidden', ...style };
+    const box: React.CSSProperties = { border: '1px solid #c0bdb5', boxShadow: 'inset 1px 1px 0 #fff, 1px 1px 0 #c0bdb5', borderRadius: SECTION_RADIUS, overflow: 'hidden', marginBottom: 10, ...style };
     // Flat blue header in BOTH themes so every sectioned form reads the same. Solid,
     // not a gradient: the old left-to-right fade washed out to near-white by the right
     // edge, so a long title lost contrast halfway across and each box read as a
     // different colour depending on how wide it was.
-    const header: React.CSSProperties = classic
-        ? { background: FORM_SECTION_BLUE, color: '#fff', fontFamily: xpFont, fontSize: 10, fontWeight: 'bold', padding: '3px 8px', letterSpacing: '0.5px', textTransform: 'uppercase' as const }
-        : { background: FORM_SECTION_BLUE, color: '#fff', fontFamily: modernFont, fontSize: 11, fontWeight: 700, padding: '6px 12px', letterSpacing: '0.04em', textTransform: 'uppercase' as const };
+    const header: React.CSSProperties = { background: FORM_SECTION_BLUE, color: '#fff', fontFamily: xpFont, fontSize: 10, fontWeight: 'bold', padding: '3px 8px', letterSpacing: '0.5px', textTransform: 'uppercase' as const };
     return (
         <div style={box}>
             <div style={header}>{title}</div>
@@ -1250,13 +1179,10 @@ export type ChipSeg = 'first' | 'mid' | 'last' | 'only';
 //   - modern is no longer bootstrap's solid/outline button pair — both themes now
 //     come off the same --terras-* tokens, retoned by `.ui-style-classic`.
 //
-// `classic` is still accepted so no call site had to change, but it is inert: the
 // theme is decided by the CSS class on the tree above, not by a prop.
-export function ToggleChip({ on, onClick, classic: _classic, disabled = false, minWidth, title, seg, tone = 'blue', flat = false, toneIdle = false, children }: {
+export function ToggleChip({ on, onClick, disabled = false, minWidth, title, seg, tone = 'blue', flat = false, toneIdle = false, children }: {
     on: boolean;
     onClick: () => void;
-    /** @deprecated Inert — terras-ui reads the theme from `.ui-style-classic`. */
-    classic?: boolean;
     disabled?: boolean;
     minWidth?: number;
     title?: string;
@@ -1292,10 +1218,9 @@ export function ToggleChip({ on, onClick, classic: _classic, disabled = false, m
 // weekday indexes.
 export const WEEKDAY_LABELS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 
-export function WeekdayToggle({ value, onToggle, classic, disabled = false }: {
+export function WeekdayToggle({ value, onToggle, disabled = false }: {
     value: number[];
     onToggle: (day: number) => void;
-    classic: boolean;
     disabled?: boolean;
 }) {
     return (
@@ -1305,9 +1230,8 @@ export function WeekdayToggle({ value, onToggle, classic, disabled = false }: {
                     key={label}
                     on={value.includes(idx)}
                     onClick={() => onToggle(idx)}
-                    classic={classic}
                     disabled={disabled}
-                    minWidth={classic ? 48 : 52}
+                    minWidth={48}
                 >
                     {label}
                 </ToggleChip>
@@ -1338,14 +1262,13 @@ export function SectionTitle({ icon, children, right }: { icon: string; children
 // and then costs a line forever, so it goes in `title` and the global tooltip
 // layer renders it. A form of ten fields with ten captions reads as prose, which
 // is the state this prop exists to get out of.
-export function FieldLabel({ children, hint, title, classic, right }: { children: React.ReactNode; hint?: string; title?: string; classic: boolean; right?: React.ReactNode }) {
+export function FieldLabel({ children, hint, title, right }: { children: React.ReactNode; hint?: string; title?: string; right?: React.ReactNode }) {
     return (
         <>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 2 }}>
                 <label
                     title={title}
-                    style={classic ? { fontFamily: xpFont, fontSize: 11, fontWeight: 'bold', color: '#2b2822', margin: 0 } : undefined}
-                    className={classic ? '' : 'form-label small fw-semibold mb-0'}
+                    style={{ fontFamily: xpFont, fontSize: 11, fontWeight: 'bold', color: '#2b2822', margin: 0 }}
                 >
                     {children}
                 </label>
@@ -1353,8 +1276,7 @@ export function FieldLabel({ children, hint, title, classic, right }: { children
             </div>
             {hint && (
                 <div
-                    style={classic ? { fontFamily: xpFont, fontSize: 10, color: '#938c76', fontStyle: 'italic', marginBottom: 3 } : undefined}
-                    className={classic ? '' : 'text-muted small fst-italic mb-1'}
+                    style={{ fontFamily: xpFont, fontSize: 10, color: '#938c76', fontStyle: 'italic', marginBottom: 3 }}
                 >
                     {hint}
                 </div>
@@ -1373,19 +1295,15 @@ export function FieldLabel({ children, hint, title, classic, right }: { children
  * Not for status callouts (a "late" badge, a scanner error): those carry icons and
  * their own reds. This is specifically "what you just submitted was rejected".
  */
-export function FormError({ children, classic, style }: {
+export function FormError({ children, style }: {
     children?: React.ReactNode;
-    classic: boolean;
     style?: React.CSSProperties;
 }) {
     if (!children) return null;
     return (
         <div
             role="alert"
-            className={classic ? '' : 'alert alert-danger py-2 small'}
-            style={classic
-                ? { background: '#f5e8e8', border: '1px solid #8e0000', color: '#8e0000', padding: '4px 8px', fontSize: 11, marginBottom: 10, fontFamily: xpFont, ...style }
-                : { marginBottom: 10, ...style }}
+            style={{ background: '#f5e8e8', border: '1px solid #8e0000', color: '#8e0000', padding: '4px 8px', fontSize: 11, marginBottom: 10, fontFamily: xpFont, ...style }}
         >
             {children}
         </div>
@@ -1447,7 +1365,7 @@ const skelWidth = (row: number, col: number) => SKEL_WIDTHS[(row * 3 + col * 5) 
  * the table's own columns — drop it straight into <tbody> in place of the
  * empty-state row.
  *
- * Pass the view's OWN cell style as `tdStyle` (its `tdBase`, `lvTd(classic)`,
+ * Pass the view's OWN cell style as `tdStyle` (its `tdBase`, `lvTd()`,
  * …) rather than letting this re-derive one: padding, borders and font size
  * then match the real rows by construction, not by a copied guess that drifts
  * when the view is restyled.
@@ -1457,12 +1375,11 @@ const skelWidth = (row: number, col: number) => SKEL_WIDTHS[(row * 3 + col * 5) 
  * anyone adds a column — and a skeleton one column short leaves a blank strip
  * where the last column should be.
  */
-export function TableSkeleton({ rows = 6, cols, classic = false, tdStyle, rowHeight, fillHeight }: {
+export function TableSkeleton({ rows = 6, cols, tdStyle, rowHeight, fillHeight }: {
     /** Row count when `fillHeight` is unknown. */
     rows?: number;
     /** Column count — measure it with `useTableSkeletonMetrics`, don't count by hand. */
     cols: number;
-    classic?: boolean;
     /** The view's real cell style. */
     tdStyle?: React.CSSProperties;
     /** Measured height of a real row, in px. */
@@ -1471,16 +1388,16 @@ export function TableSkeleton({ rows = 6, cols, classic = false, tdStyle, rowHei
     fillHeight?: number;
 }) {
     const base: React.CSSProperties = tdStyle ?? {
-        padding: classic ? '4px 6px' : '8px 10px',
-        borderBottom: classic ? '1px solid #c0bdb5' : '1px solid #e6eaf1',
-        fontSize: classic ? 11 : 13,
+        padding: '4px 6px',
+        borderBottom: '1px solid #c0bdb5',
+        fontSize: 11,
     };
     // Falls back to a typical row before any measurement exists (first-ever view
     // of a table), so even that load is close rather than text-height thin.
-    const h = rowHeight ?? (typeof base.height === 'number' ? base.height : (classic ? 26 : 38));
+    const h = rowHeight ?? (typeof base.height === 'number' ? base.height : (26));
     // Bar tracks the row's text size, so a dense classic table doesn't get
     // modern-sized bars (and vice versa).
-    const fontPx = parseFloat(String(base.fontSize ?? (classic ? 11 : 13))) || (classic ? 11 : 13);
+    const fontPx = parseFloat(String(base.fontSize ?? (11))) || (11);
     const barHeight = Math.max(8, Math.round(fontPx * 0.8));
     // Fill the visible body rather than stopping mid-panel: a fixed row count
     // leaves dead space under the skeleton on a tall screen, which reads as "the
@@ -1492,7 +1409,7 @@ export function TableSkeleton({ rows = 6, cols, classic = false, tdStyle, rowHei
     return (
         <>
             {Array.from({ length: rowCount }, (_, r) => (
-                <tr key={`skel-${r}`} style={{ background: classic ? (r % 2 === 0 ? '#ffffff' : '#f5f3ee') : undefined }}>
+                <tr key={`skel-${r}`} style={{ background: r % 2 === 0 ? '#ffffff' : '#f5f3ee'}}>
                     {Array.from({ length: cols }, (_, c) => (
                         <td key={c} style={{ ...base, height: h, boxSizing: 'border-box', verticalAlign: 'middle' }}>
                             <SkeletonBar width={skelWidth(r, c)} height={barHeight} />
@@ -1525,14 +1442,13 @@ export function TableSkeleton({ rows = 6, cols, classic = false, tdStyle, rowHei
  * the real count (unknown while loading).
  */
 export function CardGridSkeleton({
-    count = 8, minWidth = 250, gap = 12, classic = false,
+    count = 8, minWidth = 250, gap = 12,
     headerStrip = true, bodyLines = 3, bar = true, bodyHeight,
 }: {
     count?: number;
     /** Must match the real grid's minmax() floor. */
     minWidth?: number;
     gap?: number;
-    classic?: boolean;
     /** Draw the coloured title strip cards carry across their top. */
     headerStrip?: boolean;
     bodyLines?: number;
@@ -1546,35 +1462,33 @@ export function CardGridSkeleton({
             {Array.from({ length: count }, (_, i) => (
                 <div
                     key={i}
-                    style={classic
-                        ? { border: '2px solid', borderColor: '#ffffff #808080 #808080 #ffffff', background: '#ece9d8' }
-                        : { border: '1px solid #e2e8f0', borderRadius: 6, background: '#fff', overflow: 'hidden' }}
+                    style={{ border: '2px solid', borderColor: '#ffffff #808080 #808080 #ffffff', background: '#ece9d8' }}
                 >
                     {headerStrip && (
                         <div
                             style={{
                                 display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 6,
-                                padding: classic ? '4px 7px' : '8px 12px',
-                                background: classic ? '#a6a6a6' : '#f1f5f9',
-                                borderBottom: `1px solid ${classic ? '#00000033' : '#e2e8f0'}`,
+                                padding: '4px 7px',
+                                background: '#a6a6a6',
+                                borderBottom: '1px solid #00000033',
                             }}
                         >
-                            <SkeletonBar width={skelWidth(i, 0)} height={classic ? 9 : 11} />
-                            <SkeletonBar width={44} height={classic ? 9 : 11} />
+                            <SkeletonBar width={skelWidth(i, 0)} height={9} />
+                            <SkeletonBar width={44} height={9} />
                         </div>
                     )}
                     <div
                         style={{
-                            padding: classic ? '7px 8px' : '12px',
+                            padding: '7px 8px',
                             background: '#fff',
-                            display: 'flex', flexDirection: 'column', gap: classic ? 6 : 8,
+                            display: 'flex', flexDirection: 'column', gap: 6,
                             minHeight: bodyHeight,
                         }}
                     >
                         {Array.from({ length: bodyLines }, (_, l) => (
-                            <SkeletonBar key={l} width={skelWidth(i, l + 1)} height={classic ? 8 : 10} />
+                            <SkeletonBar key={l} width={skelWidth(i, l + 1)} height={8} />
                         ))}
-                        {bar && <SkeletonBar width="100%" height={classic ? 10 : 12} />}
+                        {bar && <SkeletonBar width="100%" height={10} />}
                     </div>
                 </div>
             ))}
@@ -1592,16 +1506,15 @@ export function CardGridSkeleton({
  * render, and bump it for any leading spacer/expander column.
  */
 export function TableBlockSkeleton({
-    cols = 6, rows = 10, classic = false, header = true, rowHeight,
+    cols = 6, rows = 10, header = true, rowHeight,
 }: {
     cols?: number;
     rows?: number;
-    classic?: boolean;
     header?: boolean;
     rowHeight?: number;
 }) {
-    const h = rowHeight ?? (classic ? 22 : 38);
-    const pad = classic ? '4px 6px' : '8px 10px';
+    const h = rowHeight ?? (22);
+    const pad = '4px 6px';
     const cellWidths = ['62%', '78%', '45%', '70%', '52%', '84%', '58%', '40%'];
 
     return (
@@ -1610,13 +1523,13 @@ export function TableBlockSkeleton({
                 <div
                     style={{
                         display: 'flex', gap: 0,
-                        background: classic ? '#ece9d8' : '#f8fafc',
-                        borderBottom: `1px solid ${classic ? '#b0a898' : '#e2e8f0'}`,
+                        background: '#ece9d8',
+                        borderBottom: '1px solid #b0a898',
                     }}
                 >
                     {Array.from({ length: cols }, (_, c) => (
                         <div key={c} style={{ flex: 1, padding: pad, minWidth: 0 }}>
-                            <SkeletonBar width={cellWidths[(c * 3) % cellWidths.length]} height={classic ? 8 : 10} />
+                            <SkeletonBar width={cellWidths[(c * 3) % cellWidths.length]} height={8} />
                         </div>
                     ))}
                 </div>
@@ -1627,13 +1540,13 @@ export function TableBlockSkeleton({
                     style={{
                         display: 'flex',
                         height: h, alignItems: 'center',
-                        background: classic ? (r % 2 === 0 ? '#ffffff' : '#f5f3ee') : '#fff',
-                        borderBottom: `1px solid ${classic ? '#e3e1dc' : '#eef2f7'}`,
+                        background: r % 2 === 0 ? '#ffffff' : '#f5f3ee',
+                        borderBottom: '1px solid #e3e1dc',
                     }}
                 >
                     {Array.from({ length: cols }, (_, c) => (
                         <div key={c} style={{ flex: 1, padding: pad, minWidth: 0 }}>
-                            <SkeletonBar width={skelWidth(r, c)} height={classic ? 8 : 10} />
+                            <SkeletonBar width={skelWidth(r, c)} height={8} />
                         </div>
                     ))}
                 </div>
@@ -1648,35 +1561,34 @@ export function TableBlockSkeleton({
  * fields rather than rows or cards.
  */
 export function PanelSkeleton({
-    sections = 2, rows = 4, classic = false, caption = true,
+    sections = 2, rows = 4, caption = true,
 }: {
     sections?: number;
     /** Label/value rows per section. */
     rows?: number;
-    classic?: boolean;
     caption?: boolean;
 }) {
     return (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: classic ? 12 : 18, padding: classic ? 8 : 12 }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 12, padding: 8}}>
             {Array.from({ length: sections }, (_, s) => (
                 <div key={s}>
                     {caption && (
                         <div
                             style={{
-                                padding: classic ? '3px 6px' : '0 0 8px',
-                                background: classic ? '#ece9d8' : undefined,
-                                borderBottom: `1px solid ${classic ? '#b0a898' : '#e2e8f0'}`,
-                                marginBottom: classic ? 8 : 10,
+                                padding: '3px 6px',
+                                background: '#ece9d8',
+                                borderBottom: '1px solid #b0a898',
+                                marginBottom: 8,
                             }}
                         >
-                            <SkeletonBar width={s % 2 ? 120 : 150} height={classic ? 9 : 11} />
+                            <SkeletonBar width={s % 2 ? 120 : 150} height={9} />
                         </div>
                     )}
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: classic ? 7 : 10 }}>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 7}}>
                         {Array.from({ length: rows }, (_, r) => (
                             <div key={r} style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
-                                <SkeletonBar width={classic ? 92 : 120} height={classic ? 8 : 10} />
-                                <SkeletonBar width={skelWidth(s + r, r)} height={classic ? 8 : 10} />
+                                <SkeletonBar width={92} height={8} />
+                                <SkeletonBar width={skelWidth(s + r, r)} height={8} />
                             </div>
                         ))}
                     </div>
@@ -1735,7 +1647,7 @@ function scrollParentOf(el: HTMLElement): HTMLElement | null {
  *   …
  *   <tbody ref={bodyRef}>
  *       {rows.length === 0 && (loading
- *           ? <TableSkeleton cols={skel.cols ?? 12} classic={classic} tdStyle={tdBase} rowHeight={skel.rowHeight} />
+ *           ? <TableSkeleton cols={skel.cols ?? 12} tdStyle={tdBase} rowHeight={skel.rowHeight} />
  *           : <tr>…</tr>)}
  *
  * `key` must be stable per table, and distinct between two tables whose rows
@@ -1973,24 +1885,17 @@ export function useFloatingMenu(menuWidth = 175) {
 }
 
 /** "⋯" trigger button — square icon button in classic, link-style in modern. Always tagged .xp-menu-trigger so useFloatingMenu's outside-click check sees it. */
-export function MenuTriggerButton({ classic, onClick, title = 'More actions' }: { classic: boolean; onClick: (e: React.MouseEvent) => void; title?: string }) {
-    if (classic) {
-        return (
-            <Tooltip content={title} placement="side"><button
-                type="button"
-                className={`xp-menu-trigger ${XP_BTN}`}
-                onClick={onClick}
-                style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 20, height: 20, background: 'none', border: '1px solid transparent', borderRadius: BUTTON_RADIUS, cursor: 'pointer', color: '#555', fontSize: '12px' }}
-                onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.borderColor = '#7f9db9'; (e.currentTarget as HTMLButtonElement).style.background = '#e8f0f8'; }}
-                onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.borderColor = 'transparent'; (e.currentTarget as HTMLButtonElement).style.background = 'none'; }}
-            >
-                <i className="bi bi-three-dots"></i>
-            </button></Tooltip>
-        );
-    }
+export function MenuTriggerButton({ onClick, title = 'More actions' }: { onClick: (e: React.MouseEvent) => void; title?: string }) {
     return (
-        <Tooltip content={title} placement="side"><button type="button" className="btn btn-sm btn-link text-muted p-0 d-inline-flex align-items-center justify-content-center xp-menu-trigger" style={{ width: 26, height: 26 }} onClick={onClick}>
-            <i className="bi bi-three-dots fs-6"></i>
+        <Tooltip content={title} placement="side"><button
+            type="button"
+            className={`xp-menu-trigger ${XP_BTN}`}
+            onClick={onClick}
+            style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 20, height: 20, background: 'none', border: '1px solid transparent', borderRadius: BUTTON_RADIUS, cursor: 'pointer', color: '#555', fontSize: '12px' }}
+            onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.borderColor = '#7f9db9'; (e.currentTarget as HTMLButtonElement).style.background = '#e8f0f8'; }}
+            onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.borderColor = 'transparent'; (e.currentTarget as HTMLButtonElement).style.background = 'none'; }}
+        >
+            <i className="bi bi-three-dots"></i>
         </button></Tooltip>
     );
 }
@@ -2020,9 +1925,8 @@ const XP_ACTION_MODERN: Record<XPActionTone, string> = {
 };
 
 export function XPActionButton({
-    classic, tone = 'neutral', icon, label, title, onClick, disabled = false, className,
+    tone = 'neutral', icon, label, title, onClick, disabled = false, className,
 }: {
-    classic: boolean;
     tone?: XPActionTone;
     icon?: string;               // bootstrap-icon class, e.g. 'bi-box-seam'
     label?: React.ReactNode;     // optional text; icon-only when omitted
@@ -2041,32 +1945,19 @@ export function XPActionButton({
     const tip = (btn: React.ReactElement) => title
         ? <Tooltip content={title} placement={label ? 'bottom' : 'side'}>{btn}</Tooltip>
         : btn;
-    if (classic) {
-        const t = XP_ACTION_TONES[tone];
-        return tip(
-            <button
-                type="button"
-                onClick={onClick}
-                disabled={disabled}
-                className={[XP_BTN, className].filter(Boolean).join(' ')}
-                style={{
-                    fontFamily: xpFont, fontSize: 11, lineHeight: 1, padding: '2px 4px',
-                    cursor: disabled ? 'default' : 'pointer', opacity: disabled ? 0.5 : 1,
-                    background: t.bg, border: `1px solid ${t.border}`, color: t.fg,
-                    display: 'inline-flex', alignItems: 'center', gap: 4, borderRadius: BUTTON_RADIUS,
-                }}
-            >
-                {iconEl}{label}
-            </button>
-        );
-    }
+    const t = XP_ACTION_TONES[tone];
     return tip(
         <button
             type="button"
-            className={`btn ${XP_ACTION_MODERN[tone]} d-inline-flex align-items-center py-0 px-1`}
-            style={{ fontSize: 11, gap: 4 }}
             onClick={onClick}
             disabled={disabled}
+            className={[XP_BTN, className].filter(Boolean).join(' ')}
+            style={{
+                fontFamily: xpFont, fontSize: 11, lineHeight: 1, padding: '2px 4px',
+                cursor: disabled ? 'default' : 'pointer', opacity: disabled ? 0.5 : 1,
+                background: t.bg, border: `1px solid ${t.border}`, color: t.fg,
+                display: 'inline-flex', alignItems: 'center', gap: 4, borderRadius: BUTTON_RADIUS,
+            }}
         >
             {iconEl}{label}
         </button>
@@ -2138,12 +2029,12 @@ const RAIL_W = { classic: 4, modern: 3 };
 const RULE_W = 2;
 
 /** The rail + edge rules as a paint-only frame. Exported for the two views whose panel can't be a component (absolutely positioned, or a two-pane workspace keeping its own grounds) — they apply this to the `<td>` and must stay in sync with the component. `railColor` overrides the selection blue where the rail carries meaning (e.g. health on Booking Stock). */
-export function expandedRowFrame(classic: boolean, railColor?: string): React.CSSProperties {
-    const rail = classic ? RAIL_W.classic : RAIL_W.modern;
-    const rule = classic ? '#808080' : '#adb5bd';
+export function expandedRowFrame(railColor?: string): React.CSSProperties {
+    const rail = RAIL_W.classic;
+    const rule = '#808080';
     return {
         boxShadow: [
-            `inset ${rail}px 0 0 0 ${railColor || (classic ? '#316ac5' : '#2f6feb')}`,
+            `inset ${rail}px 0 0 0 ${railColor || ('#316ac5')}`,
             `inset 0 ${RULE_W}px 0 0 ${rule}`,
             `inset 0 -${RULE_W}px 0 0 ${rule}`,
         ].join(', '),
@@ -2160,7 +2051,7 @@ export function expandedRowFrame(classic: boolean, railColor?: string): React.CS
 //   highlighted transient attention only — scroll target, search hit. Amber.
 // Blue is the expand convention app-wide (matches the ExpandedRowPanel rail);
 // amber never means "open". Every list that expands a row must paint
-// rowStateBg('expanded', classic) and nothing hand-rolled.
+// rowStateBg('expanded') and nothing hand-rolled.
 export type RowState = 'expanded' | 'selected' | 'highlighted';
 
 const ROW_STATE_BG: Record<RowState, { classic: string; modern: string }> = {
@@ -2169,15 +2060,15 @@ const ROW_STATE_BG: Record<RowState, { classic: string; modern: string }> = {
     highlighted: { classic: '#fff8c4', modern: '#fef9c3' },
 };
 
-export const rowStateBg = (state: RowState, classic: boolean): string =>
-    classic ? ROW_STATE_BG[state].classic : ROW_STATE_BG[state].modern;
+export const rowStateBg = (state: RowState): string =>
+    ROW_STATE_BG[state].classic;
 
-export function ExpandedRowPanel({ classic, children, style }: { classic: boolean; children: React.ReactNode; style?: React.CSSProperties }) {
+export function ExpandedRowPanel({ children, style }: { children: React.ReactNode; style?: React.CSSProperties }) {
     return (
         <div style={{
-            ...expandedRowFrame(classic),
+            ...expandedRowFrame(),
             background: '#fff',
-            padding: classic ? 5 : 6,
+            padding: 5,
             ...style,
         }}>
             {children}
@@ -2186,10 +2077,10 @@ export function ExpandedRowPanel({ classic, children, style }: { classic: boolea
 }
 
 /** Padded, transparent content box inside an ExpandedRowPanel — the panel already supplies the ground, so this adds no second background or frame. Pass `style` to override padding/border for layouts that need their own (e.g. a fixed-height two-pane body). */
-export function ExpandedRowPanelBody({ classic, children, style }: { classic: boolean; children: React.ReactNode; style?: React.CSSProperties }) {
+export function ExpandedRowPanelBody({ children, style }: { children: React.ReactNode; style?: React.CSSProperties }) {
     return (
         <div style={{
-            padding: classic ? '4px 8px' : '6px 12px',
+            padding: '4px 8px',
             ...style,
         }}>
             {children}

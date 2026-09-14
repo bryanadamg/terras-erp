@@ -15,6 +15,7 @@ import { routeTitle, PREFETCH_ROUTES, ROUTE_PERMISSIONS } from './navConfig';
 import { useDocumentTitle } from '../../hooks/useDocumentTitle';
 import AccessDenied from './AccessDenied';
 import LiveFeedIndicator from './LiveFeedIndicator';
+import LogoutButton from '@bryanadamg/terras-ui/components/LogoutButton';
 
 export default function MainLayout({ children }: { children: React.ReactNode }) {
     const { currentUser, logout, loading, hasPermission, hasAnyPermission } = useUser();
@@ -125,7 +126,7 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
             />
 
             <div className="main-content flex-grow-1 overflow-y-auto overflow-x-hidden bg-light">
-                <div className={`app-header sticky-top bg-white border-bottom shadow-sm px-4 d-flex justify-content-between align-items-center no-print ${uiStyle === 'classic' ? 'classic-header' : ''}`}>
+                <div className="app-header sticky-top bg-white border-bottom shadow-sm px-4 d-flex justify-content-between align-items-center no-print classic-header">
                     <div className="d-flex align-items-center gap-3">
                         <button className="btn btn-link d-md-none p-0 text-dark" onClick={() => setIsMobileSidebarOpen(true)}><i className="bi bi-list fs-3"></i></button>
                         <h5 className="mb-0 fw-bold text-dark d-none d-md-block text-uppercase letter-spacing-1">{pageTitle}</h5>
@@ -133,11 +134,11 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
                     
                     <div className="d-flex align-items-center gap-2 gap-md-3">
                         <LiveFeedIndicator />
-                        <button data-testid="scanner-btn" className={`btn btn-sm ${uiStyle === 'classic' ? 'btn-light' : 'btn-outline-secondary'}`} onClick={() => router.push('/scanner')} title="Scan QR Code"><i className="bi bi-qr-code-scan"></i></button>
+                        <button data-testid="scanner-btn" className="btn btn-sm btn-light" onClick={() => router.push('/scanner')} title="Scan QR Code"><i className="bi bi-qr-code-scan"></i></button>
                         <div className="d-flex align-items-center me-1">
                             <select 
                                 data-testid="language-select"
-                                className={`form-select form-select-sm py-0 ps-1 pe-3 ${uiStyle === 'classic' ? 'bg-transparent border-0' : 'rounded-pill border-0 bg-light'}`}
+                                className="form-select form-select-sm py-0 ps-1 pe-3 bg-transparent border-0"
                                 style={{height: '24px', fontSize: '11px', minWidth: '60px'}}
                                 value={language}
                                 onChange={(e) => setLanguage(e.target.value as any)}
@@ -147,10 +148,15 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
                             </select>
                         </div>
 
-                        <button data-testid="logout-btn" className={`btn btn-sm btn-outline-danger d-flex align-items-center gap-2`} onClick={logout} title="Terminate Session">
-                            <i className="bi bi-box-arrow-right"></i>
-                            <span className="small fw-bold d-none d-sm-inline">LOGOUT</span>
-                        </button>
+                        {/* terras-ui's own control: it carries the flat red face this
+                            header used to paint from globals.css, and defaults both
+                            `title` and `data-testid` so the three Terras apps can't
+                            word them differently. The icon is a slot and the label is
+                            children, so the narrow-header collapse stays a Bootstrap
+                            class here rather than moving into the package. */}
+                        <LogoutButton onClick={logout} icon={<i className="bi bi-box-arrow-right"></i>}>
+                            <span className="d-none d-sm-inline">LOGOUT</span>
+                        </LogoutButton>
                     </div>
                 </div>
 

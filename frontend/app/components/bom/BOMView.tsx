@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import dynamic from 'next/dynamic';
-import { useTheme } from '../../context/ThemeContext';
 import { useUser } from '../../context/UserContext';
 const BOMDesigner = dynamic(() => import('./BOMDesigner'), { ssr: false });
 const BOMPrintModal = dynamic(() => import('./BOMPrintModal'), { ssr: false });
@@ -60,8 +59,6 @@ export default function BOMView({
     // load are exactly as tall as the rows that replace them.
     const listBodyRef = useRef<HTMLTableSectionElement>(null);
     const skel = useTableSkeletonMetrics('boms', listBodyRef, (boms?.length ?? 0) > 0);
-    const { uiStyle: currentStyle } = useTheme();
-    const classic = currentStyle === 'classic';
     const { hasPermission, hasAnyPermission } = useUser();
     const canManage = hasAnyPermission('bom.create', 'bom.edit', 'bom.delete');
 
@@ -183,7 +180,7 @@ export default function BOMView({
                 const hex = getAttributeValueHex(valId) ?? colorHexFor(label);
                 return (
                     <VariantChip
-                        key={valId} kind={hex ? 'color' : 'material'} classic={classic}
+                        key={valId} kind={hex ? 'color' : 'material'}
                         size={compact ? 'xs' : 'sm'} swatch={hex} icon={null} title={label}
                     >{label}</VariantChip>
                 );
@@ -284,13 +281,13 @@ export default function BOMView({
                         <div style={{ display: 'flex', alignItems: 'center' }}>
                             {isExpandable ? (
                                 <i className={`bi bi-caret-${isExpanded ? 'down' : 'right'}-fill`}
-                                    style={{ cursor: 'pointer', fontSize: '0.7rem', width: '12px', marginRight: '4px', color: classic ? '#0058e6' : undefined, flexShrink: 0 }}
+                                    style={{ cursor: 'pointer', fontSize: '0.7rem', width: '12px', marginRight: '4px', color: '#0058e6', flexShrink: 0 }}
                                     onClick={() => toggleNode(nodeKey)} />
                             ) : (
                                 <span style={{ width: '12px', display: 'inline-block', marginRight: '4px', flexShrink: 0 }} />
                             )}
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '4px', paddingBottom: '2px', borderBottom: classic ? '1px solid #e0ddd4' : '1px solid #f0f0f0', width: '100%', overflow: 'hidden' }}>
-                                <CodeChip code={getItemCode(line.item_id, line.item_code)} classic={classic} tier={2} className="text-truncate me-1" />
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '4px', paddingBottom: '2px', borderBottom: '1px solid #e0ddd4', width: '100%', overflow: 'hidden' }}>
+                                <CodeChip code={getItemCode(line.item_id, line.item_code)} tier={2} className="text-truncate me-1" />
                                 <span className="text-truncate" style={{ color: '#000' }}>{getItemName(line.item_id, line.item_name)}</span>
                                 <div className="text-truncate flex-grow-1" style={{ fontSize: '0.7rem', color: '#555', fontStyle: 'italic' }}>
                                     {(line.attribute_value_ids || []).map(getAttributeValueName).join(', ')}
@@ -422,7 +419,7 @@ export default function BOMView({
                     two-pane div's opaque background paint straight over the shadow), so the
                     frame sits on this wrapper instead of the td. */}
                 <td colSpan={9} style={{ padding: 0 }}>
-                    <div style={{ ...expandedRowFrame(classic), padding: `2px 0 2px ${classic ? 4 : 3}px` }}>
+                    <div style={{ ...expandedRowFrame(), padding: '2px 0 2px 4px' }}>
                     <div style={{ display: 'flex', height: 420, background: '#ece9d8', fontFamily: xpFont, fontSize: 11 }}>
 
                         {/* LEFT: Tree */}
@@ -489,28 +486,28 @@ export default function BOMView({
                                     ) : (
                                     <>
                                     <div style={{ flex: 1, overflowY: 'auto' }}>
-                                        <table style={{ ...lvSubTable(classic), border: 'none' }}>
+                                        <table style={{ ...lvSubTable(), border: 'none' }}>
                                             <thead>
                                                 <tr>
-                                                    <th style={lvThBanded(classic)}>Item</th>
-                                                    <th style={{ ...lvThBanded(classic), textAlign: 'right' }}>Required</th>
-                                                    {beamBom && <th style={{ ...lvThBanded(classic), textAlign: 'right' }}>Ends</th>}
-                                                    <th style={lvThBanded(classic)}>Attributes</th>
+                                                    <th style={lvThBanded()}>Item</th>
+                                                    <th style={{ ...lvThBanded(), textAlign: 'right' }}>Required</th>
+                                                    {beamBom && <th style={{ ...lvThBanded(), textAlign: 'right' }}>Ends</th>}
+                                                    <th style={lvThBanded()}>Attributes</th>
                                                 </tr>
                                             </thead>
                                             <tbody>
                                                 {lines.map((line: any, i: number) => {
                                                     const isSubBOM = !!findSubBOM(line);
                                                     return (
-                                                        <tr key={line.id} style={lvSubRow(classic, i, { zebra: true })}>
-                                                            <td style={lvSubTd(classic)}>
-                                                                <CodeChip code={line.item_code} classic={classic} tone="accent" />
+                                                        <tr key={line.id} style={lvSubRow(i, { zebra: true })}>
+                                                            <td style={lvSubTd()}>
+                                                                <CodeChip code={line.item_code} tone="accent" />
                                                                 <span style={{ marginLeft: 5, color: '#000' }}>{line.item_name}</span>
                                                                 {isSubBOM && (
                                                                     <span style={{ borderRadius: CHIP_RADIUS, marginLeft: 5, background: '#e6eeff', border: '1px solid #0058e6', color: '#003080', fontSize: 9, padding: '0 3px', fontWeight: 'bold' }}>Sub</span>
                                                                 )}
                                                             </td>
-                                                            <td style={{ ...lvSubTd(classic), textAlign: 'right', whiteSpace: 'nowrap' }}>
+                                                            <td style={{ ...lvSubTd(), textAlign: 'right', whiteSpace: 'nowrap' }}>
                                                                 {(line.percentage || 0) > 0 ? (
                                                                     <span style={{ background: '#b46a00', color: '#fff', fontSize: 9, padding: '1px 5px', fontWeight: 'bold' }}>{line.percentage}%</span>
                                                                 ) : (line.qty || 0) > 0 ? (
@@ -521,13 +518,13 @@ export default function BOMView({
                                                                 )}
                                                             </td>
                                                             {beamBom && (
-                                                                <td style={{ ...lvSubTd(classic), textAlign: 'right', whiteSpace: 'nowrap' }}>
+                                                                <td style={{ ...lvSubTd(), textAlign: 'right', whiteSpace: 'nowrap' }}>
                                                                     {(Number(line.qty) || 0) > 0
                                                                         ? <span style={{ borderRadius: CHIP_RADIUS, background: '#e6f4ea', border: '1px solid #4caf50', color: '#1a6e2e', fontWeight: 'bold', fontSize: 10, padding: '0 5px' }}>{Math.round(Number(line.qty))} ends</span>
                                                                         : <span style={{ color: '#888' }}>—</span>}
                                                                 </td>
                                                             )}
-                                                            <td style={lvSubTd(classic)}>
+                                                            <td style={lvSubTd()}>
                                                                 {(line.attribute_value_ids || []).length > 0 ? renderVariantChips(line.attribute_value_ids) : <span style={{ color: '#888' }}>—</span>}
                                                             </td>
                                                         </tr>
@@ -536,7 +533,7 @@ export default function BOMView({
                                             </tbody>
                                         </table>
                                     </div>
-                                    <div style={{ ...lvSubTd(classic), flexShrink: 0, background: 'linear-gradient(to bottom, #f5f4ef, #e0dfd8)', borderTop: '1px solid #808080', fontSize: 10, color: '#444', textAlign: 'right' }}>
+                                    <div style={{ ...lvSubTd(), flexShrink: 0, background: 'linear-gradient(to bottom, #f5f4ef, #e0dfd8)', borderTop: '1px solid #808080', fontSize: 10, color: '#444', textAlign: 'right' }}>
                                         {lines.length} component{lines.length !== 1 ? 's' : ''}
                                         {hasPct && (
                                             <> · Total %: <span style={{ fontWeight: 'bold', color: Math.abs(totalPct - 100) < 0.01 ? '#004400' : '#880000' }}>{totalPct.toFixed(1)}%</span></>
@@ -576,7 +573,6 @@ export default function BOMView({
                                     <div style={{ fontSize: 10, fontWeight: 'bold', color: '#000080', borderBottom: '1px solid #c0bdb5', paddingBottom: 3, marginBottom: 6, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                                         <span><i className="bi bi-clipboard" style={{ marginRight: 4 }} />BOM Details</span>
                                         <XPActionButton
-                                            classic={classic}
                                             icon="bi-printer"
                                             title="Print BOM"
                                             onClick={() => setPrintBOM(displayBOM)}
@@ -587,12 +583,12 @@ export default function BOMView({
                                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '4px 8px', marginBottom: 6 }}>
                                         <div style={{ gridColumn: '1/-1', minWidth: 0 }}>
                                             <div style={lbl}>BOM Code</div>
-                                            <CodeChip code={displayBOM.code} classic={classic} tone="accent" style={{ display: 'block', minWidth: 0, maxWidth: '100%', overflow: 'hidden', textOverflow: 'ellipsis' }} />
+                                            <CodeChip code={displayBOM.code} tone="accent" style={{ display: 'block', minWidth: 0, maxWidth: '100%', overflow: 'hidden', textOverflow: 'ellipsis' }} />
                                         </div>
                                         <div style={{ gridColumn: '1/-1' }}>
                                             <div style={lbl}>Item</div>
                                             <div style={{ ...val, fontSize: 11 }}>{displayBOM.item_name || displayBOM.item_code}</div>
-                                            <CodeChip code={displayBOM.item_code} classic={classic} tier={2} />
+                                            <CodeChip code={displayBOM.item_code} tier={2} />
                                         </div>
                                         {(displayBOM.attribute_value_ids || []).length > 0 && (
                                             <div style={{ gridColumn: '1/-1' }}>
@@ -713,7 +709,7 @@ export default function BOMView({
                                                 </thead>
                                                 <tbody>
                                                     {(displayBOM.sizes || []).map((s: any, i: number) => (
-                                                        <tr key={i} style={{ background: lvZebra(true, i) }}>
+                                                        <tr key={i} style={{ background: lvZebra(i) }}>
                                                             <td style={{ padding: '1px 4px 1px 0', fontWeight: 'bold', fontSize: 10 }}>{s.size_name || s.label || `Row ${i + 1}`}</td>
                                                             <td style={{ padding: '1px 4px', textAlign: 'right', fontSize: 10, background: '#f8f7f2', border: '1px solid #e0ddd4' }}>{s.target_measurement != null ? s.target_measurement : '—'}</td>
                                                             <td style={{ padding: '1px 4px', textAlign: 'right', fontSize: 10, background: '#f8f7f2', border: '1px solid #e0ddd4', borderLeft: 'none' }}>{s.measurement_min != null ? s.measurement_min : '—'}</td>
@@ -794,139 +790,101 @@ export default function BOMView({
 
             {/* BOM List */}
             <div className="col-12">
-                <div
-                    style={classic ? viewShellStyle(true) : undefined}
-                    className={classic ? '' : 'card h-100 shadow-sm border-0 shell-window'}
-                >
+                <div style={viewShellStyle()}>
                     {/* Title bar */}
-                    {classic ? (
-                        <div style={xpTitleBar({ justifyContent: 'flex-start' })}>
-                            <span><i className="bi bi-diagram-3-fill" style={{ marginRight: '6px' }} />{t('active_boms')}</span>
-                        </div>
-                    ) : (
-                        <div className="card-header bg-white">
-                            <h5 className="card-title mb-0"><i className="bi bi-diagram-3-fill me-2" />{t('active_boms')}</h5>
-                        </div>
-                    )}
+                    <div style={xpTitleBar({ justifyContent: 'flex-start' })}>
+                        <span><i className="bi bi-diagram-3-fill" style={{ marginRight: '6px' }} />{t('active_boms')}</span>
+                    </div>
 
                     {/* Toolbar: search + filter + selection + create */}
-                    {classic ? (
-                        <div style={xpToolbar()}>
-                            <SearchField classic value={bomSearch} onChange={v => onBomSearch?.(v)} placeholder="Search BOMs..." width={200} />
-                            <FilterChipBar
-                                classic
-                                options={BOM_SCOPE_FILTERS}
-                                value={showRootOnly ? 'root' : 'all'}
-                                onChange={v => setShowRootOnly?.(v === 'root')}
-                            />
-                            {canManage && sel.count > 0 && (
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                                    <span style={{ fontFamily: xpFont, fontSize: '11px', color: '#333' }}>{sel.count} selected</span>
-                                    <button className={XP_BTN} style={{ fontFamily: xpFont, fontSize: '11px', padding: '2px 10px', cursor: 'pointer', background: 'linear-gradient(to bottom, #fff, #d4d0c8)', border: '1px solid', borderColor: '#dfdfdf #808080 #808080 #dfdfdf', color: '#000', borderRadius: BUTTON_RADIUS }} onClick={handleBulkDelete}>
-                                        <i className="bi bi-trash" style={{ marginRight: '4px' }} />Delete Selected
-                                    </button>
-                                    <button style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#003ea6', textDecoration: 'underline', fontFamily: xpFont, fontSize: '11px', padding: 0 }} onClick={sel.clear}>Clear</button>
-                                </div>
-                            )}
-                            {canManage && (
-                                <ToolbarButton classic tone="create" icon="bi-plus-lg" testId="create-bom-btn" style={{ marginLeft: 'auto' }} onClick={() => setIsDesignerOpen(true)}>
-                                    {t('create_recipe')}
-                                </ToolbarButton>
-                            )}
-                        </div>
-                    ) : (
-                        <div className="px-3 py-2 border-bottom d-flex align-items-center gap-2 flex-wrap bg-white">
-                            <SearchField classic={false} value={bomSearch} onChange={v => onBomSearch?.(v)} placeholder="Search BOMs..." width={220} />
-                            <FilterChipBar
-                                classic={false}
-                                options={BOM_SCOPE_FILTERS}
-                                value={showRootOnly ? 'root' : 'all'}
-                                onChange={v => setShowRootOnly?.(v === 'root')}
-                            />
-                            {canManage && sel.count > 0 && (
-                                <div className="d-flex align-items-center gap-2">
-                                    <span className="text-muted small">{sel.count} selected</span>
-                                    <button className="btn btn-sm btn-danger" onClick={handleBulkDelete}><i className="bi bi-trash me-1" />Delete Selected</button>
-                                    <button className="btn btn-sm btn-link text-secondary p-0" onClick={sel.clear}>Clear</button>
-                                </div>
-                            )}
-                            {canManage && (
-                                <ToolbarButton classic={false} tone="create" icon="bi-plus-lg" testId="create-bom-btn" style={{ marginLeft: 'auto' }} onClick={() => setIsDesignerOpen(true)}>
-                                    {t('create_recipe')}
-                                </ToolbarButton>
-                            )}
-                        </div>
-                    )}
+                    <div style={xpToolbar()}>
+                        <SearchField value={bomSearch} onChange={v => onBomSearch?.(v)} placeholder="Search BOMs..." width={200} />
+                        <FilterChipBar
+                            options={BOM_SCOPE_FILTERS}
+                            value={showRootOnly ? 'root' : 'all'}
+                            onChange={v => setShowRootOnly?.(v === 'root')}
+                        />
+                        {canManage && sel.count > 0 && (
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                <span style={{ fontFamily: xpFont, fontSize: '11px', color: '#333' }}>{sel.count} selected</span>
+                                <button className={XP_BTN} style={{ fontFamily: xpFont, fontSize: '11px', padding: '2px 10px', cursor: 'pointer', background: 'linear-gradient(to bottom, #fff, #d4d0c8)', border: '1px solid', borderColor: '#dfdfdf #808080 #808080 #dfdfdf', color: '#000', borderRadius: BUTTON_RADIUS }} onClick={handleBulkDelete}>
+                                    <i className="bi bi-trash" style={{ marginRight: '4px' }} />Delete Selected
+                                </button>
+                                <button style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#003ea6', textDecoration: 'underline', fontFamily: xpFont, fontSize: '11px', padding: 0 }} onClick={sel.clear}>Clear</button>
+                            </div>
+                        )}
+                        {canManage && (
+                            <ToolbarButton tone="create" icon="bi-plus-lg" testId="create-bom-btn" style={{ marginLeft: 'auto' }} onClick={() => setIsDesignerOpen(true)}>
+                                {t('create_recipe')}
+                            </ToolbarButton>
+                        )}
+                    </div>
 
                     {/* Table body — flex:1 fills space between toolbar and pager */}
                     {/* `overflow: auto` here, and no `.table-responsive` inside: a nested overflow
                         wrapper is its own scroll container, so a sticky header in it pins to a box
                         that never scrolls vertically. */}
-                    <div className={classic ? '' : 'card-body p-0'} style={{ flex: 1, overflow: 'auto', minHeight: 0 }}>
+                    <div style={{ flex: 1, overflow: 'auto', minHeight: 0 }}>
                         <div>
                             <table
-                                className={classic ? '' : 'table table-hover align-middle mb-0'}
-                                style={classic ? { width: '100%', borderCollapse: 'collapse', fontFamily: xpFont, fontSize: '11px', background: '#fff' } : undefined}
+                                style={{ width: '100%', borderCollapse: 'collapse', fontFamily: xpFont, fontSize: '11px', background: '#fff' }}
                             >
                                 <thead style={LV_STICKY_THEAD}>
-                                    <tr style={classic ? { ...lvThead(true), fontSize: '10px', fontWeight: 'bold', color: '#000', letterSpacing: '0.2px' } : undefined} className={classic ? '' : 'table-light'}>
-                                        <th style={classic ? { width: LV_CHECK_COL_W, padding: '4px 6px', borderRight: '1px solid #b0aaa0' } : { width: LV_CHECK_COL_W }} className={classic ? '' : 'ps-3'}>
-                                            <SelectAllCheckbox classic={classic} allSelected={sel.allPageSelected} someSelected={sel.someSelected} onChange={sel.togglePage} />
+                                    <tr style={{ ...lvThead(), fontSize: '10px', fontWeight: 'bold', color: '#000', letterSpacing: '0.2px' }}>
+                                        <th style={{ width: LV_CHECK_COL_W, padding: '4px 6px', borderRight: '1px solid #b0aaa0' }}>
+                                            <SelectAllCheckbox allSelected={sel.allPageSelected} someSelected={sel.someSelected} onChange={sel.togglePage} />
                                         </th>
-                                        <th style={classic ? { width: LV_EXPANDER_COL_W, padding: '4px 6px', borderRight: '1px solid #b0aaa0' } : { width: LV_EXPANDER_COL_W }} />
-                                        <th style={classic ? { padding: '4px 6px', borderRight: '1px solid #b0aaa0' } : undefined} className={classic ? '' : 'ps-2'}>BOM Code</th>
-                                        <th style={classic ? { padding: '4px 6px', borderRight: '1px solid #b0aaa0' } : undefined}>{t('finished_good')}</th>
-                                        <th style={classic ? { padding: '4px 6px', borderRight: '1px solid #b0aaa0' } : undefined}>Code</th>
-                                        <th style={classic ? { padding: '4px 6px', borderRight: '1px solid #b0aaa0' } : undefined}>Variant</th>
-                                        <th style={classic ? { padding: '4px 6px', borderRight: '1px solid #b0aaa0' } : undefined}>Machine</th>
-                                        <th style={classic ? { padding: '4px 6px', borderRight: '1px solid #b0aaa0' } : undefined}>Summary</th>
-                                        <th style={classic ? { width: '50px', padding: '4px 6px' } : { width: '50px' }} />
+                                        <th style={{ width: LV_EXPANDER_COL_W, padding: '4px 6px', borderRight: '1px solid #b0aaa0' }} />
+                                        <th style={{ padding: '4px 6px', borderRight: '1px solid #b0aaa0' }}>BOM Code</th>
+                                        <th style={{ padding: '4px 6px', borderRight: '1px solid #b0aaa0' }}>{t('finished_good')}</th>
+                                        <th style={{ padding: '4px 6px', borderRight: '1px solid #b0aaa0' }}>Code</th>
+                                        <th style={{ padding: '4px 6px', borderRight: '1px solid #b0aaa0' }}>Variant</th>
+                                        <th style={{ padding: '4px 6px', borderRight: '1px solid #b0aaa0' }}>Machine</th>
+                                        <th style={{ padding: '4px 6px', borderRight: '1px solid #b0aaa0' }}>Summary</th>
+                                        <th style={{ width: '50px', padding: '4px 6px' }} />
                                     </tr>
                                 </thead>
 
                                 <tbody ref={listBodyRef}>
                                     {boms.length === 0 && bomLoading ? (
-                                        <TableSkeleton rows={8} cols={skel.cols ?? 9} classic={classic} rowHeight={skel.rowHeight} fillHeight={skel.fillHeight} />
+                                        <TableSkeleton rows={8} cols={skel.cols ?? 9} rowHeight={skel.rowHeight} fillHeight={skel.fillHeight} />
                                     ) : boms.length === 0 ? (
-                                        <TableEmpty colSpan={9} classic={classic}
+                                        <TableEmpty colSpan={9}
                                             message={bomSearch.trim()
                                                 ? 'No BOMs match your search.'
                                                 : 'No BOMs yet. Click Create Recipe to get started.'} />
                                     ) : (
                                         boms.map((bom: any, index: number) => {
                                             const isExpanded = expandedBOMRows[bom.id];
-                                            const rowBg = sel.isSelected(bom) ? rowStateBg('selected', classic)
-                                                : isExpanded ? rowStateBg('expanded', classic)
-                                                : classic ? lvZebra(true, index) : undefined;
+                                            const rowBg = sel.isSelected(bom) ? rowStateBg('selected')
+                                                : isExpanded ? rowStateBg('expanded')
+                                                : lvZebra(index);
 
                                             return (
                                                 <>
                                                 <tr
                                                     key={bom.id}
-                                                    style={classic
-                                                        ? { background: rowBg, borderBottom: isExpanded ? 'none' : '1px solid #c0bdb5' }
-                                                        : { background: rowBg }}
+                                                    style={{ background: rowBg, borderBottom: isExpanded ? 'none' : '1px solid #c0bdb5' }}
                                                 >
-                                                    <td style={classic ? { padding: '7px 6px', borderRight: '1px solid #c0bdb5', verticalAlign: 'middle' } : undefined} className={classic ? '' : 'ps-3'}>
-                                                        <RowCheckbox classic={classic} checked={sel.isSelected(bom)} onChange={() => sel.toggle(bom)} label={`BOM ${bom.code}`} />
+                                                    <td style={{ padding: '7px 6px', borderRight: '1px solid #c0bdb5', verticalAlign: 'middle' }}>
+                                                        <RowCheckbox checked={sel.isSelected(bom)} onChange={() => sel.toggle(bom)} label={`BOM ${bom.code}`} />
                                                     </td>
-                                                    <ExpanderCell classic={classic} expanded={!!isExpanded} onToggle={() => toggleBOMRow(bom.id, bom.item_id)} label="BOM details"
-                                                        tdStyle={classic ? { borderRight: '1px solid #c0bdb5' } : undefined} />
+                                                    <ExpanderCell expanded={!!isExpanded} onToggle={() => toggleBOMRow(bom.id, bom.item_id)} label="BOM details"
+                                                        tdStyle={{ borderRight: '1px solid #c0bdb5' }} />
                                                     {/* BOM Code — click to expand */}
                                                     <td
                                                         onClick={() => toggleBOMRow(bom.id, bom.item_id)}
-                                                        style={classic ? { padding: '7px 6px', borderRight: '1px solid #c0bdb5', verticalAlign: 'middle', cursor: 'pointer' } : { cursor: 'pointer' }}
-                                                        className={classic ? '' : 'ps-2'}
+                                                        style={{ padding: '7px 6px', borderRight: '1px solid #c0bdb5', verticalAlign: 'middle', cursor: 'pointer' }}
                                                         title="Click to expand BOM details"
                                                     >
                                                         <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                                                            <CodeChip code={bom.code} classic={classic} />
+                                                            <CodeChip code={bom.code} />
                                                         </div>
                                                     </td>
                                                     {/* Finished Good — item name */}
                                                     <td
                                                         onClick={() => toggleBOMRow(bom.id, bom.item_id)}
-                                                        style={classic ? { padding: '7px 8px', borderRight: '1px solid #c0bdb5', verticalAlign: 'middle', cursor: 'pointer' } : { cursor: 'pointer' }}
+                                                        style={{ padding: '7px 8px', borderRight: '1px solid #c0bdb5', verticalAlign: 'middle', cursor: 'pointer' }}
                                                     >
                                                         <span style={{ fontWeight: 'bold', color: '#000', fontSize: 11, fontFamily: xpFont }}>
                                                             {getItemName(bom.item_id, bom.item_name)}
@@ -935,30 +893,30 @@ export default function BOMView({
                                                     {/* Item code */}
                                                     <td
                                                         onClick={() => toggleBOMRow(bom.id, bom.item_id)}
-                                                        style={classic ? { padding: '7px 8px', borderRight: '1px solid #c0bdb5', verticalAlign: 'middle', cursor: 'pointer' } : { cursor: 'pointer' }}
+                                                        style={{ padding: '7px 8px', borderRight: '1px solid #c0bdb5', verticalAlign: 'middle', cursor: 'pointer' }}
                                                     >
                                                         {/* Reference to the item, not this row's identity — tier 2 so it
                                                             doesn't compete with the BOM code chip two columns over. */}
-                                                        <CodeChip code={getItemCode(bom.item_id, bom.item_code)} classic={classic} tier={2} />
+                                                        <CodeChip code={getItemCode(bom.item_id, bom.item_code)} tier={2} />
                                                     </td>
                                                     {/* Variant — color swatches + combo values */}
-                                                    <td style={classic ? { padding: '7px 8px', borderRight: '1px solid #c0bdb5', verticalAlign: 'middle' } : undefined}>
+                                                    <td style={{ padding: '7px 8px', borderRight: '1px solid #c0bdb5', verticalAlign: 'middle' }}>
                                                         {(bom.attribute_value_ids || []).length > 0 ? (
                                                             renderVariantChips(bom.attribute_value_ids)
                                                         ) : (
-                                                            <Dash classic={classic} />
+                                                            <Dash />
                                                         )}
                                                     </td>
                                                     {/* Machine — hue-coded by work-center type */}
-                                                    <td style={classic ? { padding: '7px 6px', borderRight: '1px solid #c0bdb5', verticalAlign: 'middle' } : undefined}>
+                                                    <td style={{ padding: '7px 6px', borderRight: '1px solid #c0bdb5', verticalAlign: 'middle' }}>
                                                         {bom.work_center_name ? (
                                                             <span style={{ ...workCenterChipStyle(bom.work_center_type, bom.work_center_name), borderWidth: 1, borderStyle: 'solid', fontSize: 9, padding: '1px 6px', whiteSpace: 'nowrap', fontFamily: xpFont, fontWeight: 'bold' }}>{bom.work_center_name}</span>
                                                         ) : (
-                                                            <Dash classic={classic} />
+                                                            <Dash />
                                                         )}
                                                     </td>
                                                     {/* Smart stats — glyph shows only when it carries signal */}
-                                                    <td style={classic ? { padding: '7px 8px', borderRight: '1px solid #c0bdb5', verticalAlign: 'middle' } : undefined} className={classic ? '' : 'align-middle'}>
+                                                    <td style={{ padding: '7px 8px', borderRight: '1px solid #c0bdb5', verticalAlign: 'middle' }}>
                                                         <div style={{ display: 'flex', alignItems: 'center', gap: 9, fontFamily: xpFont, fontSize: 10, color: '#555' }}>
                                                             <span title="Components (materials)" style={{ whiteSpace: 'nowrap', color: '#003080' }}>
                                                                 <i className="bi bi-gear-fill" style={{ marginRight: 2, fontSize: 9 }} />{bom.lines?.length ?? 0}
@@ -986,8 +944,8 @@ export default function BOMView({
                                                             <span title={bom.active ? 'Active' : 'Inactive'} style={{ display: 'inline-block', width: 8, height: 8, background: bom.active ? '#00aa00' : '#cc0000', border: `1px solid ${bom.active ? '#005500' : '#660000'}`, flexShrink: 0, marginLeft: 'auto' }} />
                                                         </div>
                                                     </td>
-                                                    <td style={classic ? { padding: '7px 6px', textAlign: 'right', verticalAlign: 'middle' } : undefined} className={classic ? '' : 'pe-4 text-end'}>
-                                                        {canManage && <MenuTriggerButton classic={classic} onClick={e => menuToggle(bom.id, e)} />}
+                                                    <td style={{ padding: '7px 6px', textAlign: 'right', verticalAlign: 'middle' }}>
+                                                        {canManage && <MenuTriggerButton onClick={e => menuToggle(bom.id, e)} />}
                                                     </td>
                                                 </tr>
                                                 {isExpanded && renderDetailPanel(bom)}

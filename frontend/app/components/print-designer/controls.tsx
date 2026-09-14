@@ -11,28 +11,23 @@ import { xpFont, CODE_FONT } from '../shared/xpTheme';
  * inspector to twice the scroll length. Both themes still read correctly.
  */
 
-const inputBase = (classic: boolean): React.CSSProperties => classic
-    ? {
-        fontFamily: xpFont, fontSize: 11, border: '1px solid #7f9db9',
-        boxShadow: 'inset 1px 1px 0 rgba(0,0,0,0.1)', padding: '1px 4px',
-        background: '#fff', color: '#000', height: 19, width: '100%',
-        boxSizing: 'border-box', outline: 'none', borderRadius: 0,
-    }
-    : {
-        fontSize: 12, border: '1px solid #ced4da', borderRadius: 4,
-        padding: '2px 6px', width: '100%', boxSizing: 'border-box', color: '#000',
-    };
+const inputBase = (): React.CSSProperties => ({
+    fontFamily: xpFont, fontSize: 11, border: '1px solid #7f9db9',
+    boxShadow: 'inset 1px 1px 0 rgba(0,0,0,0.1)', padding: '1px 4px',
+    background: '#fff', color: '#000', height: 19, width: '100%',
+    boxSizing: 'border-box', outline: 'none', borderRadius: 0,
+});
 
-export function Row({ label, classic, children, title }: {
-    label: string; classic: boolean; children: React.ReactNode; title?: string;
+export function Row({ label, children, title }: {
+    label: string; children: React.ReactNode; title?: string;
 }) {
     return (
         <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4 }} title={title}>
             <div style={{
                 width: 74, flexShrink: 0,
-                fontFamily: classic ? xpFont : undefined,
-                fontSize: classic ? 11 : 11.5,
-                color: classic ? '#2b2822' : '#495057',
+                fontFamily: xpFont,
+                fontSize: 11,
+                color: '#2b2822',
             }}>
                 {label}
             </div>
@@ -41,10 +36,9 @@ export function Row({ label, classic, children, title }: {
     );
 }
 
-export function TextField({ value, onChange, classic, placeholder, mono }: {
+export function TextField({ value, onChange, placeholder, mono }: {
     value: string | undefined;
     onChange: (v: string) => void;
-    classic: boolean;
     placeholder?: string;
     mono?: boolean;
 }) {
@@ -54,7 +48,7 @@ export function TextField({ value, onChange, classic, placeholder, mono }: {
             value={value ?? ''}
             placeholder={placeholder}
             onChange={e => onChange(e.target.value)}
-            style={{ ...inputBase(classic), ...(mono ? { fontFamily: CODE_FONT } : {}) }}
+            style={{ ...inputBase(), ...(mono ? { fontFamily: CODE_FONT } : {}) }}
         />
     );
 }
@@ -64,10 +58,9 @@ export function TextField({ value, onChange, classic, placeholder, mono }: {
  * writing 0 — the difference matters because most layout numbers fall back to a
  * sensible renderer default when absent.
  */
-export function NumberField({ value, onChange, classic, min, max, step, suffix }: {
+export function NumberField({ value, onChange, min, max, step, suffix }: {
     value: number | undefined;
     onChange: (v: number | undefined) => void;
-    classic: boolean;
     min?: number; max?: number; step?: number;
     suffix?: string;
 }) {
@@ -83,11 +76,11 @@ export function NumberField({ value, onChange, classic, min, max, step, suffix }
                     const n = Number(raw);
                     onChange(Number.isNaN(n) ? undefined : n);
                 }}
-                style={inputBase(classic)}
+                style={inputBase()}
             />
             {suffix && (
                 <span style={{
-                    fontFamily: classic ? xpFont : undefined, fontSize: 10,
+                    fontFamily: xpFont, fontSize: 10,
                     color: '#888', flexShrink: 0,
                 }}>
                     {suffix}
@@ -97,15 +90,15 @@ export function NumberField({ value, onChange, classic, min, max, step, suffix }
     );
 }
 
-export function CheckField({ checked, onChange, classic, label }: {
-    checked: boolean; onChange: (v: boolean) => void; classic: boolean; label: string;
+export function CheckField({ checked, onChange, label }: {
+    checked: boolean; onChange: (v: boolean) => void; label: string;
 }) {
     return (
         <label style={{
             display: 'flex', alignItems: 'center', gap: 5, cursor: 'pointer',
-            fontFamily: classic ? xpFont : undefined,
-            fontSize: classic ? 11 : 11.5,
-            color: classic ? '#2b2822' : '#495057',
+            fontFamily: xpFont,
+            fontSize: 11,
+            color: '#2b2822',
             marginBottom: 3,
         }}>
             <input type="checkbox" checked={checked} onChange={e => onChange(e.target.checked)} />
@@ -114,17 +107,16 @@ export function CheckField({ checked, onChange, classic, label }: {
     );
 }
 
-export function SelectField<T extends string>({ value, options, onChange, classic }: {
+export function SelectField<T extends string>({ value, options, onChange}: {
     value: T | undefined;
     options: { value: T; label: string }[];
     onChange: (v: T) => void;
-    classic: boolean;
 }) {
     return (
         <select
             value={value ?? ''}
             onChange={e => onChange(e.target.value as T)}
-            style={{ ...inputBase(classic), height: classic ? 19 : undefined }}
+            style={{ ...inputBase(), height: 19}}
         >
             {options.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
         </select>
@@ -138,8 +130,8 @@ export function SelectField<T extends string>({ value, options, onChange, classi
  * expose but wrong to lead with (raw CSS shorthands), and an inspector that opens on
  * six blank CSS boxes reads as a form to fill in rather than as chrome to ignore.
  */
-export function InspectorGroup({ title, classic, children, right, collapsible }: {
-    title: string; classic: boolean; children: React.ReactNode;
+export function InspectorGroup({ title, children, right, collapsible }: {
+    title: string; children: React.ReactNode;
     right?: React.ReactNode;
     collapsible?: boolean;
 }) {
@@ -151,11 +143,11 @@ export function InspectorGroup({ title, classic, children, right, collapsible }:
                 onClick={collapsible ? () => setOpen(o => !o) : undefined}
                 style={{
                     display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-                    fontFamily: classic ? xpFont : undefined,
+                    fontFamily: xpFont,
                     fontSize: 10, fontWeight: 'bold', textTransform: 'uppercase',
                     letterSpacing: '0.4px',
-                    color: classic ? '#4a4436' : '#6c757d',
-                    borderBottom: classic ? '1px solid #c0bdb5' : '1px solid #dee2e6',
+                    color: '#4a4436',
+                    borderBottom: '1px solid #c0bdb5',
                     paddingBottom: 2, marginBottom: shown ? 5 : 0,
                     cursor: collapsible ? 'pointer' : undefined,
                 }}
@@ -177,8 +169,7 @@ export function InspectorGroup({ title, classic, children, right, collapsible }:
 }
 
 /** Up / down / remove cluster used by every reorderable list in the inspector. */
-export function ListRowControls({ classic, onUp, onDown, onRemove, canUp, canDown }: {
-    classic: boolean;
+export function ListRowControls({ onUp, onDown, onRemove, canUp, canDown }: {
     onUp: () => void; onDown: () => void; onRemove?: () => void;
     canUp: boolean; canDown: boolean;
 }) {
@@ -188,12 +179,12 @@ export function ListRowControls({ classic, onUp, onDown, onRemove, canUp, canDow
             disabled={disabled}
             title={title}
             style={{
-                fontFamily: classic ? xpFont : undefined, fontSize: 10, lineHeight: 1,
+                fontFamily: xpFont, fontSize: 10, lineHeight: 1,
                 padding: '1px 3px', cursor: disabled ? 'default' : 'pointer',
                 opacity: disabled ? 0.35 : 1, borderRadius: 0,
-                background: classic ? 'linear-gradient(to bottom,#fff,#d4d0c8)' : '#f8f9fa',
+                background: 'linear-gradient(to bottom,#fff,#d4d0c8)',
                 border: '1px solid',
-                borderColor: danger ? '#c00000' : (classic ? '#dfdfdf #808080 #808080 #dfdfdf' : '#ced4da'),
+                borderColor: danger ? '#c00000' : ('#dfdfdf #808080 #808080 #dfdfdf'),
                 color: danger ? '#c00000' : '#000',
             }}
         >

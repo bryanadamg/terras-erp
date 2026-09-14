@@ -1,11 +1,10 @@
 import { useState, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { useLanguage } from '../../context/LanguageContext';
-import { useTheme } from '../../context/ThemeContext';
 import { useTimezone } from '../../context/TimezoneContext';
 import CalendarView from '../shared/CalendarView';
 import {
-    xpFont, ProgressBar, StatusChip, XPStatusBar, familyColor, familyTint, type StatusFamily,
+    xpFont, ProgressBar, StatusChip, XPStatusBar, familyColor, familyTint, statusColor, type StatusFamily,
     CodeChip, CODE_FONT, SkeletonBar,
 } from '../shared/xpTheme';
 import { ShellWindow, ShellTitleBar } from '../shared/shellTheme';
@@ -19,8 +18,8 @@ const xpTable: React.CSSProperties = {
 };
 
 const stickyTh = (extra: React.CSSProperties = {}): React.CSSProperties => ({
-    ...lvTh(true),
-    ...lvThead(true),
+    ...lvTh(),
+    ...lvThead(),
     position: 'sticky', top: 0, zIndex: 1,
     ...extra,
 });
@@ -35,52 +34,6 @@ const emptyRowStyle: React.CSSProperties = {
 type HealthStatus = 'ok' | 'warn' | 'crit';
 const HEALTH_FAMILY: Record<HealthStatus, StatusFamily> = { ok: 'green', warn: 'amber', crit: 'red' };
 const SEV_FAMILY: Record<string, StatusFamily> = { crit: 'red', warn: 'amber', info: 'green' };
-
-// ── Dependency-free inline SVG donut (no chart library — light on old clients) ──
-// Modern-only (the classic dashboard uses XP gauges), so the palette is tuned to
-// the modern blue theme rather than the old saturated XP colors.
-const DONUT_COLORS = ['#2563eb', '#0ea5e9', '#14b8a6', '#8b5cf6', '#f59e0b', '#ec4899', '#64748b'];
-const Donut = ({ segments, size = 132, stroke = 20, centerLabel, centerSub, ariaLabel }: {
-    segments: { label: string; value: number }[];
-    size?: number; stroke?: number; centerLabel: string; centerSub?: string; ariaLabel: string;
-}) => {
-    const total = segments.reduce((s, x) => s + x.value, 0);
-    const r = (size - stroke) / 2;
-    const circ = 2 * Math.PI * r;
-    let acc = 0;
-    // Shrink the center number so long values (e.g. "1,234,567") never spill past
-    // the inner hole. Usable width ≈ size − 2·stroke; ~0.62em per char for Tahoma bold.
-    const innerWidth = size - stroke * 2 - 10;
-    const labelLen = String(centerLabel).length || 1;
-    const labelFont = Math.max(9, Math.min(size * 0.17, innerWidth / (labelLen * 0.62)));
-    return (
-        <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} role="img" aria-label={ariaLabel}>
-            <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="#eef1f6" strokeWidth={stroke} />
-            <g transform={`rotate(-90 ${size / 2} ${size / 2})`}>
-                {total > 0 && segments.map((seg, i) => {
-                    const dash = (seg.value / total) * circ;
-                    const el = (
-                        <circle key={i} cx={size / 2} cy={size / 2} r={r} fill="none"
-                            stroke={DONUT_COLORS[i % DONUT_COLORS.length]} strokeWidth={stroke}
-                            strokeDasharray={`${dash} ${circ - dash}`} strokeDashoffset={-acc} />
-                    );
-                    acc += dash;
-                    return el;
-                })}
-            </g>
-            <text x="50%" y="46%" textAnchor="middle" dominantBaseline="central"
-                fontFamily="system-ui, 'Segoe UI', Arial, sans-serif" fontSize={labelFont} fontWeight="bold" fill="#1e293b">
-                {centerLabel}
-            </text>
-            {centerSub && (
-                <text x="50%" y="62%" textAnchor="middle" dominantBaseline="central"
-                    fontFamily="system-ui, 'Segoe UI', Arial, sans-serif" fontSize={size * 0.085} fill="#64748b">
-                    {centerSub}
-                </text>
-            )}
-        </svg>
-    );
-};
 
 // ── Dependency-free inline SVG sparkline (KPI daily trend) ─────────────────────
 const Sparkline = ({ data, color = familyColor('blue'), width = 120, height = 28, ariaLabel }: {
@@ -116,8 +69,6 @@ const TREND_METRICS = [
 export default function DashboardView({ items, locations, stockBalance, workOrders, stockEntries, samples, salesOrders, kpis, summary, itemIndex, kpiHistory }: any) {
     const { t } = useLanguage();
     const { formatDateTime: tzDateTime, formatCustom: tzFmt } = useTimezone();
-    const { uiStyle: currentStyle } = useTheme();
-    const classic = currentStyle === 'classic';
     const router = useRouter();
     const [drill, setDrill] = useState<'lowstock' | 'short' | null>(null);
     const [hoveredAction, setHoveredAction] = useState<number | null>(null);
@@ -284,321 +235,7 @@ export default function DashboardView({ items, locations, stockBalance, workOrde
     }, [workOrders, items, itemIndex]);
 
     // ────────────────────────────────────────────────────────────────────────
-    // DEFAULT (non-classic) layout
-    // ────────────────────────────────────────────────────────────────────────
-    if (!classic) {
-        const KPICard = ({ title, value, subtext, icon, bg, textDark, onClick }: any) => {
-            const textCls = textDark ? 'text-dark' : 'text-white';
-            return (
-            <div className="col-md-4 col-lg-2">
-                <div
-                    className={`card h-100 border-0 shadow-sm ${textCls} ${onClick ? 'kpi-clickable' : ''}`}
-                    onClick={onClick}
-                    role={onClick ? 'button' : undefined}
-                    tabIndex={onClick ? 0 : undefined}
-                    onKeyDown={onClick ? (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onClick(); } } : undefined}
-                    aria-label={onClick ? `${title}: ${value}. ${t('view_details')}` : `${title}: ${value}`}
-                    style={{ background: bg, ...(onClick ? { cursor: 'pointer' } : {}) }}
-                >
-                    <div className="card-body p-3">
-                        <div className="d-flex justify-content-between align-items-center mb-2">
-                            <h6 className={`card-title mb-0 opacity-75 small text-uppercase fw-bold ${textCls}`}>{title}</h6>
-                            <i className={`bi ${icon} fs-4 opacity-50`} aria-hidden="true"></i>
-                        </div>
-                        <h3 className="fw-bold mb-0">
-                            {kpisLoading ? <SkeletonBar width={56} height={24} /> : value}
-                        </h3>
-                        <small className="opacity-75" style={{ fontSize: '0.75rem' }}>{subtext}</small>
-                    </div>
-                </div>
-            </div>
-            );
-        };
-
-        const AdvisorPill = ({ icon, color, children, onClick, action }: any) => (
-            <div className="d-flex align-items-center gap-2 extra-small text-nowrap">
-                <i className={`bi ${icon} ${color}`} aria-hidden="true"></i>
-                <span>{children}</span>
-                {action && (
-                    <button className="btn btn-sm btn-outline-light py-0 px-2 extra-small" style={{ fontSize: '0.6rem' }} onClick={onClick}>
-                        {action} →
-                    </button>
-                )}
-            </div>
-        );
-
-        return (
-            <div className="fade-in">
-                <div className="d-flex justify-content-between align-items-center mb-3">
-                    <h4 className="fw-bold mb-0 text-capitalize">{t('dashboard')}</h4>
-                    <span className="text-muted small">{tzFmt(new Date(), { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</span>
-                </div>
-
-                {/* Smart Advisor */}
-                <div className="card border-0 shadow-sm mb-4 text-white overflow-hidden" style={{ background: '#1e293b' }}>
-                    <div className="card-body p-2 px-3">
-                        <div className="row align-items-center g-3">
-                            <div className="col-auto border-end border-secondary pe-3">
-                                <div className="d-flex align-items-center gap-2">
-                                    <i className="bi bi-cpu-fill text-info" aria-hidden="true"></i>
-                                    <span className="extra-small fw-bold text-uppercase letter-spacing-1">{t('smart_advisor')}</span>
-                                </div>
-                            </div>
-                            <div className="col">
-                                <div className="d-flex gap-4 overflow-auto no-scrollbar py-1">
-                                    {metrics.lowStock > 0 && (
-                                        <AdvisorPill icon="bi-info-circle-fill" color="text-warning" action={t('inventory')} onClick={() => router.push('/inventory')}>
-                                            <strong>{metrics.lowStock} {t('item')}{metrics.lowStock > 1 ? 's' : ''}</strong> {t('require_replenishment')}.
-                                        </AdvisorPill>
-                                    )}
-                                    {metrics.pendingWO > 0 && (
-                                        <AdvisorPill icon="bi-gear-fill" color="text-info" action={t('work_orders')} onClick={() => router.push('/work-orders')}>
-                                            <strong>{metrics.pendingWO} WO{metrics.pendingWO > 1 ? 's' : ''}</strong> {t('ready_for_release')}.
-                                        </AdvisorPill>
-                                    )}
-                                    {deliveryReadiness < 100 && openSOsCount > 0 && (
-                                        <AdvisorPill icon="bi-truck" color="text-secondary" action={t('sales_orders')} onClick={() => router.push('/sales-orders')}>
-                                            {t('material_shortages_affecting')} <strong>{Math.round(100 - deliveryReadiness)}%</strong> {t('of_orders')}.
-                                        </AdvisorPill>
-                                    )}
-                                    {metrics.lowStock === 0 && metrics.pendingWO === 0 && (
-                                        <div className="extra-small text-muted italic">{t('system_balanced')}</div>
-                                    )}
-                                </div>
-                            </div>
-                            <div className="col-auto ms-auto border-start border-secondary ps-3">
-                                <div className="d-flex gap-4">
-                                    <div className="text-center">
-                                        <div className="extra-small text-muted fw-bold uppercase" style={{ fontSize: '0.6rem' }}>{t('production_yield')}</div>
-                                        <div className={`fw-bold small ${prodYield > 90 ? 'text-success' : 'text-warning'}`}>{prodYield.toFixed(1)}%</div>
-                                    </div>
-                                    <div className="text-center">
-                                        <div className="extra-small text-muted fw-bold uppercase" style={{ fontSize: '0.6rem' }}>{t('delivery_readiness')}</div>
-                                        <div className={`fw-bold small ${deliveryReadiness > 80 ? 'text-success' : 'text-warning'}`}>{deliveryReadiness.toFixed(1)}%</div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                {/* KPI cards */}
-                <div className="row g-3 mb-3">
-                    <KPICard title={t('item_inventory')} value={metrics.totalItems} subtext={t('total_skus')} icon="bi-box-seam" bg="#2563eb" onClick={() => router.push('/inventory')} />
-                    <KPICard title={t('low_stock')} value={metrics.lowStock} subtext={t('view_details')} icon="bi-exclamation-triangle" bg="#f59e0b" textDark onClick={() => setDrill(drill === 'lowstock' ? null : 'lowstock')} />
-                    <KPICard title={t('active_wo')} value={metrics.activeWO} subtext="Production" icon="bi-gear-wide-connected" bg="#16a34a" onClick={() => router.push('/work-orders')} />
-                    <KPICard title={t('pending_wo')} value={metrics.pendingWO} subtext="In Queue" icon="bi-clock-history" bg="#8b5cf6" onClick={() => router.push('/work-orders')} />
-                    <KPICard title={t('samples')} value={metrics.activeSamples} subtext="In Development" icon="bi-eyedropper" bg="#0ea5e9" onClick={() => router.push('/samples')} />
-                    <KPICard title={t('open_orders')} value={metrics.openOrders} subtext={t('view_details')} icon="bi-receipt" bg="#475569" onClick={() => setDrill(drill === 'short' ? null : 'short')} />
-                </div>
-
-                {/* Drill-down panel */}
-                {drill && (
-                    <ShellWindow classic={false} fill={false} className="mb-4">
-                        <ShellTitleBar
-                            classic={false}
-                            icon={drill === 'lowstock' ? 'bi-exclamation-triangle' : 'bi-receipt'}
-                            title={drill === 'lowstock' ? `${t('low_stock')} — ${t('item')}s` : `${t('order_health')} — ${t('material_shortages_affecting')}`}
-                            right={<button className="btn btn-sm btn-light" onClick={() => setDrill(null)} aria-label={t('cancel')}><i className="bi bi-x-lg"></i></button>}
-                        />
-                        <div className="card-body p-0">
-                            {drill === 'lowstock' ? (
-                                <ul className="list-group list-group-flush">
-                                    {namedLowStock.length === 0 && <li className="list-group-item text-muted small">{t('all_systems_nominal')}</li>}
-                                    {namedLowStock.map((i: any) => (
-                                        <li key={i.id} className="list-group-item d-flex justify-content-between align-items-center py-2">
-                                            <span><CodeChip code={i.code} classic={false} tier={2} className="me-2" />{i.name}</span>
-                                            <span className={`badge ${i.totalStock <= 0 ? 'bg-danger' : 'bg-warning text-dark'}`}>{i.totalStock} / min {i.minLevel}</span>
-                                        </li>
-                                    ))}
-                                </ul>
-                            ) : (
-                                <ul className="list-group list-group-flush">
-                                    {shortSOs.length === 0 && <li className="list-group-item text-muted small">{t('all_systems_nominal')}</li>}
-                                    {shortSOs.map((so: any) => (
-                                        <li key={so.code} className="list-group-item d-flex justify-content-between align-items-center py-2">
-                                            <span className="fw-medium">{so.code}</span>
-                                            <span className="badge bg-warning text-dark">{so.short_lines} / {so.total_lines} {t('materials').toLowerCase()}</span>
-                                        </li>
-                                    ))}
-                                </ul>
-                            )}
-                        </div>
-                    </ShellWindow>
-                )}
-
-                {/* Charts + calendar + activity */}
-                <div className="row g-4 mb-4">
-                    <div className="col-md-4">
-                        <ShellWindow classic={false} fill={false} className="h-100">
-                            <ShellTitleBar classic={false} icon="bi-building" title={t('warehouse_distribution')} />
-                            <div className="card-body">
-                                {groupedStats.length === 0 ? (
-                                    <div className="text-center py-5"><i className="bi bi-pie-chart text-muted opacity-25 display-1" aria-hidden="true"></i><p className="text-muted small mt-2">{t('no_inventory_recorded')}</p></div>
-                                ) : (
-                                    <div className="d-flex align-items-center gap-3 flex-wrap">
-                                        <Donut
-                                            segments={groupedStats.slice(0, 7).map((g: any) => ({ label: g.name, value: g.total }))}
-                                            centerLabel={totalStockQty.toLocaleString()}
-                                            centerSub="units"
-                                            ariaLabel={`${t('warehouse_distribution')}: ${groupedStats.map((g: any) => `${g.name} ${g.total}`).join(', ')}`}
-                                        />
-                                        <div className="flex-grow-1" style={{ minWidth: 150 }}>
-                                            {groupedStats.slice(0, 7).map((g: any, idx: number) => {
-                                                const pct = totalStockQty > 0 ? (g.total / totalStockQty) * 100 : 0;
-                                                const open = !!expandedGroups[g.catId];
-                                                return (
-                                                    <div key={g.catId} className="mb-1">
-                                                        <button type="button" onClick={() => toggleGroup(g.catId)}
-                                                            className="btn btn-link p-0 text-decoration-none d-flex align-items-center justify-content-between w-100 small"
-                                                            style={{ color: 'inherit' }} aria-expanded={open}>
-                                                            <span className="d-flex align-items-center gap-2 text-truncate">
-                                                                <i className={`bi ${open ? 'bi-chevron-down' : 'bi-chevron-right'}`} style={{ fontSize: '0.6rem' }} aria-hidden="true"></i>
-                                                                <span style={{ width: 10, height: 10, borderRadius: 2, background: DONUT_COLORS[idx % DONUT_COLORS.length], display: 'inline-block', flexShrink: 0 }}></span>
-                                                                <span className="text-truncate fw-medium">{g.name}</span>
-                                                            </span>
-                                                            <span className="text-muted ms-2 text-nowrap">{g.total.toLocaleString()} · {pct.toFixed(0)}%</span>
-                                                        </button>
-                                                        {open && (
-                                                            <div className="ps-4 mt-1">
-                                                                {g.locations.map((loc: any) => {
-                                                                    const lpct = g.total > 0 ? (loc.totalQty / g.total) * 100 : 0;
-                                                                    return (
-                                                                        <div key={loc.id} className="d-flex justify-content-between small text-muted mb-1">
-                                                                            <span className="text-truncate">{loc.name}</span>
-                                                                            <span className="ms-2 text-nowrap">{loc.totalQty.toLocaleString()} · {lpct.toFixed(0)}%</span>
-                                                                        </div>
-                                                                    );
-                                                                })}
-                                                            </div>
-                                                        )}
-                                                    </div>
-                                                );
-                                            })}
-                                        </div>
-                                    </div>
-                                )}
-                            </div>
-                        </ShellWindow>
-                    </div>
-                    <div className="col-md-4">
-                        <ShellWindow classic={false} fill={false} className="h-100">
-                            <ShellTitleBar classic={false} icon="bi-calendar-event" title={t('production_deadlines')} />
-                            <div className="card-body">
-                                <CalendarView orders={workOrders} items={items} compact={true} />
-                                <div className="mt-3 d-flex flex-wrap gap-2 justify-content-center">
-                                    <small className="text-muted d-flex align-items-center"><span className="bg-primary rounded-circle me-1" style={{ width: 6, height: 6, display: 'inline-block' }}></span> {t('pending')}</small>
-                                    <small className="text-muted d-flex align-items-center"><span className="bg-warning rounded-circle me-1" style={{ width: 6, height: 6, display: 'inline-block' }}></span> {t('in_progress')}</small>
-                                    <small className="text-muted d-flex align-items-center"><span className="bg-success rounded-circle me-1" style={{ width: 6, height: 6, display: 'inline-block' }}></span> {t('completed')}</small>
-                                </div>
-                            </div>
-                        </ShellWindow>
-                    </div>
-                    <div className="col-md-4">
-                        <ShellWindow classic={false} fill={false} className="h-100">
-                            <ShellTitleBar classic={false} icon="bi-clock-history" title={t('recent_activity')} />
-                            <div className="card-body p-0">
-                                <ul className="list-group list-group-flush">
-                                    {recentActivity.map((entry: any) => (
-                                        <li key={entry.key} className="list-group-item d-flex justify-content-between align-items-center py-2 border-0 border-bottom">
-                                            <div style={{ minWidth: 0 }}>
-                                                <div className="fw-medium text-truncate small">{entry.itemName}</div>
-                                                <small className="text-muted d-block" style={{ fontSize: '0.65rem', fontFamily: CODE_FONT }}>{tzDateTime(entry.created_at)}</small>
-                                            </div>
-                                            <div className={`fw-bold ms-2 small ${entry.qty_change > 0 ? 'text-success' : 'text-danger'}`}>
-                                                {entry.qty_change > 0 ? '+' : ''}{entry.qty_change}
-                                            </div>
-                                        </li>
-                                    ))}
-                                    {recentActivity.length === 0 && <li className="list-group-item text-center py-5 text-muted small">{t('no_recent_movements')}</li>}
-                                </ul>
-                            </div>
-                        </ShellWindow>
-                    </div>
-                </div>
-
-                {/* KPI Trends */}
-                <div className="row g-4 mb-4">
-                    <div className="col-12">
-                        <ShellWindow classic={false} fill={false}>
-                            <ShellTitleBar classic={false} icon="bi-graph-up" title={t('kpi_trends')} />
-                            <div className="card-body">
-                                <div className="row g-3">
-                                    {TREND_METRICS.map((m) => {
-                                        const series = kpiHistory?.[m.key] || [];
-                                        const last = series.length ? series[series.length - 1].value : (kpis?.[m.key] ?? 0);
-                                        const first = series.length ? series[0].value : last;
-                                        const delta = last - first;
-                                        const labelKey = m.key === 'open_sos' ? 'open_orders' : m.key;
-                                        const deltaCls = m.key === 'low_stock' ? (delta > 0 ? 'text-danger' : delta < 0 ? 'text-success' : 'text-muted') : 'text-muted';
-                                        return (
-                                            <div key={m.key} className="col-6 col-md-3">
-                                                <div className="border rounded p-2 h-100">
-                                                    <div className="d-flex justify-content-between align-items-baseline mb-1">
-                                                        <span className="text-muted text-uppercase fw-bold" style={{ fontSize: '0.65rem' }}>{t(labelKey)}</span>
-                                                        <span className="fw-bold">{last.toLocaleString()}</span>
-                                                    </div>
-                                                    <Sparkline data={series} color={m.color} width={200} height={32} ariaLabel={`${t(labelKey)} 30-day trend`} />
-                                                    <div className={`mt-1 ${deltaCls}`} style={{ fontSize: '0.65rem' }}>
-                                                        {delta === 0 ? 'no change · 30d' : `${delta > 0 ? '+' : ''}${delta.toLocaleString()} · 30d`}
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        );
-                                    })}
-                                </div>
-                            </div>
-                        </ShellWindow>
-                    </div>
-                </div>
-
-                {/* Manufacturing monitoring */}
-                <div className="row">
-                    <div className="col-12">
-                        <ShellWindow classic={false} fill={false}>
-                            <ShellTitleBar
-                                classic={false}
-                                icon="bi-gear"
-                                title={t('manufacturing_monitoring')}
-                                right={<span className="small text-muted">{metrics.activeWO} {t('active_wo').toLowerCase()} · {metrics.pendingWO} {t('pending').toLowerCase()}</span>}
-                            />
-                            <div className="card-body p-0">
-                                <div className="table-responsive">
-                                    <table className="table table-hover align-middle mb-0 small">
-                                        <thead className="table-light">
-                                            <tr><th className="ps-3">{t('code')}</th><th>{t('product')}</th><th>{t('status')}</th><th>{t('progress')}</th><th className="text-end pe-3">{t('target')}</th></tr>
-                                        </thead>
-                                        <tbody>
-                                            {activeWOList.map((wo: any) => (
-                                                <tr key={wo.id}>
-                                                    <td className="ps-3"><CodeChip code={wo.code} classic={false} /></td>
-                                                    <td>{wo.itemName}</td>
-                                                    <td><StatusChip status={wo.isOverdue ? 'OVERDUE' : wo.status} tint /></td>
-                                                    <td style={{ maxWidth: 160 }}>
-                                                        <ProgressBar
-                                                            pct={wo.progress}
-                                                            tone={wo.isOverdue ? 'red' : wo.status === 'IN_PROGRESS' ? 'blue' : 'gray'}
-                                                            height={8}
-                                                            label="outside"
-                                                        />
-                                                    </td>
-                                                    <td className="text-end pe-3 fw-bold">{wo.qty?.toLocaleString()}</td>
-                                                </tr>
-                                            ))}
-                                            {activeWOList.length === 0 && <tr><td colSpan={5} className="text-center py-4 text-muted">{t('no_active_production')}</td></tr>}
-                                        </tbody>
-                                    </table>
-                                </div>
-                            </div>
-                        </ShellWindow>
-                    </div>
-                </div>
-            </div>
-        );
-    }
-
-    // ────────────────────────────────────────────────────────────────────────
-    // CLASSIC (Windows XP) layout — Command Center
+    // Command Center layout
     // ────────────────────────────────────────────────────────────────────────
 
     const critCount = actionItems.filter(a => a.sev === 'crit').length;
@@ -775,9 +412,8 @@ export default function DashboardView({ items, locations, stockBalance, workOrde
             <div style={{ display: 'flex', gap: '6px', marginBottom: '6px', height: '220px' }}>
 
                 {/* Action Items pane */}
-                <ShellWindow classic fill={false} style={{ width: '260px', flexShrink: 0, display: 'flex', flexDirection: 'column' }}>
+                <ShellWindow fill={false} style={{ width: '260px', flexShrink: 0, display: 'flex', flexDirection: 'column' }}>
                     <ShellTitleBar
-                        classic
                         tone="red"
                         icon="bi-list-check"
                         title={t('action_items')}
@@ -830,9 +466,8 @@ export default function DashboardView({ items, locations, stockBalance, workOrde
                 </ShellWindow>
 
                 {/* WO Table */}
-                <ShellWindow classic fill={false} style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column' }}>
+                <ShellWindow fill={false} style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column' }}>
                     <ShellTitleBar
-                        classic
                         tone="amber"
                         icon="bi-gear"
                         title={t('work_order_monitoring')}
@@ -855,21 +490,21 @@ export default function DashboardView({ items, locations, stockBalance, workOrde
                                     const progTone: StatusFamily = wo.isOverdue ? 'red' : wo.progress >= 100 ? 'green' : wo.status === 'IN_PROGRESS' ? 'blue' : 'gray';
                                     const displayStatus = wo.isOverdue ? 'OVERDUE' : wo.status;
                                     return (
-                                        <tr key={wo.id} style={lvRow(true, idx)}>
-                                            <td style={lvTd(true)}><CodeChip code={wo.code} classic /></td>
-                                            <td style={{ ...lvTd(true), fontWeight: 'bold', color: '#000' }}>{wo.itemName}</td>
-                                            <td style={lvTd(true)}>
+                                        <tr key={wo.id} style={lvRow(idx)}>
+                                            <td style={lvTd()}><CodeChip code={wo.code} /></td>
+                                            <td style={{ ...lvTd(), fontWeight: 'bold', color: '#000' }}>{wo.itemName}</td>
+                                            <td style={lvTd()}>
                                                 <StatusChip
                                                     status={displayStatus}
                                                     label={displayStatus === 'IN_PROGRESS' ? 'IN PROG' : displayStatus === 'COMPLETED' ? 'DONE' : undefined}
                                                     tint
                                                 />
                                             </td>
-                                            <td style={lvTd(true)}>
+                                            <td style={lvTd()}>
                                                 <ProgressBar pct={wo.progress} tone={progTone} height={9} label="outside" />
                                             </td>
-                                            <td style={{ ...lvTd(true), textAlign: 'right', fontWeight: 'bold' }}>{wo.qty?.toLocaleString()}</td>
-                                            <td style={{ ...lvTd(true), borderRight: 'none', color: wo.isOverdue ? familyColor('red') : '#333', fontWeight: wo.isOverdue ? 'bold' : 'normal', fontSize: '9px' }}>
+                                            <td style={{ ...lvTd(), textAlign: 'right', fontWeight: 'bold' }}>{wo.qty?.toLocaleString()}</td>
+                                            <td style={{ ...lvTd(), borderRight: 'none', color: wo.isOverdue ? familyColor('red') : '#333', fontWeight: wo.isOverdue ? 'bold' : 'normal', fontSize: '9px' }}>
                                                 {wo.target_end_date ? `${wo.target_end_date.slice(0, 10)}${wo.isOverdue ? ' ●' : ''}` : '—'}
                                             </td>
                                         </tr>
@@ -890,12 +525,15 @@ export default function DashboardView({ items, locations, stockBalance, workOrde
                 </ShellWindow>
             </div>
 
-            {/* ── Row 4: Recent Movements (left) + Warehouse Distribution (right) ── */}
-            <div style={{ display: 'flex', gap: '6px', height: '200px' }}>
+            {/* ── Row 4: Recent Movements + Production Deadlines + Warehouse Distribution ── */}
+            {/* 280px so a 6-week month grid (6 x 34px cells + weekday header + month nav
+                + legend) fits without the pane scrolling; the two table panes just show
+                more rows at that height. */}
+            <div style={{ display: 'flex', gap: '6px', height: '280px' }}>
 
                 {/* Recent stock movements */}
-                <ShellWindow classic fill={false} style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column' }}>
-                    <ShellTitleBar classic tone="grey" icon="bi-clock-history" title={t('recent_stock_movements')} />
+                <ShellWindow fill={false} style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column' }}>
+                    <ShellTitleBar tone="grey" icon="bi-clock-history" title={t('recent_stock_movements')} />
                     <div style={{ overflow: 'auto', flex: 1, minHeight: 0 }}>
                         <table style={xpTable}>
                             <thead>
@@ -908,15 +546,15 @@ export default function DashboardView({ items, locations, stockBalance, workOrde
                             </thead>
                             <tbody>
                                 {recentActivity.map((entry: any, idx: number) => (
-                                    <tr key={entry.key} style={lvRow(true, idx)}>
-                                        <td style={{ ...lvTd(true), fontWeight: 'bold', color: '#000' }}>{entry.itemName}</td>
-                                        <td style={{ ...lvTd(true), textAlign: 'right', fontWeight: 'bold', color: familyColor(entry.qty_change > 0 ? 'green' : 'red') }}>
+                                    <tr key={entry.key} style={lvRow(idx)}>
+                                        <td style={{ ...lvTd(), fontWeight: 'bold', color: '#000' }}>{entry.itemName}</td>
+                                        <td style={{ ...lvTd(), textAlign: 'right', fontWeight: 'bold', color: familyColor(entry.qty_change > 0 ? 'green' : 'red') }}>
                                             {entry.qty_change > 0 ? '+' : ''}{entry.qty_change}
                                         </td>
-                                        <td style={{ ...lvTd(true), fontSize: '9px', color: '#444' }}>
+                                        <td style={{ ...lvTd(), fontSize: '9px', color: '#444' }}>
                                             {entry.location_name || '—'}
                                         </td>
-                                        <td style={{ ...lvTd(true), fontSize: '9px', color: '#666', borderRight: 'none' }}>
+                                        <td style={{ ...lvTd(), fontSize: '9px', color: '#666', borderRight: 'none' }}>
                                             {tzFmt(entry.created_at, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
                                         </td>
                                     </tr>
@@ -929,9 +567,35 @@ export default function DashboardView({ items, locations, stockBalance, workOrde
                     </div>
                 </ShellWindow>
 
+                {/* Production deadlines — WOs are dated by target_end_date (their only
+                    due field); target_start_date is the fallback for one not yet scheduled
+                    to finish, matching the MO calendar tab. */}
+                <ShellWindow fill={false} style={{ width: '320px', flexShrink: 0, display: 'flex', flexDirection: 'column' }}>
+                    <ShellTitleBar tone="grey" icon="bi-calendar-event" title={t('production_deadlines')} />
+                    <div style={{ padding: '4px 6px', flex: 1, overflowY: 'auto', minHeight: 0 }}>
+                        <CalendarView
+                            orders={workOrders}
+                            items={items}
+                            compact
+                            endField="target_end_date"
+                            startField="target_start_date"
+                        />
+                        {/* Dots are painted by statusColor(); the legend reads the same
+                            function so the two can never drift apart. */}
+                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', justifyContent: 'center', marginTop: '6px' }}>
+                            {([['PENDING', t('pending')], ['IN_PROGRESS', t('in_progress')], ['COMPLETED', t('completed')]] as const).map(([code, label]) => (
+                                <span key={code} style={{ display: 'inline-flex', alignItems: 'center', gap: 3, fontSize: '9px', color: '#555' }}>
+                                    <span style={{ width: 6, height: 6, borderRadius: '50%', background: statusColor(code), display: 'inline-block' }} />
+                                    {label}
+                                </span>
+                            ))}
+                        </div>
+                    </div>
+                </ShellWindow>
+
                 {/* Warehouse distribution */}
-                <ShellWindow classic fill={false} style={{ width: '240px', flexShrink: 0, display: 'flex', flexDirection: 'column' }}>
-                    <ShellTitleBar classic tone="grey" icon="bi-building" title={t('warehouse_distribution')} />
+                <ShellWindow fill={false} style={{ width: '240px', flexShrink: 0, display: 'flex', flexDirection: 'column' }}>
+                    <ShellTitleBar tone="grey" icon="bi-building" title={t('warehouse_distribution')} />
                     <div style={{ padding: '6px 8px', background: '#f0efe8', flex: 1, overflowY: 'auto', minHeight: 0 }}>
                         {groupedStats.length === 0 ? (
                             <div style={{ textAlign: 'center', padding: '12px', color: '#888', fontStyle: 'italic', fontSize: '10px' }}>{t('no_inventory_recorded')}</div>
@@ -983,8 +647,8 @@ export default function DashboardView({ items, locations, stockBalance, workOrde
             </div>
 
             {/* ── Row 5: KPI Trends ── */}
-            <ShellWindow classic fill={false} style={{ marginTop: '6px' }}>
-                <ShellTitleBar classic tone="grey" icon="bi-graph-up" title={t('kpi_trends')} />
+            <ShellWindow fill={false} style={{ marginTop: '6px' }}>
+                <ShellTitleBar tone="grey" icon="bi-graph-up" title={t('kpi_trends')} />
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: '6px', padding: '8px', background: '#f0efe8' }}>
                     {TREND_METRICS.map((m) => {
                         const series = kpiHistory?.[m.key] || [];

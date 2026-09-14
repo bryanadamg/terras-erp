@@ -3,11 +3,9 @@
 import { useState, useEffect } from 'react';
 import SettingsView from '../components/settings/SettingsView';
 import { useData } from '../context/DataContext';
-import { useTheme } from '../context/ThemeContext';
 
 export default function SettingsPage() {
     const { fetchData, companyProfile, authFetch } = useData();
-    const { uiStyle, setUiStyle } = useTheme();
     const [appName, setAppName] = useState('Terras ERP');
 
     const envBase = process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:8000/api';
@@ -20,10 +18,6 @@ export default function SettingsPage() {
     const handleUpdateAppName = (name: string) => {
         setAppName(name);
         localStorage.setItem('app_name', name);
-    };
-
-    const handleUpdateUIStyle = (style: string) => {
-        setUiStyle(style);
     };
 
     const handleUpdateCompanyProfile = async (profile: any) => {
@@ -47,8 +41,6 @@ export default function SettingsPage() {
             <SettingsView 
                 appName={appName} 
                 onUpdateAppName={handleUpdateAppName} 
-                uiStyle={uiStyle} 
-                onUpdateUIStyle={handleUpdateUIStyle} 
                 companyProfile={companyProfile}
                 onUpdateCompanyProfile={handleUpdateCompanyProfile}
                 onUploadLogo={handleUploadLogo}

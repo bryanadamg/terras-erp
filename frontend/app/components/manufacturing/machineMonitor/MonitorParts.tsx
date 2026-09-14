@@ -39,14 +39,14 @@ export const EffBar = ({ eff, target, label, height = 9 }: {
 /** The `auto-fill` track both grids lay their cards on. Kept in one place so the
  * loading skeleton's geometry can quote the same numbers and the real grid drops
  * into its tracks with no shift. */
-export const gridColumns = (classic: boolean) => ({
+export const gridColumns = () => ({
     display: 'grid',
-    gridTemplateColumns: `repeat(auto-fill, minmax(${classic ? 240 : 250}px, 1fr))`,
-    gap: classic ? 8 : 12,
+    gridTemplateColumns: `repeat(auto-fill, minmax(${240}px, 1fr))`,
+    gap: 8,
 } as React.CSSProperties);
 
-export const CardGrid = ({ classic, children }: { classic: boolean; children: React.ReactNode }) => (
-    <div style={gridColumns(classic)}>{children}</div>
+export const CardGrid = ({ children }: { children: React.ReactNode }) => (
+    <div style={gridColumns()}>{children}</div>
 );
 
 /**
@@ -58,9 +58,8 @@ export const CardGrid = ({ classic, children }: { classic: boolean; children: Re
  * line and leave bare bevel below.
  */
 export const MachineCard = ({
-    classic, code, name, status, statusLabel, alarm, badge, onClick, title, footer, children,
+    code, name, status, statusLabel, alarm, badge, onClick, title, footer, children,
 }: {
-    classic: boolean;
     code: string;
     name: string;
     /** IDLE | STAGED | DRAW_IN | TUNING | LOADED | RUNNING */
@@ -77,51 +76,33 @@ export const MachineCard = ({
     footer?: React.ReactNode;
     children: React.ReactNode;
 }) => {
-    if (classic) {
-        return (
-            <div onClick={onClick} title={title} className="tile-hover"
-                style={{
-                    border: '2px solid', borderColor: '#ffffff #808080 #808080 #ffffff',
-                    background: '#ece9d8', cursor: onClick ? 'pointer' : undefined,
-                    borderRadius: SECTION_RADIUS, overflow: 'hidden',
-                    display: 'flex', flexDirection: 'column',
-                }}>
-                <div style={{
-                    background: machineStrip(status), color: '#fff', fontFamily: xpFont,
-                    fontSize: 11, fontWeight: 'bold', padding: '2px 7px', display: 'flex',
-                    justifyContent: 'space-between', alignItems: 'center', gap: 6,
-                    borderBottom: '1px solid #00000033',
-                }}>
-                    <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                        {code} — {name}
-                    </span>
-                    <span style={{ fontSize: 9, flexShrink: 0, display: 'flex', alignItems: 'center', gap: 4 }}>
-                        {alarm && <i className="bi bi-exclamation-triangle-fill" />}
-                        {badge}
-                        {statusLabel.toUpperCase()}
-                    </span>
-                </div>
-                <div style={{
-                    padding: '6px 8px', background: '#fff', fontFamily: xpFont,
-                    flex: 1, display: 'flex', flexDirection: 'column',
-                }}>
-                    <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>{children}</div>
-                    {footer}
-                </div>
-            </div>
-        );
-    }
     return (
-        <div onClick={onClick} className="card h-100 shadow-sm border tile-hover"
-            style={{ cursor: onClick ? 'pointer' : undefined, borderRadius: SECTION_RADIUS }} title={title}>
-            <div className="card-body p-3 d-flex flex-column">
-                <div className="d-flex align-items-center gap-2 mb-2">
-                    <span style={{ fontWeight: 'bold', fontSize: 15 }}>{code}</span>
-                    <span className="text-muted small text-truncate" style={{ flex: 1 }}>{name}</span>
-                    {alarm && <i className="bi bi-exclamation-triangle-fill" style={{ color: RED }} />}
-                    {badge && <span className="text-muted" style={{ fontSize: 11 }}>{badge}</span>}
-                    <StatusChip status={machineChipStatus(status)} label={statusLabel} tint />
-                </div>
+        <div onClick={onClick} title={title} className="tile-hover"
+            style={{
+                border: '2px solid', borderColor: '#ffffff #808080 #808080 #ffffff',
+                background: '#ece9d8', cursor: onClick ? 'pointer' : undefined,
+                borderRadius: SECTION_RADIUS, overflow: 'hidden',
+                display: 'flex', flexDirection: 'column',
+            }}>
+            <div style={{
+                background: machineStrip(status), color: '#fff', fontFamily: xpFont,
+                fontSize: 11, fontWeight: 'bold', padding: '2px 7px', display: 'flex',
+                justifyContent: 'space-between', alignItems: 'center', gap: 6,
+                borderBottom: '1px solid #00000033',
+            }}>
+                <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    {code} — {name}
+                </span>
+                <span style={{ fontSize: 9, flexShrink: 0, display: 'flex', alignItems: 'center', gap: 4 }}>
+                    {alarm && <i className="bi bi-exclamation-triangle-fill" />}
+                    {badge}
+                    {statusLabel.toUpperCase()}
+                </span>
+            </div>
+            <div style={{
+                padding: '6px 8px', background: '#fff', fontFamily: xpFont,
+                flex: 1, display: 'flex', flexDirection: 'column',
+            }}>
                 <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>{children}</div>
                 {footer}
             </div>
@@ -138,8 +119,7 @@ export const sectionLabel = (sec: { id: string | null; code: string; name: strin
  * the counts alone said nothing about whether the bank was in trouble. Classic
  * reuses the shared toolbar strip; modern keeps the underlined caption row.
  */
-export const GroupHeader = <M,>({ classic, sec, labels, action }: {
-    classic: boolean;
+export const GroupHeader = <M,>({ sec, labels, action }: {
     sec: MonitorSection<M>;
     labels: { machines: string; running: string; avgEfficiency: string; belowTarget: string; late: string };
     action?: React.ReactNode;
@@ -163,8 +143,7 @@ export const GroupHeader = <M,>({ classic, sec, labels, action }: {
         </>
     );
     const right = action ? <span style={{ marginLeft: 'auto' }}>{action}</span> : null;
-    return classic ? (
-        <div style={xpToolbar({
+    return <div style={xpToolbar({
             marginBottom: 6, border: '1px solid #b0a898', borderRadius: SECTION_RADIUS,
             fontFamily: xpFont, fontSize: 11, fontWeight: 'bold', color: familyColor('blue'),
         })}>
@@ -172,15 +151,7 @@ export const GroupHeader = <M,>({ classic, sec, labels, action }: {
             <span>{sectionLabel(sec)}</span>
             {health}
             {right}
-        </div>
-    ) : (
-        <div className="d-flex align-items-center gap-2 mb-2 pb-1 border-bottom small">
-            <i className="bi bi-collection text-secondary" />
-            <span className="fw-semibold">{sectionLabel(sec)}</span>
-            {health}
-            {right}
-        </div>
-    );
+        </div>;
 };
 
 /**
@@ -191,10 +162,9 @@ export const GroupHeader = <M,>({ classic, sec, labels, action }: {
  * is what property tabs would have cost.
  */
 export const MonitorChipBar = <M,>({
-    classic, sections, isGrouped, groupFilter, onGroupChange,
+    sections, isGrouped, groupFilter, onGroupChange,
     machineCount, runningOnly, runningCount, onRunningOnlyChange, labels,
 }: {
-    classic: boolean;
     sections: MonitorSection<M>[];
     isGrouped: boolean;
     groupFilter: string | null;
@@ -212,7 +182,6 @@ export const MonitorChipBar = <M,>({
     const runningToggle = (
         <span style={{ marginLeft: isGrouped ? 'auto' : undefined }}>
             <ToggleChip
-                classic={classic}
                 on={runningOnly}
                 tone="green"
                 toneIdle
@@ -225,18 +194,15 @@ export const MonitorChipBar = <M,>({
         </span>
     );
     return (
-        <div style={classic
-            ? xpToolbar({ marginBottom: 8, border: '1px solid #b0a898', borderRadius: SECTION_RADIUS })
-            : { display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap', marginBottom: 12 }}>
+        <div style={xpToolbar({ marginBottom: 8, border: '1px solid #b0a898', borderRadius: SECTION_RADIUS })}>
             {!isGrouped ? runningToggle : null}
             {isGrouped && (
-                <span style={{ fontSize: classic ? 11 : 12, color: '#666', fontFamily: classic ? xpFont : undefined }}>
+                <span style={{ fontSize: 11, color: '#666', fontFamily: xpFont}}>
                     <i className="bi bi-funnel" style={{ marginRight: 4 }} />{labels.group}
                 </span>
             )}
             {isGrouped && (
                 <FilterChipBar
-                    classic={classic}
                     value={groupFilter ?? ALL_GROUPS}
                     onChange={v => onGroupChange(v === ALL_GROUPS || v === groupFilter ? null : v)}
                     options={[

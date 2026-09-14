@@ -30,12 +30,11 @@ const SCOPE_BADGE: Record<PermissionScope, string> = {
  * a direct user override can't remove).
  */
 export default function PermissionsPicker({
-    allPermissions, selectedIds, onChange, classic, disabledIds,
+    allPermissions, selectedIds, onChange, disabledIds,
 }: {
     allPermissions: PermissionOption[];
     selectedIds: string[];
     onChange: (ids: string[]) => void;
-    classic: boolean;
     disabledIds?: string[];
 }) {
     const idByCode = useMemo(() => {
@@ -119,11 +118,9 @@ export default function PermissionsPicker({
         });
     };
 
-    const font = classic ? xpFont : undefined;
+    const font = xpFont;
 
-    const wrapStyle = classic
-        ? { background: '#f7f6f2', border: '1px solid #b0a898', maxHeight: 400, overflowY: 'auto' as const, padding: 6, display: 'flex', flexDirection: 'column' as const, gap: 8 }
-        : { background: '#f8f9fb', border: '1px solid #dee2e6', borderRadius: 4, maxHeight: 400, overflowY: 'auto' as const, padding: 8, display: 'flex', flexDirection: 'column' as const, gap: 10 };
+    const wrapStyle = { background: '#f7f6f2', border: '1px solid #b0a898', maxHeight: 400, overflowY: 'auto' as const, padding: 6, display: 'flex', flexDirection: 'column' as const, gap: 8 };
 
     const linkBtn = (label: string, onClick: () => void, disabled: boolean) => (
         <button
@@ -131,7 +128,7 @@ export default function PermissionsPicker({
             disabled={disabled}
             onClick={e => { e.stopPropagation(); onClick(); }}
             style={{
-                fontFamily: font, fontSize: classic ? 9 : 10,
+                fontFamily: font, fontSize: 9,
                 background: 'none', border: 'none', padding: '0 3px',
                 color: disabled ? '#a9a396' : '#00006e',
                 textDecoration: disabled ? 'none' : 'underline',
@@ -169,7 +166,6 @@ export default function PermissionsPicker({
                                     key={id}
                                     label={action.label}
                                     code={code}
-                                    classic={classic}
                                     state={inherited || pinned ? 'locked' : selectedSet.has(id) ? 'on' : 'off'}
                                     onClick={() => toggle(id, r.resource, action.code)}
                                     title={
@@ -186,7 +182,6 @@ export default function PermissionsPicker({
                 return (
                     <PermissionSectionTable
                         key={section.section}
-                        classic={classic}
                         headerActive={grantedCount > 0}
                         onHeaderClick={() => toggleCollapse(section.section)}
                         labelWidth={160}
@@ -194,7 +189,7 @@ export default function PermissionsPicker({
                             <>
                                 <i className={`bi ${isCollapsed ? 'bi-caret-right-fill' : 'bi-caret-down-fill'}`} style={{ fontSize: 8, color: '#5a6472' }} />
                                 {section.section}
-                                <PermissionCountPill granted={grantedCount} total={secIds.length} classic={classic} />
+                                <PermissionCountPill granted={grantedCount} total={secIds.length} />
                             </>
                         }
                         right={
@@ -209,7 +204,7 @@ export default function PermissionsPicker({
                 );
             })}
             {PERMISSION_MATRIX.every(s => !sectionIds(s).length) && (
-                <div style={{ fontFamily: font, fontSize: classic ? 10 : 11, padding: 8, color: '#888', fontStyle: 'italic' }}>No permissions defined</div>
+                <div style={{ fontFamily: font, fontSize: 10, padding: 8, color: '#888', fontStyle: 'italic' }}>No permissions defined</div>
             )}
         </div>
     );

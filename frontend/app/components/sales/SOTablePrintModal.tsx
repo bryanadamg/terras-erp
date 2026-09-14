@@ -159,11 +159,10 @@ function SOTableDocument({
 }
 
 export default function SOTablePrintModal({
-    salesOrders, onClose, currentStyle, companyProfile, items, attributes, partners,
+    salesOrders, onClose, companyProfile, items, attributes, partners,
 }: {
     salesOrders: any[];
     onClose: () => void;
-    currentStyle: string;
     companyProfile: any;
     items: any[];
     attributes: any[];

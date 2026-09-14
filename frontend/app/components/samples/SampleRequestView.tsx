@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import dynamic from 'next/dynamic';
-import { useTheme } from '../../context/ThemeContext';
 import { useTimezone } from '../../context/TimezoneContext';
 import { useToast } from '../shared/Toast';
 import { useLanguage } from '../../context/LanguageContext';
@@ -132,8 +131,6 @@ export default function SampleRequestView({ samples, customers, onCreateSample, 
       });
   const [pendingColorName, setPendingColorName] = useState('');
   const [pendingColorIsRepeat, setPendingColorIsRepeat] = useState(false);
-  const { uiStyle: currentStyle } = useTheme();
-  const classic = currentStyle === 'classic';
 
   // ── Reject confirmation (reason + notes) ────────────────────────────────
   const REJECT_REASONS = [
@@ -284,11 +281,11 @@ export default function SampleRequestView({ samples, customers, onCreateSample, 
       flexShrink: 0,
   };
 
-  const xpTableHeader: React.CSSProperties = lvThead(true, true);
+  const xpTableHeader: React.CSSProperties = lvThead();
 
-  const xpThCell: React.CSSProperties = lvTh(true);
+  const xpThCell: React.CSSProperties = lvTh();
 
-  const tdBase: React.CSSProperties = lvTdRuled(true);
+  const tdBase: React.CSSProperties = lvTdRuled();
 
   const today = new Date().toISOString().split('T')[0];
   const emptyForm = () => ({
@@ -600,12 +597,12 @@ export default function SampleRequestView({ samples, customers, onCreateSample, 
            footer={
                <>
                    <button type="button"
-                       style={classic ? xpBtn() : undefined}
-                       className={classic ? XP_BTN : 'btn btn-sm btn-link text-muted'}
+                       style={xpBtn()}
+                       className={XP_BTN}
                        onClick={() => setApproveTarget(null)}>{t('cancel')}</button>
                    <button type="button"
-                       style={classic ? xpBtn({ ...BTN_TONES.success }) : undefined}
-                       className={classic ? XP_BTN : 'btn btn-sm btn-success px-4 fw-bold'}
+                       style={xpBtn({ ...BTN_TONES.success })}
+                       className={XP_BTN}
                        onClick={confirmApprove}>Approve</button>
                </>
            }
@@ -640,12 +637,12 @@ export default function SampleRequestView({ samples, customers, onCreateSample, 
            footer={
                <>
                    <button type="button"
-                       style={classic ? xpBtn() : undefined}
-                       className={classic ? XP_BTN : 'btn btn-sm btn-link text-muted'}
+                       style={xpBtn()}
+                       className={XP_BTN}
                        onClick={() => setRejectTarget(null)}>{t('cancel')}</button>
                    <button type="button"
-                       style={classic ? xpBtn({ ...BTN_TONES.danger }) : undefined}
-                       className={classic ? XP_BTN : 'btn btn-sm btn-danger px-4 fw-bold'}
+                       style={xpBtn({ ...BTN_TONES.danger })}
+                       className={XP_BTN}
                        onClick={confirmReject}>Reject Color</button>
                </>
            }
@@ -690,14 +687,14 @@ export default function SampleRequestView({ samples, customers, onCreateSample, 
                <>
                    <button
                        type="button"
-                       style={classic ? xpBtn() : undefined}
-                       className={classic ? XP_BTN : 'btn btn-sm btn-link text-muted'}
+                       style={xpBtn()}
+                       className={XP_BTN}
                        onClick={() => { setIsCreateOpen(false); setEditingSample(null); }}
                    >{t('cancel')}</button>
                    <button
                        type="button"
-                       style={classic ? xpBtn({ ...BTN_TONES.primary }) : undefined}
-                       className={classic ? XP_BTN : 'btn btn-sm btn-primary px-4 fw-bold'}
+                       style={xpBtn({ ...BTN_TONES.primary })}
+                       className={XP_BTN}
                        onClick={handleSubmit as any}
                    >{editingSample ? 'Save Changes' : 'Create Request'}</button>
                </>
@@ -706,9 +703,8 @@ export default function SampleRequestView({ samples, customers, onCreateSample, 
            <form onSubmit={handleSubmit} id="create-sample-form">
 
                {/* ══ Identity ══ */}
-               <FormSection title="Identity" classic={classic}>
-               {classic ? (
-                           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px 12px' }}>
+               <FormSection title="Identity">
+               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px 12px' }}>
                                <div>
                                    <label style={{ ...xpLbl, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                                        <span>Request Code <span style={{ fontWeight: 'normal', color: '#a00' }}>*</span></span>
@@ -760,50 +756,6 @@ export default function SampleRequestView({ samples, customers, onCreateSample, 
                                           placeholder="Bola Intan ref code" />
                                </div>
                            </div>
-               ) : (
-                           <div className="row g-2">
-                               <div className="col-md-6">
-                                   <label className="form-label d-flex justify-content-between align-items-center small text-muted">
-                                       Request Code {!editingSample && <i className="bi bi-gear-fill text-muted" style={{ cursor: 'pointer' }} onClick={() => setIsConfigOpen(true)} title="Configure Auto-Suggestion" />}
-                                   </label>
-                                   <input className="form-control form-control-sm" value={newSample.code} onChange={e => !editingSample && setNewSample({ ...newSample, code: e.target.value })} placeholder="Auto-generated" required readOnly={!!editingSample} />
-                               </div>
-                               <div className="col-md-6">
-                                   <label className="form-label small text-muted">Request Date</label>
-                                   <input type="date" className="form-control form-control-sm" value={newSample.request_date} onChange={e => setNewSample({ ...newSample, request_date: e.target.value })} required />
-                               </div>
-                               <div className="col-12">
-                                   <label className="form-label small text-muted">Category</label>
-                                   <select className="form-select form-select-sm"
-                                           value={newSample.category_value_id}
-                                           onChange={e => pickCategory(e.target.value)} required>
-                                       <option value="">Select Category…</option>
-                                       {categoryOptions.map((c: any) => <option key={c.id} value={c.id}>{c.label}</option>)}
-                                   </select>
-                               </div>
-                               <div className="col-12">
-                                   <label className="form-label small text-muted">Customer <span className="fw-normal">(Optional)</span></label>
-                                   <SearchableSelect
-                                       options={[{ value: '', label: 'No Customer (Internal/Prototype)' }, ...(customers || []).map((c: any) => ({ value: c.id, label: c.name }))]}
-                                       value={newSample.customer_id}
-                                       onChange={(val: string) => setNewSample({ ...newSample, customer_id: val })}
-                                       placeholder="Select Customer (Optional)…"
-                                   />
-                               </div>
-                               <div className="col-md-6">
-                                   <label className="form-label small text-muted">Project</label>
-                                   <input className="form-control form-control-sm" value={newSample.project} onChange={e => setNewSample({ ...newSample, project: e.target.value })} placeholder="e.g. Spring 2026" />
-                               </div>
-                               <div className="col-md-6">
-                                   <label className="form-label small text-muted">Customer Article Code</label>
-                                   <input className="form-control form-control-sm" value={newSample.customer_article_code} onChange={e => setNewSample({ ...newSample, customer_article_code: e.target.value })} placeholder="Customer's ref code" />
-                               </div>
-                               <div className="col-12">
-                                   <label className="form-label small text-muted">Internal Article Code</label>
-                                   <input className="form-control form-control-sm" value={newSample.internal_article_code} onChange={e => setNewSample({ ...newSample, internal_article_code: e.target.value })} placeholder="Bola Intan ref code" />
-                               </div>
-                           </div>
-               )}
                </FormSection>
 
                {/* ══ Colors & Specs ══ */}
@@ -822,9 +774,8 @@ export default function SampleRequestView({ samples, customers, onCreateSample, 
                        setPendingColorIsRepeat(false);
                    };
                    return (
-                       <FormSection title="Colors & Specs" classic={classic}>
-                       {classic ? (
-                           <>
+                       <FormSection title="Colors & Specs">
+                       <>
                                <div style={{ marginBottom: 10 }}>
                                    <label style={xpLbl}>Width</label>
                                    <input style={{ ...xpInput, width: 130 }}
@@ -833,7 +784,6 @@ export default function SampleRequestView({ samples, customers, onCreateSample, 
                                </div>
                                {/* Tab bar */}
                                <Tabs
-                                   classic
                                    tabs={[
                                        { key: 'color', label: colorsAttrName || 'Colors' },
                                        { key: 'combo', label: comboAttrName || 'Combo' },
@@ -898,67 +848,13 @@ export default function SampleRequestView({ samples, customers, onCreateSample, 
                                    </button>
                                </div>
                            </>
-                       ) : (
-                           <>
-                               <div className="mb-2">
-                                   <label className="form-label small text-muted">Width</label>
-                                   <input className="form-control form-control-sm" style={{ maxWidth: 160 }} value={newSample.width} onChange={e => setNewSample({ ...newSample, width: e.target.value })} placeholder="e.g. 8 mm" />
-                               </div>
-                               {/* Tab bar */}
-                               <Tabs
-                                   classic={false}
-                                   tabs={[
-                                       { key: 'color', label: colorsAttrName || 'Colors' },
-                                       { key: 'combo', label: comboAttrName || 'Combo' },
-                                   ]}
-                                   activeKey={newSample.variant_type}
-                                   onChange={switchTab}
-                                   right={activeAttrName && (
-                                       <span className="badge bg-secondary bg-opacity-10 text-secondary border" style={{ fontSize: 9, fontWeight: 'normal' }}>attr: {activeAttrName}</span>
-                                   )}
-                               />
-                               {/* Added variants */}
-                               <div className="p-2 mb-2 d-flex flex-wrap" style={{ background: '#f0f5ff', border: '1px solid #c8d8f0', minHeight: 40 }}>
-                                   {newSample.colors.length === 0
-                                       ? <span className="text-muted fst-italic small">No variants added yet…</span>
-                                       : newSample.colors.map((c, idx) => (
-                                           <span key={idx} className={`badge me-1 mb-1 d-inline-flex align-items-center gap-1 ${c.is_repeat ? 'bg-primary' : 'bg-success'}`} style={{ fontSize: 11, fontWeight: 'normal' }}>
-                                               <small className="fw-bold">{c.is_repeat ? 'RPT' : 'NEW'}</small>
-                                               {c.name}
-                                               <span onClick={() => removeColorRow(idx)} style={{ cursor: 'pointer', marginLeft: 2 }} title="Remove">×</span>
-                                           </span>
-                                       ))
-                                   }
-                               </div>
-                               {/* Add row */}
-                               <div className="d-flex gap-2 align-items-center">
-                                   <div className="flex-grow-1">
-                                       <SearchableSelect
-                                           options={activeOptions}
-                                           value={pendingColorName}
-                                           onChange={setPendingColorName}
-                                           onSearch={activeOnSearch}
-                                           placeholder={`Select ${isColor ? 'color' : 'combo'}…`}
-                                           size="sm"
-                                       />
-                                   </div>
-                                   <button type="button" className={`btn btn-sm ${pendingColorIsRepeat ? 'btn-primary' : 'btn-outline-secondary'}`} style={{ minWidth: 60 }} onClick={() => setPendingColorIsRepeat(!pendingColorIsRepeat)}>
-                                       {pendingColorIsRepeat ? 'Repeat' : 'New'}
-                                   </button>
-                                   <button type="button" className="btn btn-sm btn-outline-secondary" onClick={addPendingColor}>
-                                       <i className="bi bi-plus-lg me-1" />Add
-                                   </button>
-                               </div>
-                           </>
-                       )}
                        </FormSection>
                    );
                })()}
 
                {/* ══ Materials ══ */}
-               <FormSection title="Materials" classic={classic}>
-               {classic ? (
-                           <>
+               <FormSection title="Materials">
+               <>
                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '8px 12px', marginBottom: 8 }}>
                                {[
                                    { key: 'main_material', label: 'Main Material' },
@@ -1037,85 +933,11 @@ export default function SampleRequestView({ samples, customers, onCreateSample, 
                                </div>
                            </div>
                            </>
-               ) : (
-                           <>
-                           <div className="row g-2 mb-2">
-                               {[
-                                   { key: 'main_material', label: 'Main Material' },
-                                   { key: 'middle_material', label: 'Middle Material' },
-                                   { key: 'bottom_material', label: 'Bottom Material' },
-                               ].map(({ key, label }) => (
-                                   <div key={key} className="col-md-4">
-                                       <label className="form-label small text-muted">{label}</label>
-                                       <SearchableSelect
-                                           options={materialOptions}
-                                           value={(newSample as any)[key]}
-                                           onChange={(val: string) => setNewSample({ ...newSample, [key]: val })}
-                                           placeholder="Select material…"
-                                           size="sm"
-                                       />
-                                   </div>
-                               ))}
-                           </div>
-                           <hr className="my-2" />
-                           <div className="row g-2">
-                               <div className="col-md-6">
-                                   <label className="form-label small text-muted">Weft</label>
-                                   <SearchableSelect
-                                       options={materialOptions}
-                                       value={newSample.weft}
-                                       onChange={(val: string) => setNewSample({ ...newSample, weft: val })}
-                                       placeholder="Select material…"
-                                       size="sm"
-                                   />
-                               </div>
-                               <div className="col-md-6">
-                                   <label className="form-label small text-muted">Warp</label>
-                                   <SearchableSelect
-                                       options={materialOptions}
-                                       value={newSample.warp}
-                                       onChange={(val: string) => setNewSample({ ...newSample, warp: val })}
-                                       placeholder="Select material…"
-                                       size="sm"
-                                   />
-                               </div>
-                               <div className="col-md-6">
-                                   <label className="form-label small text-muted">Original Weight</label>
-                                   <div className="input-group input-group-sm">
-                                       <input type="number" step="0.01" className="form-control" value={newSample.original_weight} onChange={e => setNewSample({ ...newSample, original_weight: e.target.value })} placeholder="0.00" />
-                                       <select className="form-select" style={{ maxWidth: 80 }} value={newSample.original_weight_unit} onChange={e => setNewSample({ ...newSample, original_weight_unit: e.target.value })}>
-                                           <option value="g/y">g/y</option>
-                                           <option value="gsm">gsm</option>
-                                           <option value="g/m²">g/m²</option>
-                                           <option value="oz/yd²">oz/yd²</option>
-                                       </select>
-                                   </div>
-                               </div>
-                               <div className="col-md-6">
-                                   <label className="form-label small text-muted">Production Weight</label>
-                                   <div className="input-group input-group-sm">
-                                       <input type="number" step="0.01" className="form-control" value={newSample.production_weight} onChange={e => setNewSample({ ...newSample, production_weight: e.target.value })} placeholder="0.00" />
-                                       <select className="form-select" style={{ maxWidth: 80 }} value={newSample.production_weight_unit} onChange={e => setNewSample({ ...newSample, production_weight_unit: e.target.value })}>
-                                           <option value="g/y">g/y</option>
-                                           <option value="gsm">gsm</option>
-                                           <option value="g/m²">g/m²</option>
-                                           <option value="oz/yd²">oz/yd²</option>
-                                       </select>
-                                   </div>
-                               </div>
-                               <div className="col-12">
-                                   <label className="form-label small text-muted">Additional Information</label>
-                                   <textarea className="form-control form-control-sm" rows={2} value={newSample.additional_info} onChange={e => setNewSample({ ...newSample, additional_info: e.target.value })} placeholder="e.g. PRINTING ROTARY" />
-                               </div>
-                           </div>
-                           </>
-               )}
                </FormSection>
 
                {/* ══ Logistics ══ */}
-               <FormSection title="Logistics" classic={classic}>
-               {classic ? (
-                           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px 12px' }}>
+               <FormSection title="Logistics">
+               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px 12px' }}>
                                <div>
                                    <label style={xpLbl}>Sample Quantity</label>
                                    <input style={{ ...xpInput, width: '100%', boxSizing: 'border-box' as const }}
@@ -1175,44 +997,6 @@ export default function SampleRequestView({ samples, customers, onCreateSample, 
                                    </div>
                                </div>
                            </div>
-               ) : (
-                           <div className="row g-2">
-                               <div className="col-md-6">
-                                   <label className="form-label small text-muted">Sample Quantity</label>
-                                   <input className="form-control form-control-sm" value={newSample.quantity} onChange={e => setNewSample({ ...newSample, quantity: e.target.value })} placeholder="e.g. 1 METER" />
-                               </div>
-                               <div className="col-md-6">
-                                   <label className="form-label small text-muted">Per-Sample Size</label>
-                                   <input className="form-control form-control-sm" value={newSample.sample_size} onChange={e => setNewSample({ ...newSample, sample_size: e.target.value })} placeholder="Dimensions" />
-                               </div>
-                               <div className="col-md-6">
-                                   <label className="form-label small text-muted">Est. Completion Date</label>
-                                   <input type="date" className="form-control form-control-sm" value={newSample.estimated_completion_date} onChange={e => setNewSample({ ...newSample, estimated_completion_date: e.target.value })} />
-                               </div>
-                               <div className="col-12">
-                                   <label className="form-label small text-muted">Completion Notes</label>
-                                   <textarea className="form-control form-control-sm" rows={2} value={newSample.completion_description} onChange={e => setNewSample({ ...newSample, completion_description: e.target.value })} placeholder="Priority instructions, special notes…" />
-                               </div>
-                               <div className="col-md-6">
-                                   <label className="form-label small text-muted">Sample Photo</label>
-                                   <input type="file" accept="image/*" className="form-control form-control-sm"
-                                          onChange={e => setCompletionImageFile(e.target.files?.[0] || null)} />
-                                   {completionImagePreviewUrl && (
-                                       <img src={completionImagePreviewUrl}
-                                            className="mt-1 border" style={{ maxHeight: 60, maxWidth: '100%', display: 'block' }}
-                                            alt="Preview" />
-                                   )}
-                               </div>
-                               <div className="col-md-6">
-                                   <label className="form-label small text-muted">Design</label>
-                                   <input type="file" accept="application/pdf,image/*,.xlsx,.xls,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel" className="form-control form-control-sm"
-                                          onChange={e => setDesignPdfFile(e.target.files?.[0] || null)} />
-                                   {designPdfFile && (
-                                       <div className="small text-muted mt-1">{designPdfFile.name}</div>
-                                   )}
-                               </div>
-                           </div>
-               )}
                </FormSection>
            </form>
        </ModalWrapper>
@@ -1252,20 +1036,18 @@ export default function SampleRequestView({ samples, customers, onCreateSample, 
        })()}
 
        {/* ── Outer shell ── */}
-       <ShellWindow classic={classic} fill="page" className="fade-in">
+       <ShellWindow fill="page" className="fade-in">
            <ShellTitleBar
-               classic={classic}
                icon="bi-eyedropper"
                title={t('sample_requests')}
                subtitle="Track prototype and sample approval workflow"
            />
 
            {/* ── Secondary toolbar: search + status filters + count ── */}
-           {classic ? (
-               <div style={xpToolbar()}>
-                   <SearchField classic value={searchTerm} onChange={setSearchTerm} placeholder="Search code, article, project…" width={200} />
+           <div style={xpToolbar()}>
+                   <SearchField value={searchTerm} onChange={setSearchTerm} placeholder="Search code, article, project…" width={200} />
                    <div style={xpSep}></div>
-                   <FilterChipBar classic options={STATUS_FILTER_OPTIONS} value={statusFilter} onChange={setStatusFilter} />
+                   <FilterChipBar options={STATUS_FILTER_OPTIONS} value={statusFilter} onChange={setStatusFilter} />
                    <div style={xpSep}></div>
                    <select
                        style={{ ...xpInput, width: 120 }}
@@ -1306,85 +1088,21 @@ export default function SampleRequestView({ samples, customers, onCreateSample, 
                        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><circle cx="12" cy="12" r="10"/><path d="M8 12l2.5 2.5L16 9"/></svg>
                        Mark All as Read
                    </button>
-                   <ToolbarCount classic right>
+                   <ToolbarCount right>
                        {totalSamples} item{totalSamples !== 1 ? 's' : ''}
                        {unreadCount > 0 && (
                            <> · <span style={{ color: '#1c5bc8', fontWeight: 'bold' }}>{unreadCount} unread</span></>
                        )}
                    </ToolbarCount>
                    {canManage && (
-                       <ToolbarButton classic tone="create" icon="bi-plus-lg" onClick={openCreateModal}>
+                       <ToolbarButton tone="create" icon="bi-plus-lg" onClick={openCreateModal}>
                            {t('create')}
                        </ToolbarButton>
                    )}
                </div>
-           ) : (
-               <div className="px-3 py-2 border-bottom d-flex align-items-center gap-2 flex-wrap bg-white">
-                   <SearchField classic={false} value={searchTerm} onChange={setSearchTerm} placeholder="Search code, article, project…" width={240} grow />
-                   <FilterChipBar classic={false} options={STATUS_FILTER_OPTIONS} value={statusFilter} onChange={setStatusFilter} />
-                   <select
-                       className="form-select form-select-sm"
-                       style={{ fontSize: 11, width: 'auto' }}
-                       value={categoryFilter}
-                       onChange={e => setCategoryFilter(e.target.value)}
-                       title="Filter by category"
-                   >
-                       <option value="ALL">All Categories</option>
-                       {categoryOptions.map((c: any) => <option key={c.id} value={c.id}>{c.label}</option>)}
-                   </select>
-                   <div className="d-flex align-items-center gap-1">
-                       <span className="small text-muted">Created</span>
-                       <input
-                           type="date"
-                           className="form-control form-control-sm"
-                           style={{ fontSize: 11, width: 'auto' }}
-                           value={createdFrom}
-                           onChange={e => setCreatedFrom(e.target.value)}
-                           title="Created from"
-                       />
-                       <span className="small text-muted">–</span>
-                       <input
-                           type="date"
-                           className="form-control form-control-sm"
-                           style={{ fontSize: 11, width: 'auto' }}
-                           value={createdTo}
-                           onChange={e => setCreatedTo(e.target.value)}
-                           title="Created to"
-                       />
-                   </div>
-                   {hasActiveFilter && (
-                       <button
-                           className="btn btn-sm btn-light border"
-                           style={{ fontSize: 11 }}
-                           onClick={clearFilters}
-                           title="Clear all filters"
-                       >Clear</button>
-                   )}
-                   <button
-                       className="btn btn-sm btn-outline-primary ms-auto"
-                       style={{ fontSize: 11 }}
-                       onClick={onMarkAllRead}
-                       title="Mark all sample requests as read"
-                   >
-                       <i className="bi bi-check-circle me-1"></i>Mark All as Read
-                   </button>
-                   <span className="small text-muted">
-                       {totalSamples} item{totalSamples !== 1 ? 's' : ''}
-                       {unreadCount > 0 && (
-                           <> · <span className="fw-bold" style={{ color: '#0d6efd' }}>{unreadCount} unread</span></>
-                       )}
-                   </span>
-                   {canManage && (
-                       <ToolbarButton classic={false} tone="create" icon="bi-plus-lg" onClick={openCreateModal}>
-                           {t('create')}
-                       </ToolbarButton>
-                   )}
-               </div>
-           )}
 
            {/* ── Table ── */}
            <div
-               className={classic ? '' : 'card-body p-0'}
                // scrollbarGutter: reserve the vertical scrollbar's space always, so expanding a
                // row (which toggles the scrollbar) can't reflow the table's auto-width columns.
                // `overflow: auto` (not overflowY) with no inner `.table-responsive`: a nested
@@ -1394,20 +1112,19 @@ export default function SampleRequestView({ samples, customers, onCreateSample, 
            >
                <div>
                    <table
-                       className={classic ? '' : 'table table-hover align-middle mb-0'}
-                       style={classic ? { width: '100%', borderCollapse: 'collapse', background: '#fff' } : undefined}
+                       style={{ width: '100%', borderCollapse: 'collapse', background: '#fff' }}
                    >
-                       <thead style={classic ? xpTableHeader : LV_STICKY_THEAD} className={classic ? '' : 'table-light'}>
+                       <thead style={xpTableHeader}>
                            <tr>
-                               <th style={classic ? { ...xpThCell, width: LV_EXPANDER_COL_W } : { width: LV_EXPANDER_COL_W }} />
-                               <th style={classic ? { ...xpThCell, width: '130px' } : undefined} className={classic ? '' : 'ps-4'}>Request Code</th>
-                               <th style={classic ? { ...xpThCell, width: '90px' } : undefined}>Category</th>
-                               <th style={classic ? { ...xpThCell, width: '110px' } : undefined}>Customer</th>
-                               <th style={classic ? xpThCell : undefined}>Article / Project</th>
-                               <th style={classic ? xpThCell : undefined}>Specs</th>
-                               <th style={classic ? { ...xpThCell, width: '100px' } : undefined}>Status</th>
-                               <th style={classic ? { ...xpThCell, width: '90px' } : undefined}>Colors</th>
-                               <th style={classic ? { ...xpThCell, textAlign: 'right' as const, borderRight: 'none', width: '80px' } : undefined} className={classic ? '' : 'text-end pe-4'}>Actions</th>
+                               <th style={{ ...xpThCell, width: LV_EXPANDER_COL_W }} />
+                               <th style={{ ...xpThCell, width: '130px' }}>Request Code</th>
+                               <th style={{ ...xpThCell, width: '90px' }}>Category</th>
+                               <th style={{ ...xpThCell, width: '110px' }}>Customer</th>
+                               <th style={xpThCell}>Article / Project</th>
+                               <th style={xpThCell}>Specs</th>
+                               <th style={{ ...xpThCell, width: '100px' }}>Status</th>
+                               <th style={{ ...xpThCell, width: '90px' }}>Colors</th>
+                               <th style={{ ...xpThCell, textAlign: 'right' as const, borderRight: 'none', width: '80px' }}>Actions</th>
                            </tr>
                        </thead>
                        <tbody ref={listBodyRef}>
@@ -1418,98 +1135,85 @@ export default function SampleRequestView({ samples, customers, onCreateSample, 
                                    ref={s.id === highlightId ? highlightRef : undefined}
                                    onClick={() => toggleExpand(s.id)}
                                    style={{
-                                       background: s.id === highlightId ? rowStateBg('highlighted', classic)
-                                           : expandedIds.has(s.id) ? rowStateBg('expanded', classic)
-                                           : s.is_unread ? (classic ? '#dde8fb' : '#f0f7ff')
-                                           : classic ? lvZebra(true, rowIndex) : undefined,
-                                       borderBottom: classic ? '1px solid #c0bdb5' : undefined,
+                                       background: s.id === highlightId ? rowStateBg('highlighted')
+                                           : expandedIds.has(s.id) ? rowStateBg('expanded')
+                                           : s.is_unread ? ('#dde8fb')
+                                           : lvZebra(rowIndex),
+                                       borderBottom: '1px solid #c0bdb5',
                                        cursor: 'pointer',
                                        outline: s.id === highlightId ? '2px solid #f0a000' : undefined,
                                    }}
                                >
-                                   <ExpanderCell classic={classic} expanded={expandedIds.has(s.id)} onToggle={() => toggleExpand(s.id)} label="sample detail"
-                                       tdStyle={classic ? tdBase : undefined} />
-                                   <td style={classic ? tdBase : undefined} className={classic ? '' : 'ps-4'}>
+                                   <ExpanderCell expanded={expandedIds.has(s.id)} onToggle={() => toggleExpand(s.id)} label="sample detail"
+                                       tdStyle={tdBase} />
+                                   <td style={tdBase}>
                                        <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
                                            <div>
                                                {/* Unread rows keep their extra weight — that is a state
                                                    marker on top of the tier-1 code, not a second style. */}
                                                <CodeChip
                                                    code={s.code}
-                                                   classic={classic}
                                                    tone="accent"
                                                    style={s.is_unread ? { fontWeight: 900 } : undefined}
                                                />
-                                               <div style={classic ? { fontSize: '9px', color: '#555' } : undefined} className={classic ? '' : 'small text-muted'}>
+                                               <div style={{ fontSize: '9px', color: '#555' }}>
                                                    {tzDate(s.created_at)}
                                                </div>
                                            </div>
                                        </div>
                                    </td>
-                                   <td style={classic ? tdBase : undefined}>
-                                       <span style={classic ? { fontFamily: xpFont, fontSize: '10px' } : undefined}
-                                             className={classic ? '' : 'small'}>
+                                   <td style={tdBase}>
+                                       <span style={{ fontFamily: xpFont, fontSize: '10px' }}>
                                            {categoryLabel(s.category)}
                                        </span>
                                    </td>
-                                   <td style={classic ? tdBase : undefined}>
+                                   <td style={tdBase}>
                                        {s.customer_id ? (
-                                           <span style={classic ? { fontFamily: xpFont, fontSize: '11px' } : undefined}
-                                                 className={classic ? '' : 'fw-medium'}>
+                                           <span style={{ fontFamily: xpFont, fontSize: '11px' }}>
                                                {getCustomerName(s.customer_id)}
                                            </span>
                                        ) : (
-                                           <span style={classic ? { fontSize: '9px', color: '#555', fontStyle: 'italic', fontFamily: xpFont } : undefined} className={classic ? '' : 'text-muted small fst-italic'}>
+                                           <span style={{ fontSize: '9px', color: '#555', fontStyle: 'italic', fontFamily: xpFont }}>
                                                Internal
                                            </span>
                                        )}
                                    </td>
                                    {/* Article / Project */}
-                                   <td style={classic ? tdBase : undefined}>
+                                   <td style={tdBase}>
                                        {s.customer_article_code && (
-                                           <div style={classic ? { fontWeight: 'bold', fontSize: '11px' } : undefined} className={classic ? '' : 'fw-medium'}>
+                                           <div style={{ fontWeight: 'bold', fontSize: '11px' }}>
                                                {s.customer_article_code}
                                            </div>
                                        )}
                                        {s.project && (
-                                           <div style={classic ? { fontSize: '9px', color: '#555' } : undefined} className={classic ? '' : 'small text-muted'}>
+                                           <div style={{ fontSize: '9px', color: '#555' }}>
                                                {s.project}
                                            </div>
                                        )}
                                        {!s.customer_article_code && !s.project && (
-                                           <span style={classic ? { fontSize: '9px', color: '#888', fontStyle: 'italic', fontFamily: xpFont } : undefined}
-                                                 className={classic ? '' : 'text-muted small fst-italic'}>—</span>
+                                           <span style={{ fontSize: '9px', color: '#888', fontStyle: 'italic', fontFamily: xpFont }}>—</span>
                                        )}
                                    </td>
                                    {/* Specs */}
-                                   <td style={classic ? tdBase : undefined}>
+                                   <td style={tdBase}>
                                        {s.width && (
-                                           <div style={classic ? { fontSize: '10px', fontFamily: xpFont } : undefined}
-                                                className={classic ? '' : 'small'}>
+                                           <div style={{ fontSize: '10px', fontFamily: xpFont }}>
                                                <i className="bi bi-rulers me-1 opacity-50"></i>{s.width}
                                            </div>
                                        )}
-                                       <div style={classic ? { display: 'flex', gap: 2, flexWrap: 'wrap' as const, marginTop: 2 } : undefined}
-                                            className={classic ? '' : 'small text-muted d-flex gap-1 flex-wrap mt-1'}>
+                                       <div style={{ display: 'flex', gap: 2, flexWrap: 'wrap' as const, marginTop: 2 }}>
                                            {s.colors && s.colors.map((c: any, i: number) => (
-                                               classic ? (
-                                                   <span key={i} style={{ borderRadius: CHIP_RADIUS, background: c.is_repeat ? '#e8e8ff' : '#e8f5e8', border: `1px solid ${c.is_repeat ? '#8888cc' : '#88aa88'}`, color: c.is_repeat ? '#333' : '#1a3a1a', padding: '0 4px', fontSize: '9px', fontFamily: xpFont }}>
+                                               <span key={i} style={{ borderRadius: CHIP_RADIUS, background: c.is_repeat ? '#e8e8ff' : '#e8f5e8', border: `1px solid ${c.is_repeat ? '#8888cc' : '#88aa88'}`, color: c.is_repeat ? '#333' : '#1a3a1a', padding: '0 4px', fontSize: '9px', fontFamily: xpFont }}>
                                                        {c.name}{c.is_repeat ? ' (R)' : ''}
-                                                   </span>
-                                               ) : (
-                                                   <span key={i} className={`badge ${c.is_repeat ? 'bg-primary bg-opacity-10 text-primary' : 'bg-success bg-opacity-10 text-success'} border`}>
-                                                       {c.name}{c.is_repeat ? ' ↺' : ''}
-                                                   </span>
-                                               )
-                                           ))}
+                                                   </span>))}
                                        </div>
                                    </td>
                                    {/* Status — request-level only */}
-                                   <td style={classic ? tdBase : undefined}>
+                                   <td style={tdBase}>
                                        <StatusChip status={s.status} tint />
                                    </td>
                                    {/* Colors — status count badges */}
-                                   <td style={classic ? tdBase : undefined}>
+                                   <td style={tdBase}>
                                        {s.colors && s.colors.length > 0 ? (() => {
                                            const counts: Record<string, number> = { APPROVED: 0, SENT: 0, IN_PRODUCTION: 0, REJECTED: 0, PENDING: 0 };
                                            s.colors.forEach((c: any) => { const st = c.status || 'PENDING'; counts[st] = (counts[st] || 0) + 1; });
@@ -1530,16 +1234,14 @@ export default function SampleRequestView({ samples, customers, onCreateSample, 
                                                </div>
                                            );
                                        })() : (
-                                           <span style={classic ? { fontSize: '9px', color: '#888', fontStyle: 'italic', fontFamily: xpFont } : undefined}
-                                                 className={classic ? '' : 'text-muted small fst-italic'}>—</span>
+                                           <span style={{ fontSize: '9px', color: '#888', fontStyle: 'italic', fontFamily: xpFont }}>—</span>
                                        )}
                                    </td>
                                    {/* Actions — Update icon button + "⋯" overflow (Edit / Print / Log) */}
-                                   <td style={classic ? { ...tdBase, borderRight: 'none', textAlign: 'right' as const } : undefined} className={classic ? '' : 'pe-4 text-end'}>
+                                   <td style={{ ...tdBase, borderRight: 'none', textAlign: 'right' as const }}>
                                        <div style={{ display: 'flex', gap: 3, justifyContent: 'flex-end', alignItems: 'center' }} onClick={e => e.stopPropagation()}>
                                            {canManage && (
                                                <XPActionButton
-                                                   classic={classic}
                                                    tone="primary"
                                                    icon="bi-arrow-repeat"
                                                    title="Update Status"
@@ -1547,12 +1249,12 @@ export default function SampleRequestView({ samples, customers, onCreateSample, 
                                                    onClick={(e) => { closeRowMenu(); toggleDropdown(s.id, e); }}
                                                />
                                            )}
-                                           <MenuTriggerButton classic={classic} onClick={(e) => { closeDropdown(); toggleRowMenu(s.id, e); }} />
+                                           <MenuTriggerButton onClick={(e) => { closeDropdown(); toggleRowMenu(s.id, e); }} />
                                            {/* Read/unread dot */}
                                            <span
                                                title={s.is_unread ? 'Unread — click to mark as read' : 'Read — click to mark as unread'}
                                                onClick={(e) => { e.stopPropagation(); s.is_unread ? onMarkRead(s.id) : onMarkUnread(s.id); }}
-                                               style={classic ? {
+                                               style={{
                                                    display: 'inline-block',
                                                    width: 10,
                                                    height: 10,
@@ -1567,20 +1269,6 @@ export default function SampleRequestView({ samples, customers, onCreateSample, 
                                                        background: '#ece9d8',
                                                        border: '1px solid #7f9db9',
                                                        boxShadow: 'inset 1px 1px 0 rgba(255,255,255,0.6)',
-                                                   })
-                                               } : {
-                                                   display: 'inline-block',
-                                                   width: 10,
-                                                   height: 10,
-                                                   borderRadius: '50%',
-                                                   cursor: 'pointer',
-                                                   flexShrink: 0,
-                                                   ...(s.is_unread ? {
-                                                       background: '#0d6efd',
-                                                       boxShadow: '0 0 0 2px rgba(13,110,253,0.25)',
-                                                   } : {
-                                                       background: 'white',
-                                                       border: '2px solid #0d6efd',
                                                    })
                                                }}
                                            />
@@ -1608,22 +1296,18 @@ export default function SampleRequestView({ samples, customers, onCreateSample, 
                                        return {
                                            key: c.id,
                                            stripeColor: stripe.borderLeftColor,
-                                           background: classic ? stripe.background : undefined,
+                                           background: stripe.background,
                                            cells: [
-                                               <span style={{ fontWeight: classic ? 'bold' : 500, color: '#111' }}>{c.name}</span>,
-                                               classic ? (
-                                                   <span style={{ borderRadius: CHIP_RADIUS, background: c.is_repeat ? '#dce4f5' : '#d4edda', border: `1px solid ${c.is_repeat ? '#6878c8' : '#5aaa68'}`, color: c.is_repeat ? '#0d2a6e' : '#0c3a1a', padding: '0 4px', fontSize: 9, fontFamily: xpFont, fontWeight: 'bold' }}>{c.is_repeat ? 'Repeat' : 'New'}</span>
-                                               ) : (
-                                                   <span className={`badge ${c.is_repeat ? 'bg-primary bg-opacity-10 text-primary' : 'bg-success bg-opacity-10 text-success'} border`} style={{ fontSize: 10 }}>{c.is_repeat ? 'Repeat' : 'New'}</span>
-                                               ),
+                                               <span style={{ fontWeight: 'bold', color: '#111' }}>{c.name}</span>,
+                                               <span style={{ borderRadius: CHIP_RADIUS, background: c.is_repeat ? '#dce4f5' : '#d4edda', border: `1px solid ${c.is_repeat ? '#6878c8' : '#5aaa68'}`, color: c.is_repeat ? '#0d2a6e' : '#0c3a1a', padding: '0 4px', fontSize: 9, fontFamily: xpFont, fontWeight: 'bold' }}>{c.is_repeat ? 'Repeat' : 'New'}</span>,
                                                <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, flexWrap: 'wrap' }}>
-                                                   <StatusChip status={status} tint style={classic ? undefined : { fontSize: 10 }} />
+                                                   <StatusChip status={status} tint style={undefined} />
                                                    {/* Attempt tallies — a rejected variant can be reopened and rejected again,
                                                        so these are counts of logged transitions, not the current status. */}
                                                    {(c.process_count > 1 || c.reject_count > 0) && (
                                                        <span
                                                            title={`${c.process_count || 0} process run(s), ${c.reject_count || 0} rejection(s), ${c.approve_count || 0} approval(s)`}
-                                                           style={{ fontSize: 9, fontFamily: classic ? xpFont : undefined, color: '#555', whiteSpace: 'nowrap' }}
+                                                           style={{ fontSize: 9, fontFamily: xpFont, color: '#555', whiteSpace: 'nowrap' }}
                                                        >
                                                            {c.process_count > 1 && <span>run {c.process_count}&#215;</span>}
                                                            {c.process_count > 1 && c.reject_count > 0 && ' · '}
@@ -1634,26 +1318,26 @@ export default function SampleRequestView({ samples, customers, onCreateSample, 
                                                isApproved ? (
                                                    <div style={{ textAlign: 'center' as const }}>
                                                        <StatusChip status="APPROVED" label="Approved" tint />
-                                                       {c.approval_notes && <div className={classic ? '' : 'text-muted fst-italic'} style={classic ? { fontSize: 9, color: '#555', fontFamily: xpFont, fontStyle: 'italic', marginTop: 1 } : { fontSize: 9 }}>{c.approval_notes}</div>}
+                                                       {c.approval_notes && <div style={{ fontSize: 9, color: '#555', fontFamily: xpFont, fontStyle: 'italic', marginTop: 1 }}>{c.approval_notes}</div>}
                                                    </div>
                                                ) : isRejected ? (
                                                    <div style={{ textAlign: 'center' as const }}>
-                                                       <div className={classic ? '' : 'fw-bold text-danger'} style={classic ? { fontSize: 10, color: '#a01a1a', fontWeight: 'bold', fontFamily: xpFont } : { fontSize: 10 }}>Rejected{c.rejection_reason ? `: ${c.rejection_reason}` : ''}</div>
-                                                       {c.rejection_notes && <div className={classic ? '' : 'text-muted fst-italic'} style={classic ? { fontSize: 9, color: '#555', fontFamily: xpFont, fontStyle: 'italic', marginTop: 1 } : { fontSize: 9 }}>{c.rejection_notes}</div>}
+                                                       <div style={{ fontSize: 10, color: '#a01a1a', fontWeight: 'bold', fontFamily: xpFont }}>Rejected{c.rejection_reason ? `: ${c.rejection_reason}` : ''}</div>
+                                                       {c.rejection_notes && <div style={{ fontSize: 9, color: '#555', fontFamily: xpFont, fontStyle: 'italic', marginTop: 1 }}>{c.rejection_notes}</div>}
                                                        {/* Rejected rests but is reopenable — remaking the variant is a new attempt,
                                                            which is what the sample report counts. Only exit is back to In Production. */}
                                                        {canManage && (
                                                            <div style={{ marginTop: 4 }}>
-                                                               <ToggleChip on={false} onClick={() => onUpdateColorStatus(s.id, c.id, 'IN_PRODUCTION')} classic={classic} tone="amber" flat title="Reopen for another attempt (logs a new process run)">&#8635; Reopen</ToggleChip>
+                                                               <ToggleChip on={false} onClick={() => onUpdateColorStatus(s.id, c.id, 'IN_PRODUCTION')} tone="amber" flat title="Reopen for another attempt (logs a new process run)">&#8635; Reopen</ToggleChip>
                                                            </div>
                                                        )}
                                                    </div>
                                                ) : canManage ? (
-                                                   <div className={classic ? undefined : 'btn-group btn-group-sm'} role="group" style={{ display: 'inline-flex' }}>
-                                                       <ToggleChip on={isInProd} onClick={() => onUpdateColorStatus(s.id, c.id, isInProd ? 'PENDING' : 'IN_PRODUCTION')} classic={classic} tone="amber" flat seg="first" title={isInProd ? 'Reset to Pending' : 'Set In Production'}>&#9881; In Prod</ToggleChip>
-                                                       <ToggleChip on={isSent} onClick={() => onUpdateColorStatus(s.id, c.id, isSent ? 'PENDING' : 'SENT')} classic={classic} tone="blue" flat seg="mid" title={isSent ? 'Reset to Pending' : 'Mark Sent to Customer'}>&#187; Sent</ToggleChip>
-                                                       <ToggleChip on={false} onClick={() => handleApproveColor(s.id, c.id, c.name)} classic={classic} tone="green" flat seg="mid" title="Approve">&#10003; Approve</ToggleChip>
-                                                       <ToggleChip on={false} onClick={() => openRejectModal(s.id, c.id, c.name)} classic={classic} tone="red" flat seg="last" title="Reject">&#10007; Reject</ToggleChip>
+                                                   <div className={undefined} role="group" style={{ display: 'inline-flex' }}>
+                                                       <ToggleChip on={isInProd} onClick={() => onUpdateColorStatus(s.id, c.id, isInProd ? 'PENDING' : 'IN_PRODUCTION')} tone="amber" flat seg="first" title={isInProd ? 'Reset to Pending' : 'Set In Production'}>&#9881; In Prod</ToggleChip>
+                                                       <ToggleChip on={isSent} onClick={() => onUpdateColorStatus(s.id, c.id, isSent ? 'PENDING' : 'SENT')} tone="blue" flat seg="mid" title={isSent ? 'Reset to Pending' : 'Mark Sent to Customer'}>&#187; Sent</ToggleChip>
+                                                       <ToggleChip on={false} onClick={() => handleApproveColor(s.id, c.id, c.name)} tone="green" flat seg="mid" title="Approve">&#10003; Approve</ToggleChip>
+                                                       <ToggleChip on={false} onClick={() => openRejectModal(s.id, c.id, c.name)} tone="red" flat seg="last" title="Reject">&#10007; Reject</ToggleChip>
                                                    </div>
                                                ) : null,
                                                // Photo column — only one side can be current, so this is whichever
@@ -1662,23 +1346,14 @@ export default function SampleRequestView({ samples, customers, onCreateSample, 
                                                statusPhotoThumb(
                                                    isApproved ? c.approval_image_url : isRejected ? c.rejection_image_url : null,
                                                    isApproved ? 'Approval photo' : 'Rejection photo',
-                                               ) || <span style={{ fontSize: 10, color: '#888', fontFamily: classic ? xpFont : undefined }}>—</span>,
+                                               ) || <span style={{ fontSize: 10, color: '#888', fontFamily: xpFont}}>—</span>,
                                                isApproved ? (
                                                    c.item_id ? (
-                                                       classic
-                                                           ? <span style={{ fontSize: 10, color: '#1b5e20', fontWeight: 'bold', fontFamily: xpFont }}>Item: {c.item_code}</span>
-                                                           : <span className="badge bg-success bg-opacity-10 text-success border" style={{ fontSize: 10 }}>Item: {c.item_code}</span>
-                                                   ) : canManage ? (
-                                                       classic
-                                                           ? <button className={XP_BTN} style={xpBtn({ ...BTN_TONES.success, fontSize: 10, padding: '1px 6px' })} onClick={() => createItemFromColor(s, c)} title="Create Item from this approved color">+ Item</button>
-                                                           : <button className="btn btn-sm btn-success" style={{ fontSize: 10, padding: '1px 6px' }} onClick={() => createItemFromColor(s, c)}>+ Item</button>
-                                                   ) : null
+                                                       <span style={{ fontSize: 10, color: '#1b5e20', fontWeight: 'bold', fontFamily: xpFont }}>Item: {c.item_code}</span>) : canManage ? (
+                                                       <button className={XP_BTN} style={xpBtn({ ...BTN_TONES.success, fontSize: 10, padding: '1px 6px' })} onClick={() => createItemFromColor(s, c)} title="Create Item from this approved color">+ Item</button>) : null
                                                ) : isRejected ? (
                                                    canManage ? (
-                                                       classic
-                                                           ? <button className={XP_BTN} style={xpBtn({ ...BTN_TONES.primary, fontSize: 10, padding: '1px 6px' })} onClick={() => createNewFromRejected(s, c)} title="Create a new sample request based on this rejected color">+ New Sample</button>
-                                                           : <button className="btn btn-sm btn-primary" style={{ fontSize: 10, padding: '1px 6px' }} onClick={() => createNewFromRejected(s, c)} title="Create a new sample request based on this rejected color">+ New Sample</button>
-                                                   ) : null
+                                                       <button className={XP_BTN} style={xpBtn({ ...BTN_TONES.primary, fontSize: 10, padding: '1px 6px' })} onClick={() => createNewFromRejected(s, c)} title="Create a new sample request based on this rejected color">+ New Sample</button>) : null
                                                ) : null,
                                            ],
                                        };
@@ -1745,13 +1420,12 @@ export default function SampleRequestView({ samples, customers, onCreateSample, 
                                            <td colSpan={9} style={{
                                                padding: 0, position: 'relative', height: 300,
                                                background: '#fff',
-                                               ...expandedRowFrame(classic),
+                                               ...expandedRowFrame(),
                                            }}>
                                                {/* left offset clears the rail — an absolutely positioned child paints
                                                    above the cell's inset shadow and would otherwise cover it */}
-                                               <div style={{ position: 'absolute', top: 0, right: 0, bottom: 0, left: classic ? 4 : 3 }}>
+                                               <div style={{ position: 'absolute', top: 0, right: 0, bottom: 0, left: 4}}>
                                                    <RequestDetailPanel
-                                                       classic={classic}
                                                        leftTitle={<><i className="bi bi-palette" style={{ marginRight: 2 }} />Colors — {colors.length} total · {colors.filter((c: any) => c.status === 'APPROVED').length} approved</>}
                                                        leftWidth="56%"
                                                        columns={columns}
@@ -1768,13 +1442,12 @@ export default function SampleRequestView({ samples, customers, onCreateSample, 
                                </React.Fragment>
                            ))}
                            {pageSamples.length === 0 && (dataLoading.samples ? (
-                               <TableSkeleton rows={8} cols={skel.cols ?? 9} classic={classic} tdStyle={tdBase} rowHeight={skel.rowHeight} fillHeight={skel.fillHeight} />
+                               <TableSkeleton rows={8} cols={skel.cols ?? 9} tdStyle={tdBase} rowHeight={skel.rowHeight} fillHeight={skel.fillHeight} />
                            ) : (
                                <tr>
                                    <td
                                        colSpan={9}
-                                       style={classic ? { ...tdBase, borderRight: 'none', textAlign: 'center', padding: '24px 8px', color: '#555', fontStyle: 'italic' } : undefined}
-                                       className={classic ? '' : 'text-center py-5 text-muted'}
+                                       style={{ ...tdBase, borderRight: 'none', textAlign: 'center', padding: '24px 8px', color: '#555', fontStyle: 'italic' }}
                                    >
                                        {hasActiveFilter
                                            ? 'No requests match the current filter.'
@@ -1790,8 +1463,7 @@ export default function SampleRequestView({ samples, customers, onCreateSample, 
            <Pager page={clampedSamplePage} total={totalSamples} pageSize={SAMPLE_PAGE_SIZE} onPageChange={setSamplePage} hideWhenEmpty />
 
            {/* ── Status bar ── */}
-           {classic && (
-               <div style={{
+           <div style={{
                    background: 'linear-gradient(to bottom, #e8e6df, #d5d3cc)',
                    borderTop: '1px solid #b0a898',
                    padding: '3px 8px',
@@ -1807,21 +1479,19 @@ export default function SampleRequestView({ samples, customers, onCreateSample, 
                        {totalSamples} request{totalSamples !== 1 ? 's' : ''} · {colorStats.total} color{colorStats.total !== 1 ? 's' : ''}
                    </span>
                    <span style={{ ...xpSep, height: 15, alignSelf: 'center' }} />
-                   <StatusCountPill classic status="PENDING" count={colorStats.PENDING} title="Colors not yet started" />
-                   <StatusCountPill classic status="IN_PRODUCTION" count={colorStats.IN_PRODUCTION} title="Colors in production" />
-                   <StatusCountPill classic status="SENT" count={colorStats.SENT} title="Colors sent to customer" />
-                   <StatusCountPill classic status="APPROVED" count={colorStats.APPROVED} title="Colors approved" />
-                   <StatusCountPill classic status="REJECTED" count={colorStats.REJECTED} title="Colors rejected" />
+                   <StatusCountPill status="PENDING" count={colorStats.PENDING} title="Colors not yet started" />
+                   <StatusCountPill status="IN_PRODUCTION" count={colorStats.IN_PRODUCTION} title="Colors in production" />
+                   <StatusCountPill status="SENT" count={colorStats.SENT} title="Colors sent to customer" />
+                   <StatusCountPill status="APPROVED" count={colorStats.APPROVED} title="Colors approved" />
+                   <StatusCountPill status="REJECTED" count={colorStats.REJECTED} title="Colors rejected" />
                    {hasActiveFilter && <span style={{ marginLeft: 'auto', fontStyle: 'italic', alignSelf: 'center' }}>filtered</span>}
                </div>
-           )}
        </ShellWindow>
 
        {printSample && (
            <SamplePrintModal
                sample={printSample}
                onClose={() => setPrintSample(null)}
-               currentStyle={currentStyle}
                companyProfile={companyProfile}
                getCustomerName={getCustomerName}
            />
@@ -1846,30 +1516,25 @@ export default function SampleRequestView({ samples, customers, onCreateSample, 
                level={2}
                footer={
                    <>
-                       <span style={classic
-                           ? { flex: 1, fontFamily: xpFont, fontSize: 10, color: '#555', textAlign: 'left' as const }
-                           : { flex: 1, fontSize: 12, color: '#666' }
-                       }>
+                       <span style={{ flex: 1, fontFamily: xpFont, fontSize: 10, color: '#555', textAlign: 'left' as const }}>
                            {filePreview.filename}
                        </span>
                        <button
                            onClick={() => window.open(filePreview.url, '_blank')}
-                           style={classic ? xpBtn() : undefined}
-                           className={classic ? XP_BTN : 'btn btn-sm btn-outline-secondary'}
+                           style={xpBtn()}
+                           className={XP_BTN}
                        >
                            ↗ Open Full View
                        </button>
-                       {classic && (
-                           <button className={XP_BTN} onClick={() => setFilePreview(null)} style={xpBtn()}>
+                       <button className={XP_BTN} onClick={() => setFilePreview(null)} style={xpBtn()}>
                                Close
                            </button>
-                       )}
                    </>
                }
            >
                {filePreview.type === 'image' ? (
                    <div style={{
-                       margin: classic ? '-12px -14px' : '-24px',
+                       margin: '-12px -14px',
                        background: '#1e1e1e',
                        display: 'flex', alignItems: 'center', justifyContent: 'center',
                        minHeight: 320,
@@ -1881,7 +1546,7 @@ export default function SampleRequestView({ samples, customers, onCreateSample, 
                        />
                    </div>
                ) : (
-                   <div style={{ margin: classic ? '-12px -14px' : '-24px' }}>
+                   <div style={{ margin: '-12px -14px'}}>
                        <iframe
                            src={filePreview.url}
                            style={{ width: '100%', height: 'calc(var(--app-vh) * 70 / 100)', border: 'none', display: 'block' }}

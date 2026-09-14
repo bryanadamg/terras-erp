@@ -4,7 +4,6 @@ import React, { useEffect, useMemo, useState, useCallback, useRef } from 'react'
 import dynamic from 'next/dynamic';
 import { useData } from '../../context/DataContext';
 import { usePaginatedFetch } from '../../context/usePaginatedList';
-import { useTheme } from '../../context/ThemeContext';
 import { useUser } from '../../context/UserContext';
 import { useTimezone } from '../../context/TimezoneContext';
 import { useToast } from '../shared/Toast';
@@ -26,14 +25,14 @@ const API_BASE = (process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:8000/api
 // regardless of the user's theme setting) — inherited from the packing view this
 // was split out of, tracked separately.
 const xpFont = LV_XP_FONT;
-const xpInput: React.CSSProperties = lvInput(true);
+const xpInput: React.CSSProperties = lvInput();
 const xpSelect: React.CSSProperties = { ...xpInput, height: 22 };
-const xpTableHeader: React.CSSProperties = lvThSticky(true);
-const xpBtn = (extra: React.CSSProperties = {}): React.CSSProperties => lvBtn(true, 'default', extra);
-const xpBtnGreen = (extra: React.CSSProperties = {}) => lvBtn(true, 'success', extra);
-const rowStyle = (idx: number): React.CSSProperties => lvRow(true, idx);
-const td: React.CSSProperties = lvTd(true);
-const xpLabel: React.CSSProperties = lvLabel(true);
+const xpTableHeader: React.CSSProperties = lvThSticky();
+const xpBtn = (extra: React.CSSProperties = {}): React.CSSProperties => lvBtn('default', extra);
+const xpBtnGreen = (extra: React.CSSProperties = {}) => lvBtn('success', extra);
+const rowStyle = (idx: number): React.CSSProperties => lvRow(idx);
+const td: React.CSSProperties = lvTd();
+const xpLabel: React.CSSProperties = lvLabel();
 
 const num = (v: any) => { const n = parseFloat(v); return isNaN(n) ? 0 : n; };
 const PL_PAGE_SIZE = 20;
@@ -45,7 +44,6 @@ export default function PickListView() {
     // master data (loaded on initial app load). Pick lists, sales orders and stock
     // balances are all fetched here scoped to what's actually on screen.
     const { partners, locations, attributes, companyProfile, itemIndex, authFetch } = useData();
-    const { uiStyle } = useTheme();
     const { formatDate: tzDate, formatDateTime: tzDateTime } = useTimezone();
     const { showToast } = useToast();
     const { confirm } = useConfirm();
@@ -258,13 +256,13 @@ export default function PickListView() {
             </div>
         );
         // Dense: this table shares its row with two other panes in the grid below.
-        const th = lvSubTh(true, true);
-        const td = lvSubTd(true, true);
+        const th = lvSubTh();
+        const td = lvSubTd();
 
         return (
             <tr key={`${pl.id}-detail`}>
                 <td colSpan={PL_COLS} style={{ padding: 0 }}>
-                    <ExpandedRowPanel classic>
+                    <ExpandedRowPanel>
                         <div style={{
                             display: 'grid', gridTemplateColumns: '250px minmax(280px, 1fr) 260px',
                             border: '1px solid #7f9db9', fontFamily: xpFont, fontSize: 10,
@@ -316,7 +314,7 @@ export default function PickListView() {
                                     </div>
                                 ) : (
                                     <div style={{ maxHeight: 200, overflowY: 'auto' }}>
-                                        <table style={{ ...lvSubTable(true), border: 'none' }}>
+                                        <table style={{ ...lvSubTable(), border: 'none' }}>
                                             <thead>
                                                 <tr>
                                                     <th style={{ ...th, width: 24 }}>#</th>
@@ -335,7 +333,7 @@ export default function PickListView() {
                                                 {/* No zebra — the only row fill is the picked-green
                                                     confirmation, which is the floor's actual signal. */}
                                                 {lines.map((l: any, li: number) => (
-                                                    <tr key={l.id} style={lvSubRow(true, li, { fill: l.picked_at ? '#eef7ee' : undefined })}>
+                                                    <tr key={l.id} style={lvSubRow(li, { fill: l.picked_at ? '#eef7ee' : undefined })}>
                                                         <td style={{ ...td, color: '#888' }}>{l.package_no ?? '—'}</td>
                                                         <td style={{ ...td, fontFamily: CODE_FONT, color: '#00309c', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: 120 }}
                                                             title={l.batch_number || undefined}>
@@ -428,9 +426,8 @@ export default function PickListView() {
     };
 
     return (
-        <ShellWindow classic fill="page" className="fade-in" style={{ fontFamily: xpFont }}>
+        <ShellWindow fill="page" className="fade-in" style={{ fontFamily: xpFont }}>
             <ShellTitleBar
-                classic
                 icon="bi-clipboard-check"
                 title="Pick Lists & Dispatch"
             />
@@ -438,7 +435,6 @@ export default function PickListView() {
                 order on the board, so the Pick action lives on the row that says
                 whether the order can be picked at all. */}
             <Tabs<PLTab>
-                classic
                 activeKey={tab}
                 onChange={setTab}
                 tabs={[
@@ -482,7 +478,7 @@ export default function PickListView() {
                     </thead>
                     <tbody ref={listBodyRef}>
                         {pickLists.length === 0 && (loading ? (
-                            <TableSkeleton rows={7} cols={skel.cols ?? PL_COLS} classic tdStyle={td} rowHeight={skel.rowHeight} fillHeight={skel.fillHeight} />
+                            <TableSkeleton rows={7} cols={skel.cols ?? PL_COLS} tdStyle={td} rowHeight={skel.rowHeight} fillHeight={skel.fillHeight} />
                         ) : (
                             <tr><td colSpan={PL_COLS} style={{ padding: 0 }}>
                                 <XPEmptyState icon="bi-clipboard-check" message='No pick lists yet. Click "New Pick List" to pick packed cartons for an order.' />
@@ -493,10 +489,10 @@ export default function PickListView() {
                             return (
                             <React.Fragment key={pl.id}>
                             <tr
-                                style={{ ...rowStyle(idx), ...(isExpanded ? { background: rowStateBg('expanded', true) } : {}), cursor: 'pointer' }}
+                                style={{ ...rowStyle(idx), ...(isExpanded ? { background: rowStateBg('expanded') } : {}), cursor: 'pointer' }}
                                 onClick={() => setExpandedId(prev => prev === String(pl.id) ? null : String(pl.id))}
                             >
-                                <ExpanderCell classic expanded={isExpanded} tdStyle={td} label="pick list detail"
+                                <ExpanderCell expanded={isExpanded} tdStyle={td} label="pick list detail"
                                     onToggle={() => setExpandedId(prev => prev === String(pl.id) ? null : String(pl.id))} />
                                 <td style={{ ...td, fontWeight: 'bold', color: '#00309c' }}>{pl.code}</td>
                                 <td style={td}>{pl.sales_order_code || '—'}</td>
@@ -508,7 +504,6 @@ export default function PickListView() {
                                 <td style={{ ...td, textAlign: 'right' }} onClick={e => e.stopPropagation()}>
                                     <span style={{ marginRight: 2 }}>
                                         <XPActionButton
-                                            classic
                                             tone="primary"
                                             icon="bi-upc-scan"
                                             title={pl.status === 'DISPATCHED' ? 'View' : 'Pick'}
@@ -517,14 +512,13 @@ export default function PickListView() {
                                     </span>
                                     <span style={{ marginRight: 2 }}>
                                         <XPActionButton
-                                            classic
                                             tone="neutral"
                                             icon="bi-card-list"
                                             title="Kartu Picking"
                                             onClick={() => setPrintCard(pl)}
                                         />
                                     </span>
-                                    <MenuTriggerButton classic onClick={e => menuToggle(String(pl.id), e)} />
+                                    <MenuTriggerButton onClick={e => menuToggle(String(pl.id), e)} />
                                 </td>
                             </tr>
                             {isExpanded && renderPickDetail(pl)}
@@ -724,7 +718,6 @@ function SOPickerBoard({ pickableSOs, loading, tzDate, canManage, onRefresh, onP
                     <i className="bi bi-arrow-clockwise" style={{ marginRight: 4 }} />Refresh
                 </button>
                 <FilterChipBar
-                    classic
                     style={{ marginLeft: 10 }}
                     value={readyOnly ? 'ready' : 'all'}
                     onChange={v => setReadyOnly(v === 'ready')}
@@ -740,7 +733,7 @@ function SOPickerBoard({ pickableSOs, loading, tzDate, canManage, onRefresh, onP
                     another pick list — cartons are suggested oldest-first, and the last one may overshoot
                     since a carton is never split.
                 </span>
-                <ToolbarCount classic right>
+                <ToolbarCount right>
                     {filtered.length.toLocaleString()} order{filtered.length !== 1 ? 's' : ''}
                 </ToolbarCount>
             </div>
@@ -1380,7 +1373,6 @@ function PickListEditor({ pl: initialPl, itemById, locPickerTreeOptions, authFet
                                                 </td>
                                             ) : (
                                                 <RowCheckboxCell
-                                                    classic
                                                     checked={false}
                                                     disabled={readOnly || scanning}
                                                     onChange={() => scan(r.batch_number)}
@@ -1441,12 +1433,12 @@ function PickListEditor({ pl: initialPl, itemById, locPickerTreeOptions, authFet
                                                 {!r.batch_id ? (
                                                     <span style={{ fontSize: 10, color: '#bbb' }}>n/a</span>
                                                 ) : r.picked_at ? (
-                                                    <Chip classic size="xs" icon="bi-check-lg" tone={statusTint('SCANNED')}
+                                                    <Chip size="xs" icon="bi-check-lg" tone={statusTint('SCANNED')}
                                                         title={`Scanned by ${r.picked_by || 'an operator'}`}>
                                                         {r.picked_by || 'scanned'}
                                                     </Chip>
                                                 ) : (
-                                                    <Chip classic size="xs" tone={statusTint('UNSCANNED')}
+                                                    <Chip size="xs" tone={statusTint('UNSCANNED')}
                                                         title="Not yet scanned — this carton blocks dispatch">
                                                         pending
                                                     </Chip>
@@ -1455,7 +1447,6 @@ function PickListEditor({ pl: initialPl, itemById, locPickerTreeOptions, authFet
                                             <td style={{ ...td, textAlign: 'center' }}>
                                                 {!readOnly && (
                                                     <XPActionButton
-                                                        classic
                                                         tone="danger"
                                                         icon="bi-x"
                                                         title={r.batch_id

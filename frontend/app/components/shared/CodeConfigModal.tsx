@@ -1,5 +1,4 @@
 import { useState, useEffect, useRef, Fragment } from 'react';
-import { useTheme } from '../../context/ThemeContext';
 import ModalWrapper from './ModalWrapper';
 import { CODE_FONT, xpFont, BUTTON_RADIUS, XP_BTN } from './xpTheme';
 
@@ -402,7 +401,6 @@ export default function CodeConfigModal({ isOpen, onClose, type, onSave, initial
   const [segments, setSegments] = useState<Segment[]>(() => getDefaultSegments(type));
   const [separator, setSeparator] = useState('-');
   const [activeGap, setActiveGap] = useState<number | null>(null);
-  const { uiStyle: currentStyle } = useTheme();
   const dragRef = useRef<{
     sourceZone: 'track' | 'palette';
     index: number;
@@ -501,7 +499,6 @@ export default function CodeConfigModal({ isOpen, onClose, type, onSave, initial
     setSegments(prev => prev.map(s => s.type === 'suffix' ? { ...s, value: value.toUpperCase() } : s));
   };
 
-  const classic = currentStyle === 'classic';
   const palette = getAvailablePalette(segments, attributes);
 
   const title = (
@@ -511,8 +508,7 @@ export default function CodeConfigModal({ isOpen, onClose, type, onSave, initial
     </>
   );
 
-  const footer = classic ? (
-    <>
+  const footer = <>
       <button onClick={onClose} className={XP_BTN} style={{
         borderRadius: BUTTON_RADIUS,
         fontFamily: xpFont, fontSize: '11px', padding: '4px 18px',
@@ -526,343 +522,209 @@ export default function CodeConfigModal({ isOpen, onClose, type, onSave, initial
         border: '1px solid', borderColor: '#99bbee #224477 #224477 #99bbee',
         color: '#fff', cursor: 'pointer',
       }}>Save Configuration</button>
-    </>
-  ) : (
-    <>
-      <button type="button" className="btn btn-sm btn-secondary" onClick={onClose}>Cancel</button>
-      <button type="button" className="btn btn-sm btn-primary px-4" onClick={handleSave}>
-        Save Configuration
-      </button>
-    </>
+    </>;
+
+  const xpGap = (gapIndex: number) => (
+    <div
+      key={`xp-gap-${gapIndex}`}
+      onDragOver={e => handleGapDragOver(e, gapIndex)}
+      onDragLeave={handleGapDragLeave}
+      onDrop={e => handleGapDrop(e, gapIndex)}
+      style={{
+        width: activeGap === gapIndex ? '16px' : '4px',
+        minWidth: activeGap === gapIndex ? '16px' : '4px',
+        height: '32px',
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        fontSize: '11px', fontWeight: 700, color: '#555555',
+        background: activeGap === gapIndex ? '#cce0ff' : 'transparent',
+        borderLeft: activeGap === gapIndex ? '2px solid #0058e6' : 'none',
+        transition: 'width 0.1s',
+        cursor: 'crosshair', userSelect: 'none', flexShrink: 0,
+        fontFamily: xpFont,
+      }}
+    >
+      {activeGap !== gapIndex && gapIndex > 0 ? separator : ''}
+    </div>
   );
 
-  if (classic) {
-    const xpGap = (gapIndex: number) => (
-      <div
-        key={`xp-gap-${gapIndex}`}
-        onDragOver={e => handleGapDragOver(e, gapIndex)}
-        onDragLeave={handleGapDragLeave}
-        onDrop={e => handleGapDrop(e, gapIndex)}
-        style={{
-          width: activeGap === gapIndex ? '16px' : '4px',
-          minWidth: activeGap === gapIndex ? '16px' : '4px',
-          height: '32px',
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-          fontSize: '11px', fontWeight: 700, color: '#555555',
-          background: activeGap === gapIndex ? '#cce0ff' : 'transparent',
-          borderLeft: activeGap === gapIndex ? '2px solid #0058e6' : 'none',
-          transition: 'width 0.1s',
-          cursor: 'crosshair', userSelect: 'none', flexShrink: 0,
-          fontFamily: xpFont,
-        }}
-      >
-        {activeGap !== gapIndex && gapIndex > 0 ? separator : ''}
-      </div>
-    );
-
-    const xpChip = (seg: Segment, i: number) => {
-      const isCounter = seg.type === 'counter';
-      const isPrefix = seg.type === 'prefix';
-      const isSuffix = seg.type === 'suffix';
-      const textColor = CHIP_COLORS_CLASSIC_TEXT[seg.type] ?? '#333';
-      const label = seg.type === 'attribute'
-        ? (seg as Extract<Segment, { type: 'attribute' }>).name
-        : seg.type === 'prefix' ? 'prefix'
-        : seg.type === 'suffix' ? 'suffix'
-        : seg.type === 'item' ? 'item code'
-        : seg.type;
-      return (
-        <Fragment key={`xp-chip-${seg.type}-${seg.type === 'attribute' ? (seg as Extract<Segment, { type: 'attribute' }>).name : seg.type === 'prefix' || seg.type === 'suffix' ? (seg as Extract<Segment, { type: 'prefix' }>).value : ''}-${i}`}>
-          {xpGap(i)}
-          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1px', flexShrink: 0 }}>
-            <div
-              draggable
-              onDragStart={e => handleTrackDragStart(e, i)}
-              onDragEnd={handleDragEnd}
-              style={{
-                display: 'flex', alignItems: 'center', gap: '4px',
-                background: isCounter
-                  ? 'linear-gradient(to bottom, #e0e0e0, #c0c0c0)'
-                  : 'linear-gradient(to bottom, #ffffff, #d4d0c8)',
-                border: '1px solid',
-                borderColor: '#dfdfdf #808080 #808080 #dfdfdf',
-                padding: isPrefix || isSuffix ? '2px 5px' : '2px 8px',
-                fontFamily: CODE_FONT,
-                fontSize: '11px', fontWeight: 'bold',
-                color: isCounter ? '#333' : textColor,
-                cursor: 'grab',
-                userSelect: 'none', minHeight: '22px',
-              }}
-            >
-              {!isCounter && (
-                <span style={{ color: '#666', fontSize: '9px' }}>⠿</span>
-              )}
-              {isPrefix && (
-                <input
-                  value={(seg as Extract<Segment, { type: 'prefix' }>).value}
-                  onChange={e => handlePrefixChange(e.target.value)}
-                  placeholder="PREFIX"
-                  style={{
-                    fontFamily: CODE_FONT, fontSize: '11px', fontWeight: 'bold',
-                    color: textColor, background: '#fff',
-                    border: '1px solid', borderColor: '#808080 #dfdfdf #dfdfdf #808080',
-                    boxShadow: 'inset 1px 1px 0 rgba(0,0,0,0.1)',
-                    padding: '1px 3px',
-                    width: Math.max(40, (seg as Extract<Segment, { type: 'prefix' }>).value.length * 7 + 10) + 'px',
-                    outline: 'none',
-                  }}
-                />
-              )}
-              {isSuffix && (
-                <input
-                  value={(seg as Extract<Segment, { type: 'suffix' }>).value}
-                  onChange={e => handleSuffixChange(e.target.value)}
-                  placeholder="SUFFIX"
-                  style={{
-                    fontFamily: CODE_FONT, fontSize: '11px', fontWeight: 'bold',
-                    color: textColor, background: '#fff',
-                    border: '1px solid', borderColor: '#808080 #dfdfdf #dfdfdf #808080',
-                    boxShadow: 'inset 1px 1px 0 rgba(0,0,0,0.1)',
-                    padding: '1px 3px',
-                    width: Math.max(40, (seg as Extract<Segment, { type: 'suffix' }>).value.length * 7 + 10) + 'px',
-                    outline: 'none',
-                  }}
-                />
-              )}
-              {!isPrefix && !isSuffix && (
-                <span>
-                  {seg.type === 'item' ? 'ITEM001'
-                   : seg.type === 'attribute' ? (seg as Extract<Segment, { type: 'attribute' }>).name.toUpperCase()
-                   : seg.type === 'year' ? new Date().getFullYear()
-                   : seg.type === 'month' ? String(new Date().getMonth() + 1).padStart(2, '0')
-                   : '00001'}
-                </span>
-              )}
-              {!isCounter && (
-                <button
-                  type="button"
-                  onClick={() => handleRemoveFromTrack(i)}
-                  style={{
-                    background: 'linear-gradient(to bottom, #fff, #d4d0c8)',
-                    border: '1px solid', borderColor: '#dfdfdf #808080 #808080 #dfdfdf',
-                    color: '#800000', cursor: 'pointer', fontSize: '9px', lineHeight: 1,
-                    padding: '0 3px', fontWeight: 'bold',
-                  }}
-                >×</button>
-              )}
-            </div>
-            <div style={{ fontSize: '8px', color: '#333', fontFamily: xpFont }}>
-              {label}
-            </div>
-          </div>
-        </Fragment>
-      );
-    };
-
-    const xpPaletteChip = (seg: Segment, i: number) => {
-      const attrName = seg.type === 'attribute' ? (seg as Extract<Segment, { type: 'attribute' }>).name : '';
-      const label = seg.type === 'attribute' ? `+ ${attrName}`
-                  : seg.type === 'prefix' ? '+ Prefix'
-                  : seg.type === 'suffix' ? '+ Suffix'
-                  : seg.type === 'item' ? '+ Item Code'
-                  : seg.type === 'year' ? '+ Year'
-                  : seg.type === 'month' ? '+ Month'
-                  : `+ ${seg.type}`;
-      return (
-        <div
-          key={`xp-pal-${seg.type}-${attrName || i}`}
-          draggable
-          onDragStart={e => handlePaletteDragStart(e, i)}
-          onDragEnd={handleDragEnd}
-          onClick={() => handlePaletteChipClick(seg)}
-          style={{
-            padding: '2px 8px',
-            border: '1px solid', borderColor: '#dfdfdf #808080 #808080 #dfdfdf',
-            background: 'linear-gradient(to bottom, #fff, #d4d0c8)',
-            fontFamily: CODE_FONT, fontSize: '10px',
-            color: CHIP_COLORS_CLASSIC_TEXT[seg.type] ?? '#333',
-            cursor: 'grab', userSelect: 'none',
-          }}
-        >
-          {label}
-        </div>
-      );
-    };
-
+  const xpChip = (seg: Segment, i: number) => {
+    const isCounter = seg.type === 'counter';
+    const isPrefix = seg.type === 'prefix';
+    const isSuffix = seg.type === 'suffix';
+    const textColor = CHIP_COLORS_CLASSIC_TEXT[seg.type] ?? '#333';
+    const label = seg.type === 'attribute'
+      ? (seg as Extract<Segment, { type: 'attribute' }>).name
+      : seg.type === 'prefix' ? 'prefix'
+      : seg.type === 'suffix' ? 'suffix'
+      : seg.type === 'item' ? 'item code'
+      : seg.type;
     return (
-      <ModalWrapper isOpen={isOpen} onClose={onClose} title={title} footer={footer} size="lg" variant="primary" modeless level={level}>
-        <div style={{ fontFamily: xpFont, fontSize: '11px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
-
-            {/* Separator row */}
-            <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: '6px' }}>
-              <span style={{ fontWeight: 'bold', fontSize: '10px' }}>Separator:</span>
-              <select
-                value={separator}
-                onChange={e => setSeparator(e.target.value)}
+      <Fragment key={`xp-chip-${seg.type}-${seg.type === 'attribute' ? (seg as Extract<Segment, { type: 'attribute' }>).name : seg.type === 'prefix' || seg.type === 'suffix' ? (seg as Extract<Segment, { type: 'prefix' }>).value : ''}-${i}`}>
+        {xpGap(i)}
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1px', flexShrink: 0 }}>
+          <div
+            draggable
+            onDragStart={e => handleTrackDragStart(e, i)}
+            onDragEnd={handleDragEnd}
+            style={{
+              display: 'flex', alignItems: 'center', gap: '4px',
+              background: isCounter
+                ? 'linear-gradient(to bottom, #e0e0e0, #c0c0c0)'
+                : 'linear-gradient(to bottom, #ffffff, #d4d0c8)',
+              border: '1px solid',
+              borderColor: '#dfdfdf #808080 #808080 #dfdfdf',
+              padding: isPrefix || isSuffix ? '2px 5px' : '2px 8px',
+              fontFamily: CODE_FONT,
+              fontSize: '11px', fontWeight: 'bold',
+              color: isCounter ? '#333' : textColor,
+              cursor: 'grab',
+              userSelect: 'none', minHeight: '22px',
+            }}
+          >
+            {!isCounter && (
+              <span style={{ color: '#666', fontSize: '9px' }}>⠿</span>
+            )}
+            {isPrefix && (
+              <input
+                value={(seg as Extract<Segment, { type: 'prefix' }>).value}
+                onChange={e => handlePrefixChange(e.target.value)}
+                placeholder="PREFIX"
                 style={{
-                  fontFamily: xpFont, fontSize: '11px',
+                  fontFamily: CODE_FONT, fontSize: '11px', fontWeight: 'bold',
+                  color: textColor, background: '#fff',
                   border: '1px solid', borderColor: '#808080 #dfdfdf #dfdfdf #808080',
                   boxShadow: 'inset 1px 1px 0 rgba(0,0,0,0.1)',
-                  padding: '1px 4px', background: '#fff',
+                  padding: '1px 3px',
+                  width: Math.max(40, (seg as Extract<Segment, { type: 'prefix' }>).value.length * 7 + 10) + 'px',
+                  outline: 'none',
                 }}
-              >
-                <option value="-">Dash (-)</option>
-                <option value="_">Underscore (_)</option>
-                <option value="/">Slash (/)</option>
-                <option value="">None</option>
-              </select>
-            </div>
-
-            {/* Track */}
-            <div>
-              <div style={{ fontWeight: 'bold', fontSize: '10px', marginBottom: '3px' }}>
-                Code Sequence <span style={{ fontWeight: 'normal', color: '#666' }}>(drag to reorder)</span>
-              </div>
-              <div style={{
-                background: '#fff', border: '1px solid',
-                borderColor: '#808080 #dfdfdf #dfdfdf #808080',
-                boxShadow: 'inset 1px 1px 0 rgba(0,0,0,0.12)',
-                padding: '7px 8px', display: 'flex', alignItems: 'flex-end',
-                flexWrap: 'wrap', gap: '2px', minHeight: '46px',
-              }}>
-                {segments.map((seg, i) => xpChip(seg, i))}
-                {/* Trailing drop zone */}
-                <div
-                  onDragOver={e => handleGapDragOver(e, segments.length)}
-                  onDragLeave={handleGapDragLeave}
-                  onDrop={e => handleGapDrop(e, segments.length)}
-                  style={{
-                    width: activeGap === segments.length ? '16px' : '6px',
-                    minWidth: activeGap === segments.length ? '16px' : '6px',
-                    height: '22px',
-                    background: activeGap === segments.length ? '#cce0ff' : 'transparent',
-                    borderLeft: activeGap === segments.length ? '2px solid #0058e6' : 'none',
-                    transition: 'width 0.1s',
-                    cursor: 'crosshair', flexShrink: 0,
-                  }}
-                />
-              </div>
-            </div>
-
-            {/* Palette */}
-            {palette.length > 0 && (
-              <div>
-                <div style={{ fontWeight: 'bold', fontSize: '10px', marginBottom: '3px' }}>
-                  Available <span style={{ fontWeight: 'normal', color: '#666' }}>(drag or click to add)</span>
-                </div>
-                <div
-                  onDragOver={handlePaletteDragOver}
-                  onDrop={handlePaletteDrop}
-                  style={{
-                    background: '#f5f3ee', border: '1px solid',
-                    borderColor: '#808080 #dfdfdf #dfdfdf #808080',
-                    boxShadow: 'inset 1px 1px 0 rgba(0,0,0,0.08)',
-                    padding: '6px 8px', display: 'flex', flexWrap: 'wrap', gap: '5px',
-                    minHeight: '30px',
-                  }}
-                >
-                  {palette.map((seg, i) => xpPaletteChip(seg, i))}
-                </div>
-              </div>
+              />
             )}
-
-            {/* XP Preview */}
-            <div style={{
-              background: '#fff', border: '2px solid',
-              borderColor: '#808080 #dfdfdf #dfdfdf #808080',
-              boxShadow: 'inset 2px 2px 0 rgba(0,0,0,0.1)',
-              padding: '7px 10px',
-            }}>
-              <div style={{ fontSize: '9px', color: '#555', marginBottom: '3px', fontWeight: 'bold',
-                            textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-                <i className="bi bi-eye" style={{ marginRight: '4px' }}></i>Preview
-              </div>
-              <div style={{ fontFamily: CODE_FONT, fontSize: '14px',
-                            fontWeight: 'bold', color: '#000', letterSpacing: '0.5px' }}>
-                {getPreview(segments, separator, attributes)}
-              </div>
-            </div>
-
+            {isSuffix && (
+              <input
+                value={(seg as Extract<Segment, { type: 'suffix' }>).value}
+                onChange={e => handleSuffixChange(e.target.value)}
+                placeholder="SUFFIX"
+                style={{
+                  fontFamily: CODE_FONT, fontSize: '11px', fontWeight: 'bold',
+                  color: textColor, background: '#fff',
+                  border: '1px solid', borderColor: '#808080 #dfdfdf #dfdfdf #808080',
+                  boxShadow: 'inset 1px 1px 0 rgba(0,0,0,0.1)',
+                  padding: '1px 3px',
+                  width: Math.max(40, (seg as Extract<Segment, { type: 'suffix' }>).value.length * 7 + 10) + 'px',
+                  outline: 'none',
+                }}
+              />
+            )}
+            {!isPrefix && !isSuffix && (
+              <span>
+                {seg.type === 'item' ? 'ITEM001'
+                 : seg.type === 'attribute' ? (seg as Extract<Segment, { type: 'attribute' }>).name.toUpperCase()
+                 : seg.type === 'year' ? new Date().getFullYear()
+                 : seg.type === 'month' ? String(new Date().getMonth() + 1).padStart(2, '0')
+                 : '00001'}
+              </span>
+            )}
+            {!isCounter && (
+              <button
+                type="button"
+                onClick={() => handleRemoveFromTrack(i)}
+                style={{
+                  background: 'linear-gradient(to bottom, #fff, #d4d0c8)',
+                  border: '1px solid', borderColor: '#dfdfdf #808080 #808080 #dfdfdf',
+                  color: '#800000', cursor: 'pointer', fontSize: '9px', lineHeight: 1,
+                  padding: '0 3px', fontWeight: 'bold',
+                }}
+              >×</button>
+            )}
+          </div>
+          <div style={{ fontSize: '8px', color: '#333', fontFamily: xpFont }}>
+            {label}
+          </div>
         </div>
-      </ModalWrapper>
+      </Fragment>
     );
-  }
+  };
 
-  // ─── Default (Modern) Mode ────────────────────────────────────────────────
+  const xpPaletteChip = (seg: Segment, i: number) => {
+    const attrName = seg.type === 'attribute' ? (seg as Extract<Segment, { type: 'attribute' }>).name : '';
+    const label = seg.type === 'attribute' ? `+ ${attrName}`
+                : seg.type === 'prefix' ? '+ Prefix'
+                : seg.type === 'suffix' ? '+ Suffix'
+                : seg.type === 'item' ? '+ Item Code'
+                : seg.type === 'year' ? '+ Year'
+                : seg.type === 'month' ? '+ Month'
+                : `+ ${seg.type}`;
+    return (
+      <div
+        key={`xp-pal-${seg.type}-${attrName || i}`}
+        draggable
+        onDragStart={e => handlePaletteDragStart(e, i)}
+        onDragEnd={handleDragEnd}
+        onClick={() => handlePaletteChipClick(seg)}
+        style={{
+          padding: '2px 8px',
+          border: '1px solid', borderColor: '#dfdfdf #808080 #808080 #dfdfdf',
+          background: 'linear-gradient(to bottom, #fff, #d4d0c8)',
+          fontFamily: CODE_FONT, fontSize: '10px',
+          color: CHIP_COLORS_CLASSIC_TEXT[seg.type] ?? '#333',
+          cursor: 'grab', userSelect: 'none',
+        }}
+      >
+        {label}
+      </div>
+    );
+  };
+
   return (
     <ModalWrapper isOpen={isOpen} onClose={onClose} title={title} footer={footer} size="lg" variant="primary" modeless level={level}>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+      <div style={{ fontFamily: xpFont, fontSize: '11px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
 
           {/* Separator row */}
-          <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: '8px' }}>
-            <label style={{ fontSize: '11px', fontWeight: 600, color: '#6b7280' }}>Separator:</label>
+          <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: '6px' }}>
+            <span style={{ fontWeight: 'bold', fontSize: '10px' }}>Separator:</span>
             <select
-              className="form-select form-select-sm"
-              style={{ width: 'auto' }}
               value={separator}
               onChange={e => setSeparator(e.target.value)}
+              style={{
+                fontFamily: xpFont, fontSize: '11px',
+                border: '1px solid', borderColor: '#808080 #dfdfdf #dfdfdf #808080',
+                boxShadow: 'inset 1px 1px 0 rgba(0,0,0,0.1)',
+                padding: '1px 4px', background: '#fff',
+              }}
             >
-              <option value="-">Dash ( - )</option>
-              <option value="_">Underscore ( _ )</option>
-              <option value="/">Slash ( / )</option>
+              <option value="-">Dash (-)</option>
+              <option value="_">Underscore (_)</option>
+              <option value="/">Slash (/)</option>
               <option value="">None</option>
             </select>
           </div>
 
-          {/* Active Track */}
+          {/* Track */}
           <div>
-            <div style={{ fontSize: '10px', fontWeight: 700, color: '#9ca3af',
-                          textTransform: 'uppercase', letterSpacing: '0.8px', marginBottom: '6px' }}>
-              Code Sequence
-              <span style={{ fontWeight: 400, textTransform: 'none', marginLeft: '6px', color: '#cbd5e1',
-                             fontSize: '10px' }}>
-                drag to reorder — click × to remove
-              </span>
+            <div style={{ fontWeight: 'bold', fontSize: '10px', marginBottom: '3px' }}>
+              Code Sequence <span style={{ fontWeight: 'normal', color: '#666' }}>(drag to reorder)</span>
             </div>
             <div style={{
-              background: segments.filter(s => s.type !== 'counter').length === 0
-                ? 'transparent' : '#f8fafc',
-              border: segments.filter(s => s.type !== 'counter').length === 0
-                ? '1.5px dashed #cbd5e1' : '1.5px solid #e2e8f0',
-              borderRadius: '8px',
-              padding: '10px 12px',
-              display: 'flex', alignItems: 'flex-end', flexWrap: 'wrap', gap: '2px',
-              minHeight: '60px',
+              background: '#fff', border: '1px solid',
+              borderColor: '#808080 #dfdfdf #dfdfdf #808080',
+              boxShadow: 'inset 1px 1px 0 rgba(0,0,0,0.12)',
+              padding: '7px 8px', display: 'flex', alignItems: 'flex-end',
+              flexWrap: 'wrap', gap: '2px', minHeight: '46px',
             }}>
-              {segments.length === 1 && segments[0].type === 'counter' ? (
-                <span style={{ color: '#94a3b8', fontSize: '12px', margin: 'auto' }}>
-                  Drag segments here
-                </span>
-              ) : null}
-              {segments.map((seg, i) => (
-                <SegmentChipDefault
-                  key={`${seg.type}-${seg.type === 'attribute' ? (seg as any).name : seg.type === 'prefix' || seg.type === 'suffix' ? (seg as any).value : ''}-${i}`}
-                  seg={seg}
-                  index={i}
-                  activeGap={activeGap}
-                  separator={separator}
-                  onDragStart={e => handleTrackDragStart(e, i)}
-                  onDragEnd={handleDragEnd}
-                  onGapDragOver={handleGapDragOver}
-                  onGapDragLeave={handleGapDragLeave}
-                  onGapDrop={handleGapDrop}
-                  onRemove={() => handleRemoveFromTrack(i)}
-                  onPrefixChange={handlePrefixChange}
-                  onSuffixChange={handleSuffixChange}
-                />
-              ))}
-              {/* Trailing drop zone — allows placing any segment at the very end */}
+              {segments.map((seg, i) => xpChip(seg, i))}
+              {/* Trailing drop zone */}
               <div
                 onDragOver={e => handleGapDragOver(e, segments.length)}
                 onDragLeave={handleGapDragLeave}
                 onDrop={e => handleGapDrop(e, segments.length)}
                 style={{
-                  width: activeGap === segments.length ? '16px' : '8px',
-                  minWidth: activeGap === segments.length ? '16px' : '8px',
-                  height: '36px',
-                  background: activeGap === segments.length ? '#47556922' : 'transparent',
-                  borderLeft: activeGap === segments.length ? '2px solid #475569' : 'none',
-                  transition: 'width 0.1s, background 0.1s',
+                  width: activeGap === segments.length ? '16px' : '6px',
+                  minWidth: activeGap === segments.length ? '16px' : '6px',
+                  height: '22px',
+                  background: activeGap === segments.length ? '#cce0ff' : 'transparent',
+                  borderLeft: activeGap === segments.length ? '2px solid #0058e6' : 'none',
+                  transition: 'width 0.1s',
                   cursor: 'crosshair', flexShrink: 0,
                 }}
               />
@@ -872,67 +734,45 @@ export default function CodeConfigModal({ isOpen, onClose, type, onSave, initial
           {/* Palette */}
           {palette.length > 0 && (
             <div>
-              <div style={{ fontSize: '10px', fontWeight: 700, color: '#9ca3af',
-                            textTransform: 'uppercase', letterSpacing: '0.8px', marginBottom: '6px' }}>
-                Available Segments
-                <span style={{ fontWeight: 400, textTransform: 'none', marginLeft: '6px', color: '#cbd5e1', fontSize: '10px' }}>
-                  drag onto track or click to add
-                </span>
+              <div style={{ fontWeight: 'bold', fontSize: '10px', marginBottom: '3px' }}>
+                Available <span style={{ fontWeight: 'normal', color: '#666' }}>(drag or click to add)</span>
               </div>
               <div
                 onDragOver={handlePaletteDragOver}
                 onDrop={handlePaletteDrop}
                 style={{
-                  background: '#f1f5f9', border: '1px solid #e2e8f0', borderRadius: '8px',
-                  padding: '10px 12px', display: 'flex', flexWrap: 'wrap', gap: '8px', minHeight: '44px',
+                  background: '#f5f3ee', border: '1px solid',
+                  borderColor: '#808080 #dfdfdf #dfdfdf #808080',
+                  boxShadow: 'inset 1px 1px 0 rgba(0,0,0,0.08)',
+                  padding: '6px 8px', display: 'flex', flexWrap: 'wrap', gap: '5px',
+                  minHeight: '30px',
                 }}
               >
-                {palette.map((seg, i) => {
-                  const color = CHIP_COLORS[seg.type] ?? '#64748b';
-                  const label = seg.type === 'attribute'
-                    ? (seg as Extract<Segment, { type: 'attribute' }>).name
-                    : seg.type === 'prefix' ? 'Prefix'
-                    : seg.type === 'suffix' ? 'Suffix'
-                    : seg.type === 'item' ? 'Item Code'
-                    : seg.type === 'year' ? 'Year'
-                    : seg.type === 'month' ? 'Month'
-                    : seg.type;
-                  return (
-                    <div
-                      key={`pal-${seg.type}-${seg.type === 'attribute' ? (seg as Extract<Segment, { type: 'attribute' }>).name : i}`}
-                      draggable
-                      onDragStart={e => handlePaletteDragStart(e, i)}
-                      onDragEnd={handleDragEnd}
-                      onClick={() => handlePaletteChipClick(seg)}
-                      style={{
-                        display: 'flex', alignItems: 'center', gap: '5px',
-                        padding: '4px 10px', borderRadius: '5px', cursor: 'grab',
-                        border: `1.5px solid ${color}`, background: '#fff',
-                        color: color, fontSize: '12px', fontWeight: 600,
-                        fontFamily: CODE_FONT, letterSpacing: '0.3px',
-                        userSelect: 'none',
-                      }}
-                    >
-                      <span style={{ fontSize: '10px', opacity: 0.6 }}>⊕</span>
-                      {label}
-                    </div>
-                  );
-                })}
+                {palette.map((seg, i) => xpPaletteChip(seg, i))}
               </div>
             </div>
           )}
 
-          {/* Preview bar */}
-          <div style={{ background: '#1e293b', borderRadius: '7px', padding: '9px 13px',
-                        display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <i className="bi bi-code-slash" style={{ color: '#64748b', fontSize: '12px', flexShrink: 0 }}></i>
-            <span style={{ fontFamily: CODE_FONT, fontSize: '14px', fontWeight: 700,
-                           color: '#e2e8f0', letterSpacing: '1.2px' }}>
+          {/* XP Preview */}
+          <div style={{
+            background: '#fff', border: '2px solid',
+            borderColor: '#808080 #dfdfdf #dfdfdf #808080',
+            boxShadow: 'inset 2px 2px 0 rgba(0,0,0,0.1)',
+            padding: '7px 10px',
+          }}>
+            <div style={{ fontSize: '9px', color: '#555', marginBottom: '3px', fontWeight: 'bold',
+                          textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+              <i className="bi bi-eye" style={{ marginRight: '4px' }}></i>Preview
+            </div>
+            <div style={{ fontFamily: CODE_FONT, fontSize: '14px',
+                          fontWeight: 'bold', color: '#000', letterSpacing: '0.5px' }}>
               {getPreview(segments, separator, attributes)}
-            </span>
+            </div>
           </div>
 
       </div>
     </ModalWrapper>
   );
+
+  // ─── Default (Modern) Mode ────────────────────────────────────────────────
 }

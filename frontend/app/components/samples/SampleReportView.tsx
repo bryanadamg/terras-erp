@@ -1,7 +1,6 @@
 'use client';
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
-import { useTheme } from '../../context/ThemeContext';
 import { useData } from '../../context/DataContext';
 import { isoDate } from '../shared/format';
 import { useTimezone } from '../../context/TimezoneContext';
@@ -56,8 +55,6 @@ const SCROLL_BODY: React.CSSProperties = {
 };
 
 export default function SampleReportView() {
-    const { uiStyle } = useTheme();
-    const classic = uiStyle === 'classic';
     const { authFetch, partners, attributes } = useData();
     const { formatDateTime: tzDateTime } = useTimezone();
     const { showToast } = useToast();
@@ -155,8 +152,8 @@ export default function SampleReportView() {
     const KpiTiles = () => (
         <div style={{
             display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: 8, flexShrink: 0,
-            padding: classic ? '6px 8px' : '10px 16px',
-            ...(classic ? xpPanel({ borderBottom: '1px solid #a0988c' }) : { borderBottom: '1px solid #e5e5e5' }),
+            padding: '6px 8px',
+            ...(xpPanel({ borderBottom: '1px solid #a0988c' })),
         }}>
             {TILES.map(tile => {
                 const tint = familyTint(tile.family);
@@ -164,19 +161,16 @@ export default function SampleReportView() {
                     <div
                         key={tile.key}
                         title={tile.hint}
-                        style={classic ? {
+                        style={{
                             background: tint.background, border: `1px solid ${tint.borderColor}`,
                             boxShadow: 'inset 1px 1px 0 #ffffff', padding: '5px 8px',
                             fontFamily: LV_XP_FONT,
-                        } : {
-                            background: tint.background, border: `1px solid ${tint.borderColor}`,
-                            borderRadius: 8, padding: '10px 12px', fontFamily: LV_MODERN_FONT,
                         }}
                     >
                         <div style={{ fontSize: 10, textTransform: 'uppercase', letterSpacing: 0.4, color: tint.color, opacity: 0.85 }}>
                             {tile.label}
                         </div>
-                        <div style={{ fontSize: classic ? 18 : 22, fontWeight: 'bold', color: tint.color, lineHeight: 1.2 }}>
+                        <div style={{ fontSize: 18, fontWeight: 'bold', color: tint.color, lineHeight: 1.2 }}>
                             {tile.value}
                         </div>
                     </div>
@@ -190,42 +184,37 @@ export default function SampleReportView() {
     // inline it here so a caption sits *beside* its field instead of pushing the row
     // taller, and drop the toolbar gradient so the bar reads as a flat strip.
     const inlineLabel: React.CSSProperties = {
-        ...lvLabel(classic), display: 'inline-block', marginBottom: 0, whiteSpace: 'nowrap',
+        ...lvLabel(), display: 'inline-block', marginBottom: 0, whiteSpace: 'nowrap',
     };
 
     const Filters = () => (
-        <div style={classic
-            ? sharedXpToolbar({ background: '#ece9d8', padding: '5px 8px', gap: 5, flexShrink: 0 })
-            : {
-                display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 8,
-                padding: '8px 16px', borderBottom: '1px solid #e5e5e5', background: '#fff', flexShrink: 0,
-            }}>
+        <div style={sharedXpToolbar({ background: '#ece9d8', padding: '5px 8px', gap: 5, flexShrink: 0 })}>
             <span style={inlineLabel}>From</span>
             <input type="date" value={dateFrom} onChange={e => setDateFrom(e.target.value)}
-                style={lvInput(classic, { width: 128 })} className={classic ? '' : 'form-control form-control-sm'} />
+                style={lvInput({ width: 128 })} />
             <span style={inlineLabel}>To</span>
             <input type="date" value={dateTo} onChange={e => setDateTo(e.target.value)}
-                style={lvInput(classic, { width: 128 })} className={classic ? '' : 'form-control form-control-sm'} />
+                style={lvInput({ width: 128 })} />
 
-            <div style={lvSep(classic)} />
+            <div style={lvSep()} />
             {([['month', 'This Month'], ['last30', 'Last 30 Days'], ['quarter', 'This Quarter'], ['year', 'This Year']] as [Preset, string][]).map(([p, label]) => (
                 <button key={p} type="button" onClick={() => applyPreset(p)}
-                    style={lvBtn(classic)} className={classic ? XP_BTN : 'btn btn-sm btn-outline-secondary'}>{label}</button>
+                    style={lvBtn()} className={XP_BTN}>{label}</button>
             ))}
 
-            <div style={lvSep(classic)} />
+            <div style={lvSep()} />
             <select value={customerId} onChange={e => setCustomerId(e.target.value)}
-                style={lvInput(classic, { width: 168 })} className={classic ? '' : 'form-select form-select-sm'}>
+                style={lvInput({ width: 168 })}>
                 <option value="">All Customers</option>
                 {customers.map((c: any) => <option key={c.id} value={c.id}>{c.name}</option>)}
             </select>
             <select value={categoryValueId} onChange={e => setCategoryValueId(e.target.value)}
-                style={lvInput(classic, { width: 140 })} className={classic ? '' : 'form-select form-select-sm'}>
+                style={lvInput({ width: 140 })}>
                 <option value="ALL">All Categories</option>
                 {categoryOptions.map((c: any) => <option key={c.id} value={c.id}>{c.label}</option>)}
             </select>
             <select value={groupBy} onChange={e => setGroupBy(e.target.value as any)}
-                style={lvInput(classic, { width: 132 })} className={classic ? '' : 'form-select form-select-sm'}
+                style={lvInput({ width: 132 })}
                 title="Summary grouping">
                 <option value="customer">By Customer</option>
                 <option value="category">By Category</option>
@@ -236,8 +225,8 @@ export default function SampleReportView() {
                 <span style={inlineLabel}>
                     <b>{rows.length}</b> variant rows
                 </span>
-                <ToolbarButton classic={classic} tone="neutral" icon="bi-arrow-clockwise" title="Reload" onClick={load}>Refresh</ToolbarButton>
-                <ToolbarButton classic={classic} tone="neutral" icon="bi-download" disabled={!rows.length} title="Download the variant table as CSV" onClick={exportCsv}>Export CSV</ToolbarButton>
+                <ToolbarButton tone="neutral" icon="bi-arrow-clockwise" title="Reload" onClick={load}>Refresh</ToolbarButton>
+                <ToolbarButton tone="neutral" icon="bi-download" disabled={!rows.length} title="Download the variant table as CSV" onClick={exportCsv}>Export CSV</ToolbarButton>
             </div>
         </div>
     );
@@ -248,27 +237,26 @@ export default function SampleReportView() {
     // down to a two-row sliver.
     const SummaryTable = () => (
         <div style={{ display: 'flex', flexDirection: 'column', flexShrink: 0, maxHeight: '32%', minHeight: 92 }}>
-            <LvSectionCaption classic={classic} icon="bi-bar-chart-steps" right={`${groups.length} ${groups.length === 1 ? 'group' : 'groups'}`}>
+            <LvSectionCaption icon="bi-bar-chart-steps" right={`${groups.length} ${groups.length === 1 ? 'group' : 'groups'}`}>
                 Summary by {GROUP_LABEL[groupBy]}
             </LvSectionCaption>
             <div style={SCROLL_BODY}>
-                <table style={{ width: '100%', borderCollapse: 'collapse' }}
-                    className={classic ? '' : 'table table-sm table-hover align-middle mb-0 small'}>
-                    <thead style={lvThead(classic, true)}>
+                <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                    <thead style={lvThead()}>
                         <tr>
-                            <th style={lvTh(classic)}>{GROUP_LABEL[groupBy]}</th>
-                            <th style={{ ...lvTh(classic), width: 90, textAlign: 'right' }}>Variants</th>
-                            <th style={{ ...lvTh(classic), width: 90, textAlign: 'right' }}>Processed</th>
-                            <th style={{ ...lvTh(classic), width: 80, textAlign: 'right' }}>Sent</th>
-                            <th style={{ ...lvTh(classic), width: 90, textAlign: 'right' }}>Approved</th>
-                            <th style={{ ...lvTh(classic), width: 90, textAlign: 'right' }}>Rejected</th>
-                            <th style={{ ...lvTh(classic), width: 110, textAlign: 'right', borderRight: 'none' }}>Approval %</th>
+                            <th style={lvTh()}>{GROUP_LABEL[groupBy]}</th>
+                            <th style={{ ...lvTh(), width: 90, textAlign: 'right' }}>Variants</th>
+                            <th style={{ ...lvTh(), width: 90, textAlign: 'right' }}>Processed</th>
+                            <th style={{ ...lvTh(), width: 80, textAlign: 'right' }}>Sent</th>
+                            <th style={{ ...lvTh(), width: 90, textAlign: 'right' }}>Approved</th>
+                            <th style={{ ...lvTh(), width: 90, textAlign: 'right' }}>Rejected</th>
+                            <th style={{ ...lvTh(), width: 110, textAlign: 'right', borderRight: 'none' }}>Approval %</th>
                         </tr>
                     </thead>
                     <tbody>
                         {groups.map((g: any, i: number) => (
-                            <tr key={g.label} style={classic ? lvRow(true, i) : undefined}>
-                                <td style={{ padding: '3px 8px', fontFamily: classic ? LV_XP_FONT : LV_MODERN_FONT, fontSize: 11, fontWeight: 'bold' }}>{g.label}</td>
+                            <tr key={g.label} style={lvRow(i)}>
+                                <td style={{ padding: '3px 8px', fontFamily: LV_XP_FONT, fontSize: 11, fontWeight: 'bold' }}>{g.label}</td>
                                 <td style={{ padding: '3px 8px', textAlign: 'right', fontSize: 11 }}>{g.variants}</td>
                                 <td style={{ padding: '3px 8px', textAlign: 'right', fontSize: 11 }}>{g.processes}</td>
                                 <td style={{ padding: '3px 8px', textAlign: 'right', fontSize: 11 }}>{g.sent}</td>
@@ -290,13 +278,13 @@ export default function SampleReportView() {
 
     // ── Variant table ────────────────────────────────────────────────────────
     const Th = ({ colKey, label, width, align }: { colKey: string; label: string; width?: number; align?: 'right' }) => (
-        <SortableTh sort={sort} colKey={colKey} onSort={toggle} style={{ ...lvTh(classic), width, textAlign: align }}>
+        <SortableTh sort={sort} colKey={colKey} onSort={toggle} style={{ ...lvTh(), width, textAlign: align }}>
             {label}
         </SortableTh>
     );
 
     const countCell = (n: number, tone: string) => (
-        <td style={{ padding: '3px 8px', textAlign: 'right', fontFamily: classic ? LV_XP_FONT : LV_MODERN_FONT, fontSize: 11 }}>
+        <td style={{ padding: '3px 8px', textAlign: 'right', fontFamily: LV_XP_FONT, fontSize: 11 }}>
             {n > 0
                 ? <span style={{ color: tone, fontWeight: 'bold' }}>{n}{n > 1 ? '×' : ''}</span>
                 : <span style={{ color: '#aaa' }}>—</span>}
@@ -305,13 +293,12 @@ export default function SampleReportView() {
 
     const VariantTable = () => (
         <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 150 }}>
-            <LvSectionCaption classic={classic} icon="bi-list-ul" right={`${sorted.length} ${sorted.length === 1 ? 'row' : 'rows'}`}>
+            <LvSectionCaption icon="bi-list-ul" right={`${sorted.length} ${sorted.length === 1 ? 'row' : 'rows'}`}>
                 Variant Detail
             </LvSectionCaption>
             <div style={SCROLL_BODY}>
-                <table style={{ width: '100%', borderCollapse: 'collapse', tableLayout: 'fixed' }}
-                    className={classic ? '' : 'table table-hover align-middle mb-0 small'}>
-                    <thead style={lvThead(classic, true)}>
+                <table style={{ width: '100%', borderCollapse: 'collapse', tableLayout: 'fixed' }}>
+                    <thead style={lvThead()}>
                         <tr>
                             <Th colKey="sample_code" label="Sample" width={130} />
                             <Th colKey="customer_name" label="Customer" width={150} />
@@ -326,8 +313,8 @@ export default function SampleReportView() {
                     </thead>
                     <tbody>
                         {sorted.map((r: any, i: number) => (
-                            <tr key={r.color_id} style={classic ? lvRow(true, i) : undefined}>
-                                <td style={{ padding: '3px 8px', fontFamily: classic ? LV_XP_FONT : LV_MODERN_FONT, fontSize: 11, fontWeight: 'bold', color: familyColor('blue') }}>
+                            <tr key={r.color_id} style={lvRow(i)}>
+                                <td style={{ padding: '3px 8px', fontFamily: LV_XP_FONT, fontSize: 11, fontWeight: 'bold', color: familyColor('blue') }}>
                                     {r.sample_code}
                                 </td>
                                 <td style={{ padding: '3px 8px', fontSize: 11, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={r.customer_name || ''}>
@@ -367,13 +354,12 @@ export default function SampleReportView() {
     const rangeLabel = `${dateFrom || 'start'} → ${dateTo || 'today'}`;
 
     return (
-        <ShellWindow classic={classic} fill="page" className="fade-in">
+        <ShellWindow fill="page" className="fade-in">
             <ShellTitleBar
-                classic={classic}
                 icon="bi-clipboard-data"
                 title="Sample Development Report"
                 subtitle="Attempt counts per variant over a date range — processes, rejections and approvals are event counts, so a remade variant contributes more than one."
-                right={<span style={{ fontFamily: classic ? LV_XP_FONT : LV_MODERN_FONT, fontSize: 11, color: classic ? '#fff' : '#666' }}>{rangeLabel}</span>}
+                right={<span style={{ fontFamily: LV_XP_FONT, fontSize: 11, color: '#fff'}}>{rangeLabel}</span>}
             />
             <Filters />
             <KpiTiles />
@@ -381,8 +367,8 @@ export default function SampleReportView() {
                 report lands in the skeleton's columns instead of replacing it. */}
             {loading && !report
                 ? <div style={{ flex: 1, minHeight: 0, overflow: 'hidden' }}>
-                    <TableBlockSkeleton cols={7} rows={4} classic={classic} />
-                    <TableBlockSkeleton cols={9} rows={10} classic={classic} />
+                    <TableBlockSkeleton cols={7} rows={4} />
+                    <TableBlockSkeleton cols={9} rows={10} />
                 </div>
                 : <><SummaryTable /><VariantTable /></>}
             <XPStatusBar right={`Range ${rangeLabel}`}>

@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useMemo, memo, useRef } from 'react';
 import { useLanguage } from '../../context/LanguageContext';
-import { useTheme } from '../../context/ThemeContext';
 import { useTimezone } from '../../context/TimezoneContext';
 import { useUser } from '../../context/UserContext';
 import { xpToolbar as sharedXpToolbar, ShellWindow, ShellTitleBar } from '../shared/shellTheme';
@@ -20,77 +19,44 @@ function formatEntityType(entityType: string): string {
         .join(' ');
 }
 
-const AuditLogRow = memo(({ log, classic, rowIndex, userName }: any) => {
+const AuditLogRow = memo(({ log, rowIndex, userName }: any) => {
     const [showChanges, setShowChanges] = useState(false);
     const { formatDateTime: tzDateTime } = useTimezone();
     const userShort = log.user_id ? log.user_id.split('-')[0] : 'System';
     const userLabel = userName || (log.user_id ? `User ${userShort}` : 'System');
 
-    if (classic) {
-        const rowStyle = { ...lvRow(true, rowIndex ?? 0), cursor: log.changes ? 'pointer' : 'default' };
-        return (
-            <>
-                <tr
-                    style={showChanges ? { ...rowStyle, background: '#e8f0ff' } : rowStyle}
-                    onClick={() => log.changes && setShowChanges(!showChanges)}
-                >
-                    <td style={{ padding: '3px 8px', fontFamily: LV_XP_FONT, fontSize: '10px', color: '#555' }}>
-                        {tzDateTime(log.timestamp)}
-                    </td>
-                    <td style={{ padding: '3px 8px', fontFamily: LV_XP_FONT, fontSize: '11px', color: '#000', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={log.user_id}>
-                        {userLabel}
-                    </td>
-                    <td style={{ padding: '3px 8px', overflow: 'hidden' }}>
-                        <StatusChip status={log.action} title={log.action.replace(/_/g, ' ')} style={{ maxWidth: '100%', overflow: 'hidden', textOverflow: 'ellipsis' }} />
-                    </td>
-                    <td style={{ padding: '3px 8px', overflow: 'hidden' }} title={log.entity_id}>
-                        <span style={{ borderRadius: CHIP_RADIUS, display: 'inline-block', maxWidth: '100%', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', background: '#e0dfd8', border: '1px solid #b0a898', padding: '1px 5px', fontFamily: LV_XP_FONT, fontSize: '10px', color: '#333' }}>{formatEntityType(log.entity_type)}</span>
-                    </td>
-                    <td style={{ padding: '3px 8px', fontFamily: LV_XP_FONT, fontSize: '11px', color: '#444' }}>
-                        {log.details}
-                        {log.changes && (
-                            <i className={`bi bi-chevron-${showChanges ? 'up' : 'down'} ms-2`} style={{ color: '#0058e6', fontSize: '10px' }}></i>
-                        )}
-                    </td>
-                </tr>
-                {showChanges && log.changes && (
-                    <tr style={{ background: '#f0f4ff' }}>
-                        <td colSpan={5} style={{ padding: 0 }}>
-                            <div style={{ padding: '6px 12px 8px 32px', borderBottom: '1px solid #c0bdb5' }}>
-                                <div style={{ fontFamily: LV_XP_FONT, fontSize: '10px', fontWeight: 'bold', color: '#444', textTransform: 'uppercase', marginBottom: 4 }}>Technical Diff (JSON)</div>
-                                <pre style={{ fontFamily: CODE_FONT, fontSize: '10px', background: '#ffffff', border: '1px solid #7f9db9', padding: '4px 6px', margin: 0, maxHeight: '160px', overflowY: 'auto', boxShadow: 'inset 1px 1px 0 rgba(0,0,0,0.1)' }}>
-                                    {JSON.stringify(log.changes, null, 2)}
-                                </pre>
-                            </div>
-                        </td>
-                    </tr>
-                )}
-            </>
-        );
-    }
-
+    const rowStyle = { ...lvRow(rowIndex ?? 0), cursor: log.changes ? 'pointer' : 'default' };
     return (
         <>
-            <tr style={{ ...lvRow(false, rowIndex ?? 0), cursor: log.changes ? 'pointer' : 'default' }} onClick={() => log.changes && setShowChanges(!showChanges)}>
-                <td className="ps-4 text-muted" style={{ fontFamily: CODE_FONT }}>{tzDateTime(log.timestamp)}</td>
-                <td><span className="fw-medium text-dark text-truncate d-inline-block" style={{ maxWidth: '100%' }} title={log.user_id}>{userLabel}</span></td>
-                <td style={{ overflow: 'hidden' }}>
-                    <StatusChip status={log.action} title={log.action.replace(/_/g, ' ')} style={{ fontFamily: LV_MODERN_FONT, borderRadius: 4, maxWidth: '100%', overflow: 'hidden', textOverflow: 'ellipsis' }} />
+            <tr
+                style={showChanges ? { ...rowStyle, background: '#e8f0ff' } : rowStyle}
+                onClick={() => log.changes && setShowChanges(!showChanges)}
+            >
+                <td style={{ padding: '3px 8px', fontFamily: LV_XP_FONT, fontSize: '10px', color: '#555' }}>
+                    {tzDateTime(log.timestamp)}
                 </td>
-                <td className="text-truncate" title={log.entity_id}>
-                    <span className="badge bg-light text-dark border fw-normal">{formatEntityType(log.entity_type)}</span>
+                <td style={{ padding: '3px 8px', fontFamily: LV_XP_FONT, fontSize: '11px', color: '#000', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={log.user_id}>
+                    {userLabel}
                 </td>
-                <td className="text-muted">
+                <td style={{ padding: '3px 8px', overflow: 'hidden' }}>
+                    <StatusChip status={log.action} title={log.action.replace(/_/g, ' ')} style={{ maxWidth: '100%', overflow: 'hidden', textOverflow: 'ellipsis' }} />
+                </td>
+                <td style={{ padding: '3px 8px', overflow: 'hidden' }} title={log.entity_id}>
+                    <span style={{ borderRadius: CHIP_RADIUS, display: 'inline-block', maxWidth: '100%', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', background: '#e0dfd8', border: '1px solid #b0a898', padding: '1px 5px', fontFamily: LV_XP_FONT, fontSize: '10px', color: '#333' }}>{formatEntityType(log.entity_type)}</span>
+                </td>
+                <td style={{ padding: '3px 8px', fontFamily: LV_XP_FONT, fontSize: '11px', color: '#444' }}>
                     {log.details}
-                    {log.changes && <i className={`bi bi-chevron-${showChanges ? 'up' : 'down'} ms-2 text-primary`}></i>}
+                    {log.changes && (
+                        <i className={`bi bi-chevron-${showChanges ? 'up' : 'down'} ms-2`} style={{ color: '#0058e6', fontSize: '10px' }}></i>
+                    )}
                 </td>
             </tr>
             {showChanges && log.changes && (
-                <tr className="bg-light bg-opacity-50">
-                    <td colSpan={5} className="p-0">
-                        <div className="p-3 ps-5 border-bottom shadow-inner">
-                            <h6 className="extra-small fw-bold text-uppercase text-muted mb-2">Technical Diff (JSON)</h6>
-                            <pre className="extra-small mb-0 overflow-auto bg-white p-2 border rounded" style={{ maxHeight: '200px', fontFamily: CODE_FONT }}>
+                <tr style={{ background: '#f0f4ff' }}>
+                    <td colSpan={5} style={{ padding: 0 }}>
+                        <div style={{ padding: '6px 12px 8px 32px', borderBottom: '1px solid #c0bdb5' }}>
+                            <div style={{ fontFamily: LV_XP_FONT, fontSize: '10px', fontWeight: 'bold', color: '#444', textTransform: 'uppercase', marginBottom: 4 }}>Technical Diff (JSON)</div>
+                            <pre style={{ fontFamily: CODE_FONT, fontSize: '10px', background: '#ffffff', border: '1px solid #7f9db9', padding: '4px 6px', margin: 0, maxHeight: '160px', overflowY: 'auto', boxShadow: 'inset 1px 1px 0 rgba(0,0,0,0.1)' }}>
                                 {JSON.stringify(log.changes, null, 2)}
                             </pre>
                         </div>
@@ -99,14 +65,13 @@ const AuditLogRow = memo(({ log, classic, rowIndex, userName }: any) => {
             )}
         </>
     );
+
 });
 
 AuditLogRow.displayName = 'AuditLogRow';
 
 export default function AuditLogsView({ auditLogs, currentPage, totalItems, pageSize, onPageChange, filterType, onFilterChange }: any) {
   const { t } = useLanguage();
-  const { uiStyle: currentStyle } = useTheme();
-  const classic = currentStyle === 'classic';
   const { users, refreshUsers } = useUser();
   const { loading: dataLoading, fetchData } = useData();
   const [refreshing, setRefreshing] = useState(false);
@@ -127,7 +92,7 @@ export default function AuditLogsView({ auditLogs, currentPage, totalItems, page
   // load are exactly as tall as the rows that replace them. Classic and modern
   // rows differ in height, so they cache under separate keys.
   const listBodyRef = useRef<HTMLTableSectionElement>(null);
-  const skel = useTableSkeletonMetrics(classic ? 'audit-logs-classic' : 'audit-logs', listBodyRef, auditLogs.length > 0);
+  const skel = useTableSkeletonMetrics('audit-logs-classic', listBodyRef, auditLogs.length > 0);
 
   // ── XP inline styles ─────────────────────────────────────────────────────
   const xpToolbar: React.CSSProperties = sharedXpToolbar();
@@ -153,28 +118,15 @@ export default function AuditLogsView({ auditLogs, currentPage, totalItems, page
   );
 
   return (
-      <ShellWindow classic={classic} fill="page" className="fade-in">
+      <ShellWindow fill="page" className="fade-in">
           <ShellTitleBar
-              classic={classic}
               icon="bi-shield-check"
               title="System Audit Logs"
-              subtitle={classic ? undefined : 'Track all user activities and system changes. Click rows to see technical details.'}
-              right={classic ? undefined : (
-                  <div className="d-flex align-items-center gap-2">
-                      <div className="input-group input-group-sm" style={{ width: '180px' }}>
-                          <span className="input-group-text px-2"><i className="bi bi-funnel"></i></span>
-                          <select className="form-select" value={filterType} onChange={e => onFilterChange(e.target.value)}>
-                              {entityFilterOptions}
-                          </select>
-                      </div>
-                      <button className="btn btn-outline-secondary btn-sm" onClick={handleRefresh} disabled={refreshing} title="Refresh">
-                          <i className="bi bi-arrow-clockwise me-1" />{refreshing ? 'Refreshing…' : 'Refresh'}
-                      </button>
-                  </div>
-              )}
+              subtitle={undefined}
+              right={undefined}
           />
 
-          {classic && (
+          {(
               <div style={xpToolbar}>
                   <button className={XP_BTN} style={xpBtn()} onClick={handleRefresh} disabled={refreshing} title="Refresh">
                       <i className="bi bi-arrow-clockwise" style={{ marginRight: 4 }} />{refreshing ? 'Refreshing…' : 'Refresh'}
@@ -192,33 +144,29 @@ export default function AuditLogsView({ auditLogs, currentPage, totalItems, page
               </div>
           )}
 
-          <div style={{ flex: 1, minHeight: 0, background: classic ? '#ffffff' : undefined, overflowY: 'auto', overflowX: 'hidden' }}>
+          <div style={{ flex: 1, minHeight: 0, background: '#ffffff', overflowY: 'auto', overflowX: 'hidden' }}>
               <table
-                  className={classic ? undefined : 'table table-hover align-middle mb-0 small'}
-                  style={classic ? { width: '100%', borderCollapse: 'collapse', tableLayout: 'fixed' } : { tableLayout: 'fixed' }}
+                  className={undefined}
+                  style={{ width: '100%', borderCollapse: 'collapse', tableLayout: 'fixed' }}
               >
-                  <thead style={classic ? { ...lvThead(true), position: 'sticky', top: 0, zIndex: 1 } : { position: 'sticky', top: 0, zIndex: 1 }}>
+                  <thead style={{ ...lvThead(), position: 'sticky', top: 0, zIndex: 1 }}>
                       <tr>
-                          <th style={{ ...lvTh(classic), width: 140 }} className={classic ? undefined : 'ps-4'}>Timestamp</th>
-                          <th style={{ ...lvTh(classic), width: 110 }}>User</th>
-                          <th style={{ ...lvTh(classic), width: 140 }}>Action</th>
-                          <th style={{ ...lvTh(classic), width: 160 }}>Entity</th>
-                          <th style={classic ? { ...lvTh(classic), borderRight: 'none' } : lvTh(classic)}>Details</th>
+                          <th style={{ ...lvTh(), width: 140 }} className={undefined}>Timestamp</th>
+                          <th style={{ ...lvTh(), width: 110 }}>User</th>
+                          <th style={{ ...lvTh(), width: 140 }}>Action</th>
+                          <th style={{ ...lvTh(), width: 160 }}>Entity</th>
+                          <th style={{ ...lvTh(), borderRight: 'none' }}>Details</th>
                       </tr>
                   </thead>
                   <tbody ref={listBodyRef}>
                       {auditLogs.map((log: any, i: number) => (
-                          <AuditLogRow key={log.id} log={log} classic={classic} rowIndex={i} userName={userNameById[log.user_id]} />
+                          <AuditLogRow key={log.id} log={log} rowIndex={i} userName={userNameById[log.user_id]} />
                       ))}
                       {auditLogs.length === 0 && (dataLoading.auditLogs ? (
-                          <TableSkeleton rows={8} cols={skel.cols ?? 5} classic={classic} rowHeight={skel.rowHeight} fillHeight={skel.fillHeight} />
-                      ) : classic ? (
-                          <tr><td colSpan={5} style={{ textAlign: 'center', padding: '24px', fontFamily: xpFont, fontSize: '11px', color: '#666', fontStyle: 'italic' }}>
+                          <TableSkeleton rows={8} cols={skel.cols ?? 5} rowHeight={skel.rowHeight} fillHeight={skel.fillHeight} />
+                      ) : <tr><td colSpan={5} style={{ textAlign: 'center', padding: '24px', fontFamily: xpFont, fontSize: '11px', color: '#666', fontStyle: 'italic' }}>
                               No activity logs found
-                          </td></tr>
-                      ) : (
-                          <tr><td colSpan={5} className="text-center py-5 text-muted">No activity logs found</td></tr>
-                      ))}
+                          </td></tr>)}
                   </tbody>
               </table>
           </div>

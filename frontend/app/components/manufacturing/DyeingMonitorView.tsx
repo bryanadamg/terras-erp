@@ -3,7 +3,6 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useData } from '../../context/DataContext';
 import { useLanguage } from '../../context/LanguageContext';
-import { useTheme } from '../../context/ThemeContext';
 import { useUser } from '../../context/UserContext';
 import { familyColor, StatusChip, XPEmptyState, XPActionButton, BUTTON_RADIUS, XP_BTN } from '../shared/xpTheme';
 import VariantChips from '../shared/VariantChips';
@@ -47,13 +46,11 @@ const isLive = (r: any) => r?.status === 'IN_PROGRESS';
 export default function DyeingMonitorView() {
     const { authFetch, subscribeLiveEvents } = useData();
     const { t } = useLanguage();
-    const { uiStyle } = useTheme();
     const { hasPermission } = useUser();
     const { showToast } = useToast();
     // Same gate the Dyeing Orders tab uses to start and complete a batch: entering
     // the rpm is part of setting the machine up, not a supervisory act.
     const canSetRate = hasPermission('work_order.log');
-    const cls = uiStyle === 'classic';
 
     const envBase = process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:8000/api';
     const API_BASE = envBase.endsWith('/api') ? envBase : `${envBase}/api`;
@@ -118,7 +115,6 @@ export default function DyeingMonitorView() {
             colorName={run.color_name}
             colorHex={run.color_hex}
             labdipCode={run.labdip_variant_code}
-            classic={cls}
             scale="sm"
             style={{ flexWrap: 'wrap', gap: 3 }}
         />
@@ -142,7 +138,7 @@ export default function DyeingMonitorView() {
         if (!reason) return null;
         return (
             <div title={reason.hint} style={{
-                marginTop: 3, padding: '1px 5px', background: cls ? '#fff6e0' : '#fff8e8',
+                marginTop: 3, padding: '1px 5px', background: '#fff6e0',
                 border: `1px solid ${AMBER}`, color: '#8a6100', fontSize: 10,
                 display: 'flex', alignItems: 'center', gap: 4,
             }}>
@@ -159,7 +155,7 @@ export default function DyeingMonitorView() {
         const stop = (fn: () => void) => (e: React.MouseEvent) => { e.stopPropagation(); fn(); };
         return (
             <>
-                <div style={{ fontSize: cls ? 10 : 12, color: '#555', marginBottom: 3, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                <div style={{ fontSize: 10, color: '#555', marginBottom: 3, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                     {/* WO first: a vessel queues several batches and the WO is what tells
                         them apart on the floor. */}
                     {run.wo_code && <b style={{ color: BLUE }}>{run.wo_code} · </b>}
@@ -172,13 +168,13 @@ export default function DyeingMonitorView() {
                 )}
                 <div style={{ marginBottom: 4 }}><RunVariant run={run} /></div>
                 <div style={{ display: 'flex', alignItems: 'baseline', gap: 6 }}>
-                    <span style={{ fontSize: cls ? 24 : 26, fontWeight: 'bold', color: effColor, lineHeight: 1 }}>
-                        {fmt(run.efficiency_pct, 1)}<span style={{ fontSize: cls ? 12 : 13 }}>%</span>
+                    <span style={{ fontSize: 24, fontWeight: 'bold', color: effColor, lineHeight: 1 }}>
+                        {fmt(run.efficiency_pct, 1)}<span style={{ fontSize: 12}}>%</span>
                     </span>
-                    <span style={{ fontSize: cls ? 10 : 12, color: '#888' }}>
+                    <span style={{ fontSize: 10, color: '#888' }}>
                         {t('target')} {fmt(run.target_efficiency_pct, 0)}%
                     </span>
-                    <span style={{ fontSize: cls ? 10 : 12, color: '#888', marginLeft: 'auto' }}>
+                    <span style={{ fontSize: 10, color: '#888', marginLeft: 'auto' }}>
                         {run.lines} {t('lines')}
                     </span>
                 </div>
@@ -186,7 +182,7 @@ export default function DyeingMonitorView() {
                     <EffBar eff={run.efficiency_pct} target={run.target_efficiency_pct}
                         label={`${t('target')} ${fmt(run.target_efficiency_pct, 0)}%`} />
                 </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: cls ? 10 : 12 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 10}}>
                     <span>
                         <span style={{ color: '#888' }}>{t('yards_dyed')}:</span>{' '}
                         <b>{fmt(run.actual_yards, 0)}</b> {t('yd_short')}
@@ -195,7 +191,7 @@ export default function DyeingMonitorView() {
                 </div>
                 {/* The rate the batch is being judged against, and how long it has been
                     on. Both are inputs the floor sets, so they sit next to the result. */}
-                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: cls ? 10 : 11, color: '#888', marginTop: 2 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 10, color: '#888', marginTop: 2 }}>
                     <span>
                         {t('rpm')} <b style={{ color: '#555' }}>{fmt(run.rpm, 0)}</b>
                         {run.target_yd_per_min ? ` · ${fmt(run.target_yd_per_min, 0)} ${t('yd_per_min')}` : ''}
@@ -205,7 +201,7 @@ export default function DyeingMonitorView() {
                 <MissingWhy run={run} machine={machine} />
                 {canSetRate && (
                     <div style={{ marginTop: 4 }}>
-                        <XPActionButton classic={cls} tone="neutral" icon="bi-sliders"
+                        <XPActionButton tone="neutral" icon="bi-sliders"
                             label={t('set_rate')} onClick={stop(() => setRateRun({ ...run, machine }))} />
                     </div>
                 )}
@@ -225,12 +221,10 @@ export default function DyeingMonitorView() {
             setRunSlide(prev => ({ ...prev, [m.id]: (n + total) % total }));
         };
         const navBtn = (dir: -1 | 1) => (
-            <button type="button" onClick={go(idx + dir)} className={cls ? XP_BTN : undefined}
+            <button type="button" onClick={go(idx + dir)} className={XP_BTN}
                 title={dir < 0 ? t('prev_run') : t('next_run')}
                 style={{
-                    ...(cls
-                        ? { background: 'linear-gradient(to bottom, #fdfdfd, #e3e1d8)', border: '1px solid', borderColor: '#dfdfdf #808080 #808080 #dfdfdf' }
-                        : { background: '#fff', border: '1px solid #d5dae1' }),
+                    ...({ background: 'linear-gradient(to bottom, #fdfdfd, #e3e1d8)', border: '1px solid', borderColor: '#dfdfdf #808080 #808080 #dfdfdf' }),
                     borderRadius: BUTTON_RADIUS, width: 18, height: 16, padding: 0, lineHeight: 1,
                     fontSize: 10, color: '#333', cursor: 'pointer', display: 'flex',
                     alignItems: 'center', justifyContent: 'center', flexShrink: 0,
@@ -242,7 +236,7 @@ export default function DyeingMonitorView() {
             <>
                 <div style={{
                     display: 'flex', alignItems: 'center', gap: 4, marginBottom: 4, paddingBottom: 3,
-                    borderBottom: `1px solid ${cls ? '#c8c4b8' : '#e3e3e3'}`,
+                    borderBottom: '1px solid #c8c4b8',
                 }}>
                     {navBtn(-1)}
                     <span style={{ fontSize: 10, fontWeight: 700, color: '#555', minWidth: 26, textAlign: 'center' }}>
@@ -258,7 +252,7 @@ export default function DyeingMonitorView() {
                                     width: 7, height: 7, borderRadius: '50%', cursor: 'pointer',
                                     background: i === idx
                                         ? (isLive(r) ? GREEN : BLUE)
-                                        : (isLive(r) ? '#a8dca8' : cls ? '#c8c4b8' : '#d8dde3'),
+                                        : (isLive(r) ? '#a8dca8' : '#c8c4b8'),
                                     border: i === idx ? '1px solid #00000055' : '1px solid transparent',
                                 }} />
                         ))}
@@ -270,9 +264,9 @@ export default function DyeingMonitorView() {
     };
 
     const IdleBody = ({ machine }: { machine: any }) => (
-        <div style={{ fontSize: cls ? 11 : 12, color: '#888', display: 'flex', flexDirection: 'column', gap: 3, justifyContent: 'center', flex: 1, minHeight: cls ? 64 : 70 }}>
+        <div style={{ fontSize: 11, color: '#888', display: 'flex', flexDirection: 'column', gap: 3, justifyContent: 'center', flex: 1, minHeight: 64}}>
             <span style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
-                <i className="bi bi-pause-circle" style={{ fontSize: cls ? 16 : 18 }} />
+                <i className="bi bi-pause-circle" style={{ fontSize: 16}} />
                 {t('no_active_batch')}
             </span>
             {/* An idle vessel is the one place there is room to say the machine was
@@ -291,7 +285,6 @@ export default function DyeingMonitorView() {
         return (
             <MachineCard
                 key={m.id}
-                classic={cls}
                 code={m.code}
                 name={m.name}
                 status={status}
@@ -307,18 +300,18 @@ export default function DyeingMonitorView() {
         );
     };
 
-    const cardGrid = (list: any[]) => <CardGrid classic={cls}>{list.map(card)}</CardGrid>;
+    const cardGrid = (list: any[]) => <CardGrid>{list.map(card)}</CardGrid>;
 
     const summaryText = data ? (
         <>
             <span><b>{data.total}</b> {t('machines')}</span>
-            <span style={{ marginLeft: 12 }}><b style={{ color: cls ? '#9effa0' : GREEN }}>{data.running}</b> {t('running')}</span>
+            <span style={{ marginLeft: 12 }}><b style={{ color: '#9effa0'}}>{data.running}</b> {t('running')}</span>
             {data.avg_efficiency_pct !== null && data.avg_efficiency_pct !== undefined && (
                 <span style={{ marginLeft: 12 }}>{t('avg_efficiency')}: <b>{fmt(data.avg_efficiency_pct, 1)}%</b></span>
             )}
             {plantBelowTarget > 0 && (
                 <span style={{ marginLeft: 12 }}>
-                    <b style={{ color: cls ? '#ffc9c9' : RED }}>{plantBelowTarget}</b> {t('below_target')}
+                    <b style={{ color: '#ffc9c9'}}>{plantBelowTarget}</b> {t('below_target')}
                 </span>
             )}
             {/* Plant-wide, and deliberately in the header: until a reel is measured the
@@ -326,7 +319,7 @@ export default function DyeingMonitorView() {
             {data.needs_setup > 0 && (
                 <span style={{ marginLeft: 12 }} title={t('no_reel_measured_hint')}>
                     <i className="bi bi-gear" style={{ marginRight: 4 }} />
-                    <b style={{ color: cls ? '#ffe9b0' : AMBER }}>{data.needs_setup}</b> {t('needs_setup')}
+                    <b style={{ color: '#ffe9b0'}}>{data.needs_setup}</b> {t('needs_setup')}
                 </span>
             )}
         </>
@@ -334,7 +327,6 @@ export default function DyeingMonitorView() {
 
     const chipBar = (
         <MonitorChipBar
-            classic={cls}
             sections={sections}
             isGrouped={isGrouped}
             groupFilter={groupFilter}
@@ -352,7 +344,7 @@ export default function DyeingMonitorView() {
     );
 
     const body = loading ? (
-        <MonitorGridSkeleton classic={cls} />
+        <MonitorGridSkeleton />
     ) : machines.length === 0 ? (
         <XPEmptyState icon="bi-droplet" message={t('no_dyeing_machines')} />
     ) : runningOnly && runningCount === 0 ? (
@@ -360,11 +352,10 @@ export default function DyeingMonitorView() {
     ) : !isGrouped ? (
         cardGrid(shown(machines))
     ) : (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: cls ? 10 : 20 }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 10}}>
             {visibleSections.filter(sec => shown(sec.machines).length > 0).map(sec => (
                 <div key={sec.id || 'ungrouped'}>
                     <GroupHeader
-                        classic={cls}
                         sec={sec}
                         labels={{
                             machines: t('machines'), running: t('running'),
@@ -381,7 +372,6 @@ export default function DyeingMonitorView() {
     return (
         <>
             <MonitorShell
-                classic={cls}
                 icon="bi-droplet-half"
                 title={t('dyeing_monitor')}
                 summary={summaryText}
