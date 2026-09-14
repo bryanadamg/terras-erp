@@ -15,6 +15,15 @@ on `main`:
 
 ## [Unreleased]
 
+## [0.29.0] - 2026-09-14
+
+### Added
+- Dashboard shows a Production Deadlines calendar in its main row, alongside Recent Movements and Warehouse Distribution
+
+### Changed
+- Classic (XP) is now the app's only interface style; Modern theme and its Settings toggle are gone, plus all dead modern-only code paths across the app
+- SearchField, FilterChipBar/SegmentedBar, LogoutButton, Toast, ProgressBar, and interface-scale zoom now come from the shared terras-ui package (bumped to 0.19.0) instead of local copies
+
 ## [0.28.0] - 2026-09-13
 
 ### Added
