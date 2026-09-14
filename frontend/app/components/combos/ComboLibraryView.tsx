@@ -241,7 +241,6 @@ export default function ComboLibraryView({
                                 <div key={c.id} style={{ border: '1px solid #b0a898', background: '#fff' }}>
                                     <SwatchBox
                                         bands={colorBandsFor(c.code)}
-                                        classic
                                         title={bandTitle(c.code)}
                                         style={{ display: 'block', width: '100%', height: 48, borderRadius: 0, borderWidth: '0 0 1px 0' }}
                                     />
@@ -261,7 +260,7 @@ export default function ComboLibraryView({
                                                     </span>
                                                 )}
                                             </span>
-                                            {canManage && <MenuTriggerButton classic onClick={e => menuToggle(c.id, e)} />}
+                                            {canManage && <MenuTriggerButton onClick={e => menuToggle(c.id, e)} />}
                                         </div>
                                     </div>
                                 </div>
@@ -281,22 +280,22 @@ export default function ComboLibraryView({
                     </thead>
                     <tbody ref={listBodyRef}>
                         {filtered.length === 0 && (loading ? (
-                            <TableSkeleton rows={8} cols={skel.cols ?? 5} classic tdStyle={lvTd()} rowHeight={skel.rowHeight} fillHeight={skel.fillHeight} />
+                            <TableSkeleton rows={8} cols={skel.cols ?? 5} tdStyle={lvTd()} rowHeight={skel.rowHeight} fillHeight={skel.fillHeight} />
                         ) : (
                             <TableEmpty colSpan={5} tdStyle={lvTd()} message={emptyMessage} />
                         ))}
                         {filtered.map((c: any, idx: number) => (
                             <tr key={c.id} style={lvRow(idx)}>
                                 <td style={lvTd()}>
-                                    <SwatchBox bands={colorBandsFor(c.code)} classic title={bandTitle(c.code)} style={{ width: 44 }} />
+                                    <SwatchBox bands={colorBandsFor(c.code)} title={bandTitle(c.code)} style={{ width: 44 }} />
                                 </td>
                                 <td style={lvTd()}>
-                                    <CodeChip code={c.code} classic tone="accent" title={codeTitle(c)} />
+                                    <CodeChip code={c.code} tone="accent" title={codeTitle(c)} />
                                 </td>
                                 <td style={{ ...lvTd(), textAlign: 'center' }}>{c.usage_count || 0}</td>
                                 <td style={lvTd()}><StatusChip status={c.status} /></td>
                                 <td style={{ ...lvTd(), borderRight: 'none', textAlign: 'right' }}>
-                                    {canManage && <MenuTriggerButton classic onClick={e => menuToggle(c.id, e)} />}
+                                    {canManage && <MenuTriggerButton onClick={e => menuToggle(c.id, e)} />}
                                 </td>
                             </tr>
                         ))}

@@ -402,7 +402,7 @@ export default function ManufacturingOrdersTab({
         // full-bleed to the panel's rules. Left padding still reserves the rail's width
         // so it doesn't paint over the first tab.
         return (
-            <ExpandedRowPanel classic style={{ marginBottom: 6, padding: '0 0 0 4px'}}>
+            <ExpandedRowPanel style={{ marginBottom: 6, padding: '0 0 0 4px'}}>
             {/* ── TABS ── */}
             <Tabs
                 tabs={[
@@ -415,7 +415,7 @@ export default function ManufacturingOrdersTab({
             />
 
             {detailTab === 'bom' && (
-            <ExpandedRowPanelBody classic style={{ display: 'flex', height: PANEL_BODY_H, padding: 0, border: '1px solid #808080'}}>
+            <ExpandedRowPanelBody style={{ display: 'flex', height: PANEL_BODY_H, padding: 0, border: '1px solid #808080'}}>
 
                 {/* ── LEFT: MO Tree ── */}
                 <div style={{
@@ -472,7 +472,7 @@ export default function ManufacturingOrdersTab({
                                                 {(node.attribute_value_ids || []).map((id: string) => {
                                                     const hex = getAttributeValueHex(id);
                                                     return (
-                                                        <VariantChip key={id} kind={hex ? 'color' : 'material'} classic
+                                                        <VariantChip key={id} kind={hex ? 'color' : 'material'}
                                                             swatch={hex} icon={null} truncate
                                                             style={activeChipStyle(isActive)}
                                                         >{getAttributeValueName(id)}</VariantChip>
@@ -481,7 +481,7 @@ export default function ManufacturingOrdersTab({
                                                 {(node.bom_size_id || node.bom_size_snapshot) && (() => {
                                                     const label = getBomSizeLabel(node.bom_id, node.bom_size_id, node.bom_size_snapshot);
                                                     return label ? (
-                                                        <VariantChip kind="size" classic truncate
+                                                        <VariantChip kind="size" truncate
                                                             style={activeChipStyle(isActive)}
                                                         >{label}</VariantChip>
                                                     ) : null;
@@ -522,12 +522,12 @@ export default function ManufacturingOrdersTab({
                         borderBottom: '1px solid #808080',
                         padding: '5px 10px', display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap'
                     }}>
-                        <CodeChip code={selectedNode.code} classic style={{ fontSize: 12, fontWeight: 'bold' }} />
+                        <CodeChip code={selectedNode.code} style={{ fontSize: 12, fontWeight: 'bold' }} />
                         <span style={{ fontSize: '12px', color: '#000' }}>{selectedNode.item_name}</span>
                         {(selectedNode.attribute_value_ids || []).map((id: string) => {
                             const hex = getAttributeValueHex(id);
                             return (
-                                <VariantChip key={id} kind={hex ? 'color' : 'material'} classic size="sm"
+                                <VariantChip key={id} kind={hex ? 'color' : 'material'} size="sm"
                                     swatch={hex} icon={null}
                                 >{getAttributeValueName(id)}</VariantChip>
                             );
@@ -543,14 +543,14 @@ export default function ManufacturingOrdersTab({
                         )}
                         {/* Color / pending-lab-dip status for color-type orders */}
                         {selectedNode.color_code && (
-                            <VariantChip kind="color" classic size="sm"
+                            <VariantChip kind="color" size="sm"
                                 title={`Approved color: ${colorTitle(selectedNode.color_code, selectedNode.color_name)}`}
                                 swatch={selectedNode.color_hex || colorHexFor(selectedNode.color_name || selectedNode.color_code)}
                                 icon={selectedNode.color_hex ? undefined : 'bi-palette'}
                             >{colorLabel(selectedNode.color_code, selectedNode.color_name)}</VariantChip>
                         )}
                         {!selectedNode.color_id && selectedNode.labdip_variant_code && (
-                            <VariantChip kind="pending" classic size="sm"
+                            <VariantChip kind="pending" size="sm"
                                 title="Color still in lab dip — dyeing is blocked until approved or a color is set"
                             >Lab dip: {selectedNode.labdip_variant_code}</VariantChip>
                         )}
@@ -566,7 +566,7 @@ export default function ManufacturingOrdersTab({
                         {(selectedNode.bom_size_id || selectedNode.bom_size_snapshot) && (() => {
                             const label = getBomSizeLabel(selectedNode.bom_id, selectedNode.bom_size_id, selectedNode.bom_size_snapshot);
                             return label ? (
-                                <VariantChip kind="size" classic size="sm">{label}</VariantChip>
+                                <VariantChip kind="size" size="sm">{label}</VariantChip>
                             ) : null;
                         })()}
                         <span
@@ -585,7 +585,7 @@ export default function ManufacturingOrdersTab({
                                 <i className="bi bi-pencil"></i>
                             </button>
                         )}
-                        {bom && <span style={{ fontSize: '10px', color: '#444' }}>BOM: <CodeChip code={bom.code} classic tier={2} /></span>}
+                        {bom && <span style={{ fontSize: '10px', color: '#444' }}>BOM: <CodeChip code={bom.code} tier={2} /></span>}
                         <div style={{ marginLeft: 'auto', display: 'flex', gap: '6px' }}>
                             {canManage && selectedNode.status === 'PENDING' && (
                                 <button className="btn btn-sm btn-primary py-0 px-2" style={{ fontSize: '0.72rem' }} onClick={() => onUpdateStatus(selectedNode.id, 'IN_PROGRESS')}>
@@ -766,9 +766,9 @@ export default function ManufacturingOrdersTab({
                                             <tr key={line.id} style={rowStyle}>
                                                 <td style={{ ...cell, color: '#000' }}>
                                                     <div style={{ fontWeight: 500 }}>{line.item_name || getItemName(line.item_id)}</div>
-                                                    <CodeChip code={line.item_code || getItemCode(line.item_id)} classic tier={2} style={{ display: 'block' }} />
+                                                    <CodeChip code={line.item_code || getItemCode(line.item_id)} tier={2} style={{ display: 'block' }} />
                                                     {hasSubBOM && (
-                                                        <Chip classic size="xs" bold
+                                                        <Chip size="xs" bold
                                                             tone={{ background: '#fff3cd', borderColor: '#b8860b', color: '#6b4e00' }}
                                                             title="This component has its own BOM — it is made, not bought">
                                                             SUB-BOM
@@ -816,7 +816,7 @@ export default function ManufacturingOrdersTab({
                                                     ) : (
                                                         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 2 }}>
                                                             {locs.map(l => (
-                                                                <LocationChip key={l.locId} classic direction="in" code={l.code}>
+                                                                <LocationChip key={l.locId} direction="in" code={l.code}>
                                                                     {' '}<span style={{ fontFamily: CODE_FONT, fontWeight: 'bold' }}>{l.qty.toFixed(1)}</span>
                                                                 </LocationChip>
                                                             ))}
@@ -1106,7 +1106,7 @@ export default function ManufacturingOrdersTab({
                         </thead>
                         <tbody ref={listBodyRef}>
                             {manufacturingOrders.length === 0 && (dataLoading.manufacturingOrders ? (
-                                <TableSkeleton rows={8} cols={skel.cols ?? 10} classic rowHeight={skel.rowHeight} fillHeight={skel.fillHeight} />
+                                <TableSkeleton rows={8} cols={skel.cols ?? 10} rowHeight={skel.rowHeight} fillHeight={skel.fillHeight} />
                             ) : (
                                 <TableEmpty colSpan={10}
                                     message={moCodeFilter
@@ -1117,8 +1117,8 @@ export default function ManufacturingOrdersTab({
                                 const warning = getDueDateWarning(mo);
                                 const isExpanded = expandedRows[mo.id];
                                 const isHighlighted = !!moCodeFilter && mo.code.toLowerCase().includes(moCodeFilter.toLowerCase());
-                                const rowBg = isHighlighted ? rowStateBg('highlighted', true)
-                                    : isExpanded ? rowStateBg('expanded', true)
+                                const rowBg = isHighlighted ? rowStateBg('highlighted')
+                                    : isExpanded ? rowStateBg('expanded')
                                     : lvZebra(rowIdx);
                                 const tdStyle: React.CSSProperties = {
                                     border: '1px solid #c0bdb5',
@@ -1142,7 +1142,7 @@ export default function ManufacturingOrdersTab({
                                         {/* MO Code */}
                                         <td style={{ ...tdStyle, paddingLeft: '10px'}}>
                                             <div style={{ display: 'flex', alignItems: 'center', gap: 4, overflow: 'hidden' }}>
-                                                <CodeChip code={mo.code} classic style={{ fontWeight: 'bold', minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis' }} />
+                                                <CodeChip code={mo.code} style={{ fontWeight: 'bold', minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis' }} />
                                                 <span style={{ marginLeft: 'auto', flexShrink: 0 }}>
                                                     <PrintChip variant={mo.card_printed_at ? 'green' : 'gray'} label="Card"
                                                         title={mo.card_printed_at ? `SPK Produksi printed ${tzFmt(mo.card_printed_at, { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }, 'id-ID')}` : 'SPK Produksi not printed yet'} />
@@ -1162,7 +1162,7 @@ export default function ManufacturingOrdersTab({
                                                             {(mo.attribute_value_ids || []).map((id: string) => {
                                                                 const hex = getAttributeValueHex(id);
                                                                 return (
-                                                                    <VariantChip key={id} kind={hex ? 'color' : 'material'} classic
+                                                                    <VariantChip key={id} kind={hex ? 'color' : 'material'}
                                                                         swatch={hex} icon={null} truncate
                                                                     >{getAttributeValueName(id)}</VariantChip>
                                                                 );
@@ -1170,7 +1170,7 @@ export default function ManufacturingOrdersTab({
                                                             {mo.bom_size_id && (() => {
                                                                 const label = getBomSizeLabel(mo.bom_id, mo.bom_size_id);
                                                                 return label ? (
-                                                                    <VariantChip kind="size" classic truncate>{label}</VariantChip>
+                                                                    <VariantChip kind="size" truncate>{label}</VariantChip>
                                                                 ) : null;
                                                             })()}
                                                         </div>
@@ -1182,20 +1182,20 @@ export default function ManufacturingOrdersTab({
                                         {/* BOM — code + originating SO + nested marker */}
                                         <td style={{ ...tdStyle, overflow: 'hidden' }}>
                                             <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 4, fontSize: '9px', color: '#555', minWidth: 0, maxWidth: '100%' }}>
-                                                <CodeChip code={getBOMCode(mo.bom_id)} classic tier={2} style={{ display: 'block', minWidth: 0, maxWidth: '100%', overflow: 'hidden', textOverflow: 'ellipsis' }} />
+                                                <CodeChip code={getBOMCode(mo.bom_id)} tier={2} style={{ display: 'block', minWidth: 0, maxWidth: '100%', overflow: 'hidden', textOverflow: 'ellipsis' }} />
                                                 {/* Both badges go through Chip: the classic/modern pairs they
                                                     replaced disagreed on radius (one square, one CHIP_RADIUS)
                                                     and on wording ("NESTED x2" vs "NESTED (2)") for the same
                                                     fact, and neither gave a clipped label the popout. */}
                                                 {mo.sales_order_id && (
-                                                    <Chip classic size="xs" bold icon="bi-receipt" truncate
+                                                    <Chip size="xs" bold icon="bi-receipt" truncate
                                                         tone={{ background: '#dce8ff', borderColor: '#9ab0e0', color: '#003ea6' }}
                                                         title={`Originating Sales Order: ${mo.sales_order_code || 'unknown'}`}>
                                                         SO: {mo.sales_order_code || '—'}
                                                     </Chip>
                                                 )}
                                                 {mo.child_mos && mo.child_mos.length > 0 && (
-                                                    <Chip classic size="xs" bold
+                                                    <Chip size="xs" bold
                                                         tone={{ background: '#fff3cd', borderColor: '#b8860b', color: '#6b4e00' }}
                                                         title={`${mo.child_mos.length} nested component order(s) under this one`}>
                                                         NESTED x{mo.child_mos.length}
@@ -1274,11 +1274,11 @@ export default function ManufacturingOrdersTab({
                                         <td style={{ ...tdStyle, textAlign: 'right' }} className="no-print" onClick={(e) => e.stopPropagation()}>
                                             <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: '4px' }}>
                                                 {canManage && mo.status === 'PENDING' && (
-                                                    <XPActionButton classic tone="primary" icon="bi-play-fill"
+                                                    <XPActionButton tone="primary" icon="bi-play-fill"
                                                         title="Start production"
                                                         onClick={() => onUpdateStatus(mo.id, 'IN_PROGRESS')} />
                                                 )}
-                                                <MenuTriggerButton classic onClick={(e) => toggleMoMenu(mo.id, e)} />
+                                                <MenuTriggerButton onClick={(e) => toggleMoMenu(mo.id, e)} />
                                             </div>
                                         </td>
                                     </tr>
@@ -1340,7 +1340,7 @@ export default function ManufacturingOrdersTab({
                         title={<><i className="bi bi-tags me-1"></i>Edit Attributes — <span style={{ fontFamily: CODE_FONT }}>{editAttrsModal.mo.code}</span></>}
                         size="md"
                         level={2}
-                        footer={<ModalFooterActions classic
+                        footer={<ModalFooterActions
                             onCancel={() => setEditAttrsModal(null)}
                             onSubmit={() => handleUpdateMOAttributes(editAttrsModal.mo.id, editAttrsModal.selected)}
                             submitLabel="Save" />}
@@ -1406,7 +1406,7 @@ export default function ManufacturingOrdersTab({
                         title={<><i className="bi bi-palette me-1"></i>Set Color — <span style={{ fontFamily: CODE_FONT }}>{mo.code}</span></>}
                         size="md"
                         level={2}
-                        footer={<ModalFooterActions classic
+                        footer={<ModalFooterActions
                             onCancel={() => setEditColorModal(null)} cancelLabel="Close"
                             onExtra={mo.color_id ? () => handleSetMOColor(mo.id, null) : undefined}
                             extraLabel={mo.color_id ? 'Clear' : undefined} />}
@@ -1476,7 +1476,7 @@ export default function ManufacturingOrdersTab({
                         title={<><i className="bi bi-box-arrow-in-down me-1"></i>Putaway Bin — <span style={{ fontFamily: CODE_FONT }}>{pm.mo.code}</span></>}
                         size="md"
                         level={2}
-                        footer={<ModalFooterActions classic
+                        footer={<ModalFooterActions
                             onCancel={() => setPutawayModal(null)}
                             onSubmit={() => handleSavePutaway(pm.mo.id, pm.selected)}
                             submitLabel="Save" />}
@@ -1542,7 +1542,7 @@ export default function ManufacturingOrdersTab({
                         title={<><i className="bi bi-arrow-bar-up me-1"></i>Overdelivery Tolerance — <span style={{ fontFamily: CODE_FONT }}>{tm.mo.code}</span></>}
                         size="md"
                         level={2}
-                        footer={<ModalFooterActions classic
+                        footer={<ModalFooterActions
                             onCancel={() => setToleranceModal(null)}
                             onSubmit={handleSaveTolerance}
                             submitLabel="Save" />}

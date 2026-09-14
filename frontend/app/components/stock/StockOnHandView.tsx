@@ -566,7 +566,7 @@ export default function StockOnHandView({ locations, attributes, categories, ite
     // Identity block every stock modal opens with: which item/lot/location is being
     // touched, and how much of it is there right now.
     const stockContextSection = (bal: any, locPrefix: string, qtyLabel: string) => (
-        <FormSection title="Stock" classic>
+        <FormSection title="Stock">
             <div style={{ fontWeight: 'bold' }}>{bal.item_name}</div>
             <div style={{ fontSize: 10, color: '#666' }}>
                 {locPrefix}: {bal.location_name || getLocationName(bal.location_id)}
@@ -627,13 +627,13 @@ export default function StockOnHandView({ locations, attributes, categories, ite
             <tr key={`${bal.item_id}-${bal.location_id}-${bal.batch_key}-${i}`}
                 className={undefined}
                 title={qStatus ? `Lot is QC ${qStatus} — physically in stock but excluded from netting and consumption pickers` : undefined}
-                style={{ background: sel.isSelectedKey(rk) ? rowStateBg('selected', true) : qStatus ? (i % 2 === 0 ? '#fdf0f0' : '#f8e8e8') : lvZebra(i), borderBottom: '1px solid #c0bdb5' }}>
+                style={{ background: sel.isSelectedKey(rk) ? rowStateBg('selected') : qStatus ? (i % 2 === 0 ? '#fdf0f0' : '#f8e8e8') : lvZebra(i), borderBottom: '1px solid #c0bdb5' }}>
                 <td className={undefined} style={{ padding: '4px 6px', textAlign: 'center', ...colDivider }}>{checkCell}</td>
                 <td style={{ padding: '4px 8px', fontFamily: xpFont, overflow: 'hidden', ...colDivider }}>
                     <div title={bal.item_name}
                         style={{ fontSize: '11px', fontWeight: 'bold', color: '#000', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
                         className={undefined}>{bal.item_name}</div>
-                    <CodeChip code={bal.item_code} classic tier={2}
+                    <CodeChip code={bal.item_code} tier={2}
                         style={{ display: 'block', overflow: 'hidden', textOverflow: 'ellipsis' }}
                         className={undefined} />
                 </td>
@@ -646,7 +646,7 @@ export default function StockOnHandView({ locations, attributes, categories, ite
                         // classic palette AND a bootstrap badge class, so the same fact
                         // wore two shapes, and neither popped out when the column
                         // clipped it. Palettes moved to REF_TONES unchanged.
-                        <Chip classic tone={REF_TONES.category} truncate size="xs">
+                        <Chip tone={REF_TONES.category} truncate size="xs">
                             {bal.item_category_name}
                         </Chip>
                     ) : (
@@ -656,11 +656,11 @@ export default function StockOnHandView({ locations, attributes, categories, ite
                 <td style={{ padding: '4px 8px', fontFamily: xpFont, fontSize: '11px', overflow: 'hidden', ...colDivider }}>
                     <div style={{ display: 'flex', flexWrap: 'wrap', gap: 3, maxWidth: '100%' }} className={undefined}>
                         {getWarehouseName(bal.location_id) && (
-                            <Chip classic tone={REF_TONES.warehouse} truncate size="xs">
+                            <Chip tone={REF_TONES.warehouse} truncate size="xs">
                                 {getWarehouseName(bal.location_id)}
                             </Chip>
                         )}
-                        <Chip classic tone={REF_TONES.bin} truncate size="xs">
+                        <Chip tone={REF_TONES.bin} truncate size="xs">
                             {bal.location_name || getLocationName(bal.location_id)}
                         </Chip>
                     </div>
@@ -669,15 +669,15 @@ export default function StockOnHandView({ locations, attributes, categories, ite
                     {bal.batch_key ? (
                         <div style={{ display: 'flex', flexDirection: 'column', gap: 2, alignItems: 'flex-start', maxWidth: '100%' }}
                             className={undefined}>
-                            <Chip classic tone={REF_TONES.lot} truncate size="xs">{batchLabel}</Chip>
+                            <Chip tone={REF_TONES.lot} truncate size="xs">{batchLabel}</Chip>
                             {bal.vendor_lot && (
-                                <Chip classic tone={REF_TONES.supplierLot} truncate size="xs"
+                                <Chip tone={REF_TONES.supplierLot} truncate size="xs"
                                     title={`Supplier lot: ${bal.vendor_lot}`} style={{ fontFamily: CODE_FONT }}>
                                     SUP {bal.vendor_lot}
                                 </Chip>
                             )}
                             {qStatus && (
-                                <Chip classic tone={statusTint('REJECTED')} truncate size="xs" bold
+                                <Chip tone={statusTint('REJECTED')} truncate size="xs" bold
                                     icon="bi-x-octagon-fill"
                                     title="QC rejected — not usable stock, excluded from netting and consumption pickers">
                                     {qStatus}
@@ -690,7 +690,7 @@ export default function StockOnHandView({ locations, attributes, categories, ite
                 </td>
                 <td style={{ padding: '4px 8px', fontFamily: xpFont, fontSize: '11px', overflow: 'hidden', ...colDivider }}>
                     {bal.mo_code ? (
-                        <Chip classic tone={REF_TONES.producedBy} truncate size="xs"
+                        <Chip tone={REF_TONES.producedBy} truncate size="xs"
                             title={moFilter === bal.mo_code ? `Filtering to MO ${bal.mo_code} — click to clear` : `Produced by MO ${bal.mo_code} — click to filter the grid to this MO`}
                             style={{ fontFamily: CODE_FONT }}
                             onClick={() => setMoFilter(moFilter === bal.mo_code ? '' : bal.mo_code)}
@@ -704,7 +704,7 @@ export default function StockOnHandView({ locations, attributes, categories, ite
                 </td>
                 <td style={{ padding: '4px 8px', fontFamily: xpFont, fontSize: '11px', overflow: 'hidden', ...colDivider }}>
                     {bal.wo_code ? (
-                        <Chip classic tone={REF_TONES.producedBy} truncate size="xs"
+                        <Chip tone={REF_TONES.producedBy} truncate size="xs"
                             title={woFilter === bal.wo_code ? `Filtering to WO ${bal.wo_code} — click to clear` : `Produced by WO ${bal.wo_code} — click to filter the grid to this WO`}
                             style={{ fontFamily: CODE_FONT }}
                             onClick={() => setWoFilter(woFilter === bal.wo_code ? '' : bal.wo_code)}
@@ -719,15 +719,14 @@ export default function StockOnHandView({ locations, attributes, categories, ite
                 <td style={{ padding: '4px 8px', ...colDivider }}>
                     <div style={{ display: 'flex', flexWrap: 'wrap', gap: 3 }}>
                         {bal.size_label && (
-                            <VariantChip kind="size" classic title={`Size: ${bal.size_label}`}>{bal.size_label}</VariantChip>
+                            <VariantChip kind="size" title={`Size: ${bal.size_label}`}>{bal.size_label}</VariantChip>
                         )}
                         {getComboLabel(bal) && (
-                            <VariantChip kind="combo" classic title={`Combo: ${getComboLabel(bal)}`}>{getComboLabel(bal)}</VariantChip>
+                            <VariantChip kind="combo" title={`Combo: ${getComboLabel(bal)}`}>{getComboLabel(bal)}</VariantChip>
                         )}
                         {colorInfo && (
                             <VariantChip
                                 kind={colorInfo.pending ? 'pending' : 'color'}
-                                classic
                                 swatch={colorInfo.hex || null}
                                 title={colorInfo.pending
                                     ? `Shade pending lab dip approval: ${colorInfo.label}`
@@ -737,7 +736,7 @@ export default function StockOnHandView({ locations, attributes, categories, ite
                             </VariantChip>
                         )}
                         {!colorInfo && ownColorAttr && (
-                            <VariantChip kind="color" classic swatch={ownColorAttr.hex} title={`Color: ${ownColorAttr.name}`}>
+                            <VariantChip kind="color" swatch={ownColorAttr.hex} title={`Color: ${ownColorAttr.name}`}>
                                 {ownColorAttr.name}
                             </VariantChip>
                         )}
@@ -747,7 +746,7 @@ export default function StockOnHandView({ locations, attributes, categories, ite
                         {bal.attribute_value_ids
                             ?.filter((vid: string) => !comboValueIds.has(String(vid)) && !colorValueIds.has(String(vid)))
                             .map((vid: string) => (
-                                <Chip key={vid} classic size="xs">{getAttrValueName(vid)}</Chip>
+                                <Chip key={vid} size="xs">{getAttrValueName(vid)}</Chip>
                             ))}
                         {!bal.size_label && !getComboLabel(bal) && !colorInfo && !ownColorAttr && !bal.attribute_value_ids?.length && (
                             <Dash />
@@ -786,10 +785,10 @@ export default function StockOnHandView({ locations, attributes, categories, ite
                 <td style={{ padding: '2px 6px', whiteSpace: 'nowrap' }}>
                     <div style={{ display: 'flex', gap: 4 }} className={undefined}>
                         {canEntry && (
-                            <XPActionButton classic tone="warning" icon="bi-sliders" title={ADJUST_TITLE} onClick={() => openAdjust(bal)} />
+                            <XPActionButton tone="warning" icon="bi-sliders" title={ADJUST_TITLE} onClick={() => openAdjust(bal)} />
                         )}
                         {canEntry && bal.qty > 0 && (
-                            <XPActionButton classic tone="primary" icon="bi-arrow-left-right" title={MOVE_TITLE} onClick={() => openTransfer(bal)} />
+                            <XPActionButton tone="primary" icon="bi-arrow-left-right" title={MOVE_TITLE} onClick={() => openTransfer(bal)} />
                         )}
                     </div>
                 </td>
@@ -813,9 +812,9 @@ export default function StockOnHandView({ locations, attributes, categories, ite
         >
             <div style={{ fontFamily: xpFont, fontSize: 11}}>
                 {stockContextSection(transferTarget, 'From', 'Available')}
-                <FormSection title="Move" classic>
+                <FormSection title="Move">
                     <div style={{ marginBottom: 8 }}>
-                        <FieldLabel classic>Destination</FieldLabel>
+                        <FieldLabel>Destination</FieldLabel>
                         <TreeSelect
                             options={buildLocationPickerTree(locations, transferTarget.location_id)}
                             value={transferToLoc}
@@ -826,7 +825,7 @@ export default function StockOnHandView({ locations, attributes, categories, ite
                         />
                     </div>
                     <div>
-                        <FieldLabel classic>Quantity{transferTarget.item_uom ? ` (${transferTarget.item_uom})` : ''}</FieldLabel>
+                        <FieldLabel>Quantity{transferTarget.item_uom ? ` (${transferTarget.item_uom})` : ''}</FieldLabel>
                         <input
                             type="number" min="0.0001" step="any"
                             style={{ ...xpInput, width: '100%' }}
@@ -835,8 +834,8 @@ export default function StockOnHandView({ locations, attributes, categories, ite
                         />
                     </div>
                 </FormSection>
-                <FormSection title="Packaging to move" classic>
-                    <FieldLabel classic hint="Optional — how many of each container moves with the quantity above.">Containers</FieldLabel>
+                <FormSection title="Packaging to move">
+                    <FieldLabel hint="Optional — how many of each container moves with the quantity above.">Containers</FieldLabel>
                     {packagingInputs([
                         ['Cones', transferCones, setTransferCones],
                         ['Boxes', transferBoxes, setTransferBoxes],
@@ -864,8 +863,8 @@ export default function StockOnHandView({ locations, attributes, categories, ite
             </>}
         >
             <div style={{ fontFamily: xpFont, fontSize: 11}}>
-                <FormSection title="Destination" classic>
-                    <FieldLabel classic hint="Every selected row moves here. Sources, lots and variants are kept as they are.">Move to</FieldLabel>
+                <FormSection title="Destination">
+                    <FieldLabel hint="Every selected row moves here. Sources, lots and variants are kept as they are.">Move to</FieldLabel>
                     <TreeSelect
                         options={locPickerTreeOptions}
                         value={bulkToLoc}
@@ -875,7 +874,7 @@ export default function StockOnHandView({ locations, attributes, categories, ite
                         size="sm"
                     />
                 </FormSection>
-                <FormSection title="Rows to move" classic>
+                <FormSection title="Rows to move">
                     <div style={{ maxHeight: 320, overflowY: 'auto' }}>
                         <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                             <thead>
@@ -897,7 +896,7 @@ export default function StockOnHandView({ locations, attributes, categories, ite
                                         <tr key={k} style={{ borderBottom: '1px solid #c0bdb5' }}>
                                             <td style={{ padding: '3px 6px' }}>
                                                 <div style={{ fontWeight: 'bold' }}>{bal.item_name}</div>
-                                                <CodeChip code={bal.item_code} classic tier={2} />
+                                                <CodeChip code={bal.item_code} tier={2} />
                                             </td>
                                             <td style={{ padding: '3px 6px' }}>{bal.location_name || getLocationName(bal.location_id)}</td>
                                             <td style={{ padding: '3px 6px', fontFamily: CODE_FONT, fontSize: 10 }}>
@@ -916,7 +915,7 @@ export default function StockOnHandView({ locations, attributes, categories, ite
                                                 />
                                             </td>
                                             <td style={{ padding: '3px 6px' }}>
-                                                <XPActionButton classic tone="danger" icon="bi-x-lg" title="Remove from this move" onClick={() => dropBulkRow(k)} />
+                                                <XPActionButton tone="danger" icon="bi-x-lg" title="Remove from this move" onClick={() => dropBulkRow(k)} />
                                             </td>
                                         </tr>
                                     );
@@ -966,13 +965,13 @@ export default function StockOnHandView({ locations, attributes, categories, ite
             >
                 <div style={{ fontFamily: xpFont, fontSize: 11}}>
                     {stockContextSection(t, 'Location', 'On hand')}
-                    <FormSection title="Adjustment" classic>
+                    <FormSection title="Adjustment">
                         <div style={{ display: 'flex', gap: 6, marginBottom: 8 }}>
                             {modeBtn('set', 'Set to (count)')}
                             {modeBtn('delta', 'Adjust by (+/-)')}
                         </div>
                         <div>
-                            <FieldLabel classic>
+                            <FieldLabel>
                                 {adjustMode === 'set' ? 'Counted quantity' : 'Quantity change (+/-)'}
                                 {t.item_uom ? ` (${t.item_uom})` : ''}
                             </FieldLabel>
@@ -987,17 +986,17 @@ export default function StockOnHandView({ locations, attributes, categories, ite
                             </div>
                         </div>
                     </FormSection>
-                    <FormSection title={pkgLabel} classic>
-                        <FieldLabel classic hint={adjustMode === 'set' ? 'Optional — counted containers, blank to leave untouched.' : 'Optional — container change, may be negative.'}>Containers</FieldLabel>
+                    <FormSection title={pkgLabel}>
+                        <FieldLabel hint={adjustMode === 'set' ? 'Optional — counted containers, blank to leave untouched.' : 'Optional — container change, may be negative.'}>Containers</FieldLabel>
                         {packagingInputs([
                             ['Cones', adjustCones, setAdjustCones],
                             ['Boxes', adjustBoxes, setAdjustBoxes],
                             ['Drums', adjustDrums, setAdjustDrums],
                         ], adjustMode === 'delta')}
                     </FormSection>
-                    <FormSection title="Why" classic>
+                    <FormSection title="Why">
                         <div style={{ marginBottom: 8 }}>
-                            <FieldLabel classic>Reason</FieldLabel>
+                            <FieldLabel>Reason</FieldLabel>
                             <select
                                 style={{ ...xpSelect, width: '100%' }}
                                 value={adjustReason}
@@ -1007,7 +1006,7 @@ export default function StockOnHandView({ locations, attributes, categories, ite
                             </select>
                         </div>
                         <div>
-                            <FieldLabel classic hint="Optional">Note</FieldLabel>
+                            <FieldLabel hint="Optional">Note</FieldLabel>
                             <input
                                 type="text" placeholder="e.g. spoiled in transit"
                                 style={{ ...xpInput, width: '100%' }}
@@ -1036,9 +1035,9 @@ export default function StockOnHandView({ locations, attributes, categories, ite
             </>}
         >
             <div style={{ fontFamily: xpFont, fontSize: 11}}>
-                <FormSection title="Item" classic>
+                <FormSection title="Item">
                     <div style={{ marginBottom: newBoundAttrs.length ? 8 : 0 }}>
-                        <FieldLabel classic>Item</FieldLabel>
+                        <FieldLabel>Item</FieldLabel>
                         <SearchableSelect
                             options={items.map((it: any) => ({ value: it.code, label: it.name, subLabel: it.code }))}
                             onSearch={onSearchItems}
@@ -1050,7 +1049,7 @@ export default function StockOnHandView({ locations, attributes, categories, ite
                     </div>
                     {newBoundAttrs.map((attr: any, i: number) => (
                         <div key={attr.id} style={{ marginBottom: i === newBoundAttrs.length - 1 ? 0 : 6 }}>
-                            <FieldLabel classic>{attr.name}</FieldLabel>
+                            <FieldLabel>{attr.name}</FieldLabel>
                             <select
                                 style={{ ...xpSelect, width: '100%' }}
                                 value={newAttrIds.find(vid => attr.values.some((v: any) => v.id === vid)) || ''}
@@ -1062,9 +1061,9 @@ export default function StockOnHandView({ locations, attributes, categories, ite
                         </div>
                     ))}
                 </FormSection>
-                <FormSection title="Quantity" classic>
+                <FormSection title="Quantity">
                     <div style={{ marginBottom: 8 }}>
-                        <FieldLabel classic>Location</FieldLabel>
+                        <FieldLabel>Location</FieldLabel>
                         <TreeSelect
                             options={locPickerTreeOptions}
                             value={newLocId}
@@ -1075,7 +1074,7 @@ export default function StockOnHandView({ locations, attributes, categories, ite
                         />
                     </div>
                     <div>
-                        <FieldLabel classic hint="Negative to subtract">Quantity</FieldLabel>
+                        <FieldLabel hint="Negative to subtract">Quantity</FieldLabel>
                         <input
                             type="number" step="any"
                             style={{ ...xpInput, width: '100%' }}
@@ -1084,17 +1083,17 @@ export default function StockOnHandView({ locations, attributes, categories, ite
                         />
                     </div>
                 </FormSection>
-                <FormSection title="Packaging" classic>
-                    <FieldLabel classic hint="Optional — container tallies booked alongside the quantity.">Containers</FieldLabel>
+                <FormSection title="Packaging">
+                    <FieldLabel hint="Optional — container tallies booked alongside the quantity.">Containers</FieldLabel>
                     {packagingInputs([
                         ['Cones', newCones, setNewCones],
                         ['Boxes', newBoxes, setNewBoxes],
                         ['Drums', newDrums, setNewDrums],
                     ], true)}
                 </FormSection>
-                <FormSection title="Why" classic>
+                <FormSection title="Why">
                     <div style={{ marginBottom: 8 }}>
-                        <FieldLabel classic>Reason</FieldLabel>
+                        <FieldLabel>Reason</FieldLabel>
                         <select
                             style={{ ...xpSelect, width: '100%' }}
                             value={newReason}
@@ -1104,7 +1103,7 @@ export default function StockOnHandView({ locations, attributes, categories, ite
                         </select>
                     </div>
                     <div>
-                        <FieldLabel classic hint="Optional">Note</FieldLabel>
+                        <FieldLabel hint="Optional">Note</FieldLabel>
                         <input
                             type="text"
                             style={{ ...xpInput, width: '100%' }}
@@ -1165,12 +1164,12 @@ export default function StockOnHandView({ locations, attributes, categories, ite
             {(moFilter || woFilter) && col('col-md-2 d-flex align-items-center gap-1', (
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
                     {moFilter && (
-                        <Chip classic tone={REF_TONES.producedBy} size="xs" onRemove={() => setMoFilter('')}>
+                        <Chip tone={REF_TONES.producedBy} size="xs" onRemove={() => setMoFilter('')}>
                             MO {moFilter}
                         </Chip>
                     )}
                     {woFilter && (
-                        <Chip classic tone={REF_TONES.producedBy} size="xs" onRemove={() => setWoFilter('')}>
+                        <Chip tone={REF_TONES.producedBy} size="xs" onRemove={() => setWoFilter('')}>
                             WO {woFilter}
                         </Chip>
                     )}
@@ -1258,7 +1257,7 @@ export default function StockOnHandView({ locations, attributes, categories, ite
                         <tbody ref={listBodyRef}>
                             {pageRows.map((bal: any, i: number) => renderRow(bal, i))}
                             {pageRows.length === 0 && (loading ? (
-                                <TableSkeleton rows={8} cols={skel.cols ?? 14} classic rowHeight={skel.rowHeight} fillHeight={skel.fillHeight} />
+                                <TableSkeleton rows={8} cols={skel.cols ?? 14} rowHeight={skel.rowHeight} fillHeight={skel.fillHeight} />
                             ) : <tr>
                                     <td colSpan={14} style={{ textAlign: 'center', padding: '24px' }}>
                                         <span style={{ fontFamily: xpFont, fontSize: '11px', color: '#666', fontStyle: 'italic' }}>No stock records found</span>

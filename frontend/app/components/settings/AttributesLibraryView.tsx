@@ -174,7 +174,7 @@ export default function AttributesLibraryView({
                                 </td>
                                 <td style={{ ...lvTd(), textAlign: 'center' }}>{attr.values.length}</td>
                                 <td style={{ ...lvTd(), borderRight: 'none', textAlign: 'right' }} onClick={e => e.stopPropagation()}>
-                                    {canManage && <MenuTriggerButton classic onClick={e => menuToggle(String(attr.id), e)} />}
+                                    {canManage && <MenuTriggerButton onClick={e => menuToggle(String(attr.id), e)} />}
                                 </td>
                             </tr>
                         ))}
@@ -215,7 +215,7 @@ export default function AttributesLibraryView({
                 }
             >
                 <form id="attribute-form" onSubmit={handleSubmit}>
-                    <FormSection title="Identity" classic>
+                    <FormSection title="Identity">
                         <div>
                             <label style={lvLabel()}>Name *</label>
                             <input
@@ -235,7 +235,7 @@ export default function AttributesLibraryView({
                         </div>
                     </FormSection>
 
-                    <FormSection title={editing ? `Values (${editing.values.length})` : 'Initial Values'} classic>
+                    <FormSection title={editing ? `Values (${editing.values.length})` : 'Initial Values'}>
                         {editing ? (
                             <>
                                 <div style={{ background: '#fff', border: '1px solid #7f9db9', maxHeight: 220, overflowY: 'auto', marginBottom: 8 }}>

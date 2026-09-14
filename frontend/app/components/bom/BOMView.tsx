@@ -180,7 +180,7 @@ export default function BOMView({
                 const hex = getAttributeValueHex(valId) ?? colorHexFor(label);
                 return (
                     <VariantChip
-                        key={valId} kind={hex ? 'color' : 'material'} classic
+                        key={valId} kind={hex ? 'color' : 'material'}
                         size={compact ? 'xs' : 'sm'} swatch={hex} icon={null} title={label}
                     >{label}</VariantChip>
                 );
@@ -287,7 +287,7 @@ export default function BOMView({
                                 <span style={{ width: '12px', display: 'inline-block', marginRight: '4px', flexShrink: 0 }} />
                             )}
                             <div style={{ display: 'flex', alignItems: 'center', gap: '4px', paddingBottom: '2px', borderBottom: '1px solid #e0ddd4', width: '100%', overflow: 'hidden' }}>
-                                <CodeChip code={getItemCode(line.item_id, line.item_code)} classic tier={2} className="text-truncate me-1" />
+                                <CodeChip code={getItemCode(line.item_id, line.item_code)} tier={2} className="text-truncate me-1" />
                                 <span className="text-truncate" style={{ color: '#000' }}>{getItemName(line.item_id, line.item_name)}</span>
                                 <div className="text-truncate flex-grow-1" style={{ fontSize: '0.7rem', color: '#555', fontStyle: 'italic' }}>
                                     {(line.attribute_value_ids || []).map(getAttributeValueName).join(', ')}
@@ -419,7 +419,7 @@ export default function BOMView({
                     two-pane div's opaque background paint straight over the shadow), so the
                     frame sits on this wrapper instead of the td. */}
                 <td colSpan={9} style={{ padding: 0 }}>
-                    <div style={{ ...expandedRowFrame(true), padding: '2px 0 2px 4px' }}>
+                    <div style={{ ...expandedRowFrame(), padding: '2px 0 2px 4px' }}>
                     <div style={{ display: 'flex', height: 420, background: '#ece9d8', fontFamily: xpFont, fontSize: 11 }}>
 
                         {/* LEFT: Tree */}
@@ -501,7 +501,7 @@ export default function BOMView({
                                                     return (
                                                         <tr key={line.id} style={lvSubRow(i, { zebra: true })}>
                                                             <td style={lvSubTd()}>
-                                                                <CodeChip code={line.item_code} classic tone="accent" />
+                                                                <CodeChip code={line.item_code} tone="accent" />
                                                                 <span style={{ marginLeft: 5, color: '#000' }}>{line.item_name}</span>
                                                                 {isSubBOM && (
                                                                     <span style={{ borderRadius: CHIP_RADIUS, marginLeft: 5, background: '#e6eeff', border: '1px solid #0058e6', color: '#003080', fontSize: 9, padding: '0 3px', fontWeight: 'bold' }}>Sub</span>
@@ -573,7 +573,6 @@ export default function BOMView({
                                     <div style={{ fontSize: 10, fontWeight: 'bold', color: '#000080', borderBottom: '1px solid #c0bdb5', paddingBottom: 3, marginBottom: 6, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                                         <span><i className="bi bi-clipboard" style={{ marginRight: 4 }} />BOM Details</span>
                                         <XPActionButton
-                                            classic
                                             icon="bi-printer"
                                             title="Print BOM"
                                             onClick={() => setPrintBOM(displayBOM)}
@@ -584,12 +583,12 @@ export default function BOMView({
                                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '4px 8px', marginBottom: 6 }}>
                                         <div style={{ gridColumn: '1/-1', minWidth: 0 }}>
                                             <div style={lbl}>BOM Code</div>
-                                            <CodeChip code={displayBOM.code} classic tone="accent" style={{ display: 'block', minWidth: 0, maxWidth: '100%', overflow: 'hidden', textOverflow: 'ellipsis' }} />
+                                            <CodeChip code={displayBOM.code} tone="accent" style={{ display: 'block', minWidth: 0, maxWidth: '100%', overflow: 'hidden', textOverflow: 'ellipsis' }} />
                                         </div>
                                         <div style={{ gridColumn: '1/-1' }}>
                                             <div style={lbl}>Item</div>
                                             <div style={{ ...val, fontSize: 11 }}>{displayBOM.item_name || displayBOM.item_code}</div>
-                                            <CodeChip code={displayBOM.item_code} classic tier={2} />
+                                            <CodeChip code={displayBOM.item_code} tier={2} />
                                         </div>
                                         {(displayBOM.attribute_value_ids || []).length > 0 && (
                                             <div style={{ gridColumn: '1/-1' }}>
@@ -849,7 +848,7 @@ export default function BOMView({
 
                                 <tbody ref={listBodyRef}>
                                     {boms.length === 0 && bomLoading ? (
-                                        <TableSkeleton rows={8} cols={skel.cols ?? 9} classic rowHeight={skel.rowHeight} fillHeight={skel.fillHeight} />
+                                        <TableSkeleton rows={8} cols={skel.cols ?? 9} rowHeight={skel.rowHeight} fillHeight={skel.fillHeight} />
                                     ) : boms.length === 0 ? (
                                         <TableEmpty colSpan={9}
                                             message={bomSearch.trim()
@@ -858,8 +857,8 @@ export default function BOMView({
                                     ) : (
                                         boms.map((bom: any, index: number) => {
                                             const isExpanded = expandedBOMRows[bom.id];
-                                            const rowBg = sel.isSelected(bom) ? rowStateBg('selected', true)
-                                                : isExpanded ? rowStateBg('expanded', true)
+                                            const rowBg = sel.isSelected(bom) ? rowStateBg('selected')
+                                                : isExpanded ? rowStateBg('expanded')
                                                 : lvZebra(index);
 
                                             return (
@@ -880,7 +879,7 @@ export default function BOMView({
                                                         title="Click to expand BOM details"
                                                     >
                                                         <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                                                            <CodeChip code={bom.code} classic />
+                                                            <CodeChip code={bom.code} />
                                                         </div>
                                                     </td>
                                                     {/* Finished Good — item name */}
@@ -899,7 +898,7 @@ export default function BOMView({
                                                     >
                                                         {/* Reference to the item, not this row's identity — tier 2 so it
                                                             doesn't compete with the BOM code chip two columns over. */}
-                                                        <CodeChip code={getItemCode(bom.item_id, bom.item_code)} classic tier={2} />
+                                                        <CodeChip code={getItemCode(bom.item_id, bom.item_code)} tier={2} />
                                                     </td>
                                                     {/* Variant — color swatches + combo values */}
                                                     <td style={{ padding: '7px 8px', borderRight: '1px solid #c0bdb5', verticalAlign: 'middle' }}>
@@ -947,7 +946,7 @@ export default function BOMView({
                                                         </div>
                                                     </td>
                                                     <td style={{ padding: '7px 6px', textAlign: 'right', verticalAlign: 'middle' }}>
-                                                        {canManage && <MenuTriggerButton classic onClick={e => menuToggle(bom.id, e)} />}
+                                                        {canManage && <MenuTriggerButton onClick={e => menuToggle(bom.id, e)} />}
                                                     </td>
                                                 </tr>
                                                 {isExpanded && renderDetailPanel(bom)}

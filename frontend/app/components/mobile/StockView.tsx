@@ -101,7 +101,7 @@ export default function MobileStockView({ items, locations, stockBalance }: Mobi
                                                     {item.name}
                                                 </div>
                                                 {item.sku && (
-                                                    <CodeChip code={item.sku} classic tier={2} style={{ display: 'block', fontSize: 10, marginTop: 1 }} />
+                                                    <CodeChip code={item.sku} tier={2} style={{ display: 'block', fontSize: 10, marginTop: 1 }} />
                                                 )}
                                                 {total <= 0 && (
                                                     <div style={{ fontFamily: XP_FONT, fontSize: 10, color: '#cc0000', fontWeight: 'bold', marginTop: 1 }}>

@@ -631,17 +631,17 @@ export default function BatchesView({ items, locations, categories, workCenters,
   // Origin — customer/supplier source only (SO + PO), as badges.
   const originCell = (b: Batch) => {
     const chips: React.ReactNode[] = [];
-    if (b.sales_order_code) chips.push(<OriginChip kind="so" code={b.sales_order_code} classic />);
-    if (b.po_number) chips.push(<OriginChip kind="po" code={b.po_number} classic
+    if (b.sales_order_code) chips.push(<OriginChip kind="so" code={b.sales_order_code} />);
+    if (b.po_number) chips.push(<OriginChip kind="po" code={b.po_number}
       title={b.vendor_lot ? `Supplier Lot: ${b.vendor_lot}` : undefined} />);
     return chips.length ? chipRow(chips.map((c, i) => <React.Fragment key={i}>{c}</React.Fragment>)) : emDash;
   };
 
   // WO / MO / PR — internal production origin, one column each so a lot with
   // more than one of them doesn't crowd a single cell.
-  const woCell = (b: Batch) => b.wo_code ? <OriginChip kind="wo" code={b.wo_code} classic prefix={false} truncate /> : emDash;
-  const moCell = (b: Batch) => b.mo_code ? <OriginChip kind="mo" code={b.mo_code} classic prefix={false} truncate /> : emDash;
-  const prCell = (b: Batch) => b.production_run_code ? <OriginChip kind="pr" code={b.production_run_code} classic truncate /> : emDash;
+  const woCell = (b: Batch) => b.wo_code ? <OriginChip kind="wo" code={b.wo_code} prefix={false} truncate /> : emDash;
+  const moCell = (b: Batch) => b.mo_code ? <OriginChip kind="mo" code={b.mo_code} prefix={false} truncate /> : emDash;
+  const prCell = (b: Batch) => b.production_run_code ? <OriginChip kind="pr" code={b.production_run_code} truncate /> : emDash;
 
   // WO/MO/PR share one fixed width so the three origin columns line up — codes are
   // clipped with an ellipsis and pop out unclipped on hover (Chip's truncate prop).
@@ -711,11 +711,11 @@ export default function BatchesView({ items, locations, categories, workCenters,
     if (!sz && !combo && !shade) return emDash;
     return chipRow(
       <>
-        {sz && <VariantChip kind="size" classic title={`Size: ${sz}`}>{sz}</VariantChip>}
-        {combo && <VariantChip kind="combo" classic title={`Combo: ${combo}`}>{combo}</VariantChip>}
+        {sz && <VariantChip kind="size" title={`Size: ${sz}`}>{sz}</VariantChip>}
+        {combo && <VariantChip kind="combo" title={`Combo: ${combo}`}>{combo}</VariantChip>}
         {shade && (shade.pending
-          ? <VariantChip kind="pending" classic title={`Shade pending lab dip approval: ${shade.label}`}>{shade.label} (pending)</VariantChip>
-          : <VariantChip kind="color" classic swatch={shade.hex} title={`Color: ${shade.label}`}>{shade.label}</VariantChip>)}
+          ? <VariantChip kind="pending" title={`Shade pending lab dip approval: ${shade.label}`}>{shade.label} (pending)</VariantChip>
+          : <VariantChip kind="color" swatch={shade.hex} title={`Color: ${shade.label}`}>{shade.label}</VariantChip>)}
       </>,
     );
   };
@@ -828,7 +828,7 @@ export default function BatchesView({ items, locations, categories, workCenters,
     );
 
     return (
-      <ExpandedRowPanel classic style={{
+      <ExpandedRowPanel style={{
         padding: '12px 14px',
         whiteSpace: 'normal',   // table rows are nowrap; lineage boxes wrap normally
         ...fnt,
@@ -1025,7 +1025,7 @@ export default function BatchesView({ items, locations, categories, workCenters,
                 </tr>
               </thead>
               <tbody ref={listBodyRef}>
-                {loading && <TableSkeleton rows={8} cols={skel.cols ?? colSpan} classic tdStyle={xpTd(false)} rowHeight={skel.rowHeight} fillHeight={skel.fillHeight} />}
+                {loading && <TableSkeleton rows={8} cols={skel.cols ?? colSpan} tdStyle={xpTd(false)} rowHeight={skel.rowHeight} fillHeight={skel.fillHeight} />}
                 {!loading && batches.length === 0 && (
                   <TableEmpty colSpan={colSpan} tdStyle={xpTd(false)} message="No lots found." />
                 )}
@@ -1033,39 +1033,39 @@ export default function BatchesView({ items, locations, categories, workCenters,
                   <>
                     <tr
                       key={b.id}
-                      style={{ background: expandedRows[b.id] ? rowStateBg('expanded', true) : lvZebra(i), cursor: 'pointer', color: isDepleted(b) ? '#9a9a9a' : undefined, height: ROW_H }}
+                      style={{ background: expandedRows[b.id] ? rowStateBg('expanded') : lvZebra(i), cursor: 'pointer', color: isDepleted(b) ? '#9a9a9a' : undefined, height: ROW_H }}
                       onClick={() => toggleExpand(b)}
                       title={isDepleted(b) ? 'Depleted lot — 0 remaining' : 'Show lot lineage'}
                     >
                       <ExpanderCell expanded={!!expandedRows[b.id]} onToggle={() => toggleExpand(b)} label="lot lineage"
-                        tdStyle={{ ...xpTd(i % 2 === 1), background: expandedRows[b.id] ? rowStateBg('expanded', true) : undefined }} />
-                      <td style={{ ...xpTd(i % 2 === 1), background: expandedRows[b.id] ? rowStateBg('expanded', true) : undefined }}>
+                        tdStyle={{ ...xpTd(i % 2 === 1), background: expandedRows[b.id] ? rowStateBg('expanded') : undefined }} />
+                      <td style={{ ...xpTd(i % 2 === 1), background: expandedRows[b.id] ? rowStateBg('expanded') : undefined }}>
                         <strong>{b.batch_number}</strong>
                         {qualityChip(b)}
                       </td>
-                      <td style={{ ...xpTd(i % 2 === 1), background: expandedRows[b.id] ? rowStateBg('expanded', true) : undefined }}>{productCell(b)}</td>
-                      <td style={{ ...xpTd(i % 2 === 1), textAlign: 'right', background: expandedRows[b.id] ? rowStateBg('expanded', true) : undefined }}>{b.ends ?? '-'}</td>
-                      <td style={{ ...xpTd(i % 2 === 1), width: ATTRS_COL_W, maxWidth: ATTRS_COL_W, background: expandedRows[b.id] ? rowStateBg('expanded', true) : undefined }}>{attrsCell(b)}</td>
-                      <td style={{ ...xpTd(i % 2 === 1), background: expandedRows[b.id] ? rowStateBg('expanded', true) : undefined }}>{originCell(b)}</td>
-                      <td style={{ ...xpTd(i % 2 === 1), width: ORIGIN_COL_W, maxWidth: ORIGIN_COL_W, overflow: 'hidden', background: expandedRows[b.id] ? rowStateBg('expanded', true) : undefined }}>{woCell(b)}</td>
-                      <td style={{ ...xpTd(i % 2 === 1), width: ORIGIN_COL_W, maxWidth: ORIGIN_COL_W, overflow: 'hidden', background: expandedRows[b.id] ? rowStateBg('expanded', true) : undefined }}>{moCell(b)}</td>
-                      <td style={{ ...xpTd(i % 2 === 1), width: ORIGIN_COL_W, maxWidth: ORIGIN_COL_W, overflow: 'hidden', background: expandedRows[b.id] ? rowStateBg('expanded', true) : undefined }}>{prCell(b)}</td>
-                      <td style={{ ...xpTd(i % 2 === 1), background: expandedRows[b.id] ? rowStateBg('expanded', true) : undefined }}>{locationCell(b)}</td>
-                      <td style={{ ...xpTd(i % 2 === 1), textAlign: 'right', background: expandedRows[b.id] ? rowStateBg('expanded', true) : undefined, whiteSpace: 'nowrap' }}>{remainingCell(b)}</td>
-                      <td style={{ ...xpTd(i % 2 === 1), background: expandedRows[b.id] ? rowStateBg('expanded', true) : undefined }}>{notesCell(b)}</td>
-                      <td style={{ ...xpTd(i % 2 === 1), background: expandedRows[b.id] ? rowStateBg('expanded', true) : undefined }}>{createdCell(b)}</td>
-                      <td style={{ ...xpTd(i % 2 === 1), whiteSpace: 'nowrap', textAlign: 'right', background: expandedRows[b.id] ? rowStateBg('expanded', true) : undefined }} onClick={e => e.stopPropagation()}>
+                      <td style={{ ...xpTd(i % 2 === 1), background: expandedRows[b.id] ? rowStateBg('expanded') : undefined }}>{productCell(b)}</td>
+                      <td style={{ ...xpTd(i % 2 === 1), textAlign: 'right', background: expandedRows[b.id] ? rowStateBg('expanded') : undefined }}>{b.ends ?? '-'}</td>
+                      <td style={{ ...xpTd(i % 2 === 1), width: ATTRS_COL_W, maxWidth: ATTRS_COL_W, background: expandedRows[b.id] ? rowStateBg('expanded') : undefined }}>{attrsCell(b)}</td>
+                      <td style={{ ...xpTd(i % 2 === 1), background: expandedRows[b.id] ? rowStateBg('expanded') : undefined }}>{originCell(b)}</td>
+                      <td style={{ ...xpTd(i % 2 === 1), width: ORIGIN_COL_W, maxWidth: ORIGIN_COL_W, overflow: 'hidden', background: expandedRows[b.id] ? rowStateBg('expanded') : undefined }}>{woCell(b)}</td>
+                      <td style={{ ...xpTd(i % 2 === 1), width: ORIGIN_COL_W, maxWidth: ORIGIN_COL_W, overflow: 'hidden', background: expandedRows[b.id] ? rowStateBg('expanded') : undefined }}>{moCell(b)}</td>
+                      <td style={{ ...xpTd(i % 2 === 1), width: ORIGIN_COL_W, maxWidth: ORIGIN_COL_W, overflow: 'hidden', background: expandedRows[b.id] ? rowStateBg('expanded') : undefined }}>{prCell(b)}</td>
+                      <td style={{ ...xpTd(i % 2 === 1), background: expandedRows[b.id] ? rowStateBg('expanded') : undefined }}>{locationCell(b)}</td>
+                      <td style={{ ...xpTd(i % 2 === 1), textAlign: 'right', background: expandedRows[b.id] ? rowStateBg('expanded') : undefined, whiteSpace: 'nowrap' }}>{remainingCell(b)}</td>
+                      <td style={{ ...xpTd(i % 2 === 1), background: expandedRows[b.id] ? rowStateBg('expanded') : undefined }}>{notesCell(b)}</td>
+                      <td style={{ ...xpTd(i % 2 === 1), background: expandedRows[b.id] ? rowStateBg('expanded') : undefined }}>{createdCell(b)}</td>
+                      <td style={{ ...xpTd(i % 2 === 1), whiteSpace: 'nowrap', textAlign: 'right', background: expandedRows[b.id] ? rowStateBg('expanded') : undefined }} onClick={e => e.stopPropagation()}>
                         <div style={{ display: 'inline-flex', alignItems: 'center', gap: 4, justifyContent: 'flex-end' }}>
                           {!isRejectGrade(b.quality_status) && (b.remaining ?? 0) > 0 && (
-                            <XPActionButton classic tone="neutral" icon="bi-scissors" title={SPLIT_TITLE} onClick={() => openSplit(b)} />
+                            <XPActionButton tone="neutral" icon="bi-scissors" title={SPLIT_TITLE} onClick={() => openSplit(b)} />
                           )}
                           {!isRejectGrade(b.quality_status) && b.quality_status !== 'DISPOSED' && (
-                            <XPActionButton classic tone="warning" icon="bi-slash-circle" title={REJECT_TITLE} onClick={() => openReject(b)} />
+                            <XPActionButton tone="warning" icon="bi-slash-circle" title={REJECT_TITLE} onClick={() => openReject(b)} />
                           )}
                           {isRejectGrade(b.quality_status) && (b.remaining ?? 0) > 0 && (
-                            <XPActionButton classic tone="danger" icon="bi-trash" title={DISPOSE_TITLE} onClick={() => openDispose(b)} />
+                            <XPActionButton tone="danger" icon="bi-trash" title={DISPOSE_TITLE} onClick={() => openDispose(b)} />
                           )}
-                          <MenuTriggerButton classic onClick={e => toggle(b.id, e)} />
+                          <MenuTriggerButton onClick={e => toggle(b.id, e)} />
                         </div>
                       </td>
                     </tr>

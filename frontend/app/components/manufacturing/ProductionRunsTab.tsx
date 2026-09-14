@@ -336,7 +336,7 @@ export default function ProductionRunsTab({
                         </thead>
                         <tbody ref={listBodyRef}>
                             {filteredProductionRuns.length === 0 && dataLoading.productionRuns && (
-                                <TableSkeleton rows={8} cols={skel.cols ?? 9} classic rowHeight={skel.rowHeight} fillHeight={skel.fillHeight} />
+                                <TableSkeleton rows={8} cols={skel.cols ?? 9} rowHeight={skel.rowHeight} fillHeight={skel.fillHeight} />
                             )}
                             {filteredProductionRuns.map((pr: any, rowIdx: number) => {
                                 const mos = pr.manufacturing_orders || [];
@@ -362,10 +362,10 @@ export default function ProductionRunsTab({
                                 const hasShortfall = mstat ? statusShort > 0 : reqs.some((r: any) => (r.status ? r.status === 'SHORT' : r.shortfall > 0.005));
                                 return (
                                     <React.Fragment key={pr.id}>
-                                    <tr style={{ background: isExpanded ? rowStateBg('expanded', true) : rowBg, cursor: 'pointer' }} onClick={() => togglePR(pr.id)} title="Material Requirements">
+                                    <tr style={{ background: isExpanded ? rowStateBg('expanded') : rowBg, cursor: 'pointer' }} onClick={() => togglePR(pr.id)} title="Material Requirements">
                                         <ExpanderCell expanded={isExpanded} onToggle={() => togglePR(pr.id)} tdStyle={tdStyle} tone={hasShortfall ? 'alert' : 'default'} label="material requirements" />
                                         <td style={tdStyle}>
-                                            <CodeChip code={pr.code} classic style={{ fontWeight: 'bold' }} />
+                                            <CodeChip code={pr.code} style={{ fontWeight: 'bold' }} />
                                             {pr.sales_order_id && (
                                                 <div style={{ marginTop: 3 }}>
                                                     <span style={{
@@ -393,7 +393,6 @@ export default function ProductionRunsTab({
                                                 : pr.bom?.code
                                             ) && (
                                                 <CodeChip
-                                                    classic
                                                     tier={2}
                                                     style={{
                                                         display: 'block', maxWidth: '100%',
@@ -437,21 +436,20 @@ export default function ProductionRunsTab({
                                         <td style={{ ...tdStyle, textAlign: 'right', whiteSpace: 'nowrap' }} onClick={(e) => e.stopPropagation()}>
                                             <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: '4px' }}>
                                                 <XPActionButton
-                                                    classic
                                                     tone="primary"
                                                     icon="bi-printer"
                                                     title="Print Material Pull Sheet"
                                                     onClick={() => handlePrintPR(pr)}
                                                 />
-                                                <MenuTriggerButton classic onClick={(e) => togglePrMenu(pr.id, e)} />
+                                                <MenuTriggerButton onClick={(e) => togglePrMenu(pr.id, e)} />
                                             </div>
                                         </td>
                                     </tr>
                                     {isExpanded && (
                                         <tr>
                                             <td colSpan={9} className="p-0 border-0">
-                                            <ExpandedRowPanel classic>
-                                            <ExpandedRowPanelBody classic>
+                                            <ExpandedRowPanel>
+                                            <ExpandedRowPanelBody>
                                                 {/* Empty message only once the pull has actually finished — while it
                                                     is in flight the real header renders over a skeleton body instead.
                                                     A background re-pull (list refresh) keeps the current rows on
@@ -477,7 +475,7 @@ export default function ProductionRunsTab({
                                                                                 title={`View ${mo.code} in Manufacturing Orders (${mo.status})`}
                                                                                 style={{ padding: 0, background: 'none', border: 'none', cursor: 'pointer' }}
                                                                             >
-                                                                                <CodeChip code={mo.code} classic link />
+                                                                                <CodeChip code={mo.code} link />
                                                                             </button>
                                                                         ))}
                                                                 </div>
@@ -622,13 +620,13 @@ export default function ProductionRunsTab({
                                                                                 clip instead of letting CodeChip's nowrap span bleed
                                                                                 into Item Name (fixed layout won't grow the cell for it).
                                                                                 Full code still available via CodeChip's own title. */}
-                                                                            <td style={{ ...cellStyle, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}><CodeChip code={req.item_code} classic /></td>
+                                                                            <td style={{ ...cellStyle, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}><CodeChip code={req.item_code} /></td>
                                                                             <td style={cellStyle}>
                                                                                 {req.item_name}
                                                                                 {/* Netting is size-aware, so a sized component yields one
                                                                                     row per size — without the chip they read as duplicates. */}
                                                                                 {req.size_label && (
-                                                                                    <VariantChip kind="size" classic
+                                                                                    <VariantChip kind="size"
                                                                                         title={`Size: ${req.size_label} — netted separately from other sizes`}>
                                                                                         {req.size_label}
                                                                                     </VariantChip>

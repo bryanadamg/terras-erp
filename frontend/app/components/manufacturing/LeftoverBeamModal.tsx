@@ -150,7 +150,6 @@ export default function LeftoverBeamModal({ wo, onClose, onDone }: Props) {
             size="sm"
             footer={
                 <ModalFooterActions
-                    classic
                     onCancel={onClose}
                     onSubmit={handleSubmit}
                     submitLabel="Unmount & Create Lot"
@@ -166,7 +165,7 @@ export default function LeftoverBeamModal({ wo, onClose, onDone }: Props) {
                     any difference against the system figure is written off on it.
                 </div>
 
-                <FormError classic>{error}</FormError>
+                <FormError>{error}</FormError>
 
                 {loading ? (
                     <XPLoading label="Loading beams on this machine..." />
@@ -175,7 +174,7 @@ export default function LeftoverBeamModal({ wo, onClose, onDone }: Props) {
                 ) : (
                     <>
                         <div>
-                            <FieldLabel classic>Beam on the loom</FieldLabel>
+                            <FieldLabel>Beam on the loom</FieldLabel>
                             <select
                                 style={xpSelect({ width: '100%' })}
                                 value={mountId}
@@ -198,7 +197,6 @@ export default function LeftoverBeamModal({ wo, onClose, onDone }: Props) {
                         <div style={{ display: 'flex', gap: 8 }}>
                             <div style={{ flex: 1 }}>
                                 <FieldLabel
-                                    classic
                                     hint={selected
                                         ? `System says ${sysLeft.toFixed(2)} kg · variance ${variance > 0 ? '+' : ''}${variance.toFixed(2)} kg`
                                         : undefined}
@@ -208,13 +206,13 @@ export default function LeftoverBeamModal({ wo, onClose, onDone }: Props) {
                                 <input type="number" style={xpInput} value={qty} onChange={e => setQty(e.target.value)} min="0" step="any" autoFocus />
                             </div>
                             <div style={{ flex: 1 }}>
-                                <FieldLabel classic>Ends (utas)</FieldLabel>
+                                <FieldLabel>Ends (utas)</FieldLabel>
                                 <input type="number" style={xpInput} value={ends} onChange={e => setEnds(e.target.value)} min="1" step="1" placeholder="Optional" />
                             </div>
                         </div>
 
                         <div>
-                            <FieldLabel classic>Leftover goes to</FieldLabel>
+                            <FieldLabel>Leftover goes to</FieldLabel>
                             <select style={xpSelect({ width: '100%' })} value={returnLoc} onChange={e => setReturnLoc(e.target.value)}>
                                 <option value="">— leave parked at the machine —</option>
                                 {leafLocations.map((l: any) => (
@@ -224,12 +222,12 @@ export default function LeftoverBeamModal({ wo, onClose, onDone }: Props) {
                         </div>
 
                         <div>
-                            <FieldLabel classic>Leftover Lot No.</FieldLabel>
+                            <FieldLabel>Leftover Lot No.</FieldLabel>
                             <input type="text" style={xpInput} value={beamNumber} onChange={e => setBeamNumber(e.target.value)} placeholder="Leave empty to auto-generate (LFT-YYYYMMDD-NNNN)" />
                         </div>
 
                         <div>
-                            <FieldLabel classic>Notes</FieldLabel>
+                            <FieldLabel>Notes</FieldLabel>
                             <input type="text" style={xpInput} value={notes} onChange={e => setNotes(e.target.value)} placeholder="Optional" />
                         </div>
                     </>

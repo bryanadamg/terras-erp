@@ -37,8 +37,8 @@ export { xpFont, modernFont, CODE_FONT, PRINT_FONT, PRINT_SERIF_FONT } from './t
 // underline in a dense table does not. It never collides with status color because
 // blue-on-pale-blue is not in STATUS_FAMILY's chip set at this size, and a nav code
 // always sits in its own column.
-export function CodeChip({ code, classic, tier = 1, tone = 'default', link = false, title, style, className, onClick }: {
-    code: React.ReactNode; classic: boolean; tier?: 1 | 2;
+export function CodeChip({ code, tier = 1, tone = 'default', link = false, title, style, className, onClick }: {
+    code: React.ReactNode; tier?: 1 | 2;
     tone?: 'default' | 'accent'; link?: boolean; title?: string;
     style?: React.CSSProperties; className?: string; onClick?: () => void;
 }) {
@@ -109,7 +109,7 @@ export function CodeChip({ code, classic, tier = 1, tone = 'default', link = fal
                 )
                 : (
                     <FloatingLayer rect={rect} anchorEl={anchorEl} className="tip-anim">
-                        <TooltipSurface classic>{tip}</TooltipSurface>
+                        <TooltipSurface>{tip}</TooltipSurface>
                     </FloatingLayer>
                 ))}
         </>
@@ -347,10 +347,9 @@ export const statusChipStyle = (status?: string, extra: React.CSSProperties = {}
 // bootstrap-icon class, `swatch` for a colour dot, `onRemove` for a pick-list "x".
 // Don't re-roll a chip span in a view; if a variant is missing, add it here.
 export function Chip({
-    children, classic, tone, icon, swatch, title, onRemove, onClick, bold, size = 'sm', truncate, style,
+    children, tone, icon, swatch, title, onRemove, onClick, bold, size = 'sm', truncate, style,
 }: {
     children: React.ReactNode;
-    classic?: boolean;
     tone?: { background?: string; borderColor?: string; color?: string };
     icon?: string;
     swatch?: string | null;
@@ -432,7 +431,7 @@ export function Chip({
                 )
                 : (
                     <FloatingLayer rect={rect} anchorEl={anchorEl} className="tip-anim">
-                        <TooltipSurface classic>{title}</TooltipSurface>
+                        <TooltipSurface>{title}</TooltipSurface>
                     </FloatingLayer>
                 ))}
         </>
@@ -495,11 +494,10 @@ const VARIANT_ICON: Partial<Record<VariantKind, string>> = {
 
 /** One variant-identity badge. Geometry comes from `Chip`, colour from `VARIANT_TONE`. */
 export function VariantChip({
-    kind, children, classic, swatch, icon, mono, title, size = 'xs', bold = true, onRemove, onClick, truncate, style,
+    kind, children, swatch, icon, mono, title, size = 'xs', bold = true, onRemove, onClick, truncate, style,
 }: {
     kind: VariantKind;
     children: React.ReactNode;
-    classic?: boolean;
     swatch?: string | null;
     /** Override the kind's default icon; `null` renders none. */
     icon?: string | null;
@@ -518,7 +516,6 @@ export function VariantChip({
     const ic = icon === null ? undefined : (icon ?? (swatch ? undefined : VARIANT_ICON[kind]));
     return (
         <Chip
-            classic
             tone={VARIANT_TONE[kind]}
             size={size}
             bold={bold}
@@ -555,10 +552,9 @@ const ORIGIN_TITLE: Record<OriginKind, string> = {
 
 /** One origin reference as a badge. `prefix` false drops the "PR "/"SO " label when
  *  the code already carries it (MO-00012) or the column header says which it is. */
-export function OriginChip({ kind, code, classic, prefix = true, title, size = 'xs', truncate, style }: {
+export function OriginChip({ kind, code, prefix = true, title, size = 'xs', truncate, style }: {
     kind: OriginKind;
     code: React.ReactNode;
-    classic?: boolean;
     prefix?: boolean;
     title?: string;
     size?: 'xs' | 'sm' | 'md';
@@ -568,7 +564,6 @@ export function OriginChip({ kind, code, classic, prefix = true, title, size = '
 }) {
     return (
         <Chip
-            classic
             tone={ORIGIN_TONES[kind]}
             size={size}
             bold
@@ -609,8 +604,8 @@ export function StatusChip({ status, label, style, tint, title }: { status: stri
 // separated by "|". For status-bar tallies where the reader scans for a status and
 // wants its number, not a sentence. Uses the same 5-family tint palette as
 // StatusChip, so a status reads the same color wherever it appears.
-export function StatusCountPill({ status, count, label, classic, title }: {
-    status: string; count: number; label?: string; classic?: boolean; title?: string;
+export function StatusCountPill({ status, count, label, title }: {
+    status: string; count: number; label?: string; title?: string;
 }) {
     const c = statusTint(status);
     const pill = (
@@ -725,7 +720,7 @@ export const resolveColorHex = (
 // together ARE the thing (a combo's `BLACK WHITE`, `NVYRED`), drawn as hard-stop
 // bands. It keeps a SOLID border even though nothing is saved, because a combo has
 // no hex field to be missing — the strip is a depiction, not a stand-in for one.
-export function SwatchBox({ hex, derived, bands, size = 18, classic, title, onPick, style }: {
+export function SwatchBox({ hex, derived, bands, size = 18, title, onPick, style }: {
     hex?: string | null;
     /** Fallback shade implied by the name; rendered dashed to stay distinguishable. */
     derived?: string | null;
@@ -733,7 +728,6 @@ export function SwatchBox({ hex, derived, bands, size = 18, classic, title, onPi
      *  single entry just fills the box. Pair with a wider `style.width`. */
     bands?: string[];
     size?: number;
-    classic?: boolean;
     title?: string;
     onPick?: (hex: string) => void;
     style?: React.CSSProperties;
@@ -792,14 +786,13 @@ export function SwatchBox({ hex, derived, bands, size = 18, classic, title, onPi
 // fallback: most callers hold a name and no hex, so the swatch is derived from the
 // name via `colorHexFor`. It used to carry its own beige/gray palette, which is why
 // the same shade read pink on the lot pickers and beige here.
-export function ColorSwatchChip({ label, classic, hex: hexOverride, onRemove, size = 'sm', title }: {
-    label: string; classic: boolean; hex?: string | null; onRemove?: () => void;
+export function ColorSwatchChip({ label, hex: hexOverride, onRemove, size = 'sm', title }: {
+    label: string; hex?: string | null; onRemove?: () => void;
     size?: 'xs' | 'sm' | 'md'; title?: string;
 }) {
     return (
         <VariantChip
             kind="color"
-            classic
             size={size}
             swatch={hexOverride ?? colorHexFor(label)}
             title={title ?? `Color: ${label}`}
@@ -854,12 +847,11 @@ const LOCATION_CHIP_TONES = {
 } as const;
 
 export function LocationChip({
-    code, direction = 'in', classic, title, size = 'xs', children, style,
+    code, direction = 'in', title, size = 'xs', children, style,
 }: {
     /** Location code. Renders '?' when absent, matching the WO route cell. */
     code?: string | null;
     direction?: keyof typeof LOCATION_CHIP_TONES;
-    classic?: boolean;
     title?: string;
     size?: 'xs' | 'sm' | 'md';
     /** Trailing detail inside the chip, e.g. the qty at that location. */
@@ -868,7 +860,6 @@ export function LocationChip({
 }) {
     return (
         <Chip
-            classic
             tone={LOCATION_CHIP_TONES[direction]}
             size={size}
             title={title}
@@ -1020,13 +1011,11 @@ const MODAL_FOOTER_CLASSIC_TONES: Record<'success' | 'primary' | 'danger', React
 // the modern branch as a `btn-outline-danger` with no classic counterpart, so in
 // Classic there was no way to clear a colour at all.
 export function ModalFooterActions({
-    classic,
     onCancel, cancelLabel = 'Cancel',
     onSubmit, submitLabel, submittingLabel = 'Saving...', submitting = false,
     variant = 'success', disabled = false,
     onExtra, extraLabel,
 }: {
-    classic: boolean;
     onCancel: () => void;
     cancelLabel?: string;
     onSubmit?: () => void;
@@ -1125,9 +1114,8 @@ export const SECTION_RADIUS = 6;
 // (a gap-spaced stack passes `marginBottom: 0`) or that put a full-bleed table
 // where the 10px form padding would inset it (`bodyStyle={{ padding: 0 }}`).
 // They are overrides on this one chrome — not a licence to re-declare the box.
-export function FormSection({ title, classic, children, style, bodyStyle }: {
+export function FormSection({ title, children, style, bodyStyle }: {
     title: React.ReactNode;
-    classic: boolean;
     children: React.ReactNode;
     style?: React.CSSProperties;
     bodyStyle?: React.CSSProperties;
@@ -1252,10 +1240,9 @@ export function ToggleChip({ on, onClick, classic: _classic, disabled = false, m
 // weekday indexes.
 export const WEEKDAY_LABELS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 
-export function WeekdayToggle({ value, onToggle, classic, disabled = false }: {
+export function WeekdayToggle({ value, onToggle, disabled = false }: {
     value: number[];
     onToggle: (day: number) => void;
-    classic: boolean;
     disabled?: boolean;
 }) {
     return (
@@ -1298,7 +1285,7 @@ export function SectionTitle({ icon, children, right }: { icon: string; children
 // and then costs a line forever, so it goes in `title` and the global tooltip
 // layer renders it. A form of ten fields with ten captions reads as prose, which
 // is the state this prop exists to get out of.
-export function FieldLabel({ children, hint, title, classic, right }: { children: React.ReactNode; hint?: string; title?: string; classic: boolean; right?: React.ReactNode }) {
+export function FieldLabel({ children, hint, title, right }: { children: React.ReactNode; hint?: string; title?: string; right?: React.ReactNode }) {
     return (
         <>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 2 }}>
@@ -1331,9 +1318,8 @@ export function FieldLabel({ children, hint, title, classic, right }: { children
  * Not for status callouts (a "late" badge, a scanner error): those carry icons and
  * their own reds. This is specifically "what you just submitted was rejected".
  */
-export function FormError({ children, classic, style }: {
+export function FormError({ children, style }: {
     children?: React.ReactNode;
-    classic: boolean;
     style?: React.CSSProperties;
 }) {
     if (!children) return null;
@@ -1412,12 +1398,11 @@ const skelWidth = (row: number, col: number) => SKEL_WIDTHS[(row * 3 + col * 5) 
  * anyone adds a column — and a skeleton one column short leaves a blank strip
  * where the last column should be.
  */
-export function TableSkeleton({ rows = 6, cols, classic = false, tdStyle, rowHeight, fillHeight }: {
+export function TableSkeleton({ rows = 6, cols, tdStyle, rowHeight, fillHeight }: {
     /** Row count when `fillHeight` is unknown. */
     rows?: number;
     /** Column count — measure it with `useTableSkeletonMetrics`, don't count by hand. */
     cols: number;
-    classic?: boolean;
     /** The view's real cell style. */
     tdStyle?: React.CSSProperties;
     /** Measured height of a real row, in px. */
@@ -1480,14 +1465,13 @@ export function TableSkeleton({ rows = 6, cols, classic = false, tdStyle, rowHei
  * the real count (unknown while loading).
  */
 export function CardGridSkeleton({
-    count = 8, minWidth = 250, gap = 12, classic = false,
+    count = 8, minWidth = 250, gap = 12,
     headerStrip = true, bodyLines = 3, bar = true, bodyHeight,
 }: {
     count?: number;
     /** Must match the real grid's minmax() floor. */
     minWidth?: number;
     gap?: number;
-    classic?: boolean;
     /** Draw the coloured title strip cards carry across their top. */
     headerStrip?: boolean;
     bodyLines?: number;
@@ -1545,11 +1529,10 @@ export function CardGridSkeleton({
  * render, and bump it for any leading spacer/expander column.
  */
 export function TableBlockSkeleton({
-    cols = 6, rows = 10, classic = false, header = true, rowHeight,
+    cols = 6, rows = 10, header = true, rowHeight,
 }: {
     cols?: number;
     rows?: number;
-    classic?: boolean;
     header?: boolean;
     rowHeight?: number;
 }) {
@@ -1601,12 +1584,11 @@ export function TableBlockSkeleton({
  * fields rather than rows or cards.
  */
 export function PanelSkeleton({
-    sections = 2, rows = 4, classic = false, caption = true,
+    sections = 2, rows = 4, caption = true,
 }: {
     sections?: number;
     /** Label/value rows per section. */
     rows?: number;
-    classic?: boolean;
     caption?: boolean;
 }) {
     return (
@@ -1688,7 +1670,7 @@ function scrollParentOf(el: HTMLElement): HTMLElement | null {
  *   …
  *   <tbody ref={bodyRef}>
  *       {rows.length === 0 && (loading
- *           ? <TableSkeleton cols={skel.cols ?? 12} classic tdStyle={tdBase} rowHeight={skel.rowHeight} />
+ *           ? <TableSkeleton cols={skel.cols ?? 12} tdStyle={tdBase} rowHeight={skel.rowHeight} />
  *           : <tr>…</tr>)}
  *
  * `key` must be stable per table, and distinct between two tables whose rows
@@ -1926,7 +1908,7 @@ export function useFloatingMenu(menuWidth = 175) {
 }
 
 /** "⋯" trigger button — square icon button in classic, link-style in modern. Always tagged .xp-menu-trigger so useFloatingMenu's outside-click check sees it. */
-export function MenuTriggerButton({ classic, onClick, title = 'More actions' }: { classic: boolean; onClick: (e: React.MouseEvent) => void; title?: string }) {
+export function MenuTriggerButton({ onClick, title = 'More actions' }: { onClick: (e: React.MouseEvent) => void; title?: string }) {
     if (true) {
         return (
             <Tooltip content={title} placement="side"><button
@@ -1973,9 +1955,8 @@ const XP_ACTION_MODERN: Record<XPActionTone, string> = {
 };
 
 export function XPActionButton({
-    classic, tone = 'neutral', icon, label, title, onClick, disabled = false, className,
+    tone = 'neutral', icon, label, title, onClick, disabled = false, className,
 }: {
-    classic: boolean;
     tone?: XPActionTone;
     icon?: string;               // bootstrap-icon class, e.g. 'bi-box-seam'
     label?: React.ReactNode;     // optional text; icon-only when omitted
@@ -2091,7 +2072,7 @@ const RAIL_W = { classic: 4, modern: 3 };
 const RULE_W = 2;
 
 /** The rail + edge rules as a paint-only frame. Exported for the two views whose panel can't be a component (absolutely positioned, or a two-pane workspace keeping its own grounds) — they apply this to the `<td>` and must stay in sync with the component. `railColor` overrides the selection blue where the rail carries meaning (e.g. health on Booking Stock). */
-export function expandedRowFrame(classic: boolean, railColor?: string): React.CSSProperties {
+export function expandedRowFrame(railColor?: string): React.CSSProperties {
     const rail = RAIL_W.classic;
     const rule = '#808080';
     return {
@@ -2113,7 +2094,7 @@ export function expandedRowFrame(classic: boolean, railColor?: string): React.CS
 //   highlighted transient attention only — scroll target, search hit. Amber.
 // Blue is the expand convention app-wide (matches the ExpandedRowPanel rail);
 // amber never means "open". Every list that expands a row must paint
-// rowStateBg('expanded', classic) and nothing hand-rolled.
+// rowStateBg('expanded') and nothing hand-rolled.
 export type RowState = 'expanded' | 'selected' | 'highlighted';
 
 const ROW_STATE_BG: Record<RowState, { classic: string; modern: string }> = {
@@ -2122,13 +2103,13 @@ const ROW_STATE_BG: Record<RowState, { classic: string; modern: string }> = {
     highlighted: { classic: '#fff8c4', modern: '#fef9c3' },
 };
 
-export const rowStateBg = (state: RowState, classic: boolean): string =>
+export const rowStateBg = (state: RowState): string =>
     ROW_STATE_BG[state].classic;
 
-export function ExpandedRowPanel({ classic, children, style }: { classic: boolean; children: React.ReactNode; style?: React.CSSProperties }) {
+export function ExpandedRowPanel({ children, style }: { children: React.ReactNode; style?: React.CSSProperties }) {
     return (
         <div style={{
-            ...expandedRowFrame(true),
+            ...expandedRowFrame(),
             background: '#fff',
             padding: 5,
             ...style,
@@ -2139,7 +2120,7 @@ export function ExpandedRowPanel({ classic, children, style }: { classic: boolea
 }
 
 /** Padded, transparent content box inside an ExpandedRowPanel — the panel already supplies the ground, so this adds no second background or frame. Pass `style` to override padding/border for layouts that need their own (e.g. a fixed-height two-pane body). */
-export function ExpandedRowPanelBody({ classic, children, style }: { classic: boolean; children: React.ReactNode; style?: React.CSSProperties }) {
+export function ExpandedRowPanelBody({ children, style }: { children: React.ReactNode; style?: React.CSSProperties }) {
     return (
         <div style={{
             padding: '4px 8px',

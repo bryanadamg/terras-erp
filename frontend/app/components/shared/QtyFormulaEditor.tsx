@@ -277,7 +277,7 @@ export function QtyFormulaEditorFields({ editor, classic, canEdit, hint }: {
 
             <div style={{ display: 'flex', alignItems: 'flex-end', gap: 10, marginTop: 10 }}>
                 <div style={{ width: 120 }}>
-                    <FieldLabel classic>Test tolerance %</FieldLabel>
+                    <FieldLabel>Test tolerance %</FieldLabel>
                     <input
                         value={tolerance}
                         onChange={e => setTolerance(e.target.value)}

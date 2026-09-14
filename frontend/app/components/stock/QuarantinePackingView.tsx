@@ -594,7 +594,7 @@ export default function QuarantinePackingView() {
         const pickDisabled = !canSetStatus || busy(groupIds);
 
         return (
-        <ExpandedRowPanel classic style={{
+        <ExpandedRowPanel style={{
             padding: '8px 12px 10px 18px',
         }}>
             <div style={lvSubCaption()}>
@@ -634,7 +634,6 @@ export default function QuarantinePackingView() {
                             onPick={(id, label) => setStatus(chosen, id, label)}
                         />
                         <XPActionButton
-                            classic
                             tone="neutral"
                             icon="bi-x"
                             label="Clear"
@@ -721,7 +720,7 @@ export default function QuarantinePackingView() {
                                     // Chosen = selected, so it takes the app-wide selection
                                     // fill; amber here read as a warning instead.
                                     fill: locked ? ('#f0efe9')
-                                        : isChosen ? rowStateBg('selected', true)
+                                        : isChosen ? rowStateBg('selected')
                                         : undefined,
                                 }),
                                 ...(locked ? { color: '#8a8a8a' } : {}),
@@ -742,7 +741,7 @@ export default function QuarantinePackingView() {
                             <td style={{ ...lotTd, ...dim }}>
                                 <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                                     {l.batch_number
-                                        ? <CodeChip code={l.batch_number} classic />
+                                        ? <CodeChip code={l.batch_number} />
                                         : <span style={{ color: '#999', fontStyle: 'italic' }}>No lot</span>}
                                     {l.quality_status === 'REJECTED' && (
                                         <StatusChip status="REJECTED" tint />
@@ -769,7 +768,7 @@ export default function QuarantinePackingView() {
                             </td>
                             <td style={{ ...lotTd, ...dim }}>
                                 {l.wo_code
-                                    ? <CodeChip code={l.wo_code} classic />
+                                    ? <CodeChip code={l.wo_code} />
                                     : <span style={{ color: '#ccc' }}>—</span>}
                             </td>
                             <td style={{ ...lotTd, textAlign: 'right', whiteSpace: 'nowrap', ...dim }}>
@@ -915,7 +914,7 @@ export default function QuarantinePackingView() {
                                         // Only override when open — `background: undefined` still wins over
                                         // the spread above (last key in the literal), which is what was
                                         // silently wiping the zebra stripe off every closed row.
-                                        ...(open ? { background: rowStateBg('expanded', true) } : {}),
+                                        ...(open ? { background: rowStateBg('expanded') } : {}),
                                     }}
                                 >
                                     <ExpanderCell expanded={open} onToggle={() => toggleRow(g.key, g.lots)} label="lots" />
@@ -926,24 +925,24 @@ export default function QuarantinePackingView() {
                                     <td style={lvTd()}>
                                         <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                                             {g.mo_code
-                                                ? <CodeChip code={g.mo_code} classic tone="accent" />
+                                                ? <CodeChip code={g.mo_code} tone="accent" />
                                                 : <span style={{ color: '#999', fontStyle: 'italic' }}>No MO</span>}
                                             {g.mo_status && <StatusChip status={g.mo_status} style={{ marginLeft: 'auto' }} tint />}
                                         </div>
                                         {g.production_run_code ? (
                                             <OriginChipRow style={{ marginTop: 2 }}>
-                                                <OriginChip kind="pr" code={g.production_run_code} classic />
+                                                <OriginChip kind="pr" code={g.production_run_code} />
                                             </OriginChipRow>
                                         ) : <div style={{ fontSize: 10 }}>&nbsp;</div>}
                                     </td>
                                     <td style={lvTd()}>
                                         {g.sales_order_code
-                                            ? <OriginChip kind="so" code={g.sales_order_code} classic />
+                                            ? <OriginChip kind="so" code={g.sales_order_code} />
                                             : <span style={{ color: '#ccc' }}>—</span>}
                                     </td>
                                     <td style={lvTd()}>
                                         {g.color_name
-                                            ? <ColorSwatchChip classic label={colorLabel(g.color_code, g.color_name)} title={`Color: ${colorTitle(g.color_code, g.color_name)}`} hex={resolveColorHex(g.color_hex, g.lots?.[0]?.variant_attributes)} />
+                                            ? <ColorSwatchChip label={colorLabel(g.color_code, g.color_name)} title={`Color: ${colorTitle(g.color_code, g.color_name)}`} hex={resolveColorHex(g.color_hex, g.lots?.[0]?.variant_attributes)} />
                                             : g.labdip_variant_code
                                                 ? <span style={{ fontSize: 10, color: '#9a6a00' }} title="Shade still awaiting lab-dip approval">{g.labdip_variant_code}</span>
                                                 : <span style={{ color: '#999', fontStyle: 'italic', fontSize: 10 }}>Greige</span>}
@@ -1002,7 +1001,6 @@ export default function QuarantinePackingView() {
                                     </td>
                                     <td style={{ ...lvTd(), borderRight: 'none' }} onClick={e => e.stopPropagation()}>
                                         <XPActionButton
-                                            classic
                                             tone="success"
                                             icon="bi-box2"
                                             label="Pack"
@@ -1028,7 +1026,7 @@ export default function QuarantinePackingView() {
                             </Fragment>
                         );
                     })}
-                    {showSkeleton && <TableSkeleton rows={7} cols={skel.cols ?? COL_COUNT} classic tdStyle={lvTd()} rowHeight={skel.rowHeight} fillHeight={skel.fillHeight} />}
+                    {showSkeleton && <TableSkeleton rows={7} cols={skel.cols ?? COL_COUNT} tdStyle={lvTd()} rowHeight={skel.rowHeight} fillHeight={skel.fillHeight} />}
                     {!loading && stableGroups.length === 0 && (
                         <tr>
                             <td colSpan={COL_COUNT} style={{ padding: 0 }}>
@@ -1079,7 +1077,7 @@ export default function QuarantinePackingView() {
             )}
             {body}
             <XPStatusBar right={`Held ${fmtQty(heldTotal)} across ${stableGroups.length} group${stableGroups.length === 1 ? '' : 's'} on this page`}>
-                <StatusCountPill status="NONE" count={awaiting} label="awaiting decision" classic />
+                <StatusCountPill status="NONE" count={awaiting} label="awaiting decision" />
             </XPStatusBar>
             <Pager page={page} total={total} pageSize={PAGE_SIZE} onPageChange={setPage} hideWhenEmpty />
         </ShellWindow>

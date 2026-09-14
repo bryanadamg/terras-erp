@@ -412,7 +412,7 @@ export default function WorkOrderListView({
         return (
             <tr key={`${wo.id}-detail`}>
                 <td colSpan={COLS} style={{ padding: 0 }}>
-                    <ExpandedRowPanel classic>
+                    <ExpandedRowPanel>
                     <div style={panelStyle}>
                         {/* QR Code */}
                         <div style={{ borderRight: '1px solid #c0bdb5', padding: '6px 6px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3, background: '#f5f4ef' }}>
@@ -431,7 +431,6 @@ export default function WorkOrderListView({
                                 <span style={{ color: '#888' }}>MO</span>
                                 <CodeChip
                                     code={wo.mo_code}
-                                    classic
                                     link
                                     onClick={() => router.push(`/manufacturing-orders?mo=${encodeURIComponent(wo.mo_code)}`)}
                                     title={`Go to ${wo.mo_code}`}
@@ -749,7 +748,7 @@ export default function WorkOrderListView({
                             </thead>
                             <tbody ref={listBodyRef}>
                                 {filtered.length === 0 && (loading ? (
-                                    <TableSkeleton rows={8} cols={skel.cols ?? COLS} classic tdStyle={tdBase} rowHeight={skel.rowHeight} fillHeight={skel.fillHeight} />
+                                    <TableSkeleton rows={8} cols={skel.cols ?? COLS} tdStyle={tdBase} rowHeight={skel.rowHeight} fillHeight={skel.fillHeight} />
                                 ) : (
                                     <tr>
                                         <td colSpan={COLS} style={{ padding: 0 }}>
@@ -815,7 +814,7 @@ export default function WorkOrderListView({
                                             <tr
                                                 ref={isHighlighted ? highlightedRowRef : null}
                                                 style={{
-                                                    background: isExpanded ? rowStateBg('expanded', true) : rowBg,
+                                                    background: isExpanded ? rowStateBg('expanded') : rowBg,
                                                     cursor: 'pointer',
                                                     outline: isHighlighted ? '2px solid #0058e6' : undefined,
                                                     outlineOffset: isHighlighted ? '-2px' : undefined,
@@ -834,7 +833,6 @@ export default function WorkOrderListView({
                                                         <div style={{ display: 'flex', alignItems: 'center', gap: 3, overflow: 'hidden' }}>
                                                             <CodeChip
                                                                 code={wo.root_mo_code}
-                                                                classic
                                                                 tier={2}
                                                                 link
                                                                 onClick={() => router.push(`/manufacturing-orders?mo=${encodeURIComponent(wo.root_mo_code!)}`)}
@@ -856,7 +854,6 @@ export default function WorkOrderListView({
                                                     <div style={{ display: 'flex', alignItems: 'center', gap: 4, overflow: 'hidden' }}>
                                                         <CodeChip
                                                             code={(wo as any).code || wo.name}
-                                                            classic
                                                             tone="accent"
                                                             style={{ fontWeight: 'bold', minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis' }}
                                                         />
@@ -965,12 +962,12 @@ export default function WorkOrderListView({
                                                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 2}}>
                                                         {<>
                                                                 <ActionSlot width={22} show={canStage(wo)}>
-                                                                    <XPActionButton classic tone="primary" icon="bi-box-seam" title="Stage — issue this step's materials to the line" onClick={() => (canScanStage(wo) ? setScanStageWO(wo) : setStageWO(wo))} />
+                                                                    <XPActionButton tone="primary" icon="bi-box-seam" title="Stage — issue this step's materials to the line" onClick={() => (canScanStage(wo) ? setScanStageWO(wo) : setStageWO(wo))} />
                                                                 </ActionSlot>
                                                                 <ActionSlot width={22} show={canManage && (wo.status === 'PENDING' || wo.status === 'IN_PROGRESS')}>
-                                                                    <XPActionButton classic tone="success" icon="bi-plus-lg" title="Log production output" onClick={() => openLog(wo)} />
+                                                                    <XPActionButton tone="success" icon="bi-plus-lg" title="Log production output" onClick={() => openLog(wo)} />
                                                                 </ActionSlot>
-                                                                <MenuTriggerButton classic onClick={(e) => toggleMenu(wo.id, e)} />
+                                                                <MenuTriggerButton onClick={(e) => toggleMenu(wo.id, e)} />
                                                             </>}
                                                     </div>
                                                 </td>

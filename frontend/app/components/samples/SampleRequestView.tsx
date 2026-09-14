@@ -703,7 +703,7 @@ export default function SampleRequestView({ samples, customers, onCreateSample, 
            <form onSubmit={handleSubmit} id="create-sample-form">
 
                {/* ══ Identity ══ */}
-               <FormSection title="Identity" classic>
+               <FormSection title="Identity">
                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px 12px' }}>
                                <div>
                                    <label style={{ ...xpLbl, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -774,7 +774,7 @@ export default function SampleRequestView({ samples, customers, onCreateSample, 
                        setPendingColorIsRepeat(false);
                    };
                    return (
-                       <FormSection title="Colors & Specs" classic>
+                       <FormSection title="Colors & Specs">
                        <>
                                <div style={{ marginBottom: 10 }}>
                                    <label style={xpLbl}>Width</label>
@@ -854,7 +854,7 @@ export default function SampleRequestView({ samples, customers, onCreateSample, 
                })()}
 
                {/* ══ Materials ══ */}
-               <FormSection title="Materials" classic>
+               <FormSection title="Materials">
                <>
                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '8px 12px', marginBottom: 8 }}>
                                {[
@@ -937,7 +937,7 @@ export default function SampleRequestView({ samples, customers, onCreateSample, 
                </FormSection>
 
                {/* ══ Logistics ══ */}
-               <FormSection title="Logistics" classic>
+               <FormSection title="Logistics">
                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px 12px' }}>
                                <div>
                                    <label style={xpLbl}>Sample Quantity</label>
@@ -1136,8 +1136,8 @@ export default function SampleRequestView({ samples, customers, onCreateSample, 
                                    ref={s.id === highlightId ? highlightRef : undefined}
                                    onClick={() => toggleExpand(s.id)}
                                    style={{
-                                       background: s.id === highlightId ? rowStateBg('highlighted', true)
-                                           : expandedIds.has(s.id) ? rowStateBg('expanded', true)
+                                       background: s.id === highlightId ? rowStateBg('highlighted')
+                                           : expandedIds.has(s.id) ? rowStateBg('expanded')
                                            : s.is_unread ? ('#dde8fb')
                                            : lvZebra(rowIndex),
                                        borderBottom: '1px solid #c0bdb5',
@@ -1154,7 +1154,6 @@ export default function SampleRequestView({ samples, customers, onCreateSample, 
                                                    marker on top of the tier-1 code, not a second style. */}
                                                <CodeChip
                                                    code={s.code}
-                                                   classic
                                                    tone="accent"
                                                    style={s.is_unread ? { fontWeight: 900 } : undefined}
                                                />
@@ -1244,7 +1243,6 @@ export default function SampleRequestView({ samples, customers, onCreateSample, 
                                        <div style={{ display: 'flex', gap: 3, justifyContent: 'flex-end', alignItems: 'center' }} onClick={e => e.stopPropagation()}>
                                            {canManage && (
                                                <XPActionButton
-                                                   classic
                                                    tone="primary"
                                                    icon="bi-arrow-repeat"
                                                    title="Update Status"
@@ -1252,7 +1250,7 @@ export default function SampleRequestView({ samples, customers, onCreateSample, 
                                                    onClick={(e) => { closeRowMenu(); toggleDropdown(s.id, e); }}
                                                />
                                            )}
-                                           <MenuTriggerButton classic onClick={(e) => { closeDropdown(); toggleRowMenu(s.id, e); }} />
+                                           <MenuTriggerButton onClick={(e) => { closeDropdown(); toggleRowMenu(s.id, e); }} />
                                            {/* Read/unread dot */}
                                            <span
                                                title={s.is_unread ? 'Unread — click to mark as read' : 'Read — click to mark as unread'}
@@ -1423,7 +1421,7 @@ export default function SampleRequestView({ samples, customers, onCreateSample, 
                                            <td colSpan={9} style={{
                                                padding: 0, position: 'relative', height: 300,
                                                background: '#fff',
-                                               ...expandedRowFrame(true),
+                                               ...expandedRowFrame(),
                                            }}>
                                                {/* left offset clears the rail — an absolutely positioned child paints
                                                    above the cell's inset shadow and would otherwise cover it */}
@@ -1446,7 +1444,7 @@ export default function SampleRequestView({ samples, customers, onCreateSample, 
                                </React.Fragment>
                            ))}
                            {pageSamples.length === 0 && (dataLoading.samples ? (
-                               <TableSkeleton rows={8} cols={skel.cols ?? 9} classic tdStyle={tdBase} rowHeight={skel.rowHeight} fillHeight={skel.fillHeight} />
+                               <TableSkeleton rows={8} cols={skel.cols ?? 9} tdStyle={tdBase} rowHeight={skel.rowHeight} fillHeight={skel.fillHeight} />
                            ) : (
                                <tr>
                                    <td
@@ -1483,11 +1481,11 @@ export default function SampleRequestView({ samples, customers, onCreateSample, 
                        {totalSamples} request{totalSamples !== 1 ? 's' : ''} · {colorStats.total} color{colorStats.total !== 1 ? 's' : ''}
                    </span>
                    <span style={{ ...xpSep, height: 15, alignSelf: 'center' }} />
-                   <StatusCountPill classic status="PENDING" count={colorStats.PENDING} title="Colors not yet started" />
-                   <StatusCountPill classic status="IN_PRODUCTION" count={colorStats.IN_PRODUCTION} title="Colors in production" />
-                   <StatusCountPill classic status="SENT" count={colorStats.SENT} title="Colors sent to customer" />
-                   <StatusCountPill classic status="APPROVED" count={colorStats.APPROVED} title="Colors approved" />
-                   <StatusCountPill classic status="REJECTED" count={colorStats.REJECTED} title="Colors rejected" />
+                   <StatusCountPill status="PENDING" count={colorStats.PENDING} title="Colors not yet started" />
+                   <StatusCountPill status="IN_PRODUCTION" count={colorStats.IN_PRODUCTION} title="Colors in production" />
+                   <StatusCountPill status="SENT" count={colorStats.SENT} title="Colors sent to customer" />
+                   <StatusCountPill status="APPROVED" count={colorStats.APPROVED} title="Colors approved" />
+                   <StatusCountPill status="REJECTED" count={colorStats.REJECTED} title="Colors rejected" />
                    {hasActiveFilter && <span style={{ marginLeft: 'auto', fontStyle: 'italic', alignSelf: 'center' }}>filtered</span>}
                </div>
        </ShellWindow>

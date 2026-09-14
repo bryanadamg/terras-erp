@@ -571,7 +571,7 @@ export default function WorkCenterMonitorModal({ isOpen, onClose, workCenter, au
             : []),
     ];
     const refreshBtn = (
-        <XPActionButton classic tone="neutral" icon="bi-arrow-clockwise" title="Refresh" disabled={loading} onClick={load} />
+        <XPActionButton tone="neutral" icon="bi-arrow-clockwise" title="Refresh" disabled={loading} onClick={load} />
     );
     const tabBar = (
         <Tabs classic activeKey={tab} onChange={k => setTab(k as any)} tabs={tabs} right={refreshBtn} />
@@ -701,11 +701,11 @@ export default function WorkCenterMonitorModal({ isOpen, onClose, workCenter, au
                         {/* Park vs close. Pause keeps the run and its earned efficiency
                             and is the reprioritise action; Stop closes the run for good. */}
                         {run.is_paused ? (
-                            <XPActionButton classic tone="primary" icon="bi-play-fill" label={t('resume_run')} onClick={() => resumeRun(run.id)} />
+                            <XPActionButton tone="primary" icon="bi-play-fill" label={t('resume_run')} onClick={() => resumeRun(run.id)} />
                         ) : (
-                            <XPActionButton classic tone="warning" icon="bi-pause-fill" label={t('pause_run')} onClick={() => pauseRun(run.id)} />
+                            <XPActionButton tone="warning" icon="bi-pause-fill" label={t('pause_run')} onClick={() => pauseRun(run.id)} />
                         )}
-                        <XPActionButton classic tone="danger" icon="bi-stop-fill" label={t('stop_run')} onClick={() => stopRun(run.id)} />
+                        <XPActionButton tone="danger" icon="bi-stop-fill" label={t('stop_run')} onClick={() => stopRun(run.id)} />
                     </span>
                 )}
             </div>
@@ -713,7 +713,6 @@ export default function WorkCenterMonitorModal({ isOpen, onClose, workCenter, au
         return (
             <FormSection
                 title={header}
-                classic
                 style={{
                     marginBottom: 14,
                     // Snap stop per run. `proximity` on the pane, so a run taller than the
@@ -753,14 +752,14 @@ export default function WorkCenterMonitorModal({ isOpen, onClose, workCenter, au
                             {editingTarget ? (
                                 <div className="d-flex gap-1 align-items-center">
                                     <input type="number" {...inputProps} style={{ ...(inputProps.style || {}), maxWidth: 70, height: 22, fontSize: 10 }} value={targetVal} onChange={e => setTargetVal(e.target.value)} />
-                                    <XPActionButton classic tone="success" icon="bi-check" onClick={() => saveTarget(run.id)} />
-                                    <XPActionButton classic tone="neutral" icon="bi-x" onClick={() => setTargetRunId(null)} />
+                                    <XPActionButton tone="success" icon="bi-check" onClick={() => saveTarget(run.id)} />
+                                    <XPActionButton tone="neutral" icon="bi-x" onClick={() => setTargetRunId(null)} />
                                 </div>
                             ) : (
                                 <>
                                     <span>{t('target')} {fmt(run.target_efficiency_pct, 0)}% · <span style={{ color: effColor, fontWeight: 'bold' }}>{onTarget ? t('on_target') : t('below_target')}</span></span>
                                     {canManage && (
-                                        <XPActionButton classic tone="neutral" icon="bi-pencil-square" title="Edit target" onClick={() => { setTargetVal(String(run.target_efficiency_pct ?? '')); setTargetRunId(run.id); }} />
+                                        <XPActionButton tone="neutral" icon="bi-pencil-square" title="Edit target" onClick={() => { setTargetVal(String(run.target_efficiency_pct ?? '')); setTargetRunId(run.id); }} />
                                     )}
                                 </>
                             )}
@@ -778,13 +777,13 @@ export default function WorkCenterMonitorModal({ isOpen, onClose, workCenter, au
                         {editingOverride ? (
                             <div className="d-flex gap-1 mt-1">
                                 <input type="number" {...inputProps} style={{ ...(inputProps.style || {}), maxWidth: 100 }} value={overrideVal} placeholder={String(run.actual_kg)} onChange={e => setOverrideVal(e.target.value)} />
-                                <XPActionButton classic tone="success" icon="bi-check" onClick={() => saveOverride(run.id)} />
-                                <XPActionButton classic tone="neutral" icon="bi-x" onClick={() => setOverrideRunId(null)} />
+                                <XPActionButton tone="success" icon="bi-check" onClick={() => saveOverride(run.id)} />
+                                <XPActionButton tone="neutral" icon="bi-x" onClick={() => setOverrideRunId(null)} />
                             </div>
                         ) : (
                             <div style={{ fontFamily: xpFont, fontSize: 22, fontWeight: 700, display: 'flex', alignItems: 'center', gap: 6 }}>
                                 <span>{fmt(run.actual_kg, 2)}<span style={{ fontSize: 11, color: '#888' }}> kg</span></span>
-                                <XPActionButton classic tone="neutral" icon="bi-pencil-square" title="Override" onClick={() => { setOverrideVal(run.actual_qty_override ?? ''); setOverrideRunId(run.id); }} />
+                                <XPActionButton tone="neutral" icon="bi-pencil-square" title="Override" onClick={() => { setOverrideVal(run.actual_qty_override ?? ''); setOverrideRunId(run.id); }} />
                             </div>
                         )}
                     </CardBox>
@@ -805,25 +804,25 @@ export default function WorkCenterMonitorModal({ isOpen, onClose, workCenter, au
                         <Stat label={t('lines')} value={editingLines ? (
                             <div className="d-flex gap-1 align-items-center">
                                 <input type="number" min="1" {...inputProps} style={{ ...(inputProps.style || {}), maxWidth: 55, height: 22, fontSize: 12 }} value={linesVal} onChange={e => setLinesVal(e.target.value)} />
-                                <XPActionButton classic tone="success" icon="bi-check" onClick={() => saveLines(run.id)} />
-                                <XPActionButton classic tone="neutral" icon="bi-x" onClick={() => setLinesRunId(null)} />
+                                <XPActionButton tone="success" icon="bi-check" onClick={() => saveLines(run.id)} />
+                                <XPActionButton tone="neutral" icon="bi-x" onClick={() => setLinesRunId(null)} />
                             </div>
                         ) : (
                             <span className="d-flex align-items-center gap-1">
                                 {run.lines}
-                                {canManage && <XPActionButton classic tone="neutral" icon="bi-pencil-square" title="Edit lines" onClick={() => { setLinesVal(String(run.lines ?? '')); setLinesRunId(run.id); }} />}
+                                {canManage && <XPActionButton tone="neutral" icon="bi-pencil-square" title="Edit lines" onClick={() => { setLinesVal(String(run.lines ?? '')); setLinesRunId(run.id); }} />}
                             </span>
                         )} />
                         <Stat label={t('rate_per_line')} value={editingRate ? (
                             <div className="d-flex gap-1 align-items-center">
                                 <input type="number" {...inputProps} style={{ ...(inputProps.style || {}), maxWidth: 65, height: 22, fontSize: 12 }} value={rateVal} onChange={e => setRateVal(e.target.value)} />
-                                <XPActionButton classic tone="success" icon="bi-check" onClick={() => saveRate(run.id)} />
-                                <XPActionButton classic tone="neutral" icon="bi-x" onClick={() => setRateRunId(null)} />
+                                <XPActionButton tone="success" icon="bi-check" onClick={() => saveRate(run.id)} />
+                                <XPActionButton tone="neutral" icon="bi-x" onClick={() => setRateRunId(null)} />
                             </div>
                         ) : (
                             <span className="d-flex align-items-center gap-1">
                                 {fmt(run.rate_per_line_g_min, 2)}<span style={{ fontSize: 9, fontWeight: 'normal', color: '#888' }}>g/min</span>
-                                {canManage && <XPActionButton classic tone="neutral" icon="bi-pencil-square" title="Edit rate" onClick={() => { setRateVal(String(run.rate_per_line_g_min ?? '')); setRateRunId(run.id); }} />}
+                                {canManage && <XPActionButton tone="neutral" icon="bi-pencil-square" title="Edit rate" onClick={() => { setRateVal(String(run.rate_per_line_g_min ?? '')); setRateRunId(run.id); }} />}
                             </span>
                         )} />
                         <Stat label={t('target_100_day')} value={fmt(run.target_100_per_day_kg, 2)} unit="kg" />
@@ -858,7 +857,7 @@ export default function WorkCenterMonitorModal({ isOpen, onClose, workCenter, au
                     {/* First load of this machine: field-shaped placeholders rather than
                         a marquee — what arrives is a block of run/prep fields, so the
                         panel keeps its height and the content fades into it. */}
-                    {loading && !data && <PanelSkeleton sections={2} rows={4} classic />}
+                    {loading && !data && <PanelSkeleton sections={2} rows={4} />}
 
                     {/* No run: read-only viewers get the shared empty state; managers go
                         straight to the start-run form — no extra click to get there. */}
@@ -870,7 +869,7 @@ export default function WorkCenterMonitorModal({ isOpen, onClose, workCenter, au
                         (STAGED and later) — a machine with no beams tracked keeps the
                         plain start form it always had. */}
                     {!loading && !runs.length && loomStatus !== 'IDLE' && (
-                        <FormSection title={<SecTitle icon="bi-tools">{t('loom_prep')}</SecTitle>} classic>
+                        <FormSection title={<SecTitle icon="bi-tools">{t('loom_prep')}</SecTitle>}>
                             <div className="d-flex align-items-center gap-2 flex-wrap">
                                 <StatusChip status={loomStatus} label={stepLabel(loomStatus)} tint />
                                 <span style={{ fontSize: 11, color: '#666' }}>
@@ -880,7 +879,6 @@ export default function WorkCenterMonitorModal({ isOpen, onClose, workCenter, au
                                 </span>
                                 {canManage && nextLoomStep && (
                                     <XPActionButton
-                                        classic
                                         tone={nextLoomStep === 'TUNING' ? 'warning' : 'primary'}
                                         icon={nextLoomStep === 'TUNING' ? 'bi-sliders' : 'bi-arrows-collapse-vertical'}
                                         label={stepLabel(nextLoomStep)}
@@ -890,7 +888,6 @@ export default function WorkCenterMonitorModal({ isOpen, onClose, workCenter, au
                                 )}
                                 {canManage && loomStatus !== 'STAGED' && (
                                     <XPActionButton
-                                        classic
                                         tone="neutral"
                                         icon="bi-arrow-counterclockwise"
                                         label={t('prep_reset')}
@@ -909,7 +906,6 @@ export default function WorkCenterMonitorModal({ isOpen, onClose, workCenter, au
                     {!loading && canManage && runs.length > 0 && !startOpen && (
                         <div style={{ marginBottom: 10 }}>
                             <XPActionButton
-                                classic
                                 tone="success"
                                 icon="bi-plus-lg"
                                 label={t('start_another_run')}
@@ -921,7 +917,6 @@ export default function WorkCenterMonitorModal({ isOpen, onClose, workCenter, au
                     {!loading && canManage && (runs.length === 0 || startOpen) && (
                         <FormSection
                             title={<SecTitle icon="bi-play-circle">{runs.length ? t('start_another_run') : t('start_run')}</SecTitle>}
-                            classic
                         >
                             {/* Top-align, not bottom: the order column carries a helper
                                 line under its select, and align-items-end pushed every
@@ -931,7 +926,7 @@ export default function WorkCenterMonitorModal({ isOpen, onClose, workCenter, au
                                 <div className="col-md-5">
                                     {moMode ? (
                                         <>
-                                            <FieldLabel classic>{t('manufacturing_order')}</FieldLabel>
+                                            <FieldLabel>{t('manufacturing_order')}</FieldLabel>
                                             <SearchableSelect
                                                 options={moOptions}
                                                 value={moId}
@@ -967,7 +962,7 @@ export default function WorkCenterMonitorModal({ isOpen, onClose, workCenter, au
                                             {/* WO, not MO: two combos of one item are two WOs
                                                 on this loom, each with its own line count and
                                                 its own promised end date. */}
-                                            <FieldLabel classic>{t('work_order')}</FieldLabel>
+                                            <FieldLabel>{t('work_order')}</FieldLabel>
                                             <SearchableSelect
                                                 options={woOptions}
                                                 value={woId}
@@ -990,27 +985,26 @@ export default function WorkCenterMonitorModal({ isOpen, onClose, workCenter, au
                                     )}
                                 </div>
                                 <div className="col-md-2 col-4">
-                                    <FieldLabel classic>{t('lines')}</FieldLabel>
+                                    <FieldLabel>{t('lines')}</FieldLabel>
                                     <input type="number" min="1" {...inputProps} value={lines} onChange={e => setLines(e.target.value)} />
                                 </div>
                                 <div className="col-md-2 col-4">
-                                    <FieldLabel classic>{t('rate_per_line')}</FieldLabel>
+                                    <FieldLabel>{t('rate_per_line')}</FieldLabel>
                                     <input type="number" {...inputProps} value={rate} onChange={e => setRate(e.target.value)} />
                                 </div>
                                 <div className="col-md-3 col-4">
-                                    <FieldLabel classic>{t('target_efficiency')}</FieldLabel>
+                                    <FieldLabel>{t('target_efficiency')}</FieldLabel>
                                     <input type="number" {...inputProps} value={eff} onChange={e => setEff(e.target.value)} />
                                 </div>
                                 <div className="col-md-4 col-6">
-                                    <FieldLabel classic>{t('start_date')}</FieldLabel>
+                                    <FieldLabel>{t('start_date')}</FieldLabel>
                                     <input type="date" {...inputProps} value={startDate} onChange={e => setStartDate(e.target.value)} />
                                 </div>
                                 <div className="col-md-8">
                                     {/* Empty label so the button lines up with the date
                                         input beside it, not with that input's label. */}
-                                    <FieldLabel classic>&nbsp;</FieldLabel>
+                                    <FieldLabel>&nbsp;</FieldLabel>
                                     <XPActionButton
-                                        classic
                                         tone="success"
                                         icon="bi-play-fill"
                                         label={t('start')}
@@ -1020,7 +1014,7 @@ export default function WorkCenterMonitorModal({ isOpen, onClose, workCenter, au
                                     />
                                     {startOpen && (
                                         <span style={{ marginLeft: 6 }}>
-                                            <XPActionButton classic tone="neutral" icon="bi-x" label={t('cancel')} onClick={() => setStartOpen(false)} />
+                                            <XPActionButton tone="neutral" icon="bi-x" label={t('cancel')} onClick={() => setStartOpen(false)} />
                                         </span>
                                     )}
                                     {prepBlocksStart && (
@@ -1039,7 +1033,7 @@ export default function WorkCenterMonitorModal({ isOpen, onClose, workCenter, au
 
                     {/* History */}
                     {data?.history?.length > 0 && (
-                        <FormSection title={<SecTitle icon="bi-clock-history">{t('run_history')}</SecTitle>} classic>
+                        <FormSection title={<SecTitle icon="bi-clock-history">{t('run_history')}</SecTitle>}>
                             {/* Shared list-view table styling (lvTh/lvTd/lvRow) — same chrome as
                                 the beams table below and the group calendar's holiday table. */}
                             <div style={{ overflowX: 'auto' }}>
@@ -1058,7 +1052,7 @@ export default function WorkCenterMonitorModal({ isOpen, onClose, workCenter, au
                                     <tbody>
                                         {data.history.map((h: any, idx: number) => (
                                             <tr key={h.id} style={lvRow(idx)}>
-                                                <td style={lvTd()}><CodeChip code={h.mo_code} classic /></td>
+                                                <td style={lvTd()}><CodeChip code={h.mo_code} /></td>
                                                 <td style={lvTd()}>
                                                     <div className="d-flex align-items-center gap-2">
                                                         <span>{h.item_code}</span>
@@ -1117,7 +1111,7 @@ export default function WorkCenterMonitorModal({ isOpen, onClose, workCenter, au
                             else addHolidayDate(ds, nat || null);
                         }}
                         headerAction={canManage ? (
-                            <XPActionButton classic tone="neutral" icon="bi-download"
+                            <XPActionButton tone="neutral" icon="bi-download"
                                 label={`${t('import_id_holidays')} ${calRef.getFullYear()}`} onClick={importNational} />
                         ) : undefined}
                     />
@@ -1149,7 +1143,6 @@ export default function WorkCenterMonitorModal({ isOpen, onClose, workCenter, au
                             {canMount && (
                                 <span style={{ marginLeft: 'auto', alignSelf: 'center' }}>
                                     <XPActionButton
-                                        classic
                                         tone={mountOpen ? 'neutral' : 'primary'}
                                         icon="bi-arrow-bar-up"
                                         label={mountOpen ? t('cancel') : t('mount_beam')}
@@ -1165,8 +1158,8 @@ export default function WorkCenterMonitorModal({ isOpen, onClose, workCenter, au
                             what can go up, then what is up. */}
                         {mountOpen && canMount && (
                             <div style={{ marginBottom: 8 }}>
-                                <ExpandedRowPanel classic>
-                                    <ExpandedRowPanelBody classic>
+                                <ExpandedRowPanel>
+                                    <ExpandedRowPanelBody>
                                         <div
                                             style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}
                                             onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); handleBeamScan(beamSearch); } }}
@@ -1180,7 +1173,6 @@ export default function WorkCenterMonitorModal({ isOpen, onClose, workCenter, au
                                                 width={220}
                                             />
                                             <XPActionButton
-                                                classic
                                                 tone={beamCameraOn ? 'neutral' : 'primary'}
                                                 icon="bi-camera-video"
                                                 label={beamCameraOn ? t('scan_beam_stop') : t('scan_beam')}
@@ -1201,7 +1193,7 @@ export default function WorkCenterMonitorModal({ isOpen, onClose, workCenter, au
                                             </div>
                                         )}
                                         {freeLoading ? (
-                                            <PanelSkeleton classic rows={3} />
+                                            <PanelSkeleton rows={3} />
                                         ) : freeBeams.length === 0 ? (
                                             <XPEmptyState icon="bi-inboxes" message={t('no_free_beams')} />
                                         ) : (
@@ -1214,7 +1206,6 @@ export default function WorkCenterMonitorModal({ isOpen, onClose, workCenter, au
                                                                     {b.beam_number}
                                                                     {b.is_leftover && (
                                                                         <Chip
-                                                                            classic
                                                                             size="xs"
                                                                             tone={statusTint('PENDING')}
                                                                             title={b.parent_beam_number ? `${t('leftover_tag')} · ${b.parent_beam_number}` : t('leftover_tag')}
@@ -1228,7 +1219,6 @@ export default function WorkCenterMonitorModal({ isOpen, onClose, workCenter, au
                                                                 <td style={{ ...lvTd(), color: '#666' }}>{b.location_code || '—'}</td>
                                                                 <td style={{ ...lvTd(), borderRight: 'none', textAlign: 'right' }}>
                                                                     <XPActionButton
-                                                                        classic
                                                                         tone="primary"
                                                                         icon="bi-arrow-bar-up"
                                                                         label={mountingId === b.batch_id ? '...' : t('mount_confirm')}
@@ -1287,7 +1277,6 @@ export default function WorkCenterMonitorModal({ isOpen, onClose, workCenter, au
                                                 <td style={{ ...lvTd(), borderRight: 'none', textAlign: 'right' }}>
                                                     {canManage && unmountingId !== m.id && (
                                                         <XPActionButton
-                                                            classic
                                                             tone="warning"
                                                             icon="bi-box-arrow-up"
                                                             label={t('dismount')}
@@ -1313,8 +1302,8 @@ export default function WorkCenterMonitorModal({ isOpen, onClose, workCenter, au
                                             {unmountingId === m.id && (
                                                 <tr>
                                                     <td colSpan={6} style={{ padding: '4px 2px'}}>
-                                                        <ExpandedRowPanel classic>
-                                                            <ExpandedRowPanelBody classic>
+                                                        <ExpandedRowPanel>
+                                                            <ExpandedRowPanelBody>
                                                                 {(() => {
                                                                     const sysLeft = Number(m.remaining || 0);
                                                                     const weighed = parseFloat(leftoverQty);
@@ -1340,7 +1329,6 @@ export default function WorkCenterMonitorModal({ isOpen, onClose, workCenter, au
                                                                         </select>
                                                                         <div style={{ display: 'flex', gap: 6, marginLeft: 'auto' }}>
                                                                             <XPActionButton
-                                                                                classic
                                                                                 tone="warning"
                                                                                 icon="bi-box-arrow-up"
                                                                                 label={dismounting === m.id ? '...' : t('unmount_confirm')}
@@ -1348,7 +1336,6 @@ export default function WorkCenterMonitorModal({ isOpen, onClose, workCenter, au
                                                                                 onClick={() => dismount(m, returnLoc)}
                                                                             />
                                                                             <XPActionButton
-                                                                                classic
                                                                                 tone="neutral"
                                                                                 label={t('cancel')}
                                                                                 disabled={dismounting === m.id}

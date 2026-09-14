@@ -101,29 +101,29 @@ export default function DyeingRateModal({ isOpen, run, onClose, onSaved, authFet
             modeless
             footer={
                 <div style={{ display: 'flex', gap: 6, justifyContent: 'flex-end' }}>
-                    <XPActionButton classic tone="neutral" label={t('cancel')} onClick={onClose} />
-                    <XPActionButton classic tone="primary" icon="bi-check-lg"
+                    <XPActionButton tone="neutral" label={t('cancel')} onClick={onClose} />
+                    <XPActionButton tone="primary" icon="bi-check-lg"
                         label={t('save')} disabled={saving} onClick={save} />
                 </div>
             }
         >
             <div style={{ fontFamily: xpFont }}>
-                <FormSection title={t('set_rate')} classic>
+                <FormSection title={t('set_rate')}>
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
                         <div>
-                            <FieldLabel classic>{t('rpm')}</FieldLabel>
+                            <FieldLabel>{t('rpm')}</FieldLabel>
                             {num(rpm, setRpm, '0', '1')}
                         </div>
                         <div>
-                            <FieldLabel classic>{t('lines')}</FieldLabel>
+                            <FieldLabel>{t('lines')}</FieldLabel>
                             {num(lines, setLines, '1', '1')}
                         </div>
                         <div>
-                            <FieldLabel classic>{t('target')} %</FieldLabel>
+                            <FieldLabel>{t('target')} %</FieldLabel>
                             {num(target, setTarget, '1', '1')}
                         </div>
                         <div>
-                            <FieldLabel classic hint={t('no_reel_measured_hint')}>
+                            <FieldLabel hint={t('no_reel_measured_hint')}>
                                 {t('yards_per_rev')}
                             </FieldLabel>
                             <div style={{

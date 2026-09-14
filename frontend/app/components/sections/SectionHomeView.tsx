@@ -268,7 +268,7 @@ export default function SectionHomeView({ sectionKey }: { sectionKey: string }) 
               )}
               {section.list.rows.map((r, i) => (
                 <tr key={i} style={{ background: lvZebra(i) }}>
-                  {r.code !== '' && <td style={{ padding: '3px 6px' }}><CodeChip code={r.code} classic /></td>}
+                  {r.code !== '' && <td style={{ padding: '3px 6px' }}><CodeChip code={r.code} /></td>}
                   <td style={{ padding: '3px 6px' }}>{r.primary}</td>
                   {r.status !== undefined && <td style={{ padding: '3px 6px' }}><StatusChip status={r.status} /></td>}
                   {r.right !== undefined && <td style={{ padding: '3px 6px', textAlign: 'right' }}>{r.right}</td>}

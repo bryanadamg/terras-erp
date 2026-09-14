@@ -422,7 +422,7 @@ export default function WOStagingModal({ wo, onClose, onStaged, onScanMode }: Pr
                                         {multiItem && sl.item_code ? (
                                             <span style={{ fontWeight: 'bold', fontSize: 10 }}>{sl.item_code}</span>
                                         ) : null}
-                                        <CodeChip code={sl.batch_number || '—'} classic />
+                                        <CodeChip code={sl.batch_number || '—'} />
                                         <LotChip tone="qty" title="Quantity staged to this WO">
                                             {sl.qty.toFixed(1)}
                                         </LotChip>
@@ -612,7 +612,7 @@ export default function WOStagingModal({ wo, onClose, onStaged, onScanMode }: Pr
                                                                             the number alone. RM provenance stays last. */}
                                                                         <div style={{ display: 'flex', flexDirection: 'column', gap: 2, minWidth: 0, flex: 1 }}>
                                                                             <div style={{ display: 'flex', alignItems: 'center', gap: 4, flexWrap: 'wrap' }}>
-                                                                                <CodeChip code={b.batch_number} classic />
+                                                                                <CodeChip code={b.batch_number} />
                                                                                 <LotChip tone="qty" title="Quantity remaining">
                                                                                     {(b.remaining ?? 0).toFixed(1)}
                                                                                 </LotChip>

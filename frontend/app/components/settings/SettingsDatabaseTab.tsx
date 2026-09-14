@@ -504,14 +504,14 @@ export default function SettingsDatabaseTab() {
                                 A stack also keeps Keep Last's hint under its own field. */}
                             <div style={{ display: 'flex', flexDirection: 'column', gap: SETTINGS_FIELD_GAP }}>
                                 <div>
-                                    <FieldLabel classic>Enabled</FieldLabel>
+                                    <FieldLabel>Enabled</FieldLabel>
                                     {<label style={{ display: 'flex', alignItems: 'center', gap: 6, fontFamily: xpFont, fontSize: 11 }}>
                                             <input type="checkbox" checked={scheduleForm.enabled} onChange={e => setScheduleForm({ ...scheduleForm, enabled: e.target.checked })} />
                                             Run automatic backups
                                         </label>}
                                 </div>
                                 <div>
-                                    <FieldLabel classic>Frequency</FieldLabel>
+                                    <FieldLabel>Frequency</FieldLabel>
                                     <select
                                         style={xpInput({ height: 'auto', padding: '2px 4px', width: '100%' })}
                                         value={scheduleForm.frequency}
@@ -523,7 +523,7 @@ export default function SettingsDatabaseTab() {
                                 </div>
                                 {scheduleForm.frequency === 'weekly' && (
                                     <div>
-                                        <FieldLabel classic>Day of Week</FieldLabel>
+                                        <FieldLabel>Day of Week</FieldLabel>
                                         <select
                                             style={xpInput({ height: 'auto', padding: '2px 4px', width: '100%' })}
                                             value={scheduleForm.day_of_week}
@@ -534,7 +534,7 @@ export default function SettingsDatabaseTab() {
                                     </div>
                                 )}
                                 <div>
-                                    <FieldLabel classic>Time</FieldLabel>
+                                    <FieldLabel>Time</FieldLabel>
                                     <input
                                         type="time"
                                         style={xpInput({ width: '100%' })}
@@ -546,7 +546,7 @@ export default function SettingsDatabaseTab() {
                                     />
                                 </div>
                                 <div>
-                                    <FieldLabel classic>Timezone</FieldLabel>
+                                    <FieldLabel>Timezone</FieldLabel>
                                     <select
                                         style={xpInput({ height: 'auto', padding: '2px 4px', width: '100%' })}
                                         value={scheduleForm.timezone}
@@ -556,7 +556,7 @@ export default function SettingsDatabaseTab() {
                                     </select>
                                 </div>
                                 <div>
-                                    <FieldLabel classic>Keep Last</FieldLabel>
+                                    <FieldLabel>Keep Last</FieldLabel>
                                     <input
                                         type="number"
                                         min={1}
@@ -614,7 +614,7 @@ export default function SettingsDatabaseTab() {
                         right="Admin only"
                     >
                         <div style={{ marginBottom: SETTINGS_FIELD_GAP }}>
-                            <FieldLabel classic>Current Connection</FieldLabel>
+                            <FieldLabel>Current Connection</FieldLabel>
                             {<div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
                                     <span style={{ borderRadius: CHIP_RADIUS, background: '#e0dfd8', border: '1px solid #b0a898', padding: '1px 6px', fontFamily: xpFont, fontSize: '11px', color: '#333' }}>
                                         <i className="bi bi-link-45deg"></i>
@@ -629,7 +629,7 @@ export default function SettingsDatabaseTab() {
                             ellipsis. Reading order is the action, then the shortcut into it. */}
                         <div style={{ display: 'flex', flexDirection: 'column', gap: SETTINGS_FIELD_GAP }}>
                             <div>
-                                <FieldLabel classic>Switch to New Database</FieldLabel>
+                                <FieldLabel>Switch to New Database</FieldLabel>
                                 {<div style={{ display: 'flex', gap: 4 }}>
                                         <input
                                             style={xpInput({ flex: 1, fontFamily: CODE_FONT, boxShadow: 'inset 1px 1px 0 rgba(0,0,0,0.1)' })}
@@ -652,7 +652,7 @@ export default function SettingsDatabaseTab() {
                                 </div>
                             </div>
                             <div>
-                                <FieldLabel classic>Saved Profiles</FieldLabel>
+                                <FieldLabel>Saved Profiles</FieldLabel>
                                 {<div style={{ border: '1px solid #b0a898', background: '#ffffff', maxHeight: 118, overflowY: 'auto' as const }}>
                                         {dbProfiles.map((p, i) => (
                                             <button
@@ -716,23 +716,20 @@ export default function SettingsDatabaseTab() {
                                                 key={i}
                                                 style={{ background: lvZebra(i), borderBottom: '1px solid #c0bdb5' }}
                                             >
-                                                <td style={tdBase}><CodeChip code={s.name} classic /></td>
+                                                <td style={tdBase}><CodeChip code={s.name} /></td>
                                                 <td style={tdBase}><StatusChip status={(s.label || 'manual').toUpperCase()} /></td>
                                                 <td style={tdBase}>{tzDateTime(s.created_at)}</td>
                                                 <td style={tdBase}>{(s.size / 1024 / 1024).toFixed(2)} MB</td>
                                                 <td style={{ ...tdBase, borderRight: 'none', textAlign: 'right' as const }}>
                                                     <div style={{ display: 'flex', gap: 4, justifyContent: 'flex-end' }}>
-                                                        <XPActionButton
-                                                            classic tone="primary" icon="bi-download" title="Export/Download"
+                                                        <XPActionButton tone="primary" icon="bi-download" title="Export/Download"
                                                             onClick={() => handleDownloadSnapshot(s.name)}
                                                         />
-                                                        <XPActionButton
-                                                            classic tone="success" icon="bi-arrow-counterclockwise" title="Restore/Rollback"
+                                                        <XPActionButton tone="success" icon="bi-arrow-counterclockwise" title="Restore/Rollback"
                                                             onClick={() => handleRestoreSnapshot(s.name)}
                                                             disabled={isSnapshotLoading}
                                                         />
-                                                        <XPActionButton
-                                                            classic tone="danger" icon="bi-trash" title="Delete snapshot file"
+                                                        <XPActionButton tone="danger" icon="bi-trash" title="Delete snapshot file"
                                                             onClick={() => handleDeleteSnapshot(s.name)}
                                                             disabled={isSnapshotLoading}
                                                         />

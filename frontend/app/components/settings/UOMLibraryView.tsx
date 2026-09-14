@@ -104,12 +104,12 @@ export default function UOMLibraryView({ uoms, canManage, onCreateUOM, onDeleteU
                             const factors: any[] = uom.factors || [];
                             return (
                                 <React.Fragment key={uom.id}>
-                                    <tr style={{ ...lvRow(idx), cursor: 'pointer', background: isExpanded ? rowStateBg('expanded', true) : lvRow(idx).background }} onClick={() => toggleExpand(uom)}>
+                                    <tr style={{ ...lvRow(idx), cursor: 'pointer', background: isExpanded ? rowStateBg('expanded') : lvRow(idx).background }} onClick={() => toggleExpand(uom)}>
                                         <ExpanderCell expanded={isExpanded} onToggle={() => toggleExpand(uom)} label="conversion factors" />
                                         <td style={lvTd()}>
                                             <span style={{ fontWeight: 'bold', fontVariant: 'all-small-caps'}}>{uom.name}</span>
                                             {uom.is_system && (
-                                                <Chip classic size="xs" style={{ marginLeft: 6 }} tone={{
+                                                <Chip size="xs" style={{ marginLeft: 6 }} tone={{
                                                     background: '#dce8ff',
                                                     borderColor: '#7fa8e0',
                                                     color: '#003080',
@@ -119,7 +119,7 @@ export default function UOMLibraryView({ uoms, canManage, onCreateUOM, onDeleteU
                                         <td style={lvTd()}>
                                             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
                                                 {factors.length > 0 ? factors.map((f: any) => (
-                                                    <Chip key={f.id} classic tone={{
+                                                    <Chip key={f.id} tone={{
                                                         background: '#fff3e0',
                                                         borderColor: '#f0a040',
                                                         color: '#804800',
@@ -142,7 +142,7 @@ export default function UOMLibraryView({ uoms, canManage, onCreateUOM, onDeleteU
                                     {isExpanded && (
                                         <tr>
                                             <td colSpan={4} style={{ padding: 0 }}>
-                                                <ExpandedRowPanel classic style={{ padding: '8px 12px 8px 28px' }}>
+                                                <ExpandedRowPanel style={{ padding: '8px 12px 8px 28px' }}>
                                                     {canManage ? (
                                                         <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
                                                             <span style={{ fontSize: 11, color: '#804800'}}>1 <b>{uom.name}</b> =</span>
@@ -168,7 +168,7 @@ export default function UOMLibraryView({ uoms, canManage, onCreateUOM, onDeleteU
                                                                 <>
                                                                     <span style={{ width: 1, height: 18, background: '#c0a060'}} />
                                                                     {factors.map((f: any) => (
-                                                                        <Chip key={f.id} classic tone={{
+                                                                        <Chip key={f.id} tone={{
                                                                             background: '#fff3e0',
                                                                             borderColor: '#f0a040',
                                                                             color: '#804800',

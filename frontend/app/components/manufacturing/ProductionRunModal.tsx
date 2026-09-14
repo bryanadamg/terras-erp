@@ -534,7 +534,6 @@ export default function ProductionRunModal({
             size="xxl"
             footer={
                 <ModalFooterActions
-                    classic
                     onCancel={onClose}
                     onSubmit={handleSave}
                     submitting={isSaving}

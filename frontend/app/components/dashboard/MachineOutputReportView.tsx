@@ -681,7 +681,7 @@ export default function MachineOutputReportView() {
         );
 
         return (
-            <ExpandedRowPanel classic style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+            <ExpandedRowPanel style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
                 {isOperator && block(`By day (${(r.days || []).length})`, daysTable)}
                 {isOperator && block('By item', itemsTable)}
                 {isOperator && block(`Packing orders (${(r.orders || []).length})`, ordersTable)}
@@ -847,7 +847,7 @@ export default function MachineOutputReportView() {
                     style={{ flex: 1, overflowY: 'auto', background: '#fff', minHeight: 0 }}
                 >
                     {/* +1 for the leading expander column the real table renders. */}
-                    {loading ? <TableBlockSkeleton cols={columns.length + 1} rows={14} classic />
+                    {loading ? <TableBlockSkeleton cols={columns.length + 1} rows={14} />
                     : error ? (
                         <XPEmptyState icon="bi-exclamation-triangle" message={`Could not load report — ${error}`} />)
                     : sorted.length === 0 ? (
@@ -881,7 +881,7 @@ export default function MachineOutputReportView() {
                                         return (
                                             <React.Fragment key={key}>
                                             <tr
-                                                style={{ background: open ? rowStateBg('expanded', true) : lvZebra(i), borderBottom: '1px solid #e0ddd3', cursor: 'pointer' }}
+                                                style={{ background: open ? rowStateBg('expanded') : lvZebra(i), borderBottom: '1px solid #e0ddd3', cursor: 'pointer' }}
                                                 onClick={() => setExpanded(open ? null : key)}
                                             >
                                                 <ExpanderCell expanded={open} onToggle={() => setExpanded(open ? null : key)} tdStyle={td} label="machine detail" />

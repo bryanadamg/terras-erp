@@ -444,7 +444,7 @@ export default function DyeingOrdersTab({ items, recipes, authFetch }: DyeingOrd
         return (
             <tr key={`${wo.id}-detail`}>
                 <td colSpan={COLS} style={{ padding: 0 }}>
-                    <ExpandedRowPanel classic>
+                    <ExpandedRowPanel>
                         <div style={{
                             display: 'grid', gridTemplateColumns: '270px minmax(0, 1fr)',
                             border: '1px solid #7f9db9',
@@ -456,12 +456,12 @@ export default function DyeingOrdersTab({ items, recipes, authFetch }: DyeingOrd
                                 <div style={colHeaderStyle}>Order</div>
                                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 2, fontSize: 9 }}>
                                     <span style={{ color: '#888' }}>MO</span>
-                                    <CodeChip code={wo.mo_code} classic style={{ fontSize: 9 }} />
+                                    <CodeChip code={wo.mo_code} style={{ fontSize: 9 }} />
                                 </div>
                                 {wo.root_mo_code && wo.root_mo_code !== wo.mo_code && (
                                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 2, fontSize: 9 }}>
                                         <span style={{ color: '#888' }}>Root MO</span>
-                                        <CodeChip code={wo.root_mo_code} classic tier={2} style={{ fontSize: 9 }} />
+                                        <CodeChip code={wo.root_mo_code} tier={2} style={{ fontSize: 9 }} />
                                     </div>
                                 )}
                                 {infoRow('Product', wo.item_name || '—')}
@@ -498,7 +498,6 @@ export default function DyeingOrdersTab({ items, recipes, authFetch }: DyeingOrd
                                     <span>Baths ({sum.runs.length})</span>
                                     {canManage && (
                                         <XPActionButton
-                                            classic
                                             tone="success"
                                             icon="bi-plus-lg"
                                             label="Create Run"
@@ -568,7 +567,6 @@ export default function DyeingOrdersTab({ items, recipes, authFetch }: DyeingOrd
                                                                     panel read-only, which is where the dose sheet and
                                                                     the chemicals actually used are shown. */}
                                                                 <XPActionButton
-                                                                    classic
                                                                     tone={!bathClosed && bathFilled && canManage ? 'primary' : 'neutral'}
                                                                     icon={bathClosed || !canManage ? 'bi-eye' : 'bi-eyedropper'}
                                                                     title={bathClosed || !canManage
@@ -663,7 +661,7 @@ export default function DyeingOrdersTab({ items, recipes, authFetch }: DyeingOrd
                     </thead>
                     <tbody ref={listBodyRef}>
                         {workOrders.length === 0 && (woLoading ? (
-                            <TableSkeleton rows={8} cols={skel.cols ?? COLS} classic tdStyle={tdBase} rowHeight={skel.rowHeight} fillHeight={skel.fillHeight} />
+                            <TableSkeleton rows={8} cols={skel.cols ?? COLS} tdStyle={tdBase} rowHeight={skel.rowHeight} fillHeight={skel.fillHeight} />
                         ) : (
                             <tr>
                                 <td colSpan={COLS} style={{ padding: 0 }}>
@@ -681,7 +679,7 @@ export default function DyeingOrdersTab({ items, recipes, authFetch }: DyeingOrd
                                 <React.Fragment key={id}>
                                     <tr
                                         style={{
-                                            background: isExpanded ? rowStateBg('expanded', true) : (lvZebra(idx)),
+                                            background: isExpanded ? rowStateBg('expanded') : (lvZebra(idx)),
                                             cursor: 'pointer',
                                         }}
                                         onClick={toggleRow}
@@ -690,7 +688,6 @@ export default function DyeingOrdersTab({ items, recipes, authFetch }: DyeingOrd
                                         <td style={{ ...tdBase, overflow: 'hidden' }} title={wo.code || wo.name}>
                                             <CodeChip
                                                 code={wo.code || wo.name}
-                                                classic
                                                 tone="accent"
                                                 style={{ fontWeight: 'bold', minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis' }}
                                             />
@@ -701,7 +698,7 @@ export default function DyeingOrdersTab({ items, recipes, authFetch }: DyeingOrd
                                         <td style={{ ...tdBase, overflow: 'hidden' }}>
                                             {wo.root_mo_code ? (
                                                 <div style={{ display: 'flex', alignItems: 'center', gap: 3, overflow: 'hidden' }}>
-                                                    <CodeChip code={wo.root_mo_code} classic tier={2} style={{ fontWeight: 'bold', overflow: 'hidden', textOverflow: 'ellipsis' }} />
+                                                    <CodeChip code={wo.root_mo_code} tier={2} style={{ fontWeight: 'bold', overflow: 'hidden', textOverflow: 'ellipsis' }} />
                                                     {(wo.root_mo_count ?? 0) > 1 && (
                                                         <span
                                                             title={`Shared component — feeds ${wo.root_mo_count} root MOs: ${(wo.root_mo_codes || []).join(', ')}`}
@@ -810,7 +807,6 @@ export default function DyeingOrdersTab({ items, recipes, authFetch }: DyeingOrd
                                                 WO's open bath; every bath is reachable in the expanded row. */}
                                             {sum.open ? (
                                                 <XPActionButton
-                                                    classic
                                                     tone={canManage ? 'primary' : 'neutral'}
                                                     icon={canManage ? 'bi-eyedropper' : 'bi-eye'}
                                                     title={canManage
@@ -820,7 +816,6 @@ export default function DyeingOrdersTab({ items, recipes, authFetch }: DyeingOrd
                                                 />
                                             ) : sum.current ? (
                                                 <XPActionButton
-                                                    classic
                                                     icon="bi-eye"
                                                     title={`View bath #${sum.current.run_number}`}
                                                     onClick={() => handleOpenShade(sum.current)}

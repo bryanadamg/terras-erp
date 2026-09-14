@@ -77,7 +77,7 @@ export default function SettingsAccountTab() {
                     <SettingsPanel icon="bi-person-badge" title="Avatar">
                         {/* No preview frame here: AvatarPicker owns the stage, because a
                             preview outside it can't show the candidate you are hovering. */}
-                        <FieldLabel classic hint="Hover an option to try it on; Shuffle rolls a whole new face.">
+                        <FieldLabel hint="Hover an option to try it on; Shuffle rolls a whole new face.">
                             Choose Avatar
                         </FieldLabel>
                         <AvatarPicker value={selfAvatarId} onChange={setSelfAvatarId} seed={selfUsername} template={currentUser?.role?.default_avatar_id} classic />
@@ -88,7 +88,7 @@ export default function SettingsAccountTab() {
                     <SettingsPanel icon="bi-person-fill" title="Profile">
                         <div style={settingsGrid(200)}>
                             <div>
-                                <FieldLabel classic>Username</FieldLabel>
+                                <FieldLabel>Username</FieldLabel>
                                 <input
                                     style={xpInput({ width: '100%' })}
                                     value={selfUsername}
@@ -97,7 +97,7 @@ export default function SettingsAccountTab() {
                                 />
                             </div>
                             <div>
-                                <FieldLabel classic>Full Name</FieldLabel>
+                                <FieldLabel>Full Name</FieldLabel>
                                 <input
                                     style={xpInput({ width: '100%' })}
                                     value={selfFullName}
@@ -111,7 +111,7 @@ export default function SettingsAccountTab() {
                     <SettingsPanel icon="bi-key-fill" title="Password">
                         <div style={settingsGrid(200)}>
                             <div>
-                                <FieldLabel classic hint="Leave blank to keep your current password.">New Password</FieldLabel>
+                                <FieldLabel hint="Leave blank to keep your current password.">New Password</FieldLabel>
                                 <input
                                     type="password"
                                     style={xpInput({ width: '100%' })}
@@ -121,7 +121,7 @@ export default function SettingsAccountTab() {
                                 />
                             </div>
                             <div>
-                                <FieldLabel classic>Confirm New Password</FieldLabel>
+                                <FieldLabel>Confirm New Password</FieldLabel>
                                 <input
                                     type="password"
                                     style={xpInput({ width: '100%' })}

@@ -366,8 +366,8 @@ export default function LabDipReportView() {
                 report lands in the skeleton's columns instead of replacing it. */}
             {loading && !report
                 ? <div style={{ flex: 1, minHeight: 0, overflow: 'hidden' }}>
-                    <TableBlockSkeleton cols={6} rows={4} classic />
-                    <TableBlockSkeleton cols={9} rows={10} classic />
+                    <TableBlockSkeleton cols={6} rows={4} />
+                    <TableBlockSkeleton cols={9} rows={10} />
                 </div>
                 : <><SummaryTable /><VariantTable /></>}
             <XPStatusBar right={`Range ${rangeLabel}`}>

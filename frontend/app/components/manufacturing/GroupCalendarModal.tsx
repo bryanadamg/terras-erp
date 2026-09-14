@@ -158,7 +158,6 @@ export default function GroupCalendarModal({ isOpen, onClose, group, authFetch, 
                         here rendered flat gray in Classic, since the global .btn-primary
                         override strips the bevel gradient. */}
                     <ModalFooterActions
-                        classic
                         onCancel={onClose}
                         cancelLabel={t('cancel')}
                         onSubmit={apply}
@@ -215,16 +214,16 @@ export default function GroupCalendarModal({ isOpen, onClose, group, authFetch, 
                         import, and the flat list of what will be written. */}
                     <div style={{ display: 'flex', gap: 6, alignItems: 'flex-end', flexWrap: 'wrap', margin: '10px 0 6px' }}>
                         <div>
-                            <FieldLabel classic>{t('date')}</FieldLabel>
+                            <FieldLabel>{t('date')}</FieldLabel>
                             <input type="date" style={{ ...lvInput(), width: 140 }} value={newHoliday} onChange={e => setNewHoliday(e.target.value)} />
                         </div>
                         <div style={{ flex: 1, minWidth: 140 }}>
-                            <FieldLabel classic>{t('note')}</FieldLabel>
+                            <FieldLabel>{t('note')}</FieldLabel>
                             <input style={lvInput()} value={newHolidayNote} onChange={e => setNewHolidayNote(e.target.value)} placeholder="Cuti bersama" />
                         </div>
-                        <XPActionButton classic tone="neutral" icon="bi-plus-lg" label={t('add')} disabled={!newHoliday} onClick={addHoliday} />
+                        <XPActionButton tone="neutral" icon="bi-plus-lg" label={t('add')} disabled={!newHoliday} onClick={addHoliday} />
                         <span style={{ width: 1, alignSelf: 'stretch', background: '#c8c4b8' }} />
-                        <XPActionButton classic tone="neutral" icon="bi-download"
+                        <XPActionButton tone="neutral" icon="bi-download"
                             label={`${t('import_id_holidays')} ${calRef.getFullYear()}`} onClick={importNational} />
                     </div>
 
@@ -244,7 +243,6 @@ export default function GroupCalendarModal({ isOpen, onClose, group, authFetch, 
                                         <td style={lvTd()}>{h.note || ''}</td>
                                         <td style={{ ...lvTd(), borderRight: 'none', textAlign: 'right' }}>
                                             <XPActionButton
-                                                classic
                                                 tone="danger"
                                                 icon="bi-x"
                                                 title={t('remove')}
@@ -263,7 +261,7 @@ export default function GroupCalendarModal({ isOpen, onClose, group, authFetch, 
                     </div>
                 </HolidayCalendarSection>
 
-                <FormSection classic title={<SecTitle icon="bi-cpu">{t('machines_to_update')}</SecTitle>}>
+                <FormSection title={<SecTitle icon="bi-cpu">{t('machines_to_update')}</SecTitle>}>
                     <div style={{ fontSize: 11, color: '#555', lineHeight: 1.5 }}>
                         {machines.length === 0
                             ? <span style={{ fontStyle: 'italic', color: '#888' }}>{t('no_machines_in_group')}</span>

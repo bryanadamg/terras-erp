@@ -166,9 +166,9 @@ export default function BookingStockView() {
     // The rail is health-coded here rather than selection-blue: this table's whole
     // job is shortfall triage, so the panel inherits the row's health color.
     const renderDetail = (r: Row) => (
-        <ExpandedRowPanel classic style={{
+        <ExpandedRowPanel style={{
             display: 'flex', gap: 24, flexWrap: 'wrap',
-            ...expandedRowFrame(true, healthOf(r.qty_net_free).color),
+            ...expandedRowFrame(healthOf(r.qty_net_free).color),
             padding: '8px 12px 10px 20px',
         }}>
             {detailSide(
@@ -259,7 +259,7 @@ export default function BookingStockView() {
                                 return (
                                     <Fragment key={k}>
                                         <tr onClick={() => toggleRow(k)} title={'Click for MO breakdown'}
-                                            style={{ background: isOpen ? rowStateBg('expanded', true) : (h === HEALTH.short ? h.tint : zebra), borderBottom: '1px solid #c0bdb5', cursor: 'pointer' }}
+                                            style={{ background: isOpen ? rowStateBg('expanded') : (h === HEALTH.short ? h.tint : zebra), borderBottom: '1px solid #c0bdb5', cursor: 'pointer' }}
                                             className={undefined}>
                                             {/* The health stripe rides the row's leftmost cell, which is now the
                                                 chevron column. */}
@@ -278,7 +278,7 @@ export default function BookingStockView() {
                                             </td>
                                             <td style={{ padding: '4px 8px', fontFamily: xpFont, fontSize: '10px' }} className={undefined}>
                                                 {r.size_label && (
-                                                    <VariantChip kind="size" classic
+                                                    <VariantChip kind="size"
                                                         title={`Size: ${r.size_label} — netted separately from other sizes`}>
                                                         {r.size_label}
                                                     </VariantChip>
@@ -321,7 +321,7 @@ export default function BookingStockView() {
                             {/* Skeleton in both themes — the modern branch used to show a bare
                                 "Loading..." line, which reads as a row rather than as a wait. */}
                             {loading && (
-                                <TableSkeleton rows={8} cols={skel.cols ?? COLS.length + 1} classic
+                                <TableSkeleton rows={8} cols={skel.cols ?? COLS.length + 1}
                                     rowHeight={skel.rowHeight} fillHeight={skel.fillHeight} />
                             )}
                         </tbody>

@@ -421,7 +421,7 @@ export default function ReportsView(_props: any) {
                     put and the placeholder rows inherit its columns. */}
                 <tbody ref={listBodyRef}>
                     {loading
-                        ? <TableSkeleton rows={10} cols={skel.cols ?? 7} classic tdStyle={xpCell} rowHeight={skel.rowHeight} fillHeight={skel.fillHeight} />
+                        ? <TableSkeleton rows={10} cols={skel.cols ?? 7} tdStyle={xpCell} rowHeight={skel.rowHeight} fillHeight={skel.fillHeight} />
                         : rows.map((e: any, i: number) => renderRow(e, i))}
                 </tbody>
             </table>

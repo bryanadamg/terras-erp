@@ -434,7 +434,7 @@ export default function BookingStockInfoModal({ isOpen, onClose }: {
 
                 {/* ── The sections, in the selected language ───────────────────── */}
                 {doc.sections.map((sec, si) => (
-                    <FormSection key={sec.title} title={sec.title} classic
+                    <FormSection key={sec.title} title={sec.title}
                         style={si === doc.sections.length - 1 ? { marginBottom: 0 } : undefined}>
                         {sec.blocks.map((b, bi) => renderBlock(b, bi, bi === sec.blocks.length - 1))}
                     </FormSection>

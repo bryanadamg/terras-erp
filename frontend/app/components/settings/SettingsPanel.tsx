@@ -25,7 +25,6 @@ export default function SettingsPanel({ icon, title, right, flush = false, child
 }) {
     return (
         <FormSection
-            classic
             style={{ marginBottom: 0 }}
             bodyStyle={flush ? { padding: 0 } : undefined}
             title={<SectionTitle icon={icon} right={right}>{title}</SectionTitle>}

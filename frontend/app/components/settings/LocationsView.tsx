@@ -304,8 +304,8 @@ export default function LocationsView({
         <td style={{ ...lvTd(), width: 60, textAlign: 'right', ...({ borderRight: 'none' }) }} onClick={(e) => e.stopPropagation()}>
           {canManage && (
             <span style={{ display: 'inline-flex', gap: 4 }}>
-                <XPActionButton classic icon="bi-pencil" title="Rename" onClick={() => startRename(loc)} />
-                <XPActionButton classic tone="danger" icon="bi-trash" title="Delete" onClick={() => handleDelete(loc.id)} />
+                <XPActionButton icon="bi-pencil" title="Rename" onClick={() => startRename(loc)} />
+                <XPActionButton tone="danger" icon="bi-trash" title="Delete" onClick={() => handleDelete(loc.id)} />
               </span>)}
         </td>
       </tr>

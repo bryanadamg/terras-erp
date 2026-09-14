@@ -264,7 +264,7 @@ export default function PickListView() {
         return (
             <tr key={`${pl.id}-detail`}>
                 <td colSpan={PL_COLS} style={{ padding: 0 }}>
-                    <ExpandedRowPanel classic>
+                    <ExpandedRowPanel>
                         <div style={{
                             display: 'grid', gridTemplateColumns: '250px minmax(280px, 1fr) 260px',
                             border: '1px solid #7f9db9', fontFamily: xpFont, fontSize: 10,
@@ -481,7 +481,7 @@ export default function PickListView() {
                     </thead>
                     <tbody ref={listBodyRef}>
                         {pickLists.length === 0 && (loading ? (
-                            <TableSkeleton rows={7} cols={skel.cols ?? PL_COLS} classic tdStyle={td} rowHeight={skel.rowHeight} fillHeight={skel.fillHeight} />
+                            <TableSkeleton rows={7} cols={skel.cols ?? PL_COLS} tdStyle={td} rowHeight={skel.rowHeight} fillHeight={skel.fillHeight} />
                         ) : (
                             <tr><td colSpan={PL_COLS} style={{ padding: 0 }}>
                                 <XPEmptyState icon="bi-clipboard-check" message='No pick lists yet. Click "New Pick List" to pick packed cartons for an order.' />
@@ -492,7 +492,7 @@ export default function PickListView() {
                             return (
                             <React.Fragment key={pl.id}>
                             <tr
-                                style={{ ...rowStyle(idx), ...(isExpanded ? { background: rowStateBg('expanded', true) } : {}), cursor: 'pointer' }}
+                                style={{ ...rowStyle(idx), ...(isExpanded ? { background: rowStateBg('expanded') } : {}), cursor: 'pointer' }}
                                 onClick={() => setExpandedId(prev => prev === String(pl.id) ? null : String(pl.id))}
                             >
                                 <ExpanderCell expanded={isExpanded} tdStyle={td} label="pick list detail"
@@ -507,7 +507,6 @@ export default function PickListView() {
                                 <td style={{ ...td, textAlign: 'right' }} onClick={e => e.stopPropagation()}>
                                     <span style={{ marginRight: 2 }}>
                                         <XPActionButton
-                                            classic
                                             tone="primary"
                                             icon="bi-upc-scan"
                                             title={pl.status === 'DISPATCHED' ? 'View' : 'Pick'}
@@ -516,14 +515,13 @@ export default function PickListView() {
                                     </span>
                                     <span style={{ marginRight: 2 }}>
                                         <XPActionButton
-                                            classic
                                             tone="neutral"
                                             icon="bi-card-list"
                                             title="Kartu Picking"
                                             onClick={() => setPrintCard(pl)}
                                         />
                                     </span>
-                                    <MenuTriggerButton classic onClick={e => menuToggle(String(pl.id), e)} />
+                                    <MenuTriggerButton onClick={e => menuToggle(String(pl.id), e)} />
                                 </td>
                             </tr>
                             {isExpanded && renderPickDetail(pl)}
@@ -1439,12 +1437,12 @@ function PickListEditor({ pl: initialPl, itemById, locPickerTreeOptions, authFet
                                                 {!r.batch_id ? (
                                                     <span style={{ fontSize: 10, color: '#bbb' }}>n/a</span>
                                                 ) : r.picked_at ? (
-                                                    <Chip classic size="xs" icon="bi-check-lg" tone={statusTint('SCANNED')}
+                                                    <Chip size="xs" icon="bi-check-lg" tone={statusTint('SCANNED')}
                                                         title={`Scanned by ${r.picked_by || 'an operator'}`}>
                                                         {r.picked_by || 'scanned'}
                                                     </Chip>
                                                 ) : (
-                                                    <Chip classic size="xs" tone={statusTint('UNSCANNED')}
+                                                    <Chip size="xs" tone={statusTint('UNSCANNED')}
                                                         title="Not yet scanned — this carton blocks dispatch">
                                                         pending
                                                     </Chip>
@@ -1453,7 +1451,6 @@ function PickListEditor({ pl: initialPl, itemById, locPickerTreeOptions, authFet
                                             <td style={{ ...td, textAlign: 'center' }}>
                                                 {!readOnly && (
                                                     <XPActionButton
-                                                        classic
                                                         tone="danger"
                                                         icon="bi-x"
                                                         title={r.batch_id

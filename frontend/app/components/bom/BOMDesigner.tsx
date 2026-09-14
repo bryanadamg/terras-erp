@@ -1350,7 +1350,7 @@ export default function BOMDesigner({
                                     <div style={{ fontWeight: 'bold', fontSize: 12, color: '#000080' }}>
                                         {getItemName(selectedNode.item_code) || 'Select an item'}
                                     </div>
-                                    <CodeChip code={selectedNode.item_code || '—'} classic tier={2} style={{ display: 'block' }} />
+                                    <CodeChip code={selectedNode.item_code || '—'} tier={2} style={{ display: 'block' }} />
                                 </div>
                                 <div style={{ display: 'flex', gap: 4 }}>
                                     {selectedShared && (
@@ -1527,7 +1527,7 @@ export default function BOMDesigner({
                                         return (
                                             <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: '#eef4ff', border: '1px solid #b0c8e8', padding: '4px 8px', marginTop: 2 }}>
                                                 <span style={{ fontSize: 10, color: '#003080', fontWeight: 'bold', whiteSpace: 'nowrap' }}>Linked Sample:</span>
-                                                <CodeChip code={selItem.source_sample_code} classic tone="accent" />
+                                                <CodeChip code={selItem.source_sample_code} tone="accent" />
                                                 {selItem.source_color_name && (
                                                     <span style={{ borderRadius: CHIP_RADIUS, fontSize: 10, color: '#333', background: '#d8e8f8', border: '1px solid #b0c8e8', padding: '0 6px', whiteSpace: 'nowrap' }}>
                                                         {selItem.source_color_name}

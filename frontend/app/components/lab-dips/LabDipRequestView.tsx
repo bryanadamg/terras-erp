@@ -538,7 +538,7 @@ export default function LabDipRequestView({
                     </thead>
                     <tbody ref={listBodyRef}>
                         {labDips.length === 0 && (loading ? (
-                            <TableSkeleton rows={8} cols={skel.cols ?? 10} classic tdStyle={lvTdRuled()} rowHeight={skel.rowHeight} fillHeight={skel.fillHeight} />
+                            <TableSkeleton rows={8} cols={skel.cols ?? 10} tdStyle={lvTdRuled()} rowHeight={skel.rowHeight} fillHeight={skel.fillHeight} />
                         ) : (
                             <TableEmpty colSpan={10} tdStyle={lvTdRuled()}
                                 message={hasActiveFilter ? 'No requests match the current filter.' : isYarn ? 'No yarn lab dip requests yet.' : 'No lab dip requests yet.'} />
@@ -549,8 +549,8 @@ export default function LabDipRequestView({
                             return (
                                 <React.Fragment key={r.id}>
                                     <tr id={`labdip-row-${r.id}`} onClick={() => toggleExpand(r.id)} style={{
-                                        background: String(r.id) === String(openRequestId) ? rowStateBg('highlighted', true)
-                                            : expandedIds.has(r.id) ? rowStateBg('expanded', true)
+                                        background: String(r.id) === String(openRequestId) ? rowStateBg('highlighted')
+                                            : expandedIds.has(r.id) ? rowStateBg('expanded')
                                             : lvZebra(idx),
                                         borderBottom: '1px solid #c0bdb5',
                                         cursor: 'pointer',
@@ -560,7 +560,7 @@ export default function LabDipRequestView({
                                         <td style={lvTdRuled()}>
                                             <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
                                                 <div>
-                                                    <CodeChip code={r.code} classic tone="accent" style={{ fontWeight: 'bold' }} />
+                                                    <CodeChip code={r.code} tone="accent" style={{ fontWeight: 'bold' }} />
                                                     <div style={{ fontSize: 9, color: '#555'}}>{r.created_at ? tzDate(r.created_at) : ''}</div>
                                                 </div>
                                             </div>
@@ -593,7 +593,7 @@ export default function LabDipRequestView({
                                                 if (!dips.length) return <span style={{ fontSize: 9, color: '#888', fontStyle: 'italic' }}>—</span>;
                                                 return (
                                                     <div style={{ display: 'flex', flexWrap: 'wrap' as const, gap: 3 }}>
-                                                        {dips.map((d: any) => <ColorSwatchChip key={d.id || d.color_name} label={d.color_name} classic hex={hexByColorName[d.color_name]} />)}
+                                                        {dips.map((d: any) => <ColorSwatchChip key={d.id || d.color_name} label={d.color_name} hex={hexByColorName[d.color_name]} />)}
                                                     </div>
                                                 );
                                             })()}
@@ -617,7 +617,7 @@ export default function LabDipRequestView({
                                         <td style={{ ...lvTdRuled(), borderRight: 'none', textAlign: 'right' as const }} onClick={e => e.stopPropagation()}>
                                             <div style={{ display: 'flex', gap: 3, justifyContent: 'flex-end', alignItems: 'center' }}>
                                                 {canManage && (
-                                                <MenuTriggerButton classic onClick={e => menuToggle(String(r.id), e)} />
+                                                <MenuTriggerButton onClick={e => menuToggle(String(r.id), e)} />
                                                 )}
                                             </div>
                                         </td>
@@ -739,7 +739,7 @@ export default function LabDipRequestView({
                                                     if (!dips.length) return '—';
                                                     return (
                                                         <div style={{ display: 'flex', flexWrap: 'wrap' as const, gap: 5 }}>
-                                                            {dips.map((d: any) => <ColorSwatchChip key={d.id || d.color_name} label={d.color_name} classic hex={hexByColorName[d.color_name]} />)}
+                                                            {dips.map((d: any) => <ColorSwatchChip key={d.id || d.color_name} label={d.color_name} hex={hexByColorName[d.color_name]} />)}
                                                         </div>
                                                     );
                                                 })(), full: true },
@@ -762,7 +762,7 @@ export default function LabDipRequestView({
                                         return (
                                         <tr>
                                             <td colSpan={10} style={{ padding: 0 }}>
-                                                <ExpandedRowPanel classic style={{ overflow: 'hidden' }}>
+                                                <ExpandedRowPanel style={{ overflow: 'hidden' }}>
                                                     <RequestDetailPanel
                                                         classic
                                                         leftTitle={<><i className="bi bi-box-seam" /> Variants — {total} total · {approved} approved</>}
@@ -793,10 +793,10 @@ export default function LabDipRequestView({
                     {total} request{total !== 1 ? 's' : ''} · {variantStats.total} variant{variantStats.total !== 1 ? 's' : ''}
                 </span>
                 <span style={{ width: 1, height: 15, background: '#a0988c', margin: '0 2px' }} />
-                <StatusCountPill classic status="PENDING" count={variantStats.PENDING} title="Variants not yet started" />
-                <StatusCountPill classic status="IN_PROGRESS" count={variantStats.IN_PROGRESS} title="Variants in progress" />
-                <StatusCountPill classic status="APPROVED" count={variantStats.APPROVED} title="Variants approved" />
-                <StatusCountPill classic status="REJECTED" count={variantStats.REJECTED} title="Variants rejected" />
+                <StatusCountPill status="PENDING" count={variantStats.PENDING} title="Variants not yet started" />
+                <StatusCountPill status="IN_PROGRESS" count={variantStats.IN_PROGRESS} title="Variants in progress" />
+                <StatusCountPill status="APPROVED" count={variantStats.APPROVED} title="Variants approved" />
+                <StatusCountPill status="REJECTED" count={variantStats.REJECTED} title="Variants rejected" />
                 {hasActiveFilter && <span style={{ marginLeft: 'auto', fontStyle: 'italic' }}>filtered</span>}
             </div>
 
@@ -836,7 +836,7 @@ export default function LabDipRequestView({
             >
                 <form onSubmit={handleSubmit} id="create-lab-dip-form">
                     {/* Identity */}
-                    <FormSection title="Identity" classic>
+                    <FormSection title="Identity">
                             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px 12px' }}>
                                 <div>
                                     <label style={xpLbl()}>Request Code</label>
@@ -870,7 +870,7 @@ export default function LabDipRequestView({
                     </FormSection>
 
                     {/* Items */}
-                    <FormSection title="Items" classic>
+                    <FormSection title="Items">
                             {/* Add item — finished good on the FG book, yarn on the yarn book */}
                             <div style={{ display: 'flex', gap: 6, alignItems: 'center', marginBottom: 10 }}>
                                 <div style={{ flex: 1 }}>
@@ -925,7 +925,7 @@ export default function LabDipRequestView({
                     </FormSection>
 
                     {/* Colors — applies to all items on this request */}
-                    <FormSection title={colorsAttrName} classic>
+                    <FormSection title={colorsAttrName}>
                             <div style={{ display: 'flex', gap: 6, alignItems: 'center', marginBottom: 10 }}>
                                 <div style={{ flex: 1 }}>
                                     <SearchableSelect
@@ -945,14 +945,14 @@ export default function LabDipRequestView({
                             ) : (
                                 <div style={{ display: 'flex', flexWrap: 'wrap' as const, gap: 6 }}>
                                     {form.legacyDips.map(d => (
-                                        <ColorSwatchChip key={d.color_name} label={d.color_name} classic hex={hexByColorName[d.color_name]} onRemove={() => removeColor(d.color_name)} />
+                                        <ColorSwatchChip key={d.color_name} label={d.color_name} hex={hexByColorName[d.color_name]} onRemove={() => removeColor(d.color_name)} />
                                     ))}
                                 </div>
                             )}
                     </FormSection>
 
                     {/* Recipe link & notes */}
-                    <FormSection title="Approved Recipe & Notes" classic>
+                    <FormSection title="Approved Recipe & Notes">
                             <div style={{ marginBottom: 8 }}>
                                 <label style={xpLbl()}>Approved Dye Recipe (Optional)</label>
                                 <SearchableSelect options={[{ value: '', label: 'Not yet linked' }, ...recipeOptions]} value={form.approved_recipe_id} onChange={(v: string) => setField('approved_recipe_id', v)} placeholder="Link approved recipe…" />

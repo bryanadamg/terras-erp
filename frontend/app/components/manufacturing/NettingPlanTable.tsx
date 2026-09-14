@@ -98,7 +98,7 @@ function IdentityChips({ chips, classic }: { chips?: NettingChip[]; classic: boo
                 const swatch = kind === 'color' ? (c.hex || colorHexFor(c.label)) : null;
                 return (
                     <VariantChip
-                        key={i} kind={kind} classic swatch={swatch}
+                        key={i} kind={kind} swatch={swatch}
                         title={c.group ? `${c.group}: ${c.label}` : c.label}
                     >
                         {kind === 'size' ? c.label.toUpperCase() : c.label}
@@ -203,7 +203,7 @@ export default function NettingPlanTable({
                                             {indentOf(n) > 0 && <span style={{ color: '#cbd5e1' }}>└ </span>}{n.item_name}
                                         </div>
                                         <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 3, marginTop: 1 }}>
-                                            <CodeChip code={n.item_code} classic tier={2} />
+                                            <CodeChip code={n.item_code} tier={2} />
                                             <IdentityChips chips={n.chips} classic />
                                         </div>
                                     </td>

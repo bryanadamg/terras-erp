@@ -121,7 +121,6 @@ export default function UserFormModal({
             size="xl"
             footer={
                 <ModalFooterActions
-                    classic
                     onCancel={onClose}
                     onSubmit={handleSubmit}
                     submitting={submitting}
@@ -130,12 +129,12 @@ export default function UserFormModal({
                 />
             }
         >
-            <FormError classic>{error}</FormError>
+            <FormError>{error}</FormError>
 
             {/* Preview frame lives inside AvatarPicker (it has to, for the
                 hover-to-try-on stage) — don't add a second one here. */}
             <div className="mb-3">
-                <FieldLabel classic>Avatar</FieldLabel>
+                <FieldLabel>Avatar</FieldLabel>
                 <AvatarPicker value={avatarId} onChange={setAvatarId} seed={username} template={roleAvatarTemplate} classic />
             </div>
 
@@ -144,7 +143,7 @@ export default function UserFormModal({
                 narrow screens. */}
             <div className="row g-2 mb-3">
                 <div className="col-md-6">
-                    <FieldLabel classic>Username</FieldLabel>
+                    <FieldLabel>Username</FieldLabel>
                     <input
                         style={xpInput({ width: '100%', fontFamily: CODE_FONT })}
                         value={username}
@@ -152,7 +151,7 @@ export default function UserFormModal({
                     />
                 </div>
                 <div className="col-md-6">
-                    <FieldLabel classic>Full Name</FieldLabel>
+                    <FieldLabel>Full Name</FieldLabel>
                     <input
                         style={xpInput({ width: '100%' })}
                         value={fullName}
@@ -163,7 +162,7 @@ export default function UserFormModal({
 
             <div className="row g-2 mb-3">
                 <div className="col-md-6">
-                    <FieldLabel classic>Role</FieldLabel>
+                    <FieldLabel>Role</FieldLabel>
                     <select
                         style={xpInput({ height: 'auto', padding: '2px 4px', width: '100%' })}
                         value={roleId}
@@ -175,7 +174,6 @@ export default function UserFormModal({
                 </div>
                 <div className="col-md-6">
                     <FieldLabel
-                        classic
                         right={mode === 'edit' && !showPassword ? (
                             <button
                                 type="button"
@@ -234,7 +232,7 @@ export default function UserFormModal({
             </div>
 
             <div className="mb-3">
-                <FieldLabel classic>Permissions</FieldLabel>
+                <FieldLabel>Permissions</FieldLabel>
                 <PermissionsPicker
                     allPermissions={allPermissions}
                     selectedIds={permissionIds}

@@ -30,8 +30,8 @@ export default function PermissionBreakdown({ permissions, showDirect = false }:
     const font = xpFont;
 
     return (
-        <ExpandedRowPanel classic>
-            <ExpandedRowPanelBody classic>
+        <ExpandedRowPanel>
+            <ExpandedRowPanelBody>
                 <div style={{
                     display: 'grid',
                     gridTemplateColumns: 'repeat(auto-fill, minmax(360px, 1fr))',

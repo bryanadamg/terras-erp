@@ -458,7 +458,7 @@ export default function PrintDesignerView() {
                         {/* Dirty state also sits in the status bar, but that is the far corner
                             from Save — the one place the state actually changes what you do. */}
                         {dirty && (
-                            <Chip classic tone={familyTint('amber')}>Unsaved</Chip>
+                            <Chip tone={familyTint('amber')}>Unsaved</Chip>
                         )}
                         <ToolbarButton tone="create" icon="bi-check-lg"
                             onClick={save} disabled={!dirty || saving}
@@ -481,7 +481,7 @@ export default function PrintDesignerView() {
                         />
                     </div>
 
-                    <Chip classic tone={familyTint(customised ? 'green' : 'gray')}>
+                    <Chip tone={familyTint(customised ? 'green' : 'gray')}>
                         {customised ? 'Customised' : 'Built-in default'}
                     </Chip>
 
@@ -531,8 +531,7 @@ export default function PrintDesignerView() {
                     }}>
                         <span>Sections, top to bottom</span>
                         {/* Adds after the selected section, so the menu doubles as "insert here". */}
-                        <XPActionButton
-                            classic icon="bi-plus-lg" label={<i className="bi bi-caret-down-fill" style={{ fontSize: 7 }} />}
+                        <XPActionButton icon="bi-plus-lg" label={<i className="bi bi-caret-down-fill" style={{ fontSize: 7 }} />}
                             title="Add a section" className="xp-menu-trigger"
                             onClick={e => addMenu.toggle('add-band', e)}
                         />
@@ -642,16 +641,14 @@ export default function PrintDesignerView() {
                         more buttons to each 210px row, which already carries a tick, an
                         ordinal, a name, a type and two chevrons. */}
                     <div style={{ display: 'flex', gap: 4, marginTop: 6 }}>
-                        <XPActionButton
-                            classic icon="bi-copy" label="Duplicate"
+                        <XPActionButton icon="bi-copy" label="Duplicate"
                             title="Copy the selected section, with its design, below itself"
                             onClick={duplicateSelectedBand} disabled={!selectedBand}
                         />
                         {/* The last section is not deletable: a layout with no sections
                             prints a blank card, and the floor would find that before
                             anyone noticed the save. Delete down to one, then replace it. */}
-                        <XPActionButton
-                            classic tone="danger" icon="bi-trash" label="Delete"
+                        <XPActionButton tone="danger" icon="bi-trash" label="Delete"
                             title={draft.bands.length <= 1
                                 ? 'A layout needs at least one section'
                                 : 'Remove the selected section (Ctrl+Z undoes)'}
@@ -704,7 +701,7 @@ export default function PrintDesignerView() {
                                 width: `${paperW}mm`, height: `${paperH}mm`,
                                 padding: `${draft.paper.marginMm}mm`, boxSizing: 'border-box',
                             }}>
-                                <PanelSkeleton sections={3} rows={4} classic caption />
+                                <PanelSkeleton sections={3} rows={4} caption />
                             </div>
                         </div>
                     ) : (
@@ -715,21 +712,17 @@ export default function PrintDesignerView() {
                                 fontFamily: xpFont, fontSize: 10,
                                 color: '#fff', textShadow: '0 1px 2px rgba(0,0,0,0.5)',
                             }}>
-                                <XPActionButton
-                                    classic icon="bi-dash-lg" title="Zoom out"
+                                <XPActionButton icon="bi-dash-lg" title="Zoom out"
                                     onClick={() => stepZoom(-1)} disabled={zoom <= ZOOM_MIN}
                                 />
-                                <XPActionButton
-                                    classic label={`${Math.round(zoom * 100)}%`}
+                                <XPActionButton label={`${Math.round(zoom * 100)}%`}
                                     title="Back to true size (100%)"
                                     onClick={() => setZoom(1)} disabled={zoom === 1}
                                 />
-                                <XPActionButton
-                                    classic icon="bi-plus-lg" title="Zoom in"
+                                <XPActionButton icon="bi-plus-lg" title="Zoom in"
                                     onClick={() => stepZoom(1)} disabled={zoom >= ZOOM_MAX}
                                 />
-                                <XPActionButton
-                                    classic label="Fit"
+                                <XPActionButton label="Fit"
                                     title="Scale the sheet to fit this pane"
                                     onClick={fitZoom}
                                 />

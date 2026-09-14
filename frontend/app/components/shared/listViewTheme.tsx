@@ -467,7 +467,7 @@ export function SelectAllCell({ tdStyle, tdClassName, ...cb }: React.ComponentPr
 // Engineering lists each picked a different arrangement of the same three
 // things (checkbox→chevron-in-code-cell, chevron→code, code→chevron-in-second-
 // cell, checkbox→chevron→code) so no two tables had their controls in the same
-// place. Pair `ExpanderCell` with `rowStateBg('expanded', classic)` on the row —
+// place. Pair `ExpanderCell` with `rowStateBg('expanded')` on the row —
 // the two halves of the same convention. `ExpandToggle` on its own is for a
 // non-table disclosure, not for smuggling the glyph back into a data cell.
 export const LV_EXPANDER_COL_W = 22;

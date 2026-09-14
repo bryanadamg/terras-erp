@@ -185,7 +185,6 @@ export default function RoleFormModal({
             size="xl"
             footer={
                 <ModalFooterActions
-                    classic
                     onCancel={onClose}
                     onSubmit={handleSubmit}
                     submitting={submitting}
@@ -194,10 +193,10 @@ export default function RoleFormModal({
                 />
             }
         >
-            <FormError classic>{error}</FormError>
+            <FormError>{error}</FormError>
 
             <div className="mb-3">
-                <FieldLabel classic>Role Name</FieldLabel>
+                <FieldLabel>Role Name</FieldLabel>
                 <input
                     style={xpInput({ width: '100%' })}
                     placeholder="e.g. Warehouse Supervisor"
@@ -207,7 +206,7 @@ export default function RoleFormModal({
             </div>
 
             <div className="mb-3">
-                <FieldLabel classic>Description</FieldLabel>
+                <FieldLabel>Description</FieldLabel>
                 <input
                     style={xpInput({ width: '100%' })}
                     placeholder="Optional"
@@ -217,7 +216,7 @@ export default function RoleFormModal({
             </div>
 
             <div className="mb-1">
-                <FieldLabel classic>Permissions</FieldLabel>
+                <FieldLabel>Permissions</FieldLabel>
                 <PermissionsPicker
                     allPermissions={allPermissions}
                     selectedIds={permissionIds}
@@ -227,7 +226,6 @@ export default function RoleFormModal({
 
             <div className="mt-3">
                 <FieldLabel
-                    classic
                     hint="Applies only to users in this role who haven't saved an avatar of their own; their own choice always wins. Only the pinned slots are stored — every user keeps their own face, so set the slots that must not be left to chance (hat and accessories on an executive role) and leave the rest on Auto."
                 >
                     Default Avatar
@@ -268,7 +266,7 @@ export default function RoleFormModal({
 
             {hasWorkOrderPerm && wcTypes.length > 0 && (
                 <div className="mt-3">
-                    <FieldLabel classic hint="Leave all off to allow this role's Work Order actions on any station. Turn one or more on to restrict.">
+                    <FieldLabel hint="Leave all off to allow this role's Work Order actions on any station. Turn one or more on to restrict.">
                         Work Order Station Scope
                     </FieldLabel>
                     {scopeBox(false, wcTypes.map(t => (
@@ -279,7 +277,7 @@ export default function RoleFormModal({
 
             {hasCategoryScopedPerm && categories.length > 0 && (
                 <div className="mt-3">
-                    <FieldLabel classic hint="Leave all off to allow Item/Stock actions on any category. Turn one or more on to restrict.">
+                    <FieldLabel hint="Leave all off to allow Item/Stock actions on any category. Turn one or more on to restrict.">
                         Item/Stock Category Scope
                     </FieldLabel>
                     {scopeBox(true, categories.map((c: any) => (
@@ -292,7 +290,7 @@ export default function RoleFormModal({
 
             {hasLocationScopedPerm && locations.length > 0 && (
                 <div className="mt-3">
-                    <FieldLabel classic hint="Leave all off to allow Lot actions at any location. Turn one or more on to restrict.">
+                    <FieldLabel hint="Leave all off to allow Lot actions at any location. Turn one or more on to restrict.">
                         Lot Management Location Scope
                     </FieldLabel>
                     {scopeBox(true, locations.map((l: any) => (

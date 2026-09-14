@@ -248,7 +248,7 @@ export default function GlobalTooltip() {
     if (!live) return null;
     return (
         <FloatingLayer rect={live.rect} anchorEl={live.el} placement={sidePlaced(live.el) ? 'side' : 'bottom'} className="tip-anim">
-            <TooltipSurface classic maxWidth={360} id={TIP_ID}>{live.text}</TooltipSurface>
+            <TooltipSurface maxWidth={360} id={TIP_ID}>{live.text}</TooltipSurface>
         </FloatingLayer>
     );
 }

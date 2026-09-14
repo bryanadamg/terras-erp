@@ -406,7 +406,7 @@ export default function DashboardView({ items, locations, stockBalance, workOrde
                                     {namedLowStock.length === 0 && <li className="list-group-item text-muted small">{t('all_systems_nominal')}</li>}
                                     {namedLowStock.map((i: any) => (
                                         <li key={i.id} className="list-group-item d-flex justify-content-between align-items-center py-2">
-                                            <span><CodeChip code={i.code} classic={false} tier={2} className="me-2" />{i.name}</span>
+                                            <span><CodeChip code={i.code} tier={2} className="me-2" />{i.name}</span>
                                             <span className={`badge ${i.totalStock <= 0 ? 'bg-danger' : 'bg-warning text-dark'}`}>{i.totalStock} / min {i.minLevel}</span>
                                         </li>
                                     ))}
@@ -569,7 +569,7 @@ export default function DashboardView({ items, locations, stockBalance, workOrde
                                         <tbody>
                                             {activeWOList.map((wo: any) => (
                                                 <tr key={wo.id}>
-                                                    <td className="ps-3"><CodeChip code={wo.code} classic={false} /></td>
+                                                    <td className="ps-3"><CodeChip code={wo.code} /></td>
                                                     <td>{wo.itemName}</td>
                                                     <td><StatusChip status={wo.isOverdue ? 'OVERDUE' : wo.status} tint /></td>
                                                     <td style={{ maxWidth: 160 }}>
@@ -852,7 +852,7 @@ export default function DashboardView({ items, locations, stockBalance, workOrde
                                     const displayStatus = wo.isOverdue ? 'OVERDUE' : wo.status;
                                     return (
                                         <tr key={wo.id} style={lvRow(idx)}>
-                                            <td style={lvTd()}><CodeChip code={wo.code} classic /></td>
+                                            <td style={lvTd()}><CodeChip code={wo.code} /></td>
                                             <td style={{ ...lvTd(), fontWeight: 'bold', color: '#000' }}>{wo.itemName}</td>
                                             <td style={lvTd()}>
                                                 <StatusChip

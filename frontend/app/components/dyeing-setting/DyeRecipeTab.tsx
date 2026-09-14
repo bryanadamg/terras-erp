@@ -644,7 +644,7 @@ export default function DyeRecipeTab({ items, attributes, authFetch, initialColo
                     </thead>
                     <tbody ref={listBodyRef}>
                         {recipes.length === 0 && (loading ? (
-                            <TableSkeleton rows={8} cols={skel.cols ?? 10} classic tdStyle={lvTd()} rowHeight={skel.rowHeight} fillHeight={skel.fillHeight} />
+                            <TableSkeleton rows={8} cols={skel.cols ?? 10} tdStyle={lvTd()} rowHeight={skel.rowHeight} fillHeight={skel.fillHeight} />
                         ) : (
                             <TableEmpty colSpan={10} tdStyle={lvTd()} message="No recipes found." />
                         ))}
@@ -654,10 +654,10 @@ export default function DyeRecipeTab({ items, attributes, authFetch, initialColo
                             const lineCount = (recipe.lines || []).length;
                             return (
                                 <React.Fragment key={rid}>
-                                    <tr style={{ ...lvRow(idx), ...(expanded ? { background: rowStateBg('expanded', true) } : {}), cursor: 'pointer' }} onClick={() => toggleExpand(rid)}>
+                                    <tr style={{ ...lvRow(idx), ...(expanded ? { background: rowStateBg('expanded') } : {}), cursor: 'pointer' }} onClick={() => toggleExpand(rid)}>
                                         <ExpanderCell expanded={expanded} onToggle={() => toggleExpand(rid)} label="recipe detail" />
                                         <td style={lvTd()}>
-                                            <CodeChip code={recipe.code} classic tone="accent" />
+                                            <CodeChip code={recipe.code} tone="accent" />
                                         </td>
                                         <td style={lvTd()}>
                                             {recipe.color_code ? (
@@ -666,13 +666,13 @@ export default function DyeRecipeTab({ items, attributes, authFetch, initialColo
                                                     title={`Open ${recipe.color_code} in the Color Library`}
                                                     style={{ display: 'inline-flex', alignItems: 'center', cursor: 'pointer' }}
                                                 >
-                                                    <ColorSwatchChip label={recipe.color_code} classic hex={recipe.color_hex} title={`Open ${recipe.color_code} in the Color Library`} />
+                                                    <ColorSwatchChip label={recipe.color_code} hex={recipe.color_hex} title={`Open ${recipe.color_code} in the Color Library`} />
                                                 </span>
                                             ) : <span style={{ color: '#aaa' }}>—</span>}
                                         </td>
                                         <td style={lvTd()}>
                                             {recipe.color_variant_label ? (
-                                                <ColorSwatchChip label={recipe.color_variant_label} classic hex={recipe.color_variant_hex} />
+                                                <ColorSwatchChip label={recipe.color_variant_label} hex={recipe.color_variant_hex} />
                                             ) : <span style={{ color: '#aaa' }}>—</span>}
                                         </td>
                                         <td style={lvTd()}>{recipe.name}</td>
@@ -684,14 +684,14 @@ export default function DyeRecipeTab({ items, attributes, authFetch, initialColo
                                         </td>
                                         <td style={{ ...lvTd(), borderRight: 'none', textAlign: 'right' }} onClick={e => e.stopPropagation()}>
                                             <div style={{ display: 'flex', gap: 3, justifyContent: 'flex-end', alignItems: 'center' }}>
-                                                <MenuTriggerButton classic onClick={e => menuToggle(rid, e)} />
+                                                <MenuTriggerButton onClick={e => menuToggle(rid, e)} />
                                             </div>
                                         </td>
                                     </tr>
                                     {expanded && (
                                         <tr>
                                             <td colSpan={10} style={{ padding: 0 }}>
-                                                <ExpandedRowPanel classic>
+                                                <ExpandedRowPanel>
                                                     {renderDetail(recipe)}
                                                 </ExpandedRowPanel>
                                             </td>
@@ -754,7 +754,7 @@ export default function DyeRecipeTab({ items, attributes, authFetch, initialColo
                     {/* A recipe is made FOR one Library Color. The color drives the recipe
                         code + name + color standard, so those are read-only here — the
                         panel only asks for the color plus recipe-specific fields. */}
-                    <FormSection title="Recipe Info" classic>
+                    <FormSection title="Recipe Info">
                         <div style={{ marginBottom: 8 }}>
                             <label style={lvLabel()}>
                                 Library Color <span style={{ color: 'red'}}>*</span>
@@ -851,7 +851,7 @@ export default function DyeRecipeTab({ items, attributes, authFetch, initialColo
                     </FormSection>
 
                     {/* ── Chemical Lines ── */}
-                    <FormSection title="Chemical Lines" classic>
+                    <FormSection title="Chemical Lines">
                         <div style={{ border: '1px solid #7f9db9' }}>
                             <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 10}}>
                                 <thead>
@@ -956,7 +956,7 @@ export default function DyeRecipeTab({ items, attributes, authFetch, initialColo
                     </FormSection>
 
                     {/* ── Bak Cuci ── */}
-                    <FormSection title="Bak Cuci" classic>
+                    <FormSection title="Bak Cuci">
                         <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 10}}>
                             <thead>
                                 <tr style={{ background: '#eef2f8' }}>
@@ -1004,7 +1004,7 @@ export default function DyeRecipeTab({ items, attributes, authFetch, initialColo
                     </FormSection>
 
                     {/* ── Finishing ── */}
-                    <FormSection title="Finishing" classic>
+                    <FormSection title="Finishing">
                         {finishingSteps.map((fs, i) => (
                             <div key={i} style={{ display: 'flex', gap: 6, marginBottom: 4, alignItems: 'center' }}>
                                 <div style={{ flex: 1 }}>

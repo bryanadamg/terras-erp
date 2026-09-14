@@ -480,36 +480,36 @@ export default function PurchaseOrderView({ items, itemResults, onSearchItems, a
                </>}
        >
            <form onSubmit={handleSubmit} id="create-po-form">
-               <FormSection title="Order Details" classic>
+               <FormSection title="Order Details">
                    <div className="row g-3">
                        <div className="col-md-4">
-                           <FieldLabel classic right={<i className="bi bi-gear-fill" style={{cursor:'pointer',color:'#555',fontSize:'11px'}} onClick={() => setIsConfigOpen(true)} title="Configure Auto-Suggestion"></i>}>PO Number</FieldLabel>
+                           <FieldLabel right={<i className="bi bi-gear-fill" style={{cursor:'pointer',color:'#555',fontSize:'11px'}} onClick={() => setIsConfigOpen(true)} title="Configure Auto-Suggestion"></i>}>PO Number</FieldLabel>
                            <input className="form-control" style={xpInput()} placeholder="Auto-generated" value={newPO.po_number} onChange={e => setNewPO({...newPO, po_number: e.target.value})} required />
                        </div>
                        <div className="col-md-5">
-                           <FieldLabel classic>Supplier</FieldLabel>
+                           <FieldLabel>Supplier</FieldLabel>
                            <SearchableSelect options={suppliers.map((c: any) => ({ value: c.id, label: c.name, subLabel: c.address }))} value={newPO.supplier_id} onChange={(val) => setNewPO({...newPO, supplier_id: val})} placeholder="Select Supplier…" required />
                        </div>
                        <div className="col-md-3">
-                           <FieldLabel classic>Date</FieldLabel>
+                           <FieldLabel>Date</FieldLabel>
                            <input type="date" className="form-control" style={xpInput({width:'100%',height:'22px'})} value={newPO.order_date} onChange={e => setNewPO({...newPO, order_date: e.target.value})} required />
                        </div>
                        <div className="col-md-12">
-                           <FieldLabel classic>Receiving Warehouse</FieldLabel>
+                           <FieldLabel>Receiving Warehouse</FieldLabel>
                            <TreeSelect options={locPickerTreeOptions} value={newPO.target_location_id} onChange={(val) => setNewPO({...newPO, target_location_id: val})} placeholder="Select receiving location…" size="sm" style={{ width: '100%' }} />
                        </div>
                    </div>
                </FormSection>
 
                {/* ── PO Document Details (rendered on the printed PO) ── */}
-               <FormSection title="Document Details" classic>
+               <FormSection title="Document Details">
                    <div className="row g-2">
                        <div className="col-md-4">
-                           <FieldLabel classic>SSN</FieldLabel>
+                           <FieldLabel>SSN</FieldLabel>
                            <input className="form-control" style={xpInput()} placeholder="e.g. BI 084/KMK/26/06/09" value={newPO.ssn} onChange={e => setNewPO({...newPO, ssn: e.target.value})} />
                        </div>
                        <div className="col-md-4">
-                           <FieldLabel classic>Rate Variant</FieldLabel>
+                           <FieldLabel>Rate Variant</FieldLabel>
                            <select className="form-select form-select-sm" style={xpInput({height:'22px',borderRadius:0,width:'100%'})} value={newPO.rate_mode} onChange={e => setNewPO({...newPO, rate_mode: e.target.value})}>
                                <option value="kurs_pajak">Kurs Pajak</option>
                                <option value="ktbi">KTBI</option>
@@ -517,29 +517,29 @@ export default function PurchaseOrderView({ items, itemResults, onSearchItems, a
                        </div>
                        {newPO.rate_mode === 'ktbi' ? (
                            <div className="col-md-4">
-                               <FieldLabel classic>KTBI</FieldLabel>
+                               <FieldLabel>KTBI</FieldLabel>
                                <input className="form-control" style={xpInput()} placeholder="e.g. KTBI value" value={newPO.ktbi} onChange={e => setNewPO({...newPO, ktbi: e.target.value})} />
                            </div>
                        ) : (
                            <div className="col-md-4">
-                               <FieldLabel classic>Kurs Pajak</FieldLabel>
+                               <FieldLabel>Kurs Pajak</FieldLabel>
                                <input className="form-control" style={xpInput()} placeholder="e.g. Rp 17.805 (09.06.26)" value={newPO.kurs_pajak} onChange={e => setNewPO({...newPO, kurs_pajak: e.target.value})} />
                            </div>
                        )}
                        <div className="col-md-4">
-                           <FieldLabel classic>Code</FieldLabel>
+                           <FieldLabel>Code</FieldLabel>
                            <input className="form-control" style={xpInput()} value={newPO.code} onChange={e => setNewPO({...newPO, code: e.target.value})} />
                        </div>
                        <div className="col-md-4">
-                           <FieldLabel classic>Payment</FieldLabel>
+                           <FieldLabel>Payment</FieldLabel>
                            <input className="form-control" style={xpInput()} placeholder="e.g. Net 45 days" value={newPO.payment_term} onChange={e => setNewPO({...newPO, payment_term: e.target.value})} />
                        </div>
                        <div className="col-md-4">
-                           <FieldLabel classic>Category</FieldLabel>
+                           <FieldLabel>Category</FieldLabel>
                            <input className="form-control" style={xpInput()} placeholder="e.g. dsc" value={newPO.category} onChange={e => setNewPO({...newPO, category: e.target.value})} />
                        </div>
                        <div className="col-md-3">
-                           <FieldLabel classic right={
+                           <FieldLabel right={
                                <label style={{display:'flex',alignItems:'center',gap:4,fontWeight:'normal',cursor:'pointer',fontSize:'10px',color:'#555'}}>
                                    <input type="checkbox" checked={vatEnabled} onChange={e => setVatEnabled(e.target.checked)} />
                                    Include
@@ -548,32 +548,32 @@ export default function PurchaseOrderView({ items, itemResults, onSearchItems, a
                            <input type="number" className="form-control" disabled={!vatEnabled} style={xpInput({opacity:vatEnabled?1:0.5})} value={newPO.vat_percent} onChange={e => setNewPO({...newPO, vat_percent: parseFloat(e.target.value) || 0})} />
                        </div>
                        <div className="col-md-3">
-                           <FieldLabel classic>Discount (Rp)</FieldLabel>
+                           <FieldLabel>Discount (Rp)</FieldLabel>
                            <input type="number" className="form-control" style={xpInput()} value={newPO.discount} onChange={e => setNewPO({...newPO, discount: parseFloat(e.target.value) || 0})} />
                        </div>
                        <div className="col-md-6">
-                           <FieldLabel classic>Notes</FieldLabel>
+                           <FieldLabel>Notes</FieldLabel>
                            <input className="form-control" style={xpInput()} placeholder="Optional notes printed on the PO" value={newPO.notes} onChange={e => setNewPO({...newPO, notes: e.target.value})} />
                        </div>
                    </div>
                </FormSection>
 
-               <FormSection title="Order Items" classic>
+               <FormSection title="Order Items">
                    <div className="row g-2 mb-2">
                        <div className="col-4">
-                           <FieldLabel classic>Item</FieldLabel>
+                           <FieldLabel>Item</FieldLabel>
                            <SearchableSelect options={(itemResults || []).map((item: any) => ({ value: item.id, label: item.name, subLabel: item.code }))} value={newLine.item_id} onChange={(val) => setNewLine({...newLine, item_id: val, attribute_value_ids: []})} onSearch={onSearchItems} placeholder="Select Item…" />
                        </div>
                        <div className="col-2">
-                           <FieldLabel classic>Qty</FieldLabel>
+                           <FieldLabel>Qty</FieldLabel>
                            <input type="number" className="form-control" style={xpInput()} placeholder="0" value={newLine.qty || ''} onChange={e => setNewLine({...newLine, qty: parseFloat(e.target.value)})} />
                        </div>
                        <div className="col-2">
-                           <FieldLabel classic>Price (Rp)</FieldLabel>
+                           <FieldLabel>Price (Rp)</FieldLabel>
                            <input type="number" min="0" step="0.01" className="form-control" style={xpInput()} placeholder="0.00" value={newLine.unit_price} onChange={e => setNewLine({...newLine, unit_price: e.target.value === '' ? '' : parseFloat(e.target.value)})} />
                        </div>
                        <div className="col-2">
-                           <FieldLabel classic>Expected By</FieldLabel>
+                           <FieldLabel>Expected By</FieldLabel>
                            <input type="date" className="form-control" style={xpInput({width:'100%',height:'22px'})} value={newLine.due_date} onChange={e => setNewLine({...newLine, due_date: e.target.value})} />
                        </div>
                        <div className="col-2 d-flex align-items-end">
@@ -828,13 +828,13 @@ export default function PurchaseOrderView({ items, itemResults, onSearchItems, a
                                <>
                                <tr
                                    key={po.id}
-                                   style={{ background: expandedRows[po.id] ? rowStateBg('expanded', true) : lvZebra(rowIndex), borderBottom: expandedRows[po.id] ? 'none' : '1px solid #c0bdb5' }}
+                                   style={{ background: expandedRows[po.id] ? rowStateBg('expanded') : lvZebra(rowIndex), borderBottom: expandedRows[po.id] ? 'none' : '1px solid #c0bdb5' }}
                                >
                                    <ExpanderCell expanded={!!expandedRows[po.id]} label="items & receipts"
                                        onToggle={() => setExpandedRows(prev => ({ ...prev, [po.id]: !prev[po.id] }))}
                                        tdStyle={tdBase} tdClassName={''} />
                                    <td style={tdBase}>
-                                       <CodeChip code={po.po_number} classic tone="accent" style={{ fontWeight: 'bold' }} />
+                                       <CodeChip code={po.po_number} tone="accent" style={{ fontWeight: 'bold' }} />
                                    </td>
                                    <td style={tdBase}>{getSupplierName(po.supplier_id)}</td>
                                    <td style={{ ...tdBase, fontSize: '10px' }}>
@@ -884,7 +884,7 @@ export default function PurchaseOrderView({ items, itemResults, onSearchItems, a
                                                    >
                                                        <i className="bi bi-box-arrow-in-down"></i>
                                                    </button>)}
-                                           <MenuTriggerButton classic onClick={(e) => toggleMenu(po.id, e)} />
+                                           <MenuTriggerButton onClick={(e) => toggleMenu(po.id, e)} />
                                        </div>
                                    </td>
                                </tr>
@@ -892,7 +892,7 @@ export default function PurchaseOrderView({ items, itemResults, onSearchItems, a
                                {expandedRows[po.id] && (
                                    <tr key={`${po.id}-receipts`}>
                                        <td colSpan={9} style={{ padding: 0 }}>
-                                           <ExpandedRowPanel classic style={{ padding: '6px 16px 8px 20px', fontFamily: xpFont, fontSize: '11px' }}>
+                                           <ExpandedRowPanel style={{ padding: '6px 16px 8px 20px', fontFamily: xpFont, fontSize: '11px' }}>
                                            <div style={{ marginBottom: 10 }}>
                                                <div style={lvSubCaption()}>Order Lines</div>
                                                <table style={{ ...lvSubTable(), maxWidth: 560 }}>
@@ -994,7 +994,7 @@ export default function PurchaseOrderView({ items, itemResults, onSearchItems, a
                                </>
                            ))}
                            {pageOrders.length === 0 && (dataLoading.purchaseOrders ? (
-                               <TableSkeleton rows={8} cols={skel.cols ?? 9} classic tdStyle={tdBase} rowHeight={skel.rowHeight} fillHeight={skel.fillHeight} />
+                               <TableSkeleton rows={8} cols={skel.cols ?? 9} tdStyle={tdBase} rowHeight={skel.rowHeight} fillHeight={skel.fillHeight} />
                            ) : (
                                <tr>
                                    <td

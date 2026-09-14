@@ -36,7 +36,6 @@ export default function LiveFeedIndicator({ compact = false }: { compact?: boole
 
     return (
         <Chip
-            classic
             size={compact ? 'xs' : 'sm'}
             icon="bi-wifi-off"
             tone={familyTint('amber')}

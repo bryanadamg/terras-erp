@@ -226,7 +226,7 @@ export default function SettingsUsersTab({
                                 return (
                                     <Fragment key={user.id}>
                                     <tr
-                                        style={{ background: isExpanded ? rowStateBg('expanded', true) : lvZebra(rowIndex), borderBottom: isExpanded ? 'none' : '1px solid #c0bdb5', opacity: user.is_active ? 1 : 0.6 }}
+                                        style={{ background: isExpanded ? rowStateBg('expanded') : lvZebra(rowIndex), borderBottom: isExpanded ? 'none' : '1px solid #c0bdb5', opacity: user.is_active ? 1 : 0.6 }}
                                     >
                                         <td style={{ ...tdBase, textAlign: 'center' as const }}>
                                             <div style={{ width: 28, height: 28, border: '1px solid', borderColor: '#fff #888 #888 #fff', background: '#e0dcd4', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -234,7 +234,7 @@ export default function SettingsUsersTab({
                                             </div>
                                         </td>
                                         <td style={tdBase}>
-                                            <CodeChip code={user.username} classic />
+                                            <CodeChip code={user.username} />
                                             {isSelf && <span style={{ fontSize: 8, color: '#888', fontWeight: 'normal' }}> (you)</span>}
                                         </td>
                                         <td style={tdBase}>{user.full_name}</td>

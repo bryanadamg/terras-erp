@@ -1052,7 +1052,7 @@ export default function SalesOrderView({ items, attributes, boms, salesOrders, p
   const renderChipRow = (chips: { label: string; hex: string | null; kind: VariantKind; icon?: string | null }[]) => (
       <div style={{display:'flex',flexWrap:'wrap' as const,gap:4,marginTop:2,minWidth:0,maxWidth:'100%'}}>
           {chips.map((c, i) => (
-              <VariantChip key={i} kind={c.kind} classic
+              <VariantChip key={i} kind={c.kind}
                   title={c.kind === 'pending' ? 'Pending lab dip — colour not approved yet' : `${c.label}`}
                   icon={c.icon}
                   swatch={c.hex}
@@ -1395,13 +1395,13 @@ In stock ${fmtQty(f.baseAvailable)}${bu} · Shipped ${fmtQty(f.baseShipped)}${bu
                                                    <tr key={r.id} style={{ borderTop: '1px dashed #d0cdc8'}}>
                                                        <td style={tdStyle}>
                                                            <div style={{ fontWeight: 600 }}>{r.item_name}</div>
-                                                           <CodeChip code={r.item_code} classic tier={2} />
+                                                           <CodeChip code={r.item_code} tier={2} />
                                                        </td>
                                                        <td style={tdStyle}>
                                                            <div style={{ display: 'flex', flexWrap: 'wrap' as const, gap: 2 }}>
-                                                               {r.size_label && <VariantChip kind="size" classic>{String(r.size_label).toUpperCase()}</VariantChip>}
+                                                               {r.size_label && <VariantChip kind="size">{String(r.size_label).toUpperCase()}</VariantChip>}
                                                                {(r.color_code || r.color_name) && (
-                                                                   <VariantChip kind="color" classic swatch={colorHexFor(r.color_name || r.color_code || '')}>
+                                                                   <VariantChip kind="color" swatch={colorHexFor(r.color_name || r.color_code || '')}>
                                                                        {colorLabel(r.color_code, r.color_name)}
                                                                    </VariantChip>
                                                                )}
@@ -1417,7 +1417,7 @@ In stock ${fmtQty(f.baseAvailable)}${bu} · Shipped ${fmtQty(f.baseShipped)}${bu
                                                        </td>
                                                        <td style={{ ...tdStyle, textAlign: 'right' }}>
                                                            {canManage && r.status === 'ACTIVE' && (
-                                                               <XPActionButton classic tone="danger" icon="bi-unlock"
+                                                               <XPActionButton tone="danger" icon="bi-unlock"
                                                                    title="Release this stock back to the free pool - other orders may then plan against it"
                                                                    onClick={() => releaseReservation(lineageSO?.id || r.sales_order_id, r.id)} />
                                                            )}
@@ -1510,22 +1510,22 @@ In stock ${fmtQty(f.baseAvailable)}${bu} · Shipped ${fmtQty(f.baseShipped)}${bu
                </>}
        >
            <form onSubmit={handleSubmit} id="create-so-form">
-               <FormSection title="Order Details" classic>
+               <FormSection title="Order Details">
                <div className="row g-3">
                    <div className="col-md-4">
-                       <FieldLabel classic right={<i className="bi bi-gear-fill" style={{cursor:'pointer',color:'#555',fontSize:'11px'}} onClick={() => setIsConfigOpen(true)} title="Configure Auto-Suggestion"></i>}>Ref No. (PO#)</FieldLabel>
+                       <FieldLabel right={<i className="bi bi-gear-fill" style={{cursor:'pointer',color:'#555',fontSize:'11px'}} onClick={() => setIsConfigOpen(true)} title="Configure Auto-Suggestion"></i>}>Ref No. (PO#)</FieldLabel>
                        <input className="form-control" style={xpInput()} placeholder="Auto-generated" value={newSO.po_number} onChange={e => setNewSO({...newSO, po_number: e.target.value})} required />
                    </div>
                    <div className="col-md-4">
-                       <FieldLabel classic>Customer PO Ref</FieldLabel>
+                       <FieldLabel>Customer PO Ref</FieldLabel>
                        <input className="form-control" style={xpInput()} placeholder="Customer's own PO reference" value={newSO.customer_po_ref} onChange={e => setNewSO({...newSO, customer_po_ref: e.target.value})} />
                    </div>
                    <div className="col-md-4">
-                       <FieldLabel classic>Date</FieldLabel>
+                       <FieldLabel>Date</FieldLabel>
                        <input type="date" className="form-control" style={xpInput({width:'100%',height:'22px'})} value={newSO.order_date} onChange={e => setNewSO({...newSO, order_date: e.target.value})} required />
                    </div>
                    <div className="col-md-12">
-                       <FieldLabel classic>Customer</FieldLabel>
+                       <FieldLabel>Customer</FieldLabel>
                        <SearchableSelect
                            options={customers.map((c: any) => ({ value: c.name, label: c.name, subLabel: c.address }))}
                            value={newSO.customer_name}
@@ -1537,11 +1537,11 @@ In stock ${fmtQty(f.baseAvailable)}${bu} · Shipped ${fmtQty(f.baseShipped)}${bu
                </div>
                </FormSection>
 
-               <FormSection title="Line Items" classic>
+               <FormSection title="Line Items">
                    {/* Item selector — full width */}
                    <div className="row g-2 mb-2">
                        <div className="col-12">
-                           <FieldLabel classic right={
+                           <FieldLabel right={
                                <span
                                    title="Only items in the Finished Goods category can be ordered"
                                    style={{
@@ -1575,15 +1575,15 @@ In stock ${fmtQty(f.baseAvailable)}${bu} · Shipped ${fmtQty(f.baseShipped)}${bu
                                        <span style={{ position: 'absolute', top: -7, left: 8, background: '#f8f7f2', padding: '0 4px', fontSize: '10px', fontWeight: 'bold', color: '#444', textTransform: 'uppercase' as const, letterSpacing: '0.4px', fontFamily: xpFont }}>Length</span>
                                        <div style={{ paddingTop: 4, display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 5}}>
                                            <div>
-                                               <FieldLabel classic>Yard</FieldLabel>
+                                               <FieldLabel>Yard</FieldLabel>
                                                <input type="number" className="form-control" style={xpInput({width:'100%'})} placeholder="0" value={newLine.qty || ''} onChange={e => handleQtyYardChange(e.target.value)} />
                                            </div>
                                            <div>
-                                               <FieldLabel classic>Meter</FieldLabel>
+                                               <FieldLabel>Meter</FieldLabel>
                                                <input type="number" className="form-control" style={xpInput({width:'100%'})} placeholder="0" value={qtyMeter} onChange={e => handleQtyMeterChange(e.target.value)} />
                                            </div>
                                            <div>
-                                               <FieldLabel classic><span style={{ whiteSpace: 'nowrap' }}>Gross Yd <span style={{ fontWeight: 'normal', fontSize: '10px', color: '#888' }}>(144 yd)</span></span></FieldLabel>
+                                               <FieldLabel><span style={{ whiteSpace: 'nowrap' }}>Gross Yd <span style={{ fontWeight: 'normal', fontSize: '10px', color: '#888' }}>(144 yd)</span></span></FieldLabel>
                                                <input type="number" className="form-control" style={xpInput({width:'100%'})} placeholder="0" value={qtyGrossYd} onChange={e => handleQtyGrossYdChange(e.target.value)} />
                                            </div>
                                        </div>
@@ -1595,7 +1595,7 @@ In stock ${fmtQty(f.baseAvailable)}${bu} · Shipped ${fmtQty(f.baseShipped)}${bu
                                        <div style={{ paddingTop: 4}}>
                                            <div style={{ display: 'flex', alignItems: 'flex-end', gap: 4 }}>
                                                <div style={{ flex: 1 }}>
-                                                   <FieldLabel classic>Kilogram</FieldLabel>
+                                                   <FieldLabel>Kilogram</FieldLabel>
                                                    <input type="number" className="form-control"
                                                        style={xpInput({width:'100%'})}
                                                        placeholder="0"
@@ -1627,7 +1627,7 @@ In stock ${fmtQty(f.baseAvailable)}${bu} · Shipped ${fmtQty(f.baseShipped)}${bu
 
                                    {/* Alt Unit compound input */}
                                    <div>
-                                       <FieldLabel classic>Alt Unit</FieldLabel>
+                                       <FieldLabel>Alt Unit</FieldLabel>
                                        {(() => {
                                            const selectedUom = uoms.find((u: any) => u.name === newLine.uom2);
                                            const factors = selectedUom?.factors || [];
@@ -1688,15 +1688,15 @@ In stock ${fmtQty(f.baseAvailable)}${bu} · Shipped ${fmtQty(f.baseShipped)}${bu
                                {/* Right: Dates + Stock Notes */}
                                <div style={{ display: 'flex', flexDirection: 'column', gap: 5}}>
                                    <div>
-                                       <FieldLabel classic>Del. Request</FieldLabel>
+                                       <FieldLabel>Del. Request</FieldLabel>
                                        <input type="date" className="form-control" style={xpInput({width:'100%',height:'22px'})} value={newLine.due_date} onChange={e => setNewLine({...newLine, due_date: e.target.value})} />
                                    </div>
                                    <div>
-                                       <FieldLabel classic>Del. Confirmation</FieldLabel>
+                                       <FieldLabel>Del. Confirmation</FieldLabel>
                                        <input type="date" className="form-control" style={xpInput({width:'100%',height:'22px'})} value={newLine.internal_confirmation_date} onChange={e => setNewLine({...newLine, internal_confirmation_date: e.target.value})} />
                                    </div>
                                    <div>
-                                       <FieldLabel classic>Stock Notes</FieldLabel>
+                                       <FieldLabel>Stock Notes</FieldLabel>
                                        <input className="form-control" style={xpInput({width:'100%'})} placeholder="e.g. 1 IKAT 60 PCS" value={newLine.ket_stock} onChange={e => setNewLine({...newLine, ket_stock: e.target.value})} />
                                    </div>
                                </div>
@@ -1936,7 +1936,7 @@ In stock ${fmtQty(f.baseAvailable)}${bu} · Shipped ${fmtQty(f.baseShipped)}${bu
                            <div key={idx} style={{display:'flex',justifyContent:'space-between',alignItems:'center',padding:'3px 6px',background:lvZebra(idx),border:'1px solid #c0bdb5',marginBottom:2,fontFamily:xpFont,fontSize:'11px',flexWrap:'wrap' as const,gap:4}}>
                                <div>
                                    <span style={{fontWeight:'bold'}}>{getItemName(line.item_id, line.item_name)}</span>
-                                   <CodeChip code={getItemCode(line.item_id, line.item_code)} classic tier={2} style={{ marginLeft: 8 }} />
+                                   <CodeChip code={getItemCode(line.item_id, line.item_code)} tier={2} style={{ marginLeft: 8 }} />
                                    {isSample(line.item_id) && <span style={{ borderRadius: CHIP_RADIUS,background:'#fff8dc',border:'1px solid #c8a000',color:'#4a3000',padding:'0 4px',fontSize:'9px',fontFamily:xpFont,marginLeft:6}}>Sample</span>}
                                    {(() => {
                                        const { chips, plainIds } = buildVariantChips(line.attribute_value_ids || [], line.color_label, line.color_hex, !line.color_id ? line.labdip_variant_code : null);
@@ -2141,7 +2141,7 @@ In stock ${fmtQty(f.baseAvailable)}${bu} · Shipped ${fmtQty(f.baseShipped)}${bu
 
                                const poCellContent = (
                                    <>
-                                       <CodeChip code={so.po_number} classic tone="accent" style={{ fontWeight: 'bold' }} />
+                                       <CodeChip code={so.po_number} tone="accent" style={{ fontWeight: 'bold' }} />
                                        {so.customer_po_ref && (
                                            <div style={{ fontFamily:xpFont, fontSize:'10px', color:'#666', marginTop:1 }}>
                                                {so.customer_po_ref}
@@ -2154,7 +2154,7 @@ In stock ${fmtQty(f.baseAvailable)}${bu} · Shipped ${fmtQty(f.baseShipped)}${bu
                                                    hover. It also drops the per-theme green pair this cell used to
                                                    pick for itself — green is the STATUS_FAMILY green. */}
                                                {soPRs.map((pr: any) => (
-                                                   <Chip key={pr.id} classic tone={statusTint('COMPLETED')} bold truncate
+                                                   <Chip key={pr.id} tone={statusTint('COMPLETED')} bold truncate
                                                        icon="bi-check-circle" size="xs" title={`Go to ${pr.code}`}
                                                        onClick={() => goToPR(pr.code)} style={{ fontFamily: CODE_FONT }}>
                                                        {pr.code}
@@ -2164,7 +2164,7 @@ In stock ${fmtQty(f.baseAvailable)}${bu} · Shipped ${fmtQty(f.baseShipped)}${bu
                                        )}
                                        {soReserved > 0 && (
                                            <div style={{ display:'flex', flexWrap:'wrap' as const, gap:2, marginTop:3 }}>
-                                               <Chip classic tone={statusTint('PENDING')} bold truncate
+                                               <Chip tone={statusTint('PENDING')} bold truncate
                                                    icon="bi-box-seam" size="xs"
                                                    title="Part of this order is covered by finished goods already in stock, reserved to it. That part has no manufacturing order."
                                                    onClick={() => openLineage(so)} style={{ fontFamily: CODE_FONT }}>
@@ -2188,23 +2188,23 @@ In stock ${fmtQty(f.baseAvailable)}${bu} · Shipped ${fmtQty(f.baseShipped)}${bu
                                const actionsCellContent = (
                                    <div style={{ display:'flex', gap:2, justifyContent:'flex-end', alignItems:'center' }}>
                                        {soPRs.length > 0 && (
-                                           <XPActionButton classic tone="neutral" icon="bi-diagram-3"
+                                           <XPActionButton tone="neutral" icon="bi-diagram-3"
                                                title="View full production lineage — PR, MO, WO and beams created for this SO"
                                                onClick={() => openLineage(so)} />
                                        )}
                                        {so.status === 'PENDING' && (
-                                           <XPActionButton classic tone="primary" icon="bi-collection-play"
+                                           <XPActionButton tone="primary" icon="bi-collection-play"
                                                title="Create Production Run" onClick={() => onGenerateWO(so)} />
                                        )}
                                        {canManage && (so.status === 'READY' || so.status === 'PARTIAL') && (
-                                           <XPActionButton classic tone="neutral" icon="bi-send"
+                                           <XPActionButton tone="neutral" icon="bi-send"
                                                title="Mark as Sent" onClick={() => onUpdateSOStatus(so.id, 'SENT')} />
                                        )}
                                        {canManage && so.status === 'SENT' && (
-                                           <XPActionButton classic tone="success" icon="bi-check2-all"
+                                           <XPActionButton tone="success" icon="bi-check2-all"
                                                title="Mark as Delivered" onClick={() => onUpdateSOStatus(so.id, 'DELIVERED')} />
                                        )}
-                                       <MenuTriggerButton classic onClick={(e) => toggleMenu(so.id, e)} />
+                                       <MenuTriggerButton onClick={(e) => toggleMenu(so.id, e)} />
                                    </div>
                                );
 
@@ -2270,9 +2270,9 @@ In stock ${fmtQty(f.baseAvailable)}${bu} · Shipped ${fmtQty(f.baseShipped)}${bu
                                                    const { name, measurement } = getLineSizeParts(line);
                                                    return (
                                                        <div style={{ display:'flex', flexWrap:'nowrap' as const, gap:3, alignItems:'center' }}>
-                                                           <VariantChip kind="size" classic title={`Size: ${name}`}>{name}</VariantChip>
+                                                           <VariantChip kind="size" title={`Size: ${name}`}>{name}</VariantChip>
                                                            {measurement && (
-                                                               <VariantChip kind="size" classic icon={null} title={`Measurement: ${measurement}`}>{measurement}</VariantChip>
+                                                               <VariantChip kind="size" icon={null} title={`Measurement: ${measurement}`}>{measurement}</VariantChip>
                                                            )}
                                                        </div>
                                                    );
@@ -2284,10 +2284,10 @@ In stock ${fmtQty(f.baseAvailable)}${bu} · Shipped ${fmtQty(f.baseShipped)}${bu
                                            {/* Qty */}
                                            <td style={lineTd(isFirst, isLast)}>
                                                <div style={{ display:'flex', flexWrap:'nowrap' as const, gap:3, alignItems:'center' }}>
-                                                   <Chip classic size="xs" bold tone={QTY_ORDERED_TONE} title="Quantity ordered">{line.qty} Yd</Chip>
-                                                   <Chip classic size="xs" title="Same quantity in metres">{Math.round(line.qty * 0.9144 * 100) / 100} m</Chip>
+                                                   <Chip size="xs" bold tone={QTY_ORDERED_TONE} title="Quantity ordered">{line.qty} Yd</Chip>
+                                                   <Chip size="xs" title="Same quantity in metres">{Math.round(line.qty * 0.9144 * 100) / 100} m</Chip>
                                                    {line.qty_kg != null && line.qty_kg !== '' && (
-                                                       <Chip classic size="xs" tone={variantChipTone('qty')} title="Quantity in kilograms">{line.qty_kg} KG</Chip>
+                                                       <Chip size="xs" tone={variantChipTone('qty')} title="Quantity in kilograms">{line.qty_kg} KG</Chip>
                                                    )}
                                                </div>
                                            </td>
@@ -2366,7 +2366,7 @@ In stock ${fmtQty(f.baseAvailable)}${bu} · Shipped ${fmtQty(f.baseShipped)}${bu
                                });
                            })}
                            {pageOrders.length === 0 && (dataLoading.salesOrders ? (
-                               <TableSkeleton rows={8} cols={skel.cols ?? 13} classic tdStyle={tdBase} rowHeight={skel.rowHeight} fillHeight={skel.fillHeight} />
+                               <TableSkeleton rows={8} cols={skel.cols ?? 13} tdStyle={tdBase} rowHeight={skel.rowHeight} fillHeight={skel.fillHeight} />
                            ) : (
                                <tr>
                                    <td

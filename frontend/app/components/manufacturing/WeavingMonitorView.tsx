@@ -409,7 +409,6 @@ export default function WeavingMonitorView() {
             <div style={{ marginTop: 5, paddingTop: 5, borderTop: `1px solid ${border}`, display: 'flex', gap: 4, alignItems: 'center' }}>
                 {next && (
                     <XPActionButton
-                        classic
                         tone={next === 'TUNING' ? 'warning' : 'primary'}
                         icon={next === 'TUNING' ? 'bi-sliders' : 'bi-arrows-collapse-vertical'}
                         label={next === 'TUNING' ? t('tuning') : t('draw_in')}
@@ -419,7 +418,6 @@ export default function WeavingMonitorView() {
                 )}
                 {status !== 'STAGED' && (
                     <XPActionButton
-                        classic
                         tone="neutral"
                         icon="bi-arrow-counterclockwise"
                         title={t('prep_reset')}
@@ -506,7 +504,7 @@ export default function WeavingMonitorView() {
                             late: t('behind_schedule'),
                         }}
                         action={sec.id && canManage ? (
-                            <XPActionButton classic tone="neutral" icon="bi-calendar3"
+                            <XPActionButton tone="neutral" icon="bi-calendar3"
                                 label={t('work_calendar')} onClick={() => setCalGroup(sec)} />
                         ) : null}
                     />

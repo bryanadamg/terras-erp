@@ -546,7 +546,7 @@ export default function WOCompletionModal({ mo, onClose, onSaved, workOrder }: W
                                         </div>
                                         {heldHere.map((b: any) => (
                                             <div key={b.id} style={{ display: 'flex', alignItems: 'center', gap: 4, flexWrap: 'wrap' }}>
-                                                <CodeChip code={b.batch_number} classic />
+                                                <CodeChip code={b.batch_number} />
                                                 <span>{Number(b.remaining ?? 0).toFixed(2)} kg</span>
                                                 <span>&rarr; {b.reserved_wo_code || 'other WO'}</span>
                                             </div>
@@ -609,7 +609,7 @@ export default function WOCompletionModal({ mo, onClose, onSaved, workOrder }: W
                                                             same item differ only by size / combo / shade. */}
                                                         <div style={{ display: 'flex', flexDirection: 'column', gap: 2, minWidth: 0, flex: 1 }}>
                                                             <div style={{ display: 'flex', alignItems: 'center', gap: 4, flexWrap: 'wrap' }}>
-                                                                <CodeChip code={b.batch_number} classic />
+                                                                <CodeChip code={b.batch_number} />
                                                                 <span style={{ color: '#555' }}>{Number(b.remaining ?? 0).toFixed(2)} kg</span>
                                                                 {/* What this log actually takes off the lot — the rest stays
                                                                     on it for the next run. FIFO, so later lots may draw 0. */}

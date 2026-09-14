@@ -63,7 +63,7 @@ const ItemEventLogPanel = memo(({ state, userNameById, classic }: { state?: Item
     );
 
     return (
-        <ExpandedRowPanel classic style={{ padding: '8px 10px', whiteSpace: 'normal' }}>
+        <ExpandedRowPanel style={{ padding: '8px 10px', whiteSpace: 'normal' }}>
             {caption}
             {state?.loading ? (
                 <div style={{ color: '#888', padding: 6, fontFamily: xpFont, fontSize: 11}}>Loading events…</div>
@@ -132,9 +132,9 @@ const InventoryRow = memo(({ item, rowIndex, isEditing, isSelected, isExpanded, 
     // every other list (see rowStateBg). This row used to invert to XP selection
     // blue with white text, which meant re-colouring the code chip, the category
     // chip and every link inside it.
-    const rowBg = isSelected ? rowStateBg('selected', true)
-        : isExpanded ? rowStateBg('expanded', true)
-        : isEditing ? rowStateBg('highlighted', true)
+    const rowBg = isSelected ? rowStateBg('selected')
+        : isExpanded ? rowStateBg('expanded')
+        : isEditing ? rowStateBg('highlighted')
         : lvZebra(rowIndex);
 
     const tdBase: React.CSSProperties = lvTdRuled();
@@ -161,7 +161,7 @@ const InventoryRow = memo(({ item, rowIndex, isEditing, isSelected, isExpanded, 
                 tdStyle={tdBase}
             />
             <td style={{ ...tdBase, width: '110px' }}>
-                <CodeChip code={item.code} classic />
+                <CodeChip code={item.code} />
             </td>
             <td style={{ ...tdBase, fontWeight: 'bold' }}>
                 {item.name}
@@ -217,7 +217,7 @@ const InventoryRow = memo(({ item, rowIndex, isEditing, isSelected, isExpanded, 
                 onClick={e => e.stopPropagation()}
             >
                 <div style={{ display: 'flex', gap: '2px', justifyContent: 'flex-end' }}>
-                    <MenuTriggerButton classic onClick={e => onMenu(String(item.id), e)} />
+                    <MenuTriggerButton onClick={e => onMenu(String(item.id), e)} />
                 </div>
             </td>
         </tr>
@@ -776,10 +776,10 @@ export default function InventoryView({
           }
       >
           <form id="create-item-form" onSubmit={handleSubmitItem} data-testid="create-item-modal">
-            <FormSection title="Basic Info" classic>
+            <FormSection title="Basic Info">
               <div className="mb-3" style={{ display: 'flex', gap: '12px' }}>
                   <div style={{ flex: 1, minWidth: 0 }}>
-                      <FieldLabel classic>{t('item_code')}</FieldLabel>
+                      <FieldLabel>{t('item_code')}</FieldLabel>
                       <div style={{ display: 'flex', gap: '4px', alignItems: 'center' }}>
                           <input data-testid="item-code-input" style={{ ...xpInput, flex: 1, minWidth: 0 }} placeholder="ITM-001" value={newItem.code} onChange={e => {
                               const code = e.target.value;
@@ -789,7 +789,7 @@ export default function InventoryView({
                       </div>
                   </div>
                   <div style={{ flex: 1, minWidth: 0 }}>
-                      <FieldLabel classic>{t('item_name')}</FieldLabel>
+                      <FieldLabel>{t('item_name')}</FieldLabel>
                       <input data-testid="item-name-input" style={{ ...xpInput, width: '100%' }} placeholder="Product Name" value={newItem.name} onChange={e => {
                           setNameManuallyEdited(true);
                           setNewItem(prev => ({ ...prev, name: e.target.value }));
@@ -798,7 +798,7 @@ export default function InventoryView({
               </div>
               <div className="mb-1" style={{ display: 'flex', gap: '12px' }}>
                   <div style={{ flex: 1, minWidth: 0 }}>
-                      <FieldLabel classic>{t('categories')}</FieldLabel>
+                      <FieldLabel>{t('categories')}</FieldLabel>
                       <TreeSelect
                           options={catTreeOptions}
                           value={effectiveFormCategoryId || ''}
@@ -810,7 +810,7 @@ export default function InventoryView({
                       />
                   </div>
                   <div style={{ flex: 1, minWidth: 0 }}>
-                      <FieldLabel classic>{t('uom')}</FieldLabel>
+                      <FieldLabel>{t('uom')}</FieldLabel>
                       <select data-testid="uom-select" style={{ ...xpInput, height: 'auto', padding: '2px 4px', width: '100%' }} value={newItem.uom} onChange={e => setNewItem({...newItem, uom: e.target.value, packaging_factor_ids: []})} required>
                           <option value="">Unit...</option>
                           {(uoms || []).map((u: any) => <option key={u.id} value={u.name}>{u.name}</option>)}
@@ -819,11 +819,11 @@ export default function InventoryView({
               </div>
             </FormSection>
 
-            <FormSection title="Packaging & Weight" classic>
+            <FormSection title="Packaging & Weight">
               {/* Packaging Units */}
               <div className="mb-3">
                 <div>
-                    <FieldLabel classic hint={!newItem.uom ? undefined : 'Extra units this item can also be counted/received in'}>Packaging Units</FieldLabel>
+                    <FieldLabel hint={!newItem.uom ? undefined : 'Extra units this item can also be counted/received in'}>Packaging Units</FieldLabel>
                     <div style={{ display: 'flex', flexDirection: 'column' as const, gap: 4 }}>
                       {(() => {
                         const factors = (uoms || []).flatMap((u: any) => (u.factors || []).filter((f: any) => f.to_uom_name === newItem.uom));
@@ -864,7 +864,7 @@ export default function InventoryView({
 
               <div className="row g-2 mb-1">
                   <div className="col-5">
-                      <FieldLabel classic>Weight / Unit</FieldLabel>
+                      <FieldLabel>Weight / Unit</FieldLabel>
                       <input
                           style={xpInput}
                           type="number"
@@ -876,7 +876,7 @@ export default function InventoryView({
                       />
                   </div>
                   <div className="col-4">
-                      <FieldLabel classic>Unit</FieldLabel>
+                      <FieldLabel>Unit</FieldLabel>
                       <select
                           style={{ ...xpInput, height: 'auto', padding: '2px 4px', width: '100%' }}
                           value={newItem.weight_unit}
@@ -891,7 +891,7 @@ export default function InventoryView({
               </div>
             </FormSection>
 
-            <FormSection title="Inventory Settings" classic>
+            <FormSection title="Inventory Settings">
               <div className="mb-1">
                   <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                       <input
@@ -931,7 +931,7 @@ export default function InventoryView({
               </div>
 
               <div className="mb-3">
-                  <FieldLabel classic hint="Flags low stock when total on-hand drops below this. Blank = default (10).">Reorder point (min stock)</FieldLabel>
+                  <FieldLabel hint="Flags low stock when total on-hand drops below this. Blank = default (10).">Reorder point (min stock)</FieldLabel>
                   <input
                       type="number" min="0" step="any"
                       style={{ ...xpInput, height: 'auto', padding: '2px 4px', width: '100%' }}
@@ -942,7 +942,7 @@ export default function InventoryView({
               </div>
 
               <div className="mb-1">
-                  <FieldLabel classic hint="Where this item is normally pulled from when staging to production">Default source location</FieldLabel>
+                  <FieldLabel hint="Where this item is normally pulled from when staging to production">Default source location</FieldLabel>
                   <TreeSelect
                       options={locPickerTreeOptions}
                       value={newItem.default_source_location_id}
@@ -955,7 +955,7 @@ export default function InventoryView({
               </div>
 
               <div className="mb-1">
-                  <FieldLabel classic hint="Preferred bin for this item's production output — pre-fills the MO putaway suggestion">Default putaway location</FieldLabel>
+                  <FieldLabel hint="Preferred bin for this item's production output — pre-fills the MO putaway suggestion">Default putaway location</FieldLabel>
                   <TreeSelect
                       options={locPickerTreeOptions}
                       value={newItem.default_putaway_location_id}
@@ -968,7 +968,7 @@ export default function InventoryView({
               </div>
 
               <div className="mb-1">
-                  <FieldLabel classic hint="Defect store for QC-rejected stock of this item — used when the producing work centre has no reject location of its own">Default reject location</FieldLabel>
+                  <FieldLabel hint="Defect store for QC-rejected stock of this item — used when the producing work centre has no reject location of its own">Default reject location</FieldLabel>
                   <TreeSelect
                       options={locPickerTreeOptions}
                       value={newItem.default_reject_location_id}
@@ -982,7 +982,7 @@ export default function InventoryView({
             </FormSection>
 
             {isFinishedGoodsCategory && (
-              <FormSection title="Variant Type" classic>
+              <FormSection title="Variant Type">
                   {renderVariantTypeSelector(newItem.variant_type, (v) => setNewItem({ ...newItem, variant_type: v }), 'new')}
               </FormSection>
             )}
@@ -1228,7 +1228,7 @@ export default function InventoryView({
                     />
                   ))}
                   {filteredItems.length === 0 && dataLoading.items && (
-                    <TableSkeleton rows={8} cols={skel.cols ?? ITEM_COL_SPAN} classic rowHeight={skel.rowHeight} fillHeight={skel.fillHeight} />
+                    <TableSkeleton rows={8} cols={skel.cols ?? ITEM_COL_SPAN} rowHeight={skel.rowHeight} fillHeight={skel.fillHeight} />
                   )}
                   {filteredItems.length === 0 && !dataLoading.items && (
                     <tr>
@@ -1283,9 +1283,9 @@ export default function InventoryView({
       >
           {activeEditingItem && (
                 <form id="edit-item-form" onSubmit={handleUpdateItemSubmit}>
-                  <FormSection title="Basic Info" classic>
+                  <FormSection title="Basic Info">
                     <div className="mb-3">
-                        <FieldLabel classic>{t('item_code')}</FieldLabel>
+                        <FieldLabel>{t('item_code')}</FieldLabel>
                         <input
                           style={{ ...xpInput, width: '100%', boxSizing: 'border-box' }}
                           value={editingItem.code}
@@ -1294,7 +1294,7 @@ export default function InventoryView({
                         />
                     </div>
                     <div className="mb-3">
-                        <FieldLabel classic>{t('item_name')}</FieldLabel>
+                        <FieldLabel>{t('item_name')}</FieldLabel>
                         <input
                           style={{ ...xpInput, width: '100%', boxSizing: 'border-box' }}
                           value={editingItem.name}
@@ -1303,7 +1303,7 @@ export default function InventoryView({
                         />
                     </div>
                     <div className="mb-3">
-                        <FieldLabel classic>{t('categories')}</FieldLabel>
+                        <FieldLabel>{t('categories')}</FieldLabel>
                         <TreeSelect
                             options={catTreeOptions}
                             value={effectiveFormCategoryId || ''}
@@ -1315,7 +1315,7 @@ export default function InventoryView({
                         />
                     </div>
                     <div className="mb-1">
-                        <FieldLabel classic>{t('uom')}</FieldLabel>
+                        <FieldLabel>{t('uom')}</FieldLabel>
                         <select
                           style={{ ...xpSelect, width: '100%', boxSizing: 'border-box', height: '22px' }}
                           value={editingItem.uom}
@@ -1328,11 +1328,11 @@ export default function InventoryView({
                     </div>
                   </FormSection>
 
-                  <FormSection title="Packaging & Weight" classic>
+                  <FormSection title="Packaging & Weight">
                     {/* Packaging Units */}
                     <div className="mb-3">
                       <div>
-                          <FieldLabel classic>Packaging Units</FieldLabel>
+                          <FieldLabel>Packaging Units</FieldLabel>
                           <div style={{ display: 'flex', flexDirection: 'column' as const, gap: 4 }}>
                             {(() => {
                               const factors = (uoms || []).flatMap((u: any) => (u.factors || []).filter((f: any) => f.to_uom_name === editingItem.uom));
@@ -1373,7 +1373,7 @@ export default function InventoryView({
 
                     <div className="row g-2 mb-1">
                         <div className="col-6">
-                            <FieldLabel classic>Weight / Unit</FieldLabel>
+                            <FieldLabel>Weight / Unit</FieldLabel>
                             <input
                               style={{ ...xpInput, width: '100%', boxSizing: 'border-box' }}
                               type="number"
@@ -1385,7 +1385,7 @@ export default function InventoryView({
                             />
                         </div>
                         <div className="col-6">
-                            <FieldLabel classic>Weight Unit</FieldLabel>
+                            <FieldLabel>Weight Unit</FieldLabel>
                             <select
                               style={{ ...xpSelect, width: '100%', boxSizing: 'border-box', height: '22px' }}
                               value={editingItem.weight_unit || 'gsm'}
@@ -1400,7 +1400,7 @@ export default function InventoryView({
                     </div>
                   </FormSection>
 
-                  <FormSection title="Inventory Settings" classic>
+                  <FormSection title="Inventory Settings">
                     <div className="mb-1">
                         <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                             <input
@@ -1440,7 +1440,7 @@ export default function InventoryView({
                     </div>
 
                     <div className="mb-3">
-                        <FieldLabel classic hint="Flags low stock when total on-hand drops below this. Blank = default (10).">Reorder point (min stock)</FieldLabel>
+                        <FieldLabel hint="Flags low stock when total on-hand drops below this. Blank = default (10).">Reorder point (min stock)</FieldLabel>
                         <input
                           type="number" min="0" step="any"
                           style={{ ...xpSelect, width: '100%', boxSizing: 'border-box', height: '22px' }}
@@ -1451,7 +1451,7 @@ export default function InventoryView({
                     </div>
 
                     <div className="mb-1">
-                        <FieldLabel classic hint="Where this item is normally pulled from when staging to production">Default source location</FieldLabel>
+                        <FieldLabel hint="Where this item is normally pulled from when staging to production">Default source location</FieldLabel>
                         <TreeSelect
                           options={locPickerTreeOptions}
                           value={editingItem.default_source_location_id ?? ''}
@@ -1464,7 +1464,7 @@ export default function InventoryView({
                     </div>
 
                     <div className="mb-1">
-                        <FieldLabel classic hint="Preferred bin for this item's production output — pre-fills the MO putaway suggestion">Default putaway location</FieldLabel>
+                        <FieldLabel hint="Preferred bin for this item's production output — pre-fills the MO putaway suggestion">Default putaway location</FieldLabel>
                         <TreeSelect
                           options={locPickerTreeOptions}
                           value={editingItem.default_putaway_location_id ?? ''}
@@ -1477,7 +1477,7 @@ export default function InventoryView({
                     </div>
 
                     <div className="mb-1">
-                        <FieldLabel classic hint="Defect store for QC-rejected stock of this item — used when the producing work centre has no reject location of its own">Default reject location</FieldLabel>
+                        <FieldLabel hint="Defect store for QC-rejected stock of this item — used when the producing work centre has no reject location of its own">Default reject location</FieldLabel>
                         <TreeSelect
                           options={locPickerTreeOptions}
                           value={editingItem.default_reject_location_id ?? ''}
@@ -1491,7 +1491,7 @@ export default function InventoryView({
                   </FormSection>
 
                   {(isFinishedGoodsCategory || editingItem.variant_type) && (
-                    <FormSection title="Variant Type" classic>
+                    <FormSection title="Variant Type">
                         {renderVariantTypeSelector(editingItem.variant_type || '', (v) => setEditingItem({ ...editingItem, variant_type: v }), 'edit')}
                     </FormSection>
                   )}

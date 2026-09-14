@@ -75,7 +75,7 @@ export default function CompanyProfileView({ profile, onUpdate, onUploadLogo, au
                     column with a border hung off its edge. */}
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: 16, alignItems: 'flex-start' }}>
                     <div style={{ width: 200, flexShrink: 0 }}>
-                        <FieldLabel classic>Company Logo</FieldLabel>
+                        <FieldLabel>Company Logo</FieldLabel>
                         <div style={{
                             border: '1px solid #7f9db9',
                             borderRadius: 0,
@@ -101,11 +101,11 @@ export default function CompanyProfileView({ profile, onUpdate, onUploadLogo, au
 
                     <div style={{ flex: '1 1 340px', minWidth: 0, display: 'flex', flexDirection: 'column', gap: SETTINGS_FIELD_GAP }}>
                         <div>
-                            <FieldLabel classic>Company Name</FieldLabel>
+                            <FieldLabel>Company Name</FieldLabel>
                             <input style={inputStyle} className={inputClass} value={editProfile.name} onChange={e => setEditProfile({ ...editProfile, name: e.target.value })} required />
                         </div>
                         <div>
-                            <FieldLabel classic>Address</FieldLabel>
+                            <FieldLabel>Address</FieldLabel>
                             <textarea
                                 style={xpInput({ width: '100%', height: 'auto', padding: '4px 6px', resize: 'vertical' as const })}
                                 className={inputClass}
@@ -116,19 +116,19 @@ export default function CompanyProfileView({ profile, onUpdate, onUploadLogo, au
                         </div>
                         <div style={settingsGrid(160)}>
                             <div>
-                                <FieldLabel classic>Phone</FieldLabel>
+                                <FieldLabel>Phone</FieldLabel>
                                 <input style={inputStyle} className={inputClass} value={editProfile.phone} onChange={e => setEditProfile({ ...editProfile, phone: e.target.value })} />
                             </div>
                             <div>
-                                <FieldLabel classic>Email</FieldLabel>
+                                <FieldLabel>Email</FieldLabel>
                                 <input type="email" style={inputStyle} className={inputClass} value={editProfile.email} onChange={e => setEditProfile({ ...editProfile, email: e.target.value })} />
                             </div>
                             <div>
-                                <FieldLabel classic>Website</FieldLabel>
+                                <FieldLabel>Website</FieldLabel>
                                 <input style={inputStyle} className={inputClass} value={editProfile.website} onChange={e => setEditProfile({ ...editProfile, website: e.target.value })} />
                             </div>
                             <div>
-                                <FieldLabel classic>Tax ID / NPWP</FieldLabel>
+                                <FieldLabel>Tax ID / NPWP</FieldLabel>
                                 <input style={inputStyle} className={inputClass} value={editProfile.tax_id} onChange={e => setEditProfile({ ...editProfile, tax_id: e.target.value })} />
                             </div>
                         </div>

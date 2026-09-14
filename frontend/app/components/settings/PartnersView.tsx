@@ -227,7 +227,7 @@ export default function PartnersView({ type, onCreate, onUpdate, onDelete, onBul
                                 {pagedPartners.map((p, rowIndex) => (
                                     <tr
                                         key={p.id}
-                                        style={{ background: sel.isSelected(p) ? rowStateBg('selected', true) : lvZebra(rowIndex), borderBottom: '1px solid #c0bdb5' }}
+                                        style={{ background: sel.isSelected(p) ? rowStateBg('selected') : lvZebra(rowIndex), borderBottom: '1px solid #c0bdb5' }}
                                     >
                                         <td style={{ ...tdBase, textAlign: 'center' as const }}>
                                             <RowCheckbox checked={sel.isSelected(p)} onChange={() => sel.toggle(p)} label={p.name} />
@@ -242,12 +242,12 @@ export default function PartnersView({ type, onCreate, onUpdate, onDelete, onBul
                                             <StatusChip status={p.active ? 'ACTIVE' : 'INACTIVE'} />
                                         </td>
                                         <td style={{ ...tdBase, borderRight: 'none', textAlign: 'right' as const }}>
-                                            {canManage && <MenuTriggerButton classic onClick={e => menuToggle(p.id, e)} />}
+                                            {canManage && <MenuTriggerButton onClick={e => menuToggle(p.id, e)} />}
                                         </td>
                                     </tr>
                                 ))}
                                 {pagedPartners.length === 0 && (loading ? (
-                                    <TableSkeleton rows={8} cols={skel.cols ?? 5} classic tdStyle={tdBase} rowHeight={skel.rowHeight} fillHeight={skel.fillHeight} />
+                                    <TableSkeleton rows={8} cols={skel.cols ?? 5} tdStyle={tdBase} rowHeight={skel.rowHeight} fillHeight={skel.fillHeight} />
                                 ) : (
                                     <tr>
                                         <td

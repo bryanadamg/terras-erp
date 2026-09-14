@@ -40,14 +40,14 @@ export default function VariantChips({
     return (
         <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, ...style }}>
             {combo && (
-                <VariantChip kind="combo" classic size={scale} title={`Combo: ${combo}`}>{combo}</VariantChip>
+                <VariantChip kind="combo" size={scale} title={`Combo: ${combo}`}>{combo}</VariantChip>
             )}
             {size && (
-                <VariantChip kind="size" classic size={scale} title={`Size: ${size}`}>{size}</VariantChip>
+                <VariantChip kind="size" size={scale} title={`Size: ${size}`}>{size}</VariantChip>
             )}
             {colorVariant && (
                 <VariantChip
-                    kind="color" classic size={scale}
+                    kind="color" size={scale}
                     // The attribute value carries its own hex on the Attributes page; a
                     // colour chip with no swatch when one exists is just a lost cue.
                     swatch={colorVariantHex || null}
@@ -57,14 +57,14 @@ export default function VariantChips({
             )}
             {colorCode ? (
                 <VariantChip
-                    kind="color" classic size={scale}
+                    kind="color" size={scale}
                     swatch={colorHex || null}
                     icon={colorHex ? undefined : 'bi-palette'}
                     title={`Color: ${colorCode}${colorName && colorName !== colorCode ? ` — ${colorName}` : ''}`}
                 >{colorCode}</VariantChip>
             ) : labdipCode ? (
                 <VariantChip
-                    kind="pending" classic size={scale}
+                    kind="pending" size={scale}
                     title={`Color still in lab dip (${labdipCode}) — dyeing is blocked until approved`}
                 >{labdipCode}</VariantChip>
             ) : null}

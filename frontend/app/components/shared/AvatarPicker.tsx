@@ -281,7 +281,6 @@ export default function AvatarPicker({ value, onChange, seed, template, classic 
                         {preview ? preview.label : 'Preview'}
                     </div>
                     <Chip
-                        classic
                         size="xs"
                         icon={pinnedCount ? 'bi-pin-angle-fill' : 'bi-dice-3'}
                         title={pinnedCount

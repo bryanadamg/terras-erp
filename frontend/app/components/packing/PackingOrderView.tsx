@@ -400,7 +400,7 @@ export default function PackingOrderView({ initialCreateState, onClearInitialSta
         return (
             <tr key={`${po.id}-detail`}>
                 <td colSpan={PO_COLS} style={{ padding: 0 }}>
-                    <ExpandedRowPanel classic>
+                    <ExpandedRowPanel>
                         <div style={{
                             display: 'grid', gridTemplateColumns: '320px 250px minmax(360px, 1fr)',
                             border: '1px solid #7f9db9', fontFamily: xpFont, fontSize: 10,
@@ -582,7 +582,7 @@ export default function PackingOrderView({ initialCreateState, onClearInitialSta
                                                         <td style={{ ...td, color: '#888' }}>#{u.package_no}</td>
                                                         <td style={{ ...td, overflow: 'hidden' }}>
                                                             <span style={{ display: 'flex', alignItems: 'center', gap: 3, flexWrap: 'wrap', minWidth: 0 }}>
-                                                                <CodeChip code={u.batch_number} classic link style={{ cursor: 'default', maxWidth: '100%', overflow: 'hidden', textOverflow: 'ellipsis' }} />
+                                                                <CodeChip code={u.batch_number} link style={{ cursor: 'default', maxWidth: '100%', overflow: 'hidden', textOverflow: 'ellipsis' }} />
                                                                 {/* A carton is a lot and labels itself like one: shade/combo
                                                                     resolved from its stock key, size stamped on it at packing.
                                                                     Renders nothing when it carries no identity. */}
@@ -602,7 +602,7 @@ export default function PackingOrderView({ initialCreateState, onClearInitialSta
                                                             rewrites what shipped. */}
                                                         <td style={{ ...td, overflow: 'hidden' }}>
                                                             {u.packaging_type_name ? (
-                                                                <Chip classic size="xs" truncate title={u.packaging_type_name} style={{ maxWidth: 70 }}>
+                                                                <Chip size="xs" truncate title={u.packaging_type_name} style={{ maxWidth: 70 }}>
                                                                     {u.packaging_type_name}
                                                                 </Chip>
                                                             ) : <span style={{ color: '#bbb' }}>—</span>}
@@ -682,7 +682,7 @@ export default function PackingOrderView({ initialCreateState, onClearInitialSta
                     </thead>
                     <tbody ref={listBodyRef}>
                         {orders.length === 0 && (loading ? (
-                            <TableSkeleton rows={7} cols={skel.cols ?? PO_COLS} classic tdStyle={td} rowHeight={skel.rowHeight} fillHeight={skel.fillHeight} />
+                            <TableSkeleton rows={7} cols={skel.cols ?? PO_COLS} tdStyle={td} rowHeight={skel.rowHeight} fillHeight={skel.fillHeight} />
                         ) : (
                             <tr><td colSpan={PO_COLS} style={{ padding: 0 }}>
                                 <XPEmptyState icon="bi-box2" message='No packing orders yet. Click "New Packing Order" to pack finished goods into cartons.' />
@@ -698,12 +698,12 @@ export default function PackingOrderView({ initialCreateState, onClearInitialSta
                             return (
                                 <React.Fragment key={po.id}>
                                 <tr
-                                    style={{ ...rowStyle(idx), ...(isExpanded ? { background: rowStateBg('expanded', true) } : {}), cursor: 'pointer' }}
+                                    style={{ ...rowStyle(idx), ...(isExpanded ? { background: rowStateBg('expanded') } : {}), cursor: 'pointer' }}
                                     onClick={() => setExpandedId(prev => prev === String(po.id) ? null : String(po.id))}
                                 >
                                     <ExpanderCell expanded={isExpanded} tdStyle={td} label="packing order detail"
                                         onToggle={() => setExpandedId(prev => prev === String(po.id) ? null : String(po.id))} />
-                                    <td style={td}><CodeChip code={po.code} classic tone="accent" style={{ fontWeight: 'bold' }} /></td>
+                                    <td style={td}><CodeChip code={po.code} tone="accent" style={{ fontWeight: 'bold' }} /></td>
                                     <td style={td}>
                                         <div style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{po.item_name || it?.name || po.item_id}</div>
                                         <div style={{ fontSize: 9, color: '#888' }}>{po.item_code || it?.code}</div>
@@ -731,7 +731,6 @@ export default function PackingOrderView({ initialCreateState, onClearInitialSta
                                         {po.sales_order_code ? (
                                             <CodeChip
                                                 code={po.sales_order_code}
-                                                classic
                                                 link
                                                 onClick={() => router.push(`/sales-orders?so=${encodeURIComponent(po.sales_order_code)}`)}
                                             />
@@ -760,7 +759,6 @@ export default function PackingOrderView({ initialCreateState, onClearInitialSta
                                             <>
                                                 <span style={{ marginRight: 2 }}>
                                                     <XPActionButton
-                                                        classic
                                                         tone="success"
                                                         icon="bi-plus-lg"
                                                         title="Pack — log cartons against this order"
@@ -769,7 +767,6 @@ export default function PackingOrderView({ initialCreateState, onClearInitialSta
                                                 </span>
                                                 <span style={{ marginRight: 2 }}>
                                                     <XPActionButton
-                                                        classic
                                                         tone="primary"
                                                         icon="bi-check2-square"
                                                         title="Close Order — no further cartons can be packed"
@@ -778,7 +775,7 @@ export default function PackingOrderView({ initialCreateState, onClearInitialSta
                                                 </span>
                                             </>
                                         )}
-                                        <MenuTriggerButton classic onClick={e => menuToggle(String(po.id), e)} />
+                                        <MenuTriggerButton onClick={e => menuToggle(String(po.id), e)} />
                                     </td>
                                 </tr>
                                 {isExpanded && renderPackDetail(po)}
@@ -1317,10 +1314,10 @@ function PackingOrderForm({ locPickerTreeOptions, machineOptions, defaultSourceL
             }
         >
             <div style={{ fontFamily: xpFont }}>
-                <FormSection title={<SectionTitle icon="bi-receipt">Demand</SectionTitle>} classic>
+                <FormSection title={<SectionTitle icon="bi-receipt">Demand</SectionTitle>}>
                     <div style={{ ...fieldGrid, gridTemplateColumns: '1fr 1fr' }}>
                         <div>
-                            <FieldLabel classic title="Leave empty to pack to stock">Sales Order</FieldLabel>
+                            <FieldLabel title="Leave empty to pack to stock">Sales Order</FieldLabel>
                             <SearchableSelect
                                 options={soOptions}
                                 value={soId}
@@ -1339,7 +1336,6 @@ function PackingOrderForm({ locPickerTreeOptions, machineOptions, defaultSourceL
                                 side. A checkbox-style picker (same row shape as the WO
                                 staging lot picker) shows every line's badges at once. */}
                             <FieldLabel
-                                classic
                                 title="Fixes the item being packed — colour and variant attributes are inherited from the line"
                             >Order line</FieldLabel>
                             {/* Say why the greyed rows are greyed — a disabled checkbox
@@ -1378,7 +1374,7 @@ function PackingOrderForm({ locPickerTreeOptions, machineOptions, defaultSourceL
                                             />
                                             <div style={{ display: 'flex', flexDirection: 'column', gap: 2, minWidth: 0, flex: 1 }}>
                                                 <div style={{ display: 'flex', alignItems: 'center', gap: 4, flexWrap: 'wrap' }}>
-                                                    <CodeChip code={l.item_code || l.item_name} classic />
+                                                    <CodeChip code={l.item_code || l.item_name} />
                                                     <LotChip tone="qty" title="Ordered quantity">
                                                         {num(l.qty).toLocaleString()} Yd
                                                     </LotChip>
@@ -1410,17 +1406,17 @@ function PackingOrderForm({ locPickerTreeOptions, machineOptions, defaultSourceL
                     )}
                 </FormSection>
 
-                <FormSection title={<SectionTitle icon="bi-box2">What to Pack</SectionTitle>} classic>
+                <FormSection title={<SectionTitle icon="bi-box2">What to Pack</SectionTitle>}>
                     {/* Fixed columns, and no per-field hints in this row: FieldLabel puts a
                         hint between the label and the input, so hinting only one field of a
                         row pushes that input a line below its neighbours. */}
                     <div style={{ ...fieldGrid, gridTemplateColumns: 'minmax(200px, 1fr) 100px 100px 120px' }}>
                         <div>
-                            <FieldLabel classic>Finished good</FieldLabel>
+                            <FieldLabel>Finished good</FieldLabel>
                             <SearchableSelect options={fgOptions} value={itemId} onChange={setItemId} onSearch={fgSearch} placeholder="Search item..." size="sm" />
                         </div>
                         <div>
-                            <FieldLabel classic>
+                            <FieldLabel>
                                 {altDrivesTarget ? `Target ${selectedItem?.uom || 'qty'} (est.)` : 'Target qty'}
                             </FieldLabel>
                             {/* Read-only once an alt count drives it: the count below is what
@@ -1439,7 +1435,6 @@ function PackingOrderForm({ locPickerTreeOptions, machineOptions, defaultSourceL
                         </div>
                         <div>
                             <FieldLabel
-                                classic
                                 title="Splits the target into cartons — leave it empty to decide the carton count per pack event"
                             >
                                 {altDrivesPackSize ? `${selectedItem?.uom || 'Qty'}/carton (est.)` : 'Qty per carton'}
@@ -1458,7 +1453,7 @@ function PackingOrderForm({ locPickerTreeOptions, machineOptions, defaultSourceL
                                 value={packSize} onChange={e => setPackSize(e.target.value)} />
                         </div>
                         <div>
-                            <FieldLabel classic>Package type</FieldLabel>
+                            <FieldLabel>Package type</FieldLabel>
                             <input style={{ ...xpInput, width: '100%' }} value={packageLabel} onChange={e => setPackageLabel(e.target.value)} placeholder="Carton" />
                         </div>
                     </div>
@@ -1467,7 +1462,7 @@ function PackingOrderForm({ locPickerTreeOptions, machineOptions, defaultSourceL
                         above rather than sitting beside them. */}
                     <div style={{ ...fieldGrid, gridTemplateColumns: 'minmax(220px, 1fr) 130px', marginTop: 8 }}>
                         <div>
-                            <FieldLabel classic>Alt unit</FieldLabel>
+                            <FieldLabel>Alt unit</FieldLabel>
                             <div style={{ display: 'flex' }}>
                                 <input type="number" min={0}
                                     style={{ ...xpInput, flex: 1, minWidth: 0, borderRight: 'none', textAlign: 'right' }}
@@ -1508,7 +1503,7 @@ function PackingOrderForm({ locPickerTreeOptions, machineOptions, defaultSourceL
                             )}
                         </div>
                         <div>
-                            <FieldLabel classic>{uom2 || 'Alt'} per carton</FieldLabel>
+                            <FieldLabel>{uom2 || 'Alt'} per carton</FieldLabel>
                             <input type="number" min={0} disabled={!uom2}
                                 style={{ ...xpInput, width: '100%', textAlign: 'right', background: uom2 ? undefined : '#efeee9' }}
                                 value={altPerCarton} onChange={e => onAltPerCartonChange(e.target.value)} />
@@ -1520,7 +1515,6 @@ function PackingOrderForm({ locPickerTreeOptions, machineOptions, defaultSourceL
                     <div style={{ ...fieldGrid, gridTemplateColumns: 'minmax(220px, 1fr) 130px', marginTop: 8 }}>
                         <div>
                             <FieldLabel
-                                classic
                                 title={useSample
                                     ? 'Measured off the sampled goods — every kg figure on this order converts through it, not through the estimate on the item'
                                     : 'Prefilled from the item as a sampling estimate. Replace it with the figure the operator measured off the actual goods.'}
@@ -1555,7 +1549,6 @@ function PackingOrderForm({ locPickerTreeOptions, machineOptions, defaultSourceL
                     {uom2 && (
                         <div style={{ marginTop: 8 }}>
                             <FieldLabel
-                                classic
                                 title="Whether the floor measures the goods out per box or weighs to it — it decides which figure the pack screen asks for and which one it derives"
                             >Pack basis</FieldLabel>
                             <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
@@ -1609,24 +1602,24 @@ function PackingOrderForm({ locPickerTreeOptions, machineOptions, defaultSourceL
                     )}
                 </FormSection>
 
-                <FormSection title={<SectionTitle icon="bi-geo-alt"><span title="The variant is not asked for here — the packer picks the source lots at pack time, and each lot's own stock row states its variant">Locations &amp; Machine</span></SectionTitle>} classic>
+                <FormSection title={<SectionTitle icon="bi-geo-alt"><span title="The variant is not asked for here — the packer picks the source lots at pack time, and each lot's own stock row states its variant">Locations &amp; Machine</span></SectionTitle>}>
                     <div style={{ ...fieldGrid, gridTemplateColumns: '1fr 1fr 1fr' }}>
                         <div>
-                            <FieldLabel classic title="Bulk finished goods are drawn from here">Pack from</FieldLabel>
+                            <FieldLabel title="Bulk finished goods are drawn from here">Pack from</FieldLabel>
                             <TreeSelect options={locPickerTreeOptions} value={sourceLoc} onChange={setSourceLoc} allowEmpty emptyLabel="— select —" size="sm" style={{ width: '100%' }} />
                         </div>
                         <div>
-                            <FieldLabel classic title="Sealed cartons land here">Store cartons at</FieldLabel>
+                            <FieldLabel title="Sealed cartons land here">Store cartons at</FieldLabel>
                             <TreeSelect options={locPickerTreeOptions} value={outputLoc} onChange={setOutputLoc} allowEmpty emptyLabel="— select —" size="sm" style={{ width: '100%' }} />
                         </div>
                         <div>
-                            <FieldLabel classic title="Pre-fills every pack event">Machine</FieldLabel>
+                            <FieldLabel title="Pre-fills every pack event">Machine</FieldLabel>
                             <SearchableSelect options={machineOptions || []} value={workCenterId} onChange={setWorkCenterId} placeholder="— none —" size="sm" />
                         </div>
                     </div>
                 </FormSection>
 
-                <FormSection title={<SectionTitle icon="bi-sticky">Notes</SectionTitle>} classic>
+                <FormSection title={<SectionTitle icon="bi-sticky">Notes</SectionTitle>}>
                     <textarea style={{ ...xpInput, height: 50, width: '100%', resize: 'vertical', boxSizing: 'border-box' }} value={notes} onChange={e => setNotes(e.target.value)} />
                 </FormSection>
             </div>
@@ -2430,7 +2423,6 @@ function PackingOrderDetail({ po: initialPo, itemById, locationById, locPickerTr
                                         To Pack
                                     </span>
                                     <XPActionButton
-                                        classic
                                         tone="primary"
                                         icon="bi-plus-lg"
                                         title={`Add another ${po.package_label.toLowerCase()} line`}
@@ -2960,8 +2952,7 @@ function PackingOrderDetail({ po: initialPo, itemById, locationById, locPickerTr
                                     <div style={{ ...xpFormLabel, display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 6 }}>
                                         <span>Machine</span>
                                         {machineDirty && workCenterId && (
-                                            <XPActionButton
-                                                classic tone="primary" icon="bi-pin-angle" label="Set on order"
+                                            <XPActionButton tone="primary" icon="bi-pin-angle" label="Set on order"
                                                 title="Store this machine on the packing order so later entries pre-fill with it"
                                                 disabled={savingMachine}
                                                 onClick={saveMachine}
@@ -3109,8 +3100,7 @@ function PackingOrderDetail({ po: initialPo, itemById, locationById, locPickerTr
                                                 {!readOnly && (
                                                     <td style={{ padding: '2px 4px', textAlign: 'right' }}>
                                                         {!c.rejected && goodUnitsOf(c.id).length > 0 && (
-                                                            <XPActionButton
-                                                                classic tone="warning" icon="bi-slash-circle"
+                                                            <XPActionButton tone="warning" icon="bi-slash-circle"
                                                                 title="QC reject cartons from this pack event"
                                                                 onClick={() => openReject(c)}
                                                             />

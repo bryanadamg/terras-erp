@@ -47,7 +47,7 @@ const VIEW_KEY = 'color_variant_view';
 function SwatchPicker({ hex, onChange, size = 22 }: { hex: string | null; onChange: (hex: string | null) => void; size?: number }) {
     return (
         <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-            <SwatchBox hex={hex} size={size} classic onPick={onChange} />
+            <SwatchBox hex={hex} size={size} onPick={onChange} />
             {hex
                 ? <button type="button" onClick={() => onChange(null)} title="Remove color"
                     style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', fontSize: 11, color: '#0a246a', textDecoration: 'underline' }}>Clear</button>
@@ -248,7 +248,6 @@ export default function ColorsVariantView({ values, canCreate, canEdit, canDelet
                                     <SwatchBox
                                         hex={v.hex}
                                         derived={derived}
-                                        classic
                                         onPick={canEdit ? h => onRename(v.id, v.value, h) : undefined}
                                         style={{ display: 'block', width: '100%', height: 48, borderRadius: 0, borderWidth: '0 0 1px 0' }}
                                     />
@@ -265,7 +264,7 @@ export default function ColorsVariantView({ values, canCreate, canEdit, canDelet
                                                 color: v.hex ? '#555' : '#999',
                                                 fontStyle: v.hex ? 'normal' : 'italic',
                                             }}>{v.hex || 'no swatch'}</span>
-                                            {(canEdit || canDelete) && <MenuTriggerButton classic onClick={e => menuToggle(v.id, e)} />}
+                                            {(canEdit || canDelete) && <MenuTriggerButton onClick={e => menuToggle(v.id, e)} />}
                                         </div>
                                     </div>
                                 </div>
@@ -300,7 +299,6 @@ export default function ColorsVariantView({ values, canCreate, canEdit, canDelet
                                                         <SwatchBox
                                                             hex={v.hex}
                                                             derived={derived}
-                                                            classic
                                                             onPick={canEdit ? h => onRename(v.id, v.value, h) : undefined}
                                                         />
                                                         <span style={{
@@ -339,7 +337,7 @@ export default function ColorsVariantView({ values, canCreate, canEdit, canDelet
                                                             </button>
                                                         </>
                                                     ) : (
-                                                        <MenuTriggerButton classic onClick={e => menuToggle(v.id, e)} />
+                                                        <MenuTriggerButton onClick={e => menuToggle(v.id, e)} />
                                                     )}
                                                 </div>
                                             )}
@@ -381,8 +379,8 @@ export default function ColorsVariantView({ values, canCreate, canEdit, canDelet
                 }
             >
                 <form id="color-variant-form" onSubmit={e => { e.preventDefault(); handleAdd(); }}>
-                    <FormError classic>{formError}</FormError>
-                    <FormSection title="Color" classic>
+                    <FormError>{formError}</FormError>
+                    <FormSection title="Color">
                         <div>
                             <label style={lvLabel()}>Name *</label>
                             <input
@@ -415,8 +413,8 @@ export default function ColorsVariantView({ values, canCreate, canEdit, canDelet
                 }
             >
                 <form id="color-variant-edit-form" onSubmit={e => { e.preventDefault(); commitEditModal(); }}>
-                    <FormError classic>{formError}</FormError>
-                    <FormSection title="Color" classic>
+                    <FormError>{formError}</FormError>
+                    <FormSection title="Color">
                         <div>
                             <label style={lvLabel()}>Name *</label>
                             <input

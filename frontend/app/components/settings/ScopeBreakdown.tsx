@@ -66,8 +66,8 @@ export default function ScopeBreakdown({ workCenterTypes, categories, locations}
     if (rows.length === 0) return null;
 
     return (
-        <ExpandedRowPanel classic>
-            <ExpandedRowPanelBody classic>
+        <ExpandedRowPanel>
+            <ExpandedRowPanelBody>
                 <PermissionSectionTable
                     classic
                     title="Scope Restrictions"

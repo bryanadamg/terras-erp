@@ -137,7 +137,7 @@ export default function PackagingTypesView({ types, loading, onCreate, onEdit, o
                         )}
                         {filtered.map((t: any, idx: number) => (
                             <tr key={t.id} style={lvRow(idx)}>
-                                <td style={lvTd()}><CodeChip code={t.code} classic tone="accent" /></td>
+                                <td style={lvTd()}><CodeChip code={t.code} tone="accent" /></td>
                                 <td style={lvTd()}>{t.name}</td>
                                 <td style={{ ...lvTd(), textAlign: 'right' }}>
                                     {/* A custom box has no stored tare BY DESIGN — the packer
@@ -152,7 +152,7 @@ export default function PackagingTypesView({ types, loading, onCreate, onEdit, o
                                 <td style={{ ...lvTd(), textAlign: 'center', color: '#888' }}>{t.sort_order ?? 0}</td>
                                 <td style={lvTd()}><StatusChip status={t.active === false ? 'archived' : 'active'} /></td>
                                 <td style={{ ...lvTd(), borderRight: 'none', textAlign: 'right' }}>
-                                    {canManage && <MenuTriggerButton classic onClick={e => menuToggle(t.id, e)} />}
+                                    {canManage && <MenuTriggerButton onClick={e => menuToggle(t.id, e)} />}
                                 </td>
                             </tr>
                         ))}

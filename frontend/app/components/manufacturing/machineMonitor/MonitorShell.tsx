@@ -33,7 +33,7 @@ export const MonitorShell = ({
                 right={
                     <span style={{ display: 'flex', alignItems: 'center', gap: 10, fontWeight: 'normal', fontSize: 11}}>
                         <span className={undefined}>{summary}</span>
-                        <XPActionButton classic tone="neutral" icon="bi-arrow-clockwise"
+                        <XPActionButton tone="neutral" icon="bi-arrow-clockwise"
                             title={refreshTitle} onClick={onRefresh} />
                     </span>
                 }
@@ -68,7 +68,6 @@ export const MonitorGridSkeleton = ({ classic, bodyHeight }: { classic: boolean;
         count={12}
         minWidth={240}
         gap={8}
-        classic
         bodyLines={3}
         bodyHeight={bodyHeight ?? (96)}
     />

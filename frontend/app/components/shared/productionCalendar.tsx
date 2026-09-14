@@ -72,12 +72,12 @@ export function WorkingDaysSection({ classic, weekdays, onToggleWeekday, canEdit
 }) {
     const { t } = useLanguage();
     return (
-        <FormSection classic title={<SectionTitle icon="bi-calendar-week">{t('working_days')}</SectionTitle>}>
+        <FormSection title={<SectionTitle icon="bi-calendar-week">{t('working_days')}</SectionTitle>}>
             <div className="d-flex flex-wrap gap-2 align-items-center mb-2">
-                <WeekdayToggle value={weekdays} onToggle={onToggleWeekday} classic disabled={!canEdit} />
+                <WeekdayToggle value={weekdays} onToggle={onToggleWeekday} disabled={!canEdit} />
                 {canEdit && onSave && (
                     <span className="ms-2">
-                        <XPActionButton classic tone="success" icon="bi-check-lg" label={t('save')} onClick={onSave} />
+                        <XPActionButton tone="success" icon="bi-check-lg" label={t('save')} onClick={onSave} />
                     </span>
                 )}
             </div>
@@ -99,14 +99,14 @@ function MonthNav({ classic, month, onMonthChange }: {
     const { t } = useLanguage();
     return (
         <div className="d-flex align-items-center gap-2 mb-2">
-            <XPActionButton classic tone="neutral" icon="bi-chevron-left"
+            <XPActionButton tone="neutral" icon="bi-chevron-left"
                 onClick={() => onMonthChange(new Date(month.getFullYear(), month.getMonth() - 1, 1))} />
             <span style={{ minWidth: 150, textAlign: 'center', fontWeight: 'bold', fontFamily: xpFont}}>
                 {month.toLocaleDateString(undefined, { month: 'long', year: 'numeric' })}
             </span>
-            <XPActionButton classic tone="neutral" icon="bi-chevron-right"
+            <XPActionButton tone="neutral" icon="bi-chevron-right"
                 onClick={() => onMonthChange(new Date(month.getFullYear(), month.getMonth() + 1, 1))} />
-            <XPActionButton classic tone="neutral" label={t('today')} onClick={() => onMonthChange(new Date())} />
+            <XPActionButton tone="neutral" label={t('today')} onClick={() => onMonthChange(new Date())} />
         </div>
     );
 }
@@ -228,7 +228,7 @@ export function HolidayCalendarSection({
 }) {
     const { t } = useLanguage();
     return (
-        <FormSection classic title={
+        <FormSection title={
             <SectionTitle icon="bi-calendar3" right={headerAction}>{t('holidays')}</SectionTitle>
         }>
             <MonthNav classic month={month} onMonthChange={onMonthChange} />

@@ -396,8 +396,8 @@ export default function WorkQueueView() {
     );
 
     const renderMaterials = (r: QueueRow) => (
-        <ExpandedRowPanel classic>
-            <ExpandedRowPanelBody classic>
+        <ExpandedRowPanel>
+            <ExpandedRowPanelBody>
                 <table style={lvSubTable()}>
                     <thead>
                         <tr>
@@ -534,7 +534,7 @@ export default function WorkQueueView() {
                         </tr>
                     </thead>
                     <tbody>
-                        {loading && rows.length === 0 && <TableSkeleton rows={8} cols={12} classic />}
+                        {loading && rows.length === 0 && <TableSkeleton rows={8} cols={12} />}
                         {!loading && rows.length === 0 && (
                             <tr><td colSpan={12}>
                                 <XPEmptyState
@@ -554,7 +554,7 @@ export default function WorkQueueView() {
                                     <tr
                                         style={{
                                             ...lvRow(i),
-                                            ...(open ? { background: rowStateBg('expanded', true) } : {}),
+                                            ...(open ? { background: rowStateBg('expanded') } : {}),
                                             cursor: 'pointer',
                                             borderLeft: `3px solid ${statusColor(r.verdict)}`,
                                         }}
@@ -568,7 +568,7 @@ export default function WorkQueueView() {
                                             {r.is_released ? (
                                                 <>
                                                     <div style={{ minWidth: 0 }}>
-                                                        <CodeChip code={r.work_order_code || '—'} classic style={codeClip} />
+                                                        <CodeChip code={r.work_order_code || '—'} style={codeClip} />
                                                     </div>
                                                     <div style={{ ...ellipsis, fontSize: 10, color: '#666' }}>{r.work_order_name}</div>
                                                 </>
@@ -586,7 +586,7 @@ export default function WorkQueueView() {
                                         </td>
                                         <td style={{ ...lvTd(), overflow: 'hidden' }}>
                                             <div style={{ minWidth: 0 }}>
-                                                <CodeChip code={r.mo_code || '—'} classic tier={2} style={codeClip} />
+                                                <CodeChip code={r.mo_code || '—'} tier={2} style={codeClip} />
                                             </div>
                                             <div style={{ ...ellipsis, fontSize: 10, color: '#666' }}>
                                                 {r.item_code} {r.item_name ? `· ${r.item_name}` : ''}

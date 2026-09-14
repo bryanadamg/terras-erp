@@ -43,7 +43,7 @@ export default function SettingsGeneralTab({
                     <form onSubmit={handleSubmitSystem}>
                         <div style={settingsGrid()}>
                             <div>
-                                <FieldLabel classic>Application Name</FieldLabel>
+                                <FieldLabel>Application Name</FieldLabel>
                                 <input
                                     style={xpInput({ width: '100%' })}
                                     value={name}
@@ -55,7 +55,7 @@ export default function SettingsGeneralTab({
                                 )}
                             </div>
                             <div>
-                                <FieldLabel classic>Interface Scale</FieldLabel>
+                                <FieldLabel>Interface Scale</FieldLabel>
                                 <select
                                     style={xpInput({ height: 'auto', padding: '2px 4px', width: '100%' })}
                                     value={scale}
@@ -73,7 +73,7 @@ export default function SettingsGeneralTab({
                                 </div>
                             </div>
                             <div>
-                                <FieldLabel classic>Display Timezone</FieldLabel>
+                                <FieldLabel>Display Timezone</FieldLabel>
                                 <select
                                     style={xpInput({ height: 'auto', padding: '2px 4px', width: '100%' })}
                                     value={tz}

@@ -257,19 +257,19 @@ export default function ColorLibraryView({
                     </thead>
                     <tbody ref={listBodyRef}>
                         {colors.length === 0 && (loading ? (
-                            <TableSkeleton rows={8} cols={skel.cols ?? 13} classic tdStyle={lvTd()} rowHeight={skel.rowHeight} fillHeight={skel.fillHeight} />
+                            <TableSkeleton rows={8} cols={skel.cols ?? 13} tdStyle={lvTd()} rowHeight={skel.rowHeight} fillHeight={skel.fillHeight} />
                         ) : (
                             <TableEmpty colSpan={13} tdStyle={lvTd()} message="No colors found." />
                         ))}
                         {colors.map((c, idx) => (
                             <tr key={c.id} style={lvRow(idx)}>
-                                <td style={{ ...lvTd(), textAlign: 'center' }}><SwatchBox hex={c.hex} classic /></td>
+                                <td style={{ ...lvTd(), textAlign: 'center' }}><SwatchBox hex={c.hex} /></td>
                                 <td style={lvTd()}>
-                                    <CodeChip code={c.code} classic tone="accent" style={{ fontWeight: 'bold' }} />
+                                    <CodeChip code={c.code} tone="accent" style={{ fontWeight: 'bold' }} />
                                 </td>
                                 <td style={lvTd()}>{c.name}</td>
                                 <td style={lvTd()}>{c.variant_attribute_value_label
-                                    ? <ColorSwatchChip label={c.variant_attribute_value_label} classic hex={variantHexByLabel[c.variant_attribute_value_label]} />
+                                    ? <ColorSwatchChip label={c.variant_attribute_value_label} hex={variantHexByLabel[c.variant_attribute_value_label]} />
                                     : <span style={{ color: '#aaa' }}>—</span>}</td>
                                 <td style={lvTd()}>{c.colour_index || <span style={{ color: '#aaa' }}>—</span>}</td>
                                 <td style={lvTd()}>
@@ -298,7 +298,6 @@ export default function ColorLibraryView({
                                     <div style={{ display: 'flex', gap: 3, justifyContent: 'flex-end', alignItems: 'center' }}>
                                         {canManage && c.l_star == null && (
                                         <XPActionButton
-                                            classic
                                             tone="warning"
                                             icon="bi-rulers"
                                             title="Complete L*a*b* measurement for this color"
@@ -307,14 +306,13 @@ export default function ColorLibraryView({
                                         )}
                                         {canManage && (
                                         <XPActionButton
-                                            classic
                                             tone="primary"
                                             icon="bi-droplet-half"
                                             title="Create dyeing recipe for this color"
                                             onClick={() => createRecipeForColor(c)}
                                         />
                                         )}
-                                        <MenuTriggerButton classic onClick={e => menuToggle(String(c.id), e)} />
+                                        <MenuTriggerButton onClick={e => menuToggle(String(c.id), e)} />
                                     </div>
                                 </td>
                             </tr>
@@ -357,7 +355,7 @@ export default function ColorLibraryView({
             >
                 <form id="color-form" onSubmit={handleSubmit}>
                     {/* 1. Identity — code + name (+ status when editing) always top-most. */}
-                    <FormSection title="Identity" classic>
+                    <FormSection title="Identity">
                         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
                             <div>
                                 <label style={lvLabel()}>Code *</label>
@@ -389,7 +387,7 @@ export default function ColorLibraryView({
                     </FormSection>
 
                     {/* 2. CIELAB — the structured shade identity the client completes after approval. */}
-                    <FormSection title="CIELAB (L*a*b*) — Objective Shade Identity" classic>
+                    <FormSection title="CIELAB (L*a*b*) — Objective Shade Identity">
                         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr) 1.3fr', gap: 10, alignItems: 'end' }}>
                             {([
                                 { key: 'l_star', axis: 'L*', hint: 'Lightness · 0–100', min: 0, max: 100 },
@@ -424,7 +422,7 @@ export default function ColorLibraryView({
                     </FormSection>
 
                     {/* 3. Details — everything else. */}
-                    <FormSection title="Details" classic>
+                    <FormSection title="Details">
                         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
                             <div>
                                 <label style={lvLabel()}>Pantone Ref</label>
@@ -437,7 +435,7 @@ export default function ColorLibraryView({
                             <div>
                                 <label style={lvLabel()}>Swatch (hex)</label>
                                 <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
-                                    <SwatchBox hex={form.hex || null} size={24} classic onPick={h => setForm({ ...form, hex: h })} />
+                                    <SwatchBox hex={form.hex || null} size={24} onPick={h => setForm({ ...form, hex: h })} />
                                     <input value={form.hex} onChange={e => setForm({ ...form, hex: e.target.value })} placeholder="#RRGGBB" style={lvInput()} />
                                 </div>
                             </div>

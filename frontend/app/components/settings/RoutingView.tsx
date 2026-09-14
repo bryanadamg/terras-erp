@@ -500,7 +500,7 @@ export default function RoutingView({ workCenters, operations, locations, onCrea
                                           );
                                       })}
                                       <td style={{ ...lvTd(), borderRight: 'none', textAlign: 'right' }} onClick={e => e.stopPropagation()}>
-                                          {canManage && <MenuTriggerButton classic onClick={e => wcMenuToggle(wc.id, e)} />}
+                                          {canManage && <MenuTriggerButton onClick={e => wcMenuToggle(wc.id, e)} />}
                                       </td>
                                   </tr>
                               );
@@ -598,7 +598,7 @@ export default function RoutingView({ workCenters, operations, locations, onCrea
                               <td style={lvTd()}>{op.name}</td>
                               <td style={{ ...lvTd(), borderRight: 'none', textAlign: 'right' }}>
                                   {!op.is_system && canManage && (
-                                      <XPActionButton classic tone="danger" icon="bi-trash" title="Delete" onClick={() => onDeleteOperation && onDeleteOperation(op.id)} />
+                                      <XPActionButton tone="danger" icon="bi-trash" title="Delete" onClick={() => onDeleteOperation && onDeleteOperation(op.id)} />
                                   )}
                               </td>
                           </tr>
@@ -669,8 +669,8 @@ export default function RoutingView({ workCenters, operations, locations, onCrea
       >
           <form onSubmit={handleCreateWC} style={{ display: 'flex', flexDirection: 'column' }}>
               {/* Level first: it decides which fields below even apply. */}
-              <FormSection classic title={<><i className="bi bi-diagram-3 me-1" />Placement</>}>
-                  <FieldLabel classic hint="A machine is what work orders, BOM routing and monitors point at. Types and groups only organize them.">
+              <FormSection title={<><i className="bi bi-diagram-3 me-1" />Placement</>}>
+                  <FieldLabel hint="A machine is what work orders, BOM routing and monitors point at. Types and groups only organize them.">
                       What are you adding?
                   </FieldLabel>
                   <div style={{ display: 'flex', gap: 6, marginBottom: 10, flexWrap: 'wrap' as const }}>
@@ -697,7 +697,6 @@ export default function RoutingView({ workCenters, operations, locations, onCrea
                   {newWorkCenter.node_type !== 'TYPE' && (
                       <>
                           <FieldLabel
-                              classic
                               hint={newWorkCenter.node_type === 'GROUP'
                                   ? 'Groups sit inside one work center type.'
                                   : 'Pick a group to make the machine part of a batch-calendar group, or a type to leave it ungrouped.'}
@@ -742,14 +741,14 @@ export default function RoutingView({ workCenters, operations, locations, onCrea
                   </div>
               </FormSection>
 
-              <FormSection classic title={<><i className="bi bi-tag me-1" />Identity</>}>
+              <FormSection title={<><i className="bi bi-tag me-1" />Identity</>}>
                   <div style={{ display: 'flex', gap: 10 }}>
                       <div style={{ width: 110 }}>
-                          <FieldLabel classic>Code <span style={{ color: '#c00' }}>*</span></FieldLabel>
+                          <FieldLabel>Code <span style={{ color: '#c00' }}>*</span></FieldLabel>
                           <input style={lvInput()} placeholder={newWorkCenter.node_type === 'MACHINE' ? 'W-01' : 'W'} value={newWorkCenter.code} onChange={e => setNewWorkCenter({ ...newWorkCenter, code: e.target.value })} required autoFocus />
                       </div>
                       <div style={{ flex: 1 }}>
-                          <FieldLabel classic>{t('station_name')} <span style={{ color: '#c00' }}>*</span></FieldLabel>
+                          <FieldLabel>{t('station_name')} <span style={{ color: '#c00' }}>*</span></FieldLabel>
                           <input
                               style={lvInput()}
                               placeholder={newWorkCenter.node_type === 'TYPE' ? 'WEAVING' : newWorkCenter.node_type === 'GROUP' ? 'Hall A looms' : 'Loom 1'}
@@ -761,7 +760,6 @@ export default function RoutingView({ workCenters, operations, locations, onCrea
                   </div>
                   <div style={{ marginTop: 8 }}>
                       <FieldLabel
-                          classic
                           hint={inheritedType
                               ? `Follows ${selectedParent?.code} — everything under a type shares its type.`
                               : 'Drives routing, monitors and the type chip in lists.'}
@@ -784,14 +782,12 @@ export default function RoutingView({ workCenters, operations, locations, onCrea
               {/* Locations live at every level. A group holds the pair its machines
                   inherit, so a machine only fills these in to override its group. */}
               <FormSection
-                  classic
                   title={<><i className={`bi ${newWorkCenter.node_type === 'MACHINE' ? 'bi-cpu' : 'bi-geo-alt'} me-1`} />
                       {newWorkCenter.node_type === 'MACHINE' ? 'Machine setup' : 'Default locations'}</>}
               >
                   <div style={{ display: 'flex', gap: 10 }}>
                       <div style={{ flex: 1 }}>
                           <FieldLabel
-                              classic
                               hint={newWorkCenter.node_type === 'MACHINE'
                                   ? 'Where staged material is moved to. Leave blank to use the group\'s.'
                                   : 'Where staged material is moved to — every machine inside inherits this.'}
@@ -802,7 +798,6 @@ export default function RoutingView({ workCenters, operations, locations, onCrea
                       </div>
                       <div style={{ flex: 1 }}>
                           <FieldLabel
-                              classic
                               hint={newWorkCenter.node_type === 'MACHINE'
                                   ? 'Where finished output is put away. Leave blank to use the group\'s.'
                                   : 'Where finished output is put away — every machine inside inherits this.'}
@@ -813,7 +808,6 @@ export default function RoutingView({ workCenters, operations, locations, onCrea
                       </div>
                       <div style={{ flex: 1 }}>
                           <FieldLabel
-                              classic
                               hint={newWorkCenter.node_type === 'MACHINE'
                                   ? 'Defect store for QC-rejected output. Leave blank to use the group\'s.'
                                   : 'Defect store for QC-rejected output — e.g. Gd Greige BS for weaving, Gd WiP Beam Reject for beaming.'}
@@ -825,7 +819,7 @@ export default function RoutingView({ workCenters, operations, locations, onCrea
                   </div>
                   {newWorkCenter.node_type === 'MACHINE' && ['WEAVING', 'TENUN'].includes((effectiveNewType || '').toUpperCase()) && (
                       <div style={{ width: 140, marginTop: 8 }}>
-                          <FieldLabel classic hint="Beam positions on this loom.">Beam Slots</FieldLabel>
+                          <FieldLabel hint="Beam positions on this loom.">Beam Slots</FieldLabel>
                           <input
                               type="number" min={1} step={1}
                               style={{ ...lvInput(), width: '100%' }}

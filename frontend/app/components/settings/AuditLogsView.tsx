@@ -195,7 +195,7 @@ export default function AuditLogsView({ auditLogs, currentPage, totalItems, page
                           <AuditLogRow key={log.id} log={log} rowIndex={i} userName={userNameById[log.user_id]} />
                       ))}
                       {auditLogs.length === 0 && (dataLoading.auditLogs ? (
-                          <TableSkeleton rows={8} cols={skel.cols ?? 5} classic rowHeight={skel.rowHeight} fillHeight={skel.fillHeight} />
+                          <TableSkeleton rows={8} cols={skel.cols ?? 5} rowHeight={skel.rowHeight} fillHeight={skel.fillHeight} />
                       ) : <tr><td colSpan={5} style={{ textAlign: 'center', padding: '24px', fontFamily: xpFont, fontSize: '11px', color: '#666', fontStyle: 'italic' }}>
                               No activity logs found
                           </td></tr>)}

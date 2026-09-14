@@ -202,7 +202,7 @@ export default function DyeingMonitorView() {
                 <MissingWhy run={run} machine={machine} />
                 {canSetRate && (
                     <div style={{ marginTop: 4 }}>
-                        <XPActionButton classic tone="neutral" icon="bi-sliders"
+                        <XPActionButton tone="neutral" icon="bi-sliders"
                             label={t('set_rate')} onClick={stop(() => setRateRun({ ...run, machine }))} />
                     </div>
                 )}

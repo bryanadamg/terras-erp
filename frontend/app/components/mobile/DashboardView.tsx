@@ -187,7 +187,7 @@ export default function MobileDashboardView({ items, stockBalance, workOrders, s
                                 borderLeft: `4px solid ${familyColor(wo.isOverdue ? 'red' : wo.status === 'IN_PROGRESS' ? 'blue' : 'gray')}`,
                             })}>
                                 <div style={{ minWidth: 0 }}>
-                                    <CodeChip code={wo.code} classic tone="accent" style={{ display: 'block', fontSize: 14 }} />
+                                    <CodeChip code={wo.code} tone="accent" style={{ display: 'block', fontSize: 14 }} />
                                     <div style={{ fontFamily: XP_FONT, fontSize: 11, color: '#444', marginTop: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{wo.itemName}</div>
                                     {wo.isOverdue && (
                                         <div style={{ fontFamily: XP_FONT, fontSize: 10, color: '#cc0000', fontWeight: 'bold', marginTop: 1 }}>

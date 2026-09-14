@@ -209,7 +209,7 @@ export function FloatingLayer({ rect, anchorEl, placement = 'bottom', align = 's
 /** The tooltip box itself. Classic is the XP tooltip (pale blue, 1px black,
  *  Tahoma); modern is a dark bubble. Exported for the rare caller that drives its
  *  own anchor and only wants the surface. */
-export function TooltipSurface({ classic, children, maxWidth = 320, id }: { classic: boolean; children: React.ReactNode; maxWidth?: number; id?: string }) {
+export function TooltipSurface({ children, maxWidth = 320, id }: { children: React.ReactNode; maxWidth?: number; id?: string }) {
     return (
         <div
             id={id}
@@ -279,7 +279,7 @@ export function Tooltip({ content, children, placement = 'bottom', align = 'star
             {cloned}
             {rect && (
                 <FloatingLayer rect={rect} anchorEl={anchorEl} placement={placement} align={align} className="tip-anim">
-                    <TooltipSurface classic maxWidth={maxWidth} id={tipId}>{content}</TooltipSurface>
+                    <TooltipSurface maxWidth={maxWidth} id={tipId}>{content}</TooltipSurface>
                 </FloatingLayer>
             )}
         </>

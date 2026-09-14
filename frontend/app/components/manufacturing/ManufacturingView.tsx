@@ -351,7 +351,6 @@ export default function ManufacturingView({
               size="xxl"
               footer={
                   <ModalFooterActions
-                      classic
                       onCancel={() => setIsCreateOpen(false)}
                       cancelLabel={t('cancel')}
                       onSubmit={() => handleSubmit()}
