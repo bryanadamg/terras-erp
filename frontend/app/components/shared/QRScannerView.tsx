@@ -1,7 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { Html5QrcodeScanner } from 'html5-qrcode';
 import { useLanguage } from '../../context/LanguageContext';
-import { useTheme } from '../../context/ThemeContext';
 import { useData } from '../../context/DataContext';
 import { STATUS_COLORS, CodeChip, xpFont, xpBtn as xpBtnBase, BTN_TONES, XP_BTN } from './xpTheme';
 import { xpBevel as sharedXpBevel, xpTitleBar as sharedXpTitleBar } from './shellTheme';
@@ -32,9 +31,7 @@ export default function QRScannerView({
     onClose
 }: QRScannerViewProps) {
     const { t } = useLanguage();
-    const { uiStyle: currentStyle } = useTheme();
     const { itemIndex } = useData();
-    const classic = currentStyle === 'classic';
 
     const [scannedWO, setScannedWO] = useState<any>(null);
     const [error, setError] = useState<string | null>(null);
@@ -198,7 +195,7 @@ export default function QRScannerView({
 
     const terminalId = useRef(Math.random().toString(36).substr(2, 6).toUpperCase());
 
-    if (classic) {
+    if (true) {
         return (
             <div style={xpBevel} className="fade-in">
                 {/* XP Title Bar */}

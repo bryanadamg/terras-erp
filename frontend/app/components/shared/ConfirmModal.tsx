@@ -2,7 +2,6 @@
 
 import React from 'react';
 import ModalWrapper from './ModalWrapper';
-import { useTheme } from '../../context/ThemeContext';
 import { xpFont } from './xpTheme';
 
 interface ConfirmModalProps {
@@ -59,8 +58,6 @@ export default function ConfirmModal({
     confirmText = 'Confirm',
     variant = 'danger'
 }: ConfirmModalProps) {
-    const { uiStyle } = useTheme();
-    const classic = uiStyle === 'classic';
 
     return (
         <ModalWrapper
@@ -73,20 +70,10 @@ export default function ConfirmModal({
             modeless
             footer={
                 <>
-                    {classic ? (
-                        <button type="button" style={xpCancelBtn} onClick={onClose}>Cancel</button>
-                    ) : (
-                        <button type="button" className="btn btn-sm btn-link text-muted text-decoration-none" onClick={onClose}>Cancel</button>
-                    )}
-                    {classic ? (
-                        <button type="button" style={xpConfirmBtn(variant)} onClick={() => { onConfirm(); onClose(); }}>
+                    {<button type="button" style={xpCancelBtn} onClick={onClose}>Cancel</button>}
+                    {<button type="button" style={xpConfirmBtn(variant)} onClick={() => { onConfirm(); onClose(); }}>
                             {confirmText.toUpperCase()}
-                        </button>
-                    ) : (
-                        <button type="button" className={`btn btn-sm btn-${variant} px-4 fw-bold shadow-sm`} onClick={() => { onConfirm(); onClose(); }}>
-                            {confirmText.toUpperCase()}
-                        </button>
-                    )}
+                        </button>}
                 </>
             }
         >

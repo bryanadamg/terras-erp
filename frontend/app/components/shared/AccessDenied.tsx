@@ -5,18 +5,15 @@
 // shell stays around it — sidebar, header, logout — so the user can navigate away
 // instead of hitting a dead end.
 import { useRouter } from 'next/navigation';
-import { useTheme } from '../../context/ThemeContext';
 import { xpFont, xpBtn, XP_BTN } from './xpTheme';
 
 export default function AccessDenied({ codes }: { codes: string[] }) {
-    const { uiStyle } = useTheme();
     const router = useRouter();
-    const classic = uiStyle === 'classic';
     // The codes are shown so an admin reading a user's screen share knows exactly
     // which chip to tick on the Permissions tab.
     const needed = codes.join(' or ');
 
-    if (classic) {
+    if (true) {
         return (
             <div style={{ padding: 16, fontFamily: xpFont }}>
                 <div style={{

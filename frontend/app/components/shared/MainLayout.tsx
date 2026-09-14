@@ -126,7 +126,7 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
             />
 
             <div className="main-content flex-grow-1 overflow-y-auto overflow-x-hidden bg-light">
-                <div className={`app-header sticky-top bg-white border-bottom shadow-sm px-4 d-flex justify-content-between align-items-center no-print ${uiStyle === 'classic' ? 'classic-header' : ''}`}>
+                <div className={`app-header sticky-top bg-white border-bottom shadow-sm px-4 d-flex justify-content-between align-items-center no-print classic-header`}>
                     <div className="d-flex align-items-center gap-3">
                         <button className="btn btn-link d-md-none p-0 text-dark" onClick={() => setIsMobileSidebarOpen(true)}><i className="bi bi-list fs-3"></i></button>
                         <h5 className="mb-0 fw-bold text-dark d-none d-md-block text-uppercase letter-spacing-1">{pageTitle}</h5>
@@ -134,11 +134,11 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
                     
                     <div className="d-flex align-items-center gap-2 gap-md-3">
                         <LiveFeedIndicator />
-                        <button data-testid="scanner-btn" className={`btn btn-sm ${uiStyle === 'classic' ? 'btn-light' : 'btn-outline-secondary'}`} onClick={() => router.push('/scanner')} title="Scan QR Code"><i className="bi bi-qr-code-scan"></i></button>
+                        <button data-testid="scanner-btn" className="btn btn-sm btn-light" onClick={() => router.push('/scanner')} title="Scan QR Code"><i className="bi bi-qr-code-scan"></i></button>
                         <div className="d-flex align-items-center me-1">
                             <select 
                                 data-testid="language-select"
-                                className={`form-select form-select-sm py-0 ps-1 pe-3 ${uiStyle === 'classic' ? 'bg-transparent border-0' : 'rounded-pill border-0 bg-light'}`}
+                                className="form-select form-select-sm py-0 ps-1 pe-3 bg-transparent border-0"
                                 style={{height: '24px', fontSize: '11px', minWidth: '60px'}}
                                 value={language}
                                 onChange={(e) => setLanguage(e.target.value as any)}

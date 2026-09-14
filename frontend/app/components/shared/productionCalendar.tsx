@@ -72,18 +72,17 @@ export function WorkingDaysSection({ classic, weekdays, onToggleWeekday, canEdit
 }) {
     const { t } = useLanguage();
     return (
-        <FormSection classic={classic} title={<SectionTitle icon="bi-calendar-week">{t('working_days')}</SectionTitle>}>
+        <FormSection classic title={<SectionTitle icon="bi-calendar-week">{t('working_days')}</SectionTitle>}>
             <div className="d-flex flex-wrap gap-2 align-items-center mb-2">
-                <WeekdayToggle value={weekdays} onToggle={onToggleWeekday} classic={classic} disabled={!canEdit} />
+                <WeekdayToggle value={weekdays} onToggle={onToggleWeekday} classic disabled={!canEdit} />
                 {canEdit && onSave && (
                     <span className="ms-2">
-                        <XPActionButton classic={classic} tone="success" icon="bi-check-lg" label={t('save')} onClick={onSave} />
+                        <XPActionButton classic tone="success" icon="bi-check-lg" label={t('save')} onClick={onSave} />
                     </span>
                 )}
             </div>
             <p
-                className={classic ? '' : 'text-muted small mb-0'}
-                style={classic ? { fontFamily: xpFont, fontSize: 10, color: '#777', margin: 0 } : undefined}
+                style={{ fontFamily: xpFont, fontSize: 10, color: '#777', margin: 0 }}
             >
                 {t('working_days_hint')}
             </p>
@@ -100,14 +99,14 @@ function MonthNav({ classic, month, onMonthChange }: {
     const { t } = useLanguage();
     return (
         <div className="d-flex align-items-center gap-2 mb-2">
-            <XPActionButton classic={classic} tone="neutral" icon="bi-chevron-left"
+            <XPActionButton classic tone="neutral" icon="bi-chevron-left"
                 onClick={() => onMonthChange(new Date(month.getFullYear(), month.getMonth() - 1, 1))} />
-            <span style={{ minWidth: 150, textAlign: 'center', fontWeight: 'bold', fontFamily: classic ? xpFont : undefined }}>
+            <span style={{ minWidth: 150, textAlign: 'center', fontWeight: 'bold', fontFamily: xpFont}}>
                 {month.toLocaleDateString(undefined, { month: 'long', year: 'numeric' })}
             </span>
-            <XPActionButton classic={classic} tone="neutral" icon="bi-chevron-right"
+            <XPActionButton classic tone="neutral" icon="bi-chevron-right"
                 onClick={() => onMonthChange(new Date(month.getFullYear(), month.getMonth() + 1, 1))} />
-            <XPActionButton classic={classic} tone="neutral" label={t('today')} onClick={() => onMonthChange(new Date())} />
+            <XPActionButton classic tone="neutral" label={t('today')} onClick={() => onMonthChange(new Date())} />
         </div>
     );
 }
@@ -149,9 +148,9 @@ export function HolidayMonthGrid({ classic, month, weekdays, holidays, national,
         const nat = national.get(ds);
         const isToday = ds === todayStr;
         let bg = '#fff';
-        if (hol) bg = classic ? '#f0cccc' : '#f8d7da';
-        else if (nat) bg = classic ? '#ffe2b8' : '#ffe9c7';
-        else if (!working) bg = classic ? '#e6e3da' : '#eceef0';
+        if (hol) bg = '#f0cccc';
+        else if (nat) bg = '#ffe2b8';
+        else if (!working) bg = '#e6e3da';
         cells.push(
             <div key={ds}
                 onClick={() => { if (canEdit && onToggleDay) onToggleDay(ds, hol, nat); }}
@@ -160,8 +159,8 @@ export function HolidayMonthGrid({ classic, month, weekdays, holidays, national,
                     minHeight: 48, padding: '2px 4px', background: bg, overflow: 'hidden',
                     cursor: canEdit && onToggleDay ? 'pointer' : 'default',
                     border: isToday ? `2px solid ${TODAY_BLUE}` : '1px solid',
-                    borderColor: isToday ? TODAY_BLUE : (classic ? '#c8c4b8' : '#e6e6e6'),
-                    fontFamily: classic ? xpFont : undefined, fontSize: 11,
+                    borderColor: isToday ? TODAY_BLUE : ('#c8c4b8'),
+                    fontFamily: xpFont, fontSize: 11,
                 }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                     <span style={{ fontWeight: isToday ? 'bold' : 'normal' }}>{d}</span>
@@ -178,7 +177,7 @@ export function HolidayMonthGrid({ classic, month, weekdays, holidays, national,
         <div>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7,1fr)', gap: 2, marginBottom: 2 }}>
                 {WEEKDAY_LABELS.map(h => (
-                    <div key={h} style={{ textAlign: 'center', fontSize: 10, fontWeight: 'bold', color: '#666', fontFamily: classic ? xpFont : undefined }}>{h}</div>
+                    <div key={h} style={{ textAlign: 'center', fontSize: 10, fontWeight: 'bold', color: '#666', fontFamily: xpFont}}>{h}</div>
                 ))}
             </div>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7,1fr)', gap: 2 }}>{cells}</div>
@@ -191,12 +190,12 @@ function CalendarLegend({ classic }: { classic: boolean }) {
     const { t } = useLanguage();
     const swatches: [string, string][] = [
         ['#fff', t('working_day')],
-        [classic ? '#e6e3da' : '#eceef0', t('rest_day')],
-        [classic ? '#ffe2b8' : '#ffe9c7', `★ ${t('national_holiday')}`],
-        [classic ? '#f0cccc' : '#f8d7da', t('holiday')],
+        ['#e6e3da', t('rest_day')],
+        ['#ffe2b8', `★ ${t('national_holiday')}`],
+        ['#f0cccc', t('holiday')],
     ];
     return (
-        <div className="d-flex flex-wrap gap-3 mt-2" style={{ fontSize: 10, color: '#666', fontFamily: classic ? xpFont : undefined }}>
+        <div className="d-flex flex-wrap gap-3 mt-2" style={{ fontSize: 10, color: '#666', fontFamily: xpFont}}>
             {swatches.map(([c, label]) => (
                 <span key={label} className="d-inline-flex align-items-center">
                     <span style={{ display: 'inline-block', width: 11, height: 11, background: c, border: '1px solid #aaa', marginRight: 4 }} />{label}
@@ -229,12 +228,12 @@ export function HolidayCalendarSection({
 }) {
     const { t } = useLanguage();
     return (
-        <FormSection classic={classic} title={
+        <FormSection classic title={
             <SectionTitle icon="bi-calendar3" right={headerAction}>{t('holidays')}</SectionTitle>
         }>
-            <MonthNav classic={classic} month={month} onMonthChange={onMonthChange} />
+            <MonthNav classic month={month} onMonthChange={onMonthChange} />
             <HolidayMonthGrid
-                classic={classic}
+                classic
                 month={month}
                 weekdays={weekdays}
                 holidays={holidays}
@@ -242,10 +241,9 @@ export function HolidayCalendarSection({
                 onToggleDay={onToggleDay}
                 canEdit={canEdit}
             />
-            <CalendarLegend classic={classic} />
+            <CalendarLegend classic />
             <p
-                className={classic ? '' : 'text-muted small mt-1'}
-                style={classic ? { fontFamily: xpFont, fontSize: 10, color: '#777', marginTop: 4 } : undefined}
+                style={{ fontFamily: xpFont, fontSize: 10, color: '#777', marginTop: 4 }}
             >
                 {t('calendar_click_hint')}
             </p>

@@ -11,7 +11,6 @@
  * rules straight back for the open run to use without a refetch.
  */
 
-import { useTheme } from '../../context/ThemeContext';
 import ModalWrapper from './ModalWrapper';
 import { xpBtn, BTN_TONES, XP_BTN } from './xpTheme';
 import { QtyFormulaRule } from './qtyFormula';
@@ -23,19 +22,17 @@ export default function QtyFormulaModal({ isOpen, onClose, canEdit, onSaved }: {
     canEdit: boolean;
     onSaved?: (rules: QtyFormulaRule[]) => void;
 }) {
-    const { uiStyle } = useTheme();
-    const classic = uiStyle === 'classic';
     const editor = useQtyFormulaEditor(onSaved);
 
-    const hint: React.CSSProperties = { fontSize: classic ? 10 : 11, color: '#6b6558', marginTop: 3 };
+    const hint: React.CSSProperties = { fontSize: 10, color: '#6b6558', marginTop: 3 };
 
     const btn = (label: string, onClick: () => void, tone?: React.CSSProperties, disabled = false) => (
         <button
             type="button"
             onClick={onClick}
             disabled={disabled}
-            style={classic ? xpBtn({ ...(tone || {}), padding: '3px 14px' }) : undefined}
-            className={classic ? XP_BTN : `btn btn-sm ${tone ? 'btn-primary' : 'btn-outline-secondary'} px-3`}
+            style={xpBtn({ ...(tone || {}), padding: '3px 14px' })}
+            className={XP_BTN}
         >
             {label}
         </button>
@@ -68,8 +65,8 @@ export default function QtyFormulaModal({ isOpen, onClose, canEdit, onSaved }: {
                 </div>
             }
         >
-            <div style={{ padding: classic ? 8 : 0 }}>
-                <QtyFormulaEditorFields editor={editor} classic={classic} canEdit={canEdit} hint={hint} />
+            <div style={{ padding: 8}}>
+                <QtyFormulaEditorFields editor={editor} classic canEdit={canEdit} hint={hint} />
             </div>
         </ModalWrapper>
     );

@@ -1,5 +1,4 @@
 import { useState, useEffect, useMemo } from 'react';
-import { useTheme } from '../../context/ThemeContext';
 import { useData } from '../../context/DataContext';
 import { statusColor, statusTint, xpFont, CHIP_RADIUS } from './xpTheme';
 import { xpBevel as sharedXpBevel, SearchField, FilterChipBar } from './shellTheme';
@@ -41,8 +40,6 @@ export default function CalendarView({
 }: any) {
     const { itemIndex, authFetch } = useData();
     const [currentDate, setCurrentDate] = useState(new Date());
-    const { uiStyle: currentStyle } = useTheme();
-    const classic = currentStyle === 'classic';
 
     const [statusFilter, setStatusFilter] = useState<Set<string>>(new Set());
     const [search, setSearch] = useState('');
@@ -134,10 +131,7 @@ export default function CalendarView({
     const emptyHatch = 'repeating-linear-gradient(45deg, #f7f5f0, #f7f5f0 6px, #f1eee7 6px, #f1eee7 12px)';
     for (let i = 0; i < firstDay; i++) {
         days.push(
-            classic
-                ? <div key={`empty-${i}`} style={{ background: emptyHatch, border: '1px solid #d8d4cc', minHeight: compact ? 34 : 100 }}></div>
-                : <div key={`empty-${i}`} className={`calendar-day empty border ${compact ? 'py-1' : ''}`} style={{ background: emptyHatch }}></div>
-        );
+            <div key={`empty-${i}`} style={{ background: emptyHatch, border: '1px solid #d8d4cc', minHeight: compact ? 34 : 100 }}></div>);
     }
 
     // Day cells
@@ -149,7 +143,7 @@ export default function CalendarView({
         const dayQty = showLoad ? dueOrders.reduce((a: number, w: any) => a + (Number(w.qty) || 0), 0) : 0;
         const loadPct = showLoad && maxLoad > 0 ? Math.max(8, Math.round((dayQty / maxLoad) * 100)) : 0;
 
-        if (classic) {
+        if (true) {
             const bg = isToday ? '#dde8f5' : holidayName ? '#ffe9c7' : '#ffffff';
             days.push(
                 <div key={day} title={holidayName || undefined}
@@ -250,12 +244,12 @@ export default function CalendarView({
     // the whole selection and `toggleStatus` does the add/remove.
     const filterBar = filterable && !compact && (
         <div
-            className={classic ? 'no-print' : 'd-flex flex-wrap align-items-center gap-2 mb-2 no-print'}
-            style={classic ? { display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 6, marginBottom: 6 } : undefined}
+            className={'no-print'}
+            style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 6, marginBottom: 6 }}
         >
-            <SearchField classic={classic} value={search} onChange={setSearch} placeholder="Search" width={classic ? 160 : 180} />
+            <SearchField classic value={search} onChange={setSearch} placeholder="Search" width={160} />
             <FilterChipBar
-                classic={classic}
+                classic
                 options={statusOptions.map(s => ({ value: s, label: s.replace(/_/g, ' ') }))}
                 value={Array.from(statusFilter)}
                 onChange={toggleStatus}
@@ -263,15 +257,15 @@ export default function CalendarView({
             {(statusFilter.size > 0 || search) && (
                 <button
                     onClick={() => { setStatusFilter(new Set()); setSearch(''); }}
-                    style={classic ? xpNavBtn() : undefined}
-                    className={classic ? undefined : 'btn btn-sm btn-light border'}
+                    style={xpNavBtn()}
+                    className={undefined}
                 >Clear</button>
             )}
         </div>
     );
 
     // ── Classic render ───────────────────────────────────────────────────────
-    if (classic) {
+    if (true) {
         const xpBevel: React.CSSProperties = sharedXpBevel();
         return (
             <div className={`fade-in ${compact ? 'compact-calendar' : ''}`}>

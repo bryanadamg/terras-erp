@@ -2,7 +2,6 @@
 
 import React from 'react';
 import { useData } from '../../context/DataContext';
-import { useTheme } from '../../context/ThemeContext';
 import { ProgressBar, xpFont } from './xpTheme';
 
 /**
@@ -19,8 +18,6 @@ import { ProgressBar, xpFont } from './xpTheme';
  */
 export default function AppLoadBar() {
     const { loadProgress } = useData();
-    const { uiStyle } = useTheme();
-    const classic = uiStyle === 'classic';
 
     const { done, total } = loadProgress;
     if (total === 0 || done >= total) return null;
@@ -38,18 +35,18 @@ export default function AppLoadBar() {
                 display: 'flex',
                 alignItems: 'center',
                 gap: 10,
-                padding: classic ? '4px 12px' : '6px 16px',
-                background: classic ? '#ece9d8' : '#f8fafc',
-                borderBottom: `1px solid ${classic ? '#b0aaa0' : '#e2e8f0'}`,
-                fontFamily: classic ? xpFont : undefined,
-                fontSize: classic ? 11 : 12,
-                color: classic ? '#33393f' : '#475569',
+                padding: '4px 12px',
+                background: '#ece9d8',
+                borderBottom: `1px solid ${'#b0aaa0'}`,
+                fontFamily: xpFont,
+                fontSize: 11,
+                color: '#33393f',
                 userSelect: 'none',
             }}
         >
             <span style={{ whiteSpace: 'nowrap' }}>Loading data…</span>
             <span style={{ flex: 1, maxWidth: 320 }}>
-                <ProgressBar pct={pct} tone="blue" height={classic ? 10 : 8} />
+                <ProgressBar pct={pct} tone="blue" height={10} />
             </span>
             <span style={{ whiteSpace: 'nowrap', fontVariantNumeric: 'tabular-nums' }}>
                 {done} of {total}

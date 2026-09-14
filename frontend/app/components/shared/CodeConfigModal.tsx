@@ -1,5 +1,4 @@
 import { useState, useEffect, useRef, Fragment } from 'react';
-import { useTheme } from '../../context/ThemeContext';
 import ModalWrapper from './ModalWrapper';
 import { CODE_FONT, xpFont, BUTTON_RADIUS, XP_BTN } from './xpTheme';
 
@@ -402,7 +401,6 @@ export default function CodeConfigModal({ isOpen, onClose, type, onSave, initial
   const [segments, setSegments] = useState<Segment[]>(() => getDefaultSegments(type));
   const [separator, setSeparator] = useState('-');
   const [activeGap, setActiveGap] = useState<number | null>(null);
-  const { uiStyle: currentStyle } = useTheme();
   const dragRef = useRef<{
     sourceZone: 'track' | 'palette';
     index: number;
@@ -501,7 +499,6 @@ export default function CodeConfigModal({ isOpen, onClose, type, onSave, initial
     setSegments(prev => prev.map(s => s.type === 'suffix' ? { ...s, value: value.toUpperCase() } : s));
   };
 
-  const classic = currentStyle === 'classic';
   const palette = getAvailablePalette(segments, attributes);
 
   const title = (
@@ -511,8 +508,7 @@ export default function CodeConfigModal({ isOpen, onClose, type, onSave, initial
     </>
   );
 
-  const footer = classic ? (
-    <>
+  const footer = <>
       <button onClick={onClose} className={XP_BTN} style={{
         borderRadius: BUTTON_RADIUS,
         fontFamily: xpFont, fontSize: '11px', padding: '4px 18px',
@@ -526,17 +522,9 @@ export default function CodeConfigModal({ isOpen, onClose, type, onSave, initial
         border: '1px solid', borderColor: '#99bbee #224477 #224477 #99bbee',
         color: '#fff', cursor: 'pointer',
       }}>Save Configuration</button>
-    </>
-  ) : (
-    <>
-      <button type="button" className="btn btn-sm btn-secondary" onClick={onClose}>Cancel</button>
-      <button type="button" className="btn btn-sm btn-primary px-4" onClick={handleSave}>
-        Save Configuration
-      </button>
-    </>
-  );
+    </>;
 
-  if (classic) {
+  if (true) {
     const xpGap = (gapIndex: number) => (
       <div
         key={`xp-gap-${gapIndex}`}

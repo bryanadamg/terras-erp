@@ -69,47 +69,33 @@ export default function RequestDetailPanel({
     // otherwise it grows with content (minHeight floor). `overflow: hidden` keeps
     // the inner scroll areas — not the page — owning the overflow.
     const sizing: React.CSSProperties = height != null ? { height, overflow: 'hidden', boxSizing: 'border-box' } : { minHeight };
-    const outer: React.CSSProperties = classic
-        ? { background: '#ece9d8', borderTop: '2px solid #0058e6', display: 'flex', ...sizing }
-        : { background: '#f8f9fa', borderTop: '2px solid #0d6efd', display: 'flex', ...sizing };
+    const outer: React.CSSProperties = { background: '#ece9d8', borderTop: '2px solid #0058e6', display: 'flex', ...sizing };
 
     // min-width: 0 stops each pane's intrinsic content width from propagating up into
     // the outer (auto-layout) list table and resizing its flexible columns on expand.
     // min-height: 0 lets the panes scroll within a fixed-height panel.
     const leftPane: React.CSSProperties = {
-        width: leftWidth, borderRight: classic ? '1px solid #a0988c' : '1px solid #dee2e6',
+        width: leftWidth, borderRight: '1px solid #a0988c',
         display: 'flex', flexDirection: 'column', minWidth: 0, minHeight: 0,
     };
 
-    const leftHeader: React.CSSProperties = classic
-        ? { background: 'linear-gradient(to bottom, #e4e1d8, #d5d2c8)', borderBottom: '1px solid #9a9690', padding: '2px 8px', fontSize: 10, fontWeight: 'bold', color: '#111', letterSpacing: '0.3px', display: 'flex', alignItems: 'center', gap: 6, fontFamily: xpFont, flexShrink: 0 }
-        : { background: '#f1f3f5', borderBottom: '1px solid #dee2e6', padding: '3px 8px', fontSize: 10, fontWeight: 600, color: '#495057', display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 };
+    const leftHeader: React.CSSProperties = { background: 'linear-gradient(to bottom, #e4e1d8, #d5d2c8)', borderBottom: '1px solid #9a9690', padding: '2px 8px', fontSize: 10, fontWeight: 'bold', color: '#111', letterSpacing: '0.3px', display: 'flex', alignItems: 'center', gap: 6, fontFamily: xpFont, flexShrink: 0 };
 
-    const thCell: React.CSSProperties = classic
-        ? { background: 'linear-gradient(to bottom, #f0ede8, #e4e1da)', borderBottom: '1px solid #b0a898', borderRight: '1px solid #ccc', fontSize: 9, fontWeight: 'bold', color: '#111', padding: '2px 6px', textAlign: 'left', whiteSpace: 'nowrap', textTransform: 'uppercase', letterSpacing: '0.3px', fontFamily: xpFont }
-        : { background: '#fff', borderBottom: '1px solid #dee2e6', padding: '2px 6px', fontSize: 10, fontWeight: 600, color: '#333', textAlign: 'left', whiteSpace: 'nowrap' };
+    const thCell: React.CSSProperties = { background: 'linear-gradient(to bottom, #f0ede8, #e4e1da)', borderBottom: '1px solid #b0a898', borderRight: '1px solid #ccc', fontSize: 9, fontWeight: 'bold', color: '#111', padding: '2px 6px', textAlign: 'left', whiteSpace: 'nowrap', textTransform: 'uppercase', letterSpacing: '0.3px', fontFamily: xpFont };
 
-    const tdBase: React.CSSProperties = classic
-        ? { padding: '3px 6px', borderBottom: '1px solid #e8e5e0', borderRight: '1px solid #e0ddd8', fontSize: 11, verticalAlign: 'middle', fontFamily: xpFont }
-        : { padding: '4px 6px', borderBottom: '1px solid #e9ecef', fontSize: 11, verticalAlign: 'middle' };
+    const tdBase: React.CSSProperties = { padding: '3px 6px', borderBottom: '1px solid #e8e5e0', borderRight: '1px solid #e0ddd8', fontSize: 11, verticalAlign: 'middle', fontFamily: xpFont };
 
     const rightPane: React.CSSProperties = { flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', minWidth: 0, minHeight: 0 };
 
-    const grpHdr: React.CSSProperties = classic
-        ? { background: FORM_SECTION_BLUE, color: '#fff', fontSize: 10, fontWeight: 'bold', padding: '2px 8px', letterSpacing: '0.4px', textTransform: 'uppercase', fontFamily: xpFont }
-        : { background: '#e9ecef', color: '#333', fontSize: 10, fontWeight: 600, padding: '3px 8px', borderBottom: '1px solid #dee2e6', borderTop: '1px solid #dee2e6' };
+    const grpHdr: React.CSSProperties = { background: FORM_SECTION_BLUE, color: '#fff', fontSize: 10, fontWeight: 'bold', padding: '2px 8px', letterSpacing: '0.4px', textTransform: 'uppercase', fontFamily: xpFont };
 
     const grpBody: React.CSSProperties = {
-        background: '#fff', padding: '6px 10px', borderBottom: classic ? '1px solid #d0cdc8' : '1px solid #dee2e6',
-        display: 'grid', gridTemplateColumns: '1fr 1fr', gap: classic ? '2px 20px' : '2px 16px',
+        background: '#fff', padding: '6px 10px', borderBottom: '1px solid #d0cdc8',
+        display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '2px 20px',
     };
 
-    const lbl: React.CSSProperties = classic
-        ? { fontFamily: xpFont, fontSize: 10, color: '#333', fontWeight: 'bold', minWidth: 90, flexShrink: 0 }
-        : { fontSize: 10, color: '#444', fontWeight: 600, minWidth: 88, flexShrink: 0 };
-    const val: React.CSSProperties = classic
-        ? { fontFamily: xpFont, fontSize: 11, color: '#000' }
-        : { fontSize: 11, color: '#111' };
+    const lbl: React.CSSProperties = { fontFamily: xpFont, fontSize: 10, color: '#333', fontWeight: 'bold', minWidth: 90, flexShrink: 0 };
+    const val: React.CSSProperties = { fontFamily: xpFont, fontSize: 11, color: '#000' };
 
     return (
         <div style={outer}>
@@ -144,7 +130,7 @@ export default function RequestDetailPanel({
                                                     textAlign: col?.align || 'left',
                                                     ...(isLast ? { borderBottom: 'none' } : {}),
                                                     ...(ci === columns.length - 1 ? { borderRight: 'none' } : {}),
-                                                    ...(ci === 0 && classic && row.stripeColor ? { borderLeft: `4px solid ${row.stripeColor}` } : {}),
+                                                    ...(ci === 0 && row.stripeColor ? { borderLeft: `4px solid ${row.stripeColor}` } : {}),
                                                 };
                                                 return <td key={ci} style={style}>{cell}</td>;
                                             })}
@@ -155,7 +141,7 @@ export default function RequestDetailPanel({
                         </table>
                     </div>
                 ) : (
-                    <div style={{ padding: '12px 10px', color: '#555', fontStyle: 'italic', fontSize: classic ? 10 : 11, fontFamily: classic ? xpFont : undefined }}>{emptyText}</div>
+                    <div style={{ padding: '12px 10px', color: '#555', fontStyle: 'italic', fontSize: 10, fontFamily: xpFont}}>{emptyText}</div>
                 )}
             </div>
 

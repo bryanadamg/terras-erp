@@ -1,7 +1,6 @@
 'use client';
 import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { createPortal } from 'react-dom';
-import { useTheme } from '../../context/ThemeContext';
 import { MODAL_REPOSITION_EVENT } from './ModalWrapper';
 import { layoutRectOf, layoutViewport } from './uiScale';
 import { xpFont, BUTTON_RADIUS } from './xpTheme';
@@ -62,8 +61,6 @@ export default function TreeSelect({
   style,
   className,
 }: Props) {
-  const { uiStyle } = useTheme();
-  const classic = uiStyle === 'classic';
 
   const [open, setOpen] = useState(false);
   const [expanded, setExpanded] = useState<Set<string>>(() => collectGroupValues(options));
@@ -183,7 +180,7 @@ export default function TreeSelect({
     const canSelect = opt.selectable !== false && !!opt.value;
     const isSelected = !!value && opt.value === value;
 
-    if (classic) {
+    if (true) {
       return (
         <div key={opt.value || `_d${depth}`}>
           <div
@@ -332,7 +329,7 @@ export default function TreeSelect({
   // ── Render ──────────────────────────────────────────────────────────────────
   const emptyRow = allowEmpty && (
     <div
-      style={classic ? {
+      style={{
         ...xpFontStyle,
         padding: '2px 4px',
         margin: '0 2px',
@@ -342,18 +339,8 @@ export default function TreeSelect({
         color: !value ? '#fff' : '#777',
         fontStyle: 'italic',
         userSelect: 'none',
-      } : {
-        padding: '4px 6px',
-        margin: '0 2px',
-        borderRadius: BUTTON_RADIUS,
-        fontSize: size === 'sm' ? 12 : 13,
-        cursor: 'pointer',
-        color: !value ? '#fff' : '#888',
-        background: !value ? '#0d6efd' : undefined,
-        fontStyle: 'italic',
-        userSelect: 'none',
       }}
-      onMouseEnter={e => { if (value) (e.currentTarget as HTMLDivElement).style.background = classic ? '#dde8f8' : '#f0f6ff'; }}
+      onMouseEnter={e => { if (value) (e.currentTarget as HTMLDivElement).style.background = '#dde8f8'; }}
       onMouseLeave={e => { if (value) (e.currentTarget as HTMLDivElement).style.background = ''; }}
       onClick={() => select('')}
     >
@@ -373,7 +360,7 @@ export default function TreeSelect({
     transform: dropPos.above ? 'translateY(-100%)' : undefined,
   };
 
-  if (classic) {
+  if (true) {
     const panel = open ? createPortal(
       <div ref={panelRef} style={{
         ...portalStyle,

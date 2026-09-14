@@ -1,7 +1,6 @@
 'use client';
 
 import React from 'react';
-import { useTheme } from '../../context/ThemeContext';
 import UIPager from '@bryanadamg/terras-ui/components/Pager';
 
 interface PagerProps {
@@ -29,8 +28,6 @@ interface PagerProps {
  * the --terras-* vars — so only the label wording still reads the theme.
  */
 export default function Pager({ page, total, pageSize, onPageChange, hideWhenEmpty, leftContent, className }: PagerProps) {
-    const { uiStyle } = useTheme();
-    const classic = uiStyle === 'classic';
 
     return (
         <UIPager
@@ -39,9 +36,9 @@ export default function Pager({ page, total, pageSize, onPageChange, hideWhenEmp
             pageSize={pageSize}
             onPageChange={onPageChange}
             hideWhenEmpty={hideWhenEmpty}
-            leftContent={leftContent ?? (classic ? undefined : <>Showing {summaryRange(page, total, pageSize)}</>)}
+            leftContent={leftContent ?? (undefined)}
             className={`no-print ${className || ''}`}
-            prevLabel={<><i className="bi bi-chevron-left me-1"></i>{classic ? 'Prev' : 'Previous'}</>}
+            prevLabel={<><i className="bi bi-chevron-left me-1"></i>{'Prev'}</>}
             nextLabel={<>Next<i className="bi bi-chevron-right ms-1"></i></>}
         />
     );

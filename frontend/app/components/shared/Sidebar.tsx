@@ -1,7 +1,6 @@
 import { Fragment, useState, useRef, useLayoutEffect } from 'react';
 import { useLanguage } from '../../context/LanguageContext';
 import { useUser } from '../../context/UserContext';
-import { useTheme } from '../../context/ThemeContext';
 import { NAV_SECTIONS, navLabel, leafPermissions, NavSection } from './navConfig';
 import { xpFont, BUTTON_RADIUS, XP_BTN, CHIP_RADIUS } from './xpTheme';
 import PixelAvatar from './PixelAvatar';
@@ -147,10 +146,8 @@ function sectionHdrStyleModern(isHovered: boolean): React.CSSProperties {
 export default function Sidebar({ activeTab, setActiveTab, onTabHover, appName, isOpen }: SidebarProps) {
   const { t } = useLanguage();
   const { currentUser, hasPermission } = useUser();
-  const { uiStyle } = useTheme();
-  const classic = uiStyle === 'classic';
-  const navStyle = classic ? navItemStyle : navItemStyleModern;
-  const hdrStyle = classic ? sectionHdrStyle : sectionHdrStyleModern;
+  const navStyle = navItemStyle;
+  const hdrStyle = sectionHdrStyle;
   const sidebarRef = useRef<HTMLDivElement>(null);
 
   // Persist scroll position
@@ -202,7 +199,7 @@ export default function Sidebar({ activeTab, setActiveTab, onTabHover, appName, 
       onClick={(e) => handleTabClick(tab, e)}
       {...H(tab)}
     >
-      <span style={{ width: classic ? 14 : 16, textAlign: 'center', fontSize: classic ? 12 : 14 }}><i className={`bi ${icon}`} /></span>
+      <span style={{ width: 14, textAlign: 'center', fontSize: 12}}><i className={`bi ${icon}`} /></span>
       <span>{label}</span>
     </div>
   );
@@ -216,7 +213,7 @@ export default function Sidebar({ activeTab, setActiveTab, onTabHover, appName, 
     return (
       <div style={hdrStyle(hovered === navKey || active)} onClick={() => setActiveTab(navKey)} {...H(navKey)}>
         <span><i className={`bi ${section.icon}`} /> {navLabel(t, section)}</span>
-        <i className="bi bi-chevron-right" style={{ fontSize: 9, opacity: classic ? 0.7 : 0.45 }} aria-hidden="true" />
+        <i className="bi bi-chevron-right" style={{ fontSize: 9, opacity: 0.7}} aria-hidden="true" />
       </div>
     );
   };
@@ -227,10 +224,10 @@ export default function Sidebar({ activeTab, setActiveTab, onTabHover, appName, 
       ref={sidebarRef}
       onScroll={handleScroll}
       style={{
-        background: classic ? SIDEBAR_BG : '#ffffff',
+        background: SIDEBAR_BG,
         display: 'flex',
         flexDirection: 'column',
-        fontFamily: classic ? xpFont : modernFont,
+        fontFamily: xpFont,
       }}
     >
       {/* ── Header ──
@@ -239,7 +236,7 @@ export default function Sidebar({ activeTab, setActiveTab, onTabHover, appName, 
           difference breaks the top band at the sidebar seam. It was 40 tall with
           a 2px border against a 30px / 1px header. Height comes from the var —
           don't re-type the number here. */}
-      <div style={classic ? {
+      <div style={{
         background: 'var(--xp-title-flat)',
         padding: '0 10px',
         color: '#fff',
@@ -250,16 +247,6 @@ export default function Sidebar({ activeTab, setActiveTab, onTabHover, appName, 
         boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.3)',
         userSelect: 'none',
         height: 'var(--app-header-h)',
-      } : {
-        background: '#2563eb',
-        padding: '0 16px',
-        color: '#fff',
-        display: 'flex',
-        alignItems: 'center',
-        flexShrink: 0,
-        borderBottom: '1px solid #1d4ed8',
-        userSelect: 'none',
-        height: 'var(--app-header-h)',
       }}>
         <img
           className="app-brand-icon"
@@ -267,22 +254,22 @@ export default function Sidebar({ activeTab, setActiveTab, onTabHover, appName, 
           alt={appName}
           data-no-tip
           style={{
-            width: classic ? 20 : 24,
-            height: classic ? 20 : 24,
+            width: 20,
+            height: 20,
             flexShrink: 0,
-            borderRadius: classic ? 3 : 5,
+            borderRadius: 3,
           }}
         />
       </div>
 
       <div style={{ flex: 1, overflowY: 'auto' }}>
         {/* ── Quick Scan ── */}
-        <div style={{ padding: classic ? '8px 8px 4px' : '12px 12px 4px' }}>
+        <div style={{ padding: '8px 8px 4px'}}>
           <button
             className={XP_BTN}
             onClick={() => setActiveTab('scanner')}
             {...H('scanner')}
-            style={classic ? {
+            style={{
               width: '100%',
               padding: '6px 0',
               borderRadius: BUTTON_RADIUS,
@@ -298,24 +285,6 @@ export default function Sidebar({ activeTab, setActiveTab, onTabHover, appName, 
               justifyContent: 'center',
               gap: 6,
               letterSpacing: '0.5px',
-            } : {
-              width: '100%',
-              padding: '9px 0',
-              background: hovered === 'scanner' ? M_PRIMARY_DK : M_PRIMARY,
-              border: 'none',
-              borderRadius: 8,
-              color: '#fff',
-              fontFamily: modernFont,
-              fontSize: 12,
-              fontWeight: 600,
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: 7,
-              letterSpacing: '0.3px',
-              boxShadow: '0 1px 2px rgba(37,99,235,0.35)',
-              transition: 'background 0.12s',
             }}
           >
             <i className="bi bi-qr-code-scan" /> QUICK SCAN
@@ -345,23 +314,18 @@ export default function Sidebar({ activeTab, setActiveTab, onTabHover, appName, 
 
         {/* Credit line rides at the end of the nav list, so the footer holds
             nothing but the user card. */}
-        <div style={{ padding: classic ? '10px 8px 12px' : '14px 12px 16px', textAlign: 'center' }}>
-          <small style={{ fontSize: 9, color: classic ? '#6070a0' : '#94a3b8', fontFamily: classic ? xpFont : modernFont }}>
+        <div style={{ padding: '10px 8px 12px', textAlign: 'center' }}>
+          <small style={{ fontSize: 9, color: '#6070a0', fontFamily: xpFont}}>
             {t('powered_by') || 'Powered by'} Terras ERP
           </small>
         </div>
       </div>
 
       {/* ── Footer ── */}
-      <div style={classic ? {
+      <div style={{
         background: '#c0cade',
         borderTop: '1px solid #9098b8',
         padding: '6px 8px',
-        flexShrink: 0,
-      } : {
-        background: '#ffffff',
-        borderTop: `1px solid ${M_BORDER}`,
-        padding: '8px 12px',
         flexShrink: 0,
       }}>
         {/* Sole entry point to Settings — open to every user; the page itself
@@ -379,7 +343,7 @@ export default function Sidebar({ activeTab, setActiveTab, onTabHover, appName, 
              a second stacked box with GlobalTooltip's clip-echo for the name/
              role spans underneath it. Same opt-out as the login ID card. */
           data-no-tip
-          style={classic ? {
+          style={{
             width: '100%',
             padding: 0,
             borderRadius: 6,
@@ -398,33 +362,13 @@ export default function Sidebar({ activeTab, setActiveTab, onTabHover, appName, 
             alignItems: 'stretch',
             textAlign: 'left',
             overflow: 'hidden',
-          } : {
-            width: '100%',
-            padding: 0,
-            position: 'relative',
-            background: hovered === 'settings' ? '#f8fafc' : '#ffffff',
-            border: `1px solid ${hovered === 'settings' ? '#bfdbfe' : M_BORDER}`,
-            borderRadius: 10,
-            boxShadow: hovered === 'settings'
-              ? '0 2px 6px rgba(15,23,42,0.10)'
-              : '0 1px 2px rgba(15,23,42,0.05)',
-            color: M_TEXT,
-            fontFamily: modernFont,
-            cursor: 'pointer',
-            display: 'flex',
-            alignItems: 'stretch',
-            textAlign: 'left',
-            overflow: 'hidden',
-            transition: 'all 0.12s',
           }}
         >
           {/* Accent spine — the coloured edge of the ID card. */}
           <div style={{
             width: 3,
             flexShrink: 0,
-            background: classic
-              ? 'linear-gradient(to bottom, #4a7ddb, #003080)'
-              : 'linear-gradient(to bottom, #60a5fa, #2563eb)',
+            background: 'linear-gradient(to bottom, #4a7ddb, #003080)',
           }} />
           <div style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '5px 7px', minWidth: 0, flex: 1 }}>
             {/* Photo frame */}
@@ -436,13 +380,10 @@ export default function Sidebar({ activeTab, setActiveTab, onTabHover, appName, 
               alignItems: 'center',
               justifyContent: 'center',
               background: '#fff',
-              ...(classic ? {
+              ...({
                 border: '1px solid #7b86a8',
                 borderRadius: 4,
                 boxShadow: 'inset 1px 1px 0 #e8edf8',
-              } : {
-                border: `1px solid ${M_BORDER}`,
-                borderRadius: 6,
               }),
             }}>
               <PixelAvatar
@@ -456,9 +397,9 @@ export default function Sidebar({ activeTab, setActiveTab, onTabHover, appName, 
               <span
                 data-testid="username-display"
                 style={{
-                  fontSize: classic ? 10.5 : 11.5,
-                  fontWeight: classic ? 'bold' : 600,
-                  color: classic ? NAV_COLOR : M_TEXT,
+                  fontSize: 10.5,
+                  fontWeight: 'bold',
+                  color: NAV_COLOR,
                   overflow: 'hidden',
                   textOverflow: 'ellipsis',
                   whiteSpace: 'nowrap',
@@ -470,15 +411,15 @@ export default function Sidebar({ activeTab, setActiveTab, onTabHover, appName, 
                 marginTop: 1,
                 alignSelf: 'flex-start',
                 maxWidth: '100%',
-                fontSize: classic ? 8.5 : 9.5,
-                fontWeight: classic ? 'bold' : 600,
+                fontSize: 8.5,
+                fontWeight: 'bold',
                 letterSpacing: 0.3,
                 textTransform: 'uppercase',
                 padding: '0 4px',
                 borderRadius: CHIP_RADIUS,
-                background: classic ? '#c9d6f2' : '#eff6ff',
-                border: `1px solid ${classic ? '#8f9dc4' : '#bfdbfe'}`,
-                color: classic ? '#26365f' : '#1d4ed8',
+                background: '#c9d6f2',
+                border: `1px solid ${'#8f9dc4'}`,
+                color: '#26365f',
                 overflow: 'hidden',
                 textOverflow: 'ellipsis',
                 whiteSpace: 'nowrap',
@@ -489,9 +430,9 @@ export default function Sidebar({ activeTab, setActiveTab, onTabHover, appName, 
             <i
               className="bi bi-gear-fill"
               style={{
-                fontSize: classic ? 11 : 12,
+                fontSize: 11,
                 flexShrink: 0,
-                color: classic ? (hovered === 'settings' ? '#003080' : '#7b86a8') : (hovered === 'settings' ? '#2563eb' : '#94a3b8'),
+                color: hovered === 'settings' ? '#003080' : '#7b86a8',
               }}
             />
           </div>

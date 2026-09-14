@@ -44,7 +44,6 @@
  */
 
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { useTheme } from '../../context/ThemeContext';
 import { AnchorRect, FloatingLayer, TIP_DELAY, TooltipSurface, isClipped } from './Tooltip';
 import { layoutRectOf } from './uiScale';
 
@@ -117,8 +116,6 @@ const titleTextOf = (el: HTMLElement) => (el.getAttribute(PARKED) || el.getAttri
 const TITLED_SEL = `[${PARKED}],[title]`;
 
 export default function GlobalTooltip() {
-    const { uiStyle } = useTheme();
-    const classic = uiStyle === 'classic';
     const [live, setLive] = useState<Live | null>(null);
     const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
     /** Element currently carrying our `aria-describedby`, so it can be cleaned up. */
@@ -251,7 +248,7 @@ export default function GlobalTooltip() {
     if (!live) return null;
     return (
         <FloatingLayer rect={live.rect} anchorEl={live.el} placement={sidePlaced(live.el) ? 'side' : 'bottom'} className="tip-anim">
-            <TooltipSurface classic={classic} maxWidth={360} id={TIP_ID}>{live.text}</TooltipSurface>
+            <TooltipSurface classic maxWidth={360} id={TIP_ID}>{live.text}</TooltipSurface>
         </FloatingLayer>
     );
 }

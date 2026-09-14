@@ -28,7 +28,6 @@
 
 import React, { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { useTheme } from '../../context/ThemeContext';
 import { layoutRectOf, uiZoom } from './uiScale';
 import { xpFont, modernFont } from './typography';
 import { TOOLTIP_Z } from './zLayers';
@@ -222,15 +221,15 @@ export function TooltipSurface({ classic, children, maxWidth = 320, id }: { clas
                 // step), and '\n' in a native title is the only reason those read at
                 // all. pre-line keeps that working here.
                 whiteSpace: 'pre-line',
-                fontFamily: classic ? xpFont : modernFont,
-                fontSize: classic ? 11 : 11.5,
+                fontFamily: xpFont,
+                fontSize: 11,
                 lineHeight: 1.4,
-                padding: classic ? '2px 5px' : '5px 8px',
-                borderRadius: classic ? 0 : 4,
-                background: classic ? '#e1f0ff' : '#1f2937',
-                color: classic ? '#000' : '#f8fafc',
-                border: classic ? '1px solid #000' : '1px solid rgba(255,255,255,0.08)',
-                boxShadow: classic ? '2px 2px 3px rgba(0,0,0,0.2)' : '0 6px 16px rgba(15,23,42,0.28)',
+                padding: '2px 5px',
+                borderRadius: 0,
+                background: '#e1f0ff',
+                color: '#000',
+                border: '1px solid #000',
+                boxShadow: '2px 2px 3px rgba(0,0,0,0.2)',
             }}
         >
             {children}
@@ -258,8 +257,6 @@ export function Tooltip({ content, children, placement = 'bottom', align = 'star
     disabled?: boolean;
     maxWidth?: number;
 }) {
-    const { uiStyle } = useTheme();
-    const classic = uiStyle === 'classic';
     const empty = content === null || content === undefined || content === '';
     const { rect, anchorEl, handlers } = useHoverAnchor({ delay, enabled: !disabled && !empty });
     const tipId = React.useId();
@@ -282,7 +279,7 @@ export function Tooltip({ content, children, placement = 'bottom', align = 'star
             {cloned}
             {rect && (
                 <FloatingLayer rect={rect} anchorEl={anchorEl} placement={placement} align={align} className="tip-anim">
-                    <TooltipSurface classic={classic} maxWidth={maxWidth} id={tipId}>{content}</TooltipSurface>
+                    <TooltipSurface classic maxWidth={maxWidth} id={tipId}>{content}</TooltipSurface>
                 </FloatingLayer>
             )}
         </>

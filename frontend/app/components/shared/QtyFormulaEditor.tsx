@@ -206,10 +206,7 @@ export function QtyFormulaEditorFields({ editor, classic, canEdit, hint }: {
             value={value}
             disabled={!canEdit}
             onChange={e => onChange(e.target.value)}
-            style={classic
-                ? xpInput({ width: '100%', ...extra, ...(invalid ? { borderColor: '#c00', background: '#fff5f5' } : {}) })
-                : { width: '100%', ...extra }}
-            className={classic ? '' : `form-control form-control-sm${invalid ? ' is-invalid' : ''}`}
+            style={xpInput({ width: '100%', ...extra, ...(invalid ? { borderColor: '#c00', background: '#fff5f5' } : {}) })}
         />
     );
 
@@ -229,12 +226,12 @@ export function QtyFormulaEditorFields({ editor, classic, canEdit, hint }: {
             </div>
 
             <table style={{ width: '100%', borderCollapse: 'collapse', marginTop: 10 }}>
-                <thead style={classic ? TH_ROW : undefined}>
+                <thead style={TH_ROW}>
                     <tr>
-                        <th style={classic ? { ...TH, width: 70 } : { width: 70 }}>Size</th>
-                        <th style={classic ? TH : undefined}>Expression</th>
-                        <th style={classic ? { ...TH, width: 90 } : { width: 90 }}>Ordered</th>
-                        <th style={classic ? { ...TH, width: 80 } : { width: 80 }}>Makes</th>
+                        <th style={{ ...TH, width: 70 }}>Size</th>
+                        <th style={TH}>Expression</th>
+                        <th style={{ ...TH, width: 90 }}>Ordered</th>
+                        <th style={{ ...TH, width: 80 }}>Makes</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -242,10 +239,10 @@ export function QtyFormulaEditorFields({ editor, classic, canEdit, hint }: {
                         const isFallback = name === QTY_FORMULA_FALLBACK;
                         return (
                             <tr key={name}>
-                                <td style={classic ? { ...TD, fontWeight: 'bold' } : undefined}>
+                                <td style={{ ...TD, fontWeight: 'bold' }}>
                                     {isFallback ? 'other' : name}
                                 </td>
-                                <td style={classic ? TD : undefined}>
+                                <td style={TD}>
                                     {input(
                                         exprs[name] || '',
                                         v => setExprs(prev => ({ ...prev, [name]: v })),
@@ -262,16 +259,14 @@ export function QtyFormulaEditorFields({ editor, classic, canEdit, hint }: {
                                         </div>
                                     )}
                                 </td>
-                                <td style={classic ? TD : undefined}>
+                                <td style={TD}>
                                     {isFallback ? null : input(
                                         sample[name] ?? '',
                                         v => setSample(prev => ({ ...prev, [name]: v })),
                                         { textAlign: 'right' },
                                     )}
                                 </td>
-                                <td style={classic
-                                    ? { ...TD, textAlign: 'right', fontWeight: 'bold' }
-                                    : { textAlign: 'right', fontWeight: 600 }}>
+                                <td style={{ ...TD, textAlign: 'right', fontWeight: 'bold' }}>
                                     {isFallback ? null : preview[name]}
                                 </td>
                             </tr>
@@ -282,12 +277,11 @@ export function QtyFormulaEditorFields({ editor, classic, canEdit, hint }: {
 
             <div style={{ display: 'flex', alignItems: 'flex-end', gap: 10, marginTop: 10 }}>
                 <div style={{ width: 120 }}>
-                    <FieldLabel classic={classic}>Test tolerance %</FieldLabel>
+                    <FieldLabel classic>Test tolerance %</FieldLabel>
                     <input
                         value={tolerance}
                         onChange={e => setTolerance(e.target.value)}
-                        style={classic ? xpInput({ width: '100%', textAlign: 'right' }) : { width: '100%', textAlign: 'right' }}
-                        className={classic ? '' : 'form-control form-control-sm'}
+                        style={xpInput({ width: '100%', textAlign: 'right' })}
                     />
                 </div>
                 <div style={{ ...hint, flex: 1 }}>

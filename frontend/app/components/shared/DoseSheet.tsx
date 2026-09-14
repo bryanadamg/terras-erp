@@ -61,18 +61,12 @@ export const BASIS_LABEL: Record<string, string> = {
 export const doseUnitFor = (doses: DosePreview | null, itemId: string) =>
     doses?.lines.find(l => String(l.item_id) === String(itemId))?.dose_unit ?? null;
 
-const panel = (classic: boolean): React.CSSProperties => classic
-    ? { border: '1px solid #7f9db9', background: 'white' }
-    : { background: '#fff', border: '1px solid #dbe1ea', borderRadius: 9 };
+const panel = (classic: boolean): React.CSSProperties => ({ border: '1px solid #7f9db9', background: 'white' });
 
-const sectionHeader = (classic: boolean): React.CSSProperties => classic ? {
+const sectionHeader = (classic: boolean): React.CSSProperties => ({
     background: FORM_SECTION_BLUE, color: 'white', padding: '3px 8px',
     fontFamily: xpFont, fontSize: 11, fontWeight: 'bold',
-} : {
-    background: '#eef1f6', color: '#475569', textTransform: 'uppercase',
-    fontWeight: 700, fontSize: 11, letterSpacing: '0.04em', padding: '7px 12px',
-    borderBottom: '1px solid #dbe1ea', fontFamily: modernFont,
-};
+});
 
 interface DoseSheetProps {
     doses: DosePreview | null;
@@ -86,12 +80,12 @@ interface DoseSheetProps {
 export default function DoseSheet({ doses, emptyHint, classic, style }: DoseSheetProps) {
     const rows = doses?.lines ?? [];
     const noBath = !doses?.bath_volume_liters;
-    const th = lvThBanded(classic);
+    const th = lvThBanded(true);
     return (
-        <div style={{ ...panel(classic), overflow: classic ? undefined : 'hidden', ...style }}>
-            <div style={{ ...sectionHeader(classic), display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
+        <div style={{ ...panel(true), overflow: undefined, ...style }}>
+            <div style={{ ...sectionHeader(true), display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
                 <span>Dye Weights for this Bath</span>
-                <span style={{ fontWeight: 400, fontSize: classic ? 10 : 11 }}>
+                <span style={{ fontWeight: 400, fontSize: 10}}>
                     {doses?.bath_volume_liters != null
                         ? `${fmtDose(doses.bath_volume_liters, 1)} L water`
                         : 'no bath volume yet'}
@@ -100,58 +94,52 @@ export default function DoseSheet({ doses, emptyHint, classic, style }: DoseShee
                 </span>
             </div>
             {rows.length === 0 ? (
-                <div style={{ padding: classic ? '6px 8px' : '8px 12px', color: classic ? '#888' : '#64748b', fontSize: classic ? 11 : 13 }}>
+                <div style={{ padding: '6px 8px', color: '#888', fontSize: 11}}>
                     {emptyHint}
                 </div>
             ) : (
                 <>
                     {noBath && (
-                        <div style={classic
-                            ? { background: '#fff3cd', borderBottom: '1px solid #ffc107', padding: '3px 8px', fontSize: 10, color: '#664d03' }
-                            : { background: '#fef3cd', borderBottom: '1px solid #f0d98a', padding: '5px 10px', fontSize: 12, color: '#854d0e' }}>
+                        <div style={{ background: '#fff3cd', borderBottom: '1px solid #ffc107', padding: '3px 8px', fontSize: 10, color: '#664d03' }}>
                             Enter the bath volume (Volume Air) to weigh out the g/L chemicals. Per-100kg
                             dyestuff is already costed off the substrate weight.
                         </div>
                     )}
                     <div style={{ overflowX: 'auto' }}>
-                        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: classic ? 11 : 13 }}>
+                        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 11}}>
                             <thead>
-                                <tr style={classic ? { background: '#ece9d8', borderBottom: '1px solid #7f9db9' } : {}}>
-                                    <th style={classic ? { ...th } : { ...th, padding: '6px 10px', textAlign: 'left' }}>Chemical</th>
-                                    <th style={classic ? { ...th } : { ...th, padding: '6px 10px', textAlign: 'left' }}>Type</th>
-                                    <th style={classic ? { ...th, textAlign: 'right', whiteSpace: 'nowrap' } : { ...th, padding: '6px 10px', textAlign: 'right', whiteSpace: 'nowrap' }}>Rate</th>
-                                    <th style={classic ? { ...th, whiteSpace: 'nowrap' } : { ...th, padding: '6px 10px', textAlign: 'left', whiteSpace: 'nowrap' }}>Basis</th>
-                                    <th style={classic ? { ...th, textAlign: 'right', whiteSpace: 'nowrap' } : { ...th, padding: '6px 10px', textAlign: 'right', whiteSpace: 'nowrap' }}>Weigh Out</th>
-                                    <th style={classic ? { ...th, textAlign: 'right', whiteSpace: 'nowrap' } : { ...th, padding: '6px 10px', textAlign: 'right', whiteSpace: 'nowrap' }}>kg</th>
+                                <tr style={{ background: '#ece9d8', borderBottom: '1px solid #7f9db9' }}>
+                                    <th style={{ ...th }}>Chemical</th>
+                                    <th style={{ ...th }}>Type</th>
+                                    <th style={{ ...th, textAlign: 'right', whiteSpace: 'nowrap' }}>Rate</th>
+                                    <th style={{ ...th, whiteSpace: 'nowrap' }}>Basis</th>
+                                    <th style={{ ...th, textAlign: 'right', whiteSpace: 'nowrap' }}>Weigh Out</th>
+                                    <th style={{ ...th, textAlign: 'right', whiteSpace: 'nowrap' }}>kg</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 {rows.map((l, idx) => (
-                                    <tr key={l.line_id} style={classic
-                                        ? { borderBottom: '1px solid #e0e0e0', background: lvZebra(true, idx) }
-                                        : { borderBottom: '1px solid #e6eaf1', background: idx % 2 === 0 ? '#fff' : '#f8fafc' }}>
-                                        <td style={classic ? { padding: '2px 6px' } : { padding: '6px 10px', color: '#334155', fontFamily: modernFont }}>
+                                    <tr key={l.line_id} style={{ borderBottom: '1px solid #e0e0e0', background: lvZebra(true, idx) }}>
+                                        <td style={{ padding: '2px 6px' }}>
                                             {l.item_name ?? l.item_code ?? <Dash />}
                                         </td>
-                                        <td style={classic ? { padding: '2px 6px' } : { padding: '6px 10px', color: '#64748b', fontFamily: modernFont }}>
+                                        <td style={{ padding: '2px 6px' }}>
                                             {l.chemical_type ?? <Dash />}
                                         </td>
-                                        <td style={classic ? { padding: '2px 6px', textAlign: 'right', whiteSpace: 'nowrap' } : { padding: '6px 10px', textAlign: 'right', whiteSpace: 'nowrap', color: '#334155', fontFamily: modernFont }}>
+                                        <td style={{ padding: '2px 6px', textAlign: 'right', whiteSpace: 'nowrap' }}>
                                             {l.basis === 'PER_LITER'
                                                 ? `${fmtDose(l.qty_per_liter, 4)} g/L`
                                                 : l.basis === 'PER_100KG'
                                                     ? `${fmtDose(l.qty_per_100kg, 4)} /100kg`
                                                     : <Dash />}
                                         </td>
-                                        <td style={classic ? { padding: '2px 6px', whiteSpace: 'nowrap', color: '#666' } : { padding: '6px 10px', whiteSpace: 'nowrap', color: '#64748b', fontFamily: modernFont }}>
+                                        <td style={{ padding: '2px 6px', whiteSpace: 'nowrap', color: '#666' }}>
                                             {l.basis ? (BASIS_LABEL[l.basis] ?? l.basis) : 'no rate set'}
                                         </td>
-                                        <td style={classic
-                                            ? { padding: '2px 6px', textAlign: 'right', whiteSpace: 'nowrap', fontWeight: 'bold' }
-                                            : { padding: '6px 10px', textAlign: 'right', whiteSpace: 'nowrap', fontWeight: 700, color: '#1e293b', fontFamily: modernFont }}>
+                                        <td style={{ padding: '2px 6px', textAlign: 'right', whiteSpace: 'nowrap', fontWeight: 'bold' }}>
                                             {l.dose == null ? <Dash /> : `${fmtDose(l.dose, 3)}${l.dose_unit ? ` ${l.dose_unit}` : ''}`}
                                         </td>
-                                        <td style={classic ? { padding: '2px 6px', textAlign: 'right', whiteSpace: 'nowrap', color: '#666' } : { padding: '6px 10px', textAlign: 'right', whiteSpace: 'nowrap', color: '#64748b', fontFamily: modernFont }}>
+                                        <td style={{ padding: '2px 6px', textAlign: 'right', whiteSpace: 'nowrap', color: '#666' }}>
                                             {l.dose_kg == null ? <Dash /> : fmtDose(l.dose_kg, 4)}
                                         </td>
                                     </tr>

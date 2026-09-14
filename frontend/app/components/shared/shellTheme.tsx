@@ -119,9 +119,7 @@ export function ToolbarCount({ classic, children, right = false, style }: {
         <span style={{
             flexShrink: 0, whiteSpace: 'nowrap',
             ...(right ? { marginLeft: 'auto' } : {}),
-            ...(classic
-                ? { fontFamily: xpFont, fontSize: 11, color: '#333333' }
-                : { fontFamily: modernFont, fontSize: 12, color: '#64748b' }),
+            ...({ fontFamily: xpFont, fontSize: 11, color: '#333333' }),
             ...style,
         }}>
             {children}
@@ -170,7 +168,7 @@ export function ToolbarButton({
     title?: string;
     style?: React.CSSProperties;
 }) {
-    if (classic) {
+    if (true) {
         return (
             <button
                 type="button"
@@ -352,9 +350,7 @@ export const modernBevel = (extra: React.CSSProperties = {}): React.CSSPropertie
  */
 export const viewShellStyle = (
     classic: boolean, fill: ShellFill = 'page', extra: React.CSSProperties = {},
-): React.CSSProperties => (classic
-    ? xpBevel({ ...fillStyleFor(fill), ...extra })
-    : modernBevel({ ...fillStyleFor(fill), ...extra }));
+): React.CSSProperties => (xpBevel({ ...fillStyleFor(fill), ...extra }));
 
 /**
  * Outer-window shell: classic bevel or modern bootstrap card, sized per the
@@ -374,8 +370,8 @@ export function ShellWindow({ classic, fill = 'page', className, style, children
     const fillStyle = fillStyleFor(fill);
     return (
         <div
-            style={classic ? { ...xpBevel(), ...fillStyle, ...style } : { ...fillStyle, ...style }}
-            className={classic ? className : `card border-0 shadow-sm shell-window ${className || ''}`.trim()}
+            style={{ ...xpBevel(), ...fillStyle, ...style }}
+            className={className}
         >
             {children}
         </div>
@@ -407,16 +403,10 @@ export function PageTitleBar({ classic, icon, title, right, style }: {
     // the seven PageTitleBar pages (Colors, Color/Combo Library, Attributes, Lab
     // Dips, Dyeing & Setting, Settings) with a visibly taller bar than every
     // xpTitleBar page next to them. One bar height, app-wide.
-    const base: React.CSSProperties = classic
-        ? xpTitleBar({ justifyContent: 'flex-start', gap: 8, flexShrink: 0 })
-        : {
-            background: '#f7f9fc', color: '#1e293b', fontFamily: modernFont,
-            borderBottom: '1px solid #dbe1ea', padding: '8px 13px', fontSize: 14, fontWeight: 700,
-            display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0,
-        };
+    const base: React.CSSProperties = xpTitleBar({ justifyContent: 'flex-start', gap: 8, flexShrink: 0 });
     return (
         <div style={{ ...base, ...style }}>
-            <i className={`bi ${icon}`} style={classic ? undefined : { fontSize: 14, color: '#2563eb' }} />
+            <i className={`bi ${icon}`} style={undefined} />
             {title}
             {right && <span style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 6 }}>{right}</span>}
         </div>
@@ -437,7 +427,7 @@ export function ShellTitleBar({ classic, icon, title, subtitle, right, tone = 'b
     right?: React.ReactNode;      // action button(s) — e.g. "+ Add"
     tone?: ShellTone;             // classic-only bar color; modern keeps the white card-header
 }) {
-    if (classic) {
+    if (true) {
         return (
             <div style={xpTitleBar({}, tone)}>
                 <span><i className={`bi ${icon}`} style={{ marginRight: 6 }} />{title}</span>

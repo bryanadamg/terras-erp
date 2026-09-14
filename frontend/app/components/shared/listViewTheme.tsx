@@ -21,13 +21,9 @@ export const LV_MODERN_FONT = modernFont;
 // `extra` must be spread last — callers pass an explicit `width` to sit an input in
 // a toolbar row, and the default `width: '100%'` would otherwise silently win and
 // blow every field out to full width (stacking a one-line filter bar into N rows).
-export const lvInput = (classic: boolean, extra: React.CSSProperties = {}): React.CSSProperties => (classic ? {
+export const lvInput = (classic: boolean, extra: React.CSSProperties = {}): React.CSSProperties => ({
     fontFamily: LV_XP_FONT, fontSize: 11, border: '1px solid #7f9db9', borderRadius: BUTTON_RADIUS,
     background: 'white', padding: '1px 6px', outline: 'none', height: 20, width: '100%', boxSizing: 'border-box',
-    ...extra,
-} : {
-    fontFamily: LV_MODERN_FONT, fontSize: 13, border: '1px solid #cbd3df', borderRadius: 7,
-    padding: '4px 8px', background: '#fff', color: '#1e293b', outline: 'none', width: '100%', boxSizing: 'border-box',
     ...extra,
 });
 
@@ -48,42 +44,30 @@ const LV_MODERN_TONES: Record<BtnTone, React.CSSProperties> = {
 // a button is sized by its label, and a long flexible sibling must not squeeze it
 // until that label wraps. `extra` spreads last, so a deliberately flexible button
 // still overrides it.
-export const lvBtn = (classic: boolean, tone: BtnTone = 'default', extra: React.CSSProperties = {}): React.CSSProperties => (classic ? {
+export const lvBtn = (classic: boolean, tone: BtnTone = 'default', extra: React.CSSProperties = {}): React.CSSProperties => ({
     fontFamily: LV_XP_FONT, fontSize: 11, padding: '2px 10px', cursor: 'pointer',
     background: 'linear-gradient(to bottom, #ffffff 0%, #d4d0c8 100%)',
     border: '1px solid', borderColor: '#dfdfdf #808080 #808080 #dfdfdf', color: '#000',
     borderRadius: BUTTON_RADIUS, flexShrink: 0, ...LV_CLASSIC_TONES[tone], ...extra,
-} : {
-    fontFamily: LV_MODERN_FONT, fontSize: 12.5, fontWeight: 500, padding: '5px 12px', cursor: 'pointer',
-    background: '#fff', color: '#334155', border: '1px solid #cbd3df', borderRadius: 7,
-    flexShrink: 0, ...LV_MODERN_TONES[tone], ...extra,
 });
 
 // Emphasised primary button (blue), dual-theme. Kept as the name most call sites
-// already use; it is just `lvBtn(classic, 'primary')`.
+// already use; it is just `lvBtn(true, 'primary')`.
 export const lvPrimaryBtn = (classic: boolean, extra: React.CSSProperties = {}): React.CSSProperties =>
-    lvBtn(classic, 'primary', extra);
+    lvBtn(true, 'primary', extra);
 
-export const lvLabel = (classic: boolean): React.CSSProperties => (classic
-    ? { fontFamily: LV_XP_FONT, fontSize: 11, color: '#000', display: 'block', marginBottom: 2 }
-    : { fontFamily: LV_MODERN_FONT, fontSize: 12, color: '#475569', fontWeight: 600, display: 'block', marginBottom: 3 });
+export const lvLabel = (classic: boolean): React.CSSProperties => ({ fontFamily: LV_XP_FONT, fontSize: 11, color: '#000', display: 'block', marginBottom: 2 });
 
-export const lvTh = (classic: boolean): React.CSSProperties => (classic ? {
+export const lvTh = (classic: boolean): React.CSSProperties => ({
     padding: '2px 6px', borderRight: '1px solid #9090a0', textAlign: 'left', whiteSpace: 'nowrap',
     fontFamily: LV_XP_FONT, fontSize: 11, fontWeight: 'bold', color: '#000',
-} : {
-    padding: '6px 10px', textAlign: 'left', whiteSpace: 'nowrap',
-    fontFamily: LV_MODERN_FONT, fontSize: 11, fontWeight: 700, color: '#475569',
-    textTransform: 'uppercase', background: '#eef1f6', borderBottom: '1.5px solid #cbd3df',
 });
 
 // Table header-row style. The classic bevel gradient + modern flat band were being
 // hand-written at every `<thead>`; `sticky` keeps the header pinned when the table
 // body is its own scroll region.
 export const lvThead = (classic: boolean, sticky = false): React.CSSProperties => ({
-    ...(classic
-        ? { background: 'linear-gradient(to bottom, #f0ede4, #d8d4c8)', borderBottom: '1px solid #9090a0' }
-        : { background: '#eef1f6', borderBottom: '1.5px solid #cbd3df' }),
+    ...({ background: 'linear-gradient(to bottom, #f0ede4, #d8d4c8)', borderBottom: '1px solid #9090a0' }),
     ...(sticky ? { position: 'sticky' as const, top: 0, zIndex: 1 } : {}),
 });
 
@@ -93,7 +77,7 @@ export const lvThead = (classic: boolean, sticky = false): React.CSSProperties =
 // is applied per-cell — needs both. Ten views wrote this pair out by hand, four
 // of them with a different padding than the other six.
 export const lvThBanded = (classic: boolean, extra: React.CSSProperties = {}): React.CSSProperties =>
-    ({ ...lvTh(classic), ...lvThead(classic), ...extra });
+    ({ ...lvTh(true), ...lvThead(true), ...extra });
 
 // Pin-only header row, for `<thead>`s that already get their band elsewhere —
 // Bootstrap's `.table-light` in the modern branch, or a classic gradient written
@@ -104,18 +88,16 @@ export const LV_STICKY_THEAD: React.CSSProperties = { position: 'sticky', top: 0
 // Same, pinned to the top of the table's own scroll pane. `zIndex` keeps it over
 // chips and sticky first columns.
 export const lvThSticky = (classic: boolean, extra: React.CSSProperties = {}): React.CSSProperties =>
-    ({ ...lvThBanded(classic), position: 'sticky', top: 0, zIndex: 5, ...extra });
+    ({ ...lvThBanded(true), position: 'sticky', top: 0, zIndex: 5, ...extra });
 
-export const lvTd = (classic: boolean): React.CSSProperties => (classic ? {
+export const lvTd = (classic: boolean): React.CSSProperties => ({
     padding: '4px 6px', borderRight: '1px solid #c0bdb5', verticalAlign: 'middle', fontFamily: LV_XP_FONT, fontSize: 11,
-} : {
-    padding: '6px 10px', verticalAlign: 'middle', fontFamily: LV_MODERN_FONT, fontSize: 13, color: '#334155',
 });
 
 // Body cell with a horizontal rule under it, for lists that separate rows on the
 // cell instead of on the row (they don't use `lvRow`).
 export const lvTdRuled = (classic: boolean, extra: React.CSSProperties = {}): React.CSSProperties =>
-    ({ ...lvTd(classic), borderBottom: classic ? '1px solid #d0cdc8' : '1px solid #e6eaf1', ...extra });
+    ({ ...lvTd(true), borderBottom: '1px solid #d0cdc8', ...extra });
 
 // ── Sub-tables (mini-tables inside an expanded row) ───────────────────────────
 // A different job from lvTh/lvTd, which dress the *main* list. A table nested
@@ -133,27 +115,19 @@ export const lvTdRuled = (classic: boolean, extra: React.CSSProperties = {}): Re
 // dye recipe chemical lines) where the default would force truncation. Use it
 // only for a table sharing its row with other panes — a full-width sub-table
 // should stay at the default size.
-export const lvSubTh = (classic: boolean, dense = false): React.CSSProperties => (classic ? {
+export const lvSubTh = (classic: boolean, dense = false): React.CSSProperties => ({
     padding: dense ? '2px 5px' : '3px 8px', fontSize: dense ? 9 : 10,
     fontWeight: 'bold', color: '#1a3d6b',
     background: '#e4e0d4', borderBottom: '1px solid #b0a898',
     textAlign: 'left', whiteSpace: 'nowrap', fontFamily: LV_XP_FONT,
-} : {
-    padding: dense ? '3px 6px' : '5px 10px', fontSize: dense ? 10 : 11,
-    fontWeight: 600, color: '#334155',
-    background: '#f1f5f9', borderBottom: '1px solid #cbd5e1',
-    textAlign: 'left', whiteSpace: 'nowrap', fontFamily: LV_MODERN_FONT,
 });
 
 // Vertical padding is 3px rather than the 2px some call sites used, because
 // several of these tables carry chips, selects and checkboxes rather than plain
 // text. On a text-only row the extra pixel is imperceptible.
-export const lvSubTd = (classic: boolean, dense = false): React.CSSProperties => (classic ? {
+export const lvSubTd = (classic: boolean, dense = false): React.CSSProperties => ({
     padding: dense ? '2px 5px' : '3px 8px', fontSize: dense ? 9 : 10, color: '#333',
     borderTop: '1px solid #e6e3da', fontFamily: LV_XP_FONT,
-} : {
-    padding: dense ? '3px 6px' : '5px 10px', fontSize: dense ? 10.5 : 11.5, color: '#1e293b',
-    borderTop: '1px solid #eef2f7', fontFamily: LV_MODERN_FONT,
 });
 
 /**
@@ -176,26 +150,26 @@ export const lvSubRow = (
     { zebra = false, fill }: { zebra?: boolean; fill?: string } = {},
 ): React.CSSProperties | undefined => {
     if (fill) return { background: fill };
-    if (zebra) return { background: idx % 2 === 0 ? '#fff' : (classic ? '#f7f5f0' : '#fafbfd') };
+    if (zebra) return { background: idx % 2 === 0 ? '#fff' : ('#f7f5f0') };
     return undefined;
 };
 
 export const lvSubTable = (classic: boolean): React.CSSProperties => ({
     width: '100%', borderCollapse: 'collapse', background: '#fff',
-    border: `1px solid ${classic ? '#c0bdb5' : '#dee2e6'}`,
+    border: `1px solid ${'#c0bdb5'}`,
 });
 
 // Small uppercase title above a sub-table. Distinct from LvSectionCaption, which
 // is a full-bleed band for stacked top-level sections; this is a quiet label for
 // a mini-table, and is what makes a panel holding two of them legible.
 export const lvSubCaption = (classic: boolean): React.CSSProperties => ({
-    fontFamily: classic ? LV_XP_FONT : LV_MODERN_FONT,
-    fontSize: classic ? 10 : 11, fontWeight: 'bold', color: '#444',
+    fontFamily: LV_XP_FONT,
+    fontSize: 10, fontWeight: 'bold', color: '#444',
     textTransform: 'uppercase', letterSpacing: 0.3, marginBottom: 3,
 });
 
 export const lvSep = (classic: boolean): React.CSSProperties =>
-    ({ width: 1, height: 20, background: classic ? '#a0988c' : '#dbe1ea', margin: '0 2px' });
+    ({ width: 1, height: 20, background: '#a0988c', margin: '0 2px' });
 
 // The zebra stripe on its own, for rows that compose their background out of
 // several states (selected / expanded / QC-tinted / stripe) and so cannot take
@@ -203,12 +177,12 @@ export const lvSep = (classic: boolean): React.CSSProperties =>
 // the lot list striped bluish `#f0f0f8` and sales orders used `#fafafa` in modern
 // where every other list used `#f8fafc`.
 export const lvZebra = (classic: boolean, idx: number): string =>
-    idx % 2 === 0 ? '#fff' : (classic ? '#f5f3ee' : '#f8fafc');
+    idx % 2 === 0 ? '#fff' : ('#f5f3ee');
 
 // Row background stripe (zebra), dual-theme + border.
 export const lvRow = (classic: boolean, idx: number): React.CSSProperties => ({
-    background: lvZebra(classic, idx),
-    borderBottom: classic ? '1px solid #c0bdb5' : '1px solid #e6eaf1',
+    background: lvZebra(true, idx),
+    borderBottom: '1px solid #c0bdb5',
 });
 
 // ── Empty value ──────────────────────────────────────────────────────────────
@@ -218,7 +192,7 @@ export const lvRow = (classic: boolean, idx: number): React.CSSProperties => ({
 export const EMPTY_DASH = '\u2014';
 
 export function Dash({ classic = true, style }: { classic?: boolean; style?: React.CSSProperties }) {
-    return <span style={{ color: classic ? '#999' : '#94a3b8', ...style }}>{EMPTY_DASH}</span>;
+    return <span style={{ color: '#999', ...style }}>{EMPTY_DASH}</span>;
 }
 
 // ── Empty list row ───────────────────────────────────────────────────────────
@@ -244,9 +218,9 @@ export function TableEmpty({ colSpan, classic, message, icon, tdStyle }: {
                 style={{
                     ...tdStyle,
                     textAlign: 'center', padding: '20px 8px', fontStyle: 'italic',
-                    color: classic ? '#666' : '#64748b',
-                    fontFamily: classic ? LV_XP_FONT : LV_MODERN_FONT,
-                    fontSize: classic ? 11 : 13,
+                    color: '#666',
+                    fontFamily: LV_XP_FONT,
+                    fontSize: 11,
                 }}
             >
                 {icon && <i className={`bi ${icon}`} style={{ display: 'block', fontSize: 18, opacity: 0.45, marginBottom: 6 }} aria-hidden="true" />}
@@ -315,7 +289,7 @@ export function SortableTh({ sort, colKey, onSort, children, style, className, t
 export const LV_CHECK_COL_W = 28;
 
 export const lvCheckTd = (classic: boolean, base: React.CSSProperties = {}): React.CSSProperties => ({
-    ...lvTd(classic),
+    ...lvTd(true),
     ...base,
     width: LV_CHECK_COL_W, textAlign: 'center', padding: '3px 4px', verticalAlign: 'middle',
 });
@@ -399,8 +373,8 @@ export function useRowSelection<T>(
 // dense and sit inside a form, where the full selection blue reads as an error.
 export const lvPickerRow = (classic: boolean, on: boolean): React.CSSProperties => ({
     display: 'flex', alignItems: 'flex-start', gap: 5, padding: '3px 5px', cursor: 'pointer',
-    borderBottom: `1px solid ${classic ? '#eceae2' : '#eef2f7'}`,
-    background: on ? (classic ? '#e6f0ff' : '#eff6ff') : 'transparent',
+    borderBottom: `1px solid ${'#eceae2'}`,
+    background: on ? ('#e6f0ff') : 'transparent',
 });
 
 const checkboxStyle = (classic: boolean, enabled: boolean): React.CSSProperties =>
@@ -409,7 +383,7 @@ const checkboxStyle = (classic: boolean, enabled: boolean): React.CSSProperties 
 // The hover ring lives in globals.css (`.lv-check`), not in the style object: an
 // inline style can't express `:hover`, and every call site is a bare `<input>`
 // with no wrapper to hang a mouseenter on. Both themes get a branch there.
-const checkboxClass = (classic: boolean) => (classic ? 'lv-check' : 'form-check-input lv-check');
+const checkboxClass = (classic: boolean) => ('lv-check');
 
 export function RowCheckbox({ classic, checked, onChange, disabled, title, label }: {
     classic: boolean; checked: boolean; onChange: () => void;
@@ -418,8 +392,8 @@ export function RowCheckbox({ classic, checked, onChange, disabled, title, label
     return (
         <input
             type="checkbox"
-            className={checkboxClass(classic)}
-            style={checkboxStyle(classic, !disabled)}
+            className={checkboxClass(true)}
+            style={checkboxStyle(true, !disabled)}
             checked={checked}
             disabled={disabled}
             title={title}
@@ -443,8 +417,8 @@ export function SelectAllCheckbox({ classic, allSelected, someSelected, onChange
     return (
         <input
             type="checkbox"
-            className={checkboxClass(classic)}
-            style={checkboxStyle(classic, !disabled)}
+            className={checkboxClass(true)}
+            style={checkboxStyle(true, !disabled)}
             checked={allSelected}
             disabled={disabled}
             ref={el => { if (el) el.indeterminate = someSelected && !allSelected; }}
@@ -504,7 +478,7 @@ export const LV_EXPANDER_COL_W = 22;
 // and font). It is spread BEFORE the column geometry so the width/alignment of
 // the expander column can never drift, while the table keeps its own gridlines.
 export const lvExpanderTd = (classic: boolean, base: React.CSSProperties = {}): React.CSSProperties => ({
-    ...lvTd(classic),
+    ...lvTd(true),
     ...base,
     width: LV_EXPANDER_COL_W, textAlign: 'center', padding: '3px 4px', verticalAlign: 'middle',
 });
@@ -527,7 +501,7 @@ export interface ExpandToggleProps {
 }
 
 export function ExpandToggle({ expanded, classic, onToggle, label = 'details', panelId, tone = 'default', style }: ExpandToggleProps) {
-    const color = tone === 'alert' && expanded ? '#c00000' : (classic ? '#0058e6' : '#64748b');
+    const color = tone === 'alert' && expanded ? '#c00000' : ('#0058e6');
     return (
         <button
             type="button"
@@ -579,12 +553,10 @@ export function LvSectionCaption({ classic, icon, children, right, style }: {
     return (
         <div style={{
             display: 'flex', alignItems: 'center', gap: 5, flexShrink: 0,
-            fontFamily: classic ? LV_XP_FONT : LV_MODERN_FONT,
+            fontFamily: LV_XP_FONT,
             fontSize: 11, fontWeight: 'bold', textTransform: 'uppercase', letterSpacing: 0.4,
-            padding: classic ? '4px 8px' : '6px 12px',
-            ...(classic
-                ? { color: '#2b2822', background: '#e6e2d6', borderTop: '1px solid #c0bdb5', borderBottom: '1px solid #c0bdb5' }
-                : { color: '#475569', background: '#f4f6fa', borderTop: '1px solid #e6eaf1', borderBottom: '1px solid #e6eaf1' }),
+            padding: '4px 8px',
+            ...({ color: '#2b2822', background: '#e6e2d6', borderTop: '1px solid #c0bdb5', borderBottom: '1px solid #c0bdb5' }),
             ...style,
         }}>
             {icon && <i className={`bi ${icon}`} />}
