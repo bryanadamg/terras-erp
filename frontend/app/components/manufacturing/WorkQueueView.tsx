@@ -557,8 +557,12 @@ export default function WorkQueueView() {
                         filters (which change what each row's cells contain) reflows column widths. */}
                     <colgroup>
                         <col style={{ width: LV_EXPANDER_COL_W }} />
-                        <col style={{ width: 34 }} />
-                        <col style={{ width: 110 }} />
+                        {/* Rank: 3 digits is the most the largest queue reaches at 50/page. */}
+                        <col style={{ width: 26 }} />
+                        {/* Work Order: the codes here run to ~30 chars
+                            (PR-2026-08-00017-00001-L-WO-01), so 110 clipped almost every
+                            one of them down to its popout. */}
+                        <col style={{ width: 190 }} />
                         <col style={{ width: 220 }} />
                         {/* Variant: up to four chips (combo, size, colour, shade), wrapped.
                             Fixed like the rest, so a filter change never reflows the table. */}
