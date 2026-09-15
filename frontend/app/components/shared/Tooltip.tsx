@@ -38,10 +38,12 @@ export type AnchorRect = { top: number; left: number; right: number; bottom: num
  *  a chip's title surface). Deliberately near the native tooltip's own delay: a
  *  bubble is an answer to "what is this?", and anything faster fires on the mouse
  *  merely crossing a dense table on its way somewhere else, which is what made the
- *  old 260-380ms spread feel like the UI was talking over the user.
+ *  old 260-380ms spread feel like the UI was talking over the user. 650 was still
+ *  short enough to fire while reading ACROSS a row of chips rather than at one, so
+ *  the dwell now has to be deliberate.
  *
  *  NOT used for the clipped-chip popout — see POPOUT_DELAY. */
-export const TIP_DELAY = 650;
+export const TIP_DELAY = 900;
 
 /** Dwell before a clipped chip re-draws itself unclipped. Much shorter on purpose:
  *  it is not an explanation, it is the label the reader is already trying to read

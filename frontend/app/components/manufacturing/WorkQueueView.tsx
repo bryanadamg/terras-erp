@@ -415,7 +415,10 @@ export default function WorkQueueView() {
                                                         <LotChip
                                                             key={(l.batch_id || '') + String(l.qty)}
                                                             mono
-                                                            title={[l.batch_number, l.location_name].filter(Boolean).join(' · ')}
+                                                            // Location only — the number and qty are already
+                                                            // on the chip, so a title repeating them is a hover
+                                                            // that tells the reader nothing.
+                                                            title={l.location_name || undefined}
                                                         >
                                                             {l.batch_number} <strong>{num(l.qty)}</strong>
                                                         </LotChip>

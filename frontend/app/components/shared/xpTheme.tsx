@@ -19,6 +19,36 @@ import { field as uiField } from '@bryanadamg/terras-ui/styles';
 // `import { xpFont } from '../shared/xpTheme'` still resolves to the same const.
 export { xpFont, modernFont, CODE_FONT, PRINT_FONT, PRINT_SERIF_FONT } from './typography';
 
+// Flattened text of whatever a chip renders, so a chip can tell whether a `title`
+// actually says anything its own label doesn't. Walks elements rather than reading
+// the DOM: it has to be known during shouldOpen, before any surface is committed.
+const nodeText = (n: React.ReactNode): string => {
+    if (n == null || typeof n === 'boolean') return '';
+    if (typeof n === 'string' || typeof n === 'number') return String(n);
+    if (Array.isArray(n)) return n.map(nodeText).join('');
+    if (React.isValidElement(n)) return nodeText((n.props as any)?.children);
+    return '';
+};
+
+// A tooltip earns its place by adding something. Compared loosely (case and run of
+// whitespace ignored) because "NAVY" hovering to reveal "Navy" is the same
+// non-event as an exact repeat.
+//
+// The leading "Size: " / "Combo: " / "Color: " qualifier most callers write comes
+// off before the comparison. It names the chip's KIND, which the chip already says
+// in its tone and icon — so "Size: M - 68.0 (66.0-70.0) cm" over a chip reading
+// "M - 68.0 (66.0-70.0) cm" is a bubble that repeats the label and re-announces the
+// ruler glyph beside it. A qualifier only survives when what follows it differs
+// from the label anyway ("Color: 00001-B-6 - Navy Blue" carries the shade NAME).
+const QUALIFIER = /^[A-Za-z][A-Za-z ]{0,23}:\s*/;
+const saysSomethingNew = (title: string | undefined, children: React.ReactNode): boolean => {
+    if (!title) return false;
+    const norm = (t: string) => t.replace(/\s+/g, ' ').trim().toLowerCase();
+    const label = norm(nodeText(children));
+    const t = norm(title);
+    return t !== label && norm(t.replace(QUALIFIER, '')) !== label;
+};
+
 // ── Identifier typography ─────────────────────────────────────────────────────
 // Codes are UNBOXED — plain monospace text. The box the items/BOM tables used to
 // draw around a code read as a control, not as data, and made a dense table look
@@ -59,7 +89,8 @@ export function CodeChip({ code, tier = 1, tone = 'default', link = false, title
         delay: () => (mode.current === 'pop' ? POPOUT_DELAY : TIP_DELAY),
         shouldOpen: () => {
             if (isClipped(selfRef.current)) { mode.current = 'pop'; return true; }
-            if (title) { mode.current = 'tip'; return true; }
+            // Same rule as Chip: a title that only restates the code is not a tooltip.
+            if (saysSomethingNew(title, code)) { mode.current = 'tip'; return true; }
             return false;
         },
     });
@@ -373,15 +404,20 @@ export function Chip({
     // (a chip is only clipped at some column widths), read back on render — by
     // then the rect state has committed, so the ref is already correct.
     const mode = useRef<'pop' | 'tip' | null>(null);
+    // Most callers pass the chip's own label as `title` (a fallback for when the
+    // chip is clipped). Unclipped, that hovers to reveal what the reader is already
+    // looking at, which is why chips felt noisy to mouse across.
+    const titleAdds = saysSomethingNew(title, children);
     const { rect, anchorEl, handlers } = useHoverAnchor({
         delay: () => (mode.current === 'pop' ? POPOUT_DELAY : TIP_DELAY),
-        enabled: !!truncate || !!title,
+        enabled: !!truncate || titleAdds,
         shouldOpen: () => {
             // A clipped chip completes itself; an unclipped one with a title
             // explains itself. Never both — the popout already shows the text the
-            // title would have repeated.
+            // title would have repeated. And a title that only restates the label
+            // explains nothing, so it opens no surface at all.
             if (truncate && isClipped(labelRef.current)) { mode.current = 'pop'; return true; }
-            if (title) { mode.current = 'tip'; return true; }
+            if (titleAdds) { mode.current = 'tip'; return true; }
             return false;
         },
     });
