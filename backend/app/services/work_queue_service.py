@@ -52,7 +52,8 @@ from app.models.bom import BOMOperation
 from app.models.stock_balance import StockBalance
 from app.models.stock_ledger import StockLedger
 from app.models.batch import BeamMount
-from app.services import beam_service, netting_service
+from app.models.attribute import AttributeValue
+from app.services import beam_service, netting_service, mo_variant_service
 from app.services.stock_service import _generate_variant_key
 
 EPS = 1e-6
@@ -139,6 +140,9 @@ async def _load_work_orders(db: AsyncSession, center_type: str, work_center_id: 
                 ManufacturingOrder.planned_components
             ).joinedload(MOPlannedComponent.item),
             joinedload(WorkOrder.manufacturing_order).joinedload(ManufacturingOrder.color),
+            joinedload(WorkOrder.manufacturing_order)
+            .selectinload(ManufacturingOrder.attribute_values)
+            .joinedload(AttributeValue.attribute),
         )
     )
     return list((await db.execute(stmt)).unique().scalars().all())
@@ -380,6 +384,7 @@ async def _load_unreleased_mos(db: AsyncSession) -> list[ManufacturingOrder]:
             joinedload(ManufacturingOrder.item),
             joinedload(ManufacturingOrder.color),
             selectinload(ManufacturingOrder.planned_components).joinedload(MOPlannedComponent.item),
+            selectinload(ManufacturingOrder.attribute_values).joinedload(AttributeValue.attribute),
         )
     )
     return list((await db.execute(stmt)).unique().scalars().all())
@@ -706,13 +711,11 @@ async def build_queue(
             "mo_code": mo.code,
             "item_code": mo.item.code if mo.item else None,
             "item_name": mo.item.name if mo.item else None,
-            "color_name": mo.color.name if mo.color else None,
-            # Code is the chip's label and the hex its swatch (both already on the
-            # joinedload'd Color row). Without the hex the chip can only derive a
-            # shade from the name, which is the drift resolveColorHex/SwatchBox exist
-            # to keep honest — a derived dot must never pass for a saved one.
-            "color_code": mo.color.code if mo.color else None,
-            "color_hex": mo.color.hex if mo.color else None,
+            # combo / size / colour-variant / shade / pending lab dip, from the ONE
+            # home that names an MO's variant (services/mo_variant_service.py). The
+            # loom card and the dye vessel card read the same call, and a second copy
+            # here is exactly how two screens start describing one MO differently.
+            **mo_variant_service.variant_labels(mo),
             "qty": float((w.qty if w is not None else None) or mo.qty or 0),
             "target_start_date": (w.target_start_date if w is not None else None) or mo.target_start_date,
             "priority_date": r["priority_date"],
@@ -756,7 +759,12 @@ async def build_queue(
             or term in (r["item_code"] or "").lower()
             or term in (r["item_name"] or "").lower()
             or term in (r["color_name"] or "").lower()
+            # The cell shows the CODE and the variant labels, so search has to reach
+            # them — a filter that cannot find what is on screen reads as a bug.
             or term in (r["color_code"] or "").lower()
+            or term in (r["color_label"] or "").lower()
+            or term in (r["combo_label"] or "").lower()
+            or term in (r["size_label"] or "").lower()
         ]
 
     # Built from the SAME allocation walk the rows came from, so the panel and the

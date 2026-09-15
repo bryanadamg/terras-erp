@@ -9,8 +9,9 @@ import { lvTh, lvThead, lvTd, lvRow, lvBtn, lvSubTable, lvSubTh, lvSubTd, lvSubR
 import {
     StatusChip, XPStatusBar, XPEmptyState, TableSkeleton, CodeChip,
     ExpandedRowPanel, ExpandedRowPanelBody, statusColor, WorkCenterChip, ToggleChip, rowStateBg, XP_BTN,
-    useServerSort, VariantChip, colorHexFor, colorLabel, colorTitle,
+    useServerSort,
 } from '../shared/xpTheme';
+import VariantChips from '../shared/VariantChips';
 import Pager from '../shared/Pager';
 import { fmtQtyCompact } from '../shared/format';
 
@@ -94,6 +95,10 @@ interface QueueRow {
     color_name: string | null;
     color_code: string | null;
     color_hex: string | null;
+    combo_label: string | null;
+    size_label: string | null;
+    color_label: string | null;
+    labdip_variant_code: string | null;
     qty: number;
     target_start_date: string | null;
     priority_date: string | null;
@@ -260,7 +265,7 @@ export default function WorkQueueView() {
     const Toolbar = (
         <div style={xpToolbar({ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' })}>
             <SearchField value={search} onChange={onSearch}
-                placeholder="WO, order, item, colour..." width={220}
+                placeholder="WO, order, item, variant..." width={220}
             />
             <FilterChipBar
                 options={centerTypes.map(t => ({ value: t, label: t }))}
@@ -519,9 +524,9 @@ export default function WorkQueueView() {
                         <col style={{ width: 34 }} />
                         <col style={{ width: 110 }} />
                         <col style={{ width: 220 }} />
-                        {/* Colour: wider than the old bare text because the cell now
-                            carries a swatch chip; still fixed, so filters never reflow it. */}
-                        <col style={{ width: 92 }} />
+                        {/* Variant: up to four chips (combo, size, colour, shade), wrapped.
+                            Fixed like the rest, so a filter change never reflows the table. */}
+                        <col style={{ width: 130 }} />
                         <col style={{ width: 110 }} />
                         <col style={{ width: 55 }} />
                         <col style={{ width: 170 }} />
@@ -539,7 +544,7 @@ export default function WorkQueueView() {
                             <th style={{ ...lvTh(), textAlign: 'right' }}>#</th>
                             <th style={lvTh()}>Work Order</th>
                             <th style={lvTh()}>Order / Item</th>
-                            <th style={lvTh()}>Colour</th>
+                            <th style={lvTh()}>Variant</th>
                             <th style={lvTh()}>Work Centre</th>
                             <th style={{ ...lvTh(), textAlign: 'right' }}>Qty</th>
                             <th style={lvTh()}>Gating Material</th>
@@ -612,19 +617,25 @@ export default function WorkQueueView() {
                                                 {r.item_code} {r.item_name ? `· ${r.item_name}` : ''}
                                             </div>
                                         </td>
-                                        <td style={{ ...lvTd(), overflow: 'hidden' }}>
-                                            {/* Same shade chip the MO tab renders, off the same Color row:
-                                                saved hex -> plain swatch, no hex -> the swatch is DERIVED from
-                                                the name and the palette icon says so, matching SwatchBox's
-                                                dashed face. `truncate` gives the chip its own popout, which a
-                                                hand-rolled span in a 92px cell would not have. */}
-                                            {(r.color_code || r.color_name) ? (
-                                                <VariantChip
-                                                    kind="color" size="sm" truncate
-                                                    title={colorTitle(r.color_code, r.color_name)}
-                                                    swatch={r.color_hex || colorHexFor(r.color_name || r.color_code || '')}
-                                                    icon={r.color_hex ? undefined : 'bi-palette'}
-                                                >{colorLabel(r.color_code, r.color_name)}</VariantChip>
+                                        <td style={{ ...lvTd(), overflow: 'hidden', whiteSpace: 'normal' }}>
+                                            {/* The shared variant badges — combo, size, colour variant, shade,
+                                                pending lab dip — in the one order every floor screen uses. The
+                                                queue sits beside the loom and vessel cards in a PIC's day, so
+                                                it must not name a variant differently from them. Wraps rather
+                                                than clips: a size chip dropped off the right edge is the one
+                                                thing that makes two MOs look identical. */}
+                                            {(r.combo_label || r.size_label || r.color_label
+                                              || r.color_code || r.labdip_variant_code) ? (
+                                                <VariantChips
+                                                    combo={r.combo_label}
+                                                    size={r.size_label}
+                                                    colorVariant={r.color_label}
+                                                    colorCode={r.color_code}
+                                                    colorName={r.color_name}
+                                                    colorHex={r.color_hex}
+                                                    labdipCode={r.labdip_variant_code}
+                                                    style={{ flexWrap: 'wrap', rowGap: 2 }}
+                                                />
                                             ) : <span style={{ color: '#888' }}>—</span>}
                                         </td>
                                         <td style={{ ...lvTd(), overflow: 'hidden' }}>

@@ -4296,11 +4296,19 @@ class WorkQueueRow(BaseModel):
     mo_code: str | None = None
     item_code: str | None = None
     item_name: str | None = None
+    # The variant this order is producing, straight off mo_variant_service — the
+    # same seven fields the loom and dye-vessel cards render, so the queue cannot
+    # describe an MO differently from the monitor screens.
     color_name: str | None = None
     color_code: str | None = None
     # Color.hex when the library row has one saved. Null means the chip falls back
     # to a name-derived shade, which it marks as derived rather than showing it plain.
     color_hex: str | None = None
+    combo_label: str | None = None
+    size_label: str | None = None
+    # The `Colors` VARIANT attribute value ("Black"), not the Color Library shade.
+    color_label: str | None = None
+    labdip_variant_code: str | None = None
     qty: float = 0
     target_start_date: datetime | None = None
     # The date the row is queued on, and which planning field it came from:
