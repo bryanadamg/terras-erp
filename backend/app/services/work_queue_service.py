@@ -494,6 +494,7 @@ async def build_queue(
     work_center_id: str = "",
     search: str = "",
     sort: str = "date",
+    sort_dir: str = "asc",
     include_unreleased: bool = True,
     now: Optional[datetime] = None,
 ) -> tuple[list[dict], list[dict]]:
@@ -759,7 +760,19 @@ async def build_queue(
     # readiness carried as the chip and the filter. Sorting by readiness first would
     # sink an order that is due tomorrow and short below one that is ready and due
     # next month, which is precisely the thing the PIC must be told about.
-    if sort == "readiness":
+    if sort == "have":
+        # Coverage order — "who is closest to being fed". Purely numeric, so the
+        # direction is a sign on the key and the tiebreakers stay ascending in both,
+        # otherwise rows inside a tie would shuffle when the arrow flips. Note the
+        # figure is each row's OWN substrate in its OWN uom: this ranks orders by how
+        # well covered they are, it does not compare kg of greige against kg of yarn.
+        mult = -1 if (sort_dir or "asc").lower() == "desc" else 1
+        rows.sort(key=lambda r: (
+            float(r["substrate_available_qty"]) * mult,
+            r["priority_date"] or _FAR_FUTURE,
+            r["work_order_code"] or r["mo_code"] or "",
+        ))
+    elif sort == "readiness":
         rows.sort(key=lambda r: (
             _VERDICT_WEIGHT.get(r["verdict"], 9),
             r["priority_date"] or _FAR_FUTURE,

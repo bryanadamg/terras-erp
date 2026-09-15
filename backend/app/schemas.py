@@ -4368,6 +4368,9 @@ class WorkQueueResponse(BaseModel):
     # WO-grain list would never show.
     unreleased_count: int = 0
     sort: str = 'date'
+    # Only meaningful for sort='have'; echoed back so the column arrow can be
+    # restored from the response rather than trusted from local state alone.
+    sort_dir: str = 'asc'
     materials: list[WorkQueueMaterialSummary] = []
 
 

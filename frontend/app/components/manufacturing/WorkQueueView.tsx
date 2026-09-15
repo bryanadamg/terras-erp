@@ -5,10 +5,11 @@ import { useData } from '../../context/DataContext';
 import { useTimezone } from '../../context/TimezoneContext';
 import { usePaginatedFetch } from '../../context/usePaginatedList';
 import { ShellWindow, ShellTitleBar, SearchField, FilterChipBar, ToolbarCount, xpToolbar } from '../shared/shellTheme';
-import { lvTh, lvThead, lvTd, lvRow, lvBtn, lvSubTable, lvSubTh, lvSubTd, lvSubRow, TableEmpty, LV_XP_FONT, LV_MODERN_FONT, ExpanderCell, LV_EXPANDER_COL_W } from '../shared/listViewTheme';
+import { lvTh, lvThead, lvTd, lvRow, lvBtn, lvSubTable, lvSubTh, lvSubTd, lvSubRow, TableEmpty, LV_XP_FONT, LV_MODERN_FONT, ExpanderCell, LV_EXPANDER_COL_W, SortableTh } from '../shared/listViewTheme';
 import {
     StatusChip, XPStatusBar, XPEmptyState, TableSkeleton, CodeChip,
     ExpandedRowPanel, ExpandedRowPanelBody, statusColor, WorkCenterChip, ToggleChip, rowStateBg, XP_BTN,
+    useServerSort,
 } from '../shared/xpTheme';
 import Pager from '../shared/Pager';
 import { fmtQtyCompact } from '../shared/format';
@@ -172,7 +173,15 @@ export default function WorkQueueView() {
     const [showMaterials, setShowMaterials] = useState(false);
     const [centerType, setCenterType] = useState('');
     const [verdict, setVerdict] = useState('');
-    const [sort, setSort] = useState<'date' | 'readiness'>('date');
+    // Two sort affordances, one wire param. The chips own the two orderings that
+    // have a single honest direction (date, readiness); the Have column header owns
+    // the numeric one, where asc/desc are both meaningful. Whichever was touched
+    // last wins, and the other is visibly cleared — a highlighted "By date" chip
+    // above a column sorted by coverage would be a lie.
+    const [chipSort, setChipSort] = useState<'date' | 'readiness'>('date');
+    const { sort: colSort, setSort: setColSort, toggleSort } = useServerSort();
+    const sort = colSort ? 'have' : chipSort;
+    const sortDir = colSort?.dir === -1 ? 'desc' : 'asc';
     const [overdueOnly, setOverdueOnly] = useState(false);
     const [expanded, setExpanded] = useState<string | null>(null);
 
@@ -201,6 +210,7 @@ export default function WorkQueueView() {
         pageSize: PAGE_SIZE,
         params: {
             sort,
+            sort_dir: sortDir,
             center_type: centerType,
             verdict,
             overdue_only: overdueOnly,
@@ -234,7 +244,10 @@ export default function WorkQueueView() {
         setExpanded(null);
     };
     const onVerdict = (v: string) => setVerdict(v === verdict ? '' : v);
-    const onSort = (v: string) => setSort(v === 'readiness' ? 'readiness' : 'date');
+    const onChipSort = (v: string) => {
+        setChipSort(v === 'readiness' ? 'readiness' : 'date');
+        setColSort(null);
+    };
     const onOverdueOnly = () => setOverdueOnly(v => !v);
 
     const startable = (counts.READY || 0) + (counts.STAGED || 0);
@@ -284,8 +297,8 @@ export default function WorkQueueView() {
                 <span style={{ fontFamily: font, fontSize: 11, color: '#555' }}>Sort</span>
                 <FilterChipBar
                     options={[{ value: 'date', label: 'By date' }, { value: 'readiness', label: 'By readiness' }]}
-                    value={sort}
-                    onChange={onSort}
+                    value={colSort ? '' : chipSort}
+                    onChange={onChipSort}
                 />
             </span>
         </div>
@@ -509,7 +522,10 @@ export default function WorkQueueView() {
                         <col style={{ width: 55 }} />
                         <col style={{ width: 170 }} />
                         <col style={{ width: 60 }} />
-                        <col style={{ width: 60 }} />
+                        {/* Wider than Need by the width of the sort arrow: the widths
+                            here are fixed so the table never reflows, which it would
+                            do the first time the Have header picked up its ▲. */}
+                        <col style={{ width: 72 }} />
                         <col style={{ width: 95 }} />
                         <col style={{ width: 150 }} />
                     </colgroup>
@@ -524,7 +540,11 @@ export default function WorkQueueView() {
                             <th style={{ ...lvTh(), textAlign: 'right' }}>Qty</th>
                             <th style={lvTh()}>Gating Material</th>
                             <th style={{ ...lvTh(), textAlign: 'right' }}>Need</th>
-                            <th style={{ ...lvTh(), textAlign: 'right' }}>Have</th>
+                            <SortableTh
+                                sort={colSort} colKey="have" onSort={toggleSort}
+                                style={{ ...lvTh(), textAlign: 'right' }}
+                                title="Sort by coverage - how much of its gating material each order actually holds. Click again to reverse, a third time to go back to the chip sort."
+                            >Have</SortableTh>
                             <th style={lvTh()}>Scheduled</th>
                             <th style={lvTh()}>Verdict</th>
                         </tr>

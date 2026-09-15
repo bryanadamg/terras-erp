@@ -25,7 +25,8 @@ async def get_work_queue(
     work_center_id: str = Query("", description="Narrow to a single machine"),
     verdict: str = Query("", description="Filter to one verdict, or READY_ONLY for startable rows"),
     search: str = Query(""),
-    sort: str = Query("date", description="date (scheduled order) or readiness (verdict first)"),
+    sort: str = Query("date", description="date (scheduled order), readiness (verdict first) or have (substrate coverage)"),
+    sort_dir: str = Query("asc", description="asc / desc — only read by sort=have; the other two have one honest direction"),
     overdue_only: bool = Query(False),
     include_unreleased: bool = Query(True, description="Include open orders that have no work order yet"),
     unreleased_only: bool = Query(False),
@@ -44,7 +45,8 @@ async def get_work_queue(
 
     rows, materials = await work_queue_service.build_queue(
         db, center_type=center_type, work_center_id=work_center_id, search=search,
-        sort=(sort or "date").lower(), include_unreleased=include_unreleased,
+        sort=(sort or "date").lower(), sort_dir=(sort_dir or "asc").lower(),
+        include_unreleased=include_unreleased,
     )
     # Counts are taken before the row filters so the tab badges keep showing the
     # whole queue while the list shows one slice of it.
@@ -73,5 +75,6 @@ async def get_work_queue(
         page_rows, total, counts=counts,
         overdue_count=overdue_count, undated_count=undated_count,
         unreleased_count=unreleased_count, sort=(sort or "date").lower(),
+        sort_dir=(sort_dir or "asc").lower(),
         materials=materials,
     )
