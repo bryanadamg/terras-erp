@@ -9,7 +9,7 @@ import { lvTh, lvThead, lvTd, lvRow, lvBtn, lvSubTable, lvSubTh, lvSubTd, lvSubR
 import {
     StatusChip, XPStatusBar, XPEmptyState, TableSkeleton, CodeChip,
     ExpandedRowPanel, ExpandedRowPanelBody, statusColor, WorkCenterChip, ToggleChip, rowStateBg, XP_BTN,
-    useServerSort,
+    useServerSort, VariantChip, colorHexFor, colorLabel, colorTitle,
 } from '../shared/xpTheme';
 import Pager from '../shared/Pager';
 import { fmtQtyCompact } from '../shared/format';
@@ -92,6 +92,8 @@ interface QueueRow {
     item_code: string | null;
     item_name: string | null;
     color_name: string | null;
+    color_code: string | null;
+    color_hex: string | null;
     qty: number;
     target_start_date: string | null;
     priority_date: string | null;
@@ -517,7 +519,9 @@ export default function WorkQueueView() {
                         <col style={{ width: 34 }} />
                         <col style={{ width: 110 }} />
                         <col style={{ width: 220 }} />
-                        <col style={{ width: 70 }} />
+                        {/* Colour: wider than the old bare text because the cell now
+                            carries a swatch chip; still fixed, so filters never reflow it. */}
+                        <col style={{ width: 92 }} />
                         <col style={{ width: 110 }} />
                         <col style={{ width: 55 }} />
                         <col style={{ width: 170 }} />
@@ -608,7 +612,21 @@ export default function WorkQueueView() {
                                                 {r.item_code} {r.item_name ? `· ${r.item_name}` : ''}
                                             </div>
                                         </td>
-                                        <td style={{ ...lvTd(), ...ellipsis }}>{r.color_name || '—'}</td>
+                                        <td style={{ ...lvTd(), overflow: 'hidden' }}>
+                                            {/* Same shade chip the MO tab renders, off the same Color row:
+                                                saved hex -> plain swatch, no hex -> the swatch is DERIVED from
+                                                the name and the palette icon says so, matching SwatchBox's
+                                                dashed face. `truncate` gives the chip its own popout, which a
+                                                hand-rolled span in a 92px cell would not have. */}
+                                            {(r.color_code || r.color_name) ? (
+                                                <VariantChip
+                                                    kind="color" size="sm" truncate
+                                                    title={colorTitle(r.color_code, r.color_name)}
+                                                    swatch={r.color_hex || colorHexFor(r.color_name || r.color_code || '')}
+                                                    icon={r.color_hex ? undefined : 'bi-palette'}
+                                                >{colorLabel(r.color_code, r.color_name)}</VariantChip>
+                                            ) : <span style={{ color: '#888' }}>—</span>}
+                                        </td>
                                         <td style={{ ...lvTd(), overflow: 'hidden' }}>
                                             <WorkCenterChip type={r.work_center_type} name={r.work_center_name} />
                                         </td>

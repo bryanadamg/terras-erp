@@ -4297,6 +4297,10 @@ class WorkQueueRow(BaseModel):
     item_code: str | None = None
     item_name: str | None = None
     color_name: str | None = None
+    color_code: str | None = None
+    # Color.hex when the library row has one saved. Null means the chip falls back
+    # to a name-derived shade, which it marks as derived rather than showing it plain.
+    color_hex: str | None = None
     qty: float = 0
     target_start_date: datetime | None = None
     # The date the row is queued on, and which planning field it came from:

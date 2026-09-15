@@ -707,6 +707,12 @@ async def build_queue(
             "item_code": mo.item.code if mo.item else None,
             "item_name": mo.item.name if mo.item else None,
             "color_name": mo.color.name if mo.color else None,
+            # Code is the chip's label and the hex its swatch (both already on the
+            # joinedload'd Color row). Without the hex the chip can only derive a
+            # shade from the name, which is the drift resolveColorHex/SwatchBox exist
+            # to keep honest — a derived dot must never pass for a saved one.
+            "color_code": mo.color.code if mo.color else None,
+            "color_hex": mo.color.hex if mo.color else None,
             "qty": float((w.qty if w is not None else None) or mo.qty or 0),
             "target_start_date": (w.target_start_date if w is not None else None) or mo.target_start_date,
             "priority_date": r["priority_date"],
@@ -750,6 +756,7 @@ async def build_queue(
             or term in (r["item_code"] or "").lower()
             or term in (r["item_name"] or "").lower()
             or term in (r["color_name"] or "").lower()
+            or term in (r["color_code"] or "").lower()
         ]
 
     # Built from the SAME allocation walk the rows came from, so the panel and the
