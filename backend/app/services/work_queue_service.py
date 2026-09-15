@@ -52,8 +52,9 @@ from app.models.bom import BOMOperation
 from app.models.stock_balance import StockBalance
 from app.models.stock_ledger import StockLedger
 from app.models.batch import BeamMount
-from app.services import beam_service, netting_service
-from app.services.stock_service import _generate_variant_key
+from app.models.attribute import AttributeValue
+from app.services import beam_service, netting_service, mo_variant_service
+from app.services.stock_service import _generate_variant_key, variant_matches
 
 EPS = 1e-6
 
@@ -139,6 +140,9 @@ async def _load_work_orders(db: AsyncSession, center_type: str, work_center_id: 
                 ManufacturingOrder.planned_components
             ).joinedload(MOPlannedComponent.item),
             joinedload(WorkOrder.manufacturing_order).joinedload(ManufacturingOrder.color),
+            joinedload(WorkOrder.manufacturing_order)
+            .selectinload(ManufacturingOrder.attribute_values)
+            .joinedload(AttributeValue.attribute),
         )
     )
     return list((await db.execute(stmt)).unique().scalars().all())
@@ -252,6 +256,52 @@ async def _on_hand_pool(db: AsyncSession, item_ids: set[str]) -> dict[tuple[str,
         .group_by(StockBalance.item_id, StockBalance.variant_key)
     )
     return {(str(i), v or ""): float(q or 0) for i, v, q in rows.all()}
+
+
+def _eligible_pool_keys(pool: dict[tuple[str, str], float], item_id: str, want: str) -> list[str]:
+    """Which of an item's pool buckets a demand stated as `want` may draw on.
+
+    The walk used to look up ONE key and take `pool[(item, want)]`, i.e. exact
+    string equality. That is not the rule the rest of the stock layer uses, and it
+    invented shortfalls: an unattributed component demand (`want == ""`) reads 0
+    against 100 t of yarn sitting under a keyed bucket, and the PIC is told there
+    is no yarn. `variant_matches` is the codebase's answer — every attribute the
+    demand states must be on the stock, the colour must agree exactly, and an
+    empty demand states nothing and so matches anything.
+
+    Order is load-bearing, not cosmetic. Exact bucket first, then the rest LEAST
+    SPECIFIC first, so a demand that names nothing eats the unattributed pile
+    before it eats stock a later, pickier demand is the only one that can use.
+    Same instinct as the size rule in netting_service (take your own, then the
+    substitutable pile). Ties break on the key text, so the walk is deterministic.
+    """
+    keys = [vk for (i, vk) in pool if i == item_id]
+    exact = [vk for vk in keys if vk == want]
+    others = [vk for vk in keys if vk != want and variant_matches(want, vk)]
+    others.sort(key=lambda vk: (len([t for t in vk.split(",") if t]), vk))
+    return exact + others
+
+
+def _take_from_pool(pool: dict[tuple[str, str], float], item_id: str, want: str,
+                    need: float) -> tuple[float, float]:
+    """(free pool this demand can reach, how much of `need` it got) — and drains it.
+
+    Both numbers are what the row reports: `available` is the whole eligible pile at
+    THIS row's turn in the priority walk, `got` is capped at `need`, which is why
+    Have can never exceed Need.
+    """
+    keys = _eligible_pool_keys(pool, item_id, want)
+    available = sum(pool[(item_id, k)] for k in keys)
+    got = min(available, max(0.0, need))
+    remaining = got
+    for k in keys:
+        if remaining <= EPS:
+            break
+        cell = pool[(item_id, k)]
+        take = min(cell, remaining)
+        pool[(item_id, k)] = cell - take
+        remaining -= take
+    return available, got
 
 
 async def _mo_logged_qty(db: AsyncSession, mo_ids: list) -> dict[str, float]:
@@ -380,6 +430,7 @@ async def _load_unreleased_mos(db: AsyncSession) -> list[ManufacturingOrder]:
             joinedload(ManufacturingOrder.item),
             joinedload(ManufacturingOrder.color),
             selectinload(ManufacturingOrder.planned_components).joinedload(MOPlannedComponent.item),
+            selectinload(ManufacturingOrder.attribute_values).joinedload(AttributeValue.attribute),
         )
     )
     return list((await db.execute(stmt)).unique().scalars().all())
@@ -494,6 +545,7 @@ async def build_queue(
     work_center_id: str = "",
     search: str = "",
     sort: str = "date",
+    sort_dir: str = "asc",
     include_unreleased: bool = True,
     now: Optional[datetime] = None,
 ) -> tuple[list[dict], list[dict]]:
@@ -596,8 +648,11 @@ async def build_queue(
         for m in r["mats"]:
             if m["is_beam"] or m["staged"] <= EPS:
                 continue
-            key = (str(m["comp"].item_id), m["variant_key"])
-            pool[key] = max(0.0, pool.get(key, 0.0) - m["staged"])
+            # Drained through the same eligibility rule as pass 1. The old exact-key
+            # subtraction could not find the bucket the staged material actually sits
+            # in, so it left that stock in the pool for the next order to allocate a
+            # second time (and wrote a phantom 0.0 bucket for a key holding nothing).
+            _take_from_pool(pool, str(m["comp"].item_id), m["variant_key"], m["staged"])
 
     # --- pass 1: allocate in scheduled order -------------------------------
     # This order decides who gets scarce stock, so it is ALWAYS by date — the
@@ -643,6 +698,7 @@ async def build_queue(
                     "item_code": c.item.code if c.item else None,
                     "item_name": c.item.name if c.item else None,
                     "uom": c.item.uom if c.item else None,
+                    "attribute_value_ids": [str(v) for v in (c.attribute_value_ids or [])],
                     "required_qty": m["required"], "staged_qty": 0.0,
                     "on_hand_qty": kg, "allocated_qty": kg, "shortfall_qty": 0.0,
                     "is_beam": True, "is_substrate": gates,
@@ -652,11 +708,8 @@ async def build_queue(
                 })
                 continue
 
-            key = (str(c.item_id), m["variant_key"])
             need = max(0.0, m["required"] - m["staged"])
-            available = pool.get(key, 0.0)
-            got = min(available, need)
-            pool[key] = available - got
+            available, got = _take_from_pool(pool, str(c.item_id), m["variant_key"], need)
             allocated_map[str(c.item_id)] = got
             peg = pegged.get((str(mo.id), str(c.item_id))) or {}
             materials_out.append({
@@ -664,6 +717,10 @@ async def build_queue(
                 "item_code": c.item.code if c.item else None,
                 "item_name": c.item.name if c.item else None,
                 "uom": c.item.uom if c.item else None,
+                # The component's OWN variant — the values `variant_key` is built from,
+                # so the panel's Free pool / Allocated figures can be read against the
+                # bucket they were actually drawn from.
+                "attribute_value_ids": [str(v) for v in (c.attribute_value_ids or [])],
                 "required_qty": m["required"],
                 "staged_qty": m["staged"],
                 # on_hand is what was free when THIS row's turn came, not the raw
@@ -705,7 +762,11 @@ async def build_queue(
             "mo_code": mo.code,
             "item_code": mo.item.code if mo.item else None,
             "item_name": mo.item.name if mo.item else None,
-            "color_name": mo.color.name if mo.color else None,
+            # combo / size / colour-variant / shade / pending lab dip, from the ONE
+            # home that names an MO's variant (services/mo_variant_service.py). The
+            # loom card and the dye vessel card read the same call, and a second copy
+            # here is exactly how two screens start describing one MO differently.
+            **mo_variant_service.variant_labels(mo),
             "qty": float((w.qty if w is not None else None) or mo.qty or 0),
             "target_start_date": (w.target_start_date if w is not None else None) or mo.target_start_date,
             "priority_date": r["priority_date"],
@@ -749,6 +810,12 @@ async def build_queue(
             or term in (r["item_code"] or "").lower()
             or term in (r["item_name"] or "").lower()
             or term in (r["color_name"] or "").lower()
+            # The cell shows the CODE and the variant labels, so search has to reach
+            # them — a filter that cannot find what is on screen reads as a bug.
+            or term in (r["color_code"] or "").lower()
+            or term in (r["color_label"] or "").lower()
+            or term in (r["combo_label"] or "").lower()
+            or term in (r["size_label"] or "").lower()
         ]
 
     # Built from the SAME allocation walk the rows came from, so the panel and the
@@ -759,7 +826,19 @@ async def build_queue(
     # readiness carried as the chip and the filter. Sorting by readiness first would
     # sink an order that is due tomorrow and short below one that is ready and due
     # next month, which is precisely the thing the PIC must be told about.
-    if sort == "readiness":
+    if sort == "have":
+        # Coverage order — "who is closest to being fed". Purely numeric, so the
+        # direction is a sign on the key and the tiebreakers stay ascending in both,
+        # otherwise rows inside a tie would shuffle when the arrow flips. Note the
+        # figure is each row's OWN substrate in its OWN uom: this ranks orders by how
+        # well covered they are, it does not compare kg of greige against kg of yarn.
+        mult = -1 if (sort_dir or "asc").lower() == "desc" else 1
+        rows.sort(key=lambda r: (
+            float(r["substrate_available_qty"]) * mult,
+            r["priority_date"] or _FAR_FUTURE,
+            r["work_order_code"] or r["mo_code"] or "",
+        ))
+    elif sort == "readiness":
         rows.sort(key=lambda r: (
             _VERDICT_WEIGHT.get(r["verdict"], 9),
             r["priority_date"] or _FAR_FUTURE,

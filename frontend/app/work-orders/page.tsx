@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState, useCallback, useRef } from 'react';
+import { useSearchParams, useRouter } from 'next/navigation';
 import WorkOrderListView from '../components/manufacturing/WorkOrderListView';
 import { useData } from '../context/DataContext';
 import { usePaginatedFetch } from '../context/usePaginatedList';
@@ -28,6 +29,14 @@ export default function WorkOrdersPage() {
     const [filterUnprinted, setFilterUnprinted] = useState(false);
     const [activeTab, setActiveTab] = useState('ALL');
 
+    // Deep link from another screen: /work-orders?wo=WO-1234 lands with the list
+    // filtered to that code. Same shape as /manufacturing-orders?mo= — seed, then
+    // router.replace the param away so a later manual search isn't re-clobbered by
+    // a re-render, and a ref so re-entering the effect doesn't fight the user.
+    const searchParams = useSearchParams();
+    const router = useRouter();
+    const consumedWORef = useRef<string | null>(null);
+
     // Page window, fetch, loading flag, the debounced search box and the
     // stale-response race guard come from the shared hook. The sessionStorage
     // cache below is layered on top of it (see the two effects/derivations after).
@@ -50,6 +59,16 @@ export default function WorkOrdersPage() {
             unprinted: filterUnprinted,
         },
     });
+
+    useEffect(() => {
+        const code = searchParams.get('wo');
+        if (code && code !== consumedWORef.current) {
+            consumedWORef.current = code;
+            handleSearch(code);
+            router.replace('/work-orders');
+        }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [searchParams]);
 
     // --- sessionStorage cache (deliberate: return navigation paints instantly) ---
     // Read once at mount and shown until the first response for this visit lands.

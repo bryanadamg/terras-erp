@@ -1,5 +1,7 @@
 import { useTimezone } from '../../context/TimezoneContext';
 import { colorHexFor } from '../shared/xpTheme';
+// One definition of "what does this attribute value look like" — see attributeChips.
+import { attributeValueName, attributeValueHex } from '../shared/attributeChips';
 // Pure, closure-free calculation shared with the floor scanner — see moHelpers.
 import { calculateRequiredQty } from '../shared/moHelpers';
 
@@ -31,24 +33,12 @@ export function useManufacturingHelpers({
     const getLocationName = (id: string) => locations.find((l: any) => l.id === id)?.name || id;
     const getWCName = (id: string) => workCenters.find((w: any) => w.id === id)?.name || id;
 
-    const getAttributeValueName = (valId: string) => {
-        for (const attr of attributes) {
-            const val = attr.values.find((v: any) => v.id === valId);
-            if (val) return val.value;
-        }
-        return valId;
-    };
+    const getAttributeValueName = (valId: string) => attributeValueName(attributes, valId);
 
     // Swatch hex for an attribute value, so a colour value chips as a shade (with its
     // dot) instead of a generic attribute. Falls back to the name-derived palette in
     // xpTheme, same rule the BOM list and SO table use.
-    const getAttributeValueHex = (valId: string): string | null => {
-        for (const attr of attributes) {
-            const val = attr.values.find((v: any) => v.id === valId);
-            if (val) return val.hex || colorHexFor(val.value) || null;
-        }
-        return null;
-    };
+    const getAttributeValueHex = (valId: string): string | null => attributeValueHex(attributes, valId);
 
     const getBomSizeLabel = (bomId: string, bomSizeId: string, snapshot?: any): string => {
         const src = snapshot || (() => {

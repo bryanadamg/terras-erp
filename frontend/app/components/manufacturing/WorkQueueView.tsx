@@ -1,15 +1,21 @@
 'use client';
 
 import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { useData } from '../../context/DataContext';
+import { useUser } from '../../context/UserContext';
 import { useTimezone } from '../../context/TimezoneContext';
 import { usePaginatedFetch } from '../../context/usePaginatedList';
 import { ShellWindow, ShellTitleBar, SearchField, FilterChipBar, ToolbarCount, xpToolbar } from '../shared/shellTheme';
-import { lvTh, lvThead, lvTd, lvRow, lvBtn, lvSubTable, lvSubTh, lvSubTd, lvSubRow, TableEmpty, LV_XP_FONT, LV_MODERN_FONT, ExpanderCell, LV_EXPANDER_COL_W } from '../shared/listViewTheme';
+import { lvTh, lvThead, lvTd, lvRow, lvBtn, lvSubTable, lvSubTh, lvSubTd, lvSubRow, TableEmpty, LV_XP_FONT, LV_MODERN_FONT, ExpanderCell, LV_EXPANDER_COL_W, SortableTh } from '../shared/listViewTheme';
 import {
     StatusChip, XPStatusBar, XPEmptyState, TableSkeleton, CodeChip,
     ExpandedRowPanel, ExpandedRowPanelBody, statusColor, WorkCenterChip, ToggleChip, rowStateBg, XP_BTN,
+    useServerSort,
 } from '../shared/xpTheme';
+import VariantChips from '../shared/VariantChips';
+import AttributeValueChips from '../shared/attributeChips';
+import { LotChip, LotChipRow } from '../shared/LotChips';
 import Pager from '../shared/Pager';
 import { fmtQtyCompact } from '../shared/format';
 
@@ -36,6 +42,7 @@ interface QueueMaterial {
     item_code: string | null;
     item_name: string | null;
     uom: string | null;
+    attribute_value_ids: string[];
     required_qty: number;
     staged_qty: number;
     on_hand_qty: number;
@@ -91,6 +98,12 @@ interface QueueRow {
     item_code: string | null;
     item_name: string | null;
     color_name: string | null;
+    color_code: string | null;
+    color_hex: string | null;
+    combo_label: string | null;
+    size_label: string | null;
+    color_label: string | null;
+    labdip_variant_code: string | null;
     qty: number;
     target_start_date: string | null;
     priority_date: string | null;
@@ -160,19 +173,49 @@ const ellipsis: React.CSSProperties = { overflow: 'hidden', textOverflow: 'ellip
 const codeClip: React.CSSProperties = {
     display: 'block', minWidth: 0, maxWidth: '100%', overflow: 'hidden', textOverflow: 'ellipsis',
 };
+// Badge face for the two codes that identify a row. `link` is CodeChip's only
+// boxed face — see its header comment: codes are unboxed by default because a box
+// reads as a control, and the blue tint is spent to say "this cell is a door".
+// Nothing on this screen is a door (the queue is read-only by design; acting on a
+// row happens on the Work Orders page and the scanner), so the pointer cursor is
+// taken back off — the same borrowing PackingOrderView does for its lot badges.
+const codeBadge: React.CSSProperties = { ...codeClip, display: 'inline-block' };
+// Same badge with the affordance taken back off, for a viewer who lacks the
+// destination's route permission: MainLayout would only show them AccessDenied, and
+// a door that opens onto a wall is worse than no door.
+const codeBadgeFlat: React.CSSProperties = { ...codeBadge, cursor: 'default' };
 
 export default function WorkQueueView() {
     // Backend timestamps are naive UTC; formatCustom parses them as such and
     // renders in the user's display timezone. `new Date(iso)` read them as local.
     const { formatCustom: tzFmt } = useTimezone();
+    const router = useRouter();
+    // The badges are doors, so they are drawn as doors only where the viewer can
+    // walk through: /work-orders and /manufacturing-orders are both gated in
+    // ROUTE_PERMISSIONS, and the queue itself admits either permission alone.
+    const { hasPermission } = useUser();
+    const canOpenWO = hasPermission('work_order.view');
+    const canOpenMO = hasPermission('manufacturing_order.view');
+    // Opening a code must not also toggle the row's expander underneath it.
+    const goTo = (href: string) => (e: React.MouseEvent) => { e.stopPropagation(); router.push(href); };
     const shortDate = (iso: string | null) =>
         iso ? tzFmt(iso, { day: '2-digit', month: 'short' }) : '—';
-    const { authFetch, workCenters, subscribeLiveEvents } = useData();
+    // `attributes` is the wholesale master load every variant-chip surface reads;
+    // it is already in DataContext, so resolving ids here costs no fetch.
+    const { authFetch, workCenters, attributes, subscribeLiveEvents } = useData();
 
     const [showMaterials, setShowMaterials] = useState(false);
     const [centerType, setCenterType] = useState('');
     const [verdict, setVerdict] = useState('');
-    const [sort, setSort] = useState<'date' | 'readiness'>('date');
+    // Two sort affordances, one wire param. The chips own the two orderings that
+    // have a single honest direction (date, readiness); the Have column header owns
+    // the numeric one, where asc/desc are both meaningful. Whichever was touched
+    // last wins, and the other is visibly cleared — a highlighted "By date" chip
+    // above a column sorted by coverage would be a lie.
+    const [chipSort, setChipSort] = useState<'date' | 'readiness'>('date');
+    const { sort: colSort, setSort: setColSort, toggleSort } = useServerSort();
+    const sort = colSort ? 'have' : chipSort;
+    const sortDir = colSort?.dir === -1 ? 'desc' : 'asc';
     const [overdueOnly, setOverdueOnly] = useState(false);
     const [expanded, setExpanded] = useState<string | null>(null);
 
@@ -201,6 +244,7 @@ export default function WorkQueueView() {
         pageSize: PAGE_SIZE,
         params: {
             sort,
+            sort_dir: sortDir,
             center_type: centerType,
             verdict,
             overdue_only: overdueOnly,
@@ -234,7 +278,10 @@ export default function WorkQueueView() {
         setExpanded(null);
     };
     const onVerdict = (v: string) => setVerdict(v === verdict ? '' : v);
-    const onSort = (v: string) => setSort(v === 'readiness' ? 'readiness' : 'date');
+    const onChipSort = (v: string) => {
+        setChipSort(v === 'readiness' ? 'readiness' : 'date');
+        setColSort(null);
+    };
     const onOverdueOnly = () => setOverdueOnly(v => !v);
 
     const startable = (counts.READY || 0) + (counts.STAGED || 0);
@@ -245,7 +292,7 @@ export default function WorkQueueView() {
     const Toolbar = (
         <div style={xpToolbar({ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' })}>
             <SearchField value={search} onChange={onSearch}
-                placeholder="WO, order, item, colour..." width={220}
+                placeholder="WO, order, item, variant..." width={220}
             />
             <FilterChipBar
                 options={centerTypes.map(t => ({ value: t, label: t }))}
@@ -284,8 +331,8 @@ export default function WorkQueueView() {
                 <span style={{ fontFamily: font, fontSize: 11, color: '#555' }}>Sort</span>
                 <FilterChipBar
                     options={[{ value: 'date', label: 'By date' }, { value: 'readiness', label: 'By readiness' }]}
-                    value={sort}
-                    onChange={onSort}
+                    value={colSort ? '' : chipSort}
+                    onChange={onChipSort}
                 />
             </span>
         </div>
@@ -355,16 +402,29 @@ export default function WorkQueueView() {
                                             ? `${m.orders_waiting} / ${m.orders_total} waiting`
                                             : m.orders_total}
                                     </td>
-                                    <td style={lvTd()}>
+                                    {/* Up to 12 lots per material. As bare nowrap spans they set the
+                                        cell's min-content width, so one well-lotted greige stretched the
+                                        whole panel off the right edge and every other column with it.
+                                        LotChipRow wraps, so the column is bounded by the table again. */}
+                                    <td style={{ ...lvTd(), whiteSpace: 'normal' }}>
                                         {m.lot_count === 0
                                             ? <span style={{ color: '#888' }}>not lotted</span>
-                                            : m.lots.map(l => (
-                                                <span key={(l.batch_id || '') + String(l.qty)}
-                                                    title={l.location_name || ''}
-                                                    style={{ marginRight: 8, whiteSpace: 'nowrap' }}>
-                                                    {l.batch_number} <strong>{num(l.qty)}</strong>
-                                                </span>
-                                            ))}
+                                            : (
+                                                <LotChipRow>
+                                                    {m.lots.map(l => (
+                                                        <LotChip
+                                                            key={(l.batch_id || '') + String(l.qty)}
+                                                            mono
+                                                            // Location only — the number and qty are already
+                                                            // on the chip, so a title repeating them is a hover
+                                                            // that tells the reader nothing.
+                                                            title={l.location_name || undefined}
+                                                        >
+                                                            {l.batch_number} <strong>{num(l.qty)}</strong>
+                                                        </LotChip>
+                                                    ))}
+                                                </LotChipRow>
+                                            )}
                                     </td>
                                 </tr>
                             ))}
@@ -426,6 +486,16 @@ export default function WorkQueueView() {
                                             GATES
                                         </span>
                                     )}
+                                    {/* The component's own variant, under its name. This is the bucket
+                                        the Free pool / Allocated figures on this row were drawn from —
+                                        stock is keyed by (item, variant), so an item with two variants
+                                        is two separate piles and the numbers are unreadable without
+                                        knowing which one you are looking at. */}
+                                    <AttributeValueChips
+                                        valueIds={m.attribute_value_ids}
+                                        attributes={attributes}
+                                        style={{ display: 'flex', marginTop: 2 }}
+                                    />
                                 </td>
                                 {m.is_beam ? (
                                     <>
@@ -501,15 +571,24 @@ export default function WorkQueueView() {
                         filters (which change what each row's cells contain) reflows column widths. */}
                     <colgroup>
                         <col style={{ width: LV_EXPANDER_COL_W }} />
-                        <col style={{ width: 34 }} />
-                        <col style={{ width: 110 }} />
+                        {/* Rank: 3 digits is the most the largest queue reaches at 50/page. */}
+                        <col style={{ width: 26 }} />
+                        {/* Work Order: the codes here run to ~30 chars
+                            (PR-2026-08-00017-00001-L-WO-01), so 110 clipped almost every
+                            one of them down to its popout. */}
+                        <col style={{ width: 190 }} />
                         <col style={{ width: 220 }} />
-                        <col style={{ width: 70 }} />
+                        {/* Variant: up to four chips (combo, size, colour, shade), wrapped.
+                            Fixed like the rest, so a filter change never reflows the table. */}
+                        <col style={{ width: 130 }} />
                         <col style={{ width: 110 }} />
                         <col style={{ width: 55 }} />
                         <col style={{ width: 170 }} />
                         <col style={{ width: 60 }} />
-                        <col style={{ width: 60 }} />
+                        {/* Wider than Need by the width of the sort arrow: the widths
+                            here are fixed so the table never reflows, which it would
+                            do the first time the Have header picked up its ▲. */}
+                        <col style={{ width: 72 }} />
                         <col style={{ width: 95 }} />
                         <col style={{ width: 150 }} />
                     </colgroup>
@@ -519,12 +598,16 @@ export default function WorkQueueView() {
                             <th style={{ ...lvTh(), textAlign: 'right' }}>#</th>
                             <th style={lvTh()}>Work Order</th>
                             <th style={lvTh()}>Order / Item</th>
-                            <th style={lvTh()}>Colour</th>
+                            <th style={lvTh()}>Variant</th>
                             <th style={lvTh()}>Work Centre</th>
                             <th style={{ ...lvTh(), textAlign: 'right' }}>Qty</th>
                             <th style={lvTh()}>Gating Material</th>
                             <th style={{ ...lvTh(), textAlign: 'right' }}>Need</th>
-                            <th style={{ ...lvTh(), textAlign: 'right' }}>Have</th>
+                            <SortableTh
+                                sort={colSort} colKey="have" onSort={toggleSort}
+                                style={{ ...lvTh(), textAlign: 'right' }}
+                                title="Sort by coverage - how much of its gating material each order actually holds. Click again to reverse, a third time to go back to the chip sort."
+                            >Have</SortableTh>
                             <th style={lvTh()}>Scheduled</th>
                             <th style={lvTh()}>Verdict</th>
                         </tr>
@@ -564,7 +647,14 @@ export default function WorkQueueView() {
                                             {r.is_released ? (
                                                 <>
                                                     <div style={{ minWidth: 0 }}>
-                                                        <CodeChip code={r.work_order_code || '—'} style={codeClip} />
+                                                        <CodeChip
+                                                            code={r.work_order_code || '—'} link
+                                                            style={canOpenWO ? codeBadge : codeBadgeFlat}
+                                                            title={canOpenWO ? `Open ${r.work_order_code} in Work Orders` : undefined}
+                                                            onClick={canOpenWO && r.work_order_code
+                                                                ? goTo(`/work-orders?wo=${encodeURIComponent(r.work_order_code)}`)
+                                                                : undefined}
+                                                        />
                                                     </div>
                                                     <div style={{ ...ellipsis, fontSize: 10, color: '#666' }}>{r.work_order_name}</div>
                                                 </>
@@ -582,13 +672,40 @@ export default function WorkQueueView() {
                                         </td>
                                         <td style={{ ...lvTd(), overflow: 'hidden' }}>
                                             <div style={{ minWidth: 0 }}>
-                                                <CodeChip code={r.mo_code || '—'} tier={2} style={codeClip} />
+                                                <CodeChip
+                                                    code={r.mo_code || '—'} link
+                                                    style={canOpenMO ? codeBadge : codeBadgeFlat}
+                                                    title={canOpenMO ? `Open ${r.mo_code} in Manufacturing Orders` : undefined}
+                                                    onClick={canOpenMO && r.mo_code
+                                                        ? goTo(`/manufacturing-orders?mo=${encodeURIComponent(r.mo_code)}`)
+                                                        : undefined}
+                                                />
                                             </div>
                                             <div style={{ ...ellipsis, fontSize: 10, color: '#666' }}>
                                                 {r.item_code} {r.item_name ? `· ${r.item_name}` : ''}
                                             </div>
                                         </td>
-                                        <td style={{ ...lvTd(), ...ellipsis }}>{r.color_name || '—'}</td>
+                                        <td style={{ ...lvTd(), overflow: 'hidden', whiteSpace: 'normal' }}>
+                                            {/* The shared variant badges — combo, size, colour variant, shade,
+                                                pending lab dip — in the one order every floor screen uses. The
+                                                queue sits beside the loom and vessel cards in a PIC's day, so
+                                                it must not name a variant differently from them. Wraps rather
+                                                than clips: a size chip dropped off the right edge is the one
+                                                thing that makes two MOs look identical. */}
+                                            {(r.combo_label || r.size_label || r.color_label
+                                              || r.color_code || r.labdip_variant_code) ? (
+                                                <VariantChips
+                                                    combo={r.combo_label}
+                                                    size={r.size_label}
+                                                    colorVariant={r.color_label}
+                                                    colorCode={r.color_code}
+                                                    colorName={r.color_name}
+                                                    colorHex={r.color_hex}
+                                                    labdipCode={r.labdip_variant_code}
+                                                    style={{ flexWrap: 'wrap', rowGap: 2 }}
+                                                />
+                                            ) : <span style={{ color: '#888' }}>—</span>}
+                                        </td>
                                         <td style={{ ...lvTd(), overflow: 'hidden' }}>
                                             <WorkCenterChip type={r.work_center_type} name={r.work_center_name} />
                                         </td>

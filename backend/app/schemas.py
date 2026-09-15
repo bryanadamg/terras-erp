@@ -4258,6 +4258,9 @@ class WorkQueueMaterial(BaseModel):
     item_name: str | None = None
     # Item.uom is a plain string on the item, so every qty on this row reads in it.
     uom: str | None = None
+    # The planned component's variant attribute values, resolved to chips client-side
+    # off the attributes master. These are what `variant_key` is generated from.
+    attribute_value_ids: list[str] = []
     required_qty: float = 0
     staged_qty: float = 0
     # Free pool at the moment THIS work order's turn came in the priority walk,
@@ -4296,7 +4299,19 @@ class WorkQueueRow(BaseModel):
     mo_code: str | None = None
     item_code: str | None = None
     item_name: str | None = None
+    # The variant this order is producing, straight off mo_variant_service — the
+    # same seven fields the loom and dye-vessel cards render, so the queue cannot
+    # describe an MO differently from the monitor screens.
     color_name: str | None = None
+    color_code: str | None = None
+    # Color.hex when the library row has one saved. Null means the chip falls back
+    # to a name-derived shade, which it marks as derived rather than showing it plain.
+    color_hex: str | None = None
+    combo_label: str | None = None
+    size_label: str | None = None
+    # The `Colors` VARIANT attribute value ("Black"), not the Color Library shade.
+    color_label: str | None = None
+    labdip_variant_code: str | None = None
     qty: float = 0
     target_start_date: datetime | None = None
     # The date the row is queued on, and which planning field it came from:
@@ -4368,6 +4383,9 @@ class WorkQueueResponse(BaseModel):
     # WO-grain list would never show.
     unreleased_count: int = 0
     sort: str = 'date'
+    # Only meaningful for sort='have'; echoed back so the column arrow can be
+    # restored from the response rather than trusted from local state alone.
+    sort_dir: str = 'asc'
     materials: list[WorkQueueMaterialSummary] = []
 
 
