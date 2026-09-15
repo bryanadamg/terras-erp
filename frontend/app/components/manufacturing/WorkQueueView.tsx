@@ -1,7 +1,9 @@
 'use client';
 
 import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { useData } from '../../context/DataContext';
+import { useUser } from '../../context/UserContext';
 import { useTimezone } from '../../context/TimezoneContext';
 import { usePaginatedFetch } from '../../context/usePaginatedList';
 import { ShellWindow, ShellTitleBar, SearchField, FilterChipBar, ToolbarCount, xpToolbar } from '../shared/shellTheme';
@@ -168,11 +170,31 @@ const ellipsis: React.CSSProperties = { overflow: 'hidden', textOverflow: 'ellip
 const codeClip: React.CSSProperties = {
     display: 'block', minWidth: 0, maxWidth: '100%', overflow: 'hidden', textOverflow: 'ellipsis',
 };
+// Badge face for the two codes that identify a row. `link` is CodeChip's only
+// boxed face — see its header comment: codes are unboxed by default because a box
+// reads as a control, and the blue tint is spent to say "this cell is a door".
+// Nothing on this screen is a door (the queue is read-only by design; acting on a
+// row happens on the Work Orders page and the scanner), so the pointer cursor is
+// taken back off — the same borrowing PackingOrderView does for its lot badges.
+const codeBadge: React.CSSProperties = { ...codeClip, display: 'inline-block' };
+// Same badge with the affordance taken back off, for a viewer who lacks the
+// destination's route permission: MainLayout would only show them AccessDenied, and
+// a door that opens onto a wall is worse than no door.
+const codeBadgeFlat: React.CSSProperties = { ...codeBadge, cursor: 'default' };
 
 export default function WorkQueueView() {
     // Backend timestamps are naive UTC; formatCustom parses them as such and
     // renders in the user's display timezone. `new Date(iso)` read them as local.
     const { formatCustom: tzFmt } = useTimezone();
+    const router = useRouter();
+    // The badges are doors, so they are drawn as doors only where the viewer can
+    // walk through: /work-orders and /manufacturing-orders are both gated in
+    // ROUTE_PERMISSIONS, and the queue itself admits either permission alone.
+    const { hasPermission } = useUser();
+    const canOpenWO = hasPermission('work_order.view');
+    const canOpenMO = hasPermission('manufacturing_order.view');
+    // Opening a code must not also toggle the row's expander underneath it.
+    const goTo = (href: string) => (e: React.MouseEvent) => { e.stopPropagation(); router.push(href); };
     const shortDate = (iso: string | null) =>
         iso ? tzFmt(iso, { day: '2-digit', month: 'short' }) : '—';
     const { authFetch, workCenters, subscribeLiveEvents } = useData();
@@ -593,7 +615,14 @@ export default function WorkQueueView() {
                                             {r.is_released ? (
                                                 <>
                                                     <div style={{ minWidth: 0 }}>
-                                                        <CodeChip code={r.work_order_code || '—'} style={codeClip} />
+                                                        <CodeChip
+                                                            code={r.work_order_code || '—'} link
+                                                            style={canOpenWO ? codeBadge : codeBadgeFlat}
+                                                            title={canOpenWO ? `Open ${r.work_order_code} in Work Orders` : undefined}
+                                                            onClick={canOpenWO && r.work_order_code
+                                                                ? goTo(`/work-orders?wo=${encodeURIComponent(r.work_order_code)}`)
+                                                                : undefined}
+                                                        />
                                                     </div>
                                                     <div style={{ ...ellipsis, fontSize: 10, color: '#666' }}>{r.work_order_name}</div>
                                                 </>
@@ -611,7 +640,14 @@ export default function WorkQueueView() {
                                         </td>
                                         <td style={{ ...lvTd(), overflow: 'hidden' }}>
                                             <div style={{ minWidth: 0 }}>
-                                                <CodeChip code={r.mo_code || '—'} tier={2} style={codeClip} />
+                                                <CodeChip
+                                                    code={r.mo_code || '—'} link
+                                                    style={canOpenMO ? codeBadge : codeBadgeFlat}
+                                                    title={canOpenMO ? `Open ${r.mo_code} in Manufacturing Orders` : undefined}
+                                                    onClick={canOpenMO && r.mo_code
+                                                        ? goTo(`/manufacturing-orders?mo=${encodeURIComponent(r.mo_code)}`)
+                                                        : undefined}
+                                                />
                                             </div>
                                             <div style={{ ...ellipsis, fontSize: 10, color: '#666' }}>
                                                 {r.item_code} {r.item_name ? `· ${r.item_name}` : ''}

@@ -40,7 +40,10 @@ export { xpFont, modernFont, CODE_FONT, PRINT_FONT, PRINT_SERIF_FONT } from './t
 export function CodeChip({ code, tier = 1, tone = 'default', link = false, title, style, className, onClick }: {
     code: React.ReactNode; tier?: 1 | 2;
     tone?: 'default' | 'accent'; link?: boolean; title?: string;
-    style?: React.CSSProperties; className?: string; onClick?: () => void;
+    style?: React.CSSProperties; className?: string;
+    /** Takes the event so a code inside a clickable row can stop the row from
+     *  also reacting. Widening only — existing `() => void` handlers still fit. */
+    onClick?: (e: React.MouseEvent) => void;
 }) {
     const base: React.CSSProperties = { fontFamily: CODE_FONT, whiteSpace: 'nowrap' };
     const selfRef = useRef<HTMLSpanElement>(null);
