@@ -4258,6 +4258,9 @@ class WorkQueueMaterial(BaseModel):
     item_name: str | None = None
     # Item.uom is a plain string on the item, so every qty on this row reads in it.
     uom: str | None = None
+    # The planned component's variant attribute values, resolved to chips client-side
+    # off the attributes master. These are what `variant_key` is generated from.
+    attribute_value_ids: list[str] = []
     required_qty: float = 0
     staged_qty: float = 0
     # Free pool at the moment THIS work order's turn came in the priority walk,

@@ -14,6 +14,7 @@ import {
     useServerSort,
 } from '../shared/xpTheme';
 import VariantChips from '../shared/VariantChips';
+import AttributeValueChips from '../shared/attributeChips';
 import Pager from '../shared/Pager';
 import { fmtQtyCompact } from '../shared/format';
 
@@ -40,6 +41,7 @@ interface QueueMaterial {
     item_code: string | null;
     item_name: string | null;
     uom: string | null;
+    attribute_value_ids: string[];
     required_qty: number;
     staged_qty: number;
     on_hand_qty: number;
@@ -197,7 +199,9 @@ export default function WorkQueueView() {
     const goTo = (href: string) => (e: React.MouseEvent) => { e.stopPropagation(); router.push(href); };
     const shortDate = (iso: string | null) =>
         iso ? tzFmt(iso, { day: '2-digit', month: 'short' }) : '—';
-    const { authFetch, workCenters, subscribeLiveEvents } = useData();
+    // `attributes` is the wholesale master load every variant-chip surface reads;
+    // it is already in DataContext, so resolving ids here costs no fetch.
+    const { authFetch, workCenters, attributes, subscribeLiveEvents } = useData();
 
     const [showMaterials, setShowMaterials] = useState(false);
     const [centerType, setCenterType] = useState('');
@@ -468,6 +472,16 @@ export default function WorkQueueView() {
                                             GATES
                                         </span>
                                     )}
+                                    {/* The component's own variant, under its name. This is the bucket
+                                        the Free pool / Allocated figures on this row were drawn from —
+                                        stock is keyed by (item, variant), so an item with two variants
+                                        is two separate piles and the numbers are unreadable without
+                                        knowing which one you are looking at. */}
+                                    <AttributeValueChips
+                                        valueIds={m.attribute_value_ids}
+                                        attributes={attributes}
+                                        style={{ display: 'flex', marginTop: 2 }}
+                                    />
                                 </td>
                                 {m.is_beam ? (
                                     <>

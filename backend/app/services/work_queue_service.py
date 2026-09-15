@@ -698,6 +698,7 @@ async def build_queue(
                     "item_code": c.item.code if c.item else None,
                     "item_name": c.item.name if c.item else None,
                     "uom": c.item.uom if c.item else None,
+                    "attribute_value_ids": [str(v) for v in (c.attribute_value_ids or [])],
                     "required_qty": m["required"], "staged_qty": 0.0,
                     "on_hand_qty": kg, "allocated_qty": kg, "shortfall_qty": 0.0,
                     "is_beam": True, "is_substrate": gates,
@@ -716,6 +717,10 @@ async def build_queue(
                 "item_code": c.item.code if c.item else None,
                 "item_name": c.item.name if c.item else None,
                 "uom": c.item.uom if c.item else None,
+                # The component's OWN variant — the values `variant_key` is built from,
+                # so the panel's Free pool / Allocated figures can be read against the
+                # bucket they were actually drawn from.
+                "attribute_value_ids": [str(v) for v in (c.attribute_value_ids or [])],
                 "required_qty": m["required"],
                 "staged_qty": m["staged"],
                 # on_hand is what was free when THIS row's turn came, not the raw
