@@ -15,6 +15,12 @@ on `main`:
 
 ## [Unreleased]
 
+## [0.30.1] - 2026-09-15
+
+### Fixed
+- Work Queue nets stock by size as well as by variant, matching the MRP ledger, Booking Stock and the Production Run material requirements. A size is a physical difference — 77 cm XL greige cannot be dyed for a 72 cm L order — but the queue pooled them, so an L order read as having 22.6 kg of material it could never use, and the XL order behind it, which owned that greige, was told it had only 5.9 of the 27.1 kg it needed
+- Work Queue's material table shows the size each demand is stocked at, so the Free pool and Allocated figures name the pile they were drawn from
+
 ## [0.30.0] - 2026-09-15
 
 ### Added

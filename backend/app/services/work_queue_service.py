@@ -235,31 +235,30 @@ async def _staged_by_wo(db: AsyncSession, wos: list[WorkOrder]) -> dict[tuple[st
     return {k: max(0.0, v) for k, v in out.items()}
 
 
-async def _on_hand_pool(db: AsyncSession, item_ids: set[str]) -> dict[tuple[str, str], float]:
-    """(item_id, variant_key) -> good on-hand, summed plant-wide.
+async def _on_hand_pool(db: AsyncSession, item_ids: set[str]) -> dict[tuple[str, str, str], float]:
+    """(item_id, variant_key, size_token) -> good on-hand, summed plant-wide.
 
-    Location-agnostic by design (single plant, see CLAUDE.md netting notes) and
+    Location-agnostic by design (single plant, see CLAUDE.md netting notes) but
+    SIZE-AWARE, and that second half was the bug: a pile's size is recorded only on
+    its lot (`Batch.bom_size_snapshot`), so a variant-only pool handed 77 cm XL
+    greige to an L order that can never dye it, and then reported the XL order —
+    the one order that could use that stock — short of its own pile. The buckets
+    come from `netting_service.onhand_size_rows`, so the queue nets on the same key
+    as the MRP ledger, `/stock/availability` and the PR material requirements
+    instead of contradicting all three.
+
     QC-rejected / disposed lots are excluded through the same subquery the MRP
     netting uses, so a rejected greige lot never makes an order look ready."""
     if not item_ids:
         return {}
-    rows = await db.execute(
-        select(StockBalance.item_id, StockBalance.variant_key, func.sum(StockBalance.qty))
-        .where(
-            StockBalance.item_id.in_([uuid.UUID(i) for i in item_ids]),
-            StockBalance.qty > 0,
-            or_(
-                StockBalance.batch_key == "",
-                StockBalance.batch_key.notin_(netting_service.rejected_batch_keys()),
-            ),
-        )
-        .group_by(StockBalance.item_id, StockBalance.variant_key)
-    )
-    return {(str(i), v or ""): float(q or 0) for i, v, q in rows.all()}
+    rows = await netting_service.onhand_size_rows(db, [uuid.UUID(i) for i in item_ids])
+    return {k: float(q) for k, q in rows.items() if float(q) > EPS}
 
 
-def _eligible_pool_keys(pool: dict[tuple[str, str], float], item_id: str, want: str) -> list[str]:
-    """Which of an item's pool buckets a demand stated as `want` may draw on.
+def _eligible_pool_keys(pool: dict[tuple[str, str, str], float], item_id: str, want: str,
+                        want_size: str) -> list[tuple[str, str]]:
+    """Which of an item's pool buckets a demand stated as `want`/`want_size` may
+    draw on, as (variant_key, size_token) pairs in draw order.
 
     The walk used to look up ONE key and take `pool[(item, want)]`, i.e. exact
     string equality. That is not the rule the rest of the stock layer uses, and it
@@ -272,34 +271,44 @@ def _eligible_pool_keys(pool: dict[tuple[str, str], float], item_id: str, want: 
     Order is load-bearing, not cosmetic. Exact bucket first, then the rest LEAST
     SPECIFIC first, so a demand that names nothing eats the unattributed pile
     before it eats stock a later, pickier demand is the only one that can use.
-    Same instinct as the size rule in netting_service (take your own, then the
-    substitutable pile). Ties break on the key text, so the walk is deterministic.
+    Ties break on the key text, so the walk is deterministic.
+
+    Size nests INSIDE variant: colour is a hard identity (a NAVY demand must not
+    eat BLACK stock at any size), while size substitution is the narrow rule
+    `netting_service.eligible_tokens` owns — own size first, then the generic ""
+    pile whose size was never recorded, and only an unsized demand may take any
+    size. Deferring to that function is the point: three surfaces already agree on
+    it, and this one used to be the fourth that didn't.
     """
-    keys = [vk for (i, vk) in pool if i == item_id]
-    exact = [vk for vk in keys if vk == want]
-    others = [vk for vk in keys if vk != want and variant_matches(want, vk)]
+    variants = {vk for (i, vk, _sz) in pool if i == item_id}
+    exact = [vk for vk in variants if vk == want]
+    others = [vk for vk in variants if vk != want and variant_matches(want, vk)]
     others.sort(key=lambda vk: (len([t for t in vk.split(",") if t]), vk))
-    return exact + others
+    out: list[tuple[str, str]] = []
+    for vk in exact + others:
+        sizes = {sz for (i, v, sz) in pool if i == item_id and v == vk}
+        out += [(vk, sz) for sz in netting_service.eligible_tokens(sizes, want_size) if sz in sizes]
+    return out
 
 
-def _take_from_pool(pool: dict[tuple[str, str], float], item_id: str, want: str,
-                    need: float) -> tuple[float, float]:
+def _take_from_pool(pool: dict[tuple[str, str, str], float], item_id: str, want: str,
+                    need: float, want_size: str = "") -> tuple[float, float]:
     """(free pool this demand can reach, how much of `need` it got) — and drains it.
 
     Both numbers are what the row reports: `available` is the whole eligible pile at
     THIS row's turn in the priority walk, `got` is capped at `need`, which is why
     Have can never exceed Need.
     """
-    keys = _eligible_pool_keys(pool, item_id, want)
-    available = sum(pool[(item_id, k)] for k in keys)
+    keys = _eligible_pool_keys(pool, item_id, want, want_size)
+    available = sum(pool[(item_id, vk, sz)] for vk, sz in keys)
     got = min(available, max(0.0, need))
     remaining = got
-    for k in keys:
+    for vk, sz in keys:
         if remaining <= EPS:
             break
-        cell = pool[(item_id, k)]
+        cell = pool[(item_id, vk, sz)]
         take = min(cell, remaining)
-        pool[(item_id, k)] = cell - take
+        pool[(item_id, vk, sz)] = cell - take
         remaining -= take
     return available, got
 
@@ -581,12 +590,20 @@ async def build_queue(
     pegged = await _pegged_supply(db, [m.id for m in all_mos])
     so_due = await _so_due_dates(db, all_mos)
 
+    # Size identity of each demand, resolved the way every other netting surface
+    # resolves it: a component is stocked at its parent's size only when its OWN
+    # active BOM is sized and carries that size, so unsized greige still pools
+    # across colours while a sized one keeps its 72 cm and 77 cm piles apart.
+    sizes = await netting_service.SizeResolver.create(db)
+    await sizes.load_items(db, {c.item_id for c in all_comps})
+
     # --- resolve each WO's step materials ----------------------------------
     resolved: list[dict] = []
     for w in wos:
         mo = w.manufacturing_order
         wc_type = wc_types.get(str(w.work_center_id), "")
         comps = _step_components(w, mo, wc_type, op_types, beam_ids)
+        mo_size = netting_service.token_from_snapshot(mo.bom_size_snapshot)
         mats = []
         for c in comps:
             req = _required_qty(w, mo, c)
@@ -596,6 +613,7 @@ async def build_queue(
                 "comp": c,
                 "required": req,
                 "variant_key": _generate_variant_key(list(c.attribute_value_ids or [])),
+                "size_token": sizes.component_token(c.item_id, mo_size),
                 "is_beam": str(c.item_id) in beam_ids,
                 "staged": staged.get((str(w.id), str(c.item_id)), 0.0),
             })
@@ -611,6 +629,7 @@ async def build_queue(
     # READY against greige an earlier, undispatched order is already entitled to.
     for mo in unreleased:
         hint_ct, hint_src = _release_hint(mo, routing, bom_header, beam_ids)
+        mo_size = netting_service.token_from_snapshot(mo.bom_size_snapshot)
         mats = []
         # No routing step to filter by, so the whole BOM snapshot is the requirement.
         for c in (mo.planned_components or []):
@@ -621,6 +640,7 @@ async def build_queue(
                 "comp": c,
                 "required": req,
                 "variant_key": _generate_variant_key(list(c.attribute_value_ids or [])),
+                "size_token": sizes.component_token(c.item_id, mo_size),
                 "is_beam": str(c.item_id) in beam_ids,
                 "staged": 0.0,   # nothing can be staged without a WO to stage it to
             })
@@ -652,7 +672,8 @@ async def build_queue(
             # subtraction could not find the bucket the staged material actually sits
             # in, so it left that stock in the pool for the next order to allocate a
             # second time (and wrote a phantom 0.0 bucket for a key holding nothing).
-            _take_from_pool(pool, str(m["comp"].item_id), m["variant_key"], m["staged"])
+            _take_from_pool(pool, str(m["comp"].item_id), m["variant_key"], m["staged"],
+                            m["size_token"])
 
     # --- pass 1: allocate in scheduled order -------------------------------
     # This order decides who gets scarce stock, so it is ALWAYS by date — the
@@ -709,7 +730,8 @@ async def build_queue(
                 continue
 
             need = max(0.0, m["required"] - m["staged"])
-            available, got = _take_from_pool(pool, str(c.item_id), m["variant_key"], need)
+            available, got = _take_from_pool(pool, str(c.item_id), m["variant_key"], need,
+                                             m["size_token"])
             allocated_map[str(c.item_id)] = got
             peg = pegged.get((str(mo.id), str(c.item_id))) or {}
             materials_out.append({
@@ -721,6 +743,7 @@ async def build_queue(
                 # so the panel's Free pool / Allocated figures can be read against the
                 # bucket they were actually drawn from.
                 "attribute_value_ids": [str(v) for v in (c.attribute_value_ids or [])],
+                "size_label": sizes.label_for_token(m["size_token"]),
                 "required_qty": m["required"],
                 "staged_qty": m["staged"],
                 # on_hand is what was free when THIS row's turn came, not the raw
@@ -871,7 +894,7 @@ def _pick_substrate(mats: list[dict]) -> Optional[dict]:
 
 
 async def _gating_material_summary(db: AsyncSession, rows: list[dict],
-                                   pool: dict[tuple[str, str], float]) -> list[dict]:
+                                   pool: dict[tuple[str, str, str], float]) -> list[dict]:
     """Stock-side view of the same queue: per gating material, what is on hand, what
     the queue has claimed, what is left, and which lots it sits in.
 
@@ -903,8 +926,8 @@ async def _gating_material_summary(db: AsyncSession, rows: list[dict],
     if not agg:
         return []
 
-    # What the walk left unclaimed, across every variant of the item.
-    for (item_id, _vkey), qty in pool.items():
+    # What the walk left unclaimed, across every variant and size of the item.
+    for (item_id, _vkey, _size), qty in pool.items():
         if item_id in agg:
             agg[item_id]["free_qty"] += max(0.0, qty)
 

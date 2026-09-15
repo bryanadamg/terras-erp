@@ -4261,6 +4261,10 @@ class WorkQueueMaterial(BaseModel):
     # The planned component's variant attribute values, resolved to chips client-side
     # off the attributes master. These are what `variant_key` is generated from.
     attribute_value_ids: list[str] = []
+    # Size this demand is stocked at, when the component's own BOM is sized. Null
+    # means unsized (pooled across sizes) — the material figures below are netted
+    # per size, so the pool shown is the one this size can actually draw on.
+    size_label: str | None = None
     required_qty: float = 0
     staged_qty: float = 0
     # Free pool at the moment THIS work order's turn came in the priority walk,
