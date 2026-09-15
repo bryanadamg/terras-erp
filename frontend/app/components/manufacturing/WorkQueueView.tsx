@@ -43,6 +43,7 @@ interface QueueMaterial {
     item_name: string | null;
     uom: string | null;
     attribute_value_ids: string[];
+    size_label: string | null;
     required_qty: number;
     staged_qty: number;
     on_hand_qty: number;
@@ -486,16 +487,20 @@ export default function WorkQueueView() {
                                             GATES
                                         </span>
                                     )}
-                                    {/* The component's own variant, under its name. This is the bucket
-                                        the Free pool / Allocated figures on this row were drawn from —
-                                        stock is keyed by (item, variant), so an item with two variants
-                                        is two separate piles and the numbers are unreadable without
-                                        knowing which one you are looking at. */}
-                                    <AttributeValueChips
-                                        valueIds={m.attribute_value_ids}
-                                        attributes={attributes}
-                                        style={{ display: 'flex', marginTop: 2 }}
-                                    />
+                                    {/* The component's own variant AND size, under its name. Together
+                                        they are the bucket the Free pool / Allocated figures on this row
+                                        were drawn from — stock is keyed by (item, variant, size), so an
+                                        item with two variants or two sizes is that many separate piles
+                                        and the numbers are unreadable without knowing which one you are
+                                        looking at. No size chip = unsized, pooled across sizes. */}
+                                    <span style={{ display: 'flex', alignItems: 'center', gap: 4, marginTop: 2 }}>
+                                        <AttributeValueChips
+                                            valueIds={m.attribute_value_ids}
+                                            attributes={attributes}
+                                            style={{ display: 'flex' }}
+                                        />
+                                        {m.size_label && <VariantChips size={m.size_label} />}
+                                    </span>
                                 </td>
                                 {m.is_beam ? (
                                     <>
