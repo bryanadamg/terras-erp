@@ -15,6 +15,23 @@ on `main`:
 
 ## [Unreleased]
 
+## [0.30.0] - 2026-09-15
+
+### Added
+- Work Queue's Have column header sorts the list ascending/descending, alongside the existing By date / By readiness chips
+- Work Queue's color column renders as a swatch chip instead of a bare code
+- Work Queue shows the full variant chip set per row instead of a truncated code
+- Work Queue's WO and MO codes link through to the Work Orders and Manufacturing Orders pages
+- Work Queue's material table renders item attributes as chips
+
+### Changed
+- Work Queue's rank and work order columns rebalanced for the new sortable Have header
+
+### Fixed
+- Work Queue stock allocation now matches demand to stock by the same variant-substitution rule the rest of the stock layer uses, instead of an exact `(item, variant_key)` match — an unattributed component demand used to read 0 against a fully-stocked keyed bucket and report a false shortage
+- Work Queue's lot chips wrap instead of forcing the row to its min-content width, which used to push a well-lotted material's row off the right edge of the panel
+- Chip tooltips no longer fire when the `title` only restates the chip's own visible label
+
 ## [0.29.0] - 2026-09-14
 
 ### Added
