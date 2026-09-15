@@ -15,6 +15,7 @@ import {
 } from '../shared/xpTheme';
 import VariantChips from '../shared/VariantChips';
 import AttributeValueChips from '../shared/attributeChips';
+import { LotChip, LotChipRow } from '../shared/LotChips';
 import Pager from '../shared/Pager';
 import { fmtQtyCompact } from '../shared/format';
 
@@ -401,16 +402,26 @@ export default function WorkQueueView() {
                                             ? `${m.orders_waiting} / ${m.orders_total} waiting`
                                             : m.orders_total}
                                     </td>
-                                    <td style={lvTd()}>
+                                    {/* Up to 12 lots per material. As bare nowrap spans they set the
+                                        cell's min-content width, so one well-lotted greige stretched the
+                                        whole panel off the right edge and every other column with it.
+                                        LotChipRow wraps, so the column is bounded by the table again. */}
+                                    <td style={{ ...lvTd(), whiteSpace: 'normal' }}>
                                         {m.lot_count === 0
                                             ? <span style={{ color: '#888' }}>not lotted</span>
-                                            : m.lots.map(l => (
-                                                <span key={(l.batch_id || '') + String(l.qty)}
-                                                    title={l.location_name || ''}
-                                                    style={{ marginRight: 8, whiteSpace: 'nowrap' }}>
-                                                    {l.batch_number} <strong>{num(l.qty)}</strong>
-                                                </span>
-                                            ))}
+                                            : (
+                                                <LotChipRow>
+                                                    {m.lots.map(l => (
+                                                        <LotChip
+                                                            key={(l.batch_id || '') + String(l.qty)}
+                                                            mono
+                                                            title={[l.batch_number, l.location_name].filter(Boolean).join(' · ')}
+                                                        >
+                                                            {l.batch_number} <strong>{num(l.qty)}</strong>
+                                                        </LotChip>
+                                                    ))}
+                                                </LotChipRow>
+                                            )}
                                     </td>
                                 </tr>
                             ))}
