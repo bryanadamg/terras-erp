@@ -54,7 +54,7 @@ from app.models.stock_ledger import StockLedger
 from app.models.batch import BeamMount
 from app.models.attribute import AttributeValue
 from app.services import beam_service, netting_service, mo_variant_service
-from app.services.stock_service import _generate_variant_key
+from app.services.stock_service import _generate_variant_key, variant_matches
 
 EPS = 1e-6
 
@@ -256,6 +256,52 @@ async def _on_hand_pool(db: AsyncSession, item_ids: set[str]) -> dict[tuple[str,
         .group_by(StockBalance.item_id, StockBalance.variant_key)
     )
     return {(str(i), v or ""): float(q or 0) for i, v, q in rows.all()}
+
+
+def _eligible_pool_keys(pool: dict[tuple[str, str], float], item_id: str, want: str) -> list[str]:
+    """Which of an item's pool buckets a demand stated as `want` may draw on.
+
+    The walk used to look up ONE key and take `pool[(item, want)]`, i.e. exact
+    string equality. That is not the rule the rest of the stock layer uses, and it
+    invented shortfalls: an unattributed component demand (`want == ""`) reads 0
+    against 100 t of yarn sitting under a keyed bucket, and the PIC is told there
+    is no yarn. `variant_matches` is the codebase's answer — every attribute the
+    demand states must be on the stock, the colour must agree exactly, and an
+    empty demand states nothing and so matches anything.
+
+    Order is load-bearing, not cosmetic. Exact bucket first, then the rest LEAST
+    SPECIFIC first, so a demand that names nothing eats the unattributed pile
+    before it eats stock a later, pickier demand is the only one that can use.
+    Same instinct as the size rule in netting_service (take your own, then the
+    substitutable pile). Ties break on the key text, so the walk is deterministic.
+    """
+    keys = [vk for (i, vk) in pool if i == item_id]
+    exact = [vk for vk in keys if vk == want]
+    others = [vk for vk in keys if vk != want and variant_matches(want, vk)]
+    others.sort(key=lambda vk: (len([t for t in vk.split(",") if t]), vk))
+    return exact + others
+
+
+def _take_from_pool(pool: dict[tuple[str, str], float], item_id: str, want: str,
+                    need: float) -> tuple[float, float]:
+    """(free pool this demand can reach, how much of `need` it got) — and drains it.
+
+    Both numbers are what the row reports: `available` is the whole eligible pile at
+    THIS row's turn in the priority walk, `got` is capped at `need`, which is why
+    Have can never exceed Need.
+    """
+    keys = _eligible_pool_keys(pool, item_id, want)
+    available = sum(pool[(item_id, k)] for k in keys)
+    got = min(available, max(0.0, need))
+    remaining = got
+    for k in keys:
+        if remaining <= EPS:
+            break
+        cell = pool[(item_id, k)]
+        take = min(cell, remaining)
+        pool[(item_id, k)] = cell - take
+        remaining -= take
+    return available, got
 
 
 async def _mo_logged_qty(db: AsyncSession, mo_ids: list) -> dict[str, float]:
@@ -602,8 +648,11 @@ async def build_queue(
         for m in r["mats"]:
             if m["is_beam"] or m["staged"] <= EPS:
                 continue
-            key = (str(m["comp"].item_id), m["variant_key"])
-            pool[key] = max(0.0, pool.get(key, 0.0) - m["staged"])
+            # Drained through the same eligibility rule as pass 1. The old exact-key
+            # subtraction could not find the bucket the staged material actually sits
+            # in, so it left that stock in the pool for the next order to allocate a
+            # second time (and wrote a phantom 0.0 bucket for a key holding nothing).
+            _take_from_pool(pool, str(m["comp"].item_id), m["variant_key"], m["staged"])
 
     # --- pass 1: allocate in scheduled order -------------------------------
     # This order decides who gets scarce stock, so it is ALWAYS by date — the
@@ -658,11 +707,8 @@ async def build_queue(
                 })
                 continue
 
-            key = (str(c.item_id), m["variant_key"])
             need = max(0.0, m["required"] - m["staged"])
-            available = pool.get(key, 0.0)
-            got = min(available, need)
-            pool[key] = available - got
+            available, got = _take_from_pool(pool, str(c.item_id), m["variant_key"], need)
             allocated_map[str(c.item_id)] = got
             peg = pegged.get((str(mo.id), str(c.item_id))) or {}
             materials_out.append({
