@@ -2,6 +2,7 @@
 import React from 'react';
 import { useTimezone } from '../../context/TimezoneContext';
 import { CODE_FONT, PRINT_FONT } from '../shared/xpTheme';
+import LabelComponentsBand from './LabelComponentsBand';
 
 /**
  * Bag output label — one physical sticker per bag produced at a WEAVING WO.
@@ -139,6 +140,9 @@ export default function BagLabelCard({
                     </tr>
                 </tbody>
             </table>
+
+            {/* What actually went into this bag, substitutes included. */}
+            <LabelComponentsBand completion={completion} parentMO={parentMO} />
 
             <div style={{ flexGrow: 1, minHeight: '4px' }} />
 
