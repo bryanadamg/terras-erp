@@ -779,6 +779,39 @@ async def split_batch(
         notes=(f"Split from {batch.batch_number}" + (f": {reason}" if reason else "")),
         created_by=current_user.username,
     )
+    # A piece of a carton is still a carton. Without carrying the packing fields
+    # the child fails `packed_unit_filter()`, so it is invisible to every carton
+    # picker (pick-list suggestion, packed-unit lookup) and prints no label —
+    # the split would silently delete the goods from the outbound flow. Its own
+    # `package_no` off the same packing order, because two boxes sharing a number
+    # is exactly what `_next_package_no` exists to prevent.
+    from app.services import packing_service  # local: packing_service imports this module
+    is_carton = packing_service.is_packed_unit(batch)
+    if is_carton:
+        sub.packing_order_id = batch.packing_order_id
+        sub.packing_completion_id = batch.packing_completion_id
+        sub.package_label = batch.package_label
+        sub.packaging_type_id = batch.packaging_type_id
+        sub.tare_kg = batch.tare_kg
+        sub.packed_for_so_id = batch.packed_for_so_id
+        sub.package_no = await packing_service._next_package_no(db, batch.packing_order_id)
+        # Repacked into a second box of the same type: net is what was peeled off,
+        # brutto follows from the snapshotted tare.
+        sub.weight_kg = qty
+        sub.gross_weight_kg = packing_service.gross_weight(qty, batch.tare_kg)
+        # The packed count of the piece. Prorated by weight only as a default —
+        # `alt_qty` is a COUNT the packer made, so a caller splitting a 12-Pcs box
+        # states how many pieces went into the new one rather than inheriting
+        # 8.0004 Pcs from a kg ratio.
+        if batch.alt_qty is not None:
+            parent_alt = float(batch.alt_qty)
+            child_alt = (
+                float(payload.alt_qty) if payload.alt_qty is not None
+                else round(parent_alt * qty / remaining, 4) if remaining > 0 else 0.0
+            )
+            child_alt = max(0.0, min(child_alt, parent_alt))
+            sub.alt_qty = child_alt
+            batch.alt_qty = round(parent_alt - child_alt, 4)
     db.add(sub)
     await db.flush()
 
@@ -786,11 +819,16 @@ async def split_batch(
         db, item_id=batch.item_id, src_batch_id=batch.id, dst_batch_id=sub.id,
         qty=qty, reference_type="Split", reference_id=sub.batch_number,
     )
+    if is_carton and batch.weight_kg is not None:
+        batch.weight_kg = round(float(batch.weight_kg) - moved, 4)
+        batch.gross_weight_kg = packing_service.gross_weight(batch.weight_kg, batch.tare_kg)
     # Pegged to the kg that actually moved, not the requested qty — a source row
     # short of the ask leaves `moved` below `qty`, and genealogy must state what
-    # the child is really made of. No order id: a split belongs to no MO or
-    # packing order, same as the beam-leftover row.
+    # the child is really made of. A carton split stays pegged to its packing
+    # order; a plain lot split belongs to no order at all, same as the
+    # beam-leftover row.
     db.add(BatchConsumption(
+        packing_order_id=batch.packing_order_id if is_carton else None,
         input_batch_id=batch.id,
         output_batch_id=sub.id,
         qty_consumed=moved,

@@ -424,8 +424,14 @@ class BatchReject(BaseModel):
 class BatchSplit(BaseModel):
     """Split a GOOD lot: move `qty` off into a new GOOD sub-lot (same item,
     location, variant), leaving the original with the remainder. Used to peel a
-    leftover off a bag when only part of it is staged/consumed."""
+    leftover off a bag when only part of it is staged/consumed, and to break a
+    packed carton down to what an order still owes (the remainder stays in the
+    finished-goods store as its own carton)."""
     qty: float
+    # Cartons only: the packed count that goes into the split-off box, in the
+    # packing order's alt selling unit. Omitted => prorated by weight, which is a
+    # guess on a box sold by the piece. Ignored for a lot that has no alt count.
+    alt_qty: float | None = None
     reason: str | None = None
 
 
@@ -3166,6 +3172,12 @@ class BatchResponse(BaseModel):
     # the human label {size_name, label, target_measurement, ...} for lot displays.
     bom_size_id: Optional[UUID] = None
     bom_size_snapshot: Optional[dict] = None
+    # PackedUnit fields — non-null only on a carton. Carried so a caller that
+    # splits one (pick-list suggestion modal) can render the new box without a
+    # second round trip.
+    packing_order_id: Optional[UUID] = None
+    package_no: Optional[int] = None
+    alt_qty: Optional[float] = None
     quality_status: str = "GOOD"    # GOOD | REJECTED
     quarantine_status: Optional[str] = None  # disposition snapshot; only meaningful when `held` is true
     held: bool = False  # quarantine_status not yet OK AND the batch's current location is a quarantine hold area (populated by list endpoint)
