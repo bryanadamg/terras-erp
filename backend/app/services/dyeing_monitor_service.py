@@ -6,13 +6,21 @@ one shift and is measured in yards against the clock. The two formulas look alik
 and are not:
 
     weaving:  kg/day  = 1440 * rate_g_min * lines / 1000, over WORKING DAYS
-    dyeing:   yd/min  = rpm * yards_per_rev * lines,      over WALL-CLOCK MINUTES
+    dyeing:   yd/min  = yards_per_min * lines,            over the RUN WINDOW
 
-`yards_per_rev` is machine geometry (how far the rope advances on one revolution
-of the reel) and lives on the WorkCenter. `rpm` and `lines` are chosen per load
-and live on the DyeingRun. Both halves must be present for an efficiency to mean
-anything, so either one missing yields None -- never 0, which would read as a
-vessel producing nothing rather than a machine nobody has measured yet.
+Both dyeing factors live on the DyeingRun and are chosen per load: `yards_per_min`
+is how fast ONE rope is run (picked off the `Dyeing Speed` system attribute, not
+typed), `lines` is how many ropes the vessel carries. Either missing yields None --
+never 0, which would read as a vessel producing nothing rather than a batch nobody
+has set a speed for.
+
+The rate chain used to be `rpm * WorkCenter.yards_per_rev * lines`. Three factors,
+two of which nobody at the vessel could check, so a mistyped rpm read as a real
+measurement three hours later. One picked speed replaced them (f3b5d7a9c1e8).
+
+There is no target. The floor asked for these numbers reported, not judged: a dye
+vessel has no contracted daily rate the way a loom does, so a percentage threshold
+was a bar nobody had ever set. `on_target` / `below_target` are gone with it.
 """
 from datetime import datetime, timezone
 from typing import Optional
@@ -23,9 +31,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.models.manufacturing import MOCompletion
 from app.services import packing_service
 
-# A dye batch that is on the machine right now. PENDING has no `started_at`, so it
-# has no clock and cannot report a rate -- it still shows on the card, as the load
-# the vessel is waiting to run (see derive_machine_status).
+# A dye batch that is on the machine right now, i.e. its efficiency window is open.
 ACTIVE_RUN_STATUSES = ("IN_PROGRESS",)
 
 # Work centre types that are dyeing vessels. `CELUP` is the Indonesian name and is
@@ -34,17 +40,26 @@ DYEING_CENTER_TYPES = ("DYEING", "CELUP")
 
 # -- Vessel state ------------------------------------------------------------
 # A dye vessel has no equivalent of the loom's warp prep (STAGED/DRAW_IN/TUNING):
-# there is nothing mounted to it that outlives a batch. So all three states are
-# DERIVED from the runs alone and nothing is stored on the work center.
+# there is nothing mounted to it that outlives a batch. So every state is DERIVED
+# from the runs alone and nothing is stored on the work center.
 MACHINE_STATUS_IDLE = "IDLE"
 MACHINE_STATUS_LOADED = "LOADED"
+MACHINE_STATUS_MATCHING = "MATCHING"
 MACHINE_STATUS_RUNNING = "RUNNING"
 
 
-def derive_machine_status(has_active_run: bool, has_pending_run: bool) -> str:
-    """The single definition of what a vessel card shows."""
+def derive_machine_status(has_active_run: bool, has_matching_run: bool,
+                          has_pending_run: bool) -> str:
+    """The single definition of what a vessel card shows.
+
+    Ordered by how far along the floor is, so a vessel running one batch while the
+    next is being colour-matched reads RUNNING -- the machine's own state is the
+    batch that is in it.
+    """
     if has_active_run:
         return MACHINE_STATUS_RUNNING
+    if has_matching_run:
+        return MACHINE_STATUS_MATCHING
     if has_pending_run:
         return MACHINE_STATUS_LOADED
     return MACHINE_STATUS_IDLE
@@ -52,23 +67,21 @@ def derive_machine_status(has_active_run: bool, has_pending_run: bool) -> str:
 
 # -- Rate primitives ---------------------------------------------------------
 
-def yards_per_minute(rpm: Optional[float], yards_per_rev: Optional[float],
-                     lines: Optional[int]) -> Optional[float]:
-    """Theoretical rope speed in yards/min, or None when a factor is unmeasured.
+def yards_per_minute(yards_per_min: Optional[float], lines: Optional[int]) -> Optional[float]:
+    """Theoretical vessel speed in yards/min, or None when a factor is unset.
 
-    None rather than 0: a missing machine constant means "nobody has measured this
-    vessel", which the card must show as a dash. Returning 0 would make every
-    downstream division silently produce a null efficiency for the wrong reason.
+    None rather than 0: a missing speed means "nobody has set this batch's rate",
+    which the card must show as a dash. Returning 0 would make every downstream
+    division silently produce a null efficiency for the wrong reason.
     """
     try:
-        r = float(rpm or 0)
-        ypr = float(yards_per_rev or 0)
+        ypm = float(yards_per_min or 0)
         n = int(lines or 0)
     except (TypeError, ValueError):
         return None
-    if r <= 0 or ypr <= 0 or n <= 0:
+    if ypm <= 0 or n <= 0:
         return None
-    return r * ypr * n
+    return ypm * n
 
 
 def _aware(dt: Optional[datetime]) -> Optional[datetime]:
@@ -83,7 +96,7 @@ def _naive_utc(dt: Optional[datetime]) -> Optional[datetime]:
     TIMESTAMP WITHOUT TIME ZONE column.
 
     `DyeingRun.started_at` is `DateTime(timezone=True)` while `MOCompletion.created_at`
-    is naive — binding an aware bound against the naive column makes asyncpg raise
+    is naive -- binding an aware bound against the naive column makes asyncpg raise
     "can't subtract offset-naive and offset-aware datetimes" rather than comparing
     wrongly, so this is a hard failure, not a silent one. Both sides are UTC.
     """
@@ -91,23 +104,53 @@ def _naive_utc(dt: Optional[datetime]) -> Optional[datetime]:
     return None if aware is None else aware.astimezone(timezone.utc).replace(tzinfo=None)
 
 
-def elapsed_minutes(started_at: Optional[datetime], completed_at: Optional[datetime],
-                    now: datetime) -> float:
-    """Wall-clock minutes the batch has been on the machine.
+def _span_minutes(start: Optional[datetime], end: Optional[datetime],
+                  now: Optional[datetime]) -> Optional[float]:
+    """Wall-clock minutes between two stamps, running to `now` while `end` is open.
 
-    A finished run is frozen at its own completion; a live one runs to `now`, so
-    the card's efficiency moves every poll. No calendar and no pause intervals:
-    a dye batch spans a single shift, so there is no overnight gap to subtract and
-    nothing to park while another order is prioritised (the two things
-    weaving_service exists to handle).
+    None when the phase never began -- distinct from 0.0, which means it began and
+    no time has passed. A card showing "--" for an unrecorded colour match and "0m"
+    for one pressed a second ago is telling the truth twice; one number for both is
+    telling it once, wrongly.
+
+    Pass `now=None` for a span that must NOT run live -- the gap between two phases
+    is only meaningful once the second one lands.
+
+    No calendar and no pause intervals: a dye batch spans a single shift, so there
+    is no overnight gap to subtract and nothing to park while another order is
+    prioritised (the two things weaving_service exists to handle).
     """
-    start = _aware(started_at)
-    if start is None:
-        return 0.0
-    end = _aware(completed_at) or now
-    if end <= start:
-        return 0.0
-    return (end - start).total_seconds() / 60.0
+    s = _aware(start)
+    if s is None:
+        return None
+    e = _aware(end) or now
+    if e is None:
+        return None
+    return max((e - s).total_seconds() / 60.0, 0.0)
+
+
+def phase_minutes(run, now: datetime) -> dict:
+    """How long each phase of one batch took, and how long the whole thing has.
+
+    `prep_minutes` runs live only while the batch has not started: a vessel that has
+    been waiting on a shade since 8am is exactly what the supervisor walks the floor
+    to find, and it stops being a live number the moment the machine starts.
+
+    `run_minutes` is the efficiency window and nothing else -- it opens at
+    `started_at`, closes at `completed_at`, and is the only span the yard rate is
+    ever divided by. A batch that sat all morning waiting on a colour must not be
+    scored as a slow machine, which is what one merged elapsed figure did.
+    """
+    started = run.started_at
+    matched = run.color_matching_at
+    return {
+        "color_matching_at": matched,
+        "prep_minutes": _span_minutes(matched, started, None if started else now),
+        "run_minutes": _span_minutes(started, run.completed_at, now),
+        # First stamp to last. Falls back to the run window for a batch whose colour
+        # match was never pressed, so the total is never shorter than the run inside it.
+        "total_minutes": _span_minutes(matched or started, run.completed_at, now),
+    }
 
 
 def to_yards(qty: Optional[float], item) -> Optional[float]:
@@ -132,11 +175,15 @@ async def sum_actual_qty(db: AsyncSession, work_center_id, mo_id,
                          started_at: Optional[datetime],
                          completed_at: Optional[datetime],
                          now: datetime) -> float:
-    """Logged production on this vessel, for this MO, inside the batch's own window.
+    """Logged production on this vessel, for this MO, inside the batch's RUN window.
 
-    A DATETIME window, unlike the weaving monitor's date window: several batches
-    run on one vessel in a single day, so bucketing by date would pool this run's
-    output with the one before it.
+    Deliberately the same window the efficiency divides by -- output logged before
+    the machine was started belongs to the batch before this one, and counting it
+    here would credit this run with someone else's yards.
+
+    A DATETIME window, unlike the weaving monitor's date window: several batches run
+    on one vessel in a single day, so bucketing by date would pool this run's output
+    with the one before it.
 
     `work_center_id` is safe to filter on because `add_mo_completion` defaults it to
     the WO's machine (Alembic a4c6e8b0d2f5) -- the operator picker is an override,
@@ -159,19 +206,11 @@ async def sum_actual_qty(db: AsyncSession, work_center_id, mo_id,
 
 # -- Run metrics -------------------------------------------------------------
 
-def _missing_inputs(rpm, yards_per_rev, lines) -> list:
-    missing = []
-    if not rpm:
-        missing.append("rpm")
-    if not yards_per_rev:
-        missing.append("yards_per_rev")
-    if not lines:
-        missing.append("lines")
-    return missing
+def _round(v: Optional[float], places: int) -> Optional[float]:
+    return None if v is None else round(v, places)
 
 
-def compute_run_metrics(run, yards_per_rev: Optional[float], actual_qty: float,
-                        item, now: datetime) -> dict:
+def compute_run_metrics(run, actual_qty: float, item, now: datetime) -> dict:
     """Every displayed number for one dye batch. Pure -- caller supplies the actuals.
 
     `actual_yards` is None (not 0) when the item carries no g/y factor: the cloth
@@ -180,11 +219,13 @@ def compute_run_metrics(run, yards_per_rev: Optional[float], actual_qty: float,
     nothing.
     """
     lines = int(run.lines or 0)
-    rpm = float(run.rpm) if run.rpm is not None else None
-    eff_target = float(run.target_efficiency_pct or 0)
+    ypm = float(run.yards_per_min) if run.yards_per_min is not None else None
 
-    yd_min = yards_per_minute(rpm, yards_per_rev, lines)
-    elapsed = elapsed_minutes(run.started_at, run.completed_at, now)
+    yd_min = yards_per_minute(ypm, lines)
+    phases = phase_minutes(run, now)
+    # The efficiency window, and only it. A batch still being colour-matched has no
+    # run window, so it reports no rate -- as it should, nothing is turning yet.
+    elapsed = phases["run_minutes"] or 0.0
 
     theoretical = (yd_min * elapsed) if yd_min is not None else None
     actual_yards = to_yards(actual_qty, item)
@@ -197,21 +238,24 @@ def compute_run_metrics(run, yards_per_rev: Optional[float], actual_qty: float,
 
     return {
         "lines": lines,
-        "rpm": rpm,
-        "yards_per_rev": float(yards_per_rev) if yards_per_rev is not None else None,
-        "target_efficiency_pct": eff_target,
-        "target_yd_per_min": round(yd_min, 3) if yd_min is not None else None,
-        "target_eff_yd_per_min": round(yd_min * eff_target / 100.0, 3) if yd_min is not None else None,
+        "yards_per_min": ypm,
+        "target_yd_per_min": _round(yd_min, 3),
+        # The run window, under the name every card and the shared grid already read.
         "elapsed_minutes": round(elapsed, 1),
-        "theoretical_yards": round(theoretical, 1) if theoretical is not None else None,
+        "color_matching_at": phases["color_matching_at"],
+        "prep_minutes": _round(phases["prep_minutes"], 1),
+        "run_minutes": _round(phases["run_minutes"], 1),
+        "total_minutes": _round(phases["total_minutes"], 1),
+        "theoretical_yards": _round(theoretical, 1),
         "actual_qty": round(float(actual_qty or 0), 3),
-        "actual_yards": round(actual_yards, 1) if actual_yards is not None else None,
-        "planned_yards": round(planned_yards, 1) if planned_yards is not None else None,
-        "actual_rate_yd_min": round(actual_rate, 2) if actual_rate is not None else None,
-        "efficiency_pct": round(efficiency, 1) if efficiency is not None else None,
-        "on_target": (efficiency >= eff_target) if efficiency is not None else None,
+        "actual_yards": _round(actual_yards, 1),
+        "planned_yards": _round(planned_yards, 1),
+        "actual_rate_yd_min": _round(actual_rate, 2),
+        "efficiency_pct": _round(efficiency, 1),
         # Why there is no number, so the card can say which input is missing rather
         # than showing an unexplained dash.
-        "missing_rate_inputs": _missing_inputs(rpm, yards_per_rev, lines),
+        "missing_rate_inputs": (
+            ([] if ypm else ["yards_per_min"]) + ([] if lines else ["lines"])
+        ),
         "missing_gy_factor": actual_yards is None,
     }

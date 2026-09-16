@@ -172,6 +172,10 @@ export const STATUS_FAMILY: Record<string, StatusFamily> = {
     // Dye vessel (dyeing monitor): a batch is loaded and waiting to start. Amber for
     // the same reason ON_HOLD is — open work sitting still, waiting on the floor.
     LOADED: 'amber',
+    // The dye batch phase before the bath: the shade is being matched at the vessel.
+    // Blue because it is work in flight — somebody is at the machine — where LOADED
+    // above is work nobody has started.
+    COLOR_MATCHING: 'blue',
     // DELIVERED is blue, not green: on an MO it means "planned qty met, order still
     // open for logging". Green is reserved for closed/terminal.
     DELIVERED: 'blue',
