@@ -18,9 +18,9 @@ from app.services import dyeing_run_service as svc
 from tests.test_dyeing_output_lot import _log, _setup_dyeing_wo
 
 
-def _run(started_at=None, completed_at=None, volume=None):
+def _run(started_at=None, completed_at=None, volume=None, color_matching_at=None):
     return SimpleNamespace(started_at=started_at, completed_at=completed_at,
-                           volume_air_liters=volume)
+                           volume_air_liters=volume, color_matching_at=color_matching_at)
 
 
 NOW = "2026-09-07T00:00:00Z"   # any truthy timestamp; the rule only tests presence
@@ -55,6 +55,14 @@ def test_a_recorded_bath_is_in_progress():
 def test_a_bath_with_nothing_recorded_is_pending():
     assert svc.derive_status(_run(), "IN_PROGRESS") == "PENDING"
     assert svc.derive_status(_run(), "PENDING") == "PENDING"
+
+
+def test_colour_matching_sits_between_pending_and_the_bath():
+    """The phase before the machine runs. A recorded bath takes the batch straight
+    past it — matching is over the moment the vessel is filled."""
+    assert svc.derive_status(_run(color_matching_at=NOW), "IN_PROGRESS") == "COLOR_MATCHING"
+    assert svc.derive_status(_run(color_matching_at=NOW, volume=950), "IN_PROGRESS") == "IN_PROGRESS"
+    assert svc.derive_status(_run(color_matching_at=NOW, started_at=NOW), "IN_PROGRESS") == "IN_PROGRESS"
 
 
 def test_shade_result_is_not_part_of_the_status():

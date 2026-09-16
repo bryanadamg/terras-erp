@@ -12,11 +12,17 @@ side moves — a bath filled, a bath closed, or the WO's own status changing.
 
 The rule, in order:
 
-    CANCELLED    the WO is cancelled; nothing is running in that vessel.
-    COMPLETED    the bath was closed (`completed_at`), OR the WO closed — finishing
-                 a WO takes every bath under it off the machine.
-    IN_PROGRESS  a bath has been recorded (`started_at`, or a volume).
-    PENDING      loaded and waiting.
+    CANCELLED       the WO is cancelled; nothing is running in that vessel.
+    COMPLETED       the bath was closed (`completed_at`), OR the WO closed — finishing
+                    a WO takes every bath under it off the machine.
+    IN_PROGRESS     a bath has been recorded (`started_at`, or a volume).
+    COLOR_MATCHING  the shade is being matched at the vessel (`color_matching_at`).
+    PENDING         loaded and waiting.
+
+Colour matching sits BELOW the bath in that order on purpose: it is the phase before
+the machine runs, so the moment a bath is recorded the batch has left it. A run may
+skip it entirely — nothing forces the button, and a batch that goes straight to
+IN_PROGRESS simply reports no prep time.
 
 A bath keeps its own close on purpose: a multi-bath WO finishes bath 1 while bath 2
 is still running, and `completed_at` is granularity the WO cannot express. What is
@@ -49,6 +55,8 @@ def derive_status(run: DyeingRun, wo_status: str | None) -> str:
         return "COMPLETED"
     if run.started_at is not None or run.volume_air_liters is not None:
         return "IN_PROGRESS"
+    if run.color_matching_at is not None:
+        return "COLOR_MATCHING"
     return "PENDING"
 
 
