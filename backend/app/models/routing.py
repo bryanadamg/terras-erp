@@ -46,13 +46,10 @@ class WorkCenter(Base):
     # this is fixed machine config ("tergantung pengaturannya").
     beam_slots: Mapped[int] = mapped_column(Integer, default=1, server_default="1")
 
-    # How far the rope advances on ONE revolution of the reel, in yards (dyeing
-    # vessels). Fixed machine geometry, so it lives here beside beam_slots, while
-    # the rpm and rope count that vary batch to batch live on DyeingRun. The
-    # dyeing monitor's whole rate chain is `rpm * yards_per_rev * lines`.
-    # Null = never measured: the monitor reports no efficiency rather than
-    # inventing a denominator.
-    yards_per_rev: Mapped[Optional[float]] = mapped_column(Numeric(10, 4), nullable=True)
+    # No dyeing reel geometry here any more. The vessel's rate was `rpm *
+    # yards_per_rev * lines`, three factors nobody on the floor could verify; it is
+    # now one PICKED rope speed on the run (`DyeingRun.yards_per_min`, from the
+    # `Dyeing Speed` system attribute) times its rope count. Dropped in f3b5d7a9c1e8.
 
     # Loom prep state between "warp is up" and "run started": the floor walks
     # IDLE → STAGED → DRAW_IN → TUNING → RUNNING. Only the two MANUAL steps are

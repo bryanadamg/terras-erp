@@ -867,6 +867,11 @@ class WorkOrderCreate(BaseModel):
     # DyeingRun's PLAN (never its actual) so the Kartu Kerja prints weighed grams.
     # Left blank it falls back to the matched recipe's liquor_ratio x the load.
     bath_volume_liters: float | None = None
+    # DYEING only: how many ropes the vessel runs this load on. Seeds the same
+    # auto-created DyeingRun, where it stays — a multi-bath WO may split its load
+    # across runs at different rope counts, so the column belongs to the run and
+    # this is the planner's starting value, exactly like bath_volume_liters.
+    lines: int | None = None
 
 class WorkOrderResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
@@ -1614,7 +1619,6 @@ class WorkCenterCreate(BaseModel):
     beam_slots: int = 1
     # Yards the rope advances per reel revolution (dyeing vessels). Machine
     # geometry, so it rides here beside beam_slots rather than on each run.
-    yards_per_rev: float | None = None
 
 class WorkCenterResponse(BaseModel):
     id: UUID
@@ -1643,7 +1647,6 @@ class WorkCenterResponse(BaseModel):
     reject_location_inherited: bool = False
     working_weekdays: list[int] | None = None
     beam_slots: int = 1
-    yards_per_rev: float | None = None
 
     class Config:
         from_attributes = True
@@ -2939,13 +2942,16 @@ class DyeingRunCreate(BaseModel):
 class DyeingRunMonitorUpdate(BaseModel):
     """The rate inputs the dyeing monitor needs for one batch.
 
-    All optional and applied only when present, so the setup screen may send just
-    the rpm without restating a target the supervisor never touched. An empty body
-    is a 422, not a silent no-op.
+    Both optional and applied only when present, so the setup screen may send just
+    the speed without restating a rope count the supervisor never touched. An empty
+    body is a 422, not a silent no-op.
+
+    `yards_per_min` is per rope; the vessel's rate is it times `lines`. It replaced
+    `rpm` + `WorkCenter.yards_per_rev` + a target percentage (f3b5d7a9c1e8) — one
+    picked speed the floor can verify, and a number reported rather than scored.
     """
-    rpm: float | None = None
+    yards_per_min: float | None = None
     lines: int | None = None
-    target_efficiency_pct: float | None = None
 
 
 class DyeingRunStartPayload(BaseModel):
@@ -3032,9 +3038,16 @@ class DyeingRunResponse(BaseModel):
     shade_notes: str | None = None
     operator_name: str | None = None
     notes: str | None = None
+    # The three floor acts, in order. `color_matching_at` is stamped by
+    # POST /dyeing-runs/{id}/color-matching, `started_at` by the bath fill, and
+    # `completed_at` by the close — the dyeing monitor reports both gaps.
+    color_matching_at: datetime | None = None
     started_at: datetime | None = None
     completed_at: datetime | None = None
     created_at: datetime
+    # Monitor rate inputs, echoed so the run panel and the vessel card agree.
+    yards_per_min: float | None = None
+    lines: int = 1
     chemicals: list[DyeingRunChemicalResponse] = []
     recipe_name: str | None = None
     input_batch_number: str | None = None

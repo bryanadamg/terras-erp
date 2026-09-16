@@ -1,7 +1,8 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import ModalWrapper from '../shared/ModalWrapper';
+import { useData } from '../../context/DataContext';
 import { useLanguage } from '../../context/LanguageContext';
 import { useToast } from '../shared/Toast';
 import { xpFont, xpInput, FormSection, FieldLabel, XPActionButton, familyColor } from '../shared/xpTheme';
@@ -9,16 +10,19 @@ import { xpFont, xpInput, FormSection, FieldLabel, XPActionButton, familyColor }
 const AMBER = familyColor('amber');
 
 /**
- * The rate inputs one dye batch is judged against.
+ * The rate one dye batch is measured at.
  *
  * Separate from the Dyeing Orders create/complete forms because it is entered at a
  * different moment by a different person: whoever sets the machine up, before the
  * batch runs, rather than whoever records the shade afterwards.
  *
- * `yards_per_rev` is deliberately NOT editable here — it is machine geometry, not a
- * per-batch choice, so it belongs on the work center in Routing. Showing it
- * read-only is what makes the derived rate below verifiable: a supervisor can see
- * all three factors and the yd/min they produce.
+ * Two factors, not three. The speed is PICKED off the `Dyeing Speed` system
+ * attribute rather than typed, because the old chain (rpm x the work center's reel
+ * geometry x lines) was two numbers nobody at the vessel could verify and one that
+ * read as a measurement when it was a typo. A free-entry row stays for a speed
+ * nobody has added to the list yet — the backend takes any positive value — but the
+ * list is the path, and it is curated on the Attributes page like every other
+ * system attribute's values.
  */
 export default function DyeingRateModal({ isOpen, run, onClose, onSaved, authFetch, apiBase }: {
     isOpen: boolean;
@@ -30,31 +34,43 @@ export default function DyeingRateModal({ isOpen, run, onClose, onSaved, authFet
 }) {
     const { t } = useLanguage();
     const { showToast } = useToast();
+    // The speed list rides in on the attributes master load every page already
+    // holds — a dedicated fetch for five numbers would be a second source of the
+    // same rows.
+    const { attributes } = useData();
 
-    const [rpm, setRpm] = useState('');
+    const [speed, setSpeed] = useState('');
     const [lines, setLines] = useState('');
-    const [target, setTarget] = useState('');
     const [saving, setSaving] = useState(false);
+
+    /** Curated speeds, numeric and ascending. Non-numeric values are skipped rather
+     *  than shown: this attribute's values ARE numbers, and a stray label would
+     *  produce a run with no rate at all. */
+    const presets = useMemo(() => {
+        const attr = (attributes || []).find((a: any) => a.system_role === 'dyeing_speed');
+        return (attr?.values || [])
+            .map((v: any) => ({ id: String(v.id), n: parseFloat(String(v.value).replace(',', '.')) }))
+            .filter((v: any) => !isNaN(v.n) && v.n > 0)
+            .sort((a: any, b: any) => a.n - b.n);
+    }, [attributes]);
 
     // Re-seed whenever a different batch is opened. Without the `run.id` dependency
     // the second card opened would show the first one's numbers.
     useEffect(() => {
         if (!run) return;
-        setRpm(run.rpm !== null && run.rpm !== undefined ? String(run.rpm) : '');
+        setSpeed(run.yards_per_min !== null && run.yards_per_min !== undefined ? String(run.yards_per_min) : '');
         setLines(run.lines ? String(run.lines) : '1');
-        setTarget(run.target_efficiency_pct !== null && run.target_efficiency_pct !== undefined
-            ? String(run.target_efficiency_pct) : '50');
     }, [run?.id]);
 
-    const yardsPerRev = run?.machine?.yards_per_rev ?? run?.yards_per_rev ?? null;
-    const rpmNum = Number(rpm);
+    const speedNum = Number(speed);
     const linesNum = Number(lines);
-    // The whole point of the read-only reel figure: show the rate the three factors
-    // actually produce, so a mistyped rpm is caught here and not three hours later
-    // when the card reads 900%.
-    const derived = (yardsPerRev && rpmNum > 0 && linesNum > 0)
-        ? rpmNum * Number(yardsPerRev) * linesNum
-        : null;
+    // The rate the two factors actually produce, shown before it is saved: a speed
+    // picked for the wrong vessel is caught here and not three hours later when the
+    // card reads 900%.
+    const derived = (speedNum > 0 && linesNum > 0) ? speedNum * linesNum : null;
+    // A speed the floor typed (or one curated away since) still has to show as the
+    // current value rather than silently falling back to the first preset.
+    const isCustom = speed !== '' && !presets.some((p: any) => p.n === speedNum);
 
     const save = async () => {
         setSaving(true);
@@ -63,9 +79,8 @@ export default function DyeingRateModal({ isOpen, run, onClose, onSaved, authFet
                 method: 'PATCH',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    rpm: rpm === '' ? null : Number(rpm),
+                    yards_per_min: speed === '' ? null : Number(speed),
                     lines: lines === '' ? null : Number(lines),
-                    target_efficiency_pct: target === '' ? null : Number(target),
                 }),
             });
             if (!res.ok) {
@@ -78,18 +93,6 @@ export default function DyeingRateModal({ isOpen, run, onClose, onSaved, authFet
             setSaving(false);
         }
     };
-
-    const num = (value: string, set: (v: string) => void, min: string, step: string) => (
-        <input
-            type="number"
-            min={min}
-            step={step}
-            value={value}
-            onChange={e => set(e.target.value)}
-            className={undefined}
-            style={xpInput()}
-        />
-    );
 
     return (
         <ModalWrapper
@@ -111,35 +114,43 @@ export default function DyeingRateModal({ isOpen, run, onClose, onSaved, authFet
                 <FormSection title={t('set_rate')}>
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
                         <div>
-                            <FieldLabel>{t('rpm')}</FieldLabel>
-                            {num(rpm, setRpm, '0', '1')}
+                            <FieldLabel hint={t('speed_preset_hint')}>{t('yd_per_min')}</FieldLabel>
+                            <select
+                                value={isCustom ? '__custom' : speed}
+                                onChange={e => { if (e.target.value !== '__custom') setSpeed(e.target.value); }}
+                                style={xpInput()}
+                            >
+                                <option value="">—</option>
+                                {presets.map((p: any) => (
+                                    <option key={p.id} value={String(p.n)}>{p.n}</option>
+                                ))}
+                                {isCustom && <option value="__custom">{speed} ({t('custom')})</option>}
+                            </select>
                         </div>
                         <div>
                             <FieldLabel>{t('lines')}</FieldLabel>
-                            {num(lines, setLines, '1', '1')}
+                            <input type="number" min="1" step="1" value={lines}
+                                onChange={e => setLines(e.target.value)} style={xpInput()} />
                         </div>
-                        <div>
-                            <FieldLabel>{t('target')} %</FieldLabel>
-                            {num(target, setTarget, '1', '1')}
-                        </div>
-                        <div>
-                            <FieldLabel hint={t('no_reel_measured_hint')}>
-                                {t('yards_per_rev')}
-                            </FieldLabel>
-                            <div style={{
-                                fontSize: 11, fontWeight: 'bold', paddingTop: 3,
-                                color: yardsPerRev ? '#333' : '#8a6100',
-                            }}>
-                                {yardsPerRev ?? t('no_reel_measured')}
-                            </div>
-                        </div>
+                    </div>
+                    {/* The escape hatch, deliberately below the picker and narrower than
+                        it: a vessel run at a speed nobody has added to the list must
+                        still be recordable, but the list is the path. */}
+                    <div style={{ marginTop: 6, display: 'flex', alignItems: 'center', gap: 6, fontSize: 10, color: '#777' }}>
+                        <span>{t('or_type_speed')}</span>
+                        <input type="number" min="0" step="any" value={speed}
+                            onChange={e => setSpeed(e.target.value)}
+                            style={{ ...xpInput(), width: 70 }} />
+                        {presets.length === 0 && (
+                            <span style={{ color: AMBER }}>{t('no_speed_presets')}</span>
+                        )}
                     </div>
                     <div style={{
                         marginTop: 8, paddingTop: 6, borderTop: '1px solid #c8c4b8',
                         display: 'flex', justifyContent: 'space-between', fontSize: 11,
                     }}>
                         <span style={{ color: '#888' }}>
-                            {t('rpm')} × {t('yards_per_rev')} × {t('lines')}
+                            {t('yd_per_min')} × {t('lines')}
                         </span>
                         <b style={{ color: derived ? '#333' : AMBER }}>
                             {derived !== null ? `${derived.toLocaleString(undefined, { maximumFractionDigits: 0 })} ${t('yd_per_min')}` : '—'}

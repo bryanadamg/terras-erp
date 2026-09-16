@@ -115,18 +115,19 @@ class DyeingRun(Base):
     # here as a display-only duplicate; dropped in a7c9e1b3d5f8, never populated.
 
     # --- Monitor rate inputs -------------------------------------------------
-    # Reel speed and rope count for THIS batch. Both vary run to run (a heavier
-    # cloth is run slower, a rope count is chosen per load), which is why they are
-    # here and not on the work center — the same split as WeavingRun.lines vs
-    # WorkCenter.beam_slots. Paired with WorkCenter.yards_per_rev they give the
-    # monitor its theoretical rate: yd/min = rpm * yards_per_rev * lines.
-    # rpm null = no efficiency reported for the run; a guessed rpm would read as a
-    # measurement.
-    rpm: Mapped[Optional[float]] = mapped_column(Numeric(10, 3), nullable=True)
+    # Rope speed for THIS batch and how many ropes it runs on. Both vary run to run
+    # (a heavier cloth is run slower, a rope count is chosen per load), which is why
+    # they are here and not on the work center — the same split as WeavingRun.lines
+    # vs WorkCenter.beam_slots. Together they are the monitor's whole rate chain:
+    # yd/min = yards_per_min * lines.
+    #
+    # One measured speed, not rpm x reel geometry. `yards_per_min` is per rope and
+    # is PICKED, not typed freehand: the values come from the `Dyeing Speed` system
+    # attribute, so the floor chooses off the same short list the vessels are
+    # actually run at. Null = no efficiency reported for the run; a guessed speed
+    # would read as a measurement.
+    yards_per_min: Mapped[Optional[float]] = mapped_column(Numeric(10, 3), nullable=True)
     lines: Mapped[int] = mapped_column(Integer, default=1, server_default="1")
-    target_efficiency_pct: Mapped[float] = mapped_column(
-        Numeric(6, 2), default=50, server_default="50"
-    )
 
     # The bath, dual-track, exactly like the WO's target vs actual dates:
     #   planned_volume_air_liters  the planner's number, set when the WO is cut, so
@@ -156,6 +157,16 @@ class DyeingRun(Base):
     shade_notes: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     operator_name: Mapped[Optional[str]] = mapped_column(String(128), nullable=True)
     notes: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    # The three floor acts of a dye batch, each stamped as it happens:
+    #   color_matching_at  the shade is being matched at the vessel
+    #   started_at         the bath is filled and the machine is running
+    #   completed_at       the bath is closed
+    # The monitor reports both gaps: matching -> start is prep, start -> complete is
+    # the run, and only the second is the efficiency window (a batch that sat all
+    # morning waiting on a shade must not be scored as a slow machine). A run may
+    # skip straight to `started_at` — the prep gap is then null, never 0, because
+    # "nobody recorded it" and "it took no time" are different facts.
+    color_matching_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
     started_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
     completed_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
@@ -202,6 +213,16 @@ class SettingRun(Base):
     status: Mapped[str] = mapped_column(String(16), default="PENDING")
     operator_name: Mapped[Optional[str]] = mapped_column(String(128), nullable=True)
     notes: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    # The three floor acts of a dye batch, each stamped as it happens:
+    #   color_matching_at  the shade is being matched at the vessel
+    #   started_at         the bath is filled and the machine is running
+    #   completed_at       the bath is closed
+    # The monitor reports both gaps: matching -> start is prep, start -> complete is
+    # the run, and only the second is the efficiency window (a batch that sat all
+    # morning waiting on a shade must not be scored as a slow machine). A run may
+    # skip straight to `started_at` — the prep gap is then null, never 0, because
+    # "nobody recorded it" and "it took no time" are different facts.
+    color_matching_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
     started_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
     completed_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
