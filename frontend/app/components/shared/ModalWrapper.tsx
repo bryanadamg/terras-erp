@@ -1,9 +1,10 @@
 'use client';
 
-import React, { useState, useRef, useEffect, useId } from 'react';
+import React, { useRef, useEffect, useId } from 'react';
 import { useIsMobile } from '../../hooks/useIsMobile';
 import { toLayoutPx } from './uiScale';
-import { xpFont, BUTTON_RADIUS, XP_BTN, WINDOW_RADIUS, WINDOW_RADIUS_INNER } from './xpTheme';
+import UIWindowCloseButton from '@bryanadamg/terras-ui/components/WindowCloseButton';
+import { xpFont, XP_BTN, WINDOW_RADIUS, WINDOW_RADIUS_INNER } from './xpTheme';
 import { MODAL_Z } from './zLayers';
 
 // Shared z-index tier for anything that must render as an overlay but can't use
@@ -66,39 +67,16 @@ export function useInactiveChromeWhileOpen(active: boolean) {
 
 /**
  * The window close button — one face for every window title bar (ModalWrapper's
- * dialogs AND PrintModalShell's print previews) — the XP box: `.xp-btn`
- * lift/press animation, rounded to BUTTON_RADIUS, going red on hover.
- * Print modals used to render a bare text glyph with no
- * chrome at all, which is the drift this replaces — a print preview is a window,
- * so its close button is the same close button.
+ * dialogs AND PrintModalShell's print previews). A thin adapter over terras-ui's
+ * WindowCloseButton, which was extracted from this file and moved the red hover
+ * out of React state into a `.terras-win-close` rule in terras-ui/chrome. It
+ * keeps `.xp-btn` as well, so it still lifts like every other button here.
+ * Print modals used to render a bare text glyph with no chrome at all, which is
+ * the drift this replaces — a print preview is a window, so its close button is
+ * the same close button.
  */
 export function WindowCloseButton({ onClose }: { onClose: () => void }) {
-    const [hov, setHov] = useState(false);
-
-    return (
-        <button
-            type="button"
-            className={XP_BTN}
-            onClick={onClose}
-            onMouseEnter={() => setHov(true)}
-            onMouseLeave={() => setHov(false)}
-            style={{
-                fontFamily: xpFont, fontSize: '11px', fontWeight: 'bold',
-                width: 21, height: 21, minWidth: 21, cursor: 'pointer',
-                background: hov
-                    ? 'linear-gradient(to bottom, #e8a0a0, #c84040)'
-                    : 'linear-gradient(to bottom, #d4c8c8, #a89898)',
-                border: '1px solid',
-                borderColor: hov ? '#8e0000 #5e0000 #5e0000 #8e0000' : '#dfdfdf #808080 #808080 #dfdfdf',
-                color: '#ffffff', borderRadius: BUTTON_RADIUS,
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                lineHeight: 1, flexShrink: 0,
-                textShadow: '0 1px 1px rgba(0,0,0,0.5)',
-            }}
-            title="Close"
-            aria-label="Close"
-        >✕</button>
-    );
+    return <UIWindowCloseButton onClose={onClose} className={`${XP_BTN} terras-btn terras-win-close`} />;
 }
 
 interface ModalWrapperProps {

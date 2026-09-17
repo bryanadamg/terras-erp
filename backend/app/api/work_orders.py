@@ -256,6 +256,11 @@ async def create_work_order(
             recipe_id=planned_recipe_id,
             run_number=1,
             substrate_qty=wo.qty or 0,
+            # Rope count the planner set on the WO form. It lives on the run (a
+            # multi-bath WO may split its load across different rope counts) and is
+            # half the monitor's rate — `yards_per_min * lines`. Blank keeps the
+            # column default of 1; the speed itself is picked at the vessel.
+            **({"lines": payload.lines} if payload.lines else {}),
             # No status: an unfilled bath on a fresh WO is PENDING, which is the
             # column default. Status is derived, not typed (dyeing_run_service) —
             # and the PLANNED bath below deliberately doesn't move it.
@@ -691,6 +696,7 @@ async def create_work_orders_bulk(
                 recipe_id=planned_recipe_id,
                 run_number=1,
                 substrate_qty=wo.qty or 0,
+                **({"lines": payload.lines} if payload.lines else {}),
                 # No status, same as the single-WO path above: derived, not typed.
             )
             db.add(dye_run)

@@ -193,6 +193,44 @@ export default function PickListView() {
         }
     };
 
+    // Break a carton down to what the order still owes. The box is a Batch row,
+    // so this is the same `/batches/{id}/split` the Lot page uses — it peels the
+    // shipping piece off into its own carton and leaves the remainder in the
+    // finished-goods store as a carton of its own, pickable on a later order.
+    //
+    // The result is applied to the loaded suggestion instead of re-running it:
+    // a re-suggest is FIFO over created_at, so it would either take the (older)
+    // remainder back or drop the (newer) piece, i.e. undo the planner's split.
+    const splitCarton = async (group: any, carton: any, shipQty: number, shipAlt: number | null) => {
+        const res = await authFetch(`${API_BASE}/batches/${carton.batch_id}/split`, {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                qty: shipQty,
+                alt_qty: shipAlt,
+                reason: `Pick split for SO ${suggestFor?.po_number || ''}`.trim(),
+            }),
+        });
+        if (!res.ok) {
+            const e = await res.json().catch(() => ({}));
+            showToast(`Error: ${e.detail || 'could not split carton'}`, 'danger');
+            return null;
+        }
+        const child = await res.json();
+        const parentAlt = carton.alt_qty == null ? null
+            : Math.max(0, Math.round((num(carton.alt_qty) - num(child.alt_qty)) * 10000) / 10000);
+        setSuggestGroups(gs => gs.map((g: any) => g.sales_order_line_id !== group.sales_order_line_id ? g : {
+            ...g,
+            cartons: (g.cartons || []).flatMap((c: any) => c.batch_id !== carton.batch_id ? [c] : [
+                // The piece that ships — same physical identity, its own box number.
+                { ...c, batch_id: child.id, batch_number: child.batch_number, package_no: child.package_no, qty: shipQty, alt_qty: child.alt_qty ?? null },
+                // The remainder, staying in stock.
+                { ...c, qty: Math.round((num(c.qty) - shipQty) * 10000) / 10000, alt_qty: parentAlt },
+            ]),
+        }));
+        showToast(`Carton split — ${child.batch_number} ships, ${carton.batch_number} stays in stock`, 'success');
+        return { childId: String(child.id), parentId: String(carton.batch_id) };
+    };
+
     const deletePL = async (pl: any) => {
         const ok = await confirm({ title: 'Delete Pick List', message: `Delete ${pl.code}?`, confirmText: 'Delete', variant: 'danger' });
         if (!ok) return;
@@ -577,6 +615,8 @@ export default function PickListView() {
                     loading={suggestLoading}
                     creating={creatingPL}
                     itemById={itemById}
+                    canSplit={hasPermission('lot.split')}
+                    onSplit={splitCarton}
                     onClose={() => setSuggestFor(null)}
                     onConfirm={(lines: any[]) => createWithLines(suggestFor, lines)}
                 />
@@ -877,17 +917,60 @@ function LegendKey({ tone, label }: { tone: 'green' | 'blue' | 'red' | 'track'; 
  * order, e.g. extra packed for tolerance/reject allowance) and should stay in
  * stock rather than ship early.
  */
-function PickListSuggestionModal({ so, groups, loading, creating, itemById, onClose, onConfirm }: any) {
+function PickListSuggestionModal({ so, groups, loading, creating, itemById, canSplit, onSplit, onClose, onConfirm }: any) {
     const [checked, setChecked] = useState<Record<string, boolean>>({});
+    // Which carton row is open for splitting, and the typed piece. One at a time:
+    // the planner splits the one box that overshoots, not a form full of them.
+    const [splitFor, setSplitFor] = useState<string | null>(null);
+    const [splitQty, setSplitQty] = useState('');
+    const [splitAlt, setSplitAlt] = useState('');
+    const [splitting, setSplitting] = useState(false);
 
-    // Re-seed whenever a fresh suggestion arrives (new SO, or a refetch).
+    // Seed whenever a fresh suggestion arrives (new SO, a refetch, or a split
+    // rewriting one group's cartons). A carton the planner has already ruled on
+    // keeps that answer — splitting a box rebuilds `groups`, and a blind re-seed
+    // would re-check the remainder the split just took out of the shipment.
     useEffect(() => {
-        const init: Record<string, boolean> = {};
-        (groups || []).forEach((g: any) => (g.cartons || []).forEach((c: any) => { init[String(c.batch_id)] = true; }));
-        setChecked(init);
+        setChecked(prev => {
+            const next: Record<string, boolean> = {};
+            (groups || []).forEach((g: any) => (g.cartons || []).forEach((c: any) => {
+                const id = String(c.batch_id);
+                next[id] = prev[id] ?? true;
+            }));
+            return next;
+        });
     }, [groups]);
 
     const toggle = (batchId: string) => setChecked(prev => ({ ...prev, [batchId]: !prev[batchId] }));
+
+    // Open the split box on a carton, prefilled with the part that is actually
+    // owed: carton qty minus this group's overshoot. That is the answer the
+    // planner wanted in the first place — 10 kg ordered, 3+3+3+3 packed, the
+    // last box opens at 1.
+    const openSplit = (g: any, c: any, overshoot: number) => {
+        const suggested = Math.max(0, Math.round((num(c.qty) - Math.max(0, overshoot)) * 10000) / 10000);
+        setSplitFor(String(c.batch_id));
+        setSplitQty(suggested > 0 && suggested < num(c.qty) ? String(suggested) : '');
+        setSplitAlt('');
+    };
+
+    const doSplit = async (g: any, c: any) => {
+        const qty = num(splitQty);
+        if (qty <= 0 || qty >= num(c.qty)) return;
+        setSplitting(true);
+        try {
+            const r = await onSplit(g, c, qty, splitAlt.trim() === '' ? null : num(splitAlt));
+            if (r) {
+                // The remainder stays in stock — the one thing the seeding effect
+                // must not undo. The new piece needs no entry: it is a carton id
+                // the effect has never seen, so it seeds checked like any other.
+                setChecked(prev => ({ ...prev, [r.parentId]: false }));
+                setSplitFor(null);
+            }
+        } finally {
+            setSplitting(false);
+        }
+    };
 
     const selectedLines = useMemo(() => {
         const out: any[] = [];
@@ -1036,8 +1119,13 @@ function PickListSuggestionModal({ so, groups, loading, creating, itemById, onCl
                                 )}
                                 <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                                     <tbody>
-                                        {(g.cartons || []).map((c: any) => (
-                                            <tr key={c.batch_id}>
+                                        {(g.cartons || []).map((c: any) => {
+                                            const open = splitFor === String(c.batch_id);
+                                            const pieceQty = num(splitQty);
+                                            const pieceBad = pieceQty <= 0 || pieceQty >= num(c.qty);
+                                            return (
+                                            <React.Fragment key={c.batch_id}>
+                                            <tr>
                                                 <td style={{ ...td, width: LV_CHECK_COL_W }}>
                                                     <input type="checkbox" checked={!!checked[String(c.batch_id)]} onChange={() => toggle(String(c.batch_id))} />
                                                 </td>
@@ -1060,8 +1148,68 @@ function PickListSuggestionModal({ so, groups, loading, creating, itemById, onCl
                                                         </span>
                                                     )}
                                                 </td>
+                                                {/* Split is offered on every carton, not only the overshooting one:
+                                                    which box gets broken down is a floor judgement. The overshoot
+                                                    only decides what the form opens prefilled with. */}
+                                                <td style={{ ...td, width: 28, textAlign: 'right' }}>
+                                                    {canSplit && (
+                                                        <XPActionButton
+                                                            icon="bi-scissors"
+                                                            tone={open ? 'primary' : 'neutral'}
+                                                            title="Split this box: ship part of it, leave the rest in the finished-goods store"
+                                                            onClick={() => open ? setSplitFor(null) : openSplit(g, c, selectedQty - num(g.remaining_qty))}
+                                                        />
+                                                    )}
+                                                </td>
                                             </tr>
-                                        ))}
+                                            {open && (
+                                                <tr>
+                                                    <td colSpan={4} style={{ ...td, background: '#f5f4ef' }}>
+                                                        <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap', fontSize: 11 }}>
+                                                            <span>Ship from this box</span>
+                                                            <input
+                                                                autoFocus type="number" step="any" min="0" max={num(c.qty)}
+                                                                value={splitQty} onChange={e => setSplitQty(e.target.value)}
+                                                                style={{ ...xpInput, width: 80, textAlign: 'right' }}
+                                                            />
+                                                            <span style={{ color: '#888' }}>{uom}</span>
+                                                            {c.alt_qty != null && c.alt_uom && (
+                                                                <>
+                                                                    {/* The packed COUNT of the new box. Blank prorates by
+                                                                        weight, which is a guess on goods sold by the piece
+                                                                        — the packer knows how many went in. */}
+                                                                    <input
+                                                                        type="number" step="any" min="0" max={num(c.alt_qty)}
+                                                                        value={splitAlt} onChange={e => setSplitAlt(e.target.value)}
+                                                                        placeholder="pro-rata"
+                                                                        style={{ ...xpInput, width: 74, textAlign: 'right' }}
+                                                                    />
+                                                                    <span style={{ color: '#888' }}>{c.alt_uom}</span>
+                                                                </>
+                                                            )}
+                                                            <span style={{ color: '#666' }}>
+                                                                leaves <b>{pieceBad ? '—' : (num(c.qty) - pieceQty).toLocaleString()}</b> {uom} in stock
+                                                            </span>
+                                                            <button
+                                                                className={XP_BTN}
+                                                                style={{ ...xpBtnGreen(), opacity: pieceBad || splitting ? 0.5 : 1 }}
+                                                                disabled={pieceBad || splitting}
+                                                                onClick={() => doSplit(g, c)}
+                                                            >
+                                                                {splitting ? 'Splitting...' : 'Split'}
+                                                            </button>
+                                                            <button className={XP_BTN} style={xpBtn()} disabled={splitting} onClick={() => setSplitFor(null)}>Cancel</button>
+                                                        </div>
+                                                        <div style={{ fontSize: 9, color: '#888', marginTop: 3 }}>
+                                                            The piece becomes its own carton (own label and box number) and is picked; the rest
+                                                            keeps this box and stays in the finished-goods store for a later order.
+                                                        </div>
+                                                    </td>
+                                                </tr>
+                                            )}
+                                            </React.Fragment>
+                                            );
+                                        })}
                                     </tbody>
                                 </table>
                             </div>

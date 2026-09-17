@@ -553,6 +553,61 @@ async def create_dyeing_run(
     return _enrich_dyeing_run(run)
 
 
+@router.post("/dyeing-runs/{run_id}/color-matching", response_model=DyeingRunResponse)
+async def start_color_matching(
+    run_id: str,
+    db: AsyncSession = Depends(get_async_db),
+    current_user: User = Depends(require_permission('work_order.log')),
+):
+    """Stamp the moment the shade started being matched at the vessel.
+
+    The first of a dye batch's three floor acts (match -> start -> complete). It is
+    its own tiny route rather than a field on the bath payload because it happens
+    BEFORE the bath exists: matching is what the vessel is doing while it waits for
+    a colour to be approved, and the whole reason to stamp it is to see how long
+    that wait was. Folding it into `/start` would record it at the one moment it is
+    already over.
+
+    Writes nothing but the timestamp. In particular it does not touch
+    `volume_air_liters`, which `dyeing_run_service.derive_status` reads as "this
+    vessel is running" — a batch being matched is not a batch being dyed.
+
+    Idempotent-by-refusal rather than by overwrite: re-pressing it would silently
+    reset the clock the supervisor is reading, so a second press is a 400.
+    """
+    result = await db.execute(
+        select(DyeingRun).options(*_dyeing_run_opts()).filter(DyeingRun.id == run_id)
+    )
+    run = result.scalars().first()
+    if not run:
+        raise HTTPException(status_code=404, detail="Dyeing run not found")
+    # Gated on the facts, not the derived status, exactly as /start and /complete
+    # are: a run reads COMPLETED when its WO closes, and neither that nor anything
+    # else about the WO is a reason the colour match did or did not happen.
+    if run.color_matching_at is not None:
+        raise HTTPException(status_code=400, detail="Color matching already started")
+    if run.started_at is not None or run.volume_air_liters is not None:
+        raise HTTPException(status_code=400, detail="Run is already started — color matching comes before the bath")
+    if run.completed_at is not None:
+        raise HTTPException(status_code=400, detail="Run is already completed")
+
+    run.color_matching_at = datetime.now(timezone.utc)
+    status_before = run.status
+    # Derived, never typed — the stamp is the fact, the status follows it.
+    await dyeing_run_service.sync_wo_runs(db, run.work_order_id)
+    await db.commit()
+    await audit_service.log_activity(
+        db, current_user.id, "STATUS_CHANGE", "DyeingRun", run_id,
+        details=f"Color matching started on dyeing run {run.run_number}",
+        changes={"status": [status_before, run.status]},
+    )
+    await manager.broadcast({"type": "DYEING_RUN_UPDATE", "wo_id": str(run.work_order_id)})
+    result = await db.execute(
+        select(DyeingRun).options(*_dyeing_run_opts()).filter(DyeingRun.id == run_id)
+    )
+    return _enrich_dyeing_run(result.scalars().first())
+
+
 @router.patch("/dyeing-runs/{run_id}/bath", response_model=DyeingRunResponse)
 async def update_dyeing_run_bath(
     run_id: str,
@@ -856,12 +911,14 @@ async def complete_dyeing_run(
     run = result.scalars().first()
     if not run:
         raise HTTPException(status_code=404, detail="Dyeing run not found")
-    # The bath's own close, again — a WO closed before anyone recorded the shade
-    # marks its runs COMPLETED, and QC is a separate act at a later moment (that is
-    # the whole reason shade_result is not folded into the status). Refusing on the
-    # derived status here would make the shade unrecordable on a finished WO.
-    if run.completed_at is not None:
-        raise HTTPException(status_code=400, detail="Run already completed")
+    # Guarded on the SHADE, not on the close. Closing the bath is now a floor act of
+    # its own (the vessel card's Complete button, which stamps `completed_at` and
+    # nothing else), and QC records the shade afterwards — refusing on `completed_at`
+    # would make every monitor-closed bath un-QC-able. Refusing on the derived status
+    # would do the same to a bath under a finished WO. The shade is what this route
+    # writes, so the shade is what it declines to overwrite.
+    if run.shade_result is not None:
+        raise HTTPException(status_code=400, detail="Shade result already recorded for this run")
 
     # Output lot — ONE per physical dye lot. This route used to mint its own Batch
     # from a typed number while add_mo_completion separately minted the `DYE-` lot,
@@ -904,7 +961,11 @@ async def complete_dyeing_run(
 
     run.shade_result = payload.shade_result
     run.shade_notes = payload.shade_notes
-    run.completed_at = datetime.now(timezone.utc)
+    # Never re-stamp a close. A bath closed at the vessel and QC'd an hour later must
+    # keep the hour it actually finished — moving it here would stretch the run
+    # window the monitor divides the yard rate by, and silently drop the efficiency.
+    if not run.completed_at:
+        run.completed_at = datetime.now(timezone.utc)
     if not run.started_at:
         run.started_at = run.completed_at
     # `completed_at` is the fact that closes the bath — the status follows from it

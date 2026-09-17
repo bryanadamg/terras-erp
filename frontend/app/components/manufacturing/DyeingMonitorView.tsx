@@ -4,17 +4,16 @@ import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useData } from '../../context/DataContext';
 import { useLanguage } from '../../context/LanguageContext';
 import { useUser } from '../../context/UserContext';
-import { familyColor, StatusChip, XPEmptyState, XPActionButton, BUTTON_RADIUS, XP_BTN } from '../shared/xpTheme';
+import { familyColor, ProgressBar, StatusChip, XPEmptyState, XPActionButton, BUTTON_RADIUS, XP_BTN } from '../shared/xpTheme';
 import VariantChips from '../shared/VariantChips';
 import { useToast } from '../shared/Toast';
 import WorkCenterMonitorModal from './WorkCenterMonitorModal';
 import DyeingRateModal from './DyeingRateModal';
 import { useMonitorSections } from './machineMonitor/useMonitorSections';
-import { EffBar, CardGrid, MachineCard, GroupHeader, MonitorChipBar } from './machineMonitor/MonitorParts';
+import { CardGrid, MachineCard, GroupHeader, MonitorChipBar } from './machineMonitor/MonitorParts';
 import { MonitorShell, MonitorGridSkeleton } from './machineMonitor/MonitorShell';
 
 const GREEN = familyColor('green');
-const RED = familyColor('red');
 const BLUE = familyColor('blue');
 const AMBER = familyColor('amber');
 
@@ -36,20 +35,48 @@ function fmtElapsed(mins: any): string {
     return `${Math.floor(h / 24)}d ${h % 24}h`;
 }
 
-// Every card-worthy batch on a vessel: the one running plus any loaded and waiting.
+// Every card-worthy batch on a vessel: the one running plus any being matched or
+// loaded and waiting.
 function runsOf(m: any): any[] {
     if (Array.isArray(m?.active_runs)) return m.active_runs;
     return m?.active_run ? [m.active_run] : [];
 }
 const isLive = (r: any) => r?.status === 'IN_PROGRESS';
+const isMatching = (r: any) => r?.status === 'COLOR_MATCHING';
+
+/**
+ * The three floor acts of a dye batch, and which one this run is up for next.
+ *
+ * Deliberately one walk rather than a button per phase scattered through the card:
+ * the batch is at exactly one point in `match -> start -> complete`, so the card
+ * shows exactly one primary action. Returning null (a closed or cancelled bath)
+ * means there is nothing left to press.
+ *
+ * `start` posts the PLANNED bath, because that is the number the Kartu Kerja in the
+ * operator's hand was printed from; the backend refuses with its own message when
+ * there is no bath to dose. The other two carry no body at all — they are stamps.
+ */
+type Phase = { key: 'match' | 'start' | 'complete'; path: string; body?: any; icon: string; labelKey: string };
+function nextPhase(run: any): Phase | null {
+    if (isLive(run)) return { key: 'complete', path: 'complete', body: {}, icon: 'bi-check2-circle', labelKey: 'complete_batch' };
+    if (run?.status === 'PENDING') return { key: 'match', path: 'color-matching', icon: 'bi-palette', labelKey: 'start_color_matching' };
+    if (isMatching(run)) {
+        return {
+            key: 'start', path: 'start', icon: 'bi-play-fill', labelKey: 'start_batch',
+            body: { volume_air_liters: run.planned_bath_liters ?? null },
+        };
+    }
+    return null;
+}
 
 export default function DyeingMonitorView() {
     const { authFetch, subscribeLiveEvents } = useData();
     const { t } = useLanguage();
     const { hasPermission } = useUser();
     const { showToast } = useToast();
-    // Same gate the Dyeing Orders tab uses to start and complete a batch: entering
-    // the rpm is part of setting the machine up, not a supervisory act.
+    // Same gate the Dyeing Orders tab uses to start and complete a batch. It covers
+    // both things this card writes: picking the rate and walking the batch through
+    // its three phases are the machine setter's job, not a supervisory act.
     const canSetRate = hasPermission('work_order.log');
 
     const envBase = process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:8000/api';
@@ -65,6 +92,9 @@ export default function DyeingMonitorView() {
     // refresh and would drop the slide.
     const [runSlide, setRunSlide] = useState<Record<string, number>>({});
     const [runningOnly, setRunningOnly] = useState(false);
+    // The run id whose phase button is in flight, so a double-press cannot stamp
+    // twice (the second POST 400s, but the first toast would still be a lie).
+    const [phasing, setPhasing] = useState<string | null>(null);
 
     const load = useCallback(async () => {
         try {
@@ -88,11 +118,35 @@ export default function DyeingMonitorView() {
 
     const machines: any[] = data?.machines || [];
 
+    /** Walk one batch to its next phase. Every stamp goes through here so the grid
+     *  reloads, the toast and the audit trail always agree on what happened. */
+    const advance = useCallback(async (run: any, phase: Phase) => {
+        setPhasing(run.id);
+        try {
+            const res = await authFetch(`${API_BASE}/dyeing-runs/${run.id}/${phase.path}`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(phase.body ?? {}),
+            });
+            if (!res.ok) {
+                const d = await res.json().catch(() => null);
+                showToast(typeof d?.detail === 'string' ? d.detail : t('phase_failed'), 'danger');
+                return;
+            }
+            showToast(t(phase.labelKey), 'success');
+            await load();
+        } finally {
+            setPhasing(null);
+        }
+    }, [API_BASE, authFetch, showToast, t, load]);
+
     const statusLabel = (s: string): string => ({
-        RUNNING: t('running'), LOADED: t('loaded'),
+        RUNNING: t('running'), LOADED: t('loaded'), MATCHING: t('color_matching'),
     } as Record<string, string>)[s] || t('idle');
 
-    const { sections, visibleSections, isGrouped, plantBelowTarget } =
+    // No `plantBelowTarget` read here: a dye card carries no `on_target`, so the
+    // shared hook's below-target roll-up falls out at 0 by itself. Nothing is scored.
+    const { sections, visibleSections, isGrouped } =
         useMonitorSections({ machines, runsOf, groupFilter });
 
     // "Running" counts vessels with cloth actually circulating — a LOADED vessel is
@@ -128,10 +182,10 @@ export default function DyeingMonitorView() {
      */
     const MissingWhy = ({ run, machine }: { run: any; machine: any }) => {
         const missing: string[] = run.missing_rate_inputs || [];
-        const reason = missing.includes('yards_per_rev')
-            ? { text: t('no_reel_measured'), hint: t('no_reel_measured_hint') }
-            : missing.includes('rpm')
-                ? { text: t('no_rpm_entered'), hint: undefined }
+        const reason = missing.includes('yards_per_min')
+            ? { text: t('no_speed_picked'), hint: t('no_speed_picked_hint') }
+            : missing.includes('lines')
+                ? { text: t('no_lines_set'), hint: undefined }
                 : run.missing_gy_factor
                     ? { text: t('no_gy_factor'), hint: t('no_gy_factor_hint') }
                     : null;
@@ -148,11 +202,62 @@ export default function DyeingMonitorView() {
         );
     };
 
+    /**
+     * Match -> Start -> Complete, with the gap each one took under it.
+     *
+     * The whole point of stamping three phases: prep and run are shown SEPARATELY
+     * and never summed into one "elapsed". A batch that waited four hours on a shade
+     * and then dyed in forty minutes is a colour problem, not a slow vessel, and one
+     * merged figure told the supervisor the opposite.
+     *
+     * A phase with no stamp renders its dot hollow and its gap as a dash — "nobody
+     * pressed it" is a different fact from "it took no time", and the card must not
+     * launder one into the other.
+     */
+    const PhaseTrack = ({ run }: { run: any }) => {
+        const steps = [
+            { on: !!run.color_matching_at, label: t('phase_match'), gap: run.prep_minutes, gapLabel: t('phase_prep_gap') },
+            { on: !!run.started_at, label: t('phase_start'), gap: run.run_minutes, gapLabel: t('phase_run_gap') },
+            { on: !!run.completed_at, label: t('phase_complete'), gap: null, gapLabel: '' },
+        ];
+        return (
+            <div style={{ display: 'flex', alignItems: 'flex-start', marginTop: 4, marginBottom: 2 }}>
+                {steps.map((st, i) => (
+                    <div key={st.label} style={{ display: 'flex', alignItems: 'flex-start', flex: i < 2 ? 1 : '0 0 auto' }}>
+                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 1 }}>
+                            <span style={{
+                                width: 8, height: 8, borderRadius: '50%', flexShrink: 0,
+                                background: st.on ? BLUE : 'transparent',
+                                border: '1px solid ' + (st.on ? BLUE : '#b8b4a8'),
+                            }} />
+                            <span style={{ fontSize: 8, color: st.on ? '#555' : '#aaa', whiteSpace: 'nowrap' }}>
+                                {st.label}
+                            </span>
+                        </div>
+                        {i < 2 && (
+                            <div title={st.gapLabel} style={{
+                                flex: 1, display: 'flex', flexDirection: 'column',
+                                alignItems: 'center', gap: 1, paddingTop: 3,
+                            }}>
+                                <span style={{ width: '100%', height: 1, background: st.on ? BLUE : '#d8d4c8' }} />
+                                <span style={{ fontSize: 8, color: st.gap != null ? '#666' : '#bbb', whiteSpace: 'nowrap' }}>
+                                    {st.gap != null ? fmtElapsed(st.gap) : '—'}
+                                </span>
+                            </div>
+                        )}
+                    </div>
+                ))}
+            </div>
+        );
+    };
+
     const RunBody = ({ run, machine }: { run: any; machine: any }) => {
         const live = isLive(run);
-        // A loaded batch has no clock yet, so its % is not a judgement of the vessel.
-        const effColor = !live ? '#888' : run.on_target ? GREEN : RED;
+        // Reported, not scored: with no target there is no pass/fail colour, so the
+        // number reads plain while it is live and grey before the machine starts.
+        const effColor = live ? '#1a1a1a' : '#888';
         const stop = (fn: () => void) => (e: React.MouseEvent) => { e.stopPropagation(); fn(); };
+        const phase = nextPhase(run);
         return (
             <>
                 <div style={{ fontSize: 10, color: '#555', marginBottom: 3, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
@@ -163,7 +268,12 @@ export default function DyeingMonitorView() {
                 </div>
                 {!live && (
                     <div style={{ marginBottom: 4 }}>
-                        <StatusChip status="LOADED" label={t('loaded')} title={t('batch_loaded_hint')} tint />
+                        <StatusChip
+                            status={isMatching(run) ? 'COLOR_MATCHING' : 'LOADED'}
+                            label={isMatching(run) ? t('color_matching') : t('loaded')}
+                            title={isMatching(run) ? t('batch_matching_hint') : t('batch_loaded_hint')}
+                            tint
+                        />
                     </div>
                 )}
                 <div style={{ marginBottom: 4 }}><RunVariant run={run} /></div>
@@ -171,16 +281,14 @@ export default function DyeingMonitorView() {
                     <span style={{ fontSize: 24, fontWeight: 'bold', color: effColor, lineHeight: 1 }}>
                         {fmt(run.efficiency_pct, 1)}<span style={{ fontSize: 12}}>%</span>
                     </span>
-                    <span style={{ fontSize: 10, color: '#888' }}>
-                        {t('target')} {fmt(run.target_efficiency_pct, 0)}%
-                    </span>
+                    <span style={{ fontSize: 10, color: '#888' }}>{t('efficiency')}</span>
                     <span style={{ fontSize: 10, color: '#888', marginLeft: 'auto' }}>
                         {run.lines} {t('lines')}
                     </span>
                 </div>
+                {/* No target tick: the bar is the reported figure and nothing else. */}
                 <div style={{ margin: '4px 0' }}>
-                    <EffBar eff={run.efficiency_pct} target={run.target_efficiency_pct}
-                        label={`${t('target')} ${fmt(run.target_efficiency_pct, 0)}%`} />
+                    <ProgressBar pct={Number(run.efficiency_pct) || 0} tone="blue" height={9} />
                 </div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 10}}>
                     <span>
@@ -189,18 +297,27 @@ export default function DyeingMonitorView() {
                     </span>
                     <span style={{ color: '#666' }}>{fmt(run.actual_rate_yd_min, 1)} {t('yd_per_min')}</span>
                 </div>
-                {/* The rate the batch is being judged against, and how long it has been
-                    on. Both are inputs the floor sets, so they sit next to the result. */}
+                {/* The rate this batch is measured at, and the run window it is divided
+                    by. Both are floor inputs, so they sit next to the result. */}
                 <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 10, color: '#888', marginTop: 2 }}>
                     <span>
-                        {t('rpm')} <b style={{ color: '#555' }}>{fmt(run.rpm, 0)}</b>
-                        {run.target_yd_per_min ? ` · ${fmt(run.target_yd_per_min, 0)} ${t('yd_per_min')}` : ''}
+                        {t('yd_per_min')} <b style={{ color: '#555' }}>{fmt(run.yards_per_min, 0)}</b>
+                        {run.target_yd_per_min ? ` × ${run.lines} = ${fmt(run.target_yd_per_min, 0)}` : ''}
                     </span>
-                    <span>{t('elapsed')} <b style={{ color: '#555' }}>{fmtElapsed(run.elapsed_minutes)}</b></span>
+                    <span>{t('run_time')} <b style={{ color: '#555' }}>{fmtElapsed(run.run_minutes)}</b></span>
                 </div>
+                <PhaseTrack run={run} />
                 <MissingWhy run={run} machine={machine} />
                 {canSetRate && (
-                    <div style={{ marginTop: 4 }}>
+                    <div style={{ marginTop: 4, display: 'flex', gap: 4, flexWrap: 'wrap' }}>
+                        {/* The one act this batch is next up for. One button, because the
+                            batch is at one point in the walk — offering all three would
+                            invite stamping a phase out of order. */}
+                        {phase && (
+                            <XPActionButton tone="primary" icon={phase.icon}
+                                label={t(phase.labelKey)} disabled={phasing === run.id}
+                                onClick={stop(() => advance(run, phase))} />
+                        )}
                         <XPActionButton tone="neutral" icon="bi-sliders"
                             label={t('set_rate')} onClick={stop(() => setRateRun({ ...run, machine }))} />
                     </div>
@@ -247,12 +364,13 @@ export default function DyeingMonitorView() {
                         slide is up, so paging never hides which one is actually on. */}
                     <span style={{ display: 'flex', gap: 3, marginLeft: 'auto', alignItems: 'center' }}>
                         {runs.map((r: any, i: number) => (
-                            <span key={r.id} onClick={go(i)} title={`${r.wo_code || r.mo_code} · ${statusLabel(isLive(r) ? 'RUNNING' : 'LOADED')}`}
+                            <span key={r.id} onClick={go(i)}
+                                title={`${r.wo_code || r.mo_code} · ${statusLabel(isLive(r) ? 'RUNNING' : isMatching(r) ? 'MATCHING' : 'LOADED')}`}
                                 style={{
                                     width: 7, height: 7, borderRadius: '50%', cursor: 'pointer',
                                     background: i === idx
-                                        ? (isLive(r) ? GREEN : BLUE)
-                                        : (isLive(r) ? '#a8dca8' : '#c8c4b8'),
+                                        ? (isLive(r) ? GREEN : isMatching(r) ? BLUE : '#8f8b80')
+                                        : (isLive(r) ? '#a8dca8' : isMatching(r) ? '#b8cdf0' : '#c8c4b8'),
                                     border: i === idx ? '1px solid #00000055' : '1px solid transparent',
                                 }} />
                         ))}
@@ -269,13 +387,9 @@ export default function DyeingMonitorView() {
                 <i className="bi bi-pause-circle" style={{ fontSize: 16}} />
                 {t('no_active_batch')}
             </span>
-            {/* An idle vessel is the one place there is room to say the machine was
-                never measured, before a batch arrives and the card fills up. */}
-            {machine.needs_setup && (
-                <span title={t('no_reel_measured_hint')} style={{ fontSize: 10, color: '#8a6100' }}>
-                    <i className="bi bi-gear" style={{ marginRight: 3 }} />{t('no_reel_measured')}
-                </span>
-            )}
+            {/* Nothing to flag on an idle vessel any more: the speed is picked per
+                batch, not measured per machine, so a vessel with no batch in it is
+                not missing anything. The warning lives on the run (MissingWhy). */}
         </div>
     );
 
@@ -289,8 +403,10 @@ export default function DyeingMonitorView() {
                 name={m.name}
                 status={status}
                 statusLabel={statusLabel(status)}
-                alarm={runs.some((r: any) => r.on_target === false)}
-                alarmTitle={t('below_target')}
+                // The vessel's one alarm now that nothing is scored: a batch whose
+                // rate cannot be reported at all because nobody picked its speed.
+                alarm={runs.some((r: any) => (r.missing_rate_inputs || []).length > 0)}
+                alarmTitle={t('no_speed_picked')}
                 badge={runs.length > 1 ? `${runs.length} ${t('wo_short')}` : undefined}
                 onClick={() => openCard(m)}
                 title={t('click_for_detail')}
@@ -309,15 +425,18 @@ export default function DyeingMonitorView() {
             {data.avg_efficiency_pct !== null && data.avg_efficiency_pct !== undefined && (
                 <span style={{ marginLeft: 12 }}>{t('avg_efficiency')}: <b>{fmt(data.avg_efficiency_pct, 1)}%</b></span>
             )}
-            {plantBelowTarget > 0 && (
-                <span style={{ marginLeft: 12 }}>
-                    <b style={{ color: '#ffc9c9'}}>{plantBelowTarget}</b> {t('below_target')}
+            {/* Batches sitting on a shade rather than on a machine. The one queue a
+                dye plant loses hours to that no production number reveals — which is
+                the whole reason the phase is stamped. */}
+            {data.matching > 0 && (
+                <span style={{ marginLeft: 12 }} title={t('batch_matching_hint')}>
+                    <b style={{ color: '#bcd8ff'}}>{data.matching}</b> {t('color_matching')}
                 </span>
             )}
-            {/* Plant-wide, and deliberately in the header: until a reel is measured the
-                grid can report nothing at all, and that is a setup task, not a fault. */}
+            {/* Plant-wide, and deliberately in the header: a batch with no speed
+                picked reports no rate at all, and that is a setup task, not a fault. */}
             {data.needs_setup > 0 && (
-                <span style={{ marginLeft: 12 }} title={t('no_reel_measured_hint')}>
+                <span style={{ marginLeft: 12 }} title={t('no_speed_picked_hint')}>
                     <i className="bi bi-gear" style={{ marginRight: 4 }} />
                     <b style={{ color: '#ffe9b0'}}>{data.needs_setup}</b> {t('needs_setup')}
                 </span>

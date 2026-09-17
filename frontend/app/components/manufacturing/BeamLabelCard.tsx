@@ -2,6 +2,7 @@
 import React from 'react';
 import { useTimezone } from '../../context/TimezoneContext';
 import { CODE_FONT, PRINT_FONT } from '../shared/xpTheme';
+import LabelComponentsBand from './LabelComponentsBand';
 
 /**
  * Warp-beam label — one sticker per beam produced at a BEAMING WO.
@@ -136,6 +137,10 @@ export default function BeamLabelCard({
                     </tr>
                 </tbody>
             </table>
+
+            {/* What actually went onto this beam, substitutes included. Sits above
+                the mount log: this is what the beam IS, the log is what happens next. */}
+            <LabelComponentsBand completion={completion} parentMO={parentMO} />
 
             {/* Mount log — the beam goes up on a loom next, and the floor writes
                 which one by hand when it does. Blank on purpose: the ERP records

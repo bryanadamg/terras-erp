@@ -17,6 +17,10 @@ export const MACHINE_TITLE_VARIANT: Record<string, 'primary' | 'success' | 'warn
     // A vessel with a batch loaded but not started: waiting on the floor, same
     // amber role STAGED plays on a loom.
     LOADED: 'warning',
+    // A vessel whose next batch is having its shade matched. Blue, not amber: the
+    // floor IS working on it, the same reason a loom's DRAW_IN is blue — LOADED is
+    // the one that means nobody has touched it.
+    MATCHING: 'primary',
     IDLE: 'secondary',
 };
 
@@ -32,4 +36,10 @@ export const machineStrip = (status: string): string => {
  * rather than a per-view colour map.
  */
 export const machineChipStatus = (status: string): string =>
-    status === 'RUNNING' ? 'IN_PROGRESS' : status === 'IDLE' ? 'PENDING' : status;
+    status === 'RUNNING' ? 'IN_PROGRESS'
+        : status === 'IDLE' ? 'PENDING'
+            // The vessel state and the run status spell colour matching differently
+            // (a machine is MATCHING, a batch is COLOR_MATCHING); both take the one
+            // family entry so the card strip and the run chip cannot drift apart.
+            : status === 'MATCHING' ? 'COLOR_MATCHING'
+                : status;

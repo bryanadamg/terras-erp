@@ -1,8 +1,8 @@
-"""Dyeing vessel efficiency: the rate chain, and the grid endpoint's shape.
+"""Dyeing vessel efficiency: the phase clocks, the rate chain, and the grid shape.
 
-The arithmetic half needs no DB — compute_run_metrics takes its actuals, its
-machine constant and its clock from the caller, so the numbers the floor is
-judged on can be pinned down directly (same shape as test_weaving.py).
+The arithmetic half needs no DB — compute_run_metrics takes its actuals and its
+clock from the caller, so the numbers the floor is judged on can be pinned down
+directly (same shape as test_weaving.py).
 """
 from datetime import datetime, timedelta, timezone
 from types import SimpleNamespace
@@ -10,6 +10,7 @@ from types import SimpleNamespace
 import pytest
 
 from app.services import dyeing_monitor_service as svc
+from app.services import dyeing_run_service
 from app.services import packing_service
 
 
@@ -20,12 +21,13 @@ def _item(uom="kg", weight_per_unit=200.0, weight_unit="g/y"):
     return SimpleNamespace(uom=uom, weight_per_unit=weight_per_unit, weight_unit=weight_unit)
 
 
-def _run(rpm=120, lines=2, target=50, started_min_ago=60, completed=None, substrate=500):
+def _run(yards_per_min=540, lines=2, started_min_ago=60, completed=None, substrate=500,
+         matched_min_ago=None):
     return SimpleNamespace(
-        rpm=rpm,
+        yards_per_min=yards_per_min,
         lines=lines,
-        target_efficiency_pct=target,
         substrate_qty=substrate,
+        color_matching_at=NOW - timedelta(minutes=matched_min_ago) if matched_min_ago is not None else None,
         started_at=NOW - timedelta(minutes=started_min_ago) if started_min_ago is not None else None,
         completed_at=completed,
     )
@@ -33,44 +35,84 @@ def _run(rpm=120, lines=2, target=50, started_min_ago=60, completed=None, substr
 
 # -- yards_per_minute --------------------------------------------------------
 
-def test_rate_is_rpm_times_circumference_times_lines():
-    assert svc.yards_per_minute(120, 4.5, 2) == pytest.approx(1080.0)
+def test_rate_is_the_picked_speed_times_the_rope_count():
+    assert svc.yards_per_minute(540, 2) == pytest.approx(1080.0)
 
 
-@pytest.mark.parametrize("rpm, ypr, lines", [
-    (None, 4.5, 2),   # nobody entered the reel speed
-    (120, None, 2),   # nobody measured the machine
-    (120, 4.5, 0),    # no rope count
-    (0, 4.5, 2),
+@pytest.mark.parametrize("ypm, lines", [
+    (None, 2),   # nobody picked a speed for this batch
+    (540, 0),    # no rope count
+    (0, 2),
 ])
-def test_rate_is_none_when_any_factor_is_unmeasured(rpm, ypr, lines):
+def test_rate_is_none_when_either_factor_is_unset(ypm, lines):
     """None, never 0. A 0 would divide into a null efficiency for the wrong reason
-    and read as a vessel producing nothing rather than one nobody has measured."""
-    assert svc.yards_per_minute(rpm, ypr, lines) is None
+    and read as a vessel producing nothing rather than one nobody has set up."""
+    assert svc.yards_per_minute(ypm, lines) is None
 
 
-# -- elapsed_minutes ---------------------------------------------------------
+# -- phase clocks ------------------------------------------------------------
 
-def test_live_run_elapses_to_now():
-    assert svc.elapsed_minutes(NOW - timedelta(minutes=90), None, NOW) == pytest.approx(90.0)
+def test_run_window_elapses_to_now_while_the_batch_is_on():
+    assert svc.phase_minutes(_run(started_min_ago=90), NOW)["run_minutes"] == pytest.approx(90.0)
 
 
 def test_finished_run_is_frozen_at_its_own_completion():
-    """A completed batch must not keep accruing elapsed time after it came off."""
-    started = NOW - timedelta(hours=5)
-    completed = NOW - timedelta(hours=3)
-    assert svc.elapsed_minutes(started, completed, NOW) == pytest.approx(120.0)
+    """A completed batch must not keep accruing run time after it came off."""
+    run = _run(started_min_ago=300, completed=NOW - timedelta(hours=3))
+    assert svc.phase_minutes(run, NOW)["run_minutes"] == pytest.approx(120.0)
 
 
-def test_unstarted_run_has_no_clock():
-    assert svc.elapsed_minutes(None, None, NOW) == 0.0
+def test_unstarted_run_has_no_run_window():
+    """None, not 0.0 — the batch has not been on the machine at all, which is a
+    different fact from having been on it for no time."""
+    assert svc.phase_minutes(_run(started_min_ago=None), NOW)["run_minutes"] is None
+
+
+def test_prep_is_the_gap_between_matching_and_start():
+    run = _run(matched_min_ago=180, started_min_ago=60)
+    phases = svc.phase_minutes(run, NOW)
+    assert phases["prep_minutes"] == pytest.approx(120.0)
+    assert phases["run_minutes"] == pytest.approx(60.0)
+
+
+def test_prep_runs_live_until_the_batch_starts():
+    """The whole reason the phase is stamped: a vessel sitting on a shade since 8am
+    has to show that wait growing, not a dash."""
+    run = _run(matched_min_ago=200, started_min_ago=None)
+    assert svc.phase_minutes(run, NOW)["prep_minutes"] == pytest.approx(200.0)
+
+
+def test_prep_stops_growing_once_the_batch_is_running():
+    """`now` must not leak into a closed gap — the prep figure is a fact after the
+    start, and a live one would climb for the whole run."""
+    run = _run(matched_min_ago=180, started_min_ago=60)
+    later = svc.phase_minutes(run, NOW + timedelta(hours=4))
+    assert later["prep_minutes"] == pytest.approx(120.0)
+
+
+def test_unmatched_run_reports_no_prep_rather_than_zero():
+    run = _run(matched_min_ago=None, started_min_ago=60)
+    assert svc.phase_minutes(run, NOW)["prep_minutes"] is None
+
+
+def test_total_spans_the_first_stamp_to_the_last():
+    run = _run(matched_min_ago=180, started_min_ago=60, completed=NOW - timedelta(minutes=10))
+    assert svc.phase_minutes(run, NOW)["total_minutes"] == pytest.approx(170.0)
+
+
+def test_total_falls_back_to_the_run_when_matching_was_never_pressed():
+    """Never shorter than the run inside it."""
+    run = _run(matched_min_ago=None, started_min_ago=45)
+    phases = svc.phase_minutes(run, NOW)
+    assert phases["total_minutes"] == pytest.approx(phases["run_minutes"])
 
 
 def test_naive_timestamps_are_treated_as_utc():
     """Postgres hands back naive datetimes; subtracting one from an aware `now`
     raises TypeError unless they are reconciled."""
-    naive = (NOW - timedelta(minutes=30)).replace(tzinfo=None)
-    assert svc.elapsed_minutes(naive, None, NOW) == pytest.approx(30.0)
+    run = _run(started_min_ago=30)
+    run.started_at = run.started_at.replace(tzinfo=None)
+    assert svc.phase_minutes(run, NOW)["run_minutes"] == pytest.approx(30.0)
 
 
 def test_query_bounds_are_naive_utc():
@@ -123,45 +165,52 @@ def test_to_yards_is_the_inverse_of_base_per_alt():
 def test_efficiency_is_actual_yards_over_the_theoretical_walk():
     """60 min at 1080 yd/min = 64 800 theoretical yards. 200 g/y means the 6480 kg
     logged is 32 400 yards — exactly half, so 50%."""
-    m = svc.compute_run_metrics(_run(), yards_per_rev=4.5, actual_qty=6480.0, item=_item(), now=NOW)
+    m = svc.compute_run_metrics(_run(), actual_qty=6480.0, item=_item(), now=NOW)
     assert m["target_yd_per_min"] == pytest.approx(1080.0)
     assert m["theoretical_yards"] == pytest.approx(64800.0)
     assert m["actual_yards"] == pytest.approx(32400.0)
     assert m["efficiency_pct"] == pytest.approx(50.0)
 
 
-def test_on_target_is_true_at_exactly_the_target():
-    m = svc.compute_run_metrics(_run(target=50), 4.5, 6480.0, _item(), NOW)
-    assert m["on_target"] is True
+def test_efficiency_ignores_the_time_spent_colour_matching():
+    """The point of splitting the phases. Four hours on a shade then one hour of
+    dyeing must score the same as a batch that never waited — it is a colour
+    problem, not a slow vessel."""
+    waited = svc.compute_run_metrics(
+        _run(matched_min_ago=300, started_min_ago=60), 6480.0, _item(), NOW)
+    straight = svc.compute_run_metrics(
+        _run(matched_min_ago=61, started_min_ago=60), 6480.0, _item(), NOW)
+    assert waited["efficiency_pct"] == pytest.approx(straight["efficiency_pct"])
+    assert waited["prep_minutes"] == pytest.approx(240.0)
 
 
-def test_below_target_reports_false_not_none():
-    m = svc.compute_run_metrics(_run(target=80), 4.5, 6480.0, _item(), NOW)
-    assert m["efficiency_pct"] == pytest.approx(50.0)
-    assert m["on_target"] is False
+def test_nothing_is_scored_against_a_target():
+    """The floor asked for these reported, not judged. A stray target key would put
+    a pass/fail colour back on a card that has no bar to clear."""
+    m = svc.compute_run_metrics(_run(), 6480.0, _item(), NOW)
+    assert "on_target" not in m
+    assert "target_efficiency_pct" not in m
 
 
-def test_unmeasured_machine_reports_no_efficiency_and_says_why():
-    """A vessel with no yards_per_rev must show a dash, not a zero, and the card
-    has to be able to name the missing input."""
-    m = svc.compute_run_metrics(_run(), yards_per_rev=None, actual_qty=6480.0, item=_item(), now=NOW)
+def test_batch_without_a_picked_speed_reports_no_efficiency_and_says_why():
+    """It must show a dash, not a zero, and the card has to name the missing input."""
+    m = svc.compute_run_metrics(_run(yards_per_min=None), actual_qty=6480.0, item=_item(), now=NOW)
     assert m["efficiency_pct"] is None
-    assert m["on_target"] is None
     assert m["theoretical_yards"] is None
-    assert "yards_per_rev" in m["missing_rate_inputs"]
+    assert "yards_per_min" in m["missing_rate_inputs"]
 
 
 def test_missing_gy_factor_reports_no_efficiency_and_says_why():
-    m = svc.compute_run_metrics(_run(), 4.5, 6480.0, _item(weight_unit="gsm"), NOW)
+    m = svc.compute_run_metrics(_run(), 6480.0, _item(weight_unit="gsm"), NOW)
     assert m["actual_yards"] is None
     assert m["efficiency_pct"] is None
     assert m["missing_gy_factor"] is True
 
 
 def test_unstarted_run_has_no_efficiency_rather_than_zero():
-    """A PENDING batch has no clock. Dividing by a 0 denominator must not surface
-    as 0% — the vessel has not been given a chance to produce anything yet."""
-    m = svc.compute_run_metrics(_run(started_min_ago=None), 4.5, 0.0, _item(), NOW)
+    """A PENDING or COLOR_MATCHING batch has no run window. Dividing by a 0
+    denominator must not surface as 0% — nothing is turning yet."""
+    m = svc.compute_run_metrics(_run(started_min_ago=None, matched_min_ago=30), 0.0, _item(), NOW)
     assert m["elapsed_minutes"] == 0.0
     assert m["theoretical_yards"] == 0.0
     assert m["efficiency_pct"] is None
@@ -169,22 +218,52 @@ def test_unstarted_run_has_no_efficiency_rather_than_zero():
 
 def test_zero_output_on_a_running_vessel_is_zero_percent_not_none():
     """The opposite case, and the distinction the whole None-vs-0 rule exists for:
-    a measured machine that has been running an hour and logged nothing IS at 0%."""
-    m = svc.compute_run_metrics(_run(), 4.5, 0.0, _item(), NOW)
+    a set-up machine that has been running an hour and logged nothing IS at 0%."""
+    m = svc.compute_run_metrics(_run(), 0.0, _item(), NOW)
     assert m["efficiency_pct"] == pytest.approx(0.0)
-    assert m["on_target"] is False
+
+
+# -- derive_status (the run's own phase) -------------------------------------
+
+def _status_run(**kw):
+    base = dict(completed_at=None, started_at=None, volume_air_liters=None, color_matching_at=None)
+    base.update(kw)
+    return SimpleNamespace(**base)
+
+
+def test_colour_matching_is_derived_from_its_stamp():
+    assert dyeing_run_service.derive_status(
+        _status_run(color_matching_at=NOW), "IN_PROGRESS") == "COLOR_MATCHING"
+
+
+def test_a_filled_bath_beats_the_colour_match():
+    """Matching is the phase BEFORE the machine runs, so a recorded bath means the
+    batch has left it."""
+    assert dyeing_run_service.derive_status(
+        _status_run(color_matching_at=NOW, volume_air_liters=900), "IN_PROGRESS") == "IN_PROGRESS"
+
+
+def test_a_closed_wo_still_closes_a_matched_bath():
+    assert dyeing_run_service.derive_status(
+        _status_run(color_matching_at=NOW), "COMPLETED") == "COMPLETED"
+
+
+def test_untouched_run_is_pending():
+    assert dyeing_run_service.derive_status(_status_run(), "PENDING") == "PENDING"
 
 
 # -- derive_machine_status ---------------------------------------------------
 
-@pytest.mark.parametrize("active, pending, expected", [
-    (True, True, "RUNNING"),    # a run beats a queued load
-    (True, False, "RUNNING"),
-    (False, True, "LOADED"),
-    (False, False, "IDLE"),
+@pytest.mark.parametrize("active, matching, pending, expected", [
+    (True, True, True, "RUNNING"),     # a run beats everything queued behind it
+    (True, False, False, "RUNNING"),
+    (False, True, True, "MATCHING"),   # somebody is working on it
+    (False, True, False, "MATCHING"),
+    (False, False, True, "LOADED"),    # nobody has touched it
+    (False, False, False, "IDLE"),
 ])
-def test_machine_status_is_derived_from_the_runs_alone(active, pending, expected):
-    assert svc.derive_machine_status(active, pending) == expected
+def test_machine_status_is_derived_from_the_runs_alone(active, matching, pending, expected):
+    assert svc.derive_machine_status(active, matching, pending) == expected
 
 
 # -- endpoint ----------------------------------------------------------------
@@ -194,7 +273,7 @@ def test_monitor_returns_an_envelope_even_with_no_dyeing_machines(client, auth_h
     assert res.status_code == 200
     body = res.json()
     for key in ("machines", "total", "running", "groups", "avg_efficiency_pct",
-                "active_runs", "below_target", "needs_setup"):
+                "active_runs", "matching", "needs_setup"):
         assert key in body, f"{key} missing from the monitor envelope"
 
 
@@ -210,17 +289,17 @@ def _seed_vessels(client, async_db_session):
 
     root = WorkCenter(code="T-CELUP", name="Celup Continuous", center_type="DYEING",
                       node_type="TYPE")
-    measured = WorkCenter(code="T-CC01", name="Celup Continuous 01", center_type="DYEING",
-                          node_type="MACHINE", yards_per_rev=4.5)
-    unmeasured = WorkCenter(code="T-CC02", name="Celup Continuous 02", center_type="DYEING",
-                            node_type="MACHINE")
+    one = WorkCenter(code="T-CC01", name="Celup Continuous 01", center_type="DYEING",
+                     node_type="MACHINE")
+    two = WorkCenter(code="T-CC02", name="Celup Continuous 02", center_type="DYEING",
+                     node_type="MACHINE")
 
     async def _seed():
         async_db_session.add(root)
         await async_db_session.flush()
-        measured.parent_id = root.id
-        unmeasured.parent_id = root.id
-        async_db_session.add_all([measured, unmeasured])
+        one.parent_id = root.id
+        two.parent_id = root.id
+        async_db_session.add_all([one, two])
         await async_db_session.flush()
 
     client.portal.call(_seed)
@@ -233,8 +312,6 @@ def test_monitor_lists_dyeing_machines_under_their_type_root(client, auth_header
 
     body = client.get("/api/dyeing/monitor", headers=auth_headers).json()
     row = next(m for m in body["machines"] if m["code"] == "T-CC01")
-    assert row["yards_per_rev"] == pytest.approx(4.5)
-    assert row["needs_setup"] is False
     assert row["loom_status"] == "IDLE"
     assert row["group_code"] == "T-CELUP"
     # TYPE rows are containers, never cards.
@@ -242,31 +319,22 @@ def test_monitor_lists_dyeing_machines_under_their_type_root(client, auth_header
     assert {"id", "code", "name"} <= set(body["groups"][0])
 
 
-def test_machine_without_a_measured_reel_is_flagged_for_setup(client, auth_headers, async_db_session):
+def test_an_idle_vessel_needs_no_setup(client, auth_headers, async_db_session):
+    """The speed is a per-BATCH input now, not machine geometry, so a vessel with
+    nothing in it is not missing anything — the old flag was on the work center."""
     _seed_vessels(client, async_db_session)
 
     body = client.get("/api/dyeing/monitor", headers=auth_headers).json()
     row = next(m for m in body["machines"] if m["code"] == "T-CC02")
-    assert row["yards_per_rev"] is None
-    assert row["needs_setup"] is True
-    assert body["needs_setup"] >= 1
+    assert row["needs_setup"] == 0
 
 
-def test_work_center_endpoint_round_trips_yards_per_rev(client, auth_headers):
+def test_work_center_no_longer_carries_reel_geometry(client, auth_headers):
+    """`yards_per_rev` is gone. The route must not resurrect it as a stored field —
+    an ignored input that silently disappears is worse than a rejected one."""
     res = client.post("/api/work-centers", headers=auth_headers, json={
         "code": "T-CC03", "name": "Celup Continuous 03", "center_type": "DYEING",
-        "node_type": "MACHINE", "yards_per_rev": 4.5,
+        "node_type": "MACHINE",
     })
     assert res.status_code == 200, res.text
-    assert res.json()["yards_per_rev"] == pytest.approx(4.5)
-
-
-def test_zero_yards_per_rev_is_stored_as_unmeasured(client, auth_headers):
-    """0 is not a measurement. Storing it would divide into a false 'no efficiency'
-    that the setup flag could not distinguish from a real one."""
-    res = client.post("/api/work-centers", headers=auth_headers, json={
-        "code": "T-CC04", "name": "Celup Continuous 04", "center_type": "DYEING",
-        "node_type": "MACHINE", "yards_per_rev": 0,
-    })
-    assert res.status_code == 200, res.text
-    assert res.json()["yards_per_rev"] is None
+    assert "yards_per_rev" not in res.json()

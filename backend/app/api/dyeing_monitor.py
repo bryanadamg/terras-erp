@@ -31,10 +31,11 @@ router = APIRouter()
 DYEING_CENTER_TYPES = dyeing_monitor_service.DYEING_CENTER_TYPES
 ACTIVE_RUN_STATUSES = dyeing_monitor_service.ACTIVE_RUN_STATUSES
 
-# A run on a vessel card: either running now, or loaded and waiting to start.
-# PENDING earns its place because "what is the vessel about to run" is half of what
-# a supervisor walks the floor to find out; it simply reports no rate.
-CARD_RUN_STATUSES = ACTIVE_RUN_STATUSES + ("PENDING",)
+# A run on a vessel card: running now, being colour-matched, or loaded and waiting.
+# The two pre-run phases earn their place because "what is the vessel about to run,
+# and what is it waiting on" is half of what a supervisor walks the floor to find
+# out; neither reports a rate, and COLOR_MATCHING reports how long it has waited.
+CARD_RUN_STATUSES = ACTIVE_RUN_STATUSES + ("COLOR_MATCHING", "PENDING")
 
 # The MO behind a dye batch is reached through the WO -- DyeingRun has no mo_id of
 # its own, and no machine of its own either: the vessel is `work_order.work_center_id`
@@ -52,8 +53,10 @@ def _run_card(run: DyeingRun, metrics: dict) -> dict:
     """One dye batch as the grid and the modal both read it.
 
     Field names deliberately match the weaving card where the meaning matches
-    (`efficiency_pct`, `on_target`, `target_efficiency_pct`, `lines`) so the shared
-    frontend primitives take either domain without a per-domain adapter.
+    (`efficiency_pct`, `lines`) so the shared frontend primitives take either domain
+    without a per-domain adapter. The target fields are NOT among them: a dye vessel
+    has no contracted rate to be judged against, so the card reports and does not
+    score (see services/dyeing_monitor_service.py).
     """
     wo = run.work_order
     mo = wo.manufacturing_order if wo else None
@@ -69,12 +72,20 @@ def _run_card(run: DyeingRun, metrics: dict) -> dict:
         "item_uom": mo.item.uom if (mo and mo.item) else None,
         "target_qty": float(mo.qty) if mo else None,
         "substrate_qty": float(run.substrate_qty) if run.substrate_qty is not None else None,
+        # The planner's bath, carried so the card's Start button can post it rather
+        # than send the operator to the WO screen for a number the WO already holds.
+        # The ACTUAL volume is never sent here -- a started run has no Start button.
+        "planned_bath_liters": (
+            float(run.planned_volume_air_liters) if run.planned_volume_air_liters is not None else None
+        ),
         "recipe_code": run.recipe.code if run.recipe else None,
         # No colour/lot keys: they came off `DyeingRun.color_name` / `lot_number`,
         # dropped in a7c9e1b3d5f8 as never-populated duplicates of the MO's colour
         # attributes (already in `variant_labels` below) and the output Batch. No
         # frontend read either one.
         "status": run.status,
+        # The three phase stamps the floor presses, in order. `color_matching_at`
+        # rides in from `metrics` beside the gaps computed off it.
         "started_at": run.started_at,
         "completed_at": run.completed_at,
         "operator_name": run.operator_name,
@@ -92,17 +103,18 @@ def _machine_payload(wc: WorkCenter, cards: list) -> dict:
     effs = [c["efficiency_pct"] for c in running if c["efficiency_pct"] is not None]
     return {
         "id": str(wc.id), "code": wc.code, "name": wc.name, "center_type": wc.center_type,
-        "yards_per_rev": float(wc.yards_per_rev) if wc.yards_per_rev is not None else None,
         "active_runs": cards,
         "active_run": cards[0] if cards else None,
         "loom_status": dyeing_monitor_service.derive_machine_status(
-            bool(running), any(c["status"] == "PENDING" for c in cards),
+            bool(running),
+            any(c["status"] == "COLOR_MATCHING" for c in cards),
+            any(c["status"] == "PENDING" for c in cards),
         ),
-        "below_target": sum(1 for c in running if c["on_target"] is False),
         "avg_efficiency_pct": round(sum(effs) / len(effs), 1) if effs else None,
-        # No rate can be computed until someone measures the reel. Surfaced per
-        # machine so the card can say so instead of showing an unexplained dash.
-        "needs_setup": wc.yards_per_rev is None,
+        # No rate can be computed until a batch has a speed picked. It is a per-run
+        # input now, not machine geometry, so the flag counts the runs that need one
+        # rather than the vessel -- an idle machine needs nothing.
+        "needs_setup": sum(1 for c in cards if c["missing_rate_inputs"]),
     }
 
 
@@ -124,7 +136,7 @@ async def dyeing_monitor(
     machines = res.scalars().all()
     if not machines:
         return {"machines": [], "total": 0, "running": 0, "groups": [],
-                "avg_efficiency_pct": None, "active_runs": 0, "below_target": 0,
+                "avg_efficiency_pct": None, "active_runs": 0, "matching": 0,
                 "needs_setup": 0}
 
     machine_ids = [wc.id for wc in machines]
@@ -179,7 +191,7 @@ async def dyeing_monitor(
                 run.started_at, run.completed_at, now,
             ) if mo else 0.0
             metrics = dyeing_monitor_service.compute_run_metrics(
-                run, wc.yards_per_rev, actual, mo.item if mo else None, now,
+                run, actual, mo.item if mo else None, now,
             )
             cards.append(_run_card(run, metrics))
         payload = _machine_payload(wc, cards)
@@ -206,9 +218,12 @@ async def dyeing_monitor(
         "machines": out, "total": len(out), "running": running, "groups": groups,
         "avg_efficiency_pct": round(sum(effs) / len(effs), 1) if effs else None,
         "active_runs": len(run_cards),
-        "below_target": sum(1 for c in run_cards if c["on_target"] is False),
-        # How many vessels cannot report at all until someone measures the reel.
-        "needs_setup": sum(1 for m in out if m["needs_setup"]),
+        # Batches sitting on a shade rather than on the machine -- the one queue a
+        # dye plant loses hours to that no production number reveals.
+        "matching": sum(1 for m in out for c in m["active_runs"]
+                        if c["status"] == "COLOR_MATCHING"),
+        # How many batches cannot report a rate until someone picks their speed.
+        "needs_setup": sum(m["needs_setup"] for m in out),
     }
 
 
@@ -219,12 +234,16 @@ async def update_dyeing_run_rate(
     db: AsyncSession = Depends(get_async_db),
     current_user: User = Depends(require_permission("work_order.log")),
 ):
-    """Set the rate inputs the monitor needs for one batch (rpm / lines / target).
+    """Set the rate inputs the monitor needs for one batch (speed / rope count).
 
     Separate from the dyeing-run create and complete payloads on purpose: these are
     entered by whoever sets the machine up, at a different moment from the shade
-    result, and a run already COMPLETED may still need its rpm corrected for the
+    result, and a run already COMPLETED may still need its speed corrected for the
     record.
+
+    `yards_per_min` is validated as a positive number, not against the `Dyeing Speed`
+    attribute's values: that list is a picker convenience the floor curates, and a
+    vessel run at a speed nobody has added to it yet must still be recordable.
     """
     res = await db.execute(select(DyeingRun).where(DyeingRun.id == run_id))
     run = res.scalars().first()
@@ -232,23 +251,19 @@ async def update_dyeing_run_rate(
         raise HTTPException(status_code=404, detail="Dyeing run not found")
 
     changes: dict = {}
-    if payload.rpm is not None:
-        if float(payload.rpm) <= 0:
-            raise HTTPException(status_code=422, detail="rpm must be greater than zero")
-        changes["rpm"] = (float(run.rpm) if run.rpm is not None else None, float(payload.rpm))
-        run.rpm = payload.rpm
+    if payload.yards_per_min is not None:
+        if float(payload.yards_per_min) <= 0:
+            raise HTTPException(status_code=422, detail="yards per minute must be greater than zero")
+        changes["yards_per_min"] = (
+            float(run.yards_per_min) if run.yards_per_min is not None else None,
+            float(payload.yards_per_min),
+        )
+        run.yards_per_min = payload.yards_per_min
     if payload.lines is not None:
         if int(payload.lines) <= 0:
             raise HTTPException(status_code=422, detail="lines must be at least 1")
         changes["lines"] = (run.lines, int(payload.lines))
         run.lines = payload.lines
-    if payload.target_efficiency_pct is not None:
-        if not (0 < float(payload.target_efficiency_pct) <= 100):
-            raise HTTPException(status_code=422, detail="target efficiency must be between 0 and 100")
-        changes["target_efficiency_pct"] = (
-            float(run.target_efficiency_pct or 0), float(payload.target_efficiency_pct),
-        )
-        run.target_efficiency_pct = payload.target_efficiency_pct
 
     if not changes:
         raise HTTPException(status_code=422, detail="Nothing to update")
@@ -262,5 +277,4 @@ async def update_dyeing_run_rate(
     # The grid is self-fetching; without this the card keeps its old rate until the
     # next manual refresh.
     await manager.broadcast({"type": "DYEING_RUN_UPDATE", "action": "rate", "run_id": str(run_id)})
-    return {"id": str(run_id), "rpm": run.rpm, "lines": run.lines,
-            "target_efficiency_pct": run.target_efficiency_pct}
+    return {"id": str(run_id), "yards_per_min": run.yards_per_min, "lines": run.lines}

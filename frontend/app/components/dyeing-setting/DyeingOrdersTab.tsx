@@ -523,6 +523,7 @@ export default function DyeingOrdersTab({ items, recipes, authFetch }: DyeingOrd
                                                     <th style={{ ...subTh, textAlign: 'right', width: 52 }}>L:R</th>
                                                     <th style={{ ...subTh, width: 78 }}>Status</th>
                                                     <th style={{ ...subTh, width: 62 }}>Shade</th>
+                                                    <th style={{ ...subTh, width: 96 }} title="When the shade started being matched at the vessel">Matching</th>
                                                     <th style={{ ...subTh, width: 96 }}>Started</th>
                                                     <th style={{ ...subTh, width: 96 }}>Completed</th>
                                                     <th style={{ ...subTh, width: 30 }} />
@@ -533,12 +534,12 @@ export default function DyeingOrdersTab({ items, recipes, authFetch }: DyeingOrd
                                                     const recipeName = run.recipe_name
                                                         ?? recipes.find(r => String(r.id) === String(run.recipe_id))?.name
                                                         ?? null;
-                                                    // Gate the action on the bath's own facts, not on `status`:
-                                                    // status is derived from the WO too (backend
-                                                    // services/dyeing_run_service), so a closed WO shows its
-                                                    // baths COMPLETED — and the shade is QC at a later moment,
-                                                    // which must stay recordable after the WO is finished.
-                                                    const bathClosed = !!run.completed_at;
+                                                    // Gate the action on the SHADE, not on `status` and not on
+                                                    // the close: status is derived from the WO too (backend
+                                                    // services/dyeing_run_service), and closing the bath is now
+                                                    // its own floor act on the vessel card. The shade is QC at a
+                                                    // later moment and must stay recordable after both.
+                                                    const bathClosed = !!run.shade_result;
                                                     const bathFilled = !!run.started_at || run.volume_air_liters != null;
                                                     return (
                                                         <tr key={run.id} style={lvSubRow(ri)}>
@@ -558,14 +559,17 @@ export default function DyeingOrdersTab({ items, recipes, authFetch }: DyeingOrd
                                                                     ? <ShadeChip shade={run.shade_result} />
                                                                     : <Dash />}
                                                             </td>
+                                                            <td style={{ ...subTd, color: '#666', whiteSpace: 'nowrap' }}>{fmtDateTime(run.color_matching_at)}</td>
                                                             <td style={{ ...subTd, color: '#666', whiteSpace: 'nowrap' }}>{fmtDateTime(run.started_at)}</td>
                                                             <td style={{ ...subTd, color: '#666', whiteSpace: 'nowrap' }}>{fmtDateTime(run.completed_at)}</td>
                                                             <td style={{ ...subTd, textAlign: 'right' }}>
-                                                                {/* One action: the shade. There is no Start button —
-                                                                    filling the bath is done from the WO, with the
-                                                                    output it produced. A closed bath opens the same
-                                                                    panel read-only, which is where the dose sheet and
-                                                                    the chemicals actually used are shown. */}
+                                                                {/* One action: the shade. There is no Start button
+                                                                    here — the floor walks a batch through match /
+                                                                    start / complete on the vessel card (dyeing
+                                                                    monitor), and the bath is filled from the WO with
+                                                                    the output it produced. Once the shade is in, this
+                                                                    opens the same panel read-only, which is where the
+                                                                    dose sheet and the chemicals used are shown. */}
                                                                 <XPActionButton
                                                                     tone={!bathClosed && bathFilled && canManage ? 'primary' : 'neutral'}
                                                                     icon={bathClosed || !canManage ? 'bi-eye' : 'bi-eyedropper'}
@@ -592,7 +596,9 @@ export default function DyeingOrdersTab({ items, recipes, authFetch }: DyeingOrd
         );
     };
 
-    const shadeModalClosed = !!showCompleteModal?.completed_at;
+    // Read-only once the SHADE is recorded, not once the bath is closed: a batch
+    // completed at the vessel is still waiting for QC to look at it.
+    const shadeModalClosed = !!showCompleteModal?.shade_result;
 
     return (
         <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0, fontFamily: xpFont}}>

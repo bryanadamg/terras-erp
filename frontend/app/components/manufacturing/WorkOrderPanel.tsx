@@ -115,7 +115,7 @@ interface WO {
     created_at?: string;
 }
 
-const emptyForm = { group_id: '', work_center_id: '', bom_operation_id: '', input_location_id: '', output_location_id: '', next_destination_work_center_id: '', next_destination_location_id: '', planned_duration_hours: '', qty: '', target_start_date: '', target_end_date: '', bath_volume_liters: '' };
+const emptyForm = { group_id: '', work_center_id: '', bom_operation_id: '', input_location_id: '', output_location_id: '', next_destination_work_center_id: '', next_destination_location_id: '', planned_duration_hours: '', qty: '', target_start_date: '', target_end_date: '', bath_volume_liters: '', lines: '' };
 
 interface Props {
     manufacturingOrderId: string;
@@ -333,6 +333,7 @@ export default function WorkOrderPanel({
                 // takes the recipe's liquor ratio x this WO's qty.
                 bath_volume_liters: isDyeingSelection && form.bath_volume_liters
                     ? parseFloat(form.bath_volume_liters) : undefined,
+                lines: isDyeingSelection && form.lines ? parseInt(form.lines, 10) : undefined,
             });
             if (res && !res.ok) {
                 try {
@@ -382,6 +383,7 @@ export default function WorkOrderPanel({
                 // takes the recipe's liquor ratio x this WO's qty.
                 bath_volume_liters: isDyeingSelection && form.bath_volume_liters
                     ? parseFloat(form.bath_volume_liters) : undefined,
+                lines: isDyeingSelection && form.lines ? parseInt(form.lines, 10) : undefined,
             });
             if (result?.warning === 'total_assigned_exceeds_mo_qty') {
                 setOverAssignWarning({ totalAssigned: result.total_assigned, moQty: result.mo_qty });
@@ -414,6 +416,7 @@ export default function WorkOrderPanel({
             // the operator at the vessel (PATCH /dyeing-runs/{id}/bath), so editing
             // the WO is not where it moves. Reset so a stale figure can't be re-sent.
             bath_volume_liters: '',
+            lines: '',
         });
     };
 
@@ -969,6 +972,20 @@ export default function WorkOrderPanel({
                                     />
                                     <span>L</span>
                                     <span style={{ color: '#aaa' }}>(blank = from recipe liquor ratio &times; qty)</span>
+                                    {/* How many ropes this load runs on. Half the dyeing monitor's
+                                        rate (yd/min per rope x lines) and planned here, with the
+                                        bath, because both are the planner's figures; the speed
+                                        itself is picked at the vessel. Seeds the run, where it
+                                        lives — a multi-bath WO may split at different counts. */}
+                                    <span style={{ color: '#444', fontWeight: 'bold', whiteSpace: 'nowrap', marginLeft: 8 }}>Line:</span>
+                                    <input
+                                        type="number" min="1" step="1"
+                                        style={{ ...xpInput, width: 46 }}
+                                        value={form.lines}
+                                        onChange={e => setForm(f => ({ ...f, lines: e.target.value }))}
+                                        placeholder="1"
+                                        title="How many ropes the vessel runs this load on. The dyeing monitor's rate is yd/min per rope x this."
+                                    />
                                 </div>
                             )}
                             {(form.input_location_id || form.output_location_id) && (
