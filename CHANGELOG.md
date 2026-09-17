@@ -15,6 +15,15 @@ on `main`:
 
 ## [Unreleased]
 
+## [0.31.0] - 2026-09-17
+
+### Added
+- Dyeing runs can be stamped as color-matching before the bath starts, a new phase between PENDING and IN_PROGRESS; a run may skip it entirely if the floor goes straight to the bath
+- The dyeing vessel monitor reports phase times (color matching, bath) per run instead of only the running state
+- Dye batch speed is set as one picked rope speed instead of derived from rpm times machine geometry times lines — two of those three factors were nothing the floor could check, so a mistyped rpm read as a real measurement hours later. Dyeing efficiency no longer shows an on-target/below-target read, since a dye vessel has no contracted daily rate the way a loom does
+- Bag and beam labels print a "Komponen Terpakai" band listing the components actually consumed for that unit, flagging any item substituted for a BOM line with a SUB tag
+- A packed carton can be split down to the quantity an order actually owes; the split child keeps its own package number, tare, and packed-for-SO tag so it still shows up in pick-list suggestion and prints its own label
+
 ## [0.30.1] - 2026-09-15
 
 ### Fixed
