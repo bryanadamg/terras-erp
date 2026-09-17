@@ -37,18 +37,5 @@ export function Tabs<K extends string>({ tabs, activeKey, onChange, right }: {
         [tabs],
     );
 
-    // The strip must NOT be a scroll container. terras-ui gives it `overflow-x: auto`
-    // for tabs that might not fit, but `overflow-x: auto` forces `overflow-y` to
-    // compute to `auto` too — and the active tab hangs 1px below the padding box on
-    // purpose (`marginBottom: -1`, the open seam into the pane). That 1px is vertical
-    // scrollable overflow, so every strip in the app rendered a stray scrollbar in its
-    // corner. `overflow-y: hidden` is not the fix: it clips the seam, which is the one
-    // thing the strip exists to draw.
-    //
-    // Nothing here overflows horizontally — the widest strip in the app is 4 short
-    // tabs — so the scroll container was speculative and the spill is the honest
-    // fallback. If a strip ever does outgrow its row, wrap it rather than restoring
-    // `auto`, or the scrollbar comes straight back.
-    return <UITabs tabs={mapped} activeKey={activeKey} onChange={onChange} right={right}
-        style={{ overflowX: 'visible' }} />;
+    return <UITabs tabs={mapped} activeKey={activeKey} onChange={onChange} right={right} />;
 }
