@@ -3,6 +3,7 @@ import dynamic from 'next/dynamic';
 import { useLanguage } from '../../context/LanguageContext';
 import { useTimezone } from '../../context/TimezoneContext';
 import { useData } from '../../context/DataContext';
+import { useDebouncedCommit } from '../../context/usePaginatedList';
 import {
     xpFont, xpBtn, xpInput, xpSelect, xpSep,
     TableSkeleton, useTableSkeletonMetrics, XPEmptyState, useSortable, CodeChip, CHIP_RADIUS, XP_BTN } from '../shared/xpTheme';
@@ -95,10 +96,7 @@ export default function ReportsView(_props: any) {
     const listBodyRef = useRef<HTMLTableSectionElement>(null);
 
     // Debounce the free-text search; reset to page 1 on every new term.
-    useEffect(() => {
-        const id = setTimeout(() => { setDebouncedSearch(search); setPage(1); }, 350);
-        return () => clearTimeout(id);
-    }, [search]);
+    useDebouncedCommit(search, debouncedSearch, v => { setDebouncedSearch(v); setPage(1); });
 
     // Any non-page filter change snaps back to the first page.
     const onFilter = (setter: (v: any) => void) => (v: any) => { setter(v); setPage(1); };
