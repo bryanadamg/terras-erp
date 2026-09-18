@@ -1,5 +1,5 @@
 import logging
-from tenacity import after_log, before_log, retry, stop_after_attempt, wait_fixed
+import time
 from sqlalchemy import text
 from app.db.session import SessionLocal
 
@@ -9,21 +9,18 @@ logger = logging.getLogger(__name__)
 max_tries = 60 * 5  # 5 minutes
 wait_seconds = 1
 
-@retry(
-    stop=stop_after_attempt(max_tries),
-    wait=wait_fixed(wait_seconds),
-    before=before_log(logger, logging.INFO),
-    after=after_log(logger, logging.WARN),
-)
 def init() -> None:
-    try:
-        with SessionLocal() as db:
-            # Try to create session to check if DB is awake
-            db.execute(text("SELECT 1"))
-        logger.info("Database is alive!")
-    except Exception as e:
-        logger.error(e)
-        raise e
+    for attempt in range(max_tries):
+        try:
+            with SessionLocal() as db:
+                # Try to create session to check if DB is awake
+                db.execute(text("SELECT 1"))
+            logger.info("Database is alive!")
+            return
+        except Exception as e:
+            logger.warning("DB not ready (attempt %d/%d): %s", attempt + 1, max_tries, e)
+            time.sleep(wait_seconds)
+    raise RuntimeError("Database did not become ready in time")
 
 def main() -> None:
     logger.info("Initializing service")
