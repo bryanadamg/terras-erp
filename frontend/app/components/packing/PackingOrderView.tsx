@@ -14,7 +14,7 @@ import { LV_XP_FONT, lvBtn, lvInput, lvTd, lvRow, lvSubTh, lvSubTd, lvSubRow, Ex
 import { ShellWindow, ShellTitleBar, xpToolbar, ToolbarButton } from '../shared/shellTheme';
 import Pager from '../shared/Pager';
 import ModalWrapper from '../shared/ModalWrapper';
-import SearchableSelect from '../shared/SearchableSelect';
+import SearchableSelect from '@bryanadamg/terras-ui/components/Combobox';
 import TreeSelect, { buildLocationPickerTree } from '../shared/TreeSelect';
 import { useFinishedGoodsSearch } from '../shared/useEntitySearch';
 import { LotChips, LotChip, lotSizeKey, lotSizeLabel } from '../shared/LotChips';

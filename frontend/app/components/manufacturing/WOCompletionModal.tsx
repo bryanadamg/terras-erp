@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { useData } from '../../context/DataContext';
 import { useTimezone } from '../../context/TimezoneContext';
 import { useToast } from '../shared/Toast';
-import SearchableSelect from '../shared/SearchableSelect';
+import SearchableSelect from '@bryanadamg/terras-ui/components/Combobox';
 import { useItemSearch, itemToOption } from '../shared/useEntitySearch';
 import ModalWrapper from '../shared/ModalWrapper';
 import BagLabelPrintModal from './BagLabelPrintModal';

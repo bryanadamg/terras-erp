@@ -4,7 +4,7 @@ import { useRouter } from 'next/navigation';
 import { useConfirm } from '../../context/ConfirmContext';
 import { useUser } from '../../context/UserContext';
 import { useDebouncedCommit } from '../../context/usePaginatedList';
-import SearchableSelect from '../shared/SearchableSelect';
+import SearchableSelect from '@bryanadamg/terras-ui/components/Combobox';
 import ModalWrapper from '../shared/ModalWrapper';
 import Pager from '../shared/Pager';
 import { StatusChip, FormSection, useFloatingMenu, MenuTriggerButton, FloatingMenu, XPActionButton, ColorSwatchChip, CodeChip, CODE_FONT, SwatchBox, TableSkeleton, useTableSkeletonMetrics, XP_BTN } from '../shared/xpTheme';

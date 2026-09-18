@@ -18,7 +18,7 @@ const LOT_STATUS_FILTERS = [
   { value: '', label: 'All' },
 ];
 import TreeSelect, { buildLocationFilterTree, buildLocationPickerTree, expandLocationFilterValue, buildCategoryTree } from '../shared/TreeSelect';
-import SearchableSelect from '../shared/SearchableSelect';
+import SearchableSelect from '@bryanadamg/terras-ui/components/Combobox';
 import { useItemSearch, itemToOption } from '../shared/useEntitySearch';
 import { lotSizeLabel, lotComboLabel, lotColorLabel, type LotVariantAttr } from '../shared/LotChips';
 import { isRejectGrade } from '../shared/rejectDisplay';

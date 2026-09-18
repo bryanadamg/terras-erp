@@ -11,7 +11,7 @@ import ModalWrapper from '../shared/ModalWrapper';
 // See machineMonitor/machineStatus.ts, which also covers the dye vessel states.
 export { MACHINE_TITLE_VARIANT as LOOM_TITLE_VARIANT } from './machineMonitor/machineStatus';
 import { MACHINE_TITLE_VARIANT } from './machineMonitor/machineStatus';
-import SearchableSelect from '../shared/SearchableSelect';
+import SearchableSelect from '@bryanadamg/terras-ui/components/Combobox';
 import CameraScanner from '../shared/CameraScanner';
 import VariantChips from '../shared/VariantChips';
 import { useLanguage } from '../../context/LanguageContext';

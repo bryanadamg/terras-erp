@@ -2,7 +2,7 @@
 import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import { MODAL_REPOSITION_EVENT } from './ModalWrapper';
-import { layoutRectOf, layoutViewport } from './uiScale';
+import { layoutRectOf, layoutViewport } from '@bryanadamg/terras-ui/scale';
 import { xpFont, BUTTON_RADIUS } from './xpTheme';
 
 export interface TreeSelectOption {

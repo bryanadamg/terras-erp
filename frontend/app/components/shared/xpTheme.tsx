@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useMemo, useState, useEffect, useCallback, useRef } from 'react';
-import { layoutRectOf, layoutScroll } from './uiScale';
+import { layoutRectOf, layoutScroll } from '@bryanadamg/terras-ui/scale';
 import { xpFont, modernFont, CODE_FONT, PRINT_FONT, PRINT_SERIF_FONT } from './typography';
 import { FloatingLayer, POPOUT_DELAY, TIP_DELAY, Tooltip, TooltipSurface, useHoverAnchor, isClipped } from './Tooltip';
 import UIToggleChip from '@bryanadamg/terras-ui/components/ToggleChip';

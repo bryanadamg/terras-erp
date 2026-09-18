@@ -4,7 +4,7 @@ import { useData } from '../../context/DataContext';
 import CodeConfigModal, { CodeConfig, buildCodeWithCounter } from '../shared/CodeConfigModal';
 import BOMAutomatorModal from './BOMAutomatorModal';
 import BOMConfirmModal, { BOMPlan, BOMPlanNode, BOMPlanLine } from './BOMConfirmModal';
-import SearchableSelect from '../shared/SearchableSelect';
+import SearchableSelect from '@bryanadamg/terras-ui/components/Combobox';
 import { useToast } from '../shared/Toast';
 import { CodeChip, CODE_FONT, xpFont, CHIP_RADIUS, BUTTON_RADIUS, xpInput as xpInputBase, xpBtn as xpBtnBase, BTN_TONES, LegendPanel, XP_BTN } from '../shared/xpTheme';
 

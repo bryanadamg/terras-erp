@@ -13,7 +13,7 @@ import { useData } from '../../context/DataContext';
 import { useUser } from '../../context/UserContext';
 import { useTimezone } from '../../context/TimezoneContext';
 import { isContainerWC, isMachineWC, isTypeWC, machinesUnderWC, woHasStaging, woScanStages } from '../shared/workCenterTree';
-import SearchableSelect from '../shared/SearchableSelect';
+import SearchableSelect from '@bryanadamg/terras-ui/components/Combobox';
 import TreeSelect, { buildLocationPickerTree } from '../shared/TreeSelect';
 import { STATUS_COLORS as STATUS_BORDER, workCenterChipStyle, useFloatingMenu, MenuTriggerButton, FloatingMenu, XPActionButton, ProgressBar, CodeChip, CODE_FONT, xpFont, StatusChip, CHIP_RADIUS, XP_BTN, xpBtn, BTN_TONES, xpInput as xpInputBase, LocationChip } from '../shared/xpTheme';
 

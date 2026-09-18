@@ -3,7 +3,7 @@ import dynamic from 'next/dynamic';
 import CodeConfigModal, { CodeConfig, buildCodeWithCounter } from '../shared/CodeConfigModal';
 import { useToast } from '../shared/Toast';
 import { useLanguage } from '../../context/LanguageContext';
-import SearchableSelect from '../shared/SearchableSelect';
+import SearchableSelect from '@bryanadamg/terras-ui/components/Combobox';
 import ModalWrapper from '../shared/ModalWrapper';
 const SalesPrintModal = dynamic(() => import('./SalesPrintModal'), { ssr: false });
 const SOTablePrintModal = dynamic(() => import('./SOTablePrintModal'), { ssr: false });

@@ -2,7 +2,7 @@
 
 import React, { useRef, useEffect, useId } from 'react';
 import { useIsMobile } from '../../hooks/useIsMobile';
-import { toLayoutPx } from './uiScale';
+import { toLayoutPx } from '@bryanadamg/terras-ui/scale';
 import UIWindowCloseButton from '@bryanadamg/terras-ui/components/WindowCloseButton';
 import { xpFont, XP_BTN, WINDOW_RADIUS, WINDOW_RADIUS_INNER } from './xpTheme';
 import { MODAL_Z } from './zLayers';
