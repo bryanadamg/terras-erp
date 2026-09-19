@@ -61,6 +61,11 @@ interface CreateForm {
     input_batch_id: string;
     liquor_ratio: string;
     volume_air_liters: string;
+    /** Ropes this load runs on, and yards per minute per rope. Half the dyeing
+     *  monitor's rate each. Typed here because the whole bath setup is configured
+     *  on the run — the WO form carries no dyeing fields at all. */
+    lines: string;
+    yards_per_min: string;
     machine_speed: string;
     machine_pressure: string;
     temperature_c: string;
@@ -71,11 +76,10 @@ interface CreateForm {
 
 /** The QC entry, and nothing else.
  *
- *  This tab is supervisory: the bath, the doses and the chemicals actually used
- *  are recorded in the work order flow (`useDyeingBath`, in the WO completion modal
- *  and the mobile scan terminal), because the bath and the output it produced are
- *  one act by one operator. The shade result stays here — it is a different person
- *  at a later moment, which is exactly why it is not folded into the production log.
+ *  The bath lives here: volume, rope count, speed, load and the chemicals actually
+ *  weighed are all configured on the run, on this tab. The work order log records
+ *  kg of output and nothing else — a dyeing WO is cut with the same fields as any
+ *  other. The shade result is separate again, a different person at a later moment.
  *
  *  No output lot field either: the dyed lot is minted once, by that production log,
  *  and the run adopts it (backend `add_mo_completion`).
@@ -94,9 +98,21 @@ interface DyeingOrdersTabProps {
 
 const emptyCreateForm: CreateForm = {
     recipe_id: '', substrate_qty: '', input_batch_id: '', liquor_ratio: '',
-    volume_air_liters: '', machine_speed: '', machine_pressure: '',
-    temperature_c: '', duration_min: '', operator_name: '', notes: '',
+    volume_air_liters: '', lines: '', yards_per_min: '', machine_speed: '',
+    machine_pressure: '', temperature_c: '', duration_min: '', operator_name: '',
+    notes: '',
 };
+
+/** The run's dose sheet, as typed. Rows come from the run's frozen
+ *  `DyeingRunChemical` snapshot — the weights the operator was told — and only the
+ *  actual moves. A run with no bath yet has no sheet to weigh against. */
+interface ChemRow {
+    item_id: string;
+    item_name: string;
+    planned_qty: string;
+    actual_qty: string;
+    dose_unit: string | null;
+}
 
 const emptyCompleteForm: CompleteForm = { shade_result: '', shade_notes: '' };
 
@@ -157,6 +173,11 @@ export default function DyeingOrdersTab({ items, recipes, authFetch }: DyeingOrd
     const [expandedId, setExpandedId] = useState<string | null>(null);
 
     const [createWo, setCreateWo] = useState<any | null>(null);
+    // The run the modal is configuring, or null when it is cutting a new one. Held
+    // as the row object rather than an id: paging away from it must not strip the
+    // form (the retained-selection trap in CLAUDE.md).
+    const [editRun, setEditRun] = useState<any | null>(null);
+    const [chemRows, setChemRows] = useState<ChemRow[]>([]);
     const [showCompleteModal, setShowCompleteModal] = useState<any | null>(null);
     const [createForm, setCreateForm] = useState<CreateForm>(emptyCreateForm);
     const [completeForm, setCompleteForm] = useState<CompleteForm>(emptyCompleteForm);
@@ -284,11 +305,41 @@ export default function DyeingOrdersTab({ items, recipes, authFetch }: DyeingOrd
         createForm.volume_air_liters, createForm.liquor_ratio, fetchDoses,
     ]);
 
-    const handleOpenCreateRun = async (wo: any) => {
+    /** Open the run panel: configuring `run` when one is passed, cutting a new bath
+     *  otherwise. WO creation cuts run #1 empty, so configuring is the normal case
+     *  and creating is the multi-bath exception. */
+    const handleOpenCreateRun = async (wo: any, run?: any) => {
         setCreateWo(wo);
-        setCreateForm(emptyCreateForm);
+        setEditRun(run ?? null);
         setDosePreview(null);
         setErrorMsg(null);
+        if (run) {
+            setCreateForm({
+                recipe_id: run.recipe_id ? String(run.recipe_id) : '',
+                substrate_qty: run.substrate_qty != null ? String(run.substrate_qty) : '',
+                input_batch_id: run.input_batch_id ? String(run.input_batch_id) : '',
+                liquor_ratio: run.liquor_ratio != null ? String(run.liquor_ratio) : '',
+                volume_air_liters: run.volume_air_liters != null ? String(run.volume_air_liters) : '',
+                lines: run.lines != null ? String(run.lines) : '',
+                yards_per_min: run.yards_per_min != null ? String(run.yards_per_min) : '',
+                machine_speed: run.machine_speed != null ? String(run.machine_speed) : '',
+                machine_pressure: run.machine_pressure ?? '',
+                temperature_c: run.temperature_c != null ? String(run.temperature_c) : '',
+                duration_min: run.duration_min != null ? String(run.duration_min) : '',
+                operator_name: run.operator_name ?? '',
+                notes: run.notes ?? '',
+            });
+            setChemRows((run.chemicals ?? []).map((c: any) => ({
+                item_id: String(c.item_id ?? ''),
+                item_name: c.item_name ?? String(c.item_id ?? ''),
+                planned_qty: c.planned_qty != null ? String(c.planned_qty) : '',
+                actual_qty: c.actual_qty ? String(c.actual_qty) : '',
+                dose_unit: c.dose_unit ?? null,
+            })));
+            return;
+        }
+        setCreateForm(emptyCreateForm);
+        setChemRows([]);
         try {
             const res = await authFetch(`${API_BASE}/dye-recipes/match?work_order_id=${wo.id}`);
             if (res.ok) {
@@ -300,21 +351,32 @@ export default function DyeingOrdersTab({ items, recipes, authFetch }: DyeingOrd
         }
     };
 
+    const setChemActual = (itemId: string, value: string) =>
+        setChemRows(prev => prev.map(r => r.item_id === itemId ? { ...r, actual_qty: value } : r));
+
     const handleCreateFormChange = (field: keyof CreateForm, value: string) =>
         setCreateForm(prev => ({ ...prev, [field]: value }));
 
+    /** Write the run's setup, and the chemical actuals if any were typed.
+     *
+     *  Configuring an existing run PATCHes it; the volume is what fills the bath, so
+     *  that call is also what moves the run to IN_PROGRESS and freezes its dose
+     *  sheet (backend update_dyeing_run). Actuals go in a second call because they
+     *  are a different act on a different route — the bath must land even if nobody
+     *  has weighed anything yet. */
     const handleSaveRun = async () => {
         if (!createWo) return;
         setSaving(true);
         setErrorMsg(null);
         try {
-            const payload: any = {
-                work_order_id: String(createWo.id),
+            const fields: any = {
                 recipe_id: createForm.recipe_id || null,
                 // Null = take the WO's own qty (backend create_dyeing_run).
                 substrate_qty: createForm.substrate_qty ? parseFloat(createForm.substrate_qty) : null,
                 liquor_ratio: createForm.liquor_ratio ? parseFloat(createForm.liquor_ratio) : null,
                 volume_air_liters: createForm.volume_air_liters ? parseFloat(createForm.volume_air_liters) : null,
+                lines: createForm.lines ? parseInt(createForm.lines, 10) : null,
+                yards_per_min: createForm.yards_per_min ? parseFloat(createForm.yards_per_min) : null,
                 machine_speed: createForm.machine_speed ? parseFloat(createForm.machine_speed) : null,
                 machine_pressure: createForm.machine_pressure || null,
                 temperature_c: createForm.temperature_c ? parseFloat(createForm.temperature_c) : null,
@@ -323,21 +385,48 @@ export default function DyeingOrdersTab({ items, recipes, authFetch }: DyeingOrd
                 notes: createForm.notes || null,
                 input_batch_id: createForm.input_batch_id || null,
             };
-            const res = await authFetch(`${API_BASE}/dyeing-runs`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(payload),
-            });
+            const res = editRun
+                ? await authFetch(`${API_BASE}/dyeing-runs/${editRun.id}`, {
+                    method: 'PATCH',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(fields),
+                })
+                : await authFetch(`${API_BASE}/dyeing-runs`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ ...fields, work_order_id: String(createWo.id) }),
+                });
             if (!res.ok) {
                 const err = await res.json().catch(() => ({}));
-                setErrorMsg(err.detail || 'Failed to create run.');
-            } else {
-                setCreateWo(null);
-                setCreateForm(emptyCreateForm);
-                reloadRuns();
+                setErrorMsg(err.detail || (editRun ? 'Failed to save the run.' : 'Failed to create run.'));
+                return;
             }
+            const entered = chemRows.filter(r => r.item_id && r.actual_qty !== '' && !isNaN(parseFloat(r.actual_qty)));
+            if (editRun && entered.length) {
+                const chemRes = await authFetch(`${API_BASE}/dyeing-runs/${editRun.id}/chemicals`, {
+                    method: 'PATCH',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        // planned_qty is never sent: the snapshot is what the operator
+                        // was told to weigh, and recording what they weighed must not
+                        // rewrite it — that difference is the only variance signal.
+                        chemicals: entered.map(r => ({ item_id: r.item_id, actual_qty: parseFloat(r.actual_qty) })),
+                    }),
+                });
+                if (!chemRes.ok) {
+                    const err = await chemRes.json().catch(() => ({}));
+                    setErrorMsg(err.detail || 'Bath saved, but the chemicals used were not recorded.');
+                    reloadRuns();
+                    return;
+                }
+            }
+            setCreateWo(null);
+            setEditRun(null);
+            setCreateForm(emptyCreateForm);
+            setChemRows([]);
+            reloadRuns();
         } catch {
-            setErrorMsg('Network error creating run.');
+            setErrorMsg(editRun ? 'Network error saving the run.' : 'Network error creating run.');
         } finally {
             setSaving(false);
         }
@@ -501,7 +590,7 @@ export default function DyeingOrdersTab({ items, recipes, authFetch }: DyeingOrd
                                             tone="success"
                                             icon="bi-plus-lg"
                                             label="Create Run"
-                                            title="Cut an extra bath by hand — runs are normally created with the work order"
+                                            title="Cut an extra bath. Run #1 is created with the work order — configure it from its own row instead"
                                             onClick={() => handleOpenCreateRun(wo)}
                                         />
                                     )}
@@ -518,7 +607,7 @@ export default function DyeingOrdersTab({ items, recipes, authFetch }: DyeingOrd
                                                     <th style={{ ...subTh, width: 34 }}>Run</th>
                                                     <th style={subTh}>Recipe</th>
                                                     <th style={{ ...subTh, textAlign: 'right', width: 62 }}>Substrate</th>
-                                                    <th style={{ ...subTh, textAlign: 'right', width: 62 }} title="Bath planned when the WO was cut">Plan L</th>
+                                                    <th style={{ ...subTh, textAlign: 'right', width: 62 }} title="Bath planned at WO creation. Only on runs cut before the bath moved onto the run itself.">Plan L</th>
                                                     <th style={{ ...subTh, textAlign: 'right', width: 62 }} title="Water the floor actually filled">Actual L</th>
                                                     <th style={{ ...subTh, textAlign: 'right', width: 52 }}>L:R</th>
                                                     <th style={{ ...subTh, width: 78 }}>Status</th>
@@ -563,13 +652,22 @@ export default function DyeingOrdersTab({ items, recipes, authFetch }: DyeingOrd
                                                             <td style={{ ...subTd, color: '#666', whiteSpace: 'nowrap' }}>{fmtDateTime(run.started_at)}</td>
                                                             <td style={{ ...subTd, color: '#666', whiteSpace: 'nowrap' }}>{fmtDateTime(run.completed_at)}</td>
                                                             <td style={{ ...subTd, textAlign: 'right' }}>
-                                                                {/* One action: the shade. There is no Start button
-                                                                    here — the floor walks a batch through match /
-                                                                    start / complete on the vessel card (dyeing
-                                                                    monitor), and the bath is filled from the WO with
-                                                                    the output it produced. Once the shade is in, this
-                                                                    opens the same panel read-only, which is where the
-                                                                    dose sheet and the chemicals used are shown. */}
+                                                                {/* Two actions. Setup: the bath, the ropes, the speed and the
+                                                                    chemicals actually weighed — this is where a run is
+                                                                    configured, since the WO form carries no dyeing fields and
+                                                                    the WO log records only kg out. Shade: QC, a different
+                                                                    person at a later moment, which is why it stays its own
+                                                                    panel. */}
+                                                                {canManage && !run.completed_at && (
+                                                                    <XPActionButton
+                                                                        tone={bathFilled ? 'neutral' : 'primary'}
+                                                                        icon="bi-sliders"
+                                                                        title={bathFilled
+                                                                            ? 'Correct the bath, or record the chemicals actually used'
+                                                                            : 'Configure this bath — volume, ropes, speed and load'}
+                                                                        onClick={() => handleOpenCreateRun(wo, run)}
+                                                                    />
+                                                                )}
                                                                 <XPActionButton
                                                                     tone={!bathClosed && bathFilled && canManage ? 'primary' : 'neutral'}
                                                                     icon={bathClosed || !canManage ? 'bi-eye' : 'bi-eyedropper'}
@@ -577,7 +675,7 @@ export default function DyeingOrdersTab({ items, recipes, authFetch }: DyeingOrd
                                                                         ? 'View the bath, its dose sheet and the chemicals used'
                                                                         : bathFilled
                                                                             ? 'Record the shade result and close this bath'
-                                                                            : 'No bath recorded yet — the operator fills it from the work order log'}
+                                                                            : 'No bath recorded yet — configure the run first'}
                                                                     onClick={() => handleOpenShade(run)}
                                                                 />
                                                             </td>
@@ -838,21 +936,25 @@ export default function DyeingOrdersTab({ items, recipes, authFetch }: DyeingOrd
 
             <Pager page={page} total={woTotal} pageSize={WO_PAGE_SIZE} onPageChange={setPage} hideWhenEmpty />
 
-            {/* Create Run — a bath cut by hand. Modal rather than an inline strip:
-                the list is one full-width table now, and a form wedged above it
-                pushed every row off screen. */}
+            {/* The run panel — where a bath is configured, and the only place it is.
+                WO creation cuts run #1 carrying just the recipe its gate matched; the
+                volume, the ropes, the speed and the load are typed here, by the
+                operator at the vessel. The work order log records kg of output and
+                nothing else. Cutting a second bath by hand uses the same form. */}
             {createWo && (
                 <ModalWrapper
                     isOpen={!!createWo}
-                    onClose={() => { setCreateWo(null); setCreateForm(emptyCreateForm); setErrorMsg(null); }}
-                    title={`New Dyeing Run — ${createWo.code || createWo.name}`}
+                    onClose={() => { setCreateWo(null); setEditRun(null); setCreateForm(emptyCreateForm); setChemRows([]); setErrorMsg(null); }}
+                    title={editRun
+                        ? `Dyeing Run #${editRun.run_number} — ${createWo.code || createWo.name}`
+                        : `New Dyeing Run — ${createWo.code || createWo.name}`}
                     size="lg"
                     modeless
                     footer={<>
                         <button className={XP_BTN} style={{ ...xpPrimaryBtn, padding: '3px 16px' }} onClick={handleSaveRun} disabled={saving}>
-                            {saving ? 'Saving...' : 'Save Run'}
+                            {saving ? 'Saving...' : editRun ? 'Save Bath' : 'Save Run'}
                         </button>
-                        <button className={XP_BTN} style={{ ...xpBtn, padding: '3px 16px' }} onClick={() => { setCreateWo(null); setCreateForm(emptyCreateForm); setErrorMsg(null); }} disabled={saving}>
+                        <button className={XP_BTN} style={{ ...xpBtn, padding: '3px 16px' }} onClick={() => { setCreateWo(null); setEditRun(null); setCreateForm(emptyCreateForm); setChemRows([]); setErrorMsg(null); }} disabled={saving}>
                             Cancel
                         </button>
                     </>}
@@ -905,6 +1007,22 @@ export default function DyeingOrdersTab({ items, recipes, authFetch }: DyeingOrd
                                     onChange={e => handleCreateFormChange('volume_air_liters', e.target.value)} placeholder="e.g. 190" />
                             </label>
                             <label style={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+                                <span
+                                    style={{ fontSize: 10, color: '#444' }}
+                                    title="How many ropes the vessel runs this load on. The dyeing monitor's rate is yd/min per rope x this."
+                                >Line (ropes)</span>
+                                <input type="number" min="1" step="1" style={xpInput} value={createForm.lines}
+                                    onChange={e => handleCreateFormChange('lines', e.target.value)} placeholder="1" />
+                            </label>
+                            <label style={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+                                <span
+                                    style={{ fontSize: 10, color: '#444' }}
+                                    title="Yards per minute, per rope. Times the rope count, this is the vessel's rate on the dyeing monitor."
+                                >Yd/min (per rope)</span>
+                                <input type="number" step="0.1" style={xpInput} value={createForm.yards_per_min}
+                                    onChange={e => handleCreateFormChange('yards_per_min', e.target.value)} placeholder="e.g. 250" />
+                            </label>
+                            <label style={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
                                 <span style={{ fontSize: 10, color: '#444' }}>Speed</span>
                                 <input type="number" step="0.1" style={xpInput} value={createForm.machine_speed}
                                     onChange={e => handleCreateFormChange('machine_speed', e.target.value)} placeholder="e.g. 7" />
@@ -941,6 +1059,62 @@ export default function DyeingOrdersTab({ items, recipes, authFetch }: DyeingOrd
                                 emptyHint="This recipe has no chemical lines to weigh out."
                                 style={{ marginTop: 6}}
                             />
+                        )}
+
+                        {/* What actually went into the vessel. Only on a run whose sheet
+                            has been frozen — before the bath is filled there is nothing
+                            to weigh against, and the preview above is still a proposal.
+                            Planned is the snapshot the operator was handed; only the
+                            actual is typed, and the gap between them is the only dosing
+                            variance the system has. */}
+                        {editRun && chemRows.length > 0 && (
+                            <div style={{ marginTop: 8 }}>
+                                <div style={{ fontSize: 10, fontWeight: 'bold', color: '#444', marginBottom: 2 }}>
+                                    Chemicals Used
+                                </div>
+                                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 10 }}>
+                                    <thead>
+                                        <tr style={{ background: '#dddbd0' }}>
+                                            <th style={{ padding: '2px 6px', textAlign: 'left', borderBottom: '1px solid #aca899' }}>Chemical</th>
+                                            <th style={{ padding: '2px 6px', textAlign: 'right', borderBottom: '1px solid #aca899', width: 90 }}>Weigh Out</th>
+                                            <th style={{ padding: '2px 6px', textAlign: 'right', borderBottom: '1px solid #aca899', width: 90 }}>Actual</th>
+                                            <th style={{ padding: '2px 6px', textAlign: 'right', borderBottom: '1px solid #aca899', width: 70 }}>Variance</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {chemRows.map((row, idx) => {
+                                            const planned = parseFloat(row.planned_qty);
+                                            const actual = parseFloat(row.actual_qty);
+                                            const variance = (isNaN(actual) ? 0 : actual) - (isNaN(planned) ? 0 : planned);
+                                            return (
+                                                <tr key={row.item_id || idx} style={{ background: idx % 2 === 0 ? '#fff' : '#f5f4ee' }}>
+                                                    <td style={{ padding: '2px 6px' }}>{row.item_name}</td>
+                                                    <td style={{ padding: '2px 6px', textAlign: 'right', color: '#555', whiteSpace: 'nowrap' }}>
+                                                        {isNaN(planned) ? '—' : `${fmtDose(planned, 3)}${row.dose_unit ? ` ${row.dose_unit}` : ''}`}
+                                                    </td>
+                                                    <td style={{ padding: '2px 4px' }}>
+                                                        <input
+                                                            type="number" min="0" step="any"
+                                                            style={{ ...xpInput, textAlign: 'right' }}
+                                                            value={row.actual_qty}
+                                                            onChange={e => setChemActual(row.item_id, e.target.value)}
+                                                            placeholder={row.dose_unit || ''}
+                                                            disabled={!canManage}
+                                                        />
+                                                    </td>
+                                                    <td style={{ padding: '2px 6px', textAlign: 'right', whiteSpace: 'nowrap', color: Math.abs(variance) < 1e-9 ? '#555' : variance > 0 ? '#900' : '#1a5e1a' }}>
+                                                        {isNaN(actual) ? '—' : `${variance > 0 ? '+' : ''}${fmtDose(variance, 3)}`}
+                                                    </td>
+                                                </tr>
+                                            );
+                                        })}
+                                    </tbody>
+                                </table>
+                                <div style={{ fontSize: 9, color: '#888', marginTop: 2 }}>
+                                    Chemicals are still deducted from stock by BOM percentage, not from these
+                                    figures — this records what the vessel actually took.
+                                </div>
+                            </div>
                         )}
                     </div>
                 </ModalWrapper>

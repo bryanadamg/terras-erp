@@ -92,29 +92,29 @@ async def sync_wo_runs(
     return changed
 
 
-async def seed_planned_bath(db: AsyncSession, run: DyeingRun, typed_volume=None) -> float | None:
-    """Plan `run`'s bath and freeze its dose sheet. Returns the planned litres.
+async def price_dose_sheet(db: AsyncSession, run: DyeingRun) -> int:
+    """Weigh `run`'s recipe against its bath. Returns how many rows were written.
 
-    Called when a DYEING work order is cut, because that is the last moment before
-    the Kartu Kerja is printed — and a card that reaches the vessel carrying g/L
-    rates instead of grams is not an instruction, it is homework. `typed_volume` is
-    the planner's own figure; blank falls back to the recipe's `liquor_ratio` times
-    the load, so the usual case needs no input at all.
+    One function for what used to be four copies (run creation, `/start`,
+    `PATCH /bath`, and the bath planned at WO creation): the rule is the same every
+    time, and a dose sheet that disagrees with itself between two screens is exactly
+    what `dyeing_dose_service` exists to prevent.
 
-    Two things this deliberately does NOT do:
-      - write `volume_air_liters`. That column is the water the floor actually
-        filled, and `derive_status` reads it as "this vessel is running". The plan
-        lives in `planned_volume_air_liters` and the run stays PENDING.
-      - own the formula. Doses come from `dyeing_dose_service`, the same call the
-        screen and the print portal make.
-
-    The materialized `DyeingRunChemical.planned_qty` rows are the MOPlannedComponent
+    First call materializes `DyeingRunChemical` rows — the MOPlannedComponent
     pattern: what the operator was told to weigh must stay readable after somebody
-    retunes the recipe. `PATCH /dyeing-runs/{id}/bath` re-prices the rows whose
-    actual is still 0 once the real bath is known, so a plan is never a ceiling.
+    retunes the recipe. Later calls re-price the rows whose `actual_qty` is still 0,
+    because a bath topped up mid-cycle moves every g/L dose. A row with an actual is
+    never touched: that chemical is in the vessel, and rewriting its plan would erase
+    the variance.
+
+    No bath and no recipe are both no-ops, not errors — a run cut and not yet
+    configured has nothing to weigh.
     """
-    if not run.recipe_id:
-        return None
+    if not run.recipe_id or run.id is None:
+        return 0
+    volume = dyeing_dose_service.effective_bath(run)
+    if not volume:
+        return 0
     res = await db.execute(
         select(DyeRecipe)
         .options(
@@ -126,36 +126,34 @@ async def seed_planned_bath(db: AsyncSession, run: DyeingRun, typed_volume=None)
     )
     recipe = res.scalars().first()
     if not recipe:
-        return None
+        return 0
 
-    volume, _ratio = dyeing_dose_service.solve_bath(
-        run.substrate_qty, typed_volume, recipe.liquor_ratio,
-    )
-    if not volume or volume <= 0:
-        # No planner figure and no recipe ratio: nothing to plan. The card falls back
-        # to printing the rates with a "bath not set" note, exactly as before.
-        return None
-    run.planned_volume_air_liters = volume
+    rows = dyeing_dose_service.compute_doses(recipe, run.substrate_qty, volume)
+    existing = (await db.execute(
+        select(DyeingRunChemical).filter(DyeingRunChemical.run_id == run.id)
+    )).scalars().all()
 
-    # Guarded on "no rows yet" so a re-plan never rewrites a sheet the floor has
-    # already been weighing against.
-    if not await _has_chemicals(db, run):
-        for row in dyeing_dose_service.compute_doses(recipe, run.substrate_qty, volume):
+    written = 0
+    if not existing:
+        for row in rows:
             if row["dose"] is None:
-                continue
+                continue  # line carries no rate — nothing to weigh
             db.add(DyeingRunChemical(
                 run_id=run.id, item_id=row["item_id"],
-                planned_qty=row["dose"], actual_qty=0, uom_id=row["uom_id"],
+                planned_qty=row["dose"],
+                # Filled in by PATCH /chemicals with what actually went in; planned
+                # vs actual is the only dosing variance signal there is.
+                actual_qty=0, uom_id=row["uom_id"],
             ))
-    return volume
+            written += 1
+        return written
 
-
-async def _has_chemicals(db: AsyncSession, run: DyeingRun) -> bool:
-    """Whether the run already carries a dose sheet, without lazy-loading it (async
-    sessions can't) and without assuming the run has been flushed."""
-    if run.id is None:
-        return False
-    res = await db.execute(
-        select(DyeingRunChemical.id).filter(DyeingRunChemical.run_id == run.id).limit(1)
-    )
-    return res.scalar() is not None
+    doses = {str(r["item_id"]): r["dose"] for r in rows if r["dose"] is not None}
+    for chem in existing:
+        if float(chem.actual_qty or 0) > 0:
+            continue
+        new_dose = doses.get(str(chem.item_id))
+        if new_dose is not None and float(chem.planned_qty or 0) != float(new_dose):
+            chem.planned_qty = new_dose
+            written += 1
+    return written

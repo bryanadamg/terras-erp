@@ -49,18 +49,19 @@ export async function fetchDyeingPrintData(
         if (!res.ok) return null;
         const data = await res.json();
         const list: any[] = Array.isArray(data) ? data : (data.items ?? []);
-        // Same choice the screen makes (useDyeingBath): the bath nobody has closed,
-        // else the last one, so a finished WO still prints what went in.
+        // Same choice the Dyeing Orders tab makes: the bath nobody has closed, else
+        // the last one, so a finished WO still prints what went in.
         const run = list.find(r => !r.completed_at) ?? list[list.length - 1] ?? null;
         if (!run) return null;
         if (!run.recipe_id) return { run, doses: null };
 
         const qs = new URLSearchParams();
         if (run.substrate_qty != null) qs.set('substrate_qty', String(run.substrate_qty));
-        // The bath the card must print against: the actual once the floor filled it,
-        // the planner's figure until then (backend resolves the pair as
-        // `effective_bath_liters`). This card is normally printed at dispatch, before
-        // any actual exists — which is exactly why the plan is set at WO creation.
+        // The bath the card must print against (`effective_bath_liters`: the actual,
+        // falling back to a plan on runs cut before the bath moved onto the run).
+        // A card printed before the run is configured carries the recipe's g/L rates
+        // instead of grams — the bath is the vessel's number, and the vessel is where
+        // it is now typed.
         const bath = run.effective_bath_liters ?? run.volume_air_liters;
         if (bath != null) qs.set('bath_volume_liters', String(bath));
         const dres = await authFetch(`${apiBase}/dye-recipes/${run.recipe_id}/doses?${qs.toString()}`);

@@ -4,8 +4,6 @@ import { useState, useEffect, useRef } from 'react';
 import { Html5QrcodeScanner } from 'html5-qrcode';
 import { StatusChip, xpFont as XP_FONT, CHIP_RADIUS, xpInput as xpInputBase } from '../shared/xpTheme';
 import { MOBILE_BG, MobilePanel, MobileScreenBar, MobileButton, MobileNotice } from './mobileTheme';
-import DoseSheet, { fmtDose } from '../shared/DoseSheet';
-import { useDyeingBath } from '../shared/useDyeingBath';
 
 interface MobileScannerViewProps {
     manufacturingOrders: any[];
@@ -159,16 +157,6 @@ export default function MobileScannerView({
     const isLotOutput = isBeamOutput || (!!scannedWO && !!scannedWOParentMO && !!findItem(scannedWOParentMO.item_id)?.lot_tracked);
     const isWeavingWO = woWcType === 'WEAVING' || woWcType === 'TENUN';
     const isDyeingWO = woWcType === 'DYEING' || woWcType === 'CELUP';
-
-    // The dye bath, on the same screen as the output it produced. Identical
-    // behaviour to the desktop WO modal — one shared hook, because this is the same
-    // operator on the same bath and two screens must not apply two rules.
-    const dyeBath = useDyeingBath({
-        workOrderId: scannedWO?.id,
-        enabled: isDyeingWO,
-        authFetch,
-        apiBase: API_BASE,
-    });
 
     // Lot input: each material line with batch stock at the input location gets a lot picker
     const materialItemIds = scannedWO ? Array.from(new Set(materialRows.map(r => r.item_id))) : [];
@@ -345,15 +333,6 @@ export default function MobileScannerView({
 
         setSubmittingLog(true);
         try {
-            // Bath + chemical actuals first: a rejected bath must stop the log rather
-            // than land after stock has moved. No-op for every non-dyeing WO.
-            const bathErr = await dyeBath.flush();
-            if (bathErr) {
-                setLogError(bathErr);
-                setSubmittingLog(false);
-                return;
-            }
-
             const actualItems = materialRows
                 .filter(row => parseFloat(row.actual_qty) > 0)
                 .map(row => ({ item_id: row.item_id, qty_used: parseFloat(row.actual_qty) }));
@@ -569,93 +548,6 @@ export default function MobileScannerView({
                                 ))}
                             </select>
                         </div>
-
-                        {/* Bak celup — the bath this output came out of. Before the
-                            material rows: the g/L chemicals were weighed against it, so
-                            the operator reads and corrects it before confirming what
-                            went in. Same fields and same rules as the desktop modal. */}
-                        {isDyeingWO && dyeBath.run && (
-                            <div style={{ marginBottom: 10 }}>
-                                <div style={{ ...subLabel, marginTop: 4 }}>
-                                    Bak Celup — run #{dyeBath.run.run_number}
-                                    {dyeBath.run.recipe_name ? ` · ${dyeBath.run.recipe_name}` : ''}
-                                </div>
-                                <div style={{ display: 'flex', gap: 8, marginBottom: 8 }}>
-                                    <div style={{ flex: 1 }}>
-                                        <div style={{ fontFamily: XP_FONT, fontSize: 10, marginBottom: 3 }}>Volume Air (L)</div>
-                                        <input
-                                            type="number" inputMode="decimal" min="0" step="0.1"
-                                            value={dyeBath.bath.volume_air_liters}
-                                            onChange={e => dyeBath.setBath(b => ({ ...b, volume_air_liters: e.target.value }))}
-                                            placeholder="mis. 950" style={xpInput}
-                                        />
-                                    </div>
-                                    <div style={{ flex: 1 }}>
-                                        <div style={{ fontFamily: XP_FONT, fontSize: 10, marginBottom: 3 }}>Substrat (kg)</div>
-                                        <input
-                                            type="number" inputMode="decimal" min="0" step="0.01"
-                                            value={dyeBath.bath.substrate_qty}
-                                            onChange={e => dyeBath.setBath(b => ({ ...b, substrate_qty: e.target.value }))}
-                                            placeholder="mis. 100" style={xpInput}
-                                        />
-                                    </div>
-                                    <div style={{ width: 90 }}>
-                                        <div style={{ fontFamily: XP_FONT, fontSize: 10, marginBottom: 3 }}>Larutan</div>
-                                        <div style={{ fontFamily: XP_FONT, fontSize: 13, padding: '6px 0' }}>
-                                            {dyeBath.doses?.liquor_ratio != null ? `1 : ${fmtDose(dyeBath.doses.liquor_ratio, 2)}` : '—'}
-                                        </div>
-                                    </div>
-                                </div>
-
-                                {dyeBath.run.recipe_id ? (
-                                    <DoseSheet
-                                        doses={dyeBath.doses}
-                                        emptyHint={dyeBath.doses ? 'Resep ini tidak punya baris kimia.' : 'Memuat resep...'}
-                                    />
-                                ) : (
-                                    <MobileNotice tone="amber" style={{ marginBottom: 0 }}>
-                                        Run ini tanpa resep — tidak ada dosis. Volume air tetap dicatat.
-                                    </MobileNotice>
-                                )}
-
-                                {/* Kimia yang benar-benar ditimbang. Dicatat di sini,
-                                    bersama hasil produksi — tab Dyeing Orders hanya
-                                    menyimpan hasil shade (QC, nanti). */}
-                                {dyeBath.rows.length > 0 && (
-                                    <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 11, marginTop: 8 }}>
-                                        <thead>
-                                            <tr style={{ background: '#dddbd0' }}>
-                                                <th style={{ padding: '3px 6px', textAlign: 'left', borderBottom: '1px solid #aca899' }}>Kimia Dipakai</th>
-                                                <th style={{ padding: '3px 6px', textAlign: 'right', borderBottom: '1px solid #aca899', width: 80 }}>Timbang</th>
-                                                <th style={{ padding: '3px 6px', textAlign: 'right', borderBottom: '1px solid #aca899', width: 90 }}>Aktual</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody>
-                                            {dyeBath.rows.map((row, idx) => {
-                                                const planned = parseFloat(row.planned_qty);
-                                                return (
-                                                    <tr key={row.item_id || idx} style={{ background: idx % 2 === 0 ? '#fff' : '#f5f4ee' }}>
-                                                        <td style={{ padding: '3px 6px' }}>{row.item_name || row.item_id}</td>
-                                                        <td style={{ padding: '3px 6px', textAlign: 'right', color: '#555', whiteSpace: 'nowrap' }}>
-                                                            {isNaN(planned) ? '—' : `${fmtDose(planned, 3)}${row.dose_unit ? ` ${row.dose_unit}` : ''}`}
-                                                        </td>
-                                                        <td style={{ padding: '2px 4px' }}>
-                                                            <input
-                                                                type="number" inputMode="decimal" min="0" step="any"
-                                                                value={row.actual_qty}
-                                                                onChange={e => dyeBath.setActual(row.item_id, e.target.value)}
-                                                                placeholder={row.dose_unit || ''}
-                                                                style={{ ...xpInput, textAlign: 'right', padding: '4px 6px', fontSize: 12 }}
-                                                            />
-                                                        </td>
-                                                    </tr>
-                                                );
-                                            })}
-                                        </tbody>
-                                    </table>
-                                )}
-                            </div>
-                        )}
 
                         {/* Material Consumption */}
                         {materialRows.length > 0 && (() => {

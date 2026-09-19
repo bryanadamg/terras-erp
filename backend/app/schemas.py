@@ -865,15 +865,9 @@ class WorkOrderCreate(BaseModel):
     notes: str | None = None
     target_start_date: datetime | None = None
     target_end_date: datetime | None = None
-    # DYEING only: the bath the planner intends, litres. Seeds the auto-created
-    # DyeingRun's PLAN (never its actual) so the Kartu Kerja prints weighed grams.
-    # Left blank it falls back to the matched recipe's liquor_ratio x the load.
-    bath_volume_liters: float | None = None
-    # DYEING only: how many ropes the vessel runs this load on. Seeds the same
-    # auto-created DyeingRun, where it stays — a multi-bath WO may split its load
-    # across runs at different rope counts, so the column belongs to the run and
-    # this is the planner's starting value, exactly like bath_volume_liters.
-    lines: int | None = None
+    # No bath volume and no rope count here: a dyeing WO is cut with the same fields
+    # as any other WO. The bath, the ropes and the speed are configured on the run
+    # itself, in Dyeing Orders — one screen, one operator, one moment.
 
 class WorkOrderResponse(ORMResponse):
     id: UUID
@@ -2926,6 +2920,39 @@ class DyeingRunCreate(BaseModel):
     duration_min: int | None = None
     operator_name: str | None = None
     notes: str | None = None
+    # Rope count and per-rope speed. They used to be seeded from the WO form; the
+    # whole bath setup is configured here now, so they are typed where every other
+    # number about this load is.
+    lines: int | None = None
+    yards_per_min: float | None = None
+
+
+class DyeingRunUpdate(BaseModel):
+    """Configure a run that already exists — the setup half of PATCH /dyeing-runs/{id}.
+
+    WO creation cuts run #1 empty (recipe only). Everything that describes the bath
+    is typed here afterwards: the volume, the ropes, the speed, the load. Sending a
+    volume is what fills the bath, so this is also what moves a run to IN_PROGRESS
+    and freezes its dose sheet — the same act `/start` performs, reachable from the
+    screen where the run is set up.
+
+    Every field is optional and applied only when present: a correction to the rope
+    count must not blank the operator's name.
+    """
+    recipe_id: UUID | None = None
+    substrate_qty: float | None = None
+    input_batch_id: UUID | None = None
+    liquor_ratio: float | None = None
+    volume_air_liters: float | None = None
+    machine_speed: float | None = None
+    machine_pressure: str | None = None
+    temperature_c: float | None = None
+    duration_min: int | None = None
+    operator_name: str | None = None
+    notes: str | None = None
+    lines: int | None = None
+    yards_per_min: float | None = None
+
 
 class DyeingRunMonitorUpdate(BaseModel):
     """The rate inputs the dyeing monitor needs for one batch.

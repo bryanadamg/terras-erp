@@ -249,28 +249,21 @@ async def create_work_order(
     db.add(wo)
     await db.flush()  # get wo.id before creating DyeingRun
 
-    # Auto-seed pending DyeingRun so operator sees pre-filled recipe
+    # Auto-seed pending DyeingRun so the bath shows up in Dyeing Orders the moment
+    # the WO is cut, carrying the recipe the gate above matched. Nothing about the
+    # bath itself is set here — volume, ropes, speed and load are configured on the
+    # run in Dyeing Orders, by the operator who fills it.
     if planned_recipe_id:
         dye_run = DyeingRun(
             work_order_id=wo.id,
             recipe_id=planned_recipe_id,
             run_number=1,
             substrate_qty=wo.qty or 0,
-            # Rope count the planner set on the WO form. It lives on the run (a
-            # multi-bath WO may split its load across different rope counts) and is
-            # half the monitor's rate — `yards_per_min * lines`. Blank keeps the
-            # column default of 1; the speed itself is picked at the vessel.
-            **({"lines": payload.lines} if payload.lines else {}),
             # No status: an unfilled bath on a fresh WO is PENDING, which is the
-            # column default. Status is derived, not typed (dyeing_run_service) —
-            # and the PLANNED bath below deliberately doesn't move it.
+            # column default. Status is derived, not typed (dyeing_run_service).
         )
         db.add(dye_run)
         await db.flush()
-        # Plan the bath here so the Kartu Kerja printed off this WO carries weighed
-        # grams. `payload.bath_volume_liters` is the planner's figure; blank falls
-        # back to the recipe's liquor ratio x the load.
-        await dyeing_run_service.seed_planned_bath(db, dye_run, payload.bath_volume_liters)
 
     # Auto-start MO on first WO creation if MO is still PENDING.
     # Stock is now checked at staging time (line-side issue), not here — creating a
@@ -696,12 +689,11 @@ async def create_work_orders_bulk(
                 recipe_id=planned_recipe_id,
                 run_number=1,
                 substrate_qty=wo.qty or 0,
-                **({"lines": payload.lines} if payload.lines else {}),
                 # No status, same as the single-WO path above: derived, not typed.
+                # The bath is configured on the run, in Dyeing Orders.
             )
             db.add(dye_run)
             await db.flush()
-            await dyeing_run_service.seed_planned_bath(db, dye_run, payload.bath_volume_liters)
         created_wos.append(wo)
 
     # Auto-start MO once if still PENDING. Stock is checked at staging time

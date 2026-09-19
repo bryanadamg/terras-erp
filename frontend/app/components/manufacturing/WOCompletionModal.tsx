@@ -13,8 +13,7 @@ import { RowCheckbox, LV_STICKY_THEAD, lvPickerRow } from '../shared/listViewThe
 import { LotChips } from '../shared/LotChips';
 import { centerTypeOfWC, isContainerWC, isMachineWC, machinesUnderWC, toMachineOptions } from '../shared/workCenterTree';
 import { rejectTitle } from '../shared/rejectDisplay';
-import DoseSheet, { fmtDose } from '../shared/DoseSheet';
-import { useDyeingBath } from '../shared/useDyeingBath';
+
 
 const xpInput: React.CSSProperties = xpInputBase({ padding: '0 4px', width: '100%', boxSizing: 'border-box' });
 const xpLabel: React.CSSProperties = {
@@ -130,18 +129,6 @@ export default function WOCompletionModal({ mo, onClose, onSaved, workOrder }: W
     // Mirrors the backend's prefix choice in manufacturing.py's log-completion route.
     const lotLabel = isBeamOutput ? 'Beam' : isWeavingWO ? 'Greige' : isDyeingWO ? 'Dyed Lot' : isSettingWO ? 'Set Lot' : 'Lot';
     const lotPrefix = isBeamOutput ? 'BM' : isWeavingWO ? 'GRG' : isDyeingWO ? 'DYE' : isSettingWO ? 'SET' : 'LOT';
-
-    // The dye bath, recorded here rather than on the Dyeing Orders tab: the bath and
-    // the output it produced are one act by one operator, and splitting them across
-    // two screens is what let a WO be finished with its bath never recorded (and its
-    // status say the opposite). The hook finds the WO's open DyeingRun, weighs the
-    // recipe against the typed volume, and writes bath + actuals on submit.
-    const dyeBath = useDyeingBath({
-        workOrderId: workOrder?.id,
-        enabled: isDyeingWO,
-        authFetch,
-        apiBase: API_BASE,
-    });
 
     // How much of a multi-lot material this log actually uses: the Material
     // Consumption row's actual qty (defaults to output qty x BOM%, operator can
@@ -335,16 +322,6 @@ export default function WOCompletionModal({ mo, onClose, onSaved, workOrder }: W
 
         setSubmitting(true);
         try {
-            // Bath and chemical actuals go FIRST: a rejected bath (no resolvable
-            // volume, a closed run) must stop the log rather than land after stock
-            // has already moved. No-op for every non-dyeing WO.
-            const bathErr = await dyeBath.flush();
-            if (bathErr) {
-                showToast(bathErr, 'danger');
-                setSubmitting(false);
-                return;
-            }
-
             // Multi-lot items (dyeing substrate) are consumed explicitly via
             // consumed_lots (the logged draw, FIFO across the selected lots) —
             // exclude them from the BOM%/actual_items path and the single-lot
@@ -701,111 +678,6 @@ export default function WOCompletionModal({ mo, onClose, onSaved, workOrder }: W
                                 )}
                             </div>
                         </div>
-
-                        {/* Dye bath — before the material rows: the bath is what the
-                            g/L chemicals were weighed against, so the operator reads it
-                            (and corrects it) before confirming what went in. Hidden
-                            unless the WO actually has a bath record. */}
-                        {isDyeingWO && dyeBath.run && (
-                            <LegendPanel title={`Dye Bath — run #${dyeBath.run.run_number}${dyeBath.run.recipe_name ? ` · ${dyeBath.run.recipe_name}` : ''}`}>
-                                <div style={{ padding: '4px 8px 8px', display: 'flex', flexDirection: 'column', gap: 6 }}>
-                                    <div style={{ display: 'flex', gap: 8, alignItems: 'flex-end', flexWrap: 'wrap' }}>
-                                        <div style={{ width: 110 }}>
-                                            <label style={xpLabel} title="Water volume of the bath, in litres. Every g/L chemical is weighed out against this.">
-                                                Volume Air (L)
-                                            </label>
-                                            <input
-                                                type="number" step="0.1" min="0" style={xpInput}
-                                                value={dyeBath.bath.volume_air_liters}
-                                                onChange={e => dyeBath.setBath(b => ({ ...b, volume_air_liters: e.target.value }))}
-                                                placeholder="e.g. 950"
-                                            />
-                                        </div>
-                                        <div style={{ width: 110 }}>
-                                            <label style={xpLabel}>Substrate (kg)</label>
-                                            <input
-                                                type="number" step="0.01" min="0" style={xpInput}
-                                                value={dyeBath.bath.substrate_qty}
-                                                onChange={e => dyeBath.setBath(b => ({ ...b, substrate_qty: e.target.value }))}
-                                                placeholder="e.g. 100"
-                                            />
-                                        </div>
-                                        <div style={{ minWidth: 90 }}>
-                                            <label style={xpLabel} title="Derived from the bath volume and substrate weight — never typed separately, so the two can't disagree.">
-                                                Liquor Ratio
-                                            </label>
-                                            <div style={{ fontSize: 11, padding: '2px 0', color: '#333' }}>
-                                                {dyeBath.doses?.liquor_ratio != null ? `1 : ${fmtDose(dyeBath.doses.liquor_ratio, 2)}` : '—'}
-                                            </div>
-                                        </div>
-                                        {dyeBath.bathDirty && (
-                                            <div style={{ background: '#fff3cd', border: '1px solid #b8860b', color: '#7a5000', padding: '2px 6px', fontSize: 9 }}>
-                                                Saved with this log
-                                            </div>
-                                        )}
-                                    </div>
-
-                                    {dyeBath.run.recipe_id ? (
-                                        <DoseSheet
-                                            doses={dyeBath.doses}
-                                            emptyHint={dyeBath.doses ? 'This recipe has no chemical lines to weigh out.' : 'Loading the recipe...'}
-                                        />
-                                    ) : (
-                                        <div style={{ border: '1px solid #aca899', background: '#f5f4ee', padding: '4px 8px', fontSize: 10, color: '#555' }}>
-                                            This run carries no recipe, so there is nothing to dose. The bath volume is still recorded.
-                                        </div>
-                                    )}
-
-                                    {/* Chemicals actually weighed out. Recorded here, with the
-                                        output, because it is the same operator at the same
-                                        vessel — the Dyeing Orders tab keeps only the shade
-                                        result, which is QC at a later moment. */}
-                                    {dyeBath.rows.length > 0 && (
-                                        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 10 }}>
-                                            <thead>
-                                                <tr style={{ background: '#dddbd0' }}>
-                                                    <th style={{ padding: '2px 6px', textAlign: 'left', borderBottom: '1px solid #aca899' }}>Chemical Used</th>
-                                                    <th style={{ padding: '2px 6px', textAlign: 'right', borderBottom: '1px solid #aca899', width: 90 }}>Weigh Out</th>
-                                                    <th style={{ padding: '2px 6px', textAlign: 'right', borderBottom: '1px solid #aca899', width: 90 }}>Actual</th>
-                                                    <th style={{ padding: '2px 6px', textAlign: 'right', borderBottom: '1px solid #aca899', width: 70 }}>Variance</th>
-                                                </tr>
-                                            </thead>
-                                            <tbody>
-                                                {dyeBath.rows.map((row, idx) => {
-                                                    const planned = parseFloat(row.planned_qty);
-                                                    const actual = parseFloat(row.actual_qty);
-                                                    const variance = (isNaN(actual) ? 0 : actual) - (isNaN(planned) ? 0 : planned);
-                                                    return (
-                                                        <tr key={row.item_id || idx} style={{ background: idx % 2 === 0 ? '#fff' : '#f5f4ee' }}>
-                                                            <td style={{ padding: '2px 6px' }}>{row.item_name || row.item_id}</td>
-                                                            <td style={{ padding: '2px 6px', textAlign: 'right', color: '#555', whiteSpace: 'nowrap' }}>
-                                                                {isNaN(planned) ? '—' : `${fmtDose(planned, 3)}${row.dose_unit ? ` ${row.dose_unit}` : ''}`}
-                                                            </td>
-                                                            <td style={{ padding: '2px 4px' }}>
-                                                                <input
-                                                                    type="number" min="0" step="any"
-                                                                    style={{ ...xpInput, textAlign: 'right', height: 18, fontSize: 10 }}
-                                                                    value={row.actual_qty}
-                                                                    onChange={e => dyeBath.setActual(row.item_id, e.target.value)}
-                                                                    placeholder={row.dose_unit || ''}
-                                                                />
-                                                            </td>
-                                                            <td style={{ padding: '2px 6px', textAlign: 'right', color: Math.abs(variance) < 1e-9 ? '#555' : variance > 0 ? '#900' : '#1a5e1a', whiteSpace: 'nowrap' }}>
-                                                                {isNaN(actual) ? '—' : `${variance > 0 ? '+' : ''}${fmtDose(variance, 3)}`}
-                                                            </td>
-                                                        </tr>
-                                                    );
-                                                })}
-                                            </tbody>
-                                        </table>
-                                    )}
-                                    <div style={{ fontSize: 9, color: '#888' }}>
-                                        Chemicals are still deducted from stock by BOM percentage, not from these
-                                        figures — this records what the vessel actually took.
-                                    </div>
-                                </div>
-                            </LegendPanel>
-                        )}
 
                         {/* Material Consumption (WO mode) */}
                         {workOrder && materialRows.length > 0 && (

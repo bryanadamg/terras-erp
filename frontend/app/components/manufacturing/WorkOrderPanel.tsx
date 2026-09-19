@@ -115,7 +115,7 @@ interface WO {
     created_at?: string;
 }
 
-const emptyForm = { group_id: '', work_center_id: '', bom_operation_id: '', input_location_id: '', output_location_id: '', next_destination_work_center_id: '', next_destination_location_id: '', planned_duration_hours: '', qty: '', target_start_date: '', target_end_date: '', bath_volume_liters: '', lines: '' };
+const emptyForm = { group_id: '', work_center_id: '', bom_operation_id: '', input_location_id: '', output_location_id: '', next_destination_work_center_id: '', next_destination_location_id: '', planned_duration_hours: '', qty: '', target_start_date: '', target_end_date: '' };
 
 interface Props {
     manufacturingOrderId: string;
@@ -252,19 +252,6 @@ export default function WorkOrderPanel({
     const machineOptions = (list: any[]) =>
         list.map((wc: any) => ({ value: String(wc.id), label: wc.name, subLabel: wc.code || undefined }));
 
-    // The work center this form will actually create against — machine if picked,
-    // else the group/type row, which carries the same center_type (see
-    // effectiveWorkCenterId below, which the submit uses for the same reason).
-    const selectedCenterType = useMemo(() => {
-        const wcId = form.work_center_id || lockedGroupId || form.group_id || '';
-        if (!wcId) return '';
-        const wc = workCenters.find((w: any) => String(w.id) === String(wcId));
-        return String(wc?.center_type || '').toUpperCase();
-    }, [workCenters, form.work_center_id, form.group_id, lockedGroupId]);
-    // DYEING only, and matching the backend's own gate exactly (api/work_orders.py
-    // keys the recipe resolve + run seed off `center_type == "DYEING"`).
-    const isDyeingSelection = selectedCenterType === 'DYEING';
-
     const resetForm = () => {
         setForm({ ...emptyForm });
         setAddingRow(false);
@@ -328,12 +315,6 @@ export default function WorkOrderPanel({
                 qty: form.qty ? parseFloat(form.qty) : undefined,
                 target_start_date: form.target_start_date || null,
                 target_end_date: form.target_end_date || null,
-                // Plans the auto-created DyeingRun's bath so the Kartu Kerja prints
-                // weighed grams. Omitted (not zeroed) when blank — the backend then
-                // takes the recipe's liquor ratio x this WO's qty.
-                bath_volume_liters: isDyeingSelection && form.bath_volume_liters
-                    ? parseFloat(form.bath_volume_liters) : undefined,
-                lines: isDyeingSelection && form.lines ? parseInt(form.lines, 10) : undefined,
             });
             if (res && !res.ok) {
                 try {
@@ -378,12 +359,6 @@ export default function WorkOrderPanel({
                 qty: form.qty ? parseFloat(form.qty) : undefined,
                 target_start_date: form.target_start_date || null,
                 target_end_date: form.target_end_date || null,
-                // Plans the auto-created DyeingRun's bath so the Kartu Kerja prints
-                // weighed grams. Omitted (not zeroed) when blank — the backend then
-                // takes the recipe's liquor ratio x this WO's qty.
-                bath_volume_liters: isDyeingSelection && form.bath_volume_liters
-                    ? parseFloat(form.bath_volume_liters) : undefined,
-                lines: isDyeingSelection && form.lines ? parseInt(form.lines, 10) : undefined,
             });
             if (result?.warning === 'total_assigned_exceeds_mo_qty') {
                 setOverAssignWarning({ totalAssigned: result.total_assigned, moQty: result.mo_qty });
@@ -412,11 +387,6 @@ export default function WorkOrderPanel({
             qty: wo.qty != null ? String(wo.qty) : '',
             target_start_date: wo.target_start_date ? wo.target_start_date.slice(0, 10) : '',
             target_end_date: wo.target_end_date ? wo.target_end_date.slice(0, 10) : '',
-            // Creation-only: the bath is planned when the WO is cut and corrected by
-            // the operator at the vessel (PATCH /dyeing-runs/{id}/bath), so editing
-            // the WO is not where it moves. Reset so a stale figure can't be re-sent.
-            bath_volume_liters: '',
-            lines: '',
         });
     };
 
@@ -953,41 +923,6 @@ export default function WorkOrderPanel({
                                     </button>
                                 </div>
                             </div>
-                            {/* Dyeing only: the bath is planned here, not at the vessel, because
-                                the Kartu Kerja is printed off this WO and a card carrying g/L
-                                rates instead of grams is not an instruction. Blank is the normal
-                                case — the backend takes the recipe's liquor ratio x this qty. The
-                                operator still confirms (or corrects) the real bath when they log,
-                                and every g/L dose re-weighs against it. */}
-                            {isDyeingSelection && (
-                                <div style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 9, color: '#555', paddingLeft: 4, marginTop: 2 }}>
-                                    <span style={{ color: '#444', fontWeight: 'bold', whiteSpace: 'nowrap' }}>Volume Air:</span>
-                                    <input
-                                        type="number" min="0" step="any"
-                                        style={{ ...xpInput, width: 70 }}
-                                        value={form.bath_volume_liters}
-                                        onChange={e => setForm(f => ({ ...f, bath_volume_liters: e.target.value }))}
-                                        placeholder="auto"
-                                        title="Planned bath volume in litres. Leave blank to take the recipe's liquor ratio x the target qty."
-                                    />
-                                    <span>L</span>
-                                    <span style={{ color: '#aaa' }}>(blank = from recipe liquor ratio &times; qty)</span>
-                                    {/* How many ropes this load runs on. Half the dyeing monitor's
-                                        rate (yd/min per rope x lines) and planned here, with the
-                                        bath, because both are the planner's figures; the speed
-                                        itself is picked at the vessel. Seeds the run, where it
-                                        lives — a multi-bath WO may split at different counts. */}
-                                    <span style={{ color: '#444', fontWeight: 'bold', whiteSpace: 'nowrap', marginLeft: 8 }}>Line:</span>
-                                    <input
-                                        type="number" min="1" step="1"
-                                        style={{ ...xpInput, width: 46 }}
-                                        value={form.lines}
-                                        onChange={e => setForm(f => ({ ...f, lines: e.target.value }))}
-                                        placeholder="1"
-                                        title="How many ropes the vessel runs this load on. The dyeing monitor's rate is yd/min per rope x this."
-                                    />
-                                </div>
-                            )}
                             {(form.input_location_id || form.output_location_id) && (
                                 <div style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 9, color: '#555', paddingLeft: 4 }}>
                                     <LocationChip direction="in"
