@@ -177,3 +177,44 @@ def test_a_recorded_dose_is_never_repriced(client, auth_headers, async_db_sessio
     row = next(c for c in body["chemicals"] if c["item_name"] == "Levelling Agent")
     assert float(row["actual_qty"]) == 1550.0
     assert float(row["planned_qty"]) == 1600.0   # still the 800 L bath it was weighed against
+
+
+def test_the_clock_is_not_the_bath(client, auth_headers, async_db_session):
+    """The dyeing monitor is a timer: Start stamps it and nothing else.
+
+    A run configured in Dyeing Orders is already IN_PROGRESS (it has water in it),
+    so welding the clock to the bath left it unstartable — and `/complete` then
+    back-filled `started_at` from `completed_at`, reporting a zero-minute run window
+    for every batch the monitor scores.
+    """
+    _wo_id, run = _setup(client, auth_headers, async_db_session, liquor_ratio=8)
+    body = _configure(client, auth_headers, run["id"], volume_air_liters=800)
+    assert body["status"] == "IN_PROGRESS"     # the bath is filled
+    assert body["started_at"] is None          # the machine is not
+
+    res = client.post(f"/api/dyeing-runs/{run['id']}/start", json={}, headers=auth_headers)
+    assert res.status_code == 200, res.text
+    started = res.json()
+    assert started["started_at"] is not None
+    assert float(started["volume_air_liters"]) == 800.0   # the stamp moved no bath
+
+    # The clock is stopped by hand too, and only then does the window close.
+    res = client.post(f"/api/dyeing-runs/{run['id']}/complete", json={}, headers=auth_headers)
+    assert res.status_code == 200, res.text
+    assert res.json()["completed_at"] is not None
+
+
+def test_a_bare_run_can_still_be_started(client, auth_headers, async_db_session):
+    """No bath recorded is not a reason to refuse the clock — the vessel is turning."""
+    _wo_id, run = _setup(client, auth_headers, async_db_session, liquor_ratio=None)
+
+    res = client.post(f"/api/dyeing-runs/{run['id']}/start", json={}, headers=auth_headers)
+    assert res.status_code == 200, res.text
+    body = res.json()
+    assert body["started_at"] is not None
+    assert body["volume_air_liters"] is None
+    assert body["status"] == "IN_PROGRESS"
+
+    # Pressing it twice must not reset the clock the supervisor is reading.
+    again = client.post(f"/api/dyeing-runs/{run['id']}/start", json={}, headers=auth_headers)
+    assert again.status_code == 400, again.text

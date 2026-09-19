@@ -803,15 +803,18 @@ async def start_dyeing_run(
     db: AsyncSession = Depends(get_async_db),
     current_user: User = Depends(require_permission('work_order.log')),
 ):
-    """Start the run = fill the bath.
+    """Start the clock. A stamp, not a production act.
 
-    The bath volume is taken here rather than at completion because this is the
-    moment it physically exists, and the dose sheet weighed from it has to be in the
-    operator's hand *before* the chemicals go in. The doses are materialized as
-    `DyeingRunChemical.planned_qty` in the same transaction, snapshotting them
-    against later recipe edits the way MOPlannedComponent does for BOM lines — what
-    the operator was told to weigh must stay readable after someone retunes the
-    recipe.
+    The dyeing monitor is a timer: somebody presses Start when the vessel begins
+    turning and Complete when it stops, and the kg logged between those two stamps is
+    what the yard rate is scored against (`dyeing_monitor_service.sum_actual_qty`
+    windows on exactly this pair). Nothing else about the batch is decided here.
+
+    So this does NOT require a bath. The bath is configured on the run in Dyeing
+    Orders, which is also what freezes the dose sheet — welding the clock to the
+    volume meant a run set up beforehand could never be started, and closed with a
+    zero-minute window. A volume sent here is still honoured (and re-prices the
+    unweighed rows) for a floor that fills the vessel at the same moment it starts.
     """
     payload = payload or DyeingRunStartPayload()
     result = await db.execute(
@@ -821,12 +824,14 @@ async def start_dyeing_run(
     if not run:
         raise HTTPException(status_code=404, detail="Dyeing run not found")
     # Gated on the facts rather than the derived status: `COMPLETED` on a run can
-    # now mean "its WO closed" as well as "this bath was closed", and only the
-    # latter is a reason to refuse. Same pair the IN_PROGRESS rule reads.
+    # mean "its WO closed" as well as "this bath was closed", and only the latter is
+    # a reason to refuse. The clock is the only fact this route owns, so the only
+    # thing that can already be done is the clock — a filled bath is not a started
+    # one now that the bath is set up ahead of the run.
     if run.completed_at is not None:
         raise HTTPException(status_code=400, detail="Run is already completed")
-    if run.started_at is not None or run.volume_air_liters is not None:
-        raise HTTPException(status_code=400, detail="Run is already started — correct its bath instead")
+    if run.started_at is not None:
+        raise HTTPException(status_code=400, detail="Run is already started")
 
     for v in (payload.volume_air_liters, payload.liquor_ratio, payload.substrate_qty):
         if v is not None and v <= 0:
@@ -840,15 +845,11 @@ async def start_dyeing_run(
         ),
         payload.liquor_ratio if payload.liquor_ratio is not None else run.liquor_ratio,
     )
-    if not volume:
-        # Starting a bath nobody can dose is not a real start — the g/L half of every
-        # recipe is unweighable without this number.
-        raise HTTPException(
-            status_code=422,
-            detail="Enter the bath volume (or a liquor ratio and substrate qty) before starting — the chemical doses are calculated from it",
-        )
-    run.volume_air_liters = volume
-    run.liquor_ratio = ratio
+    # No bath is not an error: the vessel can be started before anyone records the
+    # water, and a run configured in Dyeing Orders already carries it.
+    if volume:
+        run.volume_air_liters = volume
+        run.liquor_ratio = ratio
     run.started_at = datetime.now(timezone.utc)
     # `started_at` is the fact; the status follows from it. Derived through the
     # service (which reads the WO's own status), never assigned here — see
@@ -856,18 +857,22 @@ async def start_dyeing_run(
     status_before = run.status
     await dyeing_run_service.sync_wo_runs(db, run.work_order_id)
 
-    # Materialize the dose sheet — or re-price one the run was configured with in
-    # Dyeing Orders, since the bath the floor just filled is rarely that figure
-    # litre-for-litre and every g/L row has to follow it.
+    # Only bites when a volume came in with the stamp: re-prices the rows nobody has
+    # weighed yet. A no-op on a run already configured in Dyeing Orders.
     dosed = await dyeing_run_service.price_dose_sheet(db, run)
     await db.commit()
     await audit_service.log_activity(
         db, current_user.id, "STATUS_CHANGE", "DyeingRun", run_id,
         details=(
-            f"Started dyeing run {run.run_number} — bath {volume} L"
+            f"Started dyeing run {run.run_number}"
+            + (f" — bath {volume} L" if volume else "")
             + (f", {dosed} chemical doses calculated" if dosed else "")
         ),
-        changes={"status": [status_before, run.status], "volume_air_liters": [None, volume]},
+        changes={
+            "status": [status_before, run.status],
+            "started_at": [None, str(run.started_at)],
+            **({"volume_air_liters": [None, volume]} if volume else {}),
+        },
     )
     await manager.broadcast({"type": "DYEING_RUN_UPDATE", "wo_id": str(run.work_order_id)})
     result = await db.execute(
