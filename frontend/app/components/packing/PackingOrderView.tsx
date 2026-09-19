@@ -1876,7 +1876,7 @@ function PackingOrderDetail({ po: initialPo, itemById, locationById, locPickerTr
                 // its own (packing to stock) still sees the whole pool.
                 const vq = po.variant_key ? `&variant_key=${encodeURIComponent(po.variant_key)}` : '';
                 const res = await authFetch(
-                    `${API_BASE}/batches?item_id=${po.item_id}&location_id=${po.source_location_id}${vq}&limit=200&with_source_lots=true`
+                    `${API_BASE}/batches?item_id=${po.item_id}&location_id=${po.source_location_id}${vq}&limit=200&with_source_lots=true&for_packing_order_id=${po.id}`
                 );
                 const list = res.ok ? (await res.json() || []) : [];
                 if (!alive) return;

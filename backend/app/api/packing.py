@@ -895,6 +895,12 @@ async def add_packing_completion(
             item_id=po.item_id,
             batch_ids=[(l.batch_id if l else None) for l in lots],
         )
+        # Ownership gate, checked up front for the same reason: a lot claimed off
+        # the hold desk by another open order is not this order's to draw from.
+        # The picker already hides those, but the picker is UI — this is the gate.
+        await packing_service.assert_lots_unlocked(
+            db, po.id, [(l.batch_id if l else None) for l in lots],
+        )
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
 
