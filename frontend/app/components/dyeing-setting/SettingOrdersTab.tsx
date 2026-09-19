@@ -624,6 +624,9 @@ export default function SettingOrdersTab({ items, authFetch }: Props) {
                             const isGroupHead = grouped && (idx === 0 || groupKeyOf(sortedWOs[idx - 1]) !== gKey);
                             const rowsInGroup = isGroupHead ? groupRows(gKey) : [];
                             const pickedInGroup = rowsInGroup.filter((w: any) => selected.has(String(w.id)));
+                            // The group IS the setup, so ticking nothing means "all of it".
+                            // Ticking is for leaving an order OUT.
+                            const setupWos = pickedInGroup.length ? pickedInGroup : rowsInGroup;
                             return (
                                 <React.Fragment key={id}>
                                     {isGroupHead && (
@@ -659,14 +662,21 @@ export default function SettingOrdersTab({ items, authFetch }: Props) {
                                                     <span style={{ marginLeft: 'auto' }} />
                                                     {canManage && (
                                                         <XPActionButton
-                                                            tone={pickedInGroup.length >= 2 ? 'primary' : 'neutral'}
+                                                            tone="primary"
                                                             icon="bi-thermometer-half"
-                                                            label={`Set Up Machine${pickedInGroup.length >= 2 ? ` (${pickedInGroup.length})` : ''}`}
-                                                            title={pickedInGroup.length >= 2
-                                                                ? 'One machine, one setup — every selected order takes these settings'
-                                                                : 'Tick two or more orders in this group to set them up together'}
-                                                            disabled={pickedInGroup.length < 2}
-                                                            onClick={() => handleOpenBulk(pickedInGroup)}
+                                                            label={`Set Up Machine (${setupWos.length})`}
+                                                            title={pickedInGroup.length
+                                                                ? 'One machine, one setup — every ticked order takes these settings'
+                                                                : 'One machine, one setup — every order in this group takes these settings. Tick rows to leave some out.'}
+                                                            onClick={() => {
+                                                                // A group of one shares nothing: hand it to the
+                                                                // single-run panel, which is the same form.
+                                                                if (setupWos.length < 2) {
+                                                                    handleOpenCreateRun(setupWos[0]);
+                                                                    return;
+                                                                }
+                                                                handleOpenBulk(setupWos);
+                                                            }}
                                                         />
                                                     )}
                                                 </div>
