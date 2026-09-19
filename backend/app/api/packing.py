@@ -721,6 +721,27 @@ async def update_packing_order(
 
     await _assert_work_center(db, payload.work_center_id)
 
+    # Closing gate, checked BEFORE anything is written to the order. A lot claimed
+    # off the Quarantine Packing desk is a physical pile this order took ownership
+    # of, so closing with stock still on it would strand that stock: nothing else
+    # may draw from a locked lot, and the lock only lifts by closing. `qty_target`
+    # does not enter into it — it is a snapshot of what was free when the order was
+    # planned, and over-packing the remainder is the correct floor behaviour, the
+    # same way an MO's qty is a target and not a ceiling.
+    #
+    # Ordering is load-bearing: this runs a SELECT, the session autoflushes on it,
+    # and validating after the setattr loop below would therefore persist the very
+    # status it is about to refuse.
+    if payload.status == "COMPLETED":
+        left = await packing_service.undrained_locked_lots(db, po)
+        if left:
+            uom = (po.item.uom if po.item else "") or ""
+            detail = ", ".join(f"{bn} ({qty:g} {uom})".strip() for bn, qty in left)
+            raise HTTPException(
+                status_code=400,
+                detail=f"Pack the held lots out before closing {po.code} — still on the desk: {detail}",
+            )
+
     if payload.pack_basis is not None:
         po.pack_basis = _clean_basis(payload.pack_basis)
 
