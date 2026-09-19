@@ -32,7 +32,7 @@ from app.schemas import (
     DyeingRunCreate, DyeingRunBulkCreate, DyeingRunUpdate, DyeingRunCompletePayload,
     DyeingRunResponse,
     DyeingRunStartPayload, DyeingRunBathUpdate, DyeingRunChemicalsUpdate, DyeDoseResponse,
-    SettingRunCreate, SettingRunCompletePayload, SettingRunResponse,
+    SettingRunCreate, SettingRunBulkCreate, SettingRunCompletePayload, SettingRunResponse,
 )
 
 router = APIRouter()
@@ -619,7 +619,6 @@ async def configure_dyeing_bath_bulk(
         open_runs.setdefault(str(run.work_order_id), run)
 
     bath_group_id = uuid.uuid4()
-    touched = []
     for wo in wos:
         run = open_runs.get(str(wo.id))
         if run is None:
@@ -652,7 +651,6 @@ async def configure_dyeing_bath_bulk(
         await dyeing_run_service.price_dose_sheet(db, run)
         # Derived, never typed: water in the vessel is what makes a run IN_PROGRESS.
         await dyeing_run_service.sync_wo_runs(db, wo.id, wo_status=wo.status)
-        touched.append(run)
 
     await db.commit()
     db.expire_all()  # expire_on_commit=False: dose rows were added under these runs
@@ -1259,6 +1257,99 @@ async def create_setting_run(
         details=f"Created setting run #{run.run_number} for WO {run.work_order_id}", changes={}
     )
     return _enrich_setting_run(run)
+
+
+@router.post("/setting-runs/bulk", response_model=list[SettingRunResponse])
+async def configure_setting_runs_bulk(
+    payload: SettingRunBulkCreate,
+    db: AsyncSession = Depends(get_async_db),
+    current_user: User = Depends(require_permission('work_order.log')),
+):
+    """Set one stenter up for several work orders at once.
+
+    Mirrors the dyeing side, minus the bath: these runs share a machine SETUP, not a
+    vessel of water, so there is no group id to collapse them by — cloth goes through
+    a stenter one piece after another.
+
+    A setting WO is not cut with a run the way a dyeing WO is, so this creates one
+    per work order; a WO that already has an open run has it configured instead, and
+    a closed run is left alone as history.
+
+    Refuses a mixed machine and a mixed shade for the same reason the dye side does:
+    one setup is one machine running one colour's cloth.
+    """
+    res = await db.execute(
+        select(WorkOrder)
+        .options(joinedload(WorkOrder.manufacturing_order))
+        .filter(WorkOrder.id.in_(payload.work_order_ids))
+    )
+    wos = res.unique().scalars().all()
+    found = {str(w.id) for w in wos}
+    missing = [str(i) for i in payload.work_order_ids if str(i) not in found]
+    if missing:
+        raise HTTPException(status_code=404, detail=f"Work order(s) not found: {', '.join(missing)}")
+
+    if len({str(w.work_center_id) for w in wos}) > 1:
+        raise HTTPException(
+            status_code=422,
+            detail="These work orders are on different machines — one setup is one machine",
+        )
+    if len({str(w.manufacturing_order.color_id) if w.manufacturing_order else None for w in wos}) > 1:
+        raise HTTPException(
+            status_code=422,
+            detail="These work orders are different colours — set one shade up at a time",
+        )
+
+    open_runs = {}
+    for run in (await db.execute(
+        select(SettingRun)
+        .filter(SettingRun.work_order_id.in_([w.id for w in wos]), SettingRun.completed_at.is_(None))
+        .order_by(SettingRun.run_number)
+    )).scalars().all():
+        open_runs.setdefault(str(run.work_order_id), run)
+
+    touched = []
+    for wo in wos:
+        run = open_runs.get(str(wo.id))
+        if run is None:
+            run = SettingRun(
+                work_order_id=wo.id,
+                run_number=await _get_next_run_number(db, SettingRun, wo.id),
+                substrate_qty=wo.qty or 0,
+                status="PENDING",
+            )
+            db.add(run)
+        for field in (
+            "machine_name", "temperature_c", "speed_mpm", "width_cm",
+            "overfeed_pct", "operator_name", "notes",
+        ):
+            value = getattr(payload, field)
+            if value is not None:
+                setattr(run, field, value)
+        await db.flush()
+        touched.append(run.id)   # the id, not the instance: see below
+
+    await db.commit()
+    # expire_on_commit=False, but `expire_all` is still needed for the rows just
+    # created — and once expired, touching an attribute on one of those instances
+    # would lazy-load inside an async session (MissingGreenlet). Hence the ids were
+    # taken above and the rows are re-read in one statement here.
+    db.expire_all()
+    rows = (await db.execute(
+        select(SettingRun).options(*_setting_run_opts())
+        .filter(SettingRun.id.in_(touched))
+        .order_by(SettingRun.created_at)
+    )).scalars().all()
+    for row in rows:
+        await audit_service.log_activity(
+            db, str(current_user.id), "UPDATE", "SettingRun", str(row.id),
+            details=(
+                f"Setting run #{row.run_number} set up with {len(rows)} work orders "
+                "on one machine"
+            ),
+            changes={},
+        )
+    return [_enrich_setting_run(r) for r in rows]
 
 
 @router.post("/setting-runs/{run_id}/start", response_model=SettingRunResponse)

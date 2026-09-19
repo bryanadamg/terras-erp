@@ -3113,6 +3113,29 @@ class SettingRunCreate(BaseModel):
     operator_name: str | None = None
     notes: str | None = None
 
+class SettingRunBulkCreate(BaseModel):
+    """One stenter setup, several work orders.
+
+    The same convenience as the dyeing side and for the same reason — a shade's
+    orders are set on one machine at one set of settings, and typing width, overfeed
+    and temperature into three forms is the data entry this replaces.
+
+    No bath and therefore no `bath_group_id`: cloth goes through a stenter one piece
+    after another, so these runs share a SETUP, not a vessel of water. Nothing about
+    them has to be collapsed back to a single physical thing.
+
+    `substrate_qty` is per-WO and defaults to each work order's own qty.
+    """
+    work_order_ids: list[UUID] = Field(min_length=2)
+    machine_name: str | None = None
+    temperature_c: float | None = None
+    speed_mpm: float | None = None
+    width_cm: float | None = None
+    overfeed_pct: float | None = None
+    operator_name: str | None = None
+    notes: str | None = None
+
+
 class SettingRunCompletePayload(BaseModel):
     output_batch_number: str
     actual_width_cm: float | None = None
