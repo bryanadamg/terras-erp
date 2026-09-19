@@ -708,6 +708,12 @@ async def list_work_orders_flat(
     search: str = Query(""),
     component_item_id: str = Query(""),
     unprinted: bool = Query(False),
+    order_by: str = Query(
+        "",
+        description="'color' groups the window by the MO's Color Library shade, then "
+                    "by machine — what the Dyeing/Setting Orders tabs page through to "
+                    "load one bath's worth of work orders together. Default is newest first.",
+    ),
     window: PageWindow = Depends(PageParams(default_size=50)),
     db: AsyncSession = Depends(get_async_db),
     current_user: User = Depends(require_any_permission("work_order.view", "manufacturing_order.view")),
@@ -805,8 +811,31 @@ async def list_work_orders_flat(
                 selectinload(ManufacturingOrder.attribute_values).joinedload(AttributeValue.attribute),
             ),
         )
-        .order_by(WorkOrderModel.created_at.desc(), WorkOrderModel.sequence)
     )
+    if order_by == "color":
+        # Colour first, then machine: the two halves of "one bath". This has to be an
+        # ORDER BY and not a client-side regroup, because the list is windowed — a
+        # shade with 30 WOs would otherwise group as 25 on this page and 5 on the
+        # next, and a bulk create would silently cover only what was loaded (the
+        # sort-must-move-with-the-window trap in CLAUDE.md).
+        #
+        # NULLS LAST: greige and every unshaded order sink below the colours rather
+        # than forming a phantom first group. `id` is the unique tiebreaker, without
+        # which rows jump between pages.
+        data_stmt = (
+            data_stmt
+            .outerjoin(Color, ManufacturingOrder.color_id == Color.id)
+            .outerjoin(WorkCenter, WorkOrderModel.work_center_id == WorkCenter.id)
+            .order_by(
+                Color.code.is_(None), Color.code,
+                WorkCenter.name.is_(None), WorkCenter.name,
+                WorkOrderModel.created_at.desc(), WorkOrderModel.id,
+            )
+        )
+    else:
+        data_stmt = data_stmt.order_by(
+            WorkOrderModel.created_at.desc(), WorkOrderModel.sequence
+        )
     data_stmt = window.apply(data_stmt)
 
     wos = (await db.execute(data_stmt)).scalars().unique().all()
