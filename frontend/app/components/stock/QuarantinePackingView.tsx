@@ -315,6 +315,12 @@ export default function QuarantinePackingView() {
             source_location_id: sourceLot.location_id,
             qty_target: String(qtyFree),
         });
+        // The lots themselves, not just their total. The new order LOCKS these:
+        // nothing else may draw from them, and it cannot close until they are
+        // drained — `qty_target` above is only what was free at this moment, so
+        // the pile, not the number, is what the order is answerable for.
+        const lotIds = free.map(l => l.batch_id).filter(Boolean) as string[];
+        if (lotIds.length) params.set('batch_ids', lotIds.join(','));
         if (g.sales_order_id) params.set('sales_order_id', g.sales_order_id);
         if (g.bom_size_id) params.set('bom_size_id', g.bom_size_id);
         // The size as text as well as the id: an SO line carries a Size-master id,

@@ -1285,6 +1285,10 @@ function PackingOrderForm({ locPickerTreeOptions, machineOptions, defaultSourceL
                 // the old variant-less behaviour.
                 color_id: initialValues?.color_id || null,
                 attribute_value_ids: initialValues?.combo_value_id ? [initialValues.combo_value_id] : [],
+                // Same deep link, same reasoning: the lots it named are claimed by
+                // this order outright. Empty for a hand-made order, which draws
+                // from whatever is free at pack time as before.
+                locked_batch_ids: initialValues?.locked_batch_ids || [],
                 notes: notes || null,
                 // No packaging plan on the order: the box is picked per carton line
                 // in the pack modal, where the packer is holding it. Planning it

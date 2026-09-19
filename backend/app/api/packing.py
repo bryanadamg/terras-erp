@@ -676,11 +676,22 @@ async def create_packing_order(
             notes=m.notes,
         ))
 
+    # Lots claimed off the Quarantine Packing desk. Locking them here rather than
+    # at pack time is the point: the deep link's `qty_target` is a snapshot of
+    # what was free, so between the link and the first pack event a second order
+    # could otherwise be planned over the same physical pile.
+    try:
+        claimed = await packing_service.claim_lots(db, po, payload.locked_batch_ids)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
     await db.commit()
 
     await audit_service.log_activity(
         db, user_id=current_user.id, action="CREATE", entity_type="PackingOrder",
-        entity_id=str(po.id), details=f"Created packing order {code} for {item.code}",
+        entity_id=str(po.id),
+        details=f"Created packing order {code} for {item.code}"
+                + (f"; holds {len(claimed)} lot(s): {', '.join(claimed)}" if claimed else ""),
     )
     try:
         await manager.broadcast({"type": "PACKING_UPDATE", "id": str(po.id)})
