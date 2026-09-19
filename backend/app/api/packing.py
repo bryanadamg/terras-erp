@@ -638,12 +638,17 @@ async def create_packing_order(
     await _apply_alt_unit(db, po, payload, so_line=so_line, item=item)
     # Last resort: the ordered qty of the line being packed. Restated into the
     # item's stock UOM rather than taken raw — `SalesOrderLine.qty` is in yards.
+    # Through `order_weight_spec`, like every other figure this order derives:
+    # the g/y sampled at creation is what THIS cloth weighs, and reading the
+    # item master here would make the kg target the one number on the order
+    # computed against the style's development estimate.
     if float(po.qty_target or 0) <= 0 and so_line is not None:
+        sampled_per_unit, sampled_unit = packing_service.order_weight_spec(po, item)
         po.qty_target = so_fulfilment_service.ordered_qty_in_stock_uom(
             so_line.qty, item.uom,
             qty_kg=so_line.qty_kg,
-            weight_per_unit=item.weight_per_unit,
-            weight_unit=item.weight_unit,
+            weight_per_unit=sampled_per_unit,
+            weight_unit=sampled_unit,
         )
     if float(po.qty_target or 0) <= 0:
         raise HTTPException(status_code=400, detail="Target quantity must be greater than zero")
