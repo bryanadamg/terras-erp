@@ -30,8 +30,8 @@ const API_BASE = (process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:8000/api
 
 const WO_PAGE_SIZE = 25;
 const STATUSES = ['PENDING', 'IN_PROGRESS', 'COMPLETED', 'CANCELLED'];
-/** 14 columns: chevron + 12 data + actions. */
-const COLS = 14;
+/** 15 columns: chevron + select + 12 data + actions. */
+const COLS = 15;
 
 const SHADE_COLORS: Record<string, { bg: string; color: string }> = {
     PASS: { bg: '#d4edda', color: '#155724' },
@@ -177,6 +177,11 @@ export default function DyeingOrdersTab({ items, recipes, authFetch }: DyeingOrd
     // as the row object rather than an id: paging away from it must not strip the
     // form (the retained-selection trap in CLAUDE.md).
     const [editRun, setEditRun] = useState<any | null>(null);
+    // The work orders going into ONE bath. Non-null puts the run panel in bulk mode:
+    // the fields that describe the vessel are typed once and every selected order's
+    // run takes them (POST /dyeing-runs/bulk).
+    const [bulkWos, setBulkWos] = useState<any[] | null>(null);
+    const [selected, setSelected] = useState<Set<string>>(new Set());
     const [chemRows, setChemRows] = useState<ChemRow[]>([]);
     const [showCompleteModal, setShowCompleteModal] = useState<any | null>(null);
     const [createForm, setCreateForm] = useState<CreateForm>(emptyCreateForm);
@@ -202,7 +207,11 @@ export default function DyeingOrdersTab({ items, recipes, authFetch }: DyeingOrd
         endpoint: `${API_BASE}/work-orders`,
         authFetch,
         pageSize: WO_PAGE_SIZE,
-        params: { center_type: 'DYEING', status: filterStatus, work_center_id: filterWC },
+        // `order_by: 'color'` is what makes grouping possible at all: the list is
+        // windowed, so a shade with 30 work orders would otherwise group as 25 on
+        // this page and 5 on the next, and a bath set up from the group would
+        // silently cover only the loaded half.
+        params: { center_type: 'DYEING', status: filterStatus, work_center_id: filterWC, order_by: 'color' },
     });
 
     // ── Baths for the visible page, in one call ───────────────────────────────
@@ -243,6 +252,17 @@ export default function DyeingOrdersTab({ items, recipes, authFetch }: DyeingOrd
 
     const reloadRuns = useCallback(() => setRunsNonce(n => n + 1), []);
 
+    // How many runs share each bath, across every WO on this page. A shared bath is
+    // one vessel of water recorded once per order, so a dose sheet read on its own
+    // is one Nth of a story — the chip is what says so.
+    const bathSizes = useMemo(() => {
+        const counts: Record<string, number> = {};
+        Object.values(runsByWo).flat().forEach((r: any) => {
+            if (r?.bath_group_id) counts[String(r.bath_group_id)] = (counts[String(r.bath_group_id)] || 0) + 1;
+        });
+        return counts;
+    }, [runsByWo]);
+
     // ── Vessels (dyeing machines) for the filter ──────────────────────────────
     const dyeVessels = useMemo(() => (workCenters || [])
         .filter((wc: any) => isMachineWC(wc) && ['DYEING', 'CELUP'].includes(String(wc.center_type || '').toUpperCase()))
@@ -260,6 +280,33 @@ export default function DyeingOrdersTab({ items, recipes, authFetch }: DyeingOrd
         shade: (w: any) => summarize(runsByWo[String(w.id)] || []).shade,
         status: (w: any) => w.status,
         created: (w: any) => w.created_at,
+    });
+
+    // One bath = one shade on one vessel, so that pair is the group key. Orders with
+    // no shade yet (greige, or a lab dip still pending) key on their lab dip code so
+    // they at least group with each other rather than forming one bucket of
+    // everything unshaded.
+    const groupKeyOf = (wo: any) =>
+        `${wo.color_code || wo.labdip_variant_code || ''}|${wo.work_center_id || ''}`;
+
+    // Grouping follows the server's own ordering, so it is switched off the moment a
+    // column sort re-orders the page — a group header over rows that are no longer
+    // contiguous would be a lie.
+    const grouped = !sort?.key;
+
+    /** The rows of the group `wo` belongs to, on this page. Server-ordered, so they
+     *  are contiguous; the count is still page-local and the header says so. */
+    const groupRows = useCallback((key: string) =>
+        sortedWOs.filter((w: any) => groupKeyOf(w) === key), [sortedWOs]);
+
+    // A selection that outlives the page it was made on would set up a bath from
+    // orders nobody can see.
+    useEffect(() => { setSelected(new Set()); }, [page, filterStatus, filterWC, searchInput]);
+
+    const toggleSelected = (id: string) => setSelected(prev => {
+        const next = new Set(prev);
+        next.has(id) ? next.delete(id) : next.add(id);
+        return next;
     });
 
     const listBodyRef = useRef<HTMLTableSectionElement>(null);
@@ -351,6 +398,27 @@ export default function DyeingOrdersTab({ items, recipes, authFetch }: DyeingOrd
         }
     };
 
+    /** Set one bath up across several orders. The recipe is matched off the first —
+     *  they are one shade by construction, so any of them answers the same. */
+    const handleOpenBulk = async (wos: any[]) => {
+        setCreateWo(wos[0]);
+        setBulkWos(wos);
+        setEditRun(null);
+        setChemRows([]);
+        setDosePreview(null);
+        setErrorMsg(null);
+        setCreateForm(emptyCreateForm);
+        try {
+            const res = await authFetch(`${API_BASE}/dye-recipes/match?work_order_id=${wos[0].id}`);
+            if (res.ok) {
+                const data = await res.json();
+                if (data.match?.id) setCreateForm(f => ({ ...f, recipe_id: String(data.match.id) }));
+            }
+        } catch {
+            // silently fail — user can still select manually
+        }
+    };
+
     const setChemActual = (itemId: string, value: string) =>
         setChemRows(prev => prev.map(r => r.item_id === itemId ? { ...r, actual_qty: value } : r));
 
@@ -385,6 +453,39 @@ export default function DyeingOrdersTab({ items, recipes, authFetch }: DyeingOrd
                 notes: createForm.notes || null,
                 input_batch_id: createForm.input_batch_id || null,
             };
+            if (bulkWos) {
+                const res = await authFetch(`${API_BASE}/dyeing-runs/bulk`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    // No substrate and no input lot: those are per-order, and the
+                    // backend defaults each run's load to its own work order's qty.
+                    body: JSON.stringify({
+                        work_order_ids: bulkWos.map(w => String(w.id)),
+                        recipe_id: fields.recipe_id,
+                        liquor_ratio: fields.liquor_ratio,
+                        volume_air_liters: fields.volume_air_liters,
+                        lines: fields.lines,
+                        yards_per_min: fields.yards_per_min,
+                        machine_speed: fields.machine_speed,
+                        machine_pressure: fields.machine_pressure,
+                        temperature_c: fields.temperature_c,
+                        duration_min: fields.duration_min,
+                        operator_name: fields.operator_name,
+                        notes: fields.notes,
+                    }),
+                });
+                if (!res.ok) {
+                    const err = await res.json().catch(() => ({}));
+                    setErrorMsg(err.detail || 'Failed to set the bath up.');
+                    return;
+                }
+                setCreateWo(null);
+                setBulkWos(null);
+                setCreateForm(emptyCreateForm);
+                setSelected(new Set());
+                reloadRuns();
+                return;
+            }
             const res = editRun
                 ? await authFetch(`${API_BASE}/dyeing-runs/${editRun.id}`, {
                     method: 'PATCH',
@@ -632,7 +733,15 @@ export default function DyeingOrdersTab({ items, recipes, authFetch }: DyeingOrd
                                                     const bathFilled = !!run.started_at || run.volume_air_liters != null;
                                                     return (
                                                         <tr key={run.id} style={lvSubRow(ri)}>
-                                                            <td style={{ ...subTd, fontWeight: 'bold' }}>#{run.run_number}</td>
+                                                            <td style={{ ...subTd, fontWeight: 'bold' }}>
+                                                                #{run.run_number}
+                                                                {run.bath_group_id && (bathSizes[String(run.bath_group_id)] || 0) > 1 && (
+                                                                    <span
+                                                                        title={`One bath shared with ${(bathSizes[String(run.bath_group_id)] || 1) - 1} other work order(s) — the volume and every dose below are the whole vessel's, counted once per order`}
+                                                                        style={{ marginLeft: 3, borderRadius: CHIP_RADIUS, fontSize: 8, fontWeight: 'bold', color: '#1d4f7c', background: '#dbeafe', border: '1px solid #8fb6d9', padding: '0 3px', whiteSpace: 'nowrap' }}
+                                                                    >x{bathSizes[String(run.bath_group_id)]}</span>
+                                                                )}
+                                                            </td>
                                                             <td style={{ ...subTd, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={recipeName || undefined}>
                                                                 {recipeName ?? <Dash />}
                                                             </td>
@@ -732,6 +841,7 @@ export default function DyeingOrdersTab({ items, recipes, authFetch }: DyeingOrd
                 >
                     <colgroup>
                         <col style={{ width: LV_EXPANDER_COL_W }} /> {/* chevron */}
+                        <col style={{ width: 26 }} />     {/* select */}
                         <col style={{ width: '13%' }} />  {/* WO */}
                         <col style={{ width: 170 }} />    {/* MO */}
                         <col style={{ width: '14%' }} />  {/* Product */}
@@ -749,6 +859,7 @@ export default function DyeingOrdersTab({ items, recipes, authFetch }: DyeingOrd
                     <thead>
                         <tr>
                             <th style={{ ...thStyle, width: 22, padding: '3px 4px' }} />
+                            <th style={{ ...thStyle, width: 26, padding: '3px 4px' }} />
                             {([
                                 ['WO', 'code'], ['MO', 'mo'], ['Product', 'product'], ['Variant', ''],
                                 ['Vessel', 'wc'], ['Recipe', 'recipe'], ['Substrate', ''], ['Bath (L)', ''],
@@ -779,8 +890,64 @@ export default function DyeingOrdersTab({ items, recipes, authFetch }: DyeingOrd
                             const sum = summarize(runsByWo[id] || []);
                             const cur = sum.current;
                             const toggleRow = () => setExpandedId(prev => prev === id ? null : id);
+                            // The first row of a shade-on-a-vessel carries the group header:
+                            // the server orders by exactly this pair, so equal keys are
+                            // adjacent and one comparison with the row above is enough.
+                            const gKey = groupKeyOf(wo);
+                            const isGroupHead = grouped && (idx === 0 || groupKeyOf(sortedWOs[idx - 1]) !== gKey);
+                            const rowsInGroup = isGroupHead ? groupRows(gKey) : [];
+                            const pickedInGroup = rowsInGroup.filter((w: any) => selected.has(String(w.id)));
                             return (
                                 <React.Fragment key={id}>
+                                    {isGroupHead && (
+                                        <tr style={{ background: '#ece9d8' }}>
+                                            <td style={{ ...tdBase, padding: '2px 4px', textAlign: 'center' }}>
+                                                <input
+                                                    type="checkbox"
+                                                    title="Select every order in this group that is on this page"
+                                                    checked={rowsInGroup.length > 0 && pickedInGroup.length === rowsInGroup.length}
+                                                    onChange={() => setSelected(prev => {
+                                                        const next = new Set(prev);
+                                                        const all = pickedInGroup.length === rowsInGroup.length;
+                                                        rowsInGroup.forEach((w: any) => all ? next.delete(String(w.id)) : next.add(String(w.id)));
+                                                        return next;
+                                                    })}
+                                                />
+                                            </td>
+                                            <td colSpan={COLS - 1} style={{ ...tdBase, padding: '2px 6px' }}>
+                                                <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+                                                    <VariantChips
+                                                        colorVariant={wo.color_label}
+                                                        colorCode={wo.color_code}
+                                                        colorName={wo.color_name}
+                                                        colorHex={wo.color_hex}
+                                                        labdipCode={wo.labdip_variant_code}
+                                                    />
+                                                    <span style={{ fontWeight: 'bold', color: '#333' }}>
+                                                        {wo.work_center_name || 'No vessel'}
+                                                    </span>
+                                                    <span style={{ color: '#666' }}>
+                                                        {rowsInGroup.length} order{rowsInGroup.length === 1 ? '' : 's'} on this page
+                                                        {' · '}
+                                                        {fmtDose(rowsInGroup.reduce((t: number, w: any) => t + (Number(w.qty) || 0), 0), 2)} total
+                                                    </span>
+                                                    <span style={{ marginLeft: 'auto' }} />
+                                                    {canManage && (
+                                                        <XPActionButton
+                                                            tone={pickedInGroup.length >= 2 ? 'primary' : 'neutral'}
+                                                            icon="bi-droplet-half"
+                                                            label={`Set Up Bath${pickedInGroup.length >= 2 ? ` (${pickedInGroup.length})` : ''}`}
+                                                            title={pickedInGroup.length >= 2
+                                                                ? 'One vessel, one setup — every selected order takes this bath'
+                                                                : 'Tick two or more orders in this group to run them in one bath'}
+                                                            disabled={pickedInGroup.length < 2}
+                                                            onClick={() => handleOpenBulk(pickedInGroup)}
+                                                        />
+                                                    )}
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    )}
                                     <tr
                                         style={{
                                             background: isExpanded ? rowStateBg('expanded') : (lvZebra(idx)),
@@ -789,6 +956,14 @@ export default function DyeingOrdersTab({ items, recipes, authFetch }: DyeingOrd
                                         onClick={toggleRow}
                                     >
                                         <ExpanderCell expanded={isExpanded} onToggle={toggleRow} tdStyle={tdBase} tdClassName={''} label="dyeing order detail" />
+                                        <td style={{ ...tdBase, padding: '2px 4px', textAlign: 'center' }} onClick={e => e.stopPropagation()}>
+                                            <input
+                                                type="checkbox"
+                                                aria-label={`Select ${wo.code || wo.name} for a shared bath`}
+                                                checked={selected.has(id)}
+                                                onChange={() => toggleSelected(id)}
+                                            />
+                                        </td>
                                         <td style={{ ...tdBase, overflow: 'hidden' }} title={wo.code || wo.name}>
                                             <CodeChip
                                                 code={wo.code || wo.name}
@@ -944,17 +1119,19 @@ export default function DyeingOrdersTab({ items, recipes, authFetch }: DyeingOrd
             {createWo && (
                 <ModalWrapper
                     isOpen={!!createWo}
-                    onClose={() => { setCreateWo(null); setEditRun(null); setCreateForm(emptyCreateForm); setChemRows([]); setErrorMsg(null); }}
-                    title={editRun
-                        ? `Dyeing Run #${editRun.run_number} — ${createWo.code || createWo.name}`
-                        : `New Dyeing Run — ${createWo.code || createWo.name}`}
+                    onClose={() => { setCreateWo(null); setEditRun(null); setBulkWos(null); setCreateForm(emptyCreateForm); setChemRows([]); setErrorMsg(null); }}
+                    title={bulkWos
+                        ? `Set Up Bath — ${bulkWos.length} work orders on ${createWo.work_center_name || 'one vessel'}`
+                        : editRun
+                            ? `Dyeing Run #${editRun.run_number} — ${createWo.code || createWo.name}`
+                            : `New Dyeing Run — ${createWo.code || createWo.name}`}
                     size="lg"
                     modeless
                     footer={<>
                         <button className={XP_BTN} style={{ ...xpPrimaryBtn, padding: '3px 16px' }} onClick={handleSaveRun} disabled={saving}>
-                            {saving ? 'Saving...' : editRun ? 'Save Bath' : 'Save Run'}
+                            {saving ? 'Saving...' : bulkWos ? `Set Up ${bulkWos.length} Runs` : editRun ? 'Save Bath' : 'Save Run'}
                         </button>
-                        <button className={XP_BTN} style={{ ...xpBtn, padding: '3px 16px' }} onClick={() => { setCreateWo(null); setEditRun(null); setCreateForm(emptyCreateForm); setChemRows([]); setErrorMsg(null); }} disabled={saving}>
+                        <button className={XP_BTN} style={{ ...xpBtn, padding: '3px 16px' }} onClick={() => { setCreateWo(null); setEditRun(null); setBulkWos(null); setCreateForm(emptyCreateForm); setChemRows([]); setErrorMsg(null); }} disabled={saving}>
                             Cancel
                         </button>
                     </>}
@@ -963,6 +1140,26 @@ export default function DyeingOrdersTab({ items, recipes, authFetch }: DyeingOrd
                         {errorMsg && (
                             <div style={{ background: '#fff3cd', border: '1px solid #ffc107', padding: '3px 8px', fontSize: 11, color: '#664d03', marginBottom: 6 }}>
                                 {errorMsg}
+                            </div>
+                        )}
+                        {/* What is going in the vessel. Named rather than counted: a
+                            planner about to commit 900 L to four orders should see
+                            which four, and how much cloth that is in total. */}
+                        {bulkWos && (
+                            <div style={{ border: '1px solid #aca899', background: '#f5f4ee', padding: '4px 6px', marginBottom: 6, fontSize: 10 }}>
+                                <div style={{ fontWeight: 'bold', color: '#444', marginBottom: 2 }}>
+                                    In this bath — {bulkWos.length} orders,{' '}
+                                    {fmtDose(bulkWos.reduce((t, w) => t + (Number(w.qty) || 0), 0), 2)} total
+                                </div>
+                                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
+                                    {bulkWos.map(w => (
+                                        <CodeChip key={String(w.id)} code={`${w.code || w.name} · ${fmtDose(w.qty, 2)}`} tone="accent" />
+                                    ))}
+                                </div>
+                                <div style={{ color: '#888', marginTop: 2 }}>
+                                    The bath below is the vessel's, and is recorded whole on every run —
+                                    not split between them. Each run keeps its own load, kg and clock.
+                                </div>
                             </div>
                         )}
                         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '4px 12px' }}>
@@ -979,17 +1176,23 @@ export default function DyeingOrdersTab({ items, recipes, authFetch }: DyeingOrd
                                     ))}
                                 </select>
                             </label>
-                            <label style={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
-                                <span style={{ fontSize: 10, color: '#444' }}>Substrate Qty</span>
-                                <input type="number" style={xpInput} value={createForm.substrate_qty}
-                                    onChange={e => handleCreateFormChange('substrate_qty', e.target.value)}
-                                    placeholder={createWo.qty != null ? `WO qty ${createWo.qty}` : 'e.g. 100'} />
-                            </label>
-                            <label style={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
-                                <span style={{ fontSize: 10, color: '#444' }}>Input Lot</span>
-                                <input type="text" style={xpInput} value={createForm.input_batch_id}
-                                    onChange={e => handleCreateFormChange('input_batch_id', e.target.value)} placeholder="lot number" />
-                            </label>
+                            {/* Both are per-ORDER, so a shared bath has no single answer
+                                for either: each run takes its own work order's qty. */}
+                            {!bulkWos && (
+                                <label style={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+                                    <span style={{ fontSize: 10, color: '#444' }}>Substrate Qty</span>
+                                    <input type="number" style={xpInput} value={createForm.substrate_qty}
+                                        onChange={e => handleCreateFormChange('substrate_qty', e.target.value)}
+                                        placeholder={createWo.qty != null ? `WO qty ${createWo.qty}` : 'e.g. 100'} />
+                                </label>
+                            )}
+                            {!bulkWos && (
+                                <label style={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+                                    <span style={{ fontSize: 10, color: '#444' }}>Input Lot</span>
+                                    <input type="text" style={xpInput} value={createForm.input_batch_id}
+                                        onChange={e => handleCreateFormChange('input_batch_id', e.target.value)} placeholder="lot number" />
+                                </label>
+                            )}
                             <label style={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
                                 <span
                                     style={{ fontSize: 10, color: '#444' }}
