@@ -816,7 +816,7 @@ export default function PackingOrderView({ initialCreateState, onClearInitialSta
                     showToast={showToast}
                     initialValues={createInitialValues}
                     onClose={() => { setCreating(false); setCreateInitialValues(null); }}
-                    onCreated={async (po: any) => { setCreating(false); setCreateInitialValues(null); await loadAll(); setDetail(po); }}
+                    onCreated={async () => { setCreating(false); setCreateInitialValues(null); await loadAll(); }}
                 />
             )}
 
