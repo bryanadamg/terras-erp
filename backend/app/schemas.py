@@ -1,4 +1,4 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from pydantic import ConfigDict
 from uuid import UUID
 from datetime import datetime, date
@@ -2927,6 +2927,36 @@ class DyeingRunCreate(BaseModel):
     yards_per_min: float | None = None
 
 
+class DyeingRunBulkCreate(BaseModel):
+    """One bath, several work orders.
+
+    A jet takes a whole shade's load at once, so the floor sets up one vessel and
+    three orders go through it together. That is recorded as one run per WO — each
+    keeps its own substrate, its own kg and its own clock, which is what the monitor
+    and the WO log already read — tied together by a shared `bath_group_id`.
+
+    The bath figures are typed once and carried to every run **whole, not split**:
+    the g/L concentration a WO's cloth saw is the concentration of the vessel it was
+    in, not a pro-rata share of it. Summing planned doses across a group therefore
+    counts the bath N times; collapse by `bath_group_id` first.
+
+    `substrate_qty` stays per-WO (defaults to each WO's own qty) — it is the only
+    figure here that is genuinely about one order rather than about the vessel.
+    """
+    work_order_ids: list[UUID] = Field(min_length=2)
+    recipe_id: UUID | None = None
+    liquor_ratio: float | None = None
+    volume_air_liters: float | None = None
+    lines: int | None = None
+    yards_per_min: float | None = None
+    machine_speed: float | None = None
+    machine_pressure: str | None = None
+    temperature_c: float | None = None
+    duration_min: int | None = None
+    operator_name: str | None = None
+    notes: str | None = None
+
+
 class DyeingRunUpdate(BaseModel):
     """Configure a run that already exists — the setup half of PATCH /dyeing-runs/{id}.
 
@@ -3038,6 +3068,9 @@ class DyeingRunResponse(ORMResponse):
     input_batch_id: UUID | None = None
     output_batch_id: UUID | None = None
     liquor_ratio: float | None = None
+    # Set when several WOs went through one vessel together — their dose sheets are
+    # the same water counted once per run (see DyeingRunBulkCreate).
+    bath_group_id: UUID | None = None
     planned_volume_air_liters: float | None = None
     volume_air_liters: float | None = None
     # The bath every dose on screen or on paper is weighed from: the actual once the

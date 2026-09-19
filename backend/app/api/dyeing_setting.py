@@ -29,7 +29,8 @@ from app.schemas import (
     DyeRecipeCreate, DyeRecipeUpdate, DyeRecipeResponse, PaginatedDyeRecipeResponse,
     DyeRecipeWashBathCreate, DyeRecipeWashBathResponse,
     DyeRecipeFinishingCreate, DyeRecipeFinishingResponse,
-    DyeingRunCreate, DyeingRunUpdate, DyeingRunCompletePayload, DyeingRunResponse,
+    DyeingRunCreate, DyeingRunBulkCreate, DyeingRunUpdate, DyeingRunCompletePayload,
+    DyeingRunResponse,
     DyeingRunStartPayload, DyeingRunBathUpdate, DyeingRunChemicalsUpdate, DyeDoseResponse,
     SettingRunCreate, SettingRunCompletePayload, SettingRunResponse,
 )
@@ -556,6 +557,123 @@ async def create_dyeing_run(
         details=f"Created dyeing run #{run.run_number} for WO {run.work_order_id}", changes={}
     )
     return _enrich_dyeing_run(run)
+
+
+@router.post("/dyeing-runs/bulk", response_model=list[DyeingRunResponse])
+async def configure_dyeing_bath_bulk(
+    payload: DyeingRunBulkCreate,
+    db: AsyncSession = Depends(get_async_db),
+    current_user: User = Depends(require_permission('work_order.log')),
+):
+    """Set up one bath across several work orders.
+
+    The unit of work on a dye floor is the vessel, not the order: a jet is filled
+    once and every WO of that shade waiting on that machine goes in together. Typing
+    the same volume, recipe and rope count into three separate run panels is the data
+    entry this replaces.
+
+    Still one run per WO — each carries its own substrate, kg, clock and monitor
+    card, and none of that is expressible on a shared row. `bath_group_id` records
+    that they were one vessel of water, and is re-issued on every setup: filling the
+    jet again is a new bath, not the old one edited.
+
+    It CONFIGURES rather than creates, because every dyeing WO is cut with run #1
+    already on it (`api/work_orders.py`). A WO whose only run is a closed bath gets a
+    fresh one — that is its second pass through the vessel.
+
+    Two refusals, both physical facts rather than policy: a bath is one machine, and
+    a bath is one colour. Mixing either is not a bath.
+    """
+    res = await db.execute(
+        select(WorkOrder)
+        .options(joinedload(WorkOrder.manufacturing_order))
+        .filter(WorkOrder.id.in_(payload.work_order_ids))
+    )
+    wos = res.unique().scalars().all()
+    found = {str(w.id) for w in wos}
+    missing = [str(i) for i in payload.work_order_ids if str(i) not in found]
+    if missing:
+        raise HTTPException(status_code=404, detail=f"Work order(s) not found: {', '.join(missing)}")
+
+    machines = {str(w.work_center_id) for w in wos}
+    if len(machines) > 1:
+        raise HTTPException(
+            status_code=422,
+            detail="These work orders are on different machines — one bath is one vessel",
+        )
+    colors = {str(w.manufacturing_order.color_id) if w.manufacturing_order else None for w in wos}
+    if len(colors) > 1:
+        raise HTTPException(
+            status_code=422,
+            detail="These work orders are different colours — one bath is one shade",
+        )
+
+    # The open bath on each WO, if it has one. Closed baths are left alone: their
+    # doses are history, and this load is a new pass through the vessel.
+    open_runs = {}
+    for run in (await db.execute(
+        select(DyeingRun)
+        .filter(DyeingRun.work_order_id.in_([w.id for w in wos]), DyeingRun.completed_at.is_(None))
+        .order_by(DyeingRun.run_number)
+    )).scalars().all():
+        open_runs.setdefault(str(run.work_order_id), run)
+
+    bath_group_id = uuid.uuid4()
+    touched = []
+    for wo in wos:
+        run = open_runs.get(str(wo.id))
+        if run is None:
+            run = DyeingRun(
+                work_order_id=wo.id,
+                run_number=await _get_next_run_number(db, DyeingRun, wo.id),
+                substrate_qty=wo.qty or 0,
+            )
+            db.add(run)
+        run.recipe_id = payload.recipe_id or run.recipe_id or wo.planned_recipe_id
+        run.bath_group_id = bath_group_id
+        # Solved per run: the ratio is litres per kg of THIS order's cloth, while the
+        # volume is the vessel's and therefore identical on every run in the group.
+        # The bath is carried WHOLE, never split — the concentration a WO's cloth saw
+        # is the vessel's, not a pro-rata share of it.
+        volume, ratio = dyeing_dose_service.solve_bath(
+            run.substrate_qty, payload.volume_air_liters, payload.liquor_ratio,
+        )
+        if volume:
+            run.volume_air_liters = volume
+            run.liquor_ratio = ratio
+        for field in (
+            "machine_speed", "machine_pressure", "temperature_c", "duration_min",
+            "operator_name", "notes", "yards_per_min", "lines",
+        ):
+            value = getattr(payload, field)
+            if value is not None:
+                setattr(run, field, value)
+        await db.flush()
+        await dyeing_run_service.price_dose_sheet(db, run)
+        # Derived, never typed: water in the vessel is what makes a run IN_PROGRESS.
+        await dyeing_run_service.sync_wo_runs(db, wo.id, wo_status=wo.status)
+        touched.append(run)
+
+    await db.commit()
+    db.expire_all()  # expire_on_commit=False: dose rows were added under these runs
+    rows = (await db.execute(
+        select(DyeingRun).options(*_dyeing_run_opts())
+        .filter(DyeingRun.bath_group_id == bath_group_id)
+        .order_by(DyeingRun.created_at)
+    )).scalars().all()
+    for run in rows:
+        await audit_service.log_activity(
+            db, current_user.id, "UPDATE", "DyeingRun", str(run.id),
+            details=(
+                f"Dyeing run #{run.run_number} set up in a bath shared by {len(rows)} "
+                "work orders"
+                + (f" — {run.volume_air_liters} L" if run.volume_air_liters else "")
+            ),
+            changes={"bath_group_id": [None, str(bath_group_id)]},
+        )
+    for wo_id in {str(r.work_order_id) for r in rows}:
+        await manager.broadcast({"type": "DYEING_RUN_UPDATE", "wo_id": wo_id})
+    return [_enrich_dyeing_run(r) for r in rows]
 
 
 @router.patch("/dyeing-runs/{run_id}", response_model=DyeingRunResponse)

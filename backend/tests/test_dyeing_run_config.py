@@ -18,7 +18,13 @@ import uuid
 
 
 def _setup(client, auth_headers, session, *, liquor_ratio, wo_qty=100.0):
-    """A DYEING work order created through the real recipe gate. Returns (wo_id, run)."""
+    """A DYEING work order created through the real recipe gate.
+
+    Returns (wo_id, run, ctx) — `ctx` carries the MO, vessel and location the WO was
+    cut against, so a test can put a SECOND order on the same machine without
+    rebuilding the whole fixture. The flat WO list carries neither the MO id nor the
+    location ids, so they cannot be read back off it.
+    """
     from app.models.location import Location
     from app.models.routing import WorkCenter
 
@@ -82,7 +88,8 @@ def _setup(client, auth_headers, session, *, liquor_ratio, wo_qty=100.0):
     assert runs.status_code == 200, runs.text
     rows = runs.json()
     assert len(rows) == 1
-    return wo_id, rows[0]
+    ctx = {"mo_id": mo_id, "wc_id": wc_id, "loc_id": loc_id}
+    return wo_id, rows[0], ctx
 
 
 def _configure(client, auth_headers, run_id, **fields):
@@ -93,7 +100,7 @@ def _configure(client, auth_headers, run_id, **fields):
 
 def test_wo_creation_cuts_a_bare_run(client, auth_headers, async_db_session):
     """The WO knows the recipe and the load. It knows nothing about the bath."""
-    _wo_id, run = _setup(client, auth_headers, async_db_session, liquor_ratio=8)
+    _wo_id, run, _ctx = _setup(client, auth_headers, async_db_session, liquor_ratio=8)
 
     assert run["recipe_id"] is not None
     assert float(run["substrate_qty"]) == 100.0
@@ -107,7 +114,7 @@ def test_wo_creation_cuts_a_bare_run(client, auth_headers, async_db_session):
 
 def test_configuring_the_bath_freezes_the_sheet_and_runs_the_vessel(client, auth_headers, async_db_session):
     """One call from the setup screen: the bath is filled, both bases are weighed."""
-    _wo_id, run = _setup(client, auth_headers, async_db_session, liquor_ratio=8)
+    _wo_id, run, _ctx = _setup(client, auth_headers, async_db_session, liquor_ratio=8)
 
     body = _configure(client, auth_headers, run["id"], volume_air_liters=800, lines=3, yards_per_min=250)
 
@@ -125,7 +132,7 @@ def test_configuring_the_bath_freezes_the_sheet_and_runs_the_vessel(client, auth
 
 def test_a_liquor_ratio_resolves_the_volume(client, auth_headers, async_db_session):
     """Ratio and volume are one fact twice — sending either settles the pair."""
-    _wo_id, run = _setup(client, auth_headers, async_db_session, liquor_ratio=8)
+    _wo_id, run, _ctx = _setup(client, auth_headers, async_db_session, liquor_ratio=8)
 
     body = _configure(client, auth_headers, run["id"], liquor_ratio=5)
 
@@ -138,7 +145,7 @@ def test_a_liquor_ratio_resolves_the_volume(client, auth_headers, async_db_sessi
 
 def test_a_run_with_no_bath_has_nothing_to_weigh(client, auth_headers, async_db_session):
     """Configuring the ropes alone is not filling the bath."""
-    _wo_id, run = _setup(client, auth_headers, async_db_session, liquor_ratio=None)
+    _wo_id, run, _ctx = _setup(client, auth_headers, async_db_session, liquor_ratio=None)
 
     body = _configure(client, auth_headers, run["id"], lines=2)
 
@@ -151,7 +158,7 @@ def test_a_run_with_no_bath_has_nothing_to_weigh(client, auth_headers, async_db_
 def test_a_corrected_bath_reprices_the_sheet(client, auth_headers, async_db_session):
     """The vessel took 900 L, not the 800 that was set up. Every g/L row follows the
     water; the owf row does not."""
-    _wo_id, run = _setup(client, auth_headers, async_db_session, liquor_ratio=8)
+    _wo_id, run, _ctx = _setup(client, auth_headers, async_db_session, liquor_ratio=8)
     _configure(client, auth_headers, run["id"], volume_air_liters=800)
 
     body = _configure(client, auth_headers, run["id"], volume_air_liters=900)
@@ -164,7 +171,7 @@ def test_a_corrected_bath_reprices_the_sheet(client, auth_headers, async_db_sess
 
 def test_a_recorded_dose_is_never_repriced(client, auth_headers, async_db_session):
     """Once a chemical is in the vessel, rewriting its plan would erase the variance."""
-    _wo_id, run = _setup(client, auth_headers, async_db_session, liquor_ratio=8)
+    _wo_id, run, _ctx = _setup(client, auth_headers, async_db_session, liquor_ratio=8)
     body = _configure(client, auth_headers, run["id"], volume_air_liters=800)
     gl_row = next(c for c in body["chemicals"] if c["item_name"] == "Levelling Agent")
 
@@ -187,7 +194,7 @@ def test_the_clock_is_not_the_bath(client, auth_headers, async_db_session):
     back-filled `started_at` from `completed_at`, reporting a zero-minute run window
     for every batch the monitor scores.
     """
-    _wo_id, run = _setup(client, auth_headers, async_db_session, liquor_ratio=8)
+    _wo_id, run, _ctx = _setup(client, auth_headers, async_db_session, liquor_ratio=8)
     body = _configure(client, auth_headers, run["id"], volume_air_liters=800)
     assert body["status"] == "IN_PROGRESS"     # the bath is filled
     assert body["started_at"] is None          # the machine is not
@@ -206,7 +213,7 @@ def test_the_clock_is_not_the_bath(client, auth_headers, async_db_session):
 
 def test_a_bare_run_can_still_be_started(client, auth_headers, async_db_session):
     """No bath recorded is not a reason to refuse the clock — the vessel is turning."""
-    _wo_id, run = _setup(client, auth_headers, async_db_session, liquor_ratio=None)
+    _wo_id, run, _ctx = _setup(client, auth_headers, async_db_session, liquor_ratio=None)
 
     res = client.post(f"/api/dyeing-runs/{run['id']}/start", json={}, headers=auth_headers)
     assert res.status_code == 200, res.text
@@ -218,3 +225,86 @@ def test_a_bare_run_can_still_be_started(client, auth_headers, async_db_session)
     # Pressing it twice must not reset the clock the supervisor is reading.
     again = client.post(f"/api/dyeing-runs/{run['id']}/start", json={}, headers=auth_headers)
     assert again.status_code == 400, again.text
+
+
+# -- One bath, several work orders -------------------------------------------
+
+def _second_wo(client, auth_headers, ctx, qty):
+    """Another WO on the same MO and machine — the second order in one vessel."""
+    res = client.post("/api/work-orders", json={
+        "manufacturing_order_id": ctx["mo_id"],
+        "qty": qty,
+        "work_center_id": ctx["wc_id"],
+        "input_location_id": ctx["loc_id"],
+        "output_location_id": ctx["loc_id"],
+    }, headers=auth_headers)
+    assert res.status_code == 200, res.text
+    return res.json()["id"]
+
+
+def test_one_bath_covers_several_work_orders(client, auth_headers, async_db_session):
+    """Two orders of a shade go into one jet. Each keeps its own run; the bath is the
+    same water, recorded whole on every one of them."""
+    wo_a, _run_a, ctx = _setup(client, auth_headers, async_db_session, liquor_ratio=8)
+    wo_b = _second_wo(client, auth_headers, ctx, qty=50.0)
+
+    res = client.post("/api/dyeing-runs/bulk", json={
+        "work_order_ids": [wo_a, wo_b], "volume_air_liters": 900, "lines": 2,
+    }, headers=auth_headers)
+    assert res.status_code == 200, res.text
+    rows = res.json()
+
+    # Configures the run each dyeing WO is already cut with — never a second one.
+    assert len(rows) == 2
+    assert {str(r["work_order_id"]) for r in rows} == {str(wo_a), str(wo_b)}
+    assert all(r["run_number"] == 1 for r in rows)
+    groups = {r["bath_group_id"] for r in rows}
+    assert len(groups) == 1 and None not in groups
+    assert all(float(r["volume_air_liters"]) == 900.0 for r in rows)
+    assert all(r["lines"] == 2 for r in rows)
+    assert all(r["status"] == "IN_PROGRESS" for r in rows)
+
+    by_wo = {str(r["work_order_id"]): r for r in rows}
+    for wo_id, expected_owf in ((str(wo_a), 3.0), (str(wo_b), 1.5)):
+        doses = {c["item_name"]: float(c["planned_qty"]) for c in by_wo[wo_id]["chemicals"]}
+        # The bath is whole on every run, not a pro-rata share: 2 g/L x 900 L.
+        assert doses["Levelling Agent"] == 1800.0
+        # owf follows THIS order's cloth — the one figure that stays per-WO.
+        assert doses["Navy Dyestuff"] == expected_owf
+
+
+def test_a_bath_is_one_machine_and_one_shade(client, auth_headers, async_db_session):
+    """Both refusals are physical facts, not policy."""
+    wo_a, _run_a, _ctx = _setup(client, auth_headers, async_db_session, liquor_ratio=8)
+    wo_other, _run_other, _ctx_other = _setup(client, auth_headers, async_db_session, liquor_ratio=8)
+
+    # _setup builds its own vessel and its own shade each time, so this pair is
+    # mismatched on both counts — the machine is checked first.
+    res = client.post("/api/dyeing-runs/bulk", json={
+        "work_order_ids": [wo_a, wo_other], "volume_air_liters": 900,
+    }, headers=auth_headers)
+    assert res.status_code == 422, res.text
+    assert "machine" in res.json()["detail"]
+
+
+def test_refilling_the_jet_is_a_new_bath(client, auth_headers, async_db_session):
+    """Setting the vessel up again is a new bath, not the old one edited — otherwise
+    two loads' dose sheets collapse into one group and read as a single bath."""
+    wo_a, _run_a, ctx = _setup(client, auth_headers, async_db_session, liquor_ratio=8)
+    wo_b = _second_wo(client, auth_headers, ctx, qty=50.0)
+    first = client.post("/api/dyeing-runs/bulk", json={
+        "work_order_ids": [wo_a, wo_b], "volume_air_liters": 900,
+    }, headers=auth_headers)
+    assert first.status_code == 200, first.text
+    first_group = first.json()[0]["bath_group_id"]
+
+    second = client.post("/api/dyeing-runs/bulk", json={
+        "work_order_ids": [wo_a, wo_b], "volume_air_liters": 1000,
+    }, headers=auth_headers)
+    assert second.status_code == 200, second.text
+    rows = second.json()
+    assert rows[0]["bath_group_id"] != first_group
+    assert all(float(r["volume_air_liters"]) == 1000.0 for r in rows)
+    # Re-priced against the new water: 2 g/L x 1000 L.
+    doses = {c["item_name"]: float(c["planned_qty"]) for c in rows[0]["chemicals"]}
+    assert doses["Levelling Agent"] == 2000.0
