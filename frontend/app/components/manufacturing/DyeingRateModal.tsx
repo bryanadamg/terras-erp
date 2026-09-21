@@ -6,6 +6,7 @@ import { useData } from '../../context/DataContext';
 import { useLanguage } from '../../context/LanguageContext';
 import { useToast } from '../shared/Toast';
 import { xpFont, xpInput, FormSection, FieldLabel, XPActionButton, familyColor } from '../shared/xpTheme';
+import { speedPresets } from '../shared/dyeingSpeed';
 
 const AMBER = familyColor('amber');
 
@@ -43,16 +44,10 @@ export default function DyeingRateModal({ isOpen, run, onClose, onSaved, authFet
     const [lines, setLines] = useState('');
     const [saving, setSaving] = useState(false);
 
-    /** Curated speeds, numeric and ascending. Non-numeric values are skipped rather
-     *  than shown: this attribute's values ARE numbers, and a stray label would
-     *  produce a run with no rate at all. */
-    const presets = useMemo(() => {
-        const attr = (attributes || []).find((a: any) => a.system_role === 'dyeing_speed');
-        return (attr?.values || [])
-            .map((v: any) => ({ id: String(v.id), n: parseFloat(String(v.value).replace(',', '.')) }))
-            .filter((v: any) => !isNaN(v.n) && v.n > 0)
-            .sort((a: any, b: any) => a.n - b.n);
-    }, [attributes]);
+    /** Curated speeds, numeric and ascending. Parsed in `shared/dyeingSpeed` because
+     *  the bath panel picks off the same list, and a value reads "Tua (3)" — a depth
+     *  label carrying its yd/min, not a bare number. */
+    const presets = useMemo(() => speedPresets(attributes), [attributes]);
 
     // Re-seed whenever a different batch is opened. Without the `run.id` dependency
     // the second card opened would show the first one's numbers.
@@ -70,7 +65,7 @@ export default function DyeingRateModal({ isOpen, run, onClose, onSaved, authFet
     const derived = (speedNum > 0 && linesNum > 0) ? speedNum * linesNum : null;
     // A speed the floor typed (or one curated away since) still has to show as the
     // current value rather than silently falling back to the first preset.
-    const isCustom = speed !== '' && !presets.some((p: any) => p.n === speedNum);
+    const isCustom = speed !== '' && !presets.some(p => p.n === speedNum);
 
     const save = async () => {
         setSaving(true);
@@ -121,8 +116,8 @@ export default function DyeingRateModal({ isOpen, run, onClose, onSaved, authFet
                                 style={xpInput()}
                             >
                                 <option value="">—</option>
-                                {presets.map((p: any) => (
-                                    <option key={p.id} value={String(p.n)}>{p.n}</option>
+                                {presets.map(p => (
+                                    <option key={p.id} value={String(p.n)}>{p.label}</option>
                                 ))}
                                 {isCustom && <option value="__custom">{speed} ({t('custom')})</option>}
                             </select>
