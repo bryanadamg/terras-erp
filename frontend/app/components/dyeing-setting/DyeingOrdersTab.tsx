@@ -22,6 +22,7 @@ import { useUser } from '../../context/UserContext';
 import { useTimezone } from '../../context/TimezoneContext';
 import { isMachineWC } from '../shared/workCenterTree';
 import DoseSheet, { fmtDose, doseUnitFor, type DosePreview } from '../shared/DoseSheet';
+import { speedPresets, presetFor } from '../shared/dyeingSpeed';
 
 const modernFont = 'system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif';
 
@@ -159,7 +160,7 @@ function ShadeChip({ shade }: { shade: string }) {
 
 export default function DyeingOrdersTab({ items, recipes, authFetch }: DyeingOrdersTabProps) {
     const { formatCustom: tzFmt } = useTimezone();
-    const { workCenters } = useData();
+    const { workCenters, attributes } = useData();
     const { hasPermission } = useUser();
     const canManage = hasPermission('work_order.log');
 
@@ -262,6 +263,20 @@ export default function DyeingOrdersTab({ items, recipes, authFetch }: DyeingOrd
         });
         return counts;
     }, [runsByWo]);
+
+    // ── Rope speed presets ────────────────────────────────────────────────────
+    // The same `Dyeing Speed` system attribute the monitor's rate modal picks off, so
+    // a bath set up here and a rate set at the vessel come from one list. A value
+    // names the shade depth and carries its yd/min ("Tua (3)"); the number is parsed
+    // out in shared/dyeingSpeed, which is also why a pre-label bare "60" still works.
+    const speedOptions = useMemo(() => speedPresets(attributes), [attributes]);
+    // The preset the typed value corresponds to, matched numerically — the stored
+    // column is Numeric(10,3), so "3" and "3.000" are the same speed and must not
+    // fall out of the picker as a custom one.
+    const speedPreset = useMemo(
+        () => presetFor(speedOptions, createForm.yards_per_min),
+        [speedOptions, createForm.yards_per_min],
+    );
 
     // ── Vessels (dyeing machines) for the filter ──────────────────────────────
     const dyeVessels = useMemo(() => (workCenters || [])
@@ -1233,10 +1248,36 @@ export default function DyeingOrdersTab({ items, recipes, authFetch }: DyeingOrd
                             <label style={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
                                 <span
                                     style={{ fontSize: 10, color: '#444' }}
-                                    title="Yards per minute, per rope. Times the rope count, this is the vessel's rate on the dyeing monitor."
-                                >Yd/min (per rope)</span>
-                                <input type="number" step="0.1" style={xpInput} value={createForm.yards_per_min}
-                                    onChange={e => handleCreateFormChange('yards_per_min', e.target.value)} placeholder="e.g. 250" />
+                                    title="Rope speed for this bath, picked by shade depth off the Dyeing Speed attribute. Times the rope count, this is the vessel's rate on the dyeing monitor."
+                                >Speed (yd/min per rope)</span>
+                                <select
+                                    style={{ ...xpInput, height: 22 }}
+                                    value={createForm.yards_per_min === '' ? '' : (speedPreset ? String(speedPreset.n) : '__custom')}
+                                    onChange={e => { if (e.target.value !== '__custom') handleCreateFormChange('yards_per_min', e.target.value); }}
+                                >
+                                    <option value="">-- select --</option>
+                                    {speedOptions.map(p => (
+                                        <option key={p.id} value={String(p.n)}>{p.label}</option>
+                                    ))}
+                                    {/* A speed the floor typed, or one curated away since, still has to
+                                        read as the current value instead of snapping to a preset. */}
+                                    {createForm.yards_per_min !== '' && !speedPreset && (
+                                        <option value="__custom">{createForm.yards_per_min} (custom)</option>
+                                    )}
+                                </select>
+                                {/* The escape hatch, under the picker and narrower than it: a vessel run
+                                    at a speed nobody has added to the list must still be recordable, but
+                                    the list is the path. Same shape as the monitor's rate modal. */}
+                                <span style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 9, color: '#777' }}>
+                                    or type
+                                    <input type="number" min="0" step="any"
+                                        style={{ ...xpInput, width: 58 }}
+                                        value={createForm.yards_per_min}
+                                        onChange={e => handleCreateFormChange('yards_per_min', e.target.value)} />
+                                    {speedOptions.length === 0 && (
+                                        <span style={{ color: '#a06000' }}>none curated yet</span>
+                                    )}
+                                </span>
                             </label>
                             <label style={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
                                 <span style={{ fontSize: 10, color: '#444' }}>Speed</span>
