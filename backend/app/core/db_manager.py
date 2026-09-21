@@ -49,13 +49,17 @@ def _bundle_snapshot(dump_path: Path, arcname: str, zip_path: Path) -> int:
     return count
 
 
-def _unpack_snapshot(zip_path: Path, dest: Path) -> Optional[Path]:
+def _unpack_snapshot(zip_path: Path, dest: Path, on_file=None) -> Optional[Path]:
     """Extracts a bundled snapshot: the dump into `dest`, static files back into static/.
     Merge, never mirror — a local file the bundle doesn't carry is left alone, since an
     orphaned file is harmless while a deleted one breaks a row that still points at it.
-    Returns the extracted dump path, or None if the zip carries no dump."""
+    Returns the extracted dump path, or None if the zip carries no dump.
+    `on_file(done, total)` is called per extracted static file so the caller can report
+    real progress rather than guessing at one."""
     dump = None
     with zipfile.ZipFile(zip_path) as zf:
+        total = sum(1 for i in zf.infolist() if not i.is_dir())
+        done = 0
         for info in zf.infolist():
             if info.is_dir():
                 continue
@@ -71,6 +75,9 @@ def _unpack_snapshot(zip_path: Path, dest: Path) -> Optional[Path]:
                 target.parent.mkdir(parents=True, exist_ok=True)
                 with zf.open(info) as src, target.open("wb") as out:
                     shutil.copyfileobj(src, out)
+            done += 1
+            if on_file:
+                on_file(done, total)
     return dump
 
 def _label_for_filename(name: str) -> str:
@@ -101,6 +108,18 @@ class DatabaseManager:
         self._profiles_path = Path("database_profiles.json")
         self._snapshots_dir = Path("snapshots")
         self._snapshots_dir.mkdir(exist_ok=True)
+        # Restore runs as a background task and reports through here rather than holding
+        # the HTTP request open: the psql load outlives a proxy's idle timeout, and a
+        # client polling for phases needs answers while the schema is dropped — which is
+        # exactly when nothing can be read out of the database itself.
+        self._restore_state: dict = {"status": "idle"}
+
+    @property
+    def restore_state(self) -> dict:
+        return dict(self._restore_state)
+
+    def _set_restore_phase(self, phase: str, pct: int, **extra) -> None:
+        self._restore_state.update({"status": "running", "phase": phase, "pct": pct, **extra})
 
     async def create_snapshot(self, label: str = "manual") -> DatabaseResponse:
         """Creates a snapshot of the current database plus every uploaded file, as one
@@ -229,18 +248,28 @@ class DatabaseManager:
             return DatabaseResponse(message="Snapshot file not found", status=False)
 
         tmpdir = None
-        restored_files = False
+        restored_files = 0
+        started = datetime.now()
+        self._restore_state = {"status": "running", "phase": "Reading snapshot", "pct": 2,
+                               "filename": safe_name, "started_at": started.isoformat()}
         try:
             # .zip = bundle (dump + uploaded files). Bare .sql/.sqlite still restore as
             # before, so snapshots taken before bundling — and hand-made pg_dumps — keep
             # working; they simply carry no files.
             if filepath.suffix.lower() == ".zip":
                 tmpdir = tempfile.TemporaryDirectory()
-                dump = await run_in_threadpool(_unpack_snapshot, filepath, Path(tmpdir.name))
+
+                def _progress(done: int, total: int) -> None:
+                    # 5..35% spans the unpack; the share is real (files done / files in
+                    # the bundle), only the band it maps onto is fixed.
+                    self._set_restore_phase("Restoring uploaded files", 5 + int(30 * done / max(total, 1)),
+                                            files_done=done, files_total=total)
+
+                dump = await run_in_threadpool(_unpack_snapshot, filepath, Path(tmpdir.name), _progress)
                 if dump is None:
-                    return DatabaseResponse(message="Bundle contains no database dump", status=False)
+                    raise Exception("Bundle contains no database dump")
+                restored_files = self._restore_state.get("files_total", 1) - 1  # minus the dump entry
                 filepath = dump
-                restored_files = True
 
             if self._engine:
                 self._engine.dispose()
@@ -252,7 +281,9 @@ class DatabaseManager:
                 if url.password:
                     env["PGPASSWORD"] = url.password
 
+                self._set_restore_phase("Closing open connections", 40)
                 await self._terminate_other_connections(url, env)
+                self._set_restore_phase("Resetting schema", 45)
 
                 # pg_dump snapshots are taken without --clean, so restoring onto a
                 # non-empty schema (the normal case) fails almost every CREATE TABLE /
@@ -276,6 +307,7 @@ class DatabaseManager:
                 if drop_proc.returncode != 0:
                     raise Exception(f"schema reset before restore failed: {drop_stderr.decode()}")
 
+                self._set_restore_phase("Loading database dump", 55)
                 cmd = [
                     "psql",
                     "-h", url.host or "localhost",
@@ -298,12 +330,27 @@ class DatabaseManager:
                 db_path = self._current_url.replace("sqlite:///", "")
                 shutil.copy2(filepath, db_path)
 
+            self._set_restore_phase("Reconnecting", 95)
             res = self.initialize(self._current_url)
             if res.status and restored_files:
-                res.message = "Database and uploaded files restored successfully"
+                res.message = f"Database restored, with {restored_files} uploaded file(s)"
+            self._restore_state = {
+                "status": "done" if res.status else "error",
+                "phase": "Finished" if res.status else "Failed",
+                "pct": 100, "filename": safe_name, "message": res.message,
+                "files_restored": restored_files,
+                "started_at": started.isoformat(),
+                "elapsed_seconds": round((datetime.now() - started).total_seconds(), 1),
+            }
             return res
         except Exception as e:
             logger.error(f"Restore failed: {e}")
+            self._restore_state = {
+                "status": "error", "phase": "Failed", "pct": 100, "filename": safe_name,
+                "message": f"Restore failed: {str(e)}",
+                "started_at": started.isoformat(),
+                "elapsed_seconds": round((datetime.now() - started).total_seconds(), 1),
+            }
             return DatabaseResponse(message=f"Restore failed: {str(e)}", status=False)
         finally:
             if tmpdir:

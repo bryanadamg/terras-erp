@@ -1,11 +1,11 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useToast } from '../shared/Toast';
 import { useConfirm } from '../../context/ConfirmContext';
 import { useData } from '../../context/DataContext';
 import { useTimezone, AVAILABLE_TIMEZONES } from '../../context/TimezoneContext';
-import { xpBtn, xpInput, CodeChip, StatusChip, CODE_FONT, FieldLabel, xpFont, CHIP_RADIUS, BTN_TONES, XP_BTN, XPActionButton } from '../shared/xpTheme';
+import { xpBtn, xpInput, CodeChip, StatusChip, CODE_FONT, FieldLabel, xpFont, CHIP_RADIUS, BTN_TONES, XP_BTN, XPActionButton, ProgressBar } from '../shared/xpTheme';
 import {
     xpTableHeader, xpThCell, tdBase,
     settingsStack, settingsActions, settingsHint, SETTINGS_FIELD_GAP,
@@ -111,6 +111,11 @@ export default function SettingsDatabaseTab() {
     const [isDbLoading, setIsDbLoading] = useState(false);
     const [snapshots, setSnapshots] = useState<any[]>([]);
     const [isSnapshotLoading, setIsSnapshotLoading] = useState(false);
+    // The running restore, polled from the server. Held as one object so the modal
+    // renders phase, percent and outcome off a single source rather than four booleans.
+    const [restore, setRestore] = useState<any | null>(null);
+    const [restoreElapsed, setRestoreElapsed] = useState(0);
+    const restoringRef = useRef(false);
 
     const [schedule, setSchedule] = useState<any>(null);
     const [isScheduleLoading, setIsScheduleLoading] = useState(false);
@@ -134,6 +139,9 @@ export default function SettingsDatabaseTab() {
     const [eventStats, setEventStats] = useState<any | null>(null);
 
     const fetchSystemStatus = useCallback(async () => {
+        // The schema is dropped for part of a restore, so this poll can only report
+        // false outages and add connections the restore then has to fight for locks with.
+        if (restoringRef.current) return;
         setIsStatusLoading(true);
         try {
             const auth = { 'Authorization': `Bearer ${localStorage.getItem('access_token')}` };
@@ -318,6 +326,30 @@ export default function SettingsDatabaseTab() {
         } catch (e) { showToast('Download failed', 'danger'); }
     };
 
+    /** Follows a running restore to its end. Blips are expected rather than fatal —
+     *  the API drops and re-opens its pool mid-restore — so a failed poll retries;
+     *  only a long silence is reported as lost contact. */
+    const pollRestoreStatus = useCallback(async () => {
+        let misses = 0;
+        while (misses < 40) {
+            await new Promise(r => setTimeout(r, 700));
+            try {
+                const res = await fetch(`${API_BASE}/admin/database/snapshots/restore-status`, {
+                    headers: { 'Authorization': `Bearer ${localStorage.getItem('access_token')}` }
+                });
+                if (!res.ok) { misses++; continue; }
+                misses = 0;
+                const st = await res.json();
+                setRestore((prev: any) => ({ ...prev, ...st }));
+                if (st.status === 'done' || st.status === 'error') return;
+            } catch { misses++; }
+        }
+        setRestore((prev: any) => ({
+            ...prev, status: 'error', phase: 'Lost contact',
+            message: 'Lost contact with the server while restoring. Check the API logs before retrying — the restore may still have finished.',
+        }));
+    }, []);
+
     const handleRestoreSnapshot = async (filename: string) => {
         const ok = await confirm({
             title: 'Restore Snapshot?',
@@ -326,22 +358,56 @@ export default function SettingsDatabaseTab() {
             variant: 'danger',
         });
         if (!ok) return;
-        setIsSnapshotLoading(true);
+        restoringRef.current = true;
+        setRestoreElapsed(0);
+        setRestore({ filename, status: 'running', phase: 'Starting', pct: 0 });
         try {
             const res = await fetch(`${API_BASE}/admin/database/snapshots/${filename}/restore`, {
                 method: 'POST',
                 headers: { 'Authorization': `Bearer ${localStorage.getItem('access_token')}` }
             });
-            if (res.ok) {
-                showToast('Database restored successfully!', 'success');
-                window.location.reload();
-            } else {
-                const err = await res.json();
-                showToast(`Restore failed: ${err.detail}`, 'danger');
+            if (!res.ok) {
+                const err = await res.json().catch(() => ({}));
+                setRestore({ filename, status: 'error', phase: 'Failed', pct: 100, message: err.detail || `Restore could not be started (${res.status})` });
+                return;
             }
-        } catch (e) { showToast('Restore failed', 'danger'); }
-        finally { setIsSnapshotLoading(false); }
+            await pollRestoreStatus();
+        } catch (e) {
+            setRestore({ filename, status: 'error', phase: 'Failed', pct: 100, message: 'Network error starting the restore' });
+        } finally {
+            restoringRef.current = false;
+        }
     };
+
+    /** The app holds a whole cache of rows that no longer exist. Reloading is the only
+     *  honest end to a restore — but on the user's click, so the outcome is read first. */
+    const finishRestore = (reload: boolean) => {
+        if (reload) {
+            // Survives the reload that would otherwise swallow the success toast.
+            sessionStorage.setItem('terras_restore_done', restore?.filename || '');
+            window.location.reload();
+            return;
+        }
+        setRestore(null);
+        fetchSnapshots();
+        fetchSystemStatus();
+    };
+
+    // Elapsed clock for the running restore — there is no per-row progress to show
+    // during the dump load, so the count is what tells the user it is still moving.
+    useEffect(() => {
+        if (restore?.status !== 'running') return;
+        const id = setInterval(() => setRestoreElapsed(s => s + 1), 1000);
+        return () => clearInterval(id);
+    }, [restore?.status]);
+
+    // Confirmation on the far side of the reload above.
+    useEffect(() => {
+        const done = sessionStorage.getItem('terras_restore_done');
+        if (done === null) return;
+        sessionStorage.removeItem('terras_restore_done');
+        showToast(`Restored from ${done || 'snapshot'} — you are now on the restored data`, 'success');
+    }, [showToast]);
 
     const handleUploadSnapshot = async (e: React.ChangeEvent<HTMLInputElement>) => {
         if (!e.target.files?.[0]) return;
@@ -806,6 +872,76 @@ export default function SettingsDatabaseTab() {
                         disabled={isWiping}
                         autoFocus
                     />}
+            </ModalWrapper>
+
+            {/* Restore progress. Not dismissable while running: the app is reading a
+                database that is being replaced under it, so there is nothing useful to
+                go back to until this ends. */}
+            <ModalWrapper
+                isOpen={!!restore}
+                onClose={() => { if (restore?.status !== 'running') finishRestore(false); }}
+                title={<><i className={`bi ${restore?.status === 'done' ? 'bi-check-circle-fill' : restore?.status === 'error' ? 'bi-exclamation-octagon-fill' : 'bi-arrow-clockwise'} me-1`}></i>
+                    {restore?.status === 'done' ? 'Restore Complete' : restore?.status === 'error' ? 'Restore Failed' : 'Restoring Snapshot'}</>}
+                variant={restore?.status === 'error' ? 'danger' : restore?.status === 'done' ? 'success' : 'primary'}
+                size="sm"
+                modeless
+                footer={
+                    restore?.status === 'running' ? (
+                        <span style={{ fontFamily: xpFont, fontSize: 11, color: '#666' }}>
+                            Do not close this window or navigate away.
+                        </span>
+                    ) : restore?.status === 'done' ? (
+                        <>
+                            <button type="button" style={xpCancelBtn} onClick={() => finishRestore(false)}>Stay Here</button>
+                            <button type="button" style={xpBtn({ ...BTN_TONES.primary, padding: '3px 20px' })} className={XP_BTN} onClick={() => finishRestore(true)} autoFocus>
+                                <i className="bi bi-arrow-repeat" style={{ marginRight: 4 }}></i>Reload App
+                            </button>
+                        </>
+                    ) : (
+                        <button type="button" style={xpCancelBtn} onClick={() => finishRestore(false)}>Close</button>
+                    )
+                }
+            >
+                <div style={{ fontFamily: xpFont, fontSize: 11, color: '#333', display: 'flex', flexDirection: 'column' as const, gap: 8 }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8 }}>
+                        <span style={{ fontWeight: 'bold' }}>{restore?.phase || 'Starting'}</span>
+                        <span style={{ color: '#666', fontFamily: CODE_FONT }}>
+                            {restore?.status === 'running' ? `${restoreElapsed}s` : `${restore?.elapsed_seconds ?? restoreElapsed}s`}
+                        </span>
+                    </div>
+
+                    <ProgressBar
+                        pct={restore?.pct ?? 0}
+                        tone={restore?.status === 'error' ? 'red' : restore?.status === 'done' ? 'green' : 'blue'}
+                        height={16}
+                        label="inside"
+                    />
+
+                    {restore?.files_total > 0 && restore?.status === 'running' && (
+                        <div style={{ color: '#666' }}>
+                            {restore.files_done} of {restore.files_total} file(s) written
+                        </div>
+                    )}
+
+                    <div style={{ color: '#666', wordBreak: 'break-all' as const }}>
+                        <span style={{ fontFamily: CODE_FONT }}>{restore?.filename}</span>
+                    </div>
+
+                    {restore?.status === 'done' && (
+                        <div style={{ border: '1px solid #b0a898', background: '#f4fff4', padding: '6px 8px' }}>
+                            <div style={{ fontWeight: 'bold', marginBottom: 2 }}>{restore.message}</div>
+                            <div style={{ color: '#666' }}>
+                                Reload to drop the data this page still holds from before the restore.
+                            </div>
+                        </div>
+                    )}
+
+                    {restore?.status === 'error' && (
+                        <div style={{ border: '1px solid #c84040', background: '#fff4f4', padding: '6px 8px', color: '#8e0000' }}>
+                            {restore.message}
+                        </div>
+                    )}
+                </div>
             </ModalWrapper>
         </div>
     );

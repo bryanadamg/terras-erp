@@ -9,8 +9,12 @@ from app.core.ws_manager import manager as ws_manager
 from app.core.security import verify_password
 from app.db.session import get_db
 from app.schemas import DatabaseResponse, ConnectionProfile, WipeDatabaseRequest, BackupScheduleUpdate, BackupScheduleResponse
-from app.api.auth import get_current_admin
+from app.api.auth import get_current_admin, oauth2_scheme
+from app.core.security import ALGORITHM, SECRET_KEY
 from app.models.auth import User
+from jose import JWTError, jwt
+from typing import Annotated
+import asyncio
 from app.models.audit import AuditLog
 from app.services import backup_schedule_service
 from pathlib import Path
@@ -126,12 +130,45 @@ async def upload_snapshot(file: UploadFile = File(...), current_user: User = Dep
     _log_admin_action(current_user.id, "DB_SNAPSHOT_UPLOAD", f"Uploaded snapshot {safe_filename}")
     return {"message": f"Snapshot {safe_filename} uploaded", "status": True}
 
+# Held so the task isn't garbage-collected mid-restore — asyncio keeps only a weak
+# reference to a running task.
+_restore_task: asyncio.Task | None = None
+
+
+@router.get("/snapshots/restore-status")
+def restore_status(token: Annotated[str, Depends(oauth2_scheme)]):
+    """Phase/percent of the running (or last) restore. Deliberately NOT behind
+    `get_current_admin`: that dependency loads the user and their role rows, and this is
+    polled precisely while the schema is dropped, when no such read can succeed. The
+    token's signature and expiry still gate it, and the payload is phase strings."""
+    try:
+        jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+    except JWTError:
+        raise HTTPException(status_code=401, detail="Could not validate credentials")
+    return db_manager.restore_state
+
+
 @router.post("/snapshots/{filename}/restore")
 async def restore_db(filename: str, current_user: User = Depends(get_current_admin)):
-    result = await db_manager.restore_snapshot(filename)
-    if result.status:
-        _log_admin_action(current_user.id, "DB_RESTORE", f"Restored snapshot {filename}")
-    return result
+    """Starts a restore and returns immediately — the client follows it through
+    /snapshots/restore-status. Holding the request open instead would outlive a proxy's
+    idle timeout on a large dump, and would leave the browser with one opaque spinner
+    for a job that has real phases."""
+    global _restore_task
+    if db_manager.restore_state.get("status") == "running":
+        raise HTTPException(status_code=409, detail="A restore is already running")
+    if not db_manager.get_snapshot_path(filename).exists():
+        raise HTTPException(status_code=404, detail="Snapshot file not found")
+
+    user_id = current_user.id
+
+    async def _run() -> None:
+        result = await db_manager.restore_snapshot(filename)
+        if result.status:
+            _log_admin_action(user_id, "DB_RESTORE", f"Restored snapshot {filename}")
+
+    _restore_task = asyncio.create_task(_run())
+    return {"status": True, "message": f"Restoring {filename}"}
 
 @router.post("/wipe", response_model=DatabaseResponse)
 async def wipe_database(payload: WipeDatabaseRequest, current_user: User = Depends(get_current_admin)):
