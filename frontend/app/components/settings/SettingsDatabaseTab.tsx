@@ -321,7 +321,7 @@ export default function SettingsDatabaseTab() {
     const handleRestoreSnapshot = async (filename: string) => {
         const ok = await confirm({
             title: 'Restore Snapshot?',
-            message: `Are you sure you want to restore "${filename}"? Current data will be overwritten.`,
+            message: `Are you sure you want to restore "${filename}"? Current data will be overwritten, and any uploaded files the snapshot carries (logos, sample photos, design files, delivery notes) are written back over the ones on disk.`,
             confirmText: 'Restore',
             variant: 'danger',
         });
