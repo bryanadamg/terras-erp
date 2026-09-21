@@ -133,18 +133,24 @@ async def upload_snapshot(file: UploadFile = File(...), current_user: User = Dep
 # Held so the task isn't garbage-collected mid-restore — asyncio keeps only a weak
 # reference to a running task.
 _restore_task: asyncio.Task | None = None
+# Id of the admin who started the current restore. Kept here rather than in the progress
+# state, which `restore_snapshot` rewrites wholesale at its first and last phase.
+_restore_started_by: str | None = None
 
 
 @router.get("/snapshots/restore-status")
 def restore_status(token: Annotated[str, Depends(oauth2_scheme)]):
     """Phase/percent of the running (or last) restore. Deliberately NOT behind
     `get_current_admin`: that dependency loads the user and their role rows, and this is
-    polled precisely while the schema is dropped, when no such read can succeed. The
-    token's signature and expiry still gate it, and the payload is phase strings."""
+    polled precisely while the schema is dropped, when no such read can succeed. So the
+    check is the one that needs no database — a valid token whose subject is the admin
+    who started this restore. Nobody else, and nobody at all before one is started."""
     try:
-        jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
     except JWTError:
         raise HTTPException(status_code=401, detail="Could not validate credentials")
+    if _restore_started_by is None or payload.get("sub") != _restore_started_by:
+        raise HTTPException(status_code=403, detail="Not authorized to view this restore")
     return db_manager.restore_state
 
 
@@ -154,13 +160,14 @@ async def restore_db(filename: str, current_user: User = Depends(get_current_adm
     /snapshots/restore-status. Holding the request open instead would outlive a proxy's
     idle timeout on a large dump, and would leave the browser with one opaque spinner
     for a job that has real phases."""
-    global _restore_task
+    global _restore_task, _restore_started_by
     if db_manager.restore_state.get("status") == "running":
         raise HTTPException(status_code=409, detail="A restore is already running")
     if not db_manager.get_snapshot_path(filename).exists():
         raise HTTPException(status_code=404, detail="Snapshot file not found")
 
     user_id = current_user.id
+    _restore_started_by = str(user_id)
 
     async def _run() -> None:
         result = await db_manager.restore_snapshot(filename)
