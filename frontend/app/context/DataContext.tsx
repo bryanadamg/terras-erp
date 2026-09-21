@@ -13,6 +13,10 @@ const API_BASE = envBase.endsWith('/api') ? envBase : `${envBase}/api`;
 // requestType -> the domain key views read via useData().loading.*
 const LOADING_KEY: Record<string, string> = {
     items: 'items', boms: 'boms', 'manufacturing-orders': 'manufacturingOrders',
+    // The dashboard pulls the same domain under its own slim request type; without
+    // this it is the one list in the app with no loading flag, so its tables flash
+    // "no data" before the first response lands.
+    'manufacturing-orders-slim': 'manufacturingOrders',
     'production-runs': 'productionRuns', balance: 'stockBalance', 'stock-ledger': 'stockEntries',
     'sales-orders': 'salesOrders', 'purchase-orders': 'purchaseOrders', samples: 'samples',
     'audit-logs': 'auditLogs', partners: 'partners',

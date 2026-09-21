@@ -9,7 +9,7 @@ export default function DashboardPage() {
     const {
         items, locations, stockBalance, dashboardWorkOrders,
         stockEntries, samples, salesOrders, dashboardKPIs,
-        dashboardSummary, dashboardKpiHistory, itemIndex,
+        dashboardSummary, dashboardKpiHistory, itemIndex, loading,
     } = useData();
     const isMobile = useIsMobile();
 
@@ -23,6 +23,7 @@ export default function DashboardPage() {
                 kpis={dashboardKPIs}
                 summary={dashboardSummary}
                 itemIndex={itemIndex}
+                loading={loading.manufacturingOrders}
             />
         );
     }

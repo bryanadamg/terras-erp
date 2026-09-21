@@ -1,38 +1,33 @@
-import { useState, useMemo } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useLanguage } from '../../context/LanguageContext';
 import { useTimezone } from '../../context/TimezoneContext';
 import CalendarView from '../shared/CalendarView';
 import {
     xpFont, ProgressBar, StatusChip, XPStatusBar, familyColor, familyTint, statusColor, type StatusFamily,
-    CodeChip, CODE_FONT, SkeletonBar,
+    CodeChip, CODE_FONT, SkeletonBar, TableSkeleton, useTableSkeletonMetrics, XPEmptyState,
 } from '../shared/xpTheme';
+import { Tooltip } from '../shared/Tooltip';
 import { ShellWindow, ShellTitleBar } from '../shared/shellTheme';
-import { lvTh, lvTd, lvRow, lvThead } from '../shared/listViewTheme';
+import { lvTd, lvRow, lvThSticky, TableEmpty } from '../shared/listViewTheme';
 
 // ── Local table chrome ───────────────────────────────────────────────────────
-// Cells/rows come from listViewTheme (lvTh/lvTd/lvRow); only the sticky+gradient
-// header treatment these scroll panes need is added on top.
+// Header cells, body cells, rows and empty rows are listViewTheme's
+// (lvThSticky/lvTd/lvRow/TableEmpty) — the sticky banded header and the muted
+// empty row here were local copies of exactly those. Only the <table> element
+// itself stays local.
 const xpTable: React.CSSProperties = {
     width: '100%', borderCollapse: 'collapse', fontFamily: xpFont, background: '#ffffff',
-};
-
-const stickyTh = (extra: React.CSSProperties = {}): React.CSSProperties => ({
-    ...lvTh(),
-    ...lvThead(),
-    position: 'sticky', top: 0, zIndex: 1,
-    ...extra,
-});
-
-const emptyRowStyle: React.CSSProperties = {
-    textAlign: 'center', padding: '16px', color: '#666', fontStyle: 'italic',
-    fontSize: '10px', background: '#fff', fontFamily: xpFont,
 };
 
 // Health panels signal the same five semantic families as every status chip —
 // map through STATUS_FAMILY's palette instead of a local hex table.
 type HealthStatus = 'ok' | 'warn' | 'crit';
 const HEALTH_FAMILY: Record<HealthStatus, StatusFamily> = { ok: 'green', warn: 'amber', crit: 'red' };
+
+// A line under a health panel's big number. `tone` picks its text + icon colour
+// from the shared five families; a line with neither reads as plain context.
+type HealthLine = { text: string; tone?: StatusFamily; icon?: string };
 const SEV_FAMILY: Record<string, StatusFamily> = { crit: 'red', warn: 'amber', info: 'green' };
 
 // ── Dependency-free inline SVG sparkline (KPI daily trend) ─────────────────────
@@ -66,12 +61,11 @@ const TREND_METRICS = [
     { key: 'open_sos', color: familyColor('green') },
 ];
 
-export default function DashboardView({ items, locations, stockBalance, workOrders, stockEntries, samples, salesOrders, kpis, summary, itemIndex, kpiHistory }: any) {
+export default function DashboardView({ items, locations, stockBalance, workOrders, stockEntries, samples, salesOrders, kpis, summary, itemIndex, kpiHistory, loading }: any) {
     const { t } = useLanguage();
     const { formatDateTime: tzDateTime, formatCustom: tzFmt } = useTimezone();
     const router = useRouter();
     const [drill, setDrill] = useState<'lowstock' | 'short' | null>(null);
-    const [hoveredAction, setHoveredAction] = useState<number | null>(null);
     const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>({});
     const toggleGroup = (id: string) => setExpandedGroups(p => ({ ...p, [id]: !p[id] }));
 
@@ -238,6 +232,13 @@ export default function DashboardView({ items, locations, stockBalance, workOrde
     // Command Center layout
     // ────────────────────────────────────────────────────────────────────────
 
+    // Skeleton metrics: cols summed off the live <thead>, row height measured from
+       // a real row — never hand-counted (see the loading-UI standard).
+    const woBodyRef = useRef<HTMLTableSectionElement>(null);
+    const woSkel = useTableSkeletonMetrics('dashboard-wo', woBodyRef, false);
+    const moveBodyRef = useRef<HTMLTableSectionElement>(null);
+    const moveSkel = useTableSkeletonMetrics('dashboard-movements', moveBodyRef, false);
+
     const critCount = actionItems.filter(a => a.sev === 'crit').length;
     const warnCount = actionItems.filter(a => a.sev === 'warn').length;
 
@@ -276,9 +277,13 @@ export default function DashboardView({ items, locations, stockBalance, workOrde
                     </span>
                     <span style={{ fontSize: '10px', color: '#555' }}>{bigLabel}</span>
                 </div>
-                {lines.map((line: any, i: number) => (
-                    <div key={i} style={{ fontSize: '9px', color: line.color || '#555', marginBottom: '2px' }}>
-                        {line.icon} {line.text}
+                {lines.map((line: HealthLine, i: number) => (
+                    <div key={i} style={{
+                        fontSize: '9px', marginBottom: '2px', display: 'flex', alignItems: 'center', gap: 4,
+                        color: line.tone ? familyTint(line.tone).color : '#555',
+                    }}>
+                        {line.icon && line.tone && <i className={`bi ${line.icon}`} style={{ fontSize: 8, color: familyColor(line.tone) }} aria-hidden="true" />}
+                        <span>{line.text}</span>
                     </div>
                 ))}
                 {prog !== undefined && (
@@ -295,22 +300,24 @@ export default function DashboardView({ items, locations, stockBalance, workOrde
         );
     };
 
-    const kpiTileStyle = (highlight?: 'crit' | 'warn'): React.CSSProperties => ({
+    // Accent frame + wash come from the same five families as every chip, health
+    // panel and alert row. The local crit/warn hex pair was a sixth red and a sixth
+    // amber sitting one row above the ones STATUS_FAMILY paints.
+    const kpiTileStyle = (frame?: StatusFamily): React.CSSProperties => ({
         border: '2px solid',
-        borderColor: highlight === 'crit' ? '#ffaaaa #cc0000 #cc0000 #ffaaaa'
-                   : highlight === 'warn' ? '#ffe088 #c77800 #c77800 #ffe088'
-                   : '#dfdfdf #808080 #808080 #dfdfdf',
+        ...(frame
+            ? { borderColor: familyColor(frame), background: familyTint(frame).background }
+            : { borderColor: '#dfdfdf #808080 #808080 #dfdfdf', background: '#f5f4ef' }),
         textAlign: 'center',
         padding: '5px 4px',
-        background: highlight === 'crit' ? '#ffecec' : highlight === 'warn' ? '#fffae8' : '#f5f4ef',
     });
 
     // One tile shape for the whole KPI strip — the six tiles differed only in
     // value/label/accent, so they were six copies of the same two divs.
-    const KpiTile = ({ value, label, tone, highlight }: {
-        value: React.ReactNode; label: string; tone?: StatusFamily; highlight?: 'crit' | 'warn';
+    const KpiTile = ({ value, label, tone, frame }: {
+        value: React.ReactNode; label: string; tone?: StatusFamily; frame?: boolean;
     }) => (
-        <div style={kpiTileStyle(highlight)}>
+        <div style={kpiTileStyle(frame ? tone : undefined)}>
             <div style={{ fontSize: '20px', fontWeight: 'bold', fontFamily: CODE_FONT, color: tone ? familyColor(tone) : '#333', lineHeight: 1.1 }}>
                 {kpisLoading
                     ? <span style={{ display: 'inline-block', width: 42, verticalAlign: 'middle' }}><SkeletonBar width="100%" height={18} /></span>
@@ -341,11 +348,11 @@ export default function DashboardView({ items, locations, stockBalance, workOrde
                     bigNum={namedLowStock.length > 0 ? namedLowStock.length : metrics.totalItems}
                     bigLabel={namedLowStock.length > 0 ? `item${namedLowStock.length > 1 ? 's' : ''} at critical level` : 'SKUs in inventory'}
                     lines={namedLowStock.length > 0
-                        ? namedLowStock.slice(0, 2).map((i: any) => ({ text: `${i.name} — ${i.totalStock} units`, color: '#880000', icon: '●' }))
-                          .concat(metrics.totalItems ? [{ text: `${metrics.totalItems} total SKUs across ${(locations || []).length} locations`, color: '#555', icon: '' }] : [])
+                        ? namedLowStock.slice(0, 2).map((i: any): HealthLine => ({ text: `${i.name} — ${i.totalStock} units`, tone: 'red', icon: 'bi-circle-fill' }))
+                          .concat(metrics.totalItems ? [{ text: `${metrics.totalItems} total SKUs across ${(locations || []).length} locations` }] : [])
                         : [
-                            { text: `${metrics.totalItems} total SKUs tracked`, color: '#228822', icon: '+' },
-                            { text: `${(locations || []).length} warehouse location${(locations || []).length !== 1 ? 's' : ''}`, color: '#555', icon: '' },
+                            { text: `${metrics.totalItems} total SKUs tracked`, tone: 'green', icon: 'bi-check-circle-fill' },
+                            { text: `${(locations || []).length} warehouse location${(locations || []).length !== 1 ? 's' : ''}` },
                           ]
                     }
                 />
@@ -356,9 +363,9 @@ export default function DashboardView({ items, locations, stockBalance, workOrde
                     bigLabel="active work orders"
                     lines={[
                         overdueWOs.length > 0
-                            ? { text: `${overdueWOs[0].code} overdue (${overdueWOs[0].target_end_date?.slice(0, 10) || '?'})`, color: '#aa6600', icon: '●' }
-                            : { text: 'No overdue work orders', color: '#228822', icon: '+' },
-                        { text: `${metrics.pendingWO} WO${metrics.pendingWO !== 1 ? 's' : ''} pending release`, color: '#555', icon: '' },
+                            ? { text: `${overdueWOs[0].code} overdue (${overdueWOs[0].target_end_date?.slice(0, 10) || '?'})`, tone: 'amber', icon: 'bi-exclamation-triangle-fill' }
+                            : { text: 'No overdue work orders', tone: 'green', icon: 'bi-check-circle-fill' },
+                        { text: `${metrics.pendingWO} WO${metrics.pendingWO !== 1 ? 's' : ''} pending release` },
                     ]}
                     prog={prodYield}
                     progTone={prodYield > 90 ? 'green' : 'amber'}
@@ -371,11 +378,11 @@ export default function DashboardView({ items, locations, stockBalance, workOrde
                     bigLabel="open sales orders"
                     lines={[
                         readySOCount > 0
-                            ? { text: `${readySOCount} order${readySOCount > 1 ? 's' : ''} fully fulfillable`, color: '#228822', icon: '+' }
-                            : { text: 'No orders fully fulfillable', color: '#aa6600', icon: '!' },
+                            ? { text: `${readySOCount} order${readySOCount > 1 ? 's' : ''} fully fulfillable`, tone: 'green', icon: 'bi-check-circle-fill' }
+                            : { text: 'No orders fully fulfillable', tone: 'amber', icon: 'bi-exclamation-triangle-fill' },
                         shortSOCount > 0
-                            ? { text: `${shortSOCount} order${shortSOCount > 1 ? 's' : ''} have material shortages`, color: '#aa6600', icon: '!' }
-                            : { text: 'No material shortages', color: '#228822', icon: '+' },
+                            ? { text: `${shortSOCount} order${shortSOCount > 1 ? 's' : ''} have material shortages`, tone: 'amber', icon: 'bi-exclamation-triangle-fill' }
+                            : { text: 'No material shortages', tone: 'green', icon: 'bi-check-circle-fill' },
                     ]}
                     prog={deliveryReadiness}
                     progTone={deliveryReadiness > 80 ? 'green' : deliveryReadiness > 50 ? 'amber' : 'red'}
@@ -390,13 +397,13 @@ export default function DashboardView({ items, locations, stockBalance, workOrde
                     value={metrics.lowStock}
                     label={t('low_stock')}
                     tone={outCount > 0 ? 'red' : metrics.lowStock > 0 ? 'amber' : 'green'}
-                    highlight={outCount > 0 ? 'crit' : metrics.lowStock > 0 ? 'warn' : undefined}
+                    frame={metrics.lowStock > 0}
                 />
                 <KpiTile
                     value={metrics.activeWO}
                     label={t('active_wo')}
                     tone={overdueWOs.length > 0 ? 'amber' : undefined}
-                    highlight={overdueWOs.length > 0 ? 'warn' : undefined}
+                    frame={overdueWOs.length > 0}
                 />
                 <KpiTile value={metrics.pendingWO} label={t('pending_wo')} />
                 <KpiTile value={metrics.activeSamples} label={t('samples')} />
@@ -404,7 +411,7 @@ export default function DashboardView({ items, locations, stockBalance, workOrde
                     value={metrics.openOrders}
                     label={t('open_orders')}
                     tone={shortSOCount > 0 ? 'amber' : undefined}
-                    highlight={shortSOCount > 0 ? 'warn' : undefined}
+                    frame={shortSOCount > 0}
                 />
             </div>
 
@@ -425,38 +432,29 @@ export default function DashboardView({ items, locations, stockBalance, workOrde
                     />
                     <div style={{ flex: 1, overflowY: 'auto', minHeight: 0 }}>
                         {actionItems.length === 0 ? (
-                            <div style={{ ...alertRowStyle('info'), padding: '16px', textAlign: 'center', fontStyle: 'italic', color: '#666', fontSize: '10px', display: 'block' }}>
-                                <i className="bi bi-check-circle" style={{ marginRight: 4, color: familyColor('green') }} aria-hidden="true" />{t('all_systems_nominal')}
-                            </div>
+                            <XPEmptyState icon="bi-check-circle" message={t('all_systems_nominal')} />
                         ) : (
+                            // The detail text rides the app's own hover layer (delay,
+                            // placement, portal, aria-describedby). The local absolute
+                            // popup it replaces was a second tooltip surface, clipped by
+                            // this pane's own overflow.
                             actionItems.map((item, i) => (
-                                <div key={i}
-                                    style={{ ...alertRowStyle(item.sev), position: 'relative', cursor: 'help' }}
-                                    onMouseEnter={() => setHoveredAction(i)}
-                                    onMouseLeave={() => setHoveredAction(null)}
-                                >
-                                    <span style={{
-                                        width: 9, height: 9, marginTop: '3px', flexShrink: 0, display: 'inline-block',
-                                        background: familyColor(SEV_FAMILY[item.sev]),
-                                        border: '1px solid rgba(0,0,0,0.35)',
-                                    }} />
-                                    <div style={{ minWidth: 0 }}>
-                                        <div style={{ fontWeight: 'bold', color: familyTint(SEV_FAMILY[item.sev]).color, fontSize: '10px' }}>
-                                            {item.title}
-                                            <i className="bi bi-question-circle" style={{ marginLeft: 4, color: '#999', fontSize: 9 }} aria-hidden="true" />
+                                <Tooltip key={i} content={item.detail} placement="side" maxWidth={260}>
+                                    <div style={{ ...alertRowStyle(item.sev), cursor: 'help' }}>
+                                        <span style={{
+                                            width: 9, height: 9, marginTop: '3px', flexShrink: 0, display: 'inline-block',
+                                            background: familyColor(SEV_FAMILY[item.sev]),
+                                            border: '1px solid rgba(0,0,0,0.35)',
+                                        }} />
+                                        <div style={{ minWidth: 0 }}>
+                                            <div style={{ fontWeight: 'bold', color: familyTint(SEV_FAMILY[item.sev]).color, fontSize: '10px' }}>
+                                                {item.title}
+                                                <i className="bi bi-question-circle" style={{ marginLeft: 4, color: '#999', fontSize: 9 }} aria-hidden="true" />
+                                            </div>
+                                            <div style={{ fontSize: '9px', color: '#666' }}>{item.sub}</div>
                                         </div>
-                                        <div style={{ fontSize: '9px', color: '#666' }}>{item.sub}</div>
                                     </div>
-                                    {hoveredAction === i && (
-                                        <div role="tooltip" style={{
-                                            position: 'absolute', left: '100%', top: 0, marginLeft: 6, width: 230, zIndex: 1000,
-                                            background: '#ffffe1', border: '1px solid #808080', boxShadow: '2px 2px 5px rgba(0,0,0,0.3)',
-                                            padding: '6px 8px', fontFamily: xpFont, fontSize: '10px', color: '#222', lineHeight: 1.4,
-                                        }}>
-                                            {item.detail}
-                                        </div>
-                                    )}
-                                </div>
+                                </Tooltip>
                             ))
                         )}
                     </div>
@@ -477,15 +475,15 @@ export default function DashboardView({ items, locations, stockBalance, workOrde
                         <table style={xpTable}>
                             <thead>
                                 <tr>
-                                    <th style={stickyTh({ width: '100px' })}>{t('code')}</th>
-                                    <th style={stickyTh()}>{t('product')}</th>
-                                    <th style={stickyTh({ width: '65px' })}>{t('status')}</th>
-                                    <th style={stickyTh({ width: '110px' })}>{t('progress')}</th>
-                                    <th style={stickyTh({ width: '50px', textAlign: 'right' })}>{t('qty')}</th>
-                                    <th style={stickyTh({ width: '75px', borderRight: 'none' })}>{t('due_date')}</th>
+                                    <th style={lvThSticky({ width: '100px' })}>{t('code')}</th>
+                                    <th style={lvThSticky()}>{t('product')}</th>
+                                    <th style={lvThSticky({ width: '65px' })}>{t('status')}</th>
+                                    <th style={lvThSticky({ width: '110px' })}>{t('progress')}</th>
+                                    <th style={lvThSticky({ width: '50px', textAlign: 'right' })}>{t('qty')}</th>
+                                    <th style={lvThSticky({ width: '75px', borderRight: 'none' })}>{t('due_date')}</th>
                                 </tr>
                             </thead>
-                            <tbody>
+                            <tbody ref={woBodyRef}>
                                 {activeWOList.map((wo: any, idx: number) => {
                                     const progTone: StatusFamily = wo.isOverdue ? 'red' : wo.progress >= 100 ? 'green' : wo.status === 'IN_PROGRESS' ? 'blue' : 'gray';
                                     const displayStatus = wo.isOverdue ? 'OVERDUE' : wo.status;
@@ -510,8 +508,9 @@ export default function DashboardView({ items, locations, stockBalance, workOrde
                                         </tr>
                                     );
                                 })}
-                                {activeWOList.length === 0 && (
-                                    <tr><td colSpan={6} style={emptyRowStyle}>{t('no_active_production')}</td></tr>
+                                {activeWOList.length === 0 && (loading
+                                    ? <TableSkeleton rows={6} cols={woSkel.cols ?? 6} tdStyle={lvTd()} rowHeight={woSkel.rowHeight} fillHeight={woSkel.fillHeight} />
+                                    : <TableEmpty colSpan={6} icon="bi-gear" message={t('no_active_production')} tdStyle={lvTd()} />
                                 )}
                             </tbody>
                         </table>
@@ -538,13 +537,13 @@ export default function DashboardView({ items, locations, stockBalance, workOrde
                         <table style={xpTable}>
                             <thead>
                                 <tr>
-                                    <th style={stickyTh()}>{t('item')}</th>
-                                    <th style={stickyTh({ width: '60px', textAlign: 'right' })}>{t('change')}</th>
-                                    <th style={stickyTh({ width: '110px' })}>{t('locations')}</th>
-                                    <th style={stickyTh({ width: '90px', borderRight: 'none' })}>{t('when')}</th>
+                                    <th style={lvThSticky()}>{t('item')}</th>
+                                    <th style={lvThSticky({ width: '60px', textAlign: 'right' })}>{t('change')}</th>
+                                    <th style={lvThSticky({ width: '110px' })}>{t('locations')}</th>
+                                    <th style={lvThSticky({ width: '90px', borderRight: 'none' })}>{t('when')}</th>
                                 </tr>
                             </thead>
-                            <tbody>
+                            <tbody ref={moveBodyRef}>
                                 {recentActivity.map((entry: any, idx: number) => (
                                     <tr key={entry.key} style={lvRow(idx)}>
                                         <td style={{ ...lvTd(), fontWeight: 'bold', color: '#000' }}>{entry.itemName}</td>
@@ -559,8 +558,9 @@ export default function DashboardView({ items, locations, stockBalance, workOrde
                                         </td>
                                     </tr>
                                 ))}
-                                {recentActivity.length === 0 && (
-                                    <tr><td colSpan={4} style={{ ...emptyRowStyle, padding: '12px' }}>{t('no_recent_movements')}</td></tr>
+                                {recentActivity.length === 0 && (loading
+                                    ? <TableSkeleton rows={6} cols={moveSkel.cols ?? 4} tdStyle={lvTd()} rowHeight={moveSkel.rowHeight} fillHeight={moveSkel.fillHeight} />
+                                    : <TableEmpty colSpan={4} icon="bi-clock-history" message={t('no_recent_movements')} tdStyle={lvTd()} />
                                 )}
                             </tbody>
                         </table>
@@ -598,7 +598,7 @@ export default function DashboardView({ items, locations, stockBalance, workOrde
                     <ShellTitleBar tone="grey" icon="bi-building" title={t('warehouse_distribution')} />
                     <div style={{ padding: '6px 8px', background: '#f0efe8', flex: 1, overflowY: 'auto', minHeight: 0 }}>
                         {groupedStats.length === 0 ? (
-                            <div style={{ textAlign: 'center', padding: '12px', color: '#888', fontStyle: 'italic', fontSize: '10px' }}>{t('no_inventory_recorded')}</div>
+                            <XPEmptyState icon="bi-building" message={t('no_inventory_recorded')} />
                         ) : (
                             <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
                                 {groupedStats.map((g: any) => {
