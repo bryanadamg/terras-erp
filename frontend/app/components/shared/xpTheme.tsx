@@ -159,6 +159,10 @@ export const STATUS_FAMILY: Record<string, StatusFamily> = {
     DRAFT: 'gray', CLOSED: 'gray',
     PENDING: 'gray',
     PARTIAL: 'amber', RECEIVING: 'amber', ON_HOLD: 'amber',
+    // Delivery outlook: an order past the date it was owed. Red like the SHORT
+    // verdict further down — both mean the customer cannot be served as promised;
+    // the outlook's own date column carries which of the two it is.
+    LATE: 'red',
     // A weaving run parked while another WO on the same loom is prioritised. Amber
     // like ON_HOLD: open work, deliberately not moving — not a failure (red) and not
     // in flight (blue).
