@@ -2,8 +2,10 @@
 
 import { useState, useRef, useEffect } from 'react';
 import { useUser } from '../../context/UserContext';
-import { CODE_FONT, xpFont, CHIP_RADIUS, xpInput as xpInputBase, xpBtn as xpBtnBase, BTN_TONES, XP_BTN } from '../shared/xpTheme';
-import { SearchField, ToolbarCount } from '../shared/shellTheme';
+import { useConfirm } from '../../context/ConfirmContext';
+import { Chip, XPActionButton, xpFont, rowStateBg, XP_BTN } from '../shared/xpTheme';
+import { lvInput, lvBtn, lvSep, lvZebra } from '../shared/listViewTheme';
+import { xpToolbar, SearchField, ToolbarCount, ToolbarButton } from '../shared/shellTheme';
 
 type Category = {
     id: string;
@@ -29,13 +31,33 @@ function buildTree(cats: Category[]): Category[] {
     const map = new Map(cats.map(c => [c.id, { ...c, children: [] as Category[] }]));
     const roots: Category[] = [];
     for (const node of map.values()) {
-        if (!node.parent_id) roots.push(node);
-        else map.get(node.parent_id)?.children?.push(node);
+        if (!node.parent_id || !map.has(node.parent_id)) roots.push(node);
+        else map.get(node.parent_id)!.children!.push(node);
     }
-    const sort = (arr: Category[]) => arr.sort((a, b) => a.name.localeCompare(b.name));
+    const sort = (arr: Category[]) => {
+        arr.sort((a, b) => a.name.localeCompare(b.name));
+        arr.forEach(n => sort(n.children!));
+    };
     sort(roots);
-    roots.forEach(r => { sort(r.children!); r.children!.forEach(c => sort(c.children!)); });
     return roots;
+}
+
+// A search hit is kept WITH its ancestors: filtering the flat list first dropped
+// every matched child whose parent did not match (its parent id no longer
+// resolved in the map), so searching for a leaf name found nothing.
+function filterWithAncestors(cats: Category[], term: string): Category[] {
+    const q = term.toLowerCase();
+    const byId = new Map(cats.map(c => [c.id, c]));
+    const keep = new Set<string>();
+    for (const c of cats) {
+        if (!c.name.toLowerCase().includes(q)) continue;
+        let cur: Category | undefined = c;
+        while (cur && !keep.has(cur.id)) {
+            keep.add(cur.id);
+            cur = cur.parent_id ? byId.get(cur.parent_id) : undefined;
+        }
+    }
+    return cats.filter(c => keep.has(c.id));
 }
 
 // Auto-focus helper component
@@ -45,13 +67,17 @@ function AutoFocusInput(props: React.InputHTMLAttributes<HTMLInputElement>) {
     return <input ref={ref} {...props} />;
 }
 
+const SYSTEM_TONE = { background: '#dce8ff', borderColor: '#7fa8e0', color: '#003080' };
+const INDENT = 16;
+
 export default function CategoriesView({
     categories,
     onCreateCategory,
     onDeleteCategory,
     onRenameCategory,
 }: CategoriesViewProps) {
-    const { hasPermission, hasAnyPermission } = useUser();
+    const { hasAnyPermission } = useUser();
+    const { confirm } = useConfirm();
     const canManage = hasAnyPermission('category.create', 'category.edit', 'category.delete');
 
     const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -59,9 +85,7 @@ export default function CategoriesView({
     const [editingState, setEditingState] = useState<EditingState>(null);
     const [addingState, setAddingState] = useState<AddingState>(null);
     const [hoveredId, setHoveredId] = useState<string | null>(null);
-    const [newRootName, setNewRootName] = useState('');
     const [collapsedIds, setCollapsedIds] = useState<Set<string>>(new Set());
-    const renderCounter = { n: 0 };
 
     const toggleCollapse = (id: string) => {
         setCollapsedIds(prev => {
@@ -72,19 +96,7 @@ export default function CategoriesView({
         });
     };
 
-    const handleAddRoot = async () => {
-        if (newRootName.trim()) {
-            await onCreateCategory(newRootName.trim(), undefined);
-            setNewRootName('');
-        }
-    };
-
-    const selectedNode = selectedId ? categories.find(c => c.id === selectedId) ?? null : null;
-    const tree = buildTree(
-        search
-            ? categories.filter(c => c.name.toLowerCase().includes(search.toLowerCase()))
-            : [...categories]
-    );
+    const tree = buildTree(search ? filterWithAncestors(categories, search) : [...categories]);
 
     // ── Shared action handlers ────────────────────────────────────────────────
     const handleConfirmRename = async () => {
@@ -101,15 +113,21 @@ export default function CategoriesView({
         setAddingState(null);
     };
 
-    const handleDelete = async (id: string) => {
-        await onDeleteCategory(id);
-        if (selectedId === id) setSelectedId(null);
-        if (editingState?.id === id) setEditingState(null);
+    const handleDelete = async (node: Category) => {
+        const ok = await confirm({
+            title: 'Delete Category', variant: 'danger', confirmText: 'Delete',
+            message: `Delete category "${node.name}"? Blocked if it is used by any item.`,
+        });
+        if (!ok) return;
+        await onDeleteCategory(node.id);
+        if (selectedId === node.id) setSelectedId(null);
+        if (editingState?.id === node.id) setEditingState(null);
     };
 
     const startAdd = (parentId: string | undefined) => {
         setEditingState(null);
         setAddingState({ parentId, value: '' });
+        if (parentId) setCollapsedIds(prev => { const n = new Set(prev); n.delete(parentId); return n; });
     };
 
     const startRename = (node: Category) => {
@@ -117,96 +135,61 @@ export default function CategoriesView({
         setEditingState({ type: 'rename', id: node.id, value: node.name });
     };
 
-    // ── XP style helpers ──────────────────────────────────────────────────────
-    const xpToolbar: React.CSSProperties = {
-        background: 'linear-gradient(to bottom, #f5f4ef, #e0dfd8)',
-        borderBottom: '1px solid #b0a898',
-        padding: '4px 6px',
-        display: 'flex',
-        gap: 4,
-        alignItems: 'center',
-    };
-    const xpBtn = (extra: React.CSSProperties = {}): React.CSSProperties => xpBtnBase({ padding: '2px 8px', ...extra });
-    const xpIconBtn = (extra: React.CSSProperties = {}): React.CSSProperties => ({
-        background: 'none',
-        border: 'none',
-        padding: '0 2px',
-        fontFamily: xpFont,
-        fontSize: 11,
-        cursor: 'pointer',
-        borderRadius: 0,
-        lineHeight: 1,
+    // ── Row chrome ────────────────────────────────────────────────────────────
+    const rowStyle = (level: number, extra: React.CSSProperties = {}): React.CSSProperties => ({
+        display: 'flex', alignItems: 'center', gap: 4,
+        padding: '2px 6px', paddingLeft: (level - 1) * INDENT + 6,
+        fontFamily: xpFont, fontSize: 11,
+        borderBottom: '1px solid #e6e3db',
         ...extra,
     });
-    const xpInput: React.CSSProperties = xpInputBase({ boxShadow: 'inset 1px 1px 0 rgba(0,0,0,0.1)', height: 'auto', padding: '2px 4px' });
+
+    const caret = (color = '#5a6472'): React.CSSProperties => ({ fontSize: 8, color, width: 12 });
 
     // ── Add-row renderer ──────────────────────────────────────────────────────
-    const renderAddRow = (level: number): React.ReactNode => {
-        const indent = (level - 1) * 16;
-        return (
-            <div
-                key="__adding__"
-                style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    padding: '1px 4px',
-                    paddingLeft: indent + (4),
-                    gap: 4,
+    const renderAddRow = (level: number): React.ReactNode => (
+        <div key="__adding__" style={rowStyle(level, { background: rowStateBg('expanded') })}>
+            <i className="bi bi-caret-right-fill" style={caret('#8a8a8a')} />
+            <AutoFocusInput
+                style={lvInput({ flex: 1 })}
+                placeholder="New category name..."
+                value={addingState?.value ?? ''}
+                onChange={e => setAddingState(s => s ? { ...s, value: e.target.value } : s)}
+                onKeyDown={e => {
+                    if (e.key === 'Enter') { e.preventDefault(); handleConfirmAdd(); }
+                    if (e.key === 'Escape') { e.preventDefault(); setAddingState(null); }
                 }}
-            >
-                <span style={{ marginRight: 4, fontSize: 10, fontFamily: CODE_FONT, color: '#999'}}>—</span>
-                <AutoFocusInput
-                    className={undefined}
-                    style={{ ...xpInput, flex: 1 }}
-                    placeholder="New category name..."
-                    value={addingState?.value ?? ''}
-                    onChange={e => setAddingState(s => s ? { ...s, value: e.target.value } : s)}
-                    onKeyDown={e => {
-                        if (e.key === 'Enter') { e.preventDefault(); handleConfirmAdd(); }
-                        if (e.key === 'Escape') { e.preventDefault(); setAddingState(null); }
-                    }}
-                />
-                {<>
-                        <button className={XP_BTN} style={xpBtn()} onClick={handleConfirmAdd} title="Save">✓</button>
-                        <button className={XP_BTN} style={xpBtn()} onClick={() => setAddingState(null)} title="Cancel">✕</button>
-                    </>}
-            </div>
-        );
-    };
+            />
+            <button className={XP_BTN} style={lvBtn('primary')} onClick={handleConfirmAdd}>Add</button>
+            <button className={XP_BTN} style={lvBtn()} onClick={() => setAddingState(null)}>Cancel</button>
+        </div>
+    );
 
     // ── Tree node renderer ────────────────────────────────────────────────────
+    let rowIdx = 0;
+
     const renderNode = (node: Category): React.ReactNode => {
-        const rowIdx = renderCounter.n++;
-        const isEven = rowIdx % 2 === 0;
-        const indent = (node.level - 1) * 16;
         const isSelected = node.id === selectedId;
         const isHovered = node.id === hoveredId;
         const isEditing = editingState?.id === node.id;
         const hasChildren = (node.children?.length ?? 0) > 0;
         const isCollapsed = collapsedIds.has(node.id);
-        const chevron = hasChildren ? (isCollapsed ? '▶' : '▼') : '—';
-        const chevronColor = isSelected ? '#fff' : (hasChildren ? '#444' : '#bbb');
-        const actionsOpacity = isHovered || isEditing ? 1 : 0;
-        const rowBg = isSelected ? '#316ac5' : (isHovered ? '#dde8fb' : (isEven ? '#fff' : '#f5f4ef'));
+        const zebra = lvZebra(rowIdx++);
+
+        const subRows = (
+            <>
+                {!isCollapsed && node.children?.map(child => renderNode(child))}
+                {!isCollapsed && addingState?.parentId === node.id && renderAddRow(node.level + 1)}
+            </>
+        );
 
         if (isEditing) {
             return (
                 <div key={node.id}>
-                    <div
-                        style={{
-                            display: 'flex',
-                            alignItems: 'center',
-                            padding: '1px 4px',
-                            paddingLeft: indent + (4),
-                            background: '#316ac5',
-                            borderRadius: undefined,
-                            gap: 4,
-                        }}
-                    >
-                        <span style={{ marginRight: 4, fontSize: 10, color: '#fff', fontFamily: CODE_FONT }}>{chevron}</span>
+                    <div style={rowStyle(node.level, { background: rowStateBg('expanded') })}>
+                        <i className="bi bi-caret-down-fill" style={caret('#8a8a8a')} />
                         <AutoFocusInput
-                            className={undefined}
-                            style={{ ...xpInput, flex: 1 }}
+                            style={lvInput({ flex: 1 })}
                             value={editingState.value}
                             onChange={e => setEditingState(s => s ? { ...s, value: e.target.value } : s)}
                             onKeyDown={e => {
@@ -214,13 +197,10 @@ export default function CategoriesView({
                                 if (e.key === 'Escape') { e.preventDefault(); setEditingState(null); }
                             }}
                         />
-                        {<>
-                                <button className={XP_BTN} style={xpBtn()} onClick={handleConfirmRename} title="Save">✓</button>
-                                <button className={XP_BTN} style={xpBtn()} onClick={() => setEditingState(null)} title="Cancel">✕</button>
-                            </>}
+                        <button className={XP_BTN} style={lvBtn('primary')} onClick={handleConfirmRename}>Save</button>
+                        <button className={XP_BTN} style={lvBtn()} onClick={() => setEditingState(null)}>Cancel</button>
                     </div>
-                    {node.children?.map(child => renderNode(child))}
-                    {addingState?.parentId === node.id && renderAddRow(node.level + 1)}
+                    {subRows}
                 </div>
             );
         }
@@ -228,127 +208,74 @@ export default function CategoriesView({
         return (
             <div key={node.id}>
                 <div
-                    style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        padding: '1px 4px',
-                        paddingLeft: indent + 4,
+                    style={rowStyle(node.level, {
                         cursor: 'pointer',
-                        fontFamily: xpFont,
-                        fontSize: 11,
                         fontWeight: node.level === 1 ? 'bold' : 'normal',
-                        background: rowBg,
-                        color: isSelected ? '#fff' : '#000',
+                        background: isSelected ? rowStateBg('selected') : (isHovered ? rowStateBg('expanded') : zebra),
                         userSelect: 'none' as const,
-                        position: 'relative',
-                    }}
+                    })}
                     onClick={() => setSelectedId(node.id)}
                     onMouseEnter={() => setHoveredId(node.id)}
                     onMouseLeave={() => setHoveredId(null)}
+                    title={node.path_names.join(' / ')}
                 >
-                    <span
-                        style={{ marginRight: 4, fontSize: 10, fontFamily: CODE_FONT, color: chevronColor, cursor: hasChildren ? 'pointer' : 'default' }}
-                        onClick={hasChildren ? e => { e.stopPropagation(); toggleCollapse(node.id); } : undefined}
-                    >{chevron}</span>
+                    {hasChildren ? (
+                        <i
+                            className={`bi ${isCollapsed ? 'bi-caret-right-fill' : 'bi-caret-down-fill'}`}
+                            style={{ ...caret(), cursor: 'pointer' }}
+                            onClick={e => { e.stopPropagation(); toggleCollapse(node.id); }}
+                        />
+                    ) : <span style={{ width: 12 }} />}
                     <span style={{ flex: 1 }}>{node.name}</span>
-                    {node.is_system && (
-                        <span style={{ borderRadius: CHIP_RADIUS, fontFamily: xpFont, fontSize: 9, color: '#003080', background: '#dce8ff', border: '1px solid #7fa8e0', padding: '0 4px', marginRight: 4 }}>SYSTEM</span>)}
+                    {node.is_system && <Chip size="xs" tone={SYSTEM_TONE}>SYSTEM</Chip>}
                     {canManage && (
-                    <span style={{ display: 'flex', gap: 2, opacity: actionsOpacity, transition: 'opacity 0.1s' }}>
-                        {node.level < 3 && (
-                            <button
-                                    style={xpIconBtn({ color: isSelected ? '#fff' : '#316ac5' })}
-                                    title="Add child"
-                                    onClick={e => { e.stopPropagation(); startAdd(node.id); }}
-                                >＋</button>)}
-                        {<button
-                                style={xpIconBtn({ color: isSelected ? '#fff' : '#555' })}
-                                title="Rename"
-                                onClick={e => { e.stopPropagation(); startRename(node); }}
-                            ><i className="bi bi-pencil-fill" /></button>}
-                        {!node.is_system && (
-                            <button
-                                    style={xpIconBtn({ color: isSelected ? '#ffc0c0' : '#c00' })}
-                                    title="Delete"
-                                    onClick={e => { e.stopPropagation(); handleDelete(node.id); }}
-                                >✕</button>)}
-                    </span>
+                        <span
+                            style={{ display: 'flex', gap: 3, opacity: isHovered ? 1 : 0, transition: 'opacity 0.1s' }}
+                            onClick={e => e.stopPropagation()}
+                        >
+                            {node.level < 3 && (
+                                <XPActionButton tone="primary" icon="bi-plus-lg" title="Add sub-category"
+                                    onClick={() => startAdd(node.id)} />
+                            )}
+                            <XPActionButton icon="bi-pencil" title="Rename" onClick={() => startRename(node)} />
+                            {!node.is_system && (
+                                <XPActionButton tone="danger" icon="bi-trash" title="Delete"
+                                    onClick={() => handleDelete(node)} />
+                            )}
+                        </span>
                     )}
                 </div>
-                {!isCollapsed && node.children?.map(child => renderNode(child))}
-                {!isCollapsed && addingState?.parentId === node.id && renderAddRow(node.level + 1)}
+                {subRows}
             </div>
         );
     };
 
-    return <div>
-            {/* Search toolbar */}
-            <div style={xpToolbar}>
-                <SearchField value={search} onChange={setSearch} placeholder="Search categories..." width={200} />
-                <div style={{ width: 1, height: 20, background: '#a0988c', margin: '0 2px', flexShrink: 0 }} />
-                <ToolbarCount>
+    return (
+        <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+            {/* Toolbar */}
+            <div style={xpToolbar({ padding: '4px 8px', flexShrink: 0 })}>
+                <SearchField value={search} onChange={setSearch} placeholder="Search categories…" width={220} />
+                <ToolbarCount right>
                     {categories.length} categor{categories.length === 1 ? 'y' : 'ies'}
                 </ToolbarCount>
+                {canManage && (
+                    <>
+                        <span style={lvSep()} />
+                        <ToolbarButton tone="create" icon="bi-plus-lg" onClick={() => startAdd(undefined)}>New Category</ToolbarButton>
+                    </>
+                )}
             </div>
 
             {/* Tree */}
-            <div style={{
-                background: '#fff',
-                border: '1px solid #7f9db9',
-                boxShadow: 'inset 1px 1px 0 rgba(0,0,0,0.1)',
-                minHeight: 160,
-                maxHeight: 360,
-                overflow: 'auto',
-                padding: 4,
-            }}>
+            <div style={{ flex: 1, minHeight: 0, background: '#fff', overflow: 'auto' }}>
                 {tree.length === 0 && !addingState && (
-                    <div style={{ color: '#888', fontSize: 11, padding: 8, fontFamily: xpFont }}>
+                    <div style={{ padding: 20, textAlign: 'center', color: '#888', fontStyle: 'italic', fontFamily: xpFont, fontSize: 11 }}>
                         No categories found.
                     </div>
                 )}
-                {(renderCounter.n = 0, tree.map(node => renderNode(node)))}
+                {tree.map(node => renderNode(node))}
+                {addingState && addingState.parentId === undefined && renderAddRow(1)}
             </div>
-
-            {/* Add row */}
-            {canManage && (
-            <div style={{ ...xpToolbar, borderTop: '1px solid #b0a898', borderBottom: 'none' }}>
-                <span style={{ fontFamily: xpFont, fontSize: '11px', color: '#000', whiteSpace: 'nowrap' }}>New category:</span>
-                <input
-                    style={{ ...xpInput, flex: 1, minWidth: 120 }}
-                    placeholder="Category name..."
-                    value={newRootName}
-                    onChange={e => setNewRootName(e.target.value)}
-                    onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); handleAddRoot(); } }}
-                />
-                <button
-                    className={XP_BTN}
-                    style={xpBtn({ ...BTN_TONES.success })}
-                    onClick={handleAddRoot}
-                >
-                    <i className="bi bi-plus-lg" style={{ marginRight: 4 }}></i>Add
-                </button>
-            </div>
-            )}
-
-            {/* Status bar */}
-            <div style={{
-                background: 'linear-gradient(to bottom, #e8e6df, #d5d3cc)',
-                borderTop: '1px solid #b0a898',
-                padding: '2px 8px',
-                fontSize: 11,
-                color: '#333',
-                display: 'flex',
-                gap: 16,
-                fontFamily: xpFont,
-            }}>
-                {selectedNode ? (
-                    <>
-                        <span>Selected: {selectedNode.name} (Level {selectedNode.level})</span>
-                        <span>Path: {selectedNode.path_names.join(' / ')}</span>
-                    </>
-                ) : (
-                    <span><b>{categories.length}</b> Total</span>
-                )}
-            </div>
-        </div>;
+        </div>
+    );
 }
