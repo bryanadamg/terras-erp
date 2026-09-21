@@ -244,9 +244,23 @@ async def list_quarantine_stock(
 
     # Lots already drawn by packing — their disposition is locked (frozen once
     # cartons exist against it), so the page renders them read-only.
-    packed_qty = await quarantine_service.packed_batch_qty(
-        db, [b.id for (_, b, _, _) in rows if b is not None]
-    )
+    on_hand_batch_ids = [b.id for (_, b, _, _) in rows if b is not None]
+    packed_qty = await quarantine_service.packed_batch_qty(db, on_hand_batch_ids)
+
+    # Lots LOCKED to an open packing order (`Batch.locked_packing_order_id`) —
+    # claimed off this desk and not FIFO-allocatable at all. The order that took
+    # them owns the whole pile and cannot close until it is drained, so they are
+    # reported wholly claimed rather than claimed-to-the-order's-open-qty. That
+    # is what keeps a second order from being planned over the same physical lot;
+    # the create endpoint refuses it outright either way.
+    locked_codes: dict = dict((await db.execute(
+        select(Batch.id, PackingOrder.code)
+        .join(PackingOrder, PackingOrder.id == Batch.locked_packing_order_id)
+        .filter(
+            Batch.id.in_(on_hand_batch_ids),
+            PackingOrder.status.notin_(packing_service.CLOSED_STATUSES),
+        )
+    )).all()) if on_hand_batch_ids else {}
 
     # An open packing order plans to draw this (item, source location, variant).
     # What it claims is its **open quantity** — `qty_target - qty_packed` — not the
@@ -317,6 +331,7 @@ async def list_quarantine_stock(
                     (bal, batch, item, loc) for bal, batch, item, loc in rows
                     if batch is not None
                     and batch.id not in packed_qty
+                    and batch.id not in locked_codes
                     and quarantine_service.is_pass(batch.quarantine_status)
                     and float(bal.qty or 0) > 0
                 ],
@@ -343,8 +358,14 @@ async def list_quarantine_stock(
                     prev_qty, prev_code = claims.get(bal.id, (0.0, o_code))
                     claims[bal.id] = (prev_qty + take, prev_code)
 
-    def _claim(bal) -> tuple:
-        """(claimed qty, claiming order code) for one balance row; (0, None) if free."""
+    def _claim(bal, batch) -> tuple:
+        """(claimed qty, claiming order code) for one balance row; (0, None) if free.
+
+        A locked lot short-circuits the FIFO allocation: all of it is spoken for,
+        whatever its owner's open quantity has shrunk to.
+        """
+        if batch is not None and batch.id in locked_codes:
+            return round(float(bal.qty or 0), 4), locked_codes[batch.id]
         qty, code = claims.get(bal.id, (0.0, None))
         return round(qty, 4), code
 
@@ -393,7 +414,7 @@ async def list_quarantine_stock(
         grp = _group(batch, item)
         qty = float(bal.qty or 0)
         released = quarantine_service.is_pass(batch.quarantine_status) if batch is not None else False
-        claimed_qty, claimed_code = _claim(bal)
+        claimed_qty, claimed_code = _claim(bal, batch)
         wo_code = origin.get(batch.source_wo_id, {}).get("wo_code") if batch is not None else None
         grp.qty_total += qty
         if released:

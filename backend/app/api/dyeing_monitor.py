@@ -10,7 +10,7 @@ from datetime import datetime, timezone
 from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy import select, func
+from sqlalchemy import select, func, or_, and_
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload, joinedload
 
@@ -23,7 +23,7 @@ from app.models.routing import WorkCenter
 from app.models.work_order import WorkOrder
 from app.api.auth import require_permission, require_any_permission
 from app.schemas import DyeingRunMonitorUpdate
-from app.services import audit_service, dyeing_monitor_service, mo_variant_service
+from app.services import audit_service, dyeing_dose_service, dyeing_monitor_service, mo_variant_service
 from app.core.ws_manager import manager
 
 router = APIRouter()
@@ -36,6 +36,22 @@ ACTIVE_RUN_STATUSES = dyeing_monitor_service.ACTIVE_RUN_STATUSES
 # and what is it waiting on" is half of what a supervisor walks the floor to find
 # out; neither reports a rate, and COLOR_MATCHING reports how long it has waited.
 CARD_RUN_STATUSES = ACTIVE_RUN_STATUSES + ("COLOR_MATCHING", "PENDING")
+
+# Whether a CARD's vessel is turning / waiting on a shade / merely loaded. The
+# monitor is a timer, so all three read the stamps the floor pressed rather than the
+# run's status — a bath configured in Dyeing Orders makes a run IN_PROGRESS before
+# anyone switches the machine on (services/dyeing_monitor_service).
+def _running(card: dict) -> bool:
+    return dyeing_monitor_service.clock_running(card["started_at"], card["completed_at"])
+
+
+def _matching(card: dict) -> bool:
+    return dyeing_monitor_service.clock_matching(card["color_matching_at"], card["started_at"])
+
+
+def _loaded(card: dict) -> bool:
+    return dyeing_monitor_service.clock_loaded(card["color_matching_at"], card["started_at"])
+
 
 # The MO behind a dye batch is reached through the WO -- DyeingRun has no mo_id of
 # its own, and no machine of its own either: the vessel is `work_order.work_center_id`
@@ -72,12 +88,11 @@ def _run_card(run: DyeingRun, metrics: dict) -> dict:
         "item_uom": mo.item.uom if (mo and mo.item) else None,
         "target_qty": float(mo.qty) if mo else None,
         "substrate_qty": float(run.substrate_qty) if run.substrate_qty is not None else None,
-        # The planner's bath, carried so the card's Start button can post it rather
-        # than send the operator to the WO screen for a number the WO already holds.
-        # The ACTUAL volume is never sent here -- a started run has no Start button.
-        "planned_bath_liters": (
-            float(run.planned_volume_air_liters) if run.planned_volume_air_liters is not None else None
-        ),
+        # The bath actually set up on this run, for the card to show. The Start
+        # button posts nothing: it is a clock stamp, and the bath is configured in
+        # Dyeing Orders (`planned_volume_air_liters` survives only on runs cut before
+        # that move, hence `effective_bath`).
+        "bath_liters": dyeing_dose_service.effective_bath(run),
         "recipe_code": run.recipe.code if run.recipe else None,
         # No colour/lot keys: they came off `DyeingRun.color_name` / `lot_number`,
         # dropped in a7c9e1b3d5f8 as never-populated duplicates of the MO's colour
@@ -99,7 +114,7 @@ def _machine_payload(wc: WorkCenter, cards: list) -> dict:
     the shared grid primitive reads one shape, and a vessel with a queued next load
     shows both.
     """
-    running = [c for c in cards if c["status"] in ACTIVE_RUN_STATUSES]
+    running = [c for c in cards if _running(c)]
     effs = [c["efficiency_pct"] for c in running if c["efficiency_pct"] is not None]
     return {
         "id": str(wc.id), "code": wc.code, "name": wc.name, "center_type": wc.center_type,
@@ -107,8 +122,8 @@ def _machine_payload(wc: WorkCenter, cards: list) -> dict:
         "active_run": cards[0] if cards else None,
         "loom_status": dyeing_monitor_service.derive_machine_status(
             bool(running),
-            any(c["status"] == "COLOR_MATCHING" for c in cards),
-            any(c["status"] == "PENDING" for c in cards),
+            any(_matching(c) for c in cards),
+            any(_loaded(c) for c in cards),
         ),
         "avg_efficiency_pct": round(sum(effs) / len(effs), 1) if effs else None,
         # No rate can be computed until a batch has a speed picked. It is a per-run
@@ -174,7 +189,14 @@ async def dyeing_monitor(
         .options(*_RUN_LOADS)
         .join(WorkOrder, DyeingRun.work_order_id == WorkOrder.id)
         .where(WorkOrder.work_center_id.in_(machine_ids))
-        .where(DyeingRun.status.in_(CARD_RUN_STATUSES))
+        # Status, OR an unclosed clock. A run reads COMPLETED the moment its WO
+        # closes (dyeing_run_service), but the monitor is a timer the floor stops by
+        # hand — dropping the card at WO close would take the Complete button away
+        # before anyone pressed it, and leave the batch with a running clock forever.
+        .where(or_(
+            DyeingRun.status.in_(CARD_RUN_STATUSES),
+            and_(DyeingRun.started_at.isnot(None), DyeingRun.completed_at.is_(None)),
+        ))
         .order_by(WorkOrder.work_center_id, DyeingRun.created_at.desc())
     )
     runs_by_wc: dict = {}
@@ -212,7 +234,7 @@ async def dyeing_monitor(
     # "running" counts VESSELS with cloth in them, not runs -- it sits beside the
     # machine total in the header. A vessel merely LOADED does not count.
     running = sum(1 for m in out if m["loom_status"] == dyeing_monitor_service.MACHINE_STATUS_RUNNING)
-    run_cards = [c for m in out for c in m["active_runs"] if c["status"] in ACTIVE_RUN_STATUSES]
+    run_cards = [c for m in out for c in m["active_runs"] if _running(c)]
     effs = [c["efficiency_pct"] for c in run_cards if c["efficiency_pct"] is not None]
     return {
         "machines": out, "total": len(out), "running": running, "groups": groups,
@@ -220,8 +242,7 @@ async def dyeing_monitor(
         "active_runs": len(run_cards),
         # Batches sitting on a shade rather than on the machine -- the one queue a
         # dye plant loses hours to that no production number reveals.
-        "matching": sum(1 for m in out for c in m["active_runs"]
-                        if c["status"] == "COLOR_MATCHING"),
+        "matching": sum(1 for m in out for c in m["active_runs"] if _matching(c)),
         # How many batches cannot report a rate until someone picks their speed.
         "needs_setup": sum(m["needs_setup"] for m in out),
     }

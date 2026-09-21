@@ -9,8 +9,6 @@
 //                  items). Never treat it as good stock.
 //   DISPOSED       written off, no stock left
 
-export const REJECT_GRADES = ['REJECTED', 'REJECT_USABLE'] as const;
-
 /** Either reject grade — the lot is quarantined and is no longer good stock. */
 export const isRejectGrade = (status?: string | null): boolean =>
     status === 'REJECTED' || status === 'REJECT_USABLE';

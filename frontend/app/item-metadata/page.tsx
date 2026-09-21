@@ -12,13 +12,23 @@ export default function ItemMetadataPage() {
     const envBase = process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:8000/api';
     const API_BASE = envBase.endsWith('/api') ? envBase : `${envBase}/api`;
 
+    // Every handler below used to drop a non-2xx on the floor: a 400 ("UOM already
+    // exists" — the name check is case-sensitive) or a 403 looked exactly like a
+    // dead button. Surface it once, here, instead of per call site.
+    const report = async (res: Response, fallback: string) => {
+        if (res.ok) return res;
+        const err = await res.json().catch(() => ({}));
+        showToast(err.detail || fallback, 'danger');
+        return res;
+    };
+
     // ── Categories ────────────────────────────────────────────────────────────
     const handleCreateCategory = async (name: string, parentId?: string) => {
-        const res = await authFetch(`${API_BASE}/categories`, {
+        const res = await report(await authFetch(`${API_BASE}/categories`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ name, parent_id: parentId ?? null }),
-        });
+        }), 'Failed to create category');
         if (res.ok) refreshItemMetadata();
         return res;
     };
@@ -29,24 +39,24 @@ export default function ItemMetadataPage() {
             confirmText: 'Delete', variant: 'danger',
         });
         if (!confirmed) return;
-        const res = await authFetch(`${API_BASE}/categories/${id}`, { method: 'DELETE' });
+        const res = await report(await authFetch(`${API_BASE}/categories/${id}`, { method: 'DELETE' }), 'Failed to delete category');
         if (res.ok) refreshItemMetadata();
     };
 
     const handleRenameCategory = async (id: string, name: string) => {
-        const res = await authFetch(`${API_BASE}/categories/${id}`, {
+        const res = await report(await authFetch(`${API_BASE}/categories/${id}`, {
             method: 'PATCH',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ name }),
-        });
+        }), 'Failed to rename category');
         if (res.ok) refreshItemMetadata();
     };
 
     // ── UOM ───────────────────────────────────────────────────────────────────
     const handleCreateUOM = async (name: string) => {
-        const res = await authFetch(`${API_BASE}/uoms`, {
+        const res = await report(await authFetch(`${API_BASE}/uoms`, {
             method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name }),
-        });
+        }), 'Failed to create unit');
         if (res.ok) refreshItemMetadata();
         return res;
     };
@@ -57,36 +67,36 @@ export default function ItemMetadataPage() {
             confirmText: 'Delete', variant: 'danger',
         });
         if (!confirmed) return;
-        const res = await authFetch(`${API_BASE}/uoms/${id}`, { method: 'DELETE' });
+        const res = await report(await authFetch(`${API_BASE}/uoms/${id}`, { method: 'DELETE' }), 'Failed to delete unit');
         if (res.ok) refreshItemMetadata();
     };
 
     const handleSaveUOMFactor = async (fromUomId: string, toUomId: string, value: number) => {
-        const res = await authFetch(`${API_BASE}/uoms/${fromUomId}/factors`, {
+        const res = await report(await authFetch(`${API_BASE}/uoms/${fromUomId}/factors`, {
             method: 'POST', headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ to_uom_id: toUomId, value }),
-        });
+        }), 'Failed to save conversion');
         if (res.ok) refreshItemMetadata();
     };
 
     const handleDeleteUOMFactor = async (uomId: string, factorId: string) => {
-        const res = await authFetch(`${API_BASE}/uoms/${uomId}/factors/${factorId}`, { method: 'DELETE' });
+        const res = await report(await authFetch(`${API_BASE}/uoms/${uomId}/factors/${factorId}`, { method: 'DELETE' }), 'Failed to delete conversion');
         if (res.ok) refreshItemMetadata();
     };
 
     // ── Attributes ────────────────────────────────────────────────────────────
     const handleCreateAttribute = async (p: any) => {
-        const res = await authFetch(`${API_BASE}/attributes`, {
+        const res = await report(await authFetch(`${API_BASE}/attributes`, {
             method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(p),
-        });
+        }), 'Failed to create attribute');
         if (res.ok) refreshItemMetadata();
         return res;
     };
 
     const handleUpdateAttribute = async (id: string, name: string) => {
-        const res = await authFetch(`${API_BASE}/attributes/${id}`, {
+        const res = await report(await authFetch(`${API_BASE}/attributes/${id}`, {
             method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name }),
-        });
+        }), 'Failed to rename attribute');
         if (res.ok) refreshItemMetadata();
     };
 
@@ -106,16 +116,16 @@ export default function ItemMetadataPage() {
     };
 
     const handleAddValue = async (attributeId: string, value: string) => {
-        const res = await authFetch(`${API_BASE}/attributes/${attributeId}/values`, {
+        const res = await report(await authFetch(`${API_BASE}/attributes/${attributeId}/values`, {
             method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ value }),
-        });
+        }), 'Failed to add value');
         if (res.ok) refreshItemMetadata();
     };
 
     const handleUpdateValue = async (valueId: string, value: string) => {
-        const res = await authFetch(`${API_BASE}/attributes/values/${valueId}`, {
+        const res = await report(await authFetch(`${API_BASE}/attributes/values/${valueId}`, {
             method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ value }),
-        });
+        }), 'Failed to rename value');
         if (res.ok) refreshItemMetadata();
     };
 

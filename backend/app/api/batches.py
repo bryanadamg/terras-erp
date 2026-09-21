@@ -466,6 +466,12 @@ async def list_batches(
     ),
     with_source_lots: bool = Query(False, description="Also resolve each batch's immediate upstream (RM) lots — used by the staging picker"),
     include_packed_units: bool = Query(False, description="Include packed cartons (PU-). Off by default: these pickers choose consumable lots, and a sealed carton is not one."),
+    for_packing_order_id: uuid.UUID | None = Query(
+        None,
+        description="Drop lots locked to a DIFFERENT open packing order. A lot claimed off the "
+                    "Quarantine Packing desk belongs to the order that claimed it, so offering it "
+                    "elsewhere would plan two orders over one physical pile.",
+    ),
     skip: int = 0,
     limit: int = 100,
     db: AsyncSession = Depends(get_async_db),
@@ -483,6 +489,11 @@ async def list_batches(
         query = query.filter(Batch.item_id == item_id)
     if not include_packed_units:
         query = query.filter(Batch.packing_order_id.is_(None))
+    if for_packing_order_id:
+        # Imported here, not at module scope: packing_service imports this module
+        # for `generate_batch_number`, so the other direction is a cycle.
+        from app.services import packing_service
+        query = query.filter(packing_service.lock_free_condition(for_packing_order_id))
     result = await db.execute(query.offset(skip).limit(limit))
     batches = result.scalars().all()
     enriched = await _enrich_batches(db, batches, location_id, with_source_lots=with_source_lots)

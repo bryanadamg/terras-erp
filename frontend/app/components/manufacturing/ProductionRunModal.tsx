@@ -1,7 +1,7 @@
 'use client';
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import ModalWrapper from '../shared/ModalWrapper';
-import SearchableSelect from '../shared/SearchableSelect';
+import SearchableSelect from '@bryanadamg/terras-ui/components/Combobox';
 import { useData } from '../../context/DataContext';
 import NettingPlanTable, { useNettingPreview } from './NettingPlanTable';
 import { xpFont, xpInput as _xpInput, xpLabel as _xpLabel, ModalFooterActions, CHIP_RADIUS, BUTTON_RADIUS, XP_BTN } from '../shared/xpTheme';

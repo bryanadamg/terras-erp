@@ -6,13 +6,12 @@
 // Rows written before the group tier existed have no node_type; for them the old
 // rule is still the right answer, which is what the fallback below encodes.
 
-export type WCNodeType = 'TYPE' | 'GROUP' | 'MACHINE';
+type WCNodeType = 'TYPE' | 'GROUP' | 'MACHINE';
 
-export const wcNodeType = (wc: any): WCNodeType =>
+const wcNodeType = (wc: any): WCNodeType =>
     String(wc?.node_type || (wc?.parent_id ? 'MACHINE' : 'TYPE')).toUpperCase() as WCNodeType;
 
 export const isMachineWC = (wc: any) => wcNodeType(wc) === 'MACHINE';
-export const isGroupWC = (wc: any) => wcNodeType(wc) === 'GROUP';
 export const isTypeWC = (wc: any) => wcNodeType(wc) === 'TYPE';
 /** TYPE or GROUP — anything that holds other work centers. */
 export const isContainerWC = (wc: any) => !isMachineWC(wc);
@@ -58,7 +57,7 @@ export function machinesUnderWC(workCenters: any[], rootId: string): any[] {
 }
 
 /** Picker option shape shared by SearchableSelect machine pickers. */
-export type WCOption = { value: string; label: string; subLabel?: string };
+type WCOption = { value: string; label: string; subLabel?: string };
 
 /** Name-sorted (natural order, so LOOM-10 follows LOOM-9) picker options. */
 export const toMachineOptions = (list: any[]): WCOption[] =>
@@ -93,7 +92,7 @@ export function machinesOfCenterType(workCenters: any[], type: string): any[] {
 // ─────────────────────────────────────────────────────────────────────────────
 
 /** Types whose WOs can stage without an explicit routing step. */
-export const STAGE_WC_TYPES = ['WEAVING', 'TENUN', 'DYEING', 'CELUP', 'SETTING'];
+const STAGE_WC_TYPES = ['WEAVING', 'TENUN', 'DYEING', 'CELUP', 'SETTING'];
 
 /**
  * Types whose input arrives as labelled, individually-numbered units, so the floor

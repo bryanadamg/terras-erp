@@ -14,7 +14,7 @@ import { LV_XP_FONT, lvBtn, lvInput, lvTd, lvRow, lvSubTh, lvSubTd, lvSubRow, Ex
 import { ShellWindow, ShellTitleBar, xpToolbar, ToolbarButton } from '../shared/shellTheme';
 import Pager from '../shared/Pager';
 import ModalWrapper from '../shared/ModalWrapper';
-import SearchableSelect from '../shared/SearchableSelect';
+import SearchableSelect from '@bryanadamg/terras-ui/components/Combobox';
 import TreeSelect, { buildLocationPickerTree } from '../shared/TreeSelect';
 import { useFinishedGoodsSearch } from '../shared/useEntitySearch';
 import { LotChips, LotChip, lotSizeKey, lotSizeLabel } from '../shared/LotChips';
@@ -816,7 +816,7 @@ export default function PackingOrderView({ initialCreateState, onClearInitialSta
                     showToast={showToast}
                     initialValues={createInitialValues}
                     onClose={() => { setCreating(false); setCreateInitialValues(null); }}
-                    onCreated={async (po: any) => { setCreating(false); setCreateInitialValues(null); await loadAll(); setDetail(po); }}
+                    onCreated={async () => { setCreating(false); setCreateInitialValues(null); await loadAll(); }}
                 />
             )}
 
@@ -1285,6 +1285,10 @@ function PackingOrderForm({ locPickerTreeOptions, machineOptions, defaultSourceL
                 // the old variant-less behaviour.
                 color_id: initialValues?.color_id || null,
                 attribute_value_ids: initialValues?.combo_value_id ? [initialValues.combo_value_id] : [],
+                // Same deep link, same reasoning: the lots it named are claimed by
+                // this order outright. Empty for a hand-made order, which draws
+                // from whatever is free at pack time as before.
+                locked_batch_ids: initialValues?.locked_batch_ids || [],
                 notes: notes || null,
                 // No packaging plan on the order: the box is picked per carton line
                 // in the pack modal, where the packer is holding it. Planning it
@@ -1872,7 +1876,7 @@ function PackingOrderDetail({ po: initialPo, itemById, locationById, locPickerTr
                 // its own (packing to stock) still sees the whole pool.
                 const vq = po.variant_key ? `&variant_key=${encodeURIComponent(po.variant_key)}` : '';
                 const res = await authFetch(
-                    `${API_BASE}/batches?item_id=${po.item_id}&location_id=${po.source_location_id}${vq}&limit=200&with_source_lots=true`
+                    `${API_BASE}/batches?item_id=${po.item_id}&location_id=${po.source_location_id}${vq}&limit=200&with_source_lots=true&for_packing_order_id=${po.id}`
                 );
                 const list = res.ok ? (await res.json() || []) : [];
                 if (!alive) return;

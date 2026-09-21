@@ -179,7 +179,7 @@ export default function PackingScanView({ authFetch, initialCode, onClose }: { a
             // colour of this FG, and a lot of another shade is refused by the pack
             // endpoint — offering it here would only be a 400 waiting to happen.
             const vq = po.variant_key ? `&variant_key=${encodeURIComponent(po.variant_key)}` : '';
-            const res = await authFetch(`${API_BASE}/batches?item_id=${po.item_id}${vq}`);
+            const res = await authFetch(`${API_BASE}/batches?item_id=${po.item_id}${vq}&for_packing_order_id=${po.id}`);
             if (res.ok) setLots(await res.json() || []);
         })();
     }, [po, authFetch]);

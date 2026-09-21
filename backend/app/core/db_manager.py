@@ -41,10 +41,8 @@ def _created_at_for(path: Path) -> datetime:
     return datetime.fromtimestamp(path.stat().st_mtime)
 
 class DatabaseManager:
-    _instance = None
-    _init_lock = threading.Lock()
-
     def __init__(self):
+        self._init_lock = threading.Lock()
         self._engine = None
         self._async_engine = None
         self._session_factory = None
@@ -53,14 +51,6 @@ class DatabaseManager:
         self._profiles_path = Path("database_profiles.json")
         self._snapshots_dir = Path("snapshots")
         self._snapshots_dir.mkdir(exist_ok=True)
-
-    @classmethod
-    def get_instance(cls):
-        if cls._instance is None:
-            with cls._init_lock:
-                if cls._instance is None:
-                    cls._instance = cls()
-        return cls._instance
 
     async def create_snapshot(self, label: str = "manual") -> DatabaseResponse:
         """Creates a snapshot of the current database."""
@@ -362,9 +352,6 @@ class DatabaseManager:
                 logger.error(f"Database initialization failed: {e}")
                 return DatabaseResponse(message=str(e), status=False)
 
-    def switch_database(self, new_url: str) -> DatabaseResponse:
-        return self.initialize(new_url)
-
     def get_session(self) -> Generator[Session, None, None]:
         if not self._session_factory:
             raise RuntimeError("DatabaseManager not initialized.")
@@ -418,4 +405,4 @@ class DatabaseManager:
         return self._current_url
 
 # Global instance
-db_manager = DatabaseManager.get_instance()
+db_manager = DatabaseManager()

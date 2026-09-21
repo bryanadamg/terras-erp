@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import CodeConfigModal, { CodeConfig, buildCodeParts } from '../shared/CodeConfigModal';
-import SearchableSelect from '../shared/SearchableSelect';
+import SearchableSelect from '@bryanadamg/terras-ui/components/Combobox';
 import { useToast } from '../shared/Toast';
 import { useLanguage } from '../../context/LanguageContext';
 import { useData } from '../../context/DataContext';

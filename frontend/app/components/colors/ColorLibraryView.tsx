@@ -3,7 +3,8 @@ import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { useConfirm } from '../../context/ConfirmContext';
 import { useUser } from '../../context/UserContext';
-import SearchableSelect from '../shared/SearchableSelect';
+import { useDebouncedCommit } from '../../context/usePaginatedList';
+import SearchableSelect from '@bryanadamg/terras-ui/components/Combobox';
 import ModalWrapper from '../shared/ModalWrapper';
 import Pager from '../shared/Pager';
 import { StatusChip, FormSection, useFloatingMenu, MenuTriggerButton, FloatingMenu, XPActionButton, ColorSwatchChip, CodeChip, CODE_FONT, SwatchBox, TableSkeleton, useTableSkeletonMetrics, XP_BTN } from '../shared/xpTheme';
@@ -97,15 +98,8 @@ export default function ColorLibraryView({
     }, [prefill?.source_lab_dip_line_id]); // eslint-disable-line react-hooks/exhaustive-deps
 
     // Debounce the search box so each keystroke does not fire a request against 30k rows.
-    useEffect(() => {
-        const t = setTimeout(() => onSearchChange(searchInput.trim()), 350);
-        return () => clearTimeout(t);
-    }, [searchInput]); // eslint-disable-line react-hooks/exhaustive-deps
-
-    useEffect(() => {
-        const t = setTimeout(() => onItemSearchChange?.(itemSearchInput.trim()), 350);
-        return () => clearTimeout(t);
-    }, [itemSearchInput]); // eslint-disable-line react-hooks/exhaustive-deps
+    useDebouncedCommit(searchInput.trim(), search, onSearchChange);
+    useDebouncedCommit(itemSearchInput.trim(), itemSearch || '', v => onItemSearchChange?.(v));
 
     const customerOptions = useMemo(() =>
         [{ value: '', label: 'No Customer (House Color)' },

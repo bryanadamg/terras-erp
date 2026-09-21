@@ -1,7 +1,8 @@
 'use client';
-import React, { useState, useEffect, useMemo, useRef } from 'react';
+import React, { useState, useMemo, useRef } from 'react';
 import { useConfirm } from '../../context/ConfirmContext';
 import { useUser } from '../../context/UserContext';
+import { useDebouncedCommit } from '../../context/usePaginatedList';
 import ModalWrapper from '../shared/ModalWrapper';
 import { StatusChip, CodeChip, SwatchBox, CODE_FONT, TableSkeleton, useTableSkeletonMetrics, XP_BTN, useFloatingMenu, MenuTriggerButton, FloatingMenu } from '../shared/xpTheme';
 import { SearchField, FilterChipBar, ToolbarCount, ToolbarButton, viewShellStyle, PageTitleBar } from '../shared/shellTheme';
@@ -72,10 +73,7 @@ export default function ComboLibraryView({
     const skel = useTableSkeletonMetrics('combos', listBodyRef, combos.length > 0);
 
     // Debounce the search box so each keystroke does not fire a request against many rows.
-    useEffect(() => {
-        const t = setTimeout(() => onSearchChange(searchInput.trim()), 350);
-        return () => clearTimeout(t);
-    }, [searchInput]); // eslint-disable-line react-hooks/exhaustive-deps
+    useDebouncedCommit(searchInput.trim(), search, onSearchChange);
 
     // Colour families for a combo are MULTI-MEMBERSHIP: a chip means "contains this
     // colour", so the tallies overlap and deliberately do not sum to the row count —

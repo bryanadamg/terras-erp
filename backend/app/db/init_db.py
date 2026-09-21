@@ -109,13 +109,16 @@ def seed_system_attributes(db):
             # QUARANTINE_PASS_VALUES (api/quarantine.py) releases a lot to packing.
             ("Quarantine Status", "quarantine_status", ["OK", "Bulk Sample", "Waiting Approval"]),
             # Rope speeds a dye vessel is run at, yards/min per rope. Picked on the
-            # dyeing monitor instead of typed, so the plant's real speeds are a short
-            # curated list rather than a free number nobody can check — the whole
-            # reason rpm x reel geometry was dropped (f3b5d7a9c1e8). The seeds are a
-            # starting spread; the floor adds its own on the Attributes page, and the
-            # rate endpoint accepts any positive value so an unlisted speed is still
-            # recordable.
-            ("Dyeing Speed", "dyeing_speed", ["40", "60", "80", "100", "120"]),
+            # dyeing monitor and in the bath panel instead of typed, so the plant's
+            # real speeds are a short curated list rather than a free number nobody
+            # can check — the whole reason rpm x reel geometry was dropped
+            # (f3b5d7a9c1e8). A value names the shade depth and carries its speed in
+            # the same string, because that is what the floor picks by; the number is
+            # parsed out of it (components/shared/dyeingSpeed.ts), so a bare "60" from
+            # before the labels still works. The floor adds its own on the Attributes
+            # page, and the rate endpoint accepts any positive value so an unlisted
+            # speed is still recordable.
+            ("Dyeing Speed", "dyeing_speed", ["Tua (3)", "Sedang (4)", "Muda (5)"]),
         ]
         for name, role, seed_values in system_attrs:
             existing = db.query(Attribute).filter(Attribute.name == name).first()

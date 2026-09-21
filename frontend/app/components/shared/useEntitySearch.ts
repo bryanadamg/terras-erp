@@ -1,6 +1,7 @@
 'use client';
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useData } from '../../context/DataContext';
+import { API_BASE } from './apiBase';
 
 // Server-side typeahead primitive for every SearchableSelect that can't be fed a
 // client-side list. Master tables (items, combos) run to thousands of rows, so the
@@ -54,11 +55,6 @@ export interface EntitySearchResult {
     resolve: (id: string) => any | undefined;
 }
 
-const apiBase = () => {
-    const env = process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:8000/api';
-    return env.endsWith('/api') ? env : `${env}/api`;
-};
-
 export function useEntitySearch(config: EntitySearchConfig): EntitySearchResult {
     const {
         path, params, pageSizeParam = 'limit', pageSize = 50,
@@ -101,7 +97,7 @@ export function useEntitySearch(config: EntitySearchConfig): EntitySearchResult 
                 [pageSizeParam]: String(pageSize),
             });
             if (search) qs.set('search', search);
-            const res = await authFetch(`${apiBase()}/${path}?${qs.toString()}`, { signal: ctl.signal });
+            const res = await authFetch(`${API_BASE}/${path}?${qs.toString()}`, { signal: ctl.signal });
             if (!res.ok || mySeq !== seq.current) return;
             const data = await res.json();
             if (mySeq !== seq.current) return;

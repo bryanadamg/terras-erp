@@ -141,6 +141,16 @@ class DyeingRun(Base):
     # `liquor_ratio` is the pair-partner of the ACTUAL volume (solve_bath keeps the
     # two from contradicting); the planned side's ratio lives on the recipe.
     liquor_ratio: Mapped[Optional[float]] = mapped_column(Numeric(6, 2), nullable=True)
+    # One physical bath, several work orders. A jet takes the whole load of a shade
+    # at once, so N runs (one per WO, each keeping its own kg, clock and card) share
+    # one vessel of water — and every one of them carries the FULL bath volume,
+    # because that is the concentration its cloth actually saw. This column is the
+    # only record that they were the same water: same machine + same colour + same
+    # hour is a guess, and the dose sheets must be summable to one bath by whatever
+    # wires chemical consumption later. Null = a bath of its own.
+    bath_group_id: Mapped[Optional[uuid.UUID]] = mapped_column(
+        UUID(as_uuid=True), nullable=True, index=True
+    )
     planned_volume_air_liters: Mapped[Optional[float]] = mapped_column(Numeric(10, 2), nullable=True)
     volume_air_liters: Mapped[Optional[float]] = mapped_column(Numeric(10, 2), nullable=True)
     machine_speed: Mapped[Optional[float]] = mapped_column(Numeric(6, 2), nullable=True)

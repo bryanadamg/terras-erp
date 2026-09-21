@@ -28,7 +28,7 @@
 
 import React, { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { layoutRectOf, uiZoom } from './uiScale';
+import { layoutRectOf, uiZoom } from '@bryanadamg/terras-ui/scale';
 import { xpFont, modernFont } from './typography';
 import { TOOLTIP_Z } from './zLayers';
 

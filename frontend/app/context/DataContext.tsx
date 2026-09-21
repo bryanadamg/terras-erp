@@ -970,9 +970,13 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
                 fetch(`${API_BASE}/uoms`, { headers, cache: 'no-store' }),
                 fetch(`${API_BASE}/attributes`, { headers, cache: 'no-store' }),
             ]);
-            if (catRes.ok) setCategories(await catRes.json());
-            if (uomRes.ok) setUoms(await uomRes.json());
-            if (attrRes.ok) setAttributes(await attrRes.json());
+            const patch: Record<string, any> = {};
+            if (catRes.ok) { const d = await catRes.json(); setCategories(d); patch.categories = d; }
+            if (uomRes.ok) { const d = await uomRes.json(); setUoms(d); patch.uoms = d; }
+            if (attrRes.ok) { const d = await attrRes.json(); setAttributes(d); patch.attributes = d; }
+            // Write through: without this the next page load restores the pre-edit
+            // masters from the cache and the unit you just created is gone again.
+            patchMasterCache(patch);
         } catch (e) { console.error('refreshItemMetadata error', e); }
     }, [currentUser]);
 
@@ -991,9 +995,11 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
                 fetch(`${API_BASE}/operations`, { headers, cache: 'no-store' }),
                 fetch(`${API_BASE}/locations`, { headers, cache: 'no-store' }),
             ]);
-            if (wcRes.ok) setWorkCenters(await wcRes.json());
-            if (opRes.ok) setOperations(await opRes.json());
-            if (locRes.ok) setLocations(await locRes.json());
+            const patch: Record<string, any> = {};
+            if (wcRes.ok) { const d = await wcRes.json(); setWorkCenters(d); patch.workCenters = d; }
+            if (opRes.ok) { const d = await opRes.json(); setOperations(d); patch.operations = d; }
+            if (locRes.ok) { const d = await locRes.json(); setLocations(d); patch.locations = d; }
+            patchMasterCache(patch);
         } catch (e) { console.error('refreshRouting error', e); }
     }, [currentUser]);
 

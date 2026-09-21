@@ -1,9 +1,10 @@
 'use client';
 import React, { useState } from 'react';
 import { useConfirm } from '../../context/ConfirmContext';
-import { lvInput, lvBtn, lvPrimaryBtn, lvTh, lvTd, lvSep, lvRow, lvThead, ExpanderCell } from '../shared/listViewTheme';
-import { ExpandedRowPanel, rowStateBg, Chip, XP_BTN } from '../shared/xpTheme';
-import { SearchField, ToolbarCount } from '../shared/shellTheme';
+import ModalWrapper from '../shared/ModalWrapper';
+import { lvInput, lvBtn, lvPrimaryBtn, lvLabel, lvTh, lvTd, lvSep, lvRow, lvThead, ExpanderCell } from '../shared/listViewTheme';
+import { ExpandedRowPanel, rowStateBg, Chip, XP_BTN, FormSection, FormError } from '../shared/xpTheme';
+import { ToolbarButton, SearchField, ToolbarCount } from '../shared/shellTheme';
 
 interface Props {
     uoms: any[];
@@ -18,7 +19,9 @@ export default function UOMLibraryView({ uoms, canManage, onCreateUOM, onDeleteU
     const { confirm } = useConfirm();
 
     const [search, setSearch] = useState('');
+    const [isModalOpen, setIsModalOpen] = useState(false);
     const [newName, setNewName] = useState('');
+    const [formError, setFormError] = useState('');
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [expandedId, setExpandedId] = useState<string | null>(null);
     const [factorValue, setFactorValue] = useState('');
@@ -27,13 +30,21 @@ export default function UOMLibraryView({ uoms, canManage, onCreateUOM, onDeleteU
     const filtered = (uoms || []).filter((u: any) => u.name.toLowerCase().includes(search.toLowerCase()));
     const sorted = [...filtered.filter((u: any) => u.is_system), ...filtered.filter((u: any) => !u.is_system)];
 
+    const openCreate = () => { setNewName(''); setFormError(''); setIsModalOpen(true); };
+
     const handleCreate = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (!newName.trim() || isSubmitting) return;
+        const name = newName.trim();
+        if (!name || isSubmitting) return;
+        const clash = (uoms || []).find((u: any) => String(u.name) === name);
+        if (clash) { setFormError(`"${name}" already exists.`); return; }
         setIsSubmitting(true);
         try {
-            const res = await onCreateUOM(newName.trim());
-            if (res?.ok) setNewName('');
+            const res = await onCreateUOM(name);
+            // A rejected create keeps the window open with what was typed; the
+            // reason is toasted by the page (the body is already consumed there).
+            if (res?.ok) { setNewName(''); setIsModalOpen(false); }
+            else setFormError('Could not create that unit — see the message above the page.');
         } finally { setIsSubmitting(false); }
     };
 
@@ -62,24 +73,16 @@ export default function UOMLibraryView({ uoms, canManage, onCreateUOM, onDeleteU
         <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
             {/* Toolbar */}
             <div style={{ background: 'linear-gradient(to bottom, #f5f4ef, #e0dfd8)', borderBottom: '1px solid #b0a898', padding: '4px 8px', display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap', flexShrink: 0 }}>
-                {canManage && (
-                    <form onSubmit={handleCreate} style={{ display: 'flex', gap: 6 }}>
-                        <input
-                            style={{ ...lvInput(), width: 180 }}
-                            placeholder="e.g. Dozen, kg…"
-                            value={newName}
-                            onChange={e => setNewName(e.target.value)}
-                        />
-                        <button type="submit" className={XP_BTN} style={lvPrimaryBtn()} disabled={isSubmitting}>
-                            <i className="bi bi-plus-lg" /> {isSubmitting ? '…' : 'New UOM'}
-                        </button>
-                    </form>
-                )}
-                <span style={lvSep()} />
                 <SearchField value={search} onChange={setSearch} placeholder="Search units…" width={200} />
                 <ToolbarCount right>
                     {filtered.filter((u: any) => u.is_system).length} system &nbsp;+&nbsp; {filtered.filter((u: any) => !u.is_system).length} packaging
                 </ToolbarCount>
+                {canManage && (
+                    <>
+                        <span style={lvSep()} />
+                        <ToolbarButton tone="create" icon="bi-plus-lg" onClick={openCreate}>New UOM</ToolbarButton>
+                    </>
+                )}
             </div>
 
             {/* Table */}
@@ -190,6 +193,37 @@ export default function UOMLibraryView({ uoms, canManage, onCreateUOM, onDeleteU
                     </tbody>
                 </table>
             </div>
+
+            <ModalWrapper
+                isOpen={isModalOpen}
+                onClose={() => setIsModalOpen(false)}
+                title="New UOM"
+                size="sm"
+                modeless
+                footer={
+                    <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+                        <button type="button" className={XP_BTN} style={lvBtn()} onClick={() => setIsModalOpen(false)}>Cancel</button>
+                        <button type="submit" className={XP_BTN} form="uom-create-form" style={lvPrimaryBtn()} disabled={isSubmitting}>{isSubmitting ? 'Creating…' : 'Create'}</button>
+                    </div>
+                }
+            >
+                <form id="uom-create-form" onSubmit={handleCreate}>
+                    <FormError>{formError}</FormError>
+                    <FormSection title="Unit">
+                        <div>
+                            <label style={lvLabel()}>Name *</label>
+                            <input
+                                autoFocus
+                                value={newName}
+                                onChange={e => { setNewName(e.target.value); if (formError) setFormError(''); }}
+                                placeholder="e.g. Dozen, kg…"
+                                style={lvInput({ width: '100%', ...(formError ? { borderColor: '#8e0000' } : {}) })}
+                                required
+                            />
+                        </div>
+                    </FormSection>
+                </form>
+            </ModalWrapper>
         </div>
     );
 }

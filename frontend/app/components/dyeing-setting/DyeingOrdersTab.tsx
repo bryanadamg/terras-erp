@@ -22,6 +22,7 @@ import { useUser } from '../../context/UserContext';
 import { useTimezone } from '../../context/TimezoneContext';
 import { isMachineWC } from '../shared/workCenterTree';
 import DoseSheet, { fmtDose, doseUnitFor, type DosePreview } from '../shared/DoseSheet';
+import { speedPresets, presetFor } from '../shared/dyeingSpeed';
 
 const modernFont = 'system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif';
 
@@ -30,8 +31,8 @@ const API_BASE = (process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:8000/api
 
 const WO_PAGE_SIZE = 25;
 const STATUSES = ['PENDING', 'IN_PROGRESS', 'COMPLETED', 'CANCELLED'];
-/** 14 columns: chevron + 12 data + actions. */
-const COLS = 14;
+/** 15 columns: chevron + select + 12 data + actions. */
+const COLS = 15;
 
 const SHADE_COLORS: Record<string, { bg: string; color: string }> = {
     PASS: { bg: '#d4edda', color: '#155724' },
@@ -61,6 +62,11 @@ interface CreateForm {
     input_batch_id: string;
     liquor_ratio: string;
     volume_air_liters: string;
+    /** Ropes this load runs on, and yards per minute per rope. Half the dyeing
+     *  monitor's rate each. Typed here because the whole bath setup is configured
+     *  on the run — the WO form carries no dyeing fields at all. */
+    lines: string;
+    yards_per_min: string;
     machine_speed: string;
     machine_pressure: string;
     temperature_c: string;
@@ -71,11 +77,10 @@ interface CreateForm {
 
 /** The QC entry, and nothing else.
  *
- *  This tab is supervisory: the bath, the doses and the chemicals actually used
- *  are recorded in the work order flow (`useDyeingBath`, in the WO completion modal
- *  and the mobile scan terminal), because the bath and the output it produced are
- *  one act by one operator. The shade result stays here — it is a different person
- *  at a later moment, which is exactly why it is not folded into the production log.
+ *  The bath lives here: volume, rope count, speed, load and the chemicals actually
+ *  weighed are all configured on the run, on this tab. The work order log records
+ *  kg of output and nothing else — a dyeing WO is cut with the same fields as any
+ *  other. The shade result is separate again, a different person at a later moment.
  *
  *  No output lot field either: the dyed lot is minted once, by that production log,
  *  and the run adopts it (backend `add_mo_completion`).
@@ -94,9 +99,21 @@ interface DyeingOrdersTabProps {
 
 const emptyCreateForm: CreateForm = {
     recipe_id: '', substrate_qty: '', input_batch_id: '', liquor_ratio: '',
-    volume_air_liters: '', machine_speed: '', machine_pressure: '',
-    temperature_c: '', duration_min: '', operator_name: '', notes: '',
+    volume_air_liters: '', lines: '', yards_per_min: '', machine_speed: '',
+    machine_pressure: '', temperature_c: '', duration_min: '', operator_name: '',
+    notes: '',
 };
+
+/** The run's dose sheet, as typed. Rows come from the run's frozen
+ *  `DyeingRunChemical` snapshot — the weights the operator was told — and only the
+ *  actual moves. A run with no bath yet has no sheet to weigh against. */
+interface ChemRow {
+    item_id: string;
+    item_name: string;
+    planned_qty: string;
+    actual_qty: string;
+    dose_unit: string | null;
+}
 
 const emptyCompleteForm: CompleteForm = { shade_result: '', shade_notes: '' };
 
@@ -143,7 +160,7 @@ function ShadeChip({ shade }: { shade: string }) {
 
 export default function DyeingOrdersTab({ items, recipes, authFetch }: DyeingOrdersTabProps) {
     const { formatCustom: tzFmt } = useTimezone();
-    const { workCenters } = useData();
+    const { workCenters, attributes } = useData();
     const { hasPermission } = useUser();
     const canManage = hasPermission('work_order.log');
 
@@ -157,6 +174,16 @@ export default function DyeingOrdersTab({ items, recipes, authFetch }: DyeingOrd
     const [expandedId, setExpandedId] = useState<string | null>(null);
 
     const [createWo, setCreateWo] = useState<any | null>(null);
+    // The run the modal is configuring, or null when it is cutting a new one. Held
+    // as the row object rather than an id: paging away from it must not strip the
+    // form (the retained-selection trap in CLAUDE.md).
+    const [editRun, setEditRun] = useState<any | null>(null);
+    // The work orders going into ONE bath. Non-null puts the run panel in bulk mode:
+    // the fields that describe the vessel are typed once and every selected order's
+    // run takes them (POST /dyeing-runs/bulk).
+    const [bulkWos, setBulkWos] = useState<any[] | null>(null);
+    const [selected, setSelected] = useState<Set<string>>(new Set());
+    const [chemRows, setChemRows] = useState<ChemRow[]>([]);
     const [showCompleteModal, setShowCompleteModal] = useState<any | null>(null);
     const [createForm, setCreateForm] = useState<CreateForm>(emptyCreateForm);
     const [completeForm, setCompleteForm] = useState<CompleteForm>(emptyCompleteForm);
@@ -181,7 +208,11 @@ export default function DyeingOrdersTab({ items, recipes, authFetch }: DyeingOrd
         endpoint: `${API_BASE}/work-orders`,
         authFetch,
         pageSize: WO_PAGE_SIZE,
-        params: { center_type: 'DYEING', status: filterStatus, work_center_id: filterWC },
+        // `order_by: 'color'` is what makes grouping possible at all: the list is
+        // windowed, so a shade with 30 work orders would otherwise group as 25 on
+        // this page and 5 on the next, and a bath set up from the group would
+        // silently cover only the loaded half.
+        params: { center_type: 'DYEING', status: filterStatus, work_center_id: filterWC, order_by: 'color' },
     });
 
     // ── Baths for the visible page, in one call ───────────────────────────────
@@ -222,6 +253,31 @@ export default function DyeingOrdersTab({ items, recipes, authFetch }: DyeingOrd
 
     const reloadRuns = useCallback(() => setRunsNonce(n => n + 1), []);
 
+    // How many runs share each bath, across every WO on this page. A shared bath is
+    // one vessel of water recorded once per order, so a dose sheet read on its own
+    // is one Nth of a story — the chip is what says so.
+    const bathSizes = useMemo(() => {
+        const counts: Record<string, number> = {};
+        Object.values(runsByWo).flat().forEach((r: any) => {
+            if (r?.bath_group_id) counts[String(r.bath_group_id)] = (counts[String(r.bath_group_id)] || 0) + 1;
+        });
+        return counts;
+    }, [runsByWo]);
+
+    // ── Rope speed presets ────────────────────────────────────────────────────
+    // The same `Dyeing Speed` system attribute the monitor's rate modal picks off, so
+    // a bath set up here and a rate set at the vessel come from one list. A value
+    // names the shade depth and carries its yd/min ("Tua (3)"); the number is parsed
+    // out in shared/dyeingSpeed, which is also why a pre-label bare "60" still works.
+    const speedOptions = useMemo(() => speedPresets(attributes), [attributes]);
+    // The preset the typed value corresponds to, matched numerically — the stored
+    // column is Numeric(10,3), so "3" and "3.000" are the same speed and must not
+    // fall out of the picker as a custom one.
+    const speedPreset = useMemo(
+        () => presetFor(speedOptions, createForm.yards_per_min),
+        [speedOptions, createForm.yards_per_min],
+    );
+
     // ── Vessels (dyeing machines) for the filter ──────────────────────────────
     const dyeVessels = useMemo(() => (workCenters || [])
         .filter((wc: any) => isMachineWC(wc) && ['DYEING', 'CELUP'].includes(String(wc.center_type || '').toUpperCase()))
@@ -239,6 +295,33 @@ export default function DyeingOrdersTab({ items, recipes, authFetch }: DyeingOrd
         shade: (w: any) => summarize(runsByWo[String(w.id)] || []).shade,
         status: (w: any) => w.status,
         created: (w: any) => w.created_at,
+    });
+
+    // One bath = one shade on one vessel, so that pair is the group key. Orders with
+    // no shade yet (greige, or a lab dip still pending) key on their lab dip code so
+    // they at least group with each other rather than forming one bucket of
+    // everything unshaded.
+    const groupKeyOf = (wo: any) =>
+        `${wo.color_code || wo.labdip_variant_code || ''}|${wo.work_center_id || ''}`;
+
+    // Grouping follows the server's own ordering, so it is switched off the moment a
+    // column sort re-orders the page — a group header over rows that are no longer
+    // contiguous would be a lie.
+    const grouped = !sort?.key;
+
+    /** The rows of the group `wo` belongs to, on this page. Server-ordered, so they
+     *  are contiguous; the count is still page-local and the header says so. */
+    const groupRows = useCallback((key: string) =>
+        sortedWOs.filter((w: any) => groupKeyOf(w) === key), [sortedWOs]);
+
+    // A selection that outlives the page it was made on would set up a bath from
+    // orders nobody can see.
+    useEffect(() => { setSelected(new Set()); }, [page, filterStatus, filterWC, searchInput]);
+
+    const toggleSelected = (id: string) => setSelected(prev => {
+        const next = new Set(prev);
+        next.has(id) ? next.delete(id) : next.add(id);
+        return next;
     });
 
     const listBodyRef = useRef<HTMLTableSectionElement>(null);
@@ -284,11 +367,41 @@ export default function DyeingOrdersTab({ items, recipes, authFetch }: DyeingOrd
         createForm.volume_air_liters, createForm.liquor_ratio, fetchDoses,
     ]);
 
-    const handleOpenCreateRun = async (wo: any) => {
+    /** Open the run panel: configuring `run` when one is passed, cutting a new bath
+     *  otherwise. WO creation cuts run #1 empty, so configuring is the normal case
+     *  and creating is the multi-bath exception. */
+    const handleOpenCreateRun = async (wo: any, run?: any) => {
         setCreateWo(wo);
-        setCreateForm(emptyCreateForm);
+        setEditRun(run ?? null);
         setDosePreview(null);
         setErrorMsg(null);
+        if (run) {
+            setCreateForm({
+                recipe_id: run.recipe_id ? String(run.recipe_id) : '',
+                substrate_qty: run.substrate_qty != null ? String(run.substrate_qty) : '',
+                input_batch_id: run.input_batch_id ? String(run.input_batch_id) : '',
+                liquor_ratio: run.liquor_ratio != null ? String(run.liquor_ratio) : '',
+                volume_air_liters: run.volume_air_liters != null ? String(run.volume_air_liters) : '',
+                lines: run.lines != null ? String(run.lines) : '',
+                yards_per_min: run.yards_per_min != null ? String(run.yards_per_min) : '',
+                machine_speed: run.machine_speed != null ? String(run.machine_speed) : '',
+                machine_pressure: run.machine_pressure ?? '',
+                temperature_c: run.temperature_c != null ? String(run.temperature_c) : '',
+                duration_min: run.duration_min != null ? String(run.duration_min) : '',
+                operator_name: run.operator_name ?? '',
+                notes: run.notes ?? '',
+            });
+            setChemRows((run.chemicals ?? []).map((c: any) => ({
+                item_id: String(c.item_id ?? ''),
+                item_name: c.item_name ?? String(c.item_id ?? ''),
+                planned_qty: c.planned_qty != null ? String(c.planned_qty) : '',
+                actual_qty: c.actual_qty ? String(c.actual_qty) : '',
+                dose_unit: c.dose_unit ?? null,
+            })));
+            return;
+        }
+        setCreateForm(emptyCreateForm);
+        setChemRows([]);
         try {
             const res = await authFetch(`${API_BASE}/dye-recipes/match?work_order_id=${wo.id}`);
             if (res.ok) {
@@ -300,21 +413,53 @@ export default function DyeingOrdersTab({ items, recipes, authFetch }: DyeingOrd
         }
     };
 
+    /** Set one bath up across several orders. The recipe is matched off the first —
+     *  they are one shade by construction, so any of them answers the same. */
+    const handleOpenBulk = async (wos: any[]) => {
+        setCreateWo(wos[0]);
+        setBulkWos(wos);
+        setEditRun(null);
+        setChemRows([]);
+        setDosePreview(null);
+        setErrorMsg(null);
+        setCreateForm(emptyCreateForm);
+        try {
+            const res = await authFetch(`${API_BASE}/dye-recipes/match?work_order_id=${wos[0].id}`);
+            if (res.ok) {
+                const data = await res.json();
+                if (data.match?.id) setCreateForm(f => ({ ...f, recipe_id: String(data.match.id) }));
+            }
+        } catch {
+            // silently fail — user can still select manually
+        }
+    };
+
+    const setChemActual = (itemId: string, value: string) =>
+        setChemRows(prev => prev.map(r => r.item_id === itemId ? { ...r, actual_qty: value } : r));
+
     const handleCreateFormChange = (field: keyof CreateForm, value: string) =>
         setCreateForm(prev => ({ ...prev, [field]: value }));
 
+    /** Write the run's setup, and the chemical actuals if any were typed.
+     *
+     *  Configuring an existing run PATCHes it; the volume is what fills the bath, so
+     *  that call is also what moves the run to IN_PROGRESS and freezes its dose
+     *  sheet (backend update_dyeing_run). Actuals go in a second call because they
+     *  are a different act on a different route — the bath must land even if nobody
+     *  has weighed anything yet. */
     const handleSaveRun = async () => {
         if (!createWo) return;
         setSaving(true);
         setErrorMsg(null);
         try {
-            const payload: any = {
-                work_order_id: String(createWo.id),
+            const fields: any = {
                 recipe_id: createForm.recipe_id || null,
                 // Null = take the WO's own qty (backend create_dyeing_run).
                 substrate_qty: createForm.substrate_qty ? parseFloat(createForm.substrate_qty) : null,
                 liquor_ratio: createForm.liquor_ratio ? parseFloat(createForm.liquor_ratio) : null,
                 volume_air_liters: createForm.volume_air_liters ? parseFloat(createForm.volume_air_liters) : null,
+                lines: createForm.lines ? parseInt(createForm.lines, 10) : null,
+                yards_per_min: createForm.yards_per_min ? parseFloat(createForm.yards_per_min) : null,
                 machine_speed: createForm.machine_speed ? parseFloat(createForm.machine_speed) : null,
                 machine_pressure: createForm.machine_pressure || null,
                 temperature_c: createForm.temperature_c ? parseFloat(createForm.temperature_c) : null,
@@ -323,21 +468,81 @@ export default function DyeingOrdersTab({ items, recipes, authFetch }: DyeingOrd
                 notes: createForm.notes || null,
                 input_batch_id: createForm.input_batch_id || null,
             };
-            const res = await authFetch(`${API_BASE}/dyeing-runs`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(payload),
-            });
+            if (bulkWos) {
+                const res = await authFetch(`${API_BASE}/dyeing-runs/bulk`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    // No substrate and no input lot: those are per-order, and the
+                    // backend defaults each run's load to its own work order's qty.
+                    body: JSON.stringify({
+                        work_order_ids: bulkWos.map(w => String(w.id)),
+                        recipe_id: fields.recipe_id,
+                        liquor_ratio: fields.liquor_ratio,
+                        volume_air_liters: fields.volume_air_liters,
+                        lines: fields.lines,
+                        yards_per_min: fields.yards_per_min,
+                        machine_speed: fields.machine_speed,
+                        machine_pressure: fields.machine_pressure,
+                        temperature_c: fields.temperature_c,
+                        duration_min: fields.duration_min,
+                        operator_name: fields.operator_name,
+                        notes: fields.notes,
+                    }),
+                });
+                if (!res.ok) {
+                    const err = await res.json().catch(() => ({}));
+                    setErrorMsg(err.detail || 'Failed to set the bath up.');
+                    return;
+                }
+                setCreateWo(null);
+                setBulkWos(null);
+                setCreateForm(emptyCreateForm);
+                setSelected(new Set());
+                reloadRuns();
+                return;
+            }
+            const res = editRun
+                ? await authFetch(`${API_BASE}/dyeing-runs/${editRun.id}`, {
+                    method: 'PATCH',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(fields),
+                })
+                : await authFetch(`${API_BASE}/dyeing-runs`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ ...fields, work_order_id: String(createWo.id) }),
+                });
             if (!res.ok) {
                 const err = await res.json().catch(() => ({}));
-                setErrorMsg(err.detail || 'Failed to create run.');
-            } else {
-                setCreateWo(null);
-                setCreateForm(emptyCreateForm);
-                reloadRuns();
+                setErrorMsg(err.detail || (editRun ? 'Failed to save the run.' : 'Failed to create run.'));
+                return;
             }
+            const entered = chemRows.filter(r => r.item_id && r.actual_qty !== '' && !isNaN(parseFloat(r.actual_qty)));
+            if (editRun && entered.length) {
+                const chemRes = await authFetch(`${API_BASE}/dyeing-runs/${editRun.id}/chemicals`, {
+                    method: 'PATCH',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        // planned_qty is never sent: the snapshot is what the operator
+                        // was told to weigh, and recording what they weighed must not
+                        // rewrite it — that difference is the only variance signal.
+                        chemicals: entered.map(r => ({ item_id: r.item_id, actual_qty: parseFloat(r.actual_qty) })),
+                    }),
+                });
+                if (!chemRes.ok) {
+                    const err = await chemRes.json().catch(() => ({}));
+                    setErrorMsg(err.detail || 'Bath saved, but the chemicals used were not recorded.');
+                    reloadRuns();
+                    return;
+                }
+            }
+            setCreateWo(null);
+            setEditRun(null);
+            setCreateForm(emptyCreateForm);
+            setChemRows([]);
+            reloadRuns();
         } catch {
-            setErrorMsg('Network error creating run.');
+            setErrorMsg(editRun ? 'Network error saving the run.' : 'Network error creating run.');
         } finally {
             setSaving(false);
         }
@@ -501,7 +706,7 @@ export default function DyeingOrdersTab({ items, recipes, authFetch }: DyeingOrd
                                             tone="success"
                                             icon="bi-plus-lg"
                                             label="Create Run"
-                                            title="Cut an extra bath by hand — runs are normally created with the work order"
+                                            title="Cut an extra bath. Run #1 is created with the work order — configure it from its own row instead"
                                             onClick={() => handleOpenCreateRun(wo)}
                                         />
                                     )}
@@ -518,7 +723,7 @@ export default function DyeingOrdersTab({ items, recipes, authFetch }: DyeingOrd
                                                     <th style={{ ...subTh, width: 34 }}>Run</th>
                                                     <th style={subTh}>Recipe</th>
                                                     <th style={{ ...subTh, textAlign: 'right', width: 62 }}>Substrate</th>
-                                                    <th style={{ ...subTh, textAlign: 'right', width: 62 }} title="Bath planned when the WO was cut">Plan L</th>
+                                                    <th style={{ ...subTh, textAlign: 'right', width: 62 }} title="Bath planned at WO creation. Only on runs cut before the bath moved onto the run itself.">Plan L</th>
                                                     <th style={{ ...subTh, textAlign: 'right', width: 62 }} title="Water the floor actually filled">Actual L</th>
                                                     <th style={{ ...subTh, textAlign: 'right', width: 52 }}>L:R</th>
                                                     <th style={{ ...subTh, width: 78 }}>Status</th>
@@ -543,7 +748,15 @@ export default function DyeingOrdersTab({ items, recipes, authFetch }: DyeingOrd
                                                     const bathFilled = !!run.started_at || run.volume_air_liters != null;
                                                     return (
                                                         <tr key={run.id} style={lvSubRow(ri)}>
-                                                            <td style={{ ...subTd, fontWeight: 'bold' }}>#{run.run_number}</td>
+                                                            <td style={{ ...subTd, fontWeight: 'bold' }}>
+                                                                #{run.run_number}
+                                                                {run.bath_group_id && (bathSizes[String(run.bath_group_id)] || 0) > 1 && (
+                                                                    <span
+                                                                        title={`One bath shared with ${(bathSizes[String(run.bath_group_id)] || 1) - 1} other work order(s) — the volume and every dose below are the whole vessel's, counted once per order`}
+                                                                        style={{ marginLeft: 3, borderRadius: CHIP_RADIUS, fontSize: 8, fontWeight: 'bold', color: '#1d4f7c', background: '#dbeafe', border: '1px solid #8fb6d9', padding: '0 3px', whiteSpace: 'nowrap' }}
+                                                                    >x{bathSizes[String(run.bath_group_id)]}</span>
+                                                                )}
+                                                            </td>
                                                             <td style={{ ...subTd, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={recipeName || undefined}>
                                                                 {recipeName ?? <Dash />}
                                                             </td>
@@ -563,13 +776,22 @@ export default function DyeingOrdersTab({ items, recipes, authFetch }: DyeingOrd
                                                             <td style={{ ...subTd, color: '#666', whiteSpace: 'nowrap' }}>{fmtDateTime(run.started_at)}</td>
                                                             <td style={{ ...subTd, color: '#666', whiteSpace: 'nowrap' }}>{fmtDateTime(run.completed_at)}</td>
                                                             <td style={{ ...subTd, textAlign: 'right' }}>
-                                                                {/* One action: the shade. There is no Start button
-                                                                    here — the floor walks a batch through match /
-                                                                    start / complete on the vessel card (dyeing
-                                                                    monitor), and the bath is filled from the WO with
-                                                                    the output it produced. Once the shade is in, this
-                                                                    opens the same panel read-only, which is where the
-                                                                    dose sheet and the chemicals used are shown. */}
+                                                                {/* Two actions. Setup: the bath, the ropes, the speed and the
+                                                                    chemicals actually weighed — this is where a run is
+                                                                    configured, since the WO form carries no dyeing fields and
+                                                                    the WO log records only kg out. Shade: QC, a different
+                                                                    person at a later moment, which is why it stays its own
+                                                                    panel. */}
+                                                                {canManage && !run.completed_at && (
+                                                                    <XPActionButton
+                                                                        tone={bathFilled ? 'neutral' : 'primary'}
+                                                                        icon="bi-sliders"
+                                                                        title={bathFilled
+                                                                            ? 'Correct the bath, or record the chemicals actually used'
+                                                                            : 'Configure this bath — volume, ropes, speed and load'}
+                                                                        onClick={() => handleOpenCreateRun(wo, run)}
+                                                                    />
+                                                                )}
                                                                 <XPActionButton
                                                                     tone={!bathClosed && bathFilled && canManage ? 'primary' : 'neutral'}
                                                                     icon={bathClosed || !canManage ? 'bi-eye' : 'bi-eyedropper'}
@@ -577,7 +799,7 @@ export default function DyeingOrdersTab({ items, recipes, authFetch }: DyeingOrd
                                                                         ? 'View the bath, its dose sheet and the chemicals used'
                                                                         : bathFilled
                                                                             ? 'Record the shade result and close this bath'
-                                                                            : 'No bath recorded yet — the operator fills it from the work order log'}
+                                                                            : 'No bath recorded yet — configure the run first'}
                                                                     onClick={() => handleOpenShade(run)}
                                                                 />
                                                             </td>
@@ -634,6 +856,7 @@ export default function DyeingOrdersTab({ items, recipes, authFetch }: DyeingOrd
                 >
                     <colgroup>
                         <col style={{ width: LV_EXPANDER_COL_W }} /> {/* chevron */}
+                        <col style={{ width: 26 }} />     {/* select */}
                         <col style={{ width: '13%' }} />  {/* WO */}
                         <col style={{ width: 170 }} />    {/* MO */}
                         <col style={{ width: '14%' }} />  {/* Product */}
@@ -651,6 +874,7 @@ export default function DyeingOrdersTab({ items, recipes, authFetch }: DyeingOrd
                     <thead>
                         <tr>
                             <th style={{ ...thStyle, width: 22, padding: '3px 4px' }} />
+                            <th style={{ ...thStyle, width: 26, padding: '3px 4px' }} />
                             {([
                                 ['WO', 'code'], ['MO', 'mo'], ['Product', 'product'], ['Variant', ''],
                                 ['Vessel', 'wc'], ['Recipe', 'recipe'], ['Substrate', ''], ['Bath (L)', ''],
@@ -681,8 +905,77 @@ export default function DyeingOrdersTab({ items, recipes, authFetch }: DyeingOrd
                             const sum = summarize(runsByWo[id] || []);
                             const cur = sum.current;
                             const toggleRow = () => setExpandedId(prev => prev === id ? null : id);
+                            // The first row of a shade-on-a-vessel carries the group header:
+                            // the server orders by exactly this pair, so equal keys are
+                            // adjacent and one comparison with the row above is enough.
+                            const gKey = groupKeyOf(wo);
+                            const isGroupHead = grouped && (idx === 0 || groupKeyOf(sortedWOs[idx - 1]) !== gKey);
+                            const rowsInGroup = isGroupHead ? groupRows(gKey) : [];
+                            const pickedInGroup = rowsInGroup.filter((w: any) => selected.has(String(w.id)));
+                            // The group IS the bath, so ticking nothing means "all of it".
+                            // Ticking is for leaving an order OUT — which is the rarer act,
+                            // and making it the precondition left the button dead on arrival.
+                            const bathWos = pickedInGroup.length ? pickedInGroup : rowsInGroup;
                             return (
                                 <React.Fragment key={id}>
+                                    {isGroupHead && (
+                                        <tr style={{ background: '#ece9d8' }}>
+                                            <td style={{ ...tdBase, padding: '2px 4px', textAlign: 'center' }}>
+                                                <input
+                                                    type="checkbox"
+                                                    title="Select every order in this group that is on this page"
+                                                    checked={rowsInGroup.length > 0 && pickedInGroup.length === rowsInGroup.length}
+                                                    onChange={() => setSelected(prev => {
+                                                        const next = new Set(prev);
+                                                        const all = pickedInGroup.length === rowsInGroup.length;
+                                                        rowsInGroup.forEach((w: any) => all ? next.delete(String(w.id)) : next.add(String(w.id)));
+                                                        return next;
+                                                    })}
+                                                />
+                                            </td>
+                                            <td colSpan={COLS - 1} style={{ ...tdBase, padding: '2px 6px' }}>
+                                                <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+                                                    <VariantChips
+                                                        colorVariant={wo.color_label}
+                                                        colorCode={wo.color_code}
+                                                        colorName={wo.color_name}
+                                                        colorHex={wo.color_hex}
+                                                        labdipCode={wo.labdip_variant_code}
+                                                    />
+                                                    <span style={{ fontWeight: 'bold', color: '#333' }}>
+                                                        {wo.work_center_name || 'No vessel'}
+                                                    </span>
+                                                    <span style={{ color: '#666' }}>
+                                                        {rowsInGroup.length} order{rowsInGroup.length === 1 ? '' : 's'} on this page
+                                                        {' · '}
+                                                        {fmtDose(rowsInGroup.reduce((t: number, w: any) => t + (Number(w.qty) || 0), 0), 2)} total
+                                                    </span>
+                                                    <span style={{ marginLeft: 'auto' }} />
+                                                    {canManage && (
+                                                        <XPActionButton
+                                                            tone="primary"
+                                                            icon="bi-droplet-half"
+                                                            label={`Set Up Bath (${bathWos.length})`}
+                                                            title={pickedInGroup.length
+                                                                ? 'One vessel, one setup — every ticked order takes this bath'
+                                                                : 'One vessel, one setup — every order in this group takes this bath. Tick rows to leave some out.'}
+                                                            onClick={() => {
+                                                                // A group of one has no bath to share: hand it to the
+                                                                // single-run panel rather than refusing (the bulk route
+                                                                // wants two, and one order in a vessel is just a run).
+                                                                if (bathWos.length < 2) {
+                                                                    const only = bathWos[0];
+                                                                    handleOpenCreateRun(only, summarize(runsByWo[String(only.id)] || []).open ?? undefined);
+                                                                    return;
+                                                                }
+                                                                handleOpenBulk(bathWos);
+                                                            }}
+                                                        />
+                                                    )}
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    )}
                                     <tr
                                         style={{
                                             background: isExpanded ? rowStateBg('expanded') : (lvZebra(idx)),
@@ -691,6 +984,14 @@ export default function DyeingOrdersTab({ items, recipes, authFetch }: DyeingOrd
                                         onClick={toggleRow}
                                     >
                                         <ExpanderCell expanded={isExpanded} onToggle={toggleRow} tdStyle={tdBase} tdClassName={''} label="dyeing order detail" />
+                                        <td style={{ ...tdBase, padding: '2px 4px', textAlign: 'center' }} onClick={e => e.stopPropagation()}>
+                                            <input
+                                                type="checkbox"
+                                                aria-label={`Select ${wo.code || wo.name} for a shared bath`}
+                                                checked={selected.has(id)}
+                                                onChange={() => toggleSelected(id)}
+                                            />
+                                        </td>
                                         <td style={{ ...tdBase, overflow: 'hidden' }} title={wo.code || wo.name}>
                                             <CodeChip
                                                 code={wo.code || wo.name}
@@ -838,21 +1139,27 @@ export default function DyeingOrdersTab({ items, recipes, authFetch }: DyeingOrd
 
             <Pager page={page} total={woTotal} pageSize={WO_PAGE_SIZE} onPageChange={setPage} hideWhenEmpty />
 
-            {/* Create Run — a bath cut by hand. Modal rather than an inline strip:
-                the list is one full-width table now, and a form wedged above it
-                pushed every row off screen. */}
+            {/* The run panel — where a bath is configured, and the only place it is.
+                WO creation cuts run #1 carrying just the recipe its gate matched; the
+                volume, the ropes, the speed and the load are typed here, by the
+                operator at the vessel. The work order log records kg of output and
+                nothing else. Cutting a second bath by hand uses the same form. */}
             {createWo && (
                 <ModalWrapper
                     isOpen={!!createWo}
-                    onClose={() => { setCreateWo(null); setCreateForm(emptyCreateForm); setErrorMsg(null); }}
-                    title={`New Dyeing Run — ${createWo.code || createWo.name}`}
+                    onClose={() => { setCreateWo(null); setEditRun(null); setBulkWos(null); setCreateForm(emptyCreateForm); setChemRows([]); setErrorMsg(null); }}
+                    title={bulkWos
+                        ? `Set Up Bath — ${bulkWos.length} work orders on ${createWo.work_center_name || 'one vessel'}`
+                        : editRun
+                            ? `Dyeing Run #${editRun.run_number} — ${createWo.code || createWo.name}`
+                            : `New Dyeing Run — ${createWo.code || createWo.name}`}
                     size="lg"
                     modeless
                     footer={<>
                         <button className={XP_BTN} style={{ ...xpPrimaryBtn, padding: '3px 16px' }} onClick={handleSaveRun} disabled={saving}>
-                            {saving ? 'Saving...' : 'Save Run'}
+                            {saving ? 'Saving...' : bulkWos ? `Set Up ${bulkWos.length} Runs` : editRun ? 'Save Bath' : 'Save Run'}
                         </button>
-                        <button className={XP_BTN} style={{ ...xpBtn, padding: '3px 16px' }} onClick={() => { setCreateWo(null); setCreateForm(emptyCreateForm); setErrorMsg(null); }} disabled={saving}>
+                        <button className={XP_BTN} style={{ ...xpBtn, padding: '3px 16px' }} onClick={() => { setCreateWo(null); setEditRun(null); setBulkWos(null); setCreateForm(emptyCreateForm); setChemRows([]); setErrorMsg(null); }} disabled={saving}>
                             Cancel
                         </button>
                     </>}
@@ -861,6 +1168,26 @@ export default function DyeingOrdersTab({ items, recipes, authFetch }: DyeingOrd
                         {errorMsg && (
                             <div style={{ background: '#fff3cd', border: '1px solid #ffc107', padding: '3px 8px', fontSize: 11, color: '#664d03', marginBottom: 6 }}>
                                 {errorMsg}
+                            </div>
+                        )}
+                        {/* What is going in the vessel. Named rather than counted: a
+                            planner about to commit 900 L to four orders should see
+                            which four, and how much cloth that is in total. */}
+                        {bulkWos && (
+                            <div style={{ border: '1px solid #aca899', background: '#f5f4ee', padding: '4px 6px', marginBottom: 6, fontSize: 10 }}>
+                                <div style={{ fontWeight: 'bold', color: '#444', marginBottom: 2 }}>
+                                    In this bath — {bulkWos.length} orders,{' '}
+                                    {fmtDose(bulkWos.reduce((t, w) => t + (Number(w.qty) || 0), 0), 2)} total
+                                </div>
+                                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
+                                    {bulkWos.map(w => (
+                                        <CodeChip key={String(w.id)} code={`${w.code || w.name} · ${fmtDose(w.qty, 2)}`} tone="accent" />
+                                    ))}
+                                </div>
+                                <div style={{ color: '#888', marginTop: 2 }}>
+                                    The bath below is the vessel's, and is recorded whole on every run —
+                                    not split between them. Each run keeps its own load, kg and clock.
+                                </div>
                             </div>
                         )}
                         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '4px 12px' }}>
@@ -877,17 +1204,23 @@ export default function DyeingOrdersTab({ items, recipes, authFetch }: DyeingOrd
                                     ))}
                                 </select>
                             </label>
-                            <label style={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
-                                <span style={{ fontSize: 10, color: '#444' }}>Substrate Qty</span>
-                                <input type="number" style={xpInput} value={createForm.substrate_qty}
-                                    onChange={e => handleCreateFormChange('substrate_qty', e.target.value)}
-                                    placeholder={createWo.qty != null ? `WO qty ${createWo.qty}` : 'e.g. 100'} />
-                            </label>
-                            <label style={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
-                                <span style={{ fontSize: 10, color: '#444' }}>Input Lot</span>
-                                <input type="text" style={xpInput} value={createForm.input_batch_id}
-                                    onChange={e => handleCreateFormChange('input_batch_id', e.target.value)} placeholder="lot number" />
-                            </label>
+                            {/* Both are per-ORDER, so a shared bath has no single answer
+                                for either: each run takes its own work order's qty. */}
+                            {!bulkWos && (
+                                <label style={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+                                    <span style={{ fontSize: 10, color: '#444' }}>Substrate Qty</span>
+                                    <input type="number" style={xpInput} value={createForm.substrate_qty}
+                                        onChange={e => handleCreateFormChange('substrate_qty', e.target.value)}
+                                        placeholder={createWo.qty != null ? `WO qty ${createWo.qty}` : 'e.g. 100'} />
+                                </label>
+                            )}
+                            {!bulkWos && (
+                                <label style={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+                                    <span style={{ fontSize: 10, color: '#444' }}>Input Lot</span>
+                                    <input type="text" style={xpInput} value={createForm.input_batch_id}
+                                        onChange={e => handleCreateFormChange('input_batch_id', e.target.value)} placeholder="lot number" />
+                                </label>
+                            )}
                             <label style={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
                                 <span
                                     style={{ fontSize: 10, color: '#444' }}
@@ -903,6 +1236,48 @@ export default function DyeingOrdersTab({ items, recipes, authFetch }: DyeingOrd
                                 >Volume Air (L)</span>
                                 <input type="number" step="0.1" style={xpInput} value={createForm.volume_air_liters}
                                     onChange={e => handleCreateFormChange('volume_air_liters', e.target.value)} placeholder="e.g. 190" />
+                            </label>
+                            <label style={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+                                <span
+                                    style={{ fontSize: 10, color: '#444' }}
+                                    title="How many ropes the vessel runs this load on. The dyeing monitor's rate is yd/min per rope x this."
+                                >Line (ropes)</span>
+                                <input type="number" min="1" step="1" style={xpInput} value={createForm.lines}
+                                    onChange={e => handleCreateFormChange('lines', e.target.value)} placeholder="1" />
+                            </label>
+                            <label style={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+                                <span
+                                    style={{ fontSize: 10, color: '#444' }}
+                                    title="Rope speed for this bath, picked by shade depth off the Dyeing Speed attribute. Times the rope count, this is the vessel's rate on the dyeing monitor."
+                                >Speed (yd/min per rope)</span>
+                                <select
+                                    style={{ ...xpInput, height: 22 }}
+                                    value={createForm.yards_per_min === '' ? '' : (speedPreset ? String(speedPreset.n) : '__custom')}
+                                    onChange={e => { if (e.target.value !== '__custom') handleCreateFormChange('yards_per_min', e.target.value); }}
+                                >
+                                    <option value="">-- select --</option>
+                                    {speedOptions.map(p => (
+                                        <option key={p.id} value={String(p.n)}>{p.label}</option>
+                                    ))}
+                                    {/* A speed the floor typed, or one curated away since, still has to
+                                        read as the current value instead of snapping to a preset. */}
+                                    {createForm.yards_per_min !== '' && !speedPreset && (
+                                        <option value="__custom">{createForm.yards_per_min} (custom)</option>
+                                    )}
+                                </select>
+                                {/* The escape hatch, under the picker and narrower than it: a vessel run
+                                    at a speed nobody has added to the list must still be recordable, but
+                                    the list is the path. Same shape as the monitor's rate modal. */}
+                                <span style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 9, color: '#777' }}>
+                                    or type
+                                    <input type="number" min="0" step="any"
+                                        style={{ ...xpInput, width: 58 }}
+                                        value={createForm.yards_per_min}
+                                        onChange={e => handleCreateFormChange('yards_per_min', e.target.value)} />
+                                    {speedOptions.length === 0 && (
+                                        <span style={{ color: '#a06000' }}>none curated yet</span>
+                                    )}
+                                </span>
                             </label>
                             <label style={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
                                 <span style={{ fontSize: 10, color: '#444' }}>Speed</span>
@@ -941,6 +1316,62 @@ export default function DyeingOrdersTab({ items, recipes, authFetch }: DyeingOrd
                                 emptyHint="This recipe has no chemical lines to weigh out."
                                 style={{ marginTop: 6}}
                             />
+                        )}
+
+                        {/* What actually went into the vessel. Only on a run whose sheet
+                            has been frozen — before the bath is filled there is nothing
+                            to weigh against, and the preview above is still a proposal.
+                            Planned is the snapshot the operator was handed; only the
+                            actual is typed, and the gap between them is the only dosing
+                            variance the system has. */}
+                        {editRun && chemRows.length > 0 && (
+                            <div style={{ marginTop: 8 }}>
+                                <div style={{ fontSize: 10, fontWeight: 'bold', color: '#444', marginBottom: 2 }}>
+                                    Chemicals Used
+                                </div>
+                                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 10 }}>
+                                    <thead>
+                                        <tr style={{ background: '#dddbd0' }}>
+                                            <th style={{ padding: '2px 6px', textAlign: 'left', borderBottom: '1px solid #aca899' }}>Chemical</th>
+                                            <th style={{ padding: '2px 6px', textAlign: 'right', borderBottom: '1px solid #aca899', width: 90 }}>Weigh Out</th>
+                                            <th style={{ padding: '2px 6px', textAlign: 'right', borderBottom: '1px solid #aca899', width: 90 }}>Actual</th>
+                                            <th style={{ padding: '2px 6px', textAlign: 'right', borderBottom: '1px solid #aca899', width: 70 }}>Variance</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {chemRows.map((row, idx) => {
+                                            const planned = parseFloat(row.planned_qty);
+                                            const actual = parseFloat(row.actual_qty);
+                                            const variance = (isNaN(actual) ? 0 : actual) - (isNaN(planned) ? 0 : planned);
+                                            return (
+                                                <tr key={row.item_id || idx} style={{ background: idx % 2 === 0 ? '#fff' : '#f5f4ee' }}>
+                                                    <td style={{ padding: '2px 6px' }}>{row.item_name}</td>
+                                                    <td style={{ padding: '2px 6px', textAlign: 'right', color: '#555', whiteSpace: 'nowrap' }}>
+                                                        {isNaN(planned) ? '—' : `${fmtDose(planned, 3)}${row.dose_unit ? ` ${row.dose_unit}` : ''}`}
+                                                    </td>
+                                                    <td style={{ padding: '2px 4px' }}>
+                                                        <input
+                                                            type="number" min="0" step="any"
+                                                            style={{ ...xpInput, textAlign: 'right' }}
+                                                            value={row.actual_qty}
+                                                            onChange={e => setChemActual(row.item_id, e.target.value)}
+                                                            placeholder={row.dose_unit || ''}
+                                                            disabled={!canManage}
+                                                        />
+                                                    </td>
+                                                    <td style={{ padding: '2px 6px', textAlign: 'right', whiteSpace: 'nowrap', color: Math.abs(variance) < 1e-9 ? '#555' : variance > 0 ? '#900' : '#1a5e1a' }}>
+                                                        {isNaN(actual) ? '—' : `${variance > 0 ? '+' : ''}${fmtDose(variance, 3)}`}
+                                                    </td>
+                                                </tr>
+                                            );
+                                        })}
+                                    </tbody>
+                                </table>
+                                <div style={{ fontSize: 9, color: '#888', marginTop: 2 }}>
+                                    Chemicals are still deducted from stock by BOM percentage, not from these
+                                    figures — this records what the vessel actually took.
+                                </div>
+                            </div>
                         )}
                     </div>
                 </ModalWrapper>

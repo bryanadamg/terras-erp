@@ -78,14 +78,12 @@ export default function ItemMetadataView({
                     />
                 )}
                 {tab === 'categories' && (
-                    <div style={{ flex: 1, overflow: 'auto', padding: 12, background: '#fff' }}>
-                        <CategoriesView
-                            categories={categories || []}
-                            onCreateCategory={onCreateCategory}
-                            onDeleteCategory={onDeleteCategory}
-                            onRenameCategory={onRenameCategory}
-                        />
-                    </div>
+                    <CategoriesView
+                        categories={categories || []}
+                        onCreateCategory={onCreateCategory}
+                        onDeleteCategory={onDeleteCategory}
+                        onRenameCategory={onRenameCategory}
+                    />
                 )}
                 {tab === 'uom' && (
                     <UOMLibraryView

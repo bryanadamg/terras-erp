@@ -104,6 +104,26 @@ class Batch(Base):
     quarantine_status_by: Mapped[Optional[str]] = mapped_column(String(128), nullable=True)
     quarantine_notes: Mapped[Optional[str]] = mapped_column(String(512), nullable=True)
 
+    # --- Packing lock ----------------------------------------------------------
+    # The packing order this lot was handed to off the Quarantine Packing desk.
+    # A held lot is a physical pile: the order that claimed it owns it outright,
+    # so no other order may draw from it, and that order cannot be COMPLETED
+    # until the pile is gone — even when the draw runs past `qty_target`, which
+    # is only a snapshot of what was free when the deep link was followed.
+    #
+    # NOT `packing_order_id`, which is the carton discriminator on the OUTPUT
+    # side of packing (non-null means "this batch IS a carton"). This is the
+    # INPUT side: the bulk lot being consumed. A lot has at most one owner, so
+    # the lock is a column here rather than a join table — two owners cannot be
+    # written in the first place.
+    #
+    # The lock is only in force while its order is open: `locked_by_other()` in
+    # services/packing_service.py joins on status, so a COMPLETED or CANCELLED
+    # order releases every lot it held without any unwind step.
+    locked_packing_order_id: Mapped[Optional[uuid.UUID]] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("packing_orders.id", ondelete="SET NULL"), nullable=True, index=True
+    )
+
     item = relationship("Item")
     # Eager by default: the master is a handful of rows and every carton list,
     # label and delivery note wants its name — a lazy load would MissingGreenlet

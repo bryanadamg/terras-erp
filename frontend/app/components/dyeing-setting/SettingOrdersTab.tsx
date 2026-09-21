@@ -28,7 +28,7 @@ const modernFont = 'system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neu
 const SO_WO_PAGE_SIZE = 25;
 const STATUSES = ['PENDING', 'IN_PROGRESS', 'COMPLETED', 'CANCELLED'];
 /** 13 columns: chevron + 11 data + actions. */
-const COLS = 13;
+const COLS = 14;   // chevron + select + 11 data + actions
 
 // ── Style helpers (theme-aware) ───────────────────────────────────────────────
 const xpInput = (): React.CSSProperties => lvInput({ padding: '1px 4px', width: 'auto' });
@@ -111,6 +111,11 @@ export default function SettingOrdersTab({ items, authFetch }: Props) {
     const [expandedId, setExpandedId] = useState<string | null>(null);
 
     const [createWo, setCreateWo] = useState<any | null>(null);
+    // The work orders going through one machine at one setting. Non-null puts the
+    // run panel in bulk mode (POST /setting-runs/bulk). No bath and so no group id:
+    // these share a SETUP, not a vessel — cloth crosses a stenter one piece at a time.
+    const [bulkWos, setBulkWos] = useState<any[] | null>(null);
+    const [selected, setSelected] = useState<Set<string>>(new Set());
     const [showCompleteModal, setShowCompleteModal] = useState<any | null>(null);
     const [createForm, setCreateForm] = useState<CreateForm>(EMPTY_CREATE);
     const [completeForm, setCompleteForm] = useState<CompleteForm>(EMPTY_COMPLETE);
@@ -128,7 +133,11 @@ export default function SettingOrdersTab({ items, authFetch }: Props) {
         endpoint: `${API_BASE}/work-orders`,
         authFetch,
         pageSize: SO_WO_PAGE_SIZE,
-        params: { center_type: 'SETTING', status: filterStatus, work_center_id: filterWC },
+        // `order_by: 'color'` is what makes grouping possible at all: the list is
+        // windowed, so a shade with 30 work orders would otherwise group as 25 on
+        // this page and 5 on the next, and a setup applied from the group would
+        // silently cover only the loaded half.
+        params: { center_type: 'SETTING', status: filterStatus, work_center_id: filterWC, order_by: 'color' },
     });
 
     // ── Runs for the visible page, in one call ────────────────────────────────
@@ -187,13 +196,46 @@ export default function SettingOrdersTab({ items, authFetch }: Props) {
         status: (w: any) => w.status,
     });
 
+    // One setup = one shade on one machine, so that pair is the group key. Orders
+    // with no shade yet key on their lab dip code so they group with each other
+    // rather than forming one bucket of everything unshaded.
+    const groupKeyOf = (wo: any) =>
+        `${wo.color_code || wo.labdip_variant_code || ''}|${wo.work_center_id || ''}`;
+
+    // Grouping follows the server's own ordering, so it switches off the moment a
+    // column sort re-orders the page — a header over rows that are no longer
+    // contiguous would be a lie.
+    const grouped = !sort?.key;
+
+    const groupRows = useCallback((key: string) =>
+        sortedWOs.filter((w: any) => groupKeyOf(w) === key), [sortedWOs]);
+
+    // A selection that outlives its page would set a machine up from orders nobody
+    // can see.
+    useEffect(() => { setSelected(new Set()); }, [page, filterStatus, filterWC, searchInput]);
+
+    const toggleSelected = (id: string) => setSelected(prev => {
+        const next = new Set(prev);
+        next.has(id) ? next.delete(id) : next.add(id);
+        return next;
+    });
+
     const listBodyRef = useRef<HTMLTableSectionElement>(null);
     const skel = useTableSkeletonMetrics('setting-orders', listBodyRef, workOrders.length > 0);
 
     // ── Create Run ────────────────────────────────────────────────────────────
     const handleOpenCreateRun = (wo: any) => {
         setCreateWo(wo);
+        setBulkWos(null);
         setCreateForm(EMPTY_CREATE);
+        setErrorMsg(null);
+    };
+
+    /** Set one machine up for several orders at once. */
+    const handleOpenBulk = (wos: any[]) => {
+        setCreateWo(wos[0]);
+        setBulkWos(wos);
+        setCreateForm({ ...EMPTY_CREATE, machine_name: wos[0].work_center_name || '' });
         setErrorMsg(null);
     };
 
@@ -219,7 +261,15 @@ export default function SettingOrdersTab({ items, authFetch }: Props) {
             if (createForm.width_cm !== '') payload.width_cm = parseFloat(createForm.width_cm);
             if (createForm.overfeed_pct !== '') payload.overfeed_pct = parseFloat(createForm.overfeed_pct);
 
-            const res = await authFetch(`${API_BASE}/setting-runs`, {
+            if (bulkWos) {
+                // Substrate and input lot are per-ORDER, so they are dropped here:
+                // the backend defaults each run's load to its own work order's qty.
+                delete payload.work_order_id;
+                delete payload.substrate_qty;
+                delete payload.input_batch_id_text;
+                payload.work_order_ids = bulkWos.map(w => String(w.id));
+            }
+            const res = await authFetch(`${API_BASE}/setting-runs${bulkWos ? '/bulk' : ''}`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(payload),
@@ -229,7 +279,9 @@ export default function SettingOrdersTab({ items, authFetch }: Props) {
                 setErrorMsg(err.detail || 'Failed to create run.');
             } else {
                 setCreateWo(null);
+                setBulkWos(null);
                 setCreateForm(EMPTY_CREATE);
+                setSelected(new Set());
                 reloadRuns();
             }
         } catch {
@@ -517,6 +569,7 @@ export default function SettingOrdersTab({ items, authFetch }: Props) {
                 >
                     <colgroup>
                         <col style={{ width: LV_EXPANDER_COL_W }} /> {/* chevron */}
+                        <col style={{ width: 26 }} />     {/* select */}
                         <col style={{ width: '13%' }} />  {/* WO */}
                         <col style={{ width: 170 }} />    {/* MO */}
                         <col style={{ width: '15%' }} />  {/* Product */}
@@ -533,6 +586,7 @@ export default function SettingOrdersTab({ items, authFetch }: Props) {
                     <thead>
                         <tr>
                             <th style={{ ...thStyle, width: 22, padding: '3px 4px' }} />
+                            <th style={{ ...thStyle, width: 26, padding: '3px 4px' }} />
                             {([
                                 ['WO', 'code'], ['MO', 'mo'], ['Product', 'product'], ['Variant', ''],
                                 ['Machine', 'wc'], ['Setting', ''], ['Width set / act', ''],
@@ -563,8 +617,72 @@ export default function SettingOrdersTab({ items, authFetch }: Props) {
                             const sum = summarize(runsByWo[id] || []);
                             const cur = sum.current;
                             const toggleRow = () => setExpandedId(prev => prev === id ? null : id);
+                            // The first row of a shade-on-a-machine carries the group
+                            // header: the server orders by exactly this pair, so equal
+                            // keys are adjacent and comparing with the row above is enough.
+                            const gKey = groupKeyOf(wo);
+                            const isGroupHead = grouped && (idx === 0 || groupKeyOf(sortedWOs[idx - 1]) !== gKey);
+                            const rowsInGroup = isGroupHead ? groupRows(gKey) : [];
+                            const pickedInGroup = rowsInGroup.filter((w: any) => selected.has(String(w.id)));
+                            // The group IS the setup, so ticking nothing means "all of it".
+                            // Ticking is for leaving an order OUT.
+                            const setupWos = pickedInGroup.length ? pickedInGroup : rowsInGroup;
                             return (
                                 <React.Fragment key={id}>
+                                    {isGroupHead && (
+                                        <tr style={{ background: '#ece9d8' }}>
+                                            <td style={{ ...tdBase, padding: '2px 4px', textAlign: 'center' }}>
+                                                <input
+                                                    type="checkbox"
+                                                    title="Select every order in this group that is on this page"
+                                                    checked={rowsInGroup.length > 0 && pickedInGroup.length === rowsInGroup.length}
+                                                    onChange={() => setSelected(prev => {
+                                                        const next = new Set(prev);
+                                                        const all = pickedInGroup.length === rowsInGroup.length;
+                                                        rowsInGroup.forEach((w: any) => all ? next.delete(String(w.id)) : next.add(String(w.id)));
+                                                        return next;
+                                                    })}
+                                                />
+                                            </td>
+                                            <td colSpan={COLS - 1} style={{ ...tdBase, padding: '2px 6px' }}>
+                                                <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+                                                    <VariantChips
+                                                        colorVariant={wo.color_label}
+                                                        colorCode={wo.color_code}
+                                                        colorName={wo.color_name}
+                                                        colorHex={wo.color_hex}
+                                                        labdipCode={wo.labdip_variant_code}
+                                                    />
+                                                    <span style={{ fontWeight: 'bold', color: '#333' }}>
+                                                        {wo.work_center_name || 'No machine'}
+                                                    </span>
+                                                    <span style={{ color: '#666' }}>
+                                                        {rowsInGroup.length} order{rowsInGroup.length === 1 ? '' : 's'} on this page
+                                                    </span>
+                                                    <span style={{ marginLeft: 'auto' }} />
+                                                    {canManage && (
+                                                        <XPActionButton
+                                                            tone="primary"
+                                                            icon="bi-thermometer-half"
+                                                            label={`Set Up Machine (${setupWos.length})`}
+                                                            title={pickedInGroup.length
+                                                                ? 'One machine, one setup — every ticked order takes these settings'
+                                                                : 'One machine, one setup — every order in this group takes these settings. Tick rows to leave some out.'}
+                                                            onClick={() => {
+                                                                // A group of one shares nothing: hand it to the
+                                                                // single-run panel, which is the same form.
+                                                                if (setupWos.length < 2) {
+                                                                    handleOpenCreateRun(setupWos[0]);
+                                                                    return;
+                                                                }
+                                                                handleOpenBulk(setupWos);
+                                                            }}
+                                                        />
+                                                    )}
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    )}
                                     <tr
                                         style={{
                                             background: isExpanded ? rowStateBg('expanded') : (lvZebra(idx)),
@@ -573,6 +691,14 @@ export default function SettingOrdersTab({ items, authFetch }: Props) {
                                         onClick={toggleRow}
                                     >
                                         <ExpanderCell expanded={isExpanded} onToggle={toggleRow} tdStyle={tdBase} tdClassName={''} label="setting order detail" />
+                                        <td style={{ ...tdBase, padding: '2px 4px', textAlign: 'center' }} onClick={e => e.stopPropagation()}>
+                                            <input
+                                                type="checkbox"
+                                                aria-label={`Select ${wo.code || wo.name} for a shared setup`}
+                                                checked={selected.has(id)}
+                                                onChange={() => toggleSelected(id)}
+                                            />
+                                        </td>
                                         <td style={{ ...tdBase, overflow: 'hidden' }} title={wo.code || wo.name}>
                                             <CodeChip
                                                 code={wo.code || wo.name}
@@ -720,8 +846,10 @@ export default function SettingOrdersTab({ items, authFetch }: Props) {
             {createWo && (
                 <ModalWrapper
                     isOpen={!!createWo}
-                    onClose={() => { setCreateWo(null); setCreateForm(EMPTY_CREATE); setErrorMsg(null); }}
-                    title={`New Setting Run — ${createWo.code || createWo.name}`}
+                    onClose={() => { setCreateWo(null); setBulkWos(null); setCreateForm(EMPTY_CREATE); setErrorMsg(null); }}
+                    title={bulkWos
+                        ? `Set Up Machine — ${bulkWos.length} work orders on ${createWo.work_center_name || 'one machine'}`
+                        : `New Setting Run — ${createWo.code || createWo.name}`}
                     size="lg"
                     modeless
                     footer={<>
@@ -731,11 +859,11 @@ export default function SettingOrdersTab({ items, authFetch }: Props) {
                             disabled={saving}
                             style={{ ...xpBtn(), padding: '3px 16px' }}
                         >
-                            {saving ? 'Saving...' : 'Create Run'}
+                            {saving ? 'Saving...' : bulkWos ? `Set Up ${bulkWos.length} Runs` : 'Create Run'}
                         </button>
                         <button
                             className={XP_BTN}
-                            onClick={() => { setCreateWo(null); setCreateForm(EMPTY_CREATE); setErrorMsg(null); }}
+                            onClick={() => { setCreateWo(null); setBulkWos(null); setCreateForm(EMPTY_CREATE); setErrorMsg(null); }}
                             disabled={saving}
                             style={{ ...xpBtn(), padding: '3px 16px' }}
                         >
@@ -749,10 +877,30 @@ export default function SettingOrdersTab({ items, authFetch }: Props) {
                                 {errorMsg}
                             </div>
                         )}
+                        {/* Named rather than counted: a planner about to commit one
+                            setup to four orders should see which four. */}
+                        {bulkWos && (
+                            <div style={{ border: '1px solid #aca899', background: '#f5f4ee', padding: '4px 6px', marginBottom: 6, fontSize: 10 }}>
+                                <div style={{ fontWeight: 'bold', color: '#444', marginBottom: 2 }}>
+                                    In this setup — {bulkWos.length} orders
+                                </div>
+                                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
+                                    {bulkWos.map(w => (
+                                        <CodeChip key={String(w.id)} code={`${w.code || w.name}`} tone="accent" />
+                                    ))}
+                                </div>
+                                <div style={{ color: '#888', marginTop: 2 }}>
+                                    Each run keeps its own load and output lot — only the machine
+                                    settings below are shared.
+                                </div>
+                            </div>
+                        )}
                         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '0 12px' }}>
                             <div>
-                                {fieldRow('Input Lot', 'input_batch_id_text')}
-                                {fieldRow('Substrate Qty', 'substrate_qty', 'number', createWo.qty != null ? `WO qty ${createWo.qty}` : undefined)}
+                                {/* Both are per-ORDER, so a shared setup has no single
+                                    answer for either. */}
+                                {!bulkWos && fieldRow('Input Lot', 'input_batch_id_text')}
+                                {!bulkWos && fieldRow('Substrate Qty', 'substrate_qty', 'number', createWo.qty != null ? `WO qty ${createWo.qty}` : undefined)}
                                 {fieldRow('Machine Name', 'machine_name', 'text', createWo.work_center_name || undefined)}
                             </div>
                             <div>

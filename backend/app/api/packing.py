@@ -638,12 +638,17 @@ async def create_packing_order(
     await _apply_alt_unit(db, po, payload, so_line=so_line, item=item)
     # Last resort: the ordered qty of the line being packed. Restated into the
     # item's stock UOM rather than taken raw — `SalesOrderLine.qty` is in yards.
+    # Through `order_weight_spec`, like every other figure this order derives:
+    # the g/y sampled at creation is what THIS cloth weighs, and reading the
+    # item master here would make the kg target the one number on the order
+    # computed against the style's development estimate.
     if float(po.qty_target or 0) <= 0 and so_line is not None:
+        sampled_per_unit, sampled_unit = packing_service.order_weight_spec(po, item)
         po.qty_target = so_fulfilment_service.ordered_qty_in_stock_uom(
             so_line.qty, item.uom,
             qty_kg=so_line.qty_kg,
-            weight_per_unit=item.weight_per_unit,
-            weight_unit=item.weight_unit,
+            weight_per_unit=sampled_per_unit,
+            weight_unit=sampled_unit,
         )
     if float(po.qty_target or 0) <= 0:
         raise HTTPException(status_code=400, detail="Target quantity must be greater than zero")
@@ -671,11 +676,22 @@ async def create_packing_order(
             notes=m.notes,
         ))
 
+    # Lots claimed off the Quarantine Packing desk. Locking them here rather than
+    # at pack time is the point: the deep link's `qty_target` is a snapshot of
+    # what was free, so between the link and the first pack event a second order
+    # could otherwise be planned over the same physical pile.
+    try:
+        claimed = await packing_service.claim_lots(db, po, payload.locked_batch_ids)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
     await db.commit()
 
     await audit_service.log_activity(
         db, user_id=current_user.id, action="CREATE", entity_type="PackingOrder",
-        entity_id=str(po.id), details=f"Created packing order {code} for {item.code}",
+        entity_id=str(po.id),
+        details=f"Created packing order {code} for {item.code}"
+                + (f"; holds {len(claimed)} lot(s): {', '.join(claimed)}" if claimed else ""),
     )
     try:
         await manager.broadcast({"type": "PACKING_UPDATE", "id": str(po.id)})
@@ -704,6 +720,27 @@ async def update_packing_order(
         raise HTTPException(status_code=400, detail=f"Cannot edit a {po.status} packing order")
 
     await _assert_work_center(db, payload.work_center_id)
+
+    # Closing gate, checked BEFORE anything is written to the order. A lot claimed
+    # off the Quarantine Packing desk is a physical pile this order took ownership
+    # of, so closing with stock still on it would strand that stock: nothing else
+    # may draw from a locked lot, and the lock only lifts by closing. `qty_target`
+    # does not enter into it — it is a snapshot of what was free when the order was
+    # planned, and over-packing the remainder is the correct floor behaviour, the
+    # same way an MO's qty is a target and not a ceiling.
+    #
+    # Ordering is load-bearing: this runs a SELECT, the session autoflushes on it,
+    # and validating after the setattr loop below would therefore persist the very
+    # status it is about to refuse.
+    if payload.status == "COMPLETED":
+        left = await packing_service.undrained_locked_lots(db, po)
+        if left:
+            uom = (po.item.uom if po.item else "") or ""
+            detail = ", ".join(f"{bn} ({qty:g} {uom})".strip() for bn, qty in left)
+            raise HTTPException(
+                status_code=400,
+                detail=f"Pack the held lots out before closing {po.code} — still on the desk: {detail}",
+            )
 
     if payload.pack_basis is not None:
         po.pack_basis = _clean_basis(payload.pack_basis)
@@ -878,6 +915,12 @@ async def add_packing_completion(
             source_location_id=po.source_location_id,
             item_id=po.item_id,
             batch_ids=[(l.batch_id if l else None) for l in lots],
+        )
+        # Ownership gate, checked up front for the same reason: a lot claimed off
+        # the hold desk by another open order is not this order's to draw from.
+        # The picker already hides those, but the picker is UI — this is the gate.
+        await packing_service.assert_lots_unlocked(
+            db, po.id, [(l.batch_id if l else None) for l in lots],
         )
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))

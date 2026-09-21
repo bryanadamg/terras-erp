@@ -82,7 +82,7 @@ def get_current_db(current_user: User = Depends(get_current_admin)):
 def switch_db(profile: ConnectionProfile, current_user: User = Depends(get_current_admin)):
     parsed = urlparse(profile.url)
     safe_target = urlunparse(parsed._replace(netloc=parsed.netloc.replace(f":{parsed.password}@", ":***@") if parsed.password else parsed.netloc))
-    res = db_manager.switch_database(profile.url)
+    res = db_manager.initialize(profile.url)
     if not res.status:
         raise HTTPException(status_code=400, detail=res.message)
 

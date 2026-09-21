@@ -15,6 +15,27 @@ on `main`:
 
 ## [Unreleased]
 
+## [0.32.0] - 2026-09-21
+
+### Added
+- Everything about a dye bath — volume, liquor ratio, rope count, speed, load, and the chemicals actually weighed — is now configured on the Dyeing Orders run itself; the WO completion log and printed Kartu Kerja no longer carry a bath panel or dose sheet
+- Dyeing and Setting Orders can be grouped by shade and set up in bulk: one bath or one stenter, configured once, covers every work order sharing that shade
+- Rope speed and dye speed are picked from a curated shade-depth list ("Tua/Sedang/Muda") instead of typed as a bare number, so the vessel monitor and the Dyeing Orders bath panel always agree on the rate
+- A quarantine lot locked to a packing order can only be drawn down by that order, and the order can't be closed while a locked lot still has stock on the desk
+- Lot labels can be reprinted for any lot from the Lot page's "..." menu
+- Units are created from a "New UOM" window instead of an inline field in the toolbar
+
+### Changed
+- Packing target derives from the order's sampled grams/yard, with the basis printed on the packing card
+- Categories tab restyled to match its Attributes and UOM siblings
+
+### Fixed
+- Sales order edits no longer 422 when a line has no BOM picked
+- Unit and attribute save failures now tell the user why, and the entry survives a page reload instead of disappearing
+- Creating a packing order lands on the packing order table, not the pack panel
+- Dyeing monitor clock is stamped by hand instead of off the bath
+- Setting up a bath from a whole shade group works correctly — ticking a row leaves that order out, it isn't required to include one
+
 ## [0.31.0] - 2026-09-17
 
 ### Added

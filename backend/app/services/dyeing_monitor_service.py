@@ -48,6 +48,28 @@ MACHINE_STATUS_MATCHING = "MATCHING"
 MACHINE_STATUS_RUNNING = "RUNNING"
 
 
+def clock_running(started_at, completed_at) -> bool:
+    """Is this vessel turning right now?
+
+    Read off the two stamps the floor presses, never off `DyeingRun.status`. The
+    monitor is a timer: the bath is configured ahead of the run in Dyeing Orders,
+    which makes the run IN_PROGRESS the moment a volume exists — long before anyone
+    starts the machine. Scoring that as "running" would open an efficiency window
+    on a vessel nobody had switched on.
+    """
+    return started_at is not None and completed_at is None
+
+
+def clock_matching(color_matching_at, started_at) -> bool:
+    """Waiting on a shade: matched, not yet started."""
+    return color_matching_at is not None and started_at is None
+
+
+def clock_loaded(color_matching_at, started_at) -> bool:
+    """Loaded and waiting — no stamp pressed on this batch at all."""
+    return color_matching_at is None and started_at is None
+
+
 def derive_machine_status(has_active_run: bool, has_matching_run: bool,
                           has_pending_run: bool) -> str:
     """The single definition of what a vessel card shows.

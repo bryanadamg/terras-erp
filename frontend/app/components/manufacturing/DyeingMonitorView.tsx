@@ -49,24 +49,24 @@ const isMatching = (r: any) => r?.status === 'COLOR_MATCHING';
  *
  * Deliberately one walk rather than a button per phase scattered through the card:
  * the batch is at exactly one point in `match -> start -> complete`, so the card
- * shows exactly one primary action. Returning null (a closed or cancelled bath)
- * means there is nothing left to press.
+ * shows exactly one primary action. Returning null (a cancelled batch, or a clock
+ * already stopped) means there is nothing left to press.
  *
- * `start` posts the PLANNED bath, because that is the number the Kartu Kerja in the
- * operator's hand was printed from; the backend refuses with its own message when
- * there is no bath to dose. The other two carry no body at all — they are stamps.
+ * All three are pure stamps and carry no body. This monitor is a TIMER: the floor
+ * presses Start when the vessel begins turning and Complete when it stops, and the
+ * kg logged between those two is what the rate is scored against. It decides
+ * nothing about production — the bath, the doses and the load are configured on the
+ * run in Dyeing Orders, and the output is logged on the work order.
+ *
+ * Read off the stamps, NOT off `status`: a run reads COMPLETED as soon as its WO
+ * closes, and the whole point is that somebody still has to stop the clock by hand.
  */
 type Phase = { key: 'match' | 'start' | 'complete'; path: string; body?: any; icon: string; labelKey: string };
 function nextPhase(run: any): Phase | null {
-    if (isLive(run)) return { key: 'complete', path: 'complete', body: {}, icon: 'bi-check2-circle', labelKey: 'complete_batch' };
-    if (run?.status === 'PENDING') return { key: 'match', path: 'color-matching', icon: 'bi-palette', labelKey: 'start_color_matching' };
-    if (isMatching(run)) {
-        return {
-            key: 'start', path: 'start', icon: 'bi-play-fill', labelKey: 'start_batch',
-            body: { volume_air_liters: run.planned_bath_liters ?? null },
-        };
-    }
-    return null;
+    if (!run || run.status === 'CANCELLED' || run.completed_at) return null;
+    if (run.started_at) return { key: 'complete', path: 'complete', body: {}, icon: 'bi-check2-circle', labelKey: 'complete_batch' };
+    if (run.color_matching_at) return { key: 'start', path: 'start', body: {}, icon: 'bi-play-fill', labelKey: 'start_batch' };
+    return { key: 'match', path: 'color-matching', body: {}, icon: 'bi-palette', labelKey: 'start_color_matching' };
 }
 
 export default function DyeingMonitorView() {

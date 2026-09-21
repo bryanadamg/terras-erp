@@ -3,7 +3,7 @@ import dynamic from 'next/dynamic';
 import CodeConfigModal, { CodeConfig, buildCodeWithCounter } from '../shared/CodeConfigModal';
 import { useToast } from '../shared/Toast';
 import { useLanguage } from '../../context/LanguageContext';
-import SearchableSelect from '../shared/SearchableSelect';
+import SearchableSelect from '@bryanadamg/terras-ui/components/Combobox';
 import ModalWrapper from '../shared/ModalWrapper';
 const SalesPrintModal = dynamic(() => import('./SalesPrintModal'), { ssr: false });
 const SOTablePrintModal = dynamic(() => import('./SOTablePrintModal'), { ssr: false });
@@ -881,6 +881,9 @@ export default function SalesOrderView({ items, attributes, boms, salesOrders, p
                   internal_confirmation_date: line.internal_confirmation_date || null,
                   qty_kg: line.qty_kg !== '' ? parseFloat(line.qty_kg) || null : null,
                   qty2: line.qty2 !== '' ? parseFloat(line.qty2) || null : null,
+                  // Edit mode loads every optional FK as '' (empty select value);
+                  // an empty string is not a UUID, so each one must go out as null.
+                  bom_id: line.bom_id || null,
                   size_id: line.size_id || null,
                   size_label: line.size_id ? null : (line.size_label || null),
                   bom_size_id: line.bom_size_id || null,
@@ -901,7 +904,12 @@ export default function SalesOrderView({ items, attributes, boms, salesOrders, p
               showToast('Sales Order updated successfully', 'success');
           } else if (res) {
               const err = await res.json();
-              showToast(`Error: ${err.detail}`, 'danger');
+              // A 422's `detail` is a list of field errors, not a string —
+              // interpolating it printed "[object Object]" and hid the cause.
+              const msg = Array.isArray(err.detail)
+                  ? err.detail.map((d: any) => `${(d.loc || []).slice(-2).join('.')}: ${d.msg}`).join('; ')
+                  : err.detail;
+              showToast(`Error: ${msg}`, 'danger');
           }
           return;
       }

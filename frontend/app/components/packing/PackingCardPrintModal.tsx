@@ -5,7 +5,7 @@ import QRCode from 'qrcode';
 import { useTimezone } from '../../context/TimezoneContext';
 import PrintModalShell, { PrintModalFooter } from '../shared/PrintModalShell';
 import { PRINT_FONT, PRINT_SERIF_FONT } from '../shared/xpTheme';
-import { orderBasePerAlt, baseToAlt } from '../shared/altUnit';
+import { orderBasePerAlt, baseToAlt, uomIsKg } from '../shared/altUnit';
 import { orderBoxSizeAlt } from '../shared/packingBoxes';
 
 const API_BASE = (process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:8000/api').replace(/\/api$/, '') + '/api';
@@ -97,6 +97,16 @@ export default function PackingCardPrintModal({ po, attributes, companyProfile, 
                             ? `${boxSizeAlt.toLocaleString()} ${po.uom2}`
                               + (po.pack_size ? ` (± ${Number(po.pack_size).toLocaleString()} ${po.item_uom || ''})` : '')
                             : (po.pack_size ? `${Number(po.pack_size).toLocaleString()} ${po.item_uom || ''}` : '—')],
+                        // Which g/y the kilos on this card were worked out from.
+                        // The order's own sampling of THIS cloth when it has one
+                        // (`order_weight_spec`); otherwise the item master's
+                        // development estimate, said out loud so the floor knows
+                        // the weights are theoretical.
+                        ...(uomIsKg(po.item_uom) && po.uom2 ? [[
+                            'Berat contoh', po.sample_weight_per_unit != null
+                                ? `${Number(po.sample_weight_per_unit).toLocaleString()} ${po.sample_weight_unit || 'g/y'} (contoh order ini)`
+                                : '— (estimasi master barang)',
+                        ]] as [string, string][] : []),
                         ['Satuan jual', po.uom2
                             ? `1 ${po.uom2} = ${Number(po.uom2_factor || 0)} ${po.uom2_length_uom || 'Yard'}`
                               + (altBaseFactor ? ` = ${altBaseFactor} ${po.item_uom || ''}` : '')

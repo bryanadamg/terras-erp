@@ -9,6 +9,8 @@ import { useConfirm } from '../../context/ConfirmContext';
 import { usePaginatedFetch } from '../../context/usePaginatedList';
 import BagLabelPrintModal from '../manufacturing/BagLabelPrintModal';
 import LotLabelPrintModal from '../manufacturing/LotLabelPrintModal';
+import PackedUnitLabelPrintModal from '../packing/PackedUnitLabelPrintModal';
+import { useData } from '../../context/DataContext';
 import { useFloatingMenu, MenuTriggerButton, FloatingMenu, useSortable, XPActionButton, ExpandedRowPanel, StatusChip, CODE_FONT, xpFont, TableSkeleton, useTableSkeletonMetrics, rowStateBg, CHIP_RADIUS, OriginChip, VariantChip, xpBtn as xpBtnBase, xpInput as xpInputBase, BTN_TONES, XP_BTN } from '../shared/xpTheme';
 import { xpBevel as sharedXpBevel, xpTitleBar as sharedXpTitleBar, FilterChipBar, ToolbarButton, SearchField, pageFillStyle } from '../shared/shellTheme';
 
@@ -18,7 +20,7 @@ const LOT_STATUS_FILTERS = [
   { value: '', label: 'All' },
 ];
 import TreeSelect, { buildLocationFilterTree, buildLocationPickerTree, expandLocationFilterValue, buildCategoryTree } from '../shared/TreeSelect';
-import SearchableSelect from '../shared/SearchableSelect';
+import SearchableSelect from '@bryanadamg/terras-ui/components/Combobox';
 import { useItemSearch, itemToOption } from '../shared/useEntitySearch';
 import { lotSizeLabel, lotComboLabel, lotColorLabel, type LotVariantAttr } from '../shared/LotChips';
 import { isRejectGrade } from '../shared/rejectDisplay';
@@ -69,6 +71,8 @@ interface Batch {
   // GR origin
   po_id: string | null;
   po_number: string | null;
+  // Set when the lot is a packed carton (PU-); routes Print Label to the carton sticker.
+  packing_order_id: string | null;
 }
 
 interface BatchConsumption {
@@ -117,6 +121,7 @@ export default function BatchesView({ items, locations, categories, workCenters,
   const { showToast } = useToast();
   const { formatDate: tzDate } = useTimezone();
   const { confirm } = useConfirm();
+  const { companyProfile } = useData() as any;
 
   const PAGE_SIZE = 50;
   const [itemFilter, setItemFilter] = useState('');
@@ -346,9 +351,19 @@ export default function BatchesView({ items, locations, categories, workCenters,
   // lot, and hand it to the same BagLabelPrintModal the WO page uses, which picks
   // the bag or beam card off the lot prefix — full-fidelity label, no new payload.
   const [labelData, setLabelData] = useState<{ bags: any[]; wo: any; mo: any; seqStart: number } | null>(null);
+  const [cartonLabel, setCartonLabel] = useState<{ order: any; units: any[] } | null>(null);
   const { openId, pos, toggle, close } = useFloatingMenu(160);
 
   const openBatchLabel = async (b: Batch) => {
+    // A packed carton is a Batch row too, but its sticker is the customer-facing
+    // one (PO ref, content count, gross/net) built off its packing order — fetch
+    // that and print the same card the Packing page does.
+    if (b.packing_order_id) {
+      const res = await authFetch(`${apiBase}/packing/${b.packing_order_id}`);
+      const po = res.ok ? await res.json() : null;
+      const unit = (po?.packed_units || []).find((u: any) => String(u.id) === String(b.id));
+      if (unit) { setCartonLabel({ order: po, units: [unit] }); return; }
+    }
     // Try for the rich weaving bag label (Warna/Lebar/Rak/bag#), which needs the
     // originating MOCompletion. Split leftovers (GRG-…-S1) and manual lots have no
     // completion of their own — fall back to the generic lot label off the Batch.
@@ -1441,21 +1456,24 @@ export default function BatchesView({ items, locations, categories, workCenters,
         );
       })()}
 
-      {/* ── Row ⋯ menu: Print Label (GRG only) + Delete ── */}
+      {/* ── Row ⋯ menu: Print Label + Delete ── */}
       {openId && (() => {
         const b = batches.find(x => x.id === openId);
         if (!b) return null;
-        // Reprintable rich labels: greige bags and warp beams. Both are born as an
-        // MOCompletion with an output lot, which is what openBatchLabel needs to
-        // rebuild the full-fidelity card; every other prefix falls through to the
-        // generic lot sticker there anyway.
+        // Every lot is reprintable — openBatchLabel picks the richest card it can
+        // rebuild: the carton sticker off the packing order, the greige/beam card
+        // off the originating MOCompletion, else the generic lot sticker. The
+        // title just names which one the user is about to get.
         const lotMeta = classifyLot(b.batch_number);
-        const canLabel = lotMeta === STAGE_META.GRG || lotMeta === STAGE_META.BM;
+        const labelTitle = b.packing_order_id ? "Print this carton's label"
+          : lotMeta === STAGE_META.BM ? "Print this warp beam's label"
+          : lotMeta === STAGE_META.GRG ? "Print this greige bag's label"
+          : 'Print this lot label';
         return (
           <FloatingMenu
             pos={pos}
             items={[
-              { key: 'label', label: 'Print Label', icon: 'bi-printer', hidden: !canLabel, title: lotMeta === STAGE_META.BM ? "Print this warp beam's label" : "Print this greige bag's label", onClick: () => { close(); openBatchLabel(b); } },
+              { key: 'label', label: 'Print Label', icon: 'bi-printer', title: labelTitle, onClick: () => { close(); openBatchLabel(b); } },
               { key: 'delete', label: 'Delete', icon: 'bi-trash', danger: true, onClick: () => { close(); handleDelete(b); } },
             ]}
           />
@@ -1473,7 +1491,17 @@ export default function BatchesView({ items, locations, categories, workCenters,
         />
       )}
 
-      {/* ── Lot Label Print (split leftovers) ── */}
+      {/* ── Carton Label Print (packed units) ── */}
+      {cartonLabel && (
+        <PackedUnitLabelPrintModal
+          po={cartonLabel.order}
+          units={cartonLabel.units}
+          companyProfile={companyProfile}
+          onClose={() => setCartonLabel(null)}
+        />
+      )}
+
+      {/* ── Lot Label Print (everything else: split leftovers, GR, dyed, manual) ── */}
       {lotLabels && (
         <LotLabelPrintModal lots={lotLabels} onClose={() => setLotLabels(null)} />
       )}

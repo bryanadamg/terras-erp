@@ -1,8 +1,11 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from pydantic import ConfigDict
 from uuid import UUID
 from datetime import datetime, date
 from typing import Optional, Any
+
+class ORMResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
 
 class VariantCreate(BaseModel):
     name: str
@@ -351,8 +354,7 @@ class MOCompletionItemCreate(BaseModel):
     item_id: UUID
     qty_used: float
 
-class MOCompletionItemResponse(BaseModel):
-    model_config = ConfigDict(from_attributes=True)
+class MOCompletionItemResponse(ORMResponse):
     id: UUID
     item_id: UUID
     item_code: str | None = None
@@ -379,8 +381,7 @@ class MOCompletionCreate(BaseModel):
                                              # authoritatively deducts these lots and overrides the BOM% deduction for their items
     output_location_id: UUID | None = None  # putaway override: books output here instead of the WO's output location
 
-class MOCompletionResponse(BaseModel):
-    model_config = ConfigDict(from_attributes=True)
+class MOCompletionResponse(ORMResponse):
     id: UUID
     mo_id: UUID
     work_order_id: UUID | None = None
@@ -503,7 +504,7 @@ class BatchConsumptionInMO(BaseModel):
     output_batch_number: Optional[str] = None
     qty_consumed: float
 
-class MOPlannedComponentResponse(BaseModel):
+class MOPlannedComponentResponse(ORMResponse):
     """One BOM line as it stood when the MO was cut.
 
     The MO panel has to render THIS, not the live BOM: a BOM edited after the order
@@ -513,7 +514,6 @@ class MOPlannedComponentResponse(BaseModel):
     relationship — most callers load planned_components without its `item`, and a
     lazy hop in an async route raises MissingGreenlet.
     """
-    model_config = ConfigDict(from_attributes=True)
     id: UUID
     item_id: UUID
     item_code: str | None = None
@@ -526,8 +526,7 @@ class MOPlannedComponentResponse(BaseModel):
     attribute_value_ids: list[UUID] = []
 
 
-class ManufacturingOrderResponse(BaseModel):
-    model_config = ConfigDict(from_attributes=True)
+class ManufacturingOrderResponse(ORMResponse):
     id: UUID
     code: str
     bom_id: UUID
@@ -600,14 +599,12 @@ class PRBomEntryCreate(BaseModel):
     labdip_variant_code: str | None = None
     force_create: bool = False
 
-class PRBomEntrySizeResponse(BaseModel):
-    model_config = ConfigDict(from_attributes=True)
+class PRBomEntrySizeResponse(ORMResponse):
     id: UUID
     bom_size_id: UUID
     qty: float
 
-class PRBomEntryResponse(BaseModel):
-    model_config = ConfigDict(from_attributes=True)
+class PRBomEntryResponse(ORMResponse):
     id: UUID
     bom_id: UUID
     total_qty: float | None = None
@@ -633,8 +630,7 @@ class ProductionRunCreate(BaseModel):
     target_end_date: datetime | None = None
     notes: str | None = None
 
-class ProductionRunResponse(BaseModel):
-    model_config = ConfigDict(from_attributes=True)
+class ProductionRunResponse(ORMResponse):
     id: UUID
     code: str
     bom_id: UUID | None = None
@@ -869,18 +865,11 @@ class WorkOrderCreate(BaseModel):
     notes: str | None = None
     target_start_date: datetime | None = None
     target_end_date: datetime | None = None
-    # DYEING only: the bath the planner intends, litres. Seeds the auto-created
-    # DyeingRun's PLAN (never its actual) so the Kartu Kerja prints weighed grams.
-    # Left blank it falls back to the matched recipe's liquor_ratio x the load.
-    bath_volume_liters: float | None = None
-    # DYEING only: how many ropes the vessel runs this load on. Seeds the same
-    # auto-created DyeingRun, where it stays — a multi-bath WO may split its load
-    # across runs at different rope counts, so the column belongs to the run and
-    # this is the planner's starting value, exactly like bath_volume_liters.
-    lines: int | None = None
+    # No bath volume and no rope count here: a dyeing WO is cut with the same fields
+    # as any other WO. The bath, the ropes and the speed are configured on the run
+    # itself, in Dyeing Orders — one screen, one operator, one moment.
 
-class WorkOrderResponse(BaseModel):
-    model_config = ConfigDict(from_attributes=True)
+class WorkOrderResponse(ORMResponse):
     id: UUID
     manufacturing_order_id: UUID
     sequence: int
@@ -1243,8 +1232,7 @@ ManufacturingOrderResponse.update_forward_refs()
 # MO-page shared-component tree read only scalars + the shallow relations retained
 # below. `bom` is omitted from the MO item so the loader can skip the per-MO BOM
 # fan-out entirely (Pydantic would otherwise lazy-load it and raise MissingGreenlet).
-class ManufacturingOrderListItem(BaseModel):
-    model_config = ConfigDict(from_attributes=True)
+class ManufacturingOrderListItem(ORMResponse):
     id: UUID
     code: str
     bom_id: UUID
@@ -1293,19 +1281,17 @@ class ManufacturingOrderListItem(BaseModel):
 ManufacturingOrderListItem.update_forward_refs()
 
 
-class PRListBomRef(BaseModel):
+class PRListBomRef(ORMResponse):
     """Shallow BOM reference for the PR list — code + item identity only. `item_code`
     / `item_name` are BOM properties over `self.item`, so the loader must eager-load
     BOM.item; no bom.lines / operations / sizes are pulled."""
-    model_config = ConfigDict(from_attributes=True)
     id: UUID
     code: str
     item_code: str | None = None
     item_name: str | None = None
 
 
-class PRListEntryResponse(BaseModel):
-    model_config = ConfigDict(from_attributes=True)
+class PRListEntryResponse(ORMResponse):
     id: UUID
     bom_id: UUID
     total_qty: float | None = None
@@ -1317,8 +1303,7 @@ class PRListEntryResponse(BaseModel):
     # `sizes` and the deep `bom` tree intentionally omitted (unused by list consumers).
 
 
-class ProductionRunListItem(BaseModel):
-    model_config = ConfigDict(from_attributes=True)
+class ProductionRunListItem(ORMResponse):
     id: UUID
     code: str
     bom_id: UUID | None = None
@@ -2047,10 +2032,9 @@ class SOPRCoverageResponse(BaseModel):
     covered_size_tokens: list[str] = []
     covered_entries: list[SOPRCoverageEntry] = []
 
-class StockReservationResponse(BaseModel):
+class StockReservationResponse(ORMResponse):
     """One pile of on-hand FG promised to a sales order — see
     GET /sales-orders/{id}/reservations."""
-    model_config = ConfigDict(from_attributes=True)
 
     id: UUID
     sales_order_id: UUID
@@ -2386,7 +2370,7 @@ class ColorUpdate(BaseModel):
     status: Optional[str] = None
     variant_attribute_value_id: Optional[UUID] = None
 
-class ColorResponse(BaseModel):
+class ColorResponse(ORMResponse):
     id: UUID
     code: str
     name: str
@@ -2416,7 +2400,6 @@ class ColorResponse(BaseModel):
     source_item_code: Optional[str] = None
     recipe_count: int = 0
     created_at: datetime
-    model_config = ConfigDict(from_attributes=True)
 
 class ColorListResponse(BaseModel):
     items: list[ColorResponse] = []
@@ -2437,7 +2420,7 @@ class ComboUpdate(BaseModel):
     description: Optional[str] = None
     status: Optional[str] = None
 
-class ComboResponse(BaseModel):
+class ComboResponse(ORMResponse):
     id: UUID
     code: str
     name: str
@@ -2446,7 +2429,6 @@ class ComboResponse(BaseModel):
     attribute_value_id: Optional[UUID] = None
     usage_count: int = 0
     created_at: datetime
-    model_config = ConfigDict(from_attributes=True)
 
 class ComboListResponse(BaseModel):
     items: list[ComboResponse] = []
@@ -2475,7 +2457,7 @@ class PackagingTypeUpdate(BaseModel):
     sort_order: Optional[int] = None
     active: Optional[bool] = None
 
-class PackagingTypeResponse(BaseModel):
+class PackagingTypeResponse(ORMResponse):
     id: UUID
     code: str
     name: str
@@ -2484,7 +2466,6 @@ class PackagingTypeResponse(BaseModel):
     sort_order: int = 0
     active: bool = True
     created_at: Optional[datetime] = None
-    model_config = ConfigDict(from_attributes=True)
 
 
 class LabDipLineCreate(BaseModel):
@@ -2502,7 +2483,7 @@ class LabDipLineUpdate(BaseModel):
     recipe_ref: Optional[str] = None
     order: int = 0
 
-class LabDipLineResponse(BaseModel):
+class LabDipLineResponse(ORMResponse):
     id: UUID
     lab_dip_item_id: Optional[UUID] = None
     color_name: str
@@ -2512,16 +2493,14 @@ class LabDipLineResponse(BaseModel):
     status: str = "PENDING"
     remarks: Optional[str] = None
     order: int = 0
-    model_config = ConfigDict(from_attributes=True)
 
-class LabDipRejectionResponse(BaseModel):
+class LabDipRejectionResponse(ORMResponse):
     id: UUID
     round_no: int = 1
     reason: Optional[str] = None
     notes: Optional[str] = None
     rejected_by: Optional[UUID] = None
     rejected_at: Optional[datetime] = None
-    model_config = ConfigDict(from_attributes=True)
 
 class LabDipItemCreate(BaseModel):
     item_id: UUID
@@ -2536,7 +2515,7 @@ class LabDipItemUpdate(BaseModel):
     dips: list[LabDipLineUpdate] = []
     locked_variant_code: Optional[str] = None
 
-class LabDipItemResponse(BaseModel):
+class LabDipItemResponse(ORMResponse):
     id: UUID
     item_id: UUID
     item_code: Optional[str] = None  # denormalized so display never needs the full catalog.
@@ -2556,7 +2535,6 @@ class LabDipItemResponse(BaseModel):
     rejection_count: int = 0  # times rejected (== len(rejections)); survives reopen.
     rejections: list[LabDipRejectionResponse] = []  # full reject history for traceability.
     dips: list[LabDipLineResponse] = []
-    model_config = ConfigDict(from_attributes=True)
 
 class LabDipRequestCreate(BaseModel):
     # 'FG' (finished goods) or 'YARN' (raw material). Picks the numbering book;
@@ -2597,7 +2575,7 @@ class LabDipRequestUpdate(BaseModel):
     items: list[LabDipItemUpdate] = []
     dips: list[LabDipLineUpdate] = []
 
-class LabDipRequestResponse(BaseModel):
+class LabDipRequestResponse(ORMResponse):
     id: UUID
     code: str
     kind: str = "FG"
@@ -2620,7 +2598,6 @@ class LabDipRequestResponse(BaseModel):
     notes: Optional[str] = None
     items: list[LabDipItemResponse] = []
     dips: list[LabDipLineResponse] = []
-    model_config = ConfigDict(from_attributes=True)
 
 class PaginatedLabDipRequestResponse(BaseModel):
     """`{items, total, page, size}` envelope for GET /lab-dips.
@@ -2835,7 +2812,7 @@ class DyeRecipeUpdate(BaseModel):
     wash_baths: list[DyeRecipeWashBathCreate] | None = None
     finishing_steps: list[DyeRecipeFinishingCreate] | None = None
 
-class DyeRecipeResponse(BaseModel):
+class DyeRecipeResponse(ORMResponse):
     id: UUID
     code: str
     name: str
@@ -2855,7 +2832,6 @@ class DyeRecipeResponse(BaseModel):
     lines: list[DyeRecipeLineResponse] = []
     wash_baths: list[DyeRecipeWashBathResponse] = []
     finishing_steps: list[DyeRecipeFinishingResponse] = []
-    model_config = ConfigDict(from_attributes=True)
 
 class PaginatedDyeRecipeResponse(BaseModel):
     items: list[DyeRecipeResponse] = []
@@ -2944,6 +2920,69 @@ class DyeingRunCreate(BaseModel):
     duration_min: int | None = None
     operator_name: str | None = None
     notes: str | None = None
+    # Rope count and per-rope speed. They used to be seeded from the WO form; the
+    # whole bath setup is configured here now, so they are typed where every other
+    # number about this load is.
+    lines: int | None = None
+    yards_per_min: float | None = None
+
+
+class DyeingRunBulkCreate(BaseModel):
+    """One bath, several work orders.
+
+    A jet takes a whole shade's load at once, so the floor sets up one vessel and
+    three orders go through it together. That is recorded as one run per WO — each
+    keeps its own substrate, its own kg and its own clock, which is what the monitor
+    and the WO log already read — tied together by a shared `bath_group_id`.
+
+    The bath figures are typed once and carried to every run **whole, not split**:
+    the g/L concentration a WO's cloth saw is the concentration of the vessel it was
+    in, not a pro-rata share of it. Summing planned doses across a group therefore
+    counts the bath N times; collapse by `bath_group_id` first.
+
+    `substrate_qty` stays per-WO (defaults to each WO's own qty) — it is the only
+    figure here that is genuinely about one order rather than about the vessel.
+    """
+    work_order_ids: list[UUID] = Field(min_length=2)
+    recipe_id: UUID | None = None
+    liquor_ratio: float | None = None
+    volume_air_liters: float | None = None
+    lines: int | None = None
+    yards_per_min: float | None = None
+    machine_speed: float | None = None
+    machine_pressure: str | None = None
+    temperature_c: float | None = None
+    duration_min: int | None = None
+    operator_name: str | None = None
+    notes: str | None = None
+
+
+class DyeingRunUpdate(BaseModel):
+    """Configure a run that already exists — the setup half of PATCH /dyeing-runs/{id}.
+
+    WO creation cuts run #1 empty (recipe only). Everything that describes the bath
+    is typed here afterwards: the volume, the ropes, the speed, the load. Sending a
+    volume is what fills the bath, so this is also what moves a run to IN_PROGRESS
+    and freezes its dose sheet — the same act `/start` performs, reachable from the
+    screen where the run is set up.
+
+    Every field is optional and applied only when present: a correction to the rope
+    count must not blank the operator's name.
+    """
+    recipe_id: UUID | None = None
+    substrate_qty: float | None = None
+    input_batch_id: UUID | None = None
+    liquor_ratio: float | None = None
+    volume_air_liters: float | None = None
+    machine_speed: float | None = None
+    machine_pressure: str | None = None
+    temperature_c: float | None = None
+    duration_min: int | None = None
+    operator_name: str | None = None
+    notes: str | None = None
+    lines: int | None = None
+    yards_per_min: float | None = None
+
 
 class DyeingRunMonitorUpdate(BaseModel):
     """The rate inputs the dyeing monitor needs for one batch.
@@ -3020,7 +3059,7 @@ class DyeingRunCompletePayload(BaseModel):
     output_batch_number: str | None = None
     chemicals: list[DyeingRunChemicalCreate] | None = None
 
-class DyeingRunResponse(BaseModel):
+class DyeingRunResponse(ORMResponse):
     id: UUID
     work_order_id: UUID
     run_number: int
@@ -3029,6 +3068,9 @@ class DyeingRunResponse(BaseModel):
     input_batch_id: UUID | None = None
     output_batch_id: UUID | None = None
     liquor_ratio: float | None = None
+    # Set when several WOs went through one vessel together — their dose sheets are
+    # the same water counted once per run (see DyeingRunBulkCreate).
+    bath_group_id: UUID | None = None
     planned_volume_air_liters: float | None = None
     volume_air_liters: float | None = None
     # The bath every dose on screen or on paper is weighed from: the actual once the
@@ -3058,7 +3100,6 @@ class DyeingRunResponse(BaseModel):
     recipe_name: str | None = None
     input_batch_number: str | None = None
     output_batch_number: str | None = None
-    model_config = ConfigDict(from_attributes=True)
 
 class SettingRunCreate(BaseModel):
     work_order_id: UUID
@@ -3072,13 +3113,36 @@ class SettingRunCreate(BaseModel):
     operator_name: str | None = None
     notes: str | None = None
 
+class SettingRunBulkCreate(BaseModel):
+    """One stenter setup, several work orders.
+
+    The same convenience as the dyeing side and for the same reason — a shade's
+    orders are set on one machine at one set of settings, and typing width, overfeed
+    and temperature into three forms is the data entry this replaces.
+
+    No bath and therefore no `bath_group_id`: cloth goes through a stenter one piece
+    after another, so these runs share a SETUP, not a vessel of water. Nothing about
+    them has to be collapsed back to a single physical thing.
+
+    `substrate_qty` is per-WO and defaults to each work order's own qty.
+    """
+    work_order_ids: list[UUID] = Field(min_length=2)
+    machine_name: str | None = None
+    temperature_c: float | None = None
+    speed_mpm: float | None = None
+    width_cm: float | None = None
+    overfeed_pct: float | None = None
+    operator_name: str | None = None
+    notes: str | None = None
+
+
 class SettingRunCompletePayload(BaseModel):
     output_batch_number: str
     actual_width_cm: float | None = None
     actual_gsm: float | None = None
     actual_shrinkage_pct: float | None = None
 
-class SettingRunResponse(BaseModel):
+class SettingRunResponse(ORMResponse):
     id: UUID
     work_order_id: UUID
     run_number: int
@@ -3101,7 +3165,6 @@ class SettingRunResponse(BaseModel):
     created_at: datetime
     input_batch_number: str | None = None
     output_batch_number: str | None = None
-    model_config = ConfigDict(from_attributes=True)
 
 # --- Settings Schemas ---
 class CompanyProfileBase(BaseModel):
@@ -3301,6 +3364,11 @@ class PackingOrderCreate(BaseModel):
     sales_order_line_id: UUID | None = None
     color_id: UUID | None = None
     attribute_value_ids: list[UUID] = []
+    # Lots this order takes off the Quarantine Packing desk. Each is locked to
+    # the order (`Batch.locked_packing_order_id`): no other order may draw from
+    # it, and this one cannot be COMPLETED until the lot is gone from the source
+    # location — even past `qty_target`, which is only what was free at the time.
+    locked_batch_ids: list[UUID] = []
     # Box size, in the item's UOM. Derived from `pack_size_alt` when that is sent
     # with a resolvable alt unit — the count is what the floor packs to.
     pack_size: float | None = None
@@ -4069,7 +4137,7 @@ class WeavingRunUpdate(BaseModel):
     end_date: date | None = None
     notes: str | None = None
 
-class WeavingRunResponse(BaseModel):
+class WeavingRunResponse(ORMResponse):
     id: UUID
     work_center_id: UUID
     mo_id: UUID
@@ -4083,13 +4151,12 @@ class WeavingRunResponse(BaseModel):
     actual_qty_override: float | None = None
     notes: str | None = None
     created_at: datetime
-    model_config = ConfigDict(from_attributes=True)
 
 class WeavingRunPauseRequest(BaseModel):
     """Park a run. `reason` is what the floor answers "why did this WO slip" with."""
     reason: str | None = None
 
-class WeavingRunPauseResponse(BaseModel):
+class WeavingRunPauseResponse(ORMResponse):
     id: UUID
     run_id: UUID
     paused_on: date
@@ -4097,18 +4164,16 @@ class WeavingRunPauseResponse(BaseModel):
     reason: str | None = None
     paused_by: str | None = None
     resumed_by: str | None = None
-    model_config = ConfigDict(from_attributes=True)
 
 class WorkCenterHolidayCreate(BaseModel):
     holiday_date: date
     note: str | None = None
 
-class WorkCenterHolidayResponse(BaseModel):
+class WorkCenterHolidayResponse(ORMResponse):
     id: UUID
     work_center_id: UUID
     holiday_date: date
     note: str | None = None
-    model_config = ConfigDict(from_attributes=True)
 
 class WorkCenterCalendarUpdate(BaseModel):
     working_weekdays: list[int]  # 0=Mon .. 6=Sun
@@ -4132,14 +4197,13 @@ class PrintTemplateSave(BaseModel):
     layout: dict[str, Any]
     paper: dict[str, Any] | None = None
 
-class PrintTemplateResponse(BaseModel):
+class PrintTemplateResponse(ORMResponse):
     id: UUID
     doc_type: str
     layout: dict[str, Any]
     paper: dict[str, Any] | None = None
     updated_by_id: UUID | None = None
     updated_at: datetime
-    model_config = ConfigDict(from_attributes=True)
 
 # ── Quarantine Packing ─────────────────────────────────────────────────────────
 # QC hold desk between production output and packing. The disposition lives on
@@ -4420,13 +4484,11 @@ class WorkQueueResponse(BaseModel):
 
 # ── Production quantity formula (Settings) ───────────────────────────────────
 
-class QtyFormulaRuleIO(BaseModel):
+class QtyFormulaRuleIO(ORMResponse):
     """One size's expression. `size_name` is a standard Size name or "*" for
     the fallback row."""
     size_name: str
     expression: str
-
-    model_config = ConfigDict(from_attributes=True)
 
 
 class QtyFormulaUpdate(BaseModel):

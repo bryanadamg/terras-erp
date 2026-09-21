@@ -25,6 +25,8 @@ export default function PackingPage() {
                 size_label: searchParams.get('size_label') || '',
                 color_id: searchParams.get('color_id') || '',
                 combo_value_id: searchParams.get('combo_value_id') || '',
+                // Lots the new order takes ownership of — see QuarantinePackingView.
+                locked_batch_ids: (searchParams.get('batch_ids') || '').split(',').filter(Boolean),
             });
             router.replace('/packing');
         }

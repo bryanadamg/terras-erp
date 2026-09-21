@@ -12,7 +12,7 @@ from collections import Counter, deque
 from datetime import datetime
 from typing import NamedTuple, Optional
 
-from sqlalchemy import select, func, cast, String
+from sqlalchemy import select, func, cast, String, or_
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -31,6 +31,99 @@ PACKED_UNIT_PREFIX = "PU"
 
 def is_packed_unit(batch: Batch) -> bool:
     return batch is not None and batch.packing_order_id is not None
+
+
+# --- Lot locks (quarantine-sourced orders) ---------------------------------
+# A lot handed to a packing order off the Quarantine Packing desk belongs to
+# that order alone (`Batch.locked_packing_order_id`), and the order cannot close
+# until the lot is drawn down to nothing. The lock is never unwound: it is in
+# force only while its order is open, so closing or cancelling releases every
+# lot it held in one status write.
+
+CLOSED_STATUSES = ("COMPLETED", "CANCELLED")
+
+
+def open_order_ids():
+    """Subquery of the packing orders whose lot locks are still in force."""
+    return select(PackingOrder.id).filter(PackingOrder.status.notin_(CLOSED_STATUSES))
+
+
+def lock_free_condition(po_id):
+    """SQL predicate: this lot may be drawn by packing order `po_id`.
+
+    Free (never claimed), already ours, or claimed by an order that has since
+    closed. Written as a condition rather than a service call because the lot
+    picker in `api/batches.py` applies it inside its own query.
+    """
+    return or_(
+        Batch.locked_packing_order_id.is_(None),
+        Batch.locked_packing_order_id == po_id,
+        Batch.locked_packing_order_id.notin_(open_order_ids()),
+    )
+
+
+async def assert_lots_unlocked(db: AsyncSession, po_id, batch_ids) -> None:
+    """Raise ValueError if any of these lots belongs to another open order.
+
+    The picker filter is UI; this is the gate. Runs before any stock moves, for
+    the whole submission, so a multi-lot pack cannot get halfway in.
+    """
+    ids = [b for b in batch_ids if b]
+    if not ids:
+        return
+    rows = (await db.execute(
+        select(Batch.batch_number, PackingOrder.code)
+        .join(PackingOrder, PackingOrder.id == Batch.locked_packing_order_id)
+        .filter(
+            Batch.id.in_(ids),
+            Batch.locked_packing_order_id != po_id,
+            PackingOrder.status.notin_(CLOSED_STATUSES),
+        )
+    )).all()
+    if rows:
+        detail = ", ".join(f"{bn} (held by {code})" for bn, code in rows)
+        raise ValueError(f"These lots are held by another packing order: {detail}")
+
+
+async def claim_lots(db: AsyncSession, po: PackingOrder, batch_ids) -> list[str]:
+    """Lock lots onto this order. Returns the lot numbers actually claimed.
+
+    Scoped to the order's own item: a deep link carrying an id from another
+    group would otherwise pin a lot this order can never pack.
+    """
+    ids = [b for b in batch_ids if b]
+    if not ids:
+        return []
+    await assert_lots_unlocked(db, po.id, ids)
+    batches = (await db.execute(
+        select(Batch).filter(Batch.id.in_(ids), Batch.item_id == po.item_id)
+    )).scalars().all()
+    for b in batches:
+        b.locked_packing_order_id = po.id
+    return [b.batch_number for b in batches]
+
+
+async def undrained_locked_lots(db: AsyncSession, po: PackingOrder) -> list[tuple[str, float]]:
+    """Lots locked to this order still holding stock at its source location.
+
+    Scoped to the source location on purpose: the rule is "the pile on the hold
+    desk is gone", not "this lot no longer exists anywhere". Scrap moved to the
+    defect store keeps the lot number (the batch is not re-graded — see the pack
+    endpoint), and counting that would leave the order unclosable forever.
+    """
+    if not po.source_location_id:
+        return []
+    rows = (await db.execute(
+        select(Batch.batch_number, func.sum(StockBalance.qty))
+        .join(StockBalance, StockBalance.batch_key == cast(Batch.id, String))
+        .filter(
+            Batch.locked_packing_order_id == po.id,
+            StockBalance.location_id == po.source_location_id,
+            StockBalance.qty > 0,
+        )
+        .group_by(Batch.batch_number)
+    )).all()
+    return [(bn, float(q or 0)) for bn, q in rows if float(q or 0) > 1e-6]
 
 
 def packed_unit_filter():

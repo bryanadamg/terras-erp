@@ -45,7 +45,7 @@
 
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { AnchorRect, FloatingLayer, TIP_DELAY, TooltipSurface, isClipped } from './Tooltip';
-import { layoutRectOf } from './uiScale';
+import { layoutRectOf } from '@bryanadamg/terras-ui/scale';
 
 /** Shared with `<Tooltip>` so the same hover never feels faster on one surface
  *  than the other. This layer fires on ANY titled or clipped node in the document,

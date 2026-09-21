@@ -29,9 +29,10 @@ from app.schemas import (
     DyeRecipeCreate, DyeRecipeUpdate, DyeRecipeResponse, PaginatedDyeRecipeResponse,
     DyeRecipeWashBathCreate, DyeRecipeWashBathResponse,
     DyeRecipeFinishingCreate, DyeRecipeFinishingResponse,
-    DyeingRunCreate, DyeingRunCompletePayload, DyeingRunResponse,
+    DyeingRunCreate, DyeingRunBulkCreate, DyeingRunUpdate, DyeingRunCompletePayload,
+    DyeingRunResponse,
     DyeingRunStartPayload, DyeingRunBathUpdate, DyeingRunChemicalsUpdate, DyeDoseResponse,
-    SettingRunCreate, SettingRunCompletePayload, SettingRunResponse,
+    SettingRunCreate, SettingRunBulkCreate, SettingRunCompletePayload, SettingRunResponse,
 )
 
 router = APIRouter()
@@ -536,11 +537,16 @@ async def create_dyeing_run(
         volume_air_liters=bath_volume,
         machine_speed=payload.machine_speed,
         machine_pressure=payload.machine_pressure,
+        yards_per_min=payload.yards_per_min,
+        **({"lines": payload.lines} if payload.lines else {}),
     )
     # Status is never typed, here or anywhere else — see services/dyeing_run_service.
     # A run cut with its bath volume already filled in is IN_PROGRESS from birth.
     run.status = dyeing_run_service.derive_status(run, wo.status)
     db.add(run)
+    await db.flush()
+    # A bath given at creation is a bath filled, so the dose sheet freezes with it.
+    await dyeing_run_service.price_dose_sheet(db, run)
     await db.commit()
     result = await db.execute(
         select(DyeingRun).options(*_dyeing_run_opts()).filter(DyeingRun.id == run.id)
@@ -550,6 +556,224 @@ async def create_dyeing_run(
         db, str(current_user.id), "CREATE", "DyeingRun", str(run.id),
         details=f"Created dyeing run #{run.run_number} for WO {run.work_order_id}", changes={}
     )
+    return _enrich_dyeing_run(run)
+
+
+@router.post("/dyeing-runs/bulk", response_model=list[DyeingRunResponse])
+async def configure_dyeing_bath_bulk(
+    payload: DyeingRunBulkCreate,
+    db: AsyncSession = Depends(get_async_db),
+    current_user: User = Depends(require_permission('work_order.log')),
+):
+    """Set up one bath across several work orders.
+
+    The unit of work on a dye floor is the vessel, not the order: a jet is filled
+    once and every WO of that shade waiting on that machine goes in together. Typing
+    the same volume, recipe and rope count into three separate run panels is the data
+    entry this replaces.
+
+    Still one run per WO — each carries its own substrate, kg, clock and monitor
+    card, and none of that is expressible on a shared row. `bath_group_id` records
+    that they were one vessel of water, and is re-issued on every setup: filling the
+    jet again is a new bath, not the old one edited.
+
+    It CONFIGURES rather than creates, because every dyeing WO is cut with run #1
+    already on it (`api/work_orders.py`). A WO whose only run is a closed bath gets a
+    fresh one — that is its second pass through the vessel.
+
+    Two refusals, both physical facts rather than policy: a bath is one machine, and
+    a bath is one colour. Mixing either is not a bath.
+    """
+    res = await db.execute(
+        select(WorkOrder)
+        .options(joinedload(WorkOrder.manufacturing_order))
+        .filter(WorkOrder.id.in_(payload.work_order_ids))
+    )
+    wos = res.unique().scalars().all()
+    found = {str(w.id) for w in wos}
+    missing = [str(i) for i in payload.work_order_ids if str(i) not in found]
+    if missing:
+        raise HTTPException(status_code=404, detail=f"Work order(s) not found: {', '.join(missing)}")
+
+    machines = {str(w.work_center_id) for w in wos}
+    if len(machines) > 1:
+        raise HTTPException(
+            status_code=422,
+            detail="These work orders are on different machines — one bath is one vessel",
+        )
+    colors = {str(w.manufacturing_order.color_id) if w.manufacturing_order else None for w in wos}
+    if len(colors) > 1:
+        raise HTTPException(
+            status_code=422,
+            detail="These work orders are different colours — one bath is one shade",
+        )
+
+    # The open bath on each WO, if it has one. Closed baths are left alone: their
+    # doses are history, and this load is a new pass through the vessel.
+    open_runs = {}
+    for run in (await db.execute(
+        select(DyeingRun)
+        .filter(DyeingRun.work_order_id.in_([w.id for w in wos]), DyeingRun.completed_at.is_(None))
+        .order_by(DyeingRun.run_number)
+    )).scalars().all():
+        open_runs.setdefault(str(run.work_order_id), run)
+
+    bath_group_id = uuid.uuid4()
+    for wo in wos:
+        run = open_runs.get(str(wo.id))
+        if run is None:
+            run = DyeingRun(
+                work_order_id=wo.id,
+                run_number=await _get_next_run_number(db, DyeingRun, wo.id),
+                substrate_qty=wo.qty or 0,
+            )
+            db.add(run)
+        run.recipe_id = payload.recipe_id or run.recipe_id or wo.planned_recipe_id
+        run.bath_group_id = bath_group_id
+        # Solved per run: the ratio is litres per kg of THIS order's cloth, while the
+        # volume is the vessel's and therefore identical on every run in the group.
+        # The bath is carried WHOLE, never split — the concentration a WO's cloth saw
+        # is the vessel's, not a pro-rata share of it.
+        volume, ratio = dyeing_dose_service.solve_bath(
+            run.substrate_qty, payload.volume_air_liters, payload.liquor_ratio,
+        )
+        if volume:
+            run.volume_air_liters = volume
+            run.liquor_ratio = ratio
+        for field in (
+            "machine_speed", "machine_pressure", "temperature_c", "duration_min",
+            "operator_name", "notes", "yards_per_min", "lines",
+        ):
+            value = getattr(payload, field)
+            if value is not None:
+                setattr(run, field, value)
+        await db.flush()
+        await dyeing_run_service.price_dose_sheet(db, run)
+        # Derived, never typed: water in the vessel is what makes a run IN_PROGRESS.
+        await dyeing_run_service.sync_wo_runs(db, wo.id, wo_status=wo.status)
+
+    await db.commit()
+    db.expire_all()  # expire_on_commit=False: dose rows were added under these runs
+    rows = (await db.execute(
+        select(DyeingRun).options(*_dyeing_run_opts())
+        .filter(DyeingRun.bath_group_id == bath_group_id)
+        .order_by(DyeingRun.created_at)
+    )).scalars().all()
+    for run in rows:
+        await audit_service.log_activity(
+            db, current_user.id, "UPDATE", "DyeingRun", str(run.id),
+            details=(
+                f"Dyeing run #{run.run_number} set up in a bath shared by {len(rows)} "
+                "work orders"
+                + (f" — {run.volume_air_liters} L" if run.volume_air_liters else "")
+            ),
+            changes={"bath_group_id": [None, str(bath_group_id)]},
+        )
+    for wo_id in {str(r.work_order_id) for r in rows}:
+        await manager.broadcast({"type": "DYEING_RUN_UPDATE", "wo_id": wo_id})
+    return [_enrich_dyeing_run(r) for r in rows]
+
+
+@router.patch("/dyeing-runs/{run_id}", response_model=DyeingRunResponse)
+async def update_dyeing_run(
+    run_id: str,
+    payload: DyeingRunUpdate,
+    db: AsyncSession = Depends(get_async_db),
+    current_user: User = Depends(require_permission('work_order.log')),
+):
+    """Configure the bath: volume, ropes, speed, load, recipe.
+
+    WO creation cuts run #1 carrying only the recipe its gate matched — the WO form
+    has no bath fields at all, because the numbers that describe a bath are known at
+    the vessel and not at dispatch. This is where they are typed, and it is the one
+    place: the work order log records kg of output and nothing else.
+
+    Filling in a volume IS filling the bath, so this moves the run to IN_PROGRESS
+    (via `derive_status`, never assigned here) and freezes the dose sheet, exactly as
+    `/start` does. `/start` stays for the monitor's phase button; this is the same
+    act from the setup screen.
+
+    Fields are applied only when sent — correcting a rope count must not blank the
+    operator's name.
+    """
+    result = await db.execute(
+        select(DyeingRun).options(*_dyeing_run_opts()).filter(DyeingRun.id == run_id)
+    )
+    run = result.scalars().first()
+    if not run:
+        raise HTTPException(status_code=404, detail="Dyeing run not found")
+    # The bath's own close, as everywhere else in this file: a closed bath's setup is
+    # history. A run marked COMPLETED only because its WO closed is still editable.
+    if run.completed_at is not None:
+        raise HTTPException(status_code=400, detail="Run is completed — its bath is history, not a plan")
+
+    for field, v in (
+        ("volume_air_liters", payload.volume_air_liters),
+        ("liquor_ratio", payload.liquor_ratio),
+        ("substrate_qty", payload.substrate_qty),
+        ("lines", payload.lines),
+        ("yards_per_min", payload.yards_per_min),
+    ):
+        if v is not None and v <= 0:
+            raise HTTPException(status_code=422, detail=f"{field} must be positive")
+
+    before = {
+        "recipe_id": run.recipe_id,
+        "substrate_qty": run.substrate_qty,
+        "volume_air_liters": run.volume_air_liters,
+        "liquor_ratio": run.liquor_ratio,
+        "lines": run.lines,
+        "yards_per_min": run.yards_per_min,
+        "status": run.status,
+    }
+
+    for field in (
+        "recipe_id", "substrate_qty", "input_batch_id", "machine_speed",
+        "machine_pressure", "temperature_c", "duration_min", "operator_name",
+        "notes", "lines", "yards_per_min",
+    ):
+        value = getattr(payload, field)
+        if value is not None:
+            setattr(run, field, value)
+
+    # Volume and ratio are one fact twice, so the pair is solved rather than stored
+    # as typed — whichever the operator sent wins and the other follows it.
+    if payload.volume_air_liters is not None or payload.liquor_ratio is not None:
+        volume, ratio = dyeing_dose_service.solve_bath(
+            run.substrate_qty,
+            payload.volume_air_liters if payload.volume_air_liters is not None else (
+                None if payload.liquor_ratio is not None else run.volume_air_liters
+            ),
+            payload.liquor_ratio if payload.liquor_ratio is not None else run.liquor_ratio,
+        )
+        run.volume_air_liters = volume
+        run.liquor_ratio = ratio
+    elif payload.substrate_qty is not None and run.liquor_ratio and run.volume_air_liters is None:
+        # A load typed against a recipe ratio with no bath yet still resolves one.
+        run.volume_air_liters, run.liquor_ratio = dyeing_dose_service.solve_bath(
+            run.substrate_qty, None, run.liquor_ratio,
+        )
+
+    dosed = await dyeing_run_service.price_dose_sheet(db, run)
+    await dyeing_run_service.sync_wo_runs(db, run.work_order_id)
+    await db.commit()
+
+    db.expire_all()  # expire_on_commit=False: dose rows may have just been added
+    result = await db.execute(
+        select(DyeingRun).options(*_dyeing_run_opts()).filter(DyeingRun.id == run_id)
+    )
+    run = result.scalars().first()
+    after = {k: getattr(run, k) for k in before}
+    await audit_service.log_activity(
+        db, current_user.id, "UPDATE", "DyeingRun", run_id,
+        details=(
+            f"Configured dyeing run #{run.run_number}"
+            + (f" — bath {run.volume_air_liters} L" if run.volume_air_liters else "")
+            + (f", {dosed} chemical doses weighed" if dosed else "")
+        ),
+        changes={k: [before[k], after[k]] for k in after if str(before[k]) != str(after[k])},
+    )
+    await manager.broadcast({"type": "DYEING_RUN_UPDATE", "wo_id": str(run.work_order_id)})
     return _enrich_dyeing_run(run)
 
 
@@ -662,25 +886,8 @@ async def update_dyeing_run_bath(
     run.liquor_ratio = ratio
 
     # The stored dose sheet follows the bath: a topped-up bath means every g/L
-    # chemical is re-weighed. Rows with an actual already recorded are left alone —
-    # that chemical is in the vessel, and rewriting its plan would erase the variance.
-    if run.recipe_id and run.chemicals:
-        rec_res = await db.execute(
-            select(DyeRecipe).options(*_recipe_opts()).filter(DyeRecipe.id == run.recipe_id)
-        )
-        recipe = rec_res.scalars().first()
-        if recipe:
-            doses = {
-                str(row["item_id"]): row["dose"]
-                for row in dyeing_dose_service.compute_doses(recipe, run.substrate_qty, volume)
-                if row["dose"] is not None
-            }
-            for chem in run.chemicals:
-                if float(chem.actual_qty or 0) > 0:
-                    continue
-                new_dose = doses.get(str(chem.item_id))
-                if new_dose is not None:
-                    chem.planned_qty = new_dose
+    # chemical is re-weighed (dyeing_run_service owns that rule for every surface).
+    await dyeing_run_service.price_dose_sheet(db, run)
     # A bath back-filled onto a run that never saw a Start is under way by
     # definition — the vessel is full. Derived, never typed.
     await dyeing_run_service.sync_wo_runs(db, run.work_order_id)
@@ -712,15 +919,18 @@ async def start_dyeing_run(
     db: AsyncSession = Depends(get_async_db),
     current_user: User = Depends(require_permission('work_order.log')),
 ):
-    """Start the run = fill the bath.
+    """Start the clock. A stamp, not a production act.
 
-    The bath volume is taken here rather than at completion because this is the
-    moment it physically exists, and the dose sheet weighed from it has to be in the
-    operator's hand *before* the chemicals go in. The doses are materialized as
-    `DyeingRunChemical.planned_qty` in the same transaction, snapshotting them
-    against later recipe edits the way MOPlannedComponent does for BOM lines — what
-    the operator was told to weigh must stay readable after someone retunes the
-    recipe.
+    The dyeing monitor is a timer: somebody presses Start when the vessel begins
+    turning and Complete when it stops, and the kg logged between those two stamps is
+    what the yard rate is scored against (`dyeing_monitor_service.sum_actual_qty`
+    windows on exactly this pair). Nothing else about the batch is decided here.
+
+    So this does NOT require a bath. The bath is configured on the run in Dyeing
+    Orders, which is also what freezes the dose sheet — welding the clock to the
+    volume meant a run set up beforehand could never be started, and closed with a
+    zero-minute window. A volume sent here is still honoured (and re-prices the
+    unweighed rows) for a floor that fills the vessel at the same moment it starts.
     """
     payload = payload or DyeingRunStartPayload()
     result = await db.execute(
@@ -730,12 +940,14 @@ async def start_dyeing_run(
     if not run:
         raise HTTPException(status_code=404, detail="Dyeing run not found")
     # Gated on the facts rather than the derived status: `COMPLETED` on a run can
-    # now mean "its WO closed" as well as "this bath was closed", and only the
-    # latter is a reason to refuse. Same pair the IN_PROGRESS rule reads.
+    # mean "its WO closed" as well as "this bath was closed", and only the latter is
+    # a reason to refuse. The clock is the only fact this route owns, so the only
+    # thing that can already be done is the clock — a filled bath is not a started
+    # one now that the bath is set up ahead of the run.
     if run.completed_at is not None:
         raise HTTPException(status_code=400, detail="Run is already completed")
-    if run.started_at is not None or run.volume_air_liters is not None:
-        raise HTTPException(status_code=400, detail="Run is already started — correct its bath instead")
+    if run.started_at is not None:
+        raise HTTPException(status_code=400, detail="Run is already started")
 
     for v in (payload.volume_air_liters, payload.liquor_ratio, payload.substrate_qty):
         if v is not None and v <= 0:
@@ -749,15 +961,11 @@ async def start_dyeing_run(
         ),
         payload.liquor_ratio if payload.liquor_ratio is not None else run.liquor_ratio,
     )
-    if not volume:
-        # Starting a bath nobody can dose is not a real start — the g/L half of every
-        # recipe is unweighable without this number.
-        raise HTTPException(
-            status_code=422,
-            detail="Enter the bath volume (or a liquor ratio and substrate qty) before starting — the chemical doses are calculated from it",
-        )
-    run.volume_air_liters = volume
-    run.liquor_ratio = ratio
+    # No bath is not an error: the vessel can be started before anyone records the
+    # water, and a run configured in Dyeing Orders already carries it.
+    if volume:
+        run.volume_air_liters = volume
+        run.liquor_ratio = ratio
     run.started_at = datetime.now(timezone.utc)
     # `started_at` is the fact; the status follows from it. Derived through the
     # service (which reads the WO's own status), never assigned here — see
@@ -765,54 +973,22 @@ async def start_dyeing_run(
     status_before = run.status
     await dyeing_run_service.sync_wo_runs(db, run.work_order_id)
 
-    # Materialize the dose sheet — or re-price the one WO creation already planned.
-    # A dyeing WO is cut with a planned bath and a frozen sheet
-    # (dyeing_run_service.seed_planned_bath) so its Kartu Kerja can print grams; the
-    # actual bath the floor just filled is rarely the planned litre-for-litre, and
-    # every g/L row has to follow it. Rows with an actual already recorded are left
-    # alone: that chemical is in the vessel, and rewriting its plan erases the
-    # variance.
-    dosed = 0
-    if run.recipe_id:
-        rec_res = await db.execute(
-            select(DyeRecipe).options(*_recipe_opts()).filter(DyeRecipe.id == run.recipe_id)
-        )
-        recipe = rec_res.scalars().first()
-        if recipe and not run.chemicals:
-            for row in dyeing_dose_service.compute_doses(recipe, run.substrate_qty, volume):
-                if row["dose"] is None:
-                    continue  # line carries no rate — nothing to weigh
-                db.add(DyeingRunChemical(
-                    run_id=run.id,
-                    item_id=row["item_id"],
-                    planned_qty=row["dose"],
-                    # Filled in at completion with what actually went in; planned vs
-                    # actual is the only dosing variance signal there is.
-                    actual_qty=0,
-                    uom_id=row["uom_id"],
-                ))
-                dosed += 1
-        elif recipe:
-            doses = {
-                str(row["item_id"]): row["dose"]
-                for row in dyeing_dose_service.compute_doses(recipe, run.substrate_qty, volume)
-                if row["dose"] is not None
-            }
-            for chem in run.chemicals:
-                if float(chem.actual_qty or 0) > 0:
-                    continue
-                new_dose = doses.get(str(chem.item_id))
-                if new_dose is not None and float(chem.planned_qty or 0) != float(new_dose):
-                    chem.planned_qty = new_dose
-                    dosed += 1
+    # Only bites when a volume came in with the stamp: re-prices the rows nobody has
+    # weighed yet. A no-op on a run already configured in Dyeing Orders.
+    dosed = await dyeing_run_service.price_dose_sheet(db, run)
     await db.commit()
     await audit_service.log_activity(
         db, current_user.id, "STATUS_CHANGE", "DyeingRun", run_id,
         details=(
-            f"Started dyeing run {run.run_number} — bath {volume} L"
+            f"Started dyeing run {run.run_number}"
+            + (f" — bath {volume} L" if volume else "")
             + (f", {dosed} chemical doses calculated" if dosed else "")
         ),
-        changes={"status": [status_before, run.status], "volume_air_liters": [None, volume]},
+        changes={
+            "status": [status_before, run.status],
+            "started_at": [None, str(run.started_at)],
+            **({"volume_air_liters": [None, volume]} if volume else {}),
+        },
     )
     await manager.broadcast({"type": "DYEING_RUN_UPDATE", "wo_id": str(run.work_order_id)})
     result = await db.execute(
@@ -1081,6 +1257,99 @@ async def create_setting_run(
         details=f"Created setting run #{run.run_number} for WO {run.work_order_id}", changes={}
     )
     return _enrich_setting_run(run)
+
+
+@router.post("/setting-runs/bulk", response_model=list[SettingRunResponse])
+async def configure_setting_runs_bulk(
+    payload: SettingRunBulkCreate,
+    db: AsyncSession = Depends(get_async_db),
+    current_user: User = Depends(require_permission('work_order.log')),
+):
+    """Set one stenter up for several work orders at once.
+
+    Mirrors the dyeing side, minus the bath: these runs share a machine SETUP, not a
+    vessel of water, so there is no group id to collapse them by — cloth goes through
+    a stenter one piece after another.
+
+    A setting WO is not cut with a run the way a dyeing WO is, so this creates one
+    per work order; a WO that already has an open run has it configured instead, and
+    a closed run is left alone as history.
+
+    Refuses a mixed machine and a mixed shade for the same reason the dye side does:
+    one setup is one machine running one colour's cloth.
+    """
+    res = await db.execute(
+        select(WorkOrder)
+        .options(joinedload(WorkOrder.manufacturing_order))
+        .filter(WorkOrder.id.in_(payload.work_order_ids))
+    )
+    wos = res.unique().scalars().all()
+    found = {str(w.id) for w in wos}
+    missing = [str(i) for i in payload.work_order_ids if str(i) not in found]
+    if missing:
+        raise HTTPException(status_code=404, detail=f"Work order(s) not found: {', '.join(missing)}")
+
+    if len({str(w.work_center_id) for w in wos}) > 1:
+        raise HTTPException(
+            status_code=422,
+            detail="These work orders are on different machines — one setup is one machine",
+        )
+    if len({str(w.manufacturing_order.color_id) if w.manufacturing_order else None for w in wos}) > 1:
+        raise HTTPException(
+            status_code=422,
+            detail="These work orders are different colours — set one shade up at a time",
+        )
+
+    open_runs = {}
+    for run in (await db.execute(
+        select(SettingRun)
+        .filter(SettingRun.work_order_id.in_([w.id for w in wos]), SettingRun.completed_at.is_(None))
+        .order_by(SettingRun.run_number)
+    )).scalars().all():
+        open_runs.setdefault(str(run.work_order_id), run)
+
+    touched = []
+    for wo in wos:
+        run = open_runs.get(str(wo.id))
+        if run is None:
+            run = SettingRun(
+                work_order_id=wo.id,
+                run_number=await _get_next_run_number(db, SettingRun, wo.id),
+                substrate_qty=wo.qty or 0,
+                status="PENDING",
+            )
+            db.add(run)
+        for field in (
+            "machine_name", "temperature_c", "speed_mpm", "width_cm",
+            "overfeed_pct", "operator_name", "notes",
+        ):
+            value = getattr(payload, field)
+            if value is not None:
+                setattr(run, field, value)
+        await db.flush()
+        touched.append(run.id)   # the id, not the instance: see below
+
+    await db.commit()
+    # expire_on_commit=False, but `expire_all` is still needed for the rows just
+    # created — and once expired, touching an attribute on one of those instances
+    # would lazy-load inside an async session (MissingGreenlet). Hence the ids were
+    # taken above and the rows are re-read in one statement here.
+    db.expire_all()
+    rows = (await db.execute(
+        select(SettingRun).options(*_setting_run_opts())
+        .filter(SettingRun.id.in_(touched))
+        .order_by(SettingRun.created_at)
+    )).scalars().all()
+    for row in rows:
+        await audit_service.log_activity(
+            db, str(current_user.id), "UPDATE", "SettingRun", str(row.id),
+            details=(
+                f"Setting run #{row.run_number} set up with {len(rows)} work orders "
+                "on one machine"
+            ),
+            changes={},
+        )
+    return [_enrich_setting_run(r) for r in rows]
 
 
 @router.post("/setting-runs/{run_id}/start", response_model=SettingRunResponse)

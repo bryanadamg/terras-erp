@@ -6,8 +6,9 @@ import { useToast } from '../shared/Toast';
 import { useLanguage } from '../../context/LanguageContext';
 import { useData } from '../../context/DataContext';
 import { useUser } from '../../context/UserContext';
+import { useDebouncedCommit } from '../../context/usePaginatedList';
 import CodeConfigModal, { CodeConfig, buildCodeWithCounter } from '../shared/CodeConfigModal';
-import SearchableSelect from '../shared/SearchableSelect';
+import SearchableSelect from '@bryanadamg/terras-ui/components/Combobox';
 import HistoryPane from '../shared/HistoryPane';
 import ModalWrapper from '../shared/ModalWrapper';
 const SamplePrintModal = dynamic(() => import('./SamplePrintModal'), { ssr: false });
@@ -543,10 +544,7 @@ export default function SampleRequestView({ samples, customers, onCreateSample, 
 
   // Debounce the search box: the input echoes instantly, the fetch fires after
   // the pause (same shape as DataContext's item search).
-  useEffect(() => {
-      const id = setTimeout(() => setSearchQuery(searchTerm), 350);
-      return () => clearTimeout(id);
-  }, [searchTerm]);
+  useDebouncedCommit(searchTerm, searchQuery, setSearchQuery);
 
   useEffect(() => { setSamplePage(1); }, [searchQuery, statusFilter, categoryFilter, createdFrom, createdTo]);
 

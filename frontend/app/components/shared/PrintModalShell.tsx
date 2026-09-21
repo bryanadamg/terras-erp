@@ -2,7 +2,7 @@
 import React, { useRef } from 'react';
 import { useIsMobile } from '../../hooks/useIsMobile';
 import { MODAL_Z, MODAL_REPOSITION_EVENT, useInactiveChromeWhileOpen, WindowCloseButton } from './ModalWrapper';
-import { toLayoutPx } from './uiScale';
+import { toLayoutPx } from '@bryanadamg/terras-ui/scale';
 import { xpFont, XP_BTN, xpBtn, BTN_TONES, WINDOW_RADIUS, WINDOW_RADIUS_INNER } from './xpTheme';
 
 interface PrintModalShellProps {
