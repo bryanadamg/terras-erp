@@ -328,7 +328,10 @@ class DatabaseManager:
 
             elif "sqlite" in self._current_url:
                 db_path = self._current_url.replace("sqlite:///", "")
-                shutil.copy2(filepath, db_path)
+                # Threadpool like every other copy here: a restore is a whole
+                # database file, and copying it on the loop stalls every other
+                # request for the duration.
+                await run_in_threadpool(shutil.copy2, filepath, db_path)
 
             self._set_restore_phase("Reconnecting", 95)
             res = self.initialize(self._current_url)
