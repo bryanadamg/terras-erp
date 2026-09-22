@@ -12,7 +12,7 @@ import SearchableSelect from '@bryanadamg/terras-ui/components/Combobox';
 import HistoryPane from '../shared/HistoryPane';
 import ModalWrapper from '../shared/ModalWrapper';
 const SamplePrintModal = dynamic(() => import('./SamplePrintModal'), { ssr: false });
-import { StatusChip, StatusCountPill, TableSkeleton, useTableSkeletonMetrics, FormSection, useFloatingMenu, FloatingMenu, MenuTriggerButton, XPActionButton, familyColor, Chip, CodeChip, xpFont, rowStateBg, ToggleChip, CHIP_RADIUS, xpInput as xpInputBase, xpBtn as xpBtnBase, expandedRowFrame, BTN_TONES, XP_BTN } from '../shared/xpTheme';
+import { StatusChip, StatusCountPill, TableSkeleton, useTableSkeletonMetrics, FormSection, useFloatingMenu, FloatingMenu, MenuTriggerButton, XPActionButton, familyColor, VariantChip, CodeChip, xpFont, rowStateBg, ToggleChip, CHIP_RADIUS, xpInput as xpInputBase, xpBtn as xpBtnBase, expandedRowFrame, BTN_TONES, XP_BTN } from '../shared/xpTheme';
 import { ShellWindow, ShellTitleBar, xpToolbar, SearchField, FilterChipBar, ToolbarCount, ToolbarButton } from '../shared/shellTheme';
 import Pager from '../shared/Pager';
 import RequestDetailPanel, { getStatusStripe } from '../shared/RequestDetailPanel';
@@ -820,17 +820,16 @@ export default function SampleRequestView({ samples, customers, onCreateSample, 
                                    {newSample.colors.length === 0
                                        ? <span style={{ fontFamily: xpFont, fontSize: 11, color: '#999', fontStyle: 'italic' }}>No variants added yet…</span>
                                        : newSample.colors.map((c, idx) => (
-                                           <Chip key={idx} size="md" style={{ marginRight: 4, marginBottom: 4 }}
+                                           <VariantChip key={idx} size="md" style={{ marginRight: 4, marginBottom: 4 }}
+                                               kind={isColor ? 'color' : 'combo'}
                                                swatch={colorHexByName.get(c.name.toLowerCase())}
-                                               onRemove={() => removeColorRow(idx)}
-                                               tone={c.is_repeat
-                                                   ? { background: '#dce8f8', borderColor: '#7ab0d8' }
-                                                   : { background: '#e8f4e8', borderColor: '#7aba7a' }}>
+                                               icon={colorHexByName.has(c.name.toLowerCase()) ? null : undefined}
+                                               onRemove={() => removeColorRow(idx)}>
                                                <span style={{ fontSize: 9, fontWeight: 'bold', color: c.is_repeat ? '#0047c8' : '#228b22', textTransform: 'uppercase' as const }}>
                                                    {c.is_repeat ? 'RPT' : 'NEW'}
                                                </span>
                                                {c.name}
-                                           </Chip>
+                                           </VariantChip>
                                        ))
                                    }
                                </div>
@@ -1233,13 +1232,17 @@ export default function SampleRequestView({ samples, customers, onCreateSample, 
                                            </div>
                                        )}
                                        <div style={{ display: 'flex', gap: 2, flexWrap: 'wrap' as const, marginTop: 2 }}>
-                                           {s.colors && s.colors.map((c: any, i: number) => (
-                                               <Chip key={i} size="xs" swatch={colorHexByName.get(String(c.name).toLowerCase())}
-                                                   tone={c.is_repeat
-                                                       ? { background: '#e8e8ff', borderColor: '#8888cc', color: '#333' }
-                                                       : { background: '#e8f5e8', borderColor: '#88aa88', color: '#1a3a1a' }}>
-                                                   {c.name}{c.is_repeat ? ' (R)' : ''}
-                                               </Chip>))}
+                                           {/* Colour vs combo is the app-wide variant palette (neutral / purple).
+                                               New vs repeat is a different axis and rides on the "(R)" suffix —
+                                               tinting the chip for it made these read as a third variant kind. */}
+                                           {s.colors && s.colors.map((c: any, i: number) => {
+                                               const hex = colorHexByName.get(String(c.name).toLowerCase());
+                                               return (
+                                                   <VariantChip key={i} kind={s.variant_type === 'combo' ? 'combo' : 'color'}
+                                                       swatch={hex} icon={hex ? null : undefined}>
+                                                       {c.name}{c.is_repeat ? ' (R)' : ''}
+                                                   </VariantChip>);
+                                           })}
                                        </div>
                                    </td>
                                    {/* Status — request-level only */}
