@@ -845,7 +845,7 @@ async def update_packing_order(
     # CANCELLED — those are the user's explicit closure, not a function of qty —
     # and never overrides a status the caller stated itself.
     if payload.status is None:
-        met = packing_service.is_target_met(po)
+        met = await packing_service.is_fulfilled(db, po)
         if po.status == "DELIVERED" and not met:
             po.status = "IN_PROGRESS"
             po.actual_end_date = None
@@ -1282,13 +1282,14 @@ async def add_packing_completion(
     if po.status == "PENDING":
         po.status = "IN_PROGRESS"
         po.actual_start_date = po.actual_start_date or datetime.utcnow()
-    if packing_service.is_target_met(po) and not po.actual_end_date:
+    fulfilled = await packing_service.is_fulfilled(db, po)
+    if fulfilled and not po.actual_end_date:
         po.actual_end_date = datetime.utcnow()
     # Fulfilled but still open — the MO's DELIVERED/COMPLETED split (SAP DLV vs
     # TECO). Logging stays allowed (only COMPLETED/CANCELLED stop it); what this
     # buys is that the order's *open* quantity is now zero, so quarantine stops
     # treating it as a claim on the hold bin's stock. Never auto-closes.
-    if po.status in ("PENDING", "IN_PROGRESS") and packing_service.is_target_met(po):
+    if po.status in ("PENDING", "IN_PROGRESS") and fulfilled:
         po.status = "DELIVERED"
     await db.commit()
 
@@ -1427,7 +1428,7 @@ async def reject_packing_completion(
     # Reopen: packed progress just dropped, so an order that had hit target is no
     # longer fulfilled. Never auto-closes on qty, never auto-closes off it either.
     po = await _load(db, po_id)
-    if po.actual_end_date and not packing_service.is_target_met(po):
+    if po.actual_end_date and not await packing_service.is_fulfilled(db, po):
         po.actual_end_date = None
         if po.status in ("DELIVERED", "COMPLETED"):
             po.status = "IN_PROGRESS"

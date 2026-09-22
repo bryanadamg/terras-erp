@@ -419,6 +419,33 @@ def is_target_met(po: PackingOrder, item=None, tol: float = 1e-6) -> bool:
     return po.qty_packed + tol >= float(po.qty_target or 0) > 0
 
 
+async def is_fulfilled(db: AsyncSession, po: PackingOrder, item=None) -> bool:
+    """Does this order still owe work? Target met, OR its held lots are packed out.
+
+    The second half is what holding lots means: the order was cut for one physical
+    pile (claimed off the Quarantine Packing desk, or ticked on the New Packing
+    Order form), the pile is gone, and nothing is left for it to log. Its target is
+    a snapshot of what was free when it was planned — cloth that came in light
+    would otherwise leave a fully packed-out order IN_PROGRESS for good.
+
+    Fulfilled is DELIVERED, never COMPLETED: logging stays allowed, so a packer who
+    does want to finish a short order off free stock still can. The qty comparison
+    itself stays in `is_target_met` — the single definition of "did we pack what was
+    ordered" — and this only adds the lot half, for the status transitions.
+    """
+    if is_target_met(po, item):
+        return True
+    if not po.source_location_id:
+        return False
+    held = (await db.execute(
+        select(func.count()).select_from(Batch)
+        .filter(Batch.locked_packing_order_id == po.id)
+    )).scalar() or 0
+    if not held:
+        return False
+    return not await undrained_locked_lots(db, po)
+
+
 def open_qty(po: PackingOrder, item=None) -> float:
     """What this order still owes, in the item's stock UOM.
 
