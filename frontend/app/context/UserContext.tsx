@@ -1,6 +1,7 @@
 'use client';
 
 import React, { createContext, useContext, useState, useEffect } from 'react';
+import { API_BASE } from '../components/shared/apiBase';
 import { rememberAvatar, rememberIdentity } from '../components/shared/avatarCache';
 import { resolveRecipe, serializeRecipe } from '../components/shared/avatarRecipe';
 
@@ -75,7 +76,6 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
     const [users, setUsers] = useState<User[]>([]);
     const [loading, setLoading] = useState(true);
     const [bootPhase, setBootPhase] = useState<BootPhase>('hydrating');
-    const API_BASE = process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:8000/api';
 
     const login = async (username, password): Promise<boolean | 'network_error'> => {
         const formData = new FormData();
