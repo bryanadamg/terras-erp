@@ -591,14 +591,12 @@ async def dispatch_shipment(
     # Draw down the stock this order had reserved against on-hand FG (netted away
     # at PR creation, so it never had an MO). Goods issue is the only point that
     # stock actually leaves, so releasing here — not at packing — is what keeps
-    # on-hand and the reservation from being subtracted twice. Sessions are
-    # expire_on_commit=False, so the instances issue_stock committed over are
-    # still usable. Committed with everything else below.
+    # on-hand and the reservation from being subtracted twice. Committed with
+    # everything else below, in the same transaction as the stock issue above.
     released_qty = 0.0
     for pl, lines in loaded:
         released_qty += await dispatch_service.release_reservations(db, pl, lines)
 
-    # Stock writes commit internally, so everything below re-reads.
     now = datetime.utcnow()
     so_ids = set()
     for pl_id in pl_ids:
