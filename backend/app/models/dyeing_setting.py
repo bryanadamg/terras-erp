@@ -1,7 +1,7 @@
 import uuid
 from datetime import datetime
 from typing import Optional, List
-from sqlalchemy import String, Text, Numeric, Integer, Boolean, DateTime, ForeignKey, func, Column, Table
+from sqlalchemy import String, Text, Numeric, Integer, Boolean, DateTime, ForeignKey, func, Column, Table, UniqueConstraint
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.db.base import Base
@@ -18,9 +18,10 @@ dye_recipe_attribute_values = Table(
 
 class DyeRecipe(Base):
     __tablename__ = "dye_recipes"
+    __table_args__ = (UniqueConstraint("code", name="uq_dye_recipes_code"),)
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    code: Mapped[str] = mapped_column(String(32), unique=True, index=True)
+    code: Mapped[str] = mapped_column(String(32))  # unique via __table_args__
     name: Mapped[str] = mapped_column(String(128))
     color_standard: Mapped[Optional[str]] = mapped_column(String(64), nullable=True)
     color_id: Mapped[Optional[uuid.UUID]] = mapped_column(

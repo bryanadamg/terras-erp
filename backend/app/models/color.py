@@ -1,7 +1,7 @@
 import uuid
 from datetime import datetime
 from typing import Optional, List
-from sqlalchemy import String, Text, DateTime, ForeignKey, Float, func
+from sqlalchemy import String, Text, DateTime, ForeignKey, Float, Index, func
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.db.base import Base
@@ -15,6 +15,18 @@ class Color(Base):
     transition (Option A). The variant `Colors` attribute is left untouched."""
 
     __tablename__ = "colors"
+    # GIN trigram indexes carry the substring search over ~30k codes; a btree on
+    # these columns cannot answer a LIKE '%x%'. Declared here so autogenerate
+    # stops proposing to drop them.
+    __table_args__ = tuple(
+        Index(
+            f"ix_colors_{col}_trgm",
+            col,
+            postgresql_using="gin",
+            postgresql_ops={col: "gin_trgm_ops"},
+        )
+        for col in ("code", "name", "pantone_ref", "customer_color_code")
+    )
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     code: Mapped[str] = mapped_column(String(64), unique=True, index=True)

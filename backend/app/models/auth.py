@@ -88,7 +88,9 @@ class BOMAutomatorProfile(Base):
     __tablename__ = "bom_automator_profiles"
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    user_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=False, index=True)
+    user_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True
+    )
     name: Mapped[str] = mapped_column(String(128), nullable=False)
     levels: Mapped[list] = mapped_column(JSON, nullable=False)
     # Per-level "inherit the root BOM's attribute values" flags, parallel to `levels`.

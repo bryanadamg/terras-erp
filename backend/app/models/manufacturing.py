@@ -1,5 +1,5 @@
-from sqlalchemy import String, ForeignKey, Numeric, DateTime, Table, Column, Boolean, JSON, Integer
-from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy import String, ForeignKey, Numeric, DateTime, Table, Column, Boolean, JSON, Index, Integer, text
+from sqlalchemy.dialects.postgresql import UUID, JSONB
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.db.base import Base
 import uuid
@@ -151,7 +151,7 @@ class ManufacturingOrder(Base):
     bom_size_id: Mapped[Optional[uuid.UUID]] = mapped_column(
         UUID(as_uuid=True), ForeignKey("bom_sizes.id", ondelete="SET NULL"), nullable=True
     )
-    bom_size_snapshot: Mapped[Optional[dict]] = mapped_column(JSON, nullable=True)
+    bom_size_snapshot: Mapped[Optional[dict]] = mapped_column(JSONB, nullable=True)
 
     # Relationships
     bom = relationship("BOM", back_populates="manufacturing_orders")
@@ -230,6 +230,14 @@ class ManufacturingOrder(Base):
 
 class MOCompletion(Base):
     __tablename__ = "mo_completions"
+    # Partial: reject reporting scans the few completions that recorded scrap.
+    __table_args__ = (
+        Index(
+            "ix_mo_completions_rejected_qty",
+            "qty_rejected",
+            postgresql_where=text("qty_rejected > 0"),
+        ),
+    )
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     mo_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("manufacturing_orders.id"), index=True)

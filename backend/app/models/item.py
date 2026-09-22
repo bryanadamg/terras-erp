@@ -10,8 +10,8 @@ from app.models.category import Category
 item_attributes = Table(
     "item_attributes",
     Base.metadata,
-    Column("item_id", UUID(as_uuid=True), ForeignKey("items.id"), primary_key=True),
-    Column("attribute_id", UUID(as_uuid=True), ForeignKey("attributes.id"), primary_key=True),
+    Column("item_id", UUID(as_uuid=True), ForeignKey("items.id", ondelete="CASCADE"), primary_key=True),
+    Column("attribute_id", UUID(as_uuid=True), ForeignKey("attributes.id", ondelete="CASCADE"), primary_key=True),
 )
 
 # Association table for Item <-> UOMFactor (packaging units)

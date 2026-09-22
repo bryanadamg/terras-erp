@@ -1,7 +1,7 @@
 import uuid
 from datetime import datetime, date
 from typing import Optional, TYPE_CHECKING
-from sqlalchemy import String, ForeignKey, Numeric, Integer, DateTime, Date, Text
+from sqlalchemy import String, ForeignKey, Numeric, Integer, DateTime, Date, Text, Index, text
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.db.base import Base
@@ -75,6 +75,16 @@ class WeavingRunPause(Base):
     `resumed_on` NULL means still parked.
     """
     __tablename__ = "weaving_run_pauses"
+    # One OPEN pause per run, enforced in the database: two open pauses would
+    # double-subtract the same downtime from the run's elapsed days.
+    __table_args__ = (
+        Index(
+            "uq_weaving_run_pauses_open",
+            "run_id",
+            unique=True,
+            postgresql_where=text("resumed_on IS NULL"),
+        ),
+    )
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     run_id: Mapped[uuid.UUID] = mapped_column(

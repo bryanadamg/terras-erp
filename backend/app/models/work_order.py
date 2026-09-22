@@ -1,7 +1,7 @@
 import uuid
 from datetime import datetime
 from typing import Optional, List, TYPE_CHECKING
-from sqlalchemy import String, Text, ForeignKey, DateTime, Integer, Float
+from sqlalchemy import String, Text, ForeignKey, DateTime, Integer, Float, Index, text
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.db.base import Base
@@ -14,13 +14,17 @@ if TYPE_CHECKING:
 
 class WorkOrder(Base):
     __tablename__ = "work_orders"
+    __table_args__ = (
+        Index("ix_work_orders_code", "code", unique=True, postgresql_where=text("code IS NOT NULL")),
+    )
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     manufacturing_order_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), ForeignKey("manufacturing_orders.id", ondelete="CASCADE"), index=True
     )
     sequence: Mapped[int] = mapped_column(Integer, default=1)
-    code: Mapped[Optional[str]] = mapped_column(String(128), nullable=True, index=True)
+    # Unique among the WOs that have a code; older rows predate codes entirely.
+    code: Mapped[Optional[str]] = mapped_column(String(128), nullable=True)
     name: Mapped[str] = mapped_column(String(128))
     work_center_id: Mapped[Optional[uuid.UUID]] = mapped_column(
         UUID(as_uuid=True), ForeignKey("work_centers.id", ondelete="SET NULL"), nullable=True, index=True

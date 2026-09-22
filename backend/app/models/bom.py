@@ -10,15 +10,15 @@ from datetime import datetime
 bom_values = Table(
     "bom_values",
     Base.metadata,
-    Column("bom_id", UUID(as_uuid=True), ForeignKey("boms.id"), primary_key=True),
-    Column("attribute_value_id", UUID(as_uuid=True), ForeignKey("attribute_values.id"), primary_key=True),
+    Column("bom_id", UUID(as_uuid=True), ForeignKey("boms.id", ondelete="CASCADE"), primary_key=True),
+    Column("attribute_value_id", UUID(as_uuid=True), ForeignKey("attribute_values.id", ondelete="CASCADE"), primary_key=True),
 )
 
 bom_line_values = Table(
     "bom_line_values",
     Base.metadata,
-    Column("bom_line_id", UUID(as_uuid=True), ForeignKey("bom_lines.id"), primary_key=True),
-    Column("attribute_value_id", UUID(as_uuid=True), ForeignKey("attribute_values.id"), primary_key=True),
+    Column("bom_line_id", UUID(as_uuid=True), ForeignKey("bom_lines.id", ondelete="CASCADE"), primary_key=True),
+    Column("attribute_value_id", UUID(as_uuid=True), ForeignKey("attribute_values.id", ondelete="CASCADE"), primary_key=True),
 )
 
 class BOM(Base):
@@ -136,7 +136,7 @@ class BOMLine(Base):
     percentage: Mapped[float] = mapped_column(Numeric(6, 2), default=0.0)
 
     bom_operation_id: Mapped[Optional[uuid.UUID]] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("bom_operations.id", ondelete="SET NULL"), nullable=True
+        UUID(as_uuid=True), ForeignKey("bom_operations.id", ondelete="SET NULL"), nullable=True, index=True
     )
 
     # Per-line override of the material's MRP decoupling policy. Null → inherit the

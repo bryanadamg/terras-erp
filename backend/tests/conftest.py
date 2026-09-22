@@ -189,6 +189,13 @@ def _test_database():
     from alembic.config import Config
     from alembic import command
     from app.db.base import Base
+    from sqlalchemy import text as sa_text
+
+    # The colour library's search indexes are GIN trigram, so the models cannot be
+    # created at all until pg_trgm exists. The real database got it from a
+    # migration; a from-scratch test database has to ask for it itself.
+    with engine.begin() as conn:
+        conn.execute(sa_text("CREATE EXTENSION IF NOT EXISTS pg_trgm"))
 
     Base.metadata.create_all(engine)
 

@@ -1,7 +1,7 @@
 import uuid
 from datetime import datetime
 from typing import Optional
-from sqlalchemy import String, Text, ForeignKey, DateTime, Numeric, Integer, JSON, func
+from sqlalchemy import String, Text, ForeignKey, DateTime, Numeric, Integer, JSON, Index, func, text
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.db.base import Base
@@ -9,6 +9,7 @@ from app.db.base import Base
 
 class Batch(Base):
     __tablename__ = "batches"
+    __table_args__ = (Index("ix_batches_created_at", "created_at"),)
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     batch_number: Mapped[str] = mapped_column(String(64), unique=True, index=True)
@@ -149,6 +150,16 @@ class BeamMount(Base):
     loom's active mounts (see services/beam_service.py).
     """
     __tablename__ = "beam_mounts"
+    # Partial: the only question ever asked of this table is "what is on this loom
+    # right now", and an open mount is a small slice of its history.
+    __table_args__ = (
+        Index(
+            "ix_beam_mounts_active",
+            "work_center_id",
+            "item_id",
+            postgresql_where=text("dismounted_at IS NULL"),
+        ),
+    )
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     batch_id: Mapped[uuid.UUID] = mapped_column(

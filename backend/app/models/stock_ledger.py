@@ -9,8 +9,8 @@ from datetime import datetime
 stock_ledger_values = Table(
     "stock_ledger_values",
     Base.metadata,
-    Column("stock_ledger_id", UUID(as_uuid=True), ForeignKey("stock_ledger.id"), primary_key=True),
-    Column("attribute_value_id", UUID(as_uuid=True), ForeignKey("attribute_values.id"), primary_key=True),
+    Column("stock_ledger_id", UUID(as_uuid=True), ForeignKey("stock_ledger.id", ondelete="CASCADE"), primary_key=True),
+    Column("attribute_value_id", UUID(as_uuid=True), ForeignKey("attribute_values.id", ondelete="CASCADE"), primary_key=True),
 )
 
 class StockLedger(Base):

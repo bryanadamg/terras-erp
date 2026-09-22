@@ -2,7 +2,7 @@ import uuid
 from datetime import datetime
 from typing import Optional, List, TYPE_CHECKING
 from sqlalchemy import String, Text, ForeignKey, DateTime, Numeric, JSON, Boolean
-from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy.dialects.postgresql import UUID, JSONB
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.db.base import Base
 
@@ -34,7 +34,7 @@ class PRBomEntry(Base):
     )
     bom_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("boms.id"))
     total_qty: Mapped[Optional[float]] = mapped_column(Numeric(14, 4), nullable=True)
-    attribute_value_ids: Mapped[list] = mapped_column(JSON, default=list, server_default='[]')
+    attribute_value_ids: Mapped[list] = mapped_column(JSONB, default=list, server_default='[]')
     force_create: Mapped[bool] = mapped_column(Boolean, default=False, server_default='false')
     # Color-type FG shade (Color Library) carried from the SO line into the root MO.
     color_id: Mapped[Optional[uuid.UUID]] = mapped_column(
