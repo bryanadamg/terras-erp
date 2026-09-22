@@ -8,6 +8,7 @@ import BagLabelCard from './BagLabelCard';
 import BeamLabelCard from './BeamLabelCard';
 import PrintModalShell, { PrintModalFooter } from '../shared/PrintModalShell';
 import { xpFont, PRINT_FONT } from '../shared/xpTheme';
+import { API_BASE } from '../shared/apiBase';
 
 // Code 128 (1D) so the factory's existing laser barcode scanners can read the
 // lot number too — not everyone has a phone/2D imager. Rendered to a PNG data
@@ -55,7 +56,6 @@ export default function BagLabelPrintModal({
 }) {
     const { companyProfile, attributes, authFetch } = useData() as any;
 
-    const API_BASE = (process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:8000/api').replace(/\/api$/, '') + '/api';
     // Stamp labels_printed_at when the operator prints. Compared against the newest
     // bag time on the WO row so bags logged after this print re-flag as unprinted.
     const doPrint = () => {

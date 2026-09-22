@@ -7,9 +7,8 @@ import { useUser } from '../context/UserContext';
 import PixelAvatar from '../components/shared/PixelAvatar';
 import { recallAvatar, recallIdentity } from '../components/shared/avatarCache';
 import BootSplash, { useBootIndicator } from '../components/shared/BootSplash';
+import { API_BASE } from '../components/shared/apiBase';
 
-const API_BASE = (process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:8000/api')
-    .replace(/\/api$/, '') + '/api';
 
 const LAST_USERNAME_KEY = 'teras_last_username';
 

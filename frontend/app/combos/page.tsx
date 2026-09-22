@@ -5,6 +5,7 @@ import ComboLibraryView from '../components/combos/ComboLibraryView';
 import { useData } from '../context/DataContext';
 import { usePaginatedFetch } from '../context/usePaginatedList';
 import { useToast } from '../components/shared/Toast';
+import { API_BASE } from '../components/shared/apiBase';
 
 // Uncapped on purpose. The colour-family chips filter on words parsed out of every
 // combo name, so their tallies have to see the whole matching set — over one page
@@ -16,8 +17,6 @@ import { useToast } from '../components/shared/Toast';
 export default function CombosPage() {
     const { authFetch } = useData();
     const { showToast } = useToast();
-    const envBase = process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:8000/api';
-    const API_BASE = envBase.endsWith('/api') ? envBase : `${envBase}/api`;
 
     const [search, setSearch] = useState('');
     const [statusFilter, setStatusFilter] = useState('ALL');

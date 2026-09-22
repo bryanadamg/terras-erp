@@ -3,9 +3,8 @@ import React from 'react';
 import { useData } from '../../context/DataContext';
 import { CodeChip, CODE_FONT, colorHexFor, CHIP_RADIUS, VariantChip, VariantKind } from '../shared/xpTheme';
 import { qtyFmt } from '../shared/format';
+import { API_BASE } from '../shared/apiBase';
 
-const API_BASE = (process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:8000/api')
-    .replace(/\/api$/, '') + '/api';
 
 // Size / color / combo identity of a row. Several rows carry the same item name
 // (one per size on a BOM entry, one per consolidated component key), so the chips

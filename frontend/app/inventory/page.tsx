@@ -5,6 +5,7 @@ import InventoryView from '../components/inventory/InventoryView';
 import { useData } from '../context/DataContext';
 import { useConfirm } from '../context/ConfirmContext';
 import { useToast } from '../components/shared/Toast';
+import { API_BASE } from '../components/shared/apiBase';
 
 export default function InventoryPage() {
     const {
@@ -22,8 +23,6 @@ export default function InventoryPage() {
     const { confirm } = useConfirm();
     const { showToast } = useToast();
 
-    const envBase = process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:8000/api';
-    const API_BASE = envBase.endsWith('/api') ? envBase : `${envBase}/api`;
 
     const handleCreateItem = async (p: any) => {
         const res = await authFetch(`${API_BASE}/items`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(p) });

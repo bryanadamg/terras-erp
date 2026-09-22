@@ -10,6 +10,7 @@ import { docTypeForWorkCenter } from '../shared/printTemplate/defaults/kartuKerj
 import { paperDimsMm, paperCssSize, paperSizeLabel } from '../shared/printTemplate/paper';
 import { fetchDyeingPrintDataMap, isDyeingWorkOrder, type DyeingPrintData } from '../shared/printTemplate/dyeingPrintData';
 import { PRINT_FONT } from '../shared/xpTheme';
+import { API_BASE } from '../shared/apiBase';
 
 interface PrintSettings {
     showMaterials: boolean;
@@ -36,7 +37,6 @@ export default function WOBulkPrintModal({
 }) {
     const { companyProfile, attributes, authFetch, printTemplates } = useData() as any;
 
-    const API_BASE = (process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:8000/api').replace(/\/api$/, '') + '/api';
     // Bulk print marks every included WO's card in one call.
     const doPrint = () => {
         const ids = selectedWOs.map(w => w.id).filter(Boolean);

@@ -6,6 +6,7 @@ import { useTimezone } from '../../context/TimezoneContext';
 import { PRINT_FONT } from '../shared/xpTheme';
 
 import { qtyFmt } from '../shared/format';
+import { STATIC_BASE } from '../shared/apiBase';
 
 type ColumnDef = { key: string; label: string; width: number };
 const COLUMN_DEFS: ColumnDef[] = [
@@ -44,7 +45,6 @@ const fmtQty = qtyFmt(4);   // matches ReportsView, which this prints
 
 function LedgerDocument({ entries, locations, attributes, companyProfile, periodLabel, totals, filtersSummary, hiddenCount, visibleCols }: any) {
     const { formatDateTime: tzDateTime } = useTimezone();
-    const API_BASE = (process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:8000/api').replace(/\/api$/, '');
     const locMap: Record<string, any> = {};
     for (const l of (locations || [])) locMap[l.id] = l;
     const getWarehouseName = (e: any): string => locMap[e.location_id]?.parent_name || '';
@@ -116,7 +116,7 @@ function LedgerDocument({ entries, locations, attributes, companyProfile, period
             <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 6, paddingBottom: 5, borderBottom: '2px solid #000' }}>
                 <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
                     {companyProfile?.logo_url ? (
-                        <img src={`${API_BASE}${companyProfile.logo_url}`} alt="Logo" style={{ maxHeight: 40, maxWidth: 60, objectFit: 'contain' }} />
+                        <img src={`${STATIC_BASE}${companyProfile.logo_url}`} alt="Logo" style={{ maxHeight: 40, maxWidth: 60, objectFit: 'contain' }} />
                     ) : (
                         <div style={{ width: 44, height: 32, border: '2px solid #003080', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold', fontSize: 9, color: '#003080' }}>BIE</div>
                     )}

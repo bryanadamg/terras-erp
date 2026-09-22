@@ -3,9 +3,8 @@ import { useData } from '../../context/DataContext';
 import { statusColor, statusTint, xpFont, CHIP_RADIUS } from './xpTheme';
 import { xpBevel as sharedXpBevel, SearchField, FilterChipBar } from './shellTheme';
 import { lvThead } from './listViewTheme';
+import { API_BASE } from './apiBase';
 
-const API_BASE = (process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:8000/api')
-    .replace(/\/api$/, '') + '/api';
 
 // Max MO chips shown per day in full (non-compact) mode before collapsing to "+N more".
 const MAX_VISIBLE = 4;

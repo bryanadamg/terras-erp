@@ -33,6 +33,7 @@ import { childrenOfWC, isMachineWC, isTypeWC } from '../shared/workCenterTree';
 import { xpBevel as sharedXpBevel, xpTitleBar as sharedXpTitleBar, xpToolbar as sharedXpToolbar, FilterChipBar, SegmentedBar, pageFillStyle, flexFillStyle } from '../shared/shellTheme';
 import { lvThead, lvSubTh, lvSubTd, lvSubTable, lvSubCaption, ExpanderCell, SortableTh, lvZebra, Dash } from '../shared/listViewTheme';
 import { qtyFmt } from '../shared/format';
+import { STATIC_BASE } from '../shared/apiBase';
 
 // Machine output is weighed to the gram, so this report alone runs at 3dp.
 const fmtQty = qtyFmt(3);
@@ -77,8 +78,7 @@ export default function MachineOutputReportView() {
     const canExport = hasPermission('production_output.export');
 
     const API_BASE = useMemo(() => {
-        const env = process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:8000/api';
-        return env.replace(/\/api$/, '') + '/api';
+        return STATIC_BASE.replace(/\/api$/, '') + '/api';
     }, []);
 
     // Filters — default to the trailing 7 days (a shift report, not all-time).

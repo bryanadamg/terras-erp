@@ -6,6 +6,7 @@ import PrintModalShell, { PrintModalFooter } from '../shared/PrintModalShell';
 import { PRINT_FONT } from '../shared/xpTheme';
 
 import { useTimezone } from '../../context/TimezoneContext';
+import { STATIC_BASE } from '../shared/apiBase';
 
 const TABLE_SETTINGS_KEY = 'so_table_print_settings';
 
@@ -19,7 +20,6 @@ function SOTableDocument({
     companyProfile: any;
 }) {
     const { formatCustom: tzFmt } = useTimezone();
-    const API_BASE = (process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:8000/api').replace(/\/api$/, '');
     const { itemIndex } = useData();
 
     const getItemName = (id: string) => items.find((i: any) => i.id === id)?.name || itemIndex?.[String(id)]?.name || id;
@@ -79,7 +79,7 @@ function SOTableDocument({
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6, paddingBottom: 4, borderBottom: '2px solid #000' }}>
                 <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
                     {companyProfile?.logo_url ? (
-                        <img src={`${API_BASE}${companyProfile.logo_url}`} alt="Logo"
+                        <img src={`${STATIC_BASE}${companyProfile.logo_url}`} alt="Logo"
                             style={{ maxHeight: 36, maxWidth: 52, objectFit: 'contain', display: 'block' }} />
                     ) : (
                         <div style={{ width: 40, height: 30, border: '2px solid #003080', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold', fontSize: 9, color: '#003080' }}>BIE</div>

@@ -9,6 +9,7 @@ import LotLabelPrintModal from './LotLabelPrintModal';
 import { LotChips, LotChip } from '../shared/LotChips';
 import { CodeChip, xpFont, xpInput as xpInputBase, xpBtn as xpBtnBase, BTN_TONES, XP_BTN } from '../shared/xpTheme';
 import type { StagedLot } from './WOStagingModal';
+import { API_BASE } from '../shared/apiBase';
 
 const xpInput: React.CSSProperties = xpInputBase({ fontSize: 13, height: 28, padding: '0 6px', width: '100%', boxSizing: 'border-box' });
 const xpBtn = (primary?: boolean): React.CSSProperties => xpBtnBase(primary ? { ...BTN_TONES.success, padding: '2px 14px' } : {});
@@ -84,8 +85,6 @@ interface Props {
 export default function BagScanStageModal({ wo, onClose, onStaged, onManualMode }: Props) {
     const { authFetch } = useData() as any;
     const { showToast } = useToast();
-    const envBase = process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:8000/api';
-    const API_BASE = envBase.endsWith('/api') ? envBase : `${envBase}/api`;
 
     // A partial bag splits, and the leftover label must say what the remnant IS:
     // a dyeing WO peels greige, a setting WO peels dyed fabric.

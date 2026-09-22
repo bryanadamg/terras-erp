@@ -14,6 +14,7 @@ import { useSortable, StatusChip, TableSkeleton, useTableSkeletonMetrics, Progre
 import { xpBevel as sharedXpBevel, xpTitleBar as sharedXpTitleBar, xpToolbar as sharedXpToolbar, SearchField, FilterChipBar, ToolbarCount, ToolbarButton } from '../shared/shellTheme';
 import Pager from '../shared/Pager';
 import { lvThead, lvSubTh, lvSubTd, lvSubTable, lvSubCaption, ExpanderCell, SortableTh, lvThSticky, lvTdRuled, lvZebra } from '../shared/listViewTheme';
+import { STATIC_BASE } from '../shared/apiBase';
 
 export default function PurchaseOrderView({ items, itemResults, onSearchItems, attributes, purchaseOrders, partners, locations, onCreatePO, onEditPO, onDeletePO, onCreateReceipt, onClosePO, companyProfile }: any) {
   const { showToast } = useToast();
@@ -34,7 +35,6 @@ export default function PurchaseOrderView({ items, itemResults, onSearchItems, a
   const [editingPOId, setEditingPOId] = useState<string | null>(null);
   const [printingPO, setPrintingPO] = useState<any>(null);
   // Backend origin for static files (delivery-note attachments live at /static, not /api)
-  const STATIC_BASE = (process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:8000/api').replace(/\/api$/, '');
 
   // Receipt modal state
   const [receiptTarget, setReceiptTarget] = useState<any>(null);

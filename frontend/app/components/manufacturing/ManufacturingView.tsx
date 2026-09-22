@@ -15,6 +15,7 @@ import ProductionRunsTab from './ProductionRunsTab';
 import ManufacturingOrdersTab from './ManufacturingOrdersTab';
 import { pageFillStyle, viewShellStyle, PageTitleBar } from '../shared/shellTheme';
 import { Tabs } from '../shared/Tabs';
+import { API_BASE } from '../shared/apiBase';
 
 export default function ManufacturingView({
     items,
@@ -64,8 +65,6 @@ export default function ManufacturingView({
       moSearch, setMoSearch, prSearch: prSearchCtx, setPrSearch: setPrSearchCtx,
       prSoFilter, setPrSoFilter, prProgressFilter, setPrProgressFilter,
   } = pagination;
-  const envBase = process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:8000/api';
-  const API_BASE = envBase.endsWith('/api') ? envBase : `${envBase}/api`;
   const [viewMode, setViewMode] = useState('list');
 
   // Tab state: 'production-runs' | 'manufacturing-orders'

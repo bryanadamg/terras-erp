@@ -12,6 +12,7 @@ import Pager from '../shared/Pager';
 import { xpBevel as sharedXpBevel, xpTitleBar as sharedXpTitleBar, xpToolbar as sharedXpToolbar, SearchField, FilterChipBar, SegmentedBar, FilterChipOption, pageFillStyle, flexFillStyle } from '../shared/shellTheme';
 import { lvThead, SortableTh, lvZebra, Dash } from '../shared/listViewTheme';
 import { qtyFmt } from '../shared/format';
+import { STATIC_BASE } from '../shared/apiBase';
 
 const StockLedgerPrintModal = dynamic(() => import('./StockLedgerPrintModal'), { ssr: false });
 
@@ -61,8 +62,7 @@ export default function ReportsView(_props: any) {
     const { authFetch, locations = [], attributes = [], categories = [], itemIndex, companyProfile } = useData();
 
     const API_BASE = useMemo(() => {
-        const env = process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:8000/api';
-        return env.replace(/\/api$/, '') + '/api';
+        return STATIC_BASE.replace(/\/api$/, '') + '/api';
     }, []);
 
     // Filters

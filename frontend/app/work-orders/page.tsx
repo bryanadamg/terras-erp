@@ -5,6 +5,7 @@ import { useSearchParams, useRouter } from 'next/navigation';
 import WorkOrderListView from '../components/manufacturing/WorkOrderListView';
 import { useData } from '../context/DataContext';
 import { usePaginatedFetch } from '../context/usePaginatedList';
+import { API_BASE } from '../components/shared/apiBase';
 
 const WO_PAGE_SIZE = 50;
 const CACHE_KEY = 'wo_page_cache';
@@ -19,8 +20,6 @@ function writeCache(items: any[], total: number) {
 export default function WorkOrdersPage() {
     const { workCenters, itemIndex, authFetch, subscribeLiveEvents } = useData();
 
-    const envBase = process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:8000/api';
-    const API_BASE = envBase.endsWith('/api') ? envBase : `${envBase}/api`;
 
     const [filterStatus, setFilterStatus] = useState('');
     const [filterGroup, setFilterGroup] = useState('');

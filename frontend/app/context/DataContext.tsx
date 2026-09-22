@@ -6,9 +6,8 @@ import { useUser } from './UserContext';
 import { useToast } from '../components/shared/Toast';
 import { usePageState, useDebouncedSearch } from './usePaginatedList';
 import type { SortState } from '../components/shared/xpTheme';
+import { API_BASE } from '../components/shared/apiBase';
 
-const envBase = process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:8000/api';
-const API_BASE = envBase.endsWith('/api') ? envBase : `${envBase}/api`;
 
 // requestType -> the domain key views read via useData().loading.*
 const LOADING_KEY: Record<string, string> = {

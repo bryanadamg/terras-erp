@@ -4,13 +4,12 @@ import ItemMetadataView from '../components/settings/ItemMetadataView';
 import { useData } from '../context/DataContext';
 import { useConfirm } from '../context/ConfirmContext';
 import { useToast } from '../components/shared/Toast';
+import { API_BASE } from '../components/shared/apiBase';
 
 export default function ItemMetadataPage() {
     const { categories, uoms, attributes, refreshItemMetadata, authFetch } = useData();
     const { confirm } = useConfirm();
     const { showToast } = useToast();
-    const envBase = process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:8000/api';
-    const API_BASE = envBase.endsWith('/api') ? envBase : `${envBase}/api`;
 
     // Every handler below used to drop a non-2xx on the floor: a 400 ("UOM already
     // exists" — the name check is case-sensitive) or a 403 looked exactly like a

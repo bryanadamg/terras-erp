@@ -10,6 +10,7 @@ import { useToast } from '../components/shared/Toast';
 import { useUser } from '../context/UserContext';
 import { Tabs } from '../components/shared/Tabs';
 import { PageTitleBar, viewShellStyle } from '../components/shared/shellTheme';
+import { API_BASE } from '../components/shared/apiBase';
 
 const PAGE_SIZE = 50;
 
@@ -20,8 +21,6 @@ export default function ColorsPage() {
     const { hasPermission } = useUser();
     const searchParams = useSearchParams();
     const router = useRouter();
-    const envBase = process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:8000/api';
-    const API_BASE = envBase.endsWith('/api') ? envBase : `${envBase}/api`;
 
     // Two panels under one "Colors" home (discoverability): the Color Code catalog
     // (~30k library rows) and the small `Colors` variant list. Different data models —

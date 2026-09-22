@@ -17,8 +17,8 @@ import ModalWrapper from '../shared/ModalWrapper';
 import { Tabs } from '../shared/Tabs';
 const PickListPrintModal = dynamic(() => import('./PickListPrintModal'), { ssr: false });
 import TreeSelect, { buildLocationPickerTree } from '../shared/TreeSelect';
+import { API_BASE } from '../shared/apiBase';
 
-const API_BASE = (process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:8000/api').replace(/\/api$/, '') + '/api';
 
 // ── Classic XP theme primitives (match StockOnHandView / LocationsView) ──────
 // This view has no modern-theme branch yet (renders the classic look always,

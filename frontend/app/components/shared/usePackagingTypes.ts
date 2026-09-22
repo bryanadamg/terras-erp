@@ -2,10 +2,9 @@
 import { useState, useEffect } from 'react';
 import { useData } from '../../context/DataContext';
 import type { PackagingType } from './packingBoxes';
+import { API_BASE } from './apiBase';
 
 // Same normalization every other caller uses (see CLAUDE.md > API Base URL).
-const API_BASE = (process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:8000/api')
-    .replace(/\/api$/, '') + '/api';
 
 // The packaging master (Box S/M/L/XL, Plastic Bag, Custom) as every pack screen
 // needs it: the whole list, not a page of it. It is a lookup feed — the pack

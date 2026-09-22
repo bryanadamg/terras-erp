@@ -14,6 +14,7 @@ import {
     EffBar, CardGrid, MachineCard, GroupHeader, MonitorChipBar,
 } from './machineMonitor/MonitorParts';
 import { MonitorShell, MonitorGridSkeleton } from './machineMonitor/MonitorShell';
+import { API_BASE } from '../shared/apiBase';
 
 // Measurement accents come from the shared five-family palette (DESIGN.md's one
 // semantic layer) — never a per-view hex.
@@ -50,8 +51,6 @@ export default function WeavingMonitorView() {
     // Prep steps are floor dispatch decisions, same gate as starting a run.
     const canPrep = hasPermission('weaving_monitor.start');
 
-    const envBase = process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:8000/api';
-    const API_BASE = envBase.endsWith('/api') ? envBase : `${envBase}/api`;
 
     const [data, setData] = useState<any>(null);
     const [loading, setLoading] = useState(true);

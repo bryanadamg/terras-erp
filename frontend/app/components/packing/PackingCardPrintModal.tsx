@@ -7,8 +7,8 @@ import PrintModalShell, { PrintModalFooter } from '../shared/PrintModalShell';
 import { PRINT_FONT, PRINT_SERIF_FONT } from '../shared/xpTheme';
 import { orderBasePerAlt, baseToAlt, uomIsKg } from '../shared/altUnit';
 import { orderBoxSizeAlt } from '../shared/packingBoxes';
+import { API_BASE } from '../shared/apiBase';
 
-const API_BASE = (process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:8000/api').replace(/\/api$/, '') + '/api';
 
 /**
  * Packing order shop card — the floor document for a packing order, in the same

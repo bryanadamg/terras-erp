@@ -10,6 +10,7 @@ import Pager from '../shared/Pager';
 import { lvThead, lvSubTh, lvSubTd, lvSubTable, lvSubRow, lvSubCaption, ExpanderCell, LV_EXPANDER_COL_W, SortableTh, lvThSticky, lvZebra, TableEmpty } from '../shared/listViewTheme';
 import { EPS, HEALTH, healthOf, TERM } from './bookingStockTheme';
 import BookingStockInfoModal from './BookingStockInfoModal';
+import { STATIC_BASE } from '../shared/apiBase';
 
 // Booking Stock: per-item material availability across all ongoing MOs.
 //   net_free = on_hand + incoming - required
@@ -46,8 +47,7 @@ export default function BookingStockView() {
     const { authFetch, attributes = [] } = useData();
 
     const API_BASE = useMemo(() => {
-        const env = process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:8000/api';
-        return env.replace(/\/api$/, '') + '/api';
+        return STATIC_BASE.replace(/\/api$/, '') + '/api';
     }, []);
 
     const PAGE_SIZE = 50;

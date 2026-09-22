@@ -23,11 +23,10 @@ import { useTimezone } from '../../context/TimezoneContext';
 import { isMachineWC } from '../shared/workCenterTree';
 import DoseSheet, { fmtDose, doseUnitFor, type DosePreview } from '../shared/DoseSheet';
 import { speedPresets, presetFor } from '../shared/dyeingSpeed';
+import { API_BASE } from '../shared/apiBase';
 
 const modernFont = 'system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif';
 
-const API_BASE = (process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:8000/api')
-    .replace(/\/api$/, '') + '/api';
 
 const WO_PAGE_SIZE = 25;
 const STATUSES = ['PENDING', 'IN_PROGRESS', 'COMPLETED', 'CANCELLED'];

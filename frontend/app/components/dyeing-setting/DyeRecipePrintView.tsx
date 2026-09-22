@@ -5,8 +5,8 @@ import { useData } from '../../context/DataContext';
 import PrintModalShell, { PrintModalFooter } from '../shared/PrintModalShell';
 import { CODE_FONT, PRINT_FONT } from '../shared/xpTheme';
 import { useTimezone } from '../../context/TimezoneContext';
+import { STATIC_BASE } from '../shared/apiBase';
 
-const STATIC_BASE = (process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:8000/api').replace(/\/api$/, '');
 
 interface RecipeLine {
     id: string;

@@ -11,6 +11,7 @@ import { workCenterChipStyle, xpFont, colorHexFor, expandedRowFrame, CodeChip, C
 import Pager from '../shared/Pager';
 import { lvThead, LV_STICKY_THEAD, ExpanderCell, useRowSelection, RowCheckbox, SelectAllCheckbox, LV_CHECK_COL_W, LV_EXPANDER_COL_W, lvZebra, TableEmpty, Dash, lvSubTable, lvSubTd, lvSubRow, lvThBanded } from '../shared/listViewTheme';
 import { FilterChipBar, xpToolbar, ToolbarButton, SearchField, xpTitleBar, viewShellStyle } from '../shared/shellTheme';
+import { STATIC_BASE } from '../shared/apiBase';
 
 const BOM_SCOPE_FILTERS = [
     { value: 'root', label: 'Root BOMs' },
@@ -726,16 +727,16 @@ export default function BOMView({
                                         <div style={sep}>
                                             <div style={secHdr}>Design / Susunan Rumusan</div>
                                             {/\.(jpg|jpeg|png|gif|webp)$/i.test(displayBOM.design_file_url) ? (
-                                                <a href={`${(process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:8000').replace(/\/api$/, '')}${displayBOM.design_file_url}`} target="_blank" rel="noreferrer">
+                                                <a href={`${STATIC_BASE}${displayBOM.design_file_url}`} target="_blank" rel="noreferrer">
                                                     <img
-                                                        src={`${(process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:8000').replace(/\/api$/, '')}${displayBOM.design_file_url}`}
+                                                        src={`${STATIC_BASE}${displayBOM.design_file_url}`}
                                                         alt="Design"
                                                         style={{ maxWidth: '100%', maxHeight: 80, border: '1px solid #c0bdb5', display: 'block', objectFit: 'cover', cursor: 'pointer' }}
                                                     />
                                                 </a>
                                             ) : (
                                                 <a
-                                                    href={`${(process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:8000').replace(/\/api$/, '')}${displayBOM.design_file_url}`}
+                                                    href={`${STATIC_BASE}${displayBOM.design_file_url}`}
                                                     target="_blank" rel="noreferrer"
                                                     style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 10, color: '#0000cc', textDecoration: 'underline' }}
                                                 >

@@ -15,6 +15,7 @@ const MOPrintModal = dynamic(() => import('./MOPrintModal'), { ssr: false });
 import WorkOrderPanel, { PrintChip } from './WorkOrderPanel';
 import { resolveMoBom } from '../shared/moHelpers';
 import { useTimezone } from '../../context/TimezoneContext';
+import { API_BASE } from '../shared/apiBase';
 const WOCompletionModal = dynamic(() => import('./WOCompletionModal'), { ssr: false });
 
 // On the selected (blue) tree row a normal chip fill would fight the highlight, so
@@ -53,8 +54,6 @@ export default function ManufacturingOrdersTab({
     const { showToast } = useToast();
     const { authFetch, fetchData, loading: dataLoading } = useData();
     const { formatCustom: tzFmt } = useTimezone();
-    const envBase = process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:8000/api';
-    const API_BASE = envBase.endsWith('/api') ? envBase : `${envBase}/api`;
     const {
         getItemName, getItemCode, getItemUom, getItemEnds, uomBadgeStyle,
         getBOMCode, getLocationName, getWCName, getAttributeValueName, getAttributeValueHex, getBomSizeLabel,

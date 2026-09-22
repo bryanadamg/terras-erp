@@ -19,6 +19,7 @@ import { Tooltip } from '../shared/Tooltip';
 import { ShellWindow, ShellTitleBar, xpToolbar, SearchField, FilterChipBar, ToolbarCount, ToolbarButton } from '../shared/shellTheme';
 import { useRouter } from 'next/navigation';
 import { lvThead, SortableTh, lvThSticky, lvTdRuled, lvZebra } from '../shared/listViewTheme';
+import { API_BASE } from '../shared/apiBase';
 
 // One width per column, in render order, and the ONLY place they are declared —
 // the <colgroup> below feeds them to both themes at once (the modern one used to
@@ -101,8 +102,6 @@ export default function SalesOrderView({ items, attributes, boms, salesOrders, p
 
   // Lineage (SO → PR → MO → WO → beam) trace modal
   const router = useRouter();
-  const lineageEnvBase = process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:8000/api';
-  const LINEAGE_API_BASE = lineageEnvBase.endsWith('/api') ? lineageEnvBase : `${lineageEnvBase}/api`;
 
   // Both line-form pickers are server-side typeaheads that live *inside* the
   // create/edit modal, so they prime only once it opens. Priming on mount cost two
@@ -132,8 +131,8 @@ export default function SalesOrderView({ items, attributes, boms, salesOrders, p
     setLineageLoading(true);
     try {
       const [res, resvRes] = await Promise.all([
-        authFetch(`${LINEAGE_API_BASE}/sales-orders/${so.id}/lineage`),
-        authFetch(`${LINEAGE_API_BASE}/sales-orders/${so.id}/reservations`),
+        authFetch(`${API_BASE}/sales-orders/${so.id}/lineage`),
+        authFetch(`${API_BASE}/sales-orders/${so.id}/reservations`),
       ]);
       if (res.ok) setLineageData(await res.json());
       else showToast('Failed to load lineage', 'danger');
@@ -148,7 +147,7 @@ export default function SalesOrderView({ items, attributes, boms, salesOrders, p
   };
 
   const releaseReservation = async (soId: string, resId: string) => {
-    const res = await authFetch(`${LINEAGE_API_BASE}/sales-orders/${soId}/reservations/${resId}/release`, { method: 'POST' });
+    const res = await authFetch(`${API_BASE}/sales-orders/${soId}/reservations/${resId}/release`, { method: 'POST' });
     if (res.ok) {
       setLineageReservations(((await res.json()) || {}).reservations || []);
       showToast('Stock released back to the free pool', 'success');
@@ -975,7 +974,7 @@ export default function SalesOrderView({ items, attributes, boms, salesOrders, p
       const q = colorSearch.trim();
       const h = setTimeout(async () => {
           try {
-              const res = await authFetch(`${LINEAGE_API_BASE}/colors?search=${encodeURIComponent(q)}&size=20`);
+              const res = await authFetch(`${API_BASE}/colors?search=${encodeURIComponent(q)}&size=20`);
               if (res.ok) {
                   const data = await res.json();
                   setColorResults(Array.isArray(data) ? data : (data.items || []));
@@ -991,7 +990,7 @@ export default function SalesOrderView({ items, attributes, boms, salesOrders, p
       let cancelled = false;
       (async () => {
           try {
-              const res = await authFetch(`${LINEAGE_API_BASE}/lab-dips/pending-variants?item_id=${encodeURIComponent(newLine.item_id)}`);
+              const res = await authFetch(`${API_BASE}/lab-dips/pending-variants?item_id=${encodeURIComponent(newLine.item_id)}`);
               if (res.ok && !cancelled) setLabdipResults(await res.json());
           } catch { /* transient */ }
       })();
@@ -1306,7 +1305,7 @@ In stock ${fmtQty(f.baseAvailable)}${bu} · Shipped ${fmtQty(f.baseShipped)}${bu
           // Same filters AND sort as the screen, every matching row (not just this
           // page) — the shared builder keeps the printout in the order the user is
           // actually looking at.
-          const res = await authFetch(`${LINEAGE_API_BASE}/sales-orders?${soQuery(1, { uncapped: true })}`);
+          const res = await authFetch(`${API_BASE}/sales-orders?${soQuery(1, { uncapped: true })}`);
           if (res.ok) {
               const d = await res.json();
               setPrintOrders(d.items || []);

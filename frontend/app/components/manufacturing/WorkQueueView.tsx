@@ -18,6 +18,7 @@ import AttributeValueChips from '../shared/attributeChips';
 import { LotChip, LotChipRow } from '../shared/LotChips';
 import Pager from '../shared/Pager';
 import { fmtQtyCompact } from '../shared/format';
+import { API_BASE } from '../shared/apiBase';
 
 /**
  * Work-center dispatch queue — the PIC's screen.
@@ -32,8 +33,6 @@ import { fmtQtyCompact } from '../shared/format';
  * page and the scanner — this view answers "what can I start next?", nothing else.
  */
 
-const API_BASE = (process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:8000/api')
-    .replace(/\/api$/, '') + '/api';
 
 const PAGE_SIZE = 50;
 

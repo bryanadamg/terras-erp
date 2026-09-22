@@ -14,6 +14,7 @@ import {
 import SettingsPanel from './SettingsPanel';
 import ModalWrapper from '../shared/ModalWrapper';
 import { lvZebra } from '../shared/listViewTheme';
+import { STATIC_BASE } from '../shared/apiBase';
 
 const xpDangerBtn: React.CSSProperties = {
     fontFamily: xpFont, fontSize: 11, padding: '3px 20px',
@@ -30,7 +31,6 @@ const xpCancelBtn: React.CSSProperties = {
     background: 'linear-gradient(to bottom, #fff, #d4d0c8)', color: '#000',
 };
 
-const API_BASE = process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:8000/api';
 
 function prettyBytes(bytes: number | null): string {
     if (bytes == null) return '—';
@@ -145,7 +145,7 @@ export default function SettingsDatabaseTab() {
         setIsStatusLoading(true);
         try {
             const auth = { 'Authorization': `Bearer ${localStorage.getItem('access_token')}` };
-            const res = await fetch(`${API_BASE}/admin/database/status`, { headers: auth });
+            const res = await fetch(`${STATIC_BASE}/admin/database/status`, { headers: auth });
             setBeOnline(res.ok);
             if (res.ok) {
                 const data = await res.json();
@@ -156,7 +156,7 @@ export default function SettingsDatabaseTab() {
             // Live-event bus counters. Folded into the same refresh (and the same
             // 30s interval) so the panel below never disagrees with the tiles above.
             try {
-                const ev = await fetch(`${API_BASE}/health/events`, { headers: auth });
+                const ev = await fetch(`${STATIC_BASE}/health/events`, { headers: auth });
                 setEventStats(ev.ok ? await ev.json() : null);
             } catch { setEventStats(null); }
         } catch (e) {
@@ -175,7 +175,7 @@ export default function SettingsDatabaseTab() {
 
     const fetchDbInfo = useCallback(async () => {
         try {
-            const res = await fetch(`${API_BASE}/admin/database/current`, {
+            const res = await fetch(`${STATIC_BASE}/admin/database/current`, {
                 headers: { 'Authorization': `Bearer ${localStorage.getItem('access_token')}` }
             });
             if (res.ok) {
@@ -187,7 +187,7 @@ export default function SettingsDatabaseTab() {
 
     const fetchSnapshots = useCallback(async () => {
         try {
-            const res = await fetch(`${API_BASE}/admin/database/snapshots`, {
+            const res = await fetch(`${STATIC_BASE}/admin/database/snapshots`, {
                 headers: { 'Authorization': `Bearer ${localStorage.getItem('access_token')}` }
             });
             if (res.ok) setSnapshots(await res.json());
@@ -197,7 +197,7 @@ export default function SettingsDatabaseTab() {
     const fetchSchedule = useCallback(async () => {
         setIsScheduleLoading(true);
         try {
-            const res = await fetch(`${API_BASE}/admin/database/backup-schedule`, {
+            const res = await fetch(`${STATIC_BASE}/admin/database/backup-schedule`, {
                 headers: { 'Authorization': `Bearer ${localStorage.getItem('access_token')}` }
             });
             if (res.ok) {
@@ -225,7 +225,7 @@ export default function SettingsDatabaseTab() {
         e.preventDefault();
         setIsSavingSchedule(true);
         try {
-            const res = await fetch(`${API_BASE}/admin/database/backup-schedule`, {
+            const res = await fetch(`${STATIC_BASE}/admin/database/backup-schedule`, {
                 method: 'PUT',
                 headers: {
                     'Content-Type': 'application/json',
@@ -247,7 +247,7 @@ export default function SettingsDatabaseTab() {
     const handleRunNow = async () => {
         setIsRunningNow(true);
         try {
-            const res = await fetch(`${API_BASE}/admin/database/backup-schedule/run-now`, {
+            const res = await fetch(`${STATIC_BASE}/admin/database/backup-schedule/run-now`, {
                 method: 'POST',
                 headers: { 'Authorization': `Bearer ${localStorage.getItem('access_token')}` }
             });
@@ -268,7 +268,7 @@ export default function SettingsDatabaseTab() {
     const handleSwitchDatabase = async (url: string) => {
         setIsDbLoading(true);
         try {
-            const res = await fetch(`${API_BASE}/admin/database/switch`, {
+            const res = await fetch(`${STATIC_BASE}/admin/database/switch`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -298,7 +298,7 @@ export default function SettingsDatabaseTab() {
     const handleCreateSnapshot = async () => {
         setIsSnapshotLoading(true);
         try {
-            const res = await fetch(`${API_BASE}/admin/database/snapshots`, {
+            const res = await fetch(`${STATIC_BASE}/admin/database/snapshots`, {
                 method: 'POST',
                 headers: { 'Authorization': `Bearer ${localStorage.getItem('access_token')}` }
             });
@@ -312,7 +312,7 @@ export default function SettingsDatabaseTab() {
 
     const handleDownloadSnapshot = async (filename: string) => {
         try {
-            const res = await fetch(`${API_BASE}/admin/database/snapshots/${filename}/download`, {
+            const res = await fetch(`${STATIC_BASE}/admin/database/snapshots/${filename}/download`, {
                 headers: { 'Authorization': `Bearer ${localStorage.getItem('access_token')}` }
             });
             const blob = await res.blob();
@@ -334,7 +334,7 @@ export default function SettingsDatabaseTab() {
         while (misses < 40) {
             await new Promise(r => setTimeout(r, 700));
             try {
-                const res = await fetch(`${API_BASE}/admin/database/snapshots/restore-status`, {
+                const res = await fetch(`${STATIC_BASE}/admin/database/snapshots/restore-status`, {
                     headers: { 'Authorization': `Bearer ${localStorage.getItem('access_token')}` }
                 });
                 if (!res.ok) { misses++; continue; }
@@ -362,7 +362,7 @@ export default function SettingsDatabaseTab() {
         setRestoreElapsed(0);
         setRestore({ filename, status: 'running', phase: 'Starting', pct: 0 });
         try {
-            const res = await fetch(`${API_BASE}/admin/database/snapshots/${filename}/restore`, {
+            const res = await fetch(`${STATIC_BASE}/admin/database/snapshots/${filename}/restore`, {
                 method: 'POST',
                 headers: { 'Authorization': `Bearer ${localStorage.getItem('access_token')}` }
             });
@@ -416,7 +416,7 @@ export default function SettingsDatabaseTab() {
         formData.append('file', file);
         setIsSnapshotLoading(true);
         try {
-            const res = await fetch(`${API_BASE}/admin/database/snapshots/upload`, {
+            const res = await fetch(`${STATIC_BASE}/admin/database/snapshots/upload`, {
                 method: 'POST',
                 headers: { 'Authorization': `Bearer ${localStorage.getItem('access_token')}` },
                 body: formData
@@ -439,7 +439,7 @@ export default function SettingsDatabaseTab() {
         if (!ok) return;
         setIsSnapshotLoading(true);
         try {
-            const res = await fetch(`${API_BASE}/admin/database/snapshots/${encodeURIComponent(filename)}`, {
+            const res = await fetch(`${STATIC_BASE}/admin/database/snapshots/${encodeURIComponent(filename)}`, {
                 method: 'DELETE',
                 headers: { 'Authorization': `Bearer ${localStorage.getItem('access_token')}` }
             });
@@ -458,7 +458,7 @@ export default function SettingsDatabaseTab() {
         if (!wipePassword) return;
         setIsWiping(true);
         try {
-            const res = await fetch(`${API_BASE}/admin/database/wipe`, {
+            const res = await fetch(`${STATIC_BASE}/admin/database/wipe`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',

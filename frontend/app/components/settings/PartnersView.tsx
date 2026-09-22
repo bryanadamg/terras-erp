@@ -11,11 +11,11 @@ import { useData } from '../../context/DataContext';
 import { usePaginatedFetch } from '../../context/usePaginatedList';
 import { lvBtn, lvInput, lvTh, lvTd, lvLabel, lvThead, LV_STICKY_THEAD, useRowSelection, RowCheckbox, SelectAllCheckbox, lvZebra } from '../shared/listViewTheme';
 import { ShellWindow, ShellTitleBar, xpToolbar, SearchField, ToolbarCount, ToolbarButton } from '../shared/shellTheme';
+import { STATIC_BASE } from '../shared/apiBase';
 
 const PARTNERS_PAGE_SIZE = 20;
 
-const envBase = process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:8000/api';
-const API_BASE = envBase.replace(/\/api$/, '') + '/api';
+const API_BASE = STATIC_BASE.replace(/\/api$/, '') + '/api';
 
 interface Partner {
     id: string;

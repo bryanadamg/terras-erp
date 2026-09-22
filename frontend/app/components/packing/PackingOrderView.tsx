@@ -28,10 +28,10 @@ import {
 } from '../shared/packingBoxes';
 import { usePackagingTypes } from '../shared/usePackagingTypes';
 import { basePerAlt, altToBase, baseToAlt, orderBasePerAlt, formatAlt, lengthPerAlt } from '../shared/altUnit';
+import { API_BASE } from '../shared/apiBase';
 const PackingCardPrintModal = dynamic(() => import('./PackingCardPrintModal'), { ssr: false });
 const PackedUnitLabelPrintModal = dynamic(() => import('./PackedUnitLabelPrintModal'), { ssr: false });
 
-const API_BASE = (process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:8000/api').replace(/\/api$/, '') + '/api';
 
 // ── Classic XP theme primitives (match PickListView / StockOnHandView) ──────
 const xpFont = LV_XP_FONT;

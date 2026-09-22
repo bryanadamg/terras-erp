@@ -4,6 +4,7 @@ import { createPortal } from 'react-dom';
 import PrintModalShell, { PrintModalFooter } from '../shared/PrintModalShell';
 import { PRINT_FONT } from '../shared/xpTheme';
 import { useTimezone } from '../../context/TimezoneContext';
+import { STATIC_BASE } from '../shared/apiBase';
 
 interface SamplePrintSettings {
     preparedBy: string;
@@ -64,7 +65,6 @@ function SPKDocument({
     const { preparedBy, preparedRole, showSampleBox, showChecklist } = settings;
     const { formatCustom: tzFmt } = useTimezone();
 
-    const API_BASE = (process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:8000/api').replace(/\/api$/, '');
     const customerName = sample.customer_id ? getCustomerName(sample.customer_id) : '';
     const colors: any[] = sample.colors || [];
 
@@ -101,7 +101,7 @@ function SPKDocument({
             <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10, marginBottom: 8, paddingBottom: 6, borderBottom: '2px solid #000' }}>
                 <div style={{ flexShrink: 0 }}>
                     {companyProfile?.logo_url ? (
-                        <img src={`${API_BASE}${companyProfile.logo_url}`} alt="Logo"
+                        <img src={`${STATIC_BASE}${companyProfile.logo_url}`} alt="Logo"
                             style={{ maxHeight: 68, maxWidth: 92, objectFit: 'contain', display: 'block' }} />
                     ) : (
                         <div style={{ width: 76, height: 56, border: '2px solid #003080', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold', fontSize: 17, color: '#003080' }}>BIE</div>
@@ -199,7 +199,7 @@ function SPKDocument({
                         )}
                         {sample.completion_image_url && (
                             <img
-                                src={`${API_BASE}${sample.completion_image_url}`}
+                                src={`${STATIC_BASE}${sample.completion_image_url}`}
                                 alt="Contoh"
                                 style={{ maxWidth: '100%', maxHeight: 140, objectFit: 'contain', display: 'block' }}
                             />

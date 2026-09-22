@@ -18,9 +18,9 @@ import Pager from '../shared/Pager';
 import ModalWrapper from '../shared/ModalWrapper';
 import { LotChip, LotChips, LotChipRow, lotSizeLabel, lotComboLabel, lotColorLabel } from '../shared/LotChips';
 import { qtyFmt, toNum as num } from '../shared/format';
+import { API_BASE } from '../shared/apiBase';
 const SuratJalanPrintModal = dynamic(() => import('./SuratJalanPrintModal'), { ssr: false });
 
-const API_BASE = (process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:8000/api').replace(/\/api$/, '') + '/api';
 
 // Classic-XP primitives, same set PickListView uses — the two pages are read by
 // the same warehouse staff minutes apart and must not drift apart visually.

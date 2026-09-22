@@ -7,9 +7,9 @@ import { useToast } from '../shared/Toast';
 import PrintModalShell, { PrintModalFooter } from '../shared/PrintModalShell';
 import { xpFont as font, xpInput as xpInputBase, PRINT_FONT } from '../shared/xpTheme';
 import { qtyFmt } from '../shared/format';
+import { API_BASE } from '../shared/apiBase';
 
 // Same convention as DispatchView.tsx: always ends in `/api`.
-const API_BASE = (process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:8000/api').replace(/\/api$/, '') + '/api';
 
 // Perincian spreads each group's cartons across fixed columns; a group with more
 // cartons than this spills onto continuation rows rather than squeezing the grid.

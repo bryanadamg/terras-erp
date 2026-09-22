@@ -7,6 +7,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { useToast } from '../components/shared/Toast';
 import { useConfirm } from '../context/ConfirmContext';
 import { colorLabel } from '../components/shared/xpTheme';
+import { API_BASE } from '../components/shared/apiBase';
 
 export default function SalesOrdersPage() {
     const { items, attributes, salesOrders, partners, bomsLookup: boms, refreshSalesOrders, authFetch, filters: { setSoSearch } } = useData();
@@ -28,8 +29,6 @@ export default function SalesOrdersPage() {
         }
     }, [searchParams, router, setSoSearch]);
 
-    const envBase = process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:8000/api';
-    const API_BASE = envBase.endsWith('/api') ? envBase : `${envBase}/api`;
 
     // The SO item + combo pickers live inside SalesOrderView's create/edit modal and
     // are primed by it only once that modal opens — see `pickersActive` there. They
