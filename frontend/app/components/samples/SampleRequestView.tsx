@@ -40,6 +40,13 @@ const CATEGORY_TONE: Record<string, { color: string; background: string; borderC
     're sample': VARIANT_TONE.pending,
     'yardage': VARIANT_TONE.qty,
 };
+// Long customer names and article codes used to wrap to four lines while their
+// neighbours were one, so row height swung 30px→90px down the page. Clamp the two
+// free-text columns at two lines and let the hover carry the rest.
+const clamp2: React.CSSProperties = {
+    display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' as any,
+    overflow: 'hidden', wordBreak: 'break-word',
+};
 const categoryTone = (label: string) => CATEGORY_TONE[label.toLowerCase()] ?? REF_TONES.category;
 const categoryLabel = (v?: string) =>
     (v ? (LEGACY_CATEGORY_LABELS[v] ?? v) : DEFAULT_CATEGORY_LABEL);
@@ -1143,7 +1150,7 @@ export default function SampleRequestView({ samples, customers, onCreateSample, 
                // `overflow: auto` (not overflowY) with no inner `.table-responsive`: a nested
                // overflow wrapper is its own scroll container, and a sticky header inside one
                // pins to a box that never scrolls vertically -- i.e. not at all.
-               style={{ flex: 1, minHeight: 0, overflow: 'auto', scrollbarGutter: 'stable' }}
+               style={{ flex: 1, minHeight: 0, overflow: 'auto', scrollbarGutter: 'stable', paddingLeft: 5 }}
            >
                <div>
                    <table
@@ -1154,11 +1161,11 @@ export default function SampleRequestView({ samples, customers, onCreateSample, 
                                <th style={{ ...xpThCell, width: LV_EXPANDER_COL_W }} />
                                <th style={{ ...xpThCell, width: '130px' }}>Request Code</th>
                                <th style={{ ...xpThCell, width: '90px' }}>Category</th>
-                               <th style={{ ...xpThCell, width: '110px' }}>Customer</th>
+                               <th style={{ ...xpThCell, width: '150px' }}>Customer</th>
                                <th style={xpThCell}>Article / Project</th>
                                <th style={xpThCell}>Specs</th>
                                <th style={{ ...xpThCell, width: '100px' }}>Status</th>
-                               <th style={{ ...xpThCell, width: '90px' }}>Colors</th>
+                               <th style={{ ...xpThCell, width: '70px' }}>Colors</th>
                                <th style={{ ...xpThCell, textAlign: 'right' as const, borderRight: 'none', width: '80px' }}>Actions</th>
                            </tr>
                        </thead>
@@ -1209,7 +1216,8 @@ export default function SampleRequestView({ samples, customers, onCreateSample, 
                                    </td>
                                    <td style={tdBase}>
                                        {s.customer_id ? (
-                                           <span style={{ fontFamily: xpFont, fontSize: '11px' }}>
+                                           <span style={{ fontFamily: xpFont, fontSize: '11px', ...clamp2 }}
+                                               title={getCustomerName(s.customer_id)}>
                                                {getCustomerName(s.customer_id)}
                                            </span>
                                        ) : (
@@ -1221,12 +1229,13 @@ export default function SampleRequestView({ samples, customers, onCreateSample, 
                                    {/* Article / Project */}
                                    <td style={tdBase}>
                                        {s.customer_article_code && (
-                                           <div style={{ fontWeight: 'bold', fontSize: '11px' }}>
+                                           <div style={{ fontWeight: 'bold', fontSize: '11px', ...clamp2 }}
+                                               title={s.customer_article_code}>
                                                {s.customer_article_code}
                                            </div>
                                        )}
                                        {s.project && (
-                                           <div style={{ fontSize: '9px', color: '#555' }}>
+                                           <div style={{ fontSize: '9px', color: '#555', ...clamp2 }} title={s.project}>
                                                {s.project}
                                            </div>
                                        )}
