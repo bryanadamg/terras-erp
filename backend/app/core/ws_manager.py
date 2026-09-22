@@ -265,3 +265,25 @@ class ConnectionManager:
         return len(sent)
 
 manager = ConnectionManager()
+
+
+def broadcast_sync(message: dict) -> None:
+    """Broadcast from a SYNC endpoint.
+
+    The master-data routers (attributes, uoms, locations, routing, partners) are
+    `def` + `Session`, so they cannot await `manager.broadcast`. FastAPI runs a
+    sync endpoint in a worker thread bound to the running event loop, which is
+    exactly what `anyio.from_thread.run` needs — the coroutine executes on the
+    loop and this thread waits for it.
+
+    Best-effort by design: a live event is a refresh hint, and a mutation that
+    already committed must not fail because the bus was unreachable. Outside a
+    worker thread (a script, a startup task) there is no loop to borrow and the
+    event is logged and dropped.
+    """
+    import anyio.from_thread
+
+    try:
+        anyio.from_thread.run(manager.broadcast, message)
+    except Exception as e:
+        logger.warning("Sync broadcast of %s dropped: %s", message.get("type"), e)

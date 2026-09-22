@@ -20,7 +20,8 @@ APP_DIR = pathlib.Path(app.__file__).parent
 
 
 def _broadcast_calls():
-    """Every `*.broadcast(...)` call in the app package.
+    """Every broadcast call in the app package: `*.broadcast(...)` and the sync
+    bridge `broadcast_sync(...)` the master-data routers use.
 
     Returns (types, dynamic) where `types` maps an event type string to the call
     sites that emit it, and `dynamic` lists sites whose payload this test could
@@ -36,7 +37,12 @@ def _broadcast_calls():
             if not isinstance(node, ast.Call):
                 continue
             func = node.func
-            if not (isinstance(func, ast.Attribute) and func.attr == "broadcast"):
+            is_async = isinstance(func, ast.Attribute) and func.attr == "broadcast"
+            # `broadcast_sync(...)` is a plain name, not an attribute: the sync
+            # master-data routers cannot await the manager, and their events are
+            # just as undeliverable if the type goes unregistered.
+            is_sync = isinstance(func, ast.Name) and func.id == "broadcast_sync"
+            if not (is_async or is_sync):
                 continue
             where = f"{path.relative_to(APP_DIR.parent)}:{node.lineno}"
 

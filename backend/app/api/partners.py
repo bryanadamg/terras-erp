@@ -6,6 +6,7 @@ from app.db.session import get_db
 from app.schemas import PartnerCreate, PartnerResponse, PartnerUpdate, PaginatedPartnerResponse
 from app.models.partner import Partner
 from app.models.audit import AuditLog
+from app.core.ws_manager import broadcast_sync
 from app.api.auth import get_current_user, require_permission, require_any_permission, user_has_permission
 from app.core.pagination import PageParams, PageWindow
 from app.models.auth import User
@@ -34,6 +35,7 @@ def create_partner(payload: PartnerCreate, db: Session = Depends(get_db), curren
     db.refresh(partner)
     db.add(AuditLog(user_id=current_user.id, action="CREATE", entity_type="partner", entity_id=str(partner.id), details=f"Created partner {partner.name}"))
     db.commit()
+    broadcast_sync({"type": "MASTER_DATA_UPDATE", "domain": "partners"})
     return partner
 
 @router.get("", response_model=PaginatedPartnerResponse)
@@ -122,6 +124,7 @@ def update_partner(partner_id: uuid.UUID, payload: PartnerUpdate, db: Session = 
 
     db.add(AuditLog(user_id=current_user.id, action="UPDATE", entity_type="partner", entity_id=str(partner.id), details=f"Updated partner {partner.name}"))
     db.commit()
+    broadcast_sync({"type": "MASTER_DATA_UPDATE", "domain": "partners"})
     db.refresh(partner)
     return partner
 
@@ -145,6 +148,7 @@ def delete_partner(partner_id: uuid.UUID, db: Session = Depends(get_db), current
         ))
         db.delete(partner)
         db.commit()
+        broadcast_sync({"type": "MASTER_DATA_UPDATE", "domain": "partners"})
     except IntegrityError:
         db.rollback()
         raise HTTPException(status_code=409, detail=f"Cannot delete '{partner.name}': they are referenced by existing records")

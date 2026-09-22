@@ -42,7 +42,7 @@ export interface ItemIndexEntry {
 // Kinds of debounced live (WebSocket) event a page can be told about. One alias
 // so adding a kind can't leave the queue, the buffer, and the subscriber
 // signature disagreeing — which is exactly what a bare repeated union did.
-export type LiveKind = 'production' | 'kpi' | 'stock' | 'weaving' | 'dyeing' | 'bom' | 'sales';
+export type LiveKind = 'production' | 'kpi' | 'stock' | 'weaving' | 'dyeing' | 'bom' | 'sales' | 'metadata';
 
 /**
  * Every event type the backend can broadcast. `EVENT_PERMISSIONS` in
@@ -73,6 +73,7 @@ export type LiveEventType =
     | 'COLOR_UPDATE'
     | 'COMBO_UPDATE'
     | 'KPI_UPDATE'
+    | 'MASTER_DATA_UPDATE'
     | 'PRINT_TEMPLATE_UPDATE';
 
 /**
@@ -1115,6 +1116,10 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
     useEffect(() => { refreshDashboardKPIsRef.current = refreshDashboardKPIs; }, [refreshDashboardKPIs]);
     const refreshPrintTemplatesRef = useRef(refreshPrintTemplates);
     useEffect(() => { refreshPrintTemplatesRef.current = refreshPrintTemplates; }, [refreshPrintTemplates]);
+    const refreshItemMetadataRef = useRef(refreshItemMetadata);
+    useEffect(() => { refreshItemMetadataRef.current = refreshItemMetadata; }, [refreshItemMetadata]);
+    const refreshRoutingRef = useRef(refreshRouting);
+    useEffect(() => { refreshRoutingRef.current = refreshRouting; }, [refreshRouting]);
     // Held in a ref, not read from the closure: hasPermission is rebuilt on every
     // UserContext render, and putting it in the socket effect's deps would tear
     // down and reopen the WebSocket on unrelated renders.
@@ -1198,13 +1203,14 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
         // fan-out) collapses into ONE refetch + ONE toast per 800ms window instead
         // of one heavy refetch per message. Each of those refetches used to pull
         // items + the full nested /boms + all-level MOs + PRs — a storm.
-        const pending = { kinds: new Set<LiveKind>(), codes: new Map<string, string>() };
+        const pending = { kinds: new Set<LiveKind>(), codes: new Map<string, string>(), domains: new Set<string>() };
 
         const flushLive = () => {
             flushTimer = null;
             const kinds = new Set(pending.kinds);
             const codes = new Map(pending.codes);
-            pending.kinds.clear(); pending.codes.clear();
+            const domains = new Set(pending.domains);
+            pending.kinds.clear(); pending.codes.clear(); pending.domains.clear();
             const path = typeof window !== 'undefined' ? window.location.pathname : '';
             const onDashboard = path === '/' || path.startsWith('/dashboard');
             // Route-aware refresh: only re-pull what the CURRENT page reads. Every
@@ -1267,6 +1273,16 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
                 if (routeKinds.has('bom')) fetchDataRef.current(path.replace(/^\//, ''));
                 notifyLiveSubsRef.current('bom');
             }
+            if (kinds.has('metadata')) {
+                // Master data: no route gate. These rows are the dropdowns and the
+                // name lookups on nearly every form, so a screen that shows none of
+                // them is rare enough not to be worth a routing table — but the
+                // domain IS honoured, so renaming a colour doesn't re-pull looms.
+                if (domains.has('attributes') || domains.has('uoms')) refreshItemMetadataRef.current();
+                if (domains.has('routing') || domains.has('locations')) refreshRoutingRef.current();
+                if (domains.has('partners')) fetchDataRef.current('customers');
+                notifyLiveSubsRef.current('metadata');
+            }
             if (kinds.has('sales')) {
                 // SO status is derived from packing/dispatch events that happen on
                 // other pages (and other people's devices), so an SO row can change
@@ -1288,8 +1304,9 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
         // what the CURRENT page reads. No codes are queued: a resync is not news
         // about any one order and must never toast.
         const resyncAfterReconnect = () => {
-            (['production', 'kpi', 'stock', 'weaving', 'dyeing', 'bom', 'sales'] as LiveKind[])
+            (['production', 'kpi', 'stock', 'weaving', 'dyeing', 'bom', 'sales', 'metadata'] as LiveKind[])
                 .forEach(k => pending.kinds.add(k));
+            ['attributes', 'uoms', 'routing', 'locations', 'partners'].forEach(d => pending.domains.add(d));
             if (flushTimer) clearTimeout(flushTimer);
             flushTimer = setTimeout(flushLive, 0);
         };
@@ -1416,6 +1433,12 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
                             break;
                         case 'DYEING_RUN_UPDATE':
                             queueLive('dyeing');
+                            break;
+                        case 'MASTER_DATA_UPDATE':
+                            // Someone else added a unit / attribute value / location /
+                            // work center / partner. Carries the domain, nothing else.
+                            if (data.domain) pending.domains.add(data.domain);
+                            queueLive('metadata');
                             break;
                         default:
                             break;

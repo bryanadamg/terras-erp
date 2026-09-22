@@ -5,6 +5,7 @@ from app.models.uom import UOM, UOMFactor
 from app.models.auth import User
 from app.models.audit import AuditLog
 from app.schemas import UOMCreate, UOMResponse, UOMFactorCreate, UOMFactorResponse
+from app.core.ws_manager import broadcast_sync
 from app.api.auth import get_current_user, require_permission
 
 router = APIRouter()
@@ -30,6 +31,7 @@ def create_uom(payload: UOMCreate, db: Session = Depends(get_db), current_user: 
     db.refresh(uom)
     db.add(AuditLog(user_id=current_user.id, action="CREATE", entity_type="uom", entity_id=str(uom.id), details=f"Created UOM {uom.name}"))
     db.commit()
+    broadcast_sync({"type": "MASTER_DATA_UPDATE", "domain": "uoms"})
     return uom
 
 @router.get("/uoms", response_model=list[UOMResponse])
@@ -60,6 +62,7 @@ def delete_uom(uom_id: str, db: Session = Depends(get_db), current_user: User = 
     db.add(AuditLog(user_id=current_user.id, action="DELETE", entity_type="uom", entity_id=str(uom.id), details=f"Deleted UOM {uom.name}"))
     db.delete(uom)
     db.commit()
+    broadcast_sync({"type": "MASTER_DATA_UPDATE", "domain": "uoms"})
     return {"status": "success", "message": "UOM deleted"}
 
 @router.post("/uoms/{from_uom_id}/factors", response_model=UOMFactorResponse)
@@ -76,6 +79,7 @@ def create_uom_factor(from_uom_id: str, payload: UOMFactorCreate, db: Session = 
     db.refresh(factor)
     db.add(AuditLog(user_id=current_user.id, action="CREATE", entity_type="uom_factor", entity_id=str(factor.id), details=f"Created UOM factor {from_uom.name} -> {to_uom.name}"))
     db.commit()
+    broadcast_sync({"type": "MASTER_DATA_UPDATE", "domain": "uoms"})
     # reload relationships
     factor.from_uom = from_uom
     factor.to_uom = to_uom
@@ -89,4 +93,5 @@ def delete_uom_factor(from_uom_id: str, factor_id: str, db: Session = Depends(ge
     db.add(AuditLog(user_id=current_user.id, action="DELETE", entity_type="uom_factor", entity_id=str(factor.id), details="Deleted UOM factor"))
     db.delete(factor)
     db.commit()
+    broadcast_sync({"type": "MASTER_DATA_UPDATE", "domain": "uoms"})
     return {"status": "success", "message": "Factor deleted"}
