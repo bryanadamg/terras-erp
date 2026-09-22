@@ -101,13 +101,30 @@ function packProgress(po: any, it?: any) {
         ? (num(po.qty2) > 0 ? num(po.qty2) : baseToAlt(target, altFactor))
         : null;
     const pAlt = hasAlt && po.qty_packed_alt != null ? num(po.qty_packed_alt) : null;
-    const basis = tAlt !== null && pAlt !== null ? { done: pAlt, goal: tAlt } : { done: packed, goal: target };
+    // An order holding lots (`Batch.locked_packing_order_id` — claimed off the
+    // Quarantine Packing desk or ticked on the New Packing Order form) must pack
+    // that pile OUT: nothing else may draw from it and the order cannot close
+    // while stock is still on it, whatever `qty_target` said. So the base bar
+    // measures the pile, not the plan: everything that has left the lots — packed
+    // or scrapped, the two ways material leaves — over what they still hold plus
+    // that. Both halves are live, read exactly as the close gate reads them
+    // (`packing_service.undrained_locked_lots`), which is what makes a full bar
+    // and a closable order the same thing. No held lots: unchanged, packed
+    // against target.
+    const holdsLots = num(po.held_lot_count) > 0;
+    const drawn = packed + num(po.qty_rejected);
+    const baseDone = holdsLots ? drawn : packed;
+    const baseGoal = holdsLots ? drawn + num(po.held_lot_open_qty) : target;
+    const basis = tAlt !== null && pAlt !== null ? { done: pAlt, goal: tAlt } : { done: baseDone, goal: baseGoal };
     const pctOf = (done: number, goal: number) =>
         goal > 0 ? Math.min(100, Math.round((done / goal) * 100)) : 0;
     return {
         target,
         packed,
         remaining: Math.max(0, target - packed),
+        holdsLots,
+        baseDone,
+        baseGoal,
         hasAlt,
         altUom,
         altFactor,
@@ -127,7 +144,7 @@ function packProgress(po: any, it?: any) {
         // `pctAlt` is null when the order has no alt unit — then `pctBase` is
         // the only bar and `pct` equals it.
         pctAlt: tAlt !== null && pAlt !== null ? pctOf(pAlt, tAlt) : null,
-        pctBase: pctOf(packed, target),
+        pctBase: pctOf(baseDone, baseGoal),
     };
 }
 
@@ -155,7 +172,7 @@ function PackProgressBars({ prog, uom, height = 6, fontSize = 9, hatched = false
      *  empty, which is honest: there is no piece count to be at 40% of. */
     only?: 'alt' | 'base';
 }) {
-    const rows: { key: string; pct: number; done: string; goal: string; unit: string }[] = [];
+    const rows: { key: string; pct: number; done: string; goal: string; unit: string; title?: string }[] = [];
     if (prog.pctAlt !== null) {
         rows.push({
             key: 'alt',
@@ -168,9 +185,14 @@ function PackProgressBars({ prog, uom, height = 6, fontSize = 9, hatched = false
     rows.push({
         key: 'base',
         pct: prog.pctBase,
-        done: prog.packed.toFixed(2),
-        goal: prog.target.toFixed(2),
+        // On a held-lot order these are the pile, not the plan — see packProgress.
+        done: prog.baseDone.toFixed(2),
+        goal: prog.baseGoal.toFixed(2),
         unit: uom,
+        title: prog.holdsLots
+            ? `Held lots: ${prog.baseDone.toFixed(2)} of ${prog.baseGoal.toFixed(2)} ${uom} packed or scrapped out. `
+              + `The order cannot be closed until the pile is gone, whatever its ${prog.target.toFixed(2)} ${uom} target says.`
+            : undefined,
     });
     const shown = only ? rows.filter(r => r.key === only) : rows;
     if (!shown.length) return <span style={{ color: '#bbb' }}>—</span>;
@@ -181,7 +203,7 @@ function PackProgressBars({ prog, uom, height = 6, fontSize = 9, hatched = false
                    130px column a trailing "100% · 2,880 / 2,880 Pcs" left the track
                    a ~30px stub that read as noise rather than as progress. Stacked,
                    the bar spans the whole cell and the numbers still line up. */
-                <div key={r.key} style={{ minWidth: 0 }}>
+                <div key={r.key} style={{ minWidth: 0 }} title={r.title}>
                     <div style={{
                         fontFamily: xpFont, fontSize, whiteSpace: 'nowrap',
                         overflow: 'hidden', textOverflow: 'ellipsis',

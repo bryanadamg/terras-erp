@@ -3711,6 +3711,15 @@ class PackingOrderResponse(BaseModel):
     # Scrap rolled up across completions (QC-rejected cartons)
     qty_rejected: float = 0
     package_count_rejected: int = 0
+    # Lots this order holds outright (`Batch.locked_packing_order_id`), and what is
+    # still on them at the pack-from location. Live figures, read the same way the
+    # close gate reads them (`packing_service.undrained_locked_lots`): while the
+    # order holds lots, the pile it must pack out is
+    # `qty_packed + qty_rejected + held_lot_open_qty`, and the base progress bar
+    # measures against that rather than `qty_target` — a held lot has to be
+    # depleted whatever the order was planned for.
+    held_lot_count: int = 0
+    held_lot_open_qty: float = 0
     pack_size: float | None = None
     # Box size in the alt selling unit, and the one the pack screens split by when
     # it is set — `pack_size` is its weight estimate. See PackingOrder.pack_size_alt.
