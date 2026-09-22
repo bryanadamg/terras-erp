@@ -124,12 +124,17 @@ export default function SampleRequestView({ samples, customers, onCreateSample, 
               style={{ maxHeight: 40, maxWidth: 64, border: '1px solid #b0a898', cursor: 'pointer', display: 'block', margin: '0 auto' }} />
       );
   };
-  const toggleExpand = (id: string) =>
+  const toggleExpand = (id: string, isUnread?: boolean) => {
+      const opening = !expandedIds.has(id);
       setExpandedIds(prev => {
           const next = new Set(prev);
-          next.has(id) ? next.delete(id) : next.add(id);
+          opening ? next.add(id) : next.delete(id);
           return next;
       });
+      // Opening the row IS the read gesture. Without this the dot is the only way
+      // to clear one, nobody clicks it, and every row stays unread forever.
+      if (opening && isUnread) onMarkRead?.(id);
+  };
   const [pendingColorName, setPendingColorName] = useState('');
   const [pendingColorIsRepeat, setPendingColorIsRepeat] = useState(false);
 
@@ -1131,7 +1136,7 @@ export default function SampleRequestView({ samples, customers, onCreateSample, 
                                <tr
                                    key={`${s.id}-row`}
                                    ref={s.id === highlightId ? highlightRef : undefined}
-                                   onClick={() => toggleExpand(s.id)}
+                                   onClick={() => toggleExpand(s.id, s.is_unread)}
                                    style={{
                                        background: s.id === highlightId ? rowStateBg('highlighted')
                                            : expandedIds.has(s.id) ? rowStateBg('expanded')
@@ -1142,7 +1147,7 @@ export default function SampleRequestView({ samples, customers, onCreateSample, 
                                        outline: s.id === highlightId ? '2px solid #f0a000' : undefined,
                                    }}
                                >
-                                   <ExpanderCell expanded={expandedIds.has(s.id)} onToggle={() => toggleExpand(s.id)} label="sample detail"
+                                   <ExpanderCell expanded={expandedIds.has(s.id)} onToggle={() => toggleExpand(s.id, s.is_unread)} label="sample detail"
                                        tdStyle={tdBase} />
                                    <td style={tdBase}>
                                        <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
