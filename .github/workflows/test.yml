@@ -33,6 +33,8 @@ jobs:
     env:
       DATABASE_URL: postgresql+psycopg2://erp:erp@localhost:5432/erp
       REDIS_URL: redis://localhost:6379/0
+      # Throwaway, CI-only: the app refuses to start without a signing key.
+      SECRET_KEY: ci-test-signing-key-not-used-anywhere-else
     steps:
       - uses: actions/checkout@v4
 
