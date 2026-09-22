@@ -41,20 +41,6 @@ const REJECT_REASONS = [
     'Other',
 ];
 
-const statusStyle = (status: string): React.CSSProperties => {
-    const map: Record<string, { bg: string; border: string; color: string }> = {
-        APPROVED:    { bg: '#d4edda', border: '#27713a', color: '#0c3a1a' },
-        REJECTED:    { bg: '#f8d7da', border: '#a01a1a', color: '#4a0000' },
-        SUBMITTED:   { bg: '#dce4f5', border: '#3a5faa', color: '#0d2a6e' },
-        RESUBMIT:    { bg: '#fff3cd', border: '#b8860b', color: '#3e2000' },
-        IN_PROGRESS: { bg: '#fff3cd', border: '#b8860b', color: '#3e2000' },
-        PENDING:     { bg: '#e8e8e8', border: '#7a7a7a', color: '#111' },
-    };
-    const s = map[status] || { bg: '#e8e8e8', border: '#7a7a7a', color: '#111' };
-    return { background: s.bg, border: `1px solid ${s.border}`, color: s.color, padding: '1px 5px', fontSize: 9, fontFamily: xpFont, fontWeight: 'bold', whiteSpace: 'nowrap' as const };
-    // Modern: semantic colors preserved, softer bg + matching text/border, rounded 6px.
-};
-
 const today = () => new Date().toISOString().split('T')[0];
 const LABDIP_PAGE_SIZE = 20;
 
@@ -590,7 +576,7 @@ export default function LabDipRequestView({
                                             })()}
                                         </td>
                                         <td style={lvTdRuled()}><span style={{ fontSize: 10}}>{r.request_type}</span></td>
-                                        <td style={lvTdRuled()}><span style={statusStyle(r.status)}>{r.status}</span></td>
+                                        <td style={lvTdRuled()}><StatusChip status={r.status} /></td>
                                         <td style={lvTdRuled()}>
                                             {total > 0 ? (
                                                 <span style={{ fontSize: 11}}>

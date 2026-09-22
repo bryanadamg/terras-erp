@@ -168,6 +168,10 @@ export const STATUS_FAMILY: Record<string, StatusFamily> = {
     // in flight (blue).
     PAUSED: 'amber',
     CONFIRMED: 'blue', IN_PROGRESS: 'blue', READY: 'blue', SENT: 'blue',
+    // Lab dip rounds: SUBMITTED is with the customer (in flight, blue);
+    // RESUBMIT is back on the lab's bench awaiting another dip — open work
+    // waiting on us, which is what amber means everywhere else here.
+    SUBMITTED: 'blue', RESUBMIT: 'amber',
     IN_PRODUCTION: 'blue', STAGED: 'blue',
     // Loom prep walk (weaving monitor): STAGED (warp up) → DRAW_IN → TUNING → the
     // run itself. All three are prep-in-flight, so all three read blue; IDLE falls
