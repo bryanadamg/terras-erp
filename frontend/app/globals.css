@@ -1666,3 +1666,23 @@ textarea {
 @media (prefers-reduced-motion: reduce) {
   .sidebar-id-card:hover::after { animation: none; }
 }
+
+/* ── READ / UNREAD DOT (components/samples/SampleRequestView.tsx) ─────────────
+   A 10px circle sharing a cell with two real buttons, so hover has to announce
+   "this is a control" without nudging the row. Same rule as the BUTTONS and
+   AVATAR blocks above: transform and filter only. The dot paints its own inline
+   XP bevel (background, border, box-shadow) and an inline value always beats a
+   CSS one, so a hover that recoloured it would silently do nothing. */
+.read-dot {
+  transition: transform 120ms cubic-bezier(0.22, 0.85, 0.3, 1), filter 120ms ease-out;
+}
+.read-dot:hover { transform: scale(1.45); }
+/* The glow is worth it only on the unread state — that is the one the user is
+   being asked to clear. A lit halo on the spent grey dot would advertise the
+   rarer "mark this unread again" as if it were the main action. */
+.read-dot-unread:hover { filter: drop-shadow(0 0 3px rgba(28, 91, 200, 0.7)) saturate(1.1); }
+.read-dot:active { transform: scale(1.05); }
+@media (prefers-reduced-motion: reduce) {
+  .read-dot { transition: none; }
+  .read-dot:hover { transform: none; }
+}

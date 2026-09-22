@@ -15,6 +15,24 @@ on `main`:
 
 ## [Unreleased]
 
+## [0.33.0] - 2026-09-22
+
+### Added
+- Dashboard leads with what's owed, when it's due, and how much can ship, ahead of the KPI tiles
+- Database snapshots now carry uploaded images and PDFs (logos, BOM files, sample photos), not just the database dump
+- Restoring a snapshot shows live progress and its outcome instead of an endless spinner, and any admin can watch a restore in progress, not only the one who started it
+- A packing order can hold its own hand-picked lots instead of only running against an MO; its kg progress is measured against those held lots, scrap is stacked on the progress bar in red, and the order delivers automatically once every held lot is packed out
+- The samples list marks unread requests with a rail and can be filtered to unread only; a request is marked read when its row is opened and stays read for whoever last changed it
+- Sample variant chips show the attribute's colour swatch and share the same colour/combo palette as the rest of the app
+
+### Changed
+- Dashboard panels rebuilt on the shared list and tooltip primitives
+- Boot shell matches the real page chrome and fills the viewport
+- Sample category renders as a toned chip; list rows have a steadier height and more left-edge room; the read/unread dot responds to hover
+
+### Fixed
+- A weighed carton's derived count keeps two decimals
+
 ## [0.32.0] - 2026-09-21
 
 ### Added

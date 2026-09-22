@@ -13,6 +13,10 @@ const API_BASE = envBase.endsWith('/api') ? envBase : `${envBase}/api`;
 // requestType -> the domain key views read via useData().loading.*
 const LOADING_KEY: Record<string, string> = {
     items: 'items', boms: 'boms', 'manufacturing-orders': 'manufacturingOrders',
+    // The dashboard pulls the same domain under its own slim request type; without
+    // this it is the one list in the app with no loading flag, so its tables flash
+    // "no data" before the first response lands.
+    'manufacturing-orders-slim': 'manufacturingOrders',
     'production-runs': 'productionRuns', balance: 'stockBalance', 'stock-ledger': 'stockEntries',
     'sales-orders': 'salesOrders', 'purchase-orders': 'purchaseOrders', samples: 'samples',
     'audit-logs': 'auditLogs', partners: 'partners',
@@ -155,6 +159,8 @@ export interface SampleQuery {
     createdTo?: string;
     /** Deep-link target: the server returns whichever page contains this row. */
     focusId?: string;
+    /** Narrow to rows this user hasn't read since their last edit. */
+    unreadOnly?: boolean;
 }
 
 export interface SamplesMeta {
@@ -193,6 +199,9 @@ interface DataContextType {
     partners: any[];
     dashboardKPIs: any;
     dashboardSummary: any;
+    /** Open sales orders by date owed, with how much of each can ship. Null for a
+     *  role with no sales permission — the endpoint 403s and the panel drops out. */
+     dashboardOutlook: any;
     dashboardKpiHistory: any;
     dashboardWorkOrders: any[];
     itemIndex: Record<string, ItemIndexEntry>;
@@ -332,6 +341,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
     const [partners, setPartners] = useState([]);
     const [dashboardKPIs, setDashboardKPIs] = useState<any>({});
     const [dashboardSummary, setDashboardSummary] = useState<any>(null);
+    const [dashboardOutlook, setDashboardOutlook] = useState<any>(null);
     const [dashboardKpiHistory, setDashboardKpiHistory] = useState<any>({});
     const [dashboardWorkOrders, setDashboardWorkOrders] = useState<any[]>([]);
     const [itemIndex, setItemIndex] = useState<Record<string, ItemIndexEntry>>({});
@@ -646,6 +656,8 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
                 requestTypes.push('dashboard-summary');
                 requests.push(fetch(`${API_BASE}/dashboard/kpis/history?days=30`, { headers }));
                 requestTypes.push('kpi-history');
+                requests.push(fetch(`${API_BASE}/dashboard/delivery-outlook?limit=8`, { headers }));
+                requestTypes.push('dashboard-outlook');
             }
 
             // Engineering
@@ -797,6 +809,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
                     case 'item-lookup': { const idx: Record<string, ItemIndexEntry> = {}; for (const it of (data || [])) idx[String(it.id)] = { name: it.name, code: it.code, uom: it.uom, lot_tracked: it.lot_tracked, ends: it.ends, variant_type: it.variant_type, attribute_ids: it.attribute_ids }; setItemIndex(idx); newMasterData.itemIndex = idx; break; }
                     case 'kpis': setDashboardKPIs(data); break;
                     case 'dashboard-summary': setDashboardSummary(data); break;
+                    case 'dashboard-outlook': setDashboardOutlook(data); break;
                     case 'kpi-history': setDashboardKpiHistory(data); break;
                     case 'boms': setBoms(data); break;
                     case 'boms-lookup': setBomsLookup(data); break;
@@ -930,6 +943,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
         if (query.createdFrom) params.set('created_from', query.createdFrom);
         if (query.createdTo) params.set('created_to', query.createdTo);
         if (query.focusId) params.set('focus_id', query.focusId);
+        if (query.unreadOnly) params.set('unread', 'true');
         const myGen = ++sampleGenRef.current;
         try {
             const token = localStorage.getItem('access_token');
@@ -1045,14 +1059,16 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
         try {
             const token = localStorage.getItem('access_token');
             const headers = { 'Authorization': `Bearer ${token}` };
-            const [kpiRes, summaryRes, historyRes] = await Promise.all([
+            const [kpiRes, summaryRes, historyRes, outlookRes] = await Promise.all([
                 fetch(`${API_BASE}/dashboard/kpis`, { headers, cache: 'no-store' }),
                 fetch(`${API_BASE}/dashboard/summary`, { headers, cache: 'no-store' }),
                 fetch(`${API_BASE}/dashboard/kpis/history?days=30`, { headers, cache: 'no-store' }),
+                fetch(`${API_BASE}/dashboard/delivery-outlook?limit=8`, { headers, cache: 'no-store' }),
             ]);
             if (kpiRes.ok) setDashboardKPIs(await kpiRes.json());
             if (summaryRes.ok) setDashboardSummary(await summaryRes.json());
             if (historyRes.ok) setDashboardKpiHistory(await historyRes.json());
+            if (outlookRes.ok) setDashboardOutlook(await outlookRes.json());
         } catch (e) { console.error('refreshDashboardKPIs error', e); }
     }, [currentUser]);
 
@@ -1454,7 +1470,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
     const value = React.useMemo(() => ({
         items, locations, attributes, categories, uoms, sizes, boms, bomsLookup, manufacturingOrders, productionRuns,
         stockEntries, stockBalance, workCenters, operations, salesOrders, soStatusCounts, purchaseOrders, poStatusCounts, samples, samplesMeta, auditLogs,
-        partners, dashboardKPIs, dashboardSummary, dashboardKpiHistory, dashboardWorkOrders, itemIndex, companyProfile,
+        partners, dashboardKPIs, dashboardSummary, dashboardOutlook, dashboardKpiHistory, dashboardWorkOrders, itemIndex, companyProfile,
         printTemplates, refreshPrintTemplates,
         wsStatus,
         loading,
@@ -1466,7 +1482,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
     }), [
         items, locations, attributes, categories, uoms, sizes, boms, bomsLookup, manufacturingOrders, productionRuns,
         stockEntries, stockBalance, workCenters, operations, salesOrders, soStatusCounts, purchaseOrders, poStatusCounts, samples, samplesMeta, auditLogs,
-        partners, dashboardKPIs, dashboardSummary, dashboardKpiHistory, dashboardWorkOrders, itemIndex, companyProfile,
+        partners, dashboardKPIs, dashboardSummary, dashboardOutlook, dashboardKpiHistory, dashboardWorkOrders, itemIndex, companyProfile,
         printTemplates, refreshPrintTemplates, wsStatus, loading, loadProgress,
         itemPage, itemTotal, woPage, woTotal, prPage, prTotal, auditPage, auditTotal, reportPage, reportTotal, soPage, soTotal, poPage, poTotal, pageSize,
         itemSearchInput, moSearch, prSearch, prSoFilter, prProgressFilter, categoryL1, categoryL2, categoryL3, auditType,

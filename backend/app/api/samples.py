@@ -165,6 +165,7 @@ async def create_sample_request(
     )
     db.add(sample)
     await db.flush()
+    await _mark_read(db, current_user.id, sample.id, now)
 
     for i, color_data in enumerate(payload.colors):
         if color_data.name.strip():
@@ -204,6 +205,26 @@ async def create_sample_request(
     await _enrich_colors_with_items(db, [sample])
     sample.is_unread = False
     return sample
+
+
+async def _mark_read(db: AsyncSession, user_id, sample_id, now: datetime | None = None) -> None:
+    """Stamp the actor's own read receipt. Every edit bumps updated_at, which is what
+    re-lights the row for everyone — but the person who made the edit has, by
+    definition, read it. Without this their own change comes back to them as unread
+    and the dot stops meaning anything."""
+    sid = sample_id if isinstance(sample_id, uuid.UUID) else uuid.UUID(str(sample_id))
+    now = now or datetime.utcnow()
+    result = await db.execute(
+        select(SampleRequestRead).filter(
+            SampleRequestRead.user_id == user_id,
+            SampleRequestRead.sample_request_id == sid,
+        )
+    )
+    record = result.scalars().first()
+    if record:
+        record.read_at = now
+    else:
+        db.add(SampleRequestRead(user_id=user_id, sample_request_id=sid, read_at=now))
 
 
 def _sample_conditions(
@@ -252,11 +273,31 @@ async def get_samples(
     created_from: str | None = None,
     created_to: str | None = None,
     focus_id: str | None = None,
+    unread: bool = False,
     window: PageWindow = Depends(PageParams(default_size=50, max_size=200)),
     db: AsyncSession = Depends(get_async_db),
     current_user: User = Depends(require_permission("sample_request.view")),
 ):
     conds = _sample_conditions(search, status, category, created_from, created_to, category_value_id)
+
+    # "Never read" and "read before the last edit" are the same state, so both the
+    # ?unread= filter and the badge count below read it off this one subquery.
+    read_at_sq = (
+        select(SampleRequestRead.read_at)
+        .where(
+            SampleRequestRead.user_id == current_user.id,
+            SampleRequestRead.sample_request_id == SampleRequest.id,
+        )
+        .scalar_subquery()
+    )
+    is_unread_clause = or_(
+        read_at_sq.is_(None),
+        read_at_sq < func.coalesce(SampleRequest.updated_at, SampleRequest.created_at),
+    )
+    # Filtering narrows every number on the page — total, the pager and the colour
+    # tallies all run off `conds`, so it goes in there rather than on the page query.
+    if unread:
+        conds.append(is_unread_clause)
 
     total = await db.scalar(select(func.count()).select_from(SampleRequest).where(*conds)) or 0
 
@@ -317,24 +358,9 @@ async def get_samples(
         sample_updated_at = sample.updated_at or sample.created_at
         sample.is_unread = read_at is None or read_at < sample_updated_at
 
-    # Unread badge counts the whole filtered set, not the page — correlated
-    # subquery so "never read" and "read before the last edit" both count.
-    read_at_sq = (
-        select(SampleRequestRead.read_at)
-        .where(
-            SampleRequestRead.user_id == current_user.id,
-            SampleRequestRead.sample_request_id == SampleRequest.id,
-        )
-        .scalar_subquery()
-    )
-    unread = await db.scalar(
-        select(func.count()).select_from(SampleRequest).where(
-            *conds,
-            or_(
-                read_at_sq.is_(None),
-                read_at_sq < func.coalesce(SampleRequest.updated_at, SampleRequest.created_at),
-            ),
-        )
+    # Unread badge counts the whole filtered set, not the page.
+    unread_total = await db.scalar(
+        select(func.count()).select_from(SampleRequest).where(*conds, is_unread_clause)
     ) or 0
 
     stat_rows = await db.execute(
@@ -351,7 +377,7 @@ async def get_samples(
         if hasattr(color_stats, key):
             setattr(color_stats, key, getattr(color_stats, key) + cnt)
 
-    return window.envelope(samples, total, unread=unread, color_stats=color_stats)
+    return window.envelope(samples, total, unread=unread_total, color_stats=color_stats)
 
 
 @router.get("/samples/codes", response_model=list[str])
@@ -595,6 +621,7 @@ async def update_sample_request(
     sample.completion_description = payload.completion_description
     sample.notes = payload.notes
     sample.updated_at = datetime.utcnow()
+    await _mark_read(db, current_user.id, sample.id, sample.updated_at)
 
     # Colors diff: keep existing ids, delete removed, insert new
     incoming_ids = {str(c.id) for c in payload.colors if c.id is not None}
@@ -666,6 +693,7 @@ async def update_sample_status(
     previous_status = sample.status
     sample.status = status
     sample.updated_at = datetime.utcnow()
+    await _mark_read(db, current_user.id, sample.id, sample.updated_at)
     await db.commit()
 
     await audit_service.log_activity(
@@ -778,6 +806,7 @@ async def update_color_status(
     parent_sample = parent_result.scalars().first()
     if parent_sample:
         parent_sample.updated_at = datetime.utcnow()
+        await _mark_read(db, current_user.id, parent_sample.id, parent_sample.updated_at)
 
     await db.commit()
     await db.refresh(color)
@@ -802,22 +831,7 @@ async def mark_sample_read(
     db: AsyncSession = Depends(get_async_db),
     current_user: User = Depends(require_permission('sample_request.edit')),
 ):
-    result = await db.execute(
-        select(SampleRequestRead).filter(
-            SampleRequestRead.user_id == current_user.id,
-            SampleRequestRead.sample_request_id == uuid.UUID(sample_id),
-        )
-    )
-    read_record = result.scalars().first()
-    now = datetime.utcnow()
-    if read_record:
-        read_record.read_at = now
-    else:
-        db.add(SampleRequestRead(
-            user_id=current_user.id,
-            sample_request_id=uuid.UUID(sample_id),
-            read_at=now,
-        ))
+    await _mark_read(db, current_user.id, sample_id)
     await db.commit()
     return {"status": "success"}
 

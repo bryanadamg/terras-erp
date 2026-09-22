@@ -101,13 +101,32 @@ function packProgress(po: any, it?: any) {
         ? (num(po.qty2) > 0 ? num(po.qty2) : baseToAlt(target, altFactor))
         : null;
     const pAlt = hasAlt && po.qty_packed_alt != null ? num(po.qty_packed_alt) : null;
-    const basis = tAlt !== null && pAlt !== null ? { done: pAlt, goal: tAlt } : { done: packed, goal: target };
+    // An order holding lots (`Batch.locked_packing_order_id` — claimed off the
+    // Quarantine Packing desk or ticked on the New Packing Order form) must pack
+    // that pile OUT: nothing else may draw from it and the order cannot close
+    // while stock is still on it, whatever `qty_target` said. So the base bar
+    // measures the pile, not the plan: everything that has left the lots — packed
+    // or scrapped, the two ways material leaves — over what they still hold plus
+    // that. Both halves are live, read exactly as the close gate reads them
+    // (`packing_service.undrained_locked_lots`), which is what makes a full bar
+    // and a closable order the same thing. No held lots: unchanged, packed
+    // against target.
+    const holdsLots = num(po.held_lot_count) > 0;
+    const rejected = num(po.qty_rejected);
+    const drawn = packed + rejected;
+    const baseDone = holdsLots ? drawn : packed;
+    const baseGoal = holdsLots ? drawn + num(po.held_lot_open_qty) : target;
+    const basis = tAlt !== null && pAlt !== null ? { done: pAlt, goal: tAlt } : { done: baseDone, goal: baseGoal };
     const pctOf = (done: number, goal: number) =>
         goal > 0 ? Math.min(100, Math.round((done / goal) * 100)) : 0;
     return {
         target,
         packed,
         remaining: Math.max(0, target - packed),
+        holdsLots,
+        baseDone,
+        baseGoal,
+        rejected,
         hasAlt,
         altUom,
         altFactor,
@@ -127,7 +146,18 @@ function packProgress(po: any, it?: any) {
         // `pctAlt` is null when the order has no alt unit — then `pctBase` is
         // the only bar and `pct` equals it.
         pctAlt: tAlt !== null && pAlt !== null ? pctOf(pAlt, tAlt) : null,
-        pctBase: pctOf(packed, target),
+        pctBase: pctOf(baseDone, baseGoal),
+        // The base bar's fill, split in two: what was packed, then the scrap
+        // stacked after it in red. Scrap is material that left the source lots and
+        // became nothing, so it belongs ON the bar rather than beside it — on a
+        // held-lot order it is part of what drains the pile (`baseDone` counts it),
+        // and against a plain target it is the difference between what was drawn
+        // and what the order got. Only on the kilos: the pieces bar counts what a
+        // packer counted into a box, and loose scrap was never pieces — deriving a
+        // count for it would divide kilos by the g/y estimate, which is the one
+        // conversion this file refuses everywhere else.
+        pctBasePacked: pctOf(packed, baseGoal),
+        pctBaseRejected: pctOf(rejected, baseGoal),
     };
 }
 
@@ -155,7 +185,12 @@ function PackProgressBars({ prog, uom, height = 6, fontSize = 9, hatched = false
      *  empty, which is honest: there is no piece count to be at 40% of. */
     only?: 'alt' | 'base';
 }) {
-    const rows: { key: string; pct: number; done: string; goal: string; unit: string }[] = [];
+    const rows: {
+        key: string; pct: number; done: string; goal: string; unit: string; title?: string;
+        /** The primary (packed) fill, when it is not the whole of `pct` — the rest
+         *  of the fill is `rejectPct`, drawn red after it. */
+        fillPct?: number; rejectPct?: number;
+    }[] = [];
     if (prog.pctAlt !== null) {
         rows.push({
             key: 'alt',
@@ -168,10 +203,24 @@ function PackProgressBars({ prog, uom, height = 6, fontSize = 9, hatched = false
     rows.push({
         key: 'base',
         pct: prog.pctBase,
-        done: prog.packed.toFixed(2),
-        goal: prog.target.toFixed(2),
+        // On a held-lot order these are the pile, not the plan — see packProgress.
+        done: prog.baseDone.toFixed(2),
+        goal: prog.baseGoal.toFixed(2),
         unit: uom,
+        fillPct: prog.pctBasePacked,
+        rejectPct: prog.pctBaseRejected,
+        title: prog.holdsLots
+            ? `Held lots: ${prog.baseDone.toFixed(2)} of ${prog.baseGoal.toFixed(2)} ${uom} packed or scrapped out. `
+              + `The order cannot be closed until the pile is gone, whatever its ${prog.target.toFixed(2)} ${uom} target says.`
+            : undefined,
     });
+    // Scrap is named in the hover wherever it exists, on top of whatever the
+    // held-lot line already says — the red segment shows there IS scrap, the
+    // number says how much.
+    if (prog.rejected > 0) {
+        const base = rows[rows.length - 1];
+        base.title = `${(base.title ? base.title + ' ' : '')}${prog.rejected.toFixed(2)} ${uom} rejected — drawn from stock, packed into nothing.`;
+    }
     const shown = only ? rows.filter(r => r.key === only) : rows;
     if (!shown.length) return <span style={{ color: '#bbb' }}>—</span>;
     return (
@@ -181,7 +230,7 @@ function PackProgressBars({ prog, uom, height = 6, fontSize = 9, hatched = false
                    130px column a trailing "100% · 2,880 / 2,880 Pcs" left the track
                    a ~30px stub that read as noise rather than as progress. Stacked,
                    the bar spans the whole cell and the numbers still line up. */
-                <div key={r.key} style={{ minWidth: 0 }}>
+                <div key={r.key} style={{ minWidth: 0 }} title={r.title}>
                     <div style={{
                         fontFamily: xpFont, fontSize, whiteSpace: 'nowrap',
                         overflow: 'hidden', textOverflow: 'ellipsis',
@@ -191,8 +240,10 @@ function PackProgressBars({ prog, uom, height = 6, fontSize = 9, hatched = false
                         {r.pct}% · {r.done} / {r.goal} {r.unit}
                     </div>
                     <ProgressBar
-                        pct={r.pct}
+                        pct={r.fillPct ?? r.pct}
                         tone={r.pct >= 100 ? 'green' : r.pct > 0 ? 'blue' : 'gray'}
+                        secondaryPct={r.rejectPct || undefined}
+                        secondaryTone="red"
                         hatched={hatched}
                         height={height}
                     />
@@ -901,6 +952,19 @@ function PackingOrderForm({ locPickerTreeOptions, machineOptions, defaultSourceL
     // floor knows the machine is still packable, and the packer can name one at
     // log time — but naming it here is what pre-fills every pack event.
     const [workCenterId, setWorkCenterId] = useState(initialValues?.work_center_id || '');
+    // Lots this order takes ownership of. The Quarantine Packing deep link seeds
+    // them; the picker below lets a planner cutting an order by hand claim the
+    // same way. A claimed lot is exclusive — no other open order may draw it —
+    // and this order cannot be COMPLETED until the pile is gone from the source
+    // location, whatever `qty_target` says. So this is "pack these lots out",
+    // not a suggestion; leaving it empty keeps the old behaviour of drawing from
+    // whatever is free at pack time.
+    const [lockedIds, setLockedIds] = useState<string[]>(
+        (initialValues?.locked_batch_ids || []).map((b: any) => String(b)),
+    );
+    const [lots, setLots] = useState<any[]>([]);
+    const [lotsLoading, setLotsLoading] = useState(false);
+    const [heldLotCount, setHeldLotCount] = useState(0);
     const [soId, setSoId] = useState(initialValues?.sales_order_id || '');
     const [soLineId, setSoLineId] = useState(initialValues?.sales_order_line_id || '');
     const [notes, setNotes] = useState('');
@@ -938,6 +1002,39 @@ function PackingOrderForm({ locPickerTreeOptions, machineOptions, defaultSourceL
         if (defaultSourceLocId) setSourceLoc((v: string) => v || defaultSourceLocId);
         if (defaultOutputLocId) setOutputLoc((v: string) => v || defaultOutputLocId);
     }, [defaultSourceLocId, defaultOutputLocId]);
+
+    // Candidate lots for the claim above — the same query the pack modal's picker
+    // runs, minus the order id it has no way to know yet. `exclude_locked` stands
+    // in for that: a lot another open order already holds is not offered here,
+    // because claiming it would 400 on submit (`assert_lots_unlocked`).
+    useEffect(() => {
+        if (!itemId || !sourceLoc) { setLots([]); setHeldLotCount(0); return; }
+        let alive = true;
+        setLotsLoading(true);
+        (async () => {
+            try {
+                const res = await authFetch(
+                    `${API_BASE}/batches?item_id=${itemId}&location_id=${sourceLoc}&limit=200&exclude_locked=true`
+                );
+                const list = res.ok ? (await res.json() || []) : [];
+                if (!alive) return;
+                const withStock = (list || []).filter(
+                    (b: any) => (b.remaining ?? 0) > 0 && b.quality_status !== 'REJECTED');
+                // Held lots are excluded rather than flagged, exactly as in the pack
+                // modal: packing one is hard-blocked, so claiming it would only
+                // build an order that cannot close.
+                setHeldLotCount(withStock.filter((b: any) => b.held).length);
+                const available = withStock.filter((b: any) => !b.held);
+                setLots(available);
+                // A tick that outlived an item or location change would claim a lot
+                // this order can never pack — `claim_lots` scopes to the order's own
+                // item and would drop it silently.
+                const ids = new Set(available.map((b: any) => String(b.id)));
+                setLockedIds(prev => prev.filter(id => ids.has(id)));
+            } finally { if (alive) setLotsLoading(false); }
+        })();
+        return () => { alive = false; };
+    }, [itemId, sourceLoc, authFetch]);
 
     // A pre-filled item (from a Quarantine Packing suggestion) is only an id —
     // the combobox can't show its name/code until a search has actually returned
@@ -1054,6 +1151,30 @@ function PackingOrderForm({ locPickerTreeOptions, machineOptions, defaultSourceL
     const onAltPerCartonChange = (val: string) => {
         setAltPerCarton(val);
         applyAlt(qty2, uom2Factor, uom2LengthUom, val);
+    };
+
+    // The pile the ticked lots hold, in the item's stock UOM — what this order has
+    // to pack out before it can close.
+    const lockedTotal = useMemo(() => {
+        const sel = new Set(lockedIds);
+        return lots.filter((b: any) => sel.has(String(b.id)))
+            .reduce((t: number, b: any) => t + Number(b.remaining ?? 0), 0);
+    }, [lots, lockedIds]);
+
+    // "This order is for these lots": restate the held pile as the target. With an
+    // alt unit the COUNT is the canonical figure (see `qty2`), so the kilos are
+    // converted into it and the base target follows from there — writing the base
+    // figure directly would be overwritten the moment the count changed.
+    const useLotTotalAsTarget = () => {
+        if (uom2 && altBaseFactor) {
+            const alt = baseToAlt(lockedTotal, altBaseFactor);
+            if (alt !== null) {
+                setQty2(String(alt));
+                applyAlt(String(alt), uom2Factor, uom2LengthUom, altPerCarton);
+            }
+            return;
+        }
+        setQtyTarget(String(Math.round(lockedTotal * 100) / 100));
     };
 
     // The selling unit an SO line is counted in, copied onto the form. Split out of
@@ -1285,10 +1406,10 @@ function PackingOrderForm({ locPickerTreeOptions, machineOptions, defaultSourceL
                 // the old variant-less behaviour.
                 color_id: initialValues?.color_id || null,
                 attribute_value_ids: initialValues?.combo_value_id ? [initialValues.combo_value_id] : [],
-                // Same deep link, same reasoning: the lots it named are claimed by
-                // this order outright. Empty for a hand-made order, which draws
-                // from whatever is free at pack time as before.
-                locked_batch_ids: initialValues?.locked_batch_ids || [],
+                // The lots this order claims outright — seeded by the Quarantine
+                // Packing deep link, or ticked in the Held Lots picker. Empty means
+                // the order draws from whatever is free at pack time, as before.
+                locked_batch_ids: lockedIds,
                 notes: notes || null,
                 // No packaging plan on the order: the box is picked per carton line
                 // in the pack modal, where the packer is holding it. Planning it
@@ -1619,6 +1740,71 @@ function PackingOrderForm({ locPickerTreeOptions, machineOptions, defaultSourceL
                     </div>
                 </FormSection>
 
+                <FormSection title={<SectionTitle icon="bi-lock">Held Lots</SectionTitle>}>
+                    <div style={{ fontSize: 10, color: '#555', marginBottom: 4 }}>
+                        A ticked lot is held for this order alone — no other packing order can draw
+                        it, and this one cannot be closed until the lot is packed out of the pack-from
+                        location, whatever the target says. Leave every box clear to draw from
+                        whatever is free at pack time.
+                    </div>
+                    {(!itemId || !sourceLoc) ? (
+                        <div style={{ fontSize: 10, color: '#888' }}>
+                            Pick an item and a pack-from location to choose lots.
+                        </div>
+                    ) : (
+                        <>
+                            <div style={{ ...xpFormLabel, fontWeight: 'bold', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                <span>Lots at the pack-from location</span>
+                                <span style={{ fontWeight: 'normal', color: '#555' }}>
+                                    {lockedIds.length} held · {lockedTotal.toFixed(2)} {selectedItem?.uom || ''}
+                                    {lockedIds.length > 0 && (
+                                        <button
+                                            type="button"
+                                            className={XP_BTN}
+                                            onClick={useLotTotalAsTarget}
+                                            title="Set this order's target to what the held lots hold"
+                                            style={{ ...xpBtn(), fontSize: 9, padding: '0 6px', marginLeft: 6 }}
+                                        >Use as target</button>
+                                    )}
+                                </span>
+                            </div>
+                            <div style={{ border: '1px solid #7f9db9', background: '#fff', maxHeight: 150, overflowY: 'auto' }}>
+                                {lotsLoading && <div style={{ fontSize: 10, color: '#888', padding: '3px 5px' }}>Loading lots...</div>}
+                                {!lotsLoading && lots.length === 0 && (
+                                    <div style={{ fontSize: 10, color: '#888', padding: '3px 5px' }}>
+                                        {heldLotCount > 0
+                                            ? `${heldLotCount} lot${heldLotCount === 1 ? '' : 's'} here ${heldLotCount === 1 ? 'is' : 'are'} held in quarantine — release on the Quarantine Packing page first.`
+                                            : 'No free lots of this item at the pack-from location.'}
+                                    </div>
+                                )}
+                                {lots.map((b: any) => {
+                                    const id = String(b.id);
+                                    const on = lockedIds.includes(id);
+                                    return (
+                                        <label key={id} style={{ ...lvPickerRow(on), fontSize: 10 }}>
+                                            <RowCheckbox checked={on} label={b.batch_number || 'lot'}
+                                                onChange={() => setLockedIds(prev => on ? prev.filter(x => x !== id) : [...prev, id])} />
+                                            <div style={{ display: 'flex', flexDirection: 'column', gap: 2, minWidth: 0, flex: 1 }}>
+                                                <div style={{ display: 'flex', alignItems: 'center', gap: 4, flexWrap: 'wrap' }}>
+                                                    <span style={{ fontFamily: CODE_FONT, fontWeight: 'bold' }}>{b.batch_number}</span>
+                                                    <span style={{ color: '#555' }}>{Number(b.remaining ?? 0).toFixed(2)} {selectedItem?.uom || ''}</span>
+                                                    {b.location_name && <span style={{ color: '#0058e6' }}>@ {b.location_name}</span>}
+                                                </div>
+                                                <LotChips batch={b} showOrder />
+                                            </div>
+                                        </label>
+                                    );
+                                })}
+                            </div>
+                            {heldLotCount > 0 && lots.length > 0 && (
+                                <div style={{ fontSize: 9, color: '#7a4a00', marginTop: 2 }}>
+                                    {heldLotCount} more lot{heldLotCount === 1 ? '' : 's'} held in quarantine, not shown.
+                                </div>
+                            )}
+                        </>
+                    )}
+                </FormSection>
+
                 <FormSection title={<SectionTitle icon="bi-sticky">Notes</SectionTitle>}>
                     <textarea style={{ ...xpInput, height: 50, width: '100%', resize: 'vertical', boxSizing: 'border-box' }} value={notes} onChange={e => setNotes(e.target.value)} />
                 </FormSection>
@@ -1675,11 +1861,13 @@ function PackingOrderDetail({ po: initialPo, itemById, locationById, locPickerTr
     // once, at the box, against the sample in force then is what keeps a later
     // re-sample from restating cartons that are already packed and shipped.
     const weighBasis = hasAlt && String(po.pack_basis || '').toUpperCase() === 'WEIGHED';
-    // Whole pieces: a piece is a cut length, and a label reading 50.8 Pcs is not
-    // something a customer can be handed. The drift that rounding leaves shows up
-    // in the totals strip, against the kilos, which are the measured figure.
+    // Two decimals, not whole pieces: cut-to-weight goods are not cut to a piece
+    // boundary, so rounding 11.8 up to 12 states a piece that was never in the box
+    // and hides the drift in the one figure the packer can still correct. The
+    // shared converter with its whole-count SNAP switched off — snapping is for
+    // reading a counted box back out of its weight, and here nothing was counted.
     const altFromBase = (kg: number) =>
-        (altFactor && altFactor > 0 && kg > 0 ? Math.round(kg / altFactor) : 0);
+        (kg > 0 ? (baseToAlt(kg, altFactor, false) ?? 0) : 0);
 
     // The same three figures in what the customer counts in — DISPLAY ONLY. The
     // packer thinks in pieces ("2880 Pcs ordered, 1200 boxed"), so on an alt-unit
@@ -1698,6 +1886,22 @@ function PackingOrderDetail({ po: initialPo, itemById, locationById, locPickerTr
     const targetAlt = prog.targetAlt;
     const packedAlt = prog.packedAlt;
     const remainingAlt = prog.remainingAlt;
+
+    // The kilos row of the panel below. Every figure comes off `packProgress` —
+    // the same helper the list row's bars read — because this panel used to quote
+    // `packed / target` under a bar whose percentage was already measured against
+    // the held-lot pile, so the number and the fill disagreed on a held-lot order.
+    // `rejectPct` is the scrap stacked in red after the packed fill.
+    const baseRow = {
+        key: 'base',
+        label: uom || 'QTY',
+        pct: prog.pctBase,
+        fillPct: prog.pctBasePacked,
+        rejectPct: prog.pctBaseRejected,
+        done: prog.baseDone.toFixed(2),
+        goal: prog.baseGoal.toFixed(2),
+        unit: uom,
+    };
 
     // Progress basis lives in packProgress — the list row's bars read the same
     // helper, so this panel and that row can't disagree. The panel draws
@@ -2334,16 +2538,18 @@ function PackingOrderDetail({ po: initialPo, itemById, locationById, locPickerTr
                         <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
                             {(hasAlt
                                 ? [
-                                    { key: 'alt', label: altUom || 'ALT', pct: prog.pctAlt ?? 0, done: (packedAlt ?? 0).toLocaleString(), goal: (targetAlt ?? 0).toLocaleString(), unit: altUom },
-                                    { key: 'base', label: uom || 'QTY', pct: prog.pctBase, done: packed.toFixed(2), goal: target.toFixed(2), unit: uom },
+                                    { key: 'alt', label: altUom || 'ALT', pct: prog.pctAlt ?? 0, fillPct: prog.pctAlt ?? 0, rejectPct: 0, done: (packedAlt ?? 0).toLocaleString(), goal: (targetAlt ?? 0).toLocaleString(), unit: altUom },
+                                    baseRow,
                                 ]
-                                : [{ key: 'base', label: uom || 'QTY', pct: prog.pctBase, done: packed.toFixed(2), goal: target.toFixed(2), unit: uom }]
+                                : [baseRow]
                             ).map(r => (
                                 <div key={r.key} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                                     <span style={{ fontSize: 9, fontWeight: 'bold', color: '#555', width: 30, flexShrink: 0, textTransform: 'uppercase', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                                         {r.label}
                                     </span>
-                                    <ProgressBar pct={r.pct} tone={r.pct >= 100 ? 'green' : 'blue'} hatched height={14} label="inside" />
+                                    <ProgressBar pct={r.fillPct} tone={r.pct >= 100 ? 'green' : 'blue'}
+                                        secondaryPct={r.rejectPct || undefined} secondaryTone="red"
+                                        hatched height={14} label="inside" />
                                     <span style={{ fontSize: 9, color: '#555', whiteSpace: 'nowrap', width: 120, flexShrink: 0, textAlign: 'right' }}>
                                         {r.done} / {r.goal} {r.unit}
                                     </span>

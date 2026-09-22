@@ -12,7 +12,7 @@ import SearchableSelect from '@bryanadamg/terras-ui/components/Combobox';
 import HistoryPane from '../shared/HistoryPane';
 import ModalWrapper from '../shared/ModalWrapper';
 const SamplePrintModal = dynamic(() => import('./SamplePrintModal'), { ssr: false });
-import { StatusChip, StatusCountPill, TableSkeleton, useTableSkeletonMetrics, FormSection, useFloatingMenu, FloatingMenu, MenuTriggerButton, XPActionButton, familyColor, CodeChip, xpFont, rowStateBg, ToggleChip, CHIP_RADIUS, xpInput as xpInputBase, xpBtn as xpBtnBase, expandedRowFrame, BTN_TONES, XP_BTN } from '../shared/xpTheme';
+import { StatusChip, StatusCountPill, TableSkeleton, useTableSkeletonMetrics, FormSection, useFloatingMenu, FloatingMenu, MenuTriggerButton, XPActionButton, familyColor, Chip, VariantChip, VARIANT_TONE, REF_TONES, CodeChip, xpFont, rowStateBg, ToggleChip, CHIP_RADIUS, xpInput as xpInputBase, xpBtn as xpBtnBase, expandedRowFrame, BTN_TONES, XP_BTN } from '../shared/xpTheme';
 import { ShellWindow, ShellTitleBar, xpToolbar, SearchField, FilterChipBar, ToolbarCount, ToolbarButton } from '../shared/shellTheme';
 import Pager from '../shared/Pager';
 import RequestDetailPanel, { getStatusStripe } from '../shared/RequestDetailPanel';
@@ -32,6 +32,22 @@ const LEGACY_CATEGORY_LABELS: Record<string, string> = {
     YARDAGE: 'Yardage',
 };
 const DEFAULT_CATEGORY_LABEL = 'New Sample';
+// Tones for the three seeded categories, off the shared variant palette. Anything
+// a user adds on the Attributes page falls back to the neutral reference tone —
+// the column stays legible without this map having to know every category.
+const CATEGORY_TONE: Record<string, { color: string; background: string; borderColor: string }> = {
+    'new sample': VARIANT_TONE.order,
+    're sample': VARIANT_TONE.pending,
+    'yardage': VARIANT_TONE.qty,
+};
+// Long customer names and article codes used to wrap to four lines while their
+// neighbours were one, so row height swung 30px→90px down the page. Clamp the two
+// free-text columns at two lines and let the hover carry the rest.
+const clamp2: React.CSSProperties = {
+    display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' as any,
+    overflow: 'hidden', wordBreak: 'break-word',
+};
+const categoryTone = (label: string) => CATEGORY_TONE[label.toLowerCase()] ?? REF_TONES.category;
 const categoryLabel = (v?: string) =>
     (v ? (LEGACY_CATEGORY_LABELS[v] ?? v) : DEFAULT_CATEGORY_LABEL);
 
@@ -54,6 +70,15 @@ export default function SampleRequestView({ samples, customers, onCreateSample, 
   const colorOptions = useMemo(() => {
     const attr = (attributes as any[]).find((a: any) => a.system_role === 'color');
     return (attr?.values ?? []).map((v: any) => ({ value: v.value, label: v.value }));
+  }, [attributes]);
+  // The picker maps the Colors attribute to {value,label} and drops `hex`, so the
+  // swatch is resolved back by name here. Name is what the sample stores — a value
+  // renamed after the fact simply won't match, which costs a dot and nothing else.
+  const colorHexByName = useMemo(() => {
+    const attr = (attributes as any[]).find((a: any) => a.system_role === 'color');
+    const map = new Map<string, string>();
+    for (const v of (attr?.values ?? [])) if (v?.hex) map.set(String(v.value).toLowerCase(), v.hex);
+    return map;
   }, [attributes]);
   const colorsAttrName = useMemo(() => {
     return (attributes as any[]).find((a: any) => a.system_role === 'color')?.name ?? null;
@@ -96,6 +121,7 @@ export default function SampleRequestView({ samples, customers, onCreateSample, 
   const [searchTerm, setSearchTerm] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('ALL');
+  const [unreadOnly, setUnreadOnly] = useState(false);
   const [categoryFilter, setCategoryFilter] = useState('ALL');
   // Created-date range (inclusive both ends), applied server-side like every other filter here.
   const [createdFrom, setCreatedFrom] = useState('');
@@ -124,12 +150,17 @@ export default function SampleRequestView({ samples, customers, onCreateSample, 
               style={{ maxHeight: 40, maxWidth: 64, border: '1px solid #b0a898', cursor: 'pointer', display: 'block', margin: '0 auto' }} />
       );
   };
-  const toggleExpand = (id: string) =>
+  const toggleExpand = (id: string, isUnread?: boolean) => {
+      const opening = !expandedIds.has(id);
       setExpandedIds(prev => {
           const next = new Set(prev);
-          next.has(id) ? next.delete(id) : next.add(id);
+          opening ? next.add(id) : next.delete(id);
           return next;
       });
+      // Opening the row IS the read gesture. Without this the dot is the only way
+      // to clear one, nobody clicks it, and every row stays unread forever.
+      if (opening && isUnread) onMarkRead?.(id);
+  };
   const [pendingColorName, setPendingColorName] = useState('');
   const [pendingColorIsRepeat, setPendingColorIsRepeat] = useState(false);
 
@@ -532,7 +563,7 @@ export default function SampleRequestView({ samples, customers, onCreateSample, 
       ...(samplesMeta.colorStats || {}),
   }) as Record<string, number>, [samplesMeta.colorStats]);
 
-  const hasActiveFilter = !!searchTerm || statusFilter !== 'ALL' || categoryFilter !== 'ALL' || !!createdFrom || !!createdTo;
+  const hasActiveFilter = !!searchTerm || statusFilter !== 'ALL' || categoryFilter !== 'ALL' || !!createdFrom || !!createdTo || unreadOnly;
   const clearFilters = () => {
       setSearchTerm('');
       setSearchQuery('');
@@ -540,13 +571,14 @@ export default function SampleRequestView({ samples, customers, onCreateSample, 
       setCategoryFilter('ALL');
       setCreatedFrom('');
       setCreatedTo('');
+      setUnreadOnly(false);
   };
 
   // Debounce the search box: the input echoes instantly, the fetch fires after
   // the pause (same shape as DataContext's item search).
   useDebouncedCommit(searchTerm, searchQuery, setSearchQuery);
 
-  useEffect(() => { setSamplePage(1); }, [searchQuery, statusFilter, categoryFilter, createdFrom, createdTo]);
+  useEffect(() => { setSamplePage(1); }, [searchQuery, statusFilter, categoryFilter, createdFrom, createdTo, unreadOnly]);
 
   // A ?highlight=<id> deep link must stay reachable even once paginated — the
   // server resolves which page holds that row under the active filters and
@@ -563,8 +595,9 @@ export default function SampleRequestView({ samples, customers, onCreateSample, 
           createdFrom,
           createdTo,
           focusId,
+          unreadOnly,
       });
-  }, [samplePage, searchQuery, statusFilter, categoryFilter, createdFrom, createdTo, highlightId, loadSamples]);
+  }, [samplePage, searchQuery, statusFilter, categoryFilter, createdFrom, createdTo, unreadOnly, highlightId, loadSamples]);
 
   useEffect(() => {
       if (samplesMeta.page && samplesMeta.page !== samplePage) setSamplePage(samplesMeta.page);
@@ -803,19 +836,16 @@ export default function SampleRequestView({ samples, customers, onCreateSample, 
                                    {newSample.colors.length === 0
                                        ? <span style={{ fontFamily: xpFont, fontSize: 11, color: '#999', fontStyle: 'italic' }}>No variants added yet…</span>
                                        : newSample.colors.map((c, idx) => (
-                                           <span key={idx} style={{ borderRadius: CHIP_RADIUS,
-                                               display: 'inline-flex', alignItems: 'center', gap: 4, padding: '2px 7px',
-                                               marginRight: 4, marginBottom: 4,
-                                               background: c.is_repeat ? '#dce8f8' : '#e8f4e8',
-                                               border: `1px solid ${c.is_repeat ? '#7ab0d8' : '#7aba7a'}`,
-                                               fontFamily: xpFont, fontSize: 11,
-                                           }}>
+                                           <VariantChip key={idx} size="md" style={{ marginRight: 4, marginBottom: 4 }}
+                                               kind={isColor ? 'color' : 'combo'}
+                                               swatch={colorHexByName.get(c.name.toLowerCase())}
+                                               icon={colorHexByName.has(c.name.toLowerCase()) ? null : undefined}
+                                               onRemove={() => removeColorRow(idx)}>
                                                <span style={{ fontSize: 9, fontWeight: 'bold', color: c.is_repeat ? '#0047c8' : '#228b22', textTransform: 'uppercase' as const }}>
                                                    {c.is_repeat ? 'RPT' : 'NEW'}
                                                </span>
                                                {c.name}
-                                               <span onClick={() => removeColorRow(idx)} style={{ cursor: 'pointer', color: '#a00', marginLeft: 2, fontWeight: 'bold', fontSize: 12, lineHeight: 1 }} title="Remove">×</span>
-                                           </span>
+                                           </VariantChip>
                                        ))
                                    }
                                </div>
@@ -1088,8 +1118,22 @@ export default function SampleRequestView({ samples, customers, onCreateSample, 
                    </button>
                    <ToolbarCount right>
                        {totalSamples} item{totalSamples !== 1 ? 's' : ''}
-                       {unreadCount > 0 && (
-                           <> · <span style={{ color: '#1c5bc8', fontWeight: 'bold' }}>{unreadCount} unread</span></>
+                       {(unreadCount > 0 || unreadOnly) && (
+                           <> · <span
+                               role="button"
+                               tabIndex={0}
+                               onClick={() => setUnreadOnly(v => !v)}
+                               onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setUnreadOnly(v => !v); } }}
+                               title={unreadOnly ? 'Showing unread only — click to show all' : 'Show only unread requests'}
+                               style={{
+                                   color: '#1c5bc8', fontWeight: 'bold', cursor: 'pointer',
+                                   padding: '0 3px',
+                                   ...(unreadOnly ? {
+                                       background: '#1c5bc8', color: '#fff',
+                                       border: '1px solid #0a3a9a', borderRadius: CHIP_RADIUS,
+                                   } : { borderBottom: '1px dotted #1c5bc8' }),
+                               }}
+                           >{unreadCount} unread{unreadOnly ? ' ×' : ''}</span></>
                        )}
                    </ToolbarCount>
                    {canManage && (
@@ -1106,7 +1150,7 @@ export default function SampleRequestView({ samples, customers, onCreateSample, 
                // `overflow: auto` (not overflowY) with no inner `.table-responsive`: a nested
                // overflow wrapper is its own scroll container, and a sticky header inside one
                // pins to a box that never scrolls vertically -- i.e. not at all.
-               style={{ flex: 1, minHeight: 0, overflow: 'auto', scrollbarGutter: 'stable' }}
+               style={{ flex: 1, minHeight: 0, overflow: 'auto', scrollbarGutter: 'stable', paddingLeft: 5 }}
            >
                <div>
                    <table
@@ -1117,11 +1161,11 @@ export default function SampleRequestView({ samples, customers, onCreateSample, 
                                <th style={{ ...xpThCell, width: LV_EXPANDER_COL_W }} />
                                <th style={{ ...xpThCell, width: '130px' }}>Request Code</th>
                                <th style={{ ...xpThCell, width: '90px' }}>Category</th>
-                               <th style={{ ...xpThCell, width: '110px' }}>Customer</th>
+                               <th style={{ ...xpThCell, width: '150px' }}>Customer</th>
                                <th style={xpThCell}>Article / Project</th>
                                <th style={xpThCell}>Specs</th>
                                <th style={{ ...xpThCell, width: '100px' }}>Status</th>
-                               <th style={{ ...xpThCell, width: '90px' }}>Colors</th>
+                               <th style={{ ...xpThCell, width: '70px' }}>Colors</th>
                                <th style={{ ...xpThCell, textAlign: 'right' as const, borderRight: 'none', width: '80px' }}>Actions</th>
                            </tr>
                        </thead>
@@ -1131,19 +1175,23 @@ export default function SampleRequestView({ samples, customers, onCreateSample, 
                                <tr
                                    key={`${s.id}-row`}
                                    ref={s.id === highlightId ? highlightRef : undefined}
-                                   onClick={() => toggleExpand(s.id)}
+                                   onClick={() => toggleExpand(s.id, s.is_unread)}
                                    style={{
+                                       // Unread is marked by the rail on the first cell, not a row
+                                       // wash: with nothing read yet the wash repaints the whole
+                                       // table and buries the zebra that makes wide rows scannable.
                                        background: s.id === highlightId ? rowStateBg('highlighted')
                                            : expandedIds.has(s.id) ? rowStateBg('expanded')
-                                           : s.is_unread ? ('#dde8fb')
                                            : lvZebra(rowIndex),
                                        borderBottom: '1px solid #c0bdb5',
                                        cursor: 'pointer',
                                        outline: s.id === highlightId ? '2px solid #f0a000' : undefined,
                                    }}
                                >
-                                   <ExpanderCell expanded={expandedIds.has(s.id)} onToggle={() => toggleExpand(s.id)} label="sample detail"
-                                       tdStyle={tdBase} />
+                                   {/* Read rows keep a transparent rail so nothing shifts when one
+                                       is marked read under the cursor. */}
+                                   <ExpanderCell expanded={expandedIds.has(s.id)} onToggle={() => toggleExpand(s.id, s.is_unread)} label="sample detail"
+                                       tdStyle={{ ...tdBase, borderLeft: `3px solid ${s.is_unread ? '#1c5bc8' : 'transparent'}` }} />
                                    <td style={tdBase}>
                                        <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
                                            <div>
@@ -1161,13 +1209,15 @@ export default function SampleRequestView({ samples, customers, onCreateSample, 
                                        </div>
                                    </td>
                                    <td style={tdBase}>
-                                       <span style={{ fontFamily: xpFont, fontSize: '10px' }}>
-                                           {categoryLabel(s.category)}
-                                       </span>
+                                       {(() => {
+                                           const label = categoryLabel(s.category);
+                                           return <Chip tone={categoryTone(label)} truncate title={label}>{label}</Chip>;
+                                       })()}
                                    </td>
                                    <td style={tdBase}>
                                        {s.customer_id ? (
-                                           <span style={{ fontFamily: xpFont, fontSize: '11px' }}>
+                                           <span style={{ fontFamily: xpFont, fontSize: '11px', ...clamp2 }}
+                                               title={getCustomerName(s.customer_id)}>
                                                {getCustomerName(s.customer_id)}
                                            </span>
                                        ) : (
@@ -1179,12 +1229,13 @@ export default function SampleRequestView({ samples, customers, onCreateSample, 
                                    {/* Article / Project */}
                                    <td style={tdBase}>
                                        {s.customer_article_code && (
-                                           <div style={{ fontWeight: 'bold', fontSize: '11px' }}>
+                                           <div style={{ fontWeight: 'bold', fontSize: '11px', ...clamp2 }}
+                                               title={s.customer_article_code}>
                                                {s.customer_article_code}
                                            </div>
                                        )}
                                        {s.project && (
-                                           <div style={{ fontSize: '9px', color: '#555' }}>
+                                           <div style={{ fontSize: '9px', color: '#555', ...clamp2 }} title={s.project}>
                                                {s.project}
                                            </div>
                                        )}
@@ -1200,10 +1251,17 @@ export default function SampleRequestView({ samples, customers, onCreateSample, 
                                            </div>
                                        )}
                                        <div style={{ display: 'flex', gap: 2, flexWrap: 'wrap' as const, marginTop: 2 }}>
-                                           {s.colors && s.colors.map((c: any, i: number) => (
-                                               <span key={i} style={{ borderRadius: CHIP_RADIUS, background: c.is_repeat ? '#e8e8ff' : '#e8f5e8', border: `1px solid ${c.is_repeat ? '#8888cc' : '#88aa88'}`, color: c.is_repeat ? '#333' : '#1a3a1a', padding: '0 4px', fontSize: '9px', fontFamily: xpFont }}>
+                                           {/* Colour vs combo is the app-wide variant palette (neutral / purple).
+                                               New vs repeat is a different axis and rides on the "(R)" suffix —
+                                               tinting the chip for it made these read as a third variant kind. */}
+                                           {s.colors && s.colors.map((c: any, i: number) => {
+                                               const hex = colorHexByName.get(String(c.name).toLowerCase());
+                                               return (
+                                                   <VariantChip key={i} kind={s.variant_type === 'combo' ? 'combo' : 'color'}
+                                                       swatch={hex} icon={hex ? null : undefined}>
                                                        {c.name}{c.is_repeat ? ' (R)' : ''}
-                                                   </span>))}
+                                                   </VariantChip>);
+                                           })}
                                        </div>
                                    </td>
                                    {/* Status — request-level only */}
@@ -1250,6 +1308,7 @@ export default function SampleRequestView({ samples, customers, onCreateSample, 
                                            <MenuTriggerButton onClick={(e) => { closeDropdown(); toggleRowMenu(s.id, e); }} />
                                            {/* Read/unread dot */}
                                            <span
+                                               className={s.is_unread ? 'read-dot read-dot-unread' : 'read-dot'}
                                                title={s.is_unread ? 'Unread — click to mark as read' : 'Read — click to mark as unread'}
                                                onClick={(e) => { e.stopPropagation(); s.is_unread ? onMarkRead(s.id) : onMarkUnread(s.id); }}
                                                style={{
@@ -1296,7 +1355,14 @@ export default function SampleRequestView({ samples, customers, onCreateSample, 
                                            stripeColor: stripe.borderLeftColor,
                                            background: stripe.background,
                                            cells: [
-                                               <span style={{ fontWeight: 'bold', color: '#111' }}>{c.name}</span>,
+                                               <span style={{ fontWeight: 'bold', color: '#111', display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                                                   {colorHexByName.has(String(c.name).toLowerCase()) && (
+                                                       <span style={{ width: 8, height: 8, borderRadius: '50%', flexShrink: 0, display: 'inline-block',
+                                                           background: colorHexByName.get(String(c.name).toLowerCase()),
+                                                           border: '1px solid rgba(0,0,0,0.25)' }} />
+                                                   )}
+                                                   {c.name}
+                                               </span>,
                                                <span style={{ borderRadius: CHIP_RADIUS, background: c.is_repeat ? '#dce4f5' : '#d4edda', border: `1px solid ${c.is_repeat ? '#6878c8' : '#5aaa68'}`, color: c.is_repeat ? '#0d2a6e' : '#0c3a1a', padding: '0 4px', fontSize: 9, fontFamily: xpFont, fontWeight: 'bold' }}>{c.is_repeat ? 'Repeat' : 'New'}</span>,
                                                <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, flexWrap: 'wrap' }}>
                                                    <StatusChip status={status} tint style={undefined} />

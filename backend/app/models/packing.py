@@ -143,8 +143,9 @@ class PackingOrder(Base):
     )
 
     # PENDING, IN_PROGRESS, DELIVERED, COMPLETED, CANCELLED. Same delivery-vs-closure
-    # split as ManufacturingOrder: DELIVERED means `qty_packed` reached `qty_target`
-    # and the order is fulfilled but STILL OPEN — it keeps accepting completions,
+    # split as ManufacturingOrder: DELIVERED means the order owes no more work —
+    # `qty_packed` reached `qty_target`, or the lots it holds have been packed out
+    # (`packing_service.is_fulfilled`) — and it is fulfilled but STILL OPEN — it keeps accepting completions,
     # only an explicit close makes it COMPLETED. The distinction is load-bearing
     # downstream: quarantine claims an order's *open* quantity, so a fulfilled
     # order stops claiming hold stock without anyone having to close it.

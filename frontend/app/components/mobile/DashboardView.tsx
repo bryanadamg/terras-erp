@@ -31,8 +31,11 @@ export default function MobileDashboardView({ items, stockBalance, workOrders, s
         openOrders: kpis?.open_sos    ?? (summary?.open_so_count ?? (salesOrders || []).filter((s: any) => s.status === 'PENDING').length),
     };
 
-    const prodYield = hasSummary ? summary.production_yield : 100;
-    const deliveryReadiness = hasSummary ? summary.delivery_readiness : 100;
+    // `??`, not `hasSummary ?`: /dashboard/summary now omits the block a role has
+    // no permission for, so a served summary can legitimately lack these keys and
+    // `summary.production_yield` would render NaN%.
+    const prodYield = summary?.production_yield ?? 100;
+    const deliveryReadiness = summary?.delivery_readiness ?? 100;
 
     const overdueWOs = (workOrders || []).filter((w: any) =>
         ['IN_PROGRESS', 'PENDING'].includes(w.status) &&

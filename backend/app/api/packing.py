@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, func, cast, String, nulls_last, inspect as sa_inspect
+from sqlalchemy import select, func, cast, String, nulls_last, and_, inspect as sa_inspect
 from sqlalchemy.orm import selectinload, aliased
 from typing import Optional
 from datetime import datetime
@@ -165,6 +165,56 @@ async def _packed_units_for(db: AsyncSession, po_ids: list) -> dict:
             _pu_response(batch, bal, variant=variants.get(bal.variant_key if bal else None))
         )
     return out
+
+
+async def _held_lots_for(db: AsyncSession, po_ids: list) -> dict:
+    """Per order: how many lots it holds, and how much is still sitting on them.
+
+    One query for the whole page, not one per order. Scoped to each order's own
+    source location exactly as `packing_service.undrained_locked_lots` is — the
+    rule is "the pile on the pack-from desk is gone", so scrap that moved to the
+    defect store under the same lot number is not still held. That makes this the
+    live twin of the close gate: nothing left here means the order may be closed,
+    which is what lets the progress bar and the gate agree without either
+    restating the other's rule.
+    """
+    if not po_ids:
+        return {}
+    rows = (await db.execute(
+        select(
+            Batch.locked_packing_order_id,
+            func.count(func.distinct(Batch.id)),
+            func.coalesce(func.sum(StockBalance.qty), 0),
+        )
+        .select_from(Batch)
+        .join(PackingOrder, PackingOrder.id == Batch.locked_packing_order_id)
+        .outerjoin(
+            StockBalance,
+            and_(
+                StockBalance.batch_key == cast(Batch.id, String),
+                StockBalance.location_id == PackingOrder.source_location_id,
+            ),
+        )
+        .filter(Batch.locked_packing_order_id.in_(po_ids))
+        .group_by(Batch.locked_packing_order_id)
+    )).all()
+    return {str(pid): (int(n or 0), float(q or 0)) for pid, n, q in rows}
+
+
+async def _attach_held_lots(db: AsyncSession, orders: list) -> None:
+    held = await _held_lots_for(db, [o.id for o in orders])
+    for po in orders:
+        n, q = held.get(str(po.id), (0, 0.0))
+        po.held_lot_count = n
+        po.held_lot_open_qty = round(max(0.0, q), 4)
+
+
+async def _response(db: AsyncSession, po: PackingOrder, units: list = None) -> PackingOrder:
+    """One place a single order becomes a response: the display fields, plus the
+    held-lot figures, which take a query and so cannot live in `_decorate`."""
+    _decorate(po, units)
+    await _attach_held_lots(db, [po])
+    return po
 
 
 def _decorate(po: PackingOrder, units: list = None) -> PackingOrder:
@@ -560,6 +610,7 @@ async def list_packing_orders(
     units = await _packed_units_for(db, [o.id for o in orders])
     for po in orders:
         _decorate(po, units.get(str(po.id), []))
+    await _attach_held_lots(db, orders)
     return window.envelope(orders, total)
 
 
@@ -573,7 +624,7 @@ async def get_packing_order(
     if not po:
         raise HTTPException(status_code=404, detail="Packing order not found")
     units = await _packed_units_for(db, [po.id])
-    return _decorate(po, units.get(str(po.id), []))
+    return await _response(db, po, units.get(str(po.id), []))
 
 
 @router.post("", response_model=PackingOrderResponse)
@@ -703,7 +754,7 @@ async def create_packing_order(
         pass
 
     po = await _load(db, po.id)
-    return _decorate(po)
+    return await _response(db, po)
 
 
 @router.put("/{po_id}", response_model=PackingOrderResponse)
@@ -794,7 +845,7 @@ async def update_packing_order(
     # CANCELLED — those are the user's explicit closure, not a function of qty —
     # and never overrides a status the caller stated itself.
     if payload.status is None:
-        met = packing_service.is_target_met(po)
+        met = await packing_service.is_fulfilled(db, po)
         if po.status == "DELIVERED" and not met:
             po.status = "IN_PROGRESS"
             po.actual_end_date = None
@@ -834,7 +885,7 @@ async def update_packing_order(
 
     po = await _load(db, po_id)
     units = await _packed_units_for(db, [po.id])
-    return _decorate(po, units.get(str(po.id), []))
+    return await _response(db, po, units.get(str(po.id), []))
 
 
 @router.post("/{po_id}/complete", response_model=PackingOrderResponse)
@@ -1231,13 +1282,14 @@ async def add_packing_completion(
     if po.status == "PENDING":
         po.status = "IN_PROGRESS"
         po.actual_start_date = po.actual_start_date or datetime.utcnow()
-    if packing_service.is_target_met(po) and not po.actual_end_date:
+    fulfilled = await packing_service.is_fulfilled(db, po)
+    if fulfilled and not po.actual_end_date:
         po.actual_end_date = datetime.utcnow()
     # Fulfilled but still open — the MO's DELIVERED/COMPLETED split (SAP DLV vs
     # TECO). Logging stays allowed (only COMPLETED/CANCELLED stop it); what this
     # buys is that the order's *open* quantity is now zero, so quarantine stops
     # treating it as a claim on the hold bin's stock. Never auto-closes.
-    if po.status in ("PENDING", "IN_PROGRESS") and packing_service.is_target_met(po):
+    if po.status in ("PENDING", "IN_PROGRESS") and fulfilled:
         po.status = "DELIVERED"
     await db.commit()
 
@@ -1281,7 +1333,7 @@ async def add_packing_completion(
 
     po = await _load(db, po_id)
     units = await _packed_units_for(db, [po.id])
-    return _decorate(po, units.get(str(po.id), []))
+    return await _response(db, po, units.get(str(po.id), []))
 
 
 @router.post("/{po_id}/completions/{completion_id}/reject", response_model=PackingOrderResponse)
@@ -1376,7 +1428,7 @@ async def reject_packing_completion(
     # Reopen: packed progress just dropped, so an order that had hit target is no
     # longer fulfilled. Never auto-closes on qty, never auto-closes off it either.
     po = await _load(db, po_id)
-    if po.actual_end_date and not packing_service.is_target_met(po):
+    if po.actual_end_date and not await packing_service.is_fulfilled(db, po):
         po.actual_end_date = None
         if po.status in ("DELIVERED", "COMPLETED"):
             po.status = "IN_PROGRESS"
@@ -1405,7 +1457,7 @@ async def reject_packing_completion(
 
     po = await _load(db, po_id)
     units = await _packed_units_for(db, [po.id])
-    return _decorate(po, units.get(str(po.id), []))
+    return await _response(db, po, units.get(str(po.id), []))
 
 
 @router.post("/{po_id}/card-printed", response_model=PackingOrderResponse)
@@ -1420,7 +1472,7 @@ async def mark_card_printed(
     po.card_printed_at = datetime.utcnow()
     await db.commit()
     po = await _load(db, po_id)
-    return _decorate(po)
+    return await _response(db, po)
 
 
 @router.delete("/{po_id}")

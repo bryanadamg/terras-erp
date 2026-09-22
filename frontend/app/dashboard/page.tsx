@@ -7,9 +7,8 @@ import { useIsMobile } from '../hooks/useIsMobile';
 
 export default function DashboardPage() {
     const {
-        items, locations, stockBalance, dashboardWorkOrders,
-        stockEntries, samples, salesOrders, dashboardKPIs,
-        dashboardSummary, dashboardKpiHistory, itemIndex,
+        items, stockBalance, dashboardWorkOrders, salesOrders, dashboardKPIs,
+        dashboardSummary, dashboardOutlook, dashboardKpiHistory, itemIndex, loading,
     } = useData();
     const isMobile = useIsMobile();
 
@@ -30,16 +29,13 @@ export default function DashboardPage() {
     return (
             <DashboardView
                 items={items}
-                locations={locations}
-                stockBalance={stockBalance}
                 workOrders={dashboardWorkOrders}
-                stockEntries={stockEntries}
-                samples={samples}
-                salesOrders={salesOrders}
                 kpis={dashboardKPIs}
                 summary={dashboardSummary}
                 itemIndex={itemIndex}
                 kpiHistory={dashboardKpiHistory}
+                outlook={dashboardOutlook}
+                loading={loading.manufacturingOrders}
             />
     );
 }
