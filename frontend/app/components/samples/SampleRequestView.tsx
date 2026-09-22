@@ -96,6 +96,7 @@ export default function SampleRequestView({ samples, customers, onCreateSample, 
   const [searchTerm, setSearchTerm] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('ALL');
+  const [unreadOnly, setUnreadOnly] = useState(false);
   const [categoryFilter, setCategoryFilter] = useState('ALL');
   // Created-date range (inclusive both ends), applied server-side like every other filter here.
   const [createdFrom, setCreatedFrom] = useState('');
@@ -537,7 +538,7 @@ export default function SampleRequestView({ samples, customers, onCreateSample, 
       ...(samplesMeta.colorStats || {}),
   }) as Record<string, number>, [samplesMeta.colorStats]);
 
-  const hasActiveFilter = !!searchTerm || statusFilter !== 'ALL' || categoryFilter !== 'ALL' || !!createdFrom || !!createdTo;
+  const hasActiveFilter = !!searchTerm || statusFilter !== 'ALL' || categoryFilter !== 'ALL' || !!createdFrom || !!createdTo || unreadOnly;
   const clearFilters = () => {
       setSearchTerm('');
       setSearchQuery('');
@@ -545,13 +546,14 @@ export default function SampleRequestView({ samples, customers, onCreateSample, 
       setCategoryFilter('ALL');
       setCreatedFrom('');
       setCreatedTo('');
+      setUnreadOnly(false);
   };
 
   // Debounce the search box: the input echoes instantly, the fetch fires after
   // the pause (same shape as DataContext's item search).
   useDebouncedCommit(searchTerm, searchQuery, setSearchQuery);
 
-  useEffect(() => { setSamplePage(1); }, [searchQuery, statusFilter, categoryFilter, createdFrom, createdTo]);
+  useEffect(() => { setSamplePage(1); }, [searchQuery, statusFilter, categoryFilter, createdFrom, createdTo, unreadOnly]);
 
   // A ?highlight=<id> deep link must stay reachable even once paginated — the
   // server resolves which page holds that row under the active filters and
@@ -568,8 +570,9 @@ export default function SampleRequestView({ samples, customers, onCreateSample, 
           createdFrom,
           createdTo,
           focusId,
+          unreadOnly,
       });
-  }, [samplePage, searchQuery, statusFilter, categoryFilter, createdFrom, createdTo, highlightId, loadSamples]);
+  }, [samplePage, searchQuery, statusFilter, categoryFilter, createdFrom, createdTo, unreadOnly, highlightId, loadSamples]);
 
   useEffect(() => {
       if (samplesMeta.page && samplesMeta.page !== samplePage) setSamplePage(samplesMeta.page);
@@ -1093,8 +1096,22 @@ export default function SampleRequestView({ samples, customers, onCreateSample, 
                    </button>
                    <ToolbarCount right>
                        {totalSamples} item{totalSamples !== 1 ? 's' : ''}
-                       {unreadCount > 0 && (
-                           <> · <span style={{ color: '#1c5bc8', fontWeight: 'bold' }}>{unreadCount} unread</span></>
+                       {(unreadCount > 0 || unreadOnly) && (
+                           <> · <span
+                               role="button"
+                               tabIndex={0}
+                               onClick={() => setUnreadOnly(v => !v)}
+                               onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setUnreadOnly(v => !v); } }}
+                               title={unreadOnly ? 'Showing unread only — click to show all' : 'Show only unread requests'}
+                               style={{
+                                   color: '#1c5bc8', fontWeight: 'bold', cursor: 'pointer',
+                                   padding: '0 3px',
+                                   ...(unreadOnly ? {
+                                       background: '#1c5bc8', color: '#fff',
+                                       border: '1px solid #0a3a9a', borderRadius: CHIP_RADIUS,
+                                   } : { borderBottom: '1px dotted #1c5bc8' }),
+                               }}
+                           >{unreadCount} unread{unreadOnly ? ' ×' : ''}</span></>
                        )}
                    </ToolbarCount>
                    {canManage && (
@@ -1138,17 +1155,21 @@ export default function SampleRequestView({ samples, customers, onCreateSample, 
                                    ref={s.id === highlightId ? highlightRef : undefined}
                                    onClick={() => toggleExpand(s.id, s.is_unread)}
                                    style={{
+                                       // Unread is marked by the rail on the first cell, not a row
+                                       // wash: with nothing read yet the wash repaints the whole
+                                       // table and buries the zebra that makes wide rows scannable.
                                        background: s.id === highlightId ? rowStateBg('highlighted')
                                            : expandedIds.has(s.id) ? rowStateBg('expanded')
-                                           : s.is_unread ? ('#dde8fb')
                                            : lvZebra(rowIndex),
                                        borderBottom: '1px solid #c0bdb5',
                                        cursor: 'pointer',
                                        outline: s.id === highlightId ? '2px solid #f0a000' : undefined,
                                    }}
                                >
+                                   {/* Read rows keep a transparent rail so nothing shifts when one
+                                       is marked read under the cursor. */}
                                    <ExpanderCell expanded={expandedIds.has(s.id)} onToggle={() => toggleExpand(s.id, s.is_unread)} label="sample detail"
-                                       tdStyle={tdBase} />
+                                       tdStyle={{ ...tdBase, borderLeft: `3px solid ${s.is_unread ? '#1c5bc8' : 'transparent'}` }} />
                                    <td style={tdBase}>
                                        <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
                                            <div>

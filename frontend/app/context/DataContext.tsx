@@ -159,6 +159,8 @@ export interface SampleQuery {
     createdTo?: string;
     /** Deep-link target: the server returns whichever page contains this row. */
     focusId?: string;
+    /** Narrow to rows this user hasn't read since their last edit. */
+    unreadOnly?: boolean;
 }
 
 export interface SamplesMeta {
@@ -941,6 +943,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
         if (query.createdFrom) params.set('created_from', query.createdFrom);
         if (query.createdTo) params.set('created_to', query.createdTo);
         if (query.focusId) params.set('focus_id', query.focusId);
+        if (query.unreadOnly) params.set('unread', 'true');
         const myGen = ++sampleGenRef.current;
         try {
             const token = localStorage.getItem('access_token');

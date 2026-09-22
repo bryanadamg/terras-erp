@@ -161,3 +161,24 @@ def test_own_edits_stay_read_for_the_actor(client, auth_headers):
     assert is_unread() is True
 
     client.delete(f"/api/samples/{sid}", headers=auth_headers)
+
+
+def test_unread_filter_narrows_the_whole_page(client, auth_headers):
+    def make(project):
+        return client.post("/api/samples", json={
+            "request_date": "2026-04-18",
+            "project": project,
+            "colors": [{"name": "BLACK", "is_repeat": False, "order": 0}],
+        }, headers=auth_headers).json()["id"]
+
+    read_id, unread_id = make("stays read"), make("goes unread")
+    client.delete(f"/api/samples/{unread_id}/read", headers=auth_headers)
+
+    body = client.get("/api/samples?unread=true", headers=auth_headers).json()
+    ids = [s["id"] for s in body["items"]]
+    assert unread_id in ids and read_id not in ids
+    # total and the badge both narrow with the filter — the pager reads total.
+    assert body["total"] == body["unread"] == len(ids)
+
+    for sid in (read_id, unread_id):
+        client.delete(f"/api/samples/{sid}", headers=auth_headers)
