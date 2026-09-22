@@ -133,3 +133,31 @@ def test_color_status_update(client, auth_headers):
 
     # Cleanup
     client.delete(f"/api/samples/{sample_id}", headers=auth_headers)
+
+
+def test_own_edits_stay_read_for_the_actor(client, auth_headers):
+    payload = {
+        "request_date": "2026-04-18",
+        "project": "Read receipts",
+        "colors": [{"name": "BLACK", "is_repeat": False, "order": 0}],
+    }
+    sample = client.post("/api/samples", json=payload, headers=auth_headers).json()
+    sid = sample["id"]
+
+    def is_unread():
+        items = client.get("/api/samples", headers=auth_headers).json()["items"]
+        return next(s for s in items if s["id"] == sid)["is_unread"]
+
+    # Creating, editing and moving status are all acts of reading.
+    assert is_unread() is False
+    client.put(f"/api/samples/{sid}/status?status=IN_PRODUCTION", headers=auth_headers)
+    assert is_unread() is False
+    payload["notes"] = "edited"
+    client.put(f"/api/samples/{sid}", json=payload, headers=auth_headers)
+    assert is_unread() is False
+
+    # The dot still works as a manual override.
+    client.delete(f"/api/samples/{sid}/read", headers=auth_headers)
+    assert is_unread() is True
+
+    client.delete(f"/api/samples/{sid}", headers=auth_headers)
