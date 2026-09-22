@@ -12,7 +12,7 @@ import SearchableSelect from '@bryanadamg/terras-ui/components/Combobox';
 import HistoryPane from '../shared/HistoryPane';
 import ModalWrapper from '../shared/ModalWrapper';
 const SamplePrintModal = dynamic(() => import('./SamplePrintModal'), { ssr: false });
-import { StatusChip, StatusCountPill, TableSkeleton, useTableSkeletonMetrics, FormSection, useFloatingMenu, FloatingMenu, MenuTriggerButton, XPActionButton, familyColor, VariantChip, CodeChip, xpFont, rowStateBg, ToggleChip, CHIP_RADIUS, xpInput as xpInputBase, xpBtn as xpBtnBase, expandedRowFrame, BTN_TONES, XP_BTN } from '../shared/xpTheme';
+import { StatusChip, StatusCountPill, TableSkeleton, useTableSkeletonMetrics, FormSection, useFloatingMenu, FloatingMenu, MenuTriggerButton, XPActionButton, familyColor, Chip, VariantChip, VARIANT_TONE, REF_TONES, CodeChip, xpFont, rowStateBg, ToggleChip, CHIP_RADIUS, xpInput as xpInputBase, xpBtn as xpBtnBase, expandedRowFrame, BTN_TONES, XP_BTN } from '../shared/xpTheme';
 import { ShellWindow, ShellTitleBar, xpToolbar, SearchField, FilterChipBar, ToolbarCount, ToolbarButton } from '../shared/shellTheme';
 import Pager from '../shared/Pager';
 import RequestDetailPanel, { getStatusStripe } from '../shared/RequestDetailPanel';
@@ -32,6 +32,15 @@ const LEGACY_CATEGORY_LABELS: Record<string, string> = {
     YARDAGE: 'Yardage',
 };
 const DEFAULT_CATEGORY_LABEL = 'New Sample';
+// Tones for the three seeded categories, off the shared variant palette. Anything
+// a user adds on the Attributes page falls back to the neutral reference tone —
+// the column stays legible without this map having to know every category.
+const CATEGORY_TONE: Record<string, { color: string; background: string; borderColor: string }> = {
+    'new sample': VARIANT_TONE.order,
+    're sample': VARIANT_TONE.pending,
+    'yardage': VARIANT_TONE.qty,
+};
+const categoryTone = (label: string) => CATEGORY_TONE[label.toLowerCase()] ?? REF_TONES.category;
 const categoryLabel = (v?: string) =>
     (v ? (LEGACY_CATEGORY_LABELS[v] ?? v) : DEFAULT_CATEGORY_LABEL);
 
@@ -1193,9 +1202,10 @@ export default function SampleRequestView({ samples, customers, onCreateSample, 
                                        </div>
                                    </td>
                                    <td style={tdBase}>
-                                       <span style={{ fontFamily: xpFont, fontSize: '10px' }}>
-                                           {categoryLabel(s.category)}
-                                       </span>
+                                       {(() => {
+                                           const label = categoryLabel(s.category);
+                                           return <Chip tone={categoryTone(label)} truncate title={label}>{label}</Chip>;
+                                       })()}
                                    </td>
                                    <td style={tdBase}>
                                        {s.customer_id ? (
