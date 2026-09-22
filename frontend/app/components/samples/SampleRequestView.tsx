@@ -1255,6 +1255,7 @@ export default function SampleRequestView({ samples, customers, onCreateSample, 
                                            <MenuTriggerButton onClick={(e) => { closeDropdown(); toggleRowMenu(s.id, e); }} />
                                            {/* Read/unread dot */}
                                            <span
+                                               className={s.is_unread ? 'read-dot read-dot-unread' : 'read-dot'}
                                                title={s.is_unread ? 'Unread — click to mark as read' : 'Read — click to mark as unread'}
                                                onClick={(e) => { e.stopPropagation(); s.is_unread ? onMarkRead(s.id) : onMarkUnread(s.id); }}
                                                style={{
