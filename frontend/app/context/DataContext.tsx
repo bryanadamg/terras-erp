@@ -863,6 +863,20 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
         return p;
     }, [currentUser, windowKey, itemPage, woPage, prPage, auditPage, reportPage, soPage, poPage, itemSearch, moSearch, prFilterQuery, soQuery, poQuery, categoryL1, categoryL2, categoryL3, auditType, isInitialLoad, pageSize, showToast]);
 
+    // Every targeted refresh below used to swallow its failure with a
+    // console.error: the screen kept showing the rows it already had, with
+    // nothing to say they were stale. Toast instead — but at most once per
+    // domain per 30s, so the dashboard's 60s KPI poll can't turn one outage
+    // into a stream of identical toasts.
+    const refreshErrorAtRef = useRef<Record<string, number>>({});
+    const reportRefreshError = useCallback((domain: string, e: unknown) => {
+        console.error(`${domain} refresh failed`, e);
+        const now = Date.now();
+        if (now - (refreshErrorAtRef.current[domain] || 0) < 30_000) return;
+        refreshErrorAtRef.current[domain] = now;
+        showToast(`Could not refresh ${domain} — showing the last data loaded.`, 'warning');
+    }, [showToast]);
+
     // Targeted refresh for the Manufacturing Orders page: re-pull ONLY the MO
     // (root-only) + PR lists. Used after WO/MO/PR mutations instead of the broad
     // fetchData(), which also re-fetched items + the full nested /boms + the whole
@@ -884,9 +898,9 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
             ]);
             if (moRes.ok) { const d = await moRes.json(); setManufacturingOrders(d.items); setWoTotal(d.total); }
             if (prRes.ok && myPrGen === prGenRef.current) { const d = await prRes.json(); setProductionRuns(d.items); setPrTotal(d.total); }
-        } catch (e) { console.error('refreshManufacturing error', e); }
+        } catch (e) { reportRefreshError('manufacturing orders', e); }
         finally { setPrPending(n => n - 1); }
-    }, [currentUser, woPage, prPage, moSearch, prFilterQuery, pageSize]);
+    }, [currentUser, woPage, prPage, moSearch, prFilterQuery, pageSize, reportRefreshError]);
 
     // Targeted refresh for the Purchase Orders page after a PO mutation. Goes
     // straight to /purchase-orders instead of the broad fetchData(): fetchData
@@ -903,8 +917,8 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
             const headers = { 'Authorization': `Bearer ${token}` };
             const res = await fetch(`${API_BASE}/purchase-orders?${poQuery(poPage)}`, { headers, cache: 'no-store' });
             if (res.ok) { const d = await res.json(); setPurchaseOrders(d.items || []); setPoTotal(d.total || 0); setPoStatusCounts(d.status_counts || {}); }
-        } catch (e) { console.error('refreshPurchaseOrders error', e); }
-    }, [currentUser, poPage, poQuery]);
+        } catch (e) { reportRefreshError('purchase orders', e); }
+    }, [currentUser, poPage, poQuery, reportRefreshError]);
 
     // Targeted refresh for the Sales Orders page after a SO mutation — same
     // reasoning as refreshPurchaseOrders: goes straight to /sales-orders instead
@@ -916,8 +930,8 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
             const headers = { 'Authorization': `Bearer ${token}` };
             const res = await fetch(`${API_BASE}/sales-orders?${soQuery(soPage)}`, { headers, cache: 'no-store' });
             if (res.ok) { const d = await res.json(); setSalesOrders(d.items || []); setSoTotal(d.total || 0); setSoStatusCounts(d.status_counts || {}); }
-        } catch (e) { console.error('refreshSalesOrders error', e); }
-    }, [currentUser, soPage, soQuery]);
+        } catch (e) { reportRefreshError('sales orders', e); }
+    }, [currentUser, soPage, soQuery, reportRefreshError]);
 
     // The samples list is fetched one page at a time with the filters applied
     // server-side — the table can hold tens of thousands of requests, so it is
@@ -960,11 +974,11 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
                 });
             }
         } catch (e) {
-            console.error('loadSamples error', e);
+            reportRefreshError('samples', e);
         } finally {
             if (myGen === sampleGenRef.current) setLoadedOnce(prev => ({ ...prev, samples: true }));
         }
-    }, [currentUser]);
+    }, [currentUser, reportRefreshError]);
 
     /** Re-run the current samples query after a mutation. */
     const refreshSamples = useCallback(() => loadSamples(), [loadSamples]);
@@ -991,8 +1005,8 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
             // Write through: without this the next page load restores the pre-edit
             // masters from the cache and the unit you just created is gone again.
             patchMasterCache(patch);
-        } catch (e) { console.error('refreshItemMetadata error', e); }
-    }, [currentUser]);
+        } catch (e) { reportRefreshError('item metadata', e); }
+    }, [currentUser, reportRefreshError]);
 
     // Targeted refresh for the Routing page (work centers/operations CRUD) —
     // that page reads only workCenters/operations/locations, but every mutation
@@ -1014,8 +1028,8 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
             if (opRes.ok) { const d = await opRes.json(); setOperations(d); patch.operations = d; }
             if (locRes.ok) { const d = await locRes.json(); setLocations(d); patch.locations = d; }
             patchMasterCache(patch);
-        } catch (e) { console.error('refreshRouting error', e); }
-    }, [currentUser]);
+        } catch (e) { reportRefreshError('routing', e); }
+    }, [currentUser, reportRefreshError]);
 
     // Targeted refresh for a STOCK_UPDATE live event — only the balance table,
     // not the broad fetchData() (which on stock/manufacturing routes also re-pulls
@@ -1027,8 +1041,8 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
             const headers = { 'Authorization': `Bearer ${token}` };
             const res = await fetch(`${API_BASE}/stock/balance`, { headers, cache: 'no-store' });
             if (res.ok) { const d = await res.json(); setStockBalance(d); }
-        } catch (e) { console.error('refreshStockBalance error', e); }
-    }, [currentUser]);
+        } catch (e) { reportRefreshError('stock balances', e); }
+    }, [currentUser, reportRefreshError]);
 
     // Targeted refresh for a PRINT_TEMPLATE_UPDATE live event. Deliberately NOT
     // route-aware (unlike production/stock): a print modal can open from any page,
@@ -1047,8 +1061,8 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
                 // templates from the master cache and prints the old layout.
                 patchMasterCache({ printTemplates: data });
             }
-        } catch (e) { console.error('refreshPrintTemplates error', e); }
-    }, [currentUser]);
+        } catch (e) { reportRefreshError('print templates', e); }
+    }, [currentUser, reportRefreshError]);
 
     // Targeted refresh for a KPI_UPDATE live event while on the dashboard — only
     // the 3 KPI-ish calls, not the broad fetchData('dashboard') (which also
@@ -1069,8 +1083,8 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
             if (summaryRes.ok) setDashboardSummary(await summaryRes.json());
             if (historyRes.ok) setDashboardKpiHistory(await historyRes.json());
             if (outlookRes.ok) setDashboardOutlook(await outlookRes.json());
-        } catch (e) { console.error('refreshDashboardKPIs error', e); }
-    }, [currentUser]);
+        } catch (e) { reportRefreshError('dashboard KPIs', e); }
+    }, [currentUser, reportRefreshError]);
 
     const handleTabHover = (tab: string) => fetchData(tab);
 
@@ -1099,10 +1113,10 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
                 const myPrGen = ++prGenRef.current;
                 const res = await fetch(`${API_BASE}/production-runs?skip=${prSkip}&limit=${pageSize}`, { headers, cache: 'no-store' });
                 if (res.ok && myPrGen === prGenRef.current) { const d = await res.json(); setProductionRuns(d.items); setPrTotal(d.total); }
-            } catch (e) { console.error('restore productionRuns error', e); }
+            } catch (e) { reportRefreshError('production runs', e); }
             finally { setPrPending(n => n - 1); }
         })();
-    }, [prFilterQuery, currentUser, prPage, pageSize]);
+    }, [prFilterQuery, currentUser, prPage, pageSize, reportRefreshError]);
 
     // WebSocket Logic
     const fetchDataRef = useRef(fetchData);
