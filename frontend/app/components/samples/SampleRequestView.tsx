@@ -12,7 +12,7 @@ import SearchableSelect from '@bryanadamg/terras-ui/components/Combobox';
 import HistoryPane from '../shared/HistoryPane';
 import ModalWrapper from '../shared/ModalWrapper';
 const SamplePrintModal = dynamic(() => import('./SamplePrintModal'), { ssr: false });
-import { StatusChip, StatusCountPill, TableSkeleton, useTableSkeletonMetrics, FormSection, useFloatingMenu, FloatingMenu, MenuTriggerButton, XPActionButton, familyColor, CodeChip, xpFont, rowStateBg, ToggleChip, CHIP_RADIUS, xpInput as xpInputBase, xpBtn as xpBtnBase, expandedRowFrame, BTN_TONES, XP_BTN } from '../shared/xpTheme';
+import { StatusChip, StatusCountPill, TableSkeleton, useTableSkeletonMetrics, FormSection, useFloatingMenu, FloatingMenu, MenuTriggerButton, XPActionButton, familyColor, Chip, CodeChip, xpFont, rowStateBg, ToggleChip, CHIP_RADIUS, xpInput as xpInputBase, xpBtn as xpBtnBase, expandedRowFrame, BTN_TONES, XP_BTN } from '../shared/xpTheme';
 import { ShellWindow, ShellTitleBar, xpToolbar, SearchField, FilterChipBar, ToolbarCount, ToolbarButton } from '../shared/shellTheme';
 import Pager from '../shared/Pager';
 import RequestDetailPanel, { getStatusStripe } from '../shared/RequestDetailPanel';
@@ -54,6 +54,15 @@ export default function SampleRequestView({ samples, customers, onCreateSample, 
   const colorOptions = useMemo(() => {
     const attr = (attributes as any[]).find((a: any) => a.system_role === 'color');
     return (attr?.values ?? []).map((v: any) => ({ value: v.value, label: v.value }));
+  }, [attributes]);
+  // The picker maps the Colors attribute to {value,label} and drops `hex`, so the
+  // swatch is resolved back by name here. Name is what the sample stores — a value
+  // renamed after the fact simply won't match, which costs a dot and nothing else.
+  const colorHexByName = useMemo(() => {
+    const attr = (attributes as any[]).find((a: any) => a.system_role === 'color');
+    const map = new Map<string, string>();
+    for (const v of (attr?.values ?? [])) if (v?.hex) map.set(String(v.value).toLowerCase(), v.hex);
+    return map;
   }, [attributes]);
   const colorsAttrName = useMemo(() => {
     return (attributes as any[]).find((a: any) => a.system_role === 'color')?.name ?? null;
@@ -811,19 +820,17 @@ export default function SampleRequestView({ samples, customers, onCreateSample, 
                                    {newSample.colors.length === 0
                                        ? <span style={{ fontFamily: xpFont, fontSize: 11, color: '#999', fontStyle: 'italic' }}>No variants added yet…</span>
                                        : newSample.colors.map((c, idx) => (
-                                           <span key={idx} style={{ borderRadius: CHIP_RADIUS,
-                                               display: 'inline-flex', alignItems: 'center', gap: 4, padding: '2px 7px',
-                                               marginRight: 4, marginBottom: 4,
-                                               background: c.is_repeat ? '#dce8f8' : '#e8f4e8',
-                                               border: `1px solid ${c.is_repeat ? '#7ab0d8' : '#7aba7a'}`,
-                                               fontFamily: xpFont, fontSize: 11,
-                                           }}>
+                                           <Chip key={idx} size="md" style={{ marginRight: 4, marginBottom: 4 }}
+                                               swatch={colorHexByName.get(c.name.toLowerCase())}
+                                               onRemove={() => removeColorRow(idx)}
+                                               tone={c.is_repeat
+                                                   ? { background: '#dce8f8', borderColor: '#7ab0d8' }
+                                                   : { background: '#e8f4e8', borderColor: '#7aba7a' }}>
                                                <span style={{ fontSize: 9, fontWeight: 'bold', color: c.is_repeat ? '#0047c8' : '#228b22', textTransform: 'uppercase' as const }}>
                                                    {c.is_repeat ? 'RPT' : 'NEW'}
                                                </span>
                                                {c.name}
-                                               <span onClick={() => removeColorRow(idx)} style={{ cursor: 'pointer', color: '#a00', marginLeft: 2, fontWeight: 'bold', fontSize: 12, lineHeight: 1 }} title="Remove">×</span>
-                                           </span>
+                                           </Chip>
                                        ))
                                    }
                                </div>
@@ -1227,9 +1234,12 @@ export default function SampleRequestView({ samples, customers, onCreateSample, 
                                        )}
                                        <div style={{ display: 'flex', gap: 2, flexWrap: 'wrap' as const, marginTop: 2 }}>
                                            {s.colors && s.colors.map((c: any, i: number) => (
-                                               <span key={i} style={{ borderRadius: CHIP_RADIUS, background: c.is_repeat ? '#e8e8ff' : '#e8f5e8', border: `1px solid ${c.is_repeat ? '#8888cc' : '#88aa88'}`, color: c.is_repeat ? '#333' : '#1a3a1a', padding: '0 4px', fontSize: '9px', fontFamily: xpFont }}>
-                                                       {c.name}{c.is_repeat ? ' (R)' : ''}
-                                                   </span>))}
+                                               <Chip key={i} size="xs" swatch={colorHexByName.get(String(c.name).toLowerCase())}
+                                                   tone={c.is_repeat
+                                                       ? { background: '#e8e8ff', borderColor: '#8888cc', color: '#333' }
+                                                       : { background: '#e8f5e8', borderColor: '#88aa88', color: '#1a3a1a' }}>
+                                                   {c.name}{c.is_repeat ? ' (R)' : ''}
+                                               </Chip>))}
                                        </div>
                                    </td>
                                    {/* Status — request-level only */}
@@ -1323,7 +1333,14 @@ export default function SampleRequestView({ samples, customers, onCreateSample, 
                                            stripeColor: stripe.borderLeftColor,
                                            background: stripe.background,
                                            cells: [
-                                               <span style={{ fontWeight: 'bold', color: '#111' }}>{c.name}</span>,
+                                               <span style={{ fontWeight: 'bold', color: '#111', display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                                                   {colorHexByName.has(String(c.name).toLowerCase()) && (
+                                                       <span style={{ width: 8, height: 8, borderRadius: '50%', flexShrink: 0, display: 'inline-block',
+                                                           background: colorHexByName.get(String(c.name).toLowerCase()),
+                                                           border: '1px solid rgba(0,0,0,0.25)' }} />
+                                                   )}
+                                                   {c.name}
+                                               </span>,
                                                <span style={{ borderRadius: CHIP_RADIUS, background: c.is_repeat ? '#dce4f5' : '#d4edda', border: `1px solid ${c.is_repeat ? '#6878c8' : '#5aaa68'}`, color: c.is_repeat ? '#0d2a6e' : '#0c3a1a', padding: '0 4px', fontSize: 9, fontFamily: xpFont, fontWeight: 'bold' }}>{c.is_repeat ? 'Repeat' : 'New'}</span>,
                                                <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, flexWrap: 'wrap' }}>
                                                    <StatusChip status={status} tint style={undefined} />
