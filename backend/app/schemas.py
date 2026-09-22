@@ -3364,10 +3364,11 @@ class PackingOrderCreate(BaseModel):
     sales_order_line_id: UUID | None = None
     color_id: UUID | None = None
     attribute_value_ids: list[UUID] = []
-    # Lots this order takes off the Quarantine Packing desk. Each is locked to
-    # the order (`Batch.locked_packing_order_id`): no other order may draw from
-    # it, and this one cannot be COMPLETED until the lot is gone from the source
-    # location — even past `qty_target`, which is only what was free at the time.
+    # Lots this order takes ownership of — off the Quarantine Packing desk, or
+    # picked by hand on the New Packing Order form. Each is locked to the order
+    # (`Batch.locked_packing_order_id`): no other order may draw from it, and this
+    # one cannot be COMPLETED until the lot is gone from the source location —
+    # even past `qty_target`, which is only what was free at the time.
     locked_batch_ids: list[UUID] = []
     # Box size, in the item's UOM. Derived from `pack_size_alt` when that is sent
     # with a resolvable alt unit — the count is what the floor packs to.

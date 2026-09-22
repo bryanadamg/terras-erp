@@ -472,6 +472,12 @@ async def list_batches(
                     "Quarantine Packing desk belongs to the order that claimed it, so offering it "
                     "elsewhere would plan two orders over one physical pile.",
     ),
+    exclude_locked: bool = Query(
+        False,
+        description="Drop lots locked to ANY open packing order. Same rule as for_packing_order_id "
+                    "for a caller with no order to compare against yet — the New Packing Order lot "
+                    "picker, which claims its lots at create time.",
+    ),
     skip: int = 0,
     limit: int = 100,
     db: AsyncSession = Depends(get_async_db),
@@ -489,9 +495,11 @@ async def list_batches(
         query = query.filter(Batch.item_id == item_id)
     if not include_packed_units:
         query = query.filter(Batch.packing_order_id.is_(None))
-    if for_packing_order_id:
+    if for_packing_order_id or exclude_locked:
         # Imported here, not at module scope: packing_service imports this module
         # for `generate_batch_number`, so the other direction is a cycle.
+        # A null order id leaves the condition as "free, or held by a closed order",
+        # which is exactly what a not-yet-created order may claim.
         from app.services import packing_service
         query = query.filter(packing_service.lock_free_condition(for_packing_order_id))
     result = await db.execute(query.offset(skip).limit(limit))

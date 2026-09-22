@@ -901,6 +901,19 @@ function PackingOrderForm({ locPickerTreeOptions, machineOptions, defaultSourceL
     // floor knows the machine is still packable, and the packer can name one at
     // log time — but naming it here is what pre-fills every pack event.
     const [workCenterId, setWorkCenterId] = useState(initialValues?.work_center_id || '');
+    // Lots this order takes ownership of. The Quarantine Packing deep link seeds
+    // them; the picker below lets a planner cutting an order by hand claim the
+    // same way. A claimed lot is exclusive — no other open order may draw it —
+    // and this order cannot be COMPLETED until the pile is gone from the source
+    // location, whatever `qty_target` says. So this is "pack these lots out",
+    // not a suggestion; leaving it empty keeps the old behaviour of drawing from
+    // whatever is free at pack time.
+    const [lockedIds, setLockedIds] = useState<string[]>(
+        (initialValues?.locked_batch_ids || []).map((b: any) => String(b)),
+    );
+    const [lots, setLots] = useState<any[]>([]);
+    const [lotsLoading, setLotsLoading] = useState(false);
+    const [heldLotCount, setHeldLotCount] = useState(0);
     const [soId, setSoId] = useState(initialValues?.sales_order_id || '');
     const [soLineId, setSoLineId] = useState(initialValues?.sales_order_line_id || '');
     const [notes, setNotes] = useState('');
@@ -938,6 +951,39 @@ function PackingOrderForm({ locPickerTreeOptions, machineOptions, defaultSourceL
         if (defaultSourceLocId) setSourceLoc((v: string) => v || defaultSourceLocId);
         if (defaultOutputLocId) setOutputLoc((v: string) => v || defaultOutputLocId);
     }, [defaultSourceLocId, defaultOutputLocId]);
+
+    // Candidate lots for the claim above — the same query the pack modal's picker
+    // runs, minus the order id it has no way to know yet. `exclude_locked` stands
+    // in for that: a lot another open order already holds is not offered here,
+    // because claiming it would 400 on submit (`assert_lots_unlocked`).
+    useEffect(() => {
+        if (!itemId || !sourceLoc) { setLots([]); setHeldLotCount(0); return; }
+        let alive = true;
+        setLotsLoading(true);
+        (async () => {
+            try {
+                const res = await authFetch(
+                    `${API_BASE}/batches?item_id=${itemId}&location_id=${sourceLoc}&limit=200&exclude_locked=true`
+                );
+                const list = res.ok ? (await res.json() || []) : [];
+                if (!alive) return;
+                const withStock = (list || []).filter(
+                    (b: any) => (b.remaining ?? 0) > 0 && b.quality_status !== 'REJECTED');
+                // Held lots are excluded rather than flagged, exactly as in the pack
+                // modal: packing one is hard-blocked, so claiming it would only
+                // build an order that cannot close.
+                setHeldLotCount(withStock.filter((b: any) => b.held).length);
+                const available = withStock.filter((b: any) => !b.held);
+                setLots(available);
+                // A tick that outlived an item or location change would claim a lot
+                // this order can never pack — `claim_lots` scopes to the order's own
+                // item and would drop it silently.
+                const ids = new Set(available.map((b: any) => String(b.id)));
+                setLockedIds(prev => prev.filter(id => ids.has(id)));
+            } finally { if (alive) setLotsLoading(false); }
+        })();
+        return () => { alive = false; };
+    }, [itemId, sourceLoc, authFetch]);
 
     // A pre-filled item (from a Quarantine Packing suggestion) is only an id —
     // the combobox can't show its name/code until a search has actually returned
@@ -1054,6 +1100,30 @@ function PackingOrderForm({ locPickerTreeOptions, machineOptions, defaultSourceL
     const onAltPerCartonChange = (val: string) => {
         setAltPerCarton(val);
         applyAlt(qty2, uom2Factor, uom2LengthUom, val);
+    };
+
+    // The pile the ticked lots hold, in the item's stock UOM — what this order has
+    // to pack out before it can close.
+    const lockedTotal = useMemo(() => {
+        const sel = new Set(lockedIds);
+        return lots.filter((b: any) => sel.has(String(b.id)))
+            .reduce((t: number, b: any) => t + Number(b.remaining ?? 0), 0);
+    }, [lots, lockedIds]);
+
+    // "This order is for these lots": restate the held pile as the target. With an
+    // alt unit the COUNT is the canonical figure (see `qty2`), so the kilos are
+    // converted into it and the base target follows from there — writing the base
+    // figure directly would be overwritten the moment the count changed.
+    const useLotTotalAsTarget = () => {
+        if (uom2 && altBaseFactor) {
+            const alt = baseToAlt(lockedTotal, altBaseFactor);
+            if (alt !== null) {
+                setQty2(String(alt));
+                applyAlt(String(alt), uom2Factor, uom2LengthUom, altPerCarton);
+            }
+            return;
+        }
+        setQtyTarget(String(Math.round(lockedTotal * 100) / 100));
     };
 
     // The selling unit an SO line is counted in, copied onto the form. Split out of
@@ -1285,10 +1355,10 @@ function PackingOrderForm({ locPickerTreeOptions, machineOptions, defaultSourceL
                 // the old variant-less behaviour.
                 color_id: initialValues?.color_id || null,
                 attribute_value_ids: initialValues?.combo_value_id ? [initialValues.combo_value_id] : [],
-                // Same deep link, same reasoning: the lots it named are claimed by
-                // this order outright. Empty for a hand-made order, which draws
-                // from whatever is free at pack time as before.
-                locked_batch_ids: initialValues?.locked_batch_ids || [],
+                // The lots this order claims outright — seeded by the Quarantine
+                // Packing deep link, or ticked in the Held Lots picker. Empty means
+                // the order draws from whatever is free at pack time, as before.
+                locked_batch_ids: lockedIds,
                 notes: notes || null,
                 // No packaging plan on the order: the box is picked per carton line
                 // in the pack modal, where the packer is holding it. Planning it
@@ -1617,6 +1687,71 @@ function PackingOrderForm({ locPickerTreeOptions, machineOptions, defaultSourceL
                             <SearchableSelect options={machineOptions || []} value={workCenterId} onChange={setWorkCenterId} placeholder="— none —" size="sm" />
                         </div>
                     </div>
+                </FormSection>
+
+                <FormSection title={<SectionTitle icon="bi-lock">Held Lots</SectionTitle>}>
+                    <div style={{ fontSize: 10, color: '#555', marginBottom: 4 }}>
+                        A ticked lot is held for this order alone — no other packing order can draw
+                        it, and this one cannot be closed until the lot is packed out of the pack-from
+                        location, whatever the target says. Leave every box clear to draw from
+                        whatever is free at pack time.
+                    </div>
+                    {(!itemId || !sourceLoc) ? (
+                        <div style={{ fontSize: 10, color: '#888' }}>
+                            Pick an item and a pack-from location to choose lots.
+                        </div>
+                    ) : (
+                        <>
+                            <div style={{ ...xpFormLabel, fontWeight: 'bold', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                <span>Lots at the pack-from location</span>
+                                <span style={{ fontWeight: 'normal', color: '#555' }}>
+                                    {lockedIds.length} held · {lockedTotal.toFixed(2)} {selectedItem?.uom || ''}
+                                    {lockedIds.length > 0 && (
+                                        <button
+                                            type="button"
+                                            className={XP_BTN}
+                                            onClick={useLotTotalAsTarget}
+                                            title="Set this order's target to what the held lots hold"
+                                            style={{ ...xpBtn(), fontSize: 9, padding: '0 6px', marginLeft: 6 }}
+                                        >Use as target</button>
+                                    )}
+                                </span>
+                            </div>
+                            <div style={{ border: '1px solid #7f9db9', background: '#fff', maxHeight: 150, overflowY: 'auto' }}>
+                                {lotsLoading && <div style={{ fontSize: 10, color: '#888', padding: '3px 5px' }}>Loading lots...</div>}
+                                {!lotsLoading && lots.length === 0 && (
+                                    <div style={{ fontSize: 10, color: '#888', padding: '3px 5px' }}>
+                                        {heldLotCount > 0
+                                            ? `${heldLotCount} lot${heldLotCount === 1 ? '' : 's'} here ${heldLotCount === 1 ? 'is' : 'are'} held in quarantine — release on the Quarantine Packing page first.`
+                                            : 'No free lots of this item at the pack-from location.'}
+                                    </div>
+                                )}
+                                {lots.map((b: any) => {
+                                    const id = String(b.id);
+                                    const on = lockedIds.includes(id);
+                                    return (
+                                        <label key={id} style={{ ...lvPickerRow(on), fontSize: 10 }}>
+                                            <RowCheckbox checked={on} label={b.batch_number || 'lot'}
+                                                onChange={() => setLockedIds(prev => on ? prev.filter(x => x !== id) : [...prev, id])} />
+                                            <div style={{ display: 'flex', flexDirection: 'column', gap: 2, minWidth: 0, flex: 1 }}>
+                                                <div style={{ display: 'flex', alignItems: 'center', gap: 4, flexWrap: 'wrap' }}>
+                                                    <span style={{ fontFamily: CODE_FONT, fontWeight: 'bold' }}>{b.batch_number}</span>
+                                                    <span style={{ color: '#555' }}>{Number(b.remaining ?? 0).toFixed(2)} {selectedItem?.uom || ''}</span>
+                                                    {b.location_name && <span style={{ color: '#0058e6' }}>@ {b.location_name}</span>}
+                                                </div>
+                                                <LotChips batch={b} showOrder />
+                                            </div>
+                                        </label>
+                                    );
+                                })}
+                            </div>
+                            {heldLotCount > 0 && lots.length > 0 && (
+                                <div style={{ fontSize: 9, color: '#7a4a00', marginTop: 2 }}>
+                                    {heldLotCount} more lot{heldLotCount === 1 ? '' : 's'} held in quarantine, not shown.
+                                </div>
+                            )}
+                        </>
+                    )}
                 </FormSection>
 
                 <FormSection title={<SectionTitle icon="bi-sticky">Notes</SectionTitle>}>
