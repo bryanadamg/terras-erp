@@ -549,6 +549,9 @@ export default function LabDipRequestView({
                                             <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
                                                 <div>
                                                     <CodeChip code={r.code} tone="accent" style={{ fontWeight: 'bold' }} />
+                                                    {r.items?.some((it: any) => it.approval_image_url || it.rejection_image_url) && (
+                                                        <i className="bi bi-paperclip" title="Has attached photo(s)" style={{ marginLeft: 4, fontSize: 11, color: '#555' }} />
+                                                    )}
                                                     <div style={{ fontSize: 9, color: '#555'}}>{r.created_at ? tzDate(r.created_at) : ''}</div>
                                                 </div>
                                             </div>

@@ -1202,6 +1202,9 @@ export default function SampleRequestView({ samples, customers, onCreateSample, 
                                                    tone="accent"
                                                    style={s.is_unread ? { fontWeight: 900 } : undefined}
                                                />
+                                               {s.colors?.some((c: any) => c.approval_image_url || c.rejection_image_url) && (
+                                                   <i className="bi bi-paperclip" title="Has attached photo(s)" style={{ marginLeft: 4, fontSize: 11, color: '#555' }} />
+                                               )}
                                                <div style={{ fontSize: '9px', color: '#555' }}>
                                                    {tzDate(s.created_at)}
                                                </div>
