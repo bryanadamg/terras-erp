@@ -1861,11 +1861,13 @@ function PackingOrderDetail({ po: initialPo, itemById, locationById, locPickerTr
     // once, at the box, against the sample in force then is what keeps a later
     // re-sample from restating cartons that are already packed and shipped.
     const weighBasis = hasAlt && String(po.pack_basis || '').toUpperCase() === 'WEIGHED';
-    // Whole pieces: a piece is a cut length, and a label reading 50.8 Pcs is not
-    // something a customer can be handed. The drift that rounding leaves shows up
-    // in the totals strip, against the kilos, which are the measured figure.
+    // Two decimals, not whole pieces: cut-to-weight goods are not cut to a piece
+    // boundary, so rounding 11.8 up to 12 states a piece that was never in the box
+    // and hides the drift in the one figure the packer can still correct. The
+    // shared converter with its whole-count SNAP switched off — snapping is for
+    // reading a counted box back out of its weight, and here nothing was counted.
     const altFromBase = (kg: number) =>
-        (altFactor && altFactor > 0 && kg > 0 ? Math.round(kg / altFactor) : 0);
+        (kg > 0 ? (baseToAlt(kg, altFactor, false) ?? 0) : 0);
 
     // The same three figures in what the customer counts in — DISPLAY ONLY. The
     // packer thinks in pieces ("2880 Pcs ordered, 1200 boxed"), so on an alt-unit

@@ -211,9 +211,12 @@ export default function PackingScanView({ authFetch, initialCode, onClose }: { a
     // desktop pack modal — the two screens log the same document, so a basis the
     // floor screen ignored would put a counted figure on half the cartons.
     const weighBasis = hasAlt && String(po?.pack_basis || '').toUpperCase() === 'WEIGHED';
-    // Whole pieces: a piece is a cut length, so a carton holds an integer of them.
+    // Two decimals, not whole pieces — the desktop pack modal's rule, and it has to
+    // be the same one: cut-to-weight goods stop at a weight, not a piece boundary,
+    // and rounding the derived count up states a piece the box does not hold. The
+    // shared converter with its whole-count snap off (nothing here was counted).
     const altFromBase = (kg: number) =>
-        (altFactor && altFactor > 0 && kg > 0 ? Math.round(kg / altFactor) : 0);
+        (kg > 0 ? (baseToAlt(kg, altFactor, false) ?? 0) : 0);
 
     // Box size in the counting unit; see the seed in `resolveCode`. A weighed
     // order splits by kilos instead — that is what the scale is set to.
