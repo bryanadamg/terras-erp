@@ -112,7 +112,8 @@ function packProgress(po: any, it?: any) {
     // and a closable order the same thing. No held lots: unchanged, packed
     // against target.
     const holdsLots = num(po.held_lot_count) > 0;
-    const drawn = packed + num(po.qty_rejected);
+    const rejected = num(po.qty_rejected);
+    const drawn = packed + rejected;
     const baseDone = holdsLots ? drawn : packed;
     const baseGoal = holdsLots ? drawn + num(po.held_lot_open_qty) : target;
     const basis = tAlt !== null && pAlt !== null ? { done: pAlt, goal: tAlt } : { done: baseDone, goal: baseGoal };
@@ -125,6 +126,7 @@ function packProgress(po: any, it?: any) {
         holdsLots,
         baseDone,
         baseGoal,
+        rejected,
         hasAlt,
         altUom,
         altFactor,
@@ -145,6 +147,17 @@ function packProgress(po: any, it?: any) {
         // the only bar and `pct` equals it.
         pctAlt: tAlt !== null && pAlt !== null ? pctOf(pAlt, tAlt) : null,
         pctBase: pctOf(baseDone, baseGoal),
+        // The base bar's fill, split in two: what was packed, then the scrap
+        // stacked after it in red. Scrap is material that left the source lots and
+        // became nothing, so it belongs ON the bar rather than beside it — on a
+        // held-lot order it is part of what drains the pile (`baseDone` counts it),
+        // and against a plain target it is the difference between what was drawn
+        // and what the order got. Only on the kilos: the pieces bar counts what a
+        // packer counted into a box, and loose scrap was never pieces — deriving a
+        // count for it would divide kilos by the g/y estimate, which is the one
+        // conversion this file refuses everywhere else.
+        pctBasePacked: pctOf(packed, baseGoal),
+        pctBaseRejected: pctOf(rejected, baseGoal),
     };
 }
 
@@ -172,7 +185,12 @@ function PackProgressBars({ prog, uom, height = 6, fontSize = 9, hatched = false
      *  empty, which is honest: there is no piece count to be at 40% of. */
     only?: 'alt' | 'base';
 }) {
-    const rows: { key: string; pct: number; done: string; goal: string; unit: string; title?: string }[] = [];
+    const rows: {
+        key: string; pct: number; done: string; goal: string; unit: string; title?: string;
+        /** The primary (packed) fill, when it is not the whole of `pct` — the rest
+         *  of the fill is `rejectPct`, drawn red after it. */
+        fillPct?: number; rejectPct?: number;
+    }[] = [];
     if (prog.pctAlt !== null) {
         rows.push({
             key: 'alt',
@@ -189,11 +207,20 @@ function PackProgressBars({ prog, uom, height = 6, fontSize = 9, hatched = false
         done: prog.baseDone.toFixed(2),
         goal: prog.baseGoal.toFixed(2),
         unit: uom,
+        fillPct: prog.pctBasePacked,
+        rejectPct: prog.pctBaseRejected,
         title: prog.holdsLots
             ? `Held lots: ${prog.baseDone.toFixed(2)} of ${prog.baseGoal.toFixed(2)} ${uom} packed or scrapped out. `
               + `The order cannot be closed until the pile is gone, whatever its ${prog.target.toFixed(2)} ${uom} target says.`
             : undefined,
     });
+    // Scrap is named in the hover wherever it exists, on top of whatever the
+    // held-lot line already says — the red segment shows there IS scrap, the
+    // number says how much.
+    if (prog.rejected > 0) {
+        const base = rows[rows.length - 1];
+        base.title = `${(base.title ? base.title + ' ' : '')}${prog.rejected.toFixed(2)} ${uom} rejected — drawn from stock, packed into nothing.`;
+    }
     const shown = only ? rows.filter(r => r.key === only) : rows;
     if (!shown.length) return <span style={{ color: '#bbb' }}>—</span>;
     return (
@@ -213,8 +240,10 @@ function PackProgressBars({ prog, uom, height = 6, fontSize = 9, hatched = false
                         {r.pct}% · {r.done} / {r.goal} {r.unit}
                     </div>
                     <ProgressBar
-                        pct={r.pct}
+                        pct={r.fillPct ?? r.pct}
                         tone={r.pct >= 100 ? 'green' : r.pct > 0 ? 'blue' : 'gray'}
+                        secondaryPct={r.rejectPct || undefined}
+                        secondaryTone="red"
                         hatched={hatched}
                         height={height}
                     />
@@ -1856,6 +1885,22 @@ function PackingOrderDetail({ po: initialPo, itemById, locationById, locPickerTr
     const packedAlt = prog.packedAlt;
     const remainingAlt = prog.remainingAlt;
 
+    // The kilos row of the panel below. Every figure comes off `packProgress` —
+    // the same helper the list row's bars read — because this panel used to quote
+    // `packed / target` under a bar whose percentage was already measured against
+    // the held-lot pile, so the number and the fill disagreed on a held-lot order.
+    // `rejectPct` is the scrap stacked in red after the packed fill.
+    const baseRow = {
+        key: 'base',
+        label: uom || 'QTY',
+        pct: prog.pctBase,
+        fillPct: prog.pctBasePacked,
+        rejectPct: prog.pctBaseRejected,
+        done: prog.baseDone.toFixed(2),
+        goal: prog.baseGoal.toFixed(2),
+        unit: uom,
+    };
+
     // Progress basis lives in packProgress — the list row's bars read the same
     // helper, so this panel and that row can't disagree. The panel draws
     // `pctAlt` and `pctBase` as two bars; `prog.pct` (the DELIVERED basis) is
@@ -2491,16 +2536,18 @@ function PackingOrderDetail({ po: initialPo, itemById, locationById, locPickerTr
                         <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
                             {(hasAlt
                                 ? [
-                                    { key: 'alt', label: altUom || 'ALT', pct: prog.pctAlt ?? 0, done: (packedAlt ?? 0).toLocaleString(), goal: (targetAlt ?? 0).toLocaleString(), unit: altUom },
-                                    { key: 'base', label: uom || 'QTY', pct: prog.pctBase, done: packed.toFixed(2), goal: target.toFixed(2), unit: uom },
+                                    { key: 'alt', label: altUom || 'ALT', pct: prog.pctAlt ?? 0, fillPct: prog.pctAlt ?? 0, rejectPct: 0, done: (packedAlt ?? 0).toLocaleString(), goal: (targetAlt ?? 0).toLocaleString(), unit: altUom },
+                                    baseRow,
                                 ]
-                                : [{ key: 'base', label: uom || 'QTY', pct: prog.pctBase, done: packed.toFixed(2), goal: target.toFixed(2), unit: uom }]
+                                : [baseRow]
                             ).map(r => (
                                 <div key={r.key} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                                     <span style={{ fontSize: 9, fontWeight: 'bold', color: '#555', width: 30, flexShrink: 0, textTransform: 'uppercase', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                                         {r.label}
                                     </span>
-                                    <ProgressBar pct={r.pct} tone={r.pct >= 100 ? 'green' : 'blue'} hatched height={14} label="inside" />
+                                    <ProgressBar pct={r.fillPct} tone={r.pct >= 100 ? 'green' : 'blue'}
+                                        secondaryPct={r.rejectPct || undefined} secondaryTone="red"
+                                        hatched height={14} label="inside" />
                                     <span style={{ fontSize: 9, color: '#555', whiteSpace: 'nowrap', width: 120, flexShrink: 0, textAlign: 'right' }}>
                                         {r.done} / {r.goal} {r.unit}
                                     </span>
