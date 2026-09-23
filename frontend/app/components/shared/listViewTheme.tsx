@@ -581,17 +581,15 @@ export function LvSectionCaption({ icon, children, right, style }: {
 // Freezing up front would have been the visible regression: fixed layout with no
 // widths splits the table into equal columns.
 //
-// Once frozen the colgroup carries one extra `<col>` past the last header cell: an
-// empty filler column that owns all the slack. Every real column is then
-// independent, the way a spreadsheet behaves — dragging one moves nothing else.
-// The two alternatives both failed in use: stretching the table to 100% with no
-// filler spreads the surplus over EVERY column, which inflates the narrow ones (a
-// 78px Actions column grows and its right-aligned buttons drift off the row), and
-// making one real column absorb it means every drag visibly resizes that column
-// too. The filler is not a ragged edge either — `tr` backgrounds paint the whole
-// row box, so the header band and the zebra run out over it. The table never
-// shrinks below the width it had before the first drag either, so pulling a column
-// in feeds the filler rather than dragging the whole grid off the pane's edge.
+// Once frozen the table is exactly as wide as its columns add up to, and every
+// column is independent the way a spreadsheet behaves — dragging one moves nothing
+// else. Narrowing a column therefore narrows the grid, and the pane's own
+// background shows beside it. The two alternatives both failed in use: stretching
+// the table to 100% spreads the surplus over EVERY column, which inflates the
+// narrow ones (a 78px Actions column grows and its right-aligned buttons drift off
+// the row), and parking the slack in an empty filler `<col>` only looks seamless on
+// a grid that stripes its `tr`s — the ones that set the zebra per `td` (most of
+// them) grew a column of blank white rows past the last real cell instead.
 //
 // Widths persist per `storageKey` in localStorage. A stored set whose length no
 // longer matches the table is discarded rather than mapped — columns were added or
@@ -620,13 +618,6 @@ export function useColumnWidths(storageKey: string, defaults?: (number | string)
     const ref = React.useRef<HTMLTableElement | null>(null);
     const [widths, setWidths] = React.useState<number[] | null>(null);
     const [nearBorder, setNearBorder] = React.useState(false);
-    /** The table's full width the first time it was measured — what it spans when it
-     *  is laying itself out normally, before any column was dragged. The table is
-     *  never allowed below it, so narrowing a column parks the difference in the
-     *  filler instead of pulling the whole grid in off the right of the pane.
-     *  `max(100%)` alone did not hold that line: on a shrink-to-fit container the
-     *  percentage resolves against the table's own width, which is no floor at all. */
-    const fullWidth = React.useRef(0);
     const drag = React.useRef<{ i: number; x: number; base: number[]; moved: boolean } | null>(null);
     /** Set by a drag, read by the click that follows it — see `onClickCapture`. */
     const swallowClick = React.useRef(false);
@@ -638,13 +629,10 @@ export function useColumnWidths(storageKey: string, defaults?: (number | string)
         try {
             const raw = localStorage.getItem(colwStore(storageKey));
             if (!raw) return;
-            const { w, full } = JSON.parse(raw) ?? {};
+            const { w } = JSON.parse(raw) ?? {};
             if (Array.isArray(w) && w.length && w.every((n: any) => typeof n === 'number')
                 && (!defaults || w.length === defaults.length)) {
                 setWidths(w);
-                // Restored too, or a reload would drop the floor and the grid would
-                // come back pulled in off the pane wherever a column was narrowed.
-                if (typeof full === 'number') fullWidth.current = full;
             }
         } catch { /* private mode / bad JSON — the table's own layout is fine */ }
         // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -652,12 +640,12 @@ export function useColumnWidths(storageKey: string, defaults?: (number | string)
 
     const save = (w: number[] | null) => {
         try {
-            if (w) localStorage.setItem(colwStore(storageKey), JSON.stringify({ w, full: fullWidth.current }));
+            if (w) localStorage.setItem(colwStore(storageKey), JSON.stringify({ w }));
             else localStorage.removeItem(colwStore(storageKey));
         } catch { /* ignore */ }
     };
 
-    const reset = () => { setWidths(null); fullWidth.current = 0; save(null); };
+    const reset = () => { setWidths(null); save(null); };
 
     /** The header row the borders are measured from, or null if this table has a
      *  shape we can't resize (no header, or a spanned cell — a spanned header has
@@ -709,7 +697,6 @@ export function useColumnWidths(storageKey: string, defaults?: (number | string)
         if (!cells) return;
         e.preventDefault();  // or the drag starts a text selection instead
         const base = widths ?? measure(cells);
-        fullWidth.current = Math.max(fullWidth.current, base.reduce((a, b) => a + b, 0));
         drag.current = { i, x: e.clientX, base, moved: false };
         ref.current?.setPointerCapture(e.pointerId);
     };
@@ -761,26 +748,24 @@ export function useColumnWidths(storageKey: string, defaults?: (number | string)
             style: {
                 ...style,
                 // Only once frozen: `fixed` on a table that never declared widths
-                // splits it into equal columns. Under 100% the table fills its pane
-                // and the filler column takes the slack; over it the table grows and
-                // the pane scrolls, with the filler at zero. Either way the real
-                // columns keep exactly the widths they were dragged to. `minWidth`
-                // is left to the call site's own floor.
+                // splits it into equal columns. The width is the columns' own sum, so
+                // there is no surplus to hand out and every column keeps exactly the
+                // width it was dragged to; past the pane the container scrolls.
+                // `minWidth` is left to the call site's own floor.
                 ...(widths ? {
                     tableLayout: 'fixed' as const,
-                    width: `max(100%, ${Math.max(fullWidth.current, widths.reduce((a, b) => a + b, 0))}px)`,
+                    width: widths.reduce((a, b) => a + b, 0),
+                    // The call site's floor is for its *default* widths; left on, a
+                    // grid dragged narrower than it would be stretched back out and
+                    // fixed layout would share the surplus over every column again.
+                    minWidth: 0,
                 } : {}),
                 ...(nearBorder || drag.current ? { cursor: 'col-resize' as const } : {}),
             },
         }),
-        cols: () => {
-            const real = (defaults ?? widths ?? []).map((d, i) => (
-                <col key={i} style={{ width: widths ? widths[i] : (defaults ? (d as number | string) : undefined) }} />
-            ));
-            // The filler exists only once the columns are frozen; before that the
-            // table is still laying itself out and there is no slack to park.
-            return widths ? [...real, <col key="filler" />] : real;
-        },
+        cols: () => (defaults ?? widths ?? []).map((d, i) => (
+            <col key={i} style={{ width: widths ? widths[i] : (defaults ? (d as number | string) : undefined) }} />
+        )),
         reset,
     };
 }
