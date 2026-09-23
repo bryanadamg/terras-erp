@@ -12,7 +12,7 @@ import {
     XPStatusBar, XPEmptyState, TableSkeleton, useTableSkeletonMetrics, StatusChip,
     useFloatingMenu, MenuTriggerButton, FloatingMenu, ExpandedRowPanel, XPActionButton, CodeChip, CODE_FONT, rowStateBg, colorLabel, colorTitle, XP_BTN,
 } from '../shared/xpTheme';
-import { LV_XP_FONT, lvBtn, lvInput, lvTd, lvLabel, lvRow, lvSubTh, lvSubTd, lvSubTable, useRowSelection, RowCheckbox, SelectAllCheckbox, LV_CHECK_COL_W, EMPTY_DASH, lvTh, lvThead } from '../shared/listViewTheme';
+import { LV_XP_FONT, lvBtn, lvInput, lvTd, lvLabel, lvRow, lvSubTh, lvSubTd, lvSubTable, useRowSelection, RowCheckbox, SelectAllCheckbox, LV_CHECK_COL_W, EMPTY_DASH, lvTh, lvThead, ResizableTable } from '../shared/listViewTheme';
 import { ShellWindow, ShellTitleBar, SearchField, FilterChipBar, ToolbarCount, xpToolbar } from '../shared/shellTheme';
 import Pager from '../shared/Pager';
 import ModalWrapper from '../shared/ModalWrapper';
@@ -310,7 +310,7 @@ export default function DispatchView() {
             )}
 
             <div style={{ flex: 1, overflow: 'auto' }}>
-                <table style={{ width: '100%', borderCollapse: 'collapse', fontFamily: xpFont, fontSize: 11 }}>
+                <ResizableTable colKey="shipments" style={{ width: '100%', borderCollapse: 'collapse', fontFamily: xpFont, fontSize: 11 }}>
                     <thead>
                         <tr>
                             <th style={{ ...xpTableHeader, width: LV_CHECK_COL_W, textAlign: 'center' }}>
@@ -454,7 +454,7 @@ export default function DispatchView() {
                             );
                         })}
                     </tbody>
-                </table>
+                </ResizableTable>
             </div>
             {showShipments && <Pager page={page} total={total} pageSize={PAGE_SIZE} onPageChange={setPage} hideWhenEmpty />}
         </>

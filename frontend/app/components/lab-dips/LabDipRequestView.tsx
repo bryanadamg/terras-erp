@@ -12,7 +12,7 @@ import Pager from '../shared/Pager';
 import { StatusChip, StatusCountPill, FormSection, useFloatingMenu, MenuTriggerButton, FloatingMenu, ColorSwatchChip, useSortable, ExpandedRowPanel, CodeChip, CODE_FONT, xpFont, TableSkeleton, useTableSkeletonMetrics, rowStateBg, ChipTone, CHIP_RADIUS, BTN_TONES, XP_BTN } from '../shared/xpTheme';
 import { SearchField, FilterChipBar, ToolbarCount, ToolbarButton, viewShellStyle, PageTitleBar } from '../shared/shellTheme';
 import RequestDetailPanel, { getStatusStripe } from '../shared/RequestDetailPanel';
-import { lvThead, ExpanderCell, LV_EXPANDER_COL_W, SortableTh, lvTh, lvTdRuled, lvZebra, TableEmpty, lvBtn, lvInput } from '../shared/listViewTheme';
+import { lvThead, ExpanderCell, LV_EXPANDER_COL_W, SortableTh, lvTh, lvTdRuled, lvZebra, TableEmpty, lvBtn, lvInput, ResizableTable } from '../shared/listViewTheme';
 import { API_BASE, STATIC_BASE } from '../shared/apiBase';
 
 // ── XP style constants (consistent with DyeingSettingView) ──────────────────
@@ -495,7 +495,7 @@ export default function LabDipRequestView({
 
             {/* Table */}
             <div style={{ flex: 1, background: '#fff', overflowY: 'auto' }}>
-                <table style={{ width: '100%', borderCollapse: 'collapse', background: '#fff' }}>
+                <ResizableTable colKey="lab-dips" style={{ width: '100%', borderCollapse: 'collapse', background: '#fff' }}>
                     <thead style={lvThead()}>
                         <tr>
                             <th style={{ ...lvTh(), width: LV_EXPANDER_COL_W }} />
@@ -758,7 +758,7 @@ export default function LabDipRequestView({
                             );
                         })}
                     </tbody>
-                </table>
+                </ResizableTable>
             </div>
             <Pager page={page} total={total} pageSize={LABDIP_PAGE_SIZE} onPageChange={setPage} hideWhenEmpty />
 

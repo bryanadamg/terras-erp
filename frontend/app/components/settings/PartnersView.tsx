@@ -9,7 +9,7 @@ import { useUser } from '../../context/UserContext';
 import { StatusChip, useFloatingMenu, MenuTriggerButton, FloatingMenu, xpFont, TableSkeleton, useTableSkeletonMetrics, rowStateBg, BTN_TONES, XP_BTN } from '../shared/xpTheme';
 import { useData } from '../../context/DataContext';
 import { usePaginatedFetch } from '../../context/usePaginatedList';
-import { lvBtn, lvInput, lvTh, lvTd, lvLabel, lvThead, LV_STICKY_THEAD, useRowSelection, RowCheckbox, SelectAllCheckbox, lvZebra } from '../shared/listViewTheme';
+import { lvBtn, lvInput, lvTh, lvTd, lvLabel, lvThead, LV_STICKY_THEAD, useRowSelection, RowCheckbox, SelectAllCheckbox, lvZebra, ResizableTable } from '../shared/listViewTheme';
 import { ShellWindow, ShellTitleBar, xpToolbar, SearchField, ToolbarCount, ToolbarButton } from '../shared/shellTheme';
 import { STATIC_BASE } from '../shared/apiBase';
 
@@ -208,7 +208,7 @@ export default function PartnersView({ type, onCreate, onUpdate, onDelete, onBul
                     style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }}
                 >
                     <div className="table-responsive" style={{ flex: 1, minHeight: 0, overflowY: 'auto' }}>
-                        <table
+                        <ResizableTable colKey="partners"
                             style={{ width: '100%', borderCollapse: 'collapse', background: '#fff' }}
                         >
                             <thead style={xpTableHeader}>
@@ -260,7 +260,7 @@ export default function PartnersView({ type, onCreate, onUpdate, onDelete, onBul
                                     </tr>
                                 ))}
                             </tbody>
-                        </table>
+                        </ResizableTable>
                     </div>
                 </div>
 

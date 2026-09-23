@@ -3,7 +3,7 @@ import { useLanguage } from '../../context/LanguageContext';
 import { useTimezone } from '../../context/TimezoneContext';
 import { useUser } from '../../context/UserContext';
 import { xpToolbar as sharedXpToolbar, ShellWindow, ShellTitleBar } from '../shared/shellTheme';
-import { lvTh, lvRow, LV_XP_FONT, LV_MODERN_FONT, lvThead } from '../shared/listViewTheme';
+import { lvTh, lvRow, LV_XP_FONT, LV_MODERN_FONT, lvThead, ResizableTable } from '../shared/listViewTheme';
 import { StatusChip, CODE_FONT, xpFont, xpBtn, TableSkeleton, useTableSkeletonMetrics, CHIP_RADIUS, XP_BTN } from '../shared/xpTheme';
 import { useData } from '../../context/DataContext';
 import Pager from '../shared/Pager';
@@ -145,7 +145,7 @@ export default function AuditLogsView({ auditLogs, currentPage, totalItems, page
           )}
 
           <div style={{ flex: 1, minHeight: 0, background: '#ffffff', overflowY: 'auto', overflowX: 'hidden' }}>
-              <table
+              <ResizableTable colKey="audit-logs"
                   className={undefined}
                   style={{ width: '100%', borderCollapse: 'collapse', tableLayout: 'fixed' }}
               >
@@ -168,7 +168,7 @@ export default function AuditLogsView({ auditLogs, currentPage, totalItems, page
                               No activity logs found
                           </td></tr>)}
                   </tbody>
-              </table>
+              </ResizableTable>
           </div>
 
           <Pager page={currentPage} total={totalItems} pageSize={pageSize} onPageChange={onPageChange} />

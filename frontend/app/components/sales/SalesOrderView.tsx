@@ -18,7 +18,7 @@ import Pager from '../shared/Pager';
 import { Tooltip } from '../shared/Tooltip';
 import { ShellWindow, ShellTitleBar, xpToolbar, SearchField, FilterChipBar, ToolbarCount, ToolbarButton } from '../shared/shellTheme';
 import { useRouter } from 'next/navigation';
-import { lvThead, SortableTh, lvThSticky, lvTdRuled, lvZebra } from '../shared/listViewTheme';
+import { lvThead, SortableTh, lvThSticky, lvTdRuled, lvZebra, ResizableTable } from '../shared/listViewTheme';
 import { API_BASE } from '../shared/apiBase';
 
 // One width per column, in render order, and the ONLY place they are declared —
@@ -2100,12 +2100,9 @@ In stock ${fmtQty(f.baseAvailable)}${bu} · Shipped ${fmtQty(f.baseShipped)}${bu
                        browser treats them as hints and reflows every column to fit the
                        viewport, which is what crammed them. Fixed layout means the
                        overflow goes to the horizontal scroller instead. */}
-                   <table
+                   <ResizableTable colKey="sales-orders" defaults={SO_COL_WIDTHS}
                        style={{ width: '100%', minWidth: SO_TABLE_MIN_WIDTH, tableLayout: 'fixed', borderCollapse: 'collapse', background: '#fff' }}
                    >
-                       <colgroup>
-                           {SO_COL_WIDTHS.map((w, i) => <col key={i} style={{ width: w }} />)}
-                       </colgroup>
                        <thead style={xpTableHeader}>
                            <tr>
                                <SortableTh sort={soSort} colKey="po" onSort={toggleSOSort} style={xpThCell}>PO# / Ref</SortableTh>
@@ -2383,7 +2380,7 @@ In stock ${fmtQty(f.baseAvailable)}${bu} · Shipped ${fmtQty(f.baseShipped)}${bu
                                </tr>
                            ))}
                        </tbody>
-                   </table>
+                   </ResizableTable>
                </div>
            </div>
 

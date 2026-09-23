@@ -10,7 +10,7 @@ import { useToast } from '../shared/Toast';
 import { useData } from '../../context/DataContext';
 import type { PrintSettings } from './MOPrintModal';
 import { STATUS_COLORS, useFloatingMenu, MenuTriggerButton, FloatingMenu, ExpandedRowPanel, ExpandedRowPanelBody, ProgressBar, CodeChip, CODE_FONT, xpFont, TableSkeleton, useTableSkeletonMetrics, rowStateBg, StatusChip, CHIP_RADIUS, VariantChip, colorHexFor, colorLabel, colorTitle, BUTTON_RADIUS, XP_BTN, Chip, XPActionButton, ModalFooterActions, LocationChip } from '../shared/xpTheme';
-import { lvSubTh, lvSubTd, lvSubTable, lvSubRow, ExpanderCell, LV_EXPANDER_COL_W, lvZebra, lvThead, lvTh, TableEmpty, Dash, useColumnWidths } from '../shared/listViewTheme';
+import { lvSubTh, lvSubTd, lvSubTable, lvSubRow, ExpanderCell, LV_EXPANDER_COL_W, lvZebra, lvThead, lvTh, TableEmpty, Dash, ResizableTable } from '../shared/listViewTheme';
 const MOPrintModal = dynamic(() => import('./MOPrintModal'), { ssr: false });
 import WorkOrderPanel, { PrintChip } from './WorkOrderPanel';
 import { resolveMoBom } from '../shared/moHelpers';
@@ -336,7 +336,6 @@ export default function ManufacturingOrdersTab({
     // load are exactly as tall as the rows that replace them.
     const listBodyRef = useRef<HTMLTableSectionElement>(null);
     const skel = useTableSkeletonMetrics('manufacturing-orders', listBodyRef, manufacturingOrders.length > 0);
-    const colw = useColumnWidths('manufacturing-orders', MO_COL_W);
 
     // NOTE: there is deliberately no inline QR scanner here. `/scanner` is the single
     // scan entry point for every domain (ScanDispatcher routes a code to the screen
@@ -1074,16 +1073,14 @@ export default function ManufacturingOrdersTab({
                         actions={moActions}
                     />
                     <div className="table-responsive" style={{ flex: 1, overflow: 'auto', minHeight: 0 }}>
-                    <table style={{
+                    <ResizableTable colKey="manufacturing-orders" defaults={MO_COL_W} style={{
                         width: '100%',
                         tableLayout: 'fixed',
                         borderCollapse: 'collapse',
                         fontFamily: xpFont,
                         fontSize: '11px',
                         background: '#fff',
-                        ...colw.tableStyle,
                     }}>
-                        <colgroup>{colw.cols()}</colgroup>
                         <thead style={{ ...lvThead(), fontSize: '10px'}}>
                             <tr>
                                 {[
@@ -1097,13 +1094,12 @@ export default function ManufacturingOrdersTab({
                                     { label: 'Progress',          align: 'left',   cls: '' },
                                     { label: 'Status',            align: 'left',   cls: '' },
                                     { label: 'Actions',           align: 'right',  cls: 'pe-3 no-print' },
-                                ].map(({ label, align, cls }, i) => (
+                                ].map(({ label, align, cls }) => (
                                     <th key={label} className={cls} style={{
                                         ...lvTh(),
                                         textAlign: align as any,
                                         overflow: 'hidden',
-                                        position: 'relative',
-                                    }}>{label}{colw.grip(i)}</th>
+                                    }}>{label}</th>
                                 ))}
                             </tr>
                         </thead>
@@ -1300,7 +1296,7 @@ export default function ManufacturingOrdersTab({
                                 );
                             })}
                         </tbody>
-                    </table>
+                    </ResizableTable>
                     </div>
                     {/* Floating "more actions" menu — Print / Delete */}
                     {openMoMenuId && (() => {

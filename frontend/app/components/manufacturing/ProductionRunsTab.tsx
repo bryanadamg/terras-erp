@@ -7,7 +7,7 @@ import Pager from '../shared/Pager';
 import { useToast } from '../shared/Toast';
 import { useData } from '../../context/DataContext';
 import { statusChipStyle, useFloatingMenu, MenuTriggerButton, FloatingMenu, XPActionButton, ExpandedRowPanel, ExpandedRowPanelBody, ProgressBar, CodeChip, CODE_FONT, xpFont, TableSkeleton, SkeletonBar, useTableSkeletonMetrics, rowStateBg, StatusChip, CHIP_RADIUS, VariantChip } from '../shared/xpTheme';
-import { lvSubTh, lvSubTd, lvSubTable, lvSubRow, ExpanderCell, LV_EXPANDER_COL_W, lvZebra, lvThead, lvTh } from '../shared/listViewTheme';
+import { lvSubTh, lvSubTd, lvSubTable, lvSubRow, ExpanderCell, LV_EXPANDER_COL_W, lvZebra, lvThead, lvTh, ResizableTable } from '../shared/listViewTheme';
 import { API_BASE } from '../shared/apiBase';
 const PRMaterialPullSheetModal = dynamic(() => import('./PRMaterialPullSheetModal'), { ssr: false });
 
@@ -293,7 +293,7 @@ export default function ProductionRunsTab({
                 the whole table. */}
             {(productionRuns && productionRuns.length > 0) || dataLoading.productionRuns ? (
                 <div className="table-responsive" style={{ flex: 1, overflowY: 'auto', minHeight: 0 }}>
-                    <table style={{
+                    <ResizableTable colKey="production-runs" style={{
                         width: '100%', borderCollapse: 'collapse',
                         // Fixed layout: column widths come from the header row only, so an
                         // expanded colSpan detail row (MO chips + nested material table) can
@@ -725,7 +725,7 @@ export default function ProductionRunsTab({
                                 );
                             })}
                         </tbody>
-                    </table>
+                    </ResizableTable>
                 </div>
             ) : (
                 <div style={{

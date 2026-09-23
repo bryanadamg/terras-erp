@@ -10,7 +10,7 @@ import ModalWrapper from '../shared/ModalWrapper';
 import Pager from '../shared/Pager';
 import TreeSelect, { buildLocationFilterTree, buildLocationPickerTree, buildCategoryTree } from '../shared/TreeSelect';
 import { lotColorLabel } from '../shared/LotChips';
-import { useRowSelection, RowCheckbox, SelectAllCheckbox, SortableTh, lvThSticky, lvZebra, Dash } from '../shared/listViewTheme';
+import { useRowSelection, RowCheckbox, SelectAllCheckbox, SortableTh, lvThSticky, lvZebra, Dash, ResizableTable } from '../shared/listViewTheme';
 
 const STOCK_PAGE_SIZE = 50;
 
@@ -1226,7 +1226,7 @@ export default function StockOnHandView({ locations, attributes, categories, ite
                 </div>
                 <div style={xpToolbar}>{toolbarControls}</div>
                 <div style={{ flex: 1, overflow: 'auto', background: '#ffffff', minHeight: 0 }} className={undefined}>
-                    <table style={{ width: '100%', minWidth: TABLE_MIN_WIDTH, borderCollapse: 'collapse', tableLayout: 'fixed' }} className={undefined}>
+                    <ResizableTable colKey="stock-on-hand" style={{ width: '100%', minWidth: TABLE_MIN_WIDTH, borderCollapse: 'collapse', tableLayout: 'fixed' }} className={undefined}>
                         <thead className={undefined}>
                             <tr>
                                 <th className={undefined} style={{ ...xpTableHeader, width: COL_W.check, textAlign: 'center' }}>
@@ -1259,7 +1259,7 @@ export default function StockOnHandView({ locations, attributes, categories, ite
                                     </td>
                                 </tr>)}
                         </tbody>
-                    </table>
+                    </ResizableTable>
                 </div>
                 <div style={{
                         background: 'linear-gradient(to bottom, #e8e6df, #d5d3cc)', borderTop: '1px solid #b0a898',

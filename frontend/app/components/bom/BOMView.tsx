@@ -9,7 +9,7 @@ import { useLanguage } from '../../context/LanguageContext';
 import { useData } from '../../context/DataContext';
 import { workCenterChipStyle, xpFont, colorHexFor, expandedRowFrame, CodeChip, CODE_FONT, TableSkeleton, useTableSkeletonMetrics, rowStateBg, CHIP_RADIUS, VariantChip, BUTTON_RADIUS, XP_BTN, XPActionButton, useFloatingMenu, MenuTriggerButton, FloatingMenu } from '../shared/xpTheme';
 import Pager from '../shared/Pager';
-import { lvThead, LV_STICKY_THEAD, ExpanderCell, useRowSelection, RowCheckbox, SelectAllCheckbox, LV_CHECK_COL_W, LV_EXPANDER_COL_W, lvZebra, TableEmpty, Dash, lvSubTable, lvSubTd, lvSubRow, lvThBanded } from '../shared/listViewTheme';
+import { lvThead, LV_STICKY_THEAD, ExpanderCell, useRowSelection, RowCheckbox, SelectAllCheckbox, LV_CHECK_COL_W, LV_EXPANDER_COL_W, lvZebra, TableEmpty, Dash, lvSubTable, lvSubTd, lvSubRow, lvThBanded, ResizableTable } from '../shared/listViewTheme';
 import { FilterChipBar, xpToolbar, ToolbarButton, SearchField, xpTitleBar, viewShellStyle } from '../shared/shellTheme';
 import { STATIC_BASE } from '../shared/apiBase';
 
@@ -827,7 +827,7 @@ export default function BOMView({
                         that never scrolls vertically. */}
                     <div style={{ flex: 1, overflow: 'auto', minHeight: 0 }}>
                         <div>
-                            <table
+                            <ResizableTable colKey="boms"
                                 style={{ width: '100%', borderCollapse: 'collapse', fontFamily: xpFont, fontSize: '11px', background: '#fff' }}
                             >
                                 <thead style={LV_STICKY_THEAD}>
@@ -955,7 +955,7 @@ export default function BOMView({
                                         })
                                     )}
                                 </tbody>
-                            </table>
+                            </ResizableTable>
                         </div>
                     </div>
                     {/* Pager footer — outside scroll container so always visible */}

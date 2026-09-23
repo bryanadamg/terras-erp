@@ -11,8 +11,7 @@ import { ShellWindow, ShellTitleBar, xpToolbar as sharedXpToolbar, SearchField, 
 import {
     lvTh, lvThead, lvTd, lvRow, lvBtn, lvInput, lvLabel, lvSep,
     lvSubTh, lvSubTd, lvSubTable, lvSubCaption, lvSubRow, LV_XP_FONT, LV_MODERN_FONT,
-    ExpanderCell, LV_EXPANDER_COL_W, LV_CHECK_COL_W, RowCheckbox, SelectAllCheckbox,
-} from '../shared/listViewTheme';
+    ExpanderCell, LV_EXPANDER_COL_W, LV_CHECK_COL_W, RowCheckbox, SelectAllCheckbox, ResizableTable } from '../shared/listViewTheme';
 import {
     StatusChip, StatusCountPill, TableSkeleton, useTableSkeletonMetrics, XPStatusBar, XPEmptyState,
     XPActionButton, ColorSwatchChip, ExpandedRowPanel, CodeChip, rowStateBg, ToggleChip, ChipTone,
@@ -881,7 +880,7 @@ export default function QuarantinePackingView() {
     // ── Main table ────────────────────────────────────────────────────────────
     const body = (
         <div style={{ flex: 1, minHeight: 0, width: '100%', background: '#fff', overflow: 'auto' }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse', background: '#fff' }}>
+            <ResizableTable colKey="quarantine" style={{ width: '100%', borderCollapse: 'collapse', background: '#fff' }}>
                 <thead style={lvThead()}>
                     <tr>
                         <th style={{ ...lvTh(), width: LV_EXPANDER_COL_W }} />
@@ -1045,7 +1044,7 @@ export default function QuarantinePackingView() {
                         </tr>
                     )}
                 </tbody>
-            </table>
+            </ResizableTable>
         </div>
     );
 

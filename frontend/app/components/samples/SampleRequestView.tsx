@@ -19,7 +19,7 @@ import RequestDetailPanel, { getStatusStripe } from '../shared/RequestDetailPane
 import { Tabs } from '../shared/Tabs';
 import { STATIC_BASE, API_BASE } from '../shared/apiBase';
 import { SAMPLE_PAGE_SIZE } from '../../context/DataContext';
-import { lvThead, LV_STICKY_THEAD, ExpanderCell, LV_EXPANDER_COL_W, lvTh, lvTdRuled, lvZebra } from '../shared/listViewTheme';
+import { lvThead, LV_STICKY_THEAD, ExpanderCell, LV_EXPANDER_COL_W, lvTh, lvTdRuled, lvZebra, ResizableTable } from '../shared/listViewTheme';
 
 // Request classification, chosen at create time. Values are the `Sample Category`
 // system attribute (system_role='sample_category') — New Sample / Re Sample / Yardage
@@ -1153,7 +1153,7 @@ export default function SampleRequestView({ samples, customers, onCreateSample, 
                style={{ flex: 1, minHeight: 0, overflow: 'auto', scrollbarGutter: 'stable', paddingLeft: 5 }}
            >
                <div>
-                   <table
+                   <ResizableTable colKey="samples"
                        style={{ width: '100%', borderCollapse: 'collapse', background: '#fff' }}
                    >
                        <thead style={xpTableHeader}>
@@ -1523,7 +1523,7 @@ export default function SampleRequestView({ samples, customers, onCreateSample, 
                                </tr>
                            ))}
                        </tbody>
-                   </table>
+                   </ResizableTable>
                </div>
            </div>
 

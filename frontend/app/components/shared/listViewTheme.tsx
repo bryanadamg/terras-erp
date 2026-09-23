@@ -569,66 +569,78 @@ export function LvSectionCaption({ icon, children, right, style }: {
 
 
 // ── Resizable columns ─────────────────────────────────────────────────────────
-// Excel-style column drag for the wide grids. Two things make this work at all:
-// the table must be `tableLayout: 'fixed'` with a real `<colgroup>` (otherwise the
-// browser re-flows every column from content and the drag is ignored), and the
-// widths must be frozen to px on the FIRST drag — the defaults mix px and '%', and
-// a percentage can't absorb a pixel delta. So the grip measures the live header row
-// at pointerdown and keeps px from then on.
+// Excel-style column drag, wired to the `<table>` rather than to each `<th>`: one
+// pointerdown handler works out which border you grabbed from the header cells'
+// own geometry. A per-header grip meant every column of every grid needed an edit
+// to opt in, which is most of the cost of putting this on twenty pages.
+//
+// Nothing changes until the first drag. The table keeps its own layout — auto
+// layout still sizes columns to content — and only when a border is dragged do we
+// measure the header, freeze every column to px and switch to `tableLayout: fixed`.
+// Freezing up front would have been the visible regression: fixed layout with no
+// widths splits the table into equal columns.
 //
 // One column stays elastic and soaks up whatever the others leave. Without it the
 // table has to stretch to fill its pane and the browser spreads that surplus across
 // EVERY column, which inflates the narrow fixed ones — a 78px Actions column grows
 // and its right-aligned buttons drift away from the row. The elastic column is the
-// widest proportional default ('auto', else the biggest '%') that the user has not
-// dragged: dragging one pins it to px and elasticity moves to the next proportional
-// column along. Every column keeps a grip, including the elastic one — a border you
-// cannot drag reads as a bug, not as a rule.
+// widest one the user has not dragged (for a grid that declares `defaults`, the
+// widest proportional one): dragging a column pins it to px and elasticity moves to
+// the next widest. Every border stays draggable, the elastic one included — a
+// border that will not move reads as a bug, not as a rule.
 //
 // Widths persist per `storageKey` in localStorage. A stored set whose length no
-// longer matches `defaults` is discarded rather than mapped — columns were added or
+// longer matches the table is discarded rather than mapped — columns were added or
 // removed, and a shifted-by-one width set is worse than no width set.
 const COLW_MIN = 28;
-// `v3`: earlier saves were computed against different layout maths, and they would
-// load silently because only the length is checked.
-const colwStore = (key: string) => `lv.colw.v3.${key}`;
+/** How close to a column border the pointer has to be, in px, to grab it. */
+const COLW_GRAB = 5;
+// `v4`: the stored shape and the layout maths have both changed since the first
+// cut, and a stale set loads silently because only its length is checked.
+const colwStore = (key: string) => `lv.colw.v4.${key}`;
 
 export interface ColumnWidths {
-    /** The `<col>` elements — replaces the hand-written `<colgroup>` contents. */
+    /** Spread onto the `<table>`, passing the style it would have had. */
+    table: (style?: React.CSSProperties) => React.ComponentProps<'table'>;
+    /** The `<col>` elements. A table with no `<colgroup>` needs one wrapping this. */
     cols: () => React.ReactNode;
-    /** Drag handle for column `i`. Goes inside a `position: relative` `<th>`. */
-    grip: (i: number) => React.ReactNode;
-    /** Spread onto the `<table>` LAST — pins the total width once the user drags. */
-    tableStyle: React.CSSProperties;
-    /** Back to `defaults`; also what double-clicking any grip does. */
+    /** Back to the table's own layout; also what double-clicking a border does. */
     reset: () => void;
 }
 
-export function useColumnWidths(storageKey: string, defaults: (number | string)[]): ColumnWidths {
+/** `defaults` is only needed by a grid that already hand-writes a `<colgroup>` —
+ *  it is what the columns render as before the first drag. */
+export function useColumnWidths(storageKey: string, defaults?: (number | string)[]): ColumnWidths {
+    const ref = React.useRef<HTMLTableElement | null>(null);
     const [widths, setWidths] = React.useState<number[] | null>(null);
     /** Columns the user has dragged — they hold px and can no longer go elastic. */
     const [pinned, setPinned] = React.useState<number[]>([]);
+    const [nearBorder, setNearBorder] = React.useState(false);
     const drag = React.useRef<{ i: number; x: number; base: number[] } | null>(null);
+    /** Set by a drag, read by the click that follows it — see `onClickCapture`. */
+    const swallowClick = React.useRef(false);
     // Mirrored for the pointerup handler: it persists the set pinned during THIS
     // drag, which the handler's own closure was created too early to see.
     const pinnedRef = React.useRef(pinned);
     pinnedRef.current = pinned;
 
-    // localStorage is read in an effect, not during render: these pages are
-    // client components but Next still renders them on the server, and a stored
-    // width set would hydrate against a default-width markup.
+    // localStorage is read in an effect, not during render: these pages are client
+    // components but Next still renders them on the server, and a stored width set
+    // would hydrate against default-width markup.
     React.useEffect(() => {
         try {
             const raw = localStorage.getItem(colwStore(storageKey));
             if (!raw) return;
-            const { w, p } = JSON.parse(raw) ?? {};
-            if (Array.isArray(w) && w.length === defaults.length && w.every((n: any) => typeof n === 'number')) {
+            const parsed = JSON.parse(raw) ?? {};
+            const w = parsed.w, p = parsed.p;
+            if (Array.isArray(w) && w.length && w.every((n: any) => typeof n === 'number')
+                && (!defaults || w.length === defaults.length)) {
                 setWidths(w);
                 setPinned(Array.isArray(p) ? p.filter((n: any) => typeof n === 'number') : []);
             }
-        } catch { /* private mode / bad JSON — defaults are fine */ }
+        } catch { /* private mode / bad JSON — the table's own layout is fine */ }
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [storageKey, defaults.length]);
+    }, [storageKey, defaults?.length]);
 
     const save = (w: number[] | null, p: number[]) => {
         try {
@@ -639,75 +651,129 @@ export function useColumnWidths(storageKey: string, defaults: (number | string)[
 
     const reset = () => { setWidths(null); setPinned([]); save(null, []); };
 
-    // Widest proportional column that is still free to stretch.
+    /** The header row the borders are measured from, or null if this table has a
+     *  shape we can't resize (no header, or a spanned cell — a spanned header has
+     *  no one-to-one border to drag). */
+    const headerCells = (): HTMLTableCellElement[] | null => {
+        const row = ref.current?.tHead?.rows?.[0];
+        if (!row || !row.cells.length) return null;
+        const cells = Array.from(row.cells);
+        if (cells.some(c => c.colSpan > 1)) return null;
+        if (defaults && cells.length !== defaults.length) return null;
+        return cells;
+    };
+
+    /** Index of the column whose right border is under `clientX`, or -1. */
+    const borderAt = (clientX: number, clientY: number): number => {
+        const cells = headerCells();
+        const head = ref.current?.tHead?.getBoundingClientRect();
+        if (!cells || !head) return -1;
+        if (clientY < head.top || clientY > head.bottom) return -1;
+        return cells.findIndex(c => Math.abs(clientX - c.getBoundingClientRect().right) <= COLW_GRAB);
+    };
+
+    // Widest column still free to stretch. With `defaults` that means the widest
+    // proportional one (a px default was written down as a size to keep); without
+    // them, the widest as measured, which on a content-sized table is the text
+    // column — the one with slack to give.
     let flexIdx = -1, bestWeight = -1;
-    defaults.forEach((d, i) => {
-        if (typeof d !== 'string' || pinned.includes(i)) return;
-        const weight = d === 'auto' ? Infinity : parseFloat(d) || 0;
+    (defaults ?? widths ?? []).forEach((d, i) => {
+        if (pinned.includes(i)) return;
+        const weight = typeof d === 'number' ? (defaults ? -1 : d)
+            : d === 'auto' ? Infinity : parseFloat(d) || 0;
         if (weight > bestWeight) { bestWeight = weight; flexIdx = i; }
     });
 
-    const onDown = (i: number) => (e: React.PointerEvent<HTMLDivElement>) => {
-        // Both stops matter: pointerdown would start a text selection, and the
-        // click that follows would reach SortableTh and re-sort the list.
-        e.preventDefault();
-        e.stopPropagation();
-        const row = e.currentTarget.closest('tr');
-        const measured = row ? Array.from(row.children).map(c => (c as HTMLElement).getBoundingClientRect().width) : [];
-        const base = widths
-            ?? (measured.length === defaults.length
-                ? measured
-                : defaults.map(d => (typeof d === 'number' ? d : 100)));
+    const onPointerDown = (e: React.PointerEvent<HTMLTableElement>) => {
+        const i = borderAt(e.clientX, e.clientY);
+        if (i < 0) return;
+        const cells = headerCells();
+        if (!cells) return;
+        e.preventDefault();  // or the drag starts a text selection instead
+        const base = widths ?? cells.map(c => c.getBoundingClientRect().width);
         // Pin on the way down, not on the way up: the elastic column renders `auto`,
-        // so dragging it would show nothing at all until release.
+        // so pinning it late would show no movement at all until release.
         setPinned(p => (p.includes(i) ? p : [...p, i]));
         drag.current = { i, x: e.clientX, base };
-        e.currentTarget.setPointerCapture(e.pointerId);
+        swallowClick.current = true;
+        ref.current?.setPointerCapture(e.pointerId);
     };
 
-    const onMove = (e: React.PointerEvent<HTMLDivElement>) => {
+    const onPointerMove = (e: React.PointerEvent<HTMLTableElement>) => {
         const d = drag.current;
-        if (!d) return;
+        if (!d) { setNearBorder(borderAt(e.clientX, e.clientY) >= 0); return; }
         const next = d.base.slice();
         next[d.i] = Math.max(COLW_MIN, Math.round(d.base[d.i] + (e.clientX - d.x)));
         setWidths(next);
     };
 
-    const onUp = () => {
+    const onPointerUp = (e: React.PointerEvent<HTMLTableElement>) => {
         if (!drag.current) return;
         drag.current = null;
+        try { ref.current?.releasePointerCapture(e.pointerId); } catch { /* already gone */ }
         setWidths(w => { save(w, pinnedRef.current); return w; });
     };
 
     return {
-        cols: () => defaults.map((d, i) => (
-            <col key={i} style={{ width: widths && i !== flexIdx ? widths[i] : d }} />
+        table: (style?: React.CSSProperties) => ({
+            ref,
+            onPointerDown,
+            onPointerMove,
+            onPointerUp,
+            onPointerCancel: onPointerUp,
+            // The drag ends on pointerup, but a click still follows it and would
+            // reach the header's sort handler. Capturing it at the table, before it
+            // reaches the cell, is the only place that sees it first.
+            onClickCapture: (e: React.MouseEvent) => {
+                if (!swallowClick.current) return;
+                swallowClick.current = false;
+                e.preventDefault();
+                e.stopPropagation();
+            },
+            onDoubleClick: (e: React.MouseEvent) => {
+                if (borderAt(e.clientX, e.clientY) < 0) return;
+                e.stopPropagation();
+                reset();
+            },
+            style: {
+                ...style,
+                // Only once frozen: `fixed` on a table that never declared widths
+                // splits it into equal columns. Under 100% the table fills its pane
+                // and the elastic column (rendered `auto`) takes the slack on its
+                // own, so nothing is spread across the fixed ones. Over it the table
+                // grows and the pane scrolls — and the sum INCLUDES the elastic
+                // column's starting width, so it is never squeezed to nothing.
+                // `minWidth` is left to the call site's own floor.
+                ...(widths ? {
+                    tableLayout: 'fixed' as const,
+                    width: `max(100%, ${widths.reduce((a, b) => a + b, 0)}px)`,
+                } : {}),
+                ...(nearBorder || drag.current ? { cursor: 'col-resize' as const } : {}),
+            },
+        }),
+        cols: () => (defaults ?? widths ?? []).map((d, i) => (
+            <col key={i} style={{ width: widths && i !== flexIdx ? widths[i] : (defaults ? (d as number | string) : undefined) }} />
         )),
-        grip: (i: number) => (
-            <div
-                role="separator"
-                aria-orientation="vertical"
-                title="Drag to resize, double-click to reset"
-                onPointerDown={onDown(i)}
-                onPointerMove={onMove}
-                onPointerUp={onUp}
-                onPointerCancel={onUp}
-                onDoubleClick={e => { e.stopPropagation(); reset(); }}
-                onClick={e => e.stopPropagation()}
-                style={{
-                    position: 'absolute', top: 0, right: -3, bottom: 0, width: 7,
-                    cursor: 'col-resize', zIndex: 2, touchAction: 'none',
-                }}
-            />
-        ),
-        // Under 100% the table fills its pane and the elastic column (rendered
-        // `auto`) takes the slack on its own, so nothing is spread across the fixed
-        // columns. Over it, the table grows and the pane scrolls. The sum INCLUDES
-        // the elastic column's starting width, which is what stops it being squeezed
-        // to nothing the moment the fixed columns outgrow the pane — the grid
-        // scrolls instead of dropping a column. `minWidth` is deliberately not set:
-        // the call site's own floor still applies.
-        tableStyle: widths ? { width: `max(100%, ${widths.reduce((a, b) => a + b, 0)}px)` } : {},
         reset,
     };
+}
+
+/** A `<table>` whose columns the user can drag, and the way to opt a grid in:
+ *  swap the tag, keep the style, keep the children. It owns the `<colgroup>`, so
+ *  a grid that hand-writes one passes those widths as `defaults` and deletes it.
+ *  `colKey` is the localStorage key — unique per grid, stable across releases. */
+export function ResizableTable({ colKey, defaults, style, className, children }: {
+    colKey: string;
+    defaults?: (number | string)[];
+    style?: React.CSSProperties;
+    className?: string;
+    children?: React.ReactNode;
+}) {
+    const colw = useColumnWidths(colKey, defaults);
+    return (
+        <table className={className} {...colw.table(style)}>
+            <colgroup>{colw.cols()}</colgroup>
+            {children}
+        </table>
+    );
 }

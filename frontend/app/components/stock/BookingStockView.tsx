@@ -7,7 +7,7 @@ import { usePaginatedFetch } from '../../context/usePaginatedList';
 import { xpFont, xpBtn, TableSkeleton, useTableSkeletonMetrics, useSortable, ExpandedRowPanel, expandedRowFrame, CodeChip, CODE_FONT, rowStateBg, CHIP_RADIUS, XP_BTN, VariantChip } from '../shared/xpTheme';
 import { xpBevel as sharedXpBevel, xpTitleBar as sharedXpTitleBar, xpToolbar as sharedXpToolbar, SearchField, pageFillStyle } from '../shared/shellTheme';
 import Pager from '../shared/Pager';
-import { lvThead, lvSubTh, lvSubTd, lvSubTable, lvSubRow, lvSubCaption, ExpanderCell, LV_EXPANDER_COL_W, SortableTh, lvThSticky, lvZebra, TableEmpty } from '../shared/listViewTheme';
+import { lvThead, lvSubTh, lvSubTd, lvSubTable, lvSubRow, lvSubCaption, ExpanderCell, LV_EXPANDER_COL_W, SortableTh, lvThSticky, lvZebra, TableEmpty, ResizableTable } from '../shared/listViewTheme';
 import { EPS, HEALTH, healthOf, TERM } from './bookingStockTheme';
 import BookingStockInfoModal from './BookingStockInfoModal';
 import { STATIC_BASE } from '../shared/apiBase';
@@ -236,7 +236,7 @@ export default function BookingStockView() {
 
 
                 <div style={{ flex: 1, overflowY: 'auto', background: '#ffffff', maxHeight: 'calc(var(--app-vh) - 200px)' }} className={undefined}>
-                    <table style={{ width: '100%', borderCollapse: 'collapse' }} className={undefined}>
+                    <ResizableTable colKey="booking-stock" style={{ width: '100%', borderCollapse: 'collapse' }} className={undefined}>
                         <thead className={undefined}>
                             <tr>
                                 <th style={{ ...xpTableHeader, width: LV_EXPANDER_COL_W }} />
@@ -325,7 +325,7 @@ export default function BookingStockView() {
                                     rowHeight={skel.rowHeight} fillHeight={skel.fillHeight} />
                             )}
                         </tbody>
-                    </table>
+                    </ResizableTable>
                 </div>
 
                 <div style={{

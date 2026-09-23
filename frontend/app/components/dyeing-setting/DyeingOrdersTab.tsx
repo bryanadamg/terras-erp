@@ -9,7 +9,7 @@ import {
 } from '../shared/xpTheme';
 import {
     SortableTh, ExpanderCell, LV_EXPANDER_COL_W, lvThSticky, lvTd, lvZebra,
-    lvSubTable, lvSubTh, lvSubTd, lvSubRow, Dash, lvBtn, lvInput, useColumnWidths,
+    lvSubTable, lvSubTh, lvSubTd, lvSubRow, Dash, lvBtn, lvInput, ResizableTable,
 } from '../shared/listViewTheme';
 import { SearchField } from '../shared/shellTheme';
 import { getChipStyle } from '../manufacturing/WorkOrderPanel';
@@ -642,7 +642,6 @@ export default function DyeingOrdersTab({ items, recipes, authFetch }: DyeingOrd
     // Full cell borders rather than lvTd's single rule — same call the Work Orders
     // list makes, and these rows carry the same density of dates and quantities.
     const thStyle: React.CSSProperties = lvThSticky({ border: '1px solid #808080' });
-    const colw = useColumnWidths('dyeing-orders', DY_COL_W);
     const tdBase: React.CSSProperties = { ...lvTd(), border: '1px solid #c0bdb5' };
 
     const filterBarStyle: React.CSSProperties = {
@@ -871,10 +870,9 @@ export default function DyeingOrdersTab({ items, recipes, authFetch }: DyeingOrd
 
             {/* Table */}
             <div className="table-responsive" style={{ flex: 1, overflow: 'auto', minHeight: 0, background: '#fff' }}>
-                <table
-                    style={{ width: '100%', minWidth: 1560, borderCollapse: 'collapse', tableLayout: 'fixed', fontSize: 11, fontFamily: xpFont, background: '#fff', ...colw.tableStyle }}
+                <ResizableTable colKey="dyeing-orders" defaults={DY_COL_W}
+                    style={{ width: '100%', minWidth: 1560, borderCollapse: 'collapse', tableLayout: 'fixed', fontSize: 11, fontFamily: xpFont, background: '#fff' }}
                 >
-                    <colgroup>{colw.cols()}</colgroup>
                     <thead>
                         <tr>
                             <th style={{ ...thStyle, width: 22, padding: '3px 4px' }} />
@@ -888,7 +886,7 @@ export default function DyeingOrdersTab({ items, recipes, authFetch }: DyeingOrd
                                 <SortableTh key={`${h}-${i}`}
                                     sort={sort} colKey={key || null} onSort={toggleSort}
                                     style={{ ...thStyle, textAlign: ['Substrate', 'Bath (L)'].includes(h) ? 'right' : h === '' ? 'right' : 'left' }}>
-                                    {h}{colw.grip(i + 2)}
+                                    {h}
                                 </SortableTh>
                             ))}
                         </tr>
@@ -1138,7 +1136,7 @@ export default function DyeingOrdersTab({ items, recipes, authFetch }: DyeingOrd
                             );
                         })}
                     </tbody>
-                </table>
+                </ResizableTable>
             </div>
 
             <Pager page={page} total={woTotal} pageSize={WO_PAGE_SIZE} onPageChange={setPage} hideWhenEmpty />

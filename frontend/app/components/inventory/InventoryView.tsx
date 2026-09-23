@@ -13,7 +13,7 @@ import { XPEmptyState, ExpandedRowPanel, CODE_FONT, TableSkeleton, useTableSkele
 import { xpBevel as sharedXpBevel, xpTitleBar as sharedXpTitleBar, xpToolbar as sharedXpToolbar, SearchField, ToolbarButton, pageFillStyle } from '../shared/shellTheme';
 import TreeSelect, { buildCategoryTree, buildLocationPickerTree } from '../shared/TreeSelect';
 import { Tabs, TabDef } from '../shared/Tabs';
-import { lvThead, useRowSelection, RowCheckbox, SelectAllCheckbox, LV_CHECK_COL_W, LV_EXPANDER_COL_W, ExpanderCell, SortableTh, lvThSticky, lvTdRuled, lvZebra, lvSubTable, lvSubTh, lvSubTd, lvSubRow, Dash } from '../shared/listViewTheme';
+import { lvThead, useRowSelection, RowCheckbox, SelectAllCheckbox, LV_CHECK_COL_W, LV_EXPANDER_COL_W, ExpanderCell, SortableTh, lvThSticky, lvTdRuled, lvZebra, lvSubTable, lvSubTh, lvSubTd, lvSubRow, Dash, ResizableTable } from '../shared/listViewTheme';
 
 // XP-style category badge colours derived from category name
 function getCategoryTabIcon(name: string): string {
@@ -1182,7 +1182,7 @@ export default function InventoryView({
           {/* ── Table ── */}
           <div style={{ flex: 1, overflowY: 'auto', minHeight: 0 }}>
             <div>
-              <table
+              <ResizableTable colKey="items"
                 style={{
                     width: '100%',
                     borderCollapse: 'separate',
@@ -1244,7 +1244,7 @@ export default function InventoryView({
                     </tr>
                   )}
                 </tbody>
-              </table>
+              </ResizableTable>
             </div>
           </div>
 

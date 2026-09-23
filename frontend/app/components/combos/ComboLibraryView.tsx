@@ -7,8 +7,7 @@ import ModalWrapper from '../shared/ModalWrapper';
 import { StatusChip, CodeChip, SwatchBox, CODE_FONT, TableSkeleton, useTableSkeletonMetrics, XP_BTN, useFloatingMenu, MenuTriggerButton, FloatingMenu } from '../shared/xpTheme';
 import { SearchField, FilterChipBar, ToolbarCount, ToolbarButton, viewShellStyle, PageTitleBar } from '../shared/shellTheme';
 import {
-    LV_XP_FONT, lvInput, lvBtn, lvPrimaryBtn, lvLabel, lvTh, lvTd, lvSep, lvRow, lvThead, TableEmpty,
-} from '../shared/listViewTheme';
+    LV_XP_FONT, lvInput, lvBtn, lvPrimaryBtn, lvLabel, lvTh, lvTd, lvSep, lvRow, lvThead, TableEmpty, ResizableTable } from '../shared/listViewTheme';
 import { ColorFamilyKey, COLOR_FAMILY_META, colorBandsFor, colorFamiliesIn, colorFamilyMembershipCounts } from '../shared/colorFamilies';
 
 const STATUS_FILTERS = ['ALL', 'active', 'archived'];
@@ -263,7 +262,7 @@ export default function ComboLibraryView({
                         </div>
                     )
                 ) : (
-                <table style={{ width: '100%', borderCollapse: 'collapse', background: '#fff' }}>
+                <ResizableTable colKey="combos" style={{ width: '100%', borderCollapse: 'collapse', background: '#fff' }}>
                     <thead style={lvThead()}>
                         <tr>
                             <th style={{ ...lvTh(), width: 70 }}>Colors</th>
@@ -295,7 +294,7 @@ export default function ComboLibraryView({
                             </tr>
                         ))}
                     </tbody>
-                </table>
+                </ResizableTable>
                 )}
             </div>
 

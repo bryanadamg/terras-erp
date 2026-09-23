@@ -17,7 +17,7 @@ import { getChipStyle, PrintChips } from './WorkOrderPanel';
 import Pager from '../shared/Pager';
 import { XPEmptyState, TableSkeleton, useTableSkeletonMetrics, XPStatusBar, useSortable, useFloatingMenu, MenuTriggerButton, FloatingMenu, XPActionButton, ExpandedRowPanel, ProgressBar, CodeChip, CODE_FONT, xpFont, rowStateBg, StatusChip, CHIP_RADIUS, colorLabel, xpInput as xpInputBase } from '../shared/xpTheme';
 import TreeSelect, { TreeSelectOption } from '../shared/TreeSelect';
-import { lvSubTh, lvSubTd, lvSubTable, lvSubRow, ExpanderCell, useRowSelection, RowCheckbox, SelectAllCheckbox, LV_CHECK_COL_W, LV_EXPANDER_COL_W, SortableTh, lvThSticky, lvTd, lvZebra, useColumnWidths } from '../shared/listViewTheme';
+import { lvSubTh, lvSubTd, lvSubTable, lvSubRow, ExpanderCell, useRowSelection, RowCheckbox, SelectAllCheckbox, LV_CHECK_COL_W, LV_EXPANDER_COL_W, SortableTh, lvThSticky, lvTd, lvZebra, ResizableTable } from '../shared/listViewTheme';
 import { childrenOfWC, isMachineWC, isTypeWC, woHasStaging, woScanStages } from '../shared/workCenterTree';
 import { rejectTitle } from '../shared/rejectDisplay';
 import SearchableSelect from '@bryanadamg/terras-ui/components/Combobox';
@@ -648,7 +648,6 @@ export default function WorkOrderListView({
     // Full cell borders rather than lvTh/lvTd's single rule: 15 columns of dates
     // and quantities, where the verticals are what keep a row readable.
     const thStyle: React.CSSProperties = lvThSticky({ border: '1px solid #808080' });
-    const colw = useColumnWidths('work-orders', WO_COL_W);
 
     const tdBase: React.CSSProperties = { ...lvTd(), border: '1px solid #c0bdb5' };
 
@@ -732,10 +731,9 @@ export default function WorkOrderListView({
 
                     {/* Table */}
                     <div className="table-responsive" style={{ flex: 1, overflow: 'auto', minHeight: 0, ...({ background: '#fff' }) }}>
-                        <table
-                            style={{ width: '100%', minWidth: 1830, borderCollapse: 'collapse', tableLayout: 'fixed', fontSize: 11, fontFamily: xpFont, background: '#fff', ...colw.tableStyle }}
+                        <ResizableTable colKey="work-orders" defaults={WO_COL_W}
+                            style={{ width: '100%', minWidth: 1830, borderCollapse: 'collapse', tableLayout: 'fixed', fontSize: 11, fontFamily: xpFont, background: '#fff' }}
                         >
-                            <colgroup>{colw.cols()}</colgroup>
                             <thead>
                                 <tr>
                                     <th style={{ ...thStyle, width: 28, padding: '3px 6px' }}>
@@ -746,7 +744,7 @@ export default function WorkOrderListView({
                                         <SortableTh key={`${h}-${i}`}
                                             sort={sort} colKey={key || null} onSort={toggleSort}
                                             style={{ ...thStyle, textAlign: h === '' ? 'right' : 'left' }}>
-                                            {h}{colw.grip(i + 2)}
+                                            {h}
                                         </SortableTh>
                                     ))}
                                 </tr>
@@ -981,7 +979,7 @@ export default function WorkOrderListView({
                                     );
                                 })}
                             </tbody>
-                        </table>
+                        </ResizableTable>
                     </div>
 
                     {/* Floating "more actions" menu — Print / Edit / Delete */}
