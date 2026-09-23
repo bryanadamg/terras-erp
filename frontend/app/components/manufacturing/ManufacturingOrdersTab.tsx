@@ -10,7 +10,7 @@ import { useToast } from '../shared/Toast';
 import { useData } from '../../context/DataContext';
 import type { PrintSettings } from './MOPrintModal';
 import { STATUS_COLORS, useFloatingMenu, MenuTriggerButton, FloatingMenu, ExpandedRowPanel, ExpandedRowPanelBody, ProgressBar, CodeChip, CODE_FONT, xpFont, TableSkeleton, useTableSkeletonMetrics, rowStateBg, StatusChip, CHIP_RADIUS, VariantChip, colorHexFor, colorLabel, colorTitle, BUTTON_RADIUS, XP_BTN, Chip, XPActionButton, ModalFooterActions, LocationChip } from '../shared/xpTheme';
-import { lvSubTh, lvSubTd, lvSubTable, lvSubRow, ExpanderCell, LV_EXPANDER_COL_W, lvZebra, lvThead, lvTh, TableEmpty, Dash } from '../shared/listViewTheme';
+import { lvSubTh, lvSubTd, lvSubTable, lvSubRow, ExpanderCell, LV_EXPANDER_COL_W, lvZebra, lvThead, lvTh, TableEmpty, Dash, useColumnWidths } from '../shared/listViewTheme';
 const MOPrintModal = dynamic(() => import('./MOPrintModal'), { ssr: false });
 import WorkOrderPanel, { PrintChip } from './WorkOrderPanel';
 import { resolveMoBom } from '../shared/moHelpers';
@@ -22,6 +22,22 @@ const WOCompletionModal = dynamic(() => import('./WOCompletionModal'), { ssr: fa
 // chips there go translucent-on-blue instead of picking a second palette.
 const activeChipStyle = (isActive: boolean): React.CSSProperties | undefined =>
     isActive ? { background: 'rgba(255,255,255,0.2)', borderColor: 'rgba(255,255,255,0.45)', color: '#eaf2ff' } : undefined;
+
+// Column widths for the MO grid. Order matches the `<thead>` cells exactly — the
+// resize grips index into this array. 'auto' is the Product column: it soaks up
+// whatever the sized columns leave, until the user drags something.
+const MO_COL_W: (number | string)[] = [
+    LV_EXPANDER_COL_W,  // chevron
+    195,                // MO Code
+    'auto',             // Product
+    150,                // BOM
+    90,                 // Qty
+    120,                // Target Timeline
+    120,                // Actual
+    120,                // Progress
+    90,                 // Status
+    78,                 // Actions
+];
 
 export default function ManufacturingOrdersTab({
     items,
@@ -320,6 +336,7 @@ export default function ManufacturingOrdersTab({
     // load are exactly as tall as the rows that replace them.
     const listBodyRef = useRef<HTMLTableSectionElement>(null);
     const skel = useTableSkeletonMetrics('manufacturing-orders', listBodyRef, manufacturingOrders.length > 0);
+    const colw = useColumnWidths('manufacturing-orders', MO_COL_W);
 
     // NOTE: there is deliberately no inline QR scanner here. `/scanner` is the single
     // scan entry point for every domain (ScanDispatcher routes a code to the screen
@@ -1056,7 +1073,7 @@ export default function ManufacturingOrdersTab({
                         filters={viewToggle}
                         actions={moActions}
                     />
-                    <div className="table-responsive" style={{ flex: 1, overflowY: 'auto', minHeight: 0 }}>
+                    <div className="table-responsive" style={{ flex: 1, overflow: 'auto', minHeight: 0 }}>
                     <table style={{
                         width: '100%',
                         tableLayout: 'fixed',
@@ -1064,19 +1081,9 @@ export default function ManufacturingOrdersTab({
                         fontFamily: xpFont,
                         fontSize: '11px',
                         background: '#fff',
+                        ...colw.tableStyle,
                     }}>
-                        <colgroup>
-                            <col style={{ width: `${LV_EXPANDER_COL_W}px` }} />
-                            <col style={{ width: '195px' }} />
-                            <col />
-                            <col style={{ width: '150px' }} />
-                            <col style={{ width: '90px' }} />
-                            <col style={{ width: '120px' }} />
-                            <col style={{ width: '120px' }} />
-                            <col style={{ width: '120px' }} />
-                            <col style={{ width: '90px' }} />
-                            <col style={{ width: '78px' }} />
-                        </colgroup>
+                        <colgroup>{colw.cols()}</colgroup>
                         <thead style={{ ...lvThead(), fontSize: '10px'}}>
                             <tr>
                                 {[
@@ -1090,12 +1097,13 @@ export default function ManufacturingOrdersTab({
                                     { label: 'Progress',          align: 'left',   cls: '' },
                                     { label: 'Status',            align: 'left',   cls: '' },
                                     { label: 'Actions',           align: 'right',  cls: 'pe-3 no-print' },
-                                ].map(({ label, align, cls }) => (
+                                ].map(({ label, align, cls }, i) => (
                                     <th key={label} className={cls} style={{
                                         ...lvTh(),
                                         textAlign: align as any,
                                         overflow: 'hidden',
-                                    }}>{label}</th>
+                                        position: 'relative',
+                                    }}>{label}{colw.grip(i)}</th>
                                 ))}
                             </tr>
                         </thead>

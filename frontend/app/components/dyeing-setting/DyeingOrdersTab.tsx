@@ -9,7 +9,7 @@ import {
 } from '../shared/xpTheme';
 import {
     SortableTh, ExpanderCell, LV_EXPANDER_COL_W, lvThSticky, lvTd, lvZebra,
-    lvSubTable, lvSubTh, lvSubTd, lvSubRow, Dash, lvBtn, lvInput,
+    lvSubTable, lvSubTh, lvSubTd, lvSubRow, Dash, lvBtn, lvInput, useColumnWidths,
 } from '../shared/listViewTheme';
 import { SearchField } from '../shared/shellTheme';
 import { getChipStyle } from '../manufacturing/WorkOrderPanel';
@@ -156,6 +156,26 @@ function ShadeChip({ shade }: { shade: string }) {
         }}>{shade}</span>
     );
 }
+
+// Column widths for the dyeing WO grid. Order matches the `<thead>` cells exactly —
+// the resize grips index into this array.
+const DY_COL_W: (number | string)[] = [
+    LV_EXPANDER_COL_W,  // chevron
+    26,                 // select
+    '13%',              // WO
+    170,                // MO
+    '14%',              // Product
+    '15%',              // Variant
+    '10%',              // Vessel
+    '12%',              // Recipe
+    74,                 // Substrate
+    74,                 // Bath (L)
+    86,                 // Target / Done
+    58,                 // Baths
+    74,                 // Shade
+    104,                // Status
+    52,                 // Actions
+];
 
 export default function DyeingOrdersTab({ items, recipes, authFetch }: DyeingOrdersTabProps) {
     const { formatCustom: tzFmt } = useTimezone();
@@ -622,6 +642,7 @@ export default function DyeingOrdersTab({ items, recipes, authFetch }: DyeingOrd
     // Full cell borders rather than lvTd's single rule — same call the Work Orders
     // list makes, and these rows carry the same density of dates and quantities.
     const thStyle: React.CSSProperties = lvThSticky({ border: '1px solid #808080' });
+    const colw = useColumnWidths('dyeing-orders', DY_COL_W);
     const tdBase: React.CSSProperties = { ...lvTd(), border: '1px solid #c0bdb5' };
 
     const filterBarStyle: React.CSSProperties = {
@@ -851,25 +872,9 @@ export default function DyeingOrdersTab({ items, recipes, authFetch }: DyeingOrd
             {/* Table */}
             <div className="table-responsive" style={{ flex: 1, overflow: 'auto', minHeight: 0, background: '#fff' }}>
                 <table
-                    style={{ width: '100%', minWidth: 1560, borderCollapse: 'collapse', tableLayout: 'fixed', fontSize: 11, fontFamily: xpFont, background: '#fff'}}
+                    style={{ width: '100%', minWidth: 1560, borderCollapse: 'collapse', tableLayout: 'fixed', fontSize: 11, fontFamily: xpFont, background: '#fff', ...colw.tableStyle }}
                 >
-                    <colgroup>
-                        <col style={{ width: LV_EXPANDER_COL_W }} /> {/* chevron */}
-                        <col style={{ width: 26 }} />     {/* select */}
-                        <col style={{ width: '13%' }} />  {/* WO */}
-                        <col style={{ width: 170 }} />    {/* MO */}
-                        <col style={{ width: '14%' }} />  {/* Product */}
-                        <col style={{ width: '15%' }} />  {/* Variant */}
-                        <col style={{ width: '10%' }} />  {/* Vessel */}
-                        <col style={{ width: '12%' }} />  {/* Recipe */}
-                        <col style={{ width: 74 }} />     {/* Substrate */}
-                        <col style={{ width: 74 }} />     {/* Bath L */}
-                        <col style={{ width: 86 }} />     {/* Target/Done */}
-                        <col style={{ width: 58 }} />     {/* Baths */}
-                        <col style={{ width: 74 }} />     {/* Shade */}
-                        <col style={{ width: 104 }} />    {/* Status */}
-                        <col style={{ width: 52 }} />     {/* Actions */}
-                    </colgroup>
+                    <colgroup>{colw.cols()}</colgroup>
                     <thead>
                         <tr>
                             <th style={{ ...thStyle, width: 22, padding: '3px 4px' }} />
@@ -883,7 +888,7 @@ export default function DyeingOrdersTab({ items, recipes, authFetch }: DyeingOrd
                                 <SortableTh key={`${h}-${i}`}
                                     sort={sort} colKey={key || null} onSort={toggleSort}
                                     style={{ ...thStyle, textAlign: ['Substrate', 'Bath (L)'].includes(h) ? 'right' : h === '' ? 'right' : 'left' }}>
-                                    {h}
+                                    {h}{colw.grip(i + 2)}
                                 </SortableTh>
                             ))}
                         </tr>

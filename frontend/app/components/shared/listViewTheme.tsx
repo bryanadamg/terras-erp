@@ -567,3 +567,111 @@ export function LvSectionCaption({ icon, children, right, style }: {
     );
 }
 
+
+// ── Resizable columns ─────────────────────────────────────────────────────────
+// Excel-style column drag for the wide grids. Two things make this work at all:
+// the table must be `tableLayout: 'fixed'` with a real `<colgroup>` (otherwise the
+// browser re-flows every column from content and the drag is ignored), and the
+// widths must be frozen to px on the FIRST drag — the defaults mix px and '%', and
+// a percentage can't absorb a pixel delta. So the grip measures the live header row
+// at pointerdown and keeps px from then on.
+//
+// Widths persist per `storageKey` in localStorage. A stored array whose length no
+// longer matches `defaults` is discarded rather than mapped — columns were added or
+// removed, and a shifted-by-one width set is worse than no width set.
+const COLW_MIN = 28;
+const colwStore = (key: string) => `lv.colw.${key}`;
+
+export interface ColumnWidths {
+    /** The `<col>` elements — replaces the hand-written `<colgroup>` contents. */
+    cols: () => React.ReactNode;
+    /** Drag handle for column `i`. Goes inside a `position: relative` `<th>`. */
+    grip: (i: number) => React.ReactNode;
+    /** Spread onto the `<table>` LAST — pins the total width once the user drags. */
+    tableStyle: React.CSSProperties;
+    /** Back to `defaults`; also what double-clicking any grip does. */
+    reset: () => void;
+}
+
+export function useColumnWidths(storageKey: string, defaults: (number | string)[]): ColumnWidths {
+    const [widths, setWidths] = React.useState<number[] | null>(null);
+    const drag = React.useRef<{ i: number; x: number; base: number[] } | null>(null);
+
+    // localStorage is read in an effect, not during render: these pages are
+    // client components but Next still renders them on the server, and a stored
+    // width set would hydrate against a default-width markup.
+    React.useEffect(() => {
+        try {
+            const raw = localStorage.getItem(colwStore(storageKey));
+            if (!raw) return;
+            const parsed = JSON.parse(raw);
+            if (Array.isArray(parsed) && parsed.length === defaults.length && parsed.every((n: any) => typeof n === 'number')) {
+                setWidths(parsed);
+            }
+        } catch { /* private mode / bad JSON — defaults are fine */ }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [storageKey, defaults.length]);
+
+    const save = (w: number[] | null) => {
+        try {
+            if (w) localStorage.setItem(colwStore(storageKey), JSON.stringify(w));
+            else localStorage.removeItem(colwStore(storageKey));
+        } catch { /* ignore */ }
+    };
+
+    const reset = () => { setWidths(null); save(null); };
+
+    const onDown = (i: number) => (e: React.PointerEvent<HTMLDivElement>) => {
+        // Both stops matter: pointerdown would start a text selection, and the
+        // click that follows would reach SortableTh and re-sort the list.
+        e.preventDefault();
+        e.stopPropagation();
+        const row = e.currentTarget.closest('tr');
+        const measured = row ? Array.from(row.children).map(c => (c as HTMLElement).getBoundingClientRect().width) : [];
+        const base = widths
+            ?? (measured.length === defaults.length
+                ? measured
+                : defaults.map(d => (typeof d === 'number' ? d : 100)));
+        drag.current = { i, x: e.clientX, base };
+        e.currentTarget.setPointerCapture(e.pointerId);
+    };
+
+    const onMove = (e: React.PointerEvent<HTMLDivElement>) => {
+        const d = drag.current;
+        if (!d) return;
+        const next = d.base.slice();
+        next[d.i] = Math.max(COLW_MIN, Math.round(d.base[d.i] + (e.clientX - d.x)));
+        setWidths(next);
+    };
+
+    const onUp = () => {
+        if (!drag.current) return;
+        drag.current = null;
+        setWidths(w => { save(w); return w; });
+    };
+
+    return {
+        cols: () => defaults.map((d, i) => (
+            <col key={i} style={{ width: widths ? widths[i] : d }} />
+        )),
+        grip: (i: number) => (
+            <div
+                role="separator"
+                aria-orientation="vertical"
+                title="Drag to resize, double-click to reset"
+                onPointerDown={onDown(i)}
+                onPointerMove={onMove}
+                onPointerUp={onUp}
+                onPointerCancel={onUp}
+                onDoubleClick={e => { e.stopPropagation(); reset(); }}
+                onClick={e => e.stopPropagation()}
+                style={{
+                    position: 'absolute', top: 0, right: -3, bottom: 0, width: 7,
+                    cursor: 'col-resize', zIndex: 2, touchAction: 'none',
+                }}
+            />
+        ),
+        tableStyle: widths ? { width: widths.reduce((a, b) => a + b, 0), minWidth: 0 } : {},
+        reset,
+    };
+}
