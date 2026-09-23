@@ -2,6 +2,7 @@
 import React from 'react';
 import { xpFont, modernFont, SortMark, SortState, BUTTON_RADIUS, BTN_TONES } from './xpTheme';
 import type { BtnTone } from './xpTheme';
+import { toLayoutPx } from '@bryanadamg/terras-ui/scale';
 
 // Re-exported so list-view call sites can type a tone without reaching past this module.
 export type { BtnTone };
@@ -600,9 +601,9 @@ const COLW_MIN = 28;
 const COLW_GRAB = 5;
 /** How far it then has to travel before the drag counts as a drag. */
 const COLW_DRAG_START = 3;
-// `v5`: the stored shape and the layout maths have both changed more than once, and
+// `v6`: the stored shape and the layout maths have both changed more than once, and
 // a stale set loads silently because only its length is checked.
-const colwStore = (key: string) => `lv.colw.v5.${key}`;
+const colwStore = (key: string) => `lv.colw.v6.${key}`;
 
 export interface ColumnWidths {
     /** Spread onto the `<table>`, passing the style it would have had. */
@@ -675,12 +676,18 @@ export function useColumnWidths(storageKey: string, defaults?: (number | string)
      *  a border, so their rects overlap by a pixel each and summing them overshoots
      *  the table by a pixel per column — enough to push the table past its pane and
      *  pop a horizontal scrollbar the instant the widths are applied. Measuring the
-     *  gaps between borders partitions the table exactly. */
+     *  gaps between borders partitions the table exactly.
+     *
+     *  Returned in LAYOUT px. Rects come back in screen px, already divided by the
+     *  root interface zoom, while a `<col>` width is a CSS length that gets multiplied
+     *  by it again — writing a rect straight into one shrank every real column to 80%
+     *  of itself and dumped the rest into the filler, which read as the table
+     *  collapsing the moment a border was grabbed. See terras-ui/scale. */
     const measure = (cells: HTMLTableCellElement[]): number[] => {
         let prev = cells[0].getBoundingClientRect().left;
         return cells.map(c => {
             const right = c.getBoundingClientRect().right;
-            const w = right - prev;
+            const w = toLayoutPx(right - prev);
             prev = right;
             return w;
         });
@@ -718,7 +725,7 @@ export function useColumnWidths(storageKey: string, defaults?: (number | string)
         if (!d.moved && Math.abs(dx) < COLW_DRAG_START) return;
         d.moved = true;
         const next = d.base.slice();
-        next[d.i] = Math.max(COLW_MIN, Math.round(d.base[d.i] + dx));
+        next[d.i] = Math.max(COLW_MIN, Math.round(d.base[d.i] + toLayoutPx(dx)));
         setWidths(next);
     };
 
