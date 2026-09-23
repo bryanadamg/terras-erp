@@ -171,8 +171,16 @@ export default function BootShell({ appName = 'Terras ERP' }: { appName?: string
                             <span style={{ flex: 1 }} />
                             <SkeletonBar width={100} height={18} />
                         </div>
-                        <div style={scrollAreaStyle}>
-                            <TableBlockSkeleton cols={6} rows={20} />
+                        {/* Rows enough to reach the bottom of a tall screen,
+                            clipped rather than scrolled. This shell is the
+                            server-rendered HTML — it is on screen before any JS
+                            has hydrated, so the row count can't be measured off
+                            the panel the way a live list's TableSkeleton
+                            measures `fillHeight`. A fixed count that stops
+                            mid-panel reads as a table that ends early, so the
+                            count overshoots and `hidden` absorbs the rest. */}
+                        <div style={{ ...scrollAreaStyle, overflow: 'hidden' }}>
+                            <TableBlockSkeleton cols={6} rows={60} />
                         </div>
                     </div>
                 </div>
