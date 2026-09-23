@@ -595,6 +595,8 @@ export function LvSectionCaption({ icon, children, right, style }: {
 const COLW_MIN = 28;
 /** How close to a column border the pointer has to be, in px, to grab it. */
 const COLW_GRAB = 5;
+/** How far it then has to travel before the drag counts as a drag. */
+const COLW_DRAG_START = 3;
 // `v4`: the stored shape and the layout maths have both changed since the first
 // cut, and a stale set loads silently because only its length is checked.
 const colwStore = (key: string) => `lv.colw.v4.${key}`;
@@ -616,7 +618,7 @@ export function useColumnWidths(storageKey: string, defaults?: (number | string)
     /** Columns the user has dragged — they hold px and can no longer go elastic. */
     const [pinned, setPinned] = React.useState<number[]>([]);
     const [nearBorder, setNearBorder] = React.useState(false);
-    const drag = React.useRef<{ i: number; x: number; base: number[] } | null>(null);
+    const drag = React.useRef<{ i: number; x: number; base: number[]; moved: boolean } | null>(null);
     /** Set by a drag, read by the click that follows it — see `onClickCapture`. */
     const swallowClick = React.useRef(false);
     // Mirrored for the pointerup handler: it persists the set pinned during THIS
@@ -663,6 +665,22 @@ export function useColumnWidths(storageKey: string, defaults?: (number | string)
         return cells;
     };
 
+    /** Each column's width, taken from where its RIGHT BORDER sits rather than from
+     *  the cell's own box. Under `border-collapse: collapse` neighbouring cells share
+     *  a border, so their rects overlap by a pixel each and summing them overshoots
+     *  the table by a pixel per column — enough to push the table past its pane and
+     *  pop a horizontal scrollbar the instant the widths are applied. Measuring the
+     *  gaps between borders partitions the table exactly. */
+    const measure = (cells: HTMLTableCellElement[]): number[] => {
+        let prev = cells[0].getBoundingClientRect().left;
+        return cells.map(c => {
+            const right = c.getBoundingClientRect().right;
+            const w = right - prev;
+            prev = right;
+            return w;
+        });
+    };
+
     /** Index of the column whose right border is under `clientX`, or -1. */
     const borderAt = (clientX: number, clientY: number): number => {
         const cells = headerCells();
@@ -690,25 +708,32 @@ export function useColumnWidths(storageKey: string, defaults?: (number | string)
         const cells = headerCells();
         if (!cells) return;
         e.preventDefault();  // or the drag starts a text selection instead
-        const base = widths ?? cells.map(c => c.getBoundingClientRect().width);
+        const base = widths ?? measure(cells);
         // Pin on the way down, not on the way up: the elastic column renders `auto`,
         // so pinning it late would show no movement at all until release.
         setPinned(p => (p.includes(i) ? p : [...p, i]));
-        drag.current = { i, x: e.clientX, base };
-        swallowClick.current = true;
+        drag.current = { i, x: e.clientX, base, moved: false };
         ref.current?.setPointerCapture(e.pointerId);
     };
 
     const onPointerMove = (e: React.PointerEvent<HTMLTableElement>) => {
         const d = drag.current;
         if (!d) { setNearBorder(borderAt(e.clientX, e.clientY) >= 0); return; }
+        const dx = e.clientX - d.x;
+        // Below the threshold nothing is applied at all: pressing a border, or the
+        // pixel of jitter in a click, would otherwise freeze the table to px and
+        // switch it to fixed layout — the whole grid visibly resettling before the
+        // user has dragged anything.
+        if (!d.moved && Math.abs(dx) < COLW_DRAG_START) return;
+        d.moved = true;
         const next = d.base.slice();
-        next[d.i] = Math.max(COLW_MIN, Math.round(d.base[d.i] + (e.clientX - d.x)));
+        next[d.i] = Math.max(COLW_MIN, Math.round(d.base[d.i] + dx));
         setWidths(next);
     };
 
     const onPointerUp = (e: React.PointerEvent<HTMLTableElement>) => {
         if (!drag.current) return;
+        swallowClick.current = drag.current.moved;
         drag.current = null;
         try { ref.current?.releasePointerCapture(e.pointerId); } catch { /* already gone */ }
         setWidths(w => { save(w, pinnedRef.current); return w; });
@@ -751,8 +776,17 @@ export function useColumnWidths(storageKey: string, defaults?: (number | string)
                 ...(nearBorder || drag.current ? { cursor: 'col-resize' as const } : {}),
             },
         }),
+        // Mid-drag EVERY column is pinned to px, the elastic one included. Left
+        // elastic it would re-absorb the slack in the same frame the dragged column
+        // changes, so its neighbours shift under the cursor and the border stops
+        // tracking the pointer. It goes back to `auto` on release, where its width
+        // works out to exactly what it was holding anyway.
         cols: () => (defaults ?? widths ?? []).map((d, i) => (
-            <col key={i} style={{ width: widths && i !== flexIdx ? widths[i] : (defaults ? (d as number | string) : undefined) }} />
+            <col key={i} style={{
+                width: widths && (drag.current || i !== flexIdx)
+                    ? widths[i]
+                    : (defaults ? (d as number | string) : undefined),
+            }} />
         )),
         reset,
     };
