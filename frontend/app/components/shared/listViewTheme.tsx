@@ -576,11 +576,22 @@ export function LvSectionCaption({ icon, children, right, style }: {
 // a percentage can't absorb a pixel delta. So the grip measures the live header row
 // at pointerdown and keeps px from then on.
 //
-// Widths persist per `storageKey` in localStorage. A stored array whose length no
+// One column stays elastic and soaks up whatever the others leave. Without it the
+// table has to stretch to fill its pane and the browser spreads that surplus across
+// EVERY column, which inflates the narrow fixed ones — a 78px Actions column grows
+// and its right-aligned buttons drift away from the row. The elastic column is the
+// widest proportional default ('auto', else the biggest '%') that the user has not
+// dragged: dragging one pins it to px and elasticity moves to the next proportional
+// column along. Every column keeps a grip, including the elastic one — a border you
+// cannot drag reads as a bug, not as a rule.
+//
+// Widths persist per `storageKey` in localStorage. A stored set whose length no
 // longer matches `defaults` is discarded rather than mapped — columns were added or
 // removed, and a shifted-by-one width set is worse than no width set.
 const COLW_MIN = 28;
-const colwStore = (key: string) => `lv.colw.${key}`;
+// `v3`: earlier saves were computed against different layout maths, and they would
+// load silently because only the length is checked.
+const colwStore = (key: string) => `lv.colw.v3.${key}`;
 
 export interface ColumnWidths {
     /** The `<col>` elements — replaces the hand-written `<colgroup>` contents. */
@@ -595,7 +606,13 @@ export interface ColumnWidths {
 
 export function useColumnWidths(storageKey: string, defaults: (number | string)[]): ColumnWidths {
     const [widths, setWidths] = React.useState<number[] | null>(null);
+    /** Columns the user has dragged — they hold px and can no longer go elastic. */
+    const [pinned, setPinned] = React.useState<number[]>([]);
     const drag = React.useRef<{ i: number; x: number; base: number[] } | null>(null);
+    // Mirrored for the pointerup handler: it persists the set pinned during THIS
+    // drag, which the handler's own closure was created too early to see.
+    const pinnedRef = React.useRef(pinned);
+    pinnedRef.current = pinned;
 
     // localStorage is read in an effect, not during render: these pages are
     // client components but Next still renders them on the server, and a stored
@@ -604,22 +621,31 @@ export function useColumnWidths(storageKey: string, defaults: (number | string)[
         try {
             const raw = localStorage.getItem(colwStore(storageKey));
             if (!raw) return;
-            const parsed = JSON.parse(raw);
-            if (Array.isArray(parsed) && parsed.length === defaults.length && parsed.every((n: any) => typeof n === 'number')) {
-                setWidths(parsed);
+            const { w, p } = JSON.parse(raw) ?? {};
+            if (Array.isArray(w) && w.length === defaults.length && w.every((n: any) => typeof n === 'number')) {
+                setWidths(w);
+                setPinned(Array.isArray(p) ? p.filter((n: any) => typeof n === 'number') : []);
             }
         } catch { /* private mode / bad JSON — defaults are fine */ }
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [storageKey, defaults.length]);
 
-    const save = (w: number[] | null) => {
+    const save = (w: number[] | null, p: number[]) => {
         try {
-            if (w) localStorage.setItem(colwStore(storageKey), JSON.stringify(w));
+            if (w) localStorage.setItem(colwStore(storageKey), JSON.stringify({ w, p }));
             else localStorage.removeItem(colwStore(storageKey));
         } catch { /* ignore */ }
     };
 
-    const reset = () => { setWidths(null); save(null); };
+    const reset = () => { setWidths(null); setPinned([]); save(null, []); };
+
+    // Widest proportional column that is still free to stretch.
+    let flexIdx = -1, bestWeight = -1;
+    defaults.forEach((d, i) => {
+        if (typeof d !== 'string' || pinned.includes(i)) return;
+        const weight = d === 'auto' ? Infinity : parseFloat(d) || 0;
+        if (weight > bestWeight) { bestWeight = weight; flexIdx = i; }
+    });
 
     const onDown = (i: number) => (e: React.PointerEvent<HTMLDivElement>) => {
         // Both stops matter: pointerdown would start a text selection, and the
@@ -632,6 +658,9 @@ export function useColumnWidths(storageKey: string, defaults: (number | string)[
             ?? (measured.length === defaults.length
                 ? measured
                 : defaults.map(d => (typeof d === 'number' ? d : 100)));
+        // Pin on the way down, not on the way up: the elastic column renders `auto`,
+        // so dragging it would show nothing at all until release.
+        setPinned(p => (p.includes(i) ? p : [...p, i]));
         drag.current = { i, x: e.clientX, base };
         e.currentTarget.setPointerCapture(e.pointerId);
     };
@@ -647,12 +676,12 @@ export function useColumnWidths(storageKey: string, defaults: (number | string)[
     const onUp = () => {
         if (!drag.current) return;
         drag.current = null;
-        setWidths(w => { save(w); return w; });
+        setWidths(w => { save(w, pinnedRef.current); return w; });
     };
 
     return {
         cols: () => defaults.map((d, i) => (
-            <col key={i} style={{ width: widths ? widths[i] : d }} />
+            <col key={i} style={{ width: widths && i !== flexIdx ? widths[i] : d }} />
         )),
         grip: (i: number) => (
             <div
@@ -671,7 +700,14 @@ export function useColumnWidths(storageKey: string, defaults: (number | string)[
                 }}
             />
         ),
-        tableStyle: widths ? { width: widths.reduce((a, b) => a + b, 0), minWidth: 0 } : {},
+        // Under 100% the table fills its pane and the elastic column (rendered
+        // `auto`) takes the slack on its own, so nothing is spread across the fixed
+        // columns. Over it, the table grows and the pane scrolls. The sum INCLUDES
+        // the elastic column's starting width, which is what stops it being squeezed
+        // to nothing the moment the fixed columns outgrow the pane — the grid
+        // scrolls instead of dropping a column. `minWidth` is deliberately not set:
+        // the call site's own floor still applies.
+        tableStyle: widths ? { width: `max(100%, ${widths.reduce((a, b) => a + b, 0)}px)` } : {},
         reset,
     };
 }
