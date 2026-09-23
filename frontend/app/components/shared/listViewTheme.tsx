@@ -580,14 +580,17 @@ export function LvSectionCaption({ icon, children, right, style }: {
 // Freezing up front would have been the visible regression: fixed layout with no
 // widths splits the table into equal columns.
 //
-// One column stays elastic and soaks up whatever the others leave. Without it the
-// table has to stretch to fill its pane and the browser spreads that surplus across
-// EVERY column, which inflates the narrow fixed ones — a 78px Actions column grows
-// and its right-aligned buttons drift away from the row. The elastic column is the
-// widest one the user has not dragged (for a grid that declares `defaults`, the
-// widest proportional one): dragging a column pins it to px and elasticity moves to
-// the next widest. Every border stays draggable, the elastic one included — a
-// border that will not move reads as a bug, not as a rule.
+// Once frozen the colgroup carries one extra `<col>` past the last header cell: an
+// empty filler column that owns all the slack. Every real column is then
+// independent, the way a spreadsheet behaves — dragging one moves nothing else.
+// The two alternatives both failed in use: stretching the table to 100% with no
+// filler spreads the surplus over EVERY column, which inflates the narrow ones (a
+// 78px Actions column grows and its right-aligned buttons drift off the row), and
+// making one real column absorb it means every drag visibly resizes that column
+// too. The filler is not a ragged edge either — `tr` backgrounds paint the whole
+// row box, so the header band and the zebra run out over it. The table never
+// shrinks below the width it had before the first drag either, so pulling a column
+// in feeds the filler rather than dragging the whole grid off the pane's edge.
 //
 // Widths persist per `storageKey` in localStorage. A stored set whose length no
 // longer matches the table is discarded rather than mapped — columns were added or
@@ -597,9 +600,9 @@ const COLW_MIN = 28;
 const COLW_GRAB = 5;
 /** How far it then has to travel before the drag counts as a drag. */
 const COLW_DRAG_START = 3;
-// `v4`: the stored shape and the layout maths have both changed since the first
-// cut, and a stale set loads silently because only its length is checked.
-const colwStore = (key: string) => `lv.colw.v4.${key}`;
+// `v5`: the stored shape and the layout maths have both changed more than once, and
+// a stale set loads silently because only its length is checked.
+const colwStore = (key: string) => `lv.colw.v5.${key}`;
 
 export interface ColumnWidths {
     /** Spread onto the `<table>`, passing the style it would have had. */
@@ -615,16 +618,17 @@ export interface ColumnWidths {
 export function useColumnWidths(storageKey: string, defaults?: (number | string)[]): ColumnWidths {
     const ref = React.useRef<HTMLTableElement | null>(null);
     const [widths, setWidths] = React.useState<number[] | null>(null);
-    /** Columns the user has dragged — they hold px and can no longer go elastic. */
-    const [pinned, setPinned] = React.useState<number[]>([]);
     const [nearBorder, setNearBorder] = React.useState(false);
+    /** The table's full width the first time it was measured — what it spans when it
+     *  is laying itself out normally, before any column was dragged. The table is
+     *  never allowed below it, so narrowing a column parks the difference in the
+     *  filler instead of pulling the whole grid in off the right of the pane.
+     *  `max(100%)` alone did not hold that line: on a shrink-to-fit container the
+     *  percentage resolves against the table's own width, which is no floor at all. */
+    const fullWidth = React.useRef(0);
     const drag = React.useRef<{ i: number; x: number; base: number[]; moved: boolean } | null>(null);
     /** Set by a drag, read by the click that follows it — see `onClickCapture`. */
     const swallowClick = React.useRef(false);
-    // Mirrored for the pointerup handler: it persists the set pinned during THIS
-    // drag, which the handler's own closure was created too early to see.
-    const pinnedRef = React.useRef(pinned);
-    pinnedRef.current = pinned;
 
     // localStorage is read in an effect, not during render: these pages are client
     // components but Next still renders them on the server, and a stored width set
@@ -633,25 +637,26 @@ export function useColumnWidths(storageKey: string, defaults?: (number | string)
         try {
             const raw = localStorage.getItem(colwStore(storageKey));
             if (!raw) return;
-            const parsed = JSON.parse(raw) ?? {};
-            const w = parsed.w, p = parsed.p;
+            const { w, full } = JSON.parse(raw) ?? {};
             if (Array.isArray(w) && w.length && w.every((n: any) => typeof n === 'number')
                 && (!defaults || w.length === defaults.length)) {
                 setWidths(w);
-                setPinned(Array.isArray(p) ? p.filter((n: any) => typeof n === 'number') : []);
+                // Restored too, or a reload would drop the floor and the grid would
+                // come back pulled in off the pane wherever a column was narrowed.
+                if (typeof full === 'number') fullWidth.current = full;
             }
         } catch { /* private mode / bad JSON — the table's own layout is fine */ }
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [storageKey, defaults?.length]);
 
-    const save = (w: number[] | null, p: number[]) => {
+    const save = (w: number[] | null) => {
         try {
-            if (w) localStorage.setItem(colwStore(storageKey), JSON.stringify({ w, p }));
+            if (w) localStorage.setItem(colwStore(storageKey), JSON.stringify({ w, full: fullWidth.current }));
             else localStorage.removeItem(colwStore(storageKey));
         } catch { /* ignore */ }
     };
 
-    const reset = () => { setWidths(null); setPinned([]); save(null, []); };
+    const reset = () => { setWidths(null); fullWidth.current = 0; save(null); };
 
     /** The header row the borders are measured from, or null if this table has a
      *  shape we can't resize (no header, or a spanned cell — a spanned header has
@@ -690,18 +695,6 @@ export function useColumnWidths(storageKey: string, defaults?: (number | string)
         return cells.findIndex(c => Math.abs(clientX - c.getBoundingClientRect().right) <= COLW_GRAB);
     };
 
-    // Widest column still free to stretch. With `defaults` that means the widest
-    // proportional one (a px default was written down as a size to keep); without
-    // them, the widest as measured, which on a content-sized table is the text
-    // column — the one with slack to give.
-    let flexIdx = -1, bestWeight = -1;
-    (defaults ?? widths ?? []).forEach((d, i) => {
-        if (pinned.includes(i)) return;
-        const weight = typeof d === 'number' ? (defaults ? -1 : d)
-            : d === 'auto' ? Infinity : parseFloat(d) || 0;
-        if (weight > bestWeight) { bestWeight = weight; flexIdx = i; }
-    });
-
     const onPointerDown = (e: React.PointerEvent<HTMLTableElement>) => {
         const i = borderAt(e.clientX, e.clientY);
         if (i < 0) return;
@@ -709,9 +702,7 @@ export function useColumnWidths(storageKey: string, defaults?: (number | string)
         if (!cells) return;
         e.preventDefault();  // or the drag starts a text selection instead
         const base = widths ?? measure(cells);
-        // Pin on the way down, not on the way up: the elastic column renders `auto`,
-        // so pinning it late would show no movement at all until release.
-        setPinned(p => (p.includes(i) ? p : [...p, i]));
+        fullWidth.current = Math.max(fullWidth.current, base.reduce((a, b) => a + b, 0));
         drag.current = { i, x: e.clientX, base, moved: false };
         ref.current?.setPointerCapture(e.pointerId);
     };
@@ -736,7 +727,7 @@ export function useColumnWidths(storageKey: string, defaults?: (number | string)
         swallowClick.current = drag.current.moved;
         drag.current = null;
         try { ref.current?.releasePointerCapture(e.pointerId); } catch { /* already gone */ }
-        setWidths(w => { save(w, pinnedRef.current); return w; });
+        setWidths(w => { save(w); return w; });
     };
 
     return {
@@ -764,30 +755,25 @@ export function useColumnWidths(storageKey: string, defaults?: (number | string)
                 ...style,
                 // Only once frozen: `fixed` on a table that never declared widths
                 // splits it into equal columns. Under 100% the table fills its pane
-                // and the elastic column (rendered `auto`) takes the slack on its
-                // own, so nothing is spread across the fixed ones. Over it the table
-                // grows and the pane scrolls — and the sum INCLUDES the elastic
-                // column's starting width, so it is never squeezed to nothing.
-                // `minWidth` is left to the call site's own floor.
+                // and the filler column takes the slack; over it the table grows and
+                // the pane scrolls, with the filler at zero. Either way the real
+                // columns keep exactly the widths they were dragged to. `minWidth`
+                // is left to the call site's own floor.
                 ...(widths ? {
                     tableLayout: 'fixed' as const,
-                    width: `max(100%, ${widths.reduce((a, b) => a + b, 0)}px)`,
+                    width: `max(100%, ${Math.max(fullWidth.current, widths.reduce((a, b) => a + b, 0))}px)`,
                 } : {}),
                 ...(nearBorder || drag.current ? { cursor: 'col-resize' as const } : {}),
             },
         }),
-        // Mid-drag EVERY column is pinned to px, the elastic one included. Left
-        // elastic it would re-absorb the slack in the same frame the dragged column
-        // changes, so its neighbours shift under the cursor and the border stops
-        // tracking the pointer. It goes back to `auto` on release, where its width
-        // works out to exactly what it was holding anyway.
-        cols: () => (defaults ?? widths ?? []).map((d, i) => (
-            <col key={i} style={{
-                width: widths && (drag.current || i !== flexIdx)
-                    ? widths[i]
-                    : (defaults ? (d as number | string) : undefined),
-            }} />
-        )),
+        cols: () => {
+            const real = (defaults ?? widths ?? []).map((d, i) => (
+                <col key={i} style={{ width: widths ? widths[i] : (defaults ? (d as number | string) : undefined) }} />
+            ));
+            // The filler exists only once the columns are frozen; before that the
+            // table is still laying itself out and there is no slack to park.
+            return widths ? [...real, <col key="filler" />] : real;
+        },
         reset,
     };
 }
