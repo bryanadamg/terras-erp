@@ -2,8 +2,8 @@
 
 import React from 'react';
 import { useTheme } from '../../context/ThemeContext';
-import { SkeletonBar, TableBlockSkeleton, BUTTON_RADIUS } from './xpTheme';
-import { xpTitleBar, xpToolbar, viewShellStyle, scrollAreaStyle } from './shellTheme';
+import { SkeletonBar, BUTTON_RADIUS } from './xpTheme';
+import { ListPageSkeleton } from './pageSkeletons';
 import { SIDEBAR_BG } from './Sidebar';
 import { NAV_SECTIONS } from './navConfig';
 
@@ -170,31 +170,12 @@ export default function BootShell({ appName = 'Terras ERP', children }: {
                 {/* Same gutter class and same page-filling window a real list
                     route renders — title bar, toolbar strip, then the table. */}
                 <div className="page-body">
-                    {children ?? (
-                    <div style={viewShellStyle('page')}>
-                        <div style={xpTitleBar()}>
-                            <SkeletonBar width={140} height={8} />
-                            <SkeletonBar width={54} height={8} />
-                        </div>
-                        <div style={xpToolbar()}>
-                            <SkeletonBar width={200} height={18} />
-                            <SkeletonBar width={110} height={18} />
-                            <span style={{ flex: 1 }} />
-                            <SkeletonBar width={100} height={18} />
-                        </div>
-                        {/* Rows enough to reach the bottom of a tall screen,
-                            clipped rather than scrolled. This shell is the
-                            server-rendered HTML — it is on screen before any JS
-                            has hydrated, so the row count can't be measured off
-                            the panel the way a live list's TableSkeleton
-                            measures `fillHeight`. A fixed count that stops
-                            mid-panel reads as a table that ends early, so the
-                            count overshoots and `hidden` absorbs the rest. */}
-                        <div style={{ ...scrollAreaStyle, overflow: 'hidden' }}>
-                            <TableBlockSkeleton cols={6} rows={60} />
-                        </div>
-                    </div>
-                    )}
+                    {/* Only reached before the route may draw itself — a cold start
+                        with no token, where mounting the page would fire fetches
+                        that can only 401. The list silhouette is the majority shape
+                        and it is the same component a list route's own
+                        `loading.tsx` renders, so the two can't drift. */}
+                    {children ?? <ListPageSkeleton />}
                 </div>
             </div>
         </div>
