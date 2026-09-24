@@ -46,7 +46,7 @@ export default function DashboardPage() {
                 itemIndex={itemIndex}
                 kpiHistory={dashboardKpiHistory}
                 outlook={dashboardOutlook}
-                loading={loading.manufacturingOrders || loading.dashboard}
+                loading={loading.dashboardWorkOrders || loading.dashboard}
             />
     );
 }

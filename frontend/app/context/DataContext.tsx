@@ -12,10 +12,12 @@ import { API_BASE } from '../components/shared/apiBase';
 // requestType -> the domain key views read via useData().loading.*
 const LOADING_KEY: Record<string, string> = {
     items: 'items', boms: 'boms', 'manufacturing-orders': 'manufacturingOrders',
-    // The dashboard pulls the same domain under its own slim request type; without
-    // this it is the one list in the app with no loading flag, so its tables flash
-    // "no data" before the first response lands.
-    'manufacturing-orders-slim': 'manufacturingOrders',
+    // The dashboard pulls the same domain under its own slim request type, into
+    // its own slice (`dashboardWorkOrders`), so it gets its own flag. Sharing
+    // `manufacturingOrders` marked the MO list loaded while that list was still
+    // `[]` — every cold start lands on /dashboard, so the MO page then opened on
+    // "No Manufacturing Orders yet." instead of its skeleton.
+    'manufacturing-orders-slim': 'dashboardWorkOrders',
     // The four dashboard payloads share one flag. The view can't tell "this role
     // has no sales" from "the fetch hasn't landed" — both are an absent object —
     // and it drops the panel on the first reading, so it needs to be told which
@@ -228,6 +230,7 @@ interface DataContextType {
         items: boolean; boms: boolean; manufacturingOrders: boolean; productionRuns: boolean;
         stockBalance: boolean; stockEntries: boolean; salesOrders: boolean; purchaseOrders: boolean;
         samples: boolean; auditLogs: boolean; partners: boolean; dashboard: boolean;
+        dashboardWorkOrders: boolean;
     };
 
     /**
@@ -1507,6 +1510,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
         stockEntries: !loadedOnce.stockEntries, salesOrders: !loadedOnce.salesOrders,
         purchaseOrders: !loadedOnce.purchaseOrders, samples: !loadedOnce.samples, auditLogs: !loadedOnce.auditLogs,
         partners: !loadedOnce.partners, dashboard: !loadedOnce.dashboard,
+        dashboardWorkOrders: !loadedOnce.dashboardWorkOrders,
     }), [loadedOnce, prPending]);
 
     const value = React.useMemo(() => ({
