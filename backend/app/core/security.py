@@ -5,7 +5,17 @@ from passlib.context import CryptContext
 import os
 
 # Configuration
-SECRET_KEY = os.getenv("SECRET_KEY", "change_this_to_secure_random_string")
+# No default. A fallback string here is a published signing key: anyone reading
+# the repo can mint a valid token for any deploy that forgot to set the variable,
+# and the deploy comes up looking healthy while it happens. Refusing to start is
+# the only failure mode that gets noticed.
+SECRET_KEY = os.getenv("SECRET_KEY")
+if not SECRET_KEY:
+    raise RuntimeError(
+        "SECRET_KEY is not set. Generate one with "
+        "`python -c \"import secrets; print(secrets.token_urlsafe(64))\"` "
+        "and put it in .env before starting the app."
+    )
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24 # 24 hours
 

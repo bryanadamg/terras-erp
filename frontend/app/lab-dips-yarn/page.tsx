@@ -7,6 +7,7 @@ import { useData } from '../context/DataContext';
 import { useRawMaterialSearch } from '../components/shared/useEntitySearch';
 import { useToast } from '../components/shared/Toast';
 import { useConfirm } from '../context/ConfirmContext';
+import { API_BASE } from '../components/shared/apiBase';
 
 // Yarn (raw material) lab dips. Same view and same endpoints as /lab-dips — the only
 // differences are the item scope (Raw Material subtree) and kind=YARN, which puts the
@@ -30,8 +31,6 @@ export default function YarnLabDipsPage() {
         setOpenRequestId(rawOpen);
         router.replace('/lab-dips-yarn');
     }, [rawOpen]); // eslint-disable-line react-hooks/exhaustive-deps
-    const envBase = process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:8000/api';
-    const API_BASE = envBase.endsWith('/api') ? envBase : `${envBase}/api`;
 
     const [recipes, setRecipes] = useState<any[]>([]);
     const [colors, setColors] = useState<any[]>([]);

@@ -5,7 +5,7 @@ import { useTimezone } from '../../context/TimezoneContext';
 import CalendarView from '../shared/CalendarView';
 import {
     xpFont, ProgressBar, StatusChip, XPStatusBar, familyColor, familyTint, statusColor, type StatusFamily,
-    CodeChip, CODE_FONT, SkeletonBar, TableSkeleton, useTableSkeletonMetrics, XPEmptyState,
+    CodeChip, CODE_FONT, SkeletonBar, ListSkeleton, TableSkeleton, useTableSkeletonMetrics, XPEmptyState,
 } from '../shared/xpTheme';
 import { Tooltip } from '../shared/Tooltip';
 import { ShellWindow, ShellTitleBar } from '../shared/shellTheme';
@@ -103,8 +103,15 @@ export default function DashboardView({ items, workOrders, kpis, summary, outloo
     // An absent `outlook` means the role has no sales permission — the panel and
     // its tiles drop out rather than render zeros.
     const outlookRows: any[] = outlook?.rows || [];
-    const seesStock = Array.isArray(summary?.low_stock_items);
-    const seesSales = !!outlook;
+    // `outlook` / `summary.low_stock_items` are absent for two different reasons:
+    // the role can't see that domain, or the payload hasn't landed yet. Only the
+    // first should drop the panel. Treating both as "no permission" is what made
+    // the loading dashboard a single 260px pane on an empty page — the whole page
+    // shape arrived with the data instead of before it. So while `loading` the
+    // panels stay and wear their skeletons; absence answers the permission
+    // question only once the fetch is over.
+    const seesStock = Array.isArray(summary?.low_stock_items) || loading;
+    const seesSales = !!outlook || loading;
     const openSOsCount: number = outlook?.open_count ?? 0;
     const readySOCount: number = outlook?.ready_count ?? 0;
     const lateSOCount: number = outlook?.late_count ?? 0;
@@ -199,6 +206,14 @@ export default function DashboardView({ items, workOrders, kpis, summary, outloo
     const outlookBodyRef = useRef<HTMLTableSectionElement>(null);
     const outlookSkel = useTableSkeletonMetrics('dashboard-outlook', outlookBodyRef, false);
 
+    // Same rule as the KPI tiles: a figure nobody has fetched yet is not 0 or
+    // 100% — it is unknown, and a bar says so where a number would lie.
+    const Pending = ({ width = 26 }: { width?: number }) => (
+        <span style={{ display: 'inline-block', width, verticalAlign: 'middle' }}>
+            <SkeletonBar width="100%" height={8} />
+        </span>
+    );
+
     const critCount = actionItems.filter(a => a.sev === 'crit').length;
     const warnCount = actionItems.filter(a => a.sev === 'warn').length;
 
@@ -246,11 +261,11 @@ export default function DashboardView({ items, workOrders, kpis, summary, outloo
             { key: 'ready', value: readySOCount, label: t('ready_to_ship'), tone: 'green' as StatusFamily },
             { key: 'open', value: openSOsCount, label: t('open_orders') },
         ] : []),
-        ...(kpis?.active_wo !== undefined ? [
+        ...(kpis?.active_wo !== undefined || loading ? [
             { key: 'active_wo', value: metrics.activeWO, label: t('active_wo'), tone: (overdueWOs.length > 0 ? 'amber' : undefined) as StatusFamily | undefined, frame: overdueWOs.length > 0 },
             { key: 'pending_wo', value: metrics.pendingWO, label: t('pending_wo') },
         ] : []),
-        ...(kpis?.low_stock !== undefined ? [
+        ...(kpis?.low_stock !== undefined || loading ? [
             { key: 'low_stock', value: metrics.lowStock, label: t('low_stock'), tone: (outCount > 0 ? 'red' : metrics.lowStock > 0 ? 'amber' : 'green') as StatusFamily, frame: metrics.lowStock > 0 },
         ] : []),
     ];
@@ -293,7 +308,9 @@ export default function DashboardView({ items, workOrders, kpis, summary, outloo
                         icon="bi-truck"
                         title={t('delivery_outlook')}
                         right={<span style={{ fontSize: '10px', fontWeight: 'normal' }}>
-                            {lateSOCount} {t('late_orders').toLowerCase()} · {shortSOCount} {t('at_risk').toLowerCase()} · {readySOCount} {t('ready_to_ship').toLowerCase()}
+                            {seesSales && !outlook
+                                ? <Pending width={120} />
+                                : <>{lateSOCount} {t('late_orders').toLowerCase()} · {shortSOCount} {t('at_risk').toLowerCase()} · {readySOCount} {t('ready_to_ship').toLowerCase()}</>}
                         </span>}
                     />
                     <div style={{ overflow: 'auto', flex: 1, minHeight: 0 }}>
@@ -342,9 +359,9 @@ export default function DashboardView({ items, workOrders, kpis, summary, outloo
                     </div>
                     <XPStatusBar
                         style={{ marginTop: 0 }}
-                        right={<>{t('delivery_readiness')}: {deliveryReadiness.toFixed(1)}%</>}
+                        right={<>{t('delivery_readiness')}: {outlook ? `${deliveryReadiness.toFixed(1)}%` : <Pending width={34} />}</>}
                     >
-                        {openSOsCount} {t('open_orders').toLowerCase()}
+                        {outlook ? openSOsCount : <Pending />} {t('open_orders').toLowerCase()}
                     </XPStatusBar>
                 </ShellWindow>
                 )}
@@ -362,8 +379,11 @@ export default function DashboardView({ items, workOrders, kpis, summary, outloo
                         ) : undefined}
                     />
                     <div style={{ flex: 1, overflowY: 'auto', minHeight: 0 }}>
-                        {actionItems.length === 0 ? (
-                            <XPEmptyState icon="bi-check-circle" message={t('all_systems_nominal')} />
+                        {actionItems.length === 0 ? (loading
+                            // "All systems nominal" before anything has been checked is
+                            // the loudest claim on the page and the one most likely wrong.
+                            ? <ListSkeleton rows={4} padding="5px 8px" />
+                            : <XPEmptyState icon="bi-check-circle" message={t('all_systems_nominal')} />
                         ) : (
                             // The detail text rides the app's own hover layer (delay,
                             // placement, portal, aria-describedby). The local absolute
@@ -390,7 +410,9 @@ export default function DashboardView({ items, workOrders, kpis, summary, outloo
                         )}
                     </div>
                     <XPStatusBar style={{ marginTop: 0 }}>
-                        {critCount} critical · {warnCount} warnings · {actionItems.filter(a => a.sev === 'info').length} info
+                        {loading
+                            ? <Pending width={120} />
+                            : <>{critCount} critical · {warnCount} warnings · {actionItems.filter(a => a.sev === 'info').length} info</>}
                     </XPStatusBar>
                 </ShellWindow>
             </div>
@@ -404,7 +426,9 @@ export default function DashboardView({ items, workOrders, kpis, summary, outloo
                         tone="amber"
                         icon="bi-gear"
                         title={t('work_order_monitoring')}
-                        right={<span style={{ fontSize: '10px', fontWeight: 'normal' }}>{metrics.activeWO} active · {metrics.pendingWO} pending</span>}
+                        right={<span style={{ fontSize: '10px', fontWeight: 'normal' }}>
+                            {kpisLoading ? <Pending width={90} /> : <>{metrics.activeWO} active · {metrics.pendingWO} pending</>}
+                        </span>}
                     />
                     <div style={{ overflow: 'auto', flex: 1, minHeight: 0 }}>
                         <table style={xpTable}>
@@ -454,7 +478,7 @@ export default function DashboardView({ items, workOrders, kpis, summary, outloo
                         style={{ marginTop: 0 }}
                         right={<>{t('delivery_readiness')}: {deliveryReadiness.toFixed(1)}%</>}
                     >
-                        {t('production_yield')}: {prodYield.toFixed(1)}%
+                        {t('production_yield')}: {hasSummary ? `${prodYield.toFixed(1)}%` : <Pending width={34} />}
                     </XPStatusBar>
                 </ShellWindow>
 
@@ -491,8 +515,9 @@ export default function DashboardView({ items, workOrders, kpis, summary, outloo
                 <ShellWindow fill={false} style={{ width: '240px', flexShrink: 0, display: 'flex', flexDirection: 'column' }}>
                     <ShellTitleBar tone="amber" icon="bi-box-seam" title={t('stock_risk')} />
                     <div style={{ padding: '6px 8px', background: '#f0efe8', flex: 1, overflowY: 'auto', minHeight: 0 }}>
-                        {namedLowStock.length === 0 ? (
-                            <XPEmptyState icon="bi-check-circle" message={t('no_low_stock')} />
+                        {namedLowStock.length === 0 ? (loading
+                            ? <ListSkeleton rows={4} padding="0 0 8px" />
+                            : <XPEmptyState icon="bi-check-circle" message={t('no_low_stock')} />
                         ) : (
                             <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
                                 {namedLowStock.map((i: any) => {
@@ -514,7 +539,9 @@ export default function DashboardView({ items, workOrders, kpis, summary, outloo
                         )}
                     </div>
                     <XPStatusBar style={{ marginTop: 0 }}>
-                        {outCount} {t('out_of_stock')} · {metrics.lowStock} {t('below_reorder')}
+                        {loading
+                            ? <Pending width={120} />
+                            : <>{outCount} {t('out_of_stock')} · {metrics.lowStock} {t('below_reorder')}</>}
                     </XPStatusBar>
                 </ShellWindow>
                 )}
@@ -524,6 +551,16 @@ export default function DashboardView({ items, workOrders, kpis, summary, outloo
             <ShellWindow fill={false} style={{ marginTop: '6px' }}>
                 <ShellTitleBar tone="grey" icon="bi-graph-up" title={t('kpi_trends')} />
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: '6px', padding: '8px', background: '#f0efe8' }}>
+                    {loading && !kpiHistory && !kpis && TREND_METRICS.map(m => (
+                        <div key={m.key} style={{ border: '1px solid #c0bdb5', background: '#fff', padding: '6px' }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 5 }}>
+                                <SkeletonBar width={52} height={7} />
+                                <SkeletonBar width={30} height={11} />
+                            </div>
+                            <SkeletonBar width={150} height={30} />
+                            <div style={{ marginTop: 4 }}><SkeletonBar width={64} height={7} /></div>
+                        </div>
+                    ))}
                     {TREND_METRICS.filter(m => kpiHistory?.[m.key] || kpis?.[m.key] !== undefined).map((m) => {
                         const series = kpiHistory?.[m.key] || [];
                         const last = series.length ? series[series.length - 1].value : (kpis?.[m.key] ?? 0);

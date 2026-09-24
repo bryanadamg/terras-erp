@@ -12,6 +12,7 @@ import DyeingRateModal from './DyeingRateModal';
 import { useMonitorSections } from './machineMonitor/useMonitorSections';
 import { CardGrid, MachineCard, GroupHeader, MonitorChipBar } from './machineMonitor/MonitorParts';
 import { MonitorShell, MonitorGridSkeleton } from './machineMonitor/MonitorShell';
+import { API_BASE } from '../shared/apiBase';
 
 const GREEN = familyColor('green');
 const BLUE = familyColor('blue');
@@ -79,8 +80,6 @@ export default function DyeingMonitorView() {
     // its three phases are the machine setter's job, not a supervisory act.
     const canSetRate = hasPermission('work_order.log');
 
-    const envBase = process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:8000/api';
-    const API_BASE = envBase.endsWith('/api') ? envBase : `${envBase}/api`;
 
     const [data, setData] = useState<any>(null);
     const [loading, setLoading] = useState(true);

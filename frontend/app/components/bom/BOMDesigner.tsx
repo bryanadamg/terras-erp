@@ -7,6 +7,7 @@ import BOMConfirmModal, { BOMPlan, BOMPlanNode, BOMPlanLine } from './BOMConfirm
 import SearchableSelect from '@bryanadamg/terras-ui/components/Combobox';
 import { useToast } from '../shared/Toast';
 import { CodeChip, CODE_FONT, xpFont, CHIP_RADIUS, BUTTON_RADIUS, xpInput as xpInputBase, xpBtn as xpBtnBase, BTN_TONES, LegendPanel, XP_BTN } from '../shared/xpTheme';
+import { API_BASE } from '../shared/apiBase';
 
 // Types for Recursive Structure
 interface BOMSizeEntry {
@@ -316,8 +317,6 @@ export default function BOMDesigner({
 }: any) {
     const { t } = useLanguage();
     const { itemIndex, authFetch } = useData();
-    const API_BASE = (process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:8000/api')
-        .replace(/\/api$/, '') + '/api';
     const { showProgressToast } = useToast();
 
     const [rootBOM, setRootBOM] = useState<BOMNodeData>(() => {

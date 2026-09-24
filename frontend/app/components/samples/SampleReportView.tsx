@@ -6,6 +6,7 @@ import { isoDate } from '../shared/format';
 import { useTimezone } from '../../context/TimezoneContext';
 import { useToast } from '../shared/Toast';
 import { ShellWindow, ShellTitleBar, xpToolbar as sharedXpToolbar, ToolbarButton } from '../shared/shellTheme';
+import { API_BASE } from '../shared/apiBase';
 import {
     lvTh, lvThead, lvRow, lvBtn, lvInput, lvLabel, lvSep, LvSectionCaption, LV_XP_FONT, LV_MODERN_FONT,
     SortableTh,
@@ -27,8 +28,6 @@ import {
  * list in DataContext — it always reads GET /samples/report.
  */
 
-const API_BASE = (process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:8000/api')
-    .replace(/\/api$/, '') + '/api';
 
 const iso = isoDate;   // calendar-field formatting: toISOString() would shift the range by a day
 const monthStart = () => { const d = new Date(); return new Date(d.getFullYear(), d.getMonth(), 1); };

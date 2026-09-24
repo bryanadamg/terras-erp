@@ -208,9 +208,11 @@ export function FloatingLayer({ rect, anchorEl, placement = 'bottom', align = 's
     );
 }
 
-/** The tooltip box itself. Classic is the XP tooltip (pale blue, 1px black,
- *  Tahoma); modern is a dark bubble. Exported for the rare caller that drives its
- *  own anchor and only wants the surface. */
+/** The tooltip box itself — one dark-gray bubble in every theme. Deliberately NOT
+ *  the XP pale-blue box it started as: a light bubble on a light XP window reads as
+ *  another panel that appeared, and the eye has to work out which layer it is on.
+ *  Dark gray is unambiguously "floating, temporary, not part of the page".
+ *  Exported for the rare caller that drives its own anchor and only wants the surface. */
 export function TooltipSurface({ children, maxWidth = 320, id }: { children: React.ReactNode; maxWidth?: number; id?: string }) {
     return (
         <div
@@ -226,12 +228,12 @@ export function TooltipSurface({ children, maxWidth = 320, id }: { children: Rea
                 fontFamily: xpFont,
                 fontSize: 11,
                 lineHeight: 1.4,
-                padding: '2px 5px',
-                borderRadius: 0,
-                background: '#e1f0ff',
-                color: '#000',
-                border: '1px solid #000',
-                boxShadow: '2px 2px 3px rgba(0,0,0,0.2)',
+                padding: '3px 7px',
+                borderRadius: 3,
+                background: '#2f3136',
+                color: '#f2f2f2',
+                border: '1px solid #16171a',
+                boxShadow: '0 2px 8px rgba(0,0,0,0.30)',
             }}
         >
             {children}

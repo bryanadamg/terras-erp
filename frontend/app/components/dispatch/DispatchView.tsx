@@ -10,17 +10,16 @@ import { useToast } from '../shared/Toast';
 import { useConfirm } from '../../context/ConfirmContext';
 import {
     XPStatusBar, XPEmptyState, TableSkeleton, useTableSkeletonMetrics, StatusChip,
-    useFloatingMenu, MenuTriggerButton, FloatingMenu, ExpandedRowPanel, XPActionButton, CodeChip, CODE_FONT, rowStateBg, colorLabel, colorTitle, XP_BTN,
-} from '../shared/xpTheme';
-import { LV_XP_FONT, lvBtn, lvInput, lvTd, lvLabel, lvRow, lvSubTh, lvSubTd, lvSubTable, useRowSelection, RowCheckbox, SelectAllCheckbox, LV_CHECK_COL_W, EMPTY_DASH, lvTh, lvThead } from '../shared/listViewTheme';
+    useFloatingMenu, MenuTriggerButton, FloatingMenu, ExpandedRowPanel, XPActionButton, CodeChip, CODE_FONT, rowStateBg, colorLabel, colorTitle, XP_BTN, SKEL_PAGE_ROWS } from '../shared/xpTheme';
+import { LV_XP_FONT, lvBtn, lvInput, lvTd, lvLabel, lvRow, lvSubTh, lvSubTd, lvSubTable, useRowSelection, RowCheckbox, SelectAllCheckbox, LV_CHECK_COL_W, EMPTY_DASH, lvTh, lvThead, ResizableTable } from '../shared/listViewTheme';
 import { ShellWindow, ShellTitleBar, SearchField, FilterChipBar, ToolbarCount, xpToolbar } from '../shared/shellTheme';
 import Pager from '../shared/Pager';
 import ModalWrapper from '../shared/ModalWrapper';
 import { LotChip, LotChips, LotChipRow, lotSizeLabel, lotComboLabel, lotColorLabel } from '../shared/LotChips';
 import { qtyFmt, toNum as num } from '../shared/format';
+import { API_BASE } from '../shared/apiBase';
 const SuratJalanPrintModal = dynamic(() => import('./SuratJalanPrintModal'), { ssr: false });
 
-const API_BASE = (process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:8000/api').replace(/\/api$/, '') + '/api';
 
 // Classic-XP primitives, same set PickListView uses — the two pages are read by
 // the same warehouse staff minutes apart and must not drift apart visually.
@@ -310,7 +309,7 @@ export default function DispatchView() {
             )}
 
             <div style={{ flex: 1, overflow: 'auto' }}>
-                <table style={{ width: '100%', borderCollapse: 'collapse', fontFamily: xpFont, fontSize: 11 }}>
+                <ResizableTable style={{ width: '100%', borderCollapse: 'collapse', fontFamily: xpFont, fontSize: 11 }}>
                     <thead>
                         <tr>
                             <th style={{ ...xpTableHeader, width: LV_CHECK_COL_W, textAlign: 'center' }}>
@@ -329,7 +328,7 @@ export default function DispatchView() {
                     </thead>
                     <tbody ref={listBodyRef}>
                         {nothingYet && (stillLoading ? (
-                            <TableSkeleton rows={6} cols={skel.cols ?? COLS} tdStyle={td} rowHeight={skel.rowHeight} fillHeight={skel.fillHeight} />
+                            <TableSkeleton rows={SKEL_PAGE_ROWS} cols={skel.cols ?? COLS} tdStyle={td} rowHeight={skel.rowHeight} fillHeight={skel.fillHeight} />
                         ) : (
                             <tr><td colSpan={COLS} style={{ padding: 0 }}>
                                 <XPEmptyState icon="bi-truck" message={statusFilter === DECK_FILTER
@@ -454,7 +453,7 @@ export default function DispatchView() {
                             );
                         })}
                     </tbody>
-                </table>
+                </ResizableTable>
             </div>
             {showShipments && <Pager page={page} total={total} pageSize={PAGE_SIZE} onPageChange={setPage} hideWhenEmpty />}
         </>

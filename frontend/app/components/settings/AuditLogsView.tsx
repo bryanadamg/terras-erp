@@ -3,8 +3,8 @@ import { useLanguage } from '../../context/LanguageContext';
 import { useTimezone } from '../../context/TimezoneContext';
 import { useUser } from '../../context/UserContext';
 import { xpToolbar as sharedXpToolbar, ShellWindow, ShellTitleBar } from '../shared/shellTheme';
-import { lvTh, lvRow, LV_XP_FONT, LV_MODERN_FONT, lvThead } from '../shared/listViewTheme';
-import { StatusChip, CODE_FONT, xpFont, xpBtn, TableSkeleton, useTableSkeletonMetrics, CHIP_RADIUS, XP_BTN } from '../shared/xpTheme';
+import { lvTh, lvRow, LV_XP_FONT, LV_MODERN_FONT, lvThead, ResizableTable } from '../shared/listViewTheme';
+import { StatusChip, CODE_FONT, xpFont, xpBtn, TableSkeleton, useTableSkeletonMetrics, CHIP_RADIUS, XP_BTN, SKEL_PAGE_ROWS } from '../shared/xpTheme';
 import { useData } from '../../context/DataContext';
 import Pager from '../shared/Pager';
 
@@ -145,7 +145,7 @@ export default function AuditLogsView({ auditLogs, currentPage, totalItems, page
           )}
 
           <div style={{ flex: 1, minHeight: 0, background: '#ffffff', overflowY: 'auto', overflowX: 'hidden' }}>
-              <table
+              <ResizableTable 
                   className={undefined}
                   style={{ width: '100%', borderCollapse: 'collapse', tableLayout: 'fixed' }}
               >
@@ -163,12 +163,12 @@ export default function AuditLogsView({ auditLogs, currentPage, totalItems, page
                           <AuditLogRow key={log.id} log={log} rowIndex={i} userName={userNameById[log.user_id]} />
                       ))}
                       {auditLogs.length === 0 && (dataLoading.auditLogs ? (
-                          <TableSkeleton rows={8} cols={skel.cols ?? 5} rowHeight={skel.rowHeight} fillHeight={skel.fillHeight} />
+                          <TableSkeleton rows={SKEL_PAGE_ROWS} cols={skel.cols ?? 5} rowHeight={skel.rowHeight} fillHeight={skel.fillHeight} />
                       ) : <tr><td colSpan={5} style={{ textAlign: 'center', padding: '24px', fontFamily: xpFont, fontSize: '11px', color: '#666', fontStyle: 'italic' }}>
                               No activity logs found
                           </td></tr>)}
                   </tbody>
-              </table>
+              </ResizableTable>
           </div>
 
           <Pager page={currentPage} total={totalItems} pageSize={pageSize} onPageChange={onPageChange} />

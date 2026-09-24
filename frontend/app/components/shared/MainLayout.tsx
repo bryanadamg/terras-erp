@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, Suspense } from 'react';
 import Sidebar from './Sidebar';
 import MobileShell from '../mobile/MobileShell';
 import { useUser } from '../../context/UserContext';
@@ -10,7 +10,8 @@ import { useRouter, usePathname } from 'next/navigation';
 import { useTheme } from '../../context/ThemeContext';
 import { useIsMobile } from '../../hooks/useIsMobile';
 import AppLoadBar from './AppLoadBar';
-import BootShell from './BootShell';
+import { BootSidebar, BootHeader } from './BootShell';
+import { ListPageSkeleton } from './pageSkeletons';
 import { routeTitle, PREFETCH_ROUTES, ROUTE_PERMISSIONS } from './navConfig';
 import { useDocumentTitle } from '../../hooks/useDocumentTitle';
 import AccessDenied from './AccessDenied';
@@ -85,14 +86,27 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
         return <>{children}</>;
     }
 
-    // SSR / boot state — paint the chrome instead of covering it. Same DOM
-    // classes as the real layout below, so nothing shifts when it swaps.
-    if (!mounted || loading) {
-        return <BootShell appName={appName} />;
-    }
+    // SSR / boot state — paint the chrome instead of covering it. The boot
+    // placeholders swap for the real Sidebar/header IN PLACE below, so the route
+    // under `page-body` keeps its tree position and never remounts. (Returning a
+    // separate shell component here changed the root element type, so every page
+    // mounted once inside it, then again inside the real layout: two skeletons
+    // and two rounds of fetches per cold start.)
+    //
+    // The route renders inside the boot chrome rather than being replaced by it:
+    // it owns a shape-matched skeleton gated on DataContext's `loading.*`, which
+    // is the only loading shape a route draws (there are no `loading.tsx` files —
+    // see pageSkeletons.tsx).
+    //
+    // The exception is a cold start with no token: mounting the page would fire a
+    // round of fetches that can only 401 while the redirect to /login is already
+    // in flight. Before hydration no effect has run, so nothing can fetch yet and
+    // the page draws freely; after it, the token has to be there.
+    const booting = !mounted || loading;
+    const canFetch = !mounted || !!localStorage.getItem('access_token');
 
     // Protect all other routes
-    if (!currentUser) return null;
+    if (!booting && !currentUser) return null;
 
     // Route guard — hiding a sidebar leaf never stopped a typed URL, so the route
     // itself is checked against the same navConfig permissions the sidebar uses.
@@ -105,7 +119,7 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
     const pageBody = routeBlocked ? <AccessDenied codes={routePerms} /> : children;
 
     // Mobile: render the XP mobile shell instead of sidebar layout
-    if (isMobile) {
+    if (!booting && isMobile) {
         return <MobileShell appName={appName}>{pageBody}</MobileShell>;
     }
 
@@ -116,17 +130,17 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
     };
 
     return (
-        <div className={`app-container ui-style-${uiStyle}`}>
-            <Sidebar 
+        <div className={`app-container ui-style-${uiStyle}`} aria-busy={booting || undefined}>
+            {booting ? <BootSidebar appName={appName} /> : <Sidebar 
                 activeTab={activeTab} 
                 setActiveTab={handleSetActiveTab} 
                 onTabHover={handleTabHoverPrefetch}
                 appName={appName} 
                 isOpen={isMobileSidebarOpen} 
-            />
+            />}
 
             <div className="main-content flex-grow-1 overflow-y-auto overflow-x-hidden bg-light">
-                <div className="app-header sticky-top bg-white border-bottom shadow-sm px-4 d-flex justify-content-between align-items-center no-print classic-header">
+                {booting ? <BootHeader /> : <div className="app-header sticky-top bg-white border-bottom shadow-sm px-4 d-flex justify-content-between align-items-center no-print classic-header">
                     <div className="d-flex align-items-center gap-3">
                         <button className="btn btn-link d-md-none p-0 text-dark" onClick={() => setIsMobileSidebarOpen(true)}><i className="bi bi-list fs-3"></i></button>
                         <h5 className="mb-0 fw-bold text-dark d-none d-md-block text-uppercase letter-spacing-1">{pageTitle}</h5>
@@ -158,15 +172,22 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
                             <span className="d-none d-sm-inline">LOGOUT</span>
                         </LogoutButton>
                     </div>
-                </div>
+                </div>}
 
-                <AppLoadBar />
+                {!booting && <AppLoadBar />}
 
                 {/* `page-body` carries the horizontal gutter (--content-pad); it used to
                     sit on .main-content, which inset the sticky app header away from the
                     sidebar and the viewport top. Header chrome stays full-bleed. */}
                 <div className="page-body">
-                    {pageBody}
+                    {/* Catches the static-render bailout of any page that reads
+                        `useSearchParams` (Next wants a Suspense above it). Without
+                        this the nearest boundary is layout.tsx's, whose fallback
+                        replaces the whole app shell. `null`: the page's own
+                        skeleton is the only one, and this is gone by hydration. */}
+                    <Suspense fallback={null}>
+                        {booting ? (canFetch ? children : <ListPageSkeleton />) : pageBody}
+                    </Suspense>
                 </div>
             </div>
         </div>

@@ -11,13 +11,11 @@ import { ShellWindow, ShellTitleBar, xpToolbar as sharedXpToolbar, SearchField, 
 import {
     lvTh, lvThead, lvTd, lvRow, lvBtn, lvInput, lvLabel, lvSep,
     lvSubTh, lvSubTd, lvSubTable, lvSubCaption, lvSubRow, LV_XP_FONT, LV_MODERN_FONT,
-    ExpanderCell, LV_EXPANDER_COL_W, LV_CHECK_COL_W, RowCheckbox, SelectAllCheckbox,
-} from '../shared/listViewTheme';
+    ExpanderCell, LV_EXPANDER_COL_W, LV_CHECK_COL_W, RowCheckbox, SelectAllCheckbox, ResizableTable } from '../shared/listViewTheme';
 import {
     StatusChip, StatusCountPill, TableSkeleton, useTableSkeletonMetrics, XPStatusBar, XPEmptyState,
     XPActionButton, ColorSwatchChip, ExpandedRowPanel, CodeChip, rowStateBg, ToggleChip, ChipTone,
-    OriginChip, OriginChipRow, colorLabel, colorTitle, resolveColorHex, XP_BTN,
-} from '../shared/xpTheme';
+    OriginChip, OriginChipRow, colorLabel, colorTitle, resolveColorHex, XP_BTN, SKEL_PAGE_ROWS } from '../shared/xpTheme';
 import Pager from '../shared/Pager';
 import { API_BASE } from '../shared/apiBase';
 import { LotChips, LotChip, LotChipRow, LotVariantAttr, lotSizeLabel, lotComboLabel } from '../shared/LotChips';
@@ -881,7 +879,7 @@ export default function QuarantinePackingView() {
     // ── Main table ────────────────────────────────────────────────────────────
     const body = (
         <div style={{ flex: 1, minHeight: 0, width: '100%', background: '#fff', overflow: 'auto' }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse', background: '#fff' }}>
+            <ResizableTable style={{ width: '100%', borderCollapse: 'collapse', background: '#fff' }}>
                 <thead style={lvThead()}>
                     <tr>
                         <th style={{ ...lvTh(), width: LV_EXPANDER_COL_W }} />
@@ -1029,7 +1027,7 @@ export default function QuarantinePackingView() {
                             </Fragment>
                         );
                     })}
-                    {showSkeleton && <TableSkeleton rows={7} cols={skel.cols ?? COL_COUNT} tdStyle={lvTd()} rowHeight={skel.rowHeight} fillHeight={skel.fillHeight} />}
+                    {showSkeleton && <TableSkeleton rows={SKEL_PAGE_ROWS} cols={skel.cols ?? COL_COUNT} tdStyle={lvTd()} rowHeight={skel.rowHeight} fillHeight={skel.fillHeight} />}
                     {!loading && stableGroups.length === 0 && (
                         <tr>
                             <td colSpan={COL_COUNT} style={{ padding: 0 }}>
@@ -1045,7 +1043,7 @@ export default function QuarantinePackingView() {
                         </tr>
                     )}
                 </tbody>
-            </table>
+            </ResizableTable>
         </div>
     );
 

@@ -1,7 +1,7 @@
 import uuid
 from datetime import datetime
 
-from sqlalchemy import String, DateTime, ForeignKey, func
+from sqlalchemy import String, DateTime, ForeignKey, UniqueConstraint, func
 from sqlalchemy.dialects.postgresql import UUID, JSONB
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -23,9 +23,10 @@ class PrintTemplate(Base):
     """
 
     __tablename__ = "print_templates"
+    __table_args__ = (UniqueConstraint("doc_type", name="uq_print_templates_doc_type"),)
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    doc_type: Mapped[str] = mapped_column(String(64), unique=True, index=True)
+    doc_type: Mapped[str] = mapped_column(String(64))  # unique via __table_args__
     layout: Mapped[dict] = mapped_column(JSONB, nullable=False)
     # Paper size / orientation / margin. Nullable = inherit the default layout's paper.
     paper: Mapped[dict | None] = mapped_column(JSONB, nullable=True)

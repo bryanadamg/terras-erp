@@ -6,8 +6,9 @@ import { FilterChipBar, ToolbarButton } from '../shared/shellTheme';
 import Pager from '../shared/Pager';
 import { useToast } from '../shared/Toast';
 import { useData } from '../../context/DataContext';
-import { statusChipStyle, useFloatingMenu, MenuTriggerButton, FloatingMenu, XPActionButton, ExpandedRowPanel, ExpandedRowPanelBody, ProgressBar, CodeChip, CODE_FONT, xpFont, TableSkeleton, SkeletonBar, useTableSkeletonMetrics, rowStateBg, StatusChip, CHIP_RADIUS, VariantChip } from '../shared/xpTheme';
-import { lvSubTh, lvSubTd, lvSubTable, lvSubRow, ExpanderCell, LV_EXPANDER_COL_W, lvZebra, lvThead, lvTh } from '../shared/listViewTheme';
+import { statusChipStyle, useFloatingMenu, MenuTriggerButton, FloatingMenu, XPActionButton, ExpandedRowPanel, ExpandedRowPanelBody, ProgressBar, CodeChip, CODE_FONT, xpFont, TableSkeleton, SkeletonBar, useTableSkeletonMetrics, rowStateBg, StatusChip, CHIP_RADIUS, VariantChip, SKEL_PAGE_ROWS } from '../shared/xpTheme';
+import { lvSubTh, lvSubTd, lvSubTable, lvSubRow, ExpanderCell, LV_EXPANDER_COL_W, lvZebra, lvThead, lvTh, ResizableTable } from '../shared/listViewTheme';
+import { API_BASE } from '../shared/apiBase';
 const PRMaterialPullSheetModal = dynamic(() => import('./PRMaterialPullSheetModal'), { ssr: false });
 
 // Column defs for the expanded row's material table. Module-level so the loading
@@ -110,8 +111,6 @@ export default function ProductionRunsTab({
     // load are exactly as tall as the rows that replace them.
     const listBodyRef = useRef<HTMLTableSectionElement>(null);
     const skel = useTableSkeletonMetrics('production-runs', listBodyRef, (productionRuns?.length ?? 0) > 0);
-    const envBase = process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:8000/api';
-    const API_BASE = envBase.endsWith('/api') ? envBase : `${envBase}/api`;
     const { getLocationName, getAttributeValueName, formatDate } = helpers;
 
     const [expandedPRs, setExpandedPRs] = useState<Record<string, boolean>>({});
@@ -294,7 +293,7 @@ export default function ProductionRunsTab({
                 the whole table. */}
             {(productionRuns && productionRuns.length > 0) || dataLoading.productionRuns ? (
                 <div className="table-responsive" style={{ flex: 1, overflowY: 'auto', minHeight: 0 }}>
-                    <table style={{
+                    <ResizableTable style={{
                         width: '100%', borderCollapse: 'collapse',
                         // Fixed layout: column widths come from the header row only, so an
                         // expanded colSpan detail row (MO chips + nested material table) can
@@ -332,7 +331,7 @@ export default function ProductionRunsTab({
                         </thead>
                         <tbody ref={listBodyRef}>
                             {filteredProductionRuns.length === 0 && dataLoading.productionRuns && (
-                                <TableSkeleton rows={8} cols={skel.cols ?? 9} rowHeight={skel.rowHeight} fillHeight={skel.fillHeight} />
+                                <TableSkeleton rows={SKEL_PAGE_ROWS} cols={skel.cols ?? 9} rowHeight={skel.rowHeight} fillHeight={skel.fillHeight} />
                             )}
                             {filteredProductionRuns.map((pr: any, rowIdx: number) => {
                                 const mos = pr.manufacturing_orders || [];
@@ -726,7 +725,7 @@ export default function ProductionRunsTab({
                                 );
                             })}
                         </tbody>
-                    </table>
+                    </ResizableTable>
                 </div>
             ) : (
                 <div style={{

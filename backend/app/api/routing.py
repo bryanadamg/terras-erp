@@ -5,6 +5,7 @@ from app.models.routing import WorkCenter, Operation
 from app.models.auth import User
 from app.models.audit import AuditLog
 from app.schemas import WorkCenterCreate, WorkCenterResponse, OperationCreate, OperationResponse
+from app.core.ws_manager import broadcast_sync
 from app.api.auth import get_current_user, require_permission
 from app.services import work_center_service
 
@@ -92,6 +93,7 @@ def create_work_center(payload: WorkCenterCreate, db: Session = Depends(get_db),
     db.refresh(wc)
     db.add(AuditLog(user_id=current_user.id, action="CREATE", entity_type="work_center", entity_id=str(wc.id), details=f"Created work center {wc.code}"))
     db.commit()
+    broadcast_sync({"type": "MASTER_DATA_UPDATE", "domain": "routing"})
     return _with_effective_locations(db, wc)
 
 @router.get("/work-centers", response_model=list[WorkCenterResponse])
@@ -137,6 +139,7 @@ def update_work_center(wc_id: str, payload: WorkCenterCreate, db: Session = Depe
             )
     db.add(AuditLog(user_id=current_user.id, action="UPDATE", entity_type="work_center", entity_id=str(wc.id), details=f"Updated work center {wc.code}"))
     db.commit()
+    broadcast_sync({"type": "MASTER_DATA_UPDATE", "domain": "routing"})
     db.refresh(wc)
     return _with_effective_locations(db, wc)
 
@@ -150,6 +153,7 @@ def delete_work_center(wc_id: str, db: Session = Depends(get_db), current_user: 
     db.add(AuditLog(user_id=current_user.id, action="DELETE", entity_type="work_center", entity_id=str(wc.id), details=f"Deleted work center {wc.code}"))
     db.delete(wc)
     db.commit()
+    broadcast_sync({"type": "MASTER_DATA_UPDATE", "domain": "routing"})
     return {"status": "success", "message": "Work Center deleted"}
 
 # --- Operations ---
@@ -168,6 +172,7 @@ def create_operation(payload: OperationCreate, db: Session = Depends(get_db), cu
     db.refresh(op)
     db.add(AuditLog(user_id=current_user.id, action="CREATE", entity_type="operation", entity_id=str(op.id), details=f"Created operation {op.code}"))
     db.commit()
+    broadcast_sync({"type": "MASTER_DATA_UPDATE", "domain": "routing"})
     return op
 
 @router.get("/operations", response_model=list[OperationResponse])
@@ -184,4 +189,5 @@ def delete_operation(op_id: str, db: Session = Depends(get_db), current_user: Us
     db.add(AuditLog(user_id=current_user.id, action="DELETE", entity_type="operation", entity_id=str(op.id), details=f"Deleted operation {op.code}"))
     db.delete(op)
     db.commit()
+    broadcast_sync({"type": "MASTER_DATA_UPDATE", "domain": "routing"})
     return {"status": "success", "message": "Operation deleted"}

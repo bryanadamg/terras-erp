@@ -91,8 +91,9 @@ async def check_availability(db: AsyncSession, pl: PickList, pick_lines: list[Pi
 
 
 async def issue_stock(db: AsyncSession, pl: PickList, pick_lines: list[PickListLine]) -> None:
-    """Deduct finished goods. Each `add_stock_entry` commits internally, so the
-    caller must re-fetch `pl` afterwards — the instance is expired."""
+    """Deduct finished goods. `add_stock_entry` only flushes — the caller commits
+    once, so every line of every pick list on a shipment goes out in one
+    transaction or none of it does."""
     sol_attrs, sol_colors = _variant_maps(pl)
     for l in pick_lines:
         src = l.source_location_id or pl.source_location_id

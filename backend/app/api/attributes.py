@@ -6,6 +6,7 @@ from app.models.attribute import Attribute, AttributeValue
 from app.models.auth import User
 from app.models.audit import AuditLog
 from app.schemas import AttributeCreate, AttributeResponse, AttributeValueCreate, AttributeUpdate, AttributeValueUpdate, AttributeValueResponse
+from app.core.ws_manager import broadcast_sync
 from app.api.auth import get_current_user, require_permission
 
 router = APIRouter()
@@ -27,6 +28,7 @@ def create_attribute(payload: AttributeCreate, db: Session = Depends(get_db), cu
 
     db.add(AuditLog(user_id=current_user.id, action="CREATE", entity_type="attribute", entity_id=str(attribute.id), details=f"Created attribute {attribute.name}"))
     db.commit()
+    broadcast_sync({"type": "MASTER_DATA_UPDATE", "domain": "attributes"})
     db.refresh(attribute)
     return attribute
 
@@ -44,6 +46,7 @@ def update_attribute(attribute_id: str, payload: AttributeUpdate, db: Session = 
     attribute.name = payload.name
     db.add(AuditLog(user_id=current_user.id, action="UPDATE", entity_type="attribute", entity_id=str(attribute.id), details=f"Renamed attribute {old_name} -> {payload.name}"))
     db.commit()
+    broadcast_sync({"type": "MASTER_DATA_UPDATE", "domain": "attributes"})
     db.refresh(attribute)
     return attribute
 
@@ -59,6 +62,7 @@ def delete_attribute(attribute_id: str, db: Session = Depends(get_db), current_u
         db.add(AuditLog(user_id=current_user.id, action="DELETE", entity_type="attribute", entity_id=str(attribute.id), details=f"Deleted attribute {attribute.name}"))
         db.delete(attribute)
         db.commit()
+        broadcast_sync({"type": "MASTER_DATA_UPDATE", "domain": "attributes"})
     except IntegrityError:
         db.rollback()
         raise HTTPException(
@@ -79,6 +83,7 @@ def add_attribute_value(attribute_id: str, payload: AttributeValueCreate, db: Se
     db.refresh(attr_val)
     db.add(AuditLog(user_id=current_user.id, action="CREATE", entity_type="attribute_value", entity_id=str(attr_val.id), details=f"Added value '{attr_val.value}' to attribute {attribute.name}"))
     db.commit()
+    broadcast_sync({"type": "MASTER_DATA_UPDATE", "domain": "attributes"})
     return attr_val
 
 @router.put("/attributes/values/{value_id}", response_model=AttributeValueResponse)
@@ -92,6 +97,7 @@ def update_attribute_value(value_id: str, payload: AttributeValueUpdate, db: Ses
     val.hex = payload.hex
     db.add(AuditLog(user_id=current_user.id, action="UPDATE", entity_type="attribute_value", entity_id=str(val.id), details=f"Renamed value '{old_value}' -> '{payload.value}'"))
     db.commit()
+    broadcast_sync({"type": "MASTER_DATA_UPDATE", "domain": "attributes"})
     db.refresh(val)
     return val
 
@@ -105,6 +111,7 @@ def delete_attribute_value(value_id: str, db: Session = Depends(get_db), current
         db.add(AuditLog(user_id=current_user.id, action="DELETE", entity_type="attribute_value", entity_id=str(val.id), details=f"Deleted value '{val.value}'"))
         db.delete(val)
         db.commit()
+        broadcast_sync({"type": "MASTER_DATA_UPDATE", "domain": "attributes"})
     except IntegrityError:
         db.rollback()
         raise HTTPException(

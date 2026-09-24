@@ -9,16 +9,16 @@ import { useTimezone } from '../../context/TimezoneContext';
 import { useToast } from '../shared/Toast';
 import { useConfirm } from '../../context/ConfirmContext';
 import { LotChip, LotChips, LotChipRow } from '../shared/LotChips';
-import { XPStatusBar, XPEmptyState, TableSkeleton, useTableSkeletonMetrics, StatusChip, Chip, statusTint, useFloatingMenu, MenuTriggerButton, FloatingMenu, ExpandedRowPanel, XPActionButton, CODE_FONT, rowStateBg, CHIP_RADIUS, XP_BTN, ProgressBar, progressToneColor, useSortable } from '../shared/xpTheme';
-import { LV_XP_FONT, lvBtn, lvInput, lvTd, lvLabel, lvRow, lvSubTh, lvSubTd, lvSubRow, ExpanderCell, lvThSticky, lvSubTable, RowCheckboxCell, LV_CHECK_COL_W, SortableTh } from '../shared/listViewTheme';
+import { XPStatusBar, XPEmptyState, TableSkeleton, useTableSkeletonMetrics, StatusChip, Chip, statusTint, useFloatingMenu, MenuTriggerButton, FloatingMenu, ExpandedRowPanel, XPActionButton, CODE_FONT, rowStateBg, CHIP_RADIUS, XP_BTN, ProgressBar, progressToneColor, useSortable, SKEL_PAGE_ROWS } from '../shared/xpTheme';
+import { LV_XP_FONT, lvBtn, lvInput, lvTd, lvLabel, lvRow, lvSubTh, lvSubTd, lvSubRow, ExpanderCell, lvThSticky, lvSubTable, RowCheckboxCell, LV_CHECK_COL_W, SortableTh, ResizableTable } from '../shared/listViewTheme';
 import { ShellWindow, ShellTitleBar, xpToolbar, FilterChipBar, ToolbarCount } from '../shared/shellTheme';
 import Pager from '../shared/Pager';
 import ModalWrapper from '../shared/ModalWrapper';
 import { Tabs } from '../shared/Tabs';
 const PickListPrintModal = dynamic(() => import('./PickListPrintModal'), { ssr: false });
 import TreeSelect, { buildLocationPickerTree } from '../shared/TreeSelect';
+import { API_BASE } from '../shared/apiBase';
 
-const API_BASE = (process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:8000/api').replace(/\/api$/, '') + '/api';
 
 // ── Classic XP theme primitives (match StockOnHandView / LocationsView) ──────
 // This view has no modern-theme branch yet (renders the classic look always,
@@ -500,7 +500,7 @@ export default function PickListView() {
                 </span>
             </div>
             <div style={{ flex: 1, overflowY: 'auto', background: '#fff', minHeight: 0 }}>
-                <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                <ResizableTable style={{ width: '100%', borderCollapse: 'collapse' }}>
                     <thead>
                         <tr>
                             <th style={{ ...xpTableHeader, width: 22 }} />
@@ -516,7 +516,7 @@ export default function PickListView() {
                     </thead>
                     <tbody ref={listBodyRef}>
                         {pickLists.length === 0 && (loading ? (
-                            <TableSkeleton rows={7} cols={skel.cols ?? PL_COLS} tdStyle={td} rowHeight={skel.rowHeight} fillHeight={skel.fillHeight} />
+                            <TableSkeleton rows={SKEL_PAGE_ROWS} cols={skel.cols ?? PL_COLS} tdStyle={td} rowHeight={skel.rowHeight} fillHeight={skel.fillHeight} />
                         ) : (
                             <tr><td colSpan={PL_COLS} style={{ padding: 0 }}>
                                 <XPEmptyState icon="bi-clipboard-check" message='No pick lists yet. Click "New Pick List" to pick packed cartons for an order.' />
@@ -564,7 +564,7 @@ export default function PickListView() {
                             );
                         })}
                     </tbody>
-                </table>
+                </ResizableTable>
             </div>
             <Pager page={clampedPage} total={plTotal} pageSize={PL_PAGE_SIZE} onPageChange={setPlPage} hideWhenEmpty />
             </>

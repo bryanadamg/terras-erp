@@ -2,11 +2,10 @@
 
 import RoutingView from '../components/settings/RoutingView';
 import { useData } from '../context/DataContext';
+import { API_BASE } from '../components/shared/apiBase';
 
 export default function RoutingPage() {
     const { workCenters, operations, locations, refreshRouting, authFetch } = useData();
-    const envBase = process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:8000/api';
-    const API_BASE = envBase.endsWith('/api') ? envBase : `${envBase}/api`;
 
     const handleCreateWorkCenter = async (p: any) => {
         const res = await authFetch(`${API_BASE}/work-centers`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(p) });

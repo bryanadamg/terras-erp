@@ -13,6 +13,7 @@ import { RowCheckbox, LV_STICKY_THEAD, lvPickerRow } from '../shared/listViewThe
 import { LotChips } from '../shared/LotChips';
 import { centerTypeOfWC, isContainerWC, isMachineWC, machinesUnderWC, toMachineOptions } from '../shared/workCenterTree';
 import { rejectTitle } from '../shared/rejectDisplay';
+import { API_BASE } from '../shared/apiBase';
 
 
 const xpInput: React.CSSProperties = xpInputBase({ padding: '0 4px', width: '100%', boxSizing: 'border-box' });
@@ -50,8 +51,6 @@ export default function WOCompletionModal({ mo, onClose, onSaved, workOrder }: W
     const { authFetch, workCenters, items } = useData() as any;
     const { showToast } = useToast();
     const { formatDateTime: tzDateTime } = useTimezone();
-    const envBase = process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:8000/api';
-    const API_BASE = envBase.endsWith('/api') ? envBase : `${envBase}/api`;
 
     const [qtyCompleted, setQtyCompleted] = useState('');
     const [qtyCones, setQtyCones] = useState('');

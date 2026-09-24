@@ -5,6 +5,7 @@ import MobileStockView from '../components/mobile/StockView';
 import { useData } from '../context/DataContext';
 import { useItemSearch } from '../components/shared/useEntitySearch';
 import { useIsMobile } from '../hooks/useIsMobile';
+import { API_BASE } from '../components/shared/apiBase';
 
 export default function StockPage() {
     // No `stockBalance` in the desktop grid on purpose: it's server-paginated
@@ -13,8 +14,6 @@ export default function StockPage() {
     // dashboards, and the mobile browse view below).
     const { items, locations, attributes, categories, stockBalance, fetchData, authFetch } = useData();
     const isMobile = useIsMobile();
-    const envBase = process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:8000/api';
-    const API_BASE = envBase.endsWith('/api') ? envBase : `${envBase}/api`;
 
     // Item picker source for the New Entry modal — server typeahead, so it reaches
     // past the 50-row page DataContext holds.

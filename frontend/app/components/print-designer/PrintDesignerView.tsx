@@ -25,9 +25,8 @@ import DesignerCanvas from './DesignerCanvas';
 import DesignerTestPrint from './DesignerTestPrint';
 import FieldPalette from './FieldPalette';
 import { SelectField } from './controls';
+import { API_BASE } from '../shared/apiBase';
 
-const API_BASE = (process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:8000/api')
-    .replace(/\/api$/, '') + '/api';
 
 const clone = (l: PrintLayout): PrintLayout => JSON.parse(JSON.stringify(l));
 

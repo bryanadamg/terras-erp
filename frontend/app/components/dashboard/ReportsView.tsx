@@ -6,12 +6,13 @@ import { useData } from '../../context/DataContext';
 import { useDebouncedCommit } from '../../context/usePaginatedList';
 import {
     xpFont, xpBtn, xpInput, xpSelect, xpSep,
-    TableSkeleton, useTableSkeletonMetrics, XPEmptyState, useSortable, CodeChip, CHIP_RADIUS, XP_BTN } from '../shared/xpTheme';
+    TableSkeleton, useTableSkeletonMetrics, XPEmptyState, useSortable, CodeChip, CHIP_RADIUS, XP_BTN, SKEL_PAGE_ROWS } from '../shared/xpTheme';
 import TreeSelect, { buildLocationFilterTree, expandLocationFilterValue, buildCategoryTree, expandCategoryFilterValue } from '../shared/TreeSelect';
 import Pager from '../shared/Pager';
 import { xpBevel as sharedXpBevel, xpTitleBar as sharedXpTitleBar, xpToolbar as sharedXpToolbar, SearchField, FilterChipBar, SegmentedBar, FilterChipOption, pageFillStyle, flexFillStyle } from '../shared/shellTheme';
-import { lvThead, SortableTh, lvZebra, Dash } from '../shared/listViewTheme';
+import { lvThead, SortableTh, lvZebra, Dash, ResizableTable } from '../shared/listViewTheme';
 import { qtyFmt } from '../shared/format';
+import { STATIC_BASE } from '../shared/apiBase';
 
 const StockLedgerPrintModal = dynamic(() => import('./StockLedgerPrintModal'), { ssr: false });
 
@@ -61,8 +62,7 @@ export default function ReportsView(_props: any) {
     const { authFetch, locations = [], attributes = [], categories = [], itemIndex, companyProfile } = useData();
 
     const API_BASE = useMemo(() => {
-        const env = process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:8000/api';
-        return env.replace(/\/api$/, '') + '/api';
+        return STATIC_BASE.replace(/\/api$/, '') + '/api';
     }, []);
 
     // Filters
@@ -400,7 +400,7 @@ export default function ReportsView(_props: any) {
                 {hasFilters && <button className={XP_BTN} style={{ ...xpBtn(), marginTop: 10 }} onClick={clearFilters}>Clear filters</button>}
             </XPEmptyState>) : (
         <div className={undefined} style={undefined}>
-            <table className={undefined} style={{ width: '100%', borderCollapse: 'collapse' }}>
+            <ResizableTable className={undefined} style={{ width: '100%', borderCollapse: 'collapse' }}>
                 <thead className={undefined} style={undefined}>
                     <tr>
                         <SortableTh sort={sort} colKey="date" onSort={toggle} style={th} className={undefined}>{t('date')}</SortableTh>
@@ -416,10 +416,10 @@ export default function ReportsView(_props: any) {
                     put and the placeholder rows inherit its columns. */}
                 <tbody ref={listBodyRef}>
                     {loading
-                        ? <TableSkeleton rows={10} cols={skel.cols ?? 7} tdStyle={xpCell} rowHeight={skel.rowHeight} fillHeight={skel.fillHeight} />
+                        ? <TableSkeleton rows={SKEL_PAGE_ROWS} cols={skel.cols ?? 7} tdStyle={xpCell} rowHeight={skel.rowHeight} fillHeight={skel.fillHeight} />
                         : rows.map((e: any, i: number) => renderRow(e, i))}
                 </tbody>
-            </table>
+            </ResizableTable>
         </div>
     );
 

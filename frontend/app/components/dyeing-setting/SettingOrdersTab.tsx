@@ -10,13 +10,11 @@ import { API_BASE } from '../shared/apiBase';
 import {
     CodeChip, xpFont, CODE_FONT, StatusChip, XP_BTN, CHIP_RADIUS, colorLabel, rowStateBg,
     ProgressBar, ExpandedRowPanel, XPEmptyState, TableSkeleton, useTableSkeletonMetrics,
-    useSortable, XPActionButton, xpInput as xpInputBase,
-} from '../shared/xpTheme';
+    useSortable, XPActionButton, xpInput as xpInputBase, SKEL_PAGE_ROWS } from '../shared/xpTheme';
 import { orDash, fmtQtyFixed } from '../shared/format';
 import {
     SortableTh, ExpanderCell, LV_EXPANDER_COL_W, lvThSticky, lvTd, lvZebra,
-    lvSubTable, lvSubTh, lvSubTd, lvSubRow, Dash, lvBtn, lvInput,
-} from '../shared/listViewTheme';
+    lvSubTable, lvSubTh, lvSubTd, lvSubRow, Dash, lvBtn, lvInput, ResizableTable } from '../shared/listViewTheme';
 import { SearchField } from '../shared/shellTheme';
 import { getChipStyle } from '../manufacturing/WorkOrderPanel';
 import VariantChips from '../shared/VariantChips';
@@ -97,6 +95,24 @@ function summarize(runs: any[]): RunSummary {
         outputLot: done.length ? (done[done.length - 1].output_batch_number ?? null) : null,
     };
 }
+
+// Column widths for the setting WO grid; order matches the <thead> cells exactly.
+const ST_COL_W: (number | string)[] = [
+    LV_EXPANDER_COL_W,  // chevron
+    26,                 // select
+    '13%',              // WO
+    170,                // MO
+    '15%',              // Product
+    '15%',              // Variant
+    '11%',              // Machine
+    108,                // Setting
+    92,                 // Width
+    86,                 // Target / Done
+    58,                 // Runs
+    120,                // Output Lot
+    104,                // Status
+    52,                 // Actions
+];
 
 export default function SettingOrdersTab({ items, authFetch }: Props) {
     const { workCenters } = useData();
@@ -564,25 +580,9 @@ export default function SettingOrdersTab({ items, authFetch }: Props) {
 
             {/* Table */}
             <div className="table-responsive" style={{ flex: 1, overflow: 'auto', minHeight: 0, background: '#fff' }}>
-                <table
+                <ResizableTable defaults={ST_COL_W}
                     style={{ width: '100%', minWidth: 1520, borderCollapse: 'collapse', tableLayout: 'fixed', fontSize: 11, fontFamily: xpFont, background: '#fff'}}
                 >
-                    <colgroup>
-                        <col style={{ width: LV_EXPANDER_COL_W }} /> {/* chevron */}
-                        <col style={{ width: 26 }} />     {/* select */}
-                        <col style={{ width: '13%' }} />  {/* WO */}
-                        <col style={{ width: 170 }} />    {/* MO */}
-                        <col style={{ width: '15%' }} />  {/* Product */}
-                        <col style={{ width: '15%' }} />  {/* Variant */}
-                        <col style={{ width: '11%' }} />  {/* Machine */}
-                        <col style={{ width: 108 }} />    {/* Setting */}
-                        <col style={{ width: 92 }} />     {/* Width */}
-                        <col style={{ width: 86 }} />     {/* Target/Done */}
-                        <col style={{ width: 58 }} />     {/* Runs */}
-                        <col style={{ width: 120 }} />    {/* Output Lot */}
-                        <col style={{ width: 104 }} />    {/* Status */}
-                        <col style={{ width: 52 }} />     {/* Actions */}
-                    </colgroup>
                     <thead>
                         <tr>
                             <th style={{ ...thStyle, width: 22, padding: '3px 4px' }} />
@@ -603,7 +603,7 @@ export default function SettingOrdersTab({ items, authFetch }: Props) {
                     </thead>
                     <tbody ref={listBodyRef}>
                         {workOrders.length === 0 && (loading ? (
-                            <TableSkeleton rows={8} cols={skel.cols ?? COLS} tdStyle={tdBase} rowHeight={skel.rowHeight} fillHeight={skel.fillHeight} />
+                            <TableSkeleton rows={SKEL_PAGE_ROWS} cols={skel.cols ?? COLS} tdStyle={tdBase} rowHeight={skel.rowHeight} fillHeight={skel.fillHeight} />
                         ) : (
                             <tr>
                                 <td colSpan={COLS} style={{ padding: 0 }}>
@@ -835,7 +835,7 @@ export default function SettingOrdersTab({ items, authFetch }: Props) {
                             );
                         })}
                     </tbody>
-                </table>
+                </ResizableTable>
             </div>
 
             <Pager page={page} total={woTotal} pageSize={SO_WO_PAGE_SIZE} onPageChange={setPage} hideWhenEmpty />

@@ -4,14 +4,13 @@ import { useState, useEffect, useCallback } from 'react';
 import PackagingTypesView from '../components/packaging/PackagingTypesView';
 import { useData } from '../context/DataContext';
 import { useToast } from '../components/shared/Toast';
+import { API_BASE } from '../components/shared/apiBase';
 
 // Bounded master — a handful of boxes the plant stocks — so the page loads the
 // whole list (including inactive rows, which the pack pickers hide) and the view
 // filters it client-side. Same treatment as Routing and Settings > Users: a
 // window here would cost a request per keystroke for data that fits in one.
 
-const envBase = process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:8000/api';
-const API_BASE = envBase.endsWith('/api') ? envBase : `${envBase}/api`;
 
 export default function PackagingTypesPage() {
     const { authFetch } = useData();

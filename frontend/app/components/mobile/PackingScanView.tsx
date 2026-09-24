@@ -15,8 +15,8 @@ import {
 } from '../shared/packingBoxes';
 import { usePackagingTypes } from '../shared/usePackagingTypes';
 import { orderBasePerAlt, altToBase, baseToAlt } from '../shared/altUnit';
+import { API_BASE } from '../shared/apiBase';
 
-const API_BASE = (process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:8000/api').replace(/\/api$/, '') + '/api';
 
 const xpInput: React.CSSProperties = xpInputBase({ fontSize: 13, height: 'auto', padding: '6px 8px', width: '100%', boxSizing: 'border-box' });
 const xpLabel: React.CSSProperties = { fontFamily: XP_FONT, fontSize: 11, color: '#333', display: 'block', marginBottom: 3 };

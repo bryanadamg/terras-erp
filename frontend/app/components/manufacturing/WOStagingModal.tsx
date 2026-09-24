@@ -8,6 +8,7 @@ import ModalWrapper from '../shared/ModalWrapper';
 import { LotChips, LotChip } from '../shared/LotChips';
 import { CodeChip, xpFont, xpInput as xpInputBase, xpBtn as xpBtnBase, BTN_TONES, XP_BTN } from '../shared/xpTheme';
 import { RowCheckbox, lvPickerRow } from '../shared/listViewTheme';
+import { API_BASE } from '../shared/apiBase';
 
 const xpInput: React.CSSProperties = xpInputBase({ padding: '0 4px', boxSizing: 'border-box' });
 const xpBtn = (primary?: boolean): React.CSSProperties => xpBtnBase(primary ? { ...BTN_TONES.success, padding: '2px 14px' } : {});
@@ -76,8 +77,6 @@ interface Props {
 export default function WOStagingModal({ wo, onClose, onStaged, onScanMode }: Props) {
     const { authFetch, locations, manufacturingOrders, attributes } = useData() as any;
     const { showToast } = useToast();
-    const envBase = process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:8000/api';
-    const API_BASE = envBase.endsWith('/api') ? envBase : `${envBase}/api`;
 
     const [rows, setRows] = useState<RequiredMaterial[]>([]);
     const [qtyToStage, setQtyToStage] = useState<Record<string, string>>({});

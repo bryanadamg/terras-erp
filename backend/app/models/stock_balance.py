@@ -1,5 +1,5 @@
 import uuid
-from sqlalchemy import ForeignKey, Numeric, Table, Column, String, UniqueConstraint, Integer
+from sqlalchemy import ForeignKey, Numeric, Table, Column, String, UniqueConstraint, Index, Integer, text
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.db.base import Base
@@ -52,4 +52,6 @@ class StockBalance(Base):
     # Ensure we only have one row per unique combination
     __table_args__ = (
         UniqueConstraint('item_id', 'location_id', 'variant_key', 'batch_key', name='_item_loc_variant_batch_uc'),
+        # Partial: lot lookups only ever ask about the lotted rows.
+        Index("ix_stock_balances_lot_key", "batch_key", "qty", postgresql_where=text("batch_key <> ''")),
     )

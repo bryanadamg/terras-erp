@@ -12,14 +12,14 @@ import SearchableSelect from '@bryanadamg/terras-ui/components/Combobox';
 import HistoryPane from '../shared/HistoryPane';
 import ModalWrapper from '../shared/ModalWrapper';
 const SamplePrintModal = dynamic(() => import('./SamplePrintModal'), { ssr: false });
-import { StatusChip, StatusCountPill, TableSkeleton, useTableSkeletonMetrics, FormSection, useFloatingMenu, FloatingMenu, MenuTriggerButton, XPActionButton, familyColor, Chip, VariantChip, VARIANT_TONE, REF_TONES, CodeChip, xpFont, rowStateBg, ToggleChip, CHIP_RADIUS, xpInput as xpInputBase, xpBtn as xpBtnBase, expandedRowFrame, BTN_TONES, XP_BTN } from '../shared/xpTheme';
+import { StatusChip, StatusCountPill, TableSkeleton, useTableSkeletonMetrics, FormSection, useFloatingMenu, FloatingMenu, MenuTriggerButton, XPActionButton, familyColor, Chip, VariantChip, VARIANT_TONE, REF_TONES, CodeChip, xpFont, rowStateBg, ToggleChip, CHIP_RADIUS, xpInput as xpInputBase, xpBtn as xpBtnBase, expandedRowFrame, BTN_TONES, XP_BTN, SKEL_PAGE_ROWS } from '../shared/xpTheme';
 import { ShellWindow, ShellTitleBar, xpToolbar, SearchField, FilterChipBar, ToolbarCount, ToolbarButton } from '../shared/shellTheme';
 import Pager from '../shared/Pager';
 import RequestDetailPanel, { getStatusStripe } from '../shared/RequestDetailPanel';
 import { Tabs } from '../shared/Tabs';
 import { STATIC_BASE, API_BASE } from '../shared/apiBase';
 import { SAMPLE_PAGE_SIZE } from '../../context/DataContext';
-import { lvThead, LV_STICKY_THEAD, ExpanderCell, LV_EXPANDER_COL_W, lvTh, lvTdRuled, lvZebra } from '../shared/listViewTheme';
+import { lvThead, LV_STICKY_THEAD, ExpanderCell, LV_EXPANDER_COL_W, lvTh, lvTdRuled, lvZebra, ResizableTable } from '../shared/listViewTheme';
 
 // Request classification, chosen at create time. Values are the `Sample Category`
 // system attribute (system_role='sample_category') — New Sample / Re Sample / Yardage
@@ -1153,7 +1153,7 @@ export default function SampleRequestView({ samples, customers, onCreateSample, 
                style={{ flex: 1, minHeight: 0, overflow: 'auto', scrollbarGutter: 'stable', paddingLeft: 5 }}
            >
                <div>
-                   <table
+                   <ResizableTable 
                        style={{ width: '100%', borderCollapse: 'collapse', background: '#fff' }}
                    >
                        <thead style={xpTableHeader}>
@@ -1202,6 +1202,9 @@ export default function SampleRequestView({ samples, customers, onCreateSample, 
                                                    tone="accent"
                                                    style={s.is_unread ? { fontWeight: 900 } : undefined}
                                                />
+                                               {s.colors?.some((c: any) => c.approval_image_url || c.rejection_image_url) && (
+                                                   <i className="bi bi-paperclip" title="Has attached photo(s)" style={{ marginLeft: 4, fontSize: 11, color: '#555' }} />
+                                               )}
                                                <div style={{ fontSize: '9px', color: '#555' }}>
                                                    {tzDate(s.created_at)}
                                                </div>
@@ -1506,7 +1509,7 @@ export default function SampleRequestView({ samples, customers, onCreateSample, 
                                </React.Fragment>
                            ))}
                            {pageSamples.length === 0 && (dataLoading.samples ? (
-                               <TableSkeleton rows={8} cols={skel.cols ?? 9} tdStyle={tdBase} rowHeight={skel.rowHeight} fillHeight={skel.fillHeight} />
+                               <TableSkeleton rows={SKEL_PAGE_ROWS} cols={skel.cols ?? 9} tdStyle={tdBase} rowHeight={skel.rowHeight} fillHeight={skel.fillHeight} />
                            ) : (
                                <tr>
                                    <td
@@ -1520,7 +1523,7 @@ export default function SampleRequestView({ samples, customers, onCreateSample, 
                                </tr>
                            ))}
                        </tbody>
-                   </table>
+                   </ResizableTable>
                </div>
            </div>
 

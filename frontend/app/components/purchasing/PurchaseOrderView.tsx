@@ -10,10 +10,11 @@ import ModalWrapper from '../shared/ModalWrapper';
 import { useTimezone } from '../../context/TimezoneContext';
 import { useData } from '../../context/DataContext';
 import { useUser } from '../../context/UserContext';
-import { useSortable, StatusChip, TableSkeleton, useTableSkeletonMetrics, ProgressBar, useFloatingMenu, MenuTriggerButton, FloatingMenu, FormSection, FieldLabel, ExpandedRowPanel, xpBtn, xpInput as xpInputBase, CodeChip, xpFont, rowStateBg, CHIP_RADIUS, BTN_TONES, XP_BTN } from '../shared/xpTheme';
+import { useSortable, StatusChip, TableSkeleton, useTableSkeletonMetrics, ProgressBar, useFloatingMenu, MenuTriggerButton, FloatingMenu, FormSection, FieldLabel, ExpandedRowPanel, xpBtn, xpInput as xpInputBase, CodeChip, xpFont, rowStateBg, CHIP_RADIUS, BTN_TONES, XP_BTN, SKEL_PAGE_ROWS } from '../shared/xpTheme';
 import { xpBevel as sharedXpBevel, xpTitleBar as sharedXpTitleBar, xpToolbar as sharedXpToolbar, SearchField, FilterChipBar, ToolbarCount, ToolbarButton } from '../shared/shellTheme';
 import Pager from '../shared/Pager';
-import { lvThead, lvSubTh, lvSubTd, lvSubTable, lvSubCaption, ExpanderCell, SortableTh, lvThSticky, lvTdRuled, lvZebra } from '../shared/listViewTheme';
+import { lvThead, lvSubTh, lvSubTd, lvSubTable, lvSubCaption, ExpanderCell, SortableTh, lvThSticky, lvTdRuled, lvZebra, ResizableTable } from '../shared/listViewTheme';
+import { STATIC_BASE } from '../shared/apiBase';
 
 export default function PurchaseOrderView({ items, itemResults, onSearchItems, attributes, purchaseOrders, partners, locations, onCreatePO, onEditPO, onDeletePO, onCreateReceipt, onClosePO, companyProfile }: any) {
   const { showToast } = useToast();
@@ -34,7 +35,6 @@ export default function PurchaseOrderView({ items, itemResults, onSearchItems, a
   const [editingPOId, setEditingPOId] = useState<string | null>(null);
   const [printingPO, setPrintingPO] = useState<any>(null);
   // Backend origin for static files (delivery-note attachments live at /static, not /api)
-  const STATIC_BASE = (process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:8000/api').replace(/\/api$/, '');
 
   // Receipt modal state
   const [receiptTarget, setReceiptTarget] = useState<any>(null);
@@ -803,7 +803,7 @@ export default function PurchaseOrderView({ items, itemResults, onSearchItems, a
                {/* vertical scroll must live on the same element as overflow-x,
                    otherwise sticky headers bind to the inner wrapper and never stick */}
                <div className="table-responsive" style={{ height: 'calc(var(--app-vh) - 160px)', overflowY: 'auto' }}>
-                   <table
+                   <ResizableTable 
                        style={{ width: '100%', borderCollapse: 'collapse', background: '#fff' }}
                    >
                        <thead style={xpTableHeader}>
@@ -990,7 +990,7 @@ export default function PurchaseOrderView({ items, itemResults, onSearchItems, a
                                </>
                            ))}
                            {pageOrders.length === 0 && (dataLoading.purchaseOrders ? (
-                               <TableSkeleton rows={8} cols={skel.cols ?? 9} tdStyle={tdBase} rowHeight={skel.rowHeight} fillHeight={skel.fillHeight} />
+                               <TableSkeleton rows={SKEL_PAGE_ROWS} cols={skel.cols ?? 9} tdStyle={tdBase} rowHeight={skel.rowHeight} fillHeight={skel.fillHeight} />
                            ) : (
                                <tr>
                                    <td
@@ -1004,7 +1004,7 @@ export default function PurchaseOrderView({ items, itemResults, onSearchItems, a
                                </tr>
                            ))}
                        </tbody>
-                   </table>
+                   </ResizableTable>
                </div>
            </div>
 

@@ -4,11 +4,10 @@ import { useConfirm } from '../../context/ConfirmContext';
 import { useUser } from '../../context/UserContext';
 import { useDebouncedCommit } from '../../context/usePaginatedList';
 import ModalWrapper from '../shared/ModalWrapper';
-import { StatusChip, CodeChip, SwatchBox, CODE_FONT, TableSkeleton, useTableSkeletonMetrics, XP_BTN, useFloatingMenu, MenuTriggerButton, FloatingMenu } from '../shared/xpTheme';
+import { StatusChip, CodeChip, SwatchBox, CODE_FONT, TableSkeleton, useTableSkeletonMetrics, XP_BTN, useFloatingMenu, MenuTriggerButton, FloatingMenu, SKEL_PAGE_ROWS } from '../shared/xpTheme';
 import { SearchField, FilterChipBar, ToolbarCount, ToolbarButton, viewShellStyle, PageTitleBar } from '../shared/shellTheme';
 import {
-    LV_XP_FONT, lvInput, lvBtn, lvPrimaryBtn, lvLabel, lvTh, lvTd, lvSep, lvRow, lvThead, TableEmpty,
-} from '../shared/listViewTheme';
+    LV_XP_FONT, lvInput, lvBtn, lvPrimaryBtn, lvLabel, lvTh, lvTd, lvSep, lvRow, lvThead, TableEmpty, ResizableTable } from '../shared/listViewTheme';
 import { ColorFamilyKey, COLOR_FAMILY_META, colorBandsFor, colorFamiliesIn, colorFamilyMembershipCounts } from '../shared/colorFamilies';
 
 const STATUS_FILTERS = ['ALL', 'active', 'archived'];
@@ -263,7 +262,7 @@ export default function ComboLibraryView({
                         </div>
                     )
                 ) : (
-                <table style={{ width: '100%', borderCollapse: 'collapse', background: '#fff' }}>
+                <ResizableTable style={{ width: '100%', borderCollapse: 'collapse', background: '#fff' }}>
                     <thead style={lvThead()}>
                         <tr>
                             <th style={{ ...lvTh(), width: 70 }}>Colors</th>
@@ -275,7 +274,7 @@ export default function ComboLibraryView({
                     </thead>
                     <tbody ref={listBodyRef}>
                         {filtered.length === 0 && (loading ? (
-                            <TableSkeleton rows={8} cols={skel.cols ?? 5} tdStyle={lvTd()} rowHeight={skel.rowHeight} fillHeight={skel.fillHeight} />
+                            <TableSkeleton rows={SKEL_PAGE_ROWS} cols={skel.cols ?? 5} tdStyle={lvTd()} rowHeight={skel.rowHeight} fillHeight={skel.fillHeight} />
                         ) : (
                             <TableEmpty colSpan={5} tdStyle={lvTd()} message={emptyMessage} />
                         ))}
@@ -295,7 +294,7 @@ export default function ComboLibraryView({
                             </tr>
                         ))}
                     </tbody>
-                </table>
+                </ResizableTable>
                 )}
             </div>
 

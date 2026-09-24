@@ -168,6 +168,10 @@ export const STATUS_FAMILY: Record<string, StatusFamily> = {
     // in flight (blue).
     PAUSED: 'amber',
     CONFIRMED: 'blue', IN_PROGRESS: 'blue', READY: 'blue', SENT: 'blue',
+    // Lab dip rounds: SUBMITTED is with the customer (in flight, blue);
+    // RESUBMIT is back on the lab's bench awaiting another dip — open work
+    // waiting on us, which is what amber means everywhere else here.
+    SUBMITTED: 'blue', RESUBMIT: 'amber',
     IN_PRODUCTION: 'blue', STAGED: 'blue',
     // Loom prep walk (weaving monitor): STAGED (warp up) → DRAW_IN → TUNING → the
     // run itself. All three are prep-in-flight, so all three read blue; IDLE falls
@@ -1422,8 +1426,23 @@ const skelWidth = (row: number, col: number) => SKEL_WIDTHS[(row * 3 + col * 5) 
  * anyone adds a column — and a skeleton one column short leaves a blank strip
  * where the last column should be.
  */
+/**
+ * Row count for a page-height list when `fillHeight` is unknown.
+ *
+ * Unknown means one thing in practice: this is the server-rendered frame, before
+ * any effect has run, so there is no panel to measure. Deliberately more rows
+ * than a tall panel holds — the surplus scrolls, and a scrollbar on a loading
+ * list reads as "plenty coming", where a skeleton that stops half way down reads
+ * as "this table ends here". It is corrected to the measured count the moment
+ * the page hydrates.
+ *
+ * Panel-sized lists (dashboard tiles) pass their own literal instead; 30 rows in
+ * a 250px panel is the same mistake in the other direction.
+ */
+export const SKEL_PAGE_ROWS = 30;
+
 export function TableSkeleton({ rows = 6, cols, tdStyle, rowHeight, fillHeight }: {
-    /** Row count when `fillHeight` is unknown. */
+    /** Row count when `fillHeight` is unknown — `SKEL_PAGE_ROWS` for a full page. */
     rows?: number;
     /** Column count — measure it with `useTableSkeletonMetrics`, don't count by hand. */
     cols: number;

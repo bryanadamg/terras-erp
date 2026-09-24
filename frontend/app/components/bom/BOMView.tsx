@@ -7,10 +7,11 @@ import ModalWrapper from '../shared/ModalWrapper';
 import { useToast } from '../shared/Toast';
 import { useLanguage } from '../../context/LanguageContext';
 import { useData } from '../../context/DataContext';
-import { workCenterChipStyle, xpFont, colorHexFor, expandedRowFrame, CodeChip, CODE_FONT, TableSkeleton, useTableSkeletonMetrics, rowStateBg, CHIP_RADIUS, VariantChip, BUTTON_RADIUS, XP_BTN, XPActionButton, useFloatingMenu, MenuTriggerButton, FloatingMenu } from '../shared/xpTheme';
+import { workCenterChipStyle, xpFont, colorHexFor, expandedRowFrame, CodeChip, CODE_FONT, TableSkeleton, useTableSkeletonMetrics, rowStateBg, CHIP_RADIUS, VariantChip, BUTTON_RADIUS, XP_BTN, XPActionButton, useFloatingMenu, MenuTriggerButton, FloatingMenu, SKEL_PAGE_ROWS } from '../shared/xpTheme';
 import Pager from '../shared/Pager';
-import { lvThead, LV_STICKY_THEAD, ExpanderCell, useRowSelection, RowCheckbox, SelectAllCheckbox, LV_CHECK_COL_W, LV_EXPANDER_COL_W, lvZebra, TableEmpty, Dash, lvSubTable, lvSubTd, lvSubRow, lvThBanded } from '../shared/listViewTheme';
+import { lvThead, LV_STICKY_THEAD, ExpanderCell, useRowSelection, RowCheckbox, SelectAllCheckbox, LV_CHECK_COL_W, LV_EXPANDER_COL_W, lvZebra, TableEmpty, Dash, lvSubTable, lvSubTd, lvSubRow, lvThBanded, ResizableTable } from '../shared/listViewTheme';
 import { FilterChipBar, xpToolbar, ToolbarButton, SearchField, xpTitleBar, viewShellStyle } from '../shared/shellTheme';
+import { STATIC_BASE } from '../shared/apiBase';
 
 const BOM_SCOPE_FILTERS = [
     { value: 'root', label: 'Root BOMs' },
@@ -726,16 +727,16 @@ export default function BOMView({
                                         <div style={sep}>
                                             <div style={secHdr}>Design / Susunan Rumusan</div>
                                             {/\.(jpg|jpeg|png|gif|webp)$/i.test(displayBOM.design_file_url) ? (
-                                                <a href={`${(process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:8000').replace(/\/api$/, '')}${displayBOM.design_file_url}`} target="_blank" rel="noreferrer">
+                                                <a href={`${STATIC_BASE}${displayBOM.design_file_url}`} target="_blank" rel="noreferrer">
                                                     <img
-                                                        src={`${(process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:8000').replace(/\/api$/, '')}${displayBOM.design_file_url}`}
+                                                        src={`${STATIC_BASE}${displayBOM.design_file_url}`}
                                                         alt="Design"
                                                         style={{ maxWidth: '100%', maxHeight: 80, border: '1px solid #c0bdb5', display: 'block', objectFit: 'cover', cursor: 'pointer' }}
                                                     />
                                                 </a>
                                             ) : (
                                                 <a
-                                                    href={`${(process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:8000').replace(/\/api$/, '')}${displayBOM.design_file_url}`}
+                                                    href={`${STATIC_BASE}${displayBOM.design_file_url}`}
                                                     target="_blank" rel="noreferrer"
                                                     style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 10, color: '#0000cc', textDecoration: 'underline' }}
                                                 >
@@ -826,7 +827,7 @@ export default function BOMView({
                         that never scrolls vertically. */}
                     <div style={{ flex: 1, overflow: 'auto', minHeight: 0 }}>
                         <div>
-                            <table
+                            <ResizableTable 
                                 style={{ width: '100%', borderCollapse: 'collapse', fontFamily: xpFont, fontSize: '11px', background: '#fff' }}
                             >
                                 <thead style={LV_STICKY_THEAD}>
@@ -847,7 +848,7 @@ export default function BOMView({
 
                                 <tbody ref={listBodyRef}>
                                     {boms.length === 0 && bomLoading ? (
-                                        <TableSkeleton rows={8} cols={skel.cols ?? 9} rowHeight={skel.rowHeight} fillHeight={skel.fillHeight} />
+                                        <TableSkeleton rows={SKEL_PAGE_ROWS} cols={skel.cols ?? 9} rowHeight={skel.rowHeight} fillHeight={skel.fillHeight} />
                                     ) : boms.length === 0 ? (
                                         <TableEmpty colSpan={9}
                                             message={bomSearch.trim()
@@ -954,7 +955,7 @@ export default function BOMView({
                                         })
                                     )}
                                 </tbody>
-                            </table>
+                            </ResizableTable>
                         </div>
                     </div>
                     {/* Pager footer — outside scroll container so always visible */}

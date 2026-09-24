@@ -10,7 +10,7 @@ const SOTablePrintModal = dynamic(() => import('./SOTablePrintModal'), { ssr: fa
 import { useTimezone } from '../../context/TimezoneContext';
 import { useData } from '../../context/DataContext';
 import { useUser } from '../../context/UserContext';
-import { nextSortState, StatusChip, statusTint, TableSkeleton, useTableSkeletonMetrics, ProgressBar, useFloatingMenu, MenuTriggerButton, FloatingMenu, XPActionButton, FormSection, FieldLabel, xpBtn, xpInput as xpInputBase, CodeChip, CODE_FONT, xpFont, CHIP_RADIUS, CODE_CHIP_RADIUS, Chip, VariantChip, VariantKind, variantChipTone, colorLabel, colorHexFor, BTN_TONES, XP_BTN } from '../shared/xpTheme';
+import { nextSortState, StatusChip, statusTint, TableSkeleton, useTableSkeletonMetrics, ProgressBar, useFloatingMenu, MenuTriggerButton, FloatingMenu, XPActionButton, FormSection, FieldLabel, xpBtn, xpInput as xpInputBase, CodeChip, CODE_FONT, xpFont, CHIP_RADIUS, CODE_CHIP_RADIUS, Chip, VariantChip, VariantKind, variantChipTone, colorLabel, colorHexFor, BTN_TONES, XP_BTN, SKEL_PAGE_ROWS } from '../shared/xpTheme';
 
 import { qtyFmt } from '../shared/format';
 import { useComboSearch, useFinishedGoodsSearch } from '../shared/useEntitySearch';
@@ -18,7 +18,8 @@ import Pager from '../shared/Pager';
 import { Tooltip } from '../shared/Tooltip';
 import { ShellWindow, ShellTitleBar, xpToolbar, SearchField, FilterChipBar, ToolbarCount, ToolbarButton } from '../shared/shellTheme';
 import { useRouter } from 'next/navigation';
-import { lvThead, SortableTh, lvThSticky, lvTdRuled, lvZebra } from '../shared/listViewTheme';
+import { lvThead, SortableTh, lvThSticky, lvTdRuled, lvZebra, ResizableTable } from '../shared/listViewTheme';
+import { API_BASE } from '../shared/apiBase';
 
 // One width per column, in render order, and the ONLY place they are declared —
 // the <colgroup> below feeds them to both themes at once (the modern one used to
@@ -101,8 +102,6 @@ export default function SalesOrderView({ items, attributes, boms, salesOrders, p
 
   // Lineage (SO → PR → MO → WO → beam) trace modal
   const router = useRouter();
-  const lineageEnvBase = process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:8000/api';
-  const LINEAGE_API_BASE = lineageEnvBase.endsWith('/api') ? lineageEnvBase : `${lineageEnvBase}/api`;
 
   // Both line-form pickers are server-side typeaheads that live *inside* the
   // create/edit modal, so they prime only once it opens. Priming on mount cost two
@@ -132,8 +131,8 @@ export default function SalesOrderView({ items, attributes, boms, salesOrders, p
     setLineageLoading(true);
     try {
       const [res, resvRes] = await Promise.all([
-        authFetch(`${LINEAGE_API_BASE}/sales-orders/${so.id}/lineage`),
-        authFetch(`${LINEAGE_API_BASE}/sales-orders/${so.id}/reservations`),
+        authFetch(`${API_BASE}/sales-orders/${so.id}/lineage`),
+        authFetch(`${API_BASE}/sales-orders/${so.id}/reservations`),
       ]);
       if (res.ok) setLineageData(await res.json());
       else showToast('Failed to load lineage', 'danger');
@@ -148,7 +147,7 @@ export default function SalesOrderView({ items, attributes, boms, salesOrders, p
   };
 
   const releaseReservation = async (soId: string, resId: string) => {
-    const res = await authFetch(`${LINEAGE_API_BASE}/sales-orders/${soId}/reservations/${resId}/release`, { method: 'POST' });
+    const res = await authFetch(`${API_BASE}/sales-orders/${soId}/reservations/${resId}/release`, { method: 'POST' });
     if (res.ok) {
       setLineageReservations(((await res.json()) || {}).reservations || []);
       showToast('Stock released back to the free pool', 'success');
@@ -975,7 +974,7 @@ export default function SalesOrderView({ items, attributes, boms, salesOrders, p
       const q = colorSearch.trim();
       const h = setTimeout(async () => {
           try {
-              const res = await authFetch(`${LINEAGE_API_BASE}/colors?search=${encodeURIComponent(q)}&size=20`);
+              const res = await authFetch(`${API_BASE}/colors?search=${encodeURIComponent(q)}&size=20`);
               if (res.ok) {
                   const data = await res.json();
                   setColorResults(Array.isArray(data) ? data : (data.items || []));
@@ -991,7 +990,7 @@ export default function SalesOrderView({ items, attributes, boms, salesOrders, p
       let cancelled = false;
       (async () => {
           try {
-              const res = await authFetch(`${LINEAGE_API_BASE}/lab-dips/pending-variants?item_id=${encodeURIComponent(newLine.item_id)}`);
+              const res = await authFetch(`${API_BASE}/lab-dips/pending-variants?item_id=${encodeURIComponent(newLine.item_id)}`);
               if (res.ok && !cancelled) setLabdipResults(await res.json());
           } catch { /* transient */ }
       })();
@@ -1306,7 +1305,7 @@ In stock ${fmtQty(f.baseAvailable)}${bu} · Shipped ${fmtQty(f.baseShipped)}${bu
           // Same filters AND sort as the screen, every matching row (not just this
           // page) — the shared builder keeps the printout in the order the user is
           // actually looking at.
-          const res = await authFetch(`${LINEAGE_API_BASE}/sales-orders?${soQuery(1, { uncapped: true })}`);
+          const res = await authFetch(`${API_BASE}/sales-orders?${soQuery(1, { uncapped: true })}`);
           if (res.ok) {
               const d = await res.json();
               setPrintOrders(d.items || []);
@@ -2101,12 +2100,9 @@ In stock ${fmtQty(f.baseAvailable)}${bu} · Shipped ${fmtQty(f.baseShipped)}${bu
                        browser treats them as hints and reflows every column to fit the
                        viewport, which is what crammed them. Fixed layout means the
                        overflow goes to the horizontal scroller instead. */}
-                   <table
+                   <ResizableTable defaults={SO_COL_WIDTHS}
                        style={{ width: '100%', minWidth: SO_TABLE_MIN_WIDTH, tableLayout: 'fixed', borderCollapse: 'collapse', background: '#fff' }}
                    >
-                       <colgroup>
-                           {SO_COL_WIDTHS.map((w, i) => <col key={i} style={{ width: w }} />)}
-                       </colgroup>
                        <thead style={xpTableHeader}>
                            <tr>
                                <SortableTh sort={soSort} colKey="po" onSort={toggleSOSort} style={xpThCell}>PO# / Ref</SortableTh>
@@ -2370,7 +2366,7 @@ In stock ${fmtQty(f.baseAvailable)}${bu} · Shipped ${fmtQty(f.baseShipped)}${bu
                                });
                            })}
                            {pageOrders.length === 0 && (dataLoading.salesOrders ? (
-                               <TableSkeleton rows={8} cols={skel.cols ?? 13} tdStyle={tdBase} rowHeight={skel.rowHeight} fillHeight={skel.fillHeight} />
+                               <TableSkeleton rows={SKEL_PAGE_ROWS} cols={skel.cols ?? 13} tdStyle={tdBase} rowHeight={skel.rowHeight} fillHeight={skel.fillHeight} />
                            ) : (
                                <tr>
                                    <td
@@ -2384,7 +2380,7 @@ In stock ${fmtQty(f.baseAvailable)}${bu} · Shipped ${fmtQty(f.baseShipped)}${bu
                                </tr>
                            ))}
                        </tbody>
-                   </table>
+                   </ResizableTable>
                </div>
            </div>
 

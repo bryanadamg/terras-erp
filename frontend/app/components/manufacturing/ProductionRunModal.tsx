@@ -14,9 +14,8 @@ import {
 } from '../shared/qtyFormula';
 import QtyFormulaModal from '../shared/QtyFormulaModal';
 import { useUser } from '../../context/UserContext';
+import { API_BASE } from '../shared/apiBase';
 
-const API_BASE = (process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:8000/api')
-    .replace(/\/api$/, '') + '/api';
 
 const fi = (extra: React.CSSProperties = {}): React.CSSProperties =>
     _xpInput({ width: '100%', height: '22px', borderRadius: 0, boxSizing: 'border-box', padding: '0 4px', ...extra });

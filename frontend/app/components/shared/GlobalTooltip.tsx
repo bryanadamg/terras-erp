@@ -1,56 +1,51 @@
 'use client';
 
 /**
- * One document-level layer that replaces EVERY native tooltip in the app.
+ * One document-level layer with two jobs, neither of which is "render `title=`".
  *
- * There are ~800 `title=` attributes across the views and ~90 places that clip
- * text to a fixed-width cell. Rewriting each into a `<Tooltip>` wrapper would be
- * a many-hundred-line diff that drifts again the moment someone types `title=`
- * out of habit — which they will, because that is what the attribute is for.
+ *   1. SUPPRESS the native tooltip. Every `title` in the document is PARKED on
+ *      `data-original-title` as soon as it appears, so the OS never draws its
+ *      grey box. ~800 of them across the views, and being followed around by a
+ *      system bubble on every stray hover is exactly the noise this removes.
+ *      The string is kept (not deleted) and mirrored to `aria-label` when the
+ *      element has no other accessible name, because for an icon-only button the
+ *      title WAS the name — so screen readers still read it.
+ *   2. Give CLIPPED text a hover. Text cut off by its column ("PR-2026-08-000…")
+ *      had no affordance at all: an ellipsis with nothing behind it. Hovering it
+ *      echoes the full value at the element. This is the surface that earns its
+ *      keep — it answers a question the reader is already asking.
  *
- * So the attribute stays the API and this component changes what it renders:
- *
- *   - Every `title` in the document is PARKED on `data-original-title` as soon as
- *     it appears, and the themed surface is rendered from there on hover/focus,
- *     at the element rather than at the cursor.
- *   - Hovering CLIPPED text with no title shows the full text. That case had no
- *     affordance at all before: an ellipsis with nothing behind it.
+ * A `title=` no longer opens anything here. It is an explanation nobody asked
+ * for, fired by the mouse merely crossing the element, and at ERP table density
+ * that made the UI feel like it was talking over the user. Deliberate
+ * explanatory text is now an explicit `<Tooltip content>` (Tooltip.tsx) at the
+ * one call site that wants it — opt-in, not ambient.
  *
  * Parking is up front, not on hover, and that is the whole trick. Blink captures
  * the tooltip string when the pointer's hit test runs and hands it to the browser
  * process with its own delay; removing the attribute *during* the hover does not
- * cancel that pending bubble, so the OS drew a second, system-chrome copy of the
- * same text next to ours a beat later. There is no "suppress it now" hook — the
- * only reliable move is for the attribute never to be on the node when the
- * pointer arrives. (Bootstrap's tooltip does the same at construction time.)
+ * cancel that pending bubble. There is no "suppress it now" hook — the only
+ * reliable move is for the attribute never to be on the node when the pointer
+ * arrives. (Bootstrap's tooltip does the same at construction time.)
  *
  * What it deliberately does NOT touch:
  *   - Titles on form-native UI (`<option>`, `<select>`) and iframes: the browser
  *     is the only thing that can render those, so they keep the attribute.
- *   - A titled ANCESTOR of a `[data-no-tip]` zone. `Chip` / `CodeChip` mark
- *     themselves so their own popout (the chip re-drawn unclipped, in place) is
- *     the only surface — hovering a chip must not also open the clickable row's
- *     bubble. Titles *inside* a zone (a chip's own × button) still get ours.
+ *   - Anything inside `[data-no-tip]`. `Chip` / `CodeChip` mark themselves so
+ *     their own popout — the chip re-drawn unclipped, in place — is the only
+ *     surface, rather than getting a second, worse copy of the same text.
  *
- * Accessibility: `title` is the accessible name for icon-only controls, so it is
- * not simply deleted — it is parked (Bootstrap's own tooltip does the same),
- * mirrored to `aria-label` when the element has no other name, and the surface is
- * a real `role="tooltip"` wired up with `aria-describedby`. Focus opens it as well
- * as hover, so it is reachable from the keyboard — which the native tooltip never
- * was.
- *
- * Mounted once in `layout.tsx`, inside ThemeProvider (it reads the theme) and
- * outside anything that unmounts per route.
+ * Mounted once in `layout.tsx`, outside anything that unmounts per route.
  */
 
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { AnchorRect, FloatingLayer, TIP_DELAY, TooltipSurface, isClipped } from './Tooltip';
+import { AnchorRect, FloatingLayer, POPOUT_DELAY, TooltipSurface, isClipped } from './Tooltip';
 import { layoutRectOf } from '@bryanadamg/terras-ui/scale';
 
-/** Shared with `<Tooltip>` so the same hover never feels faster on one surface
- *  than the other. This layer fires on ANY titled or clipped node in the document,
- *  so it is the one most sensitive to being too eager. */
-const DELAY_MS = TIP_DELAY;
+/** Same dwell as the chip popout, and for the same reason: this is not an
+ *  explanation the reader asked for, it is the label they are already trying to
+ *  read finishing itself. `<Tooltip>`'s longer TIP_DELAY stays for real prose. */
+const DELAY_MS = POPOUT_DELAY;
 /** How far up from the hovered node to look for a clipped box. Text is usually
  *  clipped by its own span or the cell one or two levels up, never further. */
 const CLIP_DEPTH = 3;
@@ -63,24 +58,6 @@ const PARKED = 'data-original-title';
 const OWN_ARIA = 'data-tip-aria';
 
 type Live = { el: HTMLElement; rect: AnchorRect; text: string };
-
-/** Widest an anchor can be and still count as an icon-only control. */
-const ICON_BTN_MAX = 44;
-
-/**
- * Small icon controls get the bubble BESIDE them, not under them.
- *
- * Row/toolbar action buttons sit in a column: the thing directly below a View
- * button is the NEXT row's View button, so a bubble hung underneath hides the
- * control the user is about to aim at. (It never blocked the click — the layer
- * is `pointer-events: none` — it blocked the eye.) Anything wider is ordinary
- * text or a labelled button, where "below" is still the right place.
- */
-const sidePlaced = (el: HTMLElement) => {
-    if (el.closest('button,a,[role="button"]') !== el) return false;
-    const r = el.getBoundingClientRect();
-    return r.width > 0 && r.width <= ICON_BTN_MAX;
-};
 
 const TIP_ID = 'app-tooltip-surface';
 
@@ -109,11 +86,6 @@ const parkSubtree = (root: Node) => {
     if (root.hasAttribute('title')) park(root);
     root.querySelectorAll<HTMLElement>('[title]').forEach(park);
 };
-
-/** The text this element would have shown natively, parked or not yet parked. */
-const titleTextOf = (el: HTMLElement) => (el.getAttribute(PARKED) || el.getAttribute('title') || '');
-
-const TITLED_SEL = `[${PARKED}],[title]`;
 
 export default function GlobalTooltip() {
     const [live, setLive] = useState<Live | null>(null);
@@ -163,23 +135,15 @@ export default function GlobalTooltip() {
             if (!target || !(target instanceof HTMLElement)) return;
             if (isFormNative(target)) { if (live) hide(); return; }
 
-            // A title anywhere up the chain wins: it is an author's explanation,
-            // which beats echoing text the reader can already half-see.
-            const zone = target.closest('[data-no-tip]');
-            const titled = target.closest(TITLED_SEL) as HTMLElement | null;
-            // Inside a zone that owns its own surface, only a nested control's own
-            // title still speaks (a chip's × button); the clickable ROW's title
-            // behind the chip does not — that pair is what stacked two bubbles.
-            const usable = titled && (!zone || (titled !== zone && zone.contains(titled)));
-
+            // Clipped text is the ONLY thing this layer opens for. A `title=` is
+            // parked (below) so the OS never draws it, but it no longer renders a
+            // bubble either — see the header note.
+            //
+            // A zone owns its own surface (a chip re-draws itself unclipped), so it
+            // is skipped here rather than getting a second, worse copy.
             let el: HTMLElement | null = null;
             let text = '';
-            if (usable && titleTextOf(titled as HTMLElement).trim()) {
-                el = titled;
-                text = titleTextOf(titled as HTMLElement);
-            } else if (!zone) {
-                // Otherwise: is the thing under the cursor cut off? (A clipped chip
-                // re-draws itself unclipped, so zones are skipped here too.)
+            if (!target.closest('[data-no-tip]')) {
                 let node: HTMLElement | null = target;
                 for (let i = 0; i < CLIP_DEPTH && node; i++, node = node.parentElement) {
                     if (!isClipped(node)) continue;
@@ -247,7 +211,7 @@ export default function GlobalTooltip() {
 
     if (!live) return null;
     return (
-        <FloatingLayer rect={live.rect} anchorEl={live.el} placement={sidePlaced(live.el) ? 'side' : 'bottom'} className="tip-anim">
+        <FloatingLayer rect={live.rect} anchorEl={live.el} placement="bottom" className="tip-anim">
             <TooltipSurface maxWidth={360} id={TIP_ID}>{live.text}</TooltipSurface>
         </FloatingLayer>
     );

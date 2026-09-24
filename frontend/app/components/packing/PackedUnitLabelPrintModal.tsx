@@ -8,6 +8,7 @@ import PrintModalShell, { PrintModalFooter } from '../shared/PrintModalShell';
 import { xpFont, PRINT_FONT } from '../shared/xpTheme';
 import { orderBasePerAlt, baseToAlt, lengthPerAlt } from '../shared/altUnit';
 import { lotSizeLabel, lotComboLabel, lotColorLabel } from '../shared/LotChips';
+import { API_BASE } from '../shared/apiBase';
 
 // Code 128 (1D) alongside the QR so the factory's existing laser scanners can
 // read the carton number too — same payload as the QR, matching the bag label.
@@ -22,7 +23,6 @@ function makeBarcodeDataUrl(text: string): string {
     }
 }
 
-const API_BASE = (process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:8000/api').replace(/\/api$/, '') + '/api';
 
 /**
  * Carton label — one A6 sticker per PackedUnit, laid out to match the customer-

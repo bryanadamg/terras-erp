@@ -9,6 +9,7 @@ import { useToast } from './Toast';
 import { useIsMobile } from '../../hooks/useIsMobile';
 import { xpFont as XP_FONT, XPLoading, xpInput as xpInputBase } from './xpTheme';
 import { MOBILE_BG, MobilePanel, MobileScreenBar, MobileButton, MobileNotice } from '../mobile/mobileTheme';
+import { API_BASE } from './apiBase';
 
 // One camera per session: the branch views are only mounted after a code has
 // already been decoded here, so their own readers never race this one.
@@ -17,8 +18,6 @@ const QRScannerView = dynamic(() => import('./QRScannerView'), { ssr: false });
 const PickScanView = dynamic(() => import('../mobile/PickScanView'), { ssr: false });
 const PackingScanView = dynamic(() => import('../mobile/PackingScanView'), { ssr: false });
 
-const envBase = process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:8000/api';
-const API_BASE = envBase.endsWith('/api') ? envBase : `${envBase}/api`;
 
 // Same local shape PickScanView/PackingScanView/MobileScannerView each keep —
 // mobileTheme doesn't centralize the raw input face, only the panel/button chrome.

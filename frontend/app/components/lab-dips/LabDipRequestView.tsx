@@ -9,10 +9,10 @@ import { usePaginatedFetch } from '../../context/usePaginatedList';
 import SearchableSelect from '@bryanadamg/terras-ui/components/Combobox';
 import ModalWrapper from '../shared/ModalWrapper';
 import Pager from '../shared/Pager';
-import { StatusChip, StatusCountPill, FormSection, useFloatingMenu, MenuTriggerButton, FloatingMenu, ColorSwatchChip, useSortable, ExpandedRowPanel, CodeChip, CODE_FONT, xpFont, TableSkeleton, useTableSkeletonMetrics, rowStateBg, ChipTone, CHIP_RADIUS, BTN_TONES, XP_BTN } from '../shared/xpTheme';
+import { StatusChip, StatusCountPill, FormSection, useFloatingMenu, MenuTriggerButton, FloatingMenu, ColorSwatchChip, useSortable, ExpandedRowPanel, CodeChip, CODE_FONT, xpFont, TableSkeleton, useTableSkeletonMetrics, rowStateBg, ChipTone, CHIP_RADIUS, BTN_TONES, XP_BTN, SKEL_PAGE_ROWS } from '../shared/xpTheme';
 import { SearchField, FilterChipBar, ToolbarCount, ToolbarButton, viewShellStyle, PageTitleBar } from '../shared/shellTheme';
 import RequestDetailPanel, { getStatusStripe } from '../shared/RequestDetailPanel';
-import { lvThead, ExpanderCell, LV_EXPANDER_COL_W, SortableTh, lvTh, lvTdRuled, lvZebra, TableEmpty, lvBtn, lvInput } from '../shared/listViewTheme';
+import { lvThead, ExpanderCell, LV_EXPANDER_COL_W, SortableTh, lvTh, lvTdRuled, lvZebra, TableEmpty, lvBtn, lvInput, ResizableTable } from '../shared/listViewTheme';
 import { API_BASE, STATIC_BASE } from '../shared/apiBase';
 
 // ── XP style constants (consistent with DyeingSettingView) ──────────────────
@@ -40,20 +40,6 @@ const REJECT_REASONS = [
     'Customer changed requirement',
     'Other',
 ];
-
-const statusStyle = (status: string): React.CSSProperties => {
-    const map: Record<string, { bg: string; border: string; color: string }> = {
-        APPROVED:    { bg: '#d4edda', border: '#27713a', color: '#0c3a1a' },
-        REJECTED:    { bg: '#f8d7da', border: '#a01a1a', color: '#4a0000' },
-        SUBMITTED:   { bg: '#dce4f5', border: '#3a5faa', color: '#0d2a6e' },
-        RESUBMIT:    { bg: '#fff3cd', border: '#b8860b', color: '#3e2000' },
-        IN_PROGRESS: { bg: '#fff3cd', border: '#b8860b', color: '#3e2000' },
-        PENDING:     { bg: '#e8e8e8', border: '#7a7a7a', color: '#111' },
-    };
-    const s = map[status] || { bg: '#e8e8e8', border: '#7a7a7a', color: '#111' };
-    return { background: s.bg, border: `1px solid ${s.border}`, color: s.color, padding: '1px 5px', fontSize: 9, fontFamily: xpFont, fontWeight: 'bold', whiteSpace: 'nowrap' as const };
-    // Modern: semantic colors preserved, softer bg + matching text/border, rounded 6px.
-};
 
 const today = () => new Date().toISOString().split('T')[0];
 const LABDIP_PAGE_SIZE = 20;
@@ -509,7 +495,7 @@ export default function LabDipRequestView({
 
             {/* Table */}
             <div style={{ flex: 1, background: '#fff', overflowY: 'auto' }}>
-                <table style={{ width: '100%', borderCollapse: 'collapse', background: '#fff' }}>
+                <ResizableTable style={{ width: '100%', borderCollapse: 'collapse', background: '#fff' }}>
                     <thead style={lvThead()}>
                         <tr>
                             <th style={{ ...lvTh(), width: LV_EXPANDER_COL_W }} />
@@ -526,7 +512,7 @@ export default function LabDipRequestView({
                     </thead>
                     <tbody ref={listBodyRef}>
                         {labDips.length === 0 && (loading ? (
-                            <TableSkeleton rows={8} cols={skel.cols ?? 10} tdStyle={lvTdRuled()} rowHeight={skel.rowHeight} fillHeight={skel.fillHeight} />
+                            <TableSkeleton rows={SKEL_PAGE_ROWS} cols={skel.cols ?? 10} tdStyle={lvTdRuled()} rowHeight={skel.rowHeight} fillHeight={skel.fillHeight} />
                         ) : (
                             <TableEmpty colSpan={10} tdStyle={lvTdRuled()}
                                 message={hasActiveFilter ? 'No requests match the current filter.' : isYarn ? 'No yarn lab dip requests yet.' : 'No lab dip requests yet.'} />
@@ -549,6 +535,9 @@ export default function LabDipRequestView({
                                             <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
                                                 <div>
                                                     <CodeChip code={r.code} tone="accent" style={{ fontWeight: 'bold' }} />
+                                                    {r.items?.some((it: any) => it.approval_image_url || it.rejection_image_url) && (
+                                                        <i className="bi bi-paperclip" title="Has attached photo(s)" style={{ marginLeft: 4, fontSize: 11, color: '#555' }} />
+                                                    )}
                                                     <div style={{ fontSize: 9, color: '#555'}}>{r.created_at ? tzDate(r.created_at) : ''}</div>
                                                 </div>
                                             </div>
@@ -587,7 +576,7 @@ export default function LabDipRequestView({
                                             })()}
                                         </td>
                                         <td style={lvTdRuled()}><span style={{ fontSize: 10}}>{r.request_type}</span></td>
-                                        <td style={lvTdRuled()}><span style={statusStyle(r.status)}>{r.status}</span></td>
+                                        <td style={lvTdRuled()}><StatusChip status={r.status} /></td>
                                         <td style={lvTdRuled()}>
                                             {total > 0 ? (
                                                 <span style={{ fontSize: 11}}>
@@ -769,7 +758,7 @@ export default function LabDipRequestView({
                             );
                         })}
                     </tbody>
-                </table>
+                </ResizableTable>
             </div>
             <Pager page={page} total={total} pageSize={LABDIP_PAGE_SIZE} onPageChange={setPage} hideWhenEmpty />
 

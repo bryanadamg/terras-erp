@@ -6,6 +6,7 @@ import { usePaginatedFetch } from '../context/usePaginatedList';
 import { useConfirm } from '../context/ConfirmContext';
 import { useSearchParams } from 'next/navigation';
 import { useEffect, useRef, useState, useCallback } from 'react';
+import { API_BASE } from '../components/shared/apiBase';
 
 const BOM_PAGE_SIZE = 50;
 
@@ -14,8 +15,6 @@ export default function BOMPage() {
     const { confirm } = useConfirm();
     const searchParams = useSearchParams();
     const [initialCreateState, setInitialCreateState] = useState<any>(null);
-    const envBase = process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:8000/api';
-    const API_BASE = envBase.endsWith('/api') ? envBase : `${envBase}/api`;
 
     // Self-managed paginated BOM list (decoupled from DataContext). Page window,
     // fetch, loading flag, the debounced search box and the stale-response race

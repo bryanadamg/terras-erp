@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useToast } from '../shared/Toast';
 import { STATUS_COLORS, StatusChip, CodeChip, xpFont as XP_FONT } from '../shared/xpTheme';
 import { ToolbarCount } from '../shared/shellTheme';
+import { API_BASE } from '../shared/apiBase';
 import {
     MOBILE_BG, MobilePanel, MobileToolbar, MobileSearchField, MobileFilterBar,
     MobileButton, MobileEmpty, mobileCard as xpPanel,
@@ -27,8 +28,6 @@ export default function MobileManufacturingView({
 }: MobileManufacturingViewProps) {
     const router = useRouter();
     const { showToast } = useToast();
-    const envBase = process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:8000/api';
-    const API_BASE = envBase.endsWith('/api') ? envBase : `${envBase}/api`;
 
     const [filter, setFilter]           = useState<StatusFilter>('ALL');
     const [search, setSearch]           = useState('');

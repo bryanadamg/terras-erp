@@ -6,16 +6,16 @@ import { useLanguage } from '../../context/LanguageContext';
 import ModalWrapper from '../shared/ModalWrapper';
 import Pager from '../shared/Pager';
 import { useUser } from '../../context/UserContext';
-import { StatusChip, useFloatingMenu, MenuTriggerButton, FloatingMenu, xpFont, TableSkeleton, useTableSkeletonMetrics, rowStateBg, BTN_TONES, XP_BTN } from '../shared/xpTheme';
+import { StatusChip, useFloatingMenu, MenuTriggerButton, FloatingMenu, xpFont, TableSkeleton, useTableSkeletonMetrics, rowStateBg, BTN_TONES, XP_BTN, SKEL_PAGE_ROWS } from '../shared/xpTheme';
 import { useData } from '../../context/DataContext';
 import { usePaginatedFetch } from '../../context/usePaginatedList';
-import { lvBtn, lvInput, lvTh, lvTd, lvLabel, lvThead, LV_STICKY_THEAD, useRowSelection, RowCheckbox, SelectAllCheckbox, lvZebra } from '../shared/listViewTheme';
+import { lvBtn, lvInput, lvTh, lvTd, lvLabel, lvThead, LV_STICKY_THEAD, useRowSelection, RowCheckbox, SelectAllCheckbox, lvZebra, ResizableTable } from '../shared/listViewTheme';
 import { ShellWindow, ShellTitleBar, xpToolbar, SearchField, ToolbarCount, ToolbarButton } from '../shared/shellTheme';
+import { STATIC_BASE } from '../shared/apiBase';
 
 const PARTNERS_PAGE_SIZE = 20;
 
-const envBase = process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:8000/api';
-const API_BASE = envBase.replace(/\/api$/, '') + '/api';
+const API_BASE = STATIC_BASE.replace(/\/api$/, '') + '/api';
 
 interface Partner {
     id: string;
@@ -208,7 +208,7 @@ export default function PartnersView({ type, onCreate, onUpdate, onDelete, onBul
                     style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }}
                 >
                     <div className="table-responsive" style={{ flex: 1, minHeight: 0, overflowY: 'auto' }}>
-                        <table
+                        <ResizableTable 
                             style={{ width: '100%', borderCollapse: 'collapse', background: '#fff' }}
                         >
                             <thead style={xpTableHeader}>
@@ -246,7 +246,7 @@ export default function PartnersView({ type, onCreate, onUpdate, onDelete, onBul
                                     </tr>
                                 ))}
                                 {pagedPartners.length === 0 && (loading ? (
-                                    <TableSkeleton rows={8} cols={skel.cols ?? 5} tdStyle={tdBase} rowHeight={skel.rowHeight} fillHeight={skel.fillHeight} />
+                                    <TableSkeleton rows={SKEL_PAGE_ROWS} cols={skel.cols ?? 5} tdStyle={tdBase} rowHeight={skel.rowHeight} fillHeight={skel.fillHeight} />
                                 ) : (
                                     <tr>
                                         <td
@@ -260,7 +260,7 @@ export default function PartnersView({ type, onCreate, onUpdate, onDelete, onBul
                                     </tr>
                                 ))}
                             </tbody>
-                        </table>
+                        </ResizableTable>
                     </div>
                 </div>
 

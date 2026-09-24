@@ -7,6 +7,7 @@ import { useData } from '../context/DataContext';
 import { useFinishedGoodsSearch } from '../components/shared/useEntitySearch';
 import { useToast } from '../components/shared/Toast';
 import { useConfirm } from '../context/ConfirmContext';
+import { API_BASE } from '../components/shared/apiBase';
 
 export default function LabDipsPage() {
     const { partners, attributes, authFetch } = useData();
@@ -27,8 +28,6 @@ export default function LabDipsPage() {
         setOpenRequestId(rawOpen);
         router.replace('/lab-dips');
     }, [rawOpen]); // eslint-disable-line react-hooks/exhaustive-deps
-    const envBase = process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:8000/api';
-    const API_BASE = envBase.endsWith('/api') ? envBase : `${envBase}/api`;
 
     const [recipes, setRecipes] = useState<any[]>([]);
     const [colors, setColors] = useState<any[]>([]);

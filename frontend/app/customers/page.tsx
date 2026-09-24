@@ -3,6 +3,7 @@
 import PartnersView from '../components/settings/PartnersView';
 import { useData } from '../context/DataContext';
 import { useToast } from '../components/shared/Toast';
+import { API_BASE } from '../components/shared/apiBase';
 
 export default function CustomersPage() {
     // No `partners` here: PartnersView server-paginates its own /partners page.
@@ -10,8 +11,6 @@ export default function CustomersPage() {
     // customer dropdowns elsewhere see the change.
     const { fetchData, authFetch } = useData();
     const { showToast } = useToast();
-    const envBase = process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:8000/api';
-    const API_BASE = envBase.endsWith('/api') ? envBase : `${envBase}/api`;
 
     const handleCreatePartner = async (p: any) => {
         try {

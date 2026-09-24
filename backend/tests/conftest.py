@@ -189,8 +189,22 @@ def _test_database():
     from alembic.config import Config
     from alembic import command
     from app.db.base import Base
+    from sqlalchemy import text as sa_text
+
+    # The colour library's search indexes are GIN trigram, so the models cannot be
+    # created at all until pg_trgm exists. The real database got it from a
+    # migration; a from-scratch test database has to ask for it itself.
+    with engine.begin() as conn:
+        conn.execute(sa_text("CREATE EXTENSION IF NOT EXISTS pg_trgm"))
 
     Base.metadata.create_all(engine)
+
+    # Standalone sequences are not attached to any model, so `create_all` does not
+    # make them — the real database gets them from a migration. Without these,
+    # every lab dip create fails with UndefinedTable on nextval().
+    with engine.begin() as conn:
+        for seq in ("lab_dip_request_seq", "lab_dip_yarn_request_seq"):
+            conn.execute(sa_text(f"CREATE SEQUENCE IF NOT EXISTS {seq}"))
 
     alembic_ini = Path(__file__).resolve().parents[1] / "alembic.ini"
     alembic_cfg = Config(str(alembic_ini))
@@ -255,6 +269,69 @@ def committed_admin(_test_database):
 @pytest.fixture(scope="function")
 def test_user(committed_admin):
     return committed_admin
+
+
+@pytest.fixture(scope="function")
+def user_factory():
+    """Make committed non-admin users whose role holds EXACTLY the given codes.
+
+    For testing permission gates: `committed_admin` holds `admin.access` and so
+    passes every one of them. Rows are committed for real, same reason as
+    `committed_admin` — async routes read a different connection.
+
+    ORDER MATTERS: list this fixture BEFORE `client` in the test signature.
+    Teardown runs in reverse setup order, and these rows can only be deleted once
+    the client's transaction has rolled back off them; otherwise the DELETE waits
+    on a row lock until the statement timeout.
+    """
+    from app.db.session import engine as _eng
+    from sqlalchemy.orm import Session as _SASession
+    from app.models.auth import Permission as _Permission, Role as _Role
+
+    conn = _eng.connect()
+    sess = _SASession(conn)
+    made: list[tuple] = []
+
+    def _make(codes: list[str], label: str = "user"):
+        role = _Role(name=f"role-{label}-{uuid.uuid4().hex[:6]}")
+        perms = []
+        for code in codes:
+            perm = sess.query(_Permission).filter(_Permission.code == code).first()
+            if not perm:
+                # Legacy blob codes (`sales.manage`) still exist in live databases
+                # but seed_rbac deliberately stops re-creating them, so a
+                # from-scratch test database has no row to hold.
+                perm = _Permission(code=code, description=f"test {code}")
+                sess.add(perm)
+                sess.flush()
+            perms.append(perm)
+        role.permissions = perms
+        sess.add(role)
+        sess.flush()
+        user = User(
+            username=f"{label}-{uuid.uuid4().hex[:6]}",
+            full_name=label,
+            hashed_password="hashed_secret",
+            role_id=role.id,
+        )
+        sess.add(user)
+        sess.commit()
+        sess.refresh(user)
+        made.append((user.id, role.id))
+        return user, {"Authorization": f"Bearer {create_access_token(subject=user.id)}"}
+
+    yield _make
+
+    for user_id, role_id in made:
+        sess.query(User).filter(User.id == user_id).delete(synchronize_session=False)
+        role = sess.query(_Role).filter(_Role.id == role_id).first()
+        if role:
+            role.permissions = []   # the association rows hold the role down
+            sess.flush()
+            sess.delete(role)
+    sess.commit()
+    sess.close()
+    conn.close()
 
 
 @pytest.fixture(scope="function")

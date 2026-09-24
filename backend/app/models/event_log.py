@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from sqlalchemy import BigInteger, DateTime, String, func
+from sqlalchemy import BigInteger, DateTime, Index, String, func, text
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -34,6 +34,11 @@ class EventLogEntry(Base):
     """
 
     __tablename__ = "event_log"
+    # The publisher only ever reads the unpublished tail, which stays tiny next
+    # to the log itself.
+    __table_args__ = (
+        Index("ix_event_log_unpublished", "seq", postgresql_where=text("published_at IS NULL")),
+    )
 
     # BIGSERIAL: the resume cursor. Postgres hands out sequence values at INSERT,
     # so two concurrent inserts can become visible out of order for an instant —

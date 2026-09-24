@@ -3,7 +3,7 @@ import React, { useMemo, useState } from 'react';
 import { useConfirm } from '../../context/ConfirmContext';
 import ModalWrapper from '../shared/ModalWrapper';
 import { FormSection, FormError, XP_BTN, useFloatingMenu, MenuTriggerButton, FloatingMenu, SwatchBox, CODE_FONT } from '../shared/xpTheme';
-import { lvInput, lvBtn, lvPrimaryBtn, lvLabel, lvSep, lvTh, lvTd, lvRow, lvThead, TableEmpty } from '../shared/listViewTheme';
+import { lvInput, lvBtn, lvPrimaryBtn, lvLabel, lvSep, lvTh, lvTd, lvRow, lvThead, TableEmpty, ResizableTable } from '../shared/listViewTheme';
 import { ToolbarButton, SearchField, ToolbarCount, FilterChipBar, FilterChipOption } from '../shared/shellTheme';
 import { ColorFamilyKey, COLOR_FAMILY_META, colorFamilyOf, colorFamilyCounts, derivedColorHex } from '../shared/colorFamilies';
 
@@ -269,7 +269,7 @@ export default function ColorsVariantView({ values, canCreate, canEdit, canDelet
                         })}
                     </div>
                 ) : (
-                    <table style={{ width: '100%', borderCollapse: 'collapse', background: '#fff' }}>
+                    <ResizableTable style={{ width: '100%', borderCollapse: 'collapse', background: '#fff' }}>
                         <thead style={lvThead()}>
                             <tr>
                                 <th style={{ ...lvTh(), width: 130 }}>Swatch</th>
@@ -343,7 +343,7 @@ export default function ColorsVariantView({ values, canCreate, canEdit, canDelet
                                 );
                             })}
                         </tbody>
-                    </table>
+                    </ResizableTable>
                 )}
             </div>
 

@@ -1,7 +1,7 @@
 import uuid
 from datetime import datetime
 from typing import Optional
-from sqlalchemy import String, Text, ForeignKey, DateTime, Numeric, Integer, Boolean, Table, Column
+from sqlalchemy import String, Text, ForeignKey, DateTime, Numeric, Index, Integer, Boolean, Table, Column, UniqueConstraint, text
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.db.base import Base
@@ -29,9 +29,10 @@ class PackingOrder(Base):
     (soft reservation). The delivery half lives in models/pick_list.py.
     """
     __tablename__ = "packing_orders"
+    __table_args__ = (UniqueConstraint("code", name="uq_packing_orders_code"),)
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    code: Mapped[str] = mapped_column(String(32), unique=True, index=True)  # PCK-00001
+    code: Mapped[str] = mapped_column(String(32))  # PCK-00001 (unique via __table_args__)
 
     # Optional demand link. Null = pack to stock.
     sales_order_id: Mapped[Optional[uuid.UUID]] = mapped_column(
@@ -289,6 +290,14 @@ class PackingCompletion(Base):
     location, pegged back through BatchConsumption (input lot -> carton).
     """
     __tablename__ = "packing_completions"
+    # Partial: scrap reporting scans the few completions that recorded any.
+    __table_args__ = (
+        Index(
+            "ix_packing_completions_rejected_qty",
+            "qty_rejected",
+            postgresql_where=text("qty_rejected > 0"),
+        ),
+    )
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     packing_order_id: Mapped[uuid.UUID] = mapped_column(

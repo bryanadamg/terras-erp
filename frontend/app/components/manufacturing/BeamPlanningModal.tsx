@@ -4,6 +4,7 @@ import { useData } from '../../context/DataContext';
 import ModalWrapper from '../shared/ModalWrapper';
 import SearchableSelect from '@bryanadamg/terras-ui/components/Combobox';
 import { xpFont, CHIP_RADIUS, BUTTON_RADIUS, XP_BTN, xpInput as xpInputBase } from '../shared/xpTheme';
+import { API_BASE } from '../shared/apiBase';
 
 const xpInput: React.CSSProperties = xpInputBase({ padding: '0 4px' });
 
@@ -40,8 +41,6 @@ function makeRow(defaultWcId = '', defaultEnds = ''): BeamRow {
 
 export default function BeamPlanningModal({ mo, machines, groupId, groupName, components = [], centerLabel = 'Beaming', locations = [], nextWorkCenters = [], onClose }: Props) {
     const { authFetch, fetchData } = useData();
-    const envBase = process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:8000/api';
-    const API_BASE = envBase.endsWith('/api') ? envBase : `${envBase}/api`;
 
     // Machine is optional, same as the WO row: leaving it blank pegs the WO to the
     // group badge instead, so beams can be planned before the loom is decided.

@@ -11,7 +11,7 @@ import BagLabelPrintModal from '../manufacturing/BagLabelPrintModal';
 import LotLabelPrintModal from '../manufacturing/LotLabelPrintModal';
 import PackedUnitLabelPrintModal from '../packing/PackedUnitLabelPrintModal';
 import { useData } from '../../context/DataContext';
-import { useFloatingMenu, MenuTriggerButton, FloatingMenu, useSortable, XPActionButton, ExpandedRowPanel, StatusChip, CODE_FONT, xpFont, TableSkeleton, useTableSkeletonMetrics, rowStateBg, CHIP_RADIUS, OriginChip, VariantChip, xpBtn as xpBtnBase, xpInput as xpInputBase, BTN_TONES, XP_BTN } from '../shared/xpTheme';
+import { useFloatingMenu, MenuTriggerButton, FloatingMenu, useSortable, XPActionButton, ExpandedRowPanel, StatusChip, CODE_FONT, xpFont, TableSkeleton, useTableSkeletonMetrics, rowStateBg, CHIP_RADIUS, OriginChip, VariantChip, xpBtn as xpBtnBase, xpInput as xpInputBase, BTN_TONES, XP_BTN, SKEL_PAGE_ROWS } from '../shared/xpTheme';
 import { xpBevel as sharedXpBevel, xpTitleBar as sharedXpTitleBar, FilterChipBar, ToolbarButton, SearchField, pageFillStyle } from '../shared/shellTheme';
 
 const LOT_STATUS_FILTERS = [
@@ -24,7 +24,7 @@ import SearchableSelect from '@bryanadamg/terras-ui/components/Combobox';
 import { useItemSearch, itemToOption } from '../shared/useEntitySearch';
 import { lotSizeLabel, lotComboLabel, lotColorLabel, type LotVariantAttr } from '../shared/LotChips';
 import { isRejectGrade } from '../shared/rejectDisplay';
-import { ExpanderCell, SortableTh, lvZebra, lvThead, lvTh, TableEmpty, EMPTY_DASH } from '../shared/listViewTheme';
+import { ExpanderCell, SortableTh, lvZebra, lvThead, lvTh, TableEmpty, EMPTY_DASH, ResizableTable } from '../shared/listViewTheme';
 import { Tabs, TabDef } from '../shared/Tabs';
 import { rejectGradeLabel } from '../shared/rejectDisplay';
 
@@ -1019,7 +1019,7 @@ export default function BatchesView({ items, locations, categories, workCenters,
 
           {/* ── Table ── */}
           <div style={{ flex: 1, overflowY: 'auto', overflowX: 'auto', minHeight: 0, background: '#ffffff', scrollbarGutter: 'stable' } as React.CSSProperties}>
-            <table style={xpTable}>
+            <ResizableTable style={xpTable}>
               <thead style={lvThead()}>
                 <tr>
                   <th style={{ ...lvTh(), width: 20 }}></th>
@@ -1039,7 +1039,7 @@ export default function BatchesView({ items, locations, categories, workCenters,
                 </tr>
               </thead>
               <tbody ref={listBodyRef}>
-                {loading && <TableSkeleton rows={8} cols={skel.cols ?? colSpan} tdStyle={xpTd(false)} rowHeight={skel.rowHeight} fillHeight={skel.fillHeight} />}
+                {loading && <TableSkeleton rows={SKEL_PAGE_ROWS} cols={skel.cols ?? colSpan} tdStyle={xpTd(false)} rowHeight={skel.rowHeight} fillHeight={skel.fillHeight} />}
                 {!loading && batches.length === 0 && (
                   <TableEmpty colSpan={colSpan} tdStyle={xpTd(false)} message="No lots found." />
                 )}
@@ -1093,7 +1093,7 @@ export default function BatchesView({ items, locations, categories, workCenters,
                   </>
                 ))}
               </tbody>
-            </table>
+            </ResizableTable>
           </div>
           <Pager page={page} total={total} pageSize={PAGE_SIZE} onPageChange={setPage} hideWhenEmpty />
         </div>

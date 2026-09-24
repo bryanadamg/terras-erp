@@ -9,6 +9,7 @@ import {
     xpInput as xpInputBase, xpSelect, xpPanel,
 } from '../shared/xpTheme';
 import LotLabelPrintModal from './LotLabelPrintModal';
+import { API_BASE } from '../shared/apiBase';
 
 const xpInput: React.CSSProperties = xpInputBase({ padding: '0 4px', width: '100%', boxSizing: 'border-box' });
 
@@ -32,8 +33,6 @@ interface Props {
 export default function LeftoverBeamModal({ wo, onClose, onDone }: Props) {
     const { authFetch, locations } = useData() as any;
     const { showToast } = useToast();
-    const envBase = process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:8000/api';
-    const API_BASE = envBase.endsWith('/api') ? envBase : `${envBase}/api`;
 
     const [mounts, setMounts] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);

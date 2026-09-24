@@ -4,6 +4,7 @@ import { createPortal } from 'react-dom';
 import { useData } from '../../context/DataContext';
 import PrintModalShell, { PrintModalFooter } from '../shared/PrintModalShell';
 import { PRINT_FONT, PRINT_SERIF_FONT } from '../shared/xpTheme';
+import { STATIC_BASE } from '../shared/apiBase';
 
 interface SOPrintSettings {
     preparedBy: string;
@@ -41,7 +42,6 @@ function SODocument({
     partners: any[];
     settings: SOPrintSettings;
 }) {
-    const API_BASE = (process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:8000/api').replace(/\/api$/, '');
     const { itemIndex } = useData();
 
     const getItemName = (id: string) => items.find((i: any) => i.id === id)?.name || itemIndex?.[String(id)]?.name || id;
@@ -80,7 +80,7 @@ function SODocument({
                 <div style={{ display: 'flex', gap: 8, alignItems: 'flex-start' }}>
                     <div style={{ flexShrink: 0 }}>
                         {companyProfile?.logo_url ? (
-                            <img src={`${API_BASE}${companyProfile.logo_url}`} alt="Logo"
+                            <img src={`${STATIC_BASE}${companyProfile.logo_url}`} alt="Logo"
                                 style={{ maxHeight: 52, maxWidth: 72, objectFit: 'contain', display: 'block' }} />
                         ) : (
                             <div style={{ width: 56, height: 44, border: '2px solid #003080', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold', fontSize: 11, color: '#003080' }}>BIE</div>

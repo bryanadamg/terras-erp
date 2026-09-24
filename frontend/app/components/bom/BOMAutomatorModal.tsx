@@ -3,9 +3,8 @@ import { useLanguage } from '../../context/LanguageContext';
 import { useData } from '../../context/DataContext';
 import ModalWrapper from '../shared/ModalWrapper';
 import { CODE_FONT, xpFont, CHIP_RADIUS, xpInput as xpInputBase, xpBtn as xpBtnBase, BTN_TONES, LegendPanel, XP_BTN } from '../shared/xpTheme';
+import { API_BASE } from '../shared/apiBase';
 
-const API_BASE = (process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:8000/api')
-    .replace(/\/api$/, '') + '/api';
 
 interface AutoBOMProfile {
     id: string;

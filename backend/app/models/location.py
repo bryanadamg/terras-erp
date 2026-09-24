@@ -1,5 +1,5 @@
 import uuid
-from sqlalchemy import String, ForeignKey, Boolean, text, inspect as sa_inspect
+from sqlalchemy import String, ForeignKey, Boolean, Index, text, inspect as sa_inspect
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship, backref
 from app.db.base import Base
@@ -7,6 +7,14 @@ from app.db.base import Base
 
 class Location(Base):
     __tablename__ = "locations"
+    __table_args__ = (
+        Index(
+            "ix_locations_system_code",
+            "system_code",
+            unique=True,
+            postgresql_where=text("system_code IS NOT NULL"),
+        ),
+    )
 
     id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
@@ -19,7 +27,10 @@ class Location(Base):
     location_type: Mapped[str] = mapped_column(String(10), nullable=False, default='bin')
 
     # Non-null = system-seeded row; cannot be renamed or deleted
-    system_code: Mapped[str | None] = mapped_column(String(32), nullable=True, unique=True)
+    # Unique only among the rows that have one: a plain unique constraint would
+    # be satisfied by many nulls in Postgres anyway, but the partial index says
+    # so explicitly and is what the database actually carries.
+    system_code: Mapped[str | None] = mapped_column(String(32), nullable=True)
 
     # Stock sitting here is on QC hold: it shows on the Quarantine Packing page and
     # cannot be packed until its lot carries the passing quarantine status. A flag

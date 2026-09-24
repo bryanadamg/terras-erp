@@ -15,9 +15,9 @@ const BagLabelPrintModal = dynamic(() => import('./BagLabelPrintModal'), { ssr: 
 const BagScanStageModal = dynamic(() => import('./BagScanStageModal'), { ssr: false });
 import { getChipStyle, PrintChips } from './WorkOrderPanel';
 import Pager from '../shared/Pager';
-import { XPEmptyState, TableSkeleton, useTableSkeletonMetrics, XPStatusBar, useSortable, useFloatingMenu, MenuTriggerButton, FloatingMenu, XPActionButton, ExpandedRowPanel, ProgressBar, CodeChip, CODE_FONT, xpFont, rowStateBg, StatusChip, CHIP_RADIUS, colorLabel, xpInput as xpInputBase } from '../shared/xpTheme';
+import { XPEmptyState, TableSkeleton, useTableSkeletonMetrics, XPStatusBar, useSortable, useFloatingMenu, MenuTriggerButton, FloatingMenu, XPActionButton, ExpandedRowPanel, ProgressBar, CodeChip, CODE_FONT, xpFont, rowStateBg, StatusChip, CHIP_RADIUS, colorLabel, xpInput as xpInputBase, SKEL_PAGE_ROWS } from '../shared/xpTheme';
 import TreeSelect, { TreeSelectOption } from '../shared/TreeSelect';
-import { lvSubTh, lvSubTd, lvSubTable, lvSubRow, ExpanderCell, useRowSelection, RowCheckbox, SelectAllCheckbox, LV_CHECK_COL_W, LV_EXPANDER_COL_W, SortableTh, lvThSticky, lvTd, lvZebra } from '../shared/listViewTheme';
+import { lvSubTh, lvSubTd, lvSubTable, lvSubRow, ExpanderCell, useRowSelection, RowCheckbox, SelectAllCheckbox, LV_CHECK_COL_W, LV_EXPANDER_COL_W, SortableTh, lvThSticky, lvTd, lvZebra, ResizableTable } from '../shared/listViewTheme';
 import { childrenOfWC, isMachineWC, isTypeWC, woHasStaging, woScanStages } from '../shared/workCenterTree';
 import { rejectTitle } from '../shared/rejectDisplay';
 import SearchableSelect from '@bryanadamg/terras-ui/components/Combobox';
@@ -126,6 +126,27 @@ interface FlatWO {
     color_hex?: string | null;
     labdip_variant_code?: string | null;
 }
+
+// Column widths for the WO grid. Order matches the `<thead>` cells exactly — the
+// resize grips index into this array, so a column added here needs one added there.
+const WO_COL_W: (number | string)[] = [
+    LV_CHECK_COL_W,     // checkbox
+    LV_EXPANDER_COL_W,  // chevron
+    190,                // Root MO
+    34,                 // #
+    '18%',              // Name
+    '14%',              // Product
+    '16%',              // Variant
+    '11%',              // Work Center
+    86,                 // Target / Done
+    90,                 // Target Start
+    90,                 // Target End
+    98,                 // Actual Start
+    98,                 // Actual End
+    98,                 // Created
+    112,                // Status
+    78,                 // Actions
+];
 
 export default function WorkOrderListView({
     workOrders, total, page, pageSize, onPageChange,
@@ -710,27 +731,9 @@ export default function WorkOrderListView({
 
                     {/* Table */}
                     <div className="table-responsive" style={{ flex: 1, overflow: 'auto', minHeight: 0, ...({ background: '#fff' }) }}>
-                        <table
-                            style={{ width: '100%', minWidth: 1830, borderCollapse: 'collapse', tableLayout: 'fixed', fontSize: 11, fontFamily: xpFont, background: '#fff'}}
+                        <ResizableTable defaults={WO_COL_W}
+                            style={{ width: '100%', minWidth: 1830, borderCollapse: 'collapse', tableLayout: 'fixed', fontSize: 11, fontFamily: xpFont, background: '#fff' }}
                         >
-                            <colgroup>
-                                <col style={{ width: LV_CHECK_COL_W }} />       {/* checkbox */}
-                                <col style={{ width: LV_EXPANDER_COL_W }} />   {/* chevron */}
-                                <col style={{ width: 190 }} />  {/* Root MO */}
-                                <col style={{ width: 34 }} />   {/* # */}
-                                <col style={{ width: '18%' }} />{/* Name */}
-                                <col style={{ width: '14%' }} />{/* Product */}
-                                <col style={{ width: '16%' }} />{/* Variant */}
-                                <col style={{ width: '11%' }} />{/* Work Center */}
-                                <col style={{ width: 86 }} />   {/* Target/Done */}
-                                <col style={{ width: 90 }} />   {/* Target Start */}
-                                <col style={{ width: 90 }} />   {/* Target End */}
-                                <col style={{ width: 98 }} />   {/* Actual Start */}
-                                <col style={{ width: 98 }} />   {/* Actual End */}
-                                <col style={{ width: 98 }} />   {/* Created */}
-                                <col style={{ width: 112 }} />  {/* Status */}
-                                <col style={{ width: 78 }} />   {/* Actions */}
-                            </colgroup>
                             <thead>
                                 <tr>
                                     <th style={{ ...thStyle, width: 28, padding: '3px 6px' }}>
@@ -748,7 +751,7 @@ export default function WorkOrderListView({
                             </thead>
                             <tbody ref={listBodyRef}>
                                 {filtered.length === 0 && (loading ? (
-                                    <TableSkeleton rows={8} cols={skel.cols ?? COLS} tdStyle={tdBase} rowHeight={skel.rowHeight} fillHeight={skel.fillHeight} />
+                                    <TableSkeleton rows={SKEL_PAGE_ROWS} cols={skel.cols ?? COLS} tdStyle={tdBase} rowHeight={skel.rowHeight} fillHeight={skel.fillHeight} />
                                 ) : (
                                     <tr>
                                         <td colSpan={COLS} style={{ padding: 0 }}>
@@ -976,7 +979,7 @@ export default function WorkOrderListView({
                                     );
                                 })}
                             </tbody>
-                        </table>
+                        </ResizableTable>
                     </div>
 
                     {/* Floating "more actions" menu — Print / Edit / Delete */}

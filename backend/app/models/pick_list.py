@@ -1,7 +1,7 @@
 import uuid
 from datetime import datetime
 from typing import Optional
-from sqlalchemy import String, Text, ForeignKey, DateTime, Numeric, Boolean
+from sqlalchemy import String, Text, ForeignKey, DateTime, Numeric, Boolean, Index, UniqueConstraint
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.db.base import Base
@@ -20,9 +20,13 @@ class PickList(Base):
     The printable document is a Surat Jalan (delivery note).
     """
     __tablename__ = "pick_lists"
+    __table_args__ = (
+        UniqueConstraint("code", name="uq_pick_lists_code"),
+        Index("ix_pick_lists_created_at", "created_at"),
+    )
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    code: Mapped[str] = mapped_column(String(32), unique=True, index=True)  # PL-00001 (legacy rows: PK-)
+    code: Mapped[str] = mapped_column(String(32))  # PL-00001 (legacy rows: PK-); unique via __table_args__
     sales_order_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), ForeignKey("sales_orders.id", ondelete="CASCADE"), index=True
     )

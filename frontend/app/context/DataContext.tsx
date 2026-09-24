@@ -6,17 +6,24 @@ import { useUser } from './UserContext';
 import { useToast } from '../components/shared/Toast';
 import { usePageState, useDebouncedSearch } from './usePaginatedList';
 import type { SortState } from '../components/shared/xpTheme';
+import { API_BASE } from '../components/shared/apiBase';
 
-const envBase = process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:8000/api';
-const API_BASE = envBase.endsWith('/api') ? envBase : `${envBase}/api`;
 
 // requestType -> the domain key views read via useData().loading.*
 const LOADING_KEY: Record<string, string> = {
     items: 'items', boms: 'boms', 'manufacturing-orders': 'manufacturingOrders',
-    // The dashboard pulls the same domain under its own slim request type; without
-    // this it is the one list in the app with no loading flag, so its tables flash
-    // "no data" before the first response lands.
-    'manufacturing-orders-slim': 'manufacturingOrders',
+    // The dashboard pulls the same domain under its own slim request type, into
+    // its own slice (`dashboardWorkOrders`), so it gets its own flag. Sharing
+    // `manufacturingOrders` marked the MO list loaded while that list was still
+    // `[]` — every cold start lands on /dashboard, so the MO page then opened on
+    // "No Manufacturing Orders yet." instead of its skeleton.
+    'manufacturing-orders-slim': 'dashboardWorkOrders',
+    // The four dashboard payloads share one flag. The view can't tell "this role
+    // has no sales" from "the fetch hasn't landed" — both are an absent object —
+    // and it drops the panel on the first reading, so it needs to be told which
+    // one it is looking at.
+    kpis: 'dashboard', 'dashboard-summary': 'dashboard', 'dashboard-outlook': 'dashboard',
+    'kpi-history': 'dashboard',
     'production-runs': 'productionRuns', balance: 'stockBalance', 'stock-ledger': 'stockEntries',
     'sales-orders': 'salesOrders', 'purchase-orders': 'purchaseOrders', samples: 'samples',
     'audit-logs': 'auditLogs', partners: 'partners',
@@ -42,7 +49,7 @@ export interface ItemIndexEntry {
 // Kinds of debounced live (WebSocket) event a page can be told about. One alias
 // so adding a kind can't leave the queue, the buffer, and the subscriber
 // signature disagreeing — which is exactly what a bare repeated union did.
-export type LiveKind = 'production' | 'kpi' | 'stock' | 'weaving' | 'dyeing' | 'bom' | 'sales';
+export type LiveKind = 'production' | 'kpi' | 'stock' | 'weaving' | 'dyeing' | 'bom' | 'sales' | 'metadata';
 
 /**
  * Every event type the backend can broadcast. `EVENT_PERMISSIONS` in
@@ -73,6 +80,7 @@ export type LiveEventType =
     | 'COLOR_UPDATE'
     | 'COMBO_UPDATE'
     | 'KPI_UPDATE'
+    | 'MASTER_DATA_UPDATE'
     | 'PRINT_TEMPLATE_UPDATE';
 
 /**
@@ -221,7 +229,8 @@ interface DataContextType {
     loading: {
         items: boolean; boms: boolean; manufacturingOrders: boolean; productionRuns: boolean;
         stockBalance: boolean; stockEntries: boolean; salesOrders: boolean; purchaseOrders: boolean;
-        samples: boolean; auditLogs: boolean; partners: boolean;
+        samples: boolean; auditLogs: boolean; partners: boolean; dashboard: boolean;
+        dashboardWorkOrders: boolean;
     };
 
     /**
@@ -863,6 +872,20 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
         return p;
     }, [currentUser, windowKey, itemPage, woPage, prPage, auditPage, reportPage, soPage, poPage, itemSearch, moSearch, prFilterQuery, soQuery, poQuery, categoryL1, categoryL2, categoryL3, auditType, isInitialLoad, pageSize, showToast]);
 
+    // Every targeted refresh below used to swallow its failure with a
+    // console.error: the screen kept showing the rows it already had, with
+    // nothing to say they were stale. Toast instead — but at most once per
+    // domain per 30s, so the dashboard's 60s KPI poll can't turn one outage
+    // into a stream of identical toasts.
+    const refreshErrorAtRef = useRef<Record<string, number>>({});
+    const reportRefreshError = useCallback((domain: string, e: unknown) => {
+        console.error(`${domain} refresh failed`, e);
+        const now = Date.now();
+        if (now - (refreshErrorAtRef.current[domain] || 0) < 30_000) return;
+        refreshErrorAtRef.current[domain] = now;
+        showToast(`Could not refresh ${domain} — showing the last data loaded.`, 'warning');
+    }, [showToast]);
+
     // Targeted refresh for the Manufacturing Orders page: re-pull ONLY the MO
     // (root-only) + PR lists. Used after WO/MO/PR mutations instead of the broad
     // fetchData(), which also re-fetched items + the full nested /boms + the whole
@@ -884,9 +907,9 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
             ]);
             if (moRes.ok) { const d = await moRes.json(); setManufacturingOrders(d.items); setWoTotal(d.total); }
             if (prRes.ok && myPrGen === prGenRef.current) { const d = await prRes.json(); setProductionRuns(d.items); setPrTotal(d.total); }
-        } catch (e) { console.error('refreshManufacturing error', e); }
+        } catch (e) { reportRefreshError('manufacturing orders', e); }
         finally { setPrPending(n => n - 1); }
-    }, [currentUser, woPage, prPage, moSearch, prFilterQuery, pageSize]);
+    }, [currentUser, woPage, prPage, moSearch, prFilterQuery, pageSize, reportRefreshError]);
 
     // Targeted refresh for the Purchase Orders page after a PO mutation. Goes
     // straight to /purchase-orders instead of the broad fetchData(): fetchData
@@ -903,8 +926,8 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
             const headers = { 'Authorization': `Bearer ${token}` };
             const res = await fetch(`${API_BASE}/purchase-orders?${poQuery(poPage)}`, { headers, cache: 'no-store' });
             if (res.ok) { const d = await res.json(); setPurchaseOrders(d.items || []); setPoTotal(d.total || 0); setPoStatusCounts(d.status_counts || {}); }
-        } catch (e) { console.error('refreshPurchaseOrders error', e); }
-    }, [currentUser, poPage, poQuery]);
+        } catch (e) { reportRefreshError('purchase orders', e); }
+    }, [currentUser, poPage, poQuery, reportRefreshError]);
 
     // Targeted refresh for the Sales Orders page after a SO mutation — same
     // reasoning as refreshPurchaseOrders: goes straight to /sales-orders instead
@@ -916,8 +939,8 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
             const headers = { 'Authorization': `Bearer ${token}` };
             const res = await fetch(`${API_BASE}/sales-orders?${soQuery(soPage)}`, { headers, cache: 'no-store' });
             if (res.ok) { const d = await res.json(); setSalesOrders(d.items || []); setSoTotal(d.total || 0); setSoStatusCounts(d.status_counts || {}); }
-        } catch (e) { console.error('refreshSalesOrders error', e); }
-    }, [currentUser, soPage, soQuery]);
+        } catch (e) { reportRefreshError('sales orders', e); }
+    }, [currentUser, soPage, soQuery, reportRefreshError]);
 
     // The samples list is fetched one page at a time with the filters applied
     // server-side — the table can hold tens of thousands of requests, so it is
@@ -960,11 +983,11 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
                 });
             }
         } catch (e) {
-            console.error('loadSamples error', e);
+            reportRefreshError('samples', e);
         } finally {
             if (myGen === sampleGenRef.current) setLoadedOnce(prev => ({ ...prev, samples: true }));
         }
-    }, [currentUser]);
+    }, [currentUser, reportRefreshError]);
 
     /** Re-run the current samples query after a mutation. */
     const refreshSamples = useCallback(() => loadSamples(), [loadSamples]);
@@ -991,8 +1014,8 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
             // Write through: without this the next page load restores the pre-edit
             // masters from the cache and the unit you just created is gone again.
             patchMasterCache(patch);
-        } catch (e) { console.error('refreshItemMetadata error', e); }
-    }, [currentUser]);
+        } catch (e) { reportRefreshError('item metadata', e); }
+    }, [currentUser, reportRefreshError]);
 
     // Targeted refresh for the Routing page (work centers/operations CRUD) —
     // that page reads only workCenters/operations/locations, but every mutation
@@ -1014,8 +1037,8 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
             if (opRes.ok) { const d = await opRes.json(); setOperations(d); patch.operations = d; }
             if (locRes.ok) { const d = await locRes.json(); setLocations(d); patch.locations = d; }
             patchMasterCache(patch);
-        } catch (e) { console.error('refreshRouting error', e); }
-    }, [currentUser]);
+        } catch (e) { reportRefreshError('routing', e); }
+    }, [currentUser, reportRefreshError]);
 
     // Targeted refresh for a STOCK_UPDATE live event — only the balance table,
     // not the broad fetchData() (which on stock/manufacturing routes also re-pulls
@@ -1027,8 +1050,8 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
             const headers = { 'Authorization': `Bearer ${token}` };
             const res = await fetch(`${API_BASE}/stock/balance`, { headers, cache: 'no-store' });
             if (res.ok) { const d = await res.json(); setStockBalance(d); }
-        } catch (e) { console.error('refreshStockBalance error', e); }
-    }, [currentUser]);
+        } catch (e) { reportRefreshError('stock balances', e); }
+    }, [currentUser, reportRefreshError]);
 
     // Targeted refresh for a PRINT_TEMPLATE_UPDATE live event. Deliberately NOT
     // route-aware (unlike production/stock): a print modal can open from any page,
@@ -1047,8 +1070,8 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
                 // templates from the master cache and prints the old layout.
                 patchMasterCache({ printTemplates: data });
             }
-        } catch (e) { console.error('refreshPrintTemplates error', e); }
-    }, [currentUser]);
+        } catch (e) { reportRefreshError('print templates', e); }
+    }, [currentUser, reportRefreshError]);
 
     // Targeted refresh for a KPI_UPDATE live event while on the dashboard — only
     // the 3 KPI-ish calls, not the broad fetchData('dashboard') (which also
@@ -1069,8 +1092,8 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
             if (summaryRes.ok) setDashboardSummary(await summaryRes.json());
             if (historyRes.ok) setDashboardKpiHistory(await historyRes.json());
             if (outlookRes.ok) setDashboardOutlook(await outlookRes.json());
-        } catch (e) { console.error('refreshDashboardKPIs error', e); }
-    }, [currentUser]);
+        } catch (e) { reportRefreshError('dashboard KPIs', e); }
+    }, [currentUser, reportRefreshError]);
 
     const handleTabHover = (tab: string) => fetchData(tab);
 
@@ -1099,10 +1122,10 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
                 const myPrGen = ++prGenRef.current;
                 const res = await fetch(`${API_BASE}/production-runs?skip=${prSkip}&limit=${pageSize}`, { headers, cache: 'no-store' });
                 if (res.ok && myPrGen === prGenRef.current) { const d = await res.json(); setProductionRuns(d.items); setPrTotal(d.total); }
-            } catch (e) { console.error('restore productionRuns error', e); }
+            } catch (e) { reportRefreshError('production runs', e); }
             finally { setPrPending(n => n - 1); }
         })();
-    }, [prFilterQuery, currentUser, prPage, pageSize]);
+    }, [prFilterQuery, currentUser, prPage, pageSize, reportRefreshError]);
 
     // WebSocket Logic
     const fetchDataRef = useRef(fetchData);
@@ -1115,6 +1138,10 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
     useEffect(() => { refreshDashboardKPIsRef.current = refreshDashboardKPIs; }, [refreshDashboardKPIs]);
     const refreshPrintTemplatesRef = useRef(refreshPrintTemplates);
     useEffect(() => { refreshPrintTemplatesRef.current = refreshPrintTemplates; }, [refreshPrintTemplates]);
+    const refreshItemMetadataRef = useRef(refreshItemMetadata);
+    useEffect(() => { refreshItemMetadataRef.current = refreshItemMetadata; }, [refreshItemMetadata]);
+    const refreshRoutingRef = useRef(refreshRouting);
+    useEffect(() => { refreshRoutingRef.current = refreshRouting; }, [refreshRouting]);
     // Held in a ref, not read from the closure: hasPermission is rebuilt on every
     // UserContext render, and putting it in the socket effect's deps would tear
     // down and reopen the WebSocket on unrelated renders.
@@ -1198,13 +1225,14 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
         // fan-out) collapses into ONE refetch + ONE toast per 800ms window instead
         // of one heavy refetch per message. Each of those refetches used to pull
         // items + the full nested /boms + all-level MOs + PRs — a storm.
-        const pending = { kinds: new Set<LiveKind>(), codes: new Map<string, string>() };
+        const pending = { kinds: new Set<LiveKind>(), codes: new Map<string, string>(), domains: new Set<string>() };
 
         const flushLive = () => {
             flushTimer = null;
             const kinds = new Set(pending.kinds);
             const codes = new Map(pending.codes);
-            pending.kinds.clear(); pending.codes.clear();
+            const domains = new Set(pending.domains);
+            pending.kinds.clear(); pending.codes.clear(); pending.domains.clear();
             const path = typeof window !== 'undefined' ? window.location.pathname : '';
             const onDashboard = path === '/' || path.startsWith('/dashboard');
             // Route-aware refresh: only re-pull what the CURRENT page reads. Every
@@ -1267,6 +1295,16 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
                 if (routeKinds.has('bom')) fetchDataRef.current(path.replace(/^\//, ''));
                 notifyLiveSubsRef.current('bom');
             }
+            if (kinds.has('metadata')) {
+                // Master data: no route gate. These rows are the dropdowns and the
+                // name lookups on nearly every form, so a screen that shows none of
+                // them is rare enough not to be worth a routing table — but the
+                // domain IS honoured, so renaming a colour doesn't re-pull looms.
+                if (domains.has('attributes') || domains.has('uoms')) refreshItemMetadataRef.current();
+                if (domains.has('routing') || domains.has('locations')) refreshRoutingRef.current();
+                if (domains.has('partners')) fetchDataRef.current('customers');
+                notifyLiveSubsRef.current('metadata');
+            }
             if (kinds.has('sales')) {
                 // SO status is derived from packing/dispatch events that happen on
                 // other pages (and other people's devices), so an SO row can change
@@ -1288,8 +1326,9 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
         // what the CURRENT page reads. No codes are queued: a resync is not news
         // about any one order and must never toast.
         const resyncAfterReconnect = () => {
-            (['production', 'kpi', 'stock', 'weaving', 'dyeing', 'bom', 'sales'] as LiveKind[])
+            (['production', 'kpi', 'stock', 'weaving', 'dyeing', 'bom', 'sales', 'metadata'] as LiveKind[])
                 .forEach(k => pending.kinds.add(k));
+            ['attributes', 'uoms', 'routing', 'locations', 'partners'].forEach(d => pending.domains.add(d));
             if (flushTimer) clearTimeout(flushTimer);
             flushTimer = setTimeout(flushLive, 0);
         };
@@ -1417,6 +1456,12 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
                         case 'DYEING_RUN_UPDATE':
                             queueLive('dyeing');
                             break;
+                        case 'MASTER_DATA_UPDATE':
+                            // Someone else added a unit / attribute value / location /
+                            // work center / partner. Carries the domain, nothing else.
+                            if (data.domain) pending.domains.add(data.domain);
+                            queueLive('metadata');
+                            break;
                         default:
                             break;
                     }
@@ -1464,7 +1509,8 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
         productionRuns: !loadedOnce.productionRuns || prPending > 0, stockBalance: !loadedOnce.stockBalance,
         stockEntries: !loadedOnce.stockEntries, salesOrders: !loadedOnce.salesOrders,
         purchaseOrders: !loadedOnce.purchaseOrders, samples: !loadedOnce.samples, auditLogs: !loadedOnce.auditLogs,
-        partners: !loadedOnce.partners,
+        partners: !loadedOnce.partners, dashboard: !loadedOnce.dashboard,
+        dashboardWorkOrders: !loadedOnce.dashboardWorkOrders,
     }), [loadedOnce, prPending]);
 
     const value = React.useMemo(() => ({

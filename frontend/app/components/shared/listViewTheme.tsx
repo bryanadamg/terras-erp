@@ -2,6 +2,7 @@
 import React from 'react';
 import { xpFont, modernFont, SortMark, SortState, BUTTON_RADIUS, BTN_TONES } from './xpTheme';
 import type { BtnTone } from './xpTheme';
+import { toLayoutPx } from '@bryanadamg/terras-ui/scale';
 
 // Re-exported so list-view call sites can type a tone without reaching past this module.
 export type { BtnTone };
@@ -567,3 +568,196 @@ export function LvSectionCaption({ icon, children, right, style }: {
     );
 }
 
+
+// ── Resizable columns ─────────────────────────────────────────────────────────
+// Excel-style column drag, wired to the `<table>` rather than to each `<th>`: one
+// pointerdown handler works out which border you grabbed from the header cells'
+// own geometry. A per-header grip meant every column of every grid needed an edit
+// to opt in, which is most of the cost of putting this on twenty pages.
+//
+// Nothing changes until the first drag. The table keeps its own layout — auto
+// layout still sizes columns to content — and only when a border is dragged do we
+// measure the header, freeze every column to px and switch to `tableLayout: fixed`.
+// Freezing up front would have been the visible regression: fixed layout with no
+// widths splits the table into equal columns.
+//
+// Once frozen the table is exactly as wide as its columns add up to, and every
+// column is independent the way a spreadsheet behaves — dragging one moves nothing
+// else. Narrowing a column therefore narrows the grid, and the pane's own
+// background shows beside it. The two alternatives both failed in use: stretching
+// the table to 100% spreads the surplus over EVERY column, which inflates the
+// narrow ones (a 78px Actions column grows and its right-aligned buttons drift off
+// the row), and parking the slack in an empty filler `<col>` only looks seamless on
+// a grid that stripes its `tr`s — the ones that set the zebra per `td` (most of
+// them) grew a column of blank white rows past the last real cell instead.
+//
+// Widths are NOT persisted: every page load opens on the table's own layout.
+// Restoring stored px widths froze a grid sized for another window width, sidebar
+// state or UI scale, so it came back narrower (or wider) than its pane.
+const COLW_MIN = 28;
+/** How close to a column border the pointer has to be, in px, to grab it. */
+const COLW_GRAB = 5;
+/** How far it then has to travel before the drag counts as a drag. */
+const COLW_DRAG_START = 3;
+
+export interface ColumnWidths {
+    /** Spread onto the `<table>`, passing the style it would have had. */
+    table: (style?: React.CSSProperties) => React.ComponentProps<'table'>;
+    /** The `<col>` elements. A table with no `<colgroup>` needs one wrapping this. */
+    cols: () => React.ReactNode;
+    /** Back to the table's own layout; also what double-clicking a border does. */
+    reset: () => void;
+}
+
+/** `defaults` is only needed by a grid that already hand-writes a `<colgroup>` —
+ *  it is what the columns render as before the first drag. */
+export function useColumnWidths(defaults?: (number | string)[]): ColumnWidths {
+    const ref = React.useRef<HTMLTableElement | null>(null);
+    const [widths, setWidths] = React.useState<number[] | null>(null);
+    const [nearBorder, setNearBorder] = React.useState(false);
+    const drag = React.useRef<{ i: number; x: number; base: number[]; moved: boolean } | null>(null);
+    /** Set by a drag, read by the click that follows it — see `onClickCapture`. */
+    const swallowClick = React.useRef(false);
+
+    const reset = () => setWidths(null);
+
+    /** The header row the borders are measured from, or null if this table has a
+     *  shape we can't resize (no header, or a spanned cell — a spanned header has
+     *  no one-to-one border to drag). */
+    const headerCells = (): HTMLTableCellElement[] | null => {
+        const row = ref.current?.tHead?.rows?.[0];
+        if (!row || !row.cells.length) return null;
+        const cells = Array.from(row.cells);
+        if (cells.some(c => c.colSpan > 1)) return null;
+        if (defaults && cells.length !== defaults.length) return null;
+        return cells;
+    };
+
+    /** Each column's width, taken from where its RIGHT BORDER sits rather than from
+     *  the cell's own box. Under `border-collapse: collapse` neighbouring cells share
+     *  a border, so their rects overlap by a pixel each and summing them overshoots
+     *  the table by a pixel per column — enough to push the table past its pane and
+     *  pop a horizontal scrollbar the instant the widths are applied. Measuring the
+     *  gaps between borders partitions the table exactly.
+     *
+     *  Returned in LAYOUT px. Rects come back in screen px, already divided by the
+     *  root interface zoom, while a `<col>` width is a CSS length that gets multiplied
+     *  by it again — writing a rect straight into one shrank every real column to 80%
+     *  of itself and dumped the rest into the filler, which read as the table
+     *  collapsing the moment a border was grabbed. See terras-ui/scale. */
+    const measure = (cells: HTMLTableCellElement[]): number[] => {
+        let prev = cells[0].getBoundingClientRect().left;
+        return cells.map(c => {
+            const right = c.getBoundingClientRect().right;
+            const w = toLayoutPx(right - prev);
+            prev = right;
+            return w;
+        });
+    };
+
+    /** Index of the column whose right border is under `clientX`, or -1. */
+    const borderAt = (clientX: number, clientY: number): number => {
+        const cells = headerCells();
+        const head = ref.current?.tHead?.getBoundingClientRect();
+        if (!cells || !head) return -1;
+        if (clientY < head.top || clientY > head.bottom) return -1;
+        return cells.findIndex(c => Math.abs(clientX - c.getBoundingClientRect().right) <= COLW_GRAB);
+    };
+
+    const onPointerDown = (e: React.PointerEvent<HTMLTableElement>) => {
+        const i = borderAt(e.clientX, e.clientY);
+        if (i < 0) return;
+        const cells = headerCells();
+        if (!cells) return;
+        e.preventDefault();  // or the drag starts a text selection instead
+        const base = widths ?? measure(cells);
+        drag.current = { i, x: e.clientX, base, moved: false };
+        ref.current?.setPointerCapture(e.pointerId);
+    };
+
+    const onPointerMove = (e: React.PointerEvent<HTMLTableElement>) => {
+        const d = drag.current;
+        if (!d) { setNearBorder(borderAt(e.clientX, e.clientY) >= 0); return; }
+        const dx = e.clientX - d.x;
+        // Below the threshold nothing is applied at all: pressing a border, or the
+        // pixel of jitter in a click, would otherwise freeze the table to px and
+        // switch it to fixed layout — the whole grid visibly resettling before the
+        // user has dragged anything.
+        if (!d.moved && Math.abs(dx) < COLW_DRAG_START) return;
+        d.moved = true;
+        const next = d.base.slice();
+        next[d.i] = Math.max(COLW_MIN, Math.round(d.base[d.i] + toLayoutPx(dx)));
+        setWidths(next);
+    };
+
+    const onPointerUp = (e: React.PointerEvent<HTMLTableElement>) => {
+        if (!drag.current) return;
+        swallowClick.current = drag.current.moved;
+        drag.current = null;
+        try { ref.current?.releasePointerCapture(e.pointerId); } catch { /* already gone */ }
+    };
+
+    return {
+        table: (style?: React.CSSProperties) => ({
+            ref,
+            onPointerDown,
+            onPointerMove,
+            onPointerUp,
+            onPointerCancel: onPointerUp,
+            // The drag ends on pointerup, but a click still follows it and would
+            // reach the header's sort handler. Capturing it at the table, before it
+            // reaches the cell, is the only place that sees it first.
+            onClickCapture: (e: React.MouseEvent) => {
+                if (!swallowClick.current) return;
+                swallowClick.current = false;
+                e.preventDefault();
+                e.stopPropagation();
+            },
+            onDoubleClick: (e: React.MouseEvent) => {
+                if (borderAt(e.clientX, e.clientY) < 0) return;
+                e.stopPropagation();
+                reset();
+            },
+            style: {
+                ...style,
+                // Only once frozen: `fixed` on a table that never declared widths
+                // splits it into equal columns. The width is the columns' own sum, so
+                // there is no surplus to hand out and every column keeps exactly the
+                // width it was dragged to; past the pane the container scrolls.
+                // `minWidth` is left to the call site's own floor.
+                ...(widths ? {
+                    tableLayout: 'fixed' as const,
+                    width: widths.reduce((a, b) => a + b, 0),
+                    // The call site's floor is for its *default* widths; left on, a
+                    // grid dragged narrower than it would be stretched back out and
+                    // fixed layout would share the surplus over every column again.
+                    minWidth: 0,
+                } : {}),
+                ...(nearBorder || drag.current ? { cursor: 'col-resize' as const } : {}),
+            },
+        }),
+        cols: () => (defaults ?? widths ?? []).map((d, i) => (
+            <col key={i} style={{ width: widths ? widths[i] : (defaults ? (d as number | string) : undefined) }} />
+        )),
+        reset,
+    };
+}
+
+/** A `<table>` whose columns the user can drag, and the way to opt a grid in:
+ *  swap the tag, keep the style, keep the children. It owns the `<colgroup>`, so
+ *  a grid that hand-writes one passes those widths as `defaults` and deletes it.
+ */
+export function ResizableTable({ defaults, style, className, children }: {
+    defaults?: (number | string)[];
+    style?: React.CSSProperties;
+    className?: string;
+    children?: React.ReactNode;
+}) {
+    const colw = useColumnWidths(defaults);
+    return (
+        <table className={className} {...colw.table(style)}>
+            <colgroup>{colw.cols()}</colgroup>
+            {children}
+        </table>
+    );
+}

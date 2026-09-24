@@ -3,12 +3,11 @@
 import LocationsView from '../components/settings/LocationsView';
 import { useData } from '../context/DataContext';
 import { useConfirm } from '../context/ConfirmContext';
+import { API_BASE } from '../components/shared/apiBase';
 
 export default function LocationsPage() {
     const { locations, fetchData, authFetch } = useData();
     const { confirm } = useConfirm();
-    const envBase = process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:8000/api';
-    const API_BASE = envBase.endsWith('/api') ? envBase : `${envBase}/api`;
 
     const fetchLocations = async (): Promise<any[]> => {
         try {

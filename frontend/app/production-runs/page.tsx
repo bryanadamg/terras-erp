@@ -8,6 +8,7 @@ import { useEffect, useState, useCallback, useRef } from 'react';
 import { useConfirm } from '../context/ConfirmContext';
 import { useIsMobile } from '../hooks/useIsMobile';
 import { useSearchParams, useRouter } from 'next/navigation';
+import { API_BASE } from '../components/shared/apiBase';
 
 export default function ProductionRunsPage() {
     const {
@@ -86,8 +87,6 @@ export default function ProductionRunsPage() {
         }
     }, [searchParams]);
 
-    const envBase = process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:8000/api';
-    const API_BASE = envBase.endsWith('/api') ? envBase : `${envBase}/api`;
 
     const handleCreateMO = async (payload: any) => {
         const res = await authFetch(`${API_BASE}/manufacturing-orders`, {

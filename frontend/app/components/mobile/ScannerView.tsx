@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from 'react';
 import { Html5QrcodeScanner } from 'html5-qrcode';
 import { StatusChip, xpFont as XP_FONT, CHIP_RADIUS, xpInput as xpInputBase } from '../shared/xpTheme';
 import { MOBILE_BG, MobilePanel, MobileScreenBar, MobileButton, MobileNotice } from './mobileTheme';
+import { API_BASE } from '../shared/apiBase';
 
 interface MobileScannerViewProps {
     manufacturingOrders: any[];
@@ -50,8 +51,6 @@ const isUUID = (s: string) =>
 export default function MobileScannerView({
     manufacturingOrders, workCenters, items, authFetch, initialWOId, onRefresh, onClose,
 }: MobileScannerViewProps) {
-    const envBase = process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:8000/api';
-    const API_BASE = envBase.endsWith('/api') ? envBase : `${envBase}/api`;
 
     const [scannedWOId, setScannedWOId]         = useState<string | null>(initialWOId || null);
     const [logQty, setLogQty]                   = useState('');

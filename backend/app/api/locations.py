@@ -5,6 +5,7 @@ from app.models.location import Location
 from app.models.auth import User
 from app.models.audit import AuditLog
 from app.schemas import LocationCreate, LocationResponse, LocationUpdate
+from app.core.ws_manager import broadcast_sync
 from app.api.auth import get_current_user, require_permission
 
 router = APIRouter()
@@ -67,6 +68,7 @@ def create_location(payload: LocationCreate, db: Session = Depends(get_db), curr
     db.refresh(loc)
     db.add(AuditLog(user_id=current_user.id, action="CREATE", entity_type="location", entity_id=str(loc.id), details=f"Created location {loc.code}"))
     db.commit()
+    broadcast_sync({"type": "MASTER_DATA_UPDATE", "domain": "locations"})
     return loc
 
 
@@ -114,6 +116,7 @@ def update_location(location_id: str, payload: LocationUpdate, db: Session = Dep
         loc.is_quarantine = data["is_quarantine"]
     db.add(AuditLog(user_id=current_user.id, action="UPDATE", entity_type="location", entity_id=str(loc.id), details=f"Updated location {loc.code}"))
     db.commit()
+    broadcast_sync({"type": "MASTER_DATA_UPDATE", "domain": "locations"})
     db.refresh(loc)
     return loc
 
@@ -130,4 +133,5 @@ def delete_location(location_id: str, db: Session = Depends(get_db), current_use
     db.add(AuditLog(user_id=current_user.id, action="DELETE", entity_type="location", entity_id=str(loc.id), details=f"Deleted location {loc.code}"))
     db.delete(loc)
     db.commit()
+    broadcast_sync({"type": "MASTER_DATA_UPDATE", "domain": "locations"})
     return {"status": "success", "message": "Location deleted"}

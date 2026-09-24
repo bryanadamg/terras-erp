@@ -9,18 +9,35 @@ import ModalWrapper from '../shared/ModalWrapper';
 import { useToast } from '../shared/Toast';
 import { useData } from '../../context/DataContext';
 import type { PrintSettings } from './MOPrintModal';
-import { STATUS_COLORS, useFloatingMenu, MenuTriggerButton, FloatingMenu, ExpandedRowPanel, ExpandedRowPanelBody, ProgressBar, CodeChip, CODE_FONT, xpFont, TableSkeleton, useTableSkeletonMetrics, rowStateBg, StatusChip, CHIP_RADIUS, VariantChip, colorHexFor, colorLabel, colorTitle, BUTTON_RADIUS, XP_BTN, Chip, XPActionButton, ModalFooterActions, LocationChip } from '../shared/xpTheme';
-import { lvSubTh, lvSubTd, lvSubTable, lvSubRow, ExpanderCell, LV_EXPANDER_COL_W, lvZebra, lvThead, lvTh, TableEmpty, Dash } from '../shared/listViewTheme';
+import { STATUS_COLORS, useFloatingMenu, MenuTriggerButton, FloatingMenu, ExpandedRowPanel, ExpandedRowPanelBody, ProgressBar, CodeChip, CODE_FONT, xpFont, TableSkeleton, useTableSkeletonMetrics, rowStateBg, StatusChip, CHIP_RADIUS, VariantChip, colorHexFor, colorLabel, colorTitle, BUTTON_RADIUS, XP_BTN, Chip, XPActionButton, ModalFooterActions, LocationChip, SKEL_PAGE_ROWS } from '../shared/xpTheme';
+import { lvSubTh, lvSubTd, lvSubTable, lvSubRow, ExpanderCell, LV_EXPANDER_COL_W, lvZebra, lvThead, lvTh, TableEmpty, Dash, ResizableTable } from '../shared/listViewTheme';
 const MOPrintModal = dynamic(() => import('./MOPrintModal'), { ssr: false });
 import WorkOrderPanel, { PrintChip } from './WorkOrderPanel';
 import { resolveMoBom } from '../shared/moHelpers';
 import { useTimezone } from '../../context/TimezoneContext';
+import { API_BASE } from '../shared/apiBase';
 const WOCompletionModal = dynamic(() => import('./WOCompletionModal'), { ssr: false });
 
 // On the selected (blue) tree row a normal chip fill would fight the highlight, so
 // chips there go translucent-on-blue instead of picking a second palette.
 const activeChipStyle = (isActive: boolean): React.CSSProperties | undefined =>
     isActive ? { background: 'rgba(255,255,255,0.2)', borderColor: 'rgba(255,255,255,0.45)', color: '#eaf2ff' } : undefined;
+
+// Column widths for the MO grid. Order matches the `<thead>` cells exactly — the
+// resize grips index into this array. 'auto' is the Product column: it soaks up
+// whatever the sized columns leave, until the user drags something.
+const MO_COL_W: (number | string)[] = [
+    LV_EXPANDER_COL_W,  // chevron
+    195,                // MO Code
+    'auto',             // Product
+    150,                // BOM
+    90,                 // Qty
+    120,                // Target Timeline
+    120,                // Actual
+    120,                // Progress
+    90,                 // Status
+    78,                 // Actions
+];
 
 export default function ManufacturingOrdersTab({
     items,
@@ -53,8 +70,6 @@ export default function ManufacturingOrdersTab({
     const { showToast } = useToast();
     const { authFetch, fetchData, loading: dataLoading } = useData();
     const { formatCustom: tzFmt } = useTimezone();
-    const envBase = process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:8000/api';
-    const API_BASE = envBase.endsWith('/api') ? envBase : `${envBase}/api`;
     const {
         getItemName, getItemCode, getItemUom, getItemEnds, uomBadgeStyle,
         getBOMCode, getLocationName, getWCName, getAttributeValueName, getAttributeValueHex, getBomSizeLabel,
@@ -1057,8 +1072,8 @@ export default function ManufacturingOrdersTab({
                         filters={viewToggle}
                         actions={moActions}
                     />
-                    <div className="table-responsive" style={{ flex: 1, overflowY: 'auto', minHeight: 0 }}>
-                    <table style={{
+                    <div className="table-responsive" style={{ flex: 1, overflow: 'auto', minHeight: 0 }}>
+                    <ResizableTable defaults={MO_COL_W} style={{
                         width: '100%',
                         tableLayout: 'fixed',
                         borderCollapse: 'collapse',
@@ -1066,18 +1081,6 @@ export default function ManufacturingOrdersTab({
                         fontSize: '11px',
                         background: '#fff',
                     }}>
-                        <colgroup>
-                            <col style={{ width: `${LV_EXPANDER_COL_W}px` }} />
-                            <col style={{ width: '195px' }} />
-                            <col />
-                            <col style={{ width: '150px' }} />
-                            <col style={{ width: '90px' }} />
-                            <col style={{ width: '120px' }} />
-                            <col style={{ width: '120px' }} />
-                            <col style={{ width: '120px' }} />
-                            <col style={{ width: '90px' }} />
-                            <col style={{ width: '78px' }} />
-                        </colgroup>
                         <thead style={{ ...lvThead(), fontSize: '10px'}}>
                             <tr>
                                 {[
@@ -1102,7 +1105,7 @@ export default function ManufacturingOrdersTab({
                         </thead>
                         <tbody ref={listBodyRef}>
                             {manufacturingOrders.length === 0 && (dataLoading.manufacturingOrders ? (
-                                <TableSkeleton rows={8} cols={skel.cols ?? 10} rowHeight={skel.rowHeight} fillHeight={skel.fillHeight} />
+                                <TableSkeleton rows={SKEL_PAGE_ROWS} cols={skel.cols ?? 10} rowHeight={skel.rowHeight} fillHeight={skel.fillHeight} />
                             ) : (
                                 <TableEmpty colSpan={10}
                                     message={moCodeFilter
@@ -1293,7 +1296,7 @@ export default function ManufacturingOrdersTab({
                                 );
                             })}
                         </tbody>
-                    </table>
+                    </ResizableTable>
                     </div>
                     {/* Floating "more actions" menu — Print / Delete */}
                     {openMoMenuId && (() => {

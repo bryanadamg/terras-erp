@@ -19,6 +19,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useData } from '../../context/DataContext';
 import { useToast } from './Toast';
 import { xpInput, FieldLabel } from './xpTheme';
+import { API_BASE } from './apiBase';
 import {
     DEFAULT_QTY_FORMULA,
     QTY_FORMULA_FALLBACK,
@@ -28,8 +29,6 @@ import {
     validateExpression,
 } from './qtyFormula';
 
-const API_BASE = (process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:8000/api')
-    .replace(/\/api$/, '') + '/api';
 
 // Ordered qtys the tester starts with: enough of a spread that a formula which
 // silently ignores a size shows it immediately.

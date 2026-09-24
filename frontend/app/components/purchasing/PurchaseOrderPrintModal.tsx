@@ -6,6 +6,7 @@ import PrintModalShell, { PrintModalFooter } from '../shared/PrintModalShell';
 import { PRINT_FONT } from '../shared/xpTheme';
 
 import { fmtMoney } from '../shared/format';
+import { STATIC_BASE } from '../shared/apiBase';
 
 // PO document fields (SSN, rate, kurs, code, payment, category, VAT, discount, notes)
 // now live on the PurchaseOrder record — entered at PO creation, read here from `po`.
@@ -76,7 +77,6 @@ function PODocument({
     partners: any[];
     settings: POPrintSettings;
 }) {
-    const API_BASE = (process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:8000/api').replace(/\/api$/, '');
     const { itemIndex } = useData();
 
     const getItemName = (line: any) => line.item_name || items.find((i: any) => i.id === line.item_id)?.name || itemIndex?.[String(line.item_id)]?.name || line.item_id;
@@ -117,7 +117,7 @@ function PODocument({
                 <div style={{ display: 'flex', gap: 10, alignItems: 'flex-start' }}>
                     <div style={{ flexShrink: 0 }}>
                         {companyProfile?.logo_url ? (
-                            <img src={`${API_BASE}${companyProfile.logo_url}`} alt="Logo"
+                            <img src={`${STATIC_BASE}${companyProfile.logo_url}`} alt="Logo"
                                 style={{ maxHeight: 56, maxWidth: 64, objectFit: 'contain', display: 'block' }} />
                         ) : (
                             <div style={{ width: 52, height: 52, borderRadius: '50%', border: '2px solid #000', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold', fontSize: 13 }}>BIE</div>

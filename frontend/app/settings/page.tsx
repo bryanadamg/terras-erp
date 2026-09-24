@@ -3,13 +3,12 @@
 import { useState, useEffect } from 'react';
 import SettingsView from '../components/settings/SettingsView';
 import { useData } from '../context/DataContext';
+import { API_BASE } from '../components/shared/apiBase';
 
 export default function SettingsPage() {
     const { fetchData, companyProfile, authFetch } = useData();
     const [appName, setAppName] = useState('Terras ERP');
 
-    const envBase = process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:8000/api';
-    const API_BASE = envBase.endsWith('/api') ? envBase : `${envBase}/api`;
 
     useEffect(() => {
         const savedName = localStorage.getItem('app_name'); if (savedName) setAppName(savedName);

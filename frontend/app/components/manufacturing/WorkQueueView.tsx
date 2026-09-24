@@ -7,17 +7,17 @@ import { useUser } from '../../context/UserContext';
 import { useTimezone } from '../../context/TimezoneContext';
 import { usePaginatedFetch } from '../../context/usePaginatedList';
 import { ShellWindow, ShellTitleBar, SearchField, FilterChipBar, ToolbarCount, xpToolbar } from '../shared/shellTheme';
-import { lvTh, lvThead, lvTd, lvRow, lvBtn, lvSubTable, lvSubTh, lvSubTd, lvSubRow, TableEmpty, LV_XP_FONT, LV_MODERN_FONT, ExpanderCell, LV_EXPANDER_COL_W, SortableTh } from '../shared/listViewTheme';
+import { lvTh, lvThead, lvTd, lvRow, lvBtn, lvSubTable, lvSubTh, lvSubTd, lvSubRow, TableEmpty, LV_XP_FONT, LV_MODERN_FONT, ExpanderCell, LV_EXPANDER_COL_W, SortableTh, ResizableTable } from '../shared/listViewTheme';
 import {
     StatusChip, XPStatusBar, XPEmptyState, TableSkeleton, CodeChip,
     ExpandedRowPanel, ExpandedRowPanelBody, statusColor, WorkCenterChip, ToggleChip, rowStateBg, XP_BTN,
-    useServerSort,
-} from '../shared/xpTheme';
+    useServerSort, SKEL_PAGE_ROWS } from '../shared/xpTheme';
 import VariantChips from '../shared/VariantChips';
 import AttributeValueChips from '../shared/attributeChips';
 import { LotChip, LotChipRow } from '../shared/LotChips';
 import Pager from '../shared/Pager';
 import { fmtQtyCompact } from '../shared/format';
+import { API_BASE } from '../shared/apiBase';
 
 /**
  * Work-center dispatch queue — the PIC's screen.
@@ -32,8 +32,6 @@ import { fmtQtyCompact } from '../shared/format';
  * page and the scanner — this view answers "what can I start next?", nothing else.
  */
 
-const API_BASE = (process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:8000/api')
-    .replace(/\/api$/, '') + '/api';
 
 const PAGE_SIZE = 50;
 
@@ -185,6 +183,15 @@ const codeBadge: React.CSSProperties = { ...codeClip, display: 'inline-block' };
 // destination's route permission: MainLayout would only show them AccessDenied, and
 // a door that opens onto a wall is worse than no door.
 const codeBadgeFlat: React.CSSProperties = { ...codeBadge, cursor: 'default' };
+
+// Column widths for the work queue; order matches the <thead> cells exactly.
+// Fixed on purpose, independent of row content — otherwise switching center-type /
+// verdict filters (which change what each cell holds) reflows every column. Work
+// Order runs to ~30 chars (PR-2026-08-00017-00001-L-WO-01); Have is wider than Need
+// by the width of the sort arrow, which it picks up the first time it is sorted.
+const WQ_COL_W: (number | string)[] = [
+    LV_EXPANDER_COL_W, 26, 190, 220, 130, 110, 55, 170, 60, 72, 95, 150,
+];
 
 export default function WorkQueueView() {
     // Backend timestamps are naive UTC; formatCustom parses them as such and
@@ -571,32 +578,9 @@ export default function WorkQueueView() {
             {MaterialPanel}
 
             <div style={{ flex: 1, minHeight: 0, overflow: 'auto', background: '#ffffff' }}>
-                <table style={{ width: '100%', borderCollapse: 'collapse', tableLayout: 'fixed', fontFamily: font, fontSize: 11}}>
+                <ResizableTable defaults={WQ_COL_W} style={{ width: '100%', borderCollapse: 'collapse', tableLayout: 'fixed', fontFamily: font, fontSize: 11}}>
                     {/* Fixed widths, independent of row content — otherwise switching center-type/verdict
                         filters (which change what each row's cells contain) reflows column widths. */}
-                    <colgroup>
-                        <col style={{ width: LV_EXPANDER_COL_W }} />
-                        {/* Rank: 3 digits is the most the largest queue reaches at 50/page. */}
-                        <col style={{ width: 26 }} />
-                        {/* Work Order: the codes here run to ~30 chars
-                            (PR-2026-08-00017-00001-L-WO-01), so 110 clipped almost every
-                            one of them down to its popout. */}
-                        <col style={{ width: 190 }} />
-                        <col style={{ width: 220 }} />
-                        {/* Variant: up to four chips (combo, size, colour, shade), wrapped.
-                            Fixed like the rest, so a filter change never reflows the table. */}
-                        <col style={{ width: 130 }} />
-                        <col style={{ width: 110 }} />
-                        <col style={{ width: 55 }} />
-                        <col style={{ width: 170 }} />
-                        <col style={{ width: 60 }} />
-                        {/* Wider than Need by the width of the sort arrow: the widths
-                            here are fixed so the table never reflows, which it would
-                            do the first time the Have header picked up its ▲. */}
-                        <col style={{ width: 72 }} />
-                        <col style={{ width: 95 }} />
-                        <col style={{ width: 150 }} />
-                    </colgroup>
                     <thead style={lvThead()}>
                         <tr>
                             <th style={lvTh()}></th>
@@ -618,7 +602,7 @@ export default function WorkQueueView() {
                         </tr>
                     </thead>
                     <tbody>
-                        {loading && rows.length === 0 && <TableSkeleton rows={8} cols={12} />}
+                        {loading && rows.length === 0 && <TableSkeleton rows={SKEL_PAGE_ROWS} cols={12} />}
                         {!loading && rows.length === 0 && (
                             <tr><td colSpan={12}>
                                 <XPEmptyState
@@ -765,7 +749,7 @@ export default function WorkQueueView() {
                             );
                         })}
                     </tbody>
-                </table>
+                </ResizableTable>
             </div>
 
             <Pager page={page} total={total} pageSize={PAGE_SIZE} onPageChange={setPage} />

@@ -5,14 +5,13 @@ import { useData } from '../context/DataContext';
 import { useToast } from '../components/shared/Toast';
 import { useConfirm } from '../context/ConfirmContext';
 import { usePurchasableItemSearch } from '../components/shared/useEntitySearch';
+import { API_BASE } from '../components/shared/apiBase';
 
 export default function PurchaseOrdersPage() {
     const { items, attributes, purchaseOrders, partners, locations, companyProfile, refreshPurchaseOrders, authFetch } = useData();
     const { results: itemResults, onSearch: onSearchItems } = usePurchasableItemSearch();
     const { showToast } = useToast();
     const { confirm } = useConfirm();
-    const envBase = process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:8000/api';
-    const API_BASE = envBase.endsWith('/api') ? envBase : `${envBase}/api`;
 
     const handleCreatePO = async (p: any) => {
         const res = await authFetch(`${API_BASE}/purchase-orders`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(p) });

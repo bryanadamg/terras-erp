@@ -5,11 +5,10 @@ import {
     xpFont, CODE_FONT, CHIP_RADIUS, XP_BTN, colorLabel, rowStateBg,
     CodeChip, StatusChip, ProgressBar, ExpandedRowPanel, XPEmptyState,
     TableSkeleton, useTableSkeletonMetrics, useSortable, XPActionButton,
-    xpInput as xpInputBase, FORM_SECTION_BLUE,
-} from '../shared/xpTheme';
+    xpInput as xpInputBase, FORM_SECTION_BLUE, SKEL_PAGE_ROWS } from '../shared/xpTheme';
 import {
     SortableTh, ExpanderCell, LV_EXPANDER_COL_W, lvThSticky, lvTd, lvZebra,
-    lvSubTable, lvSubTh, lvSubTd, lvSubRow, Dash, lvBtn, lvInput,
+    lvSubTable, lvSubTh, lvSubTd, lvSubRow, Dash, lvBtn, lvInput, ResizableTable,
 } from '../shared/listViewTheme';
 import { SearchField } from '../shared/shellTheme';
 import { getChipStyle } from '../manufacturing/WorkOrderPanel';
@@ -23,11 +22,10 @@ import { useTimezone } from '../../context/TimezoneContext';
 import { isMachineWC } from '../shared/workCenterTree';
 import DoseSheet, { fmtDose, doseUnitFor, type DosePreview } from '../shared/DoseSheet';
 import { speedPresets, presetFor } from '../shared/dyeingSpeed';
+import { API_BASE } from '../shared/apiBase';
 
 const modernFont = 'system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif';
 
-const API_BASE = (process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:8000/api')
-    .replace(/\/api$/, '') + '/api';
 
 const WO_PAGE_SIZE = 25;
 const STATUSES = ['PENDING', 'IN_PROGRESS', 'COMPLETED', 'CANCELLED'];
@@ -157,6 +155,26 @@ function ShadeChip({ shade }: { shade: string }) {
         }}>{shade}</span>
     );
 }
+
+// Column widths for the dyeing WO grid. Order matches the `<thead>` cells exactly —
+// the resize grips index into this array.
+const DY_COL_W: (number | string)[] = [
+    LV_EXPANDER_COL_W,  // chevron
+    26,                 // select
+    '13%',              // WO
+    170,                // MO
+    '14%',              // Product
+    '15%',              // Variant
+    '10%',              // Vessel
+    '12%',              // Recipe
+    74,                 // Substrate
+    74,                 // Bath (L)
+    86,                 // Target / Done
+    58,                 // Baths
+    74,                 // Shade
+    104,                // Status
+    52,                 // Actions
+];
 
 export default function DyeingOrdersTab({ items, recipes, authFetch }: DyeingOrdersTabProps) {
     const { formatCustom: tzFmt } = useTimezone();
@@ -851,26 +869,9 @@ export default function DyeingOrdersTab({ items, recipes, authFetch }: DyeingOrd
 
             {/* Table */}
             <div className="table-responsive" style={{ flex: 1, overflow: 'auto', minHeight: 0, background: '#fff' }}>
-                <table
-                    style={{ width: '100%', minWidth: 1560, borderCollapse: 'collapse', tableLayout: 'fixed', fontSize: 11, fontFamily: xpFont, background: '#fff'}}
+                <ResizableTable defaults={DY_COL_W}
+                    style={{ width: '100%', minWidth: 1560, borderCollapse: 'collapse', tableLayout: 'fixed', fontSize: 11, fontFamily: xpFont, background: '#fff' }}
                 >
-                    <colgroup>
-                        <col style={{ width: LV_EXPANDER_COL_W }} /> {/* chevron */}
-                        <col style={{ width: 26 }} />     {/* select */}
-                        <col style={{ width: '13%' }} />  {/* WO */}
-                        <col style={{ width: 170 }} />    {/* MO */}
-                        <col style={{ width: '14%' }} />  {/* Product */}
-                        <col style={{ width: '15%' }} />  {/* Variant */}
-                        <col style={{ width: '10%' }} />  {/* Vessel */}
-                        <col style={{ width: '12%' }} />  {/* Recipe */}
-                        <col style={{ width: 74 }} />     {/* Substrate */}
-                        <col style={{ width: 74 }} />     {/* Bath L */}
-                        <col style={{ width: 86 }} />     {/* Target/Done */}
-                        <col style={{ width: 58 }} />     {/* Baths */}
-                        <col style={{ width: 74 }} />     {/* Shade */}
-                        <col style={{ width: 104 }} />    {/* Status */}
-                        <col style={{ width: 52 }} />     {/* Actions */}
-                    </colgroup>
                     <thead>
                         <tr>
                             <th style={{ ...thStyle, width: 22, padding: '3px 4px' }} />
@@ -891,7 +892,7 @@ export default function DyeingOrdersTab({ items, recipes, authFetch }: DyeingOrd
                     </thead>
                     <tbody ref={listBodyRef}>
                         {workOrders.length === 0 && (woLoading ? (
-                            <TableSkeleton rows={8} cols={skel.cols ?? COLS} tdStyle={tdBase} rowHeight={skel.rowHeight} fillHeight={skel.fillHeight} />
+                            <TableSkeleton rows={SKEL_PAGE_ROWS} cols={skel.cols ?? COLS} tdStyle={tdBase} rowHeight={skel.rowHeight} fillHeight={skel.fillHeight} />
                         ) : (
                             <tr>
                                 <td colSpan={COLS} style={{ padding: 0 }}>
@@ -1134,7 +1135,7 @@ export default function DyeingOrdersTab({ items, recipes, authFetch }: DyeingOrd
                             );
                         })}
                     </tbody>
-                </table>
+                </ResizableTable>
             </div>
 
             <Pager page={page} total={woTotal} pageSize={WO_PAGE_SIZE} onPageChange={setPage} hideWhenEmpty />
