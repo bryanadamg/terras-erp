@@ -667,6 +667,9 @@ body.window-chrome-inactive {
   border: 1px solid #808080;
   border-radius: 3px;
 }
+.ui-style-classic ::-webkit-scrollbar-thumb:horizontal {
+  background: linear-gradient(to bottom, #ffffff, #d4d0c8);
+}
 .ui-style-classic ::-webkit-scrollbar-corner {
   background: #d4d0c8;
 }
