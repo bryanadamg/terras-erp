@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, Suspense } from 'react';
 import Sidebar from './Sidebar';
 import MobileShell from '../mobile/MobileShell';
 import { useUser } from '../../context/UserContext';
@@ -94,8 +94,9 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
     // and two rounds of fetches per cold start.)
     //
     // The route renders inside the boot chrome rather than being replaced by it:
-    // it owns a shape-matched skeleton gated on DataContext's `loading.*`, and
-    // Next's per-segment `loading.tsx` only fires if the segment mounts.
+    // it owns a shape-matched skeleton gated on DataContext's `loading.*`, which
+    // is the only loading shape a route draws (there are no `loading.tsx` files —
+    // see pageSkeletons.tsx).
     //
     // The exception is a cold start with no token: mounting the page would fire a
     // round of fetches that can only 401 while the redirect to /login is already
@@ -179,7 +180,14 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
                     sit on .main-content, which inset the sticky app header away from the
                     sidebar and the viewport top. Header chrome stays full-bleed. */}
                 <div className="page-body">
-                    {booting ? (canFetch ? children : <ListPageSkeleton />) : pageBody}
+                    {/* Catches the static-render bailout of any page that reads
+                        `useSearchParams` (Next wants a Suspense above it). Without
+                        this the nearest boundary is layout.tsx's, whose fallback
+                        replaces the whole app shell. `null`: the page's own
+                        skeleton is the only one, and this is gone by hydration. */}
+                    <Suspense fallback={null}>
+                        {booting ? (canFetch ? children : <ListPageSkeleton />) : pageBody}
+                    </Suspense>
                 </div>
             </div>
         </div>
