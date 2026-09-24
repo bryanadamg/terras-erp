@@ -60,7 +60,17 @@ function NavRow({ i, sub }: { i: number; sub?: boolean }) {
     );
 }
 
-export default function BootShell({ appName = 'Terras ERP' }: { appName?: string }) {
+export default function BootShell({ appName = 'Terras ERP', children }: {
+    appName?: string;
+    /**
+     * The route's own body. The chrome here is a placeholder because nav is
+     * permission-filtered and permissions aren't known yet — but the ROUTE knows
+     * what it is about to render, so it draws its own skeleton and this shell
+     * only frames it. Omitted (pre-auth, when mounting the page would fire a
+     * round of tokenless fetches) it falls back to the generic list shape.
+     */
+    children?: React.ReactNode;
+}) {
     const { uiStyle } = useTheme();
 
     return (
@@ -160,6 +170,7 @@ export default function BootShell({ appName = 'Terras ERP' }: { appName?: string
                 {/* Same gutter class and same page-filling window a real list
                     route renders — title bar, toolbar strip, then the table. */}
                 <div className="page-body">
+                    {children ?? (
                     <div style={viewShellStyle('page')}>
                         <div style={xpTitleBar()}>
                             <SkeletonBar width={140} height={8} />
@@ -183,6 +194,7 @@ export default function BootShell({ appName = 'Terras ERP' }: { appName?: string
                             <TableBlockSkeleton cols={6} rows={60} />
                         </div>
                     </div>
+                    )}
                 </div>
             </div>
         </div>

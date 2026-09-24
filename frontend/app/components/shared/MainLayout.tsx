@@ -87,8 +87,22 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
 
     // SSR / boot state — paint the chrome instead of covering it. Same DOM
     // classes as the real layout below, so nothing shifts when it swaps.
+    //
+    // The route renders INSIDE it rather than being replaced by it. Returning a
+    // shell in place of `children` is what made every cold start open on the same
+    // hardcoded list shape — a table on the dashboard, a table on the weaving
+    // monitor — and it also meant Next's per-segment `loading.tsx` could never
+    // fire, because the segment never mounted. Each page already owns a
+    // shape-matched skeleton gated on DataContext's `loading.*`; this hands the
+    // decision back to the only component that knows what is coming.
+    //
+    // The exception is a cold start with no token: mounting the page would fire a
+    // round of fetches that can only 401 while the redirect to /login is already
+    // in flight. Before hydration no effect has run, so nothing can fetch yet and
+    // the page draws freely; after it, the token has to be there.
     if (!mounted || loading) {
-        return <BootShell appName={appName} />;
+        const canFetch = !mounted || !!localStorage.getItem('access_token');
+        return <BootShell appName={appName}>{canFetch ? children : undefined}</BootShell>;
     }
 
     // Protect all other routes
