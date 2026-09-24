@@ -3,6 +3,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import LoginScreen from '@bryanadamg/terras-ui/components/LoginScreen';
+import { cssVar } from '@bryanadamg/terras-ui/styles';
 import { useUser } from '../context/UserContext';
 import PixelAvatar from '../components/shared/PixelAvatar';
 import { recallAvatar, recallIdentity } from '../components/shared/avatarCache';
@@ -11,6 +12,9 @@ import { API_BASE } from '../components/shared/apiBase';
 
 
 const LAST_USERNAME_KEY = 'teras_last_username';
+
+// LoginScreen's own backdrop expression (terras-ui LoginScreen.js screenStyle).
+const LOGIN_BG = cssVar('login-bg', 'linear-gradient(135deg, #0d1f5c 0%, #1a3fa8 40%, #0a246a 100%)');
 
 type SystemStatus = 'checking' | 'ok' | 'degraded' | 'offline';
 
@@ -106,11 +110,16 @@ export default function LoginPage() {
         })
         : undefined;
 
-    // Splash only once the wait has earned it; below SHOW_DELAY the screen stays
-    // empty rather than flashing. `showBoot` can outlast `booting` — that's the
-    // min-visible floor holding a splash that did appear.
+    // Splash only once the wait has earned it; below SHOW_DELAY the screen shows
+    // the login backdrop rather than flashing. `showBoot` can outlast `booting` —
+    // that's the min-visible floor holding a splash that did appear.
     if (showBoot) return <BootSplash phase={mounted ? bootPhase : 'hydrating'} />;
-    if (booting) return null;
+    // The backdrop, not `null`: this is also the server-rendered HTML (`mounted`
+    // is false there), and an empty body is a white page until the JS arrives.
+    // Same token and fallback LoginScreen paints, so the form lands on it with
+    // nothing changing colour — and a token holder about to be redirected still
+    // never sees the form.
+    if (booting) return <div style={{ minHeight: cssVar('app-vh', '100dvh'), background: LOGIN_BG }} />;
 
     return (
         <LoginScreen
