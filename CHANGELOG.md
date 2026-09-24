@@ -15,6 +15,22 @@ on `main`:
 
 ## [Unreleased]
 
+## [0.34.0] - 2026-09-24
+
+### Added
+- Column widths can be dragged on every list grid, not just the three widest ones; a table opens on its own default layout each time instead of restoring a saved width that could collapse the grid
+- Every route draws its own matching loading skeleton on boot and navigation instead of one shared table shape, and the boot shell now fills the same layout the real page will use — the login screen paints its backdrop immediately instead of a blank white page, the dashboard keeps its panels and MO list on screen while their numbers reload, and a fast load never flashes a skeleton it didn't need
+- Editing attributes, locations, partners, units, or routing now broadcasts a master-data update so other open screens refresh instead of going stale
+- Sample and lab dip rows are flagged when a photo is attached
+
+### Changed
+- Tooltips no longer use the browser's native `title=` popup; they render as a themed dark-gray surface
+
+### Fixed
+- A background refresh that fails now tells the user their data may be stale instead of only logging it to the console
+- The backend refuses to start without a `SECRET_KEY` set instead of falling back to a published default — a deploy that forgot to set it was signing tokens anyone reading the repo could forge
+- Setting runs load again; a migration for `setting_runs.color_matching_at` had been left out
+
 ## [0.33.0] - 2026-09-22
 
 ### Added
