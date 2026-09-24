@@ -16,6 +16,12 @@ const LOADING_KEY: Record<string, string> = {
     // this it is the one list in the app with no loading flag, so its tables flash
     // "no data" before the first response lands.
     'manufacturing-orders-slim': 'manufacturingOrders',
+    // The four dashboard payloads share one flag. The view can't tell "this role
+    // has no sales" from "the fetch hasn't landed" — both are an absent object —
+    // and it drops the panel on the first reading, so it needs to be told which
+    // one it is looking at.
+    kpis: 'dashboard', 'dashboard-summary': 'dashboard', 'dashboard-outlook': 'dashboard',
+    'kpi-history': 'dashboard',
     'production-runs': 'productionRuns', balance: 'stockBalance', 'stock-ledger': 'stockEntries',
     'sales-orders': 'salesOrders', 'purchase-orders': 'purchaseOrders', samples: 'samples',
     'audit-logs': 'auditLogs', partners: 'partners',
@@ -221,7 +227,7 @@ interface DataContextType {
     loading: {
         items: boolean; boms: boolean; manufacturingOrders: boolean; productionRuns: boolean;
         stockBalance: boolean; stockEntries: boolean; salesOrders: boolean; purchaseOrders: boolean;
-        samples: boolean; auditLogs: boolean; partners: boolean;
+        samples: boolean; auditLogs: boolean; partners: boolean; dashboard: boolean;
     };
 
     /**
@@ -1500,7 +1506,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
         productionRuns: !loadedOnce.productionRuns || prPending > 0, stockBalance: !loadedOnce.stockBalance,
         stockEntries: !loadedOnce.stockEntries, salesOrders: !loadedOnce.salesOrders,
         purchaseOrders: !loadedOnce.purchaseOrders, samples: !loadedOnce.samples, auditLogs: !loadedOnce.auditLogs,
-        partners: !loadedOnce.partners,
+        partners: !loadedOnce.partners, dashboard: !loadedOnce.dashboard,
     }), [loadedOnce, prPending]);
 
     const value = React.useMemo(() => ({
