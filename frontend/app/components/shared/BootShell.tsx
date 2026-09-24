@@ -1,9 +1,7 @@
 'use client';
 
 import React from 'react';
-import { useTheme } from '../../context/ThemeContext';
 import { SkeletonBar, BUTTON_RADIUS } from './xpTheme';
-import { ListPageSkeleton } from './pageSkeletons';
 import { SIDEBAR_BG } from './Sidebar';
 import { NAV_SECTIONS } from './navConfig';
 
@@ -32,6 +30,13 @@ import { NAV_SECTIONS } from './navConfig';
  *
  * BootSplash still covers the case with no chrome to draw (login, Electron cold
  * start). This covers every authenticated route.
+ *
+ * Exported as the two chrome pieces, not one wrapper: MainLayout swaps them for
+ * the real Sidebar/header in place, so the route under `page-body` keeps its
+ * tree position across the boot → ready swap. A wrapper component returned
+ * instead of the real layout changes the root element type, which unmounted
+ * and remounted every page on cold start — a second skeleton and a second
+ * round of fetches.
  */
 
 // Same palette constants the real sidebar uses for its sub rows / footer.
@@ -60,123 +65,102 @@ function NavRow({ i, sub }: { i: number; sub?: boolean }) {
     );
 }
 
-export default function BootShell({ appName = 'Terras ERP', children }: {
-    appName?: string;
-    /**
-     * The route's own body. The chrome here is a placeholder because nav is
-     * permission-filtered and permissions aren't known yet — but the ROUTE knows
-     * what it is about to render, so it draws its own skeleton and this shell
-     * only frames it. Omitted (pre-auth, when mounting the page would fire a
-     * round of tokenless fetches) it falls back to the generic list shape.
-     */
-    children?: React.ReactNode;
-}) {
-    const { uiStyle } = useTheme();
-
+/** Placeholder for `<Sidebar>` — same class, palette and brand block. */
+export function BootSidebar({ appName = 'Terras ERP' }: { appName?: string }) {
     return (
-        <div className={`app-container ui-style-${uiStyle}`} aria-busy="true">
+        <div
+            className="sidebar"
+            style={{ background: SIDEBAR_BG, display: 'flex', flexDirection: 'column' }}
+        >
+            {/* Same brand block as Sidebar.tsx: real height var, real colors, the
+                actual icon asset (a static file, so it needs no auth to draw). */}
             <div
-                className="sidebar"
-                style={{ background: SIDEBAR_BG, display: 'flex', flexDirection: 'column' }}
+                style={{
+                    background: 'var(--xp-title-flat)',
+                    padding: '0 10px',
+                    borderBottom: '1px solid var(--xp-title-blue-border)',
+                    boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.3)',
+                    display: 'flex', alignItems: 'center', flexShrink: 0,
+                    height: 'var(--app-header-h)',
+                }}
             >
-                {/* Same brand block as Sidebar.tsx: real height var, real colors, the
-                    actual icon asset (a static file, so it needs no auth to draw). */}
-                <div
+                <img
+                    className="app-brand-icon"
+                    src="/icons/icon-192.png"
+                    alt={appName}
                     style={{
-                        background: 'var(--xp-title-flat)',
-                        padding: '0 10px',
-                        borderBottom: '1px solid var(--xp-title-blue-border)',
-                        boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.3)',
-                        display: 'flex', alignItems: 'center', flexShrink: 0,
-                        height: 'var(--app-header-h)',
+                        width: 20,
+                        height: 20,
+                        flexShrink: 0,
+                        borderRadius: 3,
                     }}
-                >
-                    <img
-                        className="app-brand-icon"
-                        src="/icons/icon-192.png"
-                        alt={appName}
-                        style={{
-                            width: 20,
-                            height: 20,
-                            flexShrink: 0,
-                            borderRadius: 3,
-                        }}
+                />
+            </div>
+
+            <div style={{ flex: 1, overflow: 'hidden' }}>
+                {/* QUICK SCAN button block */}
+                <div style={{ padding: '8px 8px 4px' }}>
+                    <div
+                        className="xp-skel"
+                        style={{ height: 24, width: '100%', borderRadius: BUTTON_RADIUS }}
                     />
                 </div>
 
-                <div style={{ flex: 1, overflow: 'hidden' }}>
-                    {/* QUICK SCAN button block */}
-                    <div style={{ padding: '8px 8px 4px' }}>
+                <NavRow i={0} />
+
+                {NAV_SECTIONS.map((section, s) => (
+                    <React.Fragment key={section.key}>
                         <div
-                            className="xp-skel"
-                            style={{ height: 24, width: '100%', borderRadius: BUTTON_RADIUS }}
-                        />
-                    </div>
-
-                    <NavRow i={0} />
-
-                    {NAV_SECTIONS.map((section, s) => (
-                        <React.Fragment key={section.key}>
-                            <div
-                                style={{
-                                    background: 'linear-gradient(to right, #0058e6, #003080)',
-                                    padding: '4px 8px',
-                                    borderTop: '1px solid #7090cc',
-                                    borderBottom: '1px solid #003080',
-                                    display: 'flex', alignItems: 'center', gap: 5,
-                                    height: 20,
-                                }}
-                            >
-                                <SkeletonBar width={72} height={7} />
-                            </div>
-                            {section.items.map((item, i) => (
-                                <NavRow key={item.tab} i={s + i + 1} sub />
-                            ))}
-                        </React.Fragment>
-                    ))}
-                </div>
-
-                {/* Footer ID card — same band as Sidebar's, so the bottom edge
-                    doesn't jump when the real user card arrives. */}
-                <div
-                    style={{
-                        background: '#c0cade',
-                        borderTop: '1px solid #9098b8',
-                        padding: '6px 8px',
-                        flexShrink: 0,
-                        display: 'flex', alignItems: 'center', gap: 7,
-                    }}
-                >
-                    <SkeletonBar width={30} height={30} />
-                    <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 4 }}>
-                        <SkeletonBar width="70%" height={8} />
-                        <SkeletonBar width="40%" height={7} />
-                    </div>
-                </div>
+                            style={{
+                                background: 'linear-gradient(to right, #0058e6, #003080)',
+                                padding: '4px 8px',
+                                borderTop: '1px solid #7090cc',
+                                borderBottom: '1px solid #003080',
+                                display: 'flex', alignItems: 'center', gap: 5,
+                                height: 20,
+                            }}
+                        >
+                            <SkeletonBar width={72} height={7} />
+                        </div>
+                        {section.items.map((item, i) => (
+                            <NavRow key={item.tab} i={s + i + 1} sub />
+                        ))}
+                    </React.Fragment>
+                ))}
             </div>
 
-            <div className="main-content flex-grow-1 overflow-y-auto overflow-x-hidden bg-light">
-                <div
-                    className="app-header sticky-top bg-white border-bottom shadow-sm px-4 d-flex justify-content-between align-items-center no-print classic-header"
-                >
-                    <SkeletonBar width={160} height={9} />
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                        <SkeletonBar width={28} height={16} />
-                        <SkeletonBar width={40} height={16} />
-                        <SkeletonBar width={90} height={16} />
-                    </div>
+            {/* Footer ID card — same band as Sidebar's, so the bottom edge
+                doesn't jump when the real user card arrives. */}
+            <div
+                style={{
+                    background: '#c0cade',
+                    borderTop: '1px solid #9098b8',
+                    padding: '6px 8px',
+                    flexShrink: 0,
+                    display: 'flex', alignItems: 'center', gap: 7,
+                }}
+            >
+                <SkeletonBar width={30} height={30} />
+                <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 4 }}>
+                    <SkeletonBar width="70%" height={8} />
+                    <SkeletonBar width="40%" height={7} />
                 </div>
+            </div>
+        </div>
+    );
+}
 
-                {/* Same gutter class and same page-filling window a real list
-                    route renders — title bar, toolbar strip, then the table. */}
-                <div className="page-body">
-                    {/* Only reached before the route may draw itself — a cold start
-                        with no token, where mounting the page would fire fetches
-                        that can only 401. The list silhouette is the majority shape
-                        and it is the same component a list route's own
-                        `loading.tsx` renders, so the two can't drift. */}
-                    {children ?? <ListPageSkeleton />}
-                </div>
+/** Placeholder for the app header strip. */
+export function BootHeader() {
+    return (
+        <div
+            className="app-header sticky-top bg-white border-bottom shadow-sm px-4 d-flex justify-content-between align-items-center no-print classic-header"
+        >
+            <SkeletonBar width={160} height={9} />
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                <SkeletonBar width={28} height={16} />
+                <SkeletonBar width={40} height={16} />
+                <SkeletonBar width={90} height={16} />
             </div>
         </div>
     );

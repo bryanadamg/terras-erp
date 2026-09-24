@@ -67,7 +67,7 @@ export function GridPageSkeleton({ minWidth = 250, count = 24 }: { minWidth?: nu
     );
 }
 
-/** Split-pane pages: BOM designer, routing, locations, settings, print designer. */
+/** Split-pane pages: routing, locations, settings, print designer. */
 export function PanesPageSkeleton({ left = 260 }: { left?: number }) {
     return (
         <PageShell>

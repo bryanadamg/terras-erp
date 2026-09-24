@@ -1,5 +1,5 @@
-import { PanesPageSkeleton } from '../components/shared/pageSkeletons';
+import { ListPageSkeleton } from '../components/shared/pageSkeletons';
 
 export default function Loading() {
-    return <PanesPageSkeleton />;
+    return <ListPageSkeleton cols={9} />;
 }
