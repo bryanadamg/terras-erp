@@ -2100,7 +2100,7 @@ In stock ${fmtQty(f.baseAvailable)}${bu} · Shipped ${fmtQty(f.baseShipped)}${bu
                        browser treats them as hints and reflows every column to fit the
                        viewport, which is what crammed them. Fixed layout means the
                        overflow goes to the horizontal scroller instead. */}
-                   <ResizableTable colKey="sales-orders" defaults={SO_COL_WIDTHS}
+                   <ResizableTable defaults={SO_COL_WIDTHS}
                        style={{ width: '100%', minWidth: SO_TABLE_MIN_WIDTH, tableLayout: 'fixed', borderCollapse: 'collapse', background: '#fff' }}
                    >
                        <thead style={xpTableHeader}>

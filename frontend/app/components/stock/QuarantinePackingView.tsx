@@ -879,7 +879,7 @@ export default function QuarantinePackingView() {
     // ── Main table ────────────────────────────────────────────────────────────
     const body = (
         <div style={{ flex: 1, minHeight: 0, width: '100%', background: '#fff', overflow: 'auto' }}>
-            <ResizableTable colKey="quarantine" style={{ width: '100%', borderCollapse: 'collapse', background: '#fff' }}>
+            <ResizableTable style={{ width: '100%', borderCollapse: 'collapse', background: '#fff' }}>
                 <thead style={lvThead()}>
                     <tr>
                         <th style={{ ...lvTh(), width: LV_EXPANDER_COL_W }} />

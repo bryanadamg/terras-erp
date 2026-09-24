@@ -705,7 +705,7 @@ export default function PackingOrderView({ initialCreateState, onClearInitialSta
                 )}
             </div>
             <div style={{ flex: 1, overflowY: 'auto', background: '#fff', minHeight: 0 }}>
-                <ResizableTable colKey="packing-orders" style={{ width: '100%', borderCollapse: 'collapse' }}>
+                <ResizableTable style={{ width: '100%', borderCollapse: 'collapse' }}>
                     <thead>
                         <tr>
                             <th style={{ ...xpTableHeader, width: 22 }} />

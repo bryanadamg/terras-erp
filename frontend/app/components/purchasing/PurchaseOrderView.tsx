@@ -803,7 +803,7 @@ export default function PurchaseOrderView({ items, itemResults, onSearchItems, a
                {/* vertical scroll must live on the same element as overflow-x,
                    otherwise sticky headers bind to the inner wrapper and never stick */}
                <div className="table-responsive" style={{ height: 'calc(var(--app-vh) - 160px)', overflowY: 'auto' }}>
-                   <ResizableTable colKey="purchase-orders"
+                   <ResizableTable 
                        style={{ width: '100%', borderCollapse: 'collapse', background: '#fff' }}
                    >
                        <thead style={xpTableHeader}>

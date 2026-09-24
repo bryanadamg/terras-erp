@@ -262,7 +262,7 @@ export default function ComboLibraryView({
                         </div>
                     )
                 ) : (
-                <ResizableTable colKey="combos" style={{ width: '100%', borderCollapse: 'collapse', background: '#fff' }}>
+                <ResizableTable style={{ width: '100%', borderCollapse: 'collapse', background: '#fff' }}>
                     <thead style={lvThead()}>
                         <tr>
                             <th style={{ ...lvTh(), width: 70 }}>Colors</th>

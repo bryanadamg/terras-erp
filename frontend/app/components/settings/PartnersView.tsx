@@ -208,7 +208,7 @@ export default function PartnersView({ type, onCreate, onUpdate, onDelete, onBul
                     style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }}
                 >
                     <div className="table-responsive" style={{ flex: 1, minHeight: 0, overflowY: 'auto' }}>
-                        <ResizableTable colKey="partners"
+                        <ResizableTable 
                             style={{ width: '100%', borderCollapse: 'collapse', background: '#fff' }}
                         >
                             <thead style={xpTableHeader}>

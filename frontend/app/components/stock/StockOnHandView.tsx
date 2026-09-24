@@ -1226,7 +1226,7 @@ export default function StockOnHandView({ locations, attributes, categories, ite
                 </div>
                 <div style={xpToolbar}>{toolbarControls}</div>
                 <div style={{ flex: 1, overflow: 'auto', background: '#ffffff', minHeight: 0 }} className={undefined}>
-                    <ResizableTable colKey="stock-on-hand" style={{ width: '100%', minWidth: TABLE_MIN_WIDTH, borderCollapse: 'collapse', tableLayout: 'fixed' }} className={undefined}>
+                    <ResizableTable style={{ width: '100%', minWidth: TABLE_MIN_WIDTH, borderCollapse: 'collapse', tableLayout: 'fixed' }} className={undefined}>
                         <thead className={undefined}>
                             <tr>
                                 <th className={undefined} style={{ ...xpTableHeader, width: COL_W.check, textAlign: 'center' }}>

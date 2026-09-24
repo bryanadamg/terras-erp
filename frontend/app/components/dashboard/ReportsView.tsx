@@ -400,7 +400,7 @@ export default function ReportsView(_props: any) {
                 {hasFilters && <button className={XP_BTN} style={{ ...xpBtn(), marginTop: 10 }} onClick={clearFilters}>Clear filters</button>}
             </XPEmptyState>) : (
         <div className={undefined} style={undefined}>
-            <ResizableTable colKey="stock-ledger" className={undefined} style={{ width: '100%', borderCollapse: 'collapse' }}>
+            <ResizableTable className={undefined} style={{ width: '100%', borderCollapse: 'collapse' }}>
                 <thead className={undefined} style={undefined}>
                     <tr>
                         <SortableTh sort={sort} colKey="date" onSort={toggle} style={th} className={undefined}>{t('date')}</SortableTh>

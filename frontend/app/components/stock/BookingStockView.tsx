@@ -236,7 +236,7 @@ export default function BookingStockView() {
 
 
                 <div style={{ flex: 1, overflowY: 'auto', background: '#ffffff', maxHeight: 'calc(var(--app-vh) - 200px)' }} className={undefined}>
-                    <ResizableTable colKey="booking-stock" style={{ width: '100%', borderCollapse: 'collapse' }} className={undefined}>
+                    <ResizableTable style={{ width: '100%', borderCollapse: 'collapse' }} className={undefined}>
                         <thead className={undefined}>
                             <tr>
                                 <th style={{ ...xpTableHeader, width: LV_EXPANDER_COL_W }} />

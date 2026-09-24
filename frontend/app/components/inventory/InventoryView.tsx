@@ -1182,7 +1182,7 @@ export default function InventoryView({
           {/* ── Table ── */}
           <div style={{ flex: 1, overflowY: 'auto', minHeight: 0 }}>
             <div>
-              <ResizableTable colKey="items"
+              <ResizableTable 
                 style={{
                     width: '100%',
                     borderCollapse: 'separate',

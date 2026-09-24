@@ -827,7 +827,7 @@ export default function BOMView({
                         that never scrolls vertically. */}
                     <div style={{ flex: 1, overflow: 'auto', minHeight: 0 }}>
                         <div>
-                            <ResizableTable colKey="boms"
+                            <ResizableTable 
                                 style={{ width: '100%', borderCollapse: 'collapse', fontFamily: xpFont, fontSize: '11px', background: '#fff' }}
                             >
                                 <thead style={LV_STICKY_THEAD}>

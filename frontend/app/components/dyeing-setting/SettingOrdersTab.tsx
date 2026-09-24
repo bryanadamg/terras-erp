@@ -580,7 +580,7 @@ export default function SettingOrdersTab({ items, authFetch }: Props) {
 
             {/* Table */}
             <div className="table-responsive" style={{ flex: 1, overflow: 'auto', minHeight: 0, background: '#fff' }}>
-                <ResizableTable colKey="setting-orders" defaults={ST_COL_W}
+                <ResizableTable defaults={ST_COL_W}
                     style={{ width: '100%', minWidth: 1520, borderCollapse: 'collapse', tableLayout: 'fixed', fontSize: 11, fontFamily: xpFont, background: '#fff'}}
                 >
                     <thead>

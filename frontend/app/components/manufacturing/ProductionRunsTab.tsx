@@ -293,7 +293,7 @@ export default function ProductionRunsTab({
                 the whole table. */}
             {(productionRuns && productionRuns.length > 0) || dataLoading.productionRuns ? (
                 <div className="table-responsive" style={{ flex: 1, overflowY: 'auto', minHeight: 0 }}>
-                    <ResizableTable colKey="production-runs" style={{
+                    <ResizableTable style={{
                         width: '100%', borderCollapse: 'collapse',
                         // Fixed layout: column widths come from the header row only, so an
                         // expanded colSpan detail row (MO chips + nested material table) can

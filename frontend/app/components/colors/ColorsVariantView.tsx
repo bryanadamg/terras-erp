@@ -269,7 +269,7 @@ export default function ColorsVariantView({ values, canCreate, canEdit, canDelet
                         })}
                     </div>
                 ) : (
-                    <ResizableTable colKey="colors-variant" style={{ width: '100%', borderCollapse: 'collapse', background: '#fff' }}>
+                    <ResizableTable style={{ width: '100%', borderCollapse: 'collapse', background: '#fff' }}>
                         <thead style={lvThead()}>
                             <tr>
                                 <th style={{ ...lvTh(), width: 130 }}>Swatch</th>

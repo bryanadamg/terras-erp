@@ -578,7 +578,7 @@ export default function WorkQueueView() {
             {MaterialPanel}
 
             <div style={{ flex: 1, minHeight: 0, overflow: 'auto', background: '#ffffff' }}>
-                <ResizableTable colKey="work-queue" defaults={WQ_COL_W} style={{ width: '100%', borderCollapse: 'collapse', tableLayout: 'fixed', fontFamily: font, fontSize: 11}}>
+                <ResizableTable defaults={WQ_COL_W} style={{ width: '100%', borderCollapse: 'collapse', tableLayout: 'fixed', fontFamily: font, fontSize: 11}}>
                     {/* Fixed widths, independent of row content — otherwise switching center-type/verdict
                         filters (which change what each row's cells contain) reflows column widths. */}
                     <thead style={lvThead()}>

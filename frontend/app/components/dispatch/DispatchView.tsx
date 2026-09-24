@@ -309,7 +309,7 @@ export default function DispatchView() {
             )}
 
             <div style={{ flex: 1, overflow: 'auto' }}>
-                <ResizableTable colKey="shipments" style={{ width: '100%', borderCollapse: 'collapse', fontFamily: xpFont, fontSize: 11 }}>
+                <ResizableTable style={{ width: '100%', borderCollapse: 'collapse', fontFamily: xpFont, fontSize: 11 }}>
                     <thead>
                         <tr>
                             <th style={{ ...xpTableHeader, width: LV_CHECK_COL_W, textAlign: 'center' }}>

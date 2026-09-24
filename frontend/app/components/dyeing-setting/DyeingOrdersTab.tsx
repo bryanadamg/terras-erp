@@ -869,7 +869,7 @@ export default function DyeingOrdersTab({ items, recipes, authFetch }: DyeingOrd
 
             {/* Table */}
             <div className="table-responsive" style={{ flex: 1, overflow: 'auto', minHeight: 0, background: '#fff' }}>
-                <ResizableTable colKey="dyeing-orders" defaults={DY_COL_W}
+                <ResizableTable defaults={DY_COL_W}
                     style={{ width: '100%', minWidth: 1560, borderCollapse: 'collapse', tableLayout: 'fixed', fontSize: 11, fontFamily: xpFont, background: '#fff' }}
                 >
                     <thead>

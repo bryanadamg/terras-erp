@@ -1019,7 +1019,7 @@ export default function BatchesView({ items, locations, categories, workCenters,
 
           {/* ── Table ── */}
           <div style={{ flex: 1, overflowY: 'auto', overflowX: 'auto', minHeight: 0, background: '#ffffff', scrollbarGutter: 'stable' } as React.CSSProperties}>
-            <ResizableTable colKey="batches" style={xpTable}>
+            <ResizableTable style={xpTable}>
               <thead style={lvThead()}>
                 <tr>
                   <th style={{ ...lvTh(), width: 20 }}></th>

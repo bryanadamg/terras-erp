@@ -145,7 +145,7 @@ export default function AuditLogsView({ auditLogs, currentPage, totalItems, page
           )}
 
           <div style={{ flex: 1, minHeight: 0, background: '#ffffff', overflowY: 'auto', overflowX: 'hidden' }}>
-              <ResizableTable colKey="audit-logs"
+              <ResizableTable 
                   className={undefined}
                   style={{ width: '100%', borderCollapse: 'collapse', tableLayout: 'fixed' }}
               >

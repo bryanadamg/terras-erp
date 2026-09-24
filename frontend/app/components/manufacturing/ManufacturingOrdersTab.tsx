@@ -1073,7 +1073,7 @@ export default function ManufacturingOrdersTab({
                         actions={moActions}
                     />
                     <div className="table-responsive" style={{ flex: 1, overflow: 'auto', minHeight: 0 }}>
-                    <ResizableTable colKey="manufacturing-orders" defaults={MO_COL_W} style={{
+                    <ResizableTable defaults={MO_COL_W} style={{
                         width: '100%',
                         tableLayout: 'fixed',
                         borderCollapse: 'collapse',

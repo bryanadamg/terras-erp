@@ -495,7 +495,7 @@ export default function LabDipRequestView({
 
             {/* Table */}
             <div style={{ flex: 1, background: '#fff', overflowY: 'auto' }}>
-                <ResizableTable colKey="lab-dips" style={{ width: '100%', borderCollapse: 'collapse', background: '#fff' }}>
+                <ResizableTable style={{ width: '100%', borderCollapse: 'collapse', background: '#fff' }}>
                     <thead style={lvThead()}>
                         <tr>
                             <th style={{ ...lvTh(), width: LV_EXPANDER_COL_W }} />

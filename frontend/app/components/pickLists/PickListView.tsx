@@ -500,7 +500,7 @@ export default function PickListView() {
                 </span>
             </div>
             <div style={{ flex: 1, overflowY: 'auto', background: '#fff', minHeight: 0 }}>
-                <ResizableTable colKey="pick-lists" style={{ width: '100%', borderCollapse: 'collapse' }}>
+                <ResizableTable style={{ width: '100%', borderCollapse: 'collapse' }}>
                     <thead>
                         <tr>
                             <th style={{ ...xpTableHeader, width: 22 }} />

@@ -731,7 +731,7 @@ export default function WorkOrderListView({
 
                     {/* Table */}
                     <div className="table-responsive" style={{ flex: 1, overflow: 'auto', minHeight: 0, ...({ background: '#fff' }) }}>
-                        <ResizableTable colKey="work-orders" defaults={WO_COL_W}
+                        <ResizableTable defaults={WO_COL_W}
                             style={{ width: '100%', minWidth: 1830, borderCollapse: 'collapse', tableLayout: 'fixed', fontSize: 11, fontFamily: xpFont, background: '#fff' }}
                         >
                             <thead>

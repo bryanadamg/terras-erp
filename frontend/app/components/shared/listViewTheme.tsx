@@ -591,17 +591,14 @@ export function LvSectionCaption({ icon, children, right, style }: {
 // a grid that stripes its `tr`s — the ones that set the zebra per `td` (most of
 // them) grew a column of blank white rows past the last real cell instead.
 //
-// Widths persist per `storageKey` in localStorage. A stored set whose length no
-// longer matches the table is discarded rather than mapped — columns were added or
-// removed, and a shifted-by-one width set is worse than no width set.
+// Widths are NOT persisted: every page load opens on the table's own layout.
+// Restoring stored px widths froze a grid sized for another window width, sidebar
+// state or UI scale, so it came back narrower (or wider) than its pane.
 const COLW_MIN = 28;
 /** How close to a column border the pointer has to be, in px, to grab it. */
 const COLW_GRAB = 5;
 /** How far it then has to travel before the drag counts as a drag. */
 const COLW_DRAG_START = 3;
-// `v6`: the stored shape and the layout maths have both changed more than once, and
-// a stale set loads silently because only its length is checked.
-const colwStore = (key: string) => `lv.colw.v6.${key}`;
 
 export interface ColumnWidths {
     /** Spread onto the `<table>`, passing the style it would have had. */
@@ -614,7 +611,7 @@ export interface ColumnWidths {
 
 /** `defaults` is only needed by a grid that already hand-writes a `<colgroup>` —
  *  it is what the columns render as before the first drag. */
-export function useColumnWidths(storageKey: string, defaults?: (number | string)[]): ColumnWidths {
+export function useColumnWidths(defaults?: (number | string)[]): ColumnWidths {
     const ref = React.useRef<HTMLTableElement | null>(null);
     const [widths, setWidths] = React.useState<number[] | null>(null);
     const [nearBorder, setNearBorder] = React.useState(false);
@@ -622,30 +619,7 @@ export function useColumnWidths(storageKey: string, defaults?: (number | string)
     /** Set by a drag, read by the click that follows it — see `onClickCapture`. */
     const swallowClick = React.useRef(false);
 
-    // localStorage is read in an effect, not during render: these pages are client
-    // components but Next still renders them on the server, and a stored width set
-    // would hydrate against default-width markup.
-    React.useEffect(() => {
-        try {
-            const raw = localStorage.getItem(colwStore(storageKey));
-            if (!raw) return;
-            const { w } = JSON.parse(raw) ?? {};
-            if (Array.isArray(w) && w.length && w.every((n: any) => typeof n === 'number')
-                && (!defaults || w.length === defaults.length)) {
-                setWidths(w);
-            }
-        } catch { /* private mode / bad JSON — the table's own layout is fine */ }
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [storageKey, defaults?.length]);
-
-    const save = (w: number[] | null) => {
-        try {
-            if (w) localStorage.setItem(colwStore(storageKey), JSON.stringify({ w }));
-            else localStorage.removeItem(colwStore(storageKey));
-        } catch { /* ignore */ }
-    };
-
-    const reset = () => { setWidths(null); save(null); };
+    const reset = () => setWidths(null);
 
     /** The header row the borders are measured from, or null if this table has a
      *  shape we can't resize (no header, or a spanned cell — a spanned header has
@@ -721,7 +695,6 @@ export function useColumnWidths(storageKey: string, defaults?: (number | string)
         swallowClick.current = drag.current.moved;
         drag.current = null;
         try { ref.current?.releasePointerCapture(e.pointerId); } catch { /* already gone */ }
-        setWidths(w => { save(w); return w; });
     };
 
     return {
@@ -773,15 +746,14 @@ export function useColumnWidths(storageKey: string, defaults?: (number | string)
 /** A `<table>` whose columns the user can drag, and the way to opt a grid in:
  *  swap the tag, keep the style, keep the children. It owns the `<colgroup>`, so
  *  a grid that hand-writes one passes those widths as `defaults` and deletes it.
- *  `colKey` is the localStorage key — unique per grid, stable across releases. */
-export function ResizableTable({ colKey, defaults, style, className, children }: {
-    colKey: string;
+ */
+export function ResizableTable({ defaults, style, className, children }: {
     defaults?: (number | string)[];
     style?: React.CSSProperties;
     className?: string;
     children?: React.ReactNode;
 }) {
-    const colw = useColumnWidths(colKey, defaults);
+    const colw = useColumnWidths(defaults);
     return (
         <table className={className} {...colw.table(style)}>
             <colgroup>{colw.cols()}</colgroup>

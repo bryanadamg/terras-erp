@@ -1153,7 +1153,7 @@ export default function SampleRequestView({ samples, customers, onCreateSample, 
                style={{ flex: 1, minHeight: 0, overflow: 'auto', scrollbarGutter: 'stable', paddingLeft: 5 }}
            >
                <div>
-                   <ResizableTable colKey="samples"
+                   <ResizableTable 
                        style={{ width: '100%', borderCollapse: 'collapse', background: '#fff' }}
                    >
                        <thead style={xpTableHeader}>
