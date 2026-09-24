@@ -9,7 +9,7 @@ import ModalWrapper from '../shared/ModalWrapper';
 import { useToast } from '../shared/Toast';
 import { useData } from '../../context/DataContext';
 import type { PrintSettings } from './MOPrintModal';
-import { STATUS_COLORS, useFloatingMenu, MenuTriggerButton, FloatingMenu, ExpandedRowPanel, ExpandedRowPanelBody, ProgressBar, CodeChip, CODE_FONT, xpFont, TableSkeleton, useTableSkeletonMetrics, rowStateBg, StatusChip, CHIP_RADIUS, VariantChip, colorHexFor, colorLabel, colorTitle, BUTTON_RADIUS, XP_BTN, Chip, XPActionButton, ModalFooterActions, LocationChip } from '../shared/xpTheme';
+import { STATUS_COLORS, useFloatingMenu, MenuTriggerButton, FloatingMenu, ExpandedRowPanel, ExpandedRowPanelBody, ProgressBar, CodeChip, CODE_FONT, xpFont, TableSkeleton, useTableSkeletonMetrics, rowStateBg, StatusChip, CHIP_RADIUS, VariantChip, colorHexFor, colorLabel, colorTitle, BUTTON_RADIUS, XP_BTN, Chip, XPActionButton, ModalFooterActions, LocationChip, SKEL_PAGE_ROWS } from '../shared/xpTheme';
 import { lvSubTh, lvSubTd, lvSubTable, lvSubRow, ExpanderCell, LV_EXPANDER_COL_W, lvZebra, lvThead, lvTh, TableEmpty, Dash, ResizableTable } from '../shared/listViewTheme';
 const MOPrintModal = dynamic(() => import('./MOPrintModal'), { ssr: false });
 import WorkOrderPanel, { PrintChip } from './WorkOrderPanel';
@@ -1105,7 +1105,7 @@ export default function ManufacturingOrdersTab({
                         </thead>
                         <tbody ref={listBodyRef}>
                             {manufacturingOrders.length === 0 && (dataLoading.manufacturingOrders ? (
-                                <TableSkeleton rows={8} cols={skel.cols ?? 10} rowHeight={skel.rowHeight} fillHeight={skel.fillHeight} />
+                                <TableSkeleton rows={SKEL_PAGE_ROWS} cols={skel.cols ?? 10} rowHeight={skel.rowHeight} fillHeight={skel.fillHeight} />
                             ) : (
                                 <TableEmpty colSpan={10}
                                     message={moCodeFilter

@@ -9,7 +9,7 @@ import { usePaginatedFetch } from '../../context/usePaginatedList';
 import SearchableSelect from '@bryanadamg/terras-ui/components/Combobox';
 import ModalWrapper from '../shared/ModalWrapper';
 import Pager from '../shared/Pager';
-import { StatusChip, StatusCountPill, FormSection, useFloatingMenu, MenuTriggerButton, FloatingMenu, ColorSwatchChip, useSortable, ExpandedRowPanel, CodeChip, CODE_FONT, xpFont, TableSkeleton, useTableSkeletonMetrics, rowStateBg, ChipTone, CHIP_RADIUS, BTN_TONES, XP_BTN } from '../shared/xpTheme';
+import { StatusChip, StatusCountPill, FormSection, useFloatingMenu, MenuTriggerButton, FloatingMenu, ColorSwatchChip, useSortable, ExpandedRowPanel, CodeChip, CODE_FONT, xpFont, TableSkeleton, useTableSkeletonMetrics, rowStateBg, ChipTone, CHIP_RADIUS, BTN_TONES, XP_BTN, SKEL_PAGE_ROWS } from '../shared/xpTheme';
 import { SearchField, FilterChipBar, ToolbarCount, ToolbarButton, viewShellStyle, PageTitleBar } from '../shared/shellTheme';
 import RequestDetailPanel, { getStatusStripe } from '../shared/RequestDetailPanel';
 import { lvThead, ExpanderCell, LV_EXPANDER_COL_W, SortableTh, lvTh, lvTdRuled, lvZebra, TableEmpty, lvBtn, lvInput, ResizableTable } from '../shared/listViewTheme';
@@ -512,7 +512,7 @@ export default function LabDipRequestView({
                     </thead>
                     <tbody ref={listBodyRef}>
                         {labDips.length === 0 && (loading ? (
-                            <TableSkeleton rows={8} cols={skel.cols ?? 10} tdStyle={lvTdRuled()} rowHeight={skel.rowHeight} fillHeight={skel.fillHeight} />
+                            <TableSkeleton rows={SKEL_PAGE_ROWS} cols={skel.cols ?? 10} tdStyle={lvTdRuled()} rowHeight={skel.rowHeight} fillHeight={skel.fillHeight} />
                         ) : (
                             <TableEmpty colSpan={10} tdStyle={lvTdRuled()}
                                 message={hasActiveFilter ? 'No requests match the current filter.' : isYarn ? 'No yarn lab dip requests yet.' : 'No lab dip requests yet.'} />

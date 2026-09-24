@@ -9,7 +9,7 @@ import { useTimezone } from '../../context/TimezoneContext';
 import { useData } from '../../context/DataContext';
 import { useUser } from '../../context/UserContext';
 import { API_BASE } from '../shared/apiBase';
-import { XPEmptyState, ExpandedRowPanel, CODE_FONT, TableSkeleton, useTableSkeletonMetrics, useSortable, MenuTriggerButton, FloatingMenu, useFloatingMenu, FormSection, FieldLabel, StatusChip, CodeChip, xpFont, rowStateBg, CHIP_RADIUS, xpInput as xpInputBase, xpBtn as xpBtnBase, BTN_TONES, XP_BTN } from '../shared/xpTheme';
+import { XPEmptyState, ExpandedRowPanel, CODE_FONT, TableSkeleton, useTableSkeletonMetrics, useSortable, MenuTriggerButton, FloatingMenu, useFloatingMenu, FormSection, FieldLabel, StatusChip, CodeChip, xpFont, rowStateBg, CHIP_RADIUS, xpInput as xpInputBase, xpBtn as xpBtnBase, BTN_TONES, XP_BTN, SKEL_PAGE_ROWS } from '../shared/xpTheme';
 import { xpBevel as sharedXpBevel, xpTitleBar as sharedXpTitleBar, xpToolbar as sharedXpToolbar, SearchField, ToolbarButton, pageFillStyle } from '../shared/shellTheme';
 import TreeSelect, { buildCategoryTree, buildLocationPickerTree } from '../shared/TreeSelect';
 import { Tabs, TabDef } from '../shared/Tabs';
@@ -1227,7 +1227,7 @@ export default function InventoryView({
                     />
                   ))}
                   {filteredItems.length === 0 && dataLoading.items && (
-                    <TableSkeleton rows={8} cols={skel.cols ?? ITEM_COL_SPAN} rowHeight={skel.rowHeight} fillHeight={skel.fillHeight} />
+                    <TableSkeleton rows={SKEL_PAGE_ROWS} cols={skel.cols ?? ITEM_COL_SPAN} rowHeight={skel.rowHeight} fillHeight={skel.fillHeight} />
                   )}
                   {filteredItems.length === 0 && !dataLoading.items && (
                     <tr>

@@ -11,7 +11,7 @@ import BagLabelPrintModal from '../manufacturing/BagLabelPrintModal';
 import LotLabelPrintModal from '../manufacturing/LotLabelPrintModal';
 import PackedUnitLabelPrintModal from '../packing/PackedUnitLabelPrintModal';
 import { useData } from '../../context/DataContext';
-import { useFloatingMenu, MenuTriggerButton, FloatingMenu, useSortable, XPActionButton, ExpandedRowPanel, StatusChip, CODE_FONT, xpFont, TableSkeleton, useTableSkeletonMetrics, rowStateBg, CHIP_RADIUS, OriginChip, VariantChip, xpBtn as xpBtnBase, xpInput as xpInputBase, BTN_TONES, XP_BTN } from '../shared/xpTheme';
+import { useFloatingMenu, MenuTriggerButton, FloatingMenu, useSortable, XPActionButton, ExpandedRowPanel, StatusChip, CODE_FONT, xpFont, TableSkeleton, useTableSkeletonMetrics, rowStateBg, CHIP_RADIUS, OriginChip, VariantChip, xpBtn as xpBtnBase, xpInput as xpInputBase, BTN_TONES, XP_BTN, SKEL_PAGE_ROWS } from '../shared/xpTheme';
 import { xpBevel as sharedXpBevel, xpTitleBar as sharedXpTitleBar, FilterChipBar, ToolbarButton, SearchField, pageFillStyle } from '../shared/shellTheme';
 
 const LOT_STATUS_FILTERS = [
@@ -1039,7 +1039,7 @@ export default function BatchesView({ items, locations, categories, workCenters,
                 </tr>
               </thead>
               <tbody ref={listBodyRef}>
-                {loading && <TableSkeleton rows={8} cols={skel.cols ?? colSpan} tdStyle={xpTd(false)} rowHeight={skel.rowHeight} fillHeight={skel.fillHeight} />}
+                {loading && <TableSkeleton rows={SKEL_PAGE_ROWS} cols={skel.cols ?? colSpan} tdStyle={xpTd(false)} rowHeight={skel.rowHeight} fillHeight={skel.fillHeight} />}
                 {!loading && batches.length === 0 && (
                   <TableEmpty colSpan={colSpan} tdStyle={xpTd(false)} message="No lots found." />
                 )}

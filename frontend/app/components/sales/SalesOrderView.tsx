@@ -10,7 +10,7 @@ const SOTablePrintModal = dynamic(() => import('./SOTablePrintModal'), { ssr: fa
 import { useTimezone } from '../../context/TimezoneContext';
 import { useData } from '../../context/DataContext';
 import { useUser } from '../../context/UserContext';
-import { nextSortState, StatusChip, statusTint, TableSkeleton, useTableSkeletonMetrics, ProgressBar, useFloatingMenu, MenuTriggerButton, FloatingMenu, XPActionButton, FormSection, FieldLabel, xpBtn, xpInput as xpInputBase, CodeChip, CODE_FONT, xpFont, CHIP_RADIUS, CODE_CHIP_RADIUS, Chip, VariantChip, VariantKind, variantChipTone, colorLabel, colorHexFor, BTN_TONES, XP_BTN } from '../shared/xpTheme';
+import { nextSortState, StatusChip, statusTint, TableSkeleton, useTableSkeletonMetrics, ProgressBar, useFloatingMenu, MenuTriggerButton, FloatingMenu, XPActionButton, FormSection, FieldLabel, xpBtn, xpInput as xpInputBase, CodeChip, CODE_FONT, xpFont, CHIP_RADIUS, CODE_CHIP_RADIUS, Chip, VariantChip, VariantKind, variantChipTone, colorLabel, colorHexFor, BTN_TONES, XP_BTN, SKEL_PAGE_ROWS } from '../shared/xpTheme';
 
 import { qtyFmt } from '../shared/format';
 import { useComboSearch, useFinishedGoodsSearch } from '../shared/useEntitySearch';
@@ -2366,7 +2366,7 @@ In stock ${fmtQty(f.baseAvailable)}${bu} · Shipped ${fmtQty(f.baseShipped)}${bu
                                });
                            })}
                            {pageOrders.length === 0 && (dataLoading.salesOrders ? (
-                               <TableSkeleton rows={8} cols={skel.cols ?? 13} tdStyle={tdBase} rowHeight={skel.rowHeight} fillHeight={skel.fillHeight} />
+                               <TableSkeleton rows={SKEL_PAGE_ROWS} cols={skel.cols ?? 13} tdStyle={tdBase} rowHeight={skel.rowHeight} fillHeight={skel.fillHeight} />
                            ) : (
                                <tr>
                                    <td

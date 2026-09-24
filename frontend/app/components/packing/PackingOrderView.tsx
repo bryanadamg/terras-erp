@@ -9,7 +9,7 @@ import { useUser } from '../../context/UserContext';
 import { useTimezone } from '../../context/TimezoneContext';
 import { useToast } from '../shared/Toast';
 import { useConfirm } from '../../context/ConfirmContext';
-import { XPStatusBar, XPEmptyState, TableSkeleton, useTableSkeletonMetrics, StatusChip, useFloatingMenu, MenuTriggerButton, FloatingMenu, FormSection, SectionTitle, FieldLabel, XPActionButton, LegendPanel, ExpandedRowPanel, ProgressBar, CodeChip, Chip, CODE_FONT, rowStateBg, CHIP_RADIUS, BTN_TONES, XP_BTN } from '../shared/xpTheme';
+import { XPStatusBar, XPEmptyState, TableSkeleton, useTableSkeletonMetrics, StatusChip, useFloatingMenu, MenuTriggerButton, FloatingMenu, FormSection, SectionTitle, FieldLabel, XPActionButton, LegendPanel, ExpandedRowPanel, ProgressBar, CodeChip, Chip, CODE_FONT, rowStateBg, CHIP_RADIUS, BTN_TONES, XP_BTN, SKEL_PAGE_ROWS } from '../shared/xpTheme';
 import { LV_XP_FONT, lvBtn, lvInput, lvTd, lvRow, lvSubTh, lvSubTd, lvSubRow, ExpanderCell, RowCheckbox, lvThSticky, lvPickerRow, lvSubTable, ResizableTable } from '../shared/listViewTheme';
 import { ShellWindow, ShellTitleBar, xpToolbar, ToolbarButton } from '../shared/shellTheme';
 import Pager from '../shared/Pager';
@@ -731,7 +731,7 @@ export default function PackingOrderView({ initialCreateState, onClearInitialSta
                     </thead>
                     <tbody ref={listBodyRef}>
                         {orders.length === 0 && (loading ? (
-                            <TableSkeleton rows={7} cols={skel.cols ?? PO_COLS} tdStyle={td} rowHeight={skel.rowHeight} fillHeight={skel.fillHeight} />
+                            <TableSkeleton rows={SKEL_PAGE_ROWS} cols={skel.cols ?? PO_COLS} tdStyle={td} rowHeight={skel.rowHeight} fillHeight={skel.fillHeight} />
                         ) : (
                             <tr><td colSpan={PO_COLS} style={{ padding: 0 }}>
                                 <XPEmptyState icon="bi-box2" message='No packing orders yet. Click "New Packing Order" to pack finished goods into cartons.' />

@@ -6,7 +6,7 @@ import { useLanguage } from '../../context/LanguageContext';
 import ModalWrapper from '../shared/ModalWrapper';
 import Pager from '../shared/Pager';
 import { useUser } from '../../context/UserContext';
-import { StatusChip, useFloatingMenu, MenuTriggerButton, FloatingMenu, xpFont, TableSkeleton, useTableSkeletonMetrics, rowStateBg, BTN_TONES, XP_BTN } from '../shared/xpTheme';
+import { StatusChip, useFloatingMenu, MenuTriggerButton, FloatingMenu, xpFont, TableSkeleton, useTableSkeletonMetrics, rowStateBg, BTN_TONES, XP_BTN, SKEL_PAGE_ROWS } from '../shared/xpTheme';
 import { useData } from '../../context/DataContext';
 import { usePaginatedFetch } from '../../context/usePaginatedList';
 import { lvBtn, lvInput, lvTh, lvTd, lvLabel, lvThead, LV_STICKY_THEAD, useRowSelection, RowCheckbox, SelectAllCheckbox, lvZebra, ResizableTable } from '../shared/listViewTheme';
@@ -246,7 +246,7 @@ export default function PartnersView({ type, onCreate, onUpdate, onDelete, onBul
                                     </tr>
                                 ))}
                                 {pagedPartners.length === 0 && (loading ? (
-                                    <TableSkeleton rows={8} cols={skel.cols ?? 5} tdStyle={tdBase} rowHeight={skel.rowHeight} fillHeight={skel.fillHeight} />
+                                    <TableSkeleton rows={SKEL_PAGE_ROWS} cols={skel.cols ?? 5} tdStyle={tdBase} rowHeight={skel.rowHeight} fillHeight={skel.fillHeight} />
                                 ) : (
                                     <tr>
                                         <td

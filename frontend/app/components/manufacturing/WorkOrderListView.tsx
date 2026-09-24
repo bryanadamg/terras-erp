@@ -15,7 +15,7 @@ const BagLabelPrintModal = dynamic(() => import('./BagLabelPrintModal'), { ssr: 
 const BagScanStageModal = dynamic(() => import('./BagScanStageModal'), { ssr: false });
 import { getChipStyle, PrintChips } from './WorkOrderPanel';
 import Pager from '../shared/Pager';
-import { XPEmptyState, TableSkeleton, useTableSkeletonMetrics, XPStatusBar, useSortable, useFloatingMenu, MenuTriggerButton, FloatingMenu, XPActionButton, ExpandedRowPanel, ProgressBar, CodeChip, CODE_FONT, xpFont, rowStateBg, StatusChip, CHIP_RADIUS, colorLabel, xpInput as xpInputBase } from '../shared/xpTheme';
+import { XPEmptyState, TableSkeleton, useTableSkeletonMetrics, XPStatusBar, useSortable, useFloatingMenu, MenuTriggerButton, FloatingMenu, XPActionButton, ExpandedRowPanel, ProgressBar, CodeChip, CODE_FONT, xpFont, rowStateBg, StatusChip, CHIP_RADIUS, colorLabel, xpInput as xpInputBase, SKEL_PAGE_ROWS } from '../shared/xpTheme';
 import TreeSelect, { TreeSelectOption } from '../shared/TreeSelect';
 import { lvSubTh, lvSubTd, lvSubTable, lvSubRow, ExpanderCell, useRowSelection, RowCheckbox, SelectAllCheckbox, LV_CHECK_COL_W, LV_EXPANDER_COL_W, SortableTh, lvThSticky, lvTd, lvZebra, ResizableTable } from '../shared/listViewTheme';
 import { childrenOfWC, isMachineWC, isTypeWC, woHasStaging, woScanStages } from '../shared/workCenterTree';
@@ -751,7 +751,7 @@ export default function WorkOrderListView({
                             </thead>
                             <tbody ref={listBodyRef}>
                                 {filtered.length === 0 && (loading ? (
-                                    <TableSkeleton rows={8} cols={skel.cols ?? COLS} tdStyle={tdBase} rowHeight={skel.rowHeight} fillHeight={skel.fillHeight} />
+                                    <TableSkeleton rows={SKEL_PAGE_ROWS} cols={skel.cols ?? COLS} tdStyle={tdBase} rowHeight={skel.rowHeight} fillHeight={skel.fillHeight} />
                                 ) : (
                                     <tr>
                                         <td colSpan={COLS} style={{ padding: 0 }}>

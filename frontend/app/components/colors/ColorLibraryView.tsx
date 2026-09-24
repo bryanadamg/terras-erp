@@ -7,7 +7,7 @@ import { useDebouncedCommit } from '../../context/usePaginatedList';
 import SearchableSelect from '@bryanadamg/terras-ui/components/Combobox';
 import ModalWrapper from '../shared/ModalWrapper';
 import Pager from '../shared/Pager';
-import { StatusChip, FormSection, useFloatingMenu, MenuTriggerButton, FloatingMenu, XPActionButton, ColorSwatchChip, CodeChip, CODE_FONT, SwatchBox, TableSkeleton, useTableSkeletonMetrics, XP_BTN } from '../shared/xpTheme';
+import { StatusChip, FormSection, useFloatingMenu, MenuTriggerButton, FloatingMenu, XPActionButton, ColorSwatchChip, CodeChip, CODE_FONT, SwatchBox, TableSkeleton, useTableSkeletonMetrics, XP_BTN, SKEL_PAGE_ROWS } from '../shared/xpTheme';
 import { SearchField, FilterChipBar, ToolbarButton, viewShellStyle, PageTitleBar } from '../shared/shellTheme';
 import {
     LV_XP_FONT, lvInput, lvBtn, lvPrimaryBtn, lvLabel, lvTh, lvTd, lvSep, lvRow, lvThead, TableEmpty, ResizableTable } from '../shared/listViewTheme';
@@ -249,7 +249,7 @@ export default function ColorLibraryView({
                     </thead>
                     <tbody ref={listBodyRef}>
                         {colors.length === 0 && (loading ? (
-                            <TableSkeleton rows={8} cols={skel.cols ?? 13} tdStyle={lvTd()} rowHeight={skel.rowHeight} fillHeight={skel.fillHeight} />
+                            <TableSkeleton rows={SKEL_PAGE_ROWS} cols={skel.cols ?? 13} tdStyle={lvTd()} rowHeight={skel.rowHeight} fillHeight={skel.fillHeight} />
                         ) : (
                             <TableEmpty colSpan={13} tdStyle={lvTd()} message="No colors found." />
                         ))}

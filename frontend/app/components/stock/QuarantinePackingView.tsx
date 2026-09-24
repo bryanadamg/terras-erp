@@ -15,8 +15,7 @@ import {
 import {
     StatusChip, StatusCountPill, TableSkeleton, useTableSkeletonMetrics, XPStatusBar, XPEmptyState,
     XPActionButton, ColorSwatchChip, ExpandedRowPanel, CodeChip, rowStateBg, ToggleChip, ChipTone,
-    OriginChip, OriginChipRow, colorLabel, colorTitle, resolveColorHex, XP_BTN,
-} from '../shared/xpTheme';
+    OriginChip, OriginChipRow, colorLabel, colorTitle, resolveColorHex, XP_BTN, SKEL_PAGE_ROWS } from '../shared/xpTheme';
 import Pager from '../shared/Pager';
 import { API_BASE } from '../shared/apiBase';
 import { LotChips, LotChip, LotChipRow, LotVariantAttr, lotSizeLabel, lotComboLabel } from '../shared/LotChips';
@@ -1028,7 +1027,7 @@ export default function QuarantinePackingView() {
                             </Fragment>
                         );
                     })}
-                    {showSkeleton && <TableSkeleton rows={7} cols={skel.cols ?? COL_COUNT} tdStyle={lvTd()} rowHeight={skel.rowHeight} fillHeight={skel.fillHeight} />}
+                    {showSkeleton && <TableSkeleton rows={SKEL_PAGE_ROWS} cols={skel.cols ?? COL_COUNT} tdStyle={lvTd()} rowHeight={skel.rowHeight} fillHeight={skel.fillHeight} />}
                     {!loading && stableGroups.length === 0 && (
                         <tr>
                             <td colSpan={COL_COUNT} style={{ padding: 0 }}>

@@ -11,7 +11,7 @@ import CodeConfigModal, { CodeConfig } from '../shared/CodeConfigModal';
 import ModalWrapper from '../shared/ModalWrapper';
 import SearchableSelect from '@bryanadamg/terras-ui/components/Combobox';
 import Pager from '../shared/Pager';
-import { StatusChip, FormSection, useFloatingMenu, MenuTriggerButton, FloatingMenu, ExpandedRowPanel, CodeChip, ColorSwatchChip, xpFont, TableSkeleton, useTableSkeletonMetrics, rowStateBg, CHIP_RADIUS, FORM_SECTION_BLUE, xpInput as xpInputBase, xpBtn as xpBtnBase } from '../shared/xpTheme';
+import { StatusChip, FormSection, useFloatingMenu, MenuTriggerButton, FloatingMenu, ExpandedRowPanel, CodeChip, ColorSwatchChip, xpFont, TableSkeleton, useTableSkeletonMetrics, rowStateBg, CHIP_RADIUS, FORM_SECTION_BLUE, xpInput as xpInputBase, xpBtn as xpBtnBase, SKEL_PAGE_ROWS } from '../shared/xpTheme';
 import { lvTh, lvTd, lvSep, lvLabel, lvThead, lvSubTh, lvSubTd, lvSubRow, ExpanderCell, TableEmpty, lvRow, lvSubTable } from '../shared/listViewTheme';
 import { ToolbarButton, SearchField, ToolbarCount } from '../shared/shellTheme';
 import { API_BASE } from '../shared/apiBase';
@@ -644,7 +644,7 @@ export default function DyeRecipeTab({ items, attributes, authFetch, initialColo
                     </thead>
                     <tbody ref={listBodyRef}>
                         {recipes.length === 0 && (loading ? (
-                            <TableSkeleton rows={8} cols={skel.cols ?? 10} tdStyle={lvTd()} rowHeight={skel.rowHeight} fillHeight={skel.fillHeight} />
+                            <TableSkeleton rows={SKEL_PAGE_ROWS} cols={skel.cols ?? 10} tdStyle={lvTd()} rowHeight={skel.rowHeight} fillHeight={skel.fillHeight} />
                         ) : (
                             <TableEmpty colSpan={10} tdStyle={lvTd()} message="No recipes found." />
                         ))}

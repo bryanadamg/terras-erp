@@ -1,7 +1,7 @@
 import { useState, useMemo, useRef } from 'react';
 import { useLanguage } from '../../context/LanguageContext';
 import { useUser } from '../../context/UserContext';
-import { useServerSort, TableSkeleton, useTableSkeletonMetrics, XPActionButton, FormSection, FieldLabel, CodeChip, CODE_FONT, xpFont, rowStateBg, VariantChip, Chip, REF_TONES, statusTint, xpInput as xpInputBase, xpBtn as xpBtnBase, BTN_TONES, XP_BTN } from '../shared/xpTheme';
+import { useServerSort, TableSkeleton, useTableSkeletonMetrics, XPActionButton, FormSection, FieldLabel, CodeChip, CODE_FONT, xpFont, rowStateBg, VariantChip, Chip, REF_TONES, statusTint, xpInput as xpInputBase, xpBtn as xpBtnBase, BTN_TONES, XP_BTN, SKEL_PAGE_ROWS } from '../shared/xpTheme';
 import { usePaginatedFetch } from '../../context/usePaginatedList';
 import { xpBevel as sharedXpBevel, xpTitleBar as sharedXpTitleBar, xpToolbar as sharedXpToolbar, SearchField, ToolbarButton, pageFillStyle, flexFillStyle } from '../shared/shellTheme';
 import { useToast } from '../shared/Toast';
@@ -1252,7 +1252,7 @@ export default function StockOnHandView({ locations, attributes, categories, ite
                         <tbody ref={listBodyRef}>
                             {pageRows.map((bal: any, i: number) => renderRow(bal, i))}
                             {pageRows.length === 0 && (loading ? (
-                                <TableSkeleton rows={8} cols={skel.cols ?? 14} rowHeight={skel.rowHeight} fillHeight={skel.fillHeight} />
+                                <TableSkeleton rows={SKEL_PAGE_ROWS} cols={skel.cols ?? 14} rowHeight={skel.rowHeight} fillHeight={skel.fillHeight} />
                             ) : <tr>
                                     <td colSpan={14} style={{ textAlign: 'center', padding: '24px' }}>
                                         <span style={{ fontFamily: xpFont, fontSize: '11px', color: '#666', fontStyle: 'italic' }}>No stock records found</span>

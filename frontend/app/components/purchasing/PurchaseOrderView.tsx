@@ -10,7 +10,7 @@ import ModalWrapper from '../shared/ModalWrapper';
 import { useTimezone } from '../../context/TimezoneContext';
 import { useData } from '../../context/DataContext';
 import { useUser } from '../../context/UserContext';
-import { useSortable, StatusChip, TableSkeleton, useTableSkeletonMetrics, ProgressBar, useFloatingMenu, MenuTriggerButton, FloatingMenu, FormSection, FieldLabel, ExpandedRowPanel, xpBtn, xpInput as xpInputBase, CodeChip, xpFont, rowStateBg, CHIP_RADIUS, BTN_TONES, XP_BTN } from '../shared/xpTheme';
+import { useSortable, StatusChip, TableSkeleton, useTableSkeletonMetrics, ProgressBar, useFloatingMenu, MenuTriggerButton, FloatingMenu, FormSection, FieldLabel, ExpandedRowPanel, xpBtn, xpInput as xpInputBase, CodeChip, xpFont, rowStateBg, CHIP_RADIUS, BTN_TONES, XP_BTN, SKEL_PAGE_ROWS } from '../shared/xpTheme';
 import { xpBevel as sharedXpBevel, xpTitleBar as sharedXpTitleBar, xpToolbar as sharedXpToolbar, SearchField, FilterChipBar, ToolbarCount, ToolbarButton } from '../shared/shellTheme';
 import Pager from '../shared/Pager';
 import { lvThead, lvSubTh, lvSubTd, lvSubTable, lvSubCaption, ExpanderCell, SortableTh, lvThSticky, lvTdRuled, lvZebra, ResizableTable } from '../shared/listViewTheme';
@@ -990,7 +990,7 @@ export default function PurchaseOrderView({ items, itemResults, onSearchItems, a
                                </>
                            ))}
                            {pageOrders.length === 0 && (dataLoading.purchaseOrders ? (
-                               <TableSkeleton rows={8} cols={skel.cols ?? 9} tdStyle={tdBase} rowHeight={skel.rowHeight} fillHeight={skel.fillHeight} />
+                               <TableSkeleton rows={SKEL_PAGE_ROWS} cols={skel.cols ?? 9} tdStyle={tdBase} rowHeight={skel.rowHeight} fillHeight={skel.fillHeight} />
                            ) : (
                                <tr>
                                    <td

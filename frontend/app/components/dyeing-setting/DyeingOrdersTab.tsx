@@ -5,8 +5,7 @@ import {
     xpFont, CODE_FONT, CHIP_RADIUS, XP_BTN, colorLabel, rowStateBg,
     CodeChip, StatusChip, ProgressBar, ExpandedRowPanel, XPEmptyState,
     TableSkeleton, useTableSkeletonMetrics, useSortable, XPActionButton,
-    xpInput as xpInputBase, FORM_SECTION_BLUE,
-} from '../shared/xpTheme';
+    xpInput as xpInputBase, FORM_SECTION_BLUE, SKEL_PAGE_ROWS } from '../shared/xpTheme';
 import {
     SortableTh, ExpanderCell, LV_EXPANDER_COL_W, lvThSticky, lvTd, lvZebra,
     lvSubTable, lvSubTh, lvSubTd, lvSubRow, Dash, lvBtn, lvInput, ResizableTable,
@@ -893,7 +892,7 @@ export default function DyeingOrdersTab({ items, recipes, authFetch }: DyeingOrd
                     </thead>
                     <tbody ref={listBodyRef}>
                         {workOrders.length === 0 && (woLoading ? (
-                            <TableSkeleton rows={8} cols={skel.cols ?? COLS} tdStyle={tdBase} rowHeight={skel.rowHeight} fillHeight={skel.fillHeight} />
+                            <TableSkeleton rows={SKEL_PAGE_ROWS} cols={skel.cols ?? COLS} tdStyle={tdBase} rowHeight={skel.rowHeight} fillHeight={skel.fillHeight} />
                         ) : (
                             <tr>
                                 <td colSpan={COLS} style={{ padding: 0 }}>

@@ -10,8 +10,7 @@ import { API_BASE } from '../shared/apiBase';
 import {
     CodeChip, xpFont, CODE_FONT, StatusChip, XP_BTN, CHIP_RADIUS, colorLabel, rowStateBg,
     ProgressBar, ExpandedRowPanel, XPEmptyState, TableSkeleton, useTableSkeletonMetrics,
-    useSortable, XPActionButton, xpInput as xpInputBase,
-} from '../shared/xpTheme';
+    useSortable, XPActionButton, xpInput as xpInputBase, SKEL_PAGE_ROWS } from '../shared/xpTheme';
 import { orDash, fmtQtyFixed } from '../shared/format';
 import {
     SortableTh, ExpanderCell, LV_EXPANDER_COL_W, lvThSticky, lvTd, lvZebra,
@@ -604,7 +603,7 @@ export default function SettingOrdersTab({ items, authFetch }: Props) {
                     </thead>
                     <tbody ref={listBodyRef}>
                         {workOrders.length === 0 && (loading ? (
-                            <TableSkeleton rows={8} cols={skel.cols ?? COLS} tdStyle={tdBase} rowHeight={skel.rowHeight} fillHeight={skel.fillHeight} />
+                            <TableSkeleton rows={SKEL_PAGE_ROWS} cols={skel.cols ?? COLS} tdStyle={tdBase} rowHeight={skel.rowHeight} fillHeight={skel.fillHeight} />
                         ) : (
                             <tr>
                                 <td colSpan={COLS} style={{ padding: 0 }}>

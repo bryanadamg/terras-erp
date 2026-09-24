@@ -6,7 +6,7 @@ import { FilterChipBar, ToolbarButton } from '../shared/shellTheme';
 import Pager from '../shared/Pager';
 import { useToast } from '../shared/Toast';
 import { useData } from '../../context/DataContext';
-import { statusChipStyle, useFloatingMenu, MenuTriggerButton, FloatingMenu, XPActionButton, ExpandedRowPanel, ExpandedRowPanelBody, ProgressBar, CodeChip, CODE_FONT, xpFont, TableSkeleton, SkeletonBar, useTableSkeletonMetrics, rowStateBg, StatusChip, CHIP_RADIUS, VariantChip } from '../shared/xpTheme';
+import { statusChipStyle, useFloatingMenu, MenuTriggerButton, FloatingMenu, XPActionButton, ExpandedRowPanel, ExpandedRowPanelBody, ProgressBar, CodeChip, CODE_FONT, xpFont, TableSkeleton, SkeletonBar, useTableSkeletonMetrics, rowStateBg, StatusChip, CHIP_RADIUS, VariantChip, SKEL_PAGE_ROWS } from '../shared/xpTheme';
 import { lvSubTh, lvSubTd, lvSubTable, lvSubRow, ExpanderCell, LV_EXPANDER_COL_W, lvZebra, lvThead, lvTh, ResizableTable } from '../shared/listViewTheme';
 import { API_BASE } from '../shared/apiBase';
 const PRMaterialPullSheetModal = dynamic(() => import('./PRMaterialPullSheetModal'), { ssr: false });
@@ -331,7 +331,7 @@ export default function ProductionRunsTab({
                         </thead>
                         <tbody ref={listBodyRef}>
                             {filteredProductionRuns.length === 0 && dataLoading.productionRuns && (
-                                <TableSkeleton rows={8} cols={skel.cols ?? 9} rowHeight={skel.rowHeight} fillHeight={skel.fillHeight} />
+                                <TableSkeleton rows={SKEL_PAGE_ROWS} cols={skel.cols ?? 9} rowHeight={skel.rowHeight} fillHeight={skel.fillHeight} />
                             )}
                             {filteredProductionRuns.map((pr: any, rowIdx: number) => {
                                 const mos = pr.manufacturing_orders || [];

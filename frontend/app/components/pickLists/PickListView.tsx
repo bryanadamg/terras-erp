@@ -9,7 +9,7 @@ import { useTimezone } from '../../context/TimezoneContext';
 import { useToast } from '../shared/Toast';
 import { useConfirm } from '../../context/ConfirmContext';
 import { LotChip, LotChips, LotChipRow } from '../shared/LotChips';
-import { XPStatusBar, XPEmptyState, TableSkeleton, useTableSkeletonMetrics, StatusChip, Chip, statusTint, useFloatingMenu, MenuTriggerButton, FloatingMenu, ExpandedRowPanel, XPActionButton, CODE_FONT, rowStateBg, CHIP_RADIUS, XP_BTN, ProgressBar, progressToneColor, useSortable } from '../shared/xpTheme';
+import { XPStatusBar, XPEmptyState, TableSkeleton, useTableSkeletonMetrics, StatusChip, Chip, statusTint, useFloatingMenu, MenuTriggerButton, FloatingMenu, ExpandedRowPanel, XPActionButton, CODE_FONT, rowStateBg, CHIP_RADIUS, XP_BTN, ProgressBar, progressToneColor, useSortable, SKEL_PAGE_ROWS } from '../shared/xpTheme';
 import { LV_XP_FONT, lvBtn, lvInput, lvTd, lvLabel, lvRow, lvSubTh, lvSubTd, lvSubRow, ExpanderCell, lvThSticky, lvSubTable, RowCheckboxCell, LV_CHECK_COL_W, SortableTh, ResizableTable } from '../shared/listViewTheme';
 import { ShellWindow, ShellTitleBar, xpToolbar, FilterChipBar, ToolbarCount } from '../shared/shellTheme';
 import Pager from '../shared/Pager';
@@ -516,7 +516,7 @@ export default function PickListView() {
                     </thead>
                     <tbody ref={listBodyRef}>
                         {pickLists.length === 0 && (loading ? (
-                            <TableSkeleton rows={7} cols={skel.cols ?? PL_COLS} tdStyle={td} rowHeight={skel.rowHeight} fillHeight={skel.fillHeight} />
+                            <TableSkeleton rows={SKEL_PAGE_ROWS} cols={skel.cols ?? PL_COLS} tdStyle={td} rowHeight={skel.rowHeight} fillHeight={skel.fillHeight} />
                         ) : (
                             <tr><td colSpan={PL_COLS} style={{ padding: 0 }}>
                                 <XPEmptyState icon="bi-clipboard-check" message='No pick lists yet. Click "New Pick List" to pick packed cartons for an order.' />

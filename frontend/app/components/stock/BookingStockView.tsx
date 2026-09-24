@@ -4,7 +4,7 @@ import { useState, useCallback, useMemo, useRef, Fragment } from 'react';
 import { useLanguage } from '../../context/LanguageContext';
 import { useData } from '../../context/DataContext';
 import { usePaginatedFetch } from '../../context/usePaginatedList';
-import { xpFont, xpBtn, TableSkeleton, useTableSkeletonMetrics, useSortable, ExpandedRowPanel, expandedRowFrame, CodeChip, CODE_FONT, rowStateBg, CHIP_RADIUS, XP_BTN, VariantChip } from '../shared/xpTheme';
+import { xpFont, xpBtn, TableSkeleton, useTableSkeletonMetrics, useSortable, ExpandedRowPanel, expandedRowFrame, CodeChip, CODE_FONT, rowStateBg, CHIP_RADIUS, XP_BTN, VariantChip, SKEL_PAGE_ROWS } from '../shared/xpTheme';
 import { xpBevel as sharedXpBevel, xpTitleBar as sharedXpTitleBar, xpToolbar as sharedXpToolbar, SearchField, pageFillStyle } from '../shared/shellTheme';
 import Pager from '../shared/Pager';
 import { lvThead, lvSubTh, lvSubTd, lvSubTable, lvSubRow, lvSubCaption, ExpanderCell, LV_EXPANDER_COL_W, SortableTh, lvThSticky, lvZebra, TableEmpty, ResizableTable } from '../shared/listViewTheme';
@@ -321,7 +321,7 @@ export default function BookingStockView() {
                             {/* Skeleton in both themes — the modern branch used to show a bare
                                 "Loading..." line, which reads as a row rather than as a wait. */}
                             {loading && (
-                                <TableSkeleton rows={8} cols={skel.cols ?? COLS.length + 1}
+                                <TableSkeleton rows={SKEL_PAGE_ROWS} cols={skel.cols ?? COLS.length + 1}
                                     rowHeight={skel.rowHeight} fillHeight={skel.fillHeight} />
                             )}
                         </tbody>

@@ -11,8 +11,7 @@ import { lvTh, lvThead, lvTd, lvRow, lvBtn, lvSubTable, lvSubTh, lvSubTd, lvSubR
 import {
     StatusChip, XPStatusBar, XPEmptyState, TableSkeleton, CodeChip,
     ExpandedRowPanel, ExpandedRowPanelBody, statusColor, WorkCenterChip, ToggleChip, rowStateBg, XP_BTN,
-    useServerSort,
-} from '../shared/xpTheme';
+    useServerSort, SKEL_PAGE_ROWS } from '../shared/xpTheme';
 import VariantChips from '../shared/VariantChips';
 import AttributeValueChips from '../shared/attributeChips';
 import { LotChip, LotChipRow } from '../shared/LotChips';
@@ -603,7 +602,7 @@ export default function WorkQueueView() {
                         </tr>
                     </thead>
                     <tbody>
-                        {loading && rows.length === 0 && <TableSkeleton rows={8} cols={12} />}
+                        {loading && rows.length === 0 && <TableSkeleton rows={SKEL_PAGE_ROWS} cols={12} />}
                         {!loading && rows.length === 0 && (
                             <tr><td colSpan={12}>
                                 <XPEmptyState

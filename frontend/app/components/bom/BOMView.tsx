@@ -7,7 +7,7 @@ import ModalWrapper from '../shared/ModalWrapper';
 import { useToast } from '../shared/Toast';
 import { useLanguage } from '../../context/LanguageContext';
 import { useData } from '../../context/DataContext';
-import { workCenterChipStyle, xpFont, colorHexFor, expandedRowFrame, CodeChip, CODE_FONT, TableSkeleton, useTableSkeletonMetrics, rowStateBg, CHIP_RADIUS, VariantChip, BUTTON_RADIUS, XP_BTN, XPActionButton, useFloatingMenu, MenuTriggerButton, FloatingMenu } from '../shared/xpTheme';
+import { workCenterChipStyle, xpFont, colorHexFor, expandedRowFrame, CodeChip, CODE_FONT, TableSkeleton, useTableSkeletonMetrics, rowStateBg, CHIP_RADIUS, VariantChip, BUTTON_RADIUS, XP_BTN, XPActionButton, useFloatingMenu, MenuTriggerButton, FloatingMenu, SKEL_PAGE_ROWS } from '../shared/xpTheme';
 import Pager from '../shared/Pager';
 import { lvThead, LV_STICKY_THEAD, ExpanderCell, useRowSelection, RowCheckbox, SelectAllCheckbox, LV_CHECK_COL_W, LV_EXPANDER_COL_W, lvZebra, TableEmpty, Dash, lvSubTable, lvSubTd, lvSubRow, lvThBanded, ResizableTable } from '../shared/listViewTheme';
 import { FilterChipBar, xpToolbar, ToolbarButton, SearchField, xpTitleBar, viewShellStyle } from '../shared/shellTheme';
@@ -848,7 +848,7 @@ export default function BOMView({
 
                                 <tbody ref={listBodyRef}>
                                     {boms.length === 0 && bomLoading ? (
-                                        <TableSkeleton rows={8} cols={skel.cols ?? 9} rowHeight={skel.rowHeight} fillHeight={skel.fillHeight} />
+                                        <TableSkeleton rows={SKEL_PAGE_ROWS} cols={skel.cols ?? 9} rowHeight={skel.rowHeight} fillHeight={skel.fillHeight} />
                                     ) : boms.length === 0 ? (
                                         <TableEmpty colSpan={9}
                                             message={bomSearch.trim()

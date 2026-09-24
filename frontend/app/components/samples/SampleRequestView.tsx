@@ -12,7 +12,7 @@ import SearchableSelect from '@bryanadamg/terras-ui/components/Combobox';
 import HistoryPane from '../shared/HistoryPane';
 import ModalWrapper from '../shared/ModalWrapper';
 const SamplePrintModal = dynamic(() => import('./SamplePrintModal'), { ssr: false });
-import { StatusChip, StatusCountPill, TableSkeleton, useTableSkeletonMetrics, FormSection, useFloatingMenu, FloatingMenu, MenuTriggerButton, XPActionButton, familyColor, Chip, VariantChip, VARIANT_TONE, REF_TONES, CodeChip, xpFont, rowStateBg, ToggleChip, CHIP_RADIUS, xpInput as xpInputBase, xpBtn as xpBtnBase, expandedRowFrame, BTN_TONES, XP_BTN } from '../shared/xpTheme';
+import { StatusChip, StatusCountPill, TableSkeleton, useTableSkeletonMetrics, FormSection, useFloatingMenu, FloatingMenu, MenuTriggerButton, XPActionButton, familyColor, Chip, VariantChip, VARIANT_TONE, REF_TONES, CodeChip, xpFont, rowStateBg, ToggleChip, CHIP_RADIUS, xpInput as xpInputBase, xpBtn as xpBtnBase, expandedRowFrame, BTN_TONES, XP_BTN, SKEL_PAGE_ROWS } from '../shared/xpTheme';
 import { ShellWindow, ShellTitleBar, xpToolbar, SearchField, FilterChipBar, ToolbarCount, ToolbarButton } from '../shared/shellTheme';
 import Pager from '../shared/Pager';
 import RequestDetailPanel, { getStatusStripe } from '../shared/RequestDetailPanel';
@@ -1509,7 +1509,7 @@ export default function SampleRequestView({ samples, customers, onCreateSample, 
                                </React.Fragment>
                            ))}
                            {pageSamples.length === 0 && (dataLoading.samples ? (
-                               <TableSkeleton rows={8} cols={skel.cols ?? 9} tdStyle={tdBase} rowHeight={skel.rowHeight} fillHeight={skel.fillHeight} />
+                               <TableSkeleton rows={SKEL_PAGE_ROWS} cols={skel.cols ?? 9} tdStyle={tdBase} rowHeight={skel.rowHeight} fillHeight={skel.fillHeight} />
                            ) : (
                                <tr>
                                    <td

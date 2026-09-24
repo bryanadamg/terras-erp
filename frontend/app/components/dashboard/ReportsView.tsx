@@ -6,7 +6,7 @@ import { useData } from '../../context/DataContext';
 import { useDebouncedCommit } from '../../context/usePaginatedList';
 import {
     xpFont, xpBtn, xpInput, xpSelect, xpSep,
-    TableSkeleton, useTableSkeletonMetrics, XPEmptyState, useSortable, CodeChip, CHIP_RADIUS, XP_BTN } from '../shared/xpTheme';
+    TableSkeleton, useTableSkeletonMetrics, XPEmptyState, useSortable, CodeChip, CHIP_RADIUS, XP_BTN, SKEL_PAGE_ROWS } from '../shared/xpTheme';
 import TreeSelect, { buildLocationFilterTree, expandLocationFilterValue, buildCategoryTree, expandCategoryFilterValue } from '../shared/TreeSelect';
 import Pager from '../shared/Pager';
 import { xpBevel as sharedXpBevel, xpTitleBar as sharedXpTitleBar, xpToolbar as sharedXpToolbar, SearchField, FilterChipBar, SegmentedBar, FilterChipOption, pageFillStyle, flexFillStyle } from '../shared/shellTheme';
@@ -416,7 +416,7 @@ export default function ReportsView(_props: any) {
                     put and the placeholder rows inherit its columns. */}
                 <tbody ref={listBodyRef}>
                     {loading
-                        ? <TableSkeleton rows={10} cols={skel.cols ?? 7} tdStyle={xpCell} rowHeight={skel.rowHeight} fillHeight={skel.fillHeight} />
+                        ? <TableSkeleton rows={SKEL_PAGE_ROWS} cols={skel.cols ?? 7} tdStyle={xpCell} rowHeight={skel.rowHeight} fillHeight={skel.fillHeight} />
                         : rows.map((e: any, i: number) => renderRow(e, i))}
                 </tbody>
             </ResizableTable>

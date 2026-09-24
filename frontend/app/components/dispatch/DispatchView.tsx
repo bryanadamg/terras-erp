@@ -10,8 +10,7 @@ import { useToast } from '../shared/Toast';
 import { useConfirm } from '../../context/ConfirmContext';
 import {
     XPStatusBar, XPEmptyState, TableSkeleton, useTableSkeletonMetrics, StatusChip,
-    useFloatingMenu, MenuTriggerButton, FloatingMenu, ExpandedRowPanel, XPActionButton, CodeChip, CODE_FONT, rowStateBg, colorLabel, colorTitle, XP_BTN,
-} from '../shared/xpTheme';
+    useFloatingMenu, MenuTriggerButton, FloatingMenu, ExpandedRowPanel, XPActionButton, CodeChip, CODE_FONT, rowStateBg, colorLabel, colorTitle, XP_BTN, SKEL_PAGE_ROWS } from '../shared/xpTheme';
 import { LV_XP_FONT, lvBtn, lvInput, lvTd, lvLabel, lvRow, lvSubTh, lvSubTd, lvSubTable, useRowSelection, RowCheckbox, SelectAllCheckbox, LV_CHECK_COL_W, EMPTY_DASH, lvTh, lvThead, ResizableTable } from '../shared/listViewTheme';
 import { ShellWindow, ShellTitleBar, SearchField, FilterChipBar, ToolbarCount, xpToolbar } from '../shared/shellTheme';
 import Pager from '../shared/Pager';
@@ -329,7 +328,7 @@ export default function DispatchView() {
                     </thead>
                     <tbody ref={listBodyRef}>
                         {nothingYet && (stillLoading ? (
-                            <TableSkeleton rows={6} cols={skel.cols ?? COLS} tdStyle={td} rowHeight={skel.rowHeight} fillHeight={skel.fillHeight} />
+                            <TableSkeleton rows={SKEL_PAGE_ROWS} cols={skel.cols ?? COLS} tdStyle={td} rowHeight={skel.rowHeight} fillHeight={skel.fillHeight} />
                         ) : (
                             <tr><td colSpan={COLS} style={{ padding: 0 }}>
                                 <XPEmptyState icon="bi-truck" message={statusFilter === DECK_FILTER
