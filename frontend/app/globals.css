@@ -676,10 +676,13 @@ body.window-chrome-inactive {
   z-index: 1040; /* Above sticky headers */
   transition: all 0.3s;
   overflow-y: auto;
-  scrollbar-width: none; /* still scrolls by wheel/touch; bar hidden */
 }
-/* Older Safari ignores scrollbar-width; the classic prefix outranks the global XP rule */
-.ui-style-classic .sidebar::-webkit-scrollbar { display: none; }
+/* The nav list below the header is what actually scrolls. Bar hidden; wheel/touch
+   still scroll. The ::-webkit rule covers older Safari, and its classic prefix
+   outranks the global XP scrollbar rule. */
+.sidebar, .sidebar-nav { scrollbar-width: none; }
+.ui-style-classic .sidebar::-webkit-scrollbar,
+.ui-style-classic .sidebar-nav::-webkit-scrollbar { display: none; }
 
 .sidebar-header {
   height: 64px;

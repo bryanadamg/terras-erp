@@ -262,7 +262,7 @@ export default function Sidebar({ activeTab, setActiveTab, onTabHover, appName, 
         />
       </div>
 
-      <div style={{ flex: 1, overflowY: 'auto' }}>
+      <div className="sidebar-nav" style={{ flex: 1, overflowY: 'auto' }}>
         {/* ── Quick Scan ── */}
         <div style={{ padding: '8px 8px 4px'}}>
           <button
