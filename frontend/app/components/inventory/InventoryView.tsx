@@ -326,6 +326,26 @@ export default function InventoryView({
           .map((c: any) => ({ key: c.id, label: c.name, icon: getCategoryTabIcon(c.name) })),
   ], [categories]);
 
+  // Remember the root-category tab for this browser session (same key scheme as
+  // hooks/useRememberedTab). It can't use that hook: the filter lives in DataContext
+  // and inventory/page.tsx clears it on unmount — so restore it on return instead.
+  // Waits for categories so a stale id from a deleted category can't stick; the
+  // write effect only starts after that, so the mount-time '' can't clobber it.
+  const categoryRestoredRef = useRef(false);
+  useEffect(() => {
+    if (categoryRestoredRef.current || categories.length === 0) return;
+    categoryRestoredRef.current = true;
+    try {
+      const saved = sessionStorage.getItem('terras_tab:inventory');
+      if (saved && saved !== 'ALL' && !categoryL1 && categoryTabs.some(t => t.key === saved)) setCategoryL1(saved);
+    } catch { /* storage blocked: default tab */ }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [categoryTabs]);
+  useEffect(() => {
+    if (!categoryRestoredRef.current) return;
+    try { sessionStorage.setItem('terras_tab:inventory', categoryL1 || 'ALL'); } catch { /* not remembered */ }
+  }, [categoryL1]);
+
   const handleCategoryTabChange = (key: string) => {
       setCategoryL2(''); setCategoryL3('');
       setCategoryL1(key === 'ALL' ? '' : key);
