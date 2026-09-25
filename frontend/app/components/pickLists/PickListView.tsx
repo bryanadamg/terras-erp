@@ -5,6 +5,7 @@ import dynamic from 'next/dynamic';
 import { useData } from '../../context/DataContext';
 import { usePaginatedFetch } from '../../context/usePaginatedList';
 import { useUser } from '../../context/UserContext';
+import { useRememberedTab } from '../../hooks/useRememberedTab';
 import { useTimezone } from '../../context/TimezoneContext';
 import { useToast } from '../shared/Toast';
 import { useConfirm } from '../../context/ConfirmContext';
@@ -57,7 +58,7 @@ export default function PickListView() {
     // The board lands first: opening this page is nearly always "what should ship
     // next", and the Pick row on the board is the only way to create a list, so
     // the register is the follow-up view rather than the entry point.
-    const [tab, setTab] = useState<PLTab>('topick');
+    const [tab, setTab] = useRememberedTab<PLTab>('pick-lists', 'topick', ['topick', 'lists']);
 
     // Page window, fetch, loading flag and the stale-response race guard all come
     // from the shared hook (context/usePaginatedList.ts). No filters on this list —

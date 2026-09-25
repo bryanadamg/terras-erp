@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useLanguage } from '../../context/LanguageContext';
 import { useUser } from '../../context/UserContext';
+import { useRememberedTab } from '../../hooks/useRememberedTab';
 import TreeSelect, { buildLocationPickerTree, TreeSelectOption } from '../shared/TreeSelect';
 import { ShellWindow, ShellTitleBar, SearchField, ToolbarCount, ToolbarButton } from '../shared/shellTheme';
 import { Tabs, TabDef } from '../shared/Tabs';
@@ -123,7 +124,7 @@ export default function RoutingView({ workCenters, operations, locations, onCrea
       { key: 'operations', label: t('standard_operations'), icon: 'bi-gear-fill' },
   ];
 
-  const [activeTab, setActiveTab] = useState<TabKey>('work_centers');
+  const [activeTab, setActiveTab] = useRememberedTab<TabKey>('routing', 'work_centers', TABS.map(t => t.key));
   const [newWorkCenter, setNewWorkCenter] = useState({ ...emptyWC });
   const [newOperation, setNewOperation] = useState({ code: '', name: '' });
   const [wcSearch, setWcSearch] = useState('');
