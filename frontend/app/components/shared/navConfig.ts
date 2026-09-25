@@ -53,7 +53,7 @@ export const NAV_SECTIONS: NavSection[] = [
     },
     {
         key: 'inventory', label: 'Inventory', i18nKey: 'inventory', icon: 'bi-box-seam', accent: 'blue',
-        permissions: ['item.view', 'stock_on_hand.view', 'lot.view', 'location.view', 'combo_library.view', 'packaging_type.view', 'booking_stock.view'],
+        permissions: ['item.view', 'attribute.view', 'stock_on_hand.view', 'lot.view', 'location.view', 'combo_library.view', 'packaging_type.view', 'booking_stock.view'],
         items: [
             { tab: 'inventory', label: 'Item Inventory', i18nKey: 'item_inventory', icon: 'bi-list-check', permission: 'item.view' },
             { tab: 'item-metadata', label: 'Attributes', i18nKey: 'attributes', icon: 'bi-tag', permission: 'attribute.view' },
