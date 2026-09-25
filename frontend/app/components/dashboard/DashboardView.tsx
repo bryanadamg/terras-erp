@@ -87,7 +87,8 @@ export default function DashboardView({ items, workOrders, kpis, summary, outloo
     };
 
     // ── Server-computed aggregates (with client fallback if summary missing) ───
-    const prodYield = hasSummary
+    // /summary omits production_yield for roles without manufacturing view.
+    const prodYield: number | undefined = hasSummary
         ? summary.production_yield
         : (() => {
             const yo = (workOrders || []).filter((w: any) => ['COMPLETED', 'IN_PROGRESS'].includes(w.status));
@@ -478,7 +479,7 @@ export default function DashboardView({ items, workOrders, kpis, summary, outloo
                         style={{ marginTop: 0 }}
                         right={<>{t('delivery_readiness')}: {deliveryReadiness.toFixed(1)}%</>}
                     >
-                        {t('production_yield')}: {hasSummary ? `${prodYield.toFixed(1)}%` : <Pending width={34} />}
+                        {t('production_yield')}: {!hasSummary ? <Pending width={34} /> : prodYield != null ? `${prodYield.toFixed(1)}%` : '—'}
                     </XPStatusBar>
                 </ShellWindow>
 

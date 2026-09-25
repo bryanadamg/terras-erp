@@ -1,7 +1,8 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef } from 'react';
 import { useUser } from '../../context/UserContext';
+import { useRememberedTab } from '../../hooks/useRememberedTab';
 import { Tabs, TabDef } from '../shared/Tabs';
 import { PageTitleBar, ShellWindow, scrollAreaStyle } from '../shared/shellTheme';
 import SettingsGeneralTab from './SettingsGeneralTab';
@@ -20,14 +21,6 @@ export default function SettingsView({
     const { hasPermission } = useUser();
     const isAdmin = hasPermission('admin.access');
 
-    const [activeTab, setActiveTab] = useState<TabKey>('general');
-    const paneRef = useRef<HTMLDivElement>(null);
-
-    // Every tab is mounted at once (see the panes below), so they share one scroll
-    // pane — without this, hopping from the bottom of Database & Backups lands you
-    // halfway down My Account.
-    useEffect(() => { paneRef.current?.scrollTo({ top: 0 }); }, [activeTab]);
-
     const tabs: TabDef<TabKey>[] = [
         { key: 'general', label: 'General', icon: 'bi-gear-fill' },
         { key: 'account', label: 'My Account', icon: 'bi-person-fill' },
@@ -36,6 +29,13 @@ export default function SettingsView({
             { key: 'access' as TabKey, label: 'Access Control', icon: 'bi-shield-lock' },
         ] : []),
     ];
+    const [activeTab, setActiveTab] = useRememberedTab<TabKey>('settings', 'general', tabs.map(t => t.key));
+    const paneRef = useRef<HTMLDivElement>(null);
+
+    // Every tab is mounted at once (see the panes below), so they share one scroll
+    // pane — without this, hopping from the bottom of Database & Backups lands you
+    // halfway down My Account.
+    useEffect(() => { paneRef.current?.scrollTo({ top: 0 }); }, [activeTab]);
 
     return (
         <div className="fade-in">

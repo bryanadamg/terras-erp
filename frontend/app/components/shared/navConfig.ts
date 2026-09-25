@@ -35,26 +35,9 @@ export interface NavSection {
 export const NAV_SECTIONS: NavSection[] = [
     {
         key: 'sales', label: 'Sales', i18nKey: 'sales', icon: 'bi-graph-up', accent: 'green',
-        // pick_list.scan is deliberately absent: the picker's only surface is the
-        // QUICK SCAN button, which sits above the sections and is always visible.
-        // Listing it here would open an otherwise empty Sales section for them.
-        permissions: ['sales_order.view', 'customer.view', 'sample_request.view', 'sales.manage', 'quarantine.view', 'shipment.view'],
+        permissions: ['sales_order.view', 'customer.view', 'sample_request.view'],
         items: [
             { tab: 'sales-orders', label: 'Sales Orders', i18nKey: 'sales_orders', icon: 'bi-file-text', permission: 'sales_order.view' },
-            // Packing Orders / Pick Lists are a separate feature not covered by the
-            // Permissions config spreadsheet — still gated on the legacy blob code.
-            // QC hold desk feeding Packing Orders — sits immediately before it in
-            // the flow, so it sits immediately above it here.
-            { tab: 'quarantine-packing', label: 'Quarantine Packing', icon: 'bi-shield-exclamation', permission: 'quarantine.view' },
-            { tab: 'packing', label: 'Packing Orders', icon: 'bi-box2', permission: 'sales.manage' },
-            { tab: 'pick-lists', label: 'Pick Lists', icon: 'bi-clipboard-check', permission: 'sales.manage' },
-            // No Pick Scanner leaf: the floor half of a pick list is reached by
-            // scanning the PL- QR at QUICK SCAN, which routes to it. A dedicated
-            // entry only asked the picker to choose a scanner before scanning.
-            // Loading deck. Deliberately its own page and not a Pick Lists tab: the
-            // Surat Jalan check must be done by someone other than the picker, so
-            // the two surfaces carry different permissions.
-            { tab: 'dispatch', label: 'Dispatch', icon: 'bi-truck', permission: ['shipment.view', 'sales.manage'] },
             { tab: 'customers', label: 'Customers', i18nKey: 'customers', icon: 'bi-people', permission: 'customer.view' },
             { tab: 'samples', label: 'Sample Requests', i18nKey: 'sample_requests', icon: 'bi-flask', permission: 'sample_request.view' },
             { tab: 'sample-report', label: 'Sample Report', i18nKey: 'sample_report', icon: 'bi-clipboard-data', permission: 'sample_request.view' },
@@ -70,7 +53,7 @@ export const NAV_SECTIONS: NavSection[] = [
     },
     {
         key: 'inventory', label: 'Inventory', i18nKey: 'inventory', icon: 'bi-box-seam', accent: 'blue',
-        permissions: ['item.view', 'stock_on_hand.view', 'lot.view', 'location.view', 'combo_library.view', 'packaging_type.view', 'booking_stock.view'],
+        permissions: ['item.view', 'attribute.view', 'stock_on_hand.view', 'lot.view', 'location.view', 'combo_library.view', 'packaging_type.view', 'booking_stock.view'],
         items: [
             { tab: 'inventory', label: 'Item Inventory', i18nKey: 'item_inventory', icon: 'bi-list-check', permission: 'item.view' },
             { tab: 'item-metadata', label: 'Attributes', i18nKey: 'attributes', icon: 'bi-tag', permission: 'attribute.view' },
@@ -93,10 +76,17 @@ export const NAV_SECTIONS: NavSection[] = [
     },
     {
         key: 'engineering', label: 'Engineering', i18nKey: 'engineering', icon: 'bi-gear', accent: 'blue',
-        permissions: ['bom.view', 'routing.view', 'production_run.view', 'manufacturing_order.view', 'work_order.view', 'weaving_monitor.view', 'dyeing_monitor.view'],
+        permissions: ['bom.view', 'routing.view'],
         items: [
             { tab: 'bom', label: 'BOM', i18nKey: 'bom', icon: 'bi-diagram-3', permission: 'bom.view' },
             { tab: 'routing', label: 'Routing', i18nKey: 'routing', icon: 'bi-shuffle', permission: 'routing.view' },
+        ],
+    },
+    {
+        // Execution, not design: what the planner releases and the PIC runs.
+        key: 'production', label: 'Production', i18nKey: 'production', icon: 'bi-gear-wide-connected', accent: 'blue',
+        permissions: ['production_run.view', 'manufacturing_order.view', 'work_order.view', 'weaving_monitor.view', 'dyeing_monitor.view'],
+        items: [
             { tab: 'production-runs', label: 'Production Runs', icon: 'bi-collection-play', permission: 'production_run.view' },
             { tab: 'manufacturing-orders', label: 'Manufacturing Orders', i18nKey: 'manufacturing_orders', icon: 'bi-list-task', permission: 'manufacturing_order.view' },
             { tab: 'work-orders', label: 'Work Orders', i18nKey: 'work_orders', icon: 'bi-tools', permission: 'work_order.view' },
@@ -106,7 +96,7 @@ export const NAV_SECTIONS: NavSection[] = [
             { tab: 'work-queue', label: 'Work Queue', icon: 'bi-list-ol', permission: 'work_order.view' },
             { tab: 'weaving-monitor', label: 'Weaving Monitor', i18nKey: 'weaving_monitor', icon: 'bi-speedometer2', permission: 'weaving_monitor.view' },
             // Sits beside the loom grid rather than in Dyeing & Setting: this is a
-            // machine-floor tool like Routing and Work Queue, whereas that section is
+            // machine-floor tool like Work Queue, whereas that section is
             // recipes, colours and lab dips.
             { tab: 'dyeing-monitor', label: 'Dyeing Monitor', i18nKey: 'dyeing_monitor', icon: 'bi-droplet-half', permission: 'dyeing_monitor.view' },
         ],
@@ -131,19 +121,45 @@ export const NAV_SECTIONS: NavSection[] = [
         ],
     },
     {
+        // Floor-side of fulfilment, in flow order: QC hold → pack → pick → load.
+        // Run by warehouse/loading staff, not sales admins, and packing can run to
+        // stock with no SO at all — so it is not a Sales sub-list.
+        key: 'warehouse', label: 'Warehouse', i18nKey: 'warehouse', icon: 'bi-box-arrow-right', accent: 'green',
+        // pick_list.scan is deliberately absent: the picker's only surface is the
+        // QUICK SCAN button, which sits above the sections and is always visible.
+        // Listing it here would open an otherwise empty Warehouse section for them.
+        permissions: ['quarantine.view', 'sales.manage', 'shipment.view'],
+        items: [
+            // Packing Orders / Pick Lists are a separate feature not covered by the
+            // Permissions config spreadsheet — still gated on the legacy blob code.
+            // QC hold desk feeding Packing Orders — sits immediately before it in
+            // the flow, so it sits immediately above it here.
+            { tab: 'quarantine-packing', label: 'Quarantine Packing', icon: 'bi-shield-exclamation', permission: 'quarantine.view' },
+            { tab: 'packing', label: 'Packing Orders', icon: 'bi-box2', permission: 'sales.manage' },
+            { tab: 'pick-lists', label: 'Pick Lists', icon: 'bi-clipboard-check', permission: 'sales.manage' },
+            // No Pick Scanner leaf: the floor half of a pick list is reached by
+            // scanning the PL- QR at QUICK SCAN, which routes to it. A dedicated
+            // entry only asked the picker to choose a scanner before scanning.
+            // Loading deck. Deliberately its own page and not a Pick Lists tab: the
+            // Surat Jalan check must be done by someone other than the picker, so
+            // the two surfaces carry different permissions.
+            { tab: 'dispatch', label: 'Dispatch', icon: 'bi-truck', permission: ['shipment.view', 'sales.manage'] },
+        ],
+    },
+    {
         key: 'reports', label: 'Reports', i18nKey: 'reports', icon: 'bi-bar-chart', accent: 'grey',
-        permissions: ['stock_ledger.view', 'production_output.view', 'reports.view', 'audit_log.view'],
+        permissions: ['stock_ledger.view', 'production_output.view', 'reports.view'],
         items: [
             { tab: 'reports', label: 'Stock Ledger', i18nKey: 'stock_ledger', icon: 'bi-journal-text', permission: 'stock_ledger.view' },
             { tab: 'machine-report', label: 'Production Output', i18nKey: 'machine_report', icon: 'bi-clipboard-data', permission: 'production_output.view' },
-            { tab: 'audit-logs', label: 'Audit Logs', icon: 'bi-clipboard-check', permission: 'audit_log.view' },
         ],
     },
     {
         key: 'administration', label: 'Administration', i18nKey: 'administration', icon: 'bi-sliders', accent: 'grey',
-        permissions: ['print_layout.edit', 'admin.access'],
+        permissions: ['print_layout.edit', 'admin.access', 'audit_log.view'],
         items: [
             { tab: 'print-designer', label: 'Print Layouts', i18nKey: 'print_designer', icon: 'bi-printer', permission: 'print_layout.edit' },
+            { tab: 'audit-logs', label: 'Audit Logs', icon: 'bi-clipboard-check', permission: 'audit_log.view' },
         ],
     },
 ];

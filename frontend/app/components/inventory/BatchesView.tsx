@@ -11,6 +11,7 @@ import BagLabelPrintModal from '../manufacturing/BagLabelPrintModal';
 import LotLabelPrintModal from '../manufacturing/LotLabelPrintModal';
 import PackedUnitLabelPrintModal from '../packing/PackedUnitLabelPrintModal';
 import { useData } from '../../context/DataContext';
+import { useRememberedTab } from '../../hooks/useRememberedTab';
 import { useFloatingMenu, MenuTriggerButton, FloatingMenu, useSortable, XPActionButton, ExpandedRowPanel, StatusChip, CODE_FONT, xpFont, TableSkeleton, useTableSkeletonMetrics, rowStateBg, CHIP_RADIUS, OriginChip, VariantChip, xpBtn as xpBtnBase, xpInput as xpInputBase, BTN_TONES, XP_BTN, SKEL_PAGE_ROWS } from '../shared/xpTheme';
 import { xpBevel as sharedXpBevel, xpTitleBar as sharedXpTitleBar, FilterChipBar, ToolbarButton, SearchField, pageFillStyle } from '../shared/shellTheme';
 
@@ -133,7 +134,6 @@ export default function BatchesView({ items, locations, categories, workCenters,
   // through source_wo -> work_center -> TYPE-root (see /batches/paginated's
   // lot_type param). 'GR' (goods-receipt/manual) and 'PACK' (packed carton) are
   // the two buckets with no producing work center. '' = All.
-  const [lotTypeFilter, setLotTypeFilter] = useState('');
 
   const locationTree = React.useMemo(() => buildLocationFilterTree(locations || []), [locations]);
   const itemFilterOptions = React.useMemo(() => [
@@ -193,7 +193,8 @@ export default function BatchesView({ items, locations, categories, workCenters,
       { key: 'PACK', label: 'Packing', icon: 'bi-box-seam' },
     ];
   }, [workCenters]);
-  const handleLotTypeTabChange = (key: string) => setLotTypeFilter(key === 'ALL' ? '' : key);
+  const [lotTypeTab, handleLotTypeTabChange] = useRememberedTab<string>('batches', 'ALL', lotTypeTabs.map(t => t.key));
+  const lotTypeFilter = lotTypeTab === 'ALL' ? '' : lotTypeTab;
 
   // Expand the picked warehouse/zone/bin into its full descendant leaf set so a lot
   // recorded at any depth below it still matches. Sent as one comma-joined value —
@@ -978,7 +979,7 @@ export default function BatchesView({ items, locations, categories, workCenters,
             <span>Lot Management</span>
           </div>
           {/* ── Lot type tabs — classifies by the process that produced the lot ── */}
-          <Tabs<string> tabs={lotTypeTabs} activeKey={lotTypeFilter || 'ALL'} onChange={handleLotTypeTabChange} />
+          <Tabs<string> tabs={lotTypeTabs} activeKey={lotTypeTab} onChange={handleLotTypeTabChange} />
           {/* ── Filter/search bar + actions ── */}
           <div style={{ padding: '6px 8px', display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap', background: 'linear-gradient(to bottom, #f5f4ef, #e0dfd8)', borderBottom: '1px solid #b0a898', flexShrink: 0 }}>
             <SearchField value={searchInput} onChange={setSearch} placeholder="Search lot, item, WO/MO/PR, SO..." width={240} />

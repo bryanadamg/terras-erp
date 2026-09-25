@@ -15,6 +15,23 @@ on `main`:
 
 ## [Unreleased]
 
+## [0.35.0] - 2026-09-25
+
+### Added
+- A page that crashes now shows an error panel in place of a blank screen, and the sidebar and logout keep working so you can go somewhere else
+- Each page remembers its active tab for the rest of the browser session, including the inventory category tab across navigation and refresh
+
+### Changed
+- The sidebar is reorganised: production execution pages have their own section instead of sitting under Engineering, warehouse pages are split out of Sales, and Audit Logs now sits under Administration
+- The sidebar remembers its scroll position and no longer shows a scrollbar
+
+### Fixed
+- API errors reach the screen: validation failures show readable details, and server errors come back as JSON with CORS headers so the frontend can display them
+- The dashboard no longer crashes for users without permission to view manufacturing
+- Roles granted only attribute view permission can now see the Inventory section
+- The database settings tab stopped reporting the system as offline
+- Classic-theme horizontal scrollbar thumbs are shaded top to bottom instead of sideways
+
 ## [0.34.0] - 2026-09-24
 
 ### Added

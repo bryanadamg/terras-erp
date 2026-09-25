@@ -39,7 +39,7 @@ function ActionSlot({ width, show, children }: { width: number; show: boolean; c
 }
 
 type WOTabKey = 'ALL' | 'BEAMING' | 'WEAVING' | 'DYEING' | 'SETTING' | 'OTHERS';
-const WO_TABS: TabDef<WOTabKey>[] = [
+export const WO_TABS: TabDef<WOTabKey>[] = [
     { key: 'ALL',     label: 'All',     icon: 'bi-collection' },
     { key: 'BEAMING', label: 'Beaming', icon: 'bi-diagram-3' },
     { key: 'WEAVING', label: 'Weaving', icon: 'bi-grid-3x3' },

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useRememberedTab } from '../../hooks/useRememberedTab';
 import { useUser } from '../../context/UserContext';
 import CategoriesView from './CategoriesView';
 import UOMLibraryView from './UOMLibraryView';
@@ -47,7 +47,7 @@ export default function ItemMetadataView({
         'uom.create', 'uom.edit', 'uom.delete',
     );
 
-    const [tab, setTab] = useState<Tab>('attributes');
+    const [tab, setTab] = useRememberedTab<Tab>('item-metadata', 'attributes', ['attributes', 'categories', 'uom']);
 
     return (
         <div className="fade-in" style={viewShellStyle()}>

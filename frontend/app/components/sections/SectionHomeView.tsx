@@ -141,7 +141,7 @@ function buildSection(key: string, d: any, tzDate: (v: string | Date) => string)
       };
     }
 
-    case 'engineering': {
+    case 'production': {
       const active  = mos.filter((m) => m.status === 'IN_PROGRESS').length;
       const pending = mos.filter((m) => m.status === 'PENDING').length;
       const overdue = mos.filter((m) =>
@@ -175,8 +175,14 @@ function buildSection(key: string, d: any, tzDate: (v: string | Date) => string)
       return {
         kpis: [
           { label: 'Recent Movements', value: movements, tab: 'reports' },
-          { label: 'Audit Entries',    value: auditLogs.length, tab: 'audit-logs' },
         ],
+        list: null,
+      };
+    }
+
+    case 'administration': {
+      return {
+        kpis: [{ label: 'Audit Entries', value: auditLogs.length, tab: 'audit-logs' }],
         list: null,
       };
     }

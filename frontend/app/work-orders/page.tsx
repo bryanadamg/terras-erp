@@ -2,13 +2,15 @@
 
 import { useEffect, useState, useCallback, useRef } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
-import WorkOrderListView from '../components/manufacturing/WorkOrderListView';
+import WorkOrderListView, { WO_TABS } from '../components/manufacturing/WorkOrderListView';
+import { useRememberedTab } from '../hooks/useRememberedTab';
 import { useData } from '../context/DataContext';
 import { usePaginatedFetch } from '../context/usePaginatedList';
 import { API_BASE } from '../components/shared/apiBase';
 
 const WO_PAGE_SIZE = 50;
 const CACHE_KEY = 'wo_page_cache';
+const WO_TAB_KEYS: string[] = WO_TABS.map(t => t.key);
 
 function readCache() {
     try { return JSON.parse(sessionStorage.getItem(CACHE_KEY) || 'null'); } catch { return null; }
@@ -26,7 +28,7 @@ export default function WorkOrdersPage() {
     const [filterWC, setFilterWC] = useState('');
     const [filterComponentId, setFilterComponentId] = useState('');
     const [filterUnprinted, setFilterUnprinted] = useState(false);
-    const [activeTab, setActiveTab] = useState('ALL');
+    const [activeTab, setActiveTab] = useRememberedTab('work-orders', 'ALL', WO_TAB_KEYS);
 
     // Deep link from another screen: /work-orders?wo=WO-1234 lands with the list
     // filtered to that code. Same shape as /manufacturing-orders?mo= — seed, then
@@ -64,6 +66,7 @@ export default function WorkOrdersPage() {
         if (code && code !== consumedWORef.current) {
             consumedWORef.current = code;
             handleSearch(code);
+            setActiveTab('ALL'); // a remembered type tab could hide the linked WO
             router.replace('/work-orders');
         }
         // eslint-disable-next-line react-hooks/exhaustive-deps

@@ -2,6 +2,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { useData } from '../../context/DataContext';
+import { useRememberedTab } from '../../hooks/useRememberedTab';
 import { Tabs, TabDef } from '../shared/Tabs';
 import DyeRecipeTab from './DyeRecipeTab';
 import DyeingOrdersTab from './DyeingOrdersTab';
@@ -35,7 +36,7 @@ export default function DyeingSettingView() {
     const { authFetch, items, attributes } = useData();
     const searchParams = useSearchParams();
     const router = useRouter();
-    const [activeTab, setActiveTab] = useState<TabKey>('recipes');
+    const [activeTab, setActiveTab] = useRememberedTab<TabKey>('dyeing-setting', 'recipes', TABS.map(t => t.key));
     const [recipes, setRecipes] = useState<any[]>([]);
 
     // Deep-link from Color Library "create recipe for this color": force the recipes
