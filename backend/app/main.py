@@ -6,6 +6,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
+from fastapi.encoders import jsonable_encoder
 from sqlalchemy import text
 from starlette.concurrency import run_in_threadpool
 import asyncio
@@ -13,6 +14,7 @@ import os
 import json
 import time
 import logging
+import uuid
 from contextlib import asynccontextmanager
 from datetime import datetime, timezone
 
@@ -25,6 +27,9 @@ class _HealthCheckFilter(logging.Filter):
 
 logging.getLogger("uvicorn.access").addFilter(_HealthCheckFilter())
 
+# uvicorn only configures its own loggers; without this, every app.* logger
+# drops INFO and prints ERRORs bare (no timestamp or logger name).
+logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
 logger = logging.getLogger(__name__)
 
 from app.db.session import engine
@@ -108,8 +113,48 @@ app = FastAPI(
 
 @app.exception_handler(RequestValidationError)
 async def validation_exception_handler(request: Request, exc: RequestValidationError):
-    logging.error("422 Validation Error on %s %s: %s", request.method, request.url.path, exc.errors())
-    return JSONResponse(status_code=422, content={"detail": exc.errors()})
+    errors = jsonable_encoder(exc.errors())
+    logging.error("422 Validation Error on %s %s: %s", request.method, request.url.path, errors)
+    # `detail` is a readable string like every other error, since the frontend
+    # renders it straight into toasts (a raw list crashes React). The structured
+    # list stays under `errors`.
+    detail = "; ".join(
+        f"{'.'.join(str(p) for p in e['loc'] if p != 'body')}: {e['msg']}" for e in errors
+    )
+    return JSONResponse(status_code=422, content={"detail": detail, "errors": errors})
+
+
+class CatchAllErrors:
+    """Unhandled exceptions become a logged, JSON 500 with a reference id.
+
+    Pure ASGI rather than @app.exception_handler(Exception): Starlette runs that
+    handler outside every user middleware, so its 500 would carry no CORS headers
+    and the browser would hide it from the frontend as a network error. Registered
+    before CORSMiddleware so it sits inside it."""
+
+    def __init__(self, app):
+        self.app = app
+
+    async def __call__(self, scope, receive, send):
+        if scope["type"] != "http":
+            return await self.app(scope, receive, send)
+        started = False
+
+        async def _send(message):
+            nonlocal started
+            if message["type"] == "http.response.start":
+                started = True
+            await send(message)
+
+        try:
+            await self.app(scope, receive, _send)
+        except Exception:
+            ref = uuid.uuid4().hex[:8]
+            logger.exception("Unhandled error ref=%s on %s %s", ref, scope["method"], scope["path"])
+            if started:
+                raise
+            response = JSONResponse(status_code=500, content={"detail": f"Internal server error (ref {ref})", "error_id": ref})
+            await response(scope, receive, send)
 
 # Ensure .jpeg is recognized on minimal Linux images that lack a full mime.types db
 mimetypes.add_type("image/jpeg", ".jpeg")
@@ -346,6 +391,7 @@ templates = Jinja2Templates(directory=str(BASE_DIR / "templates"))
 
 origins = os.getenv("BACKEND_CORS_ORIGINS", "http://localhost:3000,http://localhost:3030").split(",")
 
+app.add_middleware(CatchAllErrors)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=origins,
