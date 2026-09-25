@@ -15,6 +15,11 @@ on `main`:
 
 ## [Unreleased]
 
+## [0.35.1] - 2026-09-25
+
+### Fixed
+- A fresh install no longer crashes on startup with a missing `greenlet` error: the backend now pins its database library so new servers install the same working versions as existing ones
+
 ## [0.35.0] - 2026-09-25
 
 ### Added
