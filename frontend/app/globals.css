@@ -283,26 +283,6 @@ body.window-chrome-inactive {
   padding: 0;
 }
 
-/* ── SIDEBAR: XP Scrollbar ── */
-.ui-style-classic .sidebar::-webkit-scrollbar {
-  width: 16px;
-}
-.ui-style-classic .sidebar::-webkit-scrollbar-track {
-  background: #d4d0c8;
-  border-left: 1px solid #808080;
-}
-.ui-style-classic .sidebar::-webkit-scrollbar-thumb {
-  background: linear-gradient(to right, #ffffff, #d4d0c8);
-  border: 1px solid #808080;
-  border-radius: 3px;
-}
-.ui-style-classic .sidebar::-webkit-scrollbar-button {
-  background: linear-gradient(to bottom, #ffffff, #d4d0c8);
-  border: 1px solid #808080;
-  height: 16px;
-  display: block;
-}
-
 /* ── TOP BAR: Enhanced XP Classic ── */
 
 /* 10. User dropdown toggle button */
@@ -696,16 +676,10 @@ body.window-chrome-inactive {
   z-index: 1040; /* Above sticky headers */
   transition: all 0.3s;
   overflow-y: auto;
-  scrollbar-width: thin;
+  scrollbar-width: none; /* still scrolls by wheel/touch; bar hidden */
 }
-
-.sidebar::-webkit-scrollbar {
-  width: 4px;
-}
-.sidebar::-webkit-scrollbar-thumb {
-  background: #e5e7eb;
-  border-radius: 10px;
-}
+/* Older Safari ignores scrollbar-width; the classic prefix outranks the global XP rule */
+.ui-style-classic .sidebar::-webkit-scrollbar { display: none; }
 
 .sidebar-header {
   height: 64px;
