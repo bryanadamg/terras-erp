@@ -329,41 +329,45 @@ export default function InventoryView({
   // Remember the root-category tab for this browser session (same key scheme as
   // hooks/useRememberedTab). It can't use that hook: the filter lives in DataContext
   // and inventory/page.tsx clears it on unmount — so restore it on return instead.
-  // Waits for categories so a stale id from a deleted category can't stick; the
-  // write effect only starts after that, so the mount-time '' can't clobber it.
+  // Saved only from the user's own picks (rememberCategory), never from an effect
+  // watching the filter, so the page's unmount reset can't overwrite it. Restore
+  // waits for categories so a stale id can't stick, and its ref resets on cleanup
+  // so a StrictMode (next dev) mount→unmount→mount restores again.
+  const CATEGORY_TAB_KEY = 'terras_tab:inventory';
+  const rememberCategory = (l1: string) => {
+    try { sessionStorage.setItem(CATEGORY_TAB_KEY, l1 || 'ALL'); } catch { /* not remembered */ }
+  };
   const categoryRestoredRef = useRef(false);
   useEffect(() => {
     if (categoryRestoredRef.current || categories.length === 0) return;
     categoryRestoredRef.current = true;
     try {
-      const saved = sessionStorage.getItem('terras_tab:inventory');
+      const saved = sessionStorage.getItem(CATEGORY_TAB_KEY);
       if (saved && saved !== 'ALL' && !categoryL1 && categoryTabs.some(t => t.key === saved)) setCategoryL1(saved);
     } catch { /* storage blocked: default tab */ }
+    return () => { categoryRestoredRef.current = false; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [categoryTabs]);
-  useEffect(() => {
-    if (!categoryRestoredRef.current) return;
-    try { sessionStorage.setItem('terras_tab:inventory', categoryL1 || 'ALL'); } catch { /* not remembered */ }
-  }, [categoryL1]);
 
   const handleCategoryTabChange = (key: string) => {
       setCategoryL2(''); setCategoryL3('');
       setCategoryL1(key === 'ALL' ? '' : key);
+      rememberCategory(key === 'ALL' ? '' : key);
   };
 
   // Filter-level category: maps single TreeSelect value back to L1/L2/L3 DataContext state
   const handleCategoryTreeChange = (id: string) => {
-    if (!id) { setCategoryL1(''); setCategoryL2(''); setCategoryL3(''); return; }
+    if (!id) { setCategoryL1(''); setCategoryL2(''); setCategoryL3(''); rememberCategory(''); return; }
     const cat = categories.find((c: any) => c.id === id);
     if (!cat) return;
     if (!cat.parent_id) {
-      setCategoryL1(id);
+      setCategoryL1(id); rememberCategory(id);
     } else {
       const parent = categories.find((c: any) => c.id === cat.parent_id);
       if (!parent?.parent_id) {
-        setCategoryL1(cat.parent_id); setCategoryL2(id);
+        setCategoryL1(cat.parent_id); setCategoryL2(id); rememberCategory(cat.parent_id);
       } else {
-        setCategoryL1(parent.parent_id); setCategoryL2(cat.parent_id); setCategoryL3(id);
+        setCategoryL1(parent.parent_id); setCategoryL2(cat.parent_id); setCategoryL3(id); rememberCategory(parent.parent_id);
       }
     }
   };
@@ -1128,7 +1132,7 @@ export default function InventoryView({
                     emptyLabel="All"
                     style={{ width: 200 }}
                   />
-                  <button className={XP_BTN} style={xpBtn()} onClick={() => { setCategoryL1(''); setCategoryL2(''); setCategoryL3(''); }}>
+                  <button className={XP_BTN} style={xpBtn()} onClick={() => { setCategoryL1(''); setCategoryL2(''); setCategoryL3(''); rememberCategory(''); }}>
                     Clear
                   </button>
                 </>
