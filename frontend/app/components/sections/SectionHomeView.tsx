@@ -141,7 +141,7 @@ function buildSection(key: string, d: any, tzDate: (v: string | Date) => string)
       };
     }
 
-    case 'engineering': {
+    case 'production': {
       const active  = mos.filter((m) => m.status === 'IN_PROGRESS').length;
       const pending = mos.filter((m) => m.status === 'PENDING').length;
       const overdue = mos.filter((m) =>

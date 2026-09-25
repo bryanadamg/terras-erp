@@ -93,10 +93,17 @@ export const NAV_SECTIONS: NavSection[] = [
     },
     {
         key: 'engineering', label: 'Engineering', i18nKey: 'engineering', icon: 'bi-gear', accent: 'blue',
-        permissions: ['bom.view', 'routing.view', 'production_run.view', 'manufacturing_order.view', 'work_order.view', 'weaving_monitor.view', 'dyeing_monitor.view'],
+        permissions: ['bom.view', 'routing.view'],
         items: [
             { tab: 'bom', label: 'BOM', i18nKey: 'bom', icon: 'bi-diagram-3', permission: 'bom.view' },
             { tab: 'routing', label: 'Routing', i18nKey: 'routing', icon: 'bi-shuffle', permission: 'routing.view' },
+        ],
+    },
+    {
+        // Execution, not design: what the planner releases and the PIC runs.
+        key: 'production', label: 'Production', i18nKey: 'production', icon: 'bi-gear-wide-connected', accent: 'blue',
+        permissions: ['production_run.view', 'manufacturing_order.view', 'work_order.view', 'weaving_monitor.view', 'dyeing_monitor.view'],
+        items: [
             { tab: 'production-runs', label: 'Production Runs', icon: 'bi-collection-play', permission: 'production_run.view' },
             { tab: 'manufacturing-orders', label: 'Manufacturing Orders', i18nKey: 'manufacturing_orders', icon: 'bi-list-task', permission: 'manufacturing_order.view' },
             { tab: 'work-orders', label: 'Work Orders', i18nKey: 'work_orders', icon: 'bi-tools', permission: 'work_order.view' },
@@ -106,7 +113,7 @@ export const NAV_SECTIONS: NavSection[] = [
             { tab: 'work-queue', label: 'Work Queue', icon: 'bi-list-ol', permission: 'work_order.view' },
             { tab: 'weaving-monitor', label: 'Weaving Monitor', i18nKey: 'weaving_monitor', icon: 'bi-speedometer2', permission: 'weaving_monitor.view' },
             // Sits beside the loom grid rather than in Dyeing & Setting: this is a
-            // machine-floor tool like Routing and Work Queue, whereas that section is
+            // machine-floor tool like Work Queue, whereas that section is
             // recipes, colours and lab dips.
             { tab: 'dyeing-monitor', label: 'Dyeing Monitor', i18nKey: 'dyeing_monitor', icon: 'bi-droplet-half', permission: 'dyeing_monitor.view' },
         ],
