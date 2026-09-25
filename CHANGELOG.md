@@ -15,6 +15,11 @@ on `main`:
 
 ## [Unreleased]
 
+## [0.35.2] - 2026-09-25
+
+### Fixed
+- A fresh install on an empty database now starts up: the backend builds the full schema on first boot instead of failing on the first migration
+
 ## [0.35.1] - 2026-09-25
 
 ### Fixed
