@@ -82,67 +82,6 @@ function sectionHdrStyle(isHovered: boolean): React.CSSProperties {
   };
 }
 
-// ── Modern (clean SaaS) theme primitives ─────────────────────────────────────
-// Light sidebar, corporate-blue accent. Mirrors the classic helpers above so the
-// component body can pick a palette without branching every style inline.
-const modernFont = 'system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif';
-export const M_PRIMARY     = '#2563eb';
-export const M_PRIMARY_DK  = '#1d4ed8';
-const M_SOFT        = '#eff6ff';
-const M_HOVER_BG    = '#f1f5f9';
-const M_TEXT        = '#475569';
-const M_SECTION     = '#94a3b8';
-const M_BORDER      = '#e5e7eb';
-
-function navItemStyleModern(
-  isActive: boolean,
-  isHovered: boolean,
-  isSub = false,
-  isDeepSub = false,
-): React.CSSProperties {
-  const bg = isActive ? M_SOFT : isHovered ? M_HOVER_BG : 'transparent';
-  return {
-    padding: isDeepSub ? '5px 8px 5px 32px'
-           : isSub     ? '5px 8px 5px 24px'
-           : '6px 10px 6px 13px',
-    color: isActive ? M_PRIMARY : M_TEXT,
-    background: bg,
-    fontWeight: isActive ? 600 : 500,
-    borderLeft: `3px solid ${isActive ? M_PRIMARY : 'transparent'}`,
-    cursor: 'pointer',
-    display: 'flex',
-    alignItems: 'center',
-    gap: 7,
-    fontSize: isSub ? 12 : 12.5,
-    fontFamily: modernFont,
-    userSelect: 'none' as const,
-    transition: 'background 0.12s, color 0.12s',
-    textDecoration: 'none',
-    listStyle: 'none',
-  };
-}
-
-function sectionHdrStyleModern(isHovered: boolean): React.CSSProperties {
-  return {
-    background: 'transparent',
-    color: isHovered ? M_PRIMARY : M_SECTION,
-    fontWeight: 700,
-    fontSize: 10.5,
-    padding: '10px 14px 3px',
-    marginTop: 4,
-    borderTop: `1px solid ${M_BORDER}`,
-    letterSpacing: '0.6px',
-    textTransform: 'uppercase' as const,
-    display: 'flex',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    cursor: 'pointer',
-    userSelect: 'none' as const,
-    fontFamily: modernFont,
-    transition: 'color 0.12s',
-  };
-}
-
 export default function Sidebar({ activeTab, setActiveTab, onTabHover, appName, isOpen }: SidebarProps) {
   const { t } = useLanguage();
   const { currentUser, hasPermission } = useUser();
@@ -221,8 +160,6 @@ export default function Sidebar({ activeTab, setActiveTab, onTabHover, appName, 
   return (
     <div
       className={`sidebar ${isOpen ? 'mobile-open' : ''}`}
-      ref={sidebarRef}
-      onScroll={handleScroll}
       style={{
         background: SIDEBAR_BG,
         display: 'flex',
@@ -262,7 +199,7 @@ export default function Sidebar({ activeTab, setActiveTab, onTabHover, appName, 
         />
       </div>
 
-      <div className="sidebar-nav" style={{ flex: 1, overflowY: 'auto' }}>
+      <div className="sidebar-nav" ref={sidebarRef} onScroll={handleScroll} style={{ flex: 1, overflowY: 'auto' }}>
         {/* ── Quick Scan ── */}
         <div style={{ padding: '8px 8px 4px'}}>
           <button
