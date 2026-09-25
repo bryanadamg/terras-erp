@@ -44,7 +44,7 @@ from app.core.ws_metrics import metrics as ws_metrics
 from app.api.auth import ws_connection_state, get_current_admin
 
 # Keep in sync with /VERSION, frontend/package.json "version", and CHANGELOG.md on release.
-APP_VERSION = "0.35.1"
+APP_VERSION = "0.35.2"
 
 # Process start time, a proxy for "last deployed/updated" — deploy is git pull +
 # docker compose up --build, which always restarts this process.
