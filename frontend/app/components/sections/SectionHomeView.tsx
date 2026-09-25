@@ -175,8 +175,14 @@ function buildSection(key: string, d: any, tzDate: (v: string | Date) => string)
       return {
         kpis: [
           { label: 'Recent Movements', value: movements, tab: 'reports' },
-          { label: 'Audit Entries',    value: auditLogs.length, tab: 'audit-logs' },
         ],
+        list: null,
+      };
+    }
+
+    case 'administration': {
+      return {
+        kpis: [{ label: 'Audit Entries', value: auditLogs.length, tab: 'audit-logs' }],
         list: null,
       };
     }
