@@ -215,7 +215,6 @@ export default function ProductionRunsPage() {
             onClearInitialPRState={handleClearInitialPRState}
             initialPRFilter={initialPRFilter}
             initialTab="production-runs"
-            showTabSwitcher={false}
         />
     );
 }

@@ -14,7 +14,6 @@ import { useManufacturingHelpers } from './useManufacturingHelpers';
 import ProductionRunsTab from './ProductionRunsTab';
 import ManufacturingOrdersTab from './ManufacturingOrdersTab';
 import { pageFillStyle, viewShellStyle, PageTitleBar } from '../shared/shellTheme';
-import { Tabs } from '../shared/Tabs';
 import { API_BASE } from '../shared/apiBase';
 
 export default function ManufacturingView({
@@ -49,7 +48,6 @@ export default function ManufacturingView({
     initialPRState,
     onClearInitialPRState,
     initialTab,
-    showTabSwitcher = true,
     initialMOFilter,
     initialPRFilter,
 }: any) {
@@ -67,8 +65,8 @@ export default function ManufacturingView({
   } = pagination;
   const [viewMode, setViewMode] = useState('list');
 
-  // Tab state: 'production-runs' | 'manufacturing-orders'
-  const [activeTab, setActiveTab] = useState<'production-runs' | 'manufacturing-orders'>(initialTab || 'production-runs');
+  // Which list this page shows — fixed by the route (/production-runs or /manufacturing-orders).
+  const activeTab: 'production-runs' | 'manufacturing-orders' = initialTab || 'production-runs';
   const [isPRModalOpen, setIsPRModalOpen] = useState(false);
   const [prModalBom, setPrModalBom] = useState<any>(null);
   const [prModalInitialSizes, setPrModalInitialSizes] = useState<Record<string, string> | undefined>(undefined);
@@ -188,7 +186,6 @@ export default function ManufacturingView({
               }).filter(Boolean) as Array<{bomId: string; itemId?: string; sizeQtys: Record<string,string>; sizeTokens?: Record<string,number>; totalQty: string; attributeValueIds?: string[]; colorId?: string; colorLabel?: string; labdipVariantCode?: string; locked?: boolean}>;
 
               if (entries.length > 0) {
-                  setActiveTab('production-runs');
                   setPrModalInitialEntries(entries);
                   setPrModalSalesOrderId(initialPRState.sales_order_id || undefined);
                   setPrModalSalesOrderCode(initialPRState.sales_order_code || undefined);
@@ -207,7 +204,6 @@ export default function ManufacturingView({
               if (bom) {
                   const sizeMap: Record<string, string> = {};
                   (sizes || []).forEach((s: any) => { sizeMap[s.bom_size_id] = String(s.qty); });
-                  setActiveTab('production-runs');
                   setPrModalBom(bom);
                   setPrModalInitialSizes(Object.keys(sizeMap).length > 0 ? sizeMap : undefined);
                   setPrModalTotalQty(total_qty ? String(total_qty) : undefined);
@@ -523,18 +519,6 @@ export default function ManufacturingView({
                       icon={activeTab === 'manufacturing-orders' ? 'bi-list-task' : 'bi-collection-play'}
                       title={activeTab === 'manufacturing-orders' ? (t('manufacturing_orders') || 'Manufacturing Orders') : 'Production Runs'}
                   />
-
-                  {/* ── Tab bar ── */}
-                  {showTabSwitcher && <div className="no-print">
-                      <Tabs<'production-runs' | 'manufacturing-orders'>
-                          tabs={[
-                              { key: 'production-runs', label: 'Production Runs', icon: 'bi-collection-play' },
-                              { key: 'manufacturing-orders', label: t('manufacturing_orders') || 'Manufacturing Orders', icon: 'bi-list-task' },
-                          ]}
-                          activeKey={activeTab}
-                          onChange={setActiveTab}
-                      />
-                  </div>}
 
                   {/* ── Body ── */}
                   <div style={{ background: '#ece9d8', flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', minHeight: 0 }}>

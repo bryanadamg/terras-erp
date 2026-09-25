@@ -215,7 +215,6 @@ export default function ManufacturingOrdersPage() {
             onClearInitialState={handleClearInitialState}
             initialMOFilter={initialMOFilter}
             initialTab="manufacturing-orders"
-            showTabSwitcher={false}
         />
     );
 }
