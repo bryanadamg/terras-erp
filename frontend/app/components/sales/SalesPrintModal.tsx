@@ -45,7 +45,7 @@ function SODocument({
     const { itemIndex } = useData();
 
     const getItemName = (id: string) => items.find((i: any) => i.id === id)?.name || itemIndex?.[String(id)]?.name || id;
-    const getItemUOM = (id: string) => items.find((i: any) => i.id === id)?.uom || '';
+    const getItemUOM = (id: string) => items.find((i: any) => i.id === id)?.uom || itemIndex?.[String(id)]?.uom || '';
     const getCustomerAddress = (name: string) => partners.find((p: any) => p.name === name)?.address || '';
     const getAttributeValueName = (valId: string) => {
         for (const attr of attributes) {

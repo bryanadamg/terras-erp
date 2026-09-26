@@ -27,8 +27,10 @@ export function useManufacturingHelpers({
 
     const getItemName = (id: string) => items.find((i: any) => i.id === id)?.name || itemIndex?.[String(id)]?.name || id;
     const getItemCode = (id: string) => items.find((i: any) => i.id === id)?.code || itemIndex?.[String(id)]?.code || id;
-    const getItemUom = (id: string) => items.find((i: any) => i.id === id)?.uom || '';
-    const getItemEnds = (id: string) => { const v = items.find((i: any) => i.id === id)?.ends; return v != null ? v : null; };
+    // `items` is only the visible /items page; itemIndex covers every item.
+    const findItem = (id: string): any => items.find((i: any) => String(i.id) === String(id)) || itemIndex?.[String(id)];
+    const getItemUom = (id: string) => findItem(id)?.uom || '';
+    const getItemEnds = (id: string) => { const v = findItem(id)?.ends; return v != null ? v : null; };
     const getBOMCode = (id: string) => boms.find((b: any) => b.id === id)?.code || id;
     const getLocationName = (id: string) => locations.find((l: any) => l.id === id)?.name || id;
     const getWCName = (id: string) => workCenters.find((w: any) => w.id === id)?.name || id;
@@ -103,7 +105,7 @@ export function useManufacturingHelpers({
     // A BOM line variant filter must not be applied to these or on-hand batch stock
     // never matches and always reads as "No Stock".
     const isBatchIdentityItem = (item_id: string) => {
-        const item = items.find((i: any) => String(i.id) === String(item_id));
+        const item = findItem(item_id);
         if (!item) return false;
         if (item.lot_tracked) return true;
         const leafCategory = (item.category_path || [])[item.category_path?.length - 1];

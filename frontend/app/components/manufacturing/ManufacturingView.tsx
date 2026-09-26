@@ -230,7 +230,7 @@ export default function ManufacturingView({
   const buildWOBasePattern = (bomId: string, config = codeConfig) => {
       const bom = boms.find((b: any) => b.id === bomId);
       if (!bom) return '';
-      const item = items.find((i: any) => i.id === bom.item_id);
+      const item = items.find((i: any) => i.id === bom.item_id) || itemIndex?.[String(bom.item_id)];
       const itemCode = item ? item.code : 'PROD';
 
       const names: string[] = [];

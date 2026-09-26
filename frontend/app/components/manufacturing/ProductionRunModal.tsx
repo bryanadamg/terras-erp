@@ -91,6 +91,7 @@ function BomEntryRow({
     onRemove: () => void;
     canRemove: boolean;
 }) {
+    const { itemIndex } = useData();
     const selectedBom = boms.find((b: any) => b.id === entry.bomId) || null;
     const sizes = selectedBom?.sizes || [];
     // Scoped to the ordered item when the SO named one — the planner is choosing
@@ -100,7 +101,7 @@ function BomEntryRow({
         tok => !sizes.some((bs: any) => sizeTokenOf(bs) === tok)
     );
 
-    const item = selectedBom ? items.find((it: any) => it.id === selectedBom.item_id) : null;
+    const item: any = selectedBom ? (items.find((it: any) => it.id === selectedBom.item_id) || itemIndex?.[String(selectedBom.item_id)]) : null;
     const itemUom: string = item?.uom || '';
     const itemAttrIds: string[] = item?.attribute_ids?.map(String) || [];
     const bomAttrIds: string[] = selectedBom?.attribute_value_ids || [];
