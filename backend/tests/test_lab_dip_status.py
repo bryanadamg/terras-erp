@@ -92,3 +92,14 @@ def test_approving_requires_a_set_index(client, auth_headers, lab_dip):
 def test_an_unknown_status_is_refused(client, auth_headers, lab_dip):
     res = _set_status(client, auth_headers, lab_dip, lab_dip["items"][0]["id"], "SHIPPED")
     assert res.status_code == 400, res.text
+
+
+def test_pending_variants_carry_their_request_code(client, auth_headers, lab_dip):
+    """The SO colour picker lists in-progress shades with the request they belong to."""
+    item_id = lab_dip["items"][0]["item_id"]
+    res = client.get(f"/api/lab-dips/pending-variants?item_id={item_id}", headers=auth_headers)
+    assert res.status_code == 200, res.text
+    rows = res.json()
+    assert len(rows) == 1
+    assert rows[0]["request_code"] == lab_dip["code"]
+    assert rows[0]["variant_code"]
