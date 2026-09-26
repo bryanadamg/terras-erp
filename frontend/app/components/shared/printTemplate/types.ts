@@ -85,7 +85,7 @@ export interface GridItem extends Omit<FieldSpec, 'field'> {
 /** A label/value row inside a `keyvalue` band. */
 export interface KeyValueRow {
     field: string;
-    /** Label cell text. Falls back to the registry label. */
+    /** Label cell text. Falls back to the registry label; '{auto}' takes the value's own label. */
     label?: string;
     /** How many value columns this row's value spans (1..3). */
     span?: number;
@@ -180,7 +180,7 @@ export interface GridBand extends BandBase {
     /** Draw each item in its own bordered cell (the Qty/Ends metric-box look). */
     cellBox?: string;
     /** Vertical alignment of items within their grid rows. */
-    alignItems?: 'start' | 'center' | 'end';
+    alignItems?: 'start' | 'center' | 'end' | 'stretch';
 }
 
 export interface KeyValueBand extends BandBase {

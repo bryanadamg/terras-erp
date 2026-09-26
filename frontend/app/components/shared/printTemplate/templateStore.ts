@@ -8,16 +8,19 @@
 import type { PrintLayout, PrintTemplateRecord } from './types';
 import { KARTU_KERJA_DEFAULTS, KARTU_KERJA_DOC_TYPE_LABELS } from './defaults/kartuKerja';
 import { SURAT_JALAN_DEFAULTS, SURAT_JALAN_DOC_TYPE_LABELS } from './defaults/suratJalan';
+import { PURCHASE_ORDER_DEFAULTS, PURCHASE_ORDER_DOC_TYPE_LABELS } from './defaults/purchaseOrder';
 
 /** Every doc type with a built-in default, i.e. everything the designer can edit. */
 export const DEFAULT_LAYOUTS: Record<string, PrintLayout> = {
     ...KARTU_KERJA_DEFAULTS,
     ...SURAT_JALAN_DEFAULTS,
+    ...PURCHASE_ORDER_DEFAULTS,
 };
 
 export const DOC_TYPE_LABELS: Record<string, string> = {
     ...KARTU_KERJA_DOC_TYPE_LABELS,
     ...SURAT_JALAN_DOC_TYPE_LABELS,
+    ...PURCHASE_ORDER_DOC_TYPE_LABELS,
 };
 
 export const EDITABLE_DOC_TYPES: string[] = Object.keys(DEFAULT_LAYOUTS);

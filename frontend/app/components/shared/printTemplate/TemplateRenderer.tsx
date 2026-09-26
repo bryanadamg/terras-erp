@@ -334,7 +334,7 @@ function KeyValueBandView({ band, ctx, docType, selectedId, onSelect }: {
                     }}
                     onClick={onSelect ? (e) => { e.stopPropagation(); onSelect(cellId); } : undefined}
                 >
-                    {row.label ?? def?.label ?? ''}
+                    {row.label === '{auto}' ? (resolved.label ?? def?.label ?? '') : (row.label ?? def?.label ?? '')}
                 </td>
                 <td
                     data-tpl-kvrow={cellId}

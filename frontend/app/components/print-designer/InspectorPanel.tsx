@@ -436,6 +436,7 @@ export default function InspectorPanel({ layout, docType, selection, onChange, o
                                 { value: 'start', label: 'Top' },
                                 { value: 'center', label: 'Middle' },
                                 { value: 'end', label: 'Bottom' },
+                                { value: 'stretch', label: 'Stretch (equal-height cells)' },
                             ]}
                             onChange={v => patchBand({ alignItems: v })} />
                     </Row>

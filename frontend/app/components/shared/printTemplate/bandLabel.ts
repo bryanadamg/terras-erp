@@ -79,7 +79,7 @@ function gridName(band: GridBand, docType: string): string {
 
 function keyValueName(band: KeyValueBand, docType: string): string {
     const names = band.rows
-        .map(r => r.label || fieldName(docType, r.field))
+        .map(r => (r.label && r.label !== '{auto}' ? r.label : null) || (r.field === '__text' ? r.text || null : fieldName(docType, r.field)))
         .filter(Boolean) as string[];
     if (names.length === 0) return 'Empty rows';
     return summarise(names, ' / ');

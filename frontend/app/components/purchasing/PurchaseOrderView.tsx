@@ -448,7 +448,6 @@ export default function PurchaseOrderView({ items, itemResults, onSearchItems, a
                po={printingPO}
                onClose={() => setPrintingPO(null)}
                companyProfile={companyProfile}
-               items={items}
                attributes={attributes}
                partners={partners}
            />

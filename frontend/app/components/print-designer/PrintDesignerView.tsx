@@ -29,6 +29,32 @@ import { SelectField } from './controls';
 import { API_BASE, STATIC_BASE } from '../shared/apiBase';
 import TemplatePrintPortal from '../shared/printTemplate/TemplatePrintPortal';
 import { buildSuratJalanContext } from '../shared/printTemplate/doctypes/suratJalan';
+import { buildPurchaseOrderContext } from '../shared/printTemplate/doctypes/purchaseOrder';
+
+/**
+ * Where each record-based document gets its preview records. `list` is the recent
+ * set for the picker; `find` builds the URL for a deep-linked record outside it.
+ */
+const RECORD_DOCS: Record<string, {
+    noun: string;
+    list: string;
+    find: (id: string, q: string) => string | null;
+    label: (x: any, partners: any[]) => string;
+}> = {
+    surat_jalan: {
+        noun: 'shipments',
+        list: '/shipments?page=1&size=20',
+        find: id => `/shipments/${id}`,
+        label: x => `${x.delivery_note_number || x.code} — ${x.customer_name || 'no customer'}`,
+    },
+    purchase_order: {
+        noun: 'purchase orders',
+        list: '/purchase-orders?page=1&size=20',
+        // No single-PO route; the preview's link carries the PO number to search by.
+        find: (_id, q) => (q ? `/purchase-orders?search=${encodeURIComponent(q)}&page=1&size=5` : null),
+        label: (x, partners) => `${x.po_number} — ${(partners || []).find((p: any) => p.id === x.supplier_id)?.name || 'no supplier'}`,
+    },
+};
 
 
 const clone = (l: PrintLayout): PrintLayout => JSON.parse(JSON.stringify(l));
@@ -76,6 +102,7 @@ export default function PrintDesignerView() {
     const linkDoc = searchParams?.get('doc') || '';
     const linkSample = searchParams?.get('sample') || '';
     const linkMo = searchParams?.get('mo') || '';
+    const linkQ = searchParams?.get('q') || '';
 
     const [docType, setDocType] = useState<string>(
         EDITABLE_DOC_TYPES.includes(linkDoc) ? linkDoc : EDITABLE_DOC_TYPES[0]);
@@ -173,42 +200,59 @@ export default function PrintDesignerView() {
         return () => { cancelled = true; };
     }, [active?.wo, authFetch]);
 
-    // Every other document previews a record of its own kind. Loaded on first visit
-    // to that document, not up front: the Kartu Kerja designer shouldn't pay for it.
+    // Every other document previews a record of its own kind, loaded on first visit
+    // to that document — the Kartu Kerja designer shouldn't pay for it. `find` fetches
+    // a deep-linked record that isn't among the recent ones (by id, or by the
+    // `?q=` search term where the API has no single-record route).
     const isKartu = docType.startsWith('kartu_kerja_');
-    const [shipments, setShipments] = useState<any[] | null>(null);
-    const [shipmentId, setShipmentId] = useState<string>(linkDoc === 'surat_jalan' ? linkSample : '');
+    const recordDef = RECORD_DOCS[docType];
+    const [records, setRecords] = useState<Record<string, any[]>>({});
+    const [recordIds, setRecordIds] = useState<Record<string, string>>(
+        linkDoc && !linkDoc.startsWith('kartu_kerja_') ? { [linkDoc]: linkSample } : {});
+    const recordList = records[docType] ?? null;
     useEffect(() => {
-        if (docType !== 'surat_jalan' || shipments) return;
+        if (!recordDef || records[docType]) return;
         let cancelled = false;
+        const wanted = recordIds[docType];
         (async () => {
             let list: any[] = [];
             try {
-                const res = await authFetch(`${API_BASE}/shipments?page=1&size=20`);
+                const res = await authFetch(`${API_BASE}${recordDef.list}`);
                 if (res.ok) list = (await res.json()).items || [];
-                if (shipmentId && !list.some(x => x.id === shipmentId)) {
-                    const one = await authFetch(`${API_BASE}/shipments/${shipmentId}`);
-                    if (one.ok) list.unshift(await one.json());
+                const findUrl = wanted && !list.some(x => x.id === wanted)
+                    ? recordDef.find(wanted, docType === linkDoc ? linkQ : '') : null;
+                if (findUrl) {
+                    const one = await authFetch(`${API_BASE}${findUrl}`);
+                    if (one.ok) {
+                        const body = await one.json();
+                        const hit = (body.items ?? [body]).find((x: any) => x.id === wanted);
+                        if (hit) list.unshift(hit);
+                    }
                 }
             } catch { /* empty picker says so below */ }
-            if (!cancelled) setShipments(list);
+            if (!cancelled) setRecords(r => ({ ...r, [docType]: list }));
         })();
         return () => { cancelled = true; };
-    }, [docType, shipments, shipmentId, authFetch]);
-    const activeShipment = shipments?.find(x => x.id === shipmentId) || shipments?.[0] || null;
+    }, [docType, recordDef, records, recordIds, authFetch, linkDoc, linkQ]);
+    const activeRecord = recordList?.find(x => x.id === recordIds[docType]) || recordList?.[0] || null;
 
     const logoUrl = companyProfile?.logo_url ? `${STATIC_BASE}${companyProfile.logo_url}` : undefined;
     const customerAddr = useCallback(
         (name: string) => (partners || []).find((pt: any) => pt.name === name)?.address || '',
         [partners]);
 
-    const ctx = useMemo(() => !isKartu ? buildSuratJalanContext({
-        shipment: activeShipment || {},
+    const ctx = useMemo(() => docType === 'surat_jalan' ? buildSuratJalanContext({
+        shipment: activeRecord || {},
         itemIndex, attributes, customerAddr,
         companyName: companyProfile?.name,
         companyLogoUrl: logoUrl,
         companyProfile,
         tzFormatCustom: formatCustom,
+    }) : docType === 'purchase_order' ? buildPurchaseOrderContext({
+        po: activeRecord || {},
+        partners, itemIndex, attributes, companyProfile,
+        companyName: companyProfile?.name,
+        companyLogoUrl: logoUrl,
     }) : buildPrintContext({
         workOrder: active?.wo || {},
         parentMO: active?.mo || {},
@@ -220,10 +264,10 @@ export default function PrintDesignerView() {
         attributes,
         tzFormatCustom: formatCustom,
         dyeing: sampleDyeing,
-    }), [isKartu, activeShipment, itemIndex, customerAddr, logoUrl, active, companyProfile, attributes, formatCustom, sampleDyeing]);
+    }), [docType, activeRecord, partners, itemIndex, customerAddr, logoUrl, active, companyProfile, attributes, formatCustom, sampleDyeing]);
 
-    const sampleLoading = isKartu ? loadingSamples : shipments === null;
-    const hasSample = isKartu ? !!active : !!activeShipment;
+    const sampleLoading = isKartu ? loadingSamples : recordList === null;
+    const hasSample = isKartu ? !!active : !!activeRecord;
     // Stable, or TemplatePrintPortal's print effect re-fires on every render.
     const endTestPrint = useCallback(() => setTestPrinting(false), []);
 
@@ -549,18 +593,15 @@ export default function PrintDesignerView() {
                     <span style={{ fontFamily: xpFont, fontSize: 11, fontWeight: 'bold' }}>Preview with:</span>
                     <div style={{ width: 260 }}>
                         {!isKartu ? (
-                            shipments === null ? (
-                                <span style={{ fontFamily: xpFont, fontSize: 11, color: '#666' }}>Loading shipments...</span>
-                            ) : shipments.length === 0 ? (
-                                <span style={{ fontFamily: xpFont, fontSize: 11, color: '#a33' }}>No shipments found</span>
+                            recordList === null ? (
+                                <span style={{ fontFamily: xpFont, fontSize: 11, color: '#666' }}>Loading {recordDef?.noun}...</span>
+                            ) : recordList.length === 0 ? (
+                                <span style={{ fontFamily: xpFont, fontSize: 11, color: '#a33' }}>No {recordDef?.noun} found</span>
                             ) : (
                                 <SelectField
-                                    value={(activeShipment?.id || '') as any}
-                                    options={shipments.map(x => ({
-                                        value: x.id,
-                                        label: `${x.delivery_note_number || x.code} — ${x.customer_name || 'no customer'}`,
-                                    }))}
-                                    onChange={v => setShipmentId(v)}
+                                    value={(activeRecord?.id || '') as any}
+                                    options={recordList.map(x => ({ value: x.id, label: recordDef!.label(x, partners) }))}
+                                    onChange={v => setRecordIds(r => ({ ...r, [docType]: v }))}
                                 />
                             )
                         ) : loadingSamples ? (
@@ -939,7 +980,7 @@ export default function PrintDesignerView() {
 
             {/* Mounted only while printing: it adds a body class that hides the rest of
                 the page, so it must not exist a moment longer than the print. */}
-            {testPrinting && !isKartu && activeShipment && (
+            {testPrinting && !isKartu && activeRecord && (
                 <TemplatePrintPortal layout={draft} ctx={ctx} docType={docType} onPrinted={endTestPrint} />
             )}
             {testPrinting && isKartu && active && (
