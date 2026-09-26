@@ -1,6 +1,8 @@
 'use client';
 import React, { useRef } from 'react';
+import { useRouter } from 'next/navigation';
 import { useIsMobile } from '../../hooks/useIsMobile';
+import { useUser } from '../../context/UserContext';
 import { MODAL_Z, MODAL_REPOSITION_EVENT, useInactiveChromeWhileOpen, WindowCloseButton } from './ModalWrapper';
 import { toLayoutPx } from '@bryanadamg/terras-ui/scale';
 import { xpFont, XP_BTN, xpBtn, BTN_TONES, WINDOW_RADIUS, WINDOW_RADIUS_INNER } from './xpTheme';
@@ -23,6 +25,14 @@ interface PrintModalShellProps {
      * blocking modal). Matches ModalWrapper's `modeless`.
      */
     modeless?: boolean;
+    /**
+     * Print-designer doc type this preview renders from. When set, users holding
+     * `print_layout.edit` get an "Edit layout" button that opens the designer on
+     * this document, previewing the record in `layoutSample` (extra query params,
+     * e.g. `{ sample: id }`) — the record they were about to print.
+     */
+    layoutDocType?: string;
+    layoutSample?: Record<string, string | undefined>;
 }
 
 // Shared shell for print-preview modals (WO/BOM/Sample/SO/PO/StockLedger/DyeRecipe print).
@@ -36,9 +46,22 @@ interface PrintModalShellProps {
 export default function PrintModalShell({
     title, onClose, children,
     width = 'calc(var(--app-vw) * 90 / 100)', maxWidth = 960, height = 'calc(var(--app-vh) * 88 / 100)',
-    bevel = true, modeless = false,
+    bevel = true, modeless = false, layoutDocType, layoutSample,
 }: PrintModalShellProps) {
     const isMobile = useIsMobile();
+    const router = useRouter();
+    const { hasPermission } = useUser();
+    const canEditLayout = !!layoutDocType && hasPermission('print_layout.edit');
+
+    // The designer is a page, not a panel inside this modal: a saved layout is
+    // company-wide, and editing it belongs somewhere that says so. Close first so
+    // the preview's body print-class does not outlive it.
+    const openDesigner = () => {
+        const qs = new URLSearchParams({ doc: layoutDocType! });
+        Object.entries(layoutSample || {}).forEach(([k, v]) => { if (v) qs.set(k, v); });
+        onClose();
+        router.push(`/print-designer?${qs.toString()}`);
+    };
     const floating = modeless && !isMobile;
 
     // Mounted == open for this shell, so the page chrome behind it is inactive
@@ -102,7 +125,17 @@ export default function PrintModalShell({
         >
             <div style={headerStyle} onPointerDown={floating ? startDrag : undefined}>
                 <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>{title}</span>
-                <WindowCloseButton onClose={onClose} />
+                <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                    {canEditLayout && (
+                        <button type="button" className={XP_BTN} onClick={openDesigner}
+                            title="Change how this document is laid out, for every workstation"
+                            style={xpBtn({ padding: '0 6px', fontSize: 10, height: 18, lineHeight: '16px' })}
+                        >
+                            <i className="bi bi-layout-text-window-reverse" style={{ marginRight: 3 }} />Edit layout
+                        </button>
+                    )}
+                    <WindowCloseButton onClose={onClose} />
+                </span>
             </div>
             {children}
         </div>

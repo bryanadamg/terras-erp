@@ -1,5 +1,6 @@
 'use client';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useSearchParams } from 'next/navigation';
 
 import { useData } from '../../context/DataContext';
 import { useTimezone } from '../../context/TimezoneContext';
@@ -66,7 +67,16 @@ export default function PrintDesignerView() {
     const { showToast } = useToast();
     const { confirm } = useConfirm();
 
-    const [docType, setDocType] = useState<string>(EDITABLE_DOC_TYPES[0]);
+    // Deep link from a print preview's "Edit layout" button: `?doc=` picks the
+    // document, `?sample=` the record that preview was printing (`?mo=` is the WO's
+    // MO, fetched when it is not among the recent ones loaded below).
+    const searchParams = useSearchParams();
+    const linkDoc = searchParams?.get('doc') || '';
+    const linkSample = searchParams?.get('sample') || '';
+    const linkMo = searchParams?.get('mo') || '';
+
+    const [docType, setDocType] = useState<string>(
+        EDITABLE_DOC_TYPES.includes(linkDoc) ? linkDoc : EDITABLE_DOC_TYPES[0]);
     const [draft, setDraft] = useState<PrintLayout | null>(null);
     const [dirty, setDirty] = useState(false);
     const [saving, setSaving] = useState(false);
@@ -92,7 +102,7 @@ export default function PrintDesignerView() {
     // Sample work orders, grouped by the doc type they would print with, so the
     // preview always shows real content for the layout being edited.
     const [samples, setSamples] = useState<{ wo: any; mo: any }[]>([]);
-    const [sampleId, setSampleId] = useState<string>('');
+    const [sampleId, setSampleId] = useState<string>(linkSample);
     const [loadingSamples, setLoadingSamples] = useState(true);
 
     // Reset the draft whenever the edited document changes, or a save elsewhere
@@ -118,6 +128,13 @@ export default function PrintDesignerView() {
                 for (const mo of (data.items || [])) {
                     for (const wo of (mo.work_orders || [])) pairs.push({ wo, mo });
                 }
+                if (linkSample && linkMo && !pairs.some(p => p.wo.id === linkSample)) {
+                    const mres = await authFetch(`${API_BASE}/manufacturing-orders/${linkMo}`);
+                    if (mres.ok) {
+                        const mo = await mres.json();
+                        for (const wo of (mo.work_orders || [])) pairs.unshift({ wo, mo });
+                    }
+                }
                 if (!cancelled) setSamples(pairs);
             } catch (e) {
                 if (!cancelled) setSamples([]);
@@ -126,7 +143,7 @@ export default function PrintDesignerView() {
             }
         })();
         return () => { cancelled = true; };
-    }, [authFetch]);
+    }, [authFetch, linkSample, linkMo]);
 
     const matchingSamples = useMemo(
         () => samples.filter(s => docTypeForWorkCenter(s.wo.work_center_type) === docType),
