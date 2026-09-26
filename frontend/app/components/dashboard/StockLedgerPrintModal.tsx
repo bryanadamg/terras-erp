@@ -7,6 +7,7 @@ import { PRINT_FONT } from '../shared/xpTheme';
 
 import { qtyFmt } from '../shared/format';
 import { STATIC_BASE } from '../shared/apiBase';
+import { refMeta, shortRef } from './ledgerRef';
 
 type ColumnDef = { key: string; label: string; width: number };
 const COLUMN_DEFS: ColumnDef[] = [
@@ -24,23 +25,6 @@ const COLUMN_DEFS: ColumnDef[] = [
 const DEFAULT_VISIBLE_COLS: Record<string, boolean> = Object.fromEntries(COLUMN_DEFS.map(c => [c.key, true]));
 const COLUMNS_STORAGE_KEY = 'stock_ledger_print_columns';
 
-type RefMeta = { label: string; classic: { bg: string; border: string; color: string } };
-const REF_META: Record<string, RefMeta> = {
-    'manual':              { label: 'Manual Adjustment', classic: { bg: '#e6e3da', border: '#a8a292', color: '#444' } },
-    'Manufacturing Order': { label: 'Manufacturing',     classic: { bg: '#dde8f5', border: '#7f9db9', color: '#1a3d7a' } },
-    'Work Order':          { label: 'Work Order',        classic: { bg: '#e6ddf2', border: '#9a82c0', color: '#4a2a7a' } },
-    'Goods Receipt':       { label: 'Goods Receipt',     classic: { bg: '#dcefe0', border: '#7faf87', color: '#1a5e2a' } },
-    'Purchase Order':      { label: 'Purchase Order',    classic: { bg: '#d6eef0', border: '#6fb0b8', color: '#15565e' } },
-    'Transfer':            { label: 'Transfer',          classic: { bg: '#fbeccf', border: '#c8a23a', color: '#6a4a00' } },
-};
-const refMeta = (t: string): RefMeta =>
-    REF_META[t] || { label: (t || '').replace(/_/g, ' '), classic: { bg: '#e0dfd8', border: '#b0a898', color: '#333' } };
-
-const shortRef = (id: string) => {
-    if (!id) return '';
-    const looksUuid = id.length > 14 && /[0-9a-f-]{12,}/i.test(id);
-    return looksUuid ? id.slice(0, 8) + '…' : id;
-};
 const fmtQty = qtyFmt(4);   // matches ReportsView, which this prints
 
 function LedgerDocument({ entries, locations, attributes, companyProfile, periodLabel, totals, filtersSummary, hiddenCount, visibleCols }: any) {

@@ -6,7 +6,7 @@ import { useData } from '../../context/DataContext';
 import { useDebouncedCommit } from '../../context/usePaginatedList';
 import {
     xpFont, xpBtn, xpInput, xpSelect, xpSep,
-    TableSkeleton, useTableSkeletonMetrics, XPEmptyState, useSortable, CodeChip, CHIP_RADIUS, XP_BTN, SKEL_PAGE_ROWS } from '../shared/xpTheme';
+    TableSkeleton, useTableSkeletonMetrics, XPEmptyState, useSortable, CodeChip, Chip, CHIP_RADIUS, XP_BTN, SKEL_PAGE_ROWS } from '../shared/xpTheme';
 import TreeSelect, { buildLocationFilterTree, expandLocationFilterValue, buildCategoryTree, expandCategoryFilterValue } from '../shared/TreeSelect';
 import Pager from '../shared/Pager';
 import { xpBevel as sharedXpBevel, xpTitleBar as sharedXpTitleBar, xpToolbar as sharedXpToolbar, SearchField, FilterChipBar, SegmentedBar, FilterChipOption, pageFillStyle, flexFillStyle } from '../shared/shellTheme';
@@ -14,31 +14,11 @@ import { lvThead, SortableTh, lvZebra, Dash, ResizableTable } from '../shared/li
 import { qtyFmt } from '../shared/format';
 import { STATIC_BASE } from '../shared/apiBase';
 
+import { refMeta, shortRef } from './ledgerRef';
 const StockLedgerPrintModal = dynamic(() => import('./StockLedgerPrintModal'), { ssr: false });
 
 const PAGE_SIZE = 50;
 const PRINT_LIMIT = 1000;
-
-// Friendly label + colour per reference_type. Unknown types fall back to a
-// title-cased label and a neutral pill so new movement sources still render.
-type RefMeta = { label: string; classic: { bg: string; border: string; color: string }; modern: string };
-const REF_META: Record<string, RefMeta> = {
-    'manual':              { label: 'Manual Adjustment', classic: { bg: '#e6e3da', border: '#a8a292', color: '#444' }, modern: 'text-bg-secondary' },
-    'Manufacturing Order': { label: 'Manufacturing',     classic: { bg: '#dde8f5', border: '#7f9db9', color: '#1a3d7a' }, modern: 'text-bg-primary' },
-    'Work Order':          { label: 'Work Order',        classic: { bg: '#e6ddf2', border: '#9a82c0', color: '#4a2a7a' }, modern: 'text-bg-dark' },
-    'Goods Receipt':       { label: 'Goods Receipt',     classic: { bg: '#dcefe0', border: '#7faf87', color: '#1a5e2a' }, modern: 'text-bg-success' },
-    'Purchase Order':      { label: 'Purchase Order',    classic: { bg: '#d6eef0', border: '#6fb0b8', color: '#15565e' }, modern: 'text-bg-info' },
-    'Transfer':            { label: 'Transfer',          classic: { bg: '#fbeccf', border: '#c8a23a', color: '#6a4a00' }, modern: 'text-bg-warning' },
-};
-const refMeta = (t: string): RefMeta =>
-    REF_META[t] || { label: (t || '').replace(/_/g, ' '), classic: { bg: '#e0dfd8', border: '#b0a898', color: '#333' }, modern: 'text-bg-light border' };
-
-// Reference ids are often UUIDs — show a short head, keep the full value on hover.
-const shortRef = (id: string) => {
-    if (!id) return '';
-    const looksUuid = id.length > 14 && /[0-9a-f-]{12,}/i.test(id);
-    return looksUuid ? id.slice(0, 8) + '…' : id;
-};
 
 // Ledger movements carry the rawest numbers in the app — 4dp so a small
 // correction entry is not rounded away.
@@ -101,7 +81,11 @@ export default function ReportsView(_props: any) {
     // Any non-page filter change snaps back to the first page.
     const onFilter = (setter: (v: any) => void) => (v: any) => { setter(v); setPage(1); };
 
+    // Filter/page changes can overlap requests; only the newest may commit, or a
+    // slow earlier response repaints the table (and totals) for a stale filter.
+    const fetchGen = useRef(0);
     const fetchLedger = useCallback(async () => {
+        const gen = ++fetchGen.current;
         setLoading(true);
         setError('');
         try {
@@ -119,16 +103,18 @@ export default function ReportsView(_props: any) {
             const res = await authFetch(`${API_BASE}/stock?${p.toString()}`);
             if (!res.ok) throw new Error(`HTTP ${res.status}`);
             const data = await res.json();
+            if (gen !== fetchGen.current) return;
             setEntries(data.items || []);
             setTotal(data.total || 0);
             setTotalIn(data.total_in || 0);
             setTotalOut(data.total_out || 0);
             if (Array.isArray(data.reference_types) && data.reference_types.length) setRefTypes(data.reference_types);
         } catch (e: any) {
+            if (gen !== fetchGen.current) return;
             setError(e.message || 'Failed to load ledger');
             setEntries([]);
         } finally {
-            setLoading(false);
+            if (gen === fetchGen.current) setLoading(false);
         }
     }, [API_BASE, authFetch, page, debouncedSearch, startDate, endDate, locationFilter, locations, categoryFilter, categories, refTypeFilter, direction]);
 
@@ -387,7 +373,7 @@ export default function ReportsView(_props: any) {
                     )}
                 </td>
                 <td style={{ ...xpCell, borderRight: 'none', whiteSpace: 'nowrap' }}>
-                    <span style={{ borderRadius: CHIP_RADIUS, background: rm.classic.bg, border: `1px solid ${rm.classic.border}`, padding: '0 5px', fontSize: '10px', color: rm.classic.color }}>{rm.label}</span>
+                    <Chip tone={rm.tone} size="xs">{rm.label}</Chip>
                     <span style={{ fontSize: '10px', color: '#999', marginLeft: 4 }} title={e.reference_id}>#{e.reference_label || shortRef(e.reference_id)}</span>
                 </td>
             </tr>;
