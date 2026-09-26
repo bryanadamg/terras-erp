@@ -1347,9 +1347,7 @@ async def add_mo_completion(
         )
         wo_wc_type = (wc_type_res2.scalar() or "").upper()
 
-    is_beam_output = bool(
-        mo.item and mo.item.category and (mo.item.category.name or "").lower() == "beam"
-    )
+    is_beam_output = beam_service.is_beam_item(mo.item)
     # Beaming WOs can live on the produced item's MO (Plan Beaming flow) —
     # a completion on a BEAMING-type work center is also a beam birth.
     if not is_beam_output and wo_wc_type == "BEAMING":

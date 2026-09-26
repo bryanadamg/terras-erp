@@ -80,6 +80,18 @@ async def beam_item_ids(db: AsyncSession, item_ids: list) -> set[str]:
     return {str(r[0]) for r in res.all()}
 
 
+def is_beam_item(item) -> bool:
+    """`beam_item_ids` for an Item already loaded with its category — same
+    three-way rule, for callers that have the row and no reason to re-query."""
+    if item is None:
+        return False
+    return bool(
+        (item.category and (item.category.name or "").lower() == "beam")
+        or (item.code or "").startswith("BEAM-")
+        or item.ends is not None
+    )
+
+
 async def _mount_remaining(db: AsyncSession, mount: BeamMount) -> float:
     """Live remaining kg of a mounted beam — its batch balance at the loom."""
     if not mount.location_id:
