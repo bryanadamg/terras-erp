@@ -292,6 +292,11 @@ const translations = {
         // Dyeing monitor. A vessel is measured in yards against reel speed, not in
         // kg against a calendar, so it carries its own vocabulary.
         'dyeing_monitor': 'Dyeing Monitor',
+        'vessel': 'Vessel',
+        'speed': 'Speed',
+        'time_output_vs_wo': 'Time-based output vs WO',
+        'time_output_hint': 'yd/min × ropes × time between Start and Complete, converted through the item g/y, against the WO qty.',
+        'no_dye_batches': 'No dye batches to show.',
         'loaded': 'loaded',
         'yards_dyed': 'Dyed',
         'yd_per_min': 'yd/min',
@@ -638,6 +643,11 @@ const translations = {
         'targets': 'Target',
         'weaving_monitor': 'Monitor Tenun',
         'dyeing_monitor': 'Monitor Celup',
+        'vessel': 'Mesin',
+        'speed': 'Kecepatan',
+        'time_output_vs_wo': 'Output berdasarkan waktu vs WO',
+        'time_output_hint': 'yd/min × tali × waktu antara Mulai dan Selesai, dikonversi lewat g/y barang, dibanding qty WO.',
+        'no_dye_batches': 'Tidak ada batch celup.',
         'loaded': 'terisi',
         'yards_dyed': 'Tercelup',
         'yd_per_min': 'yd/mnt',
