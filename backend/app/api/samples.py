@@ -16,7 +16,6 @@ from app.schemas import (
 from app.models.auth import User
 from app.api.auth import get_current_user, require_permission, require_any_permission
 from app.services import audit_service, kpi_service, numbering_service
-from app.core.ws_manager import manager
 from app.core.pagination import PageParams, PageWindow
 from datetime import datetime, date, time, timedelta
 from pathlib import Path
@@ -196,11 +195,7 @@ async def create_sample_request(
         changes={"code": sample.code, "customer_article_code": sample.customer_article_code},
     )
 
-    try:
-        await kpi_service.invalidate_kpis_async(db)
-        await manager.broadcast({"type": "KPI_UPDATE"})
-    except Exception:
-        pass
+    await kpi_service.invalidate_and_broadcast(db, {"type": "KPI_UPDATE"})
 
     await _enrich_colors_with_items(db, [sample])
     sample.is_unread = False
@@ -706,11 +701,7 @@ async def update_sample_status(
         changes={"status": status, "previous_status": previous_status},
     )
 
-    try:
-        await kpi_service.invalidate_kpis_async(db)
-        await manager.broadcast({"type": "KPI_UPDATE"})
-    except Exception:
-        pass
+    await kpi_service.invalidate_and_broadcast(db, {"type": "KPI_UPDATE"})
 
     return {"status": "success", "message": f"Sample updated to {status}"}
 
@@ -1019,10 +1010,6 @@ async def delete_sample(
         details=details,
     )
 
-    try:
-        await kpi_service.invalidate_kpis_async(db)
-        await manager.broadcast({"type": "KPI_UPDATE"})
-    except Exception:
-        pass
+    await kpi_service.invalidate_and_broadcast(db, {"type": "KPI_UPDATE"})
 
     return {"status": "success", "message": "Sample deleted"}

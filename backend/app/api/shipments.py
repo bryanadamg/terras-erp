@@ -633,13 +633,7 @@ async def dispatch_shipment(
             + (f", released {released_qty:g} of reserved stock" if released_qty else "")
         ),
     )
-    try:
-        await kpi_service.invalidate_kpis_async(db)
-        await manager.broadcast({"type": "KPI_UPDATE"})
-        await manager.broadcast({"type": "SHIPMENT_UPDATE", "id": str(shp_id)})
-        await manager.broadcast({"type": "PICK_LIST_UPDATE"})
-    except Exception:
-        pass
+    await kpi_service.invalidate_and_broadcast(db, {"type": "KPI_UPDATE"}, {"type": "SHIPMENT_UPDATE", "id": str(shp_id)}, {"type": "PICK_LIST_UPDATE"})
 
     shp = await _load(db, shp_id)
     await _decorate_cartons(db, [shp])

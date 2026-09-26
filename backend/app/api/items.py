@@ -127,11 +127,7 @@ async def create_item_api(payload: ItemCreate, db: AsyncSession = Depends(get_as
         changes=payload.model_dump()
     )
 
-    try:
-        await kpi_service.invalidate_kpis_async(db)
-        await manager.broadcast({"type": "KPI_UPDATE"})
-    except Exception:
-        pass
+    await kpi_service.invalidate_and_broadcast(db, {"type": "KPI_UPDATE"})
 
     _populate_source_info(item)
     return item
@@ -255,11 +251,7 @@ async def add_stock_api(payload: StockEntryCreate, db: AsyncSession = Depends(ge
     )
 
     await manager.broadcast({"type": "STOCK_UPDATE"})
-    try:
-        await kpi_service.invalidate_kpis_async(db)
-        await manager.broadcast({"type": "KPI_UPDATE"})
-    except Exception:
-        pass
+    await kpi_service.invalidate_and_broadcast(db, {"type": "KPI_UPDATE"})
 
     return {"status": "success", "message": "Stock recorded"}
 
@@ -310,10 +302,6 @@ async def delete_item(item_id: str, db: AsyncSession = Depends(get_async_db), cu
         details=details
     )
 
-    try:
-        await kpi_service.invalidate_kpis_async(db)
-        await manager.broadcast({"type": "KPI_UPDATE"})
-    except Exception:
-        pass
+    await kpi_service.invalidate_and_broadcast(db, {"type": "KPI_UPDATE"})
 
     return {"status": "success", "message": "Item deleted"}

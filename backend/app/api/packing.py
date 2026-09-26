@@ -1324,12 +1324,7 @@ async def add_packing_completion(
             + (f": {reject_reason}" if total_rejected > 0 and reject_reason else "")
         ),
     )
-    try:
-        await kpi_service.invalidate_kpis_async(db)
-        await manager.broadcast({"type": "PACKING_UPDATE", "id": str(po_id)})
-        await manager.broadcast({"type": "STOCK_UPDATE"})
-    except Exception:
-        pass
+    await kpi_service.invalidate_and_broadcast(db, {"type": "PACKING_UPDATE", "id": str(po_id)}, {"type": "STOCK_UPDATE"})
 
     po = await _load(db, po_id)
     units = await _packed_units_for(db, [po.id])
@@ -1448,12 +1443,7 @@ async def reject_packing_completion(
         + (f" → {loc_name}" if loc_name else "")
         + (f": {comp.reject_reason}" if comp.reject_reason else ""),
     )
-    try:
-        await kpi_service.invalidate_kpis_async(db)
-        await manager.broadcast({"type": "PACKING_UPDATE", "id": str(po_id)})
-        await manager.broadcast({"type": "STOCK_UPDATE"})
-    except Exception:
-        pass
+    await kpi_service.invalidate_and_broadcast(db, {"type": "PACKING_UPDATE", "id": str(po_id)}, {"type": "STOCK_UPDATE"})
 
     po = await _load(db, po_id)
     units = await _packed_units_for(db, [po.id])
