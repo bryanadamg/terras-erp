@@ -1358,7 +1358,7 @@ export default function SampleRequestView({ samples, customers, onCreateSample, 
                                            stripeColor: stripe.borderLeftColor,
                                            background: stripe.background,
                                            cells: [
-                                               <span style={{ fontWeight: 'bold', color: '#111', display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                                               <span key="c0" style={{ fontWeight: 'bold', color: '#111', display: 'inline-flex', alignItems: 'center', gap: 4 }}>
                                                    {colorHexByName.has(String(c.name).toLowerCase()) && (
                                                        <span style={{ width: 8, height: 8, borderRadius: '50%', flexShrink: 0, display: 'inline-block',
                                                            background: colorHexByName.get(String(c.name).toLowerCase()),
@@ -1366,8 +1366,8 @@ export default function SampleRequestView({ samples, customers, onCreateSample, 
                                                    )}
                                                    {c.name}
                                                </span>,
-                                               <span style={{ borderRadius: CHIP_RADIUS, background: c.is_repeat ? '#dce4f5' : '#d4edda', border: `1px solid ${c.is_repeat ? '#6878c8' : '#5aaa68'}`, color: c.is_repeat ? '#0d2a6e' : '#0c3a1a', padding: '0 4px', fontSize: 9, fontFamily: xpFont, fontWeight: 'bold' }}>{c.is_repeat ? 'Repeat' : 'New'}</span>,
-                                               <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, flexWrap: 'wrap' }}>
+                                               <span key="c1" style={{ borderRadius: CHIP_RADIUS, background: c.is_repeat ? '#dce4f5' : '#d4edda', border: `1px solid ${c.is_repeat ? '#6878c8' : '#5aaa68'}`, color: c.is_repeat ? '#0d2a6e' : '#0c3a1a', padding: '0 4px', fontSize: 9, fontFamily: xpFont, fontWeight: 'bold' }}>{c.is_repeat ? 'Repeat' : 'New'}</span>,
+                                               <span key="c2" style={{ display: 'inline-flex', alignItems: 'center', gap: 4, flexWrap: 'wrap' }}>
                                                    <StatusChip status={status} tint style={undefined} />
                                                    {/* Attempt tallies — a rejected variant can be reopened and rejected again,
                                                        so these are counts of logged transitions, not the current status. */}

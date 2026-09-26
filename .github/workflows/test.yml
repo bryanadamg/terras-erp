@@ -78,6 +78,11 @@ jobs:
         working-directory: frontend
         run: npx tsc --noEmit
 
+      - name: Lint
+        working-directory: frontend
+        # Errors fail the job; the exhaustive-deps backlog is warnings for now.
+        run: npm run lint
+
       - name: Build
         working-directory: frontend
         run: npm run build

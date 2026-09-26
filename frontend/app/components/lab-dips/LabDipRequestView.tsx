@@ -632,14 +632,14 @@ export default function LabDipRequestView({
                                                 stripeColor: stripe.borderLeftColor,
                                                 background: stripe.background,
                                                 cells: [
-                                                    <span style={{ fontWeight: 'bold', color: '#0d3a8a', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' as const, display: 'block' }}>{it.item_name || it.item_code || '—'}</span>,
+                                                    <span key="c0" style={{ fontWeight: 'bold', color: '#0d3a8a', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' as const, display: 'block' }}>{it.item_name || it.item_code || '—'}</span>,
                                                     // Color code + variant; the full approved code once approved.
                                                     it.approved_color_code ? (
                                                         <span title="Approved color code (saved to library)" style={{ ...variantBadge(), fontSize: 9, padding: '0 6px', background: '#1b7a34', color: '#fff', borderColor: '#0f5a22'}}>{it.approved_color_code}</span>
                                                     ) : (
                                                         <span style={{ ...seqBadge(), fontFamily: CODE_FONT, fontSize: 10}}>{variantCode}</span>
                                                     ),
-                                                    <StatusChip status={status} tint />,
+                                                    <StatusChip key="c1" status={status} tint />,
                                                     // Rejections column: a clear "log" button (icon + count) that opens the
                                                     // history trace. Bordered/underlined so it reads as clickable, not a static tag.
                                                     (it.rejection_count ?? 0) > 0 ? (
