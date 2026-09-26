@@ -1461,6 +1461,10 @@ async def mark_card_printed(
         raise HTTPException(status_code=404, detail="Packing order not found")
     po.card_printed_at = datetime.utcnow()
     await db.commit()
+    await audit_service.log_activity(
+        db, current_user.id, "PRINT", "PackingOrder", str(po_id),
+        f"Printed Kartu Packing for {po.code}",
+    )
     po = await _load(db, po_id)
     return await _response(db, po)
 
