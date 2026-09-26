@@ -28,7 +28,7 @@ export default function SettingsRolesTab({
     const { showToast } = useToast();
     const { confirm } = useConfirm();
     const { users } = useUser();
-    const { categories, locations } = useData();
+    const { categories, locations, authFetch } = useData();
 
     const [formMode, setFormMode] = useState<'create' | 'edit' | null>(null);
     const [formRole, setFormRole] = useState<RoleLike | undefined>(undefined);
@@ -67,7 +67,7 @@ export default function SettingsRolesTab({
 
     const submitCreate = async (payload: RoleFormPayload): Promise<{ ok: boolean; error?: string }> => {
         try {
-            const res = await fetch(`${API_BASE}/roles`, {
+            const res = await authFetch(`${API_BASE}/roles`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json', ...authHeaders() },
                 body: JSON.stringify(payload),
@@ -87,7 +87,7 @@ export default function SettingsRolesTab({
 
     const submitEdit = async (roleId: string, payload: RoleFormPayload): Promise<{ ok: boolean; error?: string }> => {
         try {
-            const res = await fetch(`${API_BASE}/roles/${roleId}`, {
+            const res = await authFetch(`${API_BASE}/roles/${roleId}`, {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json', ...authHeaders() },
                 body: JSON.stringify(payload),
@@ -119,7 +119,7 @@ export default function SettingsRolesTab({
         });
         if (!ok) return;
         try {
-            const res = await fetch(`${API_BASE}/roles/${role.id}`, { method: 'DELETE', headers: authHeaders() });
+            const res = await authFetch(`${API_BASE}/roles/${role.id}`, { method: 'DELETE', headers: authHeaders() });
             if (res.ok || res.status === 204) {
                 showToast('Role deleted', 'success');
                 reload();

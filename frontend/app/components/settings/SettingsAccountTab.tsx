@@ -7,9 +7,11 @@ import { xpBtn, xpInput, FieldLabel, BTN_TONES, XP_BTN } from '../shared/xpTheme
 import { settingsActions, settingsCol, settingsColumns, settingsGrid, settingsStack } from './settingsStyles';
 import SettingsPanel from './SettingsPanel';
 import AvatarPicker from '../shared/AvatarPicker';
+import { useData } from '../../context/DataContext';
 import { API_BASE } from '../shared/apiBase';
 
 export default function SettingsAccountTab() {
+    const { authFetch } = useData();
     const { showToast } = useToast();
     const { currentUser, setCurrentUser } = useUser();
 
@@ -40,7 +42,7 @@ export default function SettingsAccountTab() {
             payload.password = selfPassword;
         }
         try {
-            const res = await fetch(`${API_BASE}/users/${currentUser.id}`, {
+            const res = await authFetch(`${API_BASE}/users/${currentUser.id}`, {
                 method: 'PUT',
                 headers: {
                     'Content-Type': 'application/json',

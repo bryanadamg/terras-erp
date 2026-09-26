@@ -596,22 +596,22 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
             // 1. MASTER DATA (Locations, Partners, etc.)
             // Fetch if initial load OR explicitly targeted OR on Settings/Locations page
             if ((isInitialLoad && !masterFetched) || fetchTarget === 'settings' || fetchTarget === 'locations' || fetchTarget === 'item-metadata' || fetchTarget === 'routing') {
-                requests.push(fetch(`${API_BASE}/locations`, { headers })); requestTypes.push('locations');
-                requests.push(fetch(`${API_BASE}/attributes`, { headers })); requestTypes.push('attributes');
-                requests.push(fetch(`${API_BASE}/categories`, { headers })); requestTypes.push('categories');
-                requests.push(fetch(`${API_BASE}/uoms`, { headers })); requestTypes.push('uoms');
-                requests.push(fetch(`${API_BASE}/sizes`, { headers })); requestTypes.push('sizes');
+                requests.push(authFetch(`${API_BASE}/locations`, { headers })); requestTypes.push('locations');
+                requests.push(authFetch(`${API_BASE}/attributes`, { headers })); requestTypes.push('attributes');
+                requests.push(authFetch(`${API_BASE}/categories`, { headers })); requestTypes.push('categories');
+                requests.push(authFetch(`${API_BASE}/uoms`, { headers })); requestTypes.push('uoms');
+                requests.push(authFetch(`${API_BASE}/sizes`, { headers })); requestTypes.push('sizes');
                 // limit is explicit: every machine picker walks the whole tree client-side,
                 // so a partial page hides machines instead of paging them.
-                requests.push(fetch(`${API_BASE}/work-centers?limit=2000`, { headers })); requestTypes.push('work-centers');
-                requests.push(fetch(`${API_BASE}/operations`, { headers })); requestTypes.push('operations');
+                requests.push(authFetch(`${API_BASE}/work-centers?limit=2000`, { headers })); requestTypes.push('work-centers');
+                requests.push(authFetch(`${API_BASE}/operations`, { headers })); requestTypes.push('operations');
                 // /partners/lookup, not /partners: this feed is the name-resolution
                 // index (customer/supplier dropdowns, `.find(p => p.id === x)`, print
                 // modals, SectionHome counts), so it must be the WHOLE set. /partners
                 // is a page window and silently cut off at its 1000-row default. The
                 // paged list view (PartnersView) self-fetches /partners instead.
-                requests.push(fetch(`${API_BASE}/partners/lookup`, { headers })); requestTypes.push('partners');
-                requests.push(fetch(`${API_BASE}/settings/company`, { headers })); requestTypes.push('company-profile');
+                requests.push(authFetch(`${API_BASE}/partners/lookup`, { headers })); requestTypes.push('partners');
+                requests.push(authFetch(`${API_BASE}/settings/company`, { headers })); requestTypes.push('company-profile');
             }
 
             // Print templates are refetched on EVERY first load, cache hit included —
@@ -621,7 +621,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
             // timestamp while carrying the old templates forward). One small row per
             // customised doc type, so the extra request is cheap.
             if (isInitialLoad || fetchTarget === 'settings' || fetchTarget === 'print-designer') {
-                requests.push(fetch(`${API_BASE}/print-templates`, { headers })); requestTypes.push('print-templates');
+                requests.push(authFetch(`${API_BASE}/print-templates`, { headers })); requestTypes.push('print-templates');
             }
 
             // 2. DOMAIN DATA (Inventory, Orders, etc.)
@@ -641,7 +641,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
                 const skip = (itemPage - 1) * pageSize;
                 const effectiveCategoryId = categoryL3 || categoryL2 || categoryL1;
                 const categoryParam = effectiveCategoryId ? `&category_id=${effectiveCategoryId}` : '';
-                requests.push(fetch(`${API_BASE}/items?skip=${skip}&limit=${pageSize}&search=${encodeURIComponent(itemSearch)}${categoryParam}`, { headers }));
+                requests.push(authFetch(`${API_BASE}/items?skip=${skip}&limit=${pageSize}&search=${encodeURIComponent(itemSearch)}${categoryParam}`, { headers }));
                 requestTypes.push('items');
             }
 
@@ -652,20 +652,20 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
             // entry route), or after item CRUD on the inventory page.
             const idxEmpty = !itemIndexRef.current || Object.keys(itemIndexRef.current).length === 0;
             if (idxEmpty || fetchTarget.includes('inventory')) {
-                requests.push(fetch(`${API_BASE}/items/lookup`, { headers })); requestTypes.push('item-lookup');
+                requests.push(authFetch(`${API_BASE}/items/lookup`, { headers })); requestTypes.push('item-lookup');
             }
 
             // KPIs + dashboard summary (server-side aggregates: warehouse distribution,
             // low-stock names, delivery readiness, recent movements, yield — so the
             // dashboard no longer ships the full stock-balance + all sales-orders).
             if (fetchTarget === 'dashboard' || fetchTarget === '') {
-                requests.push(fetch(`${API_BASE}/dashboard/kpis`, { headers }));
+                requests.push(authFetch(`${API_BASE}/dashboard/kpis`, { headers }));
                 requestTypes.push('kpis');
-                requests.push(fetch(`${API_BASE}/dashboard/summary`, { headers }));
+                requests.push(authFetch(`${API_BASE}/dashboard/summary`, { headers }));
                 requestTypes.push('dashboard-summary');
-                requests.push(fetch(`${API_BASE}/dashboard/kpis/history?days=30`, { headers }));
+                requests.push(authFetch(`${API_BASE}/dashboard/kpis/history?days=30`, { headers }));
                 requestTypes.push('kpi-history');
-                requests.push(fetch(`${API_BASE}/dashboard/delivery-outlook?limit=8`, { headers }));
+                requests.push(authFetch(`${API_BASE}/dashboard/delivery-outlook?limit=8`, { headers }));
                 requestTypes.push('dashboard-outlook');
             }
 
@@ -684,11 +684,11 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
             // line form's size dropdown — see bomsLookup/`/boms/lookup` below,
             // which skips lines+operations entirely for that.
             if (fetchTarget.includes('manufacturing') || fetchTarget.includes('production-runs')) {
-                requests.push(fetch(`${API_BASE}/boms`, { headers }));
+                requests.push(authFetch(`${API_BASE}/boms`, { headers }));
                 requestTypes.push('boms');
             }
             if (fetchTarget.includes('sales-orders')) {
-                requests.push(fetch(`${API_BASE}/boms/lookup`, { headers }));
+                requests.push(authFetch(`${API_BASE}/boms/lookup`, { headers }));
                 requestTypes.push('boms-lookup');
             }
 
@@ -706,7 +706,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
                 const moSkip = (woPage - 1) * pageSize;
                 const moSlim = isDashboard ? '&slim=true' : '';
                 const moSearchParam = moSearch ? `&search=${encodeURIComponent(moSearch)}` : '';
-                requests.push(fetch(`${API_BASE}/manufacturing-orders?skip=${moSkip}&limit=${pageSize}${moSlim}${moSearchParam}`, { headers }));
+                requests.push(authFetch(`${API_BASE}/manufacturing-orders?skip=${moSkip}&limit=${pageSize}${moSlim}${moSearchParam}`, { headers }));
                 requestTypes.push(isDashboard ? 'manufacturing-orders-slim' : 'manufacturing-orders');
             }
             if (fetchTarget.includes('manufacturing') || fetchTarget.includes('production-runs') || fetchTarget.includes('reports')) {
@@ -714,7 +714,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
                 myPrGen = ++prGenRef.current;
                 heldPrPending = true;
                 setPrPending(n => n + 1);
-                requests.push(fetch(`${API_BASE}/production-runs?skip=${prSkip}&limit=${pageSize}${prFilterQuery}`, { headers }));
+                requests.push(authFetch(`${API_BASE}/production-runs?skip=${prSkip}&limit=${pageSize}${prFilterQuery}`, { headers }));
                 requestTypes.push('production-runs');
             }
 
@@ -724,13 +724,13 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
             // inventory and work-orders views do NOT read stockBalance, so fetching the
             // whole table there was wasted work — costly on the low-power ARM backend.
             if (fetchTarget.includes('stock') || fetchTarget.includes('manufacturing') || fetchTarget.includes('production-runs')) {
-                requests.push(fetch(`${API_BASE}/stock/balance`, { headers }));
+                requests.push(authFetch(`${API_BASE}/stock/balance`, { headers }));
                 requestTypes.push('balance');
             }
             
             if (fetchTarget.includes('stock') || fetchTarget.includes('reports')) {
                  const skip = (reportPage - 1) * pageSize;
-                 requests.push(fetch(`${API_BASE}/stock?skip=${skip}&limit=${pageSize}`, { headers }));
+                 requests.push(authFetch(`${API_BASE}/stock?skip=${skip}&limit=${pageSize}`, { headers }));
                  requestTypes.push('stock-ledger');
             }
 
@@ -740,7 +740,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
             // (only partners, fetched separately in master data) — each used to
             // pull both regardless of which one it actually needed.
             if (fetchTarget.includes('sales-orders')) {
-                requests.push(fetch(`${API_BASE}/sales-orders?${soQuery(soPage)}`, { headers }));
+                requests.push(authFetch(`${API_BASE}/sales-orders?${soQuery(soPage)}`, { headers }));
                 requestTypes.push('sales-orders');
             }
             // NOT samples: the samples list is server-paginated + server-filtered
@@ -749,7 +749,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
 
             // Procurement
             if (fetchTarget.includes('purchase-orders') || fetchTarget.includes('suppliers')) {
-                requests.push(fetch(`${API_BASE}/purchase-orders?${poQuery(poPage)}`, { headers }));
+                requests.push(authFetch(`${API_BASE}/purchase-orders?${poQuery(poPage)}`, { headers }));
                 requestTypes.push('purchase-orders');
             }
 
@@ -758,14 +758,14 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
             // paged /partners fetch; this refresh keeps the shared dropdowns and
             // name lookups current after a create/edit/delete on those pages.
             if (fetchTarget.includes('customers') || fetchTarget.includes('suppliers') || fetchTarget.includes('samples')) {
-                requests.push(fetch(`${API_BASE}/partners/lookup`, { headers }));
+                requests.push(authFetch(`${API_BASE}/partners/lookup`, { headers }));
                 requestTypes.push('partners');
             }
 
             // Admin / Audit
             if (fetchTarget.includes('audit-logs')) {
                 const audSkip = (auditPage - 1) * pageSize;
-                requests.push(fetch(`${API_BASE}/audit-logs?skip=${audSkip}&limit=${pageSize}&entity_type=${auditType}`, { headers }));
+                requests.push(authFetch(`${API_BASE}/audit-logs?skip=${audSkip}&limit=${pageSize}&entity_type=${auditType}`, { headers }));
                 requestTypes.push('audit-logs');
             }
 
@@ -796,8 +796,9 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
                     // endpoints are permission-gated, so a restricted user hits these
                     // by design on any page whose bundle touches a domain they can't
                     // see — surfacing it as a warning toast would nag them on every
-                    // load. Real failures (500, 404, 401) still report.
-                    if (res.status !== 403) failedTypes.push(`${type} (${res.status})`);
+                    // load. 401 already logged the user out inside authFetch.
+                    // Real failures (500, 404) still report.
+                    if (res.status !== 403 && res.status !== 401) failedTypes.push(`${type} (${res.status})`);
                     continue;
                 }
                 const data = await res.json();
@@ -902,8 +903,8 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
             const prSkip = (prPage - 1) * pageSize;
             const myPrGen = ++prGenRef.current;
             const [moRes, prRes] = await Promise.all([
-                fetch(`${API_BASE}/manufacturing-orders?skip=${moSkip}&limit=${pageSize}${moSearchParam}`, { headers }),
-                fetch(`${API_BASE}/production-runs?skip=${prSkip}&limit=${pageSize}${prFilterQuery}`, { headers }),
+                authFetch(`${API_BASE}/manufacturing-orders?skip=${moSkip}&limit=${pageSize}${moSearchParam}`, { headers }),
+                authFetch(`${API_BASE}/production-runs?skip=${prSkip}&limit=${pageSize}${prFilterQuery}`, { headers }),
             ]);
             if (moRes.ok) { const d = await moRes.json(); setManufacturingOrders(d.items); setWoTotal(d.total); }
             if (prRes.ok && myPrGen === prGenRef.current) { const d = await prRes.json(); setProductionRuns(d.items); setPrTotal(d.total); }
@@ -924,7 +925,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
         try {
             const token = localStorage.getItem('access_token');
             const headers = { 'Authorization': `Bearer ${token}` };
-            const res = await fetch(`${API_BASE}/purchase-orders?${poQuery(poPage)}`, { headers, cache: 'no-store' });
+            const res = await authFetch(`${API_BASE}/purchase-orders?${poQuery(poPage)}`, { headers, cache: 'no-store' });
             if (res.ok) { const d = await res.json(); setPurchaseOrders(d.items || []); setPoTotal(d.total || 0); setPoStatusCounts(d.status_counts || {}); }
         } catch (e) { reportRefreshError('purchase orders', e); }
     }, [currentUser, poPage, poQuery, reportRefreshError]);
@@ -937,7 +938,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
         try {
             const token = localStorage.getItem('access_token');
             const headers = { 'Authorization': `Bearer ${token}` };
-            const res = await fetch(`${API_BASE}/sales-orders?${soQuery(soPage)}`, { headers, cache: 'no-store' });
+            const res = await authFetch(`${API_BASE}/sales-orders?${soQuery(soPage)}`, { headers, cache: 'no-store' });
             if (res.ok) { const d = await res.json(); setSalesOrders(d.items || []); setSoTotal(d.total || 0); setSoStatusCounts(d.status_counts || {}); }
         } catch (e) { reportRefreshError('sales orders', e); }
     }, [currentUser, soPage, soQuery, reportRefreshError]);
@@ -971,7 +972,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
         try {
             const token = localStorage.getItem('access_token');
             const headers = { 'Authorization': `Bearer ${token}` };
-            const res = await fetch(`${API_BASE}/samples?${params.toString()}`, { headers, cache: 'no-store' });
+            const res = await authFetch(`${API_BASE}/samples?${params.toString()}`, { headers, cache: 'no-store' });
             if (res.ok && myGen === sampleGenRef.current) {
                 const d = await res.json();
                 setSamples(d.items || []);
@@ -1003,9 +1004,9 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
             const token = localStorage.getItem('access_token');
             const headers = { 'Authorization': `Bearer ${token}` };
             const [catRes, uomRes, attrRes] = await Promise.all([
-                fetch(`${API_BASE}/categories`, { headers, cache: 'no-store' }),
-                fetch(`${API_BASE}/uoms`, { headers, cache: 'no-store' }),
-                fetch(`${API_BASE}/attributes`, { headers, cache: 'no-store' }),
+                authFetch(`${API_BASE}/categories`, { headers, cache: 'no-store' }),
+                authFetch(`${API_BASE}/uoms`, { headers, cache: 'no-store' }),
+                authFetch(`${API_BASE}/attributes`, { headers, cache: 'no-store' }),
             ]);
             const patch: Record<string, any> = {};
             if (catRes.ok) { const d = await catRes.json(); setCategories(d); patch.categories = d; }
@@ -1028,9 +1029,9 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
             const token = localStorage.getItem('access_token');
             const headers = { 'Authorization': `Bearer ${token}` };
             const [wcRes, opRes, locRes] = await Promise.all([
-                fetch(`${API_BASE}/work-centers?limit=2000`, { headers, cache: 'no-store' }),
-                fetch(`${API_BASE}/operations`, { headers, cache: 'no-store' }),
-                fetch(`${API_BASE}/locations`, { headers, cache: 'no-store' }),
+                authFetch(`${API_BASE}/work-centers?limit=2000`, { headers, cache: 'no-store' }),
+                authFetch(`${API_BASE}/operations`, { headers, cache: 'no-store' }),
+                authFetch(`${API_BASE}/locations`, { headers, cache: 'no-store' }),
             ]);
             const patch: Record<string, any> = {};
             if (wcRes.ok) { const d = await wcRes.json(); setWorkCenters(d); patch.workCenters = d; }
@@ -1048,7 +1049,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
         try {
             const token = localStorage.getItem('access_token');
             const headers = { 'Authorization': `Bearer ${token}` };
-            const res = await fetch(`${API_BASE}/stock/balance`, { headers, cache: 'no-store' });
+            const res = await authFetch(`${API_BASE}/stock/balance`, { headers, cache: 'no-store' });
             if (res.ok) { const d = await res.json(); setStockBalance(d); }
         } catch (e) { reportRefreshError('stock balances', e); }
     }, [currentUser, reportRefreshError]);
@@ -1062,7 +1063,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
         try {
             const token = localStorage.getItem('access_token');
             const headers = { 'Authorization': `Bearer ${token}` };
-            const res = await fetch(`${API_BASE}/print-templates`, { headers, cache: 'no-store' });
+            const res = await authFetch(`${API_BASE}/print-templates`, { headers, cache: 'no-store' });
             if (res.ok) {
                 const data = await res.json() || [];
                 setPrintTemplates(data);
@@ -1083,10 +1084,10 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
             const token = localStorage.getItem('access_token');
             const headers = { 'Authorization': `Bearer ${token}` };
             const [kpiRes, summaryRes, historyRes, outlookRes] = await Promise.all([
-                fetch(`${API_BASE}/dashboard/kpis`, { headers, cache: 'no-store' }),
-                fetch(`${API_BASE}/dashboard/summary`, { headers, cache: 'no-store' }),
-                fetch(`${API_BASE}/dashboard/kpis/history?days=30`, { headers, cache: 'no-store' }),
-                fetch(`${API_BASE}/dashboard/delivery-outlook?limit=8`, { headers, cache: 'no-store' }),
+                authFetch(`${API_BASE}/dashboard/kpis`, { headers, cache: 'no-store' }),
+                authFetch(`${API_BASE}/dashboard/summary`, { headers, cache: 'no-store' }),
+                authFetch(`${API_BASE}/dashboard/kpis/history?days=30`, { headers, cache: 'no-store' }),
+                authFetch(`${API_BASE}/dashboard/delivery-outlook?limit=8`, { headers, cache: 'no-store' }),
             ]);
             if (kpiRes.ok) setDashboardKPIs(await kpiRes.json());
             if (summaryRes.ok) setDashboardSummary(await summaryRes.json());
@@ -1120,7 +1121,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
                 const headers = { 'Authorization': `Bearer ${token}` };
                 const prSkip = (prPage - 1) * pageSize;
                 const myPrGen = ++prGenRef.current;
-                const res = await fetch(`${API_BASE}/production-runs?skip=${prSkip}&limit=${pageSize}`, { headers, cache: 'no-store' });
+                const res = await authFetch(`${API_BASE}/production-runs?skip=${prSkip}&limit=${pageSize}`, { headers, cache: 'no-store' });
                 if (res.ok && myPrGen === prGenRef.current) { const d = await res.json(); setProductionRuns(d.items); setPrTotal(d.total); }
             } catch (e) { reportRefreshError('production runs', e); }
             finally { setPrPending(n => n - 1); }
