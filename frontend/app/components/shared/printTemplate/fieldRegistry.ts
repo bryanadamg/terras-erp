@@ -12,7 +12,7 @@
 
 import type { PrintContext } from './renderContext';
 
-export type FieldKind = 'text' | 'number' | 'date' | 'qr' | 'blank' | 'static';
+export type FieldKind = 'text' | 'number' | 'date' | 'qr' | 'blank' | 'static' | 'image';
 
 export interface FieldDef {
     key: string;
@@ -28,6 +28,18 @@ export interface FieldDef {
 }
 
 const EM_DASH = '—';
+
+/**
+ * Letterhead fields every document can place. `__text` prints the placement's own
+ * `text` — titles, captions and boilerplate sentences are layout, not data.
+ */
+export const DOC_CHROME_FIELDS: FieldDef[] = [
+    { key: 'company.name', label: 'Company Name', kind: 'text', group: 'Document' },
+    { key: 'company.logo', label: 'Company Logo', kind: 'image', group: 'Document' },
+    { key: 'print.date', label: 'Print Date', kind: 'date', group: 'Document' },
+    { key: '__text', label: 'Text (type your own)', kind: 'static', group: 'Document' },
+    { key: '__blank', label: 'Blank (hand fill-in)', kind: 'blank', group: 'Document' },
+];
 
 // ── Work Order card fields ─────────────────────────────────────────────────────
 // Shared by all four kartu_kerja_* doc types: one manifest, four default layouts.
@@ -78,6 +90,9 @@ export const WO_CARD_FIELDS: FieldDef[] = [
     { key: 'wo.footer_trace', label: 'Traceability Footer (code + ID)', kind: 'text', group: 'Document' },
     { key: 'wo.qr', label: 'QR Code (scan to log)', kind: 'qr', group: 'Document' },
     { key: '__blank', label: 'Blank (hand fill-in)', kind: 'blank', group: 'Document' },
+    // No company.logo: the Kartu Kerja print path carries no logo URL, so a placed
+    // logo would show in the designer and vanish on paper.
+    { key: '__text', label: 'Text (type your own)', kind: 'static', group: 'Document' },
 ];
 
 /** Field manifest per doc type. */
@@ -98,6 +113,8 @@ export interface ResolvedField {
     empty: boolean;
     /** Data URL for `qr` fields. */
     qrDataUrl?: string;
+    /** URL for `image` fields. */
+    imageUrl?: string;
 }
 
 function txt(v: any): ResolvedField {
@@ -227,7 +244,11 @@ export function resolveField(key: string, ctx: PrintContext): ResolvedField {
         case 'wo.qr':
             return { text: '', empty: !ctx.qrDataUrl, qrDataUrl: ctx.qrDataUrl };
 
+        case 'company.logo':
+            return { text: '', empty: !ctx.companyLogoUrl, imageUrl: ctx.companyLogoUrl };
+
         case '__blank':
+        case '__text':
             return { text: '', empty: false };
 
         default:

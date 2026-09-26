@@ -42,6 +42,15 @@ export interface FieldSpec {
     /** `qr` fields only: rendered pixel size and the caption under it. */
     qrSize?: number;
     qrCaption?: string;
+    /** Printed inline before the value, in normal weight ("No : "). */
+    prefix?: string;
+    /** Printed instead of the em dash when the value is empty; '' prints nothing. */
+    emptyText?: string;
+    uppercase?: boolean;
+    /** `static` fields (`__text`) only: the literal text printed. */
+    text?: string;
+    /** `image` fields only: max rendered height, px. */
+    imageHeight?: number;
 }
 
 /**
@@ -87,6 +96,8 @@ export interface KeyValueRow {
     /** Draw an underline in the value cell for hand-written entry. */
     fill?: boolean;
     unit?: string;
+    /** Printed instead of the em dash when the value is empty; '' prints nothing. */
+    emptyText?: string;
 }
 
 /** A column inside a `table` band. */
@@ -104,6 +115,28 @@ export interface TableColumn {
      * so the cell prints blank rather than dashed.
      */
     emptyText?: string;
+    /** Heading alignment when it differs from the cells (a right-aligned qty under a centred heading). */
+    headerAlign?: Align;
+    /** Dotted write-on line instead of a boxed cell (the Perincian carton slots). */
+    dotted?: boolean;
+    /**
+     * This column's cell in the table's footer row. The row is drawn when any column
+     * has one; columns without one get an unbordered blank, so a footer can sit
+     * under just the last few columns. Keyed per column rather than as a positional
+     * list so reordering columns carries the footer along.
+     */
+    footer?: TableFooterCell;
+}
+
+export interface TableFooterCell {
+    /** Literal text ("Total :"). */
+    text?: string;
+    /** Or a document field (e.g. a total the doc type exposes). */
+    field?: string;
+    bold?: boolean;
+    align?: Align;
+    /** Draw the cell's border. Default true. */
+    border?: boolean;
 }
 
 /** A column inside a `tally` band (the hand-fill grids). */
@@ -153,6 +186,11 @@ export interface KeyValueBand extends BandBase {
     labelWidth?: string;
     labelFontSize?: number;
     valueFontSize?: number;
+    /**
+     * `boxed` (default): shaded label cells in a ruled grid, the card look.
+     * `plain`: unruled `Label : value` lines, the letterhead look of a delivery note.
+     */
+    variant?: 'boxed' | 'plain';
 }
 
 export interface TableBand extends BandBase {
@@ -163,6 +201,12 @@ export interface TableBand extends BandBase {
     fontSize?: number;
     /** Hide the whole band when the source yields no rows. */
     hideWhenEmpty?: boolean;
+    /** Pad with blank rows up to this count — room for hand annotations. */
+    minRows?: number;
+    /** Cell rule colour. Default #bbb. */
+    ruleColor?: string;
+    /** Heading row background. Default #f0f0f0; 'none' for an unshaded heading. */
+    headerBackground?: string;
 }
 
 export interface TallyBand extends BandBase {
@@ -186,7 +230,13 @@ export interface SignatureBand extends BandBase {
     type: 'signature';
     /** Small print in the bottom-left (traceability footer). */
     footerFields?: { field: string; fontSize?: number }[];
-    boxes: { caption: string; width?: number; height?: number }[];
+    /**
+     * `line` (default): a signing line with the caption under it, boxes right-aligned.
+     * `block`: equal columns across the page, caption on top, blank signing space
+     * below, then any `fields` (the delivery-note "Hormat Kami / company" block).
+     */
+    variant?: 'line' | 'block';
+    boxes: { caption: string; width?: number; height?: number; fields?: string[] }[];
 }
 
 export interface SpacerBand extends BandBase {

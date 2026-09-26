@@ -1177,6 +1177,25 @@ table {
     box-sizing: border-box !important;
   }
 
+  /* Template documents (TemplatePrintPortal) — the portal alone, on a page the
+     component sizes from the layout's paper via an injected `@page tplpage`. */
+  body.tpl-print-active > *:not(.tpl-print-portal) {
+    display: none !important;
+  }
+  body.tpl-print-active .tpl-print-portal {
+    display: block !important;
+    position: static !important;
+    left: 0 !important;
+    width: 100% !important;
+    page: tplpage;
+  }
+  body.tpl-print-active {
+    width: auto !important;
+  }
+  html:has(body.tpl-print-active) {
+    width: auto !important;
+  }
+
   /* Sales Order print preview modal — hide everything except the paper portal */
   body.so-print-preview-active > *:not(.so-print-paper-portal) {
     display: none !important;

@@ -3,7 +3,7 @@ import React from 'react';
 
 import type {
     PrintLayout, Band, GridBand, GridItem, FieldSpec, KeyValueBand, KeyValueRow,
-    TableBand, TallyBand, SignatureBand, SpacerBand, Align,
+    TableBand, TableColumn, TallyBand, SignatureBand, SpacerBand, Align,
 } from './types';
 import type { PrintContext } from './renderContext';
 import { resolveField, fieldDef } from './fieldRegistry';
@@ -110,6 +110,24 @@ function FieldValue({ item, ctx, docType }: {
         return <div style={{ borderBottom: '1px solid #000', minHeight: 14 }}>&nbsp;</div>;
     }
 
+    if (def?.kind === 'image') {
+        if (!resolved.imageUrl) return null;
+        const centred = item.align === 'center';
+        return (
+            <img src={resolved.imageUrl} alt="" style={{
+                display: 'block', maxHeight: item.imageHeight ?? 34, maxWidth: '100%', objectFit: 'contain',
+                marginLeft: centred || item.align === 'right' ? 'auto' : undefined,
+                marginRight: centred ? 'auto' : undefined,
+            }} />
+        );
+    }
+
+    // A static field prints its placement's own text; a data field prints its value,
+    // or the placement's `emptyText` in place of the dash when there is none.
+    const text = def?.kind === 'static'
+        ? (item.text ?? '')
+        : (resolved.empty && item.emptyText !== undefined ? item.emptyText : resolved.text);
+
     // `unit` is only appended when there is an actual value — "— kg" reads as broken.
     const unit = item.unit !== undefined ? item.unit : def?.unit;
     const showUnit = !!unit && !resolved.empty;
@@ -122,7 +140,8 @@ function FieldValue({ item, ctx, docType }: {
         color: item.color,
         lineHeight: (item.fontSize ?? 11) >= 17 ? 1.05 : undefined,
         wordBreak: 'break-word',
-        whiteSpace: resolved.text.includes('\n') ? 'pre-line' : undefined,
+        whiteSpace: text.includes('\n') ? 'pre-line' : undefined,
+        textTransform: item.uppercase ? 'uppercase' : undefined,
         ...(item.maxLines
             ? {
                 display: '-webkit-box',
@@ -135,7 +154,8 @@ function FieldValue({ item, ctx, docType }: {
 
     return (
         <div style={style}>
-            {resolved.text}
+            {item.prefix && <span style={{ fontWeight: 'normal' }}>{item.prefix}</span>}
+            {text}
             {showUnit && <span style={UNIT}>{` ${unit}`}</span>}
         </div>
     );
@@ -250,8 +270,14 @@ function KeyValueBandView({ band, ctx, docType, selectedId, onSelect }: {
     });
     if (pending.length) lines.push(pending);
 
-    const lblStyle = { ...LBL_CELL, fontSize: band.labelFontSize ?? 9 };
-    const valStyle = { ...VAL_CELL, fontSize: band.valueFontSize ?? 11 };
+    // `plain` drops the ruled grid for unboxed "Label : value" lines.
+    const plain = band.variant === 'plain';
+    const lblStyle: React.CSSProperties = plain
+        ? { padding: '0 8px 0 0', whiteSpace: 'nowrap', verticalAlign: 'top', fontSize: band.labelFontSize ?? 9 }
+        : { ...LBL_CELL, fontSize: band.labelFontSize ?? 9 };
+    const valStyle: React.CSSProperties = plain
+        ? { padding: '0 12px 0 0', verticalAlign: 'top', fontSize: band.valueFontSize ?? 9 }
+        : { ...VAL_CELL, fontSize: band.valueFontSize ?? 11 };
 
     const renderCell = ({ row, index }: { row: KeyValueRow; index: number }, halfCount: number) => {
         const def = fieldDef(docType, row.field);
@@ -269,7 +295,7 @@ function KeyValueBandView({ band, ctx, docType, selectedId, onSelect }: {
                     data-tpl-kvlabel="1"
                     style={{
                         ...lblStyle,
-                        width: full || halfCount === 1 ? band.labelWidth ?? '24%' : undefined,
+                        width: full || halfCount === 1 ? band.labelWidth ?? (plain ? undefined : '24%') : undefined,
                         ...(selected ? { outline: '2px solid #0058e6' } : {}),
                         cursor: onSelect ? 'pointer' : undefined,
                     }}
@@ -289,7 +315,9 @@ function KeyValueBandView({ band, ctx, docType, selectedId, onSelect }: {
                         ...(selected ? { outline: '2px solid #0058e6' } : {}),
                     }}
                 >
-                    {row.field === '__blank' ? ' ' : resolved.text}
+                    {plain && ': '}
+                    {row.field === '__blank' ? ' '
+                        : (resolved.empty && row.emptyText !== undefined ? row.emptyText : resolved.text)}
                     {showUnit && <span style={UNIT}>{` ${unit}`}</span>}
                 </td>
             </React.Fragment>
@@ -297,7 +325,7 @@ function KeyValueBandView({ band, ctx, docType, selectedId, onSelect }: {
     };
 
     return (
-        <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+        <table style={{ width: plain ? undefined : '100%', borderCollapse: 'collapse' }}>
             <tbody>
                 {lines.map((line, li) => (
                     <tr key={li}>{line.map(entry => renderCell(entry, line.length))}</tr>
@@ -315,6 +343,17 @@ function TableBandView({ band, ctx, rows, onSelect }: {
     if (!source) return null;
 
     const fontSize = band.fontSize ?? 9;
+    const rule = `1px solid ${band.ruleColor ?? '#bbb'}`;
+    const th: React.CSSProperties = { ...TH, border: rule };
+    const td: React.CSSProperties = { ...TD, border: rule };
+    const headerBg = band.headerBackground === 'none' ? undefined : (band.headerBackground ?? '#f0f0f0');
+    const cellStyle = (col: TableColumn): React.CSSProperties => ({
+        ...(col.dotted ? { ...TD, border: 'none', borderBottom: '1px dotted #777' } : td),
+        textAlign: col.align ?? 'left',
+        fontWeight: col.bold ? 'bold' : 'normal',
+    });
+    const padRows = Math.max(0, (band.minRows ?? 0) - rows.length);
+    const hasFooter = band.columns.some(c => c.footer);
 
     return (
         <table style={{
@@ -327,13 +366,13 @@ function TableBandView({ band, ctx, rows, onSelect }: {
             ...(band.columns.some(c => c.width) ? { tableLayout: 'fixed' as const } : {}),
         }}>
             <thead>
-                <tr style={{ background: '#f0f0f0' }}>
+                <tr style={{ background: headerBg }}>
                     {band.columns.map((col, ci) => (
                         <th
                             key={col.field}
                             data-tpl-tablecol={`${band.id}:${ci}`}
                             onClick={onSelect ? (e) => { e.stopPropagation(); onSelect(`${band.id}:${ci}`); } : undefined}
-                            style={{ ...TH, textAlign: col.align ?? 'left', width: col.width }}
+                            style={{ ...th, textAlign: col.headerAlign ?? col.align ?? 'left', width: col.width }}
                         >
                             {col.label}
                         </th>
@@ -345,11 +384,7 @@ function TableBandView({ band, ctx, rows, onSelect }: {
                     <tr key={row._key ?? ri}>
                         {band.columns.map(col => {
                             const raw = row[col.field];
-                            const align = col.align ?? 'left';
-                            const style: React.CSSProperties = {
-                                ...TD, textAlign: align,
-                                fontWeight: col.bold ? 'bold' : 'normal',
-                            };
+                            const style = cellStyle(col);
                             // Composite item cell: mono code then name, as the old card drew it.
                             if (col.field === 'item' && raw && typeof raw === 'object') {
                                 return (
@@ -371,6 +406,30 @@ function TableBandView({ band, ctx, rows, onSelect }: {
                         })}
                     </tr>
                 ))}
+                {Array.from({ length: padRows }, (_, pi) => (
+                    <tr key={`pad-${pi}`}>
+                        {band.columns.map(col => <td key={col.field} style={cellStyle(col)}>&nbsp;</td>)}
+                    </tr>
+                ))}
+                {hasFooter && (
+                    <tr>
+                        {band.columns.map(col => {
+                            const f = col.footer;
+                            if (!f) return <td key={col.field} style={{ ...TD, border: 'none' }} />;
+                            const value = f.field ? resolveField(f.field, ctx) : null;
+                            return (
+                                <td key={col.field} style={{
+                                    ...(f.border === false ? { ...TD, border: 'none' } : td),
+                                    textAlign: f.align ?? col.align ?? 'left',
+                                    fontWeight: f.bold ? 'bold' : 'normal',
+                                    whiteSpace: 'nowrap',
+                                }}>
+                                    {f.text}{value && !value.empty ? value.text : ''}
+                                </td>
+                            );
+                        })}
+                    </tr>
+                )}
             </tbody>
         </table>
     );
@@ -457,6 +516,22 @@ function TallyBandView({ band }: { band: TallyBand }) {
 }
 
 function SignatureBandView({ band, ctx, docType }: { band: SignatureBand; ctx: PrintContext; docType: string }) {
+    if (band.variant === 'block') {
+        return (
+            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                {band.boxes.map((box, i) => (
+                    <div key={i} data-tpl-sigbox={`${band.id}:${i}`} style={{ width: `${Math.floor(100 / Math.max(1, band.boxes.length))}%` }}>
+                        <div>{box.caption}</div>
+                        <div style={{ height: box.height ?? 40 }} />
+                        {(box.fields || []).map((f, fi) => {
+                            const r = resolveField(f, ctx);
+                            return r.empty ? null : <div key={fi} style={{ fontWeight: fi === 0 ? 'bold' : 'normal' }}>{r.text}</div>;
+                        })}
+                    </div>
+                ))}
+            </div>
+        );
+    }
     return (
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end' }}>
             <div>
@@ -514,7 +589,7 @@ function BandView(props: {
     if (band.type === 'table') {
         const source = rowSource((band as TableBand).source);
         if (!source) return null;
-        const resolved = source.resolve(ctx);
+        const resolved = source.resolve(ctx, band as TableBand);
         rows = resolved.rows;
         autoTitle = resolved.autoTitle;
         if ((band as TableBand).hideWhenEmpty !== false && rows.length === 0) return null;

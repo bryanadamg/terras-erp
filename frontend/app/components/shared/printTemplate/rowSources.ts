@@ -9,6 +9,9 @@
  */
 
 import type { PrintContext } from './renderContext';
+import type { TableBand } from './types';
+
+const KARTU_KERJA_DOCS = ['kartu_kerja_weaving', 'kartu_kerja_beaming', 'kartu_kerja_dyeing', 'kartu_kerja_general'];
 
 export interface SourceColumnDef {
     field: string;
@@ -31,13 +34,23 @@ export interface SourceResult {
 export interface RowSourceDef {
     id: string;
     label: string;
+    /** Doc types whose tables may draw from this source. */
+    docTypes: string[];
     columns: SourceColumnDef[];
-    resolve: (ctx: PrintContext) => SourceResult;
+    /** Columns a newly added table starts with. Default: the first three. */
+    seedColumns?: string[];
+    /**
+     * `band` is passed when rendering, for sources whose row shape depends on the
+     * columns placed (a slot grid wraps at however many slot columns the band has).
+     */
+    resolve: (ctx: PrintContext, band?: TableBand) => SourceResult;
 }
 
 const BOM_STEP_LINES: RowSourceDef = {
     id: 'bom_step_lines',
     label: 'Step Materials (BOM lines for this WO)',
+    docTypes: KARTU_KERJA_DOCS,
+    seedColumns: ['item', 'required_qty', 'actual_qty'],
     columns: [
         { field: 'item', label: 'Komponen' },
         { field: 'item_code', label: 'Item Code' },
@@ -121,6 +134,7 @@ const BOM_STEP_LINES: RowSourceDef = {
 const DYE_DOSES: RowSourceDef = {
     id: 'dye_doses',
     label: 'Dye Weights (this WO’s bath)',
+    docTypes: KARTU_KERJA_DOCS,
     columns: [
         { field: 'item', label: 'Kimia' },
         { field: 'item_code', label: 'Item Code' },
@@ -188,4 +202,9 @@ export const ROW_SOURCES: Record<string, RowSourceDef> = {
 
 export function rowSource(id: string): RowSourceDef | undefined {
     return ROW_SOURCES[id];
+}
+
+/** Sources a table on this doc type can draw from, in registry order. */
+export function sourcesForDoc(docType: string): RowSourceDef[] {
+    return Object.values(ROW_SOURCES).filter(s => s.docTypes.includes(docType));
 }
