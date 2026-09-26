@@ -9,6 +9,7 @@ import DyeingOrdersTab from './DyeingOrdersTab';
 import SettingOrdersTab from './SettingOrdersTab';
 import { xpFont, FORM_SECTION_BLUE, xpInput as xpInputBase, xpBtn as xpBtnBase } from '../shared/xpTheme';
 import { viewShellStyle, PageTitleBar } from '../shared/shellTheme';
+import { API_BASE } from '../shared/apiBase';
 
 // ── XP Style Constants ─────────────────────────────────────────────────────────
 const modernFont = 'system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif';
@@ -51,7 +52,7 @@ export default function DyeingSettingView() {
     // Dye Recipes list view only.
     const fetchRecipes = useCallback(async () => {
         try {
-            const res = await authFetch('/api/dye-recipes?size=0');
+            const res = await authFetch(`${API_BASE}/dye-recipes?size=0`);
             if (res.ok) {
                 const data = await res.json();
                 setRecipes(Array.isArray(data) ? data : (data.items ?? []));
