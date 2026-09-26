@@ -146,3 +146,10 @@ def test_a_staged_pick_list_is_locked_against_editing(picked_line, client, auth_
     res = _save(client, auth_headers, picked_line, qty=99)
     assert res.status_code == 400, res.text
     assert "unload it" in res.json()["detail"]
+
+
+@pytest.mark.parametrize("status", ["DISPATCHED", "CANCELLED", "FOO"])
+def test_put_cannot_set_a_status_it_does_not_own(status, picked_line, client, auth_headers):
+    """DISPATCHED via PUT would skip the shipment's four-eyes verify and goods issue."""
+    res = client.put(f"/api/pick-lists/{picked_line['pl']}", json={"status": status}, headers=auth_headers)
+    assert res.status_code == 400, res.text
