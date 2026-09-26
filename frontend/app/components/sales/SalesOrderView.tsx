@@ -1115,7 +1115,7 @@ export default function SalesOrderView({ items, attributes, boms, salesOrders, p
 
   // Pro-rata `made` splits produce values like 1.6666666666666665 — clamp the
   // display to 2dp and drop trailing zeros so whole numbers stay whole.
-  const fmtQty = (v: number) => (Math.round(v * 100) / 100).toLocaleString(undefined, { maximumFractionDigits: 2 });
+  const fmtQty = qtyFmt(2);
 
   const fulfilmentCell = (line: any) => {
       const f = lineFulfilment(line);
