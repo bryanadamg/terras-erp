@@ -26,7 +26,9 @@ import DesignerCanvas from './DesignerCanvas';
 import DesignerTestPrint from './DesignerTestPrint';
 import FieldPalette from './FieldPalette';
 import { SelectField } from './controls';
-import { API_BASE } from '../shared/apiBase';
+import { API_BASE, STATIC_BASE } from '../shared/apiBase';
+import TemplatePrintPortal from '../shared/printTemplate/TemplatePrintPortal';
+import { buildSuratJalanContext } from '../shared/printTemplate/doctypes/suratJalan';
 
 
 const clone = (l: PrintLayout): PrintLayout => JSON.parse(JSON.stringify(l));
@@ -62,7 +64,7 @@ function selectionToId(sel: Selection): string | null {
  * rather than a separate mock that can drift.
  */
 export default function PrintDesignerView() {
-    const { printTemplates, refreshPrintTemplates, companyProfile, attributes, authFetch } = useData() as any;
+    const { printTemplates, refreshPrintTemplates, companyProfile, attributes, authFetch, itemIndex, partners } = useData() as any;
     const { formatCustom } = useTimezone();
     const { showToast } = useToast();
     const { confirm } = useConfirm();
@@ -102,7 +104,7 @@ export default function PrintDesignerView() {
     // Sample work orders, grouped by the doc type they would print with, so the
     // preview always shows real content for the layout being edited.
     const [samples, setSamples] = useState<{ wo: any; mo: any }[]>([]);
-    const [sampleId, setSampleId] = useState<string>(linkSample);
+    const [sampleId, setSampleId] = useState<string>(linkDoc.startsWith('kartu_kerja_') ? linkSample : '');
     const [loadingSamples, setLoadingSamples] = useState(true);
 
     // Reset the draft whenever the edited document changes, or a save elsewhere
@@ -171,7 +173,42 @@ export default function PrintDesignerView() {
         return () => { cancelled = true; };
     }, [active?.wo, authFetch]);
 
-    const ctx = useMemo(() => buildPrintContext({
+    // Every other document previews a record of its own kind. Loaded on first visit
+    // to that document, not up front: the Kartu Kerja designer shouldn't pay for it.
+    const isKartu = docType.startsWith('kartu_kerja_');
+    const [shipments, setShipments] = useState<any[] | null>(null);
+    const [shipmentId, setShipmentId] = useState<string>(linkDoc === 'surat_jalan' ? linkSample : '');
+    useEffect(() => {
+        if (docType !== 'surat_jalan' || shipments) return;
+        let cancelled = false;
+        (async () => {
+            let list: any[] = [];
+            try {
+                const res = await authFetch(`${API_BASE}/shipments?page=1&size=20`);
+                if (res.ok) list = (await res.json()).items || [];
+                if (shipmentId && !list.some(x => x.id === shipmentId)) {
+                    const one = await authFetch(`${API_BASE}/shipments/${shipmentId}`);
+                    if (one.ok) list.unshift(await one.json());
+                }
+            } catch { /* empty picker says so below */ }
+            if (!cancelled) setShipments(list);
+        })();
+        return () => { cancelled = true; };
+    }, [docType, shipments, shipmentId, authFetch]);
+    const activeShipment = shipments?.find(x => x.id === shipmentId) || shipments?.[0] || null;
+
+    const logoUrl = companyProfile?.logo_url ? `${STATIC_BASE}${companyProfile.logo_url}` : undefined;
+    const customerAddr = useCallback(
+        (name: string) => (partners || []).find((pt: any) => pt.name === name)?.address || '',
+        [partners]);
+
+    const ctx = useMemo(() => !isKartu ? buildSuratJalanContext({
+        shipment: activeShipment || {},
+        itemIndex, attributes, customerAddr,
+        companyName: companyProfile?.name,
+        companyLogoUrl: logoUrl,
+        tzFormatCustom: formatCustom,
+    }) : buildPrintContext({
         workOrder: active?.wo || {},
         parentMO: active?.mo || {},
         // A placeholder QR keeps the cell's true printed size visible without
@@ -182,7 +219,12 @@ export default function PrintDesignerView() {
         attributes,
         tzFormatCustom: formatCustom,
         dyeing: sampleDyeing,
-    }), [active, companyProfile, attributes, formatCustom, sampleDyeing]);
+    }), [isKartu, activeShipment, itemIndex, customerAddr, logoUrl, active, companyProfile, attributes, formatCustom, sampleDyeing]);
+
+    const sampleLoading = isKartu ? loadingSamples : shipments === null;
+    const hasSample = isKartu ? !!active : !!activeShipment;
+    // Stable, or TemplatePrintPortal's print effect re-fires on every render.
+    const endTestPrint = useCallback(() => setTestPrinting(false), []);
 
     // Undo/redo history. Each entry is a full layout snapshot taken right BEFORE
     // a change is applied — so undo replaces the current draft with the top of
@@ -462,7 +504,7 @@ export default function PrintDesignerView() {
                         {/* Prints the draft, so it needs no save first — that is the point. */}
                         <ToolbarButton icon="bi-printer" printable
                             onClick={() => setTestPrinting(true)}
-                            disabled={!active || testPrinting}
+                            disabled={!hasSample || testPrinting}
                         >
                             Test print
                         </ToolbarButton>
@@ -505,7 +547,22 @@ export default function PrintDesignerView() {
 
                     <span style={{ fontFamily: xpFont, fontSize: 11, fontWeight: 'bold' }}>Preview with:</span>
                     <div style={{ width: 260 }}>
-                        {loadingSamples ? (
+                        {!isKartu ? (
+                            shipments === null ? (
+                                <span style={{ fontFamily: xpFont, fontSize: 11, color: '#666' }}>Loading shipments...</span>
+                            ) : shipments.length === 0 ? (
+                                <span style={{ fontFamily: xpFont, fontSize: 11, color: '#a33' }}>No shipments found</span>
+                            ) : (
+                                <SelectField
+                                    value={(activeShipment?.id || '') as any}
+                                    options={shipments.map(x => ({
+                                        value: x.id,
+                                        label: `${x.delivery_note_number || x.code} — ${x.customer_name || 'no customer'}`,
+                                    }))}
+                                    onChange={v => setShipmentId(v)}
+                                />
+                            )
+                        ) : loadingSamples ? (
                             <span style={{ fontFamily: xpFont, fontSize: 11, color: '#666' }}>Loading work orders...</span>
                         ) : previewPool.length === 0 ? (
                             <span style={{ fontFamily: xpFont, fontSize: 11, color: '#a33' }}>No work orders found</span>
@@ -521,7 +578,7 @@ export default function PrintDesignerView() {
                         )}
                     </div>
                 </div>
-                {!loadingSamples && matchingSamples.length === 0 && previewPool.length > 0 && (
+                {isKartu && !loadingSamples && matchingSamples.length === 0 && previewPool.length > 0 && (
                     <div style={{
                         fontFamily: xpFont, fontSize: 10,
                         color: '#8a6d00', marginTop: 4,
@@ -704,7 +761,7 @@ export default function PrintDesignerView() {
                         display: 'flex', justifyContent: 'center', alignItems: 'flex-start',
                     }}
                 >
-                    {loadingSamples ? (
+                    {sampleLoading ? (
                         // Sheet-shaped placeholder at the real paper size, so the canvas
                         // doesn't resize under the designer when the sample WO lands.
                         <div>
@@ -881,7 +938,10 @@ export default function PrintDesignerView() {
 
             {/* Mounted only while printing: it adds a body class that hides the rest of
                 the page, so it must not exist a moment longer than the print. */}
-            {testPrinting && active && (
+            {testPrinting && !isKartu && activeShipment && (
+                <TemplatePrintPortal layout={draft} ctx={ctx} docType={docType} onPrinted={endTestPrint} />
+            )}
+            {testPrinting && isKartu && active && (
                 <DesignerTestPrint
                     draft={draft}
                     workOrder={active.wo}

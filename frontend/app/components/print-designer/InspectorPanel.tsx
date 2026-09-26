@@ -938,6 +938,12 @@ export default function InspectorPanel({ layout, docType, selection, onChange, o
                             ]}
                             onChange={v => patchBand({ variant: v === 'line' ? undefined : v })} />
                     </Row>
+                    {block && (
+                        <Row label="Font size">
+                            <NumberField suffix="px" min={4} max={24}
+                                value={sg.fontSize} onChange={v => patchBand({ fontSize: v })} />
+                        </Row>
+                    )}
                 </InspectorGroup>
                 <InspectorGroup
                     title="Signature boxes"

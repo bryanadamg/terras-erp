@@ -3,7 +3,7 @@ import React, { useEffect } from 'react';
 import { createPortal } from 'react-dom';
 
 import TemplateRenderer, { type BandVisibilityOverrides } from './TemplateRenderer';
-import { paperCssSize } from './paper';
+import { paperCssSize, paperDimsMm } from './paper';
 import type { PrintLayout } from './types';
 import type { PrintContext } from './renderContext';
 
@@ -27,6 +27,7 @@ export default function TemplatePrintPortal({ layout, ctx, docType, bandOverride
 }) {
     const cssSize = paperCssSize(layout.paper);
     const marginMm = layout.paper.marginMm ?? 8;
+    const printableMm = paperDimsMm(layout.paper).widthMm - marginMm * 2;
 
     useEffect(() => {
         document.body.classList.add('tpl-print-active');
@@ -52,7 +53,9 @@ export default function TemplatePrintPortal({ layout, ctx, docType, bandOverride
     }, [onPrinted]);
 
     return createPortal(
-        <div className="tpl-print-portal" style={{ position: 'fixed', left: '-9999px', top: 0 }}>
+        // Parked off-screen at the printable width. Without a width, a fixed box
+        // with only `left` set grows until its 100%-wide tables reach back on screen.
+        <div className="tpl-print-portal" style={{ position: 'fixed', left: '-9999px', top: 0, width: `${printableMm}mm` }}>
             <div style={{ background: '#fff', width: '100%', display: 'flex', flexDirection: 'column' }}>
                 <TemplateRenderer layout={layout} ctx={ctx} docType={docType} bandOverrides={bandOverrides} />
             </div>

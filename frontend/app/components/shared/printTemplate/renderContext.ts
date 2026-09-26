@@ -14,7 +14,7 @@ export interface PrintContext {
     parentMO: any;
     /**
      * The record a non-WO document prints (a shipment's Surat Jalan, ...), already
-     * shaped by that doc type's builder. Its own resolver reads it (see docs/).
+     * shaped by that doc type's builder. Its own resolver reads it (see doctypes/).
      */
     doc?: any;
     /** Absolute URL of the company logo, when the profile has one. */

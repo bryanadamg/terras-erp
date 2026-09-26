@@ -518,9 +518,10 @@ function TallyBandView({ band }: { band: TallyBand }) {
 function SignatureBandView({ band, ctx, docType }: { band: SignatureBand; ctx: PrintContext; docType: string }) {
     if (band.variant === 'block') {
         return (
-            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: band.fontSize ?? 9 }}>
                 {band.boxes.map((box, i) => (
-                    <div key={i} data-tpl-sigbox={`${band.id}:${i}`} style={{ width: `${Math.floor(100 / Math.max(1, band.boxes.length))}%` }}>
+                    // One point short of an equal share, so neighbouring captions never touch.
+                    <div key={i} data-tpl-sigbox={`${band.id}:${i}`} style={{ width: `${Math.floor(100 / Math.max(1, band.boxes.length)) - 1}%` }}>
                         <div>{box.caption}</div>
                         <div style={{ height: box.height ?? 40 }} />
                         {(box.fields || []).map((f, fi) => {

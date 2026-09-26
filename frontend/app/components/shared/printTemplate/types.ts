@@ -236,6 +236,8 @@ export interface SignatureBand extends BandBase {
      * below, then any `fields` (the delivery-note "Hormat Kami / company" block).
      */
     variant?: 'line' | 'block';
+    /** `block` only: caption and line text size, px. Default 9. */
+    fontSize?: number;
     boxes: { caption: string; width?: number; height?: number; fields?: string[] }[];
 }
 

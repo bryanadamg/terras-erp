@@ -68,7 +68,8 @@ function gridName(band: GridBand, docType: string): string {
     band.items.forEach(item => {
         const specs: (FieldSpec | GridBand['items'][number])[] = item.stack ?? [item];
         specs.forEach(s => {
-            const n = fieldName(docType, s.field);
+            // Typed text names itself — "SURAT JALAN" beats "Text (type your own)".
+            const n = s.field === '__text' ? (s.text || null) : fieldName(docType, s.field);
             if (n) names.push(n);
         });
     });
