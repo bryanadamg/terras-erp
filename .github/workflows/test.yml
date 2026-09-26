@@ -1,8 +1,14 @@
-name: Backend Tests
+name: Tests
 
+# main is covered by deploy.yml, which calls this workflow and deploys only when
+# it passes — main takes local merges, never PRs, so pull_request alone meant
+# nothing ever tested what shipped.
 on:
   pull_request:
+  push:
+    branches: [dev]
   workflow_dispatch:
+  workflow_call:
 
 jobs:
   pytest:
@@ -49,3 +55,29 @@ jobs:
       - name: Run pytest
         working-directory: backend
         run: python -u -m pytest tests -v -n auto
+
+  frontend:
+    runs-on: ubuntu-latest
+    env:
+      # @bryanadamg/terras-ui comes from GitHub Packages (see frontend/.npmrc).
+      NODE_AUTH_TOKEN: ${{ secrets.NODE_AUTH_TOKEN }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install dependencies
+        working-directory: frontend
+        run: npm ci
+
+      - name: Type-check
+        working-directory: frontend
+        run: npx tsc --noEmit
+
+      - name: Build
+        working-directory: frontend
+        run: npm run build
