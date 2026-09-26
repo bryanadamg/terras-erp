@@ -98,6 +98,10 @@ export interface KeyValueRow {
     unit?: string;
     /** Printed instead of the em dash when the value is empty; '' prints nothing. */
     emptyText?: string;
+    /** Value alignment within its cell. */
+    align?: Align;
+    /** `__text` rows only: the literal value printed (footer notes, fixed terms). */
+    text?: string;
 }
 
 /** A column inside a `table` band. */
@@ -191,6 +195,13 @@ export interface KeyValueBand extends BandBase {
      * `plain`: unruled `Label : value` lines, the letterhead look of a delivery note.
      */
     variant?: 'boxed' | 'plain';
+    /** `boxed` only: cell rule colour (default #bbb) and label shading ('none' for white). */
+    ruleColor?: string;
+    labelBackground?: string;
+    /** Width of the whole block, e.g. '42%' — a totals box that sits to one side. */
+    width?: string;
+    /** Which side a narrowed block sits on. */
+    blockAlign?: Align;
 }
 
 export interface TableBand extends BandBase {
@@ -207,6 +218,8 @@ export interface TableBand extends BandBase {
     ruleColor?: string;
     /** Heading row background. Default #f0f0f0; 'none' for an unshaded heading. */
     headerBackground?: string;
+    /** Height of the blank padding rows, px — room to write a line by hand. */
+    padRowHeight?: number;
 }
 
 export interface TallyBand extends BandBase {
@@ -238,6 +251,8 @@ export interface SignatureBand extends BandBase {
     variant?: 'line' | 'block';
     /** `block` only: caption and line text size, px. Default 9. */
     fontSize?: number;
+    /** `block` only: text alignment inside each column. */
+    align?: Align;
     boxes: { caption: string; width?: number; height?: number; fields?: string[] }[];
 }
 

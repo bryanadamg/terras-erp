@@ -1195,6 +1195,14 @@ table {
   html:has(body.tpl-print-active) {
     width: auto !important;
   }
+  /* Long tables (PO lines) run onto more pages: keep each row whole and repeat the
+     heading row on every page. */
+  body.tpl-print-active .tpl-print-portal tr {
+    break-inside: avoid;
+  }
+  body.tpl-print-active .tpl-print-portal thead {
+    display: table-header-group;
+  }
 
   /* Sales Order print preview modal — hide everything except the paper portal */
   body.so-print-preview-active > *:not(.so-print-paper-portal) {

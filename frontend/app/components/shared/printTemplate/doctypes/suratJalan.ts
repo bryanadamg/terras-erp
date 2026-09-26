@@ -167,13 +167,14 @@ export interface BuildSuratJalanArgs {
     customerAddr: (customerName: string) => string;
     companyName?: string;
     companyLogoUrl?: string;
+    companyProfile?: any;
     tzFormatCustom: (iso: string, opts: Intl.DateTimeFormatOptions, locale?: string) => string;
     /** The print form's in-progress edits, which win over the saved shipment. */
     overrides?: SuratJalanOverrides;
 }
 
 export function buildSuratJalanContext({
-    shipment, itemIndex, attributes = [], customerAddr, companyName, companyLogoUrl, tzFormatCustom,
+    shipment, itemIndex, attributes = [], customerAddr, companyName, companyLogoUrl, companyProfile, tzFormatCustom,
     overrides = {},
 }: BuildSuratJalanArgs): PrintContext {
     const shp = shipment || {};
@@ -239,6 +240,7 @@ export function buildSuratJalanContext({
         doc,
         companyName,
         companyLogoUrl,
+        companyProfile,
         printDate: new Date().toLocaleDateString('id-ID', { day: '2-digit', month: '2-digit', year: 'numeric' }),
         formatDate: (iso: string) => fmtDate(iso),
         moAttributeValue: () => '',

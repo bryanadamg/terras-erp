@@ -110,6 +110,16 @@ function FieldValue({ item, ctx, docType }: {
         return <div style={{ borderBottom: '1px solid #000', minHeight: 14 }}>&nbsp;</div>;
     }
 
+    if (def?.kind === 'barcode') {
+        if (resolved.empty) return null;
+        const right = item.align === 'right';
+        return (
+            <div style={{ display: 'flex', justifyContent: right ? 'flex-end' : item.align === 'center' ? 'center' : 'flex-start' }}>
+                <DecorativeBarcode value={resolved.text} height={item.imageHeight ?? 42} />
+            </div>
+        );
+    }
+
     if (def?.kind === 'image') {
         if (!resolved.imageUrl) return null;
         const centred = item.align === 'center';
@@ -157,6 +167,24 @@ function FieldValue({ item, ctx, docType }: {
             {item.prefix && <span style={{ fontWeight: 'normal' }}>{item.prefix}</span>}
             {text}
             {showUnit && <span style={UNIT}>{` ${unit}`}</span>}
+        </div>
+    );
+}
+
+/**
+ * Bar strip derived from the value — decoration that reads as "document number",
+ * NOT a scannable symbology. Lifted from the old PO print so a ported PO looks the
+ * same; anything that must scan uses the `qr` kind.
+ */
+function DecorativeBarcode({ value, height }: { value: string; height: number }) {
+    const bars: { w: number; on: boolean }[] = [];
+    for (let i = 0; i < value.length; i++) {
+        const c = value.charCodeAt(i);
+        bars.push({ w: (c % 3) + 1, on: true }, { w: (c % 2) + 1, on: false }, { w: ((c >> 2) % 3) + 1, on: true }, { w: 1, on: false });
+    }
+    return (
+        <div style={{ display: 'flex', alignItems: 'flex-end', height }}>
+            {bars.map((b, i) => <div key={i} style={{ width: b.w * 1.4, height: '100%', background: b.on ? '#000' : 'transparent' }} />)}
         </div>
     );
 }
@@ -272,12 +300,17 @@ function KeyValueBandView({ band, ctx, docType, selectedId, onSelect }: {
 
     // `plain` drops the ruled grid for unboxed "Label : value" lines.
     const plain = band.variant === 'plain';
+    const rule = band.ruleColor ? `1px solid ${band.ruleColor}` : undefined;
     const lblStyle: React.CSSProperties = plain
         ? { padding: '0 8px 0 0', whiteSpace: 'nowrap', verticalAlign: 'top', fontSize: band.labelFontSize ?? 9 }
-        : { ...LBL_CELL, fontSize: band.labelFontSize ?? 9 };
+        : {
+            ...LBL_CELL, fontSize: band.labelFontSize ?? 9,
+            ...(rule ? { border: rule, color: '#000' } : {}),
+            ...(band.labelBackground ? { background: band.labelBackground === 'none' ? 'transparent' : band.labelBackground } : {}),
+        };
     const valStyle: React.CSSProperties = plain
         ? { padding: '0 12px 0 0', verticalAlign: 'top', fontSize: band.valueFontSize ?? 9 }
-        : { ...VAL_CELL, fontSize: band.valueFontSize ?? 11 };
+        : { ...VAL_CELL, fontSize: band.valueFontSize ?? 11, ...(rule ? { border: rule } : {}) };
 
     const renderCell = ({ row, index }: { row: KeyValueRow; index: number }, halfCount: number) => {
         const def = fieldDef(docType, row.field);
@@ -311,13 +344,16 @@ function KeyValueBandView({ band, ctx, docType, selectedId, onSelect }: {
                         ...valStyle,
                         fontSize: row.fontSize ?? valStyle.fontSize,
                         fontWeight: row.bold ? 'bold' : 'normal',
+                        textAlign: row.align,
+                        whiteSpace: 'pre-line',
                         ...(row.fill ? { borderBottom: '1px solid #000' } : {}),
                         ...(selected ? { outline: '2px solid #0058e6' } : {}),
                     }}
                 >
                     {plain && ': '}
-                    {row.field === '__blank' ? ' '
-                        : (resolved.empty && row.emptyText !== undefined ? row.emptyText : resolved.text)}
+                    {row.field === '__blank' ? '\u00a0'
+                        : row.field === '__text' ? (row.text ?? '')
+                            : (resolved.empty && row.emptyText !== undefined ? row.emptyText : resolved.text)}
                     {showUnit && <span style={UNIT}>{` ${unit}`}</span>}
                 </td>
             </React.Fragment>
@@ -325,7 +361,11 @@ function KeyValueBandView({ band, ctx, docType, selectedId, onSelect }: {
     };
 
     return (
-        <table style={{ width: plain ? undefined : '100%', borderCollapse: 'collapse' }}>
+        <table style={{
+            width: band.width ?? (plain ? undefined : '100%'), borderCollapse: 'collapse',
+            marginLeft: band.width && band.blockAlign !== 'left' && band.blockAlign ? 'auto' : undefined,
+            marginRight: band.width && band.blockAlign === 'center' ? 'auto' : undefined,
+        }}>
             <tbody>
                 {lines.map((line, li) => (
                     <tr key={li}>{line.map(entry => renderCell(entry, line.length))}</tr>
@@ -372,7 +412,7 @@ function TableBandView({ band, ctx, rows, onSelect }: {
                             key={col.field}
                             data-tpl-tablecol={`${band.id}:${ci}`}
                             onClick={onSelect ? (e) => { e.stopPropagation(); onSelect(`${band.id}:${ci}`); } : undefined}
-                            style={{ ...th, textAlign: col.headerAlign ?? col.align ?? 'left', width: col.width }}
+                            style={{ ...th, textAlign: col.headerAlign ?? col.align ?? 'left', width: col.width, whiteSpace: 'pre-line' }}
                         >
                             {col.label}
                         </th>
@@ -398,6 +438,15 @@ function TableBandView({ band, ctx, rows, onSelect }: {
                                     </td>
                                 );
                             }
+                            // Composite description cell: bold title, then detail lines under it.
+                            if (raw && typeof raw === 'object' && 'title' in raw) {
+                                return (
+                                    <td key={col.field} style={style}>
+                                        <div style={{ fontWeight: 'bold' }}>{raw.title}</div>
+                                        {(raw.lines || []).map((ln: string, li: number) => <div key={li} style={{ marginTop: 2 }}>{ln}</div>)}
+                                    </td>
+                                );
+                            }
                             const isNumeric = source.columns.find(c => c.field === col.field)?.numeric;
                             const text = isNumeric
                                 ? fmtNumber(raw, col.decimals ?? 2, col.emptyText ?? EM_DASH)
@@ -408,7 +457,7 @@ function TableBandView({ band, ctx, rows, onSelect }: {
                 ))}
                 {Array.from({ length: padRows }, (_, pi) => (
                     <tr key={`pad-${pi}`}>
-                        {band.columns.map(col => <td key={col.field} style={cellStyle(col)}>&nbsp;</td>)}
+                        {band.columns.map(col => <td key={col.field} style={{ ...cellStyle(col), height: band.padRowHeight }}>&nbsp;</td>)}
                     </tr>
                 ))}
                 {hasFooter && (
@@ -518,7 +567,7 @@ function TallyBandView({ band }: { band: TallyBand }) {
 function SignatureBandView({ band, ctx, docType }: { band: SignatureBand; ctx: PrintContext; docType: string }) {
     if (band.variant === 'block') {
         return (
-            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: band.fontSize ?? 9 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: band.fontSize ?? 9, textAlign: band.align }}>
                 {band.boxes.map((box, i) => (
                     // One point short of an equal share, so neighbouring captions never touch.
                     <div key={i} data-tpl-sigbox={`${band.id}:${i}`} style={{ width: `${Math.floor(100 / Math.max(1, band.boxes.length)) - 1}%` }}>

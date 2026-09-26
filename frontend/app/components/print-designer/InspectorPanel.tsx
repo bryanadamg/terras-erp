@@ -270,7 +270,7 @@ export default function InspectorPanel({ layout, docType, selection, onChange, o
                             onChange={v => apply({ text: v })} />
                     </Row>
                 )}
-                {kindOf(spec.field) === 'image' && (
+                {(kindOf(spec.field) === 'image' || kindOf(spec.field) === 'barcode') && (
                     <Row label="Height">
                         <NumberField suffix="px" min={10} max={200}
                             value={spec.imageHeight} onChange={v => apply({ imageHeight: v })} />
@@ -577,6 +577,28 @@ export default function InspectorPanel({ layout, docType, selection, onChange, o
                             ]}
                             onChange={v => patchBand({ variant: v === 'boxed' ? undefined : v })} />
                     </Row>
+                    {kv.variant !== 'plain' && (
+                        <>
+                            <Row label="Rule colour">
+                                <TextField value={kv.ruleColor} placeholder="#bbb" mono
+                                    onChange={v => patchBand({ ruleColor: v || undefined })} />
+                            </Row>
+                            <Row label="Label shade" title="Label cell background; none for white">
+                                <TextField value={kv.labelBackground} placeholder="#f0f0f0" mono
+                                    onChange={v => patchBand({ labelBackground: v || undefined })} />
+                            </Row>
+                        </>
+                    )}
+                    <Row label="Block width" title="e.g. 42% — narrows the whole block, like a totals box">
+                        <TextField value={kv.width} placeholder="(full)"
+                            onChange={v => patchBand({ width: v || undefined })} />
+                    </Row>
+                    {kv.width && (
+                        <Row label="Block side">
+                            <SelectField value={kv.blockAlign ?? 'left'} options={ALIGN_OPTS}
+                                onChange={v => patchBand({ blockAlign: v })} />
+                        </Row>
+                    )}
                     <Row label="Label width">
                         <TextField value={kv.labelWidth} placeholder="24%"
                             onChange={v => patchBand({ labelWidth: v || undefined })} />
@@ -600,6 +622,16 @@ export default function InspectorPanel({ layout, docType, selection, onChange, o
                         <Row label="Label">
                             <TextField value={row.label} placeholder="(field name)"
                                 onChange={v => patchRow({ label: v || undefined })} />
+                        </Row>
+                        {row.field === '__text' && (
+                            <Row label="Text">
+                                <TextField value={row.text} placeholder="(type the text)"
+                                    onChange={v => patchRow({ text: v })} />
+                            </Row>
+                        )}
+                        <Row label="Value align">
+                            <SelectField value={row.align ?? 'left'} options={ALIGN_OPTS}
+                                onChange={v => patchRow({ align: v })} />
                         </Row>
                         <Row label="Width" title="Full rows take a whole line; half rows pair up two per line">
                             <SelectField
@@ -746,6 +778,12 @@ export default function InspectorPanel({ layout, docType, selection, onChange, o
                         <NumberField min={0} max={40}
                             value={tb.minRows} onChange={v => patchBand({ minRows: v || undefined })} />
                     </Row>
+                    {!!tb.minRows && (
+                        <Row label="Blank row height">
+                            <NumberField suffix="px" min={8} max={80}
+                                value={tb.padRowHeight} onChange={v => patchBand({ padRowHeight: v })} />
+                        </Row>
+                    )}
                     <CheckField label="Hide section when no rows" checked={tb.hideWhenEmpty !== false}
                         onChange={v => patchBand({ hideWhenEmpty: v })} />
                     <div style={{ fontFamily: xpFont, fontSize: 10, color: '#888', fontStyle: 'italic' }}>
@@ -938,6 +976,12 @@ export default function InspectorPanel({ layout, docType, selection, onChange, o
                             ]}
                             onChange={v => patchBand({ variant: v === 'line' ? undefined : v })} />
                     </Row>
+                    {block && (
+                        <Row label="Align">
+                            <SelectField value={sg.align ?? 'left'} options={ALIGN_OPTS}
+                                onChange={v => patchBand({ align: v })} />
+                        </Row>
+                    )}
                     {block && (
                         <Row label="Font size">
                             <NumberField suffix="px" min={4} max={24}

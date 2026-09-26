@@ -13,7 +13,7 @@
 import type { PrintContext } from './renderContext';
 import { SJ_FIELDS, SURAT_JALAN_DOC, resolveSuratJalanField } from './doctypes/suratJalan';
 
-export type FieldKind = 'text' | 'number' | 'date' | 'qr' | 'blank' | 'static' | 'image';
+export type FieldKind = 'text' | 'number' | 'date' | 'qr' | 'blank' | 'static' | 'image' | 'barcode';
 
 export interface FieldDef {
     key: string;
@@ -37,6 +37,11 @@ const EM_DASH = '—';
 export const DOC_CHROME_FIELDS: FieldDef[] = [
     { key: 'company.name', label: 'Company Name', kind: 'text', group: 'Document' },
     { key: 'company.logo', label: 'Company Logo', kind: 'image', group: 'Document' },
+    { key: 'company.address', label: 'Company Address', kind: 'text', group: 'Document' },
+    { key: 'company.phone', label: 'Company Phone', kind: 'text', group: 'Document' },
+    { key: 'company.fax', label: 'Company Fax', kind: 'text', group: 'Document' },
+    { key: 'company.phone_fax', label: 'Company Telp + Fax line', kind: 'text', group: 'Document' },
+    { key: 'company.email', label: 'Company Email', kind: 'text', group: 'Document' },
     { key: 'print.date', label: 'Print Date', kind: 'date', group: 'Document' },
     { key: '__text', label: 'Text (type your own)', kind: 'static', group: 'Document' },
     { key: '__blank', label: 'Blank (hand fill-in)', kind: 'blank', group: 'Document' },
@@ -248,6 +253,18 @@ export function resolveField(key: string, ctx: PrintContext): ResolvedField {
 
         case 'company.logo':
             return { text: '', empty: !ctx.companyLogoUrl, imageUrl: ctx.companyLogoUrl };
+        case 'company.address':
+            return txt(ctx.companyProfile?.address);
+        case 'company.phone':
+            return txt(ctx.companyProfile?.phone);
+        case 'company.fax':
+            return txt(ctx.companyProfile?.fax);
+        case 'company.phone_fax': {
+            const cp = ctx.companyProfile || {};
+            return txt([cp.phone && `Telp: ${cp.phone}`, cp.fax && `FAX: ${cp.fax}`].filter(Boolean).join('  '));
+        }
+        case 'company.email':
+            return txt(ctx.companyProfile?.email);
 
         case '__blank':
         case '__text':

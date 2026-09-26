@@ -37,6 +37,7 @@ export default function SuratJalanPrintModal({ shipment, attributes, companyProf
     const ctx = useMemo(() => buildSuratJalanContext({
         shipment, itemIndex, attributes, customerAddr,
         companyName: companyProfile?.name,
+        companyProfile,
         companyLogoUrl: companyProfile?.logo_url ? `${STATIC_BASE}${companyProfile.logo_url}` : undefined,
         tzFormatCustom: formatCustom,
         overrides: {

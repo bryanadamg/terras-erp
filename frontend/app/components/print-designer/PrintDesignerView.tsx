@@ -207,6 +207,7 @@ export default function PrintDesignerView() {
         itemIndex, attributes, customerAddr,
         companyName: companyProfile?.name,
         companyLogoUrl: logoUrl,
+        companyProfile,
         tzFormatCustom: formatCustom,
     }) : buildPrintContext({
         workOrder: active?.wo || {},
