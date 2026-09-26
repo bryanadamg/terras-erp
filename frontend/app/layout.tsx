@@ -21,7 +21,6 @@ import { UserProvider } from './context/UserContext';
 import { DataProvider } from './context/DataContext';
 import { ThemeProvider } from './context/ThemeContext';
 import { TimezoneProvider } from './context/TimezoneContext';
-import QueryProvider from './components/shared/QueryProvider';
 import MainLayout from './components/shared/MainLayout';
 import GlobalTooltip from './components/shared/GlobalTooltip';
 import SWRegister from './components/shared/SWRegister';
@@ -89,32 +88,30 @@ export default function RootLayout({
       </head>
       <body>
         <SWRegister />
-        <QueryProvider>
-          <LanguageProvider>
-            <ToastProvider>
-              <ConfirmProvider>
-                  <ThemeProvider>
-                  {/* Upgrades every native `title=` in the app to the themed
-                      surface, and gives clipped text a hover of its own. Sits
-                      under ThemeProvider (it reads the style) and outside the
-                      route subtree so it survives navigation. */}
-                  <GlobalTooltip />
-                  <TimezoneProvider>
-                  <UserProvider>
-                    <DataProvider>
-                      <Suspense fallback={<div className="d-flex justify-content-center align-items-center vh-100 bg-light text-muted fw-bold">LOADING_SYSTEM_RESOURCES...</div>}>
-                        <MainLayout>
-                          {children}
-                        </MainLayout>
-                      </Suspense>
-                    </DataProvider>
-                  </UserProvider>
-                  </TimezoneProvider>
-                </ThemeProvider>
-              </ConfirmProvider>
-            </ToastProvider>
-          </LanguageProvider>
-        </QueryProvider>
+        <LanguageProvider>
+          <ToastProvider>
+            <ConfirmProvider>
+                <ThemeProvider>
+                {/* Upgrades every native `title=` in the app to the themed
+                    surface, and gives clipped text a hover of its own. Sits
+                    under ThemeProvider (it reads the style) and outside the
+                    route subtree so it survives navigation. */}
+                <GlobalTooltip />
+                <TimezoneProvider>
+                <UserProvider>
+                  <DataProvider>
+                    <Suspense fallback={<div className="d-flex justify-content-center align-items-center vh-100 bg-light text-muted fw-bold">LOADING_SYSTEM_RESOURCES...</div>}>
+                      <MainLayout>
+                        {children}
+                      </MainLayout>
+                    </Suspense>
+                  </DataProvider>
+                </UserProvider>
+                </TimezoneProvider>
+              </ThemeProvider>
+            </ConfirmProvider>
+          </ToastProvider>
+        </LanguageProvider>
       </body>
     </html>
   )
