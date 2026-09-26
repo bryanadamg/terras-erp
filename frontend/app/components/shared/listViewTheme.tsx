@@ -437,15 +437,6 @@ export function RowCheckboxCell({ tdStyle, tdClassName, ...cb }: React.Component
     );
 }
 
-/** `<th>` + select-all checkbox. */
-export function SelectAllCell({ tdStyle, tdClassName, ...cb }: React.ComponentProps<typeof SelectAllCheckbox> & { tdStyle?: React.CSSProperties; tdClassName?: string }) {
-    return (
-        <th style={lvCheckTd(tdStyle)} className={tdClassName}>
-            <SelectAllCheckbox {...cb} />
-        </th>
-    );
-}
-
 // ── Row-detail disclosure ─────────────────────────────────────────────────────
 // One expander for every list row that opens a detail panel below itself. This
 // used to be hand-written at ~17 call sites in five different glyphs (thin

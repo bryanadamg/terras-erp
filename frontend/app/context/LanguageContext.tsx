@@ -304,7 +304,6 @@ const translations = {
         'elapsed': 'Elapsed',
         'run_time': 'Run',
         'no_dyeing_machines': 'No dyeing machines configured.',
-        'no_active_batch': 'No active batch',
         'batch_loaded_hint': 'Loaded, waiting to start.',
         'needs_setup': 'need setup',
         // Dye batch phases: match -> start -> complete, each stamped on the floor.
@@ -655,7 +654,6 @@ const translations = {
         'elapsed': 'Berjalan',
         'run_time': 'Proses',
         'no_dyeing_machines': 'Belum ada mesin celup.',
-        'no_active_batch': 'Tidak ada proses berjalan',
         'batch_loaded_hint': 'Sudah terisi, menunggu mulai.',
         'needs_setup': 'perlu setelan',
         'color_matching': 'Matching warna',
