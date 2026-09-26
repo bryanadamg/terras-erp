@@ -580,6 +580,9 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
                     setLocations(data.locations || []); setAttributes(data.attributes || []); setCategories(data.categories || []);
                     setUoms(data.uoms || []); setSizes(data.sizes || []); setWorkCenters(data.workCenters || []); setOperations(data.operations || []);
                     setPartners(data.partners || []);
+                    // Cached alongside the rest; skipping it here left every print
+                    // header without the company name/logo for the cache's hour.
+                    setCompanyProfile(data.companyProfile || null);
                     setPrintTemplates(data.printTemplates || []);
                     setItemIndex(data.itemIndex || {});
                     setIsInitialLoad(false); masterFetched = true;
