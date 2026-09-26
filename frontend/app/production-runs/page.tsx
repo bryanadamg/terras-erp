@@ -168,6 +168,10 @@ export default function ProductionRunsPage() {
         if (res.ok) refreshManufacturing();
     };
 
+    // Above the mobile early return: a hook after it changes the hook count
+    // when the viewport crosses the breakpoint, and React throws.
+    const handleClearInitialPRState = useCallback(() => setInitialPRState(null), []);
+
     if (isMobile) {
         return (
             <MobileManufacturingView
@@ -180,8 +184,6 @@ export default function ProductionRunsPage() {
             />
         );
     }
-
-    const handleClearInitialPRState = useCallback(() => setInitialPRState(null), []);
 
     return (
         <ManufacturingView
