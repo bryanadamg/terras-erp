@@ -693,10 +693,12 @@ function BandView(props: {
                 both. `borderTop` was missing here, which silently dropped the rule above
                 every default's signature band and made the inspector's "Rule above"
                 field edit nothing. */}
+            {/* Longhands only when set: React writes an undefined style key as '', and
+                `borderTop: ''` after the shorthand wipes the box's top edge. */}
             <div style={{
                 border: band.box,
-                borderTop: band.borderTop,
-                borderBottom: band.borderBottom,
+                ...(band.borderTop !== undefined ? { borderTop: band.borderTop } : {}),
+                ...(band.borderBottom !== undefined ? { borderBottom: band.borderBottom } : {}),
                 padding: band.padding,
             }}>
                 {content}
