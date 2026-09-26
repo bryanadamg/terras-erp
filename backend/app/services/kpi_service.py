@@ -7,14 +7,7 @@ from app.models.manufacturing import ManufacturingOrder as WorkOrder
 from app.models.stock_balance import StockBalance
 from app.models.sales import SalesOrder
 from app.models.sample import SampleRequest
-from datetime import datetime, timedelta, timezone, date
-
-def get_kpi(db: Session, key: str, ttl_minutes: int = 10):
-    """Retrieves a KPI from cache or returns None if expired."""
-    cached = db.query(KPICache).filter(KPICache.key == key).first()
-    if cached and (datetime.now(timezone.utc) - cached.updated_at.replace(tzinfo=timezone.utc)) < timedelta(minutes=ttl_minutes):
-        return cached.value
-    return None
+from datetime import datetime, timedelta, timezone
 
 def update_kpi(db: Session, key: str, value: float):
     cached = db.query(KPICache).filter(KPICache.key == key).first()
