@@ -8,7 +8,7 @@ from app.models.category import Category
 from app.models.auth import User
 from app.schemas import CategoryCreate, CategoryResponse
 from app.api.auth import get_current_user, require_permission
-from app.services import audit_service
+from app.services import audit_service, kpi_service
 
 router = APIRouter()
 
@@ -69,6 +69,7 @@ async def create_category(
     db.add(cat)
     await db.commit()
     await audit_service.log_activity(db, current_user.id, "CREATE", "Category", str(cat.id), details=f"Created category {cat.name}")
+    await kpi_service.invalidate_and_broadcast(db, {"type": "MASTER_DATA_UPDATE", "domain": "categories"})
     # Re-fetch with relationships loaded so level/path_names work.
     return await _get_or_404(db, cat.id)
 
@@ -87,6 +88,7 @@ async def rename_category(
     cat.name = data.name
     await db.commit()
     await audit_service.log_activity(db, current_user.id, "UPDATE", "Category", str(cat.id), details=f"Renamed category {old_name} -> {data.name}")
+    await kpi_service.invalidate_and_broadcast(db, {"type": "MASTER_DATA_UPDATE", "domain": "categories"})
     return await _get_or_404(db, cat.id)
 
 
@@ -105,3 +107,4 @@ async def delete_category(
     await db.delete(cat)
     await db.commit()
     await audit_service.log_activity(db, current_user.id, "DELETE", "Category", str(cat_id), details=f"Deleted category {cat_name}")
+    await kpi_service.invalidate_and_broadcast(db, {"type": "MASTER_DATA_UPDATE", "domain": "categories"})

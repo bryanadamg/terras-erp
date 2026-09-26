@@ -113,7 +113,7 @@ EVENT_PERMISSIONS: dict[str, tuple[str, ...]] = {
     # the app reads templates, so this one is open to any authenticated user.
     "PRINT_TEMPLATE_UPDATE": (),
     # Master data changed: an attribute value, a unit, a location, a work
-    # center/operation, or a partner. The payload is the domain name and
+    # center/operation, a partner, an item, or a category. The payload is the domain name and
     # nothing else — no codes, no names — and these rows feed the dropdowns on
     # nearly every form, so it is open to any authenticated user.
     "MASTER_DATA_UPDATE": (),

@@ -127,7 +127,7 @@ async def create_item_api(payload: ItemCreate, db: AsyncSession = Depends(get_as
         changes=payload.model_dump()
     )
 
-    await kpi_service.invalidate_and_broadcast(db, {"type": "KPI_UPDATE"})
+    await kpi_service.invalidate_and_broadcast(db, {"type": "KPI_UPDATE"}, {"type": "MASTER_DATA_UPDATE", "domain": "items"})
 
     _populate_source_info(item)
     return item
@@ -199,7 +199,7 @@ async def update_item_api(item_id: str, payload: ItemUpdate, db: AsyncSession = 
         details=f"Updated item {item.code}",
         changes=payload.model_dump(exclude_unset=True)
     )
-    
+    await kpi_service.invalidate_and_broadcast(db, {"type": "MASTER_DATA_UPDATE", "domain": "items"})
     return item
 
 @router.post("/items/stock")
@@ -262,6 +262,8 @@ async def import_items(file: UploadFile = File(...), db: AsyncSession = Depends(
     
     content = await file.read()
     results = await import_service.import_items_csv(db, content, user_id=current_user.id)
+    if results["success"]:
+        await kpi_service.invalidate_and_broadcast(db, {"type": "KPI_UPDATE"}, {"type": "MASTER_DATA_UPDATE", "domain": "items"})
     
     if results["errors"]:
         return {"status": "partial_success", "imported": results["success"], "errors": results["errors"]}
@@ -302,6 +304,6 @@ async def delete_item(item_id: str, db: AsyncSession = Depends(get_async_db), cu
         details=details
     )
 
-    await kpi_service.invalidate_and_broadcast(db, {"type": "KPI_UPDATE"})
+    await kpi_service.invalidate_and_broadcast(db, {"type": "KPI_UPDATE"}, {"type": "MASTER_DATA_UPDATE", "domain": "items"})
 
     return {"status": "success", "message": "Item deleted"}

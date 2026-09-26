@@ -1301,7 +1301,10 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
                 // name lookups on nearly every form, so a screen that shows none of
                 // them is rare enough not to be worth a routing table — but the
                 // domain IS honoured, so renaming a colour doesn't re-pull looms.
-                if (domains.has('attributes') || domains.has('uoms')) refreshItemMetadataRef.current();
+                if (domains.has('attributes') || domains.has('uoms') || domains.has('categories')) refreshItemMetadataRef.current();
+                // The item list + index are big; only the inventory page re-pulls them
+                // live. Everywhere else picks the change up on its next mount.
+                if (domains.has('items') && path.startsWith('/inventory')) fetchDataRef.current('inventory');
                 if (domains.has('routing') || domains.has('locations')) refreshRoutingRef.current();
                 if (domains.has('partners')) fetchDataRef.current('customers');
                 notifyLiveSubsRef.current('metadata');
@@ -1329,7 +1332,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
         const resyncAfterReconnect = () => {
             (['production', 'kpi', 'stock', 'weaving', 'dyeing', 'bom', 'sales', 'metadata'] as LiveKind[])
                 .forEach(k => pending.kinds.add(k));
-            ['attributes', 'uoms', 'routing', 'locations', 'partners'].forEach(d => pending.domains.add(d));
+            ['attributes', 'uoms', 'categories', 'items', 'routing', 'locations', 'partners'].forEach(d => pending.domains.add(d));
             if (flushTimer) clearTimeout(flushTimer);
             flushTimer = setTimeout(flushLive, 0);
         };
