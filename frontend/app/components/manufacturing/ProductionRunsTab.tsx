@@ -6,7 +6,7 @@ import { FilterChipBar, ToolbarButton } from '../shared/shellTheme';
 import Pager from '../shared/Pager';
 import { useToast } from '../shared/Toast';
 import { useData } from '../../context/DataContext';
-import { statusChipStyle, useFloatingMenu, MenuTriggerButton, FloatingMenu, XPActionButton, ExpandedRowPanel, ExpandedRowPanelBody, ProgressBar, CodeChip, CODE_FONT, xpFont, TableSkeleton, SkeletonBar, useTableSkeletonMetrics, rowStateBg, StatusChip, CHIP_RADIUS, VariantChip, SKEL_PAGE_ROWS } from '../shared/xpTheme';
+import { statusChipStyle, useFloatingMenu, MenuTriggerButton, FloatingMenu, XPActionButton, ExpandedRowPanel, ExpandedRowPanelBody, ProgressBar, CodeChip, CODE_FONT, xpFont, TableSkeleton, SkeletonBar, useTableSkeletonMetrics, rowStateBg, StatusChip, CHIP_RADIUS, familyColor, VariantChip, SKEL_PAGE_ROWS } from '../shared/xpTheme';
 import { lvSubTh, lvSubTd, lvSubTable, lvSubRow, ExpanderCell, LV_EXPANDER_COL_W, lvZebra, lvThead, lvTh, ResizableTable } from '../shared/listViewTheme';
 import { API_BASE } from '../shared/apiBase';
 const PRMaterialPullSheetModal = dynamic(() => import('./PRMaterialPullSheetModal'), { ssr: false });
@@ -576,27 +576,27 @@ export default function ProductionRunsTab({
                                                                     const status = req.status || (short ? 'SHORT' : isMade ? (prodShort > 0.005 ? (produced > 0.005 ? 'IN_PROGRESS' : (woCount > 0 ? 'NOT_STARTED' : 'NO_WO')) : 'DONE') : 'SUPPLIED');
                                                                     const STATUS_UI: Record<string, { color: string; text: string; title: string }> = {
                                                                         SHORT: {
-                                                                            color: '#c00000',
+                                                                            color: familyColor('red'),
                                                                             text: `SHORT ${parseFloat(req.shortfall).toFixed(2)}`,
                                                                             title: `Missing ${parseFloat(req.shortfall).toFixed(2)} ${req.uom}: ${net.toFixed(2)} still required, ${parseFloat(req.qty_available).toFixed(2)} on hand, ${incoming.toFixed(2)} scheduled.`,
                                                                         },
                                                                         NO_WO: {
-                                                                            color: '#a05a00',
+                                                                            color: familyColor('amber'),
                                                                             text: 'NO WO',
                                                                             title: `No work order opened yet on ${prodMos.map((m: any) => m.mo_code).join(', ') || 'the producing MO'} — nothing has been dispatched to the floor.`,
                                                                         },
                                                                         NOT_STARTED: {
-                                                                            color: '#777',
+                                                                            color: familyColor('gray'),
                                                                             text: 'NOT STARTED',
                                                                             title: `Work order opened (${woCount}) but no output logged yet.`,
                                                                         },
                                                                         IN_PROGRESS: {
-                                                                            color: '#1b5e9c',
+                                                                            color: familyColor('blue'),
                                                                             text: `IN PROGRESS ${produced.toFixed(2)}/${gross.toFixed(2)}`,
                                                                             title: `Still being produced — ${prodShort.toFixed(2)} ${req.uom} to go. Material for it is covered, so this is on plan, not a shortage.`,
                                                                         },
-                                                                        DONE: { color: '#2d7a2d', text: 'DONE', title: 'Requirement has been produced in full.' },
-                                                                        SUPPLIED: { color: '#999', text: '—', title: 'Not produced by this Production Run — bought or drawn from stock, and covered.' },
+                                                                        DONE: { color: familyColor('green'), text: 'DONE', title: 'Requirement has been produced in full.' },
+                                                                        SUPPLIED: { color: familyColor('gray'), text: '—', title: 'Not produced by this Production Run — bought or drawn from stock, and covered.' },
                                                                     };
                                                                     const ui = STATUS_UI[status] || STATUS_UI.SUPPLIED;
                                                                     const statusColor = ui.color;

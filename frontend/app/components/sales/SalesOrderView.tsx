@@ -161,14 +161,7 @@ export default function SalesOrderView({ items, attributes, boms, salesOrders, p
   const goToMO = (code: string) => { closeLineage(); router.push(`/manufacturing-orders?mo=${encodeURIComponent(code)}`); };
   const goToPR = (code: string) => { closeLineage(); router.push(`/production-runs?pr=${encodeURIComponent(code)}`); };
 
-  const lineageStatusBadge = (s: string) => {
-    const { background: bg, borderColor: bd, color: fg } = statusTint(s);
-    return (
-      <span style={{ fontSize: '0.68rem', background: bg, border: `1px solid ${bd}`, color: fg, padding: '0 6px', borderRadius: CHIP_RADIUS, fontWeight: 'bold', whiteSpace: 'nowrap' }}>
-        {(s || 'PENDING').replace('_', ' ')}
-      </span>
-    );
-  };
+  const lineageStatusBadge = (s: string) => <StatusChip status={s || 'PENDING'} tint />;
 
   // Clickable code chip (MO / PR). onClick navigates to the relevant page.
   // Deliberate exception to the CodeChip tiering: inside the lineage tree the tint
