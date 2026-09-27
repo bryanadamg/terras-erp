@@ -378,9 +378,9 @@ async def get_pending_labdip_variants(
     approved to a Color Library shade). Feeds the SO color picker so an order can be
     placed against a pending shade. Each row's variant_code is the stable identity
     (preserved across reject->resubmit) that later auto-backfills the minted color."""
+    # The parent request rides along on the join — one query, not one per row.
     result = await db.execute(
-        select(LabDipItem)
-        .options(joinedload(LabDipItem.item))
+        select(LabDipItem, LabDipRequest)
         .join(LabDipRequest, LabDipRequest.id == LabDipItem.lab_dip_request_id)
         .filter(
             LabDipItem.item_id == item_id,
@@ -388,12 +388,8 @@ async def get_pending_labdip_variants(
         )
         .order_by(LabDipRequest.created_at.desc())
     )
-    items = result.unique().scalars().all()
     out = []
-    for it in items:
-        parent = (await db.execute(
-            select(LabDipRequest).filter(LabDipRequest.id == it.lab_dip_request_id)
-        )).scalars().first()
+    for it, parent in result.all():
         variant_code = it.locked_variant_code or f"{_seq_part(parent)}-{_variant_letter(it.variant_seq)}"
         out.append({
             "labdip_item_id": str(it.id),

@@ -139,8 +139,8 @@ const WO_COL_W: (number | string)[] = [
     '16%',              // Variant
     '11%',              // Work Center
     86,                 // Target / Done
-    90,                 // Target Start
-    90,                 // Target End
+    110,                // Target Start — native date input needs ~105px in the edit row
+    110,                // Target End
     98,                 // Actual Start
     98,                 // Actual End
     98,                 // Created
@@ -194,7 +194,7 @@ export default function WorkOrderListView({
     const [labelWO, setLabelWO] = useState<any>(null);
     const [labelSeqStart, setLabelSeqStart] = useState(1);
     const [labelLoadingWO, setLabelLoadingWO] = useState<string | null>(null);
-    const [form, setForm] = useState({ sequence: '', name: '', work_center_id: '', planned_duration_hours: '' });
+    const [form, setForm] = useState({ sequence: '', work_center_id: '', qty: '', target_start_date: '', target_end_date: '' });
     const [isSaving, setIsSaving] = useState(false);
     const [expandedWOId, setExpandedWOId] = useState<string | null>(null);
     const [woQrUrls, setWoQrUrls] = useState<Record<string, string>>({});
@@ -318,22 +318,41 @@ export default function WorkOrderListView({
         setEditId(wo.id);
         setForm({
             sequence: String(wo.sequence),
-            name: wo.name,
             work_center_id: wo.work_center_id || '',
-            planned_duration_hours: wo.planned_duration_hours != null ? String(wo.planned_duration_hours) : '',
+            qty: wo.qty != null ? String(wo.qty) : '',
+            target_start_date: wo.target_start_date ? wo.target_start_date.slice(0, 10) : '',
+            target_end_date: wo.target_end_date ? wo.target_end_date.slice(0, 10) : '',
         });
     };
 
     const handleSave = async (wo: FlatWO) => {
         setIsSaving(true);
         try {
-            await onUpdate(wo.id, {
+            // PUT /work-orders/{id} is a full replace — every field not sent is nulled.
+            // So the fields this row doesn't edit go back exactly as loaded.
+            const wcChanged = (form.work_center_id || '') !== (wo.work_center_id || '');
+            const res = await onUpdate(wo.id, {
                 manufacturing_order_id: wo.mo_id,
                 sequence: parseInt(form.sequence) || wo.sequence,
                 name: wo.name,
                 work_center_id: form.work_center_id || undefined,
-                planned_duration_hours: form.planned_duration_hours ? parseFloat(form.planned_duration_hours) : undefined,
+                bom_operation_id: wo.bom_operation_id || undefined,
+                // Omitted on a WC change so the server resolves the new machine's locations.
+                input_location_id: wcChanged ? undefined : wo.input_location_id || undefined,
+                output_location_id: wcChanged ? undefined : wo.output_location_id || undefined,
+                next_destination_work_center_id: wo.next_destination_work_center_id || undefined,
+                next_destination_location_id: wo.next_destination_location_id || undefined,
+                planned_duration_hours: wo.planned_duration_hours ?? undefined,
+                notes: wo.notes ?? undefined,
+                qty: form.qty ? parseFloat(form.qty) : undefined,
+                target_start_date: form.target_start_date || null,
+                target_end_date: form.target_end_date || null,
             });
+            if (res && !res.ok) {
+                const err = await res.json().catch(() => ({}));
+                showToast(typeof err.detail === 'string' ? err.detail : 'Failed to save work order', 'danger');
+                return;
+            }
             setEditId(null);
         } finally {
             setIsSaving(false);
@@ -407,7 +426,7 @@ export default function WorkOrderListView({
         // Bag labels apply to lot-producing steps (each weighed bag = one lot).
         const isLotWOType = ['WEAVING', 'TENUN', 'DYEING', 'CELUP', 'BEAMING', 'SETTING'].includes((wo.work_center_type || '').toUpperCase());
         // A beaming WO's output units are warp beams, not bags — same label modal,
-        // different card (BeamLabelCard), so the button has to say so or the floor
+        // different template (beam_label), so the button has to say so or the floor
         // reads it as the wrong sticker.
         const isBeamWOType = (wo.work_center_type || '').toUpperCase() === 'BEAMING';
 
@@ -732,7 +751,7 @@ export default function WorkOrderListView({
                     {/* Table */}
                     <div className="table-responsive" style={{ flex: 1, overflow: 'auto', minHeight: 0, ...({ background: '#fff' }) }}>
                         <ResizableTable defaults={WO_COL_W}
-                            style={{ width: '100%', minWidth: 1830, borderCollapse: 'collapse', tableLayout: 'fixed', fontSize: 11, fontFamily: xpFont, background: '#fff' }}
+                            style={{ width: '100%', minWidth: 1870, borderCollapse: 'collapse', tableLayout: 'fixed', fontSize: 11, fontFamily: xpFont, background: '#fff' }}
                         >
                             <thead>
                                 <tr>
@@ -766,46 +785,73 @@ export default function WorkOrderListView({
 
                                     if (isEditing) {
                                         return (
-                                            <tr key={wo.id} style={{ background: '#fffbe6'}}>
+                                            <tr key={wo.id} style={{ background: '#fffbe6', outline: '1px solid #e0c060', outlineOffset: -1 }}>
                                                 <td style={{ ...tdBase, padding: '3px 6px' }} />
                                                 <td style={tdBase} />
-                                                <td style={tdBase} />
+                                                <td style={{ ...tdBase, overflow: 'hidden' }}>
+                                                    {wo.root_mo_code
+                                                        ? <CodeChip code={wo.root_mo_code} tier={2} link style={{ display: 'block', fontWeight: 'bold', overflow: 'hidden', textOverflow: 'ellipsis' }} />
+                                                        : <span style={{ color: '#bbb' }}>—</span>}
+                                                </td>
                                                 <td style={tdBase}>
-                                                    <input style={{ ...xpInput, width: 32 }} value={form.sequence}
+                                                    <input style={{ ...xpInput, width: '100%' }} value={form.sequence} title="Sequence"
                                                         onChange={e => setForm(f => ({ ...f, sequence: e.target.value }))} />
                                                 </td>
-                                                <td style={tdBase}>
-                                                    <span style={{ fontFamily: CODE_FONT, fontSize: 10, color: '#666' }}>
-                                                        {(wo as any).code || wo.name}
-                                                    </span>
+                                                <td style={{ ...tdBase, overflow: 'hidden' }}>
+                                                    <CodeChip code={(wo as any).code || wo.name} tone="accent"
+                                                        style={{ display: 'block', overflow: 'hidden', textOverflow: 'ellipsis' }} />
+                                                </td>
+                                                <td style={{ ...tdBase, fontSize: 10, color: '#444', overflow: 'hidden' }}>
+                                                    <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'block' }}>{wo.item_name || '—'}</span>
+                                                </td>
+                                                <td style={{ ...tdBase, fontSize: 10, overflow: 'hidden', whiteSpace: 'normal' }}>
+                                                    <VariantChips
+                                                        combo={wo.combo_label}
+                                                        size={wo.size_label}
+                                                        colorVariant={wo.color_label}
+                                                        colorCode={wo.color_code}
+                                                        colorName={wo.color_name}
+                                                        colorHex={wo.color_hex}
+                                                        labdipCode={wo.labdip_variant_code}
+                                                        style={{ flexWrap: 'wrap', rowGap: 2 }}
+                                                    />
                                                 </td>
                                                 <td style={tdBase}>
-                                                    <span style={{ fontSize: 10, color: '#666' }}>{wo.item_name || '—'}</span>
-                                                </td>
-                                                <td style={tdBase} />
-                                                <td style={tdBase}>
-                                                    <select style={{ ...xpInput, width: '100%' }} value={form.work_center_id}
+                                                    <select style={{ ...xpInput, width: '100%' }} value={form.work_center_id} title="Work center (machine)"
                                                         onChange={e => setForm(f => ({ ...f, work_center_id: e.target.value }))}>
                                                         <option value="">—</option>
-                                                        {workCenters.map((wc: any) => <option key={wc.id} value={wc.id}>{wc.name}</option>)}
+                                                        {workCenters
+                                                            .filter((wc: any) => isMachineWC(wc) || String(wc.id) === String(wo.work_center_id))
+                                                            .map((wc: any) => <option key={wc.id} value={wc.id}>{wc.name}</option>)}
                                                     </select>
                                                 </td>
                                                 <td style={tdBase}>
-                                                    <input type="number" min="0" step="0.5" style={{ ...xpInput, width: 56 }}
-                                                        value={form.planned_duration_hours}
-                                                        onChange={e => setForm(f => ({ ...f, planned_duration_hours: e.target.value }))} />
+                                                    <input type="number" min="0" step="any" style={{ ...xpInput, width: '100%' }}
+                                                        title={`Target qty — ${(wo.qty_completed_total ?? 0).toFixed(1)} done`}
+                                                        placeholder="Qty"
+                                                        value={form.qty}
+                                                        onChange={e => setForm(f => ({ ...f, qty: e.target.value }))} />
                                                 </td>
-                                                <td style={tdBase} colSpan={5} />
-                                                <td style={tdBase} />
+                                                <td style={tdBase}>
+                                                    <input type="date" style={{ ...xpInput, width: '100%', padding: '0 2px', fontSize: 10 }} value={form.target_start_date} title="Target start"
+                                                        onChange={e => setForm(f => ({ ...f, target_start_date: e.target.value }))} />
+                                                </td>
+                                                <td style={tdBase}>
+                                                    <input type="date" style={{ ...xpInput, width: '100%', padding: '0 2px', fontSize: 10 }} value={form.target_end_date} title="Target end"
+                                                        onChange={e => setForm(f => ({ ...f, target_end_date: e.target.value }))} />
+                                                </td>
+                                                <td style={{ ...tdBase, fontSize: 10 }}>{fmtDateTime(wo.actual_start_date)}</td>
+                                                <td style={{ ...tdBase, fontSize: 10 }}>{fmtDateTime(wo.actual_end_date)}</td>
+                                                <td style={{ ...tdBase, fontSize: 10 }}>{fmtDateTime(wo.created_at)}</td>
+                                                <td style={tdBase}><StatusChip status={wo.status || 'PENDING'} /></td>
+                                                {/* Icon-only, same as every other row action — text buttons don't fit the 78px column. */}
                                                 <td style={{ ...tdBase, textAlign: 'right', whiteSpace: 'nowrap' }}>
-                                                    <button onClick={() => handleSave(wo)} disabled={isSaving}
-                                                        style={{ fontFamily: xpFont, fontSize: 10, padding: '1px 8px', background: 'linear-gradient(to bottom,#b0e8b0,#70c870)', border: '1px solid #0a3e0a', cursor: 'pointer', marginRight: 4 }}>
-                                                        {isSaving ? '...' : 'Save'}
-                                                    </button>
-                                                    <button onClick={() => setEditId(null)}
-                                                        style={{ fontFamily: xpFont, fontSize: 10, padding: '1px 6px', background: 'linear-gradient(to bottom,#f0efe6,#dddbd0)', border: '1px solid #808080', cursor: 'pointer' }}>
-                                                        Cancel
-                                                    </button>
+                                                    <span style={{ display: 'inline-flex', gap: 3 }}>
+                                                        <XPActionButton tone="success" icon={isSaving ? 'bi-hourglass-split' : 'bi-check-lg'}
+                                                            title="Save" disabled={isSaving} onClick={() => handleSave(wo)} />
+                                                        <XPActionButton tone="neutral" icon="bi-x-lg"
+                                                            title="Cancel" disabled={isSaving} onClick={() => setEditId(null)} />
+                                                    </span>
                                                 </td>
                                             </tr>
                                         );

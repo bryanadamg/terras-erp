@@ -27,6 +27,9 @@ from app.core.pagination import PageParams, PageWindow
 
 router = APIRouter(prefix="/pick-lists", tags=["pick-lists"])
 
+# Statuses PUT may set. The rest are owned by their own transitions.
+EDITABLE_STATUSES = ("DRAFT", "PICKING", "PICKED")
+
 
 # --- helpers ---------------------------------------------------------------
 
@@ -914,6 +917,15 @@ async def update_pick_list(
         raise HTTPException(
             status_code=400,
             detail=f"Pick list is staged on shipment {pl.shipment.code if pl.shipment else ''} — unload it there first",
+        )
+
+    # DISPATCHED is only reachable through a shipment's goods issue
+    # (dispatch_service) — writing it here would skip the four-eyes verify and
+    # the stock-out. CANCELLED has no cleanup path on PUT either; delete instead.
+    if payload.status is not None and payload.status not in EDITABLE_STATUSES:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Status must be one of {', '.join(EDITABLE_STATUSES)}",
         )
 
     # Scalar header fields. Surat Jalan fields are absent by design: they live on

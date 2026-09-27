@@ -3,11 +3,11 @@ import React from 'react';
 
 import type {
     PrintLayout, Band, GridBand, GridItem, FieldSpec, KeyValueBand,
-    TableBand, TallyBand, SignatureBand, SpacerBand, Align,
+    TableBand, TableFooterCell, TallyBand, SignatureBand, SpacerBand, Align,
 } from '../shared/printTemplate/types';
 import { FIELD_MANIFESTS } from '../shared/printTemplate/fieldRegistry';
 import { paperPortraitMm, CUSTOM_MIN_MM, CUSTOM_MAX_MM } from '../shared/printTemplate/paper';
-import { rowSource } from '../shared/printTemplate/rowSources';
+import { rowSource, sourcesForDoc } from '../shared/printTemplate/rowSources';
 import { describeBand, bandTypeLabel } from '../shared/printTemplate/bandLabel';
 import { xpFont } from '../shared/xpTheme';
 import { Row, TextField, NumberField, CheckField, SelectField, InspectorGroup, ListRowControls } from './controls';
@@ -28,6 +28,11 @@ const ALIGN_OPTS: { value: Align; label: string }[] = [
 ];
 
 const clone = (l: PrintLayout): PrintLayout => JSON.parse(JSON.stringify(l));
+
+/** A footer cell with neither text nor a value is no footer — drop it so the row can go. */
+function tidyFooter(f: TableFooterCell): TableFooterCell | undefined {
+    return f.text || f.field ? f : undefined;
+}
 
 function move<T>(arr: T[], from: number, to: number): T[] {
     if (to < 0 || to >= arr.length) return arr;
@@ -57,6 +62,10 @@ interface Props {
 export default function InspectorPanel({ layout, docType, selection, onChange, onSelect}: Props) {
     const fields = FIELD_MANIFESTS[docType] || [];
     const fieldOpts = fields.map(f => ({ value: f.key, label: f.label }));
+    const kindOf = (key?: string) => fields.find(f => f.key === key)?.kind;
+    /** List name for a placed field — a typed-text field is named by its text. */
+    const placedName = (spec: { field?: string; text?: string }) =>
+        spec.field === '__text' ? `"${spec.text || ''}"` : (fields.find(f => f.key === spec.field)?.label || spec.field || '(none)');
 
     const bandIndex = layout.bands.findIndex(b => b.id === selection.bandId);
     const band = bandIndex >= 0 ? layout.bands[bandIndex] : null;
@@ -255,6 +264,40 @@ export default function InspectorPanel({ layout, docType, selection, onChange, o
                     <SelectField value={spec.field as any} options={fieldOpts}
                         onChange={v => apply({ field: v })} />
                 </Row>
+                {kindOf(spec.field) === 'static' && (
+                    <Row label="Text">
+                        <TextField value={spec.text} placeholder="(type the text)"
+                            onChange={v => apply({ text: v })} />
+                    </Row>
+                )}
+                {(kindOf(spec.field) === 'image' || kindOf(spec.field) === 'barcode') && (
+                    <Row label="Height">
+                        <NumberField suffix="px" min={10} max={200}
+                            value={spec.imageHeight} onChange={v => apply({ imageHeight: v })} />
+                    </Row>
+                )}
+                <Row label="Prefix" title='Printed before the value, e.g. "No : "'>
+                    <TextField value={spec.prefix} placeholder="(none)"
+                        onChange={v => apply({ prefix: v || undefined })} />
+                </Row>
+                {kindOf(spec.field) !== 'static' && (
+                    <Row label="When empty" title="Printed when there is no value. Empty string prints nothing.">
+                        <TextField value={spec.emptyText} placeholder="—"
+                            onChange={v => apply({ emptyText: v })} />
+                    </Row>
+                )}
+                <CheckField label="CAPITALS" checked={!!spec.uppercase}
+                    onChange={v => apply({ uppercase: v || undefined })} />
+                <CheckField label="Serif face" checked={!!spec.serif}
+                    onChange={v => apply({ serif: v || undefined })} />
+                {spec.prefix && (
+                    <CheckField label="Prefix bold" checked={!!spec.prefixBold}
+                        onChange={v => apply({ prefixBold: v || undefined })} />
+                )}
+                <Row label="Letter spacing">
+                    <NumberField suffix="px" min={0} max={20}
+                        value={spec.letterSpacing} onChange={v => apply({ letterSpacing: v })} />
+                </Row>
                 <Row label="Font size">
                     <NumberField suffix="px" min={4} max={72}
                         value={spec.fontSize} onChange={v => apply({ fontSize: v })} />
@@ -285,12 +328,14 @@ export default function InspectorPanel({ layout, docType, selection, onChange, o
                 </Row>
                 <CheckField label="Hide when empty (no dash)" checked={!!spec.hideWhenEmpty}
                     onChange={v => apply({ hideWhenEmpty: v || undefined })} />
-                {spec.field === 'wo.qr' && (
+                {kindOf(spec.field) === 'qr' && (
                     <>
                         <Row label="QR size">
                             <NumberField suffix="px" min={40} max={400}
                                 value={spec.qrSize} onChange={v => apply({ qrSize: v })} />
                         </Row>
+                        <CheckField label="Box around the QR" checked={spec.qrFrame !== false}
+                            onChange={v => apply({ qrFrame: v ? undefined : false })} />
                         <Row label="QR caption">
                             <TextField value={spec.qrCaption} placeholder="Scan in ERP Scanner"
                                 onChange={v => apply({ qrCaption: v })} />
@@ -324,9 +369,7 @@ export default function InspectorPanel({ layout, docType, selection, onChange, o
                 >
                     {g.items.map((it, i) => {
                         const selected = sel === i && selection.stackIndex == null;
-                        const name = it.stack
-                            ? `Stack (${it.stack.length})`
-                            : (fields.find(f => f.key === it.field)?.label || it.field || '(none)');
+                        const name = it.stack ? `Stack (${it.stack.length})` : placedName(it);
                         return (
                             <div key={i}>
                                 <div
@@ -371,7 +414,7 @@ export default function InspectorPanel({ layout, docType, selection, onChange, o
                                             }}
                                         >
                                             <span style={{ flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                                                {fields.find(f => f.key === sf.field)?.label || sf.field}
+                                                {placedName(sf)}
                                             </span>
                                             <ListRowControls
                                                 canUp={si > 0} canDown={si < it.stack!.length - 1}
@@ -405,6 +448,7 @@ export default function InspectorPanel({ layout, docType, selection, onChange, o
                                 { value: 'start', label: 'Top' },
                                 { value: 'center', label: 'Middle' },
                                 { value: 'end', label: 'Bottom' },
+                                { value: 'stretch', label: 'Stretch (equal-height cells)' },
                             ]}
                             onChange={v => patchBand({ alignItems: v })} />
                     </Row>
@@ -430,6 +474,17 @@ export default function InspectorPanel({ layout, docType, selection, onChange, o
                             <Row label="Row" title="Cells sharing a row sit side by side">
                                 <NumberField min={1} max={20}
                                     value={item.row} onChange={v => patchItem({ row: v ?? 1 })} />
+                            </Row>
+                            <Row label="Vertical" title="This cell only; the section sets the default">
+                                <SelectField value={item.valign ?? ''}
+                                    options={[
+                                        { value: '', label: '(section default)' },
+                                        { value: 'start', label: 'Top' },
+                                        { value: 'center', label: 'Middle' },
+                                        { value: 'end', label: 'Bottom' },
+                                        { value: 'stretch', label: 'Stretch' },
+                                    ]}
+                                    onChange={v => patchItem({ valign: v || undefined })} />
                             </Row>
                         </InspectorGroup>
 
@@ -538,6 +593,46 @@ export default function InspectorPanel({ layout, docType, selection, onChange, o
                 </InspectorGroup>
 
                 <InspectorGroup title="Table">
+                    <Row label="Style">
+                        <SelectField value={kv.variant ?? 'boxed'}
+                            options={[
+                                { value: 'boxed', label: 'Boxed grid' },
+                                { value: 'plain', label: 'Plain "Label : value"' },
+                            ]}
+                            onChange={v => patchBand({ variant: v === 'boxed' ? undefined : v })} />
+                    </Row>
+                    {kv.variant !== 'plain' && (
+                        <>
+                            <Row label="Rule colour">
+                                <TextField value={kv.ruleColor} placeholder="#bbb" mono
+                                    onChange={v => patchBand({ ruleColor: v || undefined })} />
+                            </Row>
+                            <Row label="Label shade" title="Label cell background; none for white">
+                                <TextField value={kv.labelBackground} placeholder="#f0f0f0" mono
+                                    onChange={v => patchBand({ labelBackground: v || undefined })} />
+                            </Row>
+                        </>
+                    )}
+                    <Row label="Block width" title="e.g. 42% — narrows the whole block, like a totals box">
+                        <TextField value={kv.width} placeholder="(full)"
+                            onChange={v => patchBand({ width: v || undefined })} />
+                    </Row>
+                    {kv.width && (
+                        <Row label="Block side">
+                            <SelectField value={kv.blockAlign ?? 'left'} options={ALIGN_OPTS}
+                                onChange={v => patchBand({ blockAlign: v })} />
+                        </Row>
+                    )}
+                    {kv.variant === 'plain' && (
+                        <CheckField label="Bold labels" checked={!!kv.labelBold}
+                            onChange={v => patchBand({ labelBold: v || undefined })} />
+                    )}
+                    {kv.variant === 'plain' && (
+                        <Row label="Separator" title='Between label and value. Default ": " — empty for a numbered list.'>
+                            <TextField value={kv.separator} placeholder=": "
+                                onChange={v => patchBand({ separator: v })} />
+                        </Row>
+                    )}
                     <Row label="Label width">
                         <TextField value={kv.labelWidth} placeholder="24%"
                             onChange={v => patchBand({ labelWidth: v || undefined })} />
@@ -562,6 +657,16 @@ export default function InspectorPanel({ layout, docType, selection, onChange, o
                             <TextField value={row.label} placeholder="(field name)"
                                 onChange={v => patchRow({ label: v || undefined })} />
                         </Row>
+                        {row.field === '__text' && (
+                            <Row label="Text">
+                                <TextField value={row.text} placeholder="(type the text)"
+                                    onChange={v => patchRow({ text: v })} />
+                            </Row>
+                        )}
+                        <Row label="Value align">
+                            <SelectField value={row.align ?? 'left'} options={ALIGN_OPTS}
+                                onChange={v => patchRow({ align: v })} />
+                        </Row>
                         <Row label="Width" title="Full rows take a whole line; half rows pair up two per line">
                             <SelectField
                                 value={(row.span ?? 1) >= 3 ? 'full' : 'half'}
@@ -576,8 +681,14 @@ export default function InspectorPanel({ layout, docType, selection, onChange, o
                             <TextField value={row.unit} placeholder="(default)"
                                 onChange={v => patchRow({ unit: v })} />
                         </Row>
+                        <Row label="When empty" title="Printed when there is no value. Empty string prints nothing.">
+                            <TextField value={row.emptyText} placeholder="—"
+                                onChange={v => patchRow({ emptyText: v })} />
+                        </Row>
                         <CheckField label="Bold value" checked={!!row.bold}
                             onChange={v => patchRow({ bold: v || undefined })} />
+                        <CheckField label="Monospace value" checked={!!row.mono}
+                            onChange={v => patchRow({ mono: v || undefined })} />
                         <CheckField label="Hide row when empty" checked={!!row.hideWhenEmpty}
                             onChange={v => patchRow({ hideWhenEmpty: v || undefined })} />
                         <CheckField label="Underline for hand fill-in" checked={!!row.fill}
@@ -600,6 +711,7 @@ export default function InspectorPanel({ layout, docType, selection, onChange, o
             editBand(b => Object.assign(b.columns[sel], patch));
         };
         const unused = available.filter(a => !tb.columns.some(c => c.field === a.field));
+        const docSources = sourcesForDoc(docType);
 
         return (
             <>
@@ -664,10 +776,62 @@ export default function InspectorPanel({ layout, docType, selection, onChange, o
                 </InspectorGroup>
 
                 <InspectorGroup title="Table">
+                    {docSources.length > 1 && (
+                        <Row label="Rows from" title="Switching resets the columns">
+                            <SelectField value={tb.source as any}
+                                options={docSources.map(src => ({ value: src.id, label: src.label }))}
+                                onChange={v => {
+                                    const src = rowSource(v);
+                                    if (!src || v === tb.source) return;
+                                    const seed = src.seedColumns
+                                        ? src.columns.filter(c => src.seedColumns!.includes(c.field))
+                                        : src.columns.slice(0, 3);
+                                    patchBand({
+                                        source: v,
+                                        columns: seed.map(c => ({
+                                            field: c.field, label: c.label,
+                                            align: c.numeric ? 'right' : 'left',
+                                            ...(c.numeric ? { decimals: 2 } : {}),
+                                        })),
+                                    });
+                                    onSelect({ bandId: band.id });
+                                }} />
+                        </Row>
+                    )}
                     <Row label="Font size">
                         <NumberField suffix="px" min={4} max={24}
                             value={tb.fontSize} onChange={v => patchBand({ fontSize: v })} />
                     </Row>
+                    <Row label="Rule colour">
+                        <TextField value={tb.ruleColor} placeholder="#bbb" mono
+                            onChange={v => patchBand({ ruleColor: v || undefined })} />
+                    </Row>
+                    <Row label="Heading shade" title="Heading row background; none for unshaded">
+                        <TextField value={tb.headerBackground} placeholder="#f0f0f0" mono
+                            onChange={v => patchBand({ headerBackground: v || undefined })} />
+                    </Row>
+                    <Row label="Min rows" title="Pads with blank rows for hand annotation">
+                        <NumberField min={0} max={40}
+                            value={tb.minRows} onChange={v => patchBand({ minRows: v || undefined })} />
+                    </Row>
+                    <Row label="Stripe" title="Shade every second row this colour, e.g. #f9f9f9">
+                        <TextField value={tb.stripe} placeholder="(none)" mono
+                            onChange={v => patchBand({ stripe: v || undefined })} />
+                    </Row>
+                    <Row label="When empty" title="A merged row printed when there are no rows">
+                        <TextField value={tb.emptyMessage} placeholder="(nothing)"
+                            onChange={v => patchBand({ emptyMessage: v || undefined })} />
+                    </Row>
+                    {tb.columns.some(c => c.footer) && (
+                        <CheckField label="Drop the footer row when it is blank" checked={!!tb.hideBlankFooter}
+                            onChange={v => patchBand({ hideBlankFooter: v || undefined })} />
+                    )}
+                    {!!tb.minRows && (
+                        <Row label="Blank row height">
+                            <NumberField suffix="px" min={8} max={80}
+                                value={tb.padRowHeight} onChange={v => patchBand({ padRowHeight: v })} />
+                        </Row>
+                    )}
                     <CheckField label="Hide section when no rows" checked={tb.hideWhenEmpty !== false}
                         onChange={v => patchBand({ hideWhenEmpty: v })} />
                     <div style={{ fontFamily: xpFont, fontSize: 10, color: '#888', fontStyle: 'italic' }}>
@@ -698,8 +862,44 @@ export default function InspectorPanel({ layout, docType, selection, onChange, o
                             <TextField value={col.emptyText} placeholder="—"
                                 onChange={v => patchCol({ emptyText: v })} />
                         </Row>
+                        <Row label="Heading align">
+                            <SelectField value={col.headerAlign ?? col.align ?? 'left'} options={ALIGN_OPTS}
+                                onChange={v => patchCol({ headerAlign: v })} />
+                        </Row>
                         <CheckField label="Bold" checked={!!col.bold}
                             onChange={v => patchCol({ bold: v || undefined })} />
+                        <CheckField label="Dotted write-on line" checked={!!col.dotted}
+                            onChange={v => patchCol({ dotted: v || undefined })} />
+                        <CheckField label="Monospace" checked={!!col.mono}
+                            onChange={v => patchCol({ mono: v || undefined })} />
+                        <CheckField label="Detail lines grey and smaller" checked={!!col.mutedDetail}
+                            onChange={v => patchCol({ mutedDetail: v || undefined })} />
+                        <Row label="Colour">
+                            <TextField value={col.color} placeholder="#000" mono
+                                onChange={v => patchCol({ color: v || undefined })} />
+                        </Row>
+                    </InspectorGroup>
+                )}
+
+                {col && (
+                    <InspectorGroup title="Column footer" collapsible>
+                        <Row label="Text" title='Literal text, e.g. "Total :"'>
+                            <TextField value={col.footer?.text} placeholder="(none)"
+                                onChange={v => patchCol({ footer: tidyFooter({ ...col.footer, text: v || undefined }) })} />
+                        </Row>
+                        <Row label="Value">
+                            <SelectField value={(col.footer?.field ?? '') as any}
+                                options={[{ value: '', label: '(none)' }, ...fieldOpts]}
+                                onChange={v => patchCol({ footer: tidyFooter({ ...col.footer, field: v || undefined }) })} />
+                        </Row>
+                        {col.footer && (
+                            <>
+                                <CheckField label="Bold" checked={!!col.footer.bold}
+                                    onChange={v => patchCol({ footer: { ...col.footer, bold: v || undefined } })} />
+                                <CheckField label="Boxed" checked={col.footer.border !== false}
+                                    onChange={v => patchCol({ footer: { ...col.footer, border: v ? undefined : false } })} />
+                            </>
+                        )}
                     </InspectorGroup>
                 )}
             </>
@@ -820,8 +1020,35 @@ export default function InspectorPanel({ layout, docType, selection, onChange, o
     // ── Signature band ────────────────────────────────────────────────────────
     const signatureEditor = () => {
         const sg = band as SignatureBand;
+        const block = sg.variant === 'block';
         return (
             <>
+                <InspectorGroup title="Style">
+                    <Row label="Layout">
+                        <SelectField value={sg.variant ?? 'line'}
+                            options={[
+                                { value: 'line', label: 'Signing line, caption under' },
+                                { value: 'block', label: 'Columns, caption on top' },
+                            ]}
+                            onChange={v => patchBand({ variant: v === 'line' ? undefined : v })} />
+                    </Row>
+                    {block && (
+                        <Row label="Align">
+                            <SelectField value={sg.align ?? 'left'} options={ALIGN_OPTS}
+                                onChange={v => patchBand({ align: v })} />
+                        </Row>
+                    )}
+                    {block && (
+                        <CheckField label="First line under the space in bold" checked={sg.boldFirstLine !== false}
+                            onChange={v => patchBand({ boldFirstLine: v ? undefined : false })} />
+                    )}
+                    {block && (
+                        <Row label="Font size">
+                            <NumberField suffix="px" min={4} max={24}
+                                value={sg.fontSize} onChange={v => patchBand({ fontSize: v })} />
+                        </Row>
+                    )}
+                </InspectorGroup>
                 <InspectorGroup
                     title="Signature boxes"
                     right={
@@ -851,14 +1078,45 @@ export default function InspectorPanel({ layout, docType, selection, onChange, o
                                     onRemove={() => editBand(b => { b.boxes.splice(i, 1); })}
                                 />
                             </div>
-                            <Row label="Width">
-                                <NumberField suffix="px" min={30} max={300}
-                                    value={b2.width} onChange={v => editBand(b => { b.boxes[i].width = v; })} />
-                            </Row>
+                            {!block && (
+                                <Row label="Width">
+                                    <NumberField suffix="px" min={30} max={300}
+                                        value={b2.width} onChange={v => editBand(b => { b.boxes[i].width = v; })} />
+                                </Row>
+                            )}
                             <Row label="Height">
                                 <NumberField suffix="px" min={10} max={120}
                                     value={b2.height} onChange={v => editBand(b => { b.boxes[i].height = v; })} />
                             </Row>
+                            {block && (
+                                <Row label="Align">
+                                    <SelectField value={b2.align ?? sg.align ?? 'left'} options={ALIGN_OPTS}
+                                        onChange={v => editBand(b => { b.boxes[i].align = v; })} />
+                                </Row>
+                            )}
+                            {block && (b2.fields || []).map((f, fi) => (
+                                <div key={fi} style={{ display: 'flex', gap: 4, alignItems: 'center', marginBottom: 3 }}>
+                                    <SelectField value={f as any} options={fieldOpts}
+                                        onChange={v => editBand(b => { b.boxes[i].fields[fi] = v; })} />
+                                    <ListRowControls canUp={false} canDown={false}
+                                        onUp={() => {}} onDown={() => {}}
+                                        onRemove={() => editBand(b => { b.boxes[i].fields.splice(fi, 1); })}
+                                    />
+                                </div>
+                            ))}
+                            {block && (
+                                <button
+                                    onClick={() => editBand(b => { b.boxes[i].fields = [...(b.boxes[i].fields || []), 'company.name']; })}
+                                    style={{
+                                        fontFamily: xpFont, fontSize: 10,
+                                        padding: '1px 4px', cursor: 'pointer', borderRadius: 3,
+                                        background: 'linear-gradient(to bottom,#fff,#d4d0c8)',
+                                        border: '1px solid', borderColor: '#dfdfdf #808080 #808080 #dfdfdf',
+                                    }}
+                                >
+                                    <i className="bi bi-plus" /> Line under
+                                </button>
+                            )}
                         </div>
                     ))}
                 </InspectorGroup>

@@ -19,6 +19,7 @@ import { Tabs } from '../shared/Tabs';
 const PickListPrintModal = dynamic(() => import('./PickListPrintModal'), { ssr: false });
 import TreeSelect, { buildLocationPickerTree } from '../shared/TreeSelect';
 import { API_BASE } from '../shared/apiBase';
+import { qtyFmt } from '../shared/format';
 
 
 // ── Classic XP theme primitives (match StockOnHandView / LocationsView) ──────
@@ -689,7 +690,7 @@ const fulfilment = (so: any) => {
     };
 };
 
-const fmtQty = (v: number) => (Math.round(v * 100) / 100).toLocaleString(undefined, { maximumFractionDigits: 2 });
+const fmtQty = qtyFmt(2);
 
 function fulfilmentCell(so: any) {
     const f = fulfilment(so);

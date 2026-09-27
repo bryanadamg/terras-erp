@@ -20,7 +20,6 @@ same date therefore reports no efficiency rather than a fabricated one; weaving
 never does that in practice.
 """
 from datetime import date, timedelta
-from math import ceil
 from typing import Optional
 
 from sqlalchemy import select, func
@@ -166,28 +165,6 @@ def paused_working_days(pauses, weekdays, holidays, window_end: date) -> int:
 def is_paused(pauses) -> bool:
     """True while any interval is still open — the run is parked right now."""
     return any(p.resumed_on is None for p in (pauses or []))
-
-
-def add_working_days(weekdays, holidays, start: date, n: int) -> Optional[date]:
-    """Return the date of the n-th working day counting from `start` (inclusive).
-
-    n<=0 returns `start`. Returns None if the calendar has no working weekdays.
-    """
-    wd = set(weekdays)
-    if not wd:
-        return None
-    if n <= 0:
-        return start
-    hol = set(holidays or [])
-    count = 0
-    d = start
-    for _ in range(_MAX_PROJECT_DAYS):
-        if _is_working_day(d, wd, hol):
-            count += 1
-            if count >= n:
-                return d
-        d += timedelta(days=1)
-    return None
 
 
 def walk_to_target(machines: list, target: float, start_date: date, initial: float = 0.0) -> Optional[date]:

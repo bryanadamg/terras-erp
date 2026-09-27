@@ -19,6 +19,7 @@ import {
 import Pager from '../shared/Pager';
 import { API_BASE } from '../shared/apiBase';
 import { LotChips, LotChip, LotChipRow, LotVariantAttr, lotSizeLabel, lotComboLabel } from '../shared/LotChips';
+import { qtyFmt } from '../shared/format';
 
 /**
  * Quarantine Packing — the QC hold desk between production output and packing.
@@ -45,8 +46,7 @@ import { LotChips, LotChip, LotChipRow, LotVariantAttr, lotSizeLabel, lotComboLa
 
 const PAGE_SIZE = 25;
 
-const fmtQty = (n: number) =>
-    Number(n || 0).toLocaleString(undefined, { maximumFractionDigits: 3 });
+const fmtQty = qtyFmt(3);
 
 /**
  * Checkbox with a real indeterminate state — `indeterminate` is a DOM property,

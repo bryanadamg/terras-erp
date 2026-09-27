@@ -33,36 +33,56 @@ def _broadcast_calls():
 
     for path in sorted(APP_DIR.rglob("*.py")):
         tree = ast.parse(path.read_text(encoding="utf-8"))
+        # The helper's own `manager.broadcast(event)` forwards its callers'
+        # payloads, which are read at the call sites below instead.
+        forwarding = {
+            id(call)
+            for fn in ast.walk(tree)
+            if isinstance(fn, ast.AsyncFunctionDef) and fn.name == FORWARDER
+            for call in ast.walk(fn)
+            if isinstance(call, ast.Call)
+        }
         for node in ast.walk(tree):
-            if not isinstance(node, ast.Call):
+            if not isinstance(node, ast.Call) or id(node) in forwarding:
                 continue
             func = node.func
-            is_async = isinstance(func, ast.Attribute) and func.attr == "broadcast"
+            name = func.attr if isinstance(func, ast.Attribute) else getattr(func, "id", None)
+            if isinstance(func, ast.Attribute) and name == "broadcast":
+                payloads = node.args[:1]
             # `broadcast_sync(...)` is a plain name, not an attribute: the sync
             # master-data routers cannot await the manager, and their events are
             # just as undeliverable if the type goes unregistered.
-            is_sync = isinstance(func, ast.Name) and func.id == "broadcast_sync"
-            if not (is_async or is_sync):
+            elif isinstance(func, ast.Name) and name == "broadcast_sync":
+                payloads = node.args[:1]
+            # kpi_service.invalidate_and_broadcast(db, *events)
+            elif name == FORWARDER:
+                payloads = node.args[1:]
+            else:
                 continue
             where = f"{path.relative_to(APP_DIR.parent)}:{node.lineno}"
-
-            payload = node.args[0] if node.args else None
-            if not isinstance(payload, ast.Dict):
+            # A bare broadcast() has nothing to read; a forwarder call with no
+            # events only invalidates KPIs, which is fine.
+            if not payloads and name != FORWARDER:
                 dynamic.append(where)
-                continue
-
-            event_type = None
-            for key, value in zip(payload.keys, payload.values):
-                if isinstance(key, ast.Constant) and key.value == "type":
-                    if isinstance(value, ast.Constant) and isinstance(value.value, str):
-                        event_type = value.value
-                    break
-            if event_type is None:
-                dynamic.append(where)
-            else:
-                types.setdefault(event_type, []).append(where)
+            for payload in payloads:
+                _record(payload, where, types, dynamic)
 
     return types, dynamic
+
+
+FORWARDER = "invalidate_and_broadcast"
+
+
+def _record(payload, where, types, dynamic):
+    """File one payload under its constant "type", or as unreadable."""
+    if isinstance(payload, ast.Dict):
+        for key, value in zip(payload.keys, payload.values):
+            if isinstance(key, ast.Constant) and key.value == "type":
+                if isinstance(value, ast.Constant) and isinstance(value.value, str):
+                    types.setdefault(value.value, []).append(where)
+                    return
+                break
+    dynamic.append(where)
 
 
 def test_every_broadcast_type_is_registered():

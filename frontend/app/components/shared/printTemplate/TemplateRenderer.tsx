@@ -3,12 +3,12 @@ import React from 'react';
 
 import type {
     PrintLayout, Band, GridBand, GridItem, FieldSpec, KeyValueBand, KeyValueRow,
-    TableBand, TallyBand, SignatureBand, SpacerBand, Align,
+    TableBand, TableColumn, TallyBand, SignatureBand, SpacerBand, Align, CellStyle,
 } from './types';
 import type { PrintContext } from './renderContext';
 import { resolveField, fieldDef } from './fieldRegistry';
 import { rowSource } from './rowSources';
-import { CODE_FONT } from '../xpTheme';
+import { CODE_FONT, PRINT_SERIF_FONT } from '../xpTheme';
 
 /**
  * Renders a print layout to JSX.
@@ -37,7 +37,9 @@ const UNIT: React.CSSProperties = { fontSize: 9, color: '#666', fontWeight: 'nor
 const TH: React.CSSProperties = { border: '1px solid #bbb', padding: '2px 5px' };
 // `wordBreak` matters under the fixed table layout a set column width switches on:
 // without it a long unbroken item code overflows its cell instead of widening it.
-const TD: React.CSSProperties = { border: '1px solid #bbb', padding: '2px 5px', wordBreak: 'break-word' };
+// Top-aligned: a multi-line cell (item name + variant lines) must not float its
+// one-line neighbours to the middle of the row.
+const TD: React.CSSProperties = { border: '1px solid #bbb', padding: '2px 5px', wordBreak: 'break-word', verticalAlign: 'top' };
 
 const EM_DASH = '—';
 
@@ -83,8 +85,9 @@ function FieldValue({ item, ctx, docType }: {
 
     if (def?.kind === 'qr') {
         const size = item.qrSize ?? 140;
+        const framed = item.qrFrame !== false;
         return (
-            <div style={{ border: '2px solid #000', padding: 4, textAlign: 'center', display: 'inline-block' }}>
+            <div style={{ ...(framed ? { border: '2px solid #000', padding: 4 } : {}), textAlign: 'center', display: 'inline-block' }}>
                 {resolved.qrDataUrl ? (
                     <img
                         src={resolved.qrDataUrl}
@@ -110,6 +113,34 @@ function FieldValue({ item, ctx, docType }: {
         return <div style={{ borderBottom: '1px solid #000', minHeight: 14 }}>&nbsp;</div>;
     }
 
+    if (def?.kind === 'barcode') {
+        if (resolved.empty) return null;
+        const right = item.align === 'right';
+        return (
+            <div style={{ display: 'flex', justifyContent: right ? 'flex-end' : item.align === 'center' ? 'center' : 'flex-start' }}>
+                <DecorativeBarcode value={resolved.text} height={item.imageHeight ?? 42} />
+            </div>
+        );
+    }
+
+    if (def?.kind === 'image') {
+        if (!resolved.imageUrl) return null;
+        const centred = item.align === 'center';
+        return (
+            <img src={resolved.imageUrl} alt="" style={{
+                display: 'block', maxHeight: item.imageHeight ?? 34, maxWidth: '100%', objectFit: 'contain',
+                marginLeft: centred || item.align === 'right' ? 'auto' : undefined,
+                marginRight: centred ? 'auto' : undefined,
+            }} />
+        );
+    }
+
+    // A static field prints its placement's own text; a data field prints its value,
+    // or the placement's `emptyText` in place of the dash when there is none.
+    const text = def?.kind === 'static'
+        ? (item.text ?? '')
+        : (resolved.empty && item.emptyText !== undefined ? item.emptyText : resolved.text);
+
     // `unit` is only appended when there is an actual value — "— kg" reads as broken.
     const unit = item.unit !== undefined ? item.unit : def?.unit;
     const showUnit = !!unit && !resolved.empty;
@@ -117,12 +148,14 @@ function FieldValue({ item, ctx, docType }: {
     const style: React.CSSProperties = {
         fontSize: item.fontSize ?? 11,
         fontWeight: item.bold ? 'bold' : 'normal',
-        fontFamily: (item.mono ?? def?.mono) ? CODE_FONT : undefined,
+        fontFamily: (item.mono ?? def?.mono) ? CODE_FONT : item.serif ? PRINT_SERIF_FONT : undefined,
+        letterSpacing: item.letterSpacing != null ? `${item.letterSpacing}px` : undefined,
         textAlign: item.align,
         color: item.color,
         lineHeight: (item.fontSize ?? 11) >= 17 ? 1.05 : undefined,
         wordBreak: 'break-word',
-        whiteSpace: resolved.text.includes('\n') ? 'pre-line' : undefined,
+        whiteSpace: text.includes('\n') ? 'pre-line' : undefined,
+        textTransform: item.uppercase ? 'uppercase' : undefined,
         ...(item.maxLines
             ? {
                 display: '-webkit-box',
@@ -135,8 +168,27 @@ function FieldValue({ item, ctx, docType }: {
 
     return (
         <div style={style}>
-            {resolved.text}
+            {item.prefix && <span style={{ fontWeight: item.prefixBold ? 'bold' : 'normal' }}>{item.prefix}</span>}
+            {text}
             {showUnit && <span style={UNIT}>{` ${unit}`}</span>}
+        </div>
+    );
+}
+
+/**
+ * Bar strip derived from the value — decoration that reads as "document number",
+ * NOT a scannable symbology. Lifted from the old PO print so a ported PO looks the
+ * same; anything that must scan uses the `qr` kind.
+ */
+function DecorativeBarcode({ value, height }: { value: string; height: number }) {
+    const bars: { w: number; on: boolean }[] = [];
+    for (let i = 0; i < value.length; i++) {
+        const c = value.charCodeAt(i);
+        bars.push({ w: (c % 3) + 1, on: true }, { w: (c % 2) + 1, on: false }, { w: ((c >> 2) % 3) + 1, on: true }, { w: 1, on: false });
+    }
+    return (
+        <div style={{ display: 'flex', alignItems: 'flex-end', height }}>
+            {bars.map((b, i) => <div key={i} style={{ width: b.w * 1.4, height: '100%', background: b.on ? '#000' : 'transparent' }} />)}
         </div>
     );
 }
@@ -175,6 +227,7 @@ function GridBandView({ band, ctx, docType, selectedId, onSelect }: {
                             gridColumn: `${item.col} / span ${item.span}`,
                             gridRow: `${item.row} / span ${item.rowSpan ?? 1}`,
                             minWidth: 0,
+                            ...(item.valign ? { alignSelf: item.valign } : {}),
                             ...(band.cellBox ? { border: band.cellBox, padding: '3px 8px' } : {}),
                             ...(item.align === 'right' ? { textAlign: 'right' as const } : {}),
                             ...(selectedId === itemId ? { outline: '2px solid #0058e6', outlineOffset: 1 } : {}),
@@ -250,8 +303,19 @@ function KeyValueBandView({ band, ctx, docType, selectedId, onSelect }: {
     });
     if (pending.length) lines.push(pending);
 
-    const lblStyle = { ...LBL_CELL, fontSize: band.labelFontSize ?? 9 };
-    const valStyle = { ...VAL_CELL, fontSize: band.valueFontSize ?? 11 };
+    // `plain` drops the ruled grid for unboxed "Label : value" lines.
+    const plain = band.variant === 'plain';
+    const rule = band.ruleColor ? `1px solid ${band.ruleColor}` : undefined;
+    const lblStyle: React.CSSProperties = plain
+        ? { padding: '0 8px 0 0', whiteSpace: 'nowrap', verticalAlign: 'top', fontSize: band.labelFontSize ?? 9, fontWeight: band.labelBold ? 'bold' : undefined }
+        : {
+            ...LBL_CELL, fontSize: band.labelFontSize ?? 9,
+            ...(rule ? { border: rule, color: '#000' } : {}),
+            ...(band.labelBackground ? { background: band.labelBackground === 'none' ? 'transparent' : band.labelBackground } : {}),
+        };
+    const valStyle: React.CSSProperties = plain
+        ? { padding: '0 12px 0 0', verticalAlign: 'top', fontSize: band.valueFontSize ?? 9 }
+        : { ...VAL_CELL, fontSize: band.valueFontSize ?? 11, ...(rule ? { border: rule } : {}) };
 
     const renderCell = ({ row, index }: { row: KeyValueRow; index: number }, halfCount: number) => {
         const def = fieldDef(docType, row.field);
@@ -269,13 +333,13 @@ function KeyValueBandView({ band, ctx, docType, selectedId, onSelect }: {
                     data-tpl-kvlabel="1"
                     style={{
                         ...lblStyle,
-                        width: full || halfCount === 1 ? band.labelWidth ?? '24%' : undefined,
+                        width: full || halfCount === 1 ? band.labelWidth ?? (plain ? undefined : '24%') : undefined,
                         ...(selected ? { outline: '2px solid #0058e6' } : {}),
                         cursor: onSelect ? 'pointer' : undefined,
                     }}
                     onClick={onSelect ? (e) => { e.stopPropagation(); onSelect(cellId); } : undefined}
                 >
-                    {row.label ?? def?.label ?? ''}
+                    {row.label === '{auto}' ? (resolved.label ?? def?.label ?? '') : (row.label ?? def?.label ?? '')}
                 </td>
                 <td
                     data-tpl-kvrow={cellId}
@@ -285,11 +349,17 @@ function KeyValueBandView({ band, ctx, docType, selectedId, onSelect }: {
                         ...valStyle,
                         fontSize: row.fontSize ?? valStyle.fontSize,
                         fontWeight: row.bold ? 'bold' : 'normal',
+                        fontFamily: row.mono ? CODE_FONT : undefined,
+                        textAlign: row.align,
+                        whiteSpace: 'pre-line',
                         ...(row.fill ? { borderBottom: '1px solid #000' } : {}),
                         ...(selected ? { outline: '2px solid #0058e6' } : {}),
                     }}
                 >
-                    {row.field === '__blank' ? ' ' : resolved.text}
+                    {plain && (band.separator ?? ': ')}
+                    {row.field === '__blank' ? '\u00a0'
+                        : row.field === '__text' ? (row.text ?? '')
+                            : (resolved.empty && row.emptyText !== undefined ? row.emptyText : resolved.text)}
                     {showUnit && <span style={UNIT}>{` ${unit}`}</span>}
                 </td>
             </React.Fragment>
@@ -297,7 +367,11 @@ function KeyValueBandView({ band, ctx, docType, selectedId, onSelect }: {
     };
 
     return (
-        <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+        <table style={{
+            width: band.width ?? (plain ? undefined : '100%'), borderCollapse: 'collapse',
+            marginLeft: band.width && band.blockAlign !== 'left' && band.blockAlign ? 'auto' : undefined,
+            marginRight: band.width && band.blockAlign === 'center' ? 'auto' : undefined,
+        }}>
             <tbody>
                 {lines.map((line, li) => (
                     <tr key={li}>{line.map(entry => renderCell(entry, line.length))}</tr>
@@ -315,6 +389,28 @@ function TableBandView({ band, ctx, rows, onSelect }: {
     if (!source) return null;
 
     const fontSize = band.fontSize ?? 9;
+    const rule = `1px solid ${band.ruleColor ?? '#bbb'}`;
+    const th: React.CSSProperties = { ...TH, border: rule };
+    const td: React.CSSProperties = { ...TD, border: rule };
+    const headerBg = band.headerBackground === 'none' ? undefined : (band.headerBackground ?? '#f0f0f0');
+    const cellStyle = (col: TableColumn, own?: CellStyle): React.CSSProperties => ({
+        ...(col.dotted ? { ...TD, border: 'none', borderBottom: '1px dotted #777' } : td),
+        textAlign: col.align ?? 'left',
+        fontWeight: (own?.bold ?? col.bold) ? 'bold' : 'normal',
+        fontFamily: col.mono ? CODE_FONT : undefined,
+        color: own?.color ?? col.color,
+        ...(own?.background ? { background: own.background } : {}),
+    });
+    const padRows = Math.max(0, (band.minRows ?? 0) - rows.length);
+    const footerCells = band.columns.map(col => {
+        const f = col.footer;
+        if (!f) return null;
+        const value = f.field ? resolveField(f.field, ctx) : null;
+        return `${f.text ?? ''}${value && !value.empty ? value.text : ''}`;
+    });
+    const hasFooter = band.columns.some(c => c.footer)
+        && !(band.hideBlankFooter && footerCells.every(t => !t || !t.trim()));
+    let dataIndex = 0;
 
     return (
         <table style={{
@@ -327,13 +423,13 @@ function TableBandView({ band, ctx, rows, onSelect }: {
             ...(band.columns.some(c => c.width) ? { tableLayout: 'fixed' as const } : {}),
         }}>
             <thead>
-                <tr style={{ background: '#f0f0f0' }}>
+                <tr style={{ background: headerBg }}>
                     {band.columns.map((col, ci) => (
                         <th
                             key={col.field}
                             data-tpl-tablecol={`${band.id}:${ci}`}
                             onClick={onSelect ? (e) => { e.stopPropagation(); onSelect(`${band.id}:${ci}`); } : undefined}
-                            style={{ ...TH, textAlign: col.align ?? 'left', width: col.width }}
+                            style={{ ...th, textAlign: col.headerAlign ?? col.align ?? 'left', width: col.width, whiteSpace: 'pre-line' }}
                         >
                             {col.label}
                         </th>
@@ -341,15 +437,24 @@ function TableBandView({ band, ctx, rows, onSelect }: {
                 </tr>
             </thead>
             <tbody>
-                {rows.map((row, ri) => (
-                    <tr key={row._key ?? ri}>
+                {rows.length === 0 && band.emptyMessage && (
+                    <tr>
+                        <td colSpan={band.columns.length} style={{ ...td, textAlign: 'center', fontStyle: 'italic', color: '#666' }}>
+                            {band.emptyMessage}
+                        </td>
+                    </tr>
+                )}
+                {rows.map((row, ri) => row._group != null ? (
+                    <tr key={row._key ?? `g-${ri}`}>
+                        <td colSpan={band.columns.length} style={{ ...td, fontWeight: 'bold', background: '#f4f4f4', ...(row._groupStyle || {}) }}>
+                            {row._group}
+                        </td>
+                    </tr>
+                ) : (
+                    <tr key={row._key ?? ri} style={band.stripe && (dataIndex++ % 2 === 1) ? { background: band.stripe } : undefined}>
                         {band.columns.map(col => {
                             const raw = row[col.field];
-                            const align = col.align ?? 'left';
-                            const style: React.CSSProperties = {
-                                ...TD, textAlign: align,
-                                fontWeight: col.bold ? 'bold' : 'normal',
-                            };
+                            const style = cellStyle(col, row._style?.[col.field]);
                             // Composite item cell: mono code then name, as the old card drew it.
                             if (col.field === 'item' && raw && typeof raw === 'object') {
                                 return (
@@ -363,6 +468,17 @@ function TableBandView({ band, ctx, rows, onSelect }: {
                                     </td>
                                 );
                             }
+                            // Composite description cell: bold title, then detail lines under it.
+                            if (raw && typeof raw === 'object' && 'title' in raw) {
+                                return (
+                                    <td key={col.field} style={style}>
+                                        <div style={{ fontWeight: 'bold' }}>{raw.title}</div>
+                                        {(raw.lines || []).map((ln: string, li: number) => (
+                                            <div key={li} style={{ marginTop: 2, ...(col.mutedDetail ? { color: '#666', fontSize: fontSize - 1 } : {}) }}>{ln}</div>
+                                        ))}
+                                    </td>
+                                );
+                            }
                             const isNumeric = source.columns.find(c => c.field === col.field)?.numeric;
                             const text = isNumeric
                                 ? fmtNumber(raw, col.decimals ?? 2, col.emptyText ?? EM_DASH)
@@ -371,6 +487,30 @@ function TableBandView({ band, ctx, rows, onSelect }: {
                         })}
                     </tr>
                 ))}
+                {Array.from({ length: padRows }, (_, pi) => (
+                    <tr key={`pad-${pi}`}>
+                        {band.columns.map(col => <td key={col.field} style={{ ...cellStyle(col), height: band.padRowHeight }}>&nbsp;</td>)}
+                    </tr>
+                ))}
+                {hasFooter && (
+                    <tr>
+                        {band.columns.map(col => {
+                            const f = col.footer;
+                            if (!f) return <td key={col.field} style={{ ...TD, border: 'none' }} />;
+                            const value = f.field ? resolveField(f.field, ctx) : null;
+                            return (
+                                <td key={col.field} style={{
+                                    ...(f.border === false ? { ...TD, border: 'none' } : td),
+                                    textAlign: f.align ?? col.align ?? 'left',
+                                    fontWeight: f.bold ? 'bold' : 'normal',
+                                    whiteSpace: 'nowrap',
+                                }}>
+                                    {f.text}{value && !value.empty ? value.text : ''}
+                                </td>
+                            );
+                        })}
+                    </tr>
+                )}
             </tbody>
         </table>
     );
@@ -457,6 +597,23 @@ function TallyBandView({ band }: { band: TallyBand }) {
 }
 
 function SignatureBandView({ band, ctx, docType }: { band: SignatureBand; ctx: PrintContext; docType: string }) {
+    if (band.variant === 'block') {
+        return (
+            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: band.fontSize ?? 9, textAlign: band.align }}>
+                {band.boxes.map((box, i) => (
+                    // One point short of an equal share, so neighbouring captions never touch.
+                    <div key={i} data-tpl-sigbox={`${band.id}:${i}`} style={{ width: `${Math.floor(100 / Math.max(1, band.boxes.length)) - 1}%`, textAlign: box.align }}>
+                        <div>{box.caption}</div>
+                        <div style={{ height: box.height ?? 40 }} />
+                        {(box.fields || []).map((f, fi) => {
+                            const r = resolveField(f, ctx);
+                            return r.empty ? null : <div key={fi} style={{ fontWeight: fi === 0 && band.boldFirstLine !== false ? 'bold' : 'normal' }}>{r.text}</div>;
+                        })}
+                    </div>
+                ))}
+            </div>
+        );
+    }
     return (
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end' }}>
             <div>
@@ -514,7 +671,7 @@ function BandView(props: {
     if (band.type === 'table') {
         const source = rowSource((band as TableBand).source);
         if (!source) return null;
-        const resolved = source.resolve(ctx);
+        const resolved = source.resolve(ctx, band as TableBand);
         rows = resolved.rows;
         autoTitle = resolved.autoTitle;
         if ((band as TableBand).hideWhenEmpty !== false && rows.length === 0) return null;
@@ -568,10 +725,12 @@ function BandView(props: {
                 both. `borderTop` was missing here, which silently dropped the rule above
                 every default's signature band and made the inspector's "Rule above"
                 field edit nothing. */}
+            {/* Longhands only when set: React writes an undefined style key as '', and
+                `borderTop: ''` after the shorthand wipes the box's top edge. */}
             <div style={{
                 border: band.box,
-                borderTop: band.borderTop,
-                borderBottom: band.borderBottom,
+                ...(band.borderTop !== undefined ? { borderTop: band.borderTop } : {}),
+                ...(band.borderBottom !== undefined ? { borderBottom: band.borderBottom } : {}),
                 padding: band.padding,
             }}>
                 {content}

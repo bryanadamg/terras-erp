@@ -1,165 +1,19 @@
 'use client';
-import React, { useEffect } from 'react';
-import { createPortal } from 'react-dom';
+import React, { useMemo } from 'react';
 import { useData } from '../../context/DataContext';
 import PrintModalShell, { PrintModalFooter } from '../shared/PrintModalShell';
-import { PRINT_FONT } from '../shared/xpTheme';
-
 import { useTimezone } from '../../context/TimezoneContext';
 import { STATIC_BASE } from '../shared/apiBase';
+import TemplateRenderer from '../shared/printTemplate/TemplateRenderer';
+import TemplatePrintPortal from '../shared/printTemplate/TemplatePrintPortal';
+import { resolveLayout } from '../shared/printTemplate/templateStore';
+import { paperDimsMm } from '../shared/printTemplate/paper';
+import { buildSoTableContext, SO_TABLE_DOC } from '../shared/printTemplate/doctypes/soTable';
 
-const TABLE_SETTINGS_KEY = 'so_table_print_settings';
-
-function SOTableDocument({
-    salesOrders, items, attributes, partners, companyProfile,
-}: {
-    salesOrders: any[];
-    items: any[];
-    attributes: any[];
-    partners: any[];
-    companyProfile: any;
-}) {
-    const { formatCustom: tzFmt } = useTimezone();
-    const { itemIndex } = useData();
-
-    const getItemName = (id: string) => items.find((i: any) => i.id === id)?.name || itemIndex?.[String(id)]?.name || id;
-    const getAttributeValues = (ids: string[]) =>
-        ids.map(vid => {
-            for (const attr of attributes) {
-                const val = attr.values?.find((v: any) => v.id === vid);
-                if (val) return val.value;
-            }
-            return '';
-        }).filter(Boolean).join(', ');
-
-    const formatDate = (d: string | null | undefined) => {
-        if (!d) return '';
-        try {
-            const dt = new Date(d);
-            return `${String(dt.getDate()).padStart(2, '0')}/${String(dt.getMonth() + 1).padStart(2, '0')}/${dt.getFullYear()}`;
-        } catch { return ''; }
-    };
-
-    const formatDateTime = (d: string | null | undefined) => {
-        if (!d) return '';
-        try {
-            const dt = new Date(d);
-            return `${String(dt.getDate()).padStart(2, '0')}/${String(dt.getMonth() + 1).padStart(2, '0')}/${dt.getFullYear()} 00.00`;
-        } catch { return ''; }
-    };
-
-    const formatNum = (v: number | null | undefined) => {
-        if (v == null) return '';
-        return Number(v).toLocaleString('id-ID', { minimumFractionDigits: 0, maximumFractionDigits: 3 });
-    };
-
-    // Expand each SO into flat line-item rows
-    const rows: any[] = [];
-    for (const so of salesOrders) {
-        if (!so.lines || so.lines.length === 0) {
-            rows.push({ so, line: null });
-        } else {
-            for (const line of so.lines) {
-                rows.push({ so, line });
-            }
-        }
-    }
-
-    const border = '1px solid #777';
-    const th: React.CSSProperties = { border, padding: '3px 4px', background: '#e8e8e8', fontWeight: 'bold', textAlign: 'center' as const, verticalAlign: 'middle', fontSize: '7.5px', lineHeight: 1.2 };
-    const td: React.CSSProperties = { border, padding: '3px 4px', verticalAlign: 'top', fontSize: '7.5px', lineHeight: 1.3 };
-
-    const today = new Date();
-    const monthNames = ['JANUARI','FEBRUARI','MARET','APRIL','MEI','JUNI','JULI','AGUSTUS','SEPTEMBER','OKTOBER','NOVEMBER','DESEMBER'];
-    const dateHeader = `${String(today.getDate()).padStart(2,'0')} ${monthNames[today.getMonth()]} ${today.getFullYear()}`;
-
-    return (
-        <div style={{ fontFamily: PRINT_FONT, fontSize: '7.5px', color: '#000', lineHeight: 1.3 }}>
-            {/* Company header */}
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6, paddingBottom: 4, borderBottom: '2px solid #000' }}>
-                <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-                    {companyProfile?.logo_url ? (
-                        <img src={`${STATIC_BASE}${companyProfile.logo_url}`} alt="Logo"
-                            style={{ maxHeight: 36, maxWidth: 52, objectFit: 'contain', display: 'block' }} />
-                    ) : (
-                        <div style={{ width: 40, height: 30, border: '2px solid #003080', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold', fontSize: 9, color: '#003080' }}>BIE</div>
-                    )}
-                    <div>
-                        <div style={{ fontWeight: 'bold', fontSize: 9 }}>{companyProfile?.name || 'PT. BOLA INTAN ELASTIC'}</div>
-                        {companyProfile?.address && <div style={{ fontSize: 7 }}>{companyProfile.address}</div>}
-                    </div>
-                </div>
-                <div style={{ textAlign: 'center' }}>
-                    <div style={{ fontWeight: 'bold', fontSize: 11 }}>{dateHeader}</div>
-                    <div style={{ fontSize: 7, color: '#555' }}>Sales Order List — {rows.length} line(s)</div>
-                </div>
-            </div>
-
-            {/* Table */}
-            <table style={{ width: '100%', borderCollapse: 'collapse', tableLayout: 'fixed' }}>
-                <thead>
-                    <tr>
-                        <th style={{ ...th, width: '2%' }}>No</th>
-                        <th style={{ ...th, width: '7%' }}>Date</th>
-                        <th style={{ ...th, width: '7%' }}>Ref No. (PO#)</th>
-                        <th style={{ ...th, width: '7%' }}>Customer PO Ref</th>
-                        <th style={{ ...th, width: '12%' }}>Customer</th>
-                        <th style={{ ...th, width: '7%' }}>Del. Request</th>
-                        <th style={{ ...th, width: '7%' }}>Del. Confirmation</th>
-                        <th style={{ ...th, width: '9%' }}>Stock Notes</th>
-                        <th style={{ ...th, width: '13%' }}>Item</th>
-                        <th style={{ ...th, width: '6%' }}>Size</th>
-                        <th style={{ ...th, width: '5%' }}>Qty (Yd)</th>
-                        <th style={{ ...th, width: '5%' }}>Qty (m)</th>
-                        <th style={{ ...th, width: '5%' }}>Qty (KG)</th>
-                        <th style={{ ...th, width: '7%' }}>Qty 3</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {rows.map(({ so, line }, idx) => (
-                        <tr key={`${so.id}-${line?.id ?? 'empty'}`} style={{ background: idx % 2 === 0 ? '#fff' : '#f9f9f9' }}>
-                            <td style={{ ...td, textAlign: 'center' }}>{idx + 1}</td>
-                            <td style={{ ...td, textAlign: 'center' }}>{formatDate(so.order_date)}</td>
-                            <td style={{ ...td, fontWeight: 'bold', wordBreak: 'break-all' }}>{so.po_number}</td>
-                            <td style={{ ...td, wordBreak: 'break-all' }}>{so.customer_po_ref || ''}</td>
-                            <td style={{ ...td }}>{so.customer_name}</td>
-                            <td style={{ ...td, textAlign: 'center' }}>{line ? formatDate(line.due_date) : ''}</td>
-                            <td style={{ ...td, textAlign: 'center' }}>{line ? formatDate(line.internal_confirmation_date) : ''}</td>
-                            <td style={{ ...td }}>{line?.ket_stock || ''}</td>
-                            <td style={{ ...td }}>{line ? getItemName(line.item_id) : ''}</td>
-                            <td style={{ ...td, textAlign: 'center' }}>
-                                {line ? getAttributeValues(line.attribute_value_ids || []) : ''}
-                            </td>
-                            <td style={{ ...td, textAlign: 'right' }}>{line ? formatNum(line.qty) : ''}</td>
-                            <td style={{ ...td, textAlign: 'right' }}>
-                                {line && line.qty ? formatNum(Math.round(line.qty * 0.9144 * 100) / 100) : ''}
-                            </td>
-                            <td style={{ ...td, textAlign: 'right' }}>{line ? formatNum(line.qty_kg) : ''}</td>
-                            <td style={{ ...td, textAlign: 'right' }}>
-                                {line && line.qty2 != null && line.qty2 !== ''
-                                    ? `${formatNum(line.qty2)}${line.uom2 ? ' ' + line.uom2 : ''}`
-                                    : ''}
-                            </td>
-                        </tr>
-                    ))}
-                    {rows.length === 0 && (
-                        <tr>
-                            <td colSpan={14} style={{ ...td, textAlign: 'center', padding: '12px', color: '#888', fontStyle: 'italic' }}>No sales orders to display.</td>
-                        </tr>
-                    )}
-                </tbody>
-            </table>
-
-            <div style={{ marginTop: 8, fontSize: '7px', color: '#555', display: 'flex', justifyContent: 'space-between' }}>
-                <span>Printed: {tzFmt(new Date(), { dateStyle: 'short', timeStyle: 'short' }, 'id-ID')}</span>
-                <span>Total rows: {rows.length}</span>
-            </div>
-        </div>
-    );
-}
+// The document is a print template (defaults/soTable.ts, editable in Print Layouts).
 
 export default function SOTablePrintModal({
-    salesOrders, onClose, companyProfile, items, attributes, partners,
+    salesOrders, onClose, companyProfile, items, attributes, partners: _partners,
 }: {
     salesOrders: any[];
     onClose: () => void;
@@ -169,37 +23,19 @@ export default function SOTablePrintModal({
     partners: any[];
 }) {
     const { formatCustom: tzFmt } = useTimezone();
-
-    useEffect(() => {
-        document.body.classList.add('so-table-print-active');
-        return () => { document.body.classList.remove('so-table-print-active'); };
-    }, []);
+    const { itemIndex, printTemplates } = useData() as any;
+    const layout = resolveLayout(SO_TABLE_DOC, printTemplates)!;
+    const ctx = useMemo(() => buildSoTableContext({
+        salesOrders, items, itemIndex, attributes, tzFormatCustom: tzFmt, companyProfile,
+        companyName: companyProfile?.name,
+        companyLogoUrl: companyProfile?.logo_url ? `${STATIC_BASE}${companyProfile.logo_url}` : undefined,
+    }), [salesOrders, items, itemIndex, attributes, tzFmt, companyProfile]);
+    const { widthMm: paperW, heightMm: paperH } = paperDimsMm(layout.paper);
 
     const handlePrint = () => {
-        const pageStyle = document.createElement('style');
-        pageStyle.id = '__so-table-page';
-        pageStyle.textContent = [
-            '@page { size: landscape; margin: 10mm; }',
-            'html, body { width: 100% !important; max-width: none !important; margin: 0 !important; padding: 0 !important; }',
-        ].join(' ');
-        document.head.appendChild(pageStyle);
-        const handler = () => {
-            onClose();
-            document.getElementById('__so-table-page')?.remove();
-        };
-        window.addEventListener('afterprint', handler, { once: true });
+        window.addEventListener('afterprint', () => onClose(), { once: true });
         window.print();
     };
-
-    const docContent = (
-        <SOTableDocument
-            salesOrders={salesOrders}
-            items={items}
-            attributes={attributes}
-            partners={partners}
-            companyProfile={companyProfile}
-        />
-    );
 
     return (
         <>
@@ -211,30 +47,23 @@ export default function SOTablePrintModal({
                 height="calc(var(--app-vh) * 90 / 100)"
                 bevel={false}
                 modeless
+                layoutDocType={SO_TABLE_DOC}
             >
-                    {/* Preview — A4 landscape: 297mm × 210mm ≈ 1122px × 794px at 96dpi */}
-                    <div style={{ flex: 1, background: '#e0e0e0', overflowY: 'auto', overflowX: 'auto', padding: 16 }}>
-                        <div
-                            className="so-table-print-paper"
-                            style={{ background: '#fff', width: 1090, minWidth: 1090, padding: '12px 16px', boxShadow: '0 2px 10px rgba(0,0,0,0.25)', fontSize: '7.5px', lineHeight: 1.4, color: '#000', fontFamily: PRINT_FONT }}
-                        >
-                            {docContent}
+                    <div style={{ flex: 1, background: '#e0e0e0', overflow: 'auto', padding: 16, display: 'flex', alignItems: 'flex-start' }}>
+                        {/* True size; auto margins centre it without clipping when wider than the pane. */}
+                        <div style={{
+                            background: '#fff', boxShadow: '0 2px 10px rgba(0,0,0,0.25)', flexShrink: 0, margin: '0 auto',
+                            width: `${paperW}mm`, minHeight: `${paperH}mm`, padding: `${layout.paper.marginMm}mm`,
+                            boxSizing: 'border-box', display: 'flex', flexDirection: 'column',
+                        }}>
+                            <TemplateRenderer layout={layout} ctx={ctx} docType={SO_TABLE_DOC} />
                         </div>
                     </div>
 
-                    {/* Footer */}
-                    <PrintModalFooter note="Landscape orientation is set automatically — no need to change the browser print dialog." onClose={onClose} onPrint={handlePrint} />
+                    <PrintModalFooter note="Paper size, orientation and margins come from Print Layouts — no need to change the browser print dialog." onClose={onClose} onPrint={handlePrint} />
             </PrintModalShell>
 
-            {/* Print portal */}
-            {createPortal(
-                <div className="so-table-print-portal" style={{ display: 'none' }}>
-                    <div className="so-table-print-paper" style={{ background: '#fff', width: '100%', boxSizing: 'border-box', padding: '0', fontSize: '7.5px', lineHeight: 1.4, color: '#000', fontFamily: PRINT_FONT }}>
-                        {docContent}
-                    </div>
-                </div>,
-                document.body
-            )}
+            <TemplatePrintPortal layout={layout} ctx={ctx} docType={SO_TABLE_DOC} />
         </>
     );
 }

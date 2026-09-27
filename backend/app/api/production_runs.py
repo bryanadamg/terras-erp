@@ -24,7 +24,7 @@ from app.models.reservation import StockReservation
 from app.models.item import Item
 from app.models.stock_balance import StockBalance
 from app.models.attribute import AttributeValue
-from app.services import stock_service, mrp_service
+from app.services import stock_service, mrp_service, beam_service
 from app.services.netting_service import (
     Availability, preview_production_run,
     SizeResolver, allocate_onhand, onhand_size_rows, token_from_snapshot,
@@ -566,7 +566,7 @@ async def get_production_run_material_requirements(
     groups: dict[tuple, list] = defaultdict(list)
     for key in agg:
         item = item_map.get(agg[key]["item_id"])
-        is_bi = bool(item and (item.lot_tracked or (item.category and (item.category.name or "").lower() == "beam")))
+        is_bi = bool(item and (item.lot_tracked or beam_service.is_beam_item(item)))
         groups[(key[0], "" if is_bi else key[1], is_bi)].append(key)
     for (item_id_str, vk, is_bi), keys in groups.items():
         buckets = onhand_item_buckets[item_id_str] if is_bi else onhand_buckets[(item_id_str, vk)]
@@ -583,7 +583,7 @@ async def get_production_run_material_requirements(
         # Batch/lot-identity items (beams, lot-tracked items) never stamp variant
         # attrs on their stock rows (variant_key is always "" — the batch itself is
         # the identity), so match plant-wide on-hand by item only, not by variant.
-        is_batch_identity = bool(item and (item.lot_tracked or (item.category and (item.category.name or "").lower() == "beam")))
+        is_batch_identity = bool(item and (item.lot_tracked or beam_service.is_beam_item(item)))
         v_key = ",".join(sorted(data["attr_ids"]))
         available = allocated_available.get(key, 0.0)
         # What is left of that on-hand once every OTHER open order's outstanding
@@ -760,7 +760,7 @@ async def get_production_runs_material_status(
         groups: dict[tuple, list] = defaultdict(list)
         for key in agg:
             item = item_map.get(key[0])
-            is_bi = bool(item and (item.lot_tracked or (item.category and (item.category.name or "").lower() == "beam")))
+            is_bi = bool(item and (item.lot_tracked or beam_service.is_beam_item(item)))
             groups[(key[0], "" if is_bi else key[1], is_bi)].append(key)
         avail_by_key: dict[tuple, float] = {}
         for (item_id_str, vk, is_bi), keys in groups.items():

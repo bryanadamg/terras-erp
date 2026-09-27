@@ -101,7 +101,7 @@ def list_snapshots(current_user: User = Depends(get_current_admin)):
 async def create_snapshot(current_user: User = Depends(get_current_admin)):
     result = await db_manager.create_snapshot()
     if result.status:
-        _log_admin_action(current_user.id, "DB_SNAPSHOT", result.message)
+        await run_in_threadpool(_log_admin_action, current_user.id, "DB_SNAPSHOT", result.message)
     return result
 
 @router.get("/snapshots/{filename}/download")
@@ -127,7 +127,7 @@ async def upload_snapshot(file: UploadFile = File(...), current_user: User = Dep
     with dest.open("wb") as buffer:
         await run_in_threadpool(shutil.copyfileobj, file.file, buffer)
 
-    _log_admin_action(current_user.id, "DB_SNAPSHOT_UPLOAD", f"Uploaded snapshot {safe_filename}")
+    await run_in_threadpool(_log_admin_action, current_user.id, "DB_SNAPSHOT_UPLOAD", f"Uploaded snapshot {safe_filename}")
     return {"message": f"Snapshot {safe_filename} uploaded", "status": True}
 
 # Held so the task isn't garbage-collected mid-restore — asyncio keeps only a weak
@@ -188,12 +188,13 @@ async def restore_db(filename: str, db: Session = Depends(get_db), current_user:
         raise HTTPException(status_code=404, detail="Snapshot file not found")
 
     user_id = current_user.id
-    _restore_admin_ids = _snapshot_admin_ids(db)
+    # Sync session on an async route: keep the blocking reads off the event loop.
+    _restore_admin_ids = await run_in_threadpool(_snapshot_admin_ids, db)
 
     async def _run() -> None:
         result = await db_manager.restore_snapshot(filename)
         if result.status:
-            _log_admin_action(user_id, "DB_RESTORE", f"Restored snapshot {filename}")
+            await run_in_threadpool(_log_admin_action, user_id, "DB_RESTORE", f"Restored snapshot {filename}")
 
     _restore_task = asyncio.create_task(_run())
     return {"status": True, "message": f"Restoring {filename}"}
@@ -205,7 +206,7 @@ async def wipe_database(payload: WipeDatabaseRequest, current_user: User = Depen
 
     result = await db_manager.wipe_and_reset()
     if result.status:
-        _log_admin_action(current_user.id, "DB_WIPE", f"Database wiped and reset to blank state by {current_user.username}")
+        await run_in_threadpool(_log_admin_action, current_user.id, "DB_WIPE", f"Database wiped and reset to blank state by {current_user.username}")
     return result
 
 

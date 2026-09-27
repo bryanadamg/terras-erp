@@ -551,7 +551,7 @@ export default function DyeRecipeTab({ items, attributes, authFetch, initialColo
                                     {(recipe.lines || []).map((line: any, idx: number) => {
                                         const linkedItem = items.find(it => String(it.id) === String(line.item_id));
                                         // g/L and /100kg are alternate rate bases — show whichever the line carries
-                                        // (mirrors the fallback in DyeRecipePrintView).
+                                        // (mirrors the fallback in printTemplate/doctypes/dyeRecipe.ts).
                                         const rate = line.qty_per_liter ?? line.qty_per_100kg ?? null;
                                         const rateUnit = line.uom_name || (line.qty_per_liter != null ? 'g/L' : line.qty_per_100kg != null ? '/100kg' : '—');
                                         return (

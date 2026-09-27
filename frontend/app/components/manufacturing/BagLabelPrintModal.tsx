@@ -1,28 +1,18 @@
 'use client';
 import React, { useState, useEffect, useMemo } from 'react';
-import { createPortal } from 'react-dom';
 import QRCode from 'qrcode';
-import JsBarcode from 'jsbarcode';
 import { useData } from '../../context/DataContext';
-import BagLabelCard from './BagLabelCard';
-import BeamLabelCard from './BeamLabelCard';
+import { useTimezone } from '../../context/TimezoneContext';
 import PrintModalShell, { PrintModalFooter } from '../shared/PrintModalShell';
-import { xpFont, PRINT_FONT } from '../shared/xpTheme';
-import { API_BASE } from '../shared/apiBase';
-
-// Code 128 (1D) so the factory's existing laser barcode scanners can read the
-// lot number too — not everyone has a phone/2D imager. Rendered to a PNG data
-// URL alongside the QR. Same payload as the QR: the lot number.
-function makeBarcodeDataUrl(text: string): string {
-    if (!text) return '';
-    try {
-        const canvas = document.createElement('canvas');
-        JsBarcode(canvas, text, { format: 'CODE128', displayValue: false, margin: 0, height: 70, width: 2 });
-        return canvas.toDataURL('image/png');
-    } catch {
-        return '';
-    }
-}
+import { xpFont } from '../shared/xpTheme';
+import { API_BASE, STATIC_BASE } from '../shared/apiBase';
+import TemplateRenderer from '../shared/printTemplate/TemplateRenderer';
+import TemplatePrintPortal from '../shared/printTemplate/TemplatePrintPortal';
+import { resolveLayout } from '../shared/printTemplate/templateStore';
+import { paperDimsMm } from '../shared/printTemplate/paper';
+import {
+    BAG_LABEL_DOC, BEAM_LABEL_DOC, buildOutputLabelContext, isBeamLot,
+} from '../shared/printTemplate/doctypes/outputLabel';
 
 /**
  * Output-unit label print — one A6 sticker per MOCompletion (each unit off the
@@ -30,11 +20,11 @@ function makeBarcodeDataUrl(text: string): string {
  * reprinting every unit on a WO. The QR on each label encodes that unit's LOT
  * number, not the WO id.
  *
- * Two cards come out of here, chosen per completion by `isBeamLot` below:
- * ./BagLabelCard for a weighed bag (greige, dyed, set) and ./BeamLabelCard for a
- * warp beam. The print plumbing — A6 sheet, QR + Code 128, the hidden portal, the
- * labels_printed_at stamp — is identical for both, which is why they share this
- * modal rather than getting a second one; only what the floor reads differs.
+ * Two documents come out of here, chosen per completion by `isBeamLot`: the bag
+ * label (greige, dyed, set) and the warp-beam label, both print templates
+ * (defaults/outputLabel.ts, editable in Print Layouts). The plumbing — QR, live
+ * lot weight, the labels_printed_at stamp — is identical for both, which is why
+ * they share this modal; only what the floor reads differs.
  *
  * `bags` are the completion objects to print, already filtered to this WO and
  * to non-rejected rows with an output lot. `seqStart` is the sequence number of
@@ -54,7 +44,8 @@ export default function BagLabelPrintModal({
     seqStart?: number;
     onClose: () => void;
 }) {
-    const { companyProfile, attributes, authFetch } = useData() as any;
+    const { companyProfile, attributes, authFetch, printTemplates } = useData() as any;
+    const { formatCustom } = useTimezone();
 
     // Stamp labels_printed_at when the operator prints. Compared against the newest
     // bag time on the WO row so bags logged after this print re-flag as unprinted.
@@ -67,12 +58,6 @@ export default function BagLabelPrintModal({
     };
 
     const [qrUrls, setQrUrls] = useState<Record<string, string>>({});
-    // 1D barcodes are synchronous to generate — memoize per bag lot.
-    const barcodeUrls = useMemo(() => {
-        const map: Record<string, string> = {};
-        bags.forEach(b => { map[b.id] = makeBarcodeDataUrl(b.output_batch_number || String(b.id)); });
-        return map;
-    }, [bags]);
 
     // Live weight per lot. The completion's `qty_completed` is the weight the bag
     // was BORN with and is never restated, so after a lot split (or a partial
@@ -100,16 +85,6 @@ export default function BagLabelPrintModal({
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [lotNumbers.join('|')]);
 
-    const lotKgOf = (bag: any): number | null => {
-        const n = String(bag?.output_batch_number || '');
-        return n && lotKg[n] != null ? lotKg[n] : null;
-    };
-
-    useEffect(() => {
-        document.body.classList.add('bag-label-print-active');
-        return () => { document.body.classList.remove('bag-label-print-active'); };
-    }, []);
-
     useEffect(() => {
         Promise.all(
             bags.map(b => {
@@ -121,46 +96,32 @@ export default function BagLabelPrintModal({
         ).then(entries => setQrUrls(Object.fromEntries(entries)));
     }, [bags]);
 
-    // Which card this completion gets. Read off the lot's own `BM-` prefix rather
-    // than the WO's work-centre type: a reprint from the Lot page (BatchesView)
-    // may hand us a WO object that is null or stale, and the lot number is the one
-    // fact that is always present and always right (see the prefix table in
-    // add_mo_completion — BM / GRG / DYE / SET / LOT).
-    const isBeamLot = (bag: any) =>
-        /^BM[-_]/i.test(String(bag?.output_batch_number || ''))
-        || String(workOrder?.work_center_type || '').toUpperCase() === 'BEAMING';
+    const bagLayout = resolveLayout(BAG_LABEL_DOC, printTemplates)!;
+    const beamLayout = resolveLayout(BEAM_LABEL_DOC, printTemplates)!;
+    const logoUrl = companyProfile?.logo_url ? `${STATIC_BASE}${companyProfile.logo_url}` : undefined;
 
-    const renderLabel = (bag: any, idx: number) => (
-        <div key={bag.id} className="bag-label-card" style={{ background: '#fff', color: '#000', fontFamily: PRINT_FONT, display: 'flex', flexDirection: 'column' }}>
-            {isBeamLot(bag) ? (
-                <BeamLabelCard
-                    completion={bag}
-                    workOrder={workOrder}
-                    parentMO={parentMO}
-                    qrDataUrl={qrUrls[bag.id] || ''}
-                    barcodeDataUrl={barcodeUrls[bag.id] || ''}
-                    companyName={companyProfile?.name}
-                    lotRemaining={lotKgOf(bag)}
-                />
-            ) : (
-                <BagLabelCard
-                    completion={bag}
-                    workOrder={workOrder}
-                    parentMO={parentMO}
-                    qrDataUrl={qrUrls[bag.id] || ''}
-                    barcodeDataUrl={barcodeUrls[bag.id] || ''}
-                    bagSeq={seqStart + idx}
-                    companyName={companyProfile?.name}
-                    attributes={attributes}
-                    lotRemaining={lotKgOf(bag)}
-                />
-            )}
-        </div>
-    );
+    // One page per completion, each with the document its lot calls for.
+    const pages = useMemo(() => bags.map((bag, idx) => {
+        const beam = isBeamLot(bag, workOrder);
+        const n = String(bag.output_batch_number || '');
+        return {
+            key: String(bag.id),
+            docType: beam ? BEAM_LABEL_DOC : BAG_LABEL_DOC,
+            ctx: buildOutputLabelContext({
+                completion: bag, workOrder, parentMO,
+                bagSeq: beam ? null : seqStart + idx,
+                lotRemaining: n && lotKg[n] != null ? lotKg[n] : null,
+                qrDataUrl: qrUrls[bag.id] || '',
+                attributes, tzFormatCustom: formatCustom,
+                companyName: companyProfile?.name, companyLogoUrl: logoUrl, companyProfile,
+            }),
+        };
+    }), [bags, workOrder, parentMO, seqStart, lotKg, qrUrls, attributes, formatCustom, companyProfile, logoUrl]);
 
-    const allBeams = bags.length > 0 && bags.every(isBeamLot);
+    const allBeams = bags.length > 0 && pages.every(p => p.docType === BEAM_LABEL_DOC);
     const unitNoun = (n: number) =>
         allBeams ? (n === 1 ? 'beam' : 'beams') : (n === 1 ? 'bag' : 'bags');
+    const layoutDoc = allBeams ? BEAM_LABEL_DOC : BAG_LABEL_DOC;
 
     return (
         <>
@@ -171,28 +132,40 @@ export default function BagLabelPrintModal({
                 maxWidth={880}
                 height="calc(var(--app-vh) * 88 / 100)"
                 modeless
+                layoutDocType={layoutDoc}
+                layoutSample={bags[0] && parentMO?.id ? { sample: bags[0].id, q: parentMO.id } : undefined}
             >
-                    <div style={{ flex: 1, background: '#e0e0e0', overflowY: 'auto', padding: '16px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '16px' }}>
+                    <div style={{ flex: 1, background: '#e0e0e0', overflowY: 'auto', padding: '16px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
                         {bags.length === 0 && (
-                            <div style={{ color: '#555', fontSize: '12px', marginTop: '40px', fontFamily: xpFont }}>
+                            <div style={{ color: '#555', fontSize: '12px', marginTop: '40px', fontFamily: xpFont, textAlign: 'center' }}>
                                 No {allBeams ? 'beams' : 'weighed bags'} to label yet. Log a completion (one per {allBeams ? 'beam' : 'bag'}) first.
                             </div>
                         )}
-                        {bags.map((bag, idx) => (
-                            <div key={bag.id} className="bag-label-paper" style={{ background: '#fff', width: '378px', minHeight: '535px', padding: '18px', boxShadow: '0 2px 10px rgba(0,0,0,0.25)', boxSizing: 'border-box', display: 'flex', flexDirection: 'column' }}>
-                                {renderLabel(bag, idx)}
-                            </div>
-                        ))}
+                        {pages.map(p => {
+                            const layout = p.docType === BEAM_LABEL_DOC ? beamLayout : bagLayout;
+                            const { widthMm, heightMm } = paperDimsMm(layout.paper);
+                            return (
+                                <div key={p.key} style={{
+                                    background: '#fff', boxShadow: '0 2px 10px rgba(0,0,0,0.25)', flexShrink: 0, margin: '0 auto',
+                                    width: `${widthMm}mm`, minHeight: `${heightMm}mm`, padding: `${layout.paper.marginMm}mm`,
+                                    boxSizing: 'border-box', display: 'flex', flexDirection: 'column',
+                                }}>
+                                    <TemplateRenderer layout={layout} ctx={p.ctx} docType={p.docType} />
+                                </div>
+                            );
+                        })}
                     </div>
 
                     <PrintModalFooter onClose={onClose} onPrint={doPrint} printDisabled={!bags.length} />
             </PrintModalShell>
 
-            {createPortal(
-                <div className="bag-label-print-portal" style={{ display: 'none' }}>
-                    {bags.map((bag, idx) => renderLabel(bag, idx))}
-                </div>,
-                document.body
+            {/* One portal, each sheet with its own layout, in the run's order. */}
+            {pages.length > 0 && (
+                <TemplatePrintPortal
+                    layout={pages[0].docType === BEAM_LABEL_DOC ? beamLayout : bagLayout}
+                    docType={pages[0].docType}
+                    pages={pages.map(p => ({ ctx: p.ctx, docType: p.docType, layout: p.docType === BEAM_LABEL_DOC ? beamLayout : bagLayout }))}
+                />
             )}
         </>
     );

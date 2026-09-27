@@ -317,11 +317,7 @@ async def create_goods_receipt(
     )
 
     await manager.broadcast({"type": "STOCK_UPDATE"})
-    try:
-        await kpi_service.invalidate_kpis_async(db)
-        await manager.broadcast({"type": "KPI_UPDATE"})
-    except Exception:
-        pass
+    await kpi_service.invalidate_and_broadcast(db, {"type": "KPI_UPDATE"})
 
     final = await db.execute(
         select(GoodsReceipt)

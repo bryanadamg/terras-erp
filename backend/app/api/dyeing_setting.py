@@ -922,9 +922,9 @@ async def start_dyeing_run(
     """Start the clock. A stamp, not a production act.
 
     The dyeing monitor is a timer: somebody presses Start when the vessel begins
-    turning and Complete when it stops, and the kg logged between those two stamps is
-    what the yard rate is scored against (`dyeing_monitor_service.sum_actual_qty`
-    windows on exactly this pair). Nothing else about the batch is decided here.
+    turning and Complete when it stops, and speed x that window is the batch's
+    time-based output (`dyeing_monitor_service.compute_run_metrics`). Nothing else
+    about the batch is decided here.
 
     So this does NOT require a bath. The bath is configured on the run in Dyeing
     Orders, which is also what freezes the dose sheet — welding the clock to the

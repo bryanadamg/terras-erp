@@ -278,11 +278,6 @@ export const STATUS_COLORS: Record<string, string> = Object.fromEntries(
     Object.keys(STATUS_FAMILY).map((status) => [status, FAMILY_SOLID[STATUS_FAMILY[status]]])
 );
 
-// Chip (badge) palette per status — background / border / text. Solid variant.
-export const STATUS_CHIP: Record<string, { background: string; borderColor: string; color: string }> = Object.fromEntries(
-    Object.keys(STATUS_FAMILY).map((status) => [status, FAMILY_CHIP[STATUS_FAMILY[status]]])
-);
-
 export const statusColor = (status?: string): string => FAMILY_SOLID[familyOf(status)];
 
 // Same five accents, addressed by family instead of by status — for the places
@@ -362,14 +357,6 @@ export const PANEL_RADIUS = WINDOW_RADIUS;
 // onMouseEnter/onMouseLeave state — it animates filter/transform/box-shadow only,
 // so it layers over whatever inline gradient face the button paints.
 export const XP_BTN = 'xp-btn';
-
-// Same idea for tab strips, but a separate class on purpose: `.xp-btn`'s hover
-// lifts the button off the surface, which is exactly wrong for a tab seated in
-// its strip with an open bottom seam. `.xp-tab` wipes an underline in instead
-// (see the TABS block in globals.css). Pair it with XP_TAB_ACTIVE on the
-// selected tab so it opts out of the hover.
-export const XP_TAB = 'xp-tab';
-export const XP_TAB_ACTIVE = 'xp-tab-active';
 
 // StatusChip is the XP-flavoured chip used in BOTH themes (it always renders on
 // xpFont), so it takes the classic geometry in both rather than threading a

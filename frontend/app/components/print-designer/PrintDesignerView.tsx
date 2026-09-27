@@ -1,5 +1,6 @@
 'use client';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useSearchParams } from 'next/navigation';
 
 import { useData } from '../../context/DataContext';
 import { useTimezone } from '../../context/TimezoneContext';
@@ -25,7 +26,9 @@ import DesignerCanvas from './DesignerCanvas';
 import DesignerTestPrint from './DesignerTestPrint';
 import FieldPalette from './FieldPalette';
 import { SelectField } from './controls';
-import { API_BASE } from '../shared/apiBase';
+import { API_BASE, STATIC_BASE } from '../shared/apiBase';
+import TemplatePrintPortal from '../shared/printTemplate/TemplatePrintPortal';
+import { DOC_MODULE_BY_TYPE, type SampleEnv } from '../shared/printTemplate/doctypes';
 
 
 const clone = (l: PrintLayout): PrintLayout => JSON.parse(JSON.stringify(l));
@@ -61,12 +64,22 @@ function selectionToId(sel: Selection): string | null {
  * rather than a separate mock that can drift.
  */
 export default function PrintDesignerView() {
-    const { printTemplates, refreshPrintTemplates, companyProfile, attributes, authFetch } = useData() as any;
+    const { printTemplates, refreshPrintTemplates, companyProfile, attributes, authFetch, itemIndex, partners } = useData() as any;
     const { formatCustom } = useTimezone();
     const { showToast } = useToast();
     const { confirm } = useConfirm();
 
-    const [docType, setDocType] = useState<string>(EDITABLE_DOC_TYPES[0]);
+    // Deep link from a print preview's "Edit layout" button: `?doc=` picks the
+    // document, `?sample=` the record that preview was printing (`?mo=` is the WO's
+    // MO, fetched when it is not among the recent ones loaded below).
+    const searchParams = useSearchParams();
+    const linkDoc = searchParams?.get('doc') || '';
+    const linkSample = searchParams?.get('sample') || '';
+    const linkMo = searchParams?.get('mo') || '';
+    const linkQ = searchParams?.get('q') || '';
+
+    const [docType, setDocType] = useState<string>(
+        EDITABLE_DOC_TYPES.includes(linkDoc) ? linkDoc : EDITABLE_DOC_TYPES[0]);
     const [draft, setDraft] = useState<PrintLayout | null>(null);
     const [dirty, setDirty] = useState(false);
     const [saving, setSaving] = useState(false);
@@ -92,7 +105,7 @@ export default function PrintDesignerView() {
     // Sample work orders, grouped by the doc type they would print with, so the
     // preview always shows real content for the layout being edited.
     const [samples, setSamples] = useState<{ wo: any; mo: any }[]>([]);
-    const [sampleId, setSampleId] = useState<string>('');
+    const [sampleId, setSampleId] = useState<string>(linkDoc.startsWith('kartu_kerja_') ? linkSample : '');
     const [loadingSamples, setLoadingSamples] = useState(true);
 
     // Reset the draft whenever the edited document changes, or a save elsewhere
@@ -118,6 +131,13 @@ export default function PrintDesignerView() {
                 for (const mo of (data.items || [])) {
                     for (const wo of (mo.work_orders || [])) pairs.push({ wo, mo });
                 }
+                if (linkSample && linkMo && !pairs.some(p => p.wo.id === linkSample)) {
+                    const mres = await authFetch(`${API_BASE}/manufacturing-orders/${linkMo}`);
+                    if (mres.ok) {
+                        const mo = await mres.json();
+                        for (const wo of (mo.work_orders || [])) pairs.unshift({ wo, mo });
+                    }
+                }
                 if (!cancelled) setSamples(pairs);
             } catch (e) {
                 if (!cancelled) setSamples([]);
@@ -126,7 +146,7 @@ export default function PrintDesignerView() {
             }
         })();
         return () => { cancelled = true; };
-    }, [authFetch]);
+    }, [authFetch, linkSample, linkMo]);
 
     const matchingSamples = useMemo(
         () => samples.filter(s => docTypeForWorkCenter(s.wo.work_center_type) === docType),
@@ -154,7 +174,58 @@ export default function PrintDesignerView() {
         return () => { cancelled = true; };
     }, [active?.wo, authFetch]);
 
-    const ctx = useMemo(() => buildPrintContext({
+    // Every other document previews a record of its own kind, loaded on first visit
+    // to that document — the Kartu Kerja designer shouldn't pay for it. `find` fetches
+    // a deep-linked record that isn't among the recent ones (by id, or by the
+    // `?q=` search term where the API has no single-record route).
+    const isKartu = docType.startsWith('kartu_kerja_');
+    const recordDef = DOC_MODULE_BY_TYPE[docType]?.sample;
+    const [records, setRecords] = useState<Record<string, any[]>>({});
+    const [recordIds, setRecordIds] = useState<Record<string, string>>(
+        linkDoc && !linkDoc.startsWith('kartu_kerja_') ? { [linkDoc]: linkSample } : {});
+    const recordList = records[docType] ?? null;
+    useEffect(() => {
+        if (!recordDef || records[docType]) return;
+        let cancelled = false;
+        const wanted = recordIds[docType];
+        (async () => {
+            let list: any[] = [];
+            try {
+                const res = await authFetch(`${API_BASE}${recordDef.list}`);
+                if (res.ok) {
+                    const body = await res.json();
+                    list = recordDef.extract ? recordDef.extract(body) : (body.items ?? body ?? []);
+                }
+                const findUrl = wanted && recordDef.find && !list.some(x => x.id === wanted)
+                    ? recordDef.find(wanted, docType === linkDoc ? linkQ : '') : null;
+                if (findUrl) {
+                    const one = await authFetch(`${API_BASE}${findUrl}`);
+                    if (one.ok) {
+                        const body = await one.json();
+                        const found = recordDef.extract ? recordDef.extract(body) : (body.items ?? [body]);
+                        const hit = found.find((x: any) => x.id === wanted);
+                        if (hit) list.unshift(hit);
+                    }
+                }
+            } catch { /* empty picker says so below */ }
+            if (!cancelled) setRecords(r => ({ ...r, [docType]: list }));
+        })();
+        return () => { cancelled = true; };
+    }, [docType, recordDef, records, recordIds, authFetch, linkDoc, linkQ]);
+    const activeRecord = recordList?.find(x => x.id === recordIds[docType]) || recordList?.[0] || null;
+
+    const logoUrl = companyProfile?.logo_url ? `${STATIC_BASE}${companyProfile.logo_url}` : undefined;
+    const customerAddr = useCallback(
+        (name: string) => (partners || []).find((pt: any) => pt.name === name)?.address || '',
+        [partners]);
+
+    const sampleEnv: SampleEnv = useMemo(() => ({
+        partners: partners || [], itemIndex, attributes, companyProfile,
+        companyName: companyProfile?.name, companyLogoUrl: logoUrl,
+        tzFormatCustom: formatCustom, customerAddr,
+    }), [partners, itemIndex, attributes, companyProfile, logoUrl, formatCustom, customerAddr]);
+
+    const ctx = useMemo(() => recordDef ? recordDef.build(activeRecord || {}, sampleEnv) : buildPrintContext({
         workOrder: active?.wo || {},
         parentMO: active?.mo || {},
         // A placeholder QR keeps the cell's true printed size visible without
@@ -165,7 +236,12 @@ export default function PrintDesignerView() {
         attributes,
         tzFormatCustom: formatCustom,
         dyeing: sampleDyeing,
-    }), [active, companyProfile, attributes, formatCustom, sampleDyeing]);
+    }), [recordDef, activeRecord, sampleEnv, active, companyProfile, attributes, formatCustom, sampleDyeing]);
+
+    const sampleLoading = isKartu ? loadingSamples : recordList === null;
+    const hasSample = isKartu ? !!active : !!activeRecord;
+    // Stable, or TemplatePrintPortal's print effect re-fires on every render.
+    const endTestPrint = useCallback(() => setTestPrinting(false), []);
 
     // Undo/redo history. Each entry is a full layout snapshot taken right BEFORE
     // a change is applied — so undo replaces the current draft with the top of
@@ -445,7 +521,7 @@ export default function PrintDesignerView() {
                         {/* Prints the draft, so it needs no save first — that is the point. */}
                         <ToolbarButton icon="bi-printer" printable
                             onClick={() => setTestPrinting(true)}
-                            disabled={!active || testPrinting}
+                            disabled={!hasSample || testPrinting}
                         >
                             Test print
                         </ToolbarButton>
@@ -488,7 +564,19 @@ export default function PrintDesignerView() {
 
                     <span style={{ fontFamily: xpFont, fontSize: 11, fontWeight: 'bold' }}>Preview with:</span>
                     <div style={{ width: 260 }}>
-                        {loadingSamples ? (
+                        {!isKartu ? (
+                            recordList === null ? (
+                                <span style={{ fontFamily: xpFont, fontSize: 11, color: '#666' }}>Loading {recordDef?.noun}...</span>
+                            ) : recordList.length === 0 ? (
+                                <span style={{ fontFamily: xpFont, fontSize: 11, color: '#a33' }}>No {recordDef?.noun} found</span>
+                            ) : (
+                                <SelectField
+                                    value={(activeRecord?.id || '') as any}
+                                    options={recordList.map(x => ({ value: x.id, label: recordDef!.label(x, sampleEnv) }))}
+                                    onChange={v => setRecordIds(r => ({ ...r, [docType]: v }))}
+                                />
+                            )
+                        ) : loadingSamples ? (
                             <span style={{ fontFamily: xpFont, fontSize: 11, color: '#666' }}>Loading work orders...</span>
                         ) : previewPool.length === 0 ? (
                             <span style={{ fontFamily: xpFont, fontSize: 11, color: '#a33' }}>No work orders found</span>
@@ -504,7 +592,7 @@ export default function PrintDesignerView() {
                         )}
                     </div>
                 </div>
-                {!loadingSamples && matchingSamples.length === 0 && previewPool.length > 0 && (
+                {isKartu && !loadingSamples && matchingSamples.length === 0 && previewPool.length > 0 && (
                     <div style={{
                         fontFamily: xpFont, fontSize: 10,
                         color: '#8a6d00', marginTop: 4,
@@ -687,7 +775,7 @@ export default function PrintDesignerView() {
                         display: 'flex', justifyContent: 'center', alignItems: 'flex-start',
                     }}
                 >
-                    {loadingSamples ? (
+                    {sampleLoading ? (
                         // Sheet-shaped placeholder at the real paper size, so the canvas
                         // doesn't resize under the designer when the sample WO lands.
                         <div>
@@ -864,7 +952,10 @@ export default function PrintDesignerView() {
 
             {/* Mounted only while printing: it adds a body class that hides the rest of
                 the page, so it must not exist a moment longer than the print. */}
-            {testPrinting && active && (
+            {testPrinting && !isKartu && activeRecord && (
+                <TemplatePrintPortal layout={draft} ctx={ctx} docType={docType} onPrinted={endTestPrint} />
+            )}
+            {testPrinting && isKartu && active && (
                 <DesignerTestPrint
                     draft={draft}
                     workOrder={active.wo}

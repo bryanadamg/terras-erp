@@ -1,8 +1,14 @@
-name: Backend Tests
+name: Tests
 
+# main is covered by deploy.yml, which calls this workflow and deploys only when
+# it passes — main takes local merges, never PRs, so pull_request alone meant
+# nothing ever tested what shipped.
 on:
   pull_request:
+  push:
+    branches: [dev]
   workflow_dispatch:
+  workflow_call:
 
 jobs:
   pytest:
@@ -22,7 +28,7 @@ jobs:
           --health-timeout 5s
           --health-retries 10
       redis:
-        image: redis:7-alpine
+        image: redis:8-alpine
         ports:
           - 6379:6379
         options: >-
@@ -36,9 +42,9 @@ jobs:
       # Throwaway, CI-only: the app refuses to start without a signing key.
       SECRET_KEY: ci-test-signing-key-not-used-anywhere-else
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v7
         with:
           python-version: "3.11"
 
@@ -49,3 +55,34 @@ jobs:
       - name: Run pytest
         working-directory: backend
         run: python -u -m pytest tests -v -n auto
+
+  frontend:
+    runs-on: ubuntu-latest
+    env:
+      # @bryanadamg/terras-ui comes from GitHub Packages (see frontend/.npmrc).
+      NODE_AUTH_TOKEN: ${{ secrets.NODE_AUTH_TOKEN }}
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "24"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install dependencies
+        working-directory: frontend
+        run: npm ci
+
+      - name: Type-check
+        working-directory: frontend
+        run: npx tsc --noEmit
+
+      - name: Lint
+        working-directory: frontend
+        # Errors fail the job; the exhaustive-deps backlog is warnings for now.
+        run: npm run lint
+
+      - name: Build
+        working-directory: frontend
+        run: npm run build

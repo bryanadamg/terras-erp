@@ -280,11 +280,7 @@ async def create_sales_order(payload: SalesOrderCreate, db: AsyncSession = Depen
         details=f"Created SO {so_refreshed.po_number}"
     )
 
-    try:
-        await kpi_service.invalidate_kpis_async(db)
-        await manager.broadcast({"type": "KPI_UPDATE"})
-    except Exception:
-        pass
+    await kpi_service.invalidate_and_broadcast(db, {"type": "KPI_UPDATE"})
 
     return so_refreshed
 
@@ -692,11 +688,7 @@ async def update_sales_order(so_id: uuid.UUID, payload: SalesOrderUpdate, db: As
         details=f"Updated SO {so_refreshed.po_number}"
     )
 
-    try:
-        await kpi_service.invalidate_kpis_async(db)
-        await manager.broadcast({"type": "KPI_UPDATE"})
-    except Exception:
-        pass
+    await kpi_service.invalidate_and_broadcast(db, {"type": "KPI_UPDATE"})
 
     return so_refreshed
 
@@ -764,11 +756,7 @@ async def update_sales_order_status(so_id: uuid.UUID, status: str, db: AsyncSess
         details=f"Status: {prev_status} -> {status}"
     )
 
-    try:
-        await kpi_service.invalidate_kpis_async(db)
-        await manager.broadcast({"type": "KPI_UPDATE"})
-    except Exception:
-        pass
+    await kpi_service.invalidate_and_broadcast(db, {"type": "KPI_UPDATE"})
 
     return so
 
@@ -796,11 +784,7 @@ async def delete_sales_order(so_id: uuid.UUID, db: AsyncSession = Depends(get_as
     await db.delete(so)
     await db.commit()
 
-    try:
-        await kpi_service.invalidate_kpis_async(db)
-        await manager.broadcast({"type": "KPI_UPDATE"})
-    except Exception:
-        pass
+    await kpi_service.invalidate_and_broadcast(db, {"type": "KPI_UPDATE"})
 
     return {"status": "success"}
 

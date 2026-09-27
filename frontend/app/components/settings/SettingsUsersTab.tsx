@@ -14,6 +14,7 @@ import Pager from '../shared/Pager';
 import UserFormModal, { UserFormPayload } from './UserFormModal';
 import EffectivePermissions, { effectivePermissionList } from './EffectivePermissions';
 import PermissionBreakdown from './PermissionBreakdown';
+import { useData } from '../../context/DataContext';
 import { API_BASE } from '../shared/apiBase';
 import { lvZebra } from '../shared/listViewTheme';
 
@@ -37,6 +38,7 @@ export default function SettingsUsersTab({
     onClearRoleFilter: () => void;
 }) {
     const { formatCustom: tzFmt } = useTimezone();
+    const { authFetch } = useData();
     const formatLastLogin = (value?: string | null): string => {
         if (!value) return 'Never';
         return tzFmt(value, { dateStyle: 'medium', timeStyle: 'short' } as Intl.DateTimeFormatOptions);
@@ -86,7 +88,7 @@ export default function SettingsUsersTab({
 
     const submitCreate = async (payload: UserFormPayload): Promise<{ ok: boolean; error?: string }> => {
         try {
-            const res = await fetch(`${API_BASE}/users`, {
+            const res = await authFetch(`${API_BASE}/users`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem('access_token')}` },
                 body: JSON.stringify(payload),
@@ -106,7 +108,7 @@ export default function SettingsUsersTab({
 
     const submitEdit = async (userId: string, payload: UserFormPayload): Promise<{ ok: boolean; error?: string }> => {
         try {
-            const res = await fetch(`${API_BASE}/users/${userId}`, {
+            const res = await authFetch(`${API_BASE}/users/${userId}`, {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem('access_token')}` },
                 body: JSON.stringify(payload),
@@ -137,7 +139,7 @@ export default function SettingsUsersTab({
             if (!ok) return;
         }
         try {
-            const res = await fetch(`${API_BASE}/users/${user.id}/${active ? 'reactivate' : 'deactivate'}`, {
+            const res = await authFetch(`${API_BASE}/users/${user.id}/${active ? 'reactivate' : 'deactivate'}`, {
                 method: 'POST',
                 headers: { 'Authorization': `Bearer ${localStorage.getItem('access_token')}` }
             });

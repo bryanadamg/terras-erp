@@ -73,8 +73,11 @@ def create_location(payload: LocationCreate, db: Session = Depends(get_db), curr
 
 
 @router.get("/locations", response_model=list[LocationResponse])
-def get_locations(skip: int = 0, limit: int = 1000, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
-    rows = db.query(Location).offset(skip).limit(limit).all()
+def get_locations(db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    # Whole set on purpose: a lookup feed (pickers, .find()), and parent_name /
+    # full_path / has_children are computed from these rows, so a window would
+    # also blank the paths of rows whose parent fell off it.
+    rows = db.query(Location).order_by(Location.code).all()
     id_to_name = {r.id: r.name for r in rows}
     id_to_parent = {r.id: r.parent_id for r in rows}
     parents_with_children = {r.parent_id for r in rows if r.parent_id}

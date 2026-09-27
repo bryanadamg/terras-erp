@@ -11,8 +11,9 @@
  */
 
 import type { PrintContext } from './renderContext';
+import { DOC_MODULES, moduleForField } from './doctypes';
 
-export type FieldKind = 'text' | 'number' | 'date' | 'qr' | 'blank' | 'static';
+export type FieldKind = 'text' | 'number' | 'date' | 'qr' | 'blank' | 'static' | 'image' | 'barcode';
 
 export interface FieldDef {
     key: string;
@@ -28,6 +29,23 @@ export interface FieldDef {
 }
 
 const EM_DASH = '—';
+
+/**
+ * Letterhead fields every document can place. `__text` prints the placement's own
+ * `text` — titles, captions and boilerplate sentences are layout, not data.
+ */
+export const DOC_CHROME_FIELDS: FieldDef[] = [
+    { key: 'company.name', label: 'Company Name', kind: 'text', group: 'Document' },
+    { key: 'company.logo', label: 'Company Logo', kind: 'image', group: 'Document' },
+    { key: 'company.address', label: 'Company Address', kind: 'text', group: 'Document' },
+    { key: 'company.phone', label: 'Company Phone', kind: 'text', group: 'Document' },
+    { key: 'company.fax', label: 'Company Fax', kind: 'text', group: 'Document' },
+    { key: 'company.phone_fax', label: 'Company Telp + Fax line', kind: 'text', group: 'Document' },
+    { key: 'company.email', label: 'Company Email', kind: 'text', group: 'Document' },
+    { key: 'print.date', label: 'Print Date', kind: 'date', group: 'Document' },
+    { key: '__text', label: 'Text (type your own)', kind: 'static', group: 'Document' },
+    { key: '__blank', label: 'Blank (hand fill-in)', kind: 'blank', group: 'Document' },
+];
 
 // ── Work Order card fields ─────────────────────────────────────────────────────
 // Shared by all four kartu_kerja_* doc types: one manifest, four default layouts.
@@ -78,6 +96,9 @@ export const WO_CARD_FIELDS: FieldDef[] = [
     { key: 'wo.footer_trace', label: 'Traceability Footer (code + ID)', kind: 'text', group: 'Document' },
     { key: 'wo.qr', label: 'QR Code (scan to log)', kind: 'qr', group: 'Document' },
     { key: '__blank', label: 'Blank (hand fill-in)', kind: 'blank', group: 'Document' },
+    // No company.logo: the Kartu Kerja print path carries no logo URL, so a placed
+    // logo would show in the designer and vanish on paper.
+    { key: '__text', label: 'Text (type your own)', kind: 'static', group: 'Document' },
 ];
 
 /** Field manifest per doc type. */
@@ -86,6 +107,7 @@ export const FIELD_MANIFESTS: Record<string, FieldDef[]> = {
     kartu_kerja_beaming: WO_CARD_FIELDS,
     kartu_kerja_dyeing: WO_CARD_FIELDS,
     kartu_kerja_general: WO_CARD_FIELDS,
+    ...Object.fromEntries(DOC_MODULES.map(m => [m.docType, [...m.fields, ...DOC_CHROME_FIELDS]])),
 };
 
 export function fieldDef(docType: string, key: string): FieldDef | undefined {
@@ -98,6 +120,10 @@ export interface ResolvedField {
     empty: boolean;
     /** Data URL for `qr` fields. */
     qrDataUrl?: string;
+    /** URL for `image` fields. */
+    imageUrl?: string;
+    /** Label the value suggests for itself ("VAT 11%"), used by a row labelled '{auto}'. */
+    label?: string;
 }
 
 function txt(v: any): ResolvedField {
@@ -227,10 +253,28 @@ export function resolveField(key: string, ctx: PrintContext): ResolvedField {
         case 'wo.qr':
             return { text: '', empty: !ctx.qrDataUrl, qrDataUrl: ctx.qrDataUrl };
 
+        case 'company.logo':
+            return { text: '', empty: !ctx.companyLogoUrl, imageUrl: ctx.companyLogoUrl };
+        case 'company.address':
+            return txt(ctx.companyProfile?.address);
+        case 'company.phone':
+            return txt(ctx.companyProfile?.phone);
+        case 'company.fax':
+            return txt(ctx.companyProfile?.fax);
+        case 'company.phone_fax': {
+            const cp = ctx.companyProfile || {};
+            return txt([cp.phone && `Telp: ${cp.phone}`, cp.fax && `FAX: ${cp.fax}`].filter(Boolean).join('  '));
+        }
+        case 'company.email':
+            return txt(ctx.companyProfile?.email);
+
         case '__blank':
+        case '__text':
             return { text: '', empty: false };
 
         default:
+            const mod = moduleForField(key);
+            if (mod) return mod.resolve(key, ctx);
             // Unknown key: render nothing rather than crash the printout. Happens when
             // a saved layout references a field removed from the manifest.
             return { text: '', empty: true };

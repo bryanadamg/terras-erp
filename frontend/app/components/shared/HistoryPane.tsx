@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useLanguage } from '../../context/LanguageContext';
 import { useTimezone } from '../../context/TimezoneContext';
+import { useData } from '../../context/DataContext';
 import { API_BASE } from './apiBase';
 import { CODE_FONT, xpFont } from './xpTheme';
 
@@ -216,6 +217,7 @@ const S = {
 
 export default function HistoryPane({ entityType, entityId, onClose }: HistoryPaneProps) {
     const { t } = useLanguage();
+    const { authFetch } = useData();
     const { formatCustom: tzFmt } = useTimezone();
     const [logs, setLogs] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
@@ -226,7 +228,7 @@ export default function HistoryPane({ entityType, entityId, onClose }: HistoryPa
             setLoading(true);
             try {
                 const token = localStorage.getItem('access_token');
-                const res = await fetch(`${API_BASE}/audit-logs?entity_type=${entityType}&entity_id=${entityId}&limit=50`, {
+                const res = await authFetch(`${API_BASE}/audit-logs?entity_type=${entityType}&entity_id=${entityId}&limit=50`, {
                     headers: { 'Authorization': `Bearer ${token}` }
                 });
                 if (res.ok) {

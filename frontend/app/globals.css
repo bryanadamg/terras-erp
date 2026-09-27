@@ -1015,22 +1015,7 @@ table {
     font-size: 10pt !important;
   }
 
-  /* WO print preview modal — hide everything except the paper portal */
-  body.wo-print-preview-active > *:not(.wo-print-paper-portal) {
-    display: none !important;
-  }
-  body.wo-print-preview-active .wo-print-paper-portal {
-    display: block !important;
-    width: 100% !important;
-  }
-  body.wo-print-preview-active .wo-print-paper-portal .wo-print-paper {
-    box-shadow: none !important;
-    padding: 20px !important;
-    max-width: 100% !important;
-    width: 100% !important;
-  }
-
-  /* Kartu Kerja (single WO step card) — printed at A6, isolated from the A4 SPK above */
+  /* Kartu Kerja (single WO step card) — printed at A6 */
   body.wo-step-print-active > *:not(.wo-print-paper-portal) {
     display: none !important;
   }
@@ -1089,161 +1074,33 @@ table {
     page-break-after: auto;
   }
 
-  /* Bag output labels — one sticker per bag/lot, one label per A6 sheet */
-  body.bag-label-print-active > *:not(.bag-label-print-portal) {
+  /* Template documents (TemplatePrintPortal) — the portal alone, on a page the
+     component sizes from the layout's paper via an injected `@page tplpage`. */
+  body.tpl-print-active > *:not(.tpl-print-portal) {
     display: none !important;
   }
-  body.bag-label-print-active .bag-label-print-portal {
+  body.tpl-print-active .tpl-print-portal {
     display: block !important;
+    position: static !important;
+    left: 0 !important;
     width: 100% !important;
-    page: baglabel;
+    page: tplpage;
   }
-  body.bag-label-print-active .bag-label-card {
-    page: baglabel;
-    break-after: page;
-    page-break-after: always;
-    box-shadow: none !important;
-    padding: 0 !important;
-    width: 100% !important;
-    max-width: 100% !important;
-    min-height: 136mm; /* A6 (148mm) − 2×6mm margin */
-    box-sizing: border-box;
-    display: flex;
-    flex-direction: column;
-  }
-  body.bag-label-print-active .bag-label-card:last-child {
-    break-after: auto;
-    page-break-after: auto;
-  }
-  body.bag-label-print-active {
+  body.tpl-print-active {
     width: auto !important;
   }
-  html:has(body.bag-label-print-active) {
+  html:has(body.tpl-print-active) {
     width: auto !important;
   }
-  @page baglabel {
-    size: A6 portrait;
-    margin: 6mm;
+  /* Long tables (PO lines) run onto more pages: keep each row whole and repeat the
+     heading row on every page. */
+  body.tpl-print-active .tpl-print-portal tr {
+    break-inside: avoid;
+  }
+  body.tpl-print-active .tpl-print-portal thead {
+    display: table-header-group;
   }
 
-  /* BOM print preview modal — hide everything except the paper portal */
-  body.bom-print-preview-active > *:not(.bom-print-paper-portal) {
-    display: none !important;
-  }
-  body.bom-print-preview-active .bom-print-paper-portal {
-    display: block !important;
-    width: 100% !important;
-  }
-  body.bom-print-preview-active .bom-print-paper-portal .bom-print-paper {
-    box-shadow: none !important;
-    padding: 20px !important;
-    max-width: 100% !important;
-    width: 100% !important;
-  }
-
-  /* SPK Sample print preview modal — hide everything except the paper portal */
-  body.smp-print-preview-active > *:not(.smp-print-paper-portal) {
-    display: none !important;
-  }
-  body.smp-print-preview-active .smp-print-paper-portal {
-    display: block !important;
-    position: static !important;
-    left: 0 !important;
-    width: 100% !important;
-  }
-  body.smp-print-preview-active .smp-print-paper-portal .smp-print-paper {
-    box-shadow: none !important;
-    padding: 16px !important;
-    max-width: 100% !important;
-    width: 100% !important;
-  }
-
-  /* Sales Order table print — landscape, hide everything except portal */
-  body.so-table-print-active > *:not(.so-table-print-portal) {
-    display: none !important;
-  }
-  body.so-table-print-active .so-table-print-portal {
-    display: block !important;
-    width: 100% !important;
-    margin: 0 !important;
-    padding: 0 !important;
-  }
-  body.so-table-print-active .so-table-print-portal .so-table-print-paper {
-    box-shadow: none !important;
-    padding: 0 !important;
-    margin: 0 !important;
-    max-width: 100% !important;
-    width: 100% !important;
-    box-sizing: border-box !important;
-  }
-
-  /* Sales Order print preview modal — hide everything except the paper portal */
-  body.so-print-preview-active > *:not(.so-print-paper-portal) {
-    display: none !important;
-  }
-  body.so-print-preview-active .so-print-paper-portal {
-    display: block !important;
-    position: static !important;
-    left: 0 !important;
-    width: 100% !important;
-  }
-  body.so-print-preview-active .so-print-paper-portal .so-print-paper {
-    box-shadow: none !important;
-    padding: 20px !important;
-    max-width: 100% !important;
-    width: 100% !important;
-  }
-
-  /* Stock Ledger print — landscape, hide everything except portal */
-  body.stock-ledger-print-active > *:not(.stock-ledger-print-portal) {
-    display: none !important;
-  }
-  body.stock-ledger-print-active .stock-ledger-print-portal {
-    display: block !important;
-    width: 100% !important;
-    margin: 0 !important;
-    padding: 0 !important;
-  }
-  body.stock-ledger-print-active .stock-ledger-print-portal .stock-ledger-print-paper {
-    box-shadow: none !important;
-    padding: 0 !important;
-    margin: 0 !important;
-    max-width: 100% !important;
-    width: 100% !important;
-    box-sizing: border-box !important;
-  }
-
-  /* Purchase Order print preview modal — hide everything except the paper portal */
-  body.po-print-preview-active > *:not(.po-print-paper-portal) {
-    display: none !important;
-  }
-  body.po-print-preview-active .po-print-paper-portal {
-    display: block !important;
-    position: static !important;
-    left: 0 !important;
-    width: 100% !important;
-  }
-  body.po-print-preview-active .po-print-paper-portal .po-print-paper {
-    box-shadow: none !important;
-    padding: 12px !important;
-    max-width: 100% !important;
-    width: 100% !important;
-  }
-
-  /* PR Material Pull Sheet print — hide everything except the paper portal */
-  body.pr-pull-sheet-print-active > *:not(.pr-pull-sheet-print-portal) {
-    display: none !important;
-  }
-  body.pr-pull-sheet-print-active .pr-pull-sheet-print-portal {
-    display: block !important;
-    width: 100% !important;
-  }
-  body.pr-pull-sheet-print-active .pr-pull-sheet-print-portal .pr-pull-sheet-paper {
-    box-shadow: none !important;
-    padding: 20px !important;
-    max-width: 100% !important;
-    width: 100% !important;
-  }
 }
 
 /* ── XP Loading indicator (xpTheme.tsx XPLoading) ── */

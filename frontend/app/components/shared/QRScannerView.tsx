@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { Html5QrcodeScanner } from 'html5-qrcode';
 import { useLanguage } from '../../context/LanguageContext';
 import { useData } from '../../context/DataContext';
-import { STATUS_COLORS, CodeChip, xpFont, xpBtn as xpBtnBase, BTN_TONES, XP_BTN } from './xpTheme';
+import { StatusChip, CodeChip, xpFont, xpBtn as xpBtnBase, BTN_TONES, XP_BTN } from './xpTheme';
 import { xpBevel as sharedXpBevel, xpTitleBar as sharedXpTitleBar } from './shellTheme';
 import { calculateRequiredQty, stockAtLocation } from './moHelpers';
 
@@ -187,12 +187,6 @@ export default function QRScannerView({
         }
     };
 
-    const xpStatusBadge = (status: string): React.CSSProperties => ({
-        background: STATUS_COLORS[status] || STATUS_COLORS.PENDING, color: '#ffffff',
-        fontFamily: xpFont, fontSize: '9px', fontWeight: 'bold',
-        padding: '1px 6px', display: 'inline-block',
-    });
-
     const terminalId = useRef(Math.random().toString(36).substr(2, 6).toUpperCase());
 
     return (
@@ -234,7 +228,7 @@ export default function QRScannerView({
                                 <CodeChip code={scannedWO.code} tone="accent" style={{ fontSize: 20 }} />
                                 <div style={{ marginTop: 4 }}>
                                     <span style={{ fontFamily: xpFont, fontSize: '11px', color: '#444', marginRight: 6 }}>{getItemName(scannedWO._mo?.item_id)}</span>
-                                    <span style={xpStatusBadge(scannedWO.status)}>{scannedWO.status}</span>
+                                    <StatusChip status={scannedWO.status} />
                                 </div>
                             </div>
                             <button className={XP_BTN} style={xpBtn()} type="button" onClick={() => { setScannedWO(null); window.location.reload(); }}>

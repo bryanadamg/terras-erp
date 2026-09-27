@@ -42,6 +42,23 @@ export interface FieldSpec {
     /** `qr` fields only: rendered pixel size and the caption under it. */
     qrSize?: number;
     qrCaption?: string;
+    /** Printed inline before the value, in normal weight ("No : "). */
+    prefix?: string;
+    /** Printed instead of the em dash when the value is empty; '' prints nothing. */
+    emptyText?: string;
+    uppercase?: boolean;
+    /** `static` fields (`__text`) only: the literal text printed. */
+    text?: string;
+    /** `image` fields only: max rendered height, px. */
+    imageHeight?: number;
+    /** Serif face (document titles like "Sales Order Confirmation"). */
+    serif?: boolean;
+    /** Letter spacing, px. */
+    letterSpacing?: number;
+    /** Print the prefix bold too (a bold "No :" label before a plain value). */
+    prefixBold?: boolean;
+    /** `qr` fields only: draw the 2px box around the code. Default true. */
+    qrFrame?: boolean;
 }
 
 /**
@@ -71,12 +88,14 @@ export interface GridItem extends Omit<FieldSpec, 'field'> {
     stack?: FieldSpec[];
     /** Gap between stacked fields, px. */
     stackGap?: number;
+    /** This cell's own vertical alignment, overriding the band's `alignItems`. */
+    valign?: 'start' | 'center' | 'end' | 'stretch';
 }
 
 /** A label/value row inside a `keyvalue` band. */
 export interface KeyValueRow {
     field: string;
-    /** Label cell text. Falls back to the registry label. */
+    /** Label cell text. Falls back to the registry label; '{auto}' takes the value's own label. */
     label?: string;
     /** How many value columns this row's value spans (1..3). */
     span?: number;
@@ -87,6 +106,14 @@ export interface KeyValueRow {
     /** Draw an underline in the value cell for hand-written entry. */
     fill?: boolean;
     unit?: string;
+    /** Printed instead of the em dash when the value is empty; '' prints nothing. */
+    emptyText?: string;
+    /** Value alignment within its cell. */
+    align?: Align;
+    /** Monospace value (codes). */
+    mono?: boolean;
+    /** `__text` rows only: the literal value printed (footer notes, fixed terms). */
+    text?: string;
 }
 
 /** A column inside a `table` band. */
@@ -104,6 +131,34 @@ export interface TableColumn {
      * so the cell prints blank rather than dashed.
      */
     emptyText?: string;
+    /** Heading alignment when it differs from the cells (a right-aligned qty under a centred heading). */
+    headerAlign?: Align;
+    /** Dotted write-on line instead of a boxed cell (the Perincian carton slots). */
+    dotted?: boolean;
+    /** Monospace cells (codes, carton numbers). */
+    mono?: boolean;
+    /** Cell text colour. A row's own `_style` for this column wins. */
+    color?: string;
+    /** Composite `{ title, lines }` cells: print the detail lines grey and a size smaller. */
+    mutedDetail?: boolean;
+    /**
+     * This column's cell in the table's footer row. The row is drawn when any column
+     * has one; columns without one get an unbordered blank, so a footer can sit
+     * under just the last few columns. Keyed per column rather than as a positional
+     * list so reordering columns carries the footer along.
+     */
+    footer?: TableFooterCell;
+}
+
+export interface TableFooterCell {
+    /** Literal text ("Total :"). */
+    text?: string;
+    /** Or a document field (e.g. a total the doc type exposes). */
+    field?: string;
+    bold?: boolean;
+    align?: Align;
+    /** Draw the cell's border. Default true. */
+    border?: boolean;
 }
 
 /** A column inside a `tally` band (the hand-fill grids). */
@@ -143,7 +198,7 @@ export interface GridBand extends BandBase {
     /** Draw each item in its own bordered cell (the Qty/Ends metric-box look). */
     cellBox?: string;
     /** Vertical alignment of items within their grid rows. */
-    alignItems?: 'start' | 'center' | 'end';
+    alignItems?: 'start' | 'center' | 'end' | 'stretch';
 }
 
 export interface KeyValueBand extends BandBase {
@@ -153,6 +208,22 @@ export interface KeyValueBand extends BandBase {
     labelWidth?: string;
     labelFontSize?: number;
     valueFontSize?: number;
+    /**
+     * `boxed` (default): shaded label cells in a ruled grid, the card look.
+     * `plain`: unruled `Label : value` lines, the letterhead look of a delivery note.
+     */
+    variant?: 'boxed' | 'plain';
+    /** `plain` only: what sits between label and value. Default ': '; '' for a numbered list. */
+    separator?: string;
+    /** `plain` only: bold labels. */
+    labelBold?: boolean;
+    /** `boxed` only: cell rule colour (default #bbb) and label shading ('none' for white). */
+    ruleColor?: string;
+    labelBackground?: string;
+    /** Width of the whole block, e.g. '42%' — a totals box that sits to one side. */
+    width?: string;
+    /** Which side a narrowed block sits on. */
+    blockAlign?: Align;
 }
 
 export interface TableBand extends BandBase {
@@ -163,6 +234,32 @@ export interface TableBand extends BandBase {
     fontSize?: number;
     /** Hide the whole band when the source yields no rows. */
     hideWhenEmpty?: boolean;
+    /** Pad with blank rows up to this count — room for hand annotations. */
+    minRows?: number;
+    /** Cell rule colour. Default #bbb. */
+    ruleColor?: string;
+    /** Heading row background. Default #f0f0f0; 'none' for an unshaded heading. */
+    headerBackground?: string;
+    /** Height of the blank padding rows, px — room to write a line by hand. */
+    padRowHeight?: number;
+    /** Shade every second data row this colour. */
+    stripe?: string;
+    /** A merged row saying so when the source has no rows (e.g. "No cartons picked"). */
+    emptyMessage?: string;
+    /** Drop the footer row when every footer cell comes out blank. */
+    hideBlankFooter?: boolean;
+}
+
+/**
+ * Per-row styling a row source may attach — the data decides, not the layout:
+ * `_style: { [columnField]: CellStyle }` colours one cell (a red shortfall), and a
+ * row with `_group: 'text'` prints as a full-width heading row instead of cells
+ * (one per location on a pull sheet).
+ */
+export interface CellStyle {
+    color?: string;
+    bold?: boolean;
+    background?: string;
 }
 
 export interface TallyBand extends BandBase {
@@ -186,7 +283,20 @@ export interface SignatureBand extends BandBase {
     type: 'signature';
     /** Small print in the bottom-left (traceability footer). */
     footerFields?: { field: string; fontSize?: number }[];
-    boxes: { caption: string; width?: number; height?: number }[];
+    /**
+     * `line` (default): a signing line with the caption under it, boxes right-aligned.
+     * `block`: equal columns across the page, caption on top, blank signing space
+     * below, then any `fields` (the delivery-note "Hormat Kami / company" block).
+     */
+    variant?: 'line' | 'block';
+    /** `block` only: caption and line text size, px. Default 9. */
+    fontSize?: number;
+    /** `block` only: text alignment inside each column. */
+    align?: Align;
+    /** `block` only: print the first line under the signing space in bold (default true). */
+    boldFirstLine?: boolean;
+    /** `align` (block only) overrides the band's alignment for one box — a right-hand "Approved by". */
+    boxes: { caption: string; width?: number; height?: number; fields?: string[]; align?: Align }[];
 }
 
 export interface SpacerBand extends BandBase {

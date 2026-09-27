@@ -408,11 +408,7 @@ async def create_manufacturing_order(payload: ManufacturingOrderCreate, db: Asyn
     await audit_service.log_activity(db, current_user.id, "CREATE", "ManufacturingOrder", str(mo.id), f"Created {'Nested' if payload.create_nested else 'Single'} MO {mo.code}")
 
     await manager.broadcast({"type": "MANUFACTURING_ORDER_UPDATE", "mo_id": str(mo.id), "status": mo.status, "code": mo.code})
-    try:
-        await kpi_service.invalidate_kpis_async(db)
-        await manager.broadcast({"type": "KPI_UPDATE"})
-    except Exception:
-        pass
+    await kpi_service.invalidate_and_broadcast(db, {"type": "KPI_UPDATE"})
 
     populate_mo_ids(mo)
     return mo
@@ -1023,11 +1019,7 @@ async def update_manufacturing_order_status(mo_id: str, status: str, db: AsyncSe
         db, current_user.id, stopped_runs, f"MO {status.lower()}")
     await manager.broadcast({"type": "MANUFACTURING_ORDER_UPDATE", "mo_id": mo_id, "status": status, "code": mo.code})
 
-    try:
-        await kpi_service.invalidate_kpis_async(db)
-        await manager.broadcast({"type": "KPI_UPDATE"})
-    except Exception:
-        pass
+    await kpi_service.invalidate_and_broadcast(db, {"type": "KPI_UPDATE"})
 
     return {"status": "success", "message": f"Updated to {status}"}
 
@@ -1347,9 +1339,7 @@ async def add_mo_completion(
         )
         wo_wc_type = (wc_type_res2.scalar() or "").upper()
 
-    is_beam_output = bool(
-        mo.item and mo.item.category and (mo.item.category.name or "").lower() == "beam"
-    )
+    is_beam_output = beam_service.is_beam_item(mo.item)
     # Beaming WOs can live on the produced item's MO (Plan Beaming flow) —
     # a completion on a BEAMING-type work center is also a beam birth.
     if not is_beam_output and wo_wc_type == "BEAMING":
@@ -1837,11 +1827,7 @@ async def add_mo_completion(
     if wo:
         await manager.broadcast({"type": "WORK_ORDER_UPDATE", "wo_id": str(wo.id), "status": wo.status})
 
-    try:
-        await kpi_service.invalidate_kpis_async(db)
-        await manager.broadcast({"type": "KPI_UPDATE"})
-    except Exception:
-        pass
+    await kpi_service.invalidate_and_broadcast(db, {"type": "KPI_UPDATE"})
 
     mo_map = await load_mo_tree(db, [mo.id])
     mo = mo_map.get(mo.id)
@@ -2000,11 +1986,7 @@ async def reject_mo_completion(
         )).scalars().first()
     await manager.broadcast({"type": "MANUFACTURING_ORDER_UPDATE", **(await mo_progress_fields(db, mo, rejected_wo))})
     await manager.broadcast({"type": "STOCK_UPDATE"})
-    try:
-        await kpi_service.invalidate_kpis_async(db)
-        await manager.broadcast({"type": "KPI_UPDATE"})
-    except Exception:
-        pass
+    await kpi_service.invalidate_and_broadcast(db, {"type": "KPI_UPDATE"})
 
     mo_map = await load_mo_tree(db, [mo.id])
     mo = mo_map.get(mo.id)
@@ -2098,11 +2080,7 @@ async def complete_manufacturing_order_with_batches(
     # Deducts every planned component at MO level, so the stock screens have to hear it.
     await manager.broadcast({"type": "STOCK_UPDATE"})
 
-    try:
-        await kpi_service.invalidate_kpis_async(db)
-        await manager.broadcast({"type": "KPI_UPDATE"})
-    except Exception:
-        pass
+    await kpi_service.invalidate_and_broadcast(db, {"type": "KPI_UPDATE"})
 
     return {"status": "success", "message": "Completed with batch tracking"}
 
@@ -2256,10 +2234,6 @@ async def delete_manufacturing_order(mo_id: str, db: AsyncSession = Depends(get_
     )
 
     await manager.broadcast({"type": "MANUFACTURING_ORDER_UPDATE", "mo_id": mo_id, "status": "DELETED", "code": mo_code})
-    try:
-        await kpi_service.invalidate_kpis_async(db)
-        await manager.broadcast({"type": "KPI_UPDATE"})
-    except Exception:
-        pass
+    await kpi_service.invalidate_and_broadcast(db, {"type": "KPI_UPDATE"})
 
     return {"status": "success"}

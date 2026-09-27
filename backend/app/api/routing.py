@@ -176,8 +176,9 @@ def create_operation(payload: OperationCreate, db: Session = Depends(get_db), cu
     return op
 
 @router.get("/operations", response_model=list[OperationResponse])
-def get_operations(skip: int = 0, limit: int = 100, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
-    return db.query(Operation).offset(skip).limit(limit).all()
+def get_operations(db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    # Whole set: a lookup feed for BOM routing / WO pickers.
+    return db.query(Operation).order_by(Operation.name).all()
 
 @router.delete("/operations/{op_id}")
 def delete_operation(op_id: str, db: Session = Depends(get_db), current_user: User = Depends(require_permission('routing.delete'))):

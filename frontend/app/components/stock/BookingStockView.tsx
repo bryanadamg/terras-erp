@@ -11,14 +11,14 @@ import { lvThead, lvSubTh, lvSubTd, lvSubTable, lvSubRow, lvSubCaption, Expander
 import { EPS, HEALTH, healthOf, TERM } from './bookingStockTheme';
 import BookingStockInfoModal from './BookingStockInfoModal';
 import { STATIC_BASE } from '../shared/apiBase';
+import { qtyFmt } from '../shared/format';
 
 // Booking Stock: per-item material availability across all ongoing MOs.
 //   net_free = on_hand + incoming - required
 // Incoming = outstanding output of in-flight production MOs (production-only;
 // purchase orders are not yet counted). Self-fetches /stock/availability.
 
-const fmtQty = (n: number) =>
-    Number(n || 0).toLocaleString(undefined, { maximumFractionDigits: 3 });
+const fmtQty = qtyFmt(3);
 
 type Row = {
     item_id: string;

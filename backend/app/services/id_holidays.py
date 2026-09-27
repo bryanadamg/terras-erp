@@ -78,6 +78,3 @@ def holidays_for_year(year: int) -> list[dict]:
         for (m, d, name) in _HOLIDAYS.get(year, [])
     ]
 
-
-def holiday_dates(year: int) -> list[date]:
-    return [date(year, m, d) for (m, d, _name) in _HOLIDAYS.get(year, [])]

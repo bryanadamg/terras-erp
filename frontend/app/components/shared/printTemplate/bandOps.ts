@@ -13,6 +13,7 @@ import type {
     Band, BandType, GridBand, KeyValueBand, TableBand, TallyBand, SignatureBand, SpacerBand,
 } from './types';
 import { FIELD_MANIFESTS } from './fieldRegistry';
+import { sourcesForDoc } from './rowSources';
 
 /** Section types offerable in the designer's "add section" menu, in menu order. */
 export const ADDABLE_BAND_TYPES: { type: BandType; label: string; hint: string }[] = [
@@ -59,16 +60,23 @@ export function newBand(type: BandType, docType: string): Band {
                 ...base, type: 'keyvalue', labelWidth: '24%',
                 rows: [{ field: seedField(docType), span: 1 }],
             } as KeyValueBand;
-        case 'table':
+        case 'table': {
+            // The doc type's first source, seeded with its first three columns — a
+            // Kartu Kerja table must not offer delivery-note rows, nor the reverse.
+            const source = sourcesForDoc(docType)[0];
             return {
-                ...base, type: 'table', source: 'bom_step_lines', fontSize: 9,
+                ...base, type: 'table', source: source?.id || '', fontSize: 9,
                 hideWhenEmpty: false,
-                columns: [
-                    { field: 'item', label: 'Komponen', align: 'left' },
-                    { field: 'required_qty', label: 'Perlu', width: '22%', align: 'right', decimals: 2 },
-                    { field: 'actual_qty', label: 'Aktual', width: '22%', align: 'right', decimals: 2, emptyText: '' },
-                ],
+                columns: (source?.seedColumns
+                    ? source.columns.filter(c => source.seedColumns!.includes(c.field))
+                    : (source?.columns || []).slice(0, 3)
+                ).map(c => ({
+                    field: c.field, label: c.label,
+                    align: c.numeric ? 'right' : 'left',
+                    ...(c.numeric ? { decimals: 2 } : {}),
+                })),
             } as TableBand;
+        }
         case 'tally':
             return {
                 ...base, type: 'tally', fontSize: 9, rows: 3,
@@ -136,6 +144,9 @@ export function placedFieldKeys(bands: Band[]): Set<string> {
             (band as KeyValueBand).rows.forEach(r => keys.add(r.field));
         } else if (band.type === 'signature') {
             (band as SignatureBand).footerFields?.forEach(f => keys.add(f.field));
+            (band as SignatureBand).boxes.forEach(b => b.fields?.forEach(f => keys.add(f)));
+        } else if (band.type === 'table') {
+            (band as TableBand).columns.forEach(c => { if (c.footer?.field) keys.add(c.footer.field); });
         }
     });
     return keys;

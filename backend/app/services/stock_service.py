@@ -1,5 +1,5 @@
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, func, or_
+from sqlalchemy import select, func
 from sqlalchemy.orm import joinedload, selectinload
 from app.models.stock_ledger import StockLedger
 from app.models.stock_balance import StockBalance
@@ -350,21 +350,6 @@ async def relocate_batch_stock(db: AsyncSession, *, item_id, batch_id, location_
     return moved
 
 
-async def get_stock_entries(db: AsyncSession, skip: int = 0, limit: int = 100) -> tuple[list[StockLedger], int]:
-    # Count total
-    count_result = await db.execute(select(func.count()).select_from(StockLedger))
-    total = count_result.scalar()
-    
-    # Get items
-    result = await db.execute(
-        select(StockLedger)
-        .order_by(StockLedger.created_at.desc())
-        .offset(skip)
-        .limit(limit)
-    )
-    items = result.scalars().all()
-    return items, total
-
 async def get_all_stock_balances(db: AsyncSession, user=None, item_ids: list | None = None):
     query = select(StockBalance)
     if item_ids:
@@ -520,18 +505,3 @@ async def get_all_stock_balances(db: AsyncSession, user=None, item_ids: list | N
         for r in results
         if r.qty != 0 or r.qty_cones or r.qty_boxes or r.qty_drums
     ]
-
-async def get_batch_stock_balances(db: AsyncSession, requirements: list[dict]):
-    results_map = {}
-    if not requirements:
-        return {}
-
-    item_ids = set(req['item_id'] for req in requirements)
-    result = await db.execute(select(StockBalance).filter(StockBalance.item_id.in_(item_ids)))
-    balances = result.scalars().all()
-
-    for b in balances:
-        key = (str(b.item_id), str(b.location_id), b.variant_key)
-        results_map[key] = results_map.get(key, 0.0) + float(b.qty)
-
-    return results_map

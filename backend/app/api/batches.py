@@ -1058,11 +1058,7 @@ async def reject_batch(
             "type": "MANUFACTURING_ORDER_UPDATE",
             **(await mo_progress_fields(db, mo, rejected_wo)),
         })
-    try:
-        await kpi_service.invalidate_kpis_async(db)
-        await manager.broadcast({"type": "KPI_UPDATE"})
-    except Exception:
-        pass
+    await kpi_service.invalidate_and_broadcast(db, {"type": "KPI_UPDATE"})
 
     batch.item_code = batch.item.code if batch.item else None
     batch.item_name = batch.item.name if batch.item else None
@@ -1116,11 +1112,7 @@ async def dispose_batch(
         + (f": {reason}" if reason else ""),
     )
     await manager.broadcast({"type": "STOCK_UPDATE"})
-    try:
-        await kpi_service.invalidate_kpis_async(db)
-        await manager.broadcast({"type": "KPI_UPDATE"})
-    except Exception:
-        pass
+    await kpi_service.invalidate_and_broadcast(db, {"type": "KPI_UPDATE"})
 
     batch.item_code = batch.item.code if batch.item else None
     batch.item_name = batch.item.name if batch.item else None
@@ -1246,11 +1238,7 @@ async def reassign_batch(
         + (f": {reason}" if reason else ""),
     )
     await manager.broadcast({"type": "STOCK_UPDATE"})
-    try:
-        await kpi_service.invalidate_kpis_async(db)
-        await manager.broadcast({"type": "KPI_UPDATE"})
-    except Exception:
-        pass
+    await kpi_service.invalidate_and_broadcast(db, {"type": "KPI_UPDATE"})
 
     reloaded = (await db.execute(
         select(Batch).options(joinedload(Batch.item)).filter(Batch.id == new_lot.id)

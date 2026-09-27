@@ -169,12 +169,6 @@ async def resolve_locations(db: AsyncSession, wc_id, loc_map: dict | None = None
     return in_id, out_id
 
 
-def resolve_locations_sync(db: Session, wc_id, loc_map: dict | None = None) -> tuple:
-    lm = loc_map if loc_map is not None else location_map_sync(db)
-    in_id, out_id = resolve_locations_from_map(lm, wc_id)[:2]
-    return in_id, out_id
-
-
 async def resolve_reject_location(db: AsyncSession, wc_id, loc_map: dict | None = None):
     """Effective defect store for a work center — own value, else inherited from
     its GROUP/TYPE. Returns None when nothing is configured anywhere up the tree

@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from 'react';
 import SettingsRolesTab from './SettingsRolesTab';
 import SettingsUsersTab from './SettingsUsersTab';
 import { RoleLike } from './RoleFormModal';
+import { useData } from '../../context/DataContext';
 import { API_BASE } from '../shared/apiBase';
 import { settingsStack } from './settingsStyles';
 
@@ -19,6 +20,7 @@ import { settingsStack } from './settingsStyles';
  * a screen each would squeeze the permission chips and Last Login off the end.
  */
 export default function SettingsAccessTab() {
+    const { authFetch } = useData();
     const [roles, setRoles] = useState<RoleLike[]>([]);
     const [allPermissions, setAllPermissions] = useState<any[]>([]);
     const [roleFilter, setRoleFilter] = useState<string | null>(null);
@@ -26,8 +28,8 @@ export default function SettingsAccessTab() {
     const loadAuthData = useCallback(() => {
         const authHeaders = { 'Authorization': `Bearer ${localStorage.getItem('access_token')}` };
         Promise.all([
-            fetch(`${API_BASE}/roles`, { headers: authHeaders }).then(res => res.ok ? res.json() : []),
-            fetch(`${API_BASE}/permissions`, { headers: authHeaders }).then(res => res.ok ? res.json() : []),
+            authFetch(`${API_BASE}/roles`, { headers: authHeaders }).then(res => res.ok ? res.json() : []),
+            authFetch(`${API_BASE}/permissions`, { headers: authHeaders }).then(res => res.ok ? res.json() : []),
         ]).then(([rolesData, permsData]) => {
             setRoles(rolesData);
             setAllPermissions(permsData);

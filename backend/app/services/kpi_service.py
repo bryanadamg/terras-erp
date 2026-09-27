@@ -7,14 +7,10 @@ from app.models.manufacturing import ManufacturingOrder as WorkOrder
 from app.models.stock_balance import StockBalance
 from app.models.sales import SalesOrder
 from app.models.sample import SampleRequest
-from datetime import datetime, timedelta, timezone, date
+from datetime import datetime, timedelta, timezone
+import logging
 
-def get_kpi(db: Session, key: str, ttl_minutes: int = 10):
-    """Retrieves a KPI from cache or returns None if expired."""
-    cached = db.query(KPICache).filter(KPICache.key == key).first()
-    if cached and (datetime.now(timezone.utc) - cached.updated_at.replace(tzinfo=timezone.utc)) < timedelta(minutes=ttl_minutes):
-        return cached.value
-    return None
+logger = logging.getLogger(__name__)
 
 def update_kpi(db: Session, key: str, value: float):
     cached = db.query(KPICache).filter(KPICache.key == key).first()
@@ -115,3 +111,18 @@ async def invalidate_kpis_async(db: AsyncSession):
     from datetime import datetime, timezone
     await db.execute(update(KPICache).values(updated_at=datetime(1970, 1, 1, tzinfo=timezone.utc)))
     await db.commit()
+
+
+async def invalidate_and_broadcast(db: AsyncSession, *events: dict) -> None:
+    """Post-commit side effects of a mutation: mark KPIs stale, then fan out
+    live events. Best-effort — the mutation is already committed, so a failure
+    here must not fail the request — but it is logged. No rollback: that would
+    expire the caller's instances (expire_on_commit=False is load-bearing) and
+    the response serializer would then lazy-load in async and raise."""
+    from app.core.ws_manager import manager
+    try:
+        await invalidate_kpis_async(db)
+        for event in events:
+            await manager.broadcast(event)
+    except Exception:
+        logger.exception("KPI invalidate / broadcast failed after commit")

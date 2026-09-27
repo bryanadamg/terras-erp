@@ -265,11 +265,7 @@ async def create_stock_entry(
     )
 
     await manager.broadcast({"type": "STOCK_UPDATE"})
-    try:
-        await kpi_service.invalidate_kpis_async(db)
-        await manager.broadcast({"type": "KPI_UPDATE"})
-    except Exception:
-        pass
+    await kpi_service.invalidate_and_broadcast(db, {"type": "KPI_UPDATE"})
 
     return {"status": "success", "message": "Stock entry recorded"}
 
@@ -335,11 +331,7 @@ async def transfer_stock(
     )
 
     await manager.broadcast({"type": "STOCK_UPDATE"})
-    try:
-        await kpi_service.invalidate_kpis_async(db)
-        await manager.broadcast({"type": "KPI_UPDATE"})
-    except Exception:
-        pass
+    await kpi_service.invalidate_and_broadcast(db, {"type": "KPI_UPDATE"})
 
     return {"status": "success", "message": "Transfer recorded"}
 
@@ -431,11 +423,7 @@ async def transfer_stock_bulk(
     )
 
     await manager.broadcast({"type": "STOCK_UPDATE"})
-    try:
-        await kpi_service.invalidate_kpis_async(db)
-        await manager.broadcast({"type": "KPI_UPDATE"})
-    except Exception:
-        pass
+    await kpi_service.invalidate_and_broadcast(db, {"type": "KPI_UPDATE"})
 
     return {"status": "success", "message": f"Moved {len(payload.lines)} rows to {dest_code}", "moved": len(payload.lines)}
 
