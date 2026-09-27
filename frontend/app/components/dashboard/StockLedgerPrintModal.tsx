@@ -1,155 +1,38 @@
 'use client';
-import React, { useEffect, useState } from 'react';
-import { createPortal } from 'react-dom';
+import React, { useMemo, useState } from 'react';
+import { useData } from '../../context/DataContext';
 import PrintModalShell, { PrintModalFooter } from '../shared/PrintModalShell';
 import { useTimezone } from '../../context/TimezoneContext';
-import { PRINT_FONT } from '../shared/xpTheme';
-
-import { qtyFmt } from '../shared/format';
 import { STATIC_BASE } from '../shared/apiBase';
-import { refMeta, shortRef } from './ledgerRef';
+import TemplateRenderer from '../shared/printTemplate/TemplateRenderer';
+import TemplatePrintPortal from '../shared/printTemplate/TemplatePrintPortal';
+import { resolveLayout } from '../shared/printTemplate/templateStore';
+import { paperDimsMm } from '../shared/printTemplate/paper';
+import type { PrintLayout, TableBand } from '../shared/printTemplate/types';
+import { buildStockLedgerContext, STOCK_LEDGER_DOC } from '../shared/printTemplate/doctypes/stockLedger';
 
-type ColumnDef = { key: string; label: string; width: number };
-const COLUMN_DEFS: ColumnDef[] = [
-    { key: 'no', label: 'No', width: 3 },
-    { key: 'date', label: 'Date', width: 9 },
-    { key: 'item', label: 'Item', width: 16 },
-    { key: 'attributes', label: 'Attributes', width: 10 },
-    { key: 'location', label: 'Location', width: 13 },
-    { key: 'lot', label: 'Lot', width: 9 },
-    { key: 'movement', label: 'Movement', width: 10 },
-    { key: 'packaging', label: 'Packaging', width: 9 },
-    { key: 'source', label: 'Source', width: 11 },
-    { key: 'ref', label: 'Ref #', width: 10 },
-];
-const DEFAULT_VISIBLE_COLS: Record<string, boolean> = Object.fromEntries(COLUMN_DEFS.map(c => [c.key, true]));
+// The document is a print template (defaults/stockLedger.ts, editable in Print
+// Layouts). The column checkboxes are print-time only: they drop columns of the
+// layout's ledger table for this print and re-spread the widths over the rest.
+
+const TABLE_BAND = 'sl_table';
 const COLUMNS_STORAGE_KEY = 'stock_ledger_print_columns';
 
-const fmtQty = qtyFmt(4);   // matches ReportsView, which this prints
-
-function LedgerDocument({ entries, locations, attributes, companyProfile, periodLabel, totals, filtersSummary, hiddenCount, visibleCols }: any) {
-    const { formatDateTime: tzDateTime } = useTimezone();
-    const locMap: Record<string, any> = {};
-    for (const l of (locations || [])) locMap[l.id] = l;
-    const getWarehouseName = (e: any): string => locMap[e.location_id]?.parent_name || '';
-    const getAttrName = (vid: string) => {
-        for (const attr of (attributes || [])) { const v = attr.values?.find((x: any) => x.id === vid); if (v) return v.value; }
-        return '';
+function withHiddenColumns(layout: PrintLayout, hidden: Record<string, boolean>): PrintLayout {
+    return {
+        ...layout,
+        bands: layout.bands.map(b => {
+            if (b.id !== TABLE_BAND || b.type !== 'table') return b;
+            const cols = (b as TableBand).columns.filter(c => hidden[c.field] !== false);
+            // Scale percentage widths back up to 100% so dropped columns don't leave a gap.
+            const pct = cols.map(c => (c.width?.endsWith('%') ? parseFloat(c.width) : NaN));
+            const sum = pct.reduce((s, p) => s + p, 0);
+            const scaled = pct.every(p => p > 0)
+                ? cols.map((c, i) => ({ ...c, width: `${(pct[i] / sum * 100).toFixed(2)}%` }))
+                : cols;
+            return { ...b, columns: scaled };
+        }),
     };
-
-    const cols = COLUMN_DEFS.filter(c => (visibleCols || DEFAULT_VISIBLE_COLS)[c.key] !== false);
-    const totalWeight = cols.reduce((s, c) => s + c.width, 0) || 1;
-
-    const border = '1px solid #777';
-    const th: React.CSSProperties = { border, padding: '3px 4px', background: '#e8e8e8', fontWeight: 'bold', textAlign: 'center', verticalAlign: 'middle', fontSize: '8px', lineHeight: 1.2 };
-    const td: React.CSSProperties = { border, padding: '3px 4px', verticalAlign: 'top', fontSize: '8px', lineHeight: 1.3 };
-
-    const renderCell = (colKey: string, e: any, idx: number) => {
-        switch (colKey) {
-            case 'no':
-                return <td key={colKey} style={{ ...td, textAlign: 'center' }}>{idx + 1}</td>;
-            case 'date':
-                return <td key={colKey} style={{ ...td, whiteSpace: 'nowrap' }}>{tzDateTime(e.created_at)}</td>;
-            case 'item':
-                return (
-                    <td key={colKey} style={td}>
-                        <div style={{ fontWeight: 'bold' }}>{e.item_name}</div>
-                        <div style={{ color: '#777', fontSize: 7 }}>{e.item_code}</div>
-                    </td>
-                );
-            case 'attributes':
-                return <td key={colKey} style={td}>{(e.attribute_value_ids || []).map((vid: string) => getAttrName(vid)).filter(Boolean).join(', ')}</td>;
-            case 'location':
-                return (
-                    <td key={colKey} style={td}>
-                        {getWarehouseName(e) && <span style={{ color: '#555' }}>{getWarehouseName(e)} / </span>}
-                        {e.location_name}
-                    </td>
-                );
-            case 'lot':
-                return (
-                    <td key={colKey} style={td}>
-                        {e.batch_number || '—'}
-                        {e.vendor_lot && <div style={{ color: '#777', fontSize: 7 }}>Supplier: {e.vendor_lot}</div>}
-                    </td>
-                );
-            case 'movement': {
-                const up = e.qty_change >= 0;
-                return (
-                    <td key={colKey} style={{ ...td, textAlign: 'right', fontWeight: 'bold', color: up ? '#1a5e1a' : '#c00000', whiteSpace: 'nowrap' }}>
-                        {up ? '+' : ''}{fmtQty(e.qty_change)} {e.item_uom}
-                    </td>
-                );
-            }
-            case 'packaging': {
-                const c = e.qty_cones_change || 0, b = e.qty_boxes_change || 0, d = e.qty_drums_change || 0;
-                const pkg = [c ? `${c > 0 ? '+' : ''}${c} cones` : '', b ? `${b > 0 ? '+' : ''}${b} boxes` : '', d ? `${d > 0 ? '+' : ''}${d} drums` : ''].filter(Boolean).join(', ');
-                return <td key={colKey} style={{ ...td, fontSize: 7 }}>{pkg || '—'}</td>;
-            }
-            case 'source':
-                return <td key={colKey} style={td}>{refMeta(e.reference_type).label}</td>;
-            case 'ref':
-                return <td key={colKey} style={{ ...td, fontSize: 7, wordBreak: 'break-all' }} title={e.reference_id}>{e.reference_label || shortRef(e.reference_id)}</td>;
-            default:
-                return null;
-        }
-    };
-
-    return (
-        <div style={{ fontFamily: PRINT_FONT, fontSize: '8px', color: '#000', lineHeight: 1.3 }}>
-            <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 6, paddingBottom: 5, borderBottom: '2px solid #000' }}>
-                <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-                    {companyProfile?.logo_url ? (
-                        <img src={`${STATIC_BASE}${companyProfile.logo_url}`} alt="Logo" style={{ maxHeight: 40, maxWidth: 60, objectFit: 'contain' }} />
-                    ) : (
-                        <div style={{ width: 44, height: 32, border: '2px solid #003080', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold', fontSize: 9, color: '#003080' }}>BIE</div>
-                    )}
-                    <div>
-                        <div style={{ fontWeight: 'bold', fontSize: 10 }}>{companyProfile?.name || 'PT. BOLA INTAN ELASTIC'}</div>
-                        {companyProfile?.address && <div style={{ fontSize: 7 }}>{companyProfile.address}</div>}
-                    </div>
-                </div>
-                <div style={{ textAlign: 'right' }}>
-                    <div style={{ fontSize: 14, fontWeight: 'bold' }}>STOCK LEDGER</div>
-                    <div style={{ fontSize: 8, color: '#555' }}>Period: {periodLabel}</div>
-                    {filtersSummary && <div style={{ fontSize: 7, color: '#777' }}>{filtersSummary}</div>}
-                </div>
-            </div>
-
-            <table style={{ width: '100%', borderCollapse: 'collapse', tableLayout: 'fixed', marginBottom: 6 }}>
-                <thead>
-                    <tr>
-                        {cols.map(c => <th key={c.key} style={{ ...th, width: `${(c.width / totalWeight * 100).toFixed(2)}%` }}>{c.label}</th>)}
-                    </tr>
-                </thead>
-                <tbody>
-                    {entries.map((e: any, idx: number) => (
-                        <tr key={e.id} style={{ background: idx % 2 === 0 ? '#fff' : '#f9f9f9' }}>
-                            {cols.map(c => renderCell(c.key, e, idx))}
-                        </tr>
-                    ))}
-                    {entries.length === 0 && (
-                        <tr><td colSpan={cols.length} style={{ ...td, textAlign: 'center', padding: '12px', color: '#888', fontStyle: 'italic' }}>No movements match these filters.</td></tr>
-                    )}
-                </tbody>
-            </table>
-
-            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '8px', fontWeight: 'bold', marginBottom: 4 }}>
-                <span>Movements: {totals.total.toLocaleString()}</span>
-                <span style={{ color: '#1a5e1a' }}>In: +{fmtQty(totals.totalIn)}</span>
-                <span style={{ color: '#c00000' }}>Out: {fmtQty(totals.totalOut)}</span>
-                <span>Net: {fmtQty(totals.totalIn + totals.totalOut)}</span>
-            </div>
-            {hiddenCount > 0 && (
-                <div style={{ fontSize: 7, color: '#c00000', marginBottom: 4 }}>
-                    Showing first {entries.length.toLocaleString()} of {totals.total.toLocaleString()} movements — narrow the filters to print the rest ({hiddenCount.toLocaleString()} not shown).
-                </div>
-            )}
-            <div style={{ fontSize: '7px', color: '#555', display: 'flex', justifyContent: 'space-between' }}>
-                <span>Printed: {new Date().toLocaleString()}</span>
-            </div>
-        </div>
-    );
 }
 
 export default function StockLedgerPrintModal({
@@ -164,58 +47,43 @@ export default function StockLedgerPrintModal({
     filtersSummary: string;
     onClose: () => void;
 }) {
+    const { formatDateTime } = useTimezone();
+    const { printTemplates } = useData() as any;
     const hiddenCount = Math.max(0, totals.total - entries.length);
 
+    // Keyed by column field; `false` = hidden for print. Absent = shown.
     const [visibleCols, setVisibleCols] = useState<Record<string, boolean>>(() => {
         try {
             const saved = localStorage.getItem(COLUMNS_STORAGE_KEY);
-            return saved ? { ...DEFAULT_VISIBLE_COLS, ...JSON.parse(saved) } : { ...DEFAULT_VISIBLE_COLS };
-        } catch { return { ...DEFAULT_VISIBLE_COLS }; }
+            return saved ? JSON.parse(saved) : {};
+        } catch { return {}; }
     });
+
+    const baseLayout = resolveLayout(STOCK_LEDGER_DOC, printTemplates)!;
+    const tableBand = baseLayout.bands.find(b => b.id === TABLE_BAND && b.type === 'table' && b.show !== false) as TableBand | undefined;
+    const columnChoices = tableBand?.columns || [];
     const toggleCol = (key: string) => {
         setVisibleCols(prev => {
-            const shownCount = COLUMN_DEFS.filter(c => prev[c.key] !== false).length;
+            const shownCount = columnChoices.filter(c => prev[c.field] !== false).length;
             if (prev[key] !== false && shownCount <= 1) return prev; // keep at least one column
             const next = { ...prev, [key]: prev[key] === false };
             try { localStorage.setItem(COLUMNS_STORAGE_KEY, JSON.stringify(next)); } catch {}
             return next;
         });
     };
+    const layout = useMemo(() => withHiddenColumns(baseLayout, visibleCols), [baseLayout, visibleCols]);
 
-    useEffect(() => {
-        document.body.classList.add('stock-ledger-print-active');
-        return () => { document.body.classList.remove('stock-ledger-print-active'); };
-    }, []);
+    const ctx = useMemo(() => buildStockLedgerContext({
+        entries, locations, attributes, periodLabel, filtersSummary, totals, formatDateTime, companyProfile,
+        companyName: companyProfile?.name,
+        companyLogoUrl: companyProfile?.logo_url ? `${STATIC_BASE}${companyProfile.logo_url}` : undefined,
+    }), [entries, locations, attributes, periodLabel, filtersSummary, totals, formatDateTime, companyProfile]);
+    const { widthMm: paperW, heightMm: paperH } = paperDimsMm(layout.paper);
 
     const handlePrint = () => {
-        const pageStyle = document.createElement('style');
-        pageStyle.id = '__stock-ledger-page';
-        pageStyle.textContent = [
-            '@page { size: landscape; margin: 10mm; }',
-            'html, body { width: 100% !important; max-width: none !important; margin: 0 !important; padding: 0 !important; }',
-        ].join(' ');
-        document.head.appendChild(pageStyle);
-        const handler = () => {
-            onClose();
-            document.getElementById('__stock-ledger-page')?.remove();
-        };
-        window.addEventListener('afterprint', handler, { once: true });
+        window.addEventListener('afterprint', () => onClose(), { once: true });
         window.print();
     };
-
-    const docContent = (
-        <LedgerDocument
-            entries={entries}
-            locations={locations}
-            attributes={attributes}
-            companyProfile={companyProfile}
-            periodLabel={periodLabel}
-            totals={totals}
-            filtersSummary={filtersSummary}
-            hiddenCount={hiddenCount}
-            visibleCols={visibleCols}
-        />
-    );
 
     return (
         <>
@@ -227,34 +95,36 @@ export default function StockLedgerPrintModal({
                 maxWidth={1300}
                 height="calc(var(--app-vh) * 90 / 100)"
                 bevel={false}
+                layoutDocType={STOCK_LEDGER_DOC}
             >
                     <div style={{ padding: '6px 12px', borderBottom: '1px solid #dee2e6', background: '#f8f9fa', display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 10, fontSize: 11 }}>
                         <span style={{ color: '#555', fontWeight: 'bold' }}>Columns:</span>
-                        {COLUMN_DEFS.map(c => (
-                            <label key={c.key} style={{ display: 'flex', alignItems: 'center', gap: 4, cursor: 'pointer', color: '#333' }}>
-                                <input type="checkbox" checked={visibleCols[c.key] !== false} onChange={() => toggleCol(c.key)} />
-                                {c.label}
+                        {columnChoices.length === 0 && (
+                            <span style={{ color: '#999' }} title="Hidden by the saved print layout — change it in Print Layouts.">No ledger table in the saved print layout</span>
+                        )}
+                        {columnChoices.map(c => (
+                            <label key={c.field} style={{ display: 'flex', alignItems: 'center', gap: 4, cursor: 'pointer', color: '#333' }}>
+                                <input type="checkbox" checked={visibleCols[c.field] !== false} onChange={() => toggleCol(c.field)} />
+                                {c.label.replace(/\n/g, ' ')}
                             </label>
                         ))}
                     </div>
 
-                    <div style={{ flex: 1, background: '#e0e0e0', overflowY: 'auto', overflowX: 'auto', padding: 16 }}>
-                        <div className="stock-ledger-print-paper" style={{ background: '#fff', width: 1090, minWidth: 1090, padding: '12px 16px', boxShadow: '0 2px 10px rgba(0,0,0,0.25)', fontSize: '8px', lineHeight: 1.4, color: '#000', fontFamily: PRINT_FONT }}>
-                            {docContent}
+                    <div style={{ flex: 1, background: '#e0e0e0', overflow: 'auto', padding: 16, display: 'flex', alignItems: 'flex-start' }}>
+                        {/* True size; auto margins centre it without clipping when wider than the pane. */}
+                        <div style={{
+                            background: '#fff', boxShadow: '0 2px 10px rgba(0,0,0,0.25)', flexShrink: 0, margin: '0 auto',
+                            width: `${paperW}mm`, minHeight: `${paperH}mm`, padding: `${layout.paper.marginMm}mm`,
+                            boxSizing: 'border-box', display: 'flex', flexDirection: 'column',
+                        }}>
+                            <TemplateRenderer layout={layout} ctx={ctx} docType={STOCK_LEDGER_DOC} />
                         </div>
                     </div>
 
-                    <PrintModalFooter note="Landscape orientation is set automatically — no need to change the browser print dialog." onClose={onClose} onPrint={handlePrint} />
+                    <PrintModalFooter note="Paper size, orientation and margins come from Print Layouts — no need to change the browser print dialog." onClose={onClose} onPrint={handlePrint} />
             </PrintModalShell>
 
-            {createPortal(
-                <div className="stock-ledger-print-portal" style={{ display: 'none' }}>
-                    <div className="stock-ledger-print-paper" style={{ background: '#fff', width: '100%', boxSizing: 'border-box', padding: '0', fontSize: '8px', lineHeight: 1.4, color: '#000', fontFamily: PRINT_FONT }}>
-                        {docContent}
-                    </div>
-                </div>,
-                document.body
-            )}
+            <TemplatePrintPortal layout={layout} ctx={ctx} docType={STOCK_LEDGER_DOC} />
         </>
     );
 }

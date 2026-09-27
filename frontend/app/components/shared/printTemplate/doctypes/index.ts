@@ -20,6 +20,8 @@ import { SALES_ORDER_DOC, SO_FIELDS, SO_ROW_SOURCES, resolveSalesOrderField, bui
 import { SURAT_JALAN_DEFAULT } from '../defaults/suratJalan';
 import { PURCHASE_ORDER_DEFAULT } from '../defaults/purchaseOrder';
 import { SALES_ORDER_DEFAULT } from '../defaults/salesOrder';
+import { STOCK_LEDGER_DOC, SL_FIELDS, SL_ROW_SOURCES, resolveStockLedgerField, buildStockLedgerContext } from './stockLedger';
+import { STOCK_LEDGER_DEFAULT } from '../defaults/stockLedger';
 
 /** What the designer has on hand to build a preview context from a sample record. */
 export interface SampleEnv {
@@ -118,6 +120,32 @@ export const DOC_MODULES: DocTypeModule[] = [
             label: x => `${x.po_number} — ${x.customer_name || 'no customer'}`,
             build: (x, env) => buildSalesOrderContext({
                 so: x, partners: env.partners, itemIndex: env.itemIndex, attributes: env.attributes,
+                companyProfile: env.companyProfile, companyName: env.companyName, companyLogoUrl: env.companyLogoUrl,
+            }),
+        },
+    },
+    {
+        docType: STOCK_LEDGER_DOC,
+        label: 'Stock Ledger report',
+        fieldPrefix: 'sl.',
+        fields: SL_FIELDS,
+        resolve: resolveStockLedgerField,
+        rowSources: SL_ROW_SOURCES,
+        defaultLayout: STOCK_LEDGER_DEFAULT,
+        sample: {
+            noun: 'ledger movements',
+            list: '/stock?page=1&size=50',
+            // A report prints a filtered set, not one record: the preview is one
+            // synthetic "record" holding the latest page and the server's totals.
+            extract: body => [{
+                id: 'recent', rows: body.items || [], total: body.total ?? 0,
+                totalIn: body.total_in ?? 0, totalOut: body.total_out ?? 0,
+            }],
+            label: x => `Latest ${x.rows.length} of ${Number(x.total).toLocaleString()} movements`,
+            build: (x, env) => buildStockLedgerContext({
+                entries: x.rows, attributes: env.attributes, periodLabel: 'All time → now',
+                totals: { total: x.total, totalIn: x.totalIn, totalOut: x.totalOut },
+                formatDateTime: iso => env.tzFormatCustom(iso, { year: 'numeric', month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' }),
                 companyProfile: env.companyProfile, companyName: env.companyName, companyLogoUrl: env.companyLogoUrl,
             }),
         },
