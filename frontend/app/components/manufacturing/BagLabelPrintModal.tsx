@@ -118,9 +118,7 @@ export default function BagLabelPrintModal({
         };
     }), [bags, workOrder, parentMO, seqStart, lotKg, qrUrls, attributes, formatCustom, companyProfile, logoUrl]);
 
-    const bagPages = pages.filter(p => p.docType === BAG_LABEL_DOC);
-    const beamPages = pages.filter(p => p.docType === BEAM_LABEL_DOC);
-    const allBeams = bags.length > 0 && beamPages.length === bags.length;
+    const allBeams = bags.length > 0 && pages.every(p => p.docType === BEAM_LABEL_DOC);
     const unitNoun = (n: number) =>
         allBeams ? (n === 1 ? 'beam' : 'beams') : (n === 1 ? 'bag' : 'bags');
     const layoutDoc = allBeams ? BEAM_LABEL_DOC : BAG_LABEL_DOC;
@@ -161,13 +159,13 @@ export default function BagLabelPrintModal({
                     <PrintModalFooter onClose={onClose} onPrint={doPrint} printDisabled={!bags.length} />
             </PrintModalShell>
 
-            {/* A run is normally all bags or all beams; a mixed one prints each kind
-                as its own run of sheets. */}
-            {bagPages.length > 0 && (
-                <TemplatePrintPortal layout={bagLayout} pages={bagPages.map(p => p.ctx)} docType={BAG_LABEL_DOC} />
-            )}
-            {beamPages.length > 0 && (
-                <TemplatePrintPortal layout={beamLayout} pages={beamPages.map(p => p.ctx)} docType={BEAM_LABEL_DOC} />
+            {/* One portal, each sheet with its own layout, in the run's order. */}
+            {pages.length > 0 && (
+                <TemplatePrintPortal
+                    layout={pages[0].docType === BEAM_LABEL_DOC ? beamLayout : bagLayout}
+                    docType={pages[0].docType}
+                    pages={pages.map(p => ({ ctx: p.ctx, docType: p.docType, layout: p.docType === BEAM_LABEL_DOC ? beamLayout : bagLayout }))}
+                />
             )}
         </>
     );
