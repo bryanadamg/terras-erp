@@ -38,6 +38,8 @@ import { SAMPLE_REQUEST_DOC, SR_FIELDS, SR_ROW_SOURCES, resolveSampleRequestFiel
 import { SAMPLE_REQUEST_DEFAULT } from '../defaults/sampleRequest';
 import { PR_PULL_SHEET_DOC, PR_FIELDS, PR_ROW_SOURCES, resolvePRPullSheetField, buildPRPullSheetContext } from './prPullSheet';
 import { PR_PULL_SHEET_DEFAULT } from '../defaults/prPullSheet';
+import { DYE_RECIPE_DOC, DR_FIELDS, DR_ROW_SOURCES, resolveDyeRecipeField, buildDyeRecipeContext } from './dyeRecipe';
+import { DYE_RECIPE_DEFAULT } from '../defaults/dyeRecipe';
 
 /** What the designer has on hand to build a preview context from a sample record. */
 export interface SampleEnv {
@@ -335,6 +337,25 @@ export const DOC_MODULES: DocTypeModule[] = [
                 pr: x, reqs: [], getLocationName: () => '', getAttributeValueName: () => '',
                 formatDate: (d: any) => (d ? env.tzFormatCustom(d, {}) : '-'),
                 tzFormatCustom: env.tzFormatCustom,
+                companyProfile: env.companyProfile, companyName: env.companyName, companyLogoUrl: env.companyLogoUrl,
+            }),
+        },
+    },
+    {
+        docType: DYE_RECIPE_DOC,
+        label: 'Kartu Celup (dye recipe)',
+        fieldPrefix: 'dr.',
+        fields: DR_FIELDS,
+        resolve: resolveDyeRecipeField,
+        rowSources: DR_ROW_SOURCES,
+        defaultLayout: DYE_RECIPE_DEFAULT,
+        sample: {
+            noun: 'dye recipes',
+            list: '/dye-recipes?page=1&size=20',
+            find: (_id, q) => (q ? `/dye-recipes?search=${encodeURIComponent(q)}&page=1&size=5` : null),
+            label: x => `${x.code} — ${x.name}`,
+            build: (x, env) => buildDyeRecipeContext({
+                recipe: x, tzFormatCustom: env.tzFormatCustom,
                 companyProfile: env.companyProfile, companyName: env.companyName, companyLogoUrl: env.companyLogoUrl,
             }),
         },
