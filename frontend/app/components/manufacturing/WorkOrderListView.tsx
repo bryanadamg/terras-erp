@@ -407,7 +407,7 @@ export default function WorkOrderListView({
         // Bag labels apply to lot-producing steps (each weighed bag = one lot).
         const isLotWOType = ['WEAVING', 'TENUN', 'DYEING', 'CELUP', 'BEAMING', 'SETTING'].includes((wo.work_center_type || '').toUpperCase());
         // A beaming WO's output units are warp beams, not bags — same label modal,
-        // different card (BeamLabelCard), so the button has to say so or the floor
+        // different template (beam_label), so the button has to say so or the floor
         // reads it as the wrong sticker.
         const isBeamWOType = (wo.work_center_type || '').toUpperCase() === 'BEAMING';
 

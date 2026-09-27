@@ -24,6 +24,8 @@ import { STOCK_LEDGER_DOC, SL_FIELDS, SL_ROW_SOURCES, resolveStockLedgerField, b
 import { STOCK_LEDGER_DEFAULT } from '../defaults/stockLedger';
 import { SO_TABLE_DOC, ST_FIELDS, ST_ROW_SOURCES, resolveSoTableField, buildSoTableContext } from './soTable';
 import { SO_TABLE_DEFAULT } from '../defaults/soTable';
+import { BAG_LABEL_DOC, BEAM_LABEL_DOC, OUTLABEL_FIELDS, OUTLABEL_ROW_SOURCES, resolveOutputLabelField, buildOutputLabelContext, outputLabelSampleRecords } from './outputLabel';
+import { BAG_LABEL_DEFAULT, BEAM_LABEL_DEFAULT } from '../defaults/outputLabel';
 
 /** What the designer has on hand to build a preview context from a sample record. */
 export interface SampleEnv {
@@ -173,6 +175,33 @@ export const DOC_MODULES: DocTypeModule[] = [
             }),
         },
     },
+    // Bag and beam labels share one field set (and so the `outlabel.` prefix); the
+    // preview record is a completion carrying its MO/WO. The modal's link `q` is the
+    // MO id, the only route that yields a completion.
+    ...[BAG_LABEL_DOC, BEAM_LABEL_DOC].map((docType): DocTypeModule => {
+        const beams = docType === BEAM_LABEL_DOC;
+        return {
+            docType,
+            label: beams ? 'Warp beam label' : 'Bag output label',
+            fieldPrefix: 'outlabel.',
+            fields: OUTLABEL_FIELDS,
+            resolve: resolveOutputLabelField,
+            rowSources: OUTLABEL_ROW_SOURCES,
+            defaultLayout: beams ? BEAM_LABEL_DEFAULT : BAG_LABEL_DEFAULT,
+            sample: {
+                noun: beams ? 'beams' : 'bags',
+                list: '/manufacturing-orders?all_levels=true&limit=40',
+                extract: body => outputLabelSampleRecords(body, beams),
+                find: (_id, q) => (q ? `/manufacturing-orders/${q}` : null),
+                label: x => `${x.output_batch_number} — ${x._mo?.code || ''}`,
+                build: (x, env) => buildOutputLabelContext({
+                    completion: x, workOrder: x._wo, parentMO: x._mo, bagSeq: beams ? null : x._seq,
+                    attributes: env.attributes, tzFormatCustom: env.tzFormatCustom,
+                    companyProfile: env.companyProfile, companyName: env.companyName, companyLogoUrl: env.companyLogoUrl,
+                }),
+            },
+        };
+    }),
 ];
 
 export const DOC_MODULE_BY_TYPE: Record<string, DocTypeModule> =
