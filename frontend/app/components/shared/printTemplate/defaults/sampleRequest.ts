@@ -90,7 +90,7 @@ const BANDS: Band[] = [
     {
         id: 'sr_checklist', type: 'grid', gap: 6, marginBottom: 12, box: BOX, padding: '6px 10px',
         items: [
-            { ...text('PRIORITAS', { fontSize: 15, bold: true, color: '#c00', align: 'center' }), col: 1, span: 12, row: 1 },
+            { ...text('PRIORITAS', { fontSize: 15, bold: true, color: '#c00', align: 'center', letterSpacing: 1 }), col: 1, span: 12, row: 1 },
             { ...text('CHECKLIST:', { bold: true }), col: 1, span: 6, row: 2 },
             { ...f('sr.checklist_ok', { emptyText: '' }), col: 10, span: 1, row: 2 },
             { ...f('sr.checklist_not_ok', { emptyText: '' }), col: 11, span: 2, row: 2 },
