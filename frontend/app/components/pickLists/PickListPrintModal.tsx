@@ -1,31 +1,31 @@
 'use client';
-import React, { useEffect, useState } from 'react';
-import { createPortal } from 'react-dom';
+import React, { useEffect, useMemo, useState } from 'react';
 import QRCode from 'qrcode';
 import { useTimezone } from '../../context/TimezoneContext';
+import { useData } from '../../context/DataContext';
 import PrintModalShell, { PrintModalFooter } from '../shared/PrintModalShell';
-import { PRINT_FONT, PRINT_SERIF_FONT, CODE_FONT } from '../shared/xpTheme';
+import { STATIC_BASE } from '../shared/apiBase';
+import TemplateRenderer from '../shared/printTemplate/TemplateRenderer';
+import TemplatePrintPortal from '../shared/printTemplate/TemplatePrintPortal';
+import { resolveLayout } from '../shared/printTemplate/templateStore';
+import { paperDimsMm } from '../shared/printTemplate/paper';
+import { PICK_LIST_DOC, buildPickListContext } from '../shared/printTemplate/doctypes/pickList';
 
 /**
  * Pick list shop card — the floor document for a pick list, sibling of the
- * Kartu Packing and in the same spirit as the Kartu Kerja.
+ * Kartu Packing. The document is a print template (defaults/pickList.ts, editable
+ * in Print Layouts).
  *
  * The QR encodes the pick list CODE (PL-…), which the picker scans at /scanner
- * to open the list. Carton QRs are already printed on the A6 labels
- * from PackedUnitLabelPrintModal — this card lists them as a paper checklist so
- * the pick can still be walked when a phone is flat, and keyed afterwards.
- *
- * Deliberately not the Surat Jalan: that is the delivery note, printed at
- * dispatch, after picking, and carries no QR.
+ * to open the list. Deliberately not the Surat Jalan: that is the delivery note,
+ * printed at dispatch, after picking, and carries no QR.
  */
 export default function PickListPrintModal({ pl, companyProfile, onClose }: any) {
     const { formatCustom: tzFmt } = useTimezone();
+    const { printTemplates } = useData() as any;
+    const layout = resolveLayout(PICK_LIST_DOC, printTemplates)!;
+    const { widthMm: paperW, heightMm: paperH } = paperDimsMm(layout.paper);
     const [qrUrl, setQrUrl] = useState('');
-
-    useEffect(() => {
-        document.body.classList.add('so-print-preview-active');
-        return () => { document.body.classList.remove('so-print-preview-active'); };
-    }, []);
 
     useEffect(() => {
         QRCode.toDataURL(pl.code, { margin: 4, width: 260, errorCorrectionLevel: 'H' })
@@ -33,176 +33,43 @@ export default function PickListPrintModal({ pl, companyProfile, onClose }: any)
             .catch(() => setQrUrl(''));
     }, [pl.code]);
 
+    const ctx = useMemo(() => buildPickListContext({
+        pl, qrDataUrl: qrUrl || undefined, tzFormatCustom: tzFmt,
+        companyProfile, companyName: companyProfile?.name,
+        companyLogoUrl: companyProfile?.logo_url ? `${STATIC_BASE}${companyProfile.logo_url}` : undefined,
+    }), [pl, qrUrl, tzFmt, companyProfile]);
+
     const doPrint = () => {
         window.addEventListener('afterprint', onClose, { once: true });
         window.print();
     };
 
-    const fmt = (d: any) => { if (!d) return ''; try { return tzFmt(d, { day: '2-digit', month: '2-digit', year: 'numeric' }, 'en-GB').replace(/\//g, '.'); } catch { return ''; } };
-    const n = (v: any) => { const x = parseFloat(v); return isNaN(x) ? 0 : x; };
-
-    const border = '1px solid #555';
-    const cell: React.CSSProperties = { border, padding: '3px 5px', verticalAlign: 'top' };
-    const hCell: React.CSSProperties = { ...cell, background: '#f0f0f0', fontWeight: 'bold', textAlign: 'center' };
-    const gridLbl: React.CSSProperties = { fontWeight: 'bold', paddingRight: 6, whiteSpace: 'nowrap', verticalAlign: 'top' };
-
-    const lines: any[] = pl.lines || [];
-    const cartons = lines.filter((l: any) => l.batch_id);
-    // Brutto across the picked cartons — net plus the boxes, both snapshotted on
-    // each carton at pack time.
-    const grossTotal = cartons.reduce((s: number, l: any) => s + (Number(l.gross_weight_kg) || 0), 0);
-
-    // What actually ships, per item — the same roll-up the desktop expand panel
-    // shows, so the card and the screen never disagree on the shipping total.
-    const byItem: Record<string, { code: string; name: string; qty: number; cartons: number; uom: string }> = {};
-    for (const l of lines) {
-        const key = String(l.item_id);
-        const row = byItem[key] || (byItem[key] = {
-            code: l.item_code || key, name: l.item_name || '', qty: 0, cartons: 0, uom: l.item_uom || '',
-        });
-        row.qty += n(l.qty_picked);
-        if (l.batch_id) row.cartons += 1;
-    }
-    const itemRows = Object.values(byItem);
-
-    const doc = (
-        <div style={{ fontFamily: PRINT_FONT, fontSize: '10px', color: '#000', lineHeight: 1.45 }}>
-            <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 8, paddingBottom: 6, borderBottom: '2px solid #000' }}>
-                <div>
-                    <div style={{ fontWeight: 'bold', fontSize: 12 }}>{companyProfile?.name || 'PT. BOLA INTAN ELASTIC'}</div>
-                    <div style={{ fontSize: 15, fontWeight: 'bold', fontFamily: PRINT_SERIF_FONT, marginTop: 2 }}>KARTU PICKING</div>
-                    <div style={{ fontSize: 9, color: '#555' }}>Pick List Card</div>
-                </div>
-                <div style={{ textAlign: 'center' }}>
-                    {qrUrl && <img src={qrUrl} alt="QR" style={{ width: 96, height: 96 }} />}
-                    <div style={{ fontWeight: 'bold', fontSize: 12, letterSpacing: 1 }}>{pl.code}</div>
-                </div>
-            </div>
-
-            <table style={{ borderCollapse: 'collapse', width: '100%', marginBottom: 10 }}>
-                <tbody>
-                    {([
-                        ['No. SO', pl.sales_order_code || '—'],
-                        ['Pelanggan / Customer', pl.customer_name || '—'],
-                        ['Jml koli / Cartons', String(cartons.length)],
-                        ['Tgl kirim / Delivery date', fmt(pl.delivery_date) || '—'],
-                        ['Ekspedisi / Carrier', pl.carrier || '—'],
-                        ['No. Polisi / Vehicle', pl.vehicle_plate || '—'],
-                        ['Sopir / Driver', pl.driver || '—'],
-                    ] as [string, string][]).map(([k, v]) => (
-                        <tr key={k}>
-                            <td style={gridLbl}>{k}</td>
-                            <td>: {v}</td>
-                        </tr>
-                    ))}
-                </tbody>
-            </table>
-
-            {itemRows.length > 0 && (
-                <>
-                    <div style={{ fontWeight: 'bold', marginBottom: 3 }}>Ringkasan Kirim / Shipping Summary:</div>
-                    <table style={{ width: '100%', borderCollapse: 'collapse', marginBottom: 10 }}>
-                        <thead>
-                            <tr>
-                                <th style={{ ...hCell, width: '8%' }}>No</th>
-                                <th style={{ ...hCell, width: '56%', textAlign: 'left' }}>Barang / Item</th>
-                                <th style={{ ...hCell, width: '18%' }}>Koli</th>
-                                <th style={{ ...hCell, width: '18%' }}>Qty</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {itemRows.map((r, i) => (
-                                <tr key={r.code}>
-                                    <td style={{ ...cell, textAlign: 'center' }}>{i + 1}</td>
-                                    <td style={cell}>{r.name} <span style={{ color: '#777' }}>{r.code}</span></td>
-                                    <td style={{ ...cell, textAlign: 'right' }}>{r.cartons}</td>
-                                    <td style={{ ...cell, textAlign: 'right' }}>{r.qty.toLocaleString()} {r.uom}</td>
-                                </tr>
-                            ))}
-                        </tbody>
-                    </table>
-                </>
-            )}
-
-            {/* Paper fallback for the scan loop: the picker ticks boxes here when a
-                phone is unavailable, then keys the list from the desktop. */}
-            <div style={{ fontWeight: 'bold', marginBottom: 3 }}>Daftar Koli / Carton Checklist:</div>
-            <table style={{ width: '100%', borderCollapse: 'collapse', marginBottom: 10 }}>
-                <thead>
-                    <tr>
-                        <th style={{ ...hCell, width: '7%' }}>No</th>
-                        <th style={{ ...hCell, width: '27%', textAlign: 'left' }}>No. Koli / Carton</th>
-                        <th style={{ ...hCell, width: '20%', textAlign: 'left' }}>Barang / Item</th>
-                        <th style={{ ...hCell, width: '15%', textAlign: 'left' }}>Kemasan / Packaging</th>
-                        <th style={{ ...hCell, width: '14%' }}>Qty</th>
-                        {/* The figure the loader and the carrier both check the load
-                            against, so it is on the sheet the picker carries. */}
-                        <th style={{ ...hCell, width: '11%' }}>Bruto</th>
-                        <th style={{ ...hCell, width: '6%' }}>✓</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {cartons.length === 0 ? (
-                        <tr><td style={{ ...cell, textAlign: 'center' }} colSpan={7}>Belum ada koli / no cartons allocated</td></tr>
-                    ) : cartons.map((l: any, i: number) => (
-                        <tr key={l.id}>
-                            <td style={{ ...cell, textAlign: 'center' }}>{l.package_no ?? i + 1}</td>
-                            <td style={{ ...cell, fontFamily: CODE_FONT }}>{l.batch_number || '—'}</td>
-                            <td style={cell}>{l.item_code || '—'}</td>
-                            <td style={cell}>{l.packaging_type_name || '—'}</td>
-                            <td style={{ ...cell, textAlign: 'right' }}>{n(l.qty_picked).toLocaleString()} {l.item_uom || ''}</td>
-                            <td style={{ ...cell, textAlign: 'right' }}>
-                                {l.gross_weight_kg != null ? `${n(l.gross_weight_kg).toFixed(2)} kg` : '—'}
-                            </td>
-                            <td style={{ ...cell, height: 18 }} />
-                        </tr>
-                    ))}
-                    {/* Load total, so the sheet the picker hands over says what the
-                        whole trolley weighs. Cartons packed before packaging was
-                        recorded contribute nothing rather than a guessed zero-tare
-                        figure — the row shows "—" and the total stays honest. */}
-                    {grossTotal > 0 && (
-                        <tr>
-                            <td style={{ ...cell, border: 'none' }} colSpan={4} />
-                            <td style={{ ...cell, fontWeight: 'bold', textAlign: 'right' }}>Total bruto</td>
-                            <td style={{ ...cell, fontWeight: 'bold', textAlign: 'right' }}>{grossTotal.toFixed(2)} kg</td>
-                            <td style={{ ...cell, border: 'none' }} />
-                        </tr>
-                    )}
-                </tbody>
-            </table>
-
-            {pl.notes && <div style={{ marginBottom: 8 }}><strong>Catatan / Notes:</strong> {pl.notes}</div>}
-
-            <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 20, textAlign: 'center' }}>
-                {['Dibuat oleh / Issued by', 'Picker', 'QC / Checked by'].map((role, i) => (
-                    <div key={i} style={{ width: '30%' }}>
-                        <div>{role}</div>
-                        <div style={{ height: 40 }} />
-                        <div style={{ borderTop: '1px solid #000', paddingTop: 2 }}>(________________)</div>
-                    </div>
-                ))}
-            </div>
-        </div>
-    );
-
     return (
         <>
-            <PrintModalShell title={`Kartu Picking — ${pl.code}`} onClose={onClose} width="calc(var(--app-vw) * 92 / 100)" maxWidth={900} height="calc(var(--app-vh) * 90 / 100)" modeless>
-                <div style={{ flex: 1, background: '#808080', overflowY: 'auto', padding: 16, display: 'flex', justifyContent: 'center', alignItems: 'flex-start' }}>
-                    <div className="so-print-paper" style={{ background: '#fff', width: '100%', maxWidth: 680, padding: '20px 24px', boxShadow: '0 2px 10px rgba(0,0,0,0.25)' }}>
-                        {doc}
+            <PrintModalShell
+                title={`Kartu Picking — ${pl.code}`}
+                onClose={onClose}
+                width="calc(var(--app-vw) * 92 / 100)"
+                maxWidth={900}
+                height="calc(var(--app-vh) * 90 / 100)"
+                modeless
+                layoutDocType={PICK_LIST_DOC}
+                layoutSample={{ sample: pl.id, q: pl.code }}
+            >
+                <div style={{ flex: 1, background: '#808080', overflow: 'auto', padding: 16, display: 'flex', alignItems: 'flex-start' }}>
+                    {/* True size; auto margins centre it without clipping when wider than the pane. */}
+                    <div style={{
+                        background: '#fff', boxShadow: '0 2px 10px rgba(0,0,0,0.25)', flexShrink: 0, margin: '0 auto',
+                        width: `${paperW}mm`, minHeight: `${paperH}mm`, padding: `${layout.paper.marginMm}mm`,
+                        boxSizing: 'border-box', display: 'flex', flexDirection: 'column',
+                    }}>
+                        <TemplateRenderer layout={layout} ctx={ctx} docType={PICK_LIST_DOC} />
                     </div>
                 </div>
                 <PrintModalFooter onClose={onClose} onPrint={doPrint} />
             </PrintModalShell>
 
-            {createPortal(
-                <div className="so-print-paper-portal" style={{ position: 'fixed', left: '-9999px', top: 0 }}>
-                    <div className="so-print-paper" style={{ background: '#fff', width: '100%', padding: '20px 24px' }}>{doc}</div>
-                </div>,
-                document.body
-            )}
+            <TemplatePrintPortal layout={layout} ctx={ctx} docType={PICK_LIST_DOC} />
         </>
     );
 }

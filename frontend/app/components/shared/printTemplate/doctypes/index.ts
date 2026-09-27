@@ -32,6 +32,8 @@ import { PACKED_UNIT_LABEL_DOC, CARTON_FIELDS, CARTON_ROW_SOURCES, resolveCarton
 import { PACKED_UNIT_LABEL_DEFAULT } from '../defaults/packedUnitLabel';
 import { PACKING_CARD_DOC, PCARD_FIELDS, PCARD_ROW_SOURCES, resolvePackingCardField, buildPackingCardContext } from './packingCard';
 import { PACKING_CARD_DEFAULT } from '../defaults/packingCard';
+import { PICK_LIST_DOC, PLIST_FIELDS, PLIST_ROW_SOURCES, resolvePickListField, buildPickListContext } from './pickList';
+import { PICK_LIST_DEFAULT } from '../defaults/pickList';
 
 /** What the designer has on hand to build a preview context from a sample record. */
 export interface SampleEnv {
@@ -266,6 +268,25 @@ export const DOC_MODULES: DocTypeModule[] = [
             label: x => `${x.code} — ${x.item_name || x.item_code || ''}`,
             build: (x, env) => buildPackingCardContext({
                 po: x, attributes: env.attributes, tzFormatCustom: env.tzFormatCustom,
+                companyProfile: env.companyProfile, companyName: env.companyName, companyLogoUrl: env.companyLogoUrl,
+            }),
+        },
+    },
+    {
+        docType: PICK_LIST_DOC,
+        label: 'Kartu Picking (pick list card)',
+        fieldPrefix: 'plist.',
+        fields: PLIST_FIELDS,
+        resolve: resolvePickListField,
+        rowSources: PLIST_ROW_SOURCES,
+        defaultLayout: PICK_LIST_DEFAULT,
+        sample: {
+            noun: 'pick lists',
+            list: '/pick-lists?page=1&size=20',
+            find: id => `/pick-lists/${id}`,
+            label: x => `${x.code} — ${x.customer_name || 'no customer'}`,
+            build: (x, env) => buildPickListContext({
+                pl: x, tzFormatCustom: env.tzFormatCustom,
                 companyProfile: env.companyProfile, companyName: env.companyName, companyLogoUrl: env.companyLogoUrl,
             }),
         },
