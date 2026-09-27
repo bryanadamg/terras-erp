@@ -42,6 +42,8 @@ import { DYE_RECIPE_DOC, DR_FIELDS, DR_ROW_SOURCES, resolveDyeRecipeField, build
 import { DYE_RECIPE_DEFAULT } from '../defaults/dyeRecipe';
 import { BOM_SHEET_DOC, BS_FIELDS, BS_ROW_SOURCES, resolveBomSheetField, buildBomSheetContext } from './bomSheet';
 import { BOM_SHEET_DEFAULT } from '../defaults/bomSheet';
+import { MO_SHEET_DOC, MS_FIELDS, MS_ROW_SOURCES, resolveMoSheetField, buildMoSheetContext } from './moSheet';
+import { MO_SHEET_DEFAULT } from '../defaults/moSheet';
 
 /** What the designer has on hand to build a preview context from a sample record. */
 export interface SampleEnv {
@@ -378,6 +380,29 @@ export const DOC_MODULES: DocTypeModule[] = [
             label: x => `${x.code} — ${x.item_name || x.item_code || ''}`,
             build: (x, env) => buildBomSheetContext({
                 bom: x, attributes: env.attributes, tzFormatCustom: env.tzFormatCustom,
+                companyProfile: env.companyProfile, companyName: env.companyName, companyLogoUrl: env.companyLogoUrl,
+            }),
+        },
+    },
+    {
+        docType: MO_SHEET_DOC,
+        label: 'SPK Produksi (manufacturing order)',
+        fieldPrefix: 'ms.',
+        fields: MS_FIELDS,
+        resolve: resolveMoSheetField,
+        rowSources: MS_ROW_SOURCES,
+        defaultLayout: MO_SHEET_DEFAULT,
+        sample: {
+            noun: 'manufacturing orders',
+            list: '/manufacturing-orders?all_levels=true&limit=40',
+            find: id => `/manufacturing-orders/${id}`,
+            label: x => `${x.code} — ${x.item_name || ''}`,
+            // Each MO carries its own BOM, so the preview explodes one level; the page
+            // print also walks sub-BOMs from its BOM list.
+            build: (x, env) => buildMoSheetContext({
+                mo: x, attributes: env.attributes, tzFormatCustom: env.tzFormatCustom,
+                getItemName: id => env.itemIndex?.[String(id)]?.name || '',
+                getItemCode: id => env.itemIndex?.[String(id)]?.code || '',
                 companyProfile: env.companyProfile, companyName: env.companyName, companyLogoUrl: env.companyLogoUrl,
             }),
         },
