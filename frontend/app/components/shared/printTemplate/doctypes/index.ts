@@ -40,6 +40,8 @@ import { PR_PULL_SHEET_DOC, PR_FIELDS, PR_ROW_SOURCES, resolvePRPullSheetField, 
 import { PR_PULL_SHEET_DEFAULT } from '../defaults/prPullSheet';
 import { DYE_RECIPE_DOC, DR_FIELDS, DR_ROW_SOURCES, resolveDyeRecipeField, buildDyeRecipeContext } from './dyeRecipe';
 import { DYE_RECIPE_DEFAULT } from '../defaults/dyeRecipe';
+import { BOM_SHEET_DOC, BS_FIELDS, BS_ROW_SOURCES, resolveBomSheetField, buildBomSheetContext } from './bomSheet';
+import { BOM_SHEET_DEFAULT } from '../defaults/bomSheet';
 
 /** What the designer has on hand to build a preview context from a sample record. */
 export interface SampleEnv {
@@ -356,6 +358,26 @@ export const DOC_MODULES: DocTypeModule[] = [
             label: x => `${x.code} — ${x.name}`,
             build: (x, env) => buildDyeRecipeContext({
                 recipe: x, tzFormatCustom: env.tzFormatCustom,
+                companyProfile: env.companyProfile, companyName: env.companyName, companyLogoUrl: env.companyLogoUrl,
+            }),
+        },
+    },
+    {
+        docType: BOM_SHEET_DOC,
+        label: 'Bill of Materials',
+        fieldPrefix: 'bs.',
+        fields: BS_FIELDS,
+        resolve: resolveBomSheetField,
+        rowSources: BS_ROW_SOURCES,
+        defaultLayout: BOM_SHEET_DEFAULT,
+        sample: {
+            noun: 'BOMs',
+            // Summary rows carry the full header, lines and sizes — all the sheet prints.
+            list: '/boms/summary?page=1&size=20',
+            find: (_id, q) => (q ? `/boms/summary?search=${encodeURIComponent(q)}&page=1&size=5` : null),
+            label: x => `${x.code} — ${x.item_name || x.item_code || ''}`,
+            build: (x, env) => buildBomSheetContext({
+                bom: x, attributes: env.attributes, tzFormatCustom: env.tzFormatCustom,
                 companyProfile: env.companyProfile, companyName: env.companyName, companyLogoUrl: env.companyLogoUrl,
             }),
         },
