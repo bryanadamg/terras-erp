@@ -15,6 +15,29 @@ on `main`:
 
 ## [Unreleased]
 
+## [0.36.0] - 2026-09-27
+
+### Added
+- Every printed document in the app now prints from an editable template in Print Layouts instead of hardcoded per-document markup: SPK Produksi (MO sheet), BOM sheet, Kartu Celup dye recipe, production-run material pull sheet, SPK Sample, pick list, Kartu Packing, carton label, lot label, bag/beam labels, Sales Order table report, Stock Ledger report, Sales Order Confirmation, Purchase Order, and Surat Jalan. The template renderer gained document-style layouts (text/logo blocks, plain labels, table footers, block signatures), letterhead fields, a decorative barcode, totals-box styling, page-breaking tables, per-cell row styling, group rows, stripes, and serif/mono/letter-spacing controls to support them
+- The print designer opens directly from a print preview on the record being printed, not only from the Print Layouts page
+- Dyeing monitor replaces its per-vessel card grid with a batch table comparing time-based output against WO qty
+
+### Fixed
+- Printing a mixed run of bag and beam labels keeps them in original scan order instead of splitting across print jobs
+- Print headers keep the company name and logo again, read back from the master-data cache
+- The WO list's inline edit row no longer wipes fields the user didn't touch, and its inputs/actions fit their columns
+- Item and category edits broadcast to other open clients so their lists and dropdowns refresh
+- A pick list can no longer be pushed to DISPATCHED directly through its own PUT — only the shipment dispatch flow can move it there
+- Locations and Operations lists are served whole and in order instead of silently capped
+- Beam detection uses the shared beam_service rule instead of matching on category name, so lookalike items aren't miscounted as beams
+- Item lookups fall back to the full item index when the searched item isn't on the currently loaded list page
+- An expired session now logs the user out — DataContext and settings fetches route through authFetch
+- The dye recipe chemical picker works in the packaged Electron build, not only behind the dev proxy
+- Stock ledger fetch is guarded against stale, out-of-order responses
+- MO/Production Run pages no longer risk a crash from hook-order mismatch when crossing the mobile breakpoint
+- Packing entries in the Audit Log render their print card like MO/WO prints
+- Admin audit writes no longer block the async event loop on admin routes
+
 ## [0.35.2] - 2026-09-25
 
 ### Fixed
