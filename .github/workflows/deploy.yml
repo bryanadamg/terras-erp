@@ -14,7 +14,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Deploy to Pi
-        uses: appleboy/ssh-action@v1.0.3
+        uses: appleboy/ssh-action@v1.2.5
         env:
           # Frontend npm ci pulls @bryanadamg/terras-ui from GitHub Packages.
           NODE_AUTH_TOKEN: ${{ secrets.NODE_AUTH_TOKEN }}
@@ -31,5 +31,9 @@ jobs:
           script: |
             cd /home/raspberrypi/Projects/teras-erp
             git pull origin main
+            # `up --build` never re-pulls: registry images (db/redis/tunnel) and
+            # build bases (python/node) would stay at whatever was first pulled.
+            sudo docker compose pull --ignore-buildable
             # sudo strips the environment, so hand the token over explicitly.
-            sudo NODE_AUTH_TOKEN="$NODE_AUTH_TOKEN" docker compose up -d --build
+            sudo NODE_AUTH_TOKEN="$NODE_AUTH_TOKEN" docker compose build --pull
+            sudo docker compose up -d
