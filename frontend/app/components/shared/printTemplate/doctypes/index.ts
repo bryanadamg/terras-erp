@@ -36,6 +36,8 @@ import { PICK_LIST_DOC, PLIST_FIELDS, PLIST_ROW_SOURCES, resolvePickListField, b
 import { PICK_LIST_DEFAULT } from '../defaults/pickList';
 import { SAMPLE_REQUEST_DOC, SR_FIELDS, SR_ROW_SOURCES, resolveSampleRequestField, buildSampleRequestContext } from './sampleRequest';
 import { SAMPLE_REQUEST_DEFAULT } from '../defaults/sampleRequest';
+import { PR_PULL_SHEET_DOC, PR_FIELDS, PR_ROW_SOURCES, resolvePRPullSheetField, buildPRPullSheetContext } from './prPullSheet';
+import { PR_PULL_SHEET_DEFAULT } from '../defaults/prPullSheet';
 
 /** What the designer has on hand to build a preview context from a sample record. */
 export interface SampleEnv {
@@ -309,6 +311,29 @@ export const DOC_MODULES: DocTypeModule[] = [
             label: (x, env) => `${x.code} — ${(env.partners || []).find((p: any) => p.id === x.customer_id)?.name || x.project || 'no customer'}`,
             build: (x, env) => buildSampleRequestContext({
                 sample: x, customerName: (env.partners || []).find((p: any) => p.id === x.customer_id)?.name || '',
+                tzFormatCustom: env.tzFormatCustom,
+                companyProfile: env.companyProfile, companyName: env.companyName, companyLogoUrl: env.companyLogoUrl,
+            }),
+        },
+    },
+    {
+        docType: PR_PULL_SHEET_DOC,
+        label: 'Material Pull Sheet (production run)',
+        fieldPrefix: 'pr.',
+        fields: PR_FIELDS,
+        resolve: resolvePRPullSheetField,
+        rowSources: PR_ROW_SOURCES,
+        defaultLayout: PR_PULL_SHEET_DEFAULT,
+        sample: {
+            noun: 'production runs',
+            list: '/production-runs?page=1&size=20',
+            find: (_id, q) => (q ? `/production-runs?search=${encodeURIComponent(q)}&page=1&size=5` : null),
+            label: x => `${x.code}${x.sales_order_code ? ` — ${x.sales_order_code}` : ''}`,
+            // The requirement rows come from a second, per-run endpoint the print
+            // modal calls; a sample preview shows the header over an empty table.
+            build: (x, env) => buildPRPullSheetContext({
+                pr: x, reqs: [], getLocationName: () => '', getAttributeValueName: () => '',
+                formatDate: (d: any) => (d ? env.tzFormatCustom(d, {}) : '-'),
                 tzFormatCustom: env.tzFormatCustom,
                 companyProfile: env.companyProfile, companyName: env.companyName, companyLogoUrl: env.companyLogoUrl,
             }),
