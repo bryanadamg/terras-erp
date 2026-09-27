@@ -26,6 +26,8 @@ import { SO_TABLE_DOC, ST_FIELDS, ST_ROW_SOURCES, resolveSoTableField, buildSoTa
 import { SO_TABLE_DEFAULT } from '../defaults/soTable';
 import { BAG_LABEL_DOC, BEAM_LABEL_DOC, OUTLABEL_FIELDS, OUTLABEL_ROW_SOURCES, resolveOutputLabelField, buildOutputLabelContext, outputLabelSampleRecords } from './outputLabel';
 import { BAG_LABEL_DEFAULT, BEAM_LABEL_DEFAULT } from '../defaults/outputLabel';
+import { LOT_LABEL_DOC, LOTLABEL_FIELDS, resolveLotLabelField, buildLotLabelContext } from './lotLabel';
+import { LOT_LABEL_DEFAULT } from '../defaults/lotLabel';
 
 /** What the designer has on hand to build a preview context from a sample record. */
 export interface SampleEnv {
@@ -202,6 +204,25 @@ export const DOC_MODULES: DocTypeModule[] = [
             },
         };
     }),
+    {
+        docType: LOT_LABEL_DOC,
+        label: 'Lot label',
+        fieldPrefix: 'lotlabel.',
+        fields: LOTLABEL_FIELDS,
+        resolve: resolveLotLabelField,
+        rowSources: [],
+        defaultLayout: LOT_LABEL_DEFAULT,
+        sample: {
+            noun: 'lots',
+            list: '/batches/paginated?page=1&size=20',
+            find: (_id, q) => (q ? `/batches/paginated?search=${encodeURIComponent(q)}&page=1&size=5` : null),
+            label: x => `${x.batch_number} — ${x.item_name || x.item_code || ''}`,
+            build: (x, env) => buildLotLabelContext({
+                lot: x, tzFormatCustom: env.tzFormatCustom,
+                companyProfile: env.companyProfile, companyName: env.companyName, companyLogoUrl: env.companyLogoUrl,
+            }),
+        },
+    },
 ];
 
 export const DOC_MODULE_BY_TYPE: Record<string, DocTypeModule> =
