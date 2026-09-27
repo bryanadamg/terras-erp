@@ -22,6 +22,8 @@ import { PURCHASE_ORDER_DEFAULT } from '../defaults/purchaseOrder';
 import { SALES_ORDER_DEFAULT } from '../defaults/salesOrder';
 import { STOCK_LEDGER_DOC, SL_FIELDS, SL_ROW_SOURCES, resolveStockLedgerField, buildStockLedgerContext } from './stockLedger';
 import { STOCK_LEDGER_DEFAULT } from '../defaults/stockLedger';
+import { SO_TABLE_DOC, ST_FIELDS, ST_ROW_SOURCES, resolveSoTableField, buildSoTableContext } from './soTable';
+import { SO_TABLE_DEFAULT } from '../defaults/soTable';
 
 /** What the designer has on hand to build a preview context from a sample record. */
 export interface SampleEnv {
@@ -146,6 +148,27 @@ export const DOC_MODULES: DocTypeModule[] = [
                 entries: x.rows, attributes: env.attributes, periodLabel: 'All time → now',
                 totals: { total: x.total, totalIn: x.totalIn, totalOut: x.totalOut },
                 formatDateTime: iso => env.tzFormatCustom(iso, { year: 'numeric', month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' }),
+                companyProfile: env.companyProfile, companyName: env.companyName, companyLogoUrl: env.companyLogoUrl,
+            }),
+        },
+    },
+    {
+        docType: SO_TABLE_DOC,
+        label: 'Sales Order table report',
+        fieldPrefix: 'st.',
+        fields: ST_FIELDS,
+        resolve: resolveSoTableField,
+        rowSources: ST_ROW_SOURCES,
+        defaultLayout: SO_TABLE_DEFAULT,
+        sample: {
+            noun: 'sales orders',
+            list: '/sales-orders?page=1&size=50',
+            // One synthetic "record": the latest page of orders, as the list would print it.
+            extract: body => [{ id: 'recent', orders: body.items || [] }],
+            label: x => `Latest ${x.orders.length} sales orders`,
+            build: (x, env) => buildSoTableContext({
+                salesOrders: x.orders, itemIndex: env.itemIndex, attributes: env.attributes,
+                tzFormatCustom: env.tzFormatCustom,
                 companyProfile: env.companyProfile, companyName: env.companyName, companyLogoUrl: env.companyLogoUrl,
             }),
         },
