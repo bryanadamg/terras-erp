@@ -6,7 +6,6 @@
 
 import type { PrintLayout, Band, FieldSpec, GridItem } from '../types';
 import { PRINT_FONT } from '../../typography';
-import { PURCHASE_ORDER_DOC } from '../doctypes/purchaseOrder';
 
 const BASE = 9;
 const f = (field: string, extra: Partial<FieldSpec> = {}): FieldSpec => ({ field, fontSize: BASE, ...extra });
@@ -129,5 +128,3 @@ export const PURCHASE_ORDER_DEFAULT: PrintLayout = {
     bands: BANDS,
 };
 
-export const PURCHASE_ORDER_DEFAULTS: Record<string, PrintLayout> = { [PURCHASE_ORDER_DOC]: PURCHASE_ORDER_DEFAULT };
-export const PURCHASE_ORDER_DOC_TYPE_LABELS: Record<string, string> = { [PURCHASE_ORDER_DOC]: 'Purchase Order' };

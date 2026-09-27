@@ -7,7 +7,6 @@
 
 import type { PrintLayout, Band, GridBand, GridItem, FieldSpec, SignatureBand, TableColumn } from '../types';
 import { PRINT_FONT } from '../../typography';
-import { SURAT_JALAN_DOC } from '../doctypes/suratJalan';
 
 const BASE = 9;
 const f = (field: string, extra: Partial<FieldSpec> = {}): FieldSpec => ({ field, fontSize: BASE, ...extra });
@@ -114,5 +113,3 @@ export const SURAT_JALAN_DEFAULT: PrintLayout = {
     bands: BANDS,
 };
 
-export const SURAT_JALAN_DEFAULTS: Record<string, PrintLayout> = { [SURAT_JALAN_DOC]: SURAT_JALAN_DEFAULT };
-export const SURAT_JALAN_DOC_TYPE_LABELS: Record<string, string> = { [SURAT_JALAN_DOC]: 'Surat Jalan (delivery note)' };

@@ -11,9 +11,7 @@
  */
 
 import type { PrintContext } from './renderContext';
-import { SJ_FIELDS, SURAT_JALAN_DOC, resolveSuratJalanField } from './doctypes/suratJalan';
-import { PO_FIELDS, PURCHASE_ORDER_DOC, resolvePurchaseOrderField } from './doctypes/purchaseOrder';
-import { SO_FIELDS, SALES_ORDER_DOC, resolveSalesOrderField } from './doctypes/salesOrder';
+import { DOC_MODULES, moduleForField } from './doctypes';
 
 export type FieldKind = 'text' | 'number' | 'date' | 'qr' | 'blank' | 'static' | 'image' | 'barcode';
 
@@ -109,9 +107,7 @@ export const FIELD_MANIFESTS: Record<string, FieldDef[]> = {
     kartu_kerja_beaming: WO_CARD_FIELDS,
     kartu_kerja_dyeing: WO_CARD_FIELDS,
     kartu_kerja_general: WO_CARD_FIELDS,
-    [SURAT_JALAN_DOC]: [...SJ_FIELDS, ...DOC_CHROME_FIELDS],
-    [PURCHASE_ORDER_DOC]: [...PO_FIELDS, ...DOC_CHROME_FIELDS],
-    [SALES_ORDER_DOC]: [...SO_FIELDS, ...DOC_CHROME_FIELDS],
+    ...Object.fromEntries(DOC_MODULES.map(m => [m.docType, [...m.fields, ...DOC_CHROME_FIELDS]])),
 };
 
 export function fieldDef(docType: string, key: string): FieldDef | undefined {
@@ -277,9 +273,8 @@ export function resolveField(key: string, ctx: PrintContext): ResolvedField {
             return { text: '', empty: false };
 
         default:
-            if (key.startsWith('sj.')) return resolveSuratJalanField(key, ctx);
-            if (key.startsWith('po.')) return resolvePurchaseOrderField(key, ctx);
-            if (key.startsWith('so.')) return resolveSalesOrderField(key, ctx);
+            const mod = moduleForField(key);
+            if (mod) return mod.resolve(key, ctx);
             // Unknown key: render nothing rather than crash the printout. Happens when
             // a saved layout references a field removed from the manifest.
             return { text: '', empty: true };

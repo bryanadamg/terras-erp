@@ -28,40 +28,7 @@ import FieldPalette from './FieldPalette';
 import { SelectField } from './controls';
 import { API_BASE, STATIC_BASE } from '../shared/apiBase';
 import TemplatePrintPortal from '../shared/printTemplate/TemplatePrintPortal';
-import { buildSuratJalanContext } from '../shared/printTemplate/doctypes/suratJalan';
-import { buildPurchaseOrderContext } from '../shared/printTemplate/doctypes/purchaseOrder';
-import { buildSalesOrderContext } from '../shared/printTemplate/doctypes/salesOrder';
-
-/**
- * Where each record-based document gets its preview records. `list` is the recent
- * set for the picker; `find` builds the URL for a deep-linked record outside it.
- */
-const RECORD_DOCS: Record<string, {
-    noun: string;
-    list: string;
-    find: (id: string, q: string) => string | null;
-    label: (x: any, partners: any[]) => string;
-}> = {
-    surat_jalan: {
-        noun: 'shipments',
-        list: '/shipments?page=1&size=20',
-        find: id => `/shipments/${id}`,
-        label: x => `${x.delivery_note_number || x.code} — ${x.customer_name || 'no customer'}`,
-    },
-    purchase_order: {
-        noun: 'purchase orders',
-        list: '/purchase-orders?page=1&size=20',
-        // No single-PO route; the preview's link carries the PO number to search by.
-        find: (_id, q) => (q ? `/purchase-orders?search=${encodeURIComponent(q)}&page=1&size=5` : null),
-        label: (x, partners) => `${x.po_number} — ${(partners || []).find((p: any) => p.id === x.supplier_id)?.name || 'no supplier'}`,
-    },
-    sales_order: {
-        noun: 'sales orders',
-        list: '/sales-orders?page=1&size=20',
-        find: (_id, q) => (q ? `/sales-orders?search=${encodeURIComponent(q)}&page=1&size=5` : null),
-        label: x => `${x.po_number} — ${x.customer_name || 'no customer'}`,
-    },
-};
+import { DOC_MODULE_BY_TYPE, type SampleEnv } from '../shared/printTemplate/doctypes';
 
 
 const clone = (l: PrintLayout): PrintLayout => JSON.parse(JSON.stringify(l));
@@ -212,7 +179,7 @@ export default function PrintDesignerView() {
     // a deep-linked record that isn't among the recent ones (by id, or by the
     // `?q=` search term where the API has no single-record route).
     const isKartu = docType.startsWith('kartu_kerja_');
-    const recordDef = RECORD_DOCS[docType];
+    const recordDef = DOC_MODULE_BY_TYPE[docType]?.sample;
     const [records, setRecords] = useState<Record<string, any[]>>({});
     const [recordIds, setRecordIds] = useState<Record<string, string>>(
         linkDoc && !linkDoc.startsWith('kartu_kerja_') ? { [linkDoc]: linkSample } : {});
@@ -225,14 +192,18 @@ export default function PrintDesignerView() {
             let list: any[] = [];
             try {
                 const res = await authFetch(`${API_BASE}${recordDef.list}`);
-                if (res.ok) list = (await res.json()).items || [];
-                const findUrl = wanted && !list.some(x => x.id === wanted)
+                if (res.ok) {
+                    const body = await res.json();
+                    list = recordDef.extract ? recordDef.extract(body) : (body.items ?? body ?? []);
+                }
+                const findUrl = wanted && recordDef.find && !list.some(x => x.id === wanted)
                     ? recordDef.find(wanted, docType === linkDoc ? linkQ : '') : null;
                 if (findUrl) {
                     const one = await authFetch(`${API_BASE}${findUrl}`);
                     if (one.ok) {
                         const body = await one.json();
-                        const hit = (body.items ?? [body]).find((x: any) => x.id === wanted);
+                        const found = recordDef.extract ? recordDef.extract(body) : (body.items ?? [body]);
+                        const hit = found.find((x: any) => x.id === wanted);
                         if (hit) list.unshift(hit);
                     }
                 }
@@ -248,24 +219,13 @@ export default function PrintDesignerView() {
         (name: string) => (partners || []).find((pt: any) => pt.name === name)?.address || '',
         [partners]);
 
-    const ctx = useMemo(() => docType === 'surat_jalan' ? buildSuratJalanContext({
-        shipment: activeRecord || {},
-        itemIndex, attributes, customerAddr,
-        companyName: companyProfile?.name,
-        companyLogoUrl: logoUrl,
-        companyProfile,
-        tzFormatCustom: formatCustom,
-    }) : docType === 'purchase_order' ? buildPurchaseOrderContext({
-        po: activeRecord || {},
-        partners, itemIndex, attributes, companyProfile,
-        companyName: companyProfile?.name,
-        companyLogoUrl: logoUrl,
-    }) : docType === 'sales_order' ? buildSalesOrderContext({
-        so: activeRecord || {},
-        partners, itemIndex, attributes, companyProfile,
-        companyName: companyProfile?.name,
-        companyLogoUrl: logoUrl,
-    }) : buildPrintContext({
+    const sampleEnv: SampleEnv = useMemo(() => ({
+        partners: partners || [], itemIndex, attributes, companyProfile,
+        companyName: companyProfile?.name, companyLogoUrl: logoUrl,
+        tzFormatCustom: formatCustom, customerAddr,
+    }), [partners, itemIndex, attributes, companyProfile, logoUrl, formatCustom, customerAddr]);
+
+    const ctx = useMemo(() => recordDef ? recordDef.build(activeRecord || {}, sampleEnv) : buildPrintContext({
         workOrder: active?.wo || {},
         parentMO: active?.mo || {},
         // A placeholder QR keeps the cell's true printed size visible without
@@ -276,7 +236,7 @@ export default function PrintDesignerView() {
         attributes,
         tzFormatCustom: formatCustom,
         dyeing: sampleDyeing,
-    }), [docType, activeRecord, partners, itemIndex, customerAddr, logoUrl, active, companyProfile, attributes, formatCustom, sampleDyeing]);
+    }), [recordDef, activeRecord, sampleEnv, active, companyProfile, attributes, formatCustom, sampleDyeing]);
 
     const sampleLoading = isKartu ? loadingSamples : recordList === null;
     const hasSample = isKartu ? !!active : !!activeRecord;
@@ -612,7 +572,7 @@ export default function PrintDesignerView() {
                             ) : (
                                 <SelectField
                                     value={(activeRecord?.id || '') as any}
-                                    options={recordList.map(x => ({ value: x.id, label: recordDef!.label(x, partners) }))}
+                                    options={recordList.map(x => ({ value: x.id, label: recordDef!.label(x, sampleEnv) }))}
                                     onChange={v => setRecordIds(r => ({ ...r, [docType]: v }))}
                                 />
                             )

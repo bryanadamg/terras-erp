@@ -318,7 +318,7 @@ export default function InspectorPanel({ layout, docType, selection, onChange, o
                 </Row>
                 <CheckField label="Hide when empty (no dash)" checked={!!spec.hideWhenEmpty}
                     onChange={v => apply({ hideWhenEmpty: v || undefined })} />
-                {spec.field === 'wo.qr' && (
+                {kindOf(spec.field) === 'qr' && (
                     <>
                         <Row label="QR size">
                             <NumberField suffix="px" min={40} max={400}

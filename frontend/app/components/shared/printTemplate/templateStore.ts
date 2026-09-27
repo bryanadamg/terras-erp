@@ -7,23 +7,17 @@
 
 import type { PrintLayout, PrintTemplateRecord } from './types';
 import { KARTU_KERJA_DEFAULTS, KARTU_KERJA_DOC_TYPE_LABELS } from './defaults/kartuKerja';
-import { SURAT_JALAN_DEFAULTS, SURAT_JALAN_DOC_TYPE_LABELS } from './defaults/suratJalan';
-import { PURCHASE_ORDER_DEFAULTS, PURCHASE_ORDER_DOC_TYPE_LABELS } from './defaults/purchaseOrder';
-import { SALES_ORDER_DEFAULTS, SALES_ORDER_DOC_TYPE_LABELS } from './defaults/salesOrder';
+import { DOC_MODULES } from './doctypes';
 
 /** Every doc type with a built-in default, i.e. everything the designer can edit. */
 export const DEFAULT_LAYOUTS: Record<string, PrintLayout> = {
     ...KARTU_KERJA_DEFAULTS,
-    ...SURAT_JALAN_DEFAULTS,
-    ...PURCHASE_ORDER_DEFAULTS,
-    ...SALES_ORDER_DEFAULTS,
+    ...Object.fromEntries(DOC_MODULES.map(m => [m.docType, m.defaultLayout])),
 };
 
 export const DOC_TYPE_LABELS: Record<string, string> = {
     ...KARTU_KERJA_DOC_TYPE_LABELS,
-    ...SURAT_JALAN_DOC_TYPE_LABELS,
-    ...PURCHASE_ORDER_DOC_TYPE_LABELS,
-    ...SALES_ORDER_DOC_TYPE_LABELS,
+    ...Object.fromEntries(DOC_MODULES.map(m => [m.docType, m.label])),
 };
 
 export const EDITABLE_DOC_TYPES: string[] = Object.keys(DEFAULT_LAYOUTS);
