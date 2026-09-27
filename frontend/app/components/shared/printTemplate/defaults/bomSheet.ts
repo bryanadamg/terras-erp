@@ -32,7 +32,7 @@ const BANDS: Band[] = [
                 f('bs.company_contact', { color: '#555', hideWhenEmpty: true }),
             ], { stackGap: 0 }),
             stack(8, 5, [
-                f('__text', { text: 'Bill of Materials', fontSize: 15, bold: true, uppercase: true, align: 'right' }),
+                f('__text', { text: 'Bill of Materials', fontSize: 15, bold: true, uppercase: true, letterSpacing: 1, align: 'right' }),
                 f('bs.code', { fontSize: 11, mono: true, color: '#0000cc', align: 'right' }),
                 f('bs.print_date', { prefix: 'Printed: ', color: '#555', align: 'right' }),
                 f('bs.header_note', { color: '#333', align: 'right', hideWhenEmpty: true }),
@@ -72,12 +72,12 @@ const BANDS: Band[] = [
             { field: 'ukuran', label: 'Ukuran', width: '40%' },
             { field: 'mesin', label: 'Keluar Mesin', width: '25%', align: 'right', decimals: 2 },
             { field: 'celup', label: 'Celup / Setting', width: '25%', align: 'right', decimals: 2 },
-            { field: 'unit', label: 'Sat.', width: '10%' },
+            { field: 'unit', label: 'Sat.', width: '10%', color: '#666' },
         ],
     },
     {
         id: 'bs_sizes', type: 'table', source: 'bs_sizes', title: '{auto}', ...SECTION,
-        marginBottom: 8, fontSize: TABLE, ruleColor: RULE, headerBackground: '#e8e8e8',
+        stripe: '#f9f9f9', marginBottom: 8, fontSize: TABLE, ruleColor: RULE, headerBackground: '#e8e8e8',
         columns: [
             { field: 'size', label: 'Size', bold: true },
             { field: 'target', label: 'Target', align: 'right', decimals: 2 },
@@ -87,13 +87,13 @@ const BANDS: Band[] = [
     },
     {
         id: 'bs_components', type: 'table', source: 'bs_lines', title: 'Komponen / Materials', ...SECTION,
-        marginBottom: 16, fontSize: TABLE, ruleColor: RULE, headerBackground: '#e8e8e8',
+        stripe: '#f9f9f9', marginBottom: 16, fontSize: TABLE, ruleColor: RULE, headerBackground: '#e8e8e8',
         columns: [
-            { field: 'no', label: '#', width: '5%', align: 'center' },
-            { field: 'item_code', label: 'Kode', width: '22%' },
+            { field: 'no', label: '#', width: '5%', align: 'center', color: '#666' },
+            { field: 'item_code', label: 'Kode', width: '22%', mono: true, color: '#0000cc' },
             { field: 'item_name', label: 'Nama Item', width: '35%' },
             { field: 'percentage', label: '%', width: '10%', align: 'right' },
-            { field: 'attributes', label: 'Atribut', width: '28%', footer: { field: 'bs.component_count', align: 'right' } },
+            { field: 'attributes', label: 'Atribut', width: '28%', color: '#444', footer: { field: 'bs.component_count', align: 'right' } },
         ],
     },
     {

@@ -29,7 +29,7 @@ const BANDS: Band[] = [
                 f('ms.company_contact', { fontSize: 7, color: '#555', hideWhenEmpty: true }),
             ], { stackGap: 0 }),
             stack(5, 4, [
-                text('SPK PRODUKSI', { fontSize: 16, bold: true, align: 'center' }),
+                text('SPK PRODUKSI', { fontSize: 16, bold: true, letterSpacing: 1, align: 'center' }),
                 f('ms.print_date', { prefix: 'Tanggal: ', color: '#333', align: 'center' }),
                 f('ms.header_meta', { fontSize: 7, color: '#555', align: 'center', hideWhenEmpty: true }),
             ]),
@@ -41,9 +41,9 @@ const BANDS: Band[] = [
         labelWidth: '18%', labelFontSize: BASE, valueFontSize: BASE, ruleColor: RULE, labelBackground: '#f0f0f0',
         rows: [
             { field: 'ms.article', label: 'ARTICLE', span: 3, bold: true, fontSize: 9 },
-            { field: 'ms.code', label: 'No. SPK' },
+            { field: 'ms.code', label: 'No. SPK', mono: true },
             { field: 'ms.qty', label: 'Jml Order', bold: true },
-            { field: 'ms.sales_order', label: 'Sales Order', hideWhenEmpty: true },
+            { field: 'ms.sales_order', label: 'Sales Order', mono: true, hideWhenEmpty: true },
             { field: 'ms.so_customer', label: 'Customer', hideWhenEmpty: true },
             { field: 'ms.customer_no_so', label: 'Customer', span: 3, hideWhenEmpty: true },
             { field: 'ms.target_start', label: 'Target Start' },
@@ -84,7 +84,7 @@ const BANDS: Band[] = [
     {
         id: 'ms_child_mos', type: 'table', source: 'ms_child_mos', title: 'Child Manufacturing Orders', ...SECTION,
         marginBottom: 8, fontSize: BASE, ruleColor: '#ddd', headerBackground: 'none',
-        columns: [{ field: 'summary', label: 'Order' }],
+        columns: [{ field: 'summary', label: 'Order', mutedDetail: true }],
     },
     {
         id: 'ms_photo', type: 'grid', title: 'Sample Produk', ...SECTION, marginBottom: 16,
