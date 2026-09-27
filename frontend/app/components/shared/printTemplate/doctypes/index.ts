@@ -30,6 +30,8 @@ import { LOT_LABEL_DOC, LOTLABEL_FIELDS, resolveLotLabelField, buildLotLabelCont
 import { LOT_LABEL_DEFAULT } from '../defaults/lotLabel';
 import { PACKED_UNIT_LABEL_DOC, CARTON_FIELDS, CARTON_ROW_SOURCES, resolveCartonLabelField, buildCartonLabelContext } from './packedUnitLabel';
 import { PACKED_UNIT_LABEL_DEFAULT } from '../defaults/packedUnitLabel';
+import { PACKING_CARD_DOC, PCARD_FIELDS, PCARD_ROW_SOURCES, resolvePackingCardField, buildPackingCardContext } from './packingCard';
+import { PACKING_CARD_DEFAULT } from '../defaults/packingCard';
 
 /** What the designer has on hand to build a preview context from a sample record. */
 export interface SampleEnv {
@@ -245,6 +247,25 @@ export const DOC_MODULES: DocTypeModule[] = [
             label: x => `${x.batch_number} — ${x._order?.code || ''}`,
             build: (x, env) => buildCartonLabelContext({
                 po: x._order, unit: x, tzFormatCustom: env.tzFormatCustom,
+                companyProfile: env.companyProfile, companyName: env.companyName, companyLogoUrl: env.companyLogoUrl,
+            }),
+        },
+    },
+    {
+        docType: PACKING_CARD_DOC,
+        label: 'Kartu Packing (packing order card)',
+        fieldPrefix: 'pcard.',
+        fields: PCARD_FIELDS,
+        resolve: resolvePackingCardField,
+        rowSources: PCARD_ROW_SOURCES,
+        defaultLayout: PACKING_CARD_DEFAULT,
+        sample: {
+            noun: 'packing orders',
+            list: '/packing?page=1&size=20',
+            find: id => `/packing/${id}`,
+            label: x => `${x.code} — ${x.item_name || x.item_code || ''}`,
+            build: (x, env) => buildPackingCardContext({
+                po: x, attributes: env.attributes, tzFormatCustom: env.tzFormatCustom,
                 companyProfile: env.companyProfile, companyName: env.companyName, companyLogoUrl: env.companyLogoUrl,
             }),
         },
