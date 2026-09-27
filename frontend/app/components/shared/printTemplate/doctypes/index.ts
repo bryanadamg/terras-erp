@@ -34,6 +34,8 @@ import { PACKING_CARD_DOC, PCARD_FIELDS, PCARD_ROW_SOURCES, resolvePackingCardFi
 import { PACKING_CARD_DEFAULT } from '../defaults/packingCard';
 import { PICK_LIST_DOC, PLIST_FIELDS, PLIST_ROW_SOURCES, resolvePickListField, buildPickListContext } from './pickList';
 import { PICK_LIST_DEFAULT } from '../defaults/pickList';
+import { SAMPLE_REQUEST_DOC, SR_FIELDS, SR_ROW_SOURCES, resolveSampleRequestField, buildSampleRequestContext } from './sampleRequest';
+import { SAMPLE_REQUEST_DEFAULT } from '../defaults/sampleRequest';
 
 /** What the designer has on hand to build a preview context from a sample record. */
 export interface SampleEnv {
@@ -287,6 +289,27 @@ export const DOC_MODULES: DocTypeModule[] = [
             label: x => `${x.code} — ${x.customer_name || 'no customer'}`,
             build: (x, env) => buildPickListContext({
                 pl: x, tzFormatCustom: env.tzFormatCustom,
+                companyProfile: env.companyProfile, companyName: env.companyName, companyLogoUrl: env.companyLogoUrl,
+            }),
+        },
+    },
+    {
+        docType: SAMPLE_REQUEST_DOC,
+        label: 'SPK Sample',
+        fieldPrefix: 'sr.',
+        fields: SR_FIELDS,
+        resolve: resolveSampleRequestField,
+        rowSources: SR_ROW_SOURCES,
+        defaultLayout: SAMPLE_REQUEST_DEFAULT,
+        sample: {
+            noun: 'sample requests',
+            list: '/samples?page=1&size=20',
+            // No single-sample route; the preview's link carries the SPK code to search by.
+            find: (_id, q) => (q ? `/samples?search=${encodeURIComponent(q)}&page=1&size=5` : null),
+            label: (x, env) => `${x.code} — ${(env.partners || []).find((p: any) => p.id === x.customer_id)?.name || x.project || 'no customer'}`,
+            build: (x, env) => buildSampleRequestContext({
+                sample: x, customerName: (env.partners || []).find((p: any) => p.id === x.customer_id)?.name || '',
+                tzFormatCustom: env.tzFormatCustom,
                 companyProfile: env.companyProfile, companyName: env.companyName, companyLogoUrl: env.companyLogoUrl,
             }),
         },
