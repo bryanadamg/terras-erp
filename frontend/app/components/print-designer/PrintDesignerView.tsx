@@ -30,6 +30,7 @@ import { API_BASE, STATIC_BASE } from '../shared/apiBase';
 import TemplatePrintPortal from '../shared/printTemplate/TemplatePrintPortal';
 import { buildSuratJalanContext } from '../shared/printTemplate/doctypes/suratJalan';
 import { buildPurchaseOrderContext } from '../shared/printTemplate/doctypes/purchaseOrder';
+import { buildSalesOrderContext } from '../shared/printTemplate/doctypes/salesOrder';
 
 /**
  * Where each record-based document gets its preview records. `list` is the recent
@@ -53,6 +54,12 @@ const RECORD_DOCS: Record<string, {
         // No single-PO route; the preview's link carries the PO number to search by.
         find: (_id, q) => (q ? `/purchase-orders?search=${encodeURIComponent(q)}&page=1&size=5` : null),
         label: (x, partners) => `${x.po_number} — ${(partners || []).find((p: any) => p.id === x.supplier_id)?.name || 'no supplier'}`,
+    },
+    sales_order: {
+        noun: 'sales orders',
+        list: '/sales-orders?page=1&size=20',
+        find: (_id, q) => (q ? `/sales-orders?search=${encodeURIComponent(q)}&page=1&size=5` : null),
+        label: x => `${x.po_number} — ${x.customer_name || 'no customer'}`,
     },
 };
 
@@ -250,6 +257,11 @@ export default function PrintDesignerView() {
         tzFormatCustom: formatCustom,
     }) : docType === 'purchase_order' ? buildPurchaseOrderContext({
         po: activeRecord || {},
+        partners, itemIndex, attributes, companyProfile,
+        companyName: companyProfile?.name,
+        companyLogoUrl: logoUrl,
+    }) : docType === 'sales_order' ? buildSalesOrderContext({
+        so: activeRecord || {},
         partners, itemIndex, attributes, companyProfile,
         companyName: companyProfile?.name,
         companyLogoUrl: logoUrl,

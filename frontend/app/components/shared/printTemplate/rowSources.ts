@@ -12,6 +12,7 @@ import type { PrintContext } from './renderContext';
 import type { TableBand } from './types';
 import { SJ_ROW_SOURCES } from './doctypes/suratJalan';
 import { PO_ROW_SOURCES } from './doctypes/purchaseOrder';
+import { SO_ROW_SOURCES } from './doctypes/salesOrder';
 
 const KARTU_KERJA_DOCS = ['kartu_kerja_weaving', 'kartu_kerja_beaming', 'kartu_kerja_dyeing', 'kartu_kerja_general'];
 
@@ -200,7 +201,7 @@ const DYE_DOSES: RowSourceDef = {
 export const ROW_SOURCES: Record<string, RowSourceDef> = {
     [BOM_STEP_LINES.id]: BOM_STEP_LINES,
     [DYE_DOSES.id]: DYE_DOSES,
-    ...Object.fromEntries([...SJ_ROW_SOURCES, ...PO_ROW_SOURCES].map(s => [s.id, s])),
+    ...Object.fromEntries([...SJ_ROW_SOURCES, ...PO_ROW_SOURCES, ...SO_ROW_SOURCES].map(s => [s.id, s])),
 };
 
 export function rowSource(id: string): RowSourceDef | undefined {

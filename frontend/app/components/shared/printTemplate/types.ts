@@ -195,6 +195,8 @@ export interface KeyValueBand extends BandBase {
      * `plain`: unruled `Label : value` lines, the letterhead look of a delivery note.
      */
     variant?: 'boxed' | 'plain';
+    /** `plain` only: what sits between label and value. Default ': '; '' for a numbered list. */
+    separator?: string;
     /** `boxed` only: cell rule colour (default #bbb) and label shading ('none' for white). */
     ruleColor?: string;
     labelBackground?: string;
@@ -253,7 +255,10 @@ export interface SignatureBand extends BandBase {
     fontSize?: number;
     /** `block` only: text alignment inside each column. */
     align?: Align;
-    boxes: { caption: string; width?: number; height?: number; fields?: string[] }[];
+    /** `block` only: print the first line under the signing space in bold (default true). */
+    boldFirstLine?: boolean;
+    /** `align` (block only) overrides the band's alignment for one box — a right-hand "Approved by". */
+    boxes: { caption: string; width?: number; height?: number; fields?: string[]; align?: Align }[];
 }
 
 export interface SpacerBand extends BandBase {

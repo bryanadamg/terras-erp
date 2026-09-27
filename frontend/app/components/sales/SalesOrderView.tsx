@@ -1329,7 +1329,6 @@ In stock ${fmtQty(f.baseAvailable)}${bu} · Shipped ${fmtQty(f.baseShipped)}${bu
                so={printingSO}
                onClose={() => setPrintingSO(null)}
                companyProfile={companyProfile}
-               items={items}
                attributes={attributes}
                partners={partners}
            />

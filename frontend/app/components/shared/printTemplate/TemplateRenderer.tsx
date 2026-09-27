@@ -37,7 +37,9 @@ const UNIT: React.CSSProperties = { fontSize: 9, color: '#666', fontWeight: 'nor
 const TH: React.CSSProperties = { border: '1px solid #bbb', padding: '2px 5px' };
 // `wordBreak` matters under the fixed table layout a set column width switches on:
 // without it a long unbroken item code overflows its cell instead of widening it.
-const TD: React.CSSProperties = { border: '1px solid #bbb', padding: '2px 5px', wordBreak: 'break-word' };
+// Top-aligned: a multi-line cell (item name + variant lines) must not float its
+// one-line neighbours to the middle of the row.
+const TD: React.CSSProperties = { border: '1px solid #bbb', padding: '2px 5px', wordBreak: 'break-word', verticalAlign: 'top' };
 
 const EM_DASH = '—';
 
@@ -350,7 +352,7 @@ function KeyValueBandView({ band, ctx, docType, selectedId, onSelect }: {
                         ...(selected ? { outline: '2px solid #0058e6' } : {}),
                     }}
                 >
-                    {plain && ': '}
+                    {plain && (band.separator ?? ': ')}
                     {row.field === '__blank' ? '\u00a0'
                         : row.field === '__text' ? (row.text ?? '')
                             : (resolved.empty && row.emptyText !== undefined ? row.emptyText : resolved.text)}
@@ -570,12 +572,12 @@ function SignatureBandView({ band, ctx, docType }: { band: SignatureBand; ctx: P
             <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: band.fontSize ?? 9, textAlign: band.align }}>
                 {band.boxes.map((box, i) => (
                     // One point short of an equal share, so neighbouring captions never touch.
-                    <div key={i} data-tpl-sigbox={`${band.id}:${i}`} style={{ width: `${Math.floor(100 / Math.max(1, band.boxes.length)) - 1}%` }}>
+                    <div key={i} data-tpl-sigbox={`${band.id}:${i}`} style={{ width: `${Math.floor(100 / Math.max(1, band.boxes.length)) - 1}%`, textAlign: box.align }}>
                         <div>{box.caption}</div>
                         <div style={{ height: box.height ?? 40 }} />
                         {(box.fields || []).map((f, fi) => {
                             const r = resolveField(f, ctx);
-                            return r.empty ? null : <div key={fi} style={{ fontWeight: fi === 0 ? 'bold' : 'normal' }}>{r.text}</div>;
+                            return r.empty ? null : <div key={fi} style={{ fontWeight: fi === 0 && band.boldFirstLine !== false ? 'bold' : 'normal' }}>{r.text}</div>;
                         })}
                     </div>
                 ))}

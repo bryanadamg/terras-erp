@@ -600,6 +600,12 @@ export default function InspectorPanel({ layout, docType, selection, onChange, o
                                 onChange={v => patchBand({ blockAlign: v })} />
                         </Row>
                     )}
+                    {kv.variant === 'plain' && (
+                        <Row label="Separator" title='Between label and value. Default ": " — empty for a numbered list.'>
+                            <TextField value={kv.separator} placeholder=": "
+                                onChange={v => patchBand({ separator: v })} />
+                        </Row>
+                    )}
                     <Row label="Label width">
                         <TextField value={kv.labelWidth} placeholder="24%"
                             onChange={v => patchBand({ labelWidth: v || undefined })} />
@@ -984,6 +990,10 @@ export default function InspectorPanel({ layout, docType, selection, onChange, o
                         </Row>
                     )}
                     {block && (
+                        <CheckField label="First line under the space in bold" checked={sg.boldFirstLine !== false}
+                            onChange={v => patchBand({ boldFirstLine: v ? undefined : false })} />
+                    )}
+                    {block && (
                         <Row label="Font size">
                             <NumberField suffix="px" min={4} max={24}
                                 value={sg.fontSize} onChange={v => patchBand({ fontSize: v })} />
@@ -1029,6 +1039,12 @@ export default function InspectorPanel({ layout, docType, selection, onChange, o
                                 <NumberField suffix="px" min={10} max={120}
                                     value={b2.height} onChange={v => editBand(b => { b.boxes[i].height = v; })} />
                             </Row>
+                            {block && (
+                                <Row label="Align">
+                                    <SelectField value={b2.align ?? sg.align ?? 'left'} options={ALIGN_OPTS}
+                                        onChange={v => editBand(b => { b.boxes[i].align = v; })} />
+                                </Row>
+                            )}
                             {block && (b2.fields || []).map((f, fi) => (
                                 <div key={fi} style={{ display: 'flex', gap: 4, alignItems: 'center', marginBottom: 3 }}>
                                     <SelectField value={f as any} options={fieldOpts}
