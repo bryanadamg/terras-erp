@@ -29,7 +29,7 @@ const BANDS: Band[] = [
                 f('dr.company_contact', { fontSize: 7, color: '#555', hideWhenEmpty: true }),
             ]),
             stack(5, 4, [
-                text('KARTU CELUP', { fontSize: 14, bold: true, align: 'center' }),
+                text('KARTU CELUP', { fontSize: 14, bold: true, align: 'center', letterSpacing: 2 }),
                 f('dr.date', { fontSize: 7, color: '#555', align: 'center', prefix: 'Tanggal: ' }),
             ], { stackGap: 2 }),
             stack(9, 4, [
@@ -58,12 +58,12 @@ const BANDS: Band[] = [
         id: 'dr_lines', type: 'table', source: 'dr_lines', fontSize: 8, marginBottom: 12,
         hideWhenEmpty: false, ruleColor: RULE,
         columns: [
-            { field: 'no', label: 'No', width: '20px', align: 'center' },
-            { field: 'label', label: 'Label', width: '60px' },
+            { field: 'no', label: 'No', width: '20px', align: 'center', color: '#555' },
+            { field: 'label', label: 'Label', width: '60px', color: '#555' },
             { field: 'bahan', label: 'Bahan' },
             { field: 'rate', label: 'Rate', width: '60px', align: 'right', emptyText: '' },
-            { field: 'satuan', label: 'Satuan', width: '44px', align: 'center', emptyText: '' },
-            { field: 'eq', label: '=', width: '14px', align: 'center' },
+            { field: 'satuan', label: 'Satuan', width: '44px', align: 'center', emptyText: '', color: '#555' },
+            { field: 'eq', label: '=', width: '14px', align: 'center', color: '#888' },
             { field: 'total', label: 'Total', width: '70px', align: 'right', emptyText: '' },
         ],
     },
@@ -75,7 +75,7 @@ const BANDS: Band[] = [
         id: 'dr_wash_baths', type: 'grid', gap: 2, marginBottom: 10,
         borderTop: `1px solid ${RULE}`, padding: '4px 0 0',
         items: [
-            { ...text('BAK CUCI', { bold: true }), col: 1, span: 12, row: 1 },
+            { ...text('BAK CUCI', { bold: true, letterSpacing: 0.5 }), col: 1, span: 12, row: 1 },
             { ...f('dr.wash_baths_left', { emptyText: '' }), col: 1, span: 6, row: 2 },
             { ...f('dr.wash_baths_right', { emptyText: '' }), col: 7, span: 6, row: 2 },
         ],
@@ -84,7 +84,7 @@ const BANDS: Band[] = [
         id: 'dr_finishing', type: 'grid', gap: 2, marginBottom: 10,
         borderTop: `1px solid ${RULE}`, padding: '4px 0 0',
         items: [
-            { ...text('FINISHING', { bold: true }), col: 1, span: 12, row: 1 },
+            { ...text('FINISHING', { bold: true, letterSpacing: 0.5 }), col: 1, span: 12, row: 1 },
             { ...f('dr.finishing_steps', { emptyText: '' }), col: 1, span: 12, row: 2 },
         ],
     },
