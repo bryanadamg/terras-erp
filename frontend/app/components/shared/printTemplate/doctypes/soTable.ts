@@ -16,7 +16,6 @@ export const ST_FIELDS: FieldDef[] = [
     { key: 'st.date_header', label: 'Print date (17 SEPTEMBER 2026)', kind: 'text', group: 'Report' },
     { key: 'st.subtitle', label: '"Sales Order List — N line(s)"', kind: 'text', group: 'Report' },
     { key: 'st.printed', label: 'Printed (date + time)', kind: 'text', group: 'Report' },
-    { key: 'st.empty_note', label: '"No sales orders" note (only when empty)', kind: 'text', group: 'Report' },
     { key: 'st.row_count', label: 'Total rows', kind: 'text', group: 'Totals' },
     { key: 'st.order_count', label: 'Total orders', kind: 'text', group: 'Totals' },
 ];
@@ -33,7 +32,6 @@ export function resolveSoTableField(key: string, ctx: PrintContext): ResolvedFie
         case 'st.date_header': return txt(d.dateHeader);
         case 'st.subtitle': return txt(`Sales Order List — ${n} line(s)`);
         case 'st.printed': return txt(d.printedAt);
-        case 'st.empty_note': return txt(n === 0 ? 'No sales orders to display.' : '');
         case 'st.row_count': return txt(String(n));
         case 'st.order_count': return txt(String(d.orderCount ?? 0));
         default: return { text: '', empty: true };

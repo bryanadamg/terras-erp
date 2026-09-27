@@ -35,11 +35,12 @@ const BANDS: Band[] = [
     },
     {
         id: 'sl_table', type: 'table', source: 'sl_rows', fontSize: 8, marginBottom: 6,
-        hideWhenEmpty: false, ruleColor: '#777', headerBackground: '#e8e8e8',
+        hideWhenEmpty: false, ruleColor: '#777', headerBackground: '#e8e8e8', stripe: '#f9f9f9',
+        emptyMessage: 'No movements match these filters.',
         columns: [
             { field: 'no', label: 'No', width: '3%', align: 'center' },
             { field: 'date', label: 'Date', width: '9%', headerAlign: 'center' },
-            { field: 'item_block', label: 'Item', width: '16%', headerAlign: 'center' },
+            { field: 'item_block', label: 'Item', width: '16%', headerAlign: 'center', mutedDetail: true },
             { field: 'attributes', label: 'Attributes', width: '10%', headerAlign: 'center', emptyText: '' },
             { field: 'location', label: 'Location', width: '13%', headerAlign: 'center', emptyText: '' },
             { field: 'lot', label: 'Lot', width: '9%', headerAlign: 'center' },
@@ -50,16 +51,12 @@ const BANDS: Band[] = [
         ],
     },
     {
-        id: 'sl_empty', type: 'grid', marginBottom: 6,
-        items: [cell(1, 12, f('sl.empty_note', { color: '#888', align: 'center', hideWhenEmpty: true }))],
-    },
-    {
         id: 'sl_totals', type: 'grid', gap: 8, marginBottom: 4,
         items: [
-            cell(1, 3, f('sl.count', { prefix: 'Movements: ', bold: true })),
-            cell(4, 3, f('sl.total_in', { prefix: 'In: ', bold: true, color: '#1a5e1a', align: 'center' })),
-            cell(7, 3, f('sl.total_out', { prefix: 'Out: ', bold: true, color: '#c00000', align: 'center' })),
-            cell(10, 3, f('sl.net', { prefix: 'Net: ', bold: true, align: 'right' })),
+            cell(1, 3, f('sl.count', { prefix: 'Movements: ', prefixBold: true, bold: true })),
+            cell(4, 3, f('sl.total_in', { prefix: 'In: ', prefixBold: true, bold: true, color: '#1a5e1a', align: 'center' })),
+            cell(7, 3, f('sl.total_out', { prefix: 'Out: ', prefixBold: true, bold: true, color: '#c00000', align: 'center' })),
+            cell(10, 3, f('sl.net', { prefix: 'Net: ', prefixBold: true, bold: true, align: 'right' })),
         ],
     },
     {

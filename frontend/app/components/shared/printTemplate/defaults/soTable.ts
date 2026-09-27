@@ -31,7 +31,8 @@ const BANDS: Band[] = [
     },
     {
         id: 'st_table', type: 'table', source: 'st_rows', fontSize: BASE, marginBottom: 8,
-        hideWhenEmpty: false, ruleColor: '#777', headerBackground: '#e8e8e8',
+        hideWhenEmpty: false, ruleColor: '#777', headerBackground: '#e8e8e8', stripe: '#f9f9f9',
+        emptyMessage: 'No sales orders to display.',
         columns: [
             { field: 'no', label: 'No', width: '2%', align: 'center' },
             { field: 'date', label: 'Date', width: '7%', align: 'center', emptyText: '' },
@@ -48,10 +49,6 @@ const BANDS: Band[] = [
             { field: 'qty_kg', label: 'Qty (KG)', width: '5%', align: 'right', headerAlign: 'center', emptyText: '' },
             { field: 'qty3', label: 'Qty 3', width: '7%', align: 'right', headerAlign: 'center', emptyText: '' },
         ],
-    },
-    {
-        id: 'st_empty', type: 'grid', marginBottom: 8,
-        items: [cell(1, 12, f('st.empty_note', { color: '#888', align: 'center', hideWhenEmpty: true }))],
     },
     {
         id: 'st_footer', type: 'grid', marginBottom: 0,

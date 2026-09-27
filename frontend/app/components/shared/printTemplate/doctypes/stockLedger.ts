@@ -18,7 +18,6 @@ export const SL_FIELDS: FieldDef[] = [
     { key: 'sl.period', label: 'Period', kind: 'text', group: 'Report' },
     { key: 'sl.filters', label: 'Filter summary', kind: 'text', group: 'Report' },
     { key: 'sl.printed', label: 'Printed (date + time)', kind: 'text', group: 'Report' },
-    { key: 'sl.empty_note', label: '"No movements" note (only when empty)', kind: 'text', group: 'Report' },
     { key: 'sl.truncated_note', label: '"Showing first N" warning (only when cut)', kind: 'text', group: 'Report' },
     { key: 'sl.count', label: 'Movements (count)', kind: 'text', group: 'Totals' },
     { key: 'sl.printed_count', label: 'Movements printed', kind: 'text', group: 'Totals' },
@@ -43,7 +42,6 @@ export function resolveStockLedgerField(key: string, ctx: PrintContext): Resolve
         case 'sl.period': return txt(d.periodLabel);
         case 'sl.filters': return txt(d.filtersSummary);
         case 'sl.printed': return txt(d.printedAt);
-        case 'sl.empty_note': return txt(printed === 0 ? 'No movements match these filters.' : '');
         case 'sl.truncated_note': return txt(hidden > 0
             ? `Showing first ${printed.toLocaleString()} of ${t.total.toLocaleString()} movements — narrow the filters to print the rest (${hidden.toLocaleString()} not shown).`
             : '');
@@ -82,6 +80,8 @@ const SL_ROWS: RowSourceDef = {
     resolve: (ctx) => ({
         rows: (ctx.doc?.rows || []).map((e: any, i: number) => ({
             _key: e.id ?? i,
+            // In green, out red — the colour the old report drew the movement in.
+            _style: { movement: { color: e.qty_change >= 0 ? '#1a5e1a' : '#c00000' } },
             no: String(i + 1),
             date: e.date,
             // Composite: bold name over the code, as the old report drew it.
