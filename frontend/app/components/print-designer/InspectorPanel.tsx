@@ -288,6 +288,16 @@ export default function InspectorPanel({ layout, docType, selection, onChange, o
                 )}
                 <CheckField label="CAPITALS" checked={!!spec.uppercase}
                     onChange={v => apply({ uppercase: v || undefined })} />
+                <CheckField label="Serif face" checked={!!spec.serif}
+                    onChange={v => apply({ serif: v || undefined })} />
+                {spec.prefix && (
+                    <CheckField label="Prefix bold" checked={!!spec.prefixBold}
+                        onChange={v => apply({ prefixBold: v || undefined })} />
+                )}
+                <Row label="Letter spacing">
+                    <NumberField suffix="px" min={0} max={20}
+                        value={spec.letterSpacing} onChange={v => apply({ letterSpacing: v })} />
+                </Row>
                 <Row label="Font size">
                     <NumberField suffix="px" min={4} max={72}
                         value={spec.fontSize} onChange={v => apply({ fontSize: v })} />
@@ -324,6 +334,8 @@ export default function InspectorPanel({ layout, docType, selection, onChange, o
                             <NumberField suffix="px" min={40} max={400}
                                 value={spec.qrSize} onChange={v => apply({ qrSize: v })} />
                         </Row>
+                        <CheckField label="Box around the QR" checked={spec.qrFrame !== false}
+                            onChange={v => apply({ qrFrame: v ? undefined : false })} />
                         <Row label="QR caption">
                             <TextField value={spec.qrCaption} placeholder="Scan in ERP Scanner"
                                 onChange={v => apply({ qrCaption: v })} />
@@ -463,6 +475,17 @@ export default function InspectorPanel({ layout, docType, selection, onChange, o
                                 <NumberField min={1} max={20}
                                     value={item.row} onChange={v => patchItem({ row: v ?? 1 })} />
                             </Row>
+                            <Row label="Vertical" title="This cell only; the section sets the default">
+                                <SelectField value={item.valign ?? ''}
+                                    options={[
+                                        { value: '', label: '(section default)' },
+                                        { value: 'start', label: 'Top' },
+                                        { value: 'center', label: 'Middle' },
+                                        { value: 'end', label: 'Bottom' },
+                                        { value: 'stretch', label: 'Stretch' },
+                                    ]}
+                                    onChange={v => patchItem({ valign: v || undefined })} />
+                            </Row>
                         </InspectorGroup>
 
                         {item.stack ? (
@@ -601,6 +624,10 @@ export default function InspectorPanel({ layout, docType, selection, onChange, o
                         </Row>
                     )}
                     {kv.variant === 'plain' && (
+                        <CheckField label="Bold labels" checked={!!kv.labelBold}
+                            onChange={v => patchBand({ labelBold: v || undefined })} />
+                    )}
+                    {kv.variant === 'plain' && (
                         <Row label="Separator" title='Between label and value. Default ": " — empty for a numbered list.'>
                             <TextField value={kv.separator} placeholder=": "
                                 onChange={v => patchBand({ separator: v })} />
@@ -660,6 +687,8 @@ export default function InspectorPanel({ layout, docType, selection, onChange, o
                         </Row>
                         <CheckField label="Bold value" checked={!!row.bold}
                             onChange={v => patchRow({ bold: v || undefined })} />
+                        <CheckField label="Monospace value" checked={!!row.mono}
+                            onChange={v => patchRow({ mono: v || undefined })} />
                         <CheckField label="Hide row when empty" checked={!!row.hideWhenEmpty}
                             onChange={v => patchRow({ hideWhenEmpty: v || undefined })} />
                         <CheckField label="Underline for hand fill-in" checked={!!row.fill}
@@ -785,6 +814,18 @@ export default function InspectorPanel({ layout, docType, selection, onChange, o
                         <NumberField min={0} max={40}
                             value={tb.minRows} onChange={v => patchBand({ minRows: v || undefined })} />
                     </Row>
+                    <Row label="Stripe" title="Shade every second row this colour, e.g. #f9f9f9">
+                        <TextField value={tb.stripe} placeholder="(none)" mono
+                            onChange={v => patchBand({ stripe: v || undefined })} />
+                    </Row>
+                    <Row label="When empty" title="A merged row printed when there are no rows">
+                        <TextField value={tb.emptyMessage} placeholder="(nothing)"
+                            onChange={v => patchBand({ emptyMessage: v || undefined })} />
+                    </Row>
+                    {tb.columns.some(c => c.footer) && (
+                        <CheckField label="Drop the footer row when it is blank" checked={!!tb.hideBlankFooter}
+                            onChange={v => patchBand({ hideBlankFooter: v || undefined })} />
+                    )}
                     {!!tb.minRows && (
                         <Row label="Blank row height">
                             <NumberField suffix="px" min={8} max={80}
@@ -829,6 +870,14 @@ export default function InspectorPanel({ layout, docType, selection, onChange, o
                             onChange={v => patchCol({ bold: v || undefined })} />
                         <CheckField label="Dotted write-on line" checked={!!col.dotted}
                             onChange={v => patchCol({ dotted: v || undefined })} />
+                        <CheckField label="Monospace" checked={!!col.mono}
+                            onChange={v => patchCol({ mono: v || undefined })} />
+                        <CheckField label="Detail lines grey and smaller" checked={!!col.mutedDetail}
+                            onChange={v => patchCol({ mutedDetail: v || undefined })} />
+                        <Row label="Colour">
+                            <TextField value={col.color} placeholder="#000" mono
+                                onChange={v => patchCol({ color: v || undefined })} />
+                        </Row>
                     </InspectorGroup>
                 )}
 

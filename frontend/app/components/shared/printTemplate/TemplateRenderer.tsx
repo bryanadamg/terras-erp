@@ -3,12 +3,12 @@ import React from 'react';
 
 import type {
     PrintLayout, Band, GridBand, GridItem, FieldSpec, KeyValueBand, KeyValueRow,
-    TableBand, TableColumn, TallyBand, SignatureBand, SpacerBand, Align,
+    TableBand, TableColumn, TallyBand, SignatureBand, SpacerBand, Align, CellStyle,
 } from './types';
 import type { PrintContext } from './renderContext';
 import { resolveField, fieldDef } from './fieldRegistry';
 import { rowSource } from './rowSources';
-import { CODE_FONT } from '../xpTheme';
+import { CODE_FONT, PRINT_SERIF_FONT } from '../xpTheme';
 
 /**
  * Renders a print layout to JSX.
@@ -85,8 +85,9 @@ function FieldValue({ item, ctx, docType }: {
 
     if (def?.kind === 'qr') {
         const size = item.qrSize ?? 140;
+        const framed = item.qrFrame !== false;
         return (
-            <div style={{ border: '2px solid #000', padding: 4, textAlign: 'center', display: 'inline-block' }}>
+            <div style={{ ...(framed ? { border: '2px solid #000', padding: 4 } : {}), textAlign: 'center', display: 'inline-block' }}>
                 {resolved.qrDataUrl ? (
                     <img
                         src={resolved.qrDataUrl}
@@ -147,7 +148,8 @@ function FieldValue({ item, ctx, docType }: {
     const style: React.CSSProperties = {
         fontSize: item.fontSize ?? 11,
         fontWeight: item.bold ? 'bold' : 'normal',
-        fontFamily: (item.mono ?? def?.mono) ? CODE_FONT : undefined,
+        fontFamily: (item.mono ?? def?.mono) ? CODE_FONT : item.serif ? PRINT_SERIF_FONT : undefined,
+        letterSpacing: item.letterSpacing != null ? `${item.letterSpacing}px` : undefined,
         textAlign: item.align,
         color: item.color,
         lineHeight: (item.fontSize ?? 11) >= 17 ? 1.05 : undefined,
@@ -166,7 +168,7 @@ function FieldValue({ item, ctx, docType }: {
 
     return (
         <div style={style}>
-            {item.prefix && <span style={{ fontWeight: 'normal' }}>{item.prefix}</span>}
+            {item.prefix && <span style={{ fontWeight: item.prefixBold ? 'bold' : 'normal' }}>{item.prefix}</span>}
             {text}
             {showUnit && <span style={UNIT}>{` ${unit}`}</span>}
         </div>
@@ -225,6 +227,7 @@ function GridBandView({ band, ctx, docType, selectedId, onSelect }: {
                             gridColumn: `${item.col} / span ${item.span}`,
                             gridRow: `${item.row} / span ${item.rowSpan ?? 1}`,
                             minWidth: 0,
+                            ...(item.valign ? { alignSelf: item.valign } : {}),
                             ...(band.cellBox ? { border: band.cellBox, padding: '3px 8px' } : {}),
                             ...(item.align === 'right' ? { textAlign: 'right' as const } : {}),
                             ...(selectedId === itemId ? { outline: '2px solid #0058e6', outlineOffset: 1 } : {}),
@@ -304,7 +307,7 @@ function KeyValueBandView({ band, ctx, docType, selectedId, onSelect }: {
     const plain = band.variant === 'plain';
     const rule = band.ruleColor ? `1px solid ${band.ruleColor}` : undefined;
     const lblStyle: React.CSSProperties = plain
-        ? { padding: '0 8px 0 0', whiteSpace: 'nowrap', verticalAlign: 'top', fontSize: band.labelFontSize ?? 9 }
+        ? { padding: '0 8px 0 0', whiteSpace: 'nowrap', verticalAlign: 'top', fontSize: band.labelFontSize ?? 9, fontWeight: band.labelBold ? 'bold' : undefined }
         : {
             ...LBL_CELL, fontSize: band.labelFontSize ?? 9,
             ...(rule ? { border: rule, color: '#000' } : {}),
@@ -346,6 +349,7 @@ function KeyValueBandView({ band, ctx, docType, selectedId, onSelect }: {
                         ...valStyle,
                         fontSize: row.fontSize ?? valStyle.fontSize,
                         fontWeight: row.bold ? 'bold' : 'normal',
+                        fontFamily: row.mono ? CODE_FONT : undefined,
                         textAlign: row.align,
                         whiteSpace: 'pre-line',
                         ...(row.fill ? { borderBottom: '1px solid #000' } : {}),
@@ -389,13 +393,24 @@ function TableBandView({ band, ctx, rows, onSelect }: {
     const th: React.CSSProperties = { ...TH, border: rule };
     const td: React.CSSProperties = { ...TD, border: rule };
     const headerBg = band.headerBackground === 'none' ? undefined : (band.headerBackground ?? '#f0f0f0');
-    const cellStyle = (col: TableColumn): React.CSSProperties => ({
+    const cellStyle = (col: TableColumn, own?: CellStyle): React.CSSProperties => ({
         ...(col.dotted ? { ...TD, border: 'none', borderBottom: '1px dotted #777' } : td),
         textAlign: col.align ?? 'left',
-        fontWeight: col.bold ? 'bold' : 'normal',
+        fontWeight: (own?.bold ?? col.bold) ? 'bold' : 'normal',
+        fontFamily: col.mono ? CODE_FONT : undefined,
+        color: own?.color ?? col.color,
+        ...(own?.background ? { background: own.background } : {}),
     });
     const padRows = Math.max(0, (band.minRows ?? 0) - rows.length);
-    const hasFooter = band.columns.some(c => c.footer);
+    const footerCells = band.columns.map(col => {
+        const f = col.footer;
+        if (!f) return null;
+        const value = f.field ? resolveField(f.field, ctx) : null;
+        return `${f.text ?? ''}${value && !value.empty ? value.text : ''}`;
+    });
+    const hasFooter = band.columns.some(c => c.footer)
+        && !(band.hideBlankFooter && footerCells.every(t => !t || !t.trim()));
+    let dataIndex = 0;
 
     return (
         <table style={{
@@ -422,11 +437,24 @@ function TableBandView({ band, ctx, rows, onSelect }: {
                 </tr>
             </thead>
             <tbody>
-                {rows.map((row, ri) => (
-                    <tr key={row._key ?? ri}>
+                {rows.length === 0 && band.emptyMessage && (
+                    <tr>
+                        <td colSpan={band.columns.length} style={{ ...td, textAlign: 'center', fontStyle: 'italic', color: '#666' }}>
+                            {band.emptyMessage}
+                        </td>
+                    </tr>
+                )}
+                {rows.map((row, ri) => row._group != null ? (
+                    <tr key={row._key ?? `g-${ri}`}>
+                        <td colSpan={band.columns.length} style={{ ...td, fontWeight: 'bold', background: '#f4f4f4', ...(row._groupStyle || {}) }}>
+                            {row._group}
+                        </td>
+                    </tr>
+                ) : (
+                    <tr key={row._key ?? ri} style={band.stripe && (dataIndex++ % 2 === 1) ? { background: band.stripe } : undefined}>
                         {band.columns.map(col => {
                             const raw = row[col.field];
-                            const style = cellStyle(col);
+                            const style = cellStyle(col, row._style?.[col.field]);
                             // Composite item cell: mono code then name, as the old card drew it.
                             if (col.field === 'item' && raw && typeof raw === 'object') {
                                 return (
@@ -445,7 +473,9 @@ function TableBandView({ band, ctx, rows, onSelect }: {
                                 return (
                                     <td key={col.field} style={style}>
                                         <div style={{ fontWeight: 'bold' }}>{raw.title}</div>
-                                        {(raw.lines || []).map((ln: string, li: number) => <div key={li} style={{ marginTop: 2 }}>{ln}</div>)}
+                                        {(raw.lines || []).map((ln: string, li: number) => (
+                                            <div key={li} style={{ marginTop: 2, ...(col.mutedDetail ? { color: '#666', fontSize: fontSize - 1 } : {}) }}>{ln}</div>
+                                        ))}
                                     </td>
                                 );
                             }

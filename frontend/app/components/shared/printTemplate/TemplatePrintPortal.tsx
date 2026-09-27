@@ -26,8 +26,8 @@ export default function TemplatePrintPortal({ layout, ctx, pages, docType, bandO
     layout: PrintLayout;
     /** One document. Ignored when `pages` is given. */
     ctx?: PrintContext;
-    /** One sheet per context. */
-    pages?: PrintContext[];
+    /** One sheet per context; an entry may bring its own layout/docType (mixed runs). */
+    pages?: (PrintContext | { ctx: PrintContext; layout: PrintLayout; docType: string })[];
     docType: string;
     bandOverrides?: BandVisibilityOverrides;
     onPrinted?: () => void;
@@ -36,7 +36,8 @@ export default function TemplatePrintPortal({ layout, ctx, pages, docType, bandO
     const marginMm = layout.paper.marginMm ?? 8;
     const { widthMm, heightMm } = paperDimsMm(layout.paper);
     const printableMm = widthMm - marginMm * 2;
-    const sheets = pages ?? (ctx ? [ctx] : []);
+    const sheets = (pages ?? (ctx ? [ctx] : [])).map(p =>
+        'layout' in p && 'ctx' in p ? p : { ctx: p as PrintContext, layout, docType });
 
     useEffect(() => {
         document.body.classList.add('tpl-print-active');
@@ -65,7 +66,7 @@ export default function TemplatePrintPortal({ layout, ctx, pages, docType, bandO
         // Parked off-screen at the printable width. Without a width, a fixed box
         // with only `left` set grows until its 100%-wide tables reach back on screen.
         <div className="tpl-print-portal" style={{ position: 'fixed', left: '-9999px', top: 0, width: `${printableMm}mm` }}>
-            {sheets.map((c, i) => (
+            {sheets.map((s, i) => (
                 <div key={i} style={{
                     background: '#fff', width: '100%', display: 'flex', flexDirection: 'column',
                     ...(pages ? {
@@ -74,7 +75,7 @@ export default function TemplatePrintPortal({ layout, ctx, pages, docType, bandO
                         breakInside: 'avoid' as const,
                     } : {}),
                 }}>
-                    <TemplateRenderer layout={layout} ctx={c} docType={docType} bandOverrides={bandOverrides} />
+                    <TemplateRenderer layout={s.layout} ctx={s.ctx} docType={s.docType} bandOverrides={bandOverrides} />
                 </div>
             ))}
         </div>,

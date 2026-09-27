@@ -51,6 +51,14 @@ export interface FieldSpec {
     text?: string;
     /** `image` fields only: max rendered height, px. */
     imageHeight?: number;
+    /** Serif face (document titles like "Sales Order Confirmation"). */
+    serif?: boolean;
+    /** Letter spacing, px. */
+    letterSpacing?: number;
+    /** Print the prefix bold too (a bold "No :" label before a plain value). */
+    prefixBold?: boolean;
+    /** `qr` fields only: draw the 2px box around the code. Default true. */
+    qrFrame?: boolean;
 }
 
 /**
@@ -80,6 +88,8 @@ export interface GridItem extends Omit<FieldSpec, 'field'> {
     stack?: FieldSpec[];
     /** Gap between stacked fields, px. */
     stackGap?: number;
+    /** This cell's own vertical alignment, overriding the band's `alignItems`. */
+    valign?: 'start' | 'center' | 'end' | 'stretch';
 }
 
 /** A label/value row inside a `keyvalue` band. */
@@ -100,6 +110,8 @@ export interface KeyValueRow {
     emptyText?: string;
     /** Value alignment within its cell. */
     align?: Align;
+    /** Monospace value (codes). */
+    mono?: boolean;
     /** `__text` rows only: the literal value printed (footer notes, fixed terms). */
     text?: string;
 }
@@ -123,6 +135,12 @@ export interface TableColumn {
     headerAlign?: Align;
     /** Dotted write-on line instead of a boxed cell (the Perincian carton slots). */
     dotted?: boolean;
+    /** Monospace cells (codes, carton numbers). */
+    mono?: boolean;
+    /** Cell text colour. A row's own `_style` for this column wins. */
+    color?: string;
+    /** Composite `{ title, lines }` cells: print the detail lines grey and a size smaller. */
+    mutedDetail?: boolean;
     /**
      * This column's cell in the table's footer row. The row is drawn when any column
      * has one; columns without one get an unbordered blank, so a footer can sit
@@ -197,6 +215,8 @@ export interface KeyValueBand extends BandBase {
     variant?: 'boxed' | 'plain';
     /** `plain` only: what sits between label and value. Default ': '; '' for a numbered list. */
     separator?: string;
+    /** `plain` only: bold labels. */
+    labelBold?: boolean;
     /** `boxed` only: cell rule colour (default #bbb) and label shading ('none' for white). */
     ruleColor?: string;
     labelBackground?: string;
@@ -222,6 +242,24 @@ export interface TableBand extends BandBase {
     headerBackground?: string;
     /** Height of the blank padding rows, px — room to write a line by hand. */
     padRowHeight?: number;
+    /** Shade every second data row this colour. */
+    stripe?: string;
+    /** A merged row saying so when the source has no rows (e.g. "No cartons picked"). */
+    emptyMessage?: string;
+    /** Drop the footer row when every footer cell comes out blank. */
+    hideBlankFooter?: boolean;
+}
+
+/**
+ * Per-row styling a row source may attach — the data decides, not the layout:
+ * `_style: { [columnField]: CellStyle }` colours one cell (a red shortfall), and a
+ * row with `_group: 'text'` prints as a full-width heading row instead of cells
+ * (one per location on a pull sheet).
+ */
+export interface CellStyle {
+    color?: string;
+    bold?: boolean;
+    background?: string;
 }
 
 export interface TallyBand extends BandBase {
