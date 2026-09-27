@@ -28,6 +28,8 @@ import { BAG_LABEL_DOC, BEAM_LABEL_DOC, OUTLABEL_FIELDS, OUTLABEL_ROW_SOURCES, r
 import { BAG_LABEL_DEFAULT, BEAM_LABEL_DEFAULT } from '../defaults/outputLabel';
 import { LOT_LABEL_DOC, LOTLABEL_FIELDS, resolveLotLabelField, buildLotLabelContext } from './lotLabel';
 import { LOT_LABEL_DEFAULT } from '../defaults/lotLabel';
+import { PACKED_UNIT_LABEL_DOC, CARTON_FIELDS, CARTON_ROW_SOURCES, resolveCartonLabelField, buildCartonLabelContext } from './packedUnitLabel';
+import { PACKED_UNIT_LABEL_DEFAULT } from '../defaults/packedUnitLabel';
 
 /** What the designer has on hand to build a preview context from a sample record. */
 export interface SampleEnv {
@@ -219,6 +221,30 @@ export const DOC_MODULES: DocTypeModule[] = [
             label: x => `${x.batch_number} — ${x.item_name || x.item_code || ''}`,
             build: (x, env) => buildLotLabelContext({
                 lot: x, tzFormatCustom: env.tzFormatCustom,
+                companyProfile: env.companyProfile, companyName: env.companyName, companyLogoUrl: env.companyLogoUrl,
+            }),
+        },
+    },
+    {
+        docType: PACKED_UNIT_LABEL_DOC,
+        label: 'Carton label',
+        fieldPrefix: 'carton.',
+        fields: CARTON_FIELDS,
+        resolve: resolveCartonLabelField,
+        rowSources: CARTON_ROW_SOURCES,
+        defaultLayout: PACKED_UNIT_LABEL_DEFAULT,
+        sample: {
+            noun: 'cartons',
+            // Cartons ride on their packing order (the label reads the order's PO
+            // ref, units and completions), so each sample carries its order along.
+            list: '/packing?page=1&size=20',
+            extract: body => (body.items ?? [body]).flatMap((o: any) =>
+                (o.packed_units || []).map((u: any) => ({ ...u, _order: o }))),
+            // The preview's link carries the packing order id as `q`.
+            find: (_id, q) => (q ? `/packing/${q}` : null),
+            label: x => `${x.batch_number} — ${x._order?.code || ''}`,
+            build: (x, env) => buildCartonLabelContext({
+                po: x._order, unit: x, tzFormatCustom: env.tzFormatCustom,
                 companyProfile: env.companyProfile, companyName: env.companyName, companyLogoUrl: env.companyLogoUrl,
             }),
         },
