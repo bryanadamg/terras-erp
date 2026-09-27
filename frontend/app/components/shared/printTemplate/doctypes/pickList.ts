@@ -31,8 +31,6 @@ export const PLIST_FIELDS: FieldDef[] = [
     { key: 'plist.gross_total_label', label: '"Total bruto" caption (only with a gross total)', kind: 'text', group: 'Totals' },
     { key: 'plist.gross_total', label: 'Total bruto (kg)', kind: 'text', group: 'Totals' },
     { key: 'plist.summary_heading', label: 'Shipping summary heading (only with lines)', kind: 'text', group: 'Pick List' },
-    { key: 'plist.no_cartons', label: '"No cartons allocated" note (only when none)', kind: 'text', group: 'Pick List' },
-    { key: 'plist.notes_caption', label: '"Catatan / Notes:" caption (only with notes)', kind: 'text', group: 'Pick List' },
     { key: 'plist.notes', label: 'Notes', kind: 'text', group: 'Pick List' },
     { key: 'plist.sign_line', label: 'Signature "(____)" line', kind: 'text', group: 'Signatures' },
 ];
@@ -64,9 +62,6 @@ export function resolvePickListField(key: string, ctx: PrintContext): ResolvedFi
         case 'plist.gross_total': return d.grossTotal > 0 ? { text: `${d.grossTotal.toFixed(2)} kg`, empty: false } : NA;
         case 'plist.summary_heading':
             return d.itemRows.length ? { text: 'Ringkasan Kirim / Shipping Summary:', empty: false } : NA;
-        case 'plist.no_cartons':
-            return d.cartons.length ? NA : { text: 'Belum ada koli / no cartons allocated', empty: false };
-        case 'plist.notes_caption': return pl.notes ? { text: 'Catatan / Notes:', empty: false } : NA;
         case 'plist.notes': return txt(pl.notes);
         case 'plist.sign_line': return { text: '(________________)', empty: false };
         default: return NA;
@@ -82,7 +77,7 @@ const PLIST_SUMMARY: RowSourceDef = {
     seedColumns: ['no', 'item', 'cartons', 'qty'],
     columns: [
         { field: 'no', label: 'No' },
-        { field: 'item', label: 'Barang / Item' },
+        { field: 'item', label: 'Barang / Item (name + muted code)' },
         { field: 'item_name', label: 'Item name' },
         { field: 'item_code', label: 'Item code' },
         { field: 'cartons', label: 'Koli' },
@@ -92,7 +87,7 @@ const PLIST_SUMMARY: RowSourceDef = {
         rows: (ctx.doc?.itemRows || []).map((r: any, i: number) => ({
             _key: r.code,
             no: String(i + 1),
-            item: `${r.name} ${r.code}`.trim(),
+            item: { code: r.code, name: r.name },
             item_name: r.name,
             item_code: r.code,
             cartons: String(r.cartons),

@@ -35,14 +35,14 @@ const BANDS: Band[] = [
             {
                 col: 1, span: 9, row: 1, stackGap: 0, stack: [
                     f('plist.company_name', { fontSize: 12, bold: true, hideWhenEmpty: true }),
-                    text('KARTU PICKING', { fontSize: 15, bold: true }),
+                    text('KARTU PICKING', { fontSize: 15, bold: true, serif: true }),
                     text('Pick List Card', { fontSize: 9, color: '#555' }),
                 ],
             },
             {
                 col: 11, span: 2, row: 1, align: 'right', stackGap: 0, stack: [
-                    f('plist.qr', { qrSize: 96, qrCaption: '' }),
-                    f('plist.code', { fontSize: 12, bold: true, align: 'center' }),
+                    f('plist.qr', { qrSize: 96, qrCaption: '', qrFrame: false }),
+                    f('plist.code', { fontSize: 12, bold: true, letterSpacing: 1, align: 'center' }),
                 ],
             },
         ],
@@ -73,36 +73,30 @@ const BANDS: Band[] = [
         // Paper fallback for the scan loop: the picker ticks boxes here when a phone
         // is unavailable, then keys the list from the desktop.
         id: 'plist_cartons', type: 'table', source: 'plist_cartons', fontSize: BASE, ruleColor: RULE,
-        // The total row is unruled: the renderer draws a footer row whenever one is
-        // placed, and a ruled pair of empty cells would print on every pick list
-        // whose cartons carry no gross weight.
-        hideWhenEmpty: false, marginBottom: 0,
+        // No gross weight on any carton -> no total row, rather than a blank one.
+        hideWhenEmpty: false, hideBlankFooter: true, marginBottom: 10,
+        emptyMessage: 'Belum ada koli / no cartons allocated',
         columns: [
             { field: 'no', label: 'No', width: '7%', align: 'center' },
-            { field: 'carton', label: 'No. Koli / Carton', width: '27%' },
+            { field: 'carton', label: 'No. Koli / Carton', width: '27%', mono: true },
             { field: 'item_code', label: 'Barang / Item', width: '20%' },
             { field: 'packaging', label: 'Kemasan / Packaging', width: '15%' },
             {
                 field: 'qty', label: 'Qty', width: '14%', align: 'right', headerAlign: 'center',
-                footer: { field: 'plist.gross_total_label', bold: true, align: 'right', border: false },
+                footer: { field: 'plist.gross_total_label', bold: true, align: 'right' },
             },
             // The figure the loader and the carrier both check the load against.
             {
                 field: 'gross', label: 'Bruto', width: '11%', align: 'right', headerAlign: 'center',
-                footer: { field: 'plist.gross_total', bold: true, align: 'right', border: false },
+                footer: { field: 'plist.gross_total', bold: true, align: 'right' },
             },
             { field: 'check', label: '✓', width: '6%', align: 'center', emptyText: '' },
         ],
     },
     {
-        id: 'plist_no_cartons', type: 'grid', marginBottom: 10,
-        items: [{ ...f('plist.no_cartons', { align: 'center', hideWhenEmpty: true }), col: 1, span: 12, row: 1 }],
-    },
-    {
         id: 'plist_notes', type: 'grid', gap: 4, marginBottom: 8,
         items: [
-            { ...f('plist.notes_caption', { bold: true, hideWhenEmpty: true }), col: 1, span: 2, row: 1 },
-            { ...f('plist.notes', { hideWhenEmpty: true }), col: 3, span: 10, row: 1 },
+            { ...f('plist.notes', { prefix: 'Catatan / Notes: ', prefixBold: true, hideWhenEmpty: true }), col: 1, span: 12, row: 1 },
         ],
     },
     {
