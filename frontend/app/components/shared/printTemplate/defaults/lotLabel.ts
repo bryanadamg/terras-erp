@@ -21,7 +21,7 @@ export const LOT_LABEL_DEFAULT: PrintLayout = {
             id: 'label_identity', type: 'keyvalue', labelWidth: '26%', marginBottom: 6,
             rows: [
                 { field: 'lotlabel.item_name', label: 'Artikel', span: 3, bold: true },
-                { field: 'lotlabel.item_code', label: 'Kode', span: 3, fontSize: 10 },
+                { field: 'lotlabel.item_code', label: 'Kode', span: 3, fontSize: 10, mono: true },
                 { field: 'lotlabel.location', label: 'Lokasi', span: 3 },
                 { field: 'lotlabel.notes', label: 'Catatan', span: 3, fontSize: 9, hideWhenEmpty: true },
             ],
