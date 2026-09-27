@@ -35,7 +35,6 @@ export const PCARD_FIELDS: FieldDef[] = [
     { key: 'pcard.target_end_date', label: 'Target selesai', kind: 'date', group: 'Packing Order' },
     { key: 'pcard.status', label: 'Status', kind: 'text', group: 'Packing Order' },
     { key: 'pcard.materials_heading', label: 'Materials heading (only when materials are planned)', kind: 'text', group: 'Packing Order' },
-    { key: 'pcard.notes_caption', label: '"Catatan / Notes:" caption (only with notes)', kind: 'text', group: 'Packing Order' },
     { key: 'pcard.notes', label: 'Notes', kind: 'text', group: 'Packing Order' },
     { key: 'pcard.sign_line', label: 'Signature "(____)" line', kind: 'text', group: 'Signatures' },
 ];
@@ -70,7 +69,6 @@ export function resolvePackingCardField(key: string, ctx: PrintContext): Resolve
         case 'pcard.status': return txt(po.status);
         case 'pcard.materials_heading':
             return (po.materials || []).length ? { text: 'Bahan Kemasan / Packaging Materials:', empty: false } : NA;
-        case 'pcard.notes_caption': return po.notes ? { text: 'Catatan / Notes:', empty: false } : NA;
         case 'pcard.notes': return txt(po.notes);
         case 'pcard.sign_line': return { text: '(________________)', empty: false };
         default: return NA;
@@ -81,10 +79,10 @@ const PCARD_MATERIALS: RowSourceDef = {
     id: 'pcard_materials',
     label: 'Packaging materials (planned)',
     docTypes: [PACKING_CARD_DOC],
-    seedColumns: ['no', 'material', 'planned', 'used'],
+    seedColumns: ['no', 'item', 'planned', 'used'],
     columns: [
         { field: 'no', label: 'No' },
-        { field: 'material', label: 'Bahan / Material' },
+        { field: 'item', label: 'Bahan / Material (name + muted code)' },
         { field: 'item_name', label: 'Material name' },
         { field: 'item_code', label: 'Material code' },
         { field: 'planned', label: 'Rencana' },
@@ -95,7 +93,7 @@ const PCARD_MATERIALS: RowSourceDef = {
         rows: (ctx.doc?.po?.materials || []).map((m: any, i: number) => ({
             _key: m.id ?? i,
             no: String(i + 1),
-            material: `${m.item_name || m.item_id || ''} ${m.item_code || ''}`.trim(),
+            item: { code: m.item_code || '', name: m.item_name || m.item_id || '' },
             item_name: m.item_name || m.item_id || '',
             item_code: m.item_code || '',
             planned: `${Number(m.qty_planned || 0).toLocaleString()} ${m.item_uom || ''}`.trim(),

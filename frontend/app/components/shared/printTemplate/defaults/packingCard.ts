@@ -41,14 +41,14 @@ const BANDS: Band[] = [
             {
                 col: 1, span: 9, row: 1, stackGap: 0, stack: [
                     f('pcard.company_name', { fontSize: 12, bold: true, hideWhenEmpty: true }),
-                    text('KARTU PACKING', { fontSize: 15, bold: true }),
+                    text('KARTU PACKING', { fontSize: 15, bold: true, serif: true }),
                     text('Packing Order Card', { fontSize: 9, color: '#555' }),
                 ],
             },
             {
                 col: 11, span: 2, row: 1, align: 'right', stackGap: 0, stack: [
-                    f('pcard.qr', { qrSize: 96, qrCaption: '' }),
-                    f('pcard.code', { fontSize: 12, bold: true, align: 'center' }),
+                    f('pcard.qr', { qrSize: 96, qrCaption: '', qrFrame: false }),
+                    f('pcard.code', { fontSize: 12, bold: true, letterSpacing: 1, align: 'center' }),
                 ],
             },
         ],
@@ -66,7 +66,7 @@ const BANDS: Band[] = [
         hideWhenEmpty: true, marginBottom: 10,
         columns: [
             { field: 'no', label: 'No', width: '8%', align: 'center' },
-            { field: 'material', label: 'Bahan / Material', width: '52%' },
+            { field: 'item', label: 'Bahan / Material', width: '52%' },
             { field: 'planned', label: 'Rencana', width: '20%', align: 'right', headerAlign: 'center' },
             { field: 'used', label: 'Dipakai', width: '20%', headerAlign: 'center', emptyText: '' },
         ],
@@ -90,8 +90,7 @@ const BANDS: Band[] = [
     {
         id: 'pcard_notes', type: 'grid', gap: 4, marginBottom: 8,
         items: [
-            { ...f('pcard.notes_caption', { bold: true, hideWhenEmpty: true }), col: 1, span: 2, row: 1 },
-            { ...f('pcard.notes', { hideWhenEmpty: true }), col: 3, span: 10, row: 1 },
+            { ...f('pcard.notes', { prefix: 'Catatan / Notes: ', prefixBold: true, hideWhenEmpty: true }), col: 1, span: 12, row: 1 },
         ],
     },
     {
