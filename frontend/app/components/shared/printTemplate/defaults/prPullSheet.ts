@@ -18,13 +18,12 @@ const stack = (col: number, span: number, fields: FieldSpec[], extra: Partial<Gr
 
 const RULE = '#ccc';
 
-// Location heading rows carry blanks in every column, so no column dashes an empty cell.
 const col = (field: string, label: string, extra: Partial<TableColumn> = {}): TableColumn =>
     ({ field, label, emptyText: '', ...extra });
 const materialColumns = (withEnds: boolean): TableColumn[] => [
-    col('code', 'Code', { width: '12%' }),
+    col('code', 'Code', { width: '12%', mono: true, color: '#555' }),
     col('material', 'Material'),
-    col('uom', 'UOM', { width: '8%', align: 'center' }),
+    col('uom', 'UOM', { width: '8%', align: 'center', color: '#555' }),
     ...(withEnds ? [col('ends', 'Ends (Utas)', { width: '8%', align: 'right' })] : []),
     // Net of what this run has already been issued.
     col('still_required', 'Still Required', { width: '13%', align: 'right', bold: true }),
@@ -43,10 +42,10 @@ const BANDS: Band[] = [
                 f('company.address', { fontSize: 7, color: '#555', hideWhenEmpty: true }),
             ]),
             stack(5, 4, [
-                text('MATERIAL PULL SHEET', { fontSize: 16, bold: true, align: 'center' }),
+                text('MATERIAL PULL SHEET', { fontSize: 16, bold: true, align: 'center', letterSpacing: 1 }),
                 f('pr.date', { fontSize: 8, color: '#333', align: 'center', prefix: 'Tanggal: ' }),
             ], { stackGap: 2 }),
-            { ...f('pr.code', { fontSize: 8, bold: true, align: 'right' }), col: 9, span: 4, row: 1 },
+            { ...f('pr.code', { fontSize: 8, bold: true, mono: true, align: 'right' }), col: 9, span: 4, row: 1 },
         ],
     },
     {
@@ -54,7 +53,7 @@ const BANDS: Band[] = [
         labelWidth: '18%', labelFontSize: 8, valueFontSize: 8, ruleColor: RULE,
         rows: [
             { field: 'pr.products', label: 'Production Run', span: 3, bold: true, fontSize: 9 },
-            { field: 'pr.sales_order', label: 'Sales Order', span: 1, hideWhenEmpty: true },
+            { field: 'pr.sales_order', label: 'Sales Order', span: 1, hideWhenEmpty: true, mono: true },
             { field: 'pr.due_date_beside_so', label: 'Due Date', span: 1, hideWhenEmpty: true },
             { field: 'pr.due_date_alone', label: 'Due Date', span: 3, hideWhenEmpty: true },
         ],

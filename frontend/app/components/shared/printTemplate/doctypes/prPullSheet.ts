@@ -68,7 +68,7 @@ const PR_PULL_LINES: RowSourceDef = {
     seedColumns: ['code', 'material', 'still_required'],
     columns: [
         { field: 'code', label: 'Code' },
-        { field: 'material', label: 'Material (+ size, variant; location rows)' },
+        { field: 'material', label: 'Material (+ size, variant)' },
         { field: 'location', label: 'Source Location' },
         { field: 'uom', label: 'UOM' },
         { field: 'ends', label: 'Ends (Utas)' },
@@ -99,7 +99,7 @@ export function buildPRPullSheetContext({
     const p = pr || {};
 
     // Group by resolved source location — one run of lines per store, each under a
-    // location heading row, stores in name order.
+    // full-width location heading row (`_group`), stores in name order.
     const byKey = new Map<string, any[]>();
     for (const r of reqs) {
         const key = r.location_id || '__unassigned__';
@@ -113,8 +113,8 @@ export function buildPRPullSheetContext({
     const rows: Record<string, any>[] = [];
     for (const g of groups) {
         rows.push({
-            _key: `loc-${g.key}`, code: '', material: { title: g.label.toUpperCase(), lines: [] }, location: '',
-            uom: '', ends: '', still_required: '', available: '', shortfall: '',
+            _key: `loc-${g.key}`, _group: g.label,
+            _groupStyle: { color: '#003080', textTransform: 'uppercase', letterSpacing: '0.3px', fontSize: 9, background: '#fff', paddingTop: 5 },
         });
         for (const r of g.rows) {
             const attrs: string[] = (r.attribute_value_ids || []).map(getAttributeValueName).filter(Boolean);
@@ -130,6 +130,7 @@ export function buildPRPullSheetContext({
                 still_required: Number(r.total_required).toFixed(3),
                 available: Number(r.qty_available).toFixed(3),
                 shortfall: r.shortfall > 0 ? Number(r.shortfall).toFixed(3) : '—',
+                ...(r.shortfall > 0 ? { _style: { shortfall: { color: '#c00000', bold: true, background: '#fdecea' } } } : {}),
             });
         }
     }
