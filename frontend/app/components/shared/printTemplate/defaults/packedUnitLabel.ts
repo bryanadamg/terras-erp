@@ -20,7 +20,7 @@ const cell = (row: number, col: number, span: number, spec: FieldSpec | FieldSpe
         : { ...spec, col, span, row, ...extra };
 
 const HALF_RULE = '0.5px solid #000';
-const LBL = { fontSize: 11, bold: true };
+const LBL = { fontSize: 11, bold: true, letterSpacing: 0.5 };
 const VAL = { fontSize: 13, bold: true };
 const BAR = { imageHeight: 26, align: 'center' as const };
 const BLANK = { fontSize: 13, color: '#666', hideWhenEmpty: true };
@@ -39,12 +39,12 @@ const BANDS: Band[] = [
             // Headline: house mark + style/colour, the carton's own PU- number barcoded beside it.
             cell(1, 1, 3, [
                 f('company.logo', { imageHeight: 30, align: 'center', hideWhenEmpty: true }),
-                f('carton.logo_fallback', { fontSize: 16, bold: true, align: 'center', hideWhenEmpty: true }),
+                f('carton.logo_fallback', { fontSize: 16, bold: true, letterSpacing: 2, align: 'center', hideWhenEmpty: true }),
             ]),
             cell(1, 4, 6, [
-                f('carton.headline', { fontSize: 19, bold: true }),
-                f('carton.identity', { fontSize: 10, bold: true, hideWhenEmpty: true }),
-                f('carton.number_tilde', { fontSize: 10 }),
+                f('carton.headline', { fontSize: 19, bold: true, letterSpacing: 0.5 }),
+                f('carton.identity', { fontSize: 10, bold: true, letterSpacing: 0.5, hideWhenEmpty: true }),
+                f('carton.number_tilde', { fontSize: 10, letterSpacing: 0.5 }),
             ], { stackGap: 2 }),
             cell(1, 10, 3, f('carton.number_barcode', BAR)),
 
@@ -68,7 +68,7 @@ const BANDS: Band[] = [
                 f('carton.package_line', { fontSize: 9, color: '#333' }),
                 f('carton.packed_date', { fontSize: 9, color: '#333', emptyText: '' }),
             ], { stackGap: 0 }),
-            cell(1, 9, 4, f('carton.qr', { qrSize: 72, qrCaption: '' }), { align: 'right' }),
+            cell(1, 9, 4, f('carton.qr', { qrSize: 72, qrCaption: '', qrFrame: false }), { align: 'right' }),
         ],
     },
 ];
