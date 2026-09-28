@@ -5,10 +5,10 @@ branch inside `api/weaving.py`: a loom is measured in kg against a calendar of
 working days, a dye batch against the clock the floor stamps by hand -- see the
 header of `services/dyeing_monitor_service.py`.
 """
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timezone
 
 from fastapi import APIRouter, Depends, HTTPException, Query
-from sqlalchemy import select, func, or_, and_
+from sqlalchemy import select, func, or_, and_, case, literal, union_all
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload, joinedload
 
@@ -16,10 +16,12 @@ from app.db.session import get_async_db
 from app.models.attribute import AttributeValue
 from app.models.auth import User
 from app.models.dyeing_setting import DyeingRun
+from app.models.item import Item
 from app.models.manufacturing import ManufacturingOrder
 from app.models.routing import WorkCenter
 from app.models.work_order import WorkOrder
 from app.api.auth import require_permission, require_any_permission
+from app.core.pagination import PageParams, PageWindow
 from app.schemas import DyeingRunMonitorUpdate
 from app.services import audit_service, dyeing_monitor_service, mo_variant_service
 from app.core.ws_manager import manager
@@ -119,19 +121,52 @@ def _no_run_row(wo: WorkOrder) -> dict:
 
 @router.get("/dyeing/monitor")
 async def dyeing_monitor(
-    days: int = Query(1, ge=0, le=31, description="Also list batches completed in the last N days"),
+    clock: str | None = Query(None, description="PENDING | IN_PROGRESS | COMPLETED | NO_RUN"),
+    search: str | None = Query(None),
+    window: PageWindow = Depends(PageParams(default_size=50)),
     db: AsyncSession = Depends(get_async_db),
     current_user: User = Depends(require_any_permission("dyeing_monitor.view", "work_order.view")),
 ):
+    """One page of dye batches, plus the dyeing WOs closed without one (NO_RUN).
+
+    Both kinds page together, so they are one UNION of (kind, id, sort keys) and the
+    page's objects are loaded afterwards. Paged in SQL rather than in Python because
+    every finished batch stays listed, so the set grows without bound.
+    """
     now = datetime.now(timezone.utc)
-    since = now - timedelta(days=days)
-    # ponytail: not paginated -- open batches + a few days of finished ones is a
-    # bounded set; move to PageParams if `days` ever grows past a month.
-    res = await db.execute(
-        select(DyeingRun)
-        .options(*_RUN_LOADS)
+
+    # The search reaches the same columns on both halves: vessel, WO, MO, item.
+    def _searched(q):
+        if not search or not search.strip():
+            return q
+        like = f"%{search.strip()}%"
+        return q.where(or_(
+            WorkCenter.code.ilike(like), WorkCenter.name.ilike(like), WorkOrder.code.ilike(like),
+            ManufacturingOrder.code.ilike(like), Item.code.ilike(like), Item.name.ilike(like),
+        ))
+
+    run_q = _searched(
+        select(
+            literal("run").label("kind"),
+            DyeingRun.id.label("id"),
+            # _CLOCK_ORDER, read off the stamps exactly as svc.clock_state does.
+            case(
+                (DyeingRun.started_at.is_(None), _CLOCK_ORDER[svc.CLOCK_WAITING]),
+                (DyeingRun.completed_at.is_(None), _CLOCK_ORDER[svc.CLOCK_RUNNING]),
+                else_=_CLOCK_ORDER[svc.CLOCK_DONE],
+            ).label("clock_ord"),
+            DyeingRun.completed_at.label("done_at"),
+            WorkCenter.code.label("wc_code"),
+            # Batches that cannot report an output until someone picks their speed.
+            and_(
+                DyeingRun.completed_at.is_(None),
+                or_(func.coalesce(DyeingRun.yards_per_min, 0) <= 0, func.coalesce(DyeingRun.lines, 0) <= 0),
+            ).label("needs_setup"),
+        )
         .join(WorkOrder, DyeingRun.work_order_id == WorkOrder.id)
         .join(WorkCenter, WorkOrder.work_center_id == WorkCenter.id)
+        .outerjoin(ManufacturingOrder, WorkOrder.manufacturing_order_id == ManufacturingOrder.id)
+        .outerjoin(Item, ManufacturingOrder.item_id == Item.id)
         .where(func.upper(WorkCenter.center_type).in_(svc.DYEING_CENTER_TYPES))
         .where(DyeingRun.status != "CANCELLED")
         .where(or_(
@@ -139,42 +174,75 @@ async def dyeing_monitor(
             # A run reads COMPLETED the moment its WO closes, but the clock is
             # stopped by hand -- keep it listed until somebody presses Complete.
             and_(DyeingRun.started_at.isnot(None), DyeingRun.completed_at.is_(None)),
-            DyeingRun.completed_at >= since,
+            DyeingRun.completed_at.isnot(None),
         ))
     )
-    rows = [_row(r, now) for r in res.unique().scalars().all()]
 
-    # Dyeing WOs closed in the window whose bath was never clocked. A run that was
-    # started is already listed above, so only WOs with no started run qualify.
-    # actual_end_date is a naive UTC column.
-    started_wo_ids = select(DyeingRun.work_order_id).where(
-        DyeingRun.started_at.isnot(None), DyeingRun.status != "CANCELLED",
+    # Dyeing WOs closed whose bath was never clocked: no started run, and no run
+    # still listed as open above.
+    has_listed_run = (
+        select(DyeingRun.id)
+        .where(DyeingRun.work_order_id == WorkOrder.id, DyeingRun.status != "CANCELLED")
+        .where(or_(
+            DyeingRun.started_at.isnot(None),
+            and_(DyeingRun.completed_at.is_(None), DyeingRun.status.in_(_OPEN_STATUSES)),
+        ))
+        .exists()
     )
-    wo_res = await db.execute(
-        select(WorkOrder)
-        .options(*_WO_LOADS)
+    wo_q = _searched(
+        select(
+            literal("wo").label("kind"),
+            WorkOrder.id.label("id"),
+            literal(_CLOCK_ORDER[CLOCK_NO_RUN]).label("clock_ord"),
+            func.timezone("UTC", WorkOrder.actual_end_date).label("done_at"),
+            WorkCenter.code.label("wc_code"),
+            literal(False).label("needs_setup"),
+        )
         .join(WorkCenter, WorkOrder.work_center_id == WorkCenter.id)
+        .outerjoin(ManufacturingOrder, WorkOrder.manufacturing_order_id == ManufacturingOrder.id)
+        .outerjoin(Item, ManufacturingOrder.item_id == Item.id)
         .where(func.upper(WorkCenter.center_type).in_(svc.DYEING_CENTER_TYPES))
         .where(WorkOrder.status == "COMPLETED")
-        .where(WorkOrder.actual_end_date >= since.replace(tzinfo=None))
-        .where(WorkOrder.id.notin_(started_wo_ids))
+        .where(~has_listed_run)
     )
-    listed = {r["work_order_id"] for r in rows}
-    rows += [_no_run_row(wo) for wo in wo_res.unique().scalars().all() if str(wo.id) not in listed]
-    rows.sort(key=lambda r: (
-        _CLOCK_ORDER[r["clock"]],
+
+    base = union_all(run_q, wo_q).subquery()
+
+    # Whole-set aggregates for the filter chips, before the clock filter narrows it.
+    agg = await db.execute(
+        select(base.c.clock_ord, func.count(), func.count().filter(base.c.needs_setup))
+        .group_by(base.c.clock_ord)
+    )
+    by_ord = {o: (n, ns) for o, n, ns in agg.all()}
+    counts = {clk: by_ord.get(o, (0, 0))[0] for clk, o in _CLOCK_ORDER.items()}
+    needs_setup = sum(ns for _, ns in by_ord.values())
+
+    page_q = select(base.c.kind, base.c.id)
+    total = sum(counts.values())
+    if clock in _CLOCK_ORDER:
+        page_q = page_q.where(base.c.clock_ord == _CLOCK_ORDER[clock])
+        total = counts[clock]
+    page_q = page_q.order_by(
+        base.c.clock_ord,
         # Finished batches newest first; the rest by vessel.
-        -((r["completed_at"] or r["wo_actual_end_date"]).timestamp())
-        if (r["completed_at"] or r["wo_actual_end_date"]) else 0,
-        r["work_center_code"] or "",
-    ))
-    return {
-        "runs": rows,
-        "total": len(rows),
-        "running": sum(1 for r in rows if r["clock"] == svc.CLOCK_RUNNING),
-        # Batches that cannot report an output until someone picks their speed.
-        "needs_setup": sum(1 for r in rows if r["missing_rate_inputs"] and r["clock"] != svc.CLOCK_DONE),
-    }
+        base.c.done_at.desc().nulls_last(),
+        base.c.wc_code,
+        base.c.id,
+    )
+    keys = [(k, i) for k, i in (await db.execute(window.apply(page_q))).all()]
+
+    run_ids = [i for k, i in keys if k == "run"]
+    wo_ids = [i for k, i in keys if k == "wo"]
+    by_key: dict = {}
+    if run_ids:
+        res = await db.execute(select(DyeingRun).options(*_RUN_LOADS).where(DyeingRun.id.in_(run_ids)))
+        by_key.update({("run", r.id): _row(r, now) for r in res.unique().scalars().all()})
+    if wo_ids:
+        res = await db.execute(select(WorkOrder).options(*_WO_LOADS).where(WorkOrder.id.in_(wo_ids)))
+        by_key.update({("wo", w.id): _no_run_row(w) for w in res.unique().scalars().all()})
+
+    items = [by_key[k] for k in keys if k in by_key]
+    return window.envelope(items, total, counts=counts, needs_setup=needs_setup)
 
 
 @router.patch("/dyeing-runs/{run_id}/rate")

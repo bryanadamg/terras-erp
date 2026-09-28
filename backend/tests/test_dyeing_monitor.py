@@ -183,7 +183,7 @@ def test_monitor_returns_an_envelope_even_with_nothing_to_dye(client, auth_heade
     res = client.get("/api/dyeing/monitor", headers=auth_headers)
     assert res.status_code == 200
     body = res.json()
-    for key in ("runs", "total", "running", "needs_setup"):
+    for key in ("items", "total", "page", "size", "counts", "needs_setup"):
         assert key in body, f"{key} missing from the monitor envelope"
 
 

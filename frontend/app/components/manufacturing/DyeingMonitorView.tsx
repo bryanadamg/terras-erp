@@ -9,6 +9,8 @@ import { ShellWindow, ShellTitleBar, SearchField, FilterChipBar, ToolbarCount, x
 import { lvTd, lvThSticky, lvZebra, ExpanderCell, LV_EXPANDER_COL_W } from '../shared/listViewTheme';
 import VariantChips from '../shared/VariantChips';
 import { useToast } from '../shared/Toast';
+import Pager from '../shared/Pager';
+import { usePaginatedFetch } from '../../context/usePaginatedList';
 import DyeingRateModal from './DyeingRateModal';
 import DyeingWOHistory, { fmtElapsed } from './DyeingWOHistory';
 import { getChipStyle } from './WorkOrderPanel';
@@ -17,8 +19,7 @@ import { API_BASE } from '../shared/apiBase';
 
 const AMBER = familyColor('amber');
 const COLS = 14;
-// How far back finished batches stay listed, so a WO's phase history can be read after the day it ran.
-const HISTORY_DAYS = [1, 7, 30];
+const PAGE_SIZE = 50;
 // Column widths; order matches the <thead> cells.
 const COL_W: (number | string)[] = [
     LV_EXPANDER_COL_W, // chevron
@@ -67,27 +68,25 @@ export default function DyeingMonitorView() {
     // Same gate the Dyeing Orders tab uses to start and complete a batch.
     const canSetRate = hasPermission('work_order.log');
 
-    const [data, setData] = useState<any>(null);
-    const [loading, setLoading] = useState(true);
     const [rateRun, setRateRun] = useState<any>(null);
     const [expandedId, setExpandedId] = useState<string | null>(null);
     const { formatCustom } = useTimezone();
     const [clockFilter, setClockFilter] = useState<string>('ALL');
-    const [search, setSearch] = useState('');
-    const [days, setDays] = useState(1);
     // The run whose Start/Complete is in flight, so a double-press cannot stamp twice.
     const [stamping, setStamping] = useState<string | null>(null);
 
-    const load = useCallback(async () => {
-        try {
-            const res = await authFetch(`${API_BASE}/dyeing/monitor?days=${days}`);
-            if (res.ok) setData(await res.json());
-        } finally {
-            setLoading(false);
-        }
-    }, [authFetch, days]);
-
-    useEffect(() => { load(); }, [load]);
+    // Paged, filtered and searched on the server: every finished batch stays listed,
+    // so the set has no bound and neither the rows nor the chip counts can come from one page.
+    const {
+        rows: runs, total, meta, loading, page, setPage, searchInput, setSearch, refetch: load,
+    } = usePaginatedFetch<any>({
+        endpoint: `${API_BASE}/dyeing/monitor`,
+        authFetch,
+        pageSize: PAGE_SIZE,
+        params: {
+            clock: clockFilter === 'ALL' ? undefined : clockFilter,
+        },
+    });
 
     useEffect(() => {
         const unsubscribe = subscribeLiveEvents(['dyeing', 'production'], () => load());
@@ -114,26 +113,15 @@ export default function DyeingMonitorView() {
                 return;
             }
             showToast(t(labelKey), 'success');
-            await load();
+            load();
         } finally {
             setStamping(null);
         }
     }, [authFetch, showToast, t, load]);
 
-    const runs: any[] = data?.runs || [];
-    const counts = useMemo(() => {
-        const c: Record<string, number> = { PENDING: 0, [RUNNING]: 0, [DONE]: 0, [NO_RUN]: 0 };
-        runs.forEach(r => { c[r.clock] = (c[r.clock] || 0) + 1; });
-        return c;
-    }, [runs]);
-
-    const shown = useMemo(() => {
-        const q = search.trim().toLowerCase();
-        return runs.filter(r =>
-            (clockFilter === 'ALL' || r.clock === clockFilter)
-            && (!q || [r.work_center_code, r.work_center_name, r.wo_code, r.mo_code, r.item_code, r.item_name]
-                .some(v => (v || '').toLowerCase().includes(q))));
-    }, [runs, clockFilter, search]);
+    const counts: Record<string, number> = meta.counts || {};
+    const allCount = Object.values(counts).reduce((a, n) => a + (n || 0), 0);
+    const shown = runs;
 
     const clockLabel = (c: string) =>
         c === RUNNING ? t('running') : c === DONE ? t('completed') : c === NO_RUN ? t('no_bath_run') : t('loaded');
@@ -186,32 +174,25 @@ export default function DyeingMonitorView() {
 
     const Toolbar = (
         <div style={xpToolbar()}>
-            <SearchField value={search} onChange={setSearch} placeholder={t('search') || 'Search...'} />
+            <SearchField value={searchInput} onChange={setSearch} placeholder={t('search') || 'Search...'} />
             <FilterChipBar
                 value={clockFilter}
                 onChange={setClockFilter}
                 options={[
-                    { value: 'ALL', label: t('all'), count: runs.length },
-                    { value: RUNNING, label: t('running'), count: counts[RUNNING] },
-                    { value: 'PENDING', label: t('loaded'), count: counts.PENDING },
-                    { value: DONE, label: t('completed'), count: counts[DONE] },
-                    { value: NO_RUN, label: t('no_bath_run'), count: counts[NO_RUN] },
+                    { value: 'ALL', label: t('all'), count: allCount },
+                    { value: RUNNING, label: t('running'), count: counts[RUNNING] || 0 },
+                    { value: 'PENDING', label: t('loaded'), count: counts.PENDING || 0 },
+                    { value: DONE, label: t('completed'), count: counts[DONE] || 0 },
+                    { value: NO_RUN, label: t('no_bath_run'), count: counts[NO_RUN] || 0 },
                 ]}
             />
-            {data?.needs_setup > 0 && (
+            {meta.needs_setup > 0 && (
                 <span title={t('no_speed_picked_hint')} style={{ fontSize: 11, color: '#8a6100' }}>
                     <i className="bi bi-gear" style={{ marginRight: 4, color: AMBER }} />
-                    <b>{data.needs_setup}</b> {t('needs_setup')}
+                    <b>{meta.needs_setup}</b> {t('needs_setup')}
                 </span>
             )}
-            <label style={{ fontSize: 11, display: 'inline-flex', alignItems: 'center', gap: 4 }}
-                title={t('history_range_hint')}>
-                {t('history')}
-                <select value={days} onChange={e => setDays(Number(e.target.value))} style={{ fontSize: 11 }}>
-                    {HISTORY_DAYS.map(d => <option key={d} value={d}>{d} {t('days')}</option>)}
-                </select>
-            </label>
-            <ToolbarCount right>{shown.length} / {runs.length}</ToolbarCount>
+            <ToolbarCount right>{total}</ToolbarCount>
             <XPActionButton tone="neutral" icon="bi-arrow-clockwise" title={t('refresh')} onClick={load} />
         </div>
     );
@@ -358,6 +339,7 @@ export default function DyeingMonitorView() {
                         </tbody>
                     </table>
                 </div>
+                <Pager page={page} total={total} pageSize={PAGE_SIZE} onPageChange={setPage} hideWhenEmpty />
             </ShellWindow>
             <DyeingRateModal
                 isOpen={!!rateRun}
