@@ -2,7 +2,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { useConfirm } from '../../context/ConfirmContext';
 import ModalWrapper from '../shared/ModalWrapper';
-import { FormSection, Chip, XP_BTN } from '../shared/xpTheme';
+import { FormSection, Chip, XPActionButton, rowStateBg, XP_BTN } from '../shared/xpTheme';
 import { lvInput, lvBtn, lvPrimaryBtn, lvLabel, lvSep, lvZebra, lvPickerRow } from '../shared/listViewTheme';
 import { ToolbarButton, SearchField, ToolbarCount, xpToolbar } from '../shared/shellTheme';
 
@@ -65,6 +65,7 @@ export default function AttributesLibraryView({
     const [selectedId, setSelectedId] = useState<string | null>(null);
     const [pendingName, setPendingName] = useState<string | null>(null);
     const [valueFilter, setValueFilter] = useState('');
+    const [hoveredValueId, setHoveredValueId] = useState<string | null>(null);
     const [valueDraft, setValueDraft] = useState('');
     const [nameDraft, setNameDraft] = useState<string | null>(null);
 
@@ -289,7 +290,12 @@ export default function AttributesLibraryView({
                                 </div>
                             )}
                             {shownValues.map((val: any, vi: number) => (
-                                <div key={val.id} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '2px 8px', background: lvZebra(vi), borderBottom: '1px solid #e0dfd8' }}>
+                                <div
+                                    key={val.id}
+                                    style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '2px 8px', background: hoveredValueId === val.id ? rowStateBg('expanded') : lvZebra(vi), borderBottom: '1px solid #e0dfd8' }}
+                                    onMouseEnter={() => setHoveredValueId(val.id)}
+                                    onMouseLeave={() => setHoveredValueId(null)}
+                                >
                                     <span style={{ width: 28, textAlign: 'right', fontSize: 10, color: '#999', flexShrink: 0 }}>{values.indexOf(val) + 1}</span>
                                     {canManage ? (
                                         <input
@@ -314,14 +320,15 @@ export default function AttributesLibraryView({
                                         <span style={{ flex: 1, fontSize: 11, padding: '3px 4px' }}>{val.value}</span>
                                     )}
                                     {canManage && (
-                                        <button
-                                            type="button"
-                                            title={`Delete "${val.value}"`}
-                                            style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#c00000', padding: '0 4px' }}
-                                            onClick={() => handleDeleteValue(val)}
-                                        >
-                                            <i className="bi bi-x-lg" />
-                                        </button>
+                                        // Hover-revealed, same as the Categories tab's row actions.
+                                        <span style={{ display: 'flex', opacity: hoveredValueId === val.id ? 1 : 0, transition: 'opacity 0.1s' }}>
+                                            <XPActionButton
+                                                tone="danger"
+                                                icon="bi-trash"
+                                                title={`Delete "${val.value}"`}
+                                                onClick={() => handleDeleteValue(val)}
+                                            />
+                                        </span>
                                     )}
                                 </div>
                             ))}
