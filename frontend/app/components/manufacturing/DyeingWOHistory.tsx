@@ -5,15 +5,15 @@ import { useLanguage } from '../../context/LanguageContext';
 import { useTimezone } from '../../context/TimezoneContext';
 import { StatusChip } from '../shared/xpTheme';
 import { lvSubTable, lvSubTh, lvSubTd, lvSubRow } from '../shared/listViewTheme';
+import { fmtMinutes } from '../shared/format';
 
-/** Minutes as the floor reads them: 45m, 3h 20m, 2d 4h. */
-export function fmtElapsed(mins: any): string {
-    const v = Number(mins);
-    if (mins === null || mins === undefined || Number.isNaN(v)) return '—';
-    if (v < 60) return `${Math.round(v)}m`;
-    const h = Math.floor(v / 60);
-    if (h < 24) return `${h}h ${Math.round(v % 60)}m`;
-    return `${Math.floor(h / 24)}d ${h % 24}h`;
+/** A phase stamp as the floor writes it: "28 Sept 2026, 12:00". Shared with the
+ *  monitor's Color matching / Start / Complete columns so the two never drift. */
+export function useFmtStamp() {
+    const { formatCustom } = useTimezone();
+    return (v: any) => (v
+        ? formatCustom(v, { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit', hour12: false }, 'en-GB')
+        : '—');
 }
 
 function minutesBetween(a: any, b: any): number | null {
@@ -34,7 +34,7 @@ export default function DyeingWOHistory({ workOrderId, authFetch, apiBase }: {
     apiBase: string;
 }) {
     const { t } = useLanguage();
-    const { formatCustom } = useTimezone();
+    const fmtStamp = useFmtStamp();
     const [runs, setRuns] = useState<any[] | null>(null);
 
     useEffect(() => {
@@ -46,11 +46,6 @@ export default function DyeingWOHistory({ workOrderId, authFetch, apiBase }: {
             .then(d => { if (live) setRuns(Array.isArray(d) ? d : []); });
         return () => { live = false; };
     }, [workOrderId, authFetch, apiBase]);
-
-    // "28 Sept 2026, 12:00" -- the shape the floor writes the phase log in.
-    const fmtStamp = (v: any) => (v
-        ? formatCustom(v, { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit', hour12: false }, 'en-GB')
-        : '—');
 
     if (runs === null) return <div style={{ color: '#888', fontStyle: 'italic', fontSize: 10, padding: 4 }}>{t('loading') || 'Loading...'}</div>;
     if (runs.length === 0) return <div style={{ color: '#888', fontStyle: 'italic', fontSize: 10, padding: 4 }}>{t('history_no_bath')}</div>;
@@ -81,7 +76,7 @@ export default function DyeingWOHistory({ workOrderId, authFetch, apiBase }: {
                             <td style={{ ...subTd, fontWeight: 'bold' }}>{s.label}</td>
                             <td style={{ ...subTd, whiteSpace: 'nowrap', color: s.at ? '#222' : '#aaa' }}>{fmtStamp(s.at)}</td>
                             <td style={{ ...subTd, textAlign: 'right', color: '#555' }} title={s.hint || undefined}>
-                                {s.gap != null ? fmtElapsed(s.gap) : ''}
+                                {s.gap != null ? fmtMinutes(s.gap) : ''}
                             </td>
                             <td style={subTd}>
                                 {si === 0 && <StatusChip status={run.status || 'PENDING'} tint />}

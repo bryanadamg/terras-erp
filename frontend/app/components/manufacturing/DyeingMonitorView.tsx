@@ -1,26 +1,26 @@
 'use client';
 
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useData } from '../../context/DataContext';
 import { useLanguage } from '../../context/LanguageContext';
 import { useUser } from '../../context/UserContext';
-import { ProgressBar, StatusChip, XPEmptyState, XPActionButton, TableSkeleton, CodeChip, ExpandedRowPanel, CHIP_RADIUS, familyColor, rowStateBg, xpFont } from '../shared/xpTheme';
+import { ProgressBar, StatusChip, XPEmptyState, XPActionButton, TableSkeleton, CodeChip, ExpandedRowPanel, WorkCenterChip, familyColor, rowStateBg, xpFont } from '../shared/xpTheme';
 import { ShellWindow, ShellTitleBar, SearchField, FilterChipBar, ToolbarCount, xpToolbar } from '../shared/shellTheme';
-import { lvTd, lvThSticky, lvZebra, ExpanderCell, LV_EXPANDER_COL_W } from '../shared/listViewTheme';
+import { lvTd, lvThSticky, lvZebra, ExpanderCell, ResizableTable, LV_EXPANDER_COL_W } from '../shared/listViewTheme';
 import VariantChips from '../shared/VariantChips';
 import { useToast } from '../shared/Toast';
 import Pager from '../shared/Pager';
 import { usePaginatedFetch } from '../../context/usePaginatedList';
 import DyeingRateModal from './DyeingRateModal';
-import DyeingWOHistory, { fmtElapsed } from './DyeingWOHistory';
-import { getChipStyle } from './WorkOrderPanel';
-import { useTimezone } from '../../context/TimezoneContext';
+import DyeingWOHistory, { useFmtStamp } from './DyeingWOHistory';
+import { fmtQty, fmtMinutes, orDash } from '../shared/format';
 import { API_BASE } from '../shared/apiBase';
 
 const AMBER = familyColor('amber');
 const COLS = 14;
 const PAGE_SIZE = 50;
-// Column widths; order matches the <thead> cells.
+// Column widths for ResizableTable; order matches the <thead> cells exactly —
+// the resize grips index into this array.
 const COL_W: (number | string)[] = [
     LV_EXPANDER_COL_W, // chevron
     150,               // MO
@@ -38,12 +38,7 @@ const COL_W: (number | string)[] = [
     104,               // Actions
 ];
 
-function fmt(n: any, d = 1): string {
-    if (n === null || n === undefined) return '—';
-    const v = Number(n);
-    if (Number.isNaN(v)) return '—';
-    return v.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: d });
-}
+const fmt = (n: any, d = 1): string => orDash(n, v => fmtQty(v, d));
 
 // `clock` is the backend's read of the Start/Complete stamps (never `status`):
 // PENDING = not started, IN_PROGRESS = clock running, COMPLETED = clock stopped,
@@ -70,7 +65,7 @@ export default function DyeingMonitorView() {
 
     const [rateRun, setRateRun] = useState<any>(null);
     const [expandedId, setExpandedId] = useState<string | null>(null);
-    const { formatCustom } = useTimezone();
+    const fmtStamp = useFmtStamp();
     const [clockFilter, setClockFilter] = useState<string>('ALL');
     // The run whose Start/Complete is in flight, so a double-press cannot stamp twice.
     const [stamping, setStamping] = useState<string | null>(null);
@@ -167,10 +162,6 @@ export default function DyeingMonitorView() {
     // keep 14 columns of codes, times and quantities readable.
     const thStyle: React.CSSProperties = lvThSticky({ border: '1px solid #808080' });
     const tdBase: React.CSSProperties = { ...lvTd(), border: '1px solid #c0bdb5' };
-    // "28 Sept 2026, 12:00" -- the shape the floor writes the phase log in.
-    const fmtStamp = (v: any) => (v
-        ? formatCustom(v, { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit', hour12: false }, 'en-GB')
-        : '—');
 
     const Toolbar = (
         <div style={xpToolbar()}>
@@ -203,10 +194,8 @@ export default function DyeingMonitorView() {
                 <ShellTitleBar icon="bi-droplet-half" title={t('dyeing_monitor')} />
                 {Toolbar}
                 <div style={{ flex: 1, minHeight: 0, overflow: 'auto', background: '#ffffff' }}>
-                    <table style={{ width: '100%', minWidth: 1500, borderCollapse: 'collapse', tableLayout: 'fixed', fontFamily: xpFont, fontSize: 11, background: '#fff' }}>
-                        <colgroup>
-                            {COL_W.map((w, i) => <col key={i} style={{ width: w }} />)}
-                        </colgroup>
+                    <ResizableTable defaults={COL_W}
+                        style={{ width: '100%', minWidth: 1500, borderCollapse: 'collapse', tableLayout: 'fixed', fontFamily: xpFont, fontSize: 11, background: '#fff' }}>
                         <thead>
                             <tr>
                                 <th style={thStyle} />
@@ -236,7 +225,6 @@ export default function DyeingMonitorView() {
                                 const isExpanded = expandedId === r.id;
                                 const noRun = r.clock === NO_RUN;
                                 const toggle = () => setExpandedId(prev => prev === r.id ? null : r.id);
-                                const cs = getChipStyle('DYEING');
                                 return (
                                     <React.Fragment key={r.id}>
                                         <tr
@@ -278,13 +266,9 @@ export default function DyeingMonitorView() {
                                                 />
                                             </td>
                                             <td style={{ ...tdBase, fontSize: 10, overflow: 'hidden' }} title={r.work_center_name || ''}>
-                                                {r.work_center_code ? (
-                                                    <span style={{
-                                                        padding: '1px 5px', borderRadius: CHIP_RADIUS, whiteSpace: 'nowrap',
-                                                        border: `1px solid ${cs.borderColor as string}`,
-                                                        background: cs.background as string, color: cs.color as string,
-                                                    }}>{r.work_center_code}</span>
-                                                ) : '—'}
+                                                {r.work_center_code
+                                                    ? <WorkCenterChip type={r.work_center_type} name={r.work_center_name} label={r.work_center_code} />
+                                                    : '—'}
                                             </td>
                                             <td style={tdBase}>
                                                 <StatusChip status={r.clock} label={clockLabel(r.clock)} />
@@ -294,7 +278,7 @@ export default function DyeingMonitorView() {
                                                     ? <>{fmt(r.yards_per_min, 0)} × {r.lines} = <b>{fmt(r.rate_yd_per_min, 0)}</b></>
                                                     : '—'}
                                             </td>
-                                            <td style={{ ...tdBase, textAlign: 'right' }}>{fmtElapsed(r.run_minutes)}</td>
+                                            <td style={{ ...tdBase, textAlign: 'right' }}>{fmtMinutes(r.run_minutes)}</td>
                                             <td style={tdBase}>{noRun ? '—' : <OutputCell r={r} />}</td>
                                             <td style={{ ...tdBase, fontSize: 10 }}>{fmtStamp(r.color_matching_at)}</td>
                                             <td style={{ ...tdBase, fontSize: 10 }}>{fmtStamp(r.started_at)}</td>
@@ -337,7 +321,7 @@ export default function DyeingMonitorView() {
                                 );
                             })}
                         </tbody>
-                    </table>
+                    </ResizableTable>
                 </div>
                 <Pager page={page} total={total} pageSize={PAGE_SIZE} onPageChange={setPage} hideWhenEmpty />
             </ShellWindow>

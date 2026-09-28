@@ -85,6 +85,7 @@ def _wo_fields(wo: WorkOrder | None) -> dict:
         "work_center_id": str(wc.id) if wc else None,
         "work_center_code": wc.code if wc else None,
         "work_center_name": wc.name if wc else None,
+        "work_center_type": wc.center_type if wc else None,
         "work_order_id": str(wo.id) if wo else None,
         "wo_code": wo.code if wo else None,
         "wo_status": wo.status if wo else None,

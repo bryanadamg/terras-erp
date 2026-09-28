@@ -70,6 +70,16 @@ export const isoDate = (d: Date): string => {
     return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
 };
 
+/** A duration in minutes as the floor reads it: 45m, 3h 20m, 2d 4h. Blank is a dash. */
+export const fmtMinutes = (mins: any): string => {
+    const v = Number(mins);
+    if (mins === null || mins === undefined || mins === '' || Number.isNaN(v)) return '—';
+    if (v < 60) return `${Math.round(v)}m`;
+    const h = Math.floor(v / 60);
+    if (h < 24) return `${h}h ${Math.round(v % 60)}m`;
+    return `${Math.floor(h / 24)}d ${h % 24}h`;
+};
+
 /** Blank/non-numeric renders as an em dash instead of 0 — for optional fields. */
 export const orDash = (v: any, fmt: (x: any) => string = fmtQty): string =>
     v === null || v === undefined || v === '' || !Number.isFinite(Number(v)) ? '—' : fmt(v);
