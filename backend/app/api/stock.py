@@ -72,6 +72,8 @@ async def get_stock_ledger(
     category_id: Optional[str] = Query(None, description="Item category id, or comma-separated ids (a category plus its descendants)"),
     reference_type: Optional[str] = Query(None),
     direction: Optional[str] = Query(None, description="'in' (qty >= 0) or 'out' (qty < 0)"),
+    sort_by: Optional[str] = Query(None, description="date | item | category | location | qty"),
+    sort_dir: Optional[str] = Query(None, description="asc | desc"),
     window: PageWindow = Depends(PageParams(default_size=100)),
     db: AsyncSession = Depends(get_async_db),
     current_user: User = Depends(require_any_permission("stock_ledger.view", "stock_on_hand.view"))
@@ -127,11 +129,33 @@ async def get_stock_ledger(
     total_in = float(agg[0] or 0)
     total_out = float(agg[1] or 0)
 
+    # Sort in SQL, not on the loaded page — a page-local sort shows the wrong rows.
+    # id is the tiebreak so OFFSET never repeats or skips a row between pages.
+    from app.models.category import Category
+    from sqlalchemy import nullslast
+    page_q = select(StockLedger).where(*conditions)
+    sort_col = {
+        "date": StockLedger.created_at,
+        "qty": StockLedger.qty_change,
+        "item": Item.name,
+        "category": Category.name,
+        "location": Location.name,
+    }.get(sort_by or "")
+    if sort_by in ("item", "category"):
+        page_q = page_q.join(Item, Item.id == StockLedger.item_id)
+    if sort_by == "category":
+        page_q = page_q.outerjoin(Category, Category.id == Item.category_id)
+    if sort_by == "location":
+        page_q = page_q.join(Location, Location.id == StockLedger.location_id)
+    if sort_col is None:
+        order = [StockLedger.created_at.desc()]
+    else:
+        order = [nullslast(sort_col.asc() if (sort_dir or "").lower().startswith("a") else sort_col.desc())]
     rows = (await db.execute(
         window.apply(
-            select(StockLedger).where(*conditions)
+            page_q
             .options(selectinload(StockLedger.attribute_values), joinedload(StockLedger.batch))
-            .order_by(StockLedger.created_at.desc())
+            .order_by(*order, StockLedger.id.desc())
         )
     )).scalars().all()
 
@@ -142,7 +166,6 @@ async def get_stock_ledger(
     loc_ids = {r.location_id for r in rows}
     item_map = {}
     if item_ids:
-        from app.models.category import Category
         for iid, nm, cd, uom, cat_id, cat_name in (await db.execute(
             select(Item.id, Item.name, Item.code, Item.uom, Item.category_id, Category.name)
             .outerjoin(Category, Category.id == Item.category_id)
@@ -183,9 +206,31 @@ async def get_stock_ledger(
         )).all():
             ref_label_map[str(gid)] = po_number
 
+    # Variant identity, in the shape LotChips reads (variant_attributes + Color
+    # Library fields): the row's own attribute values and colour, resolved through
+    # the same key folding the balance table uses. Size is not a variant attribute —
+    # a lot's only size identity is its BOM-size snapshot, so unlotted rows have none.
+    row_keys = {r.id: stock_service._generate_variant_key([v.id for v in (r.attribute_values or [])], r.color_id) for r in rows}
+    variant_info = await stock_service.describe_variant_keys(db, row_keys.values())
+    # A lot ordered against an unapproved lab dip has no shade yet — only its MO's
+    # pending code, which LotChips shows as a pending chip.
+    lot_ids = {r.batch_id for r in rows if r.batch_id}
+    labdip_map: dict = {}
+    if lot_ids:
+        from app.models.batch import Batch
+        from app.models.manufacturing import ManufacturingOrder
+        for bid, code in (await db.execute(
+            select(Batch.id, ManufacturingOrder.labdip_variant_code)
+            .join(WorkOrder, WorkOrder.id == Batch.source_wo_id)
+            .join(ManufacturingOrder, ManufacturingOrder.id == WorkOrder.manufacturing_order_id)
+            .where(Batch.id.in_(lot_ids), ManufacturingOrder.labdip_variant_code.isnot(None))
+        )).all():
+            labdip_map[bid] = code
+
     items = []
     for r in rows:
         nm, cd, uom, cat_id, cat_name = item_map.get(r.item_id, ("", "", "", None, None))
+        vinfo = variant_info.get(row_keys[r.id], {})
         items.append({
             "id": r.id,
             "item_id": r.item_id,
@@ -207,6 +252,12 @@ async def get_stock_ledger(
             "batch_id": r.batch_id,
             "batch_number": r.batch.batch_number if r.batch else None,
             "vendor_lot": r.batch.vendor_lot if r.batch else None,
+            "size_label": stock_service._bom_size_label(r.batch.bom_size_snapshot) if r.batch else None,
+            "variant_attributes": vinfo.get("variant_attributes", []),
+            "color_code": vinfo.get("color_code"),
+            "color_name": vinfo.get("color_name"),
+            "color_hex": vinfo.get("color_hex"),
+            "labdip_variant_code": labdip_map.get(r.batch_id) if not vinfo.get("color_code") else None,
             "created_at": r.created_at,
         })
 

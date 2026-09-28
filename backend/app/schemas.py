@@ -1481,6 +1481,13 @@ class StockLedgerResponse(BaseModel):
     batch_id: UUID | None = None
     batch_number: str | None = None
     vendor_lot: str | None = None
+    # Variant identity for LotChips — see get_stock_ledger.
+    size_label: str | None = None
+    variant_attributes: list[dict] = []
+    color_code: str | None = None
+    color_name: str | None = None
+    color_hex: str | None = None
+    labdip_variant_code: str | None = None
     created_at: datetime
 
     class Config:
