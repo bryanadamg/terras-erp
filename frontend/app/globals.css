@@ -734,18 +734,18 @@ body.window-chrome-inactive {
   padding: 16px var(--content-pad) var(--content-pad);
 }
 
-/* Locations page: 3-pane (stores/zones/bins) stacks vertically on narrow
+/* Column browser (shared/columnBrowser.tsx — Locations, Categories): panes stack vertically on narrow
    screens instead of overflowing horizontally; each pane keeps its own
    internal vertical scroll. */
-.locations-panes {
+.column-panes {
   display: flex;
   min-height: 0;
 }
 @media (max-width: 900px) {
-  .locations-panes {
+  .column-panes {
     flex-direction: column;
   }
-  .locations-panes .loc-pane {
+  .column-panes .column-pane {
     width: 100% !important;
     max-height: 260px;
     border-right: none !important;

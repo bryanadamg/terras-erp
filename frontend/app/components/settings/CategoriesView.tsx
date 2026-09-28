@@ -3,9 +3,12 @@
 import React, { useState } from 'react';
 import { useUser } from '../../context/UserContext';
 import { useConfirm } from '../../context/ConfirmContext';
-import { XPActionButton, xpFont, rowStateBg, XP_BTN } from '../shared/xpTheme';
-import { lvInput, lvBtn } from '../shared/listViewTheme';
+import { XPActionButton } from '../shared/xpTheme';
 import { xpToolbar, SearchField, ToolbarCount } from '../shared/shellTheme';
+import {
+    ColumnPanes, ColumnPane, ColumnAddBar, ColumnInput, ColumnRenameRow, ColumnRow, ColumnCount,
+    ColumnEmpty, ColumnStatusBar,
+} from '../shared/columnBrowser';
 
 type Category = {
     id: string;
@@ -42,9 +45,10 @@ function keepWithAncestors(cats: Category[], term: string): Set<string> {
     return keep;
 }
 
-// Three fixed columns, one per level — the backend caps depth at 3, so the columns
-// never overflow (same shape as Locations' store | zone | bin). A column is the
-// children of the selection to its left, and is where you add to that level.
+// Three fixed columns, one per level (shared/columnBrowser.tsx — same shape as
+// Locations' store | zone | bin). The backend caps depth at 3, so the columns
+// never overflow. A column is the children of the selection to its left, and is
+// where you add to that level.
 export default function CategoriesView({
     categories,
     onCreateCategory,
@@ -60,7 +64,6 @@ export default function CategoriesView({
     const [selectedId, setSelectedId] = useState<string | null>(null);
     const [pending, setPending] = useState<{ name: string; parentId: string | null } | null>(null);
     const [search, setSearch] = useState('');
-    const [hoveredId, setHoveredId] = useState<string | null>(null);
     const [renaming, setRenaming] = useState<{ id: string; value: string } | null>(null);
     const [adding, setAdding] = useState<{ level: number; value: string } | null>(null);
 
@@ -82,7 +85,7 @@ export default function CategoriesView({
     const path: Category[] = [];
     for (let c: Category | undefined = selected ?? undefined; c; c = c.parent_id ? byId.get(c.parent_id) : undefined) path.unshift(c);
 
-    const columns: { level: number; parent: Category | null; rows: Category[] }[] = [1, 2, 3].map(level => {
+    const columns = [1, 2, 3].map(level => {
         const parent = level === 1 ? null : path[level - 2] ?? null;
         return { level, parent, rows: level === 1 || parent ? childrenOf(parent?.id ?? null) : [] };
     });
@@ -90,6 +93,10 @@ export default function CategoriesView({
     const select = (id: string) => { setSelectedId(id); setRenaming(null); };
 
     // ── Actions ──────────────────────────────────────────────────────────────
+    const siblingsOf = (parent: Category | null) => all.filter(c => (c.parent_id ?? null) === (parent?.id ?? null));
+    const isDup = (parent: Category | null, v: string) =>
+        !!v.trim() && siblingsOf(parent).some(c => c.name.toLowerCase() === v.trim().toLowerCase());
+
     const commitRename = async () => {
         const r = renaming;
         setRenaming(null);
@@ -99,9 +106,7 @@ export default function CategoriesView({
 
     const commitAdd = async (parent: Category | null) => {
         const v = adding?.value.trim();
-        if (!v) { setAdding(null); return; }
-        const siblings = all.filter(c => (c.parent_id ?? null) === (parent?.id ?? null));
-        if (siblings.some(c => c.name.toLowerCase() === v.toLowerCase())) return;
+        if (!v || isDup(parent, v)) return;
         const res = await onCreateCategory(v, parent?.id);
         if (res && res.ok === false) return;
         setAdding(null); setSearch('');
@@ -127,136 +132,46 @@ export default function CategoriesView({
         if (path.some(p => p.id === c.id)) setSelectedId(c.parent_id);
     };
 
-    // ── Pieces ───────────────────────────────────────────────────────────────
-    const empty = (text: string) => (
-        <div style={{ padding: '20px 10px', textAlign: 'center', color: '#888', fontStyle: 'italic', fontFamily: xpFont, fontSize: 11 }}>{text}</div>
-    );
-
+    // ── Rows / panes ─────────────────────────────────────────────────────────
     const row = (c: Category, level: number) => {
-        const onPath = path[level - 1]?.id === c.id;
-        const isSel = selected?.id === c.id;
-        const hover = hoveredId === c.id;
-        const hasKids = allChildrenOf(c.id).length > 0;
-        const n = c.item_count ?? 0;
-        const block = deleteBlock(c);
-
         if (renaming?.id === c.id) {
             return (
-                <div key={c.id} style={{ display: 'flex', gap: 4, padding: '2px 6px', background: rowStateBg('expanded'), borderBottom: '1px solid #eceae2' }}>
-                    <input
-                        autoFocus
-                        style={lvInput({ flex: 1, minWidth: 0 })}
-                        value={renaming.value}
-                        onChange={e => setRenaming({ id: c.id, value: e.target.value })}
-                        onBlur={commitRename}
-                        onKeyDown={e => {
-                            if (e.key === 'Enter') { e.preventDefault(); commitRename(); }
-                            if (e.key === 'Escape') { e.preventDefault(); setRenaming(null); }
-                        }}
-                        aria-label="Category name"
-                    />
-                </div>
+                <ColumnRenameRow
+                    key={c.id}
+                    value={renaming.value}
+                    onChange={v => setRenaming({ id: c.id, value: v })}
+                    onCommit={commitRename}
+                    onCancel={() => setRenaming(null)}
+                />
             );
         }
-
+        const onPath = path[level - 1]?.id === c.id;
+        const block = deleteBlock(c);
+        const n = c.item_count ?? 0;
+        const editable = !c.is_system && (canEdit || canDelete);
         return (
-            <div
+            <ColumnRow
                 key={c.id}
-                role="option"
-                aria-selected={onPath}
-                tabIndex={0}
-                onClick={() => select(c.id)}
-                onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); select(c.id); } }}
-                onMouseEnter={() => setHoveredId(c.id)}
-                onMouseLeave={() => setHoveredId(null)}
+                icon={allChildrenOf(c.id).length ? 'bi-folder-fill' : 'bi-folder'}
+                label={c.name}
+                selected={selected?.id === c.id}
+                onPath={onPath && selected?.id !== c.id}
+                onSelect={() => select(c.id)}
+                chevron={level < MAX_DEPTH}
                 title={c.path_names.join(' › ')}
-                style={{
-                    display: 'flex', alignItems: 'center', gap: 5, padding: '4px 8px', cursor: 'pointer',
-                    fontFamily: xpFont, fontSize: 11, userSelect: 'none',
-                    borderBottom: '1px solid #eceae2',
-                    // The selection itself is solid; ancestors on its path stay lit, paler.
-                    background: isSel ? rowStateBg('selected') : onPath ? '#e8eef8' : hover ? rowStateBg('expanded') : 'transparent',
-                    borderLeft: `3px solid ${isSel ? '#316ac5' : onPath ? '#9db6dc' : 'transparent'}`,
-                    fontWeight: onPath ? 'bold' : 'normal',
-                }}
-            >
-                <i className={`bi ${hasKids ? 'bi-folder-fill' : 'bi-folder'}`} style={{ color: '#c8a030' }} />
-                <span style={{ flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{c.name}</span>
-                {c.is_system && <i className="bi bi-shield-lock" style={{ color: '#a06000', fontSize: 10 }} title="System category" />}
-                {(canEdit || canDelete) && (
-                    // Hover-revealed row actions, same as the Attributes / UOM tabs.
-                    <span style={{ display: 'flex', gap: 3, opacity: hover ? 1 : 0, transition: 'opacity 0.1s' }} onClick={e => e.stopPropagation()}>
-                        {canEdit && !c.is_system && (
-                            <XPActionButton icon="bi-pencil" title="Rename" onClick={() => { setAdding(null); setRenaming({ id: c.id, value: c.name }); }} />
-                        )}
-                        {canDelete && !c.is_system && (
-                            <XPActionButton tone="danger" icon="bi-trash" title={block ?? 'Delete'} disabled={!!block} onClick={() => handleDelete(c)} />
-                        )}
-                    </span>
-                )}
-                {n > 0 && <span style={{ fontSize: 10, color: '#777', fontWeight: 'normal', minWidth: 14, textAlign: 'right' }} title={`${n} item${n !== 1 ? 's' : ''} filed directly here`}>{n}</span>}
-                {level < MAX_DEPTH && <i className="bi bi-chevron-right" style={{ fontSize: 9, color: onPath ? '#316ac5' : '#bbb' }} />}
-            </div>
-        );
-    };
-
-    const column = ({ level, parent, rows }: typeof columns[number]) => {
-        const reachable = level === 1 || !!parent;
-        const isAdding = adding?.level === level;
-        const title = level === 1 ? 'Categories' : parent ? parent.name : `Level ${level}`;
-        const dup = isAdding && !!adding!.value.trim() && all.some(c =>
-            (c.parent_id ?? null) === (parent?.id ?? null) && c.name.toLowerCase() === adding!.value.trim().toLowerCase());
-        return (
-            <div
-                key={level}
-                role="listbox"
-                aria-label={`Level ${level}`}
-                style={{
-                    flex: 1, minWidth: 0,
-                    display: 'flex', flexDirection: 'column',
-                    borderRight: level < MAX_DEPTH ? '1px solid #a0988c' : 'none',
-                    background: reachable ? '#fff' : '#f5f4ef',
-                }}
-            >
-                <div style={xpToolbar({ flexShrink: 0, flexWrap: 'nowrap', justifyContent: 'space-between' })}>
-                    <span style={{ fontFamily: xpFont, fontSize: 11, fontWeight: 'bold', color: level === 1 ? '#000' : '#003080', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                        {title} <span style={{ color: '#888', fontWeight: 'normal' }}>({rows.length})</span>
-                    </span>
-                    {canCreate && reachable && (
-                        <button
-                            type="button" className={XP_BTN} style={lvBtn('success', { padding: '1px 6px' })}
-                            title={parent ? `New subcategory of ${parent.name}` : 'New top-level category'}
-                            onClick={() => { setRenaming(null); setAdding(isAdding ? null : { level, value: '' }); }}
-                        >
-                            <i className="bi bi-plus-lg" />
-                        </button>
-                    )}
-                </div>
-                {isAdding && (
-                    <div style={{ display: 'flex', gap: 4, padding: '4px 6px', background: '#eef3fb', borderBottom: '1px solid #b0c4de' }}>
-                        <input
-                            autoFocus
-                            style={lvInput({ flex: 1, minWidth: 0, ...(dup ? { borderColor: '#c00000' } : {}) })}
-                            title={dup ? 'Already exists here' : undefined}
-                            placeholder={parent ? `New in ${parent.name}… (Enter)` : 'New category… (Enter)'}
-                            value={adding!.value}
-                            onChange={e => setAdding({ level, value: e.target.value })}
-                            onKeyDown={e => {
-                                if (e.key === 'Enter') { e.preventDefault(); commitAdd(parent); }
-                                if (e.key === 'Escape') { e.preventDefault(); setAdding(null); }
-                            }}
-                        />
-                        <button type="button" className={XP_BTN} style={lvBtn('success', { padding: '1px 6px' })} disabled={dup} onClick={() => commitAdd(parent)}>Add</button>
-                    </div>
-                )}
-                <div style={{ flex: 1, minHeight: 0, overflowY: 'auto' }}>
-                    {!reachable
-                        ? empty(`Select a level ${level - 1} category.`)
-                        : rows.length === 0
-                            ? empty(keep ? 'No matches.' : parent ? `No subcategories in ${parent.name}${canCreate ? ' — add one with +' : ''}.` : 'No categories defined.')
-                            : rows.map(c => row(c, level))}
-                </div>
-            </div>
+                actions={editable ? (
+                    <>
+                        {canEdit && <XPActionButton icon="bi-pencil" title="Rename" onClick={() => { setAdding(null); setRenaming({ id: c.id, value: c.name }); }} />}
+                        {canDelete && <XPActionButton tone="danger" icon="bi-trash" title={block ?? 'Delete'} disabled={!!block} onClick={() => handleDelete(c)} />}
+                    </>
+                ) : undefined}
+                trailing={
+                    <>
+                        {c.is_system && <i className="bi bi-shield-lock" style={{ color: '#a06000', fontSize: 10 }} title="System category" />}
+                        <ColumnCount n={n} title={`${n} item${n !== 1 ? 's' : ''} filed directly here`} />
+                    </>
+                }
+            />
         );
     };
 
@@ -271,25 +186,54 @@ export default function CategoriesView({
                 <ToolbarCount right>{all.length} categor{all.length === 1 ? 'y' : 'ies'}</ToolbarCount>
             </div>
 
-            <div style={{ flex: 1, minHeight: 0, display: 'flex' }}>
-                {columns.map(column)}
-            </div>
+            <ColumnPanes>
+                {columns.map(({ level, parent, rows }) => {
+                    const reachable = level === 1 || !!parent;
+                    const isAdding = adding?.level === level;
+                    const dup = isAdding && isDup(parent, adding!.value);
+                    return (
+                        <ColumnPane
+                            key={level}
+                            last={level === MAX_DEPTH}
+                            label={`Level ${level}`}
+                            title={level === 1 ? 'Categories' : parent ? parent.name : `Level ${level}`}
+                            count={reachable ? rows.length : undefined}
+                            dimmed={!reachable}
+                            onAdd={canCreate && reachable ? () => { setRenaming(null); setAdding(isAdding ? null : { level, value: '' }); } : undefined}
+                            addTitle={parent ? `New subcategory of ${parent.name}` : 'New top-level category'}
+                            adding={isAdding ? (
+                                <ColumnAddBar onSubmit={() => commitAdd(parent)} onCancel={() => setAdding(null)} submitDisabled={!adding!.value.trim() || dup}>
+                                    <ColumnInput
+                                        autoFocus
+                                        placeholder={parent ? `New in ${parent.name}…` : 'New category…'}
+                                        value={adding!.value}
+                                        invalid={dup && 'Already exists here'}
+                                        onChange={e => setAdding({ level, value: e.target.value })}
+                                    />
+                                </ColumnAddBar>
+                            ) : undefined}
+                        >
+                            {!reachable
+                                ? <ColumnEmpty>Select a level {level - 1} category.</ColumnEmpty>
+                                : rows.length === 0
+                                    ? <ColumnEmpty>{keep ? 'No matches.' : parent ? `No subcategories in ${parent.name}${canCreate ? ' — add one with +' : ''}.` : 'No categories defined.'}</ColumnEmpty>
+                                    : rows.map(c => row(c, level))}
+                        </ColumnPane>
+                    );
+                })}
+            </ColumnPanes>
 
-            {/* Status bar: where the selection sits and what it holds */}
-            <div style={{ flexShrink: 0, display: 'flex', alignItems: 'center', gap: 10, background: 'linear-gradient(to bottom,#e8e6df,#d5d3cc)', borderTop: '1px solid #b0a898', padding: '3px 8px', fontFamily: xpFont, fontSize: 11, color: '#333' }}>
-                {selected ? (
+            <ColumnStatusBar
+                left={selected
+                    ? <><i className="bi bi-folder2-open me-1" style={{ color: '#c8a030' }} />{path.map(p => p.name).join(' › ')}</>
+                    : <span style={{ color: '#888' }}>No category selected</span>}
+                right={selected ? (
                     <>
-                        <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                            <i className="bi bi-folder2-open me-1" style={{ color: '#c8a030' }} />
-                            {path.map(p => p.name).join(' › ')}
-                        </span>
-                        <span style={{ marginLeft: 'auto', whiteSpace: 'nowrap' }}>
-                            <b>{direct}</b> item{direct !== 1 ? 's' : ''} filed here
-                            {hasKids && <> · <b>{total}</b> incl. subcategories</>}
-                        </span>
+                        <b>{direct}</b> item{direct !== 1 ? 's' : ''} filed here
+                        {hasKids && <> · <b>{total}</b> incl. subcategories</>}
                     </>
-                ) : <span style={{ color: '#888' }}>No category selected</span>}
-            </div>
+                ) : undefined}
+            />
         </div>
     );
 }
