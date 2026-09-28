@@ -165,7 +165,7 @@ export const DOC_MODULES: DocTypeModule[] = [
             }],
             label: x => `Latest ${x.rows.length} of ${Number(x.total).toLocaleString()} movements`,
             build: (x, env) => buildStockLedgerContext({
-                entries: x.rows, attributes: env.attributes, periodLabel: 'All time → now',
+                entries: x.rows, periodLabel: 'All time → now',
                 totals: { total: x.total, totalIn: x.totalIn, totalOut: x.totalOut },
                 formatDateTime: iso => env.tzFormatCustom(iso, { year: 'numeric', month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' }),
                 companyProfile: env.companyProfile, companyName: env.companyName, companyLogoUrl: env.companyLogoUrl,

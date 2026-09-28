@@ -36,11 +36,10 @@ function withHiddenColumns(layout: PrintLayout, hidden: Record<string, boolean>)
 }
 
 export default function StockLedgerPrintModal({
-    entries, locations, attributes, companyProfile, periodLabel, totals, filtersSummary, onClose,
+    entries, locations, companyProfile, periodLabel, totals, filtersSummary, onClose,
 }: {
     entries: any[];
     locations: any[];
-    attributes: any[];
     companyProfile: any;
     periodLabel: string;
     totals: { total: number; totalIn: number; totalOut: number };
@@ -74,10 +73,10 @@ export default function StockLedgerPrintModal({
     const layout = useMemo(() => withHiddenColumns(baseLayout, visibleCols), [baseLayout, visibleCols]);
 
     const ctx = useMemo(() => buildStockLedgerContext({
-        entries, locations, attributes, periodLabel, filtersSummary, totals, formatDateTime, companyProfile,
+        entries, locations, periodLabel, filtersSummary, totals, formatDateTime, companyProfile,
         companyName: companyProfile?.name,
         companyLogoUrl: companyProfile?.logo_url ? `${STATIC_BASE}${companyProfile.logo_url}` : undefined,
-    }), [entries, locations, attributes, periodLabel, filtersSummary, totals, formatDateTime, companyProfile]);
+    }), [entries, locations, periodLabel, filtersSummary, totals, formatDateTime, companyProfile]);
     const { widthMm: paperW, heightMm: paperH } = paperDimsMm(layout.paper);
 
     const handlePrint = () => {
