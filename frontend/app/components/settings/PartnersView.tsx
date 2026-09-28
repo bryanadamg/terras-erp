@@ -121,13 +121,10 @@ export default function PartnersView({ type }: PartnersViewProps) {
         sel.clear();
         setShowBulkDeleteConfirm(false);
         // Per-id failures are summarised below rather than toasted one by one.
-        let failed = 0;
-        for (const id of ids) {
-            try {
-                const res = await authFetch(`${API_BASE}/partners/${id}`, { method: 'DELETE' });
-                if (!res.ok) failed++;
-            } catch { failed++; }
-        }
+        const results = await Promise.allSettled(
+            ids.map(id => authFetch(`${API_BASE}/partners/${id}`, { method: 'DELETE' })),
+        );
+        const failed = results.filter(r => r.status === 'rejected' || !r.value.ok).length;
         const succeeded = ids.length - failed;
         if (failed === 0) showToast(`${succeeded} ${noun}${succeeded !== 1 ? 's' : ''} deleted`, 'success');
         else if (succeeded > 0) showToast(`${succeeded} deleted, ${failed} could not be removed — linked records exist`, 'warning');
