@@ -244,6 +244,32 @@ async def add_stock_entry(
                 detail=f"Insufficient stock. Current: {current_balance}, Required: {abs(qty_change)}"
             )
         balance = next((r for r in locked_rows if r.batch_key == ""), None)
+        # The guard passed on the total, but only the unlotted row is decremented
+        # below — deducting past it drove that row negative while the lots kept
+        # their qty (overstated lots, a phantom negative pile). Draw the shortfall
+        # off the lots instead, oldest lot first, as lot-stamped ledger rows.
+        plain_qty = max(float(balance.qty), 0.0) if balance else 0.0
+        spill = -qty_change - plain_qty
+        if spill > 1e-9:
+            import uuid as _uuid
+            from app.models.batch import Batch
+            lot_rows = {r.batch_key: r for r in locked_rows if r.batch_key and float(r.qty) > 0}
+            order = (await db.execute(
+                select(Batch.id).where(Batch.id.in_([_uuid.UUID(k) for k in lot_rows]))
+                .order_by(Batch.created_at, Batch.batch_number)
+            )).scalars().all() if lot_rows else []
+            for bid in order:
+                take = min(float(lot_rows[str(bid)].qty), spill)
+                await add_stock_entry(
+                    db, item_id, location_id, -take, reference_type, reference_id,
+                    attribute_value_ids=attribute_value_ids, batch_id=bid, color_id=color_id,
+                )
+                spill -= take
+                if spill <= 1e-9:
+                    break
+            qty_change = -plain_qty
+            if not qty_change and not (cones_change or boxes_change or drums_change):
+                return
     else:
         result = await db.execute(
             select(StockBalance)
