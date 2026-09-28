@@ -185,18 +185,25 @@ export default function WOCompletionModal({ mo, onClose, onSaved, workOrder }: W
             }
             setBatchesByItem(map);
             setReservedByItem(held);
+            // Lots scanned onto THIS WO (scan-to-stage) were already positively picked
+            // at the moment the bag went in — pre-tick those. Unclaimed lots on the
+            // line stay unticked: a pre-ticked guess reads as confirmed and gets
+            // logged as-is, so the operator must pick those themselves.
+            const stagedHere = (id: string) => map[id]
+                .filter((b: any) => b.reserved_wo_id && String(b.reserved_wo_id) === String(workOrder?.id))
+                .map((b: any) => b.id);
             setConsumedBatches(prev => {
                 const next: Record<string, string> = {};
-                for (const id of Object.keys(map)) { if (prev[id]) next[id] = prev[id]; }
+                for (const id of Object.keys(map)) {
+                    if (prev[id]) next[id] = prev[id];
+                    else if (map[id].length === 1 && stagedHere(id).length) next[id] = map[id][0].id;
+                }
                 return next;
             });
-            // Bag-fed steps: start with NOTHING checked. A pre-ticked list reads as
-            // confirmed and gets logged as-is — the operator must positively pick
-            // the lots that physically went into the bath. "All" is one click away.
             setSelectedLots(prev => {
                 const next: Record<string, string[]> = {};
                 for (const id of Object.keys(map)) {
-                    if (isBagFedWO && map[id].length >= 2) next[id] = prev[id] || [];
+                    if (isBagFedWO && map[id].length >= 2) next[id] = prev[id] || stagedHere(id);
                 }
                 return next;
             });
@@ -599,6 +606,14 @@ export default function WOCompletionModal({ mo, onClose, onSaved, workOrder }: W
                                                                     </span>
                                                                 )}
                                                                 {b.location_name && <span style={{ color: '#0058e6' }}>@ {b.location_name}</span>}
+                                                                {b.reserved_wo_id && (
+                                                                    <span title="Scanned onto this work order at staging — pre-ticked" style={{ borderRadius: CHIP_RADIUS,
+                                                                        fontSize: 9, fontWeight: 'bold', color: '#002080',
+                                                                        background: '#dce8ff', border: '1px solid #7f9db9', padding: '0 4px',
+                                                                    }}>
+                                                                        <i className="bi bi-upc-scan" /> staged
+                                                                    </span>
+                                                                )}
                                                             </div>
                                                             <LotChips batch={b} showOrder />
                                                         </div>
