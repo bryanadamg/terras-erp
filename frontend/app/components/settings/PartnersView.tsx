@@ -74,7 +74,6 @@ export default function PartnersView({ type }: PartnersViewProps) {
     const canCreate = hasPermission(`${permPrefix}.create`);
     const canEdit = hasPermission(`${permPrefix}.edit`);
     const canDelete = hasPermission(`${permPrefix}.delete`);
-    const canManage = canCreate || canEdit || canDelete;
 
     /** One mutation call; toasts the server's reason on failure. Returns ok. */
     const send = async (url: string, method: string, body?: any): Promise<boolean> => {
@@ -200,7 +199,7 @@ export default function PartnersView({ type }: PartnersViewProps) {
                     <ToolbarCount>
                         {total} {typeLabel}{total !== 1 ? 's' : ''}
                     </ToolbarCount>
-                    {canManage && (
+                    {canCreate && (
                         <ToolbarButton tone="create" icon="bi-plus-lg" style={{ marginLeft: 'auto' }} onClick={() => setIsCreateOpen(true)}>
                             Add {typeLabel}
                         </ToolbarButton>
@@ -208,7 +207,7 @@ export default function PartnersView({ type }: PartnersViewProps) {
                 </div>
 
                 {/* ── Bulk action bar ── */}
-                {canManage && sel.count > 0 && (
+                {canDelete && sel.count > 0 && (
                     <div style={xpToolbar({ background: '#fff8e1', borderBottom: '1px solid #e0c060' })}>
                             <span style={{ fontFamily: xpFont, fontSize: '11px', color: '#665500', fontWeight: 'bold' }}>
                                 {sel.count} selected
@@ -239,7 +238,7 @@ export default function PartnersView({ type }: PartnersViewProps) {
                             <thead style={xpTableHeader}>
                                 <tr>
                                     <th style={{ ...xpThCell, width: '28px', textAlign: 'center' as const }}>
-                                        <SelectAllCheckbox allSelected={sel.allPageSelected} someSelected={sel.someSelected} onChange={sel.togglePage} title="Select all" />
+                                        {canDelete && <SelectAllCheckbox allSelected={sel.allPageSelected} someSelected={sel.someSelected} onChange={sel.togglePage} title="Select all" />}
                                     </th>
                                     <th style={{ ...xpThCell, width: '30%' }}>Name</th>
                                     <th style={xpThCell}>Address</th>
@@ -254,7 +253,7 @@ export default function PartnersView({ type }: PartnersViewProps) {
                                         style={{ background: sel.isSelected(p) ? rowStateBg('selected') : lvZebra(rowIndex), borderBottom: '1px solid #c0bdb5' }}
                                     >
                                         <td style={{ ...tdBase, textAlign: 'center' as const }}>
-                                            <RowCheckbox checked={sel.isSelected(p)} onChange={() => sel.toggle(p)} label={p.name} />
+                                            {canDelete && <RowCheckbox checked={sel.isSelected(p)} onChange={() => sel.toggle(p)} label={p.name} />}
                                         </td>
                                         <td style={{ ...tdBase, fontWeight: 'bold' }}>
                                             {p.name}
@@ -266,7 +265,7 @@ export default function PartnersView({ type }: PartnersViewProps) {
                                             <StatusChip status={p.active ? 'ACTIVE' : 'INACTIVE'} />
                                         </td>
                                         <td style={{ ...tdBase, borderRight: 'none', textAlign: 'right' as const }}>
-                                            {canManage && <MenuTriggerButton onClick={e => menuToggle(p.id, e)} />}
+                                            {(canEdit || canDelete) && <MenuTriggerButton onClick={e => menuToggle(p.id, e)} />}
                                         </td>
                                     </tr>
                                 ))}
@@ -314,13 +313,13 @@ export default function PartnersView({ type }: PartnersViewProps) {
             {/* Row ⋯ menu: Edit / Delete */}
             {menuOpenId && (() => {
                 const p = pagedPartners.find(x => String(x.id) === menuOpenId);
-                if (!p || !canManage) return null;
+                if (!p || !(canEdit || canDelete)) return null;
                 return (
                     <FloatingMenu
                         pos={menuPos}
                         items={[
-                            { key: 'edit', label: 'Edit', icon: 'bi-pencil-square', onClick: () => { menuClose(); setEditingPartner(p); } },
-                            { key: 'delete', label: 'Delete', icon: 'bi-trash', danger: true, onClick: () => { menuClose(); handleDelete(p); } },
+                            ...(canEdit ? [{ key: 'edit', label: 'Edit', icon: 'bi-pencil-square', onClick: () => { menuClose(); setEditingPartner(p); } }] : []),
+                            ...(canDelete ? [{ key: 'delete', label: 'Delete', icon: 'bi-trash', danger: true as const, onClick: () => { menuClose(); handleDelete(p); } }] : []),
                         ]}
                     />
                 );
