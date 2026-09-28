@@ -31,10 +31,11 @@ def create_partner(payload: PartnerCreate, db: Session = Depends(get_db), curren
         active=payload.active
     )
     db.add(partner)
+    db.flush()  # assigns partner.id so the audit row lands in the same commit
+    db.add(AuditLog(user_id=current_user.id, action="CREATE", entity_type="partner", entity_id=str(partner.id),
+                    details=f"Created partner {partner.name}", changes=payload.model_dump(mode="json")))
     db.commit()
     db.refresh(partner)
-    db.add(AuditLog(user_id=current_user.id, action="CREATE", entity_type="partner", entity_id=str(partner.id), details=f"Created partner {partner.name}"))
-    db.commit()
     broadcast_sync({"type": "MASTER_DATA_UPDATE", "domain": "partners"})
     return partner
 
@@ -118,11 +119,16 @@ def update_partner(partner_id: uuid.UUID, payload: PartnerUpdate, db: Session = 
     if not user_has_permission(current_user, required):
         raise HTTPException(status_code=403, detail=f"Missing permission: {required}")
 
-    update_data = payload.model_dump(exclude_unset=True)
-    for key, value in update_data.items():
-        setattr(partner, key, value)
+    # {field: [old, new]} for fields that actually changed — the form re-sends every field.
+    changes = {}
+    for key, value in payload.model_dump(exclude_unset=True).items():
+        old = getattr(partner, key)
+        if old != value:
+            changes[key] = [old, value]
+            setattr(partner, key, value)
 
-    db.add(AuditLog(user_id=current_user.id, action="UPDATE", entity_type="partner", entity_id=str(partner.id), details=f"Updated partner {partner.name}"))
+    db.add(AuditLog(user_id=current_user.id, action="UPDATE", entity_type="partner", entity_id=str(partner.id),
+                    details=f"Updated partner {partner.name}", changes=changes))
     db.commit()
     broadcast_sync({"type": "MASTER_DATA_UPDATE", "domain": "partners"})
     db.refresh(partner)
