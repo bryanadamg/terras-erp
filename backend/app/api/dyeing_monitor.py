@@ -64,6 +64,7 @@ def _row(run: DyeingRun, now: datetime) -> dict:
         "item_code": mo.item_code if mo else None,
         "item_name": mo.item_name if mo else None,
         "item_uom": mo.item.uom if (mo and mo.item) else None,
+        "color_matching_at": run.color_matching_at,
         "started_at": run.started_at,
         "completed_at": run.completed_at,
         **mo_variant_service.variant_labels(mo),

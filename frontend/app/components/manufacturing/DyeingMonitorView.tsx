@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useData } from '../../context/DataContext';
 import { useLanguage } from '../../context/LanguageContext';
 import { useUser } from '../../context/UserContext';
+import { useTimezone } from '../../context/TimezoneContext';
 import { ProgressBar, StatusChip, XPEmptyState, XPActionButton, TableSkeleton, CodeChip, familyColor, xpFont } from '../shared/xpTheme';
 import { ShellWindow, ShellTitleBar, SearchField, FilterChipBar, ToolbarCount, xpToolbar } from '../shared/shellTheme';
 import { lvTh, lvThead, lvTd, lvRow } from '../shared/listViewTheme';
@@ -13,7 +14,9 @@ import DyeingRateModal from './DyeingRateModal';
 import { API_BASE } from '../shared/apiBase';
 
 const AMBER = familyColor('amber');
-const COLS = 8;
+const COLS = 9;
+// How far back finished batches stay listed, so a WO's phase history can be read after the day it ran.
+const HISTORY_DAYS = [1, 7, 30];
 
 function fmt(n: any, d = 1): string {
     if (n === null || n === undefined) return '—';
@@ -30,6 +33,11 @@ function fmtElapsed(mins: any): string {
     const h = Math.floor(v / 60);
     if (h < 24) return `${h}h ${Math.round(v % 60)}m`;
     return `${Math.floor(h / 24)}d ${h % 24}h`;
+}
+
+function minutesBetween(a: any, b: any): number | null {
+    if (!a || !b) return null;
+    return (new Date(b).getTime() - new Date(a).getTime()) / 60_000;
 }
 
 // `clock` is the backend's read of the Start/Complete stamps (never `status`):
@@ -50,6 +58,7 @@ export default function DyeingMonitorView() {
     const { t } = useLanguage();
     const { hasPermission } = useUser();
     const { showToast } = useToast();
+    const { formatCustom } = useTimezone();
     // Same gate the Dyeing Orders tab uses to start and complete a batch.
     const canSetRate = hasPermission('work_order.log');
 
@@ -58,17 +67,18 @@ export default function DyeingMonitorView() {
     const [rateRun, setRateRun] = useState<any>(null);
     const [clockFilter, setClockFilter] = useState<string>('ALL');
     const [search, setSearch] = useState('');
+    const [days, setDays] = useState(1);
     // The run whose Start/Complete is in flight, so a double-press cannot stamp twice.
     const [stamping, setStamping] = useState<string | null>(null);
 
     const load = useCallback(async () => {
         try {
-            const res = await authFetch(`${API_BASE}/dyeing/monitor`);
+            const res = await authFetch(`${API_BASE}/dyeing/monitor?days=${days}`);
             if (res.ok) setData(await res.json());
         } finally {
             setLoading(false);
         }
-    }, [authFetch]);
+    }, [authFetch, days]);
 
     useEffect(() => { load(); }, [load]);
 
@@ -83,7 +93,7 @@ export default function DyeingMonitorView() {
         return () => clearInterval(id);
     }, [load]);
 
-    const stamp = useCallback(async (run: any, path: 'start' | 'complete', labelKey: string) => {
+    const stamp = useCallback(async (run: any, path: 'color-matching' | 'start' | 'complete', labelKey: string) => {
         setStamping(run.id);
         try {
             const res = await authFetch(`${API_BASE}/dyeing-runs/${run.id}/${path}`, {
@@ -117,6 +127,29 @@ export default function DyeingMonitorView() {
             && (!q || [r.work_center_code, r.work_center_name, r.wo_code, r.mo_code, r.item_code, r.item_name]
                 .some(v => (v || '').toLowerCase().includes(q))));
     }, [runs, clockFilter, search]);
+
+    // "28 Sep 2026, 12:00" -- the shape the floor writes the phase log in.
+    const fmtStamp = (v: any) => formatCustom(v, { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit', hour12: false }, 'en-GB');
+
+    /** One WO's phase log: match -> start -> complete, with the gap between each. */
+    const HistoryCell = ({ r }: { r: any }) => {
+        const steps: { label: string; at: any; gap: number | null; gapHint?: string }[] = [
+            { label: t('phase_match'), at: r.color_matching_at, gap: null },
+            { label: t('phase_start'), at: r.started_at, gap: minutesBetween(r.color_matching_at, r.started_at), gapHint: t('phase_prep_gap') },
+            { label: t('phase_complete'), at: r.completed_at, gap: minutesBetween(r.started_at, r.completed_at), gapHint: t('phase_run_gap') },
+        ];
+        return (
+            <div style={{ display: 'grid', gridTemplateColumns: 'auto 1fr auto', columnGap: 6, fontSize: 10, lineHeight: 1.5 }}>
+                {steps.map(s => (
+                    <div key={s.label} style={{ display: 'contents', color: s.at ? '#222' : '#aaa' }}>
+                        <span style={{ color: '#666' }}>{s.label}</span>
+                        <span style={{ whiteSpace: 'nowrap' }}>{s.at ? fmtStamp(s.at) : '—'}</span>
+                        <span title={s.gapHint} style={{ color: '#666', textAlign: 'right' }}>{s.gap != null ? `+${fmtElapsed(s.gap)}` : ''}</span>
+                    </div>
+                ))}
+            </div>
+        );
+    };
 
     const clockLabel = (c: string) =>
         c === RUNNING ? t('running') : c === DONE ? t('completed') : t('loaded');
@@ -177,6 +210,13 @@ export default function DyeingMonitorView() {
                     <b>{data.needs_setup}</b> {t('needs_setup')}
                 </span>
             )}
+            <label style={{ fontSize: 11, display: 'inline-flex', alignItems: 'center', gap: 4 }}
+                title={t('history_range_hint')}>
+                {t('history')}
+                <select value={days} onChange={e => setDays(Number(e.target.value))} style={{ fontSize: 11 }}>
+                    {HISTORY_DAYS.map(d => <option key={d} value={d}>{d} {t('days')}</option>)}
+                </select>
+            </label>
             <ToolbarCount right>{shown.length} / {runs.length}</ToolbarCount>
             <XPActionButton tone="neutral" icon="bi-arrow-clockwise" title={t('refresh')} onClick={load} />
         </div>
@@ -199,6 +239,7 @@ export default function DyeingMonitorView() {
                                 <th style={{ ...lvTh(), textAlign: 'right', width: 80 }}>{t('run_time')}</th>
                                 <th style={{ ...lvTh(), width: 240 }}
                                     title={t('time_output_hint')}>{t('time_output_vs_wo')}</th>
+                                <th style={{ ...lvTh(), width: 230 }}>{t('history')}</th>
                                 <th style={{ ...lvTh(), width: 170 }}></th>
                             </tr>
                         </thead>
@@ -242,9 +283,16 @@ export default function DyeingMonitorView() {
                                     </td>
                                     <td style={{ ...lvTd(), textAlign: 'right' }}>{fmtElapsed(r.run_minutes)}</td>
                                     <td style={lvTd()}><OutputCell r={r} /></td>
+                                    <td style={lvTd()}><HistoryCell r={r} /></td>
                                     <td style={{ ...lvTd(), whiteSpace: 'nowrap' }}>
                                         {canSetRate && (
                                             <span style={{ display: 'inline-flex', gap: 4 }}>
+                                                {!r.color_matching_at && !r.started_at && !r.completed_at && (
+                                                    <XPActionButton tone="neutral" icon="bi-eyedropper" label={t('start_color_matching')}
+                                                        title={t('batch_matching_hint')}
+                                                        disabled={stamping === r.id}
+                                                        onClick={() => stamp(r, 'color-matching', 'start_color_matching')} />
+                                                )}
                                                 {!r.started_at && (
                                                     <XPActionButton tone="primary" icon="bi-play-fill" label={t('start_batch')}
                                                         disabled={stamping === r.id}
