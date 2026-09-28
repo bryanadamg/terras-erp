@@ -42,7 +42,19 @@ _RUN_LOADS = (
     .selectinload(ManufacturingOrder.item),
 )
 
-_CLOCK_ORDER = {svc.CLOCK_RUNNING: 0, svc.CLOCK_WAITING: 1, svc.CLOCK_DONE: 2}
+# A dyeing WO closed without its bath ever being clocked: no run at all, or runs
+# nobody pressed Start on. Listed greyed out so the table reads like the WO list
+# (every dyeing WO of the window) instead of silently dropping them.
+CLOCK_NO_RUN = "NO_RUN"
+
+_CLOCK_ORDER = {svc.CLOCK_RUNNING: 0, svc.CLOCK_WAITING: 1, svc.CLOCK_DONE: 2, CLOCK_NO_RUN: 3}
+
+_WO_LOADS = (
+    joinedload(WorkOrder.work_center),
+    joinedload(WorkOrder.manufacturing_order)
+    .selectinload(ManufacturingOrder.attribute_values).joinedload(AttributeValue.attribute),
+    joinedload(WorkOrder.manufacturing_order).selectinload(ManufacturingOrder.item),
+)
 
 
 def _row(run: DyeingRun, now: datetime) -> dict:
@@ -55,20 +67,53 @@ def _row(run: DyeingRun, now: datetime) -> dict:
     return {
         "id": str(run.id),
         "run_number": run.run_number,
+        **_wo_fields(wo),
+        "color_matching_at": run.color_matching_at,
+        "started_at": run.started_at,
+        "completed_at": run.completed_at,
+        **svc.compute_run_metrics(run, target, mo.item if mo else None, now),
+    }
+
+
+def _wo_fields(wo: WorkOrder | None) -> dict:
+    """The WO-list half of a row, shared by run rows and no-run rows."""
+    mo = wo.manufacturing_order if wo else None
+    wc = wo.work_center if wo else None
+    return {
         "work_center_id": str(wc.id) if wc else None,
         "work_center_code": wc.code if wc else None,
         "work_center_name": wc.name if wc else None,
-        "work_order_id": str(run.work_order_id) if run.work_order_id else None,
+        "work_order_id": str(wo.id) if wo else None,
         "wo_code": wo.code if wo else None,
+        "wo_status": wo.status if wo else None,
+        "wo_actual_end_date": wo.actual_end_date if wo else None,
         "mo_code": mo.code if mo else None,
         "item_code": mo.item_code if mo else None,
         "item_name": mo.item_name if mo else None,
         "item_uom": mo.item.uom if (mo and mo.item) else None,
-        "color_matching_at": run.color_matching_at,
-        "started_at": run.started_at,
-        "completed_at": run.completed_at,
         **mo_variant_service.variant_labels(mo),
-        **svc.compute_run_metrics(run, target, mo.item if mo else None, now),
+    }
+
+
+def _no_run_row(wo: WorkOrder) -> dict:
+    return {
+        "id": f"wo-{wo.id}",
+        "run_number": None,
+        **_wo_fields(wo),
+        "color_matching_at": None,
+        "started_at": None,
+        "completed_at": None,
+        "clock": CLOCK_NO_RUN,
+        "lines": None,
+        "yards_per_min": None,
+        "rate_yd_per_min": None,
+        "run_minutes": None,
+        "time_yards": None,
+        "time_qty": None,
+        "target_qty": wo.qty,
+        "progress_pct": None,
+        "missing_rate_inputs": [],
+        "missing_gy_factor": False,
     }
 
 
@@ -98,10 +143,29 @@ async def dyeing_monitor(
         ))
     )
     rows = [_row(r, now) for r in res.unique().scalars().all()]
+
+    # Dyeing WOs closed in the window whose bath was never clocked. A run that was
+    # started is already listed above, so only WOs with no started run qualify.
+    # actual_end_date is a naive UTC column.
+    started_wo_ids = select(DyeingRun.work_order_id).where(
+        DyeingRun.started_at.isnot(None), DyeingRun.status != "CANCELLED",
+    )
+    wo_res = await db.execute(
+        select(WorkOrder)
+        .options(*_WO_LOADS)
+        .join(WorkCenter, WorkOrder.work_center_id == WorkCenter.id)
+        .where(func.upper(WorkCenter.center_type).in_(svc.DYEING_CENTER_TYPES))
+        .where(WorkOrder.status == "COMPLETED")
+        .where(WorkOrder.actual_end_date >= since.replace(tzinfo=None))
+        .where(WorkOrder.id.notin_(started_wo_ids))
+    )
+    listed = {r["work_order_id"] for r in rows}
+    rows += [_no_run_row(wo) for wo in wo_res.unique().scalars().all() if str(wo.id) not in listed]
     rows.sort(key=lambda r: (
         _CLOCK_ORDER[r["clock"]],
         # Finished batches newest first; the rest by vessel.
-        -(r["completed_at"].timestamp()) if r["completed_at"] else 0,
+        -((r["completed_at"] or r["wo_actual_end_date"]).timestamp())
+        if (r["completed_at"] or r["wo_actual_end_date"]) else 0,
         r["work_center_code"] or "",
     ))
     return {
