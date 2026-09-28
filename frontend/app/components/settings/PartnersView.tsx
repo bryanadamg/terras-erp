@@ -13,7 +13,7 @@ import { lvBtn, lvInput, lvTh, lvTd, lvLabel, lvThead, LV_STICKY_THEAD, useRowSe
 import { ShellWindow, ShellTitleBar, xpToolbar, SearchField, ToolbarCount, ToolbarButton } from '../shared/shellTheme';
 import { API_BASE } from '../shared/apiBase';
 
-const PARTNERS_PAGE_SIZE = 20;
+const PARTNERS_PAGE_SIZE = 25;
 
 interface Partner {
     id: string;
