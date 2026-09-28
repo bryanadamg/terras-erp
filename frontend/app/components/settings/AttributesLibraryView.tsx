@@ -2,9 +2,10 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { useConfirm } from '../../context/ConfirmContext';
 import ModalWrapper from '../shared/ModalWrapper';
-import { FormSection, Chip, XPActionButton, rowStateBg, XP_BTN } from '../shared/xpTheme';
-import { lvInput, lvBtn, lvPrimaryBtn, lvLabel, lvSep, lvZebra, lvPickerRow } from '../shared/listViewTheme';
+import { FormSection, Chip, XPActionButton, XP_BTN } from '../shared/xpTheme';
+import { lvInput, lvBtn, lvPrimaryBtn, lvLabel, lvSep } from '../shared/listViewTheme';
 import { ToolbarButton, SearchField, ToolbarCount, xpToolbar } from '../shared/shellTheme';
+import { ColumnPanes, ColumnPane, ColumnRow, ColumnEmpty, DetailPane, DetailHeader, DetailRow, BROWSER_TONES } from '../shared/columnBrowser';
 
 // Attributes with a dedicated management home are hidden here so they are not
 // hand-edited in two places:
@@ -32,8 +33,6 @@ const ROLE_LABELS: Record<string, string> = {
 };
 const roleLabel = (role?: string | null) => (role ? ROLE_LABELS[role] || role : null);
 
-const COUNT_TONE = { background: '#eef3fb', borderColor: '#7f9db9', color: '#003080' };
-const SYSTEM_TONE = { background: '#fff4dc', borderColor: '#d0a040', color: '#804800' };
 
 interface Props {
     attributes: any[];
@@ -51,8 +50,9 @@ const nextNumber = (values: string[]) => {
     return nums.length > 0 ? Math.max(...nums) + 1 : null;
 };
 
-// Two-pane master/detail (Explorer shape): attribute list on the left, the selected
-// attribute's full value list edited in place on the right. Replaces a table that
+// Two-pane master/detail (shared/columnBrowser.tsx, same chrome as the UOM tab):
+// attribute list on the left, the selected attribute's full value list edited in
+// place on the right. Replaces a table that
 // capped each row at 8 value chips and routed every edit through a modal.
 export default function AttributesLibraryView({
     attributes, canManage,
@@ -65,7 +65,6 @@ export default function AttributesLibraryView({
     const [selectedId, setSelectedId] = useState<string | null>(null);
     const [pendingName, setPendingName] = useState<string | null>(null);
     const [valueFilter, setValueFilter] = useState('');
-    const [hoveredValueId, setHoveredValueId] = useState<string | null>(null);
     const [valueDraft, setValueDraft] = useState('');
     const [nameDraft, setNameDraft] = useState<string | null>(null);
 
@@ -152,110 +151,90 @@ export default function AttributesLibraryView({
     };
 
     return (
-        <div style={{ display: 'flex', height: '100%', minHeight: 0, background: '#ece9d8' }}>
+        <ColumnPanes>
             {/* ── Left: attribute list ─────────────────────────────────────── */}
-            <div style={{ width: 280, flexShrink: 0, display: 'flex', flexDirection: 'column', borderRight: '1px solid #a0988c', background: '#fff' }}>
-                <div style={xpToolbar({ flexShrink: 0, flexWrap: 'nowrap' })}>
-                    <SearchField value={search} onChange={setSearch} placeholder="Search name, role, value…" grow width={400} />
-                </div>
-                <div style={{ flex: 1, minHeight: 0, overflowY: 'auto' }}>
-                    {filtered.length === 0 && (
-                        <div style={{ padding: 20, textAlign: 'center', color: '#888', fontStyle: 'italic', fontSize: 11 }}>
-                            {visible.length === 0 ? 'No attributes defined.' : 'No attributes match.'}
-                        </div>
-                    )}
-                    {filtered.map((a: any) => {
-                        const on = a.id === selected?.id;
-                        const role = roleLabel(a.system_role);
-                        return (
-                            <div
-                                key={a.id}
-                                role="button"
-                                tabIndex={0}
-                                onClick={() => select(a.id)}
-                                onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); select(a.id); } }}
-                                style={{
-                                    ...lvPickerRow(on), alignItems: 'center', padding: '5px 8px',
-                                    borderLeft: `3px solid ${on ? '#316ac5' : 'transparent'}`,
-                                }}
-                            >
-                                <div style={{ flex: 1, minWidth: 0 }}>
-                                    <div style={{ fontWeight: 'bold', fontSize: 12, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                                        {a.is_system && <i className="bi bi-shield-lock me-1" style={{ color: '#a06000', fontSize: 10 }} title="System attribute" />}
-                                        {a.name}
-                                    </div>
-                                    {role && <div style={{ fontSize: 10, color: '#666', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{role}</div>}
-                                </div>
-                                <Chip tone={COUNT_TONE} size="xs">{a.values.length}</Chip>
-                            </div>
-                        );
-                    })}
-                </div>
-                <div style={xpToolbar({ flexShrink: 0, borderTop: '1px solid #b0a898', borderBottom: 'none', flexWrap: 'nowrap' })}>
-                    <ToolbarCount>{filtered.length} attribute{filtered.length !== 1 ? 's' : ''}</ToolbarCount>
-                    {canManage && (
-                        <span style={{ marginLeft: 'auto' }}>
-                            <ToolbarButton tone="create" icon="bi-plus-lg" onClick={openCreate}>New Attribute</ToolbarButton>
-                        </span>
-                    )}
-                </div>
-            </div>
+            <ColumnPane
+                width={280}
+                label="Attributes"
+                toolbar={<SearchField value={search} onChange={setSearch} placeholder="Search name, role, value…" grow width={400} />}
+                footer={
+                    <>
+                        <ToolbarCount>{filtered.length} attribute{filtered.length !== 1 ? 's' : ''}</ToolbarCount>
+                        {canManage && (
+                            <span style={{ marginLeft: 'auto' }}>
+                                <ToolbarButton tone="create" icon="bi-plus-lg" onClick={openCreate}>New Attribute</ToolbarButton>
+                            </span>
+                        )}
+                    </>
+                }
+            >
+                {filtered.length === 0 && <ColumnEmpty>{visible.length === 0 ? 'No attributes defined.' : 'No attributes match.'}</ColumnEmpty>}
+                {filtered.map((a: any) => (
+                    <ColumnRow
+                        key={a.id}
+                        icon="bi-tag"
+                        iconColor="#7f9db9"
+                        label={a.name}
+                        sub={roleLabel(a.system_role) ?? undefined}
+                        selected={a.id === selected?.id}
+                        onSelect={() => select(a.id)}
+                        trailing={
+                            <>
+                                {a.is_system && <i className="bi bi-shield-lock" style={{ color: '#a06000', fontSize: 10 }} title="System attribute" />}
+                                <Chip tone={BROWSER_TONES.count} size="xs">{a.values.length}</Chip>
+                            </>
+                        }
+                    />
+                ))}
+            </ColumnPane>
 
             {/* ── Right: selected attribute ────────────────────────────────── */}
-            <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column' }}>
-                {!selected ? (
-                    <div style={{ margin: 'auto', color: '#888', fontSize: 11, fontStyle: 'italic' }}>
-                        {canManage ? 'Select an attribute, or create a new one.' : 'Select an attribute.'}
-                    </div>
-                ) : (
+            <DetailPane empty={canManage ? 'Select an attribute, or create a new one.' : 'Select an attribute.'}>
+                {selected && (
                     <>
-                        {/* Header: name + role + protection */}
-                        <div style={{ padding: '8px 12px', borderBottom: '1px solid #b0a898', background: 'linear-gradient(to bottom, #fbfaf6, #ece9d8)', flexShrink: 0 }}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-                                {locked ? (
-                                    <span style={{ fontSize: 14, fontWeight: 'bold' }}>{selected.name}</span>
-                                ) : (
-                                    <>
-                                        <input
-                                            style={lvInput({ width: 260, fontSize: 13, fontWeight: 'bold' })}
-                                            value={nameDraft ?? selected.name}
-                                            onChange={e => setNameDraft(e.target.value)}
-                                            onKeyDown={e => {
-                                                if (e.key === 'Enter') saveName();
-                                                if (e.key === 'Escape') setNameDraft(null);
-                                            }}
-                                            aria-label="Attribute name"
-                                        />
-                                        {nameDirty && (
-                                            <>
-                                                <button type="button" className={XP_BTN} style={lvPrimaryBtn()} onClick={saveName}>Rename</button>
-                                                <button type="button" className={XP_BTN} style={lvBtn()} onClick={() => setNameDraft(null)}>Cancel</button>
-                                            </>
-                                        )}
-                                    </>
-                                )}
-                                {selected.is_system && <Chip tone={SYSTEM_TONE} icon="bi-shield-lock" size="xs">System</Chip>}
-                                {roleLabel(selected.system_role) && (
-                                    <span style={{ fontSize: 11, color: '#555' }}>
-                                        <i className="bi bi-link-45deg me-1" />Used by {roleLabel(selected.system_role)}
-                                    </span>
-                                )}
-                                {canManage && !selected.is_system && (
-                                    <button
-                                        type="button" className={XP_BTN}
-                                        style={lvBtn('danger', { marginLeft: 'auto' })}
-                                        onClick={() => onDeleteAttribute(selected.id)}
-                                    >
-                                        <i className="bi bi-trash me-1" />Delete Attribute
-                                    </button>
-                                )}
-                            </div>
-                            {selected.is_system && canManage && (
-                                <div style={{ marginTop: 4, fontSize: 10, color: '#804800' }}>
-                                    Name is protected — the system looks this attribute up by role. Values can be managed below.
-                                </div>
+                        <DetailHeader
+                            title={locked ? selected.name : (
+                                <>
+                                    <input
+                                        style={lvInput({ width: 260, fontSize: 13, fontWeight: 'bold' })}
+                                        value={nameDraft ?? selected.name}
+                                        onChange={e => setNameDraft(e.target.value)}
+                                        onKeyDown={e => {
+                                            if (e.key === 'Enter') saveName();
+                                            if (e.key === 'Escape') setNameDraft(null);
+                                        }}
+                                        aria-label="Attribute name"
+                                    />
+                                    {nameDirty && (
+                                        <>
+                                            <button type="button" className={XP_BTN} style={lvPrimaryBtn()} onClick={saveName}>Rename</button>
+                                            <button type="button" className={XP_BTN} style={lvBtn()} onClick={() => setNameDraft(null)}>Cancel</button>
+                                        </>
+                                    )}
+                                </>
                             )}
-                        </div>
+                            chips={
+                                <>
+                                    {selected.is_system && <Chip tone={BROWSER_TONES.system} icon="bi-shield-lock" size="xs">System</Chip>}
+                                    {roleLabel(selected.system_role) && (
+                                        <span style={{ fontSize: 11, color: '#555' }}>
+                                            <i className="bi bi-link-45deg me-1" />Used by {roleLabel(selected.system_role)}
+                                        </span>
+                                    )}
+                                </>
+                            }
+                            actions={canManage && !selected.is_system ? (
+                                <button type="button" className={XP_BTN} style={lvBtn('danger')} onClick={() => onDeleteAttribute(selected.id)}>
+                                    <i className="bi bi-trash me-1" />Delete Attribute
+                                </button>
+                            ) : undefined}
+                        >
+                            {selected.is_system && canManage && (
+                                <span style={{ color: '#804800' }}>
+                                    Name is protected — the system looks this attribute up by role. Values can be managed below.
+                                </span>
+                            )}
+                        </DetailHeader>
 
                         {/* Values toolbar: filter left, count, add rightmost */}
                         <div style={xpToolbar({ flexShrink: 0 })}>
@@ -284,17 +263,14 @@ export default function AttributesLibraryView({
 
                         {/* Values list */}
                         <div ref={listRef} style={{ flex: 1, minHeight: 0, overflowY: 'auto', background: '#fff' }}>
-                            {shownValues.length === 0 && (
-                                <div style={{ padding: 20, textAlign: 'center', color: '#888', fontStyle: 'italic', fontSize: 11 }}>
-                                    {values.length === 0 ? 'No values yet.' : 'No values match.'}
-                                </div>
-                            )}
+                            {shownValues.length === 0 && <ColumnEmpty>{values.length === 0 ? 'No values yet.' : 'No values match.'}</ColumnEmpty>}
                             {shownValues.map((val: any, vi: number) => (
-                                <div
+                                <DetailRow
                                     key={val.id}
-                                    style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '2px 8px', background: hoveredValueId === val.id ? rowStateBg('expanded') : lvZebra(vi), borderBottom: '1px solid #e0dfd8' }}
-                                    onMouseEnter={() => setHoveredValueId(val.id)}
-                                    onMouseLeave={() => setHoveredValueId(null)}
+                                    index={vi}
+                                    actions={canManage ? (
+                                        <XPActionButton tone="danger" icon="bi-trash" title={`Delete "${val.value}"`} onClick={() => handleDeleteValue(val)} />
+                                    ) : undefined}
                                 >
                                     <span style={{ width: 28, textAlign: 'right', fontSize: 10, color: '#999', flexShrink: 0 }}>{values.indexOf(val) + 1}</span>
                                     {canManage ? (
@@ -319,24 +295,12 @@ export default function AttributesLibraryView({
                                     ) : (
                                         <span style={{ flex: 1, fontSize: 11, padding: '3px 4px' }}>{val.value}</span>
                                     )}
-                                    {canManage && (
-                                        // Hover-revealed, same as the Categories tab's row actions.
-                                        <span style={{ display: 'flex', opacity: hoveredValueId === val.id ? 1 : 0, transition: 'opacity 0.1s' }}>
-                                            <XPActionButton
-                                                tone="danger"
-                                                icon="bi-trash"
-                                                title={`Delete "${val.value}"`}
-                                                onClick={() => handleDeleteValue(val)}
-                                            />
-                                        </span>
-                                    )}
-                                </div>
+                                </DetailRow>
                             ))}
                         </div>
-
                     </>
                 )}
-            </div>
+            </DetailPane>
 
             <ModalWrapper
                 isOpen={isModalOpen}
@@ -386,6 +350,6 @@ export default function AttributesLibraryView({
                     </FormSection>
                 </form>
             </ModalWrapper>
-        </div>
+        </ColumnPanes>
     );
 }

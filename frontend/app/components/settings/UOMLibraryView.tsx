@@ -2,9 +2,12 @@
 import React, { useState } from 'react';
 import { useConfirm } from '../../context/ConfirmContext';
 import ModalWrapper from '../shared/ModalWrapper';
-import { lvInput, lvBtn, lvPrimaryBtn, lvLabel, lvSep, lvZebra, lvPickerRow } from '../shared/listViewTheme';
-import { Chip, XPActionButton, rowStateBg, XP_BTN, FormSection, FormError } from '../shared/xpTheme';
+import { lvInput, lvBtn, lvPrimaryBtn, lvLabel, lvSep } from '../shared/listViewTheme';
+import { Chip, XPActionButton, XP_BTN, FormSection, FormError } from '../shared/xpTheme';
 import { ToolbarButton, SearchField, ToolbarCount, xpToolbar } from '../shared/shellTheme';
+import {
+    ColumnPanes, ColumnPane, ColumnRow, ColumnEmpty, DetailPane, DetailHeader, DetailCaption, DetailRow, BROWSER_TONES,
+} from '../shared/columnBrowser';
 
 interface Props {
     uoms: any[];
@@ -15,9 +18,6 @@ interface Props {
     onDeleteUOMFactor: (uomId: string, factorId: string) => void;
 }
 
-const SYSTEM_TONE = { background: '#fff4dc', borderColor: '#d0a040', color: '#804800' };
-const COUNT_TONE = { background: '#eef3fb', borderColor: '#7f9db9', color: '#003080' };
-
 const num = (v: any) => String(Number(v));
 
 // A factor `1 <from> = N <to>` is a packaging definition: the item form
@@ -26,13 +26,13 @@ const num = (v: any) => String(Number(v));
 // means "seeded, can't be deleted" (live data has system Roll = 144 yard and custom
 // m as the target of Pcs), so the layout never treats system as "base". Each unit
 // shows both directions: what one of it holds, and what packs into it.
+// Chrome: shared/columnBrowser.tsx master/detail, same as the Attributes tab.
 export default function UOMLibraryView({ uoms, canManage, onCreateUOM, onDeleteUOM, onSaveUOMFactor, onDeleteUOMFactor }: Props) {
     const { confirm } = useConfirm();
 
     const [search, setSearch] = useState('');
     const [selectedId, setSelectedId] = useState<string | null>(null);
     const [pendingName, setPendingName] = useState<string | null>(null);
-    const [hoveredFactorId, setHoveredFactorId] = useState<string | null>(null);
     const [factorValue, setFactorValue] = useState('');
     const [factorToUomId, setFactorToUomId] = useState('');
 
@@ -54,7 +54,7 @@ export default function UOMLibraryView({ uoms, canManage, onCreateUOM, onDeleteU
 
     const select = (id: string) => {
         if (id === selected?.id) return;
-        setSelectedId(id); setFactorValue(''); setFactorToUomId(''); setHoveredFactorId(null);
+        setSelectedId(id); setFactorValue(''); setFactorToUomId('');
     };
 
     const selFactors: any[] = selected?.factors || [];
@@ -108,121 +108,95 @@ export default function UOMLibraryView({ uoms, canManage, onCreateUOM, onDeleteU
     );
 
     const listRow = (u: any) => {
-        const on = u.id === selected?.id;
         const defs: any[] = u.factors || [];
         const n = incomingTo(u.id).length;
-        const sub = defs.length ? '= ' + defs.map(f => `${num(f.value)} ${f.to_uom_name}`).join(' · ') : null;
         return (
-            <div
+            <ColumnRow
                 key={u.id}
-                role="button"
-                tabIndex={0}
-                onClick={() => select(u.id)}
-                onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); select(u.id); } }}
-                style={{ ...lvPickerRow(on), alignItems: 'center', padding: '5px 8px', borderLeft: `3px solid ${on ? '#316ac5' : 'transparent'}` }}
-            >
-                <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontWeight: 'bold', fontSize: 12, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                        {u.is_system && <i className="bi bi-shield-lock me-1" style={{ color: '#a06000', fontSize: 10 }} title="System unit" />}
-                        {u.name}
-                    </div>
-                    {sub && <div style={{ fontSize: 10, color: '#666', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{sub}</div>}
-                </div>
-                {n > 0 && (
-                    <Chip tone={COUNT_TONE} size="xs" icon="bi-box-arrow-in-down" title={`${n} conversion${n !== 1 ? 's' : ''} pack into ${u.name}`}>{n}</Chip>
-                )}
-            </div>
+                icon={defs.length ? 'bi-box-seam' : 'bi-rulers'}
+                iconColor="#7f9db9"
+                label={u.name}
+                sub={defs.length ? '= ' + defs.map(f => `${num(f.value)} ${f.to_uom_name}`).join(' · ') : undefined}
+                selected={u.id === selected?.id}
+                onSelect={() => select(u.id)}
+                trailing={
+                    <>
+                        {u.is_system && <i className="bi bi-shield-lock" style={{ color: '#a06000', fontSize: 10 }} title="System unit" />}
+                        {n > 0 && (
+                            <Chip tone={BROWSER_TONES.count} size="xs" icon="bi-box-arrow-in-down" title={`${n} conversion${n !== 1 ? 's' : ''} pack into ${u.name}`}>{n}</Chip>
+                        )}
+                    </>
+                }
+            />
         );
     };
 
     const factorRow = (f: any, i: number, label: React.ReactNode) => (
-        <div
+        <DetailRow
             key={f.id}
-            style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '4px 10px', background: hoveredFactorId === f.id ? rowStateBg('expanded') : lvZebra(i), borderBottom: '1px solid #e0dfd8', fontSize: 12 }}
-            onMouseEnter={() => setHoveredFactorId(f.id)}
-            onMouseLeave={() => setHoveredFactorId(null)}
+            index={i}
+            actions={canManage ? <XPActionButton tone="danger" icon="bi-trash" title="Delete conversion" onClick={() => deleteFactor(f)} /> : undefined}
         >
             <span style={{ flex: 1 }}>{label}</span>
-            {canManage && (
-                // Hover-revealed, same as the Categories / Attributes row actions.
-                <span style={{ display: 'flex', opacity: hoveredFactorId === f.id ? 1 : 0, transition: 'opacity 0.1s' }}>
-                    <XPActionButton tone="danger" icon="bi-trash" title="Delete conversion" onClick={() => deleteFactor(f)} />
-                </span>
-            )}
-        </div>
-    );
-
-    const sectionCaption = (text: React.ReactNode, n: number) => (
-        <div style={{ padding: '6px 10px 4px', fontSize: 11, fontWeight: 'bold', color: '#333', background: '#f5f4ef', borderBottom: '1px solid #d8d4c8' }}>
-            {text}<span style={{ color: '#888', fontWeight: 'normal' }}> ({n})</span>
-        </div>
-    );
-
-    const empty = (text: string) => (
-        <div style={{ padding: 16, textAlign: 'center', color: '#888', fontStyle: 'italic', fontSize: 11 }}>{text}</div>
+        </DetailRow>
     );
 
     const unitPane = (u: any) => {
         const incoming = incomingTo(u.id);
         return (
             <>
-                {sectionCaption(<>1 {u.name} holds</>, selFactors.length)}
-                {selFactors.length === 0 && empty(canManage
+                <DetailCaption title={<>1 {u.name} holds</>} count={selFactors.length} />
+                {selFactors.length === 0 && <ColumnEmpty>{canManage
                     ? `Not defined — use the bar above if ${u.name} is a pack of something, e.g. 1 ${u.name} = 2.5 kg.`
-                    : 'Not defined.')}
+                    : 'Not defined.'}</ColumnEmpty>}
                 {selFactors.map((f, i) => factorRow(f, i, <>1 <b>{u.name}</b> = {num(f.value)} {f.to_uom_name}</>))}
 
-                {sectionCaption(<>Packs into {u.name}</>, incoming.length)}
-                {incoming.length === 0 && empty(`Nothing packs into ${u.name} — items stocked in ${u.name} have no packaging choices.`)}
+                <DetailCaption title={<>Packs into {u.name}</>} count={incoming.length} />
+                {incoming.length === 0 && <ColumnEmpty>Nothing packs into {u.name} — items stocked in {u.name} have no packaging choices.</ColumnEmpty>}
                 {incoming.map((f, i) => factorRow(f, i, <>1 <b>{f.from_uom_name}</b> = {num(f.value)} {u.name}</>))}
             </>
         );
     };
 
     return (
-        <div style={{ display: 'flex', height: '100%', minHeight: 0, background: '#ece9d8' }}>
+        <ColumnPanes>
             {/* ── Left: unit list ──────────────────────────────────────────── */}
-            <div style={{ width: 280, flexShrink: 0, display: 'flex', flexDirection: 'column', borderRight: '1px solid #a0988c', background: '#fff' }}>
-                <div style={xpToolbar({ flexShrink: 0, flexWrap: 'nowrap' })}>
-                    <SearchField value={search} onChange={setSearch} placeholder="Search units…" grow width={400} />
-                </div>
-                <div style={{ flex: 1, minHeight: 0, overflowY: 'auto' }}>
-                    {ordered.length === 0 && empty(all.length === 0 ? 'No units defined.' : 'No units match.')}
-                    {filteredSystem.length > 0 && <>{groupHeader('System units', filteredSystem.length)}{filteredSystem.map(listRow)}</>}
-                    {filteredCustom.length > 0 && <>{groupHeader('Custom units', filteredCustom.length)}{filteredCustom.map(listRow)}</>}
-                </div>
-                <div style={xpToolbar({ flexShrink: 0, borderTop: '1px solid #b0a898', borderBottom: 'none', flexWrap: 'nowrap' })}>
-                    <ToolbarCount>{filtered.length} unit{filtered.length !== 1 ? 's' : ''}</ToolbarCount>
-                    {canManage && (
-                        <span style={{ marginLeft: 'auto' }}>
-                            <ToolbarButton tone="create" icon="bi-plus-lg" onClick={openCreate}>New UOM</ToolbarButton>
-                        </span>
-                    )}
-                </div>
-            </div>
+            <ColumnPane
+                width={280}
+                label="Units"
+                toolbar={<SearchField value={search} onChange={setSearch} placeholder="Search units…" grow width={400} />}
+                footer={
+                    <>
+                        <ToolbarCount>{filtered.length} unit{filtered.length !== 1 ? 's' : ''}</ToolbarCount>
+                        {canManage && (
+                            <span style={{ marginLeft: 'auto' }}>
+                                <ToolbarButton tone="create" icon="bi-plus-lg" onClick={openCreate}>New UOM</ToolbarButton>
+                            </span>
+                        )}
+                    </>
+                }
+            >
+                {ordered.length === 0 && <ColumnEmpty>{all.length === 0 ? 'No units defined.' : 'No units match.'}</ColumnEmpty>}
+                {filteredSystem.length > 0 && <>{groupHeader('System units', filteredSystem.length)}{filteredSystem.map(listRow)}</>}
+                {filteredCustom.length > 0 && <>{groupHeader('Custom units', filteredCustom.length)}{filteredCustom.map(listRow)}</>}
+            </ColumnPane>
 
             {/* ── Right: selected unit ─────────────────────────────────────── */}
-            <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column' }}>
-                {!selected ? (
-                    <div style={{ margin: 'auto', color: '#888', fontSize: 11, fontStyle: 'italic' }}>Select a unit.</div>
-                ) : (
+            <DetailPane empty="Select a unit.">
+                {selected && (
                     <>
-                        {/* Header */}
-                        <div style={{ padding: '8px 12px', borderBottom: '1px solid #b0a898', background: 'linear-gradient(to bottom, #fbfaf6, #ece9d8)', flexShrink: 0 }}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-                                <span style={{ fontSize: 14, fontWeight: 'bold' }}>{selected.name}</span>
-                                {selected.is_system && <Chip tone={SYSTEM_TONE} icon="bi-shield-lock" size="xs">System</Chip>}
-                                {canManage && !selected.is_system && (
-                                    <button type="button" className={XP_BTN} style={lvBtn('danger', { marginLeft: 'auto' })} onClick={() => onDeleteUOM(selected.id)}>
-                                        <i className="bi bi-trash me-1" />Delete Unit
-                                    </button>
-                                )}
-                            </div>
-                            <div style={{ marginTop: 4, fontSize: 10, color: '#666' }}>
-                                A conversion <b>1 {selected.name} = N X</b> makes {selected.name} a packaging choice on items stocked in X.
-                                {selected.is_system && ' System unit — cannot be deleted.'}
-                            </div>
-                        </div>
+                        <DetailHeader
+                            title={selected.name}
+                            chips={selected.is_system ? <Chip tone={BROWSER_TONES.system} icon="bi-shield-lock" size="xs">System</Chip> : undefined}
+                            actions={canManage && !selected.is_system ? (
+                                <button type="button" className={XP_BTN} style={lvBtn('danger')} onClick={() => onDeleteUOM(selected.id)}>
+                                    <i className="bi bi-trash me-1" />Delete Unit
+                                </button>
+                            ) : undefined}
+                        >
+                            A conversion <b>1 {selected.name} = N X</b> makes {selected.name} a packaging choice on items stocked in X.
+                            {selected.is_system && ' System unit — cannot be deleted.'}
+                        </DetailHeader>
 
                         {/* Add bar: 1 <selected> = N <target> */}
                         {canManage && (
@@ -260,7 +234,7 @@ export default function UOMLibraryView({ uoms, canManage, onCreateUOM, onDeleteU
                         </div>
                     </>
                 )}
-            </div>
+            </DetailPane>
 
             <ModalWrapper
                 isOpen={isModalOpen}
@@ -293,6 +267,6 @@ export default function UOMLibraryView({ uoms, canManage, onCreateUOM, onDeleteU
                     </FormSection>
                 </form>
             </ModalWrapper>
-        </div>
+        </ColumnPanes>
     );
 }
