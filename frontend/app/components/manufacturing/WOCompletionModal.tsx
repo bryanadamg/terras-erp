@@ -10,7 +10,7 @@ import ModalWrapper from '../shared/ModalWrapper';
 import BagLabelPrintModal from './BagLabelPrintModal';
 import { ProgressBar, LegendPanel, CodeChip, xpFont, CHIP_RADIUS, xpInput as xpInputBase, xpBtn as xpBtnBase, BTN_TONES, XP_BTN } from '../shared/xpTheme';
 import { RowCheckbox, LV_STICKY_THEAD, lvPickerRow } from '../shared/listViewTheme';
-import { LotChips } from '../shared/LotChips';
+import { LotChips, lotSizeLabel } from '../shared/LotChips';
 import { centerTypeOfWC, isContainerWC, isMachineWC, machinesUnderWC, toMachineOptions } from '../shared/workCenterTree';
 import { rejectTitle } from '../shared/rejectDisplay';
 import { API_BASE } from '../shared/apiBase';
@@ -74,6 +74,11 @@ export default function WOCompletionModal({ mo, onClose, onSaved, workOrder }: W
     // Dyeing: greige substrate arrives as many scanned lots → draw from several of
     // them (item_id → selected batch ids). Single-lot materials keep the <select>.
     const [selectedLots, setSelectedLots] = useState<Record<string, string[]>>({});
+    // item_id → "other sizes" group unfolded. Size token = case-folded size name,
+    // same as netting_service; "" = unsized MO, which accepts every lot.
+    const [showOtherSizes, setShowOtherSizes] = useState<Record<string, boolean>>({});
+    const moSizeLabel = lotSizeLabel(mo) || '';
+    const moSizeToken = moSizeLabel.toLowerCase();
     // Bag labels: one sticker per weighed bag (= one lotted completion on this WO)
     const [labelBags, setLabelBags] = useState<any[] | null>(null);
     const [labelSeqStart, setLabelSeqStart] = useState(1);
@@ -556,8 +561,21 @@ export default function WOCompletionModal({ mo, onClose, onSaved, workOrder }: W
                                     for (const l of alloc) drawByBatch[l.batch_id] = l.qty;
                                     const drawn = alloc.reduce((s, l) => s + l.qty, 0);
                                     const short = need > 0 && drawn + 1e-6 < need;
-                                    const allIds = (batchesByItem[itemId] || []).map((b: any) => b.id);
-                                    const allSelected = sel.length === allIds.length;
+                                    // Size split, mirroring netting_service's eligible_tokens: a
+                                    // sized MO takes its own size, then unsized ("") lots; an
+                                    // unsized MO takes anything. Other sizes stay reachable but
+                                    // folded away, and "All" never reaches into them.
+                                    const lotsHere = batchesByItem[itemId] || [];
+                                    const fitsSize = (b: any) => {
+                                        const t = (lotSizeLabel(b) || '').toLowerCase();
+                                        return !moSizeToken || !t || t === moSizeToken;
+                                    };
+                                    const fitLots = lotsHere.filter(fitsSize);
+                                    const otherLots = lotsHere.filter((b: any) => !fitsSize(b));
+                                    const otherOpen = !!showOtherSizes[itemId] || otherLots.some((b: any) => selSet.has(b.id));
+                                    const allIds = fitLots.map((b: any) => b.id);
+                                    const allSelected = allIds.length > 0 && allIds.every((id: string) => selSet.has(id));
+                                    const otherSel = sel.filter(id => !allIds.includes(id));
                                     const toggle = (bid: string, on: boolean) => setSelectedLots(prev => {
                                         const cur = prev[itemId] || [];
                                         return { ...prev, [itemId]: on ? [...cur, bid] : cur.filter(id => id !== bid) };
@@ -578,13 +596,19 @@ export default function WOCompletionModal({ mo, onClose, onSaved, workOrder }: W
                                                     <button
                                                         type="button"
                                                         className={XP_BTN}
-                                                        onClick={() => setSelectedLots(prev => ({ ...prev, [itemId]: allSelected ? [] : allIds }))}
+                                                        onClick={() => setSelectedLots(prev => ({ ...prev, [itemId]: allSelected ? otherSel : [...otherSel, ...allIds] }))}
                                                         style={{ ...xpBtn(), fontSize: 9, padding: '0 6px', marginLeft: 6 }}
                                                     >{allSelected ? 'None' : 'All'}</button>
                                                 </span>
                                             </div>
                                             <div style={{ border: '1px solid #7f9db9', background: '#fff', maxHeight: 150, overflowY: 'auto' }}>
-                                                {(batchesByItem[itemId] || []).map((b: any) => (
+                                                {[...fitLots, ...(otherOpen ? otherLots : [])].map((b: any, i: number) => (
+                                                    <React.Fragment key={b.id}>
+                                                    {i === fitLots.length && (
+                                                        <div style={{ fontSize: 9, fontWeight: 'bold', color: '#7a5000', background: '#fff3cd', borderTop: '1px solid #b8860b', padding: '2px 6px' }}>
+                                                            Other sizes — not this order's {moSizeLabel}
+                                                        </div>
+                                                    )}
                                                     <label key={b.id} style={{ ...lvPickerRow(selSet.has(b.id)), fontSize: 10 }}>
                                                         <RowCheckbox checked={selSet.has(b.id)} label={b.batch_number || 'lot'}
                                                             onChange={() => toggle(b.id, !selSet.has(b.id))} />
@@ -618,8 +642,19 @@ export default function WOCompletionModal({ mo, onClose, onSaved, workOrder }: W
                                                             <LotChips batch={b} showOrder />
                                                         </div>
                                                     </label>
+                                                    </React.Fragment>
                                                 ))}
                                             </div>
+                                            {otherLots.length > 0 && !otherLots.some((b: any) => selSet.has(b.id)) && (
+                                                <button
+                                                    type="button"
+                                                    className={XP_BTN}
+                                                    onClick={() => setShowOtherSizes(prev => ({ ...prev, [itemId]: !prev[itemId] }))}
+                                                    style={{ ...xpBtn(), fontSize: 9, padding: '0 6px', marginTop: 3 }}
+                                                >
+                                                    <i className={`bi bi-chevron-${otherOpen ? 'up' : 'down'}`} /> {otherOpen ? 'Hide' : 'Show'} {otherLots.length} lot{otherLots.length === 1 ? '' : 's'} of other sizes
+                                                </button>
+                                            )}
                                             {reservedNote}
                                         </div>
                                     );
