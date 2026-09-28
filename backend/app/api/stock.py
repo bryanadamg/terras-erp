@@ -14,6 +14,7 @@ from app.models.location import Location
 from app.models.stock_balance import StockBalance
 from app.models.audit import AuditLog
 from app.models.work_order import WorkOrder
+from app.models.routing import WorkCenter
 from app.models.goods_receipt import GoodsReceipt
 from app.models.purchase import PurchaseOrder
 from datetime import datetime
@@ -24,7 +25,19 @@ import uuid as _uuid
 
 # reference_types whose reference_id is a raw entity UUID (str(entity.id)) rather
 # than a human-readable code — these need a resolved label for display.
-_WO_REF_TYPES = {"Staging", "Leftover Beam", "Beam Merge", "Work Order"}
+_WO_REF_TYPES = {"Staging", "Beam Merge", "Work Order"}
+# Beam movements are pegged to the loom (beam_service stamps the work center id).
+_WC_REF_TYPES = {"Beam Mount", "Beam Dismount", "Beam Leftover", "Beam Leftover Variance"}
+
+
+def _ref_uuids(rows, types) -> list:
+    out = []
+    for rid in {r.reference_id for r in rows if r.reference_type in types and r.reference_id}:
+        try:
+            out.append(_uuid.UUID(rid))
+        except (ValueError, TypeError):
+            pass
+    return out
 
 router = APIRouter()
 
@@ -147,35 +160,28 @@ async def get_stock_ledger(
     # human-readable code — resolve those to a friendly label so the ledger never
     # surfaces a bare UUID to the user.
     ref_label_map: dict[str, str] = {}
-    wo_ref_ids = {r.reference_id for r in rows if r.reference_type in _WO_REF_TYPES and r.reference_id}
-    if wo_ref_ids:
-        wo_uuids = []
-        for rid in wo_ref_ids:
-            try:
-                wo_uuids.append(_uuid.UUID(rid))
-            except (ValueError, TypeError):
-                pass
-        if wo_uuids:
-            for wid, code, name in (await db.execute(
-                select(WorkOrder.id, WorkOrder.code, WorkOrder.name).where(WorkOrder.id.in_(wo_uuids))
-            )).all():
-                ref_label_map[str(wid)] = code or name
+    wo_uuids = _ref_uuids(rows, _WO_REF_TYPES)
+    if wo_uuids:
+        for wid, code, name in (await db.execute(
+            select(WorkOrder.id, WorkOrder.code, WorkOrder.name).where(WorkOrder.id.in_(wo_uuids))
+        )).all():
+            ref_label_map[str(wid)] = code or name
 
-    gr_ref_ids = {r.reference_id for r in rows if r.reference_type == "Goods Receipt" and r.reference_id}
-    if gr_ref_ids:
-        gr_uuids = []
-        for rid in gr_ref_ids:
-            try:
-                gr_uuids.append(_uuid.UUID(rid))
-            except (ValueError, TypeError):
-                pass
-        if gr_uuids:
-            for gid, po_number in (await db.execute(
-                select(GoodsReceipt.id, PurchaseOrder.po_number)
-                .join(PurchaseOrder, PurchaseOrder.id == GoodsReceipt.po_id)
-                .where(GoodsReceipt.id.in_(gr_uuids))
-            )).all():
-                ref_label_map[str(gid)] = po_number
+    wc_uuids = _ref_uuids(rows, _WC_REF_TYPES)
+    if wc_uuids:
+        for wid, code, name in (await db.execute(
+            select(WorkCenter.id, WorkCenter.code, WorkCenter.name).where(WorkCenter.id.in_(wc_uuids))
+        )).all():
+            ref_label_map[str(wid)] = name or code
+
+    gr_uuids = _ref_uuids(rows, {"Goods Receipt"})
+    if gr_uuids:
+        for gid, po_number in (await db.execute(
+            select(GoodsReceipt.id, PurchaseOrder.po_number)
+            .join(PurchaseOrder, PurchaseOrder.id == GoodsReceipt.po_id)
+            .where(GoodsReceipt.id.in_(gr_uuids))
+        )).all():
+            ref_label_map[str(gid)] = po_number
 
     items = []
     for r in rows:
