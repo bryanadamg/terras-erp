@@ -1,10 +1,11 @@
 'use client';
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useData } from '../../context/DataContext';
 import { useLanguage } from '../../context/LanguageContext';
 import { useUser } from '../../context/UserContext';
-import { ProgressBar, StatusChip, XPEmptyState, XPActionButton, TableSkeleton, CodeChip, ExpandedRowPanel, WorkCenterChip, familyColor, rowStateBg, xpFont } from '../shared/xpTheme';
+import { ProgressBar, StatusChip, XPEmptyState, XPActionButton, TableSkeleton, CodeChip, ExpandedRowPanel, WorkCenterChip, familyColor, rowStateBg, xpFont, xpSelect } from '../shared/xpTheme';
+import { centerTypeOfWC, isMachineWC, isTypeWC } from '../shared/workCenterTree';
 import { ShellWindow, ShellTitleBar, SearchField, FilterChipBar, ToolbarCount, xpToolbar } from '../shared/shellTheme';
 import { lvTd, lvThSticky, lvZebra, ExpanderCell, ResizableTable, LV_EXPANDER_COL_W } from '../shared/listViewTheme';
 import VariantChips from '../shared/VariantChips';
@@ -56,7 +57,7 @@ const NO_RUN = 'NO_RUN';
  * stops. The bath, doses and load are configured in Dyeing Orders.
  */
 export default function DyeingMonitorView() {
-    const { authFetch, subscribeLiveEvents } = useData();
+    const { authFetch, subscribeLiveEvents, workCenters } = useData();
     const { t } = useLanguage();
     const { hasPermission } = useUser();
     const { showToast } = useToast();
@@ -67,6 +68,17 @@ export default function DyeingMonitorView() {
     const [expandedId, setExpandedId] = useState<string | null>(null);
     const fmtStamp = useFmtStamp();
     const [clockFilter, setClockFilter] = useState<string>('ALL');
+    // A vessel, or a GROUP for every vessel under it (resolved server-side).
+    const [wcFilter, setWcFilter] = useState<string>('');
+    const byName = (a: any, b: any) => String(a.name).localeCompare(String(b.name), undefined, { numeric: true });
+    const { wcGroups, wcMachines } = useMemo(() => {
+        const dye = (workCenters || []).filter((wc: any) =>
+            ['DYEING', 'CELUP'].includes(centerTypeOfWC(workCenters || [], wc)));
+        return {
+            wcGroups: dye.filter((wc: any) => !isMachineWC(wc) && !isTypeWC(wc)).sort(byName),
+            wcMachines: dye.filter(isMachineWC).sort(byName),
+        };
+    }, [workCenters]);
     // The run whose Start/Complete is in flight, so a double-press cannot stamp twice.
     const [stamping, setStamping] = useState<string | null>(null);
 
@@ -80,6 +92,7 @@ export default function DyeingMonitorView() {
         pageSize: PAGE_SIZE,
         params: {
             clock: clockFilter === 'ALL' ? undefined : clockFilter,
+            work_center_id: wcFilter || undefined,
         },
     });
 
@@ -166,6 +179,15 @@ export default function DyeingMonitorView() {
     const Toolbar = (
         <div style={xpToolbar()}>
             <SearchField value={searchInput} onChange={setSearch} placeholder={t('search') || 'Search...'} />
+            <select value={wcFilter} onChange={e => setWcFilter(e.target.value)} style={xpSelect({ width: 160 })}>
+                <option value="">{t('all_machines')}</option>
+                {wcGroups.length > 0 && (
+                    <optgroup label={t('group')}>
+                        {wcGroups.map((wc: any) => <option key={wc.id} value={wc.id}>{wc.name}</option>)}
+                    </optgroup>
+                )}
+                {wcMachines.map((wc: any) => <option key={wc.id} value={wc.id}>{wc.name}</option>)}
+            </select>
             <FilterChipBar
                 value={clockFilter}
                 onChange={setClockFilter}

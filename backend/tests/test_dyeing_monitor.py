@@ -187,6 +187,19 @@ def test_monitor_returns_an_envelope_even_with_nothing_to_dye(client, auth_heade
         assert key in body, f"{key} missing from the monitor envelope"
 
 
+def test_machine_filter_narrows_rows_and_counts(client, auth_headers):
+    # An id with no vessel under it: the subtree CTE must still compile, and the
+    # chip counts must follow the filter rather than the whole plant.
+    res = client.get(
+        "/api/dyeing/monitor?work_center_id=00000000-0000-0000-0000-000000000000",
+        headers=auth_headers,
+    )
+    assert res.status_code == 200
+    body = res.json()
+    assert body["total"] == 0 and body["items"] == []
+    assert sum(body["counts"].values()) == 0
+
+
 def test_work_center_no_longer_carries_reel_geometry(client, auth_headers):
     """`yards_per_rev` is gone. The route must not resurrect it as a stored field."""
     res = client.post("/api/work-centers", headers=auth_headers, json={

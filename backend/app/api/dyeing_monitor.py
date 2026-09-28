@@ -6,6 +6,7 @@ working days, a dye batch against the clock the floor stamps by hand -- see the
 header of `services/dyeing_monitor_service.py`.
 """
 from datetime import datetime, timezone
+from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import select, func, or_, and_, case, literal, union_all
@@ -23,7 +24,7 @@ from app.models.work_order import WorkOrder
 from app.api.auth import require_permission, require_any_permission
 from app.core.pagination import PageParams, PageWindow
 from app.schemas import DyeingRunMonitorUpdate
-from app.services import audit_service, dyeing_monitor_service, mo_variant_service
+from app.services import audit_service, dyeing_monitor_service, mo_variant_service, work_center_service
 from app.core.ws_manager import manager
 
 router = APIRouter()
@@ -124,6 +125,7 @@ def _no_run_row(wo: WorkOrder) -> dict:
 async def dyeing_monitor(
     clock: str | None = Query(None, description="PENDING | IN_PROGRESS | COMPLETED | NO_RUN"),
     search: str | None = Query(None),
+    work_center_id: UUID | None = Query(None, description="A vessel, or a GROUP/TYPE node for every vessel under it"),
     window: PageWindow = Depends(PageParams(default_size=50)),
     db: AsyncSession = Depends(get_async_db),
     current_user: User = Depends(require_any_permission("dyeing_monitor.view", "work_order.view")),
@@ -136,8 +138,18 @@ async def dyeing_monitor(
     """
     now = datetime.now(timezone.utc)
 
-    # The search reaches the same columns on both halves: vessel, WO, MO, item.
+    # The search and the machine filter reach both halves the same way, and apply
+    # before the chip counts so the counts describe what the filter shows.
+    # Resolved to ids once: the subtree CTE inlined into both UNION halves would be
+    # two CTEs of the same name, which the compiler refuses.
+    wc_ids = (
+        [work_center_id, *await work_center_service.descendant_ids(db, work_center_id)]
+        if work_center_id else None
+    )
+
     def _searched(q):
+        if wc_ids:
+            q = q.where(WorkOrder.work_center_id.in_(wc_ids))
         if not search or not search.strip():
             return q
         like = f"%{search.strip()}%"
