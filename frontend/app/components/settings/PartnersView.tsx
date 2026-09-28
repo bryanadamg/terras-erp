@@ -28,25 +28,24 @@ interface Partner {
 }
 
 interface PartnersViewProps {
-    /**
-     * Deliberately unused for the table: the list is server-paginated (see
-     * `usePaginatedFetch` below), so DataContext's shared `partners` array — which
-     * is now the unwindowed /partners/lookup index for dropdowns and name
-     * resolution — must not be sliced here. Kept optional so existing callers that
-     * still pass it keep compiling.
-     */
-    partners?: Partner[];
     type: 'CUSTOMER' | 'SUPPLIER';
-    onCreate: (partner: any) => void;
-    onUpdate: (id: string, partner: any) => void;
-    onDelete: (id: string) => void;
-    onBulkDelete?: (ids: string[]) => void;
 }
 
-export default function PartnersView({ type, onCreate, onUpdate, onDelete, onBulkDelete }: PartnersViewProps) {
+/** The server's `detail` (403 missing permission, 409 still referenced) or the bare status. */
+async function errorDetail(res: Response): Promise<string> {
+    try {
+        const body = await res.json();
+        if (typeof body?.detail === 'string') return body.detail;
+    } catch { /* non-JSON body */ }
+    return `HTTP ${res.status}`;
+}
+
+export default function PartnersView({ type }: PartnersViewProps) {
     const { showToast } = useToast();
     const { t } = useLanguage();
-    const { authFetch } = useData();
+    // fetchData() refreshes DataContext's /partners/lookup index so the partner
+    // dropdowns elsewhere see a mutation; refetch() reloads this page's window.
+    const { authFetch, fetchData } = useData();
     const [isCreateOpen, setIsCreateOpen] = useState(false);
     const [editingPartner, setEditingPartner] = useState<Partner | null>(null);
     const [newPartner, setNewPartner] = useState({ name: '', address: '', contact_person: '', phone: '', fax: '', email: '', type, active: true });
@@ -68,17 +67,31 @@ export default function PartnersView({ type, onCreate, onUpdate, onDelete, onBul
         onError: m => showToast(m, 'danger'),
     });
 
-    /** Reload the current page after a mutation the parent performed. */
-    const afterMutation = async (result: any) => {
-        await Promise.resolve(result);
-        refetch();
+    const typeLabel = type === 'CUSTOMER' ? 'Customer' : 'Supplier';
+    const noun = typeLabel.toLowerCase();
+    const { hasPermission } = useUser();
+    const permPrefix = type === 'CUSTOMER' ? 'customer' : 'supplier';
+    const canCreate = hasPermission(`${permPrefix}.create`);
+    const canEdit = hasPermission(`${permPrefix}.edit`);
+    const canDelete = hasPermission(`${permPrefix}.delete`);
+    const canManage = canCreate || canEdit || canDelete;
+
+    /** One mutation call; toasts the server's reason on failure. Returns ok. */
+    const send = async (url: string, method: string, body?: any): Promise<boolean> => {
+        try {
+            const res = await authFetch(url, {
+                method,
+                ...(body ? { headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) } : {}),
+            });
+            if (res.ok) return true;
+            showToast(await errorDetail(res), 'danger');
+        } catch {
+            showToast(`Network error saving ${noun}`, 'danger');
+        }
+        return false;
     };
 
-    const typeLabel = type === 'CUSTOMER' ? 'Customer' : 'Supplier';
-    const { hasPermission, hasAnyPermission } = useUser();
-    const canManage = type === 'CUSTOMER'
-        ? hasAnyPermission('customer.create', 'customer.edit', 'customer.delete')
-        : hasAnyPermission('supplier.create', 'supplier.edit', 'supplier.delete');
+    const afterMutation = () => { refetch(); fetchData(); };
 
     // Button/input/cell/label chrome sourced from the shared lv* helpers instead
     // of re-declaring the same CSS values locally.
@@ -104,29 +117,40 @@ export default function PartnersView({ type, onCreate, onUpdate, onDelete, onBul
     // Page-scoped: only the loaded rows exist client-side now.
     const sel = useRowSelection<any>(pagedPartners, (p: any) => p.id);
 
-    const confirmBulkDelete = () => {
+    const confirmBulkDelete = async () => {
         const ids = sel.keys;
-        if (onBulkDelete) {
-            afterMutation(onBulkDelete(ids));
-        } else {
-            afterMutation(Promise.all(ids.map(id => onDelete(id))));
-        }
         sel.clear();
         setShowBulkDeleteConfirm(false);
+        // Per-id failures are summarised below rather than toasted one by one.
+        let failed = 0;
+        for (const id of ids) {
+            try {
+                const res = await authFetch(`${API_BASE}/partners/${id}`, { method: 'DELETE' });
+                if (!res.ok) failed++;
+            } catch { failed++; }
+        }
+        const succeeded = ids.length - failed;
+        if (failed === 0) showToast(`${succeeded} ${noun}${succeeded !== 1 ? 's' : ''} deleted`, 'success');
+        else if (succeeded > 0) showToast(`${succeeded} deleted, ${failed} could not be removed — linked records exist`, 'warning');
+        else showToast(`Could not delete ${noun}s — they have linked records`, 'danger');
+        afterMutation();
     };
 
-    const handleSubmit = (e: React.FormEvent) => {
+    // Modals close only on success, so a rejected save keeps the user's input.
+    const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!newPartner.name) return;
-        afterMutation(onCreate(newPartner));
+        if (!await send(`${API_BASE}/partners`, 'POST', newPartner)) return;
+        showToast(`${typeLabel} created successfully`, 'success');
         setNewPartner({ name: '', address: '', contact_person: '', phone: '', fax: '', email: '', type, active: true });
         setIsCreateOpen(false);
+        afterMutation();
     };
 
-    const handleUpdateSubmit = (e: React.FormEvent) => {
+    const handleUpdateSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!editingPartner) return;
-        afterMutation(onUpdate(editingPartner.id, {
+        const ok = await send(`${API_BASE}/partners/${editingPartner.id}`, 'PUT', {
             name: editingPartner.name,
             address: editingPartner.address,
             contact_person: editingPartner.contact_person,
@@ -134,18 +158,21 @@ export default function PartnersView({ type, onCreate, onUpdate, onDelete, onBul
             fax: editingPartner.fax,
             email: editingPartner.email,
             active: editingPartner.active
-        }));
+        });
+        if (!ok) return;
         setEditingPartner(null);
+        afterMutation();
     };
 
     const handleDelete = (p: Partner) => {
         setDeletingPartner(p);
     };
 
-    const confirmDelete = () => {
+    const confirmDelete = async () => {
         if (!deletingPartner) return;
-        afterMutation(onDelete(deletingPartner.id));
+        const target = deletingPartner;
         setDeletingPartner(null);
+        if (await send(`${API_BASE}/partners/${target.id}`, 'DELETE')) afterMutation();
     };
 
     return (
