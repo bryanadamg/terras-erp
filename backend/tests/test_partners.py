@@ -66,6 +66,11 @@ def test_partner_crud(client, auth_headers):
     assert resp.status_code == 200, resp.text
     assert resp.json()["phone"] == "021 555"
 
+    # 4d. Search reaches contact fields, not just name/address
+    resp = client.get("/api/partners?search=021 555", headers=auth_headers)
+    assert resp.status_code == 200, resp.text
+    assert [p["name"] for p in resp.json()["items"]] == ["Test Customer PTEST"]
+
     # 5. Delete both
     resp = client.delete(f"/api/partners/{customer_id}", headers=auth_headers)
     assert resp.status_code == 200, resp.text

@@ -54,7 +54,7 @@ export default function PartnersView({ type }: PartnersViewProps) {
     const { openId: menuOpenId, pos: menuPos, toggle: menuToggle, close: menuClose } = useFloatingMenu(140);
 
     // Server-paginated + server-filtered: `rows` is ONE page of this partner type,
-    // never the whole directory. Search (name OR address) and the `type` scope are
+    // never the whole directory. Search (name, contact, phone, email, address) and the `type` scope are
     // applied by the backend; the hook resets to page 1 whenever either changes.
     const {
         rows: pagedPartners, total, meta, loading,
@@ -191,7 +191,7 @@ export default function PartnersView({ type }: PartnersViewProps) {
                     <SearchField
                         value={searchInput}
                         onChange={setSearch}
-                        placeholder={`Search ${typeLabel.toLowerCase()}s…`}
+                        placeholder={`Search name, contact, phone, email, address…`}
                         width={280}
                         grow
                     />
@@ -240,7 +240,9 @@ export default function PartnersView({ type }: PartnersViewProps) {
                                     <th style={{ ...xpThCell, width: '28px', textAlign: 'center' as const }}>
                                         {canDelete && <SelectAllCheckbox allSelected={sel.allPageSelected} someSelected={sel.someSelected} onChange={sel.togglePage} title="Select all" />}
                                     </th>
-                                    <th style={{ ...xpThCell, width: '30%' }}>Name</th>
+                                    <th style={{ ...xpThCell, width: '22%' }}>Name</th>
+                                    <th style={{ ...xpThCell, width: '18%' }}>Contact</th>
+                                    <th style={{ ...xpThCell, width: '18%' }}>Email</th>
                                     <th style={xpThCell}>Address</th>
                                     <th style={{ ...xpThCell, width: '80px' }}>Status</th>
                                     <th style={{ ...xpThCell, textAlign: 'right' as const, borderRight: 'none', width: '80px' }}>Actions</th>
@@ -258,6 +260,17 @@ export default function PartnersView({ type }: PartnersViewProps) {
                                         <td style={{ ...tdBase, fontWeight: 'bold' }}>
                                             {p.name}
                                         </td>
+                                        <td style={tdBase}>
+                                            {p.contact_person || p.phone ? (
+                                                <>
+                                                    {p.contact_person && <div>{p.contact_person}</div>}
+                                                    {p.phone && <div style={{ color: '#555' }}>{p.phone}</div>}
+                                                </>
+                                            ) : <span style={{ color: '#aaa' }}>—</span>}
+                                        </td>
+                                        <td style={{ ...tdBase, color: '#555' }}>
+                                            {p.email || <span style={{ color: '#aaa' }}>—</span>}
+                                        </td>
                                         <td style={{ ...tdBase, color: '#555' }}>
                                             {p.address || <span style={{ color: '#aaa' }}>—</span>}
                                         </td>
@@ -270,11 +283,11 @@ export default function PartnersView({ type }: PartnersViewProps) {
                                     </tr>
                                 ))}
                                 {pagedPartners.length === 0 && (loading ? (
-                                    <TableSkeleton rows={SKEL_PAGE_ROWS} cols={skel.cols ?? 5} tdStyle={tdBase} rowHeight={skel.rowHeight} fillHeight={skel.fillHeight} />
+                                    <TableSkeleton rows={SKEL_PAGE_ROWS} cols={skel.cols ?? 7} tdStyle={tdBase} rowHeight={skel.rowHeight} fillHeight={skel.fillHeight} />
                                 ) : (
                                     <tr>
                                         <td
-                                            colSpan={5}
+                                            colSpan={7}
                                             style={{ ...tdBase, borderRight: 'none', textAlign: 'center', padding: '24px 8px', color: '#888', fontStyle: 'italic' }}
                                         >
                                             {searchTerm

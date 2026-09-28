@@ -68,9 +68,10 @@ def get_partners(
         query = query.filter(Partner.active == active)
         count_query = count_query.filter(Partner.active == active)
     if search:
-        # Mirrors what PartnersView filtered client-side: name OR address.
         like = f"%{search}%"
-        cond = or_(Partner.name.ilike(like), Partner.address.ilike(like))
+        cond = or_(*(col.ilike(like) for col in (
+            Partner.name, Partner.address, Partner.contact_person, Partner.phone, Partner.email,
+        )))
         query = query.filter(cond)
         count_query = count_query.filter(cond)
 
