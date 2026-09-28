@@ -1,10 +1,11 @@
 import uuid
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select
+from sqlalchemy import select, func
 from sqlalchemy.orm import selectinload
 from app.db.session import get_async_db
 from app.models.category import Category
+from app.models.item import Item
 from app.models.auth import User
 from app.schemas import CategoryCreate, CategoryResponse
 from app.api.auth import get_current_user, require_permission
@@ -41,6 +42,15 @@ async def list_categories(
         select(Category).options(*_LOAD_OPTS).order_by(Category.name)
     )
     all_cats = result.scalars().unique().all()
+
+    # Items filed directly under each category — the Categories tab shows it so a
+    # rename/delete is made knowing what it touches (delete un-files them: the FK is
+    # ON DELETE SET NULL). A plain attribute, not a column: nothing is written back.
+    counts = dict((await db.execute(
+        select(Item.category_id, func.count()).where(Item.category_id.isnot(None)).group_by(Item.category_id)
+    )).all())
+    for c in all_cats:
+        c.item_count = counts.get(c.id, 0)
 
     # Build flat depth-first list starting from roots.
     roots = [c for c in all_cats if c.parent_id is None]

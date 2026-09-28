@@ -1588,6 +1588,7 @@ class CategoryResponse(BaseModel):
     level: int
     path_names: list[str]
     is_system: bool = False
+    item_count: int = 0
 
     class Config:
         from_attributes = True
