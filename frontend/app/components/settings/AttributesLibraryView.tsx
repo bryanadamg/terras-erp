@@ -1,10 +1,10 @@
 'use client';
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useConfirm } from '../../context/ConfirmContext';
 import ModalWrapper from '../shared/ModalWrapper';
-import { FormSection, useFloatingMenu, MenuTriggerButton, FloatingMenu, CHIP_RADIUS, XP_BTN } from '../shared/xpTheme';
-import { lvInput, lvBtn, lvPrimaryBtn, lvLabel, lvTh, lvTd, lvSep, lvRow, lvThead, lvZebra } from '../shared/listViewTheme';
-import { ToolbarButton, SearchField, ToolbarCount } from '../shared/shellTheme';
+import { FormSection, Chip, XP_BTN } from '../shared/xpTheme';
+import { lvInput, lvBtn, lvPrimaryBtn, lvLabel, lvSep, lvZebra, lvPickerRow } from '../shared/listViewTheme';
+import { ToolbarButton, SearchField, ToolbarCount, xpToolbar } from '../shared/shellTheme';
 
 // Attributes with a dedicated management home are hidden here so they are not
 // hand-edited in two places:
@@ -16,14 +16,24 @@ import { ToolbarButton, SearchField, ToolbarCount } from '../shared/shellTheme';
 // `Materials` stays — it is managed here, no dedicated home.
 const HIDDEN_LIBRARY_ROLES = ['combo', 'labdip_color', 'color'];
 
+// Where each system attribute's values are picked — shown so the user knows what
+// editing the list affects. Every role seeded in `seed_system_attributes()` needs a
+// row, otherwise the raw role key leaks into the UI.
 const ROLE_LABELS: Record<string, string> = {
     material: 'Sample Materials',
     color: 'Sample Colors',
     labdip_color: 'Labdip Colors',
     combo: 'Sample Combo',
-    wash_bath: 'Dye Recipe Bak Cuci',
-    finishing_step: 'Dye Recipe Finishing',
+    wash_bath: 'Dye Recipe · Wash Bath',
+    finishing_step: 'Dye Recipe · Finishing',
+    sample_category: 'Sample Request Category',
+    quarantine_status: 'Quarantine QC Status',
+    dyeing_speed: 'Dyeing Rope Speed',
 };
+const roleLabel = (role?: string | null) => (role ? ROLE_LABELS[role] || role : null);
+
+const COUNT_TONE = { background: '#eef3fb', borderColor: '#7f9db9', color: '#003080' };
+const SYSTEM_TONE = { background: '#fff4dc', borderColor: '#d0a040', color: '#804800' };
 
 interface Props {
     attributes: any[];
@@ -36,64 +46,75 @@ interface Props {
     onDeleteValue: (valueId: string) => void;
 }
 
+const nextNumber = (values: string[]) => {
+    const nums = values.map(v => parseInt(v)).filter(n => !isNaN(n));
+    return nums.length > 0 ? Math.max(...nums) + 1 : null;
+};
+
+// Two-pane master/detail (Explorer shape): attribute list on the left, the selected
+// attribute's full value list edited in place on the right. Replaces a table that
+// capped each row at 8 value chips and routed every edit through a modal.
 export default function AttributesLibraryView({
     attributes, canManage,
     onCreateAttribute, onUpdateAttribute, onDeleteAttribute,
     onAddValue, onUpdateValue, onDeleteValue,
 }: Props) {
     const { confirm } = useConfirm();
-    const { openId: menuOpenId, pos: menuPos, toggle: menuToggle, close: menuClose } = useFloatingMenu(160);
 
     const [search, setSearch] = useState('');
-    const [isModalOpen, setIsModalOpen] = useState(false);
-    const [editingId, setEditingId] = useState<string | null>(null);
-    const [nameDraft, setNameDraft] = useState('');
-    const [newValues, setNewValues] = useState<string[]>([]);
+    const [selectedId, setSelectedId] = useState<string | null>(null);
+    const [pendingName, setPendingName] = useState<string | null>(null);
+    const [valueFilter, setValueFilter] = useState('');
     const [valueDraft, setValueDraft] = useState('');
-    const [isSubmitting, setIsSubmitting] = useState(false);
+    const [nameDraft, setNameDraft] = useState<string | null>(null);
 
     const visible = (attributes || []).filter((a: any) => !HIDDEN_LIBRARY_ROLES.includes(a.system_role));
-    const filtered = visible.filter((a: any) => a.name.toLowerCase().includes(search.toLowerCase()));
-    const editing = editingId ? visible.find((a: any) => a.id === editingId) : null;
+    const q = search.trim().toLowerCase();
+    const filtered = visible.filter((a: any) =>
+        !q || a.name.toLowerCase().includes(q)
+        || (roleLabel(a.system_role) || '').toLowerCase().includes(q)
+        || a.values.some((v: any) => v.value.toLowerCase().includes(q)));
 
-    const getNextValue = (values: any[]) => {
-        const numbers = (values || []).map((v: any) => parseInt(v.value)).filter((n: number) => !isNaN(n));
-        return numbers.length > 0 ? Math.max(...numbers) + 1 : null;
+    // A just-created attribute is selected once the refresh brings it in; otherwise
+    // keep the pick, falling back to the first row when it is filtered out/deleted.
+    const pending = pendingName ? visible.find((a: any) => a.name === pendingName) : null;
+    if (pending) { setPendingName(null); setSelectedId(pending.id); }
+    const selected = filtered.find((a: any) => a.id === selectedId) || filtered[0] || null;
+
+    const select = (id: string) => {
+        if (id === selected?.id) return;
+        setSelectedId(id); setValueFilter(''); setValueDraft(''); setNameDraft(null);
     };
-    const nextVal = editing ? getNextValue(editing.values) : getNextValue(newValues.map(v => ({ value: v })));
 
-    const openCreate = () => { setEditingId(null); setNameDraft(''); setNewValues([]); setValueDraft(''); setIsModalOpen(true); };
-    const openEdit = (attr: any) => { setEditingId(attr.id); setNameDraft(attr.name); setValueDraft(''); setIsModalOpen(true); };
-    const closeModal = () => setIsModalOpen(false);
+    const locked = !canManage || !!selected?.is_system;
+    const values: any[] = selected?.values || [];
+    const vq = valueFilter.trim().toLowerCase();
+    const shownValues = vq ? values.filter(v => v.value.toLowerCase().includes(vq)) : values;
+    const nextVal = selected ? nextNumber(values.map(v => v.value)) : null;
+    const dupDraft = !!valueDraft.trim() && values.some(x => x.value.toLowerCase() === valueDraft.trim().toLowerCase());
 
-    const addDraftValue = () => {
-        const v = valueDraft.trim();
-        if (!v) return;
-        setNewValues([...newValues, v]);
+    // New values append at the end — follow them there so the add is visible.
+    const listRef = useRef<HTMLDivElement>(null);
+    const lastCount = useRef({ id: null as string | null, n: 0 });
+    useEffect(() => {
+        const prev = lastCount.current;
+        if (prev.id === selected?.id && values.length > prev.n && listRef.current)
+            listRef.current.scrollTop = listRef.current.scrollHeight;
+        lastCount.current = { id: selected?.id ?? null, n: values.length };
+    }, [selected?.id, values.length]);
+    const nameDirty = nameDraft !== null && nameDraft.trim() !== '' && nameDraft.trim() !== selected?.name;
+
+    const addValue = (raw: string) => {
+        const v = raw.trim();
+        if (!selected || !v) return;
+        if (values.some(x => x.value.toLowerCase() === v.toLowerCase())) return;
+        onAddValue(selected.id, v);
         setValueDraft('');
     };
-    const addNextDraftValue = () => { if (nextVal !== null) setNewValues([...newValues, String(nextVal)]); };
 
-    const handleSubmit = async (e: React.FormEvent) => {
-        e.preventDefault();
-        if (!nameDraft.trim() || isSubmitting) return;
-        setIsSubmitting(true);
-        try {
-            if (editing) {
-                if (nameDraft.trim() !== editing.name) onUpdateAttribute(editing.id, nameDraft.trim());
-            } else {
-                const res = await onCreateAttribute({ name: nameDraft.trim(), values: newValues.map(v => ({ value: v })) });
-                if (!res?.ok) return;
-            }
-            closeModal();
-        } finally { setIsSubmitting(false); }
-    };
-
-    const handleAddValueToExisting = () => {
-        if (editing && valueDraft.trim()) { onAddValue(editing.id, valueDraft.trim()); setValueDraft(''); }
-    };
-    const handleAddNextToExisting = () => {
-        if (editing && nextVal !== null) onAddValue(editing.id, String(nextVal));
+    const saveName = () => {
+        if (selected && nameDirty) onUpdateAttribute(selected.id, nameDraft!.trim());
+        setNameDraft(null);
     };
 
     const handleDeleteValue = async (v: any) => {
@@ -104,199 +125,257 @@ export default function AttributesLibraryView({
         if (ok) onDeleteValue(v.id);
     };
 
-    const handleDelete = async (attr: any) => {
-        const ok = await confirm({
-            title: 'Delete Attribute', variant: 'danger', confirmText: 'Delete',
-            message: `Delete attribute "${attr.name}" and all ${attr.values.length} of its values? This cannot be undone.`,
-        });
-        if (ok) onDeleteAttribute(attr.id);
+    // ── New-attribute dialog (the only modal left) ──────────────────────────
+    const [isModalOpen, setIsModalOpen] = useState(false);
+    const [newName, setNewName] = useState('');
+    const [newValues, setNewValues] = useState<string[]>([]);
+    const [newDraft, setNewDraft] = useState('');
+    const [isSubmitting, setIsSubmitting] = useState(false);
+    const newNext = nextNumber(newValues);
+
+    const openCreate = () => { setNewName(''); setNewValues([]); setNewDraft(''); setIsModalOpen(true); };
+    const addNewValue = (raw: string) => {
+        const v = raw.trim();
+        if (!v || newValues.some(x => x.toLowerCase() === v.toLowerCase())) return;
+        setNewValues([...newValues, v]); setNewDraft('');
+    };
+    const handleCreate = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!newName.trim() || isSubmitting) return;
+        setIsSubmitting(true);
+        try {
+            const res = await onCreateAttribute({ name: newName.trim(), values: newValues.map(v => ({ value: v })) });
+            if (!res?.ok) return;
+            setSearch(''); setPendingName(newName.trim()); setIsModalOpen(false);
+        } finally { setIsSubmitting(false); }
     };
 
     return (
-        <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
-            {/* Toolbar */}
-            <div style={{ background: 'linear-gradient(to bottom, #f5f4ef, #e0dfd8)', borderBottom: '1px solid #b0a898', padding: '4px 8px', display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap', flexShrink: 0 }}>
-                <SearchField value={search} onChange={setSearch} placeholder="Search attributes…" width={220} />
-                <ToolbarCount right>
-                    {filtered.length} attribute{filtered.length !== 1 ? 's' : ''}
-                </ToolbarCount>
-                {canManage && (
+        <div style={{ display: 'flex', height: '100%', minHeight: 0, background: '#ece9d8' }}>
+            {/* ── Left: attribute list ─────────────────────────────────────── */}
+            <div style={{ width: 280, flexShrink: 0, display: 'flex', flexDirection: 'column', borderRight: '1px solid #a0988c', background: '#fff' }}>
+                <div style={xpToolbar({ flexShrink: 0, flexWrap: 'nowrap' })}>
+                    <SearchField value={search} onChange={setSearch} placeholder="Search name, role, value…" grow width={400} />
+                </div>
+                <div style={{ flex: 1, minHeight: 0, overflowY: 'auto' }}>
+                    {filtered.length === 0 && (
+                        <div style={{ padding: 20, textAlign: 'center', color: '#888', fontStyle: 'italic', fontSize: 11 }}>
+                            {visible.length === 0 ? 'No attributes defined.' : 'No attributes match.'}
+                        </div>
+                    )}
+                    {filtered.map((a: any) => {
+                        const on = a.id === selected?.id;
+                        const role = roleLabel(a.system_role);
+                        return (
+                            <div
+                                key={a.id}
+                                role="button"
+                                tabIndex={0}
+                                onClick={() => select(a.id)}
+                                onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); select(a.id); } }}
+                                style={{
+                                    ...lvPickerRow(on), alignItems: 'center', padding: '5px 8px',
+                                    borderLeft: `3px solid ${on ? '#316ac5' : 'transparent'}`,
+                                }}
+                            >
+                                <div style={{ flex: 1, minWidth: 0 }}>
+                                    <div style={{ fontWeight: 'bold', fontSize: 12, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                                        {a.is_system && <i className="bi bi-shield-lock me-1" style={{ color: '#a06000', fontSize: 10 }} title="System attribute" />}
+                                        {a.name}
+                                    </div>
+                                    {role && <div style={{ fontSize: 10, color: '#666', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{role}</div>}
+                                </div>
+                                <Chip tone={COUNT_TONE} size="xs">{a.values.length}</Chip>
+                            </div>
+                        );
+                    })}
+                </div>
+                <div style={xpToolbar({ flexShrink: 0, borderTop: '1px solid #b0a898', borderBottom: 'none', flexWrap: 'nowrap' })}>
+                    <ToolbarCount>{filtered.length} attribute{filtered.length !== 1 ? 's' : ''}</ToolbarCount>
+                    {canManage && (
+                        <span style={{ marginLeft: 'auto' }}>
+                            <ToolbarButton tone="create" icon="bi-plus-lg" onClick={openCreate}>New Attribute</ToolbarButton>
+                        </span>
+                    )}
+                </div>
+            </div>
+
+            {/* ── Right: selected attribute ────────────────────────────────── */}
+            <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column' }}>
+                {!selected ? (
+                    <div style={{ margin: 'auto', color: '#888', fontSize: 11, fontStyle: 'italic' }}>
+                        {canManage ? 'Select an attribute, or create a new one.' : 'Select an attribute.'}
+                    </div>
+                ) : (
                     <>
-                        <span style={lvSep()} />
-                        <ToolbarButton tone="create" icon="bi-plus-lg" onClick={openCreate}>New Attribute</ToolbarButton>
+                        {/* Header: name + role + protection */}
+                        <div style={{ padding: '8px 12px', borderBottom: '1px solid #b0a898', background: 'linear-gradient(to bottom, #fbfaf6, #ece9d8)', flexShrink: 0 }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                                {locked ? (
+                                    <span style={{ fontSize: 14, fontWeight: 'bold' }}>{selected.name}</span>
+                                ) : (
+                                    <>
+                                        <input
+                                            style={lvInput({ width: 260, fontSize: 13, fontWeight: 'bold' })}
+                                            value={nameDraft ?? selected.name}
+                                            onChange={e => setNameDraft(e.target.value)}
+                                            onKeyDown={e => {
+                                                if (e.key === 'Enter') saveName();
+                                                if (e.key === 'Escape') setNameDraft(null);
+                                            }}
+                                            aria-label="Attribute name"
+                                        />
+                                        {nameDirty && (
+                                            <>
+                                                <button type="button" className={XP_BTN} style={lvPrimaryBtn()} onClick={saveName}>Rename</button>
+                                                <button type="button" className={XP_BTN} style={lvBtn()} onClick={() => setNameDraft(null)}>Cancel</button>
+                                            </>
+                                        )}
+                                    </>
+                                )}
+                                {selected.is_system && <Chip tone={SYSTEM_TONE} icon="bi-shield-lock" size="xs">System</Chip>}
+                                {roleLabel(selected.system_role) && (
+                                    <span style={{ fontSize: 11, color: '#555' }}>
+                                        <i className="bi bi-link-45deg me-1" />Used by {roleLabel(selected.system_role)}
+                                    </span>
+                                )}
+                                {canManage && !selected.is_system && (
+                                    <button
+                                        type="button" className={XP_BTN}
+                                        style={lvBtn('danger', { marginLeft: 'auto' })}
+                                        onClick={() => onDeleteAttribute(selected.id)}
+                                    >
+                                        <i className="bi bi-trash me-1" />Delete Attribute
+                                    </button>
+                                )}
+                            </div>
+                            {selected.is_system && canManage && (
+                                <div style={{ marginTop: 4, fontSize: 10, color: '#804800' }}>
+                                    Name is protected — the system looks this attribute up by role. Values can be managed below.
+                                </div>
+                            )}
+                        </div>
+
+                        {/* Values toolbar: filter left, count, add rightmost */}
+                        <div style={xpToolbar({ flexShrink: 0 })}>
+                            <SearchField value={valueFilter} onChange={setValueFilter} placeholder="Filter values…" width={200} icon="bi-funnel" />
+                            <ToolbarCount right>
+                                {vq ? `${shownValues.length} of ${values.length}` : values.length} value{values.length !== 1 ? 's' : ''}
+                            </ToolbarCount>
+                            {canManage && (
+                                <>
+                                    <span style={lvSep()} />
+                                    <input
+                                        style={lvInput({ width: 220, ...(dupDraft ? { borderColor: '#c00000' } : {}) })}
+                                        placeholder="New value… (Enter)"
+                                        title={dupDraft ? 'Already exists' : undefined}
+                                        value={valueDraft}
+                                        onChange={e => setValueDraft(e.target.value)}
+                                        onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); addValue(valueDraft); } }}
+                                    />
+                                    <ToolbarButton tone="create" icon="bi-plus-lg" onClick={() => addValue(valueDraft)} disabled={!valueDraft.trim() || dupDraft}>Add</ToolbarButton>
+                                    {nextVal !== null && (
+                                        <ToolbarButton tone="neutral" onClick={() => addValue(String(nextVal))} title="Add the next number in sequence">+{nextVal}</ToolbarButton>
+                                    )}
+                                </>
+                            )}
+                        </div>
+
+                        {/* Values list */}
+                        <div ref={listRef} style={{ flex: 1, minHeight: 0, overflowY: 'auto', background: '#fff' }}>
+                            {shownValues.length === 0 && (
+                                <div style={{ padding: 20, textAlign: 'center', color: '#888', fontStyle: 'italic', fontSize: 11 }}>
+                                    {values.length === 0 ? 'No values yet.' : 'No values match.'}
+                                </div>
+                            )}
+                            {shownValues.map((val: any, vi: number) => (
+                                <div key={val.id} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '2px 8px', background: lvZebra(vi), borderBottom: '1px solid #e0dfd8' }}>
+                                    <span style={{ width: 28, textAlign: 'right', fontSize: 10, color: '#999', flexShrink: 0 }}>{values.indexOf(val) + 1}</span>
+                                    {canManage ? (
+                                        <input
+                                            // re-mount on server change so the field follows a refresh
+                                            key={val.value}
+                                            style={{ ...lvInput(), flex: 1, border: '1px solid transparent', boxShadow: 'none', background: 'transparent' }}
+                                            defaultValue={val.value}
+                                            title="Click to rename — Enter saves, Esc reverts"
+                                            onFocus={e => { e.currentTarget.style.borderColor = '#7f9db9'; e.currentTarget.style.background = '#fff'; }}
+                                            onBlur={e => {
+                                                e.currentTarget.style.borderColor = 'transparent'; e.currentTarget.style.background = 'transparent';
+                                                const next = e.target.value.trim();
+                                                if (next && next !== val.value) onUpdateValue(val.id, next);
+                                                else e.target.value = val.value;
+                                            }}
+                                            onKeyDown={e => {
+                                                if (e.key === 'Enter') e.currentTarget.blur();
+                                                if (e.key === 'Escape') { e.currentTarget.value = val.value; e.currentTarget.blur(); }
+                                            }}
+                                        />
+                                    ) : (
+                                        <span style={{ flex: 1, fontSize: 11, padding: '3px 4px' }}>{val.value}</span>
+                                    )}
+                                    {canManage && (
+                                        <button
+                                            type="button"
+                                            title={`Delete "${val.value}"`}
+                                            style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#c00000', padding: '0 4px' }}
+                                            onClick={() => handleDeleteValue(val)}
+                                        >
+                                            <i className="bi bi-x-lg" />
+                                        </button>
+                                    )}
+                                </div>
+                            ))}
+                        </div>
+
                     </>
                 )}
             </div>
 
-            {/* Table */}
-            <div style={{ flex: 1, minHeight: 0, background: '#fff', overflow: 'auto' }}>
-                <table style={{ width: '100%', borderCollapse: 'collapse', background: '#fff' }}>
-                    <thead style={lvThead()}>
-                        <tr>
-                            <th style={{ ...lvTh(), width: 200 }}>Name</th>
-                            <th style={{ ...lvTh(), width: 140 }}>Role</th>
-                            <th style={lvTh()}>Values</th>
-                            <th style={{ ...lvTh(), width: 90, textAlign: 'center' }}>Count</th>
-                            <th style={{ ...lvTh(), width: 70, textAlign: 'right', borderRight: 'none' }}></th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {filtered.length === 0 && (
-                            <tr><td colSpan={5} style={{ ...lvTd(), textAlign: 'center', color: '#888', fontStyle: 'italic', padding: 20 }}>
-                                No attributes defined.
-                            </td></tr>
-                        )}
-                        {filtered.map((attr: any, idx: number) => (
-                            <tr key={attr.id} style={{ ...lvRow(idx), cursor: 'pointer' }} onClick={() => openEdit(attr)}>
-                                <td style={lvTd()}>
-                                    <span style={{ fontWeight: 'bold' }}>{attr.name}</span>
-                                </td>
-                                <td style={lvTd()}>
-                                    {attr.system_role ? (
-                                        <span style={{
-                                            fontSize: 9, background: '#dce8ff',
-                                            border: '1px solid #7fa8e0', color: '#003080',
-                                            padding: '1px 5px', borderRadius: CHIP_RADIUS,
-                                        }}>{ROLE_LABELS[attr.system_role] || attr.system_role}</span>
-                                    ) : <span style={{ color: '#aaa' }}>—</span>}
-                                </td>
-                                <td style={lvTd()}>
-                                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 3 }}>
-                                        {attr.values.slice(0, 8).map((v: any) => (
-                                            <span key={v.id} style={{
-                                                background: '#dde8f5', border: '1px solid #7f9db9',
-                                                padding: '0 4px', fontSize: 10, color: '#333',
-                                            }}>{v.value}</span>
-                                        ))}
-                                        {attr.values.length > 8 && <span style={{ fontSize: 10, color: '#888' }}>…</span>}
-                                        {attr.values.length === 0 && <span style={{ fontSize: 10, color: '#aaa', fontStyle: 'italic' }}>no values</span>}
-                                    </div>
-                                </td>
-                                <td style={{ ...lvTd(), textAlign: 'center' }}>{attr.values.length}</td>
-                                <td style={{ ...lvTd(), borderRight: 'none', textAlign: 'right' }} onClick={e => e.stopPropagation()}>
-                                    {canManage && <MenuTriggerButton onClick={e => menuToggle(String(attr.id), e)} />}
-                                </td>
-                            </tr>
-                        ))}
-                    </tbody>
-                </table>
-            </div>
-
-            {/* Row ⋯ menu: Edit / Delete */}
-            {menuOpenId && (() => {
-                const attr = filtered.find((x: any) => String(x.id) === menuOpenId);
-                if (!attr || !canManage) return null;
-                return (
-                    <FloatingMenu
-                        pos={menuPos}
-                        items={[
-                            { key: 'edit', label: 'Edit', icon: 'bi-pencil', onClick: () => { menuClose(); openEdit(attr); } },
-                            ...(attr.is_system ? [] : [{ key: 'delete', label: 'Delete', icon: 'bi-trash', danger: true, onClick: () => { menuClose(); handleDelete(attr); } }]),
-                        ]}
-                    />
-                );
-            })()}
-
             <ModalWrapper
                 isOpen={isModalOpen}
-                onClose={closeModal}
-                title={editing ? <><i className="bi bi-pencil-square me-1"></i>Edit Attribute — {editing.name}</> : <><i className="bi bi-plus-circle me-1"></i>New Attribute</>}
+                onClose={() => setIsModalOpen(false)}
+                title={<><i className="bi bi-plus-circle me-1"></i>New Attribute</>}
                 size="md"
                 modeless
                 footer={
                     <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
-                        <button type="button" className={XP_BTN} style={lvBtn()} onClick={closeModal}>Cancel</button>
-                        {canManage && (!editing || !editing.is_system) && (
-                            <button type="submit" form="attribute-form" className={XP_BTN} style={lvPrimaryBtn()} disabled={isSubmitting}>
-                                {editing ? 'Save' : 'Create'}
-                            </button>
-                        )}
+                        <button type="button" className={XP_BTN} style={lvBtn()} onClick={() => setIsModalOpen(false)}>Cancel</button>
+                        <button type="submit" form="attribute-form" className={XP_BTN} style={lvPrimaryBtn()} disabled={isSubmitting || !newName.trim()}>Create</button>
                     </div>
                 }
             >
-                <form id="attribute-form" onSubmit={handleSubmit}>
+                <form id="attribute-form" onSubmit={handleCreate}>
                     <FormSection title="Identity">
-                        <div>
-                            <label style={lvLabel()}>Name *</label>
+                        <label style={lvLabel()}>Name *</label>
+                        <input
+                            style={lvInput()}
+                            value={newName}
+                            onChange={e => setNewName(e.target.value)}
+                            placeholder="e.g. Size, Fabric"
+                            required
+                            autoFocus
+                        />
+                    </FormSection>
+                    <FormSection title={`Initial Values (${newValues.length})`}>
+                        <div style={{ display: 'flex', gap: 6, marginBottom: 8 }}>
                             <input
                                 style={lvInput()}
-                                value={nameDraft}
-                                onChange={e => setNameDraft(e.target.value)}
-                                placeholder="e.g. Size, Fabric"
-                                disabled={!canManage || (!!editing && editing.is_system)}
-                                required
-                                autoFocus
+                                placeholder="Value (e.g. S, M, L) — Enter adds"
+                                value={newDraft}
+                                onChange={e => setNewDraft(e.target.value)}
+                                onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); addNewValue(newDraft); } }}
                             />
-                            {editing?.is_system && (
-                                <div style={{ marginTop: 4, fontSize: 10, color: '#804800'}}>
-                                    <i className="bi bi-shield-lock me-1" />System attribute — name is protected, values can still be managed below.
-                                </div>
+                            <button type="button" className={XP_BTN} style={lvBtn()} onClick={() => addNewValue(newDraft)}>Add</button>
+                            {newNext !== null && (
+                                <button type="button" className={XP_BTN} style={lvBtn()} onClick={() => addNewValue(String(newNext))}>+{newNext}</button>
                             )}
                         </div>
-                    </FormSection>
-
-                    <FormSection title={editing ? `Values (${editing.values.length})` : 'Initial Values'}>
-                        {editing ? (
-                            <>
-                                <div style={{ background: '#fff', border: '1px solid #7f9db9', maxHeight: 220, overflowY: 'auto', marginBottom: 8 }}>
-                                    {editing.values.map((val: any, vi: number) => (
-                                        <div key={val.id} style={{ display: 'flex', alignItems: 'center', padding: '2px 4px', background: lvZebra(vi), borderBottom: '1px solid #e0dfd8' }}>
-                                            <input
-                                                style={{ ...lvInput(), flex: 1, border: 'none', boxShadow: 'none', background: 'transparent' }}
-                                                defaultValue={val.value}
-                                                disabled={!canManage}
-                                                onBlur={e => { if (e.target.value !== val.value && e.target.value.trim()) onUpdateValue(val.id, e.target.value.trim()); }}
-                                            />
-                                            {canManage && (
-                                                <button type="button" style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#c00000', padding: '0 4px' }} onClick={() => handleDeleteValue(val)}>
-                                                    <i className="bi bi-x-lg" />
-                                                </button>
-                                            )}
-                                        </div>
-                                    ))}
-                                    {editing.values.length === 0 && (
-                                        <div style={{ padding: 10, textAlign: 'center', fontSize: 11, color: '#888' }}>No values yet</div>
-                                    )}
-                                </div>
-                                {canManage && (
-                                    <div style={{ display: 'flex', gap: 6 }}>
-                                        <input
-                                            style={lvInput()}
-                                            placeholder="Add value…"
-                                            value={valueDraft}
-                                            onChange={e => setValueDraft(e.target.value)}
-                                            onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); handleAddValueToExisting(); } }}
-                                        />
-                                        <button type="button" className={XP_BTN} style={lvBtn()} onClick={handleAddValueToExisting}>Add</button>
-                                        {nextVal !== null && (
-                                            <button type="button" className={XP_BTN} style={lvBtn()} onClick={handleAddNextToExisting}>+{nextVal}</button>
-                                        )}
-                                    </div>
-                                )}
-                            </>
-                        ) : (
-                            <>
-                                <div style={{ display: 'flex', gap: 6, marginBottom: 8 }}>
-                                    <input
-                                        style={lvInput()}
-                                        placeholder="Value (e.g. S, M, L)"
-                                        value={valueDraft}
-                                        onChange={e => setValueDraft(e.target.value)}
-                                        onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); addDraftValue(); } }}
-                                    />
-                                    <button type="button" className={XP_BTN} style={lvBtn()} onClick={addDraftValue}>Add</button>
-                                    {nextVal !== null && (
-                                        <button type="button" className={XP_BTN} style={lvBtn()} onClick={addNextDraftValue}>+{nextVal}</button>
-                                    )}
-                                </div>
-                                <div style={{ background: '#fff', border: '1px solid #7f9db9', minHeight: 32, padding: '4px 6px', display: 'flex', flexWrap: 'wrap', gap: 4 }}>
-                                    {newValues.map((v, i) => (
-                                        <span key={i} style={{ borderRadius: CHIP_RADIUS, background: '#dde8f5', border: '1px solid #7f9db9', padding: '1px 6px', fontSize: 11 }}>{v}</span>
-                                    ))}
-                                    {newValues.length === 0 && <span style={{ fontSize: 11, color: '#888', fontStyle: 'italic' }}>No values added</span>}
-                                </div>
-                            </>
-                        )}
+                        <div style={{ background: '#fff', border: '1px solid #7f9db9', minHeight: 32, padding: '4px 6px', display: 'flex', flexWrap: 'wrap', gap: 4 }}>
+                            {newValues.map((v, i) => (
+                                <Chip key={v} onRemove={() => setNewValues(newValues.filter((_, j) => j !== i))}>{v}</Chip>
+                            ))}
+                            {newValues.length === 0 && <span style={{ fontSize: 11, color: '#888', fontStyle: 'italic' }}>No values added — you can add them later too.</span>}
+                        </div>
                     </FormSection>
                 </form>
             </ModalWrapper>
