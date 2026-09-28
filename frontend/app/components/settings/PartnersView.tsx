@@ -11,11 +11,9 @@ import { useData } from '../../context/DataContext';
 import { usePaginatedFetch } from '../../context/usePaginatedList';
 import { lvBtn, lvInput, lvTh, lvTd, lvLabel, lvThead, LV_STICKY_THEAD, useRowSelection, RowCheckbox, SelectAllCheckbox, lvZebra, ResizableTable } from '../shared/listViewTheme';
 import { ShellWindow, ShellTitleBar, xpToolbar, SearchField, ToolbarCount, ToolbarButton } from '../shared/shellTheme';
-import { STATIC_BASE } from '../shared/apiBase';
+import { API_BASE } from '../shared/apiBase';
 
 const PARTNERS_PAGE_SIZE = 20;
-
-const API_BASE = STATIC_BASE.replace(/\/api$/, '') + '/api';
 
 interface Partner {
     id: string;
