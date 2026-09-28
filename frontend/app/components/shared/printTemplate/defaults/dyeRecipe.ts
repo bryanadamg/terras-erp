@@ -1,7 +1,8 @@
 /**
  * Built-in Kartu Celup layout — a transcription of the hand-built document it
  * replaced in dyeing-setting/DyeRecipePrintView.tsx. Applies until the client
- * saves their own.
+ * saves their own. A saved layout predating the bath fields keeps its hand-fill
+ * rows until those fields are added to it in Print Layouts.
  */
 
 import type { PrintLayout, Band, FieldSpec, GridItem, KeyValueRow } from '../types';
@@ -41,17 +42,21 @@ const BANDS: Band[] = [
     {
         id: 'dr_job', type: 'keyvalue', marginBottom: 8,
         labelWidth: '16%', labelFontSize: 8, valueFontSize: 8, ruleColor: RULE,
+        // Bath rows print the vessel when the card comes from Dyeing Orders and
+        // fall back to the hand-fill blank when it comes from the recipe master.
         rows: [
+            kv('Nama Item', 'dr.bath_item_names', { bold: true, hideWhenEmpty: true }),
+            kv('No WO', 'dr.bath_wo_codes', { mono: true, hideWhenEmpty: true }),
             kv('Warna', 'dr.name', { bold: true }),
             kv('Color Matching', 'dr.color_standard'),
             fill('Nomor PO', ' '),
-            fill('LOT', ' '),
+            kv('LOT', 'dr.bath_lots', { emptyText: ' ' }),
             kv('Artikel', 'dr.code'),
-            fill('Qty Order', '  KG'),
-            fill('Volume Air', '  Liter'),
+            kv('Qty Order', 'dr.bath_qty', { emptyText: '  KG' }),
+            kv('Volume Air', 'dr.bath_volume', { emptyText: '  Liter' }),
             fill('Customer', ' '),
-            fill('Mesin Celup', ' '),
-            fill('Tekanan / Speed', '  /  '),
+            kv('Mesin Celup', 'dr.bath_machine', { emptyText: ' ' }),
+            kv('Tekanan / Speed', 'dr.bath_speed', { emptyText: '  /  ' }),
         ],
     },
     {

@@ -8,10 +8,12 @@ import TemplateRenderer from '../shared/printTemplate/TemplateRenderer';
 import TemplatePrintPortal from '../shared/printTemplate/TemplatePrintPortal';
 import { resolveLayout } from '../shared/printTemplate/templateStore';
 import { paperDimsMm } from '../shared/printTemplate/paper';
-import { buildDyeRecipeContext, DYE_RECIPE_DOC } from '../shared/printTemplate/doctypes/dyeRecipe';
+import { buildDyeRecipeContext, DYE_RECIPE_DOC, type KartuCelupBath } from '../shared/printTemplate/doctypes/dyeRecipe';
 
 // The Kartu Celup is a print template (defaults/dyeRecipe.ts, editable in Print
-// Layouts). The section checkboxes drop a band for this one print only.
+// Layouts). The section checkboxes drop a band for this one print only. Opened
+// from the recipe master it prints blank for the floor to fill; opened from a bath
+// on Dyeing Orders it carries `bath` + `doses` and prints that vessel filled in.
 
 interface RecipeLine {
     id: string;
@@ -47,12 +49,14 @@ interface DyeRecipeForPrint {
 
 interface Props {
     recipe: DyeRecipeForPrint;
+    bath?: KartuCelupBath | null;
+    doses?: { lines?: any[] } | null;
     onClose: () => void;
 }
 
 const HIDDEN_BY_LAYOUT = 'Hidden by the saved print layout — change it in Print Layouts.';
 
-export default function DyeRecipePrintView({ recipe, onClose }: Props) {
+export default function DyeRecipePrintView({ recipe, bath, doses, onClose }: Props) {
     const { companyProfile, printTemplates } = useData() as any;
     const { formatCustom: tzFmt } = useTimezone();
 
@@ -62,10 +66,10 @@ export default function DyeRecipePrintView({ recipe, onClose }: Props) {
 
     const layout = resolveLayout(DYE_RECIPE_DOC, printTemplates)!;
     const ctx = useMemo(() => buildDyeRecipeContext({
-        recipe, companyProfile, tzFormatCustom: tzFmt,
+        recipe, bath, doses, companyProfile, tzFormatCustom: tzFmt,
         companyName: companyProfile?.name,
         companyLogoUrl: companyProfile?.logo_url ? `${STATIC_BASE}${companyProfile.logo_url}` : undefined,
-    }), [recipe, companyProfile, tzFmt]);
+    }), [recipe, bath, doses, companyProfile, tzFmt]);
     const { widthMm: paperW, heightMm: paperH } = paperDimsMm(layout.paper);
 
     const inLayout = (id: string) => layout.bands.some(b => b.id === id && b.show !== false);
@@ -88,7 +92,7 @@ export default function DyeRecipePrintView({ recipe, onClose }: Props) {
         <>
             <PrintModalShell
                 modeless
-                title={`Kartu Celup — ${recipe.code} ${recipe.name}`}
+                title={`Kartu Celup — ${bath?.wo_codes.length ? bath.wo_codes.join(', ') : `${recipe.code} ${recipe.name}`}`}
                 onClose={onClose}
                 width="calc(var(--app-vw) * 92 / 100)"
                 maxWidth={1100}
