@@ -395,6 +395,9 @@ app.add_middleware(CatchAllErrors)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=origins,
+    # Opt-in for host-agnostic frontend builds whose origin follows the LAN address,
+    # e.g. ^http://(172\.16\.\d+\.\d+|terras-srv\.local|localhost)(:\d+)?$
+    allow_origin_regex=os.getenv("BACKEND_CORS_ORIGIN_REGEX") or None,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
