@@ -1,41 +1,52 @@
 'use client';
 
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useData } from '../../context/DataContext';
 import { useLanguage } from '../../context/LanguageContext';
 import { useUser } from '../../context/UserContext';
-import { ProgressBar, StatusChip, XPEmptyState, XPActionButton, TableSkeleton, CodeChip, familyColor, xpFont } from '../shared/xpTheme';
+import { ProgressBar, StatusChip, XPEmptyState, XPActionButton, TableSkeleton, CodeChip, ExpandedRowPanel, WorkCenterChip, familyColor, rowStateBg, xpFont, xpSelect } from '../shared/xpTheme';
+import { centerTypeOfWC, isMachineWC, isTypeWC } from '../shared/workCenterTree';
 import { ShellWindow, ShellTitleBar, SearchField, FilterChipBar, ToolbarCount, xpToolbar } from '../shared/shellTheme';
-import { lvTh, lvThead, lvTd, lvRow } from '../shared/listViewTheme';
+import { lvTd, lvThSticky, lvZebra, ExpanderCell, ResizableTable, LV_EXPANDER_COL_W } from '../shared/listViewTheme';
 import VariantChips from '../shared/VariantChips';
 import { useToast } from '../shared/Toast';
+import Pager from '../shared/Pager';
+import { usePaginatedFetch } from '../../context/usePaginatedList';
 import DyeingRateModal from './DyeingRateModal';
+import DyeingWOHistory, { useFmtStamp } from './DyeingWOHistory';
+import { fmtQty, fmtMinutes, orDash } from '../shared/format';
 import { API_BASE } from '../shared/apiBase';
 
 const AMBER = familyColor('amber');
-const COLS = 8;
+const COLS = 14;
+const PAGE_SIZE = 50;
+// Column widths for ResizableTable; order matches the <thead> cells exactly —
+// the resize grips index into this array.
+const COL_W: (number | string)[] = [
+    LV_EXPANDER_COL_W, // chevron
+    150,               // MO
+    '15%',             // Work Order
+    '12%',             // Item
+    '12%',             // Variant
+    80,                // Vessel
+    96,                // Status
+    110,               // Speed
+    64,                // Run
+    190,               // Output vs WO
+    118,               // Color matching
+    118,               // Start
+    118,               // Complete
+    104,               // Actions
+];
 
-function fmt(n: any, d = 1): string {
-    if (n === null || n === undefined) return '—';
-    const v = Number(n);
-    if (Number.isNaN(v)) return '—';
-    return v.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: d });
-}
-
-/** Minutes as the floor reads them: 45m, 3h 20m, 2d 4h. */
-function fmtElapsed(mins: any): string {
-    const v = Number(mins);
-    if (mins === null || mins === undefined || Number.isNaN(v)) return '—';
-    if (v < 60) return `${Math.round(v)}m`;
-    const h = Math.floor(v / 60);
-    if (h < 24) return `${h}h ${Math.round(v % 60)}m`;
-    return `${Math.floor(h / 24)}d ${h % 24}h`;
-}
+const fmt = (n: any, d = 1): string => orDash(n, v => fmtQty(v, d));
 
 // `clock` is the backend's read of the Start/Complete stamps (never `status`):
-// PENDING = not started, IN_PROGRESS = clock running, COMPLETED = clock stopped.
+// PENDING = not started, IN_PROGRESS = clock running, COMPLETED = clock stopped,
+// NO_RUN = the dyeing WO closed without its bath ever being clocked (greyed out).
 const RUNNING = 'IN_PROGRESS';
 const DONE = 'COMPLETED';
+const NO_RUN = 'NO_RUN';
 
 /**
  * One row per dye batch. The page answers one question: did speed x time on the
@@ -46,31 +57,44 @@ const DONE = 'COMPLETED';
  * stops. The bath, doses and load are configured in Dyeing Orders.
  */
 export default function DyeingMonitorView() {
-    const { authFetch, subscribeLiveEvents } = useData();
+    const { authFetch, subscribeLiveEvents, workCenters } = useData();
     const { t } = useLanguage();
     const { hasPermission } = useUser();
     const { showToast } = useToast();
     // Same gate the Dyeing Orders tab uses to start and complete a batch.
     const canSetRate = hasPermission('work_order.log');
 
-    const [data, setData] = useState<any>(null);
-    const [loading, setLoading] = useState(true);
     const [rateRun, setRateRun] = useState<any>(null);
+    const [expandedId, setExpandedId] = useState<string | null>(null);
+    const fmtStamp = useFmtStamp();
     const [clockFilter, setClockFilter] = useState<string>('ALL');
-    const [search, setSearch] = useState('');
+    // A vessel, or a GROUP for every vessel under it (resolved server-side).
+    const [wcFilter, setWcFilter] = useState<string>('');
+    const byName = (a: any, b: any) => String(a.name).localeCompare(String(b.name), undefined, { numeric: true });
+    const { wcGroups, wcMachines } = useMemo(() => {
+        const dye = (workCenters || []).filter((wc: any) =>
+            ['DYEING', 'CELUP'].includes(centerTypeOfWC(workCenters || [], wc)));
+        return {
+            wcGroups: dye.filter((wc: any) => !isMachineWC(wc) && !isTypeWC(wc)).sort(byName),
+            wcMachines: dye.filter(isMachineWC).sort(byName),
+        };
+    }, [workCenters]);
     // The run whose Start/Complete is in flight, so a double-press cannot stamp twice.
     const [stamping, setStamping] = useState<string | null>(null);
 
-    const load = useCallback(async () => {
-        try {
-            const res = await authFetch(`${API_BASE}/dyeing/monitor`);
-            if (res.ok) setData(await res.json());
-        } finally {
-            setLoading(false);
-        }
-    }, [authFetch]);
-
-    useEffect(() => { load(); }, [load]);
+    // Paged, filtered and searched on the server: every finished batch stays listed,
+    // so the set has no bound and neither the rows nor the chip counts can come from one page.
+    const {
+        rows: runs, total, meta, loading, page, setPage, searchInput, setSearch, refetch: load,
+    } = usePaginatedFetch<any>({
+        endpoint: `${API_BASE}/dyeing/monitor`,
+        authFetch,
+        pageSize: PAGE_SIZE,
+        params: {
+            clock: clockFilter === 'ALL' ? undefined : clockFilter,
+            work_center_id: wcFilter || undefined,
+        },
+    });
 
     useEffect(() => {
         const unsubscribe = subscribeLiveEvents(['dyeing', 'production'], () => load());
@@ -83,7 +107,7 @@ export default function DyeingMonitorView() {
         return () => clearInterval(id);
     }, [load]);
 
-    const stamp = useCallback(async (run: any, path: 'start' | 'complete', labelKey: string) => {
+    const stamp = useCallback(async (run: any, path: 'color-matching' | 'start' | 'complete', labelKey: string) => {
         setStamping(run.id);
         try {
             const res = await authFetch(`${API_BASE}/dyeing-runs/${run.id}/${path}`, {
@@ -97,29 +121,18 @@ export default function DyeingMonitorView() {
                 return;
             }
             showToast(t(labelKey), 'success');
-            await load();
+            load();
         } finally {
             setStamping(null);
         }
     }, [authFetch, showToast, t, load]);
 
-    const runs: any[] = data?.runs || [];
-    const counts = useMemo(() => {
-        const c: Record<string, number> = { PENDING: 0, [RUNNING]: 0, [DONE]: 0 };
-        runs.forEach(r => { c[r.clock] = (c[r.clock] || 0) + 1; });
-        return c;
-    }, [runs]);
-
-    const shown = useMemo(() => {
-        const q = search.trim().toLowerCase();
-        return runs.filter(r =>
-            (clockFilter === 'ALL' || r.clock === clockFilter)
-            && (!q || [r.work_center_code, r.work_center_name, r.wo_code, r.mo_code, r.item_code, r.item_name]
-                .some(v => (v || '').toLowerCase().includes(q))));
-    }, [runs, clockFilter, search]);
+    const counts: Record<string, number> = meta.counts || {};
+    const allCount = Object.values(counts).reduce((a, n) => a + (n || 0), 0);
+    const shown = runs;
 
     const clockLabel = (c: string) =>
-        c === RUNNING ? t('running') : c === DONE ? t('completed') : t('loaded');
+        c === RUNNING ? t('running') : c === DONE ? t('completed') : c === NO_RUN ? t('no_bath_run') : t('loaded');
 
     /** Why a row shows no output. Every dash names its cause. */
     const missingWhy = (r: any): { text: string; hint?: string } | null => {
@@ -158,26 +171,41 @@ export default function DyeingMonitorView() {
         );
     };
 
+    // Same grid as the WO list: full cell borders, because the verticals are what
+    // keep 14 columns of codes, times and quantities readable.
+    const thStyle: React.CSSProperties = lvThSticky({ border: '1px solid #808080' });
+    const tdBase: React.CSSProperties = { ...lvTd(), border: '1px solid #c0bdb5' };
+
     const Toolbar = (
         <div style={xpToolbar()}>
-            <SearchField value={search} onChange={setSearch} placeholder={t('search') || 'Search...'} />
+            <SearchField value={searchInput} onChange={setSearch} placeholder={t('search') || 'Search...'} />
+            <select value={wcFilter} onChange={e => setWcFilter(e.target.value)} style={xpSelect({ width: 160 })}>
+                <option value="">{t('all_machines')}</option>
+                {wcGroups.length > 0 && (
+                    <optgroup label={t('group')}>
+                        {wcGroups.map((wc: any) => <option key={wc.id} value={wc.id}>{wc.name}</option>)}
+                    </optgroup>
+                )}
+                {wcMachines.map((wc: any) => <option key={wc.id} value={wc.id}>{wc.name}</option>)}
+            </select>
             <FilterChipBar
                 value={clockFilter}
                 onChange={setClockFilter}
                 options={[
-                    { value: 'ALL', label: t('all'), count: runs.length },
-                    { value: RUNNING, label: t('running'), count: counts[RUNNING] },
-                    { value: 'PENDING', label: t('loaded'), count: counts.PENDING },
-                    { value: DONE, label: t('completed'), count: counts[DONE] },
+                    { value: 'ALL', label: t('all'), count: allCount },
+                    { value: RUNNING, label: t('running'), count: counts[RUNNING] || 0 },
+                    { value: 'PENDING', label: t('loaded'), count: counts.PENDING || 0 },
+                    { value: DONE, label: t('completed'), count: counts[DONE] || 0 },
+                    { value: NO_RUN, label: t('no_bath_run'), count: counts[NO_RUN] || 0 },
                 ]}
             />
-            {data?.needs_setup > 0 && (
+            {meta.needs_setup > 0 && (
                 <span title={t('no_speed_picked_hint')} style={{ fontSize: 11, color: '#8a6100' }}>
                     <i className="bi bi-gear" style={{ marginRight: 4, color: AMBER }} />
-                    <b>{data.needs_setup}</b> {t('needs_setup')}
+                    <b>{meta.needs_setup}</b> {t('needs_setup')}
                 </span>
             )}
-            <ToolbarCount right>{shown.length} / {runs.length}</ToolbarCount>
+            <ToolbarCount right>{total}</ToolbarCount>
             <XPActionButton tone="neutral" icon="bi-arrow-clockwise" title={t('refresh')} onClick={load} />
         </div>
     );
@@ -188,83 +216,136 @@ export default function DyeingMonitorView() {
                 <ShellTitleBar icon="bi-droplet-half" title={t('dyeing_monitor')} />
                 {Toolbar}
                 <div style={{ flex: 1, minHeight: 0, overflow: 'auto', background: '#ffffff' }}>
-                    <table style={{ width: '100%', borderCollapse: 'collapse', fontFamily: xpFont, fontSize: 11 }}>
-                        <thead style={lvThead(true)}>
+                    <ResizableTable defaults={COL_W}
+                        style={{ width: '100%', minWidth: 1500, borderCollapse: 'collapse', tableLayout: 'fixed', fontFamily: xpFont, fontSize: 11, background: '#fff' }}>
+                        <thead>
                             <tr>
-                                <th style={{ ...lvTh(), width: 110 }}>{t('vessel')}</th>
-                                <th style={lvTh()}>{t('work_order')} / {t('item')}</th>
-                                <th style={lvTh()}>{t('variant')}</th>
-                                <th style={{ ...lvTh(), width: 90 }}>{t('status')}</th>
-                                <th style={{ ...lvTh(), textAlign: 'right', width: 130 }}>{t('speed')} ({t('yd_per_min')})</th>
-                                <th style={{ ...lvTh(), textAlign: 'right', width: 80 }}>{t('run_time')}</th>
-                                <th style={{ ...lvTh(), width: 240 }}
-                                    title={t('time_output_hint')}>{t('time_output_vs_wo')}</th>
-                                <th style={{ ...lvTh(), width: 170 }}></th>
+                                <th style={thStyle} />
+                                <th style={thStyle}>MO</th>
+                                <th style={thStyle}>{t('work_order')}</th>
+                                <th style={thStyle}>{t('item')}</th>
+                                <th style={thStyle}>{t('variant')}</th>
+                                <th style={thStyle}>{t('vessel')}</th>
+                                <th style={thStyle}>{t('status')}</th>
+                                <th style={{ ...thStyle, textAlign: 'right' }}>{t('speed')} ({t('yd_per_min')})</th>
+                                <th style={{ ...thStyle, textAlign: 'right' }}>{t('run_time')}</th>
+                                <th style={thStyle} title={t('time_output_hint')}>{t('time_output_vs_wo')}</th>
+                                <th style={thStyle}>{t('start_color_matching')}</th>
+                                <th style={thStyle}>{t('start_batch')}</th>
+                                <th style={thStyle}>{t('complete_batch')}</th>
+                                <th style={thStyle} />
                             </tr>
                         </thead>
                         <tbody>
-                            {loading && runs.length === 0 && <TableSkeleton rows={8} cols={COLS} />}
+                            {loading && runs.length === 0 && <TableSkeleton rows={8} cols={COLS} tdStyle={tdBase} />}
                             {!loading && shown.length === 0 && (
-                                <tr><td colSpan={COLS}>
+                                <tr><td colSpan={COLS} style={{ padding: 0 }}>
                                     <XPEmptyState icon="bi-droplet" message={t('no_dye_batches')} />
                                 </td></tr>
                             )}
-                            {shown.map((r, i) => (
-                                <tr key={r.id} style={lvRow(i)}>
-                                    <td style={lvTd()}>
-                                        <b>{r.work_center_code || '—'}</b>
-                                        {r.work_center_name && (
-                                            <div style={{ fontSize: 10, color: '#666' }}>{r.work_center_name}</div>
-                                        )}
-                                    </td>
-                                    <td style={lvTd()}>
-                                        {r.wo_code && <CodeChip code={r.wo_code} />}
-                                        <div style={{ fontSize: 10, color: '#555', marginTop: 2 }}>
-                                            {r.mo_code}{r.item_code ? ` · ${r.item_code}` : ''}
-                                        </div>
-                                    </td>
-                                    <td style={lvTd()}>
-                                        <VariantChips
-                                            combo={r.combo_label} size={r.size_label}
-                                            colorVariant={r.color_label} colorCode={r.color_code}
-                                            colorName={r.color_name} colorHex={r.color_hex}
-                                            labdipCode={r.labdip_variant_code}
-                                            scale="sm" style={{ flexWrap: 'wrap', gap: 3 }}
-                                        />
-                                    </td>
-                                    <td style={lvTd()}>
-                                        <StatusChip status={r.clock} label={clockLabel(r.clock)} tint />
-                                    </td>
-                                    <td style={{ ...lvTd(), textAlign: 'right' }}>
-                                        {r.rate_yd_per_min != null
-                                            ? <>{fmt(r.yards_per_min, 0)} × {r.lines} = <b>{fmt(r.rate_yd_per_min, 0)}</b></>
-                                            : '—'}
-                                    </td>
-                                    <td style={{ ...lvTd(), textAlign: 'right' }}>{fmtElapsed(r.run_minutes)}</td>
-                                    <td style={lvTd()}><OutputCell r={r} /></td>
-                                    <td style={{ ...lvTd(), whiteSpace: 'nowrap' }}>
-                                        {canSetRate && (
-                                            <span style={{ display: 'inline-flex', gap: 4 }}>
-                                                {!r.started_at && (
-                                                    <XPActionButton tone="primary" icon="bi-play-fill" label={t('start_batch')}
-                                                        disabled={stamping === r.id}
-                                                        onClick={() => stamp(r, 'start', 'start_batch')} />
+                            {shown.map((r, i) => {
+                                const isExpanded = expandedId === r.id;
+                                const noRun = r.clock === NO_RUN;
+                                const toggle = () => setExpandedId(prev => prev === r.id ? null : r.id);
+                                return (
+                                    <React.Fragment key={r.id}>
+                                        <tr
+                                            onClick={toggle}
+                                            title={noRun ? t('no_bath_run_hint') : undefined}
+                                            style={{
+                                                background: isExpanded ? rowStateBg('expanded') : noRun ? '#f1f1f1' : lvZebra(i),
+                                                color: noRun ? '#8a8a8a' : undefined,
+                                                // Greyed, not hidden: the WO list shows every dyeing WO, and a
+                                                // closed WO nobody clocked is a fact the supervisor should see.
+                                                opacity: noRun ? 0.65 : undefined,
+                                                cursor: 'pointer',
+                                            }}
+                                        >
+                                            <ExpanderCell expanded={isExpanded} onToggle={toggle} tdStyle={tdBase} label="dye batch history" />
+                                            <td style={{ ...tdBase, overflow: 'hidden' }}>
+                                                {r.mo_code ? <CodeChip code={r.mo_code} tier={2} style={{ display: 'block', overflow: 'hidden', textOverflow: 'ellipsis' }} /> : '—'}
+                                            </td>
+                                            <td style={{ ...tdBase, overflow: 'hidden' }}>
+                                                <div style={{ display: 'flex', alignItems: 'center', gap: 4, overflow: 'hidden' }}>
+                                                    {r.wo_code && <CodeChip code={r.wo_code} tone="accent" style={{ fontWeight: 'bold', minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis' }} />}
+                                                    {r.run_number != null && (
+                                                        <span style={{ fontSize: 10, color: '#666', flexShrink: 0 }}>#{r.run_number}</span>
+                                                    )}
+                                                </div>
+                                            </td>
+                                            <td style={{ ...tdBase, fontSize: 10, color: noRun ? undefined : '#444', overflow: 'hidden' }} title={r.item_name || ''}>
+                                                <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'block' }}>
+                                                    {r.item_name || r.item_code || '—'}
+                                                </span>
+                                            </td>
+                                            <td style={{ ...tdBase, fontSize: 10, overflow: 'hidden', whiteSpace: 'normal' }}>
+                                                <VariantChips
+                                                    combo={r.combo_label} size={r.size_label}
+                                                    colorVariant={r.color_label} colorCode={r.color_code}
+                                                    colorName={r.color_name} colorHex={r.color_hex}
+                                                    labdipCode={r.labdip_variant_code}
+                                                    style={{ flexWrap: 'wrap', rowGap: 2 }}
+                                                />
+                                            </td>
+                                            <td style={{ ...tdBase, fontSize: 10, overflow: 'hidden' }} title={r.work_center_name || ''}>
+                                                {r.work_center_code
+                                                    ? <WorkCenterChip type={r.work_center_type} name={r.work_center_name} label={r.work_center_code} />
+                                                    : '—'}
+                                            </td>
+                                            <td style={tdBase}>
+                                                <StatusChip status={r.clock} label={clockLabel(r.clock)} />
+                                            </td>
+                                            <td style={{ ...tdBase, textAlign: 'right' }}>
+                                                {r.rate_yd_per_min != null
+                                                    ? <>{fmt(r.yards_per_min, 0)} × {r.lines} = <b>{fmt(r.rate_yd_per_min, 0)}</b></>
+                                                    : '—'}
+                                            </td>
+                                            <td style={{ ...tdBase, textAlign: 'right' }}>{fmtMinutes(r.run_minutes)}</td>
+                                            <td style={tdBase}>{noRun ? '—' : <OutputCell r={r} />}</td>
+                                            <td style={{ ...tdBase, fontSize: 10 }}>{fmtStamp(r.color_matching_at)}</td>
+                                            <td style={{ ...tdBase, fontSize: 10 }}>{fmtStamp(r.started_at)}</td>
+                                            <td style={{ ...tdBase, fontSize: 10 }}>{fmtStamp(r.completed_at)}</td>
+                                            <td style={{ ...tdBase, textAlign: 'right', whiteSpace: 'nowrap' }} onClick={e => e.stopPropagation()}>
+                                                {canSetRate && !noRun && (
+                                                    <span style={{ display: 'inline-flex', gap: 3 }}>
+                                                        {!r.color_matching_at && !r.started_at && !r.completed_at && (
+                                                            <XPActionButton tone="neutral" icon="bi-eyedropper"
+                                                                title={`${t('start_color_matching')} — ${t('batch_matching_hint')}`}
+                                                                disabled={stamping === r.id}
+                                                                onClick={() => stamp(r, 'color-matching', 'start_color_matching')} />
+                                                        )}
+                                                        {!r.started_at && (
+                                                            <XPActionButton tone="primary" icon="bi-play-fill" title={t('start_batch')}
+                                                                disabled={stamping === r.id}
+                                                                onClick={() => stamp(r, 'start', 'start_batch')} />
+                                                        )}
+                                                        {r.clock === RUNNING && (
+                                                            <XPActionButton tone="primary" icon="bi-check2-circle" title={t('complete_batch')}
+                                                                disabled={stamping === r.id}
+                                                                onClick={() => stamp(r, 'complete', 'complete_batch')} />
+                                                        )}
+                                                        <XPActionButton tone="neutral" icon="bi-sliders" title={t('set_rate')}
+                                                            onClick={() => setRateRun(r)} />
+                                                    </span>
                                                 )}
-                                                {r.clock === RUNNING && (
-                                                    <XPActionButton tone="primary" icon="bi-check2-circle" label={t('complete_batch')}
-                                                        disabled={stamping === r.id}
-                                                        onClick={() => stamp(r, 'complete', 'complete_batch')} />
-                                                )}
-                                                <XPActionButton tone="neutral" icon="bi-sliders" label={t('set_rate')}
-                                                    onClick={() => setRateRun(r)} />
-                                            </span>
+                                            </td>
+                                        </tr>
+                                        {isExpanded && r.work_order_id && (
+                                            <tr>
+                                                <td colSpan={COLS} style={{ padding: 0 }}>
+                                                    <ExpandedRowPanel>
+                                                        <DyeingWOHistory workOrderId={r.work_order_id} authFetch={authFetch} apiBase={API_BASE} />
+                                                    </ExpandedRowPanel>
+                                                </td>
+                                            </tr>
                                         )}
-                                    </td>
-                                </tr>
-                            ))}
+                                    </React.Fragment>
+                                );
+                            })}
                         </tbody>
-                    </table>
+                    </ResizableTable>
                 </div>
+                <Pager page={page} total={total} pageSize={PAGE_SIZE} onPageChange={setPage} hideWhenEmpty />
             </ShellWindow>
             <DyeingRateModal
                 isOpen={!!rateRun}

@@ -480,7 +480,7 @@ async def list_dyeing_runs(
                     "orders in a single call. Bounded by the caller's page size.",
     ),
     db: AsyncSession = Depends(get_async_db),
-    current_user: User = Depends(require_any_permission("dye_order.view", "dye_recipe.view", "work_order.view")),
+    current_user: User = Depends(require_any_permission("dye_order.view", "dye_recipe.view", "work_order.view", "dyeing_monitor.view")),
 ):
     """The baths, for one WO or for a page of them.
 

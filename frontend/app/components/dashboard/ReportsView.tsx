@@ -1,18 +1,19 @@
-import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
+import { useState, useMemo, useRef } from 'react';
 import dynamic from 'next/dynamic';
 import { useLanguage } from '../../context/LanguageContext';
 import { useTimezone } from '../../context/TimezoneContext';
 import { useData } from '../../context/DataContext';
-import { useDebouncedCommit } from '../../context/usePaginatedList';
+import { usePaginatedFetch } from '../../context/usePaginatedList';
 import {
-    xpFont, xpBtn, xpInput, xpSelect, xpSep,
-    TableSkeleton, useTableSkeletonMetrics, XPEmptyState, useSortable, CodeChip, Chip, CHIP_RADIUS, XP_BTN, SKEL_PAGE_ROWS } from '../shared/xpTheme';
+    xpFont, xpBtn, xpInput, xpSelect, xpSep, CODE_FONT,
+    TableSkeleton, useTableSkeletonMetrics, XPEmptyState, useServerSort, CodeChip, Chip, REF_TONES, XP_BTN, SKEL_PAGE_ROWS } from '../shared/xpTheme';
+import { LotChips, lotSizeLabel, lotColorLabel } from '../shared/LotChips';
 import TreeSelect, { buildLocationFilterTree, expandLocationFilterValue, buildCategoryTree, expandCategoryFilterValue } from '../shared/TreeSelect';
 import Pager from '../shared/Pager';
 import { xpBevel as sharedXpBevel, xpTitleBar as sharedXpTitleBar, xpToolbar as sharedXpToolbar, SearchField, FilterChipBar, SegmentedBar, FilterChipOption, pageFillStyle, flexFillStyle } from '../shared/shellTheme';
 import { lvThead, SortableTh, lvZebra, Dash, ResizableTable } from '../shared/listViewTheme';
 import { qtyFmt } from '../shared/format';
-import { STATIC_BASE } from '../shared/apiBase';
+import { API_BASE } from '../shared/apiBase';
 
 import { refMeta, shortRef } from './ledgerRef';
 const StockLedgerPrintModal = dynamic(() => import('./StockLedgerPrintModal'), { ssr: false });
@@ -25,6 +26,9 @@ const PRINT_LIMIT = 1000;
 const fmtQty = qtyFmt(4);
 const fmtDate = (d: Date) =>
     `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+
+// Does the row carry any variant identity for LotChips to draw?
+const hasIdentity = (e: any) => !!(lotSizeLabel(e) || lotColorLabel(e) || e.variant_attributes?.length);
 
 // Signed packaging deltas → e.g. "+2 boxes". Only nonzero units shown.
 const pkgDelta = (e: any): { n: number; label: string }[] => {
@@ -39,17 +43,10 @@ const pkgDelta = (e: any): { n: number; label: string }[] => {
 export default function ReportsView(_props: any) {
     const { t } = useLanguage();
     const { formatDate: tzDate, formatTime: tzTime } = useTimezone();
-    const { authFetch, locations = [], attributes = [], categories = [], itemIndex, companyProfile } = useData();
+    const { authFetch, locations = [], categories = [], itemIndex, companyProfile } = useData();
 
-    const API_BASE = useMemo(() => {
-        return STATIC_BASE.replace(/\/api$/, '') + '/api';
-    }, []);
-
-    // Filters
-    const [search, setSearch] = useState('');
-    const [debouncedSearch, setDebouncedSearch] = useState('');
-    // Default to the trailing 30 days, not all-time — an unbounded ledger query
-    // scans the whole (ever-growing) stock_ledger history for its count/sum
+    // Filters. Default to the trailing 30 days, not all-time — an unbounded ledger
+    // query scans the whole (ever-growing) stock_ledger history for its count/sum
     // aggregates. "All time" is still one click away via the preset/clear button.
     const [startDate, setStartDate] = useState(() => {
         const s = new Date(); s.setDate(s.getDate() - 29); return fmtDate(s);
@@ -59,66 +56,31 @@ export default function ReportsView(_props: any) {
     const [categoryFilter, setCategoryFilter] = useState(''); // TreeSelect value: '' | '<category id>'
     const [refTypeFilter, setRefTypeFilter] = useState('');
     const [direction, setDirection] = useState<'' | 'in' | 'out'>('');
-    const [page, setPage] = useState(1);
+    // Sorted in SQL: a windowed list sorted client-side shows the wrong rows.
+    const { sort, toggleSort } = useServerSort();
 
-    // Server result
-    const [entries, setEntries] = useState<any[]>([]);
-    const [total, setTotal] = useState(0);
-    const [totalIn, setTotalIn] = useState(0);
-    const [totalOut, setTotalOut] = useState(0);
-    const [refTypes, setRefTypes] = useState<string[]>([]);
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState('');
+    // Any params change restarts at page 1 inside the hook.
+    const params = {
+        start_date: startDate,
+        end_date: endDate ? `${endDate}T23:59:59` : '',
+        location_id: locationFilter ? expandLocationFilterValue(locations, locationFilter).join(',') : '',
+        category_id: categoryFilter ? expandCategoryFilterValue(categories, categoryFilter).join(',') : '',
+        reference_type: refTypeFilter,
+        direction,
+        sort_by: sort?.key,
+        sort_dir: sort ? (sort.dir === 1 ? 'asc' : 'desc') : '',
+    };
+    const {
+        rows, total, meta, loading, error, page, setPage,
+        search, searchInput, setSearch, refetch,
+    } = usePaginatedFetch({ endpoint: `${API_BASE}/stock`, authFetch, pageSize: PAGE_SIZE, params });
+    const totalIn: number = meta.total_in || 0;
+    const totalOut: number = meta.total_out || 0;
+    const refTypes: string[] = meta.reference_types || [];
 
     // Skeleton sizing: measure one real row so the placeholders shown on the next
-    // load are exactly as tall as the rows that replace them. Classic and modern
-    // rows differ in height, so they cache under separate keys.
+    // load are exactly as tall as the rows that replace them.
     const listBodyRef = useRef<HTMLTableSectionElement>(null);
-
-    // Debounce the free-text search; reset to page 1 on every new term.
-    useDebouncedCommit(search, debouncedSearch, v => { setDebouncedSearch(v); setPage(1); });
-
-    // Any non-page filter change snaps back to the first page.
-    const onFilter = (setter: (v: any) => void) => (v: any) => { setter(v); setPage(1); };
-
-    // Filter/page changes can overlap requests; only the newest may commit, or a
-    // slow earlier response repaints the table (and totals) for a stale filter.
-    const fetchGen = useRef(0);
-    const fetchLedger = useCallback(async () => {
-        const gen = ++fetchGen.current;
-        setLoading(true);
-        setError('');
-        try {
-            const p = new URLSearchParams();
-            p.set('skip', String((page - 1) * PAGE_SIZE));
-            p.set('limit', String(PAGE_SIZE));
-            if (debouncedSearch.trim()) p.set('search', debouncedSearch.trim());
-            if (startDate) p.set('start_date', startDate);
-            if (endDate) p.set('end_date', `${endDate}T23:59:59`);
-            if (locationFilter) p.set('location_id', expandLocationFilterValue(locations, locationFilter).join(','));
-            if (categoryFilter) p.set('category_id', expandCategoryFilterValue(categories, categoryFilter).join(','));
-            if (refTypeFilter) p.set('reference_type', refTypeFilter);
-            if (direction) p.set('direction', direction);
-
-            const res = await authFetch(`${API_BASE}/stock?${p.toString()}`);
-            if (!res.ok) throw new Error(`HTTP ${res.status}`);
-            const data = await res.json();
-            if (gen !== fetchGen.current) return;
-            setEntries(data.items || []);
-            setTotal(data.total || 0);
-            setTotalIn(data.total_in || 0);
-            setTotalOut(data.total_out || 0);
-            if (Array.isArray(data.reference_types) && data.reference_types.length) setRefTypes(data.reference_types);
-        } catch (e: any) {
-            if (gen !== fetchGen.current) return;
-            setError(e.message || 'Failed to load ledger');
-            setEntries([]);
-        } finally {
-            if (gen === fetchGen.current) setLoading(false);
-        }
-    }, [API_BASE, authFetch, page, debouncedSearch, startDate, endDate, locationFilter, locations, categoryFilter, categories, refTypeFilter, direction]);
-
-    useEffect(() => { fetchLedger(); }, [fetchLedger]);
 
     const locFilterTreeOptions = useMemo(() => buildLocationFilterTree(locations || []), [locations]);
     const catFilterTreeOptions = useMemo(() => buildCategoryTree(categories || []), [categories]);
@@ -132,43 +94,25 @@ export default function ReportsView(_props: any) {
         return m;
     }, [locations]);
     const getWarehouseName = (e: any): string => locMap[e.location_id]?.parent_name || '';
-    const getAttrName = (valId: string) => {
-        for (const attr of attributes) {
-            const v = attr.values?.find((x: any) => x.id === valId);
-            if (v) return v.value;
-        }
-        return valId;
-    };
-
-    // Sort the loaded page client-side; the server already scoped + ordered it.
-    const sortCols = useMemo(() => ({
-        date:     (e: any) => e.created_at,
-        item:     (e: any) => e.item_name || e.item_code || '',
-        category: (e: any) => e.item_category_name || '',
-        location: (e: any) => e.location_name || '',
-        qty:      (e: any) => e.qty_change,
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }), []);
-    const { sorted: rows, sort, toggle } = useSortable(entries, sortCols);
     const skel = useTableSkeletonMetrics('stock-ledger-classic', listBodyRef, rows.length > 0);
 
     const net = totalIn + totalOut;
-    const hasFilters = !!(debouncedSearch || startDate || endDate || locationFilter || categoryFilter || refTypeFilter || direction);
+    const hasFilters = !!(search || startDate || endDate || locationFilter || categoryFilter || refTypeFilter || direction);
 
     const applyPreset = (kind: 'today' | '7d' | '30d' | 'month' | 'all') => {
         const now = new Date();
-        if (kind === 'all') { setStartDate(''); setEndDate(''); setPage(1); return; }
+        if (kind === 'all') { setStartDate(''); setEndDate(''); return; }
         const end = fmtDate(now);
         let start = end;
         if (kind === '7d') { const s = new Date(now); s.setDate(s.getDate() - 6); start = fmtDate(s); }
         else if (kind === '30d') { const s = new Date(now); s.setDate(s.getDate() - 29); start = fmtDate(s); }
         else if (kind === 'month') { start = fmtDate(new Date(now.getFullYear(), now.getMonth(), 1)); }
-        setStartDate(start); setEndDate(end); setPage(1);
+        setStartDate(start); setEndDate(end);
     };
 
     const clearFilters = () => {
-        setSearch(''); setDebouncedSearch(''); setStartDate(''); setEndDate('');
-        setLocationFilter(''); setCategoryFilter(''); setRefTypeFilter(''); setDirection(''); setPage(1);
+        setSearch(''); setStartDate(''); setEndDate('');
+        setLocationFilter(''); setCategoryFilter(''); setRefTypeFilter(''); setDirection('');
     };
 
     const [printOpen, setPrintOpen] = useState(false);
@@ -186,7 +130,7 @@ export default function ReportsView(_props: any) {
         return (categories || []).find((c: any) => String(c.id) === categoryFilter)?.name || '';
     }, [categoryFilter, categories]);
     const filtersSummary = [
-        debouncedSearch && `Search: "${debouncedSearch}"`,
+        search && `Search: "${search}"`,
         catFilterName && `Category: ${catFilterName}`,
         locationFilter && `Location: ${locFilterName || 'filtered'}`,
         refTypeFilter && `Source: ${refMeta(refTypeFilter).label}`,
@@ -196,17 +140,13 @@ export default function ReportsView(_props: any) {
     const handlePrint = async () => {
         setPrintLoading(true);
         try {
+            // Same filters as the list, capped: a print of the whole history would
+            // hang the browser, and the template flags the cut.
             const p = new URLSearchParams();
-            p.set('skip', '0');
-            p.set('limit', String(PRINT_LIMIT));
-            if (debouncedSearch.trim()) p.set('search', debouncedSearch.trim());
-            if (startDate) p.set('start_date', startDate);
-            if (endDate) p.set('end_date', `${endDate}T23:59:59`);
-            if (locationFilter) p.set('location_id', expandLocationFilterValue(locations, locationFilter).join(','));
-            if (categoryFilter) p.set('category_id', expandCategoryFilterValue(categories, categoryFilter).join(','));
-            if (refTypeFilter) p.set('reference_type', refTypeFilter);
-            if (direction) p.set('direction', direction);
-
+            for (const [k, v] of Object.entries(params)) if (v) p.set(k, String(v));
+            if (search) p.set('search', search);
+            p.set('page', '1');
+            p.set('size', String(PRINT_LIMIT));
             const res = await authFetch(`${API_BASE}/stock?${p.toString()}`);
             if (!res.ok) throw new Error(`HTTP ${res.status}`);
             const data = await res.json();
@@ -267,12 +207,12 @@ export default function ReportsView(_props: any) {
 
     // ── Filter toolbar rows — shared content, per-branch wrapper/controls ────
     const toolbarRow1 = <div style={toolbarTop} className="no-print">
-            <SearchField value={search} onChange={setSearch} placeholder="Search item or reference..." width={200} />
+            <SearchField value={searchInput} onChange={setSearch} placeholder="Search item or reference..." width={200} />
             <div style={xpSep} />
             <TreeSelect
                 options={locFilterTreeOptions}
                 value={locationFilter}
-                onChange={onFilter(setLocationFilter)}
+                onChange={setLocationFilter}
                 allowEmpty
                 emptyLabel="All Locations"
                 style={{ width: 150 }}
@@ -280,32 +220,32 @@ export default function ReportsView(_props: any) {
             <TreeSelect
                 options={catFilterTreeOptions}
                 value={categoryFilter}
-                onChange={onFilter(setCategoryFilter)}
+                onChange={setCategoryFilter}
                 allowEmpty
                 emptyLabel="All Categories"
                 style={{ width: 150 }}
             />
-            <select style={xpSelect({ width: 150 })} value={refTypeFilter} onChange={e => onFilter(setRefTypeFilter)(e.target.value)}>
+            <select style={xpSelect({ width: 150 })} value={refTypeFilter} onChange={e => setRefTypeFilter(e.target.value)}>
                 <option value="">All Sources</option>
                 {refTypes.map(rt => <option key={rt} value={rt}>{refMeta(rt).label}</option>)}
             </select>
             <FilterChipBar
                 options={directionOptions}
                 value={direction}
-                onChange={v => onFilter(setDirection)(v as '' | 'in' | 'out')}
+                onChange={v => setDirection(v as '' | 'in' | 'out')}
             />
             <div style={{ flex: 1 }} />
         </div>;
 
     const toolbarRow2 = <div style={toolbar} className="no-print">
             <span style={lbl}>{t('from')}:</span>
-            <input type="date" style={xpInput({ width: 122 })} value={startDate} onChange={e => onFilter(setStartDate)(e.target.value)} />
+            <input type="date" style={xpInput({ width: 122 })} value={startDate} onChange={e => setStartDate(e.target.value)} />
             <span style={lbl}>{t('to')}:</span>
-            <input type="date" style={xpInput({ width: 122 })} value={endDate} onChange={e => onFilter(setEndDate)(e.target.value)} />
+            <input type="date" style={xpInput({ width: 122 })} value={endDate} onChange={e => setEndDate(e.target.value)} />
             <SegmentedBar actions={presetActions} />
             <div style={{ flex: 1 }} />
             {hasFilters && <button className={XP_BTN} style={xpBtn({ fontSize: '10px', padding: '1px 6px' })} onClick={clearFilters} title="Clear filters"><i className="bi bi-x-lg" /></button>}
-            <button className={XP_BTN} style={xpBtn({ padding: '1px 6px' })} onClick={fetchLedger} title="Refresh"><i className="bi bi-arrow-clockwise" /></button>
+            <button className={XP_BTN} style={xpBtn({ padding: '1px 6px' })} onClick={refetch} title="Refresh"><i className="bi bi-arrow-clockwise" /></button>
             <button className={XP_BTN} style={xpBtn({ padding: '1px 6px' })} onClick={handlePrint} disabled={printLoading} title={printLoading ? 'Loading...' : t('print')}><i className={printLoading ? 'bi bi-hourglass-split' : 'bi bi-printer'} /></button>
         </div>;
 
@@ -327,38 +267,37 @@ export default function ReportsView(_props: any) {
                     <div style={{ fontSize: '11px', color: '#000' }}>{tzDate(e.created_at)}</div>
                     <div style={{ fontSize: '10px', color: '#777' }}>{tzTime(e.created_at)}</div>
                 </td>
-                <td style={xpCell}>
-                    <div style={{ fontSize: '11px', fontWeight: 'bold', color: '#000' }}>{getItemName(e)}</div>
-                    <div style={{ fontSize: '10px', color: '#777', fontVariant: 'all-small-caps' }}>{getItemCode(e)}</div>
-                    {e.attribute_value_ids?.length > 0 && (
-                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 3, marginTop: 2 }}>
-                            {e.attribute_value_ids.map((vid: string) => (
-                                <span key={vid} style={{ borderRadius: CHIP_RADIUS, background: '#dde8f5', border: '1px solid #7f9db9', padding: '0 4px', fontSize: '9px', color: '#333' }}>{getAttrName(vid)}</span>
-                            ))}
-                        </div>
-                    )}
+                <td style={{ ...xpCell, overflow: 'hidden' }}>
+                    <div title={getItemName(e)} style={{ fontSize: '11px', fontWeight: 'bold', color: '#000', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{getItemName(e)}</div>
+                    <CodeChip code={getItemCode(e)} tier={2} style={{ display: 'block', overflow: 'hidden', textOverflow: 'ellipsis' }} />
                 </td>
-                <td style={{ ...xpCell, fontSize: '11px' }}>
+                <td style={xpCell}>
+                    {/* Size, combo, shade (hex swatch), then the rest — the same
+                        chips every lot picker draws. Supplier lot sits in Lot. */}
+                    {hasIdentity(e) ? <LotChips batch={{ ...e, vendor_lot: null }} /> : <Dash />}
+                </td>
+                <td style={{ ...xpCell, fontSize: '11px', maxWidth: 140 }}>
                     {e.item_category_name
-                        ? <span title={e.item_category_name} style={{ borderRadius: CHIP_RADIUS, display: 'inline-block', maxWidth: '100%', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', verticalAlign: 'bottom', background: '#e4eef0', border: '1px solid #8fb3bb', padding: '0 5px', fontSize: '10px', color: '#2a464a' }}>{e.item_category_name}</span>
+                        ? <Chip tone={REF_TONES.category} truncate size="xs">{e.item_category_name}</Chip>
                         : <Dash />}
                 </td>
-                <td style={{ ...xpCell, fontSize: '11px' }}>
-                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 3 }}>
-                        {getWarehouseName(e) && (
-                            <span style={{ borderRadius: CHIP_RADIUS, background: '#eef0e4', border: '1px solid #b7bb8f', padding: '0 5px', fontSize: '10px', color: '#4a4a2a' }}>
-                                {getWarehouseName(e)}
-                            </span>
-                        )}
-                        <span style={{ borderRadius: CHIP_RADIUS, background: '#e8e1f0', border: '1px solid #a890c0', padding: '0 5px', fontSize: '10px', color: '#3a2a4a' }}>
-                            {getLocName(e)}
-                        </span>
+                <td style={{ ...xpCell, fontSize: '11px', overflow: 'hidden' }}>
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 3, maxWidth: '100%' }}>
+                        {getWarehouseName(e) && <Chip tone={REF_TONES.warehouse} truncate size="xs">{getWarehouseName(e)}</Chip>}
+                        <Chip tone={REF_TONES.bin} truncate size="xs">{getLocName(e)}</Chip>
                     </div>
                 </td>
-                <td style={{ ...xpCell, fontSize: '11px' }}>
-                    {e.batch_number
-                        ? <span style={{ borderRadius: CHIP_RADIUS, background: '#fff8dc', border: '1px solid #c8a000', padding: '0 5px', fontSize: '10px', color: '#5a3c00' }}>{e.batch_number}</span>
-                        : <Dash />}
+                <td style={{ ...xpCell, fontSize: '11px', overflow: 'hidden' }}>
+                    {e.batch_number ? (
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: 2, alignItems: 'flex-start', maxWidth: '100%' }}>
+                            <Chip tone={REF_TONES.lot} truncate size="xs">{e.batch_number}</Chip>
+                            {e.vendor_lot && (
+                                <Chip tone={REF_TONES.supplierLot} truncate size="xs" title={`Supplier lot: ${e.vendor_lot}`} style={{ fontFamily: CODE_FONT }}>
+                                    SUP {e.vendor_lot}
+                                </Chip>
+                            )}
+                        </div>
+                    ) : <Dash />}
                 </td>
                 <td style={{ ...xpCell, textAlign: 'right', whiteSpace: 'nowrap' }}>
                     <span style={{ fontSize: '11px', fontWeight: 'bold', color: up ? '#1a5e1a' : '#c00000' }}>
@@ -389,12 +328,13 @@ export default function ReportsView(_props: any) {
             <ResizableTable className={undefined} style={{ width: '100%', borderCollapse: 'collapse' }}>
                 <thead className={undefined} style={undefined}>
                     <tr>
-                        <SortableTh sort={sort} colKey="date" onSort={toggle} style={th} className={undefined}>{t('date')}</SortableTh>
-                        <SortableTh sort={sort} colKey="item" onSort={toggle} style={th}>Item</SortableTh>
-                        <SortableTh sort={sort} colKey="category" onSort={toggle} style={th}>Category</SortableTh>
-                        <SortableTh sort={sort} colKey="location" onSort={toggle} style={th}>{t('locations')}</SortableTh>
+                        <SortableTh sort={sort} colKey="date" onSort={toggleSort} style={th}>{t('date')}</SortableTh>
+                        <SortableTh sort={sort} colKey="item" onSort={toggleSort} style={th}>Item</SortableTh>
+                        <th style={th}>Variant</th>
+                        <SortableTh sort={sort} colKey="category" onSort={toggleSort} style={th}>Category</SortableTh>
+                        <SortableTh sort={sort} colKey="location" onSort={toggleSort} style={th}>{t('locations')}</SortableTh>
                         <th style={th}>Lot</th>
-                        <SortableTh sort={sort} colKey="qty" onSort={toggle} className={undefined} style={{ ...th, textAlign: 'right' }}>Movement</SortableTh>
+                        <SortableTh sort={sort} colKey="qty" onSort={toggleSort} style={{ ...th, textAlign: 'right' }}>Movement</SortableTh>
                         <th className={undefined} style={{ ...th, borderRight: 'none' }}>Source</th>
                     </tr>
                 </thead>
@@ -402,7 +342,7 @@ export default function ReportsView(_props: any) {
                     put and the placeholder rows inherit its columns. */}
                 <tbody ref={listBodyRef}>
                     {loading
-                        ? <TableSkeleton rows={SKEL_PAGE_ROWS} cols={skel.cols ?? 7} tdStyle={xpCell} rowHeight={skel.rowHeight} fillHeight={skel.fillHeight} />
+                        ? <TableSkeleton rows={SKEL_PAGE_ROWS} cols={skel.cols ?? 8} tdStyle={xpCell} rowHeight={skel.rowHeight} fillHeight={skel.fillHeight} />
                         : rows.map((e: any, i: number) => renderRow(e, i))}
                 </tbody>
             </ResizableTable>
@@ -446,7 +386,6 @@ export default function ReportsView(_props: any) {
             <StockLedgerPrintModal
                 entries={printEntries}
                 locations={locations}
-                attributes={attributes}
                 companyProfile={companyProfile}
                 periodLabel={periodLabel}
                 totals={{ total, totalIn, totalOut }}

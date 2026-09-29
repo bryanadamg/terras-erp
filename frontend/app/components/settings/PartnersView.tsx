@@ -11,11 +11,9 @@ import { useData } from '../../context/DataContext';
 import { usePaginatedFetch } from '../../context/usePaginatedList';
 import { lvBtn, lvInput, lvTh, lvTd, lvLabel, lvThead, LV_STICKY_THEAD, useRowSelection, RowCheckbox, SelectAllCheckbox, lvZebra, ResizableTable } from '../shared/listViewTheme';
 import { ShellWindow, ShellTitleBar, xpToolbar, SearchField, ToolbarCount, ToolbarButton } from '../shared/shellTheme';
-import { STATIC_BASE } from '../shared/apiBase';
+import { API_BASE } from '../shared/apiBase';
 
-const PARTNERS_PAGE_SIZE = 20;
-
-const API_BASE = STATIC_BASE.replace(/\/api$/, '') + '/api';
+const PARTNERS_PAGE_SIZE = 25;
 
 interface Partner {
     id: string;
@@ -30,25 +28,24 @@ interface Partner {
 }
 
 interface PartnersViewProps {
-    /**
-     * Deliberately unused for the table: the list is server-paginated (see
-     * `usePaginatedFetch` below), so DataContext's shared `partners` array — which
-     * is now the unwindowed /partners/lookup index for dropdowns and name
-     * resolution — must not be sliced here. Kept optional so existing callers that
-     * still pass it keep compiling.
-     */
-    partners?: Partner[];
     type: 'CUSTOMER' | 'SUPPLIER';
-    onCreate: (partner: any) => void;
-    onUpdate: (id: string, partner: any) => void;
-    onDelete: (id: string) => void;
-    onBulkDelete?: (ids: string[]) => void;
 }
 
-export default function PartnersView({ type, onCreate, onUpdate, onDelete, onBulkDelete }: PartnersViewProps) {
+/** The server's `detail` (403 missing permission, 409 still referenced) or the bare status. */
+async function errorDetail(res: Response): Promise<string> {
+    try {
+        const body = await res.json();
+        if (typeof body?.detail === 'string') return body.detail;
+    } catch { /* non-JSON body */ }
+    return `HTTP ${res.status}`;
+}
+
+export default function PartnersView({ type }: PartnersViewProps) {
     const { showToast } = useToast();
     const { t } = useLanguage();
-    const { authFetch } = useData();
+    // fetchData() refreshes DataContext's /partners/lookup index so the partner
+    // dropdowns elsewhere see a mutation; refetch() reloads this page's window.
+    const { authFetch, fetchData } = useData();
     const [isCreateOpen, setIsCreateOpen] = useState(false);
     const [editingPartner, setEditingPartner] = useState<Partner | null>(null);
     const [newPartner, setNewPartner] = useState({ name: '', address: '', contact_person: '', phone: '', fax: '', email: '', type, active: true });
@@ -57,7 +54,7 @@ export default function PartnersView({ type, onCreate, onUpdate, onDelete, onBul
     const { openId: menuOpenId, pos: menuPos, toggle: menuToggle, close: menuClose } = useFloatingMenu(140);
 
     // Server-paginated + server-filtered: `rows` is ONE page of this partner type,
-    // never the whole directory. Search (name OR address) and the `type` scope are
+    // never the whole directory. Search (name, contact, phone, email, address) and the `type` scope are
     // applied by the backend; the hook resets to page 1 whenever either changes.
     const {
         rows: pagedPartners, total, meta, loading,
@@ -70,17 +67,30 @@ export default function PartnersView({ type, onCreate, onUpdate, onDelete, onBul
         onError: m => showToast(m, 'danger'),
     });
 
-    /** Reload the current page after a mutation the parent performed. */
-    const afterMutation = async (result: any) => {
-        await Promise.resolve(result);
-        refetch();
+    const typeLabel = type === 'CUSTOMER' ? 'Customer' : 'Supplier';
+    const noun = typeLabel.toLowerCase();
+    const { hasPermission } = useUser();
+    const permPrefix = type === 'CUSTOMER' ? 'customer' : 'supplier';
+    const canCreate = hasPermission(`${permPrefix}.create`);
+    const canEdit = hasPermission(`${permPrefix}.edit`);
+    const canDelete = hasPermission(`${permPrefix}.delete`);
+
+    /** One mutation call; toasts the server's reason on failure. Returns ok. */
+    const send = async (url: string, method: string, body?: any): Promise<boolean> => {
+        try {
+            const res = await authFetch(url, {
+                method,
+                ...(body ? { headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) } : {}),
+            });
+            if (res.ok) return true;
+            showToast(await errorDetail(res), 'danger');
+        } catch {
+            showToast(`Network error saving ${noun}`, 'danger');
+        }
+        return false;
     };
 
-    const typeLabel = type === 'CUSTOMER' ? 'Customer' : 'Supplier';
-    const { hasPermission, hasAnyPermission } = useUser();
-    const canManage = type === 'CUSTOMER'
-        ? hasAnyPermission('customer.create', 'customer.edit', 'customer.delete')
-        : hasAnyPermission('supplier.create', 'supplier.edit', 'supplier.delete');
+    const afterMutation = () => { refetch(); fetchData(); };
 
     // Button/input/cell/label chrome sourced from the shared lv* helpers instead
     // of re-declaring the same CSS values locally.
@@ -106,29 +116,37 @@ export default function PartnersView({ type, onCreate, onUpdate, onDelete, onBul
     // Page-scoped: only the loaded rows exist client-side now.
     const sel = useRowSelection<any>(pagedPartners, (p: any) => p.id);
 
-    const confirmBulkDelete = () => {
+    const confirmBulkDelete = async () => {
         const ids = sel.keys;
-        if (onBulkDelete) {
-            afterMutation(onBulkDelete(ids));
-        } else {
-            afterMutation(Promise.all(ids.map(id => onDelete(id))));
-        }
         sel.clear();
         setShowBulkDeleteConfirm(false);
+        // Per-id failures are summarised below rather than toasted one by one.
+        const results = await Promise.allSettled(
+            ids.map(id => authFetch(`${API_BASE}/partners/${id}`, { method: 'DELETE' })),
+        );
+        const failed = results.filter(r => r.status === 'rejected' || !r.value.ok).length;
+        const succeeded = ids.length - failed;
+        if (failed === 0) showToast(`${succeeded} ${noun}${succeeded !== 1 ? 's' : ''} deleted`, 'success');
+        else if (succeeded > 0) showToast(`${succeeded} deleted, ${failed} could not be removed — linked records exist`, 'warning');
+        else showToast(`Could not delete ${noun}s — they have linked records`, 'danger');
+        afterMutation();
     };
 
-    const handleSubmit = (e: React.FormEvent) => {
+    // Modals close only on success, so a rejected save keeps the user's input.
+    const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!newPartner.name) return;
-        afterMutation(onCreate(newPartner));
+        if (!await send(`${API_BASE}/partners`, 'POST', newPartner)) return;
+        showToast(`${typeLabel} created successfully`, 'success');
         setNewPartner({ name: '', address: '', contact_person: '', phone: '', fax: '', email: '', type, active: true });
         setIsCreateOpen(false);
+        afterMutation();
     };
 
-    const handleUpdateSubmit = (e: React.FormEvent) => {
+    const handleUpdateSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!editingPartner) return;
-        afterMutation(onUpdate(editingPartner.id, {
+        const ok = await send(`${API_BASE}/partners/${editingPartner.id}`, 'PUT', {
             name: editingPartner.name,
             address: editingPartner.address,
             contact_person: editingPartner.contact_person,
@@ -136,18 +154,21 @@ export default function PartnersView({ type, onCreate, onUpdate, onDelete, onBul
             fax: editingPartner.fax,
             email: editingPartner.email,
             active: editingPartner.active
-        }));
+        });
+        if (!ok) return;
         setEditingPartner(null);
+        afterMutation();
     };
 
     const handleDelete = (p: Partner) => {
         setDeletingPartner(p);
     };
 
-    const confirmDelete = () => {
+    const confirmDelete = async () => {
         if (!deletingPartner) return;
-        afterMutation(onDelete(deletingPartner.id));
+        const target = deletingPartner;
         setDeletingPartner(null);
+        if (await send(`${API_BASE}/partners/${target.id}`, 'DELETE')) afterMutation();
     };
 
     return (
@@ -167,7 +188,7 @@ export default function PartnersView({ type, onCreate, onUpdate, onDelete, onBul
                     <SearchField
                         value={searchInput}
                         onChange={setSearch}
-                        placeholder={`Search ${typeLabel.toLowerCase()}s…`}
+                        placeholder={`Search name, contact, phone, email, address…`}
                         width={280}
                         grow
                     />
@@ -175,7 +196,7 @@ export default function PartnersView({ type, onCreate, onUpdate, onDelete, onBul
                     <ToolbarCount>
                         {total} {typeLabel}{total !== 1 ? 's' : ''}
                     </ToolbarCount>
-                    {canManage && (
+                    {canCreate && (
                         <ToolbarButton tone="create" icon="bi-plus-lg" style={{ marginLeft: 'auto' }} onClick={() => setIsCreateOpen(true)}>
                             Add {typeLabel}
                         </ToolbarButton>
@@ -183,7 +204,7 @@ export default function PartnersView({ type, onCreate, onUpdate, onDelete, onBul
                 </div>
 
                 {/* ── Bulk action bar ── */}
-                {canManage && sel.count > 0 && (
+                {canDelete && sel.count > 0 && (
                     <div style={xpToolbar({ background: '#fff8e1', borderBottom: '1px solid #e0c060' })}>
                             <span style={{ fontFamily: xpFont, fontSize: '11px', color: '#665500', fontWeight: 'bold' }}>
                                 {sel.count} selected
@@ -214,9 +235,11 @@ export default function PartnersView({ type, onCreate, onUpdate, onDelete, onBul
                             <thead style={xpTableHeader}>
                                 <tr>
                                     <th style={{ ...xpThCell, width: '28px', textAlign: 'center' as const }}>
-                                        <SelectAllCheckbox allSelected={sel.allPageSelected} someSelected={sel.someSelected} onChange={sel.togglePage} title="Select all" />
+                                        {canDelete && <SelectAllCheckbox allSelected={sel.allPageSelected} someSelected={sel.someSelected} onChange={sel.togglePage} title="Select all" />}
                                     </th>
-                                    <th style={{ ...xpThCell, width: '30%' }}>Name</th>
+                                    <th style={{ ...xpThCell, width: '22%' }}>Name</th>
+                                    <th style={{ ...xpThCell, width: '18%' }}>Contact</th>
+                                    <th style={{ ...xpThCell, width: '18%' }}>Email</th>
                                     <th style={xpThCell}>Address</th>
                                     <th style={{ ...xpThCell, width: '80px' }}>Status</th>
                                     <th style={{ ...xpThCell, textAlign: 'right' as const, borderRight: 'none', width: '80px' }}>Actions</th>
@@ -229,10 +252,21 @@ export default function PartnersView({ type, onCreate, onUpdate, onDelete, onBul
                                         style={{ background: sel.isSelected(p) ? rowStateBg('selected') : lvZebra(rowIndex), borderBottom: '1px solid #c0bdb5' }}
                                     >
                                         <td style={{ ...tdBase, textAlign: 'center' as const }}>
-                                            <RowCheckbox checked={sel.isSelected(p)} onChange={() => sel.toggle(p)} label={p.name} />
+                                            {canDelete && <RowCheckbox checked={sel.isSelected(p)} onChange={() => sel.toggle(p)} label={p.name} />}
                                         </td>
                                         <td style={{ ...tdBase, fontWeight: 'bold' }}>
                                             {p.name}
+                                        </td>
+                                        <td style={tdBase}>
+                                            {p.contact_person || p.phone ? (
+                                                <>
+                                                    {p.contact_person && <div>{p.contact_person}</div>}
+                                                    {p.phone && <div style={{ color: '#555' }}>{p.phone}</div>}
+                                                </>
+                                            ) : <span style={{ color: '#aaa' }}>—</span>}
+                                        </td>
+                                        <td style={{ ...tdBase, color: '#555' }}>
+                                            {p.email || <span style={{ color: '#aaa' }}>—</span>}
                                         </td>
                                         <td style={{ ...tdBase, color: '#555' }}>
                                             {p.address || <span style={{ color: '#aaa' }}>—</span>}
@@ -241,16 +275,16 @@ export default function PartnersView({ type, onCreate, onUpdate, onDelete, onBul
                                             <StatusChip status={p.active ? 'ACTIVE' : 'INACTIVE'} />
                                         </td>
                                         <td style={{ ...tdBase, borderRight: 'none', textAlign: 'right' as const }}>
-                                            {canManage && <MenuTriggerButton onClick={e => menuToggle(p.id, e)} />}
+                                            {(canEdit || canDelete) && <MenuTriggerButton onClick={e => menuToggle(p.id, e)} />}
                                         </td>
                                     </tr>
                                 ))}
                                 {pagedPartners.length === 0 && (loading ? (
-                                    <TableSkeleton rows={SKEL_PAGE_ROWS} cols={skel.cols ?? 5} tdStyle={tdBase} rowHeight={skel.rowHeight} fillHeight={skel.fillHeight} />
+                                    <TableSkeleton rows={SKEL_PAGE_ROWS} cols={skel.cols ?? 7} tdStyle={tdBase} rowHeight={skel.rowHeight} fillHeight={skel.fillHeight} />
                                 ) : (
                                     <tr>
                                         <td
-                                            colSpan={5}
+                                            colSpan={7}
                                             style={{ ...tdBase, borderRight: 'none', textAlign: 'center', padding: '24px 8px', color: '#888', fontStyle: 'italic' }}
                                         >
                                             {searchTerm
@@ -289,13 +323,13 @@ export default function PartnersView({ type, onCreate, onUpdate, onDelete, onBul
             {/* Row ⋯ menu: Edit / Delete */}
             {menuOpenId && (() => {
                 const p = pagedPartners.find(x => String(x.id) === menuOpenId);
-                if (!p || !canManage) return null;
+                if (!p || !(canEdit || canDelete)) return null;
                 return (
                     <FloatingMenu
                         pos={menuPos}
                         items={[
-                            { key: 'edit', label: 'Edit', icon: 'bi-pencil-square', onClick: () => { menuClose(); setEditingPartner(p); } },
-                            { key: 'delete', label: 'Delete', icon: 'bi-trash', danger: true, onClick: () => { menuClose(); handleDelete(p); } },
+                            ...(canEdit ? [{ key: 'edit', label: 'Edit', icon: 'bi-pencil-square', onClick: () => { menuClose(); setEditingPartner(p); } }] : []),
+                            ...(canDelete ? [{ key: 'delete', label: 'Delete', icon: 'bi-trash', danger: true as const, onClick: () => { menuClose(); handleDelete(p); } }] : []),
                         ]}
                     />
                 );

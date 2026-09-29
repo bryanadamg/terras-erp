@@ -23,6 +23,8 @@ import { isMachineWC } from '../shared/workCenterTree';
 import DoseSheet, { fmtDose, doseUnitFor, type DosePreview } from '../shared/DoseSheet';
 import { speedPresets, presetFor } from '../shared/dyeingSpeed';
 import { API_BASE } from '../shared/apiBase';
+import DyeRecipePrintView from './DyeRecipePrintView';
+import type { KartuCelupBath } from '../shared/printTemplate/doctypes/dyeRecipe';
 
 const modernFont = 'system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif';
 
@@ -207,6 +209,8 @@ export default function DyeingOrdersTab({ items, recipes, authFetch }: DyeingOrd
     const [completeForm, setCompleteForm] = useState<CompleteForm>(emptyCompleteForm);
     const [saving, setSaving] = useState(false);
     const [errorMsg, setErrorMsg] = useState<string | null>(null);
+    // The Kartu Celup being previewed for one bath (a group header's orders).
+    const [kartuCelup, setKartuCelup] = useState<{ recipe: any; bath: KartuCelupBath; doses: any } | null>(null);
 
     // Live dose preview under the create form, and the read-only sheet the shade
     // screen shows so QC can see what the bath was dosed at.
@@ -433,6 +437,50 @@ export default function DyeingOrdersTab({ items, recipes, authFetch }: DyeingOrd
 
     /** Set one bath up across several orders. The recipe is matched off the first —
      *  they are one shade by construction, so any of them answers the same. */
+    /** The recipe a bath's card prints: the first of its orders' current runs that
+     *  carries one. Null means nothing in the vessel has a recipe to print. */
+    const bathRecipeOf = (wos: any[]) => {
+        const id = wos.map(w => summarize(runsByWo[String(w.id)] || []).current?.recipe_id).find(Boolean);
+        return id ? recipes.find(r => String(r.id) === String(id)) ?? null : null;
+    };
+
+    /** Print one Kartu Celup for the whole vessel. The load is every order's cloth
+     *  summed; the water is the vessel's, counted once (a shared bath carries the
+     *  same volume on every run). Doses are weighed server-side against that pair —
+     *  dyeing_dose_service stays the only formula. No volume recorded yet means no
+     *  g/L grams: the card prints the rates for the floor to weigh, same rule as the
+     *  Kartu Kerja. */
+    const handlePrintBath = async (wos: any[]) => {
+        const recipe = bathRecipeOf(wos);
+        if (!recipe) return;
+        const runs = wos.map(w => summarize(runsByWo[String(w.id)] || []).current).filter(Boolean);
+        const load = wos.reduce((t, w) => {
+            const run = summarize(runsByWo[String(w.id)] || []).current;
+            return t + (Number(run?.substrate_qty ?? w.qty) || 0);
+        }, 0);
+        const withBath = runs.find((r: any) => r.volume_air_liters != null);
+        const volume = withBath?.effective_bath_liters ?? withBath?.volume_air_liters ?? null;
+        const doses = await fetchDoses(String(recipe.id), load || null, volume);
+        const first: any = withBath ?? runs[0] ?? {};
+        setKartuCelup({
+            recipe,
+            doses,
+            bath: {
+                wo_codes: wos.map(w => w.code || w.name),
+                item_names: wos.map(w => w.item_name),
+                mo_codes: wos.map(w => w.root_mo_code || w.mo_code),
+                substrate_qty: load || null,
+                volume_liters: volume,
+                liquor_ratio: volume && load ? volume / load : null,
+                machine: wos[0]?.work_center_name ?? null,
+                speed: first.yards_per_min ?? null,
+                pressure: first.machine_pressure ?? null,
+                ropes: first.lines ?? null,
+                lots: runs.map((r: any) => r.input_batch_number),
+            },
+        });
+    };
+
     const handleOpenBulk = async (wos: any[]) => {
         setCreateWo(wos[0]);
         setBulkWos(wos);
@@ -952,6 +1000,22 @@ export default function DyeingOrdersTab({ items, recipes, authFetch }: DyeingOrd
                                                         {fmtDose(rowsInGroup.reduce((t: number, w: any) => t + (Number(w.qty) || 0), 0), 2)} total
                                                     </span>
                                                     <span style={{ marginLeft: 'auto' }} />
+                                                    {(() => {
+                                                        const printable = !!bathRecipeOf(bathWos);
+                                                        return (
+                                                            <XPActionButton
+                                                                icon="bi-printer"
+                                                                label={`Print Kartu Celup (${bathWos.length})`}
+                                                                disabled={!printable}
+                                                                title={!printable
+                                                                    ? 'No recipe on these orders yet — set up the bath first'
+                                                                    : pickedInGroup.length
+                                                                        ? 'One card for the ticked orders in this bath'
+                                                                        : 'One card for every order in this bath. Tick rows to leave some out.'}
+                                                                onClick={() => handlePrintBath(bathWos)}
+                                                            />
+                                                        );
+                                                    })()}
                                                     {canManage && (
                                                         <XPActionButton
                                                             tone="primary"
@@ -1546,6 +1610,15 @@ export default function DyeingOrdersTab({ items, recipes, authFetch }: DyeingOrd
                         </div>
                     </div>
                 </ModalWrapper>
+            )}
+
+            {kartuCelup && (
+                <DyeRecipePrintView
+                    recipe={kartuCelup.recipe}
+                    bath={kartuCelup.bath}
+                    doses={kartuCelup.doses}
+                    onClose={() => setKartuCelup(null)}
+                />
             )}
         </div>
     );

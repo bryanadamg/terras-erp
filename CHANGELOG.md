@@ -15,6 +15,26 @@ on `main`:
 
 ## [Unreleased]
 
+## [0.37.0] - 2026-09-29
+
+### Added
+- Stock ledger rows show a Variant column of lot chips plus size, shade and variant attributes. The ledger sorts server-side, pages through the shared paginated fetch, and every movement source gets a consistent label and tone
+- Dyeing monitor is laid out like the WO list: it pages server-side, lists every dyeing WO instead of a recent window, and expands to show per-WO phase history (match, start, complete) and bath history. No-bath WOs are greyed, columns are resizable, and you can filter by machine or machine group
+- Kartu Celup prints filled per bath from Dyeing Orders, with item names, WO numbers and vessel doses
+- Dyeing/setting lot picker pre-ticks lots already staged to the WO and folds other-size lots away, keeping "All" to the order's size
+- Customer and supplier lists show 25 partners per page, with contact, phone and email in the table and in search
+- Attributes, UoM, Categories and Locations tabs are rebuilt as two-pane lists or shared column browsers. The UoM tab shows what each unit holds and what packs into it, and Categories shows per-category item counts
+- The frontend falls back to the serving host for the API base, so on-prem IP changes need no rebuild
+
+### Changed
+- Partner bulk deletes run in parallel instead of one by one
+
+### Fixed
+- A lot-less stock deduction draws its shortfall from the lots FIFO instead of driving the unlotted balance negative
+- Beam ledger movements name their loom instead of a bare work center UUID
+- Partner create, edit and delete are gated on their own permissions, and save/delete failures are shown instead of dropped silently
+- Partner audit rows record a field diff, and create is written in one commit
+
 ## [0.36.0] - 2026-09-27
 
 ### Added

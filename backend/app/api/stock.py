@@ -14,6 +14,7 @@ from app.models.location import Location
 from app.models.stock_balance import StockBalance
 from app.models.audit import AuditLog
 from app.models.work_order import WorkOrder
+from app.models.routing import WorkCenter
 from app.models.goods_receipt import GoodsReceipt
 from app.models.purchase import PurchaseOrder
 from datetime import datetime
@@ -24,7 +25,19 @@ import uuid as _uuid
 
 # reference_types whose reference_id is a raw entity UUID (str(entity.id)) rather
 # than a human-readable code — these need a resolved label for display.
-_WO_REF_TYPES = {"Staging", "Leftover Beam", "Beam Merge", "Work Order"}
+_WO_REF_TYPES = {"Staging", "Beam Merge", "Work Order"}
+# Beam movements are pegged to the loom (beam_service stamps the work center id).
+_WC_REF_TYPES = {"Beam Mount", "Beam Dismount", "Beam Leftover", "Beam Leftover Variance"}
+
+
+def _ref_uuids(rows, types) -> list:
+    out = []
+    for rid in {r.reference_id for r in rows if r.reference_type in types and r.reference_id}:
+        try:
+            out.append(_uuid.UUID(rid))
+        except (ValueError, TypeError):
+            pass
+    return out
 
 router = APIRouter()
 
@@ -59,6 +72,8 @@ async def get_stock_ledger(
     category_id: Optional[str] = Query(None, description="Item category id, or comma-separated ids (a category plus its descendants)"),
     reference_type: Optional[str] = Query(None),
     direction: Optional[str] = Query(None, description="'in' (qty >= 0) or 'out' (qty < 0)"),
+    sort_by: Optional[str] = Query(None, description="date | item | category | location | qty"),
+    sort_dir: Optional[str] = Query(None, description="asc | desc"),
     window: PageWindow = Depends(PageParams(default_size=100)),
     db: AsyncSession = Depends(get_async_db),
     current_user: User = Depends(require_any_permission("stock_ledger.view", "stock_on_hand.view"))
@@ -114,11 +129,33 @@ async def get_stock_ledger(
     total_in = float(agg[0] or 0)
     total_out = float(agg[1] or 0)
 
+    # Sort in SQL, not on the loaded page — a page-local sort shows the wrong rows.
+    # id is the tiebreak so OFFSET never repeats or skips a row between pages.
+    from app.models.category import Category
+    from sqlalchemy import nullslast
+    page_q = select(StockLedger).where(*conditions)
+    sort_col = {
+        "date": StockLedger.created_at,
+        "qty": StockLedger.qty_change,
+        "item": Item.name,
+        "category": Category.name,
+        "location": Location.name,
+    }.get(sort_by or "")
+    if sort_by in ("item", "category"):
+        page_q = page_q.join(Item, Item.id == StockLedger.item_id)
+    if sort_by == "category":
+        page_q = page_q.outerjoin(Category, Category.id == Item.category_id)
+    if sort_by == "location":
+        page_q = page_q.join(Location, Location.id == StockLedger.location_id)
+    if sort_col is None:
+        order = [StockLedger.created_at.desc()]
+    else:
+        order = [nullslast(sort_col.asc() if (sort_dir or "").lower().startswith("a") else sort_col.desc())]
     rows = (await db.execute(
         window.apply(
-            select(StockLedger).where(*conditions)
+            page_q
             .options(selectinload(StockLedger.attribute_values), joinedload(StockLedger.batch))
-            .order_by(StockLedger.created_at.desc())
+            .order_by(*order, StockLedger.id.desc())
         )
     )).scalars().all()
 
@@ -129,7 +166,6 @@ async def get_stock_ledger(
     loc_ids = {r.location_id for r in rows}
     item_map = {}
     if item_ids:
-        from app.models.category import Category
         for iid, nm, cd, uom, cat_id, cat_name in (await db.execute(
             select(Item.id, Item.name, Item.code, Item.uom, Item.category_id, Category.name)
             .outerjoin(Category, Category.id == Item.category_id)
@@ -147,39 +183,54 @@ async def get_stock_ledger(
     # human-readable code — resolve those to a friendly label so the ledger never
     # surfaces a bare UUID to the user.
     ref_label_map: dict[str, str] = {}
-    wo_ref_ids = {r.reference_id for r in rows if r.reference_type in _WO_REF_TYPES and r.reference_id}
-    if wo_ref_ids:
-        wo_uuids = []
-        for rid in wo_ref_ids:
-            try:
-                wo_uuids.append(_uuid.UUID(rid))
-            except (ValueError, TypeError):
-                pass
-        if wo_uuids:
-            for wid, code, name in (await db.execute(
-                select(WorkOrder.id, WorkOrder.code, WorkOrder.name).where(WorkOrder.id.in_(wo_uuids))
-            )).all():
-                ref_label_map[str(wid)] = code or name
+    wo_uuids = _ref_uuids(rows, _WO_REF_TYPES)
+    if wo_uuids:
+        for wid, code, name in (await db.execute(
+            select(WorkOrder.id, WorkOrder.code, WorkOrder.name).where(WorkOrder.id.in_(wo_uuids))
+        )).all():
+            ref_label_map[str(wid)] = code or name
 
-    gr_ref_ids = {r.reference_id for r in rows if r.reference_type == "Goods Receipt" and r.reference_id}
-    if gr_ref_ids:
-        gr_uuids = []
-        for rid in gr_ref_ids:
-            try:
-                gr_uuids.append(_uuid.UUID(rid))
-            except (ValueError, TypeError):
-                pass
-        if gr_uuids:
-            for gid, po_number in (await db.execute(
-                select(GoodsReceipt.id, PurchaseOrder.po_number)
-                .join(PurchaseOrder, PurchaseOrder.id == GoodsReceipt.po_id)
-                .where(GoodsReceipt.id.in_(gr_uuids))
-            )).all():
-                ref_label_map[str(gid)] = po_number
+    wc_uuids = _ref_uuids(rows, _WC_REF_TYPES)
+    if wc_uuids:
+        for wid, code, name in (await db.execute(
+            select(WorkCenter.id, WorkCenter.code, WorkCenter.name).where(WorkCenter.id.in_(wc_uuids))
+        )).all():
+            ref_label_map[str(wid)] = name or code
+
+    gr_uuids = _ref_uuids(rows, {"Goods Receipt"})
+    if gr_uuids:
+        for gid, po_number in (await db.execute(
+            select(GoodsReceipt.id, PurchaseOrder.po_number)
+            .join(PurchaseOrder, PurchaseOrder.id == GoodsReceipt.po_id)
+            .where(GoodsReceipt.id.in_(gr_uuids))
+        )).all():
+            ref_label_map[str(gid)] = po_number
+
+    # Variant identity, in the shape LotChips reads (variant_attributes + Color
+    # Library fields): the row's own attribute values and colour, resolved through
+    # the same key folding the balance table uses. Size is not a variant attribute —
+    # a lot's only size identity is its BOM-size snapshot, so unlotted rows have none.
+    row_keys = {r.id: stock_service._generate_variant_key([v.id for v in (r.attribute_values or [])], r.color_id) for r in rows}
+    variant_info = await stock_service.describe_variant_keys(db, row_keys.values())
+    # A lot ordered against an unapproved lab dip has no shade yet — only its MO's
+    # pending code, which LotChips shows as a pending chip.
+    lot_ids = {r.batch_id for r in rows if r.batch_id}
+    labdip_map: dict = {}
+    if lot_ids:
+        from app.models.batch import Batch
+        from app.models.manufacturing import ManufacturingOrder
+        for bid, code in (await db.execute(
+            select(Batch.id, ManufacturingOrder.labdip_variant_code)
+            .join(WorkOrder, WorkOrder.id == Batch.source_wo_id)
+            .join(ManufacturingOrder, ManufacturingOrder.id == WorkOrder.manufacturing_order_id)
+            .where(Batch.id.in_(lot_ids), ManufacturingOrder.labdip_variant_code.isnot(None))
+        )).all():
+            labdip_map[bid] = code
 
     items = []
     for r in rows:
         nm, cd, uom, cat_id, cat_name = item_map.get(r.item_id, ("", "", "", None, None))
+        vinfo = variant_info.get(row_keys[r.id], {})
         items.append({
             "id": r.id,
             "item_id": r.item_id,
@@ -201,6 +252,12 @@ async def get_stock_ledger(
             "batch_id": r.batch_id,
             "batch_number": r.batch.batch_number if r.batch else None,
             "vendor_lot": r.batch.vendor_lot if r.batch else None,
+            "size_label": stock_service._bom_size_label(r.batch.bom_size_snapshot) if r.batch else None,
+            "variant_attributes": vinfo.get("variant_attributes", []),
+            "color_code": vinfo.get("color_code"),
+            "color_name": vinfo.get("color_name"),
+            "color_hex": vinfo.get("color_hex"),
+            "labdip_variant_code": labdip_map.get(r.batch_id) if not vinfo.get("color_code") else None,
             "created_at": r.created_at,
         })
 

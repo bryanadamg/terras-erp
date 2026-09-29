@@ -11,6 +11,7 @@ import type { RowSourceDef } from '../rowSources';
 import type { PrintContext } from '../renderContext';
 import { qtyFmt } from '../../format';
 import { refMeta, shortRef } from '../../../dashboard/ledgerRef';
+import { lotSizeLabel, lotComboLabel, lotColorLabel } from '../../LotChips';
 
 export const STOCK_LEDGER_DOC = 'stock_ledger_report';
 
@@ -67,7 +68,7 @@ const SL_ROWS: RowSourceDef = {
         { field: 'item_block', label: 'Item (name over code)' },
         { field: 'item_name', label: 'Item Name' },
         { field: 'item_code', label: 'Item Code' },
-        { field: 'attributes', label: 'Attributes' },
+        { field: 'attributes', label: 'Variant (size / combo / shade / attributes)' },
         { field: 'location', label: 'Location (warehouse / bin)' },
         { field: 'lot', label: 'Lot' },
         { field: 'movement', label: 'Movement (+qty uom)' },
@@ -105,12 +106,11 @@ const SL_ROWS: RowSourceDef = {
 export const SL_ROW_SOURCES: RowSourceDef[] = [SL_ROWS];
 
 export function buildStockLedgerContext({
-    entries, locations = [], attributes = [], periodLabel, filtersSummary, totals, formatDateTime,
+    entries, locations = [], periodLabel, filtersSummary, totals, formatDateTime,
     companyProfile, companyName, companyLogoUrl,
 }: {
     entries: any[];
     locations?: any[];
-    attributes?: any[];
     periodLabel: string;
     filtersSummary?: string;
     totals: { total: number; totalIn: number; totalOut: number };
@@ -122,9 +122,14 @@ export function buildStockLedgerContext({
 }): PrintContext {
     const locMap: Record<string, any> = {};
     for (const l of locations) locMap[l.id] = l;
-    const attrName = (vid: string) => {
-        for (const a of attributes) { const v = a.values?.find((x: any) => x.id === vid); if (v) return v.value; }
-        return '';
+    // Same identity, same order as the on-screen LotChips: size, combo, shade, rest.
+    const variantText = (e: any) => {
+        const color = lotColorLabel(e);
+        const others = (e.variant_attributes || [])
+            .filter((a: any) => !['combo', 'color', 'labdip_color'].includes(a.system_role || ''))
+            .map((a: any) => a.value);
+        return [lotSizeLabel(e), lotComboLabel(e), color && `${color.label}${color.pending ? ' (pending)' : ''}`, ...others]
+            .filter(Boolean).join(', ');
     };
     const now = new Date();
     return {
@@ -135,7 +140,7 @@ export function buildStockLedgerContext({
                 ...e,
                 date: e.created_at ? formatDateTime(e.created_at) : '',
                 warehouse: locMap[e.location_id]?.parent_name || '',
-                attrs: (e.attribute_value_ids || []).map(attrName).filter(Boolean).join(', '),
+                attrs: variantText(e),
             })),
             periodLabel,
             filtersSummary: filtersSummary || '',

@@ -1,155 +1,133 @@
-import { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useToast } from '../shared/Toast';
 import { useLanguage } from '../../context/LanguageContext';
 import { useUser } from '../../context/UserContext';
-import { xpToolbar as sharedXpToolbar, ShellWindow, ShellTitleBar, SearchField } from '../shared/shellTheme';
-import { lvTh, lvTd, lvRow, lvThead } from '../shared/listViewTheme';
-import { XPActionButton, CodeChip, xpFont, xpInput as xpInputBase, xpBtn as xpBtnBase, BTN_TONES, XP_BTN } from '../shared/xpTheme';
+import { ShellWindow, ShellTitleBar, SearchField, ToolbarCount, xpToolbar } from '../shared/shellTheme';
+import { XPActionButton } from '../shared/xpTheme';
+import {
+  ColumnPanes, ColumnPane, ColumnAddBar, ColumnInput, ColumnRenameRow, ColumnRow, ColumnCount,
+  ColumnEmpty, ColumnStatusBar,
+} from '../shared/columnBrowser';
 
-const ALL = '__all__';
+const byName = (a: any, b: any) => a.name.localeCompare(b.name);
+const LEVELS = ['warehouse', 'zone', 'bin'] as const;
 
+// Store → zone → bin, one column each (shared/columnBrowser.tsx — same shape as the
+// Categories tab). Stock lives only in bins. Bins can be dragged onto another zone
+// to re-parent them; the quarantine hold flag lives on the store.
 export default function LocationsView({
   locations,
   onCreateLocation,
   onUpdateLocation,
   onDeleteLocation,
-  onRefresh,
-  fetchLocations,
 }: any) {
   const { showToast } = useToast();
   const { t } = useLanguage();
-  const { hasPermission, hasAnyPermission } = useUser();
-  const canManage = hasAnyPermission('location.create', 'location.edit', 'location.delete');
+  const { hasPermission } = useUser();
+  const canCreate = hasPermission('location.create');
+  const canEdit = hasPermission('location.edit');
+  const canDelete = hasPermission('location.delete');
 
-  const [selectedStore, setSelectedStore] = useState<string>(ALL);
+  const [selectedStore, setSelectedStore] = useState<string | null>(null);
   const [selectedZone, setSelectedZone] = useState<string | null>(null);
+  const [selectedBin, setSelectedBin] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
 
-  // Add warehouse (store)
-  const [addingStore, setAddingStore] = useState(false);
-  const [newStore, setNewStore] = useState({ code: '', name: '' });
-  const [savingStore, setSavingStore] = useState(false);
+  const [adding, setAdding] = useState<null | { level: number; code: string; name: string }>(null);
+  const [saving, setSaving] = useState(false);
+  const [renaming, setRenaming] = useState<null | { id: string; value: string }>(null);
 
-  // Add zone
-  const [showZoneForm, setShowZoneForm] = useState(false);
-  const [newZoneName, setNewZoneName] = useState('');
-  const [savingZone, setSavingZone] = useState(false);
-
-  // Add bin
-  const [showBinForm, setShowBinForm] = useState(false);
-  const [newBinName, setNewBinName] = useState('');
-  const [savingBin, setSavingBin] = useState(false);
-
-  // Rename
-  const [renamingId, setRenamingId] = useState<string | null>(null);
-  const [renameValue, setRenameValue] = useState('');
-
-  // Drag-drop (bins between zones)
   const [draggingId, setDraggingId] = useState<string | null>(null);
   const [dragOverId, setDragOverId] = useState<string | null>(null);
 
-  const [hoveredStore, setHoveredStore] = useState<string | null>(null);
-  const [hoveredZone, setHoveredZone] = useState<string | null>(null);
-  const [hoveredBin, setHoveredBin] = useState<string | null>(null);
-
-  // ---------- styles (classic XP) ----------
-  const xpToolbar: React.CSSProperties = sharedXpToolbar({ gap: 6 });
-  const xpBtn = (extra: React.CSSProperties = {}): React.CSSProperties => xpBtnBase(extra);
-  const xpInput: React.CSSProperties = xpInputBase({ boxShadow: 'inset 1px 1px 0 rgba(0,0,0,0.1)' });
-  const xpLabel: React.CSSProperties = { fontFamily: xpFont, fontSize: 11, color: '#000', display: 'block', marginBottom: 2 };
-
   // ---------- derived data ----------
-  const all = (locations || []);
-  const stores = all.filter((l: any) => l.location_type === 'warehouse').sort((a: any, b: any) => a.name.localeCompare(b.name));
-  const zonesOf = (storeId: string) => all.filter((l: any) => l.parent_id === storeId && l.location_type === 'zone').sort((a: any, b: any) => a.name.localeCompare(b.name));
-  const binsOf = (zoneId: string) => all.filter((l: any) => l.parent_id === zoneId && l.location_type === 'bin').sort((a: any, b: any) => a.name.localeCompare(b.name));
-  const zoneCount = (storeId: string) => all.filter((l: any) => l.parent_id === storeId).length;
-  const binCount = (zoneId: string) => all.filter((l: any) => l.parent_id === zoneId).length;
-  const selectedStoreObj = selectedStore !== ALL ? all.find((l: any) => l.id === selectedStore) : null;
-  const selectedZoneObj = selectedZone ? all.find((l: any) => l.id === selectedZone) : null;
-  const codeSet = new Set(all.map((l: any) => l.code));
+  const all: any[] = locations || [];
+  const byId = new Map(all.map(l => [l.id, l]));
+  const kids = (id: string | null, type: string) =>
+    all.filter(l => (l.parent_id ?? null) === id && l.location_type === type);
+
+  // Search keeps each hit WITH its ancestors, so a matched bin still has a store
+  // and zone to be reached through.
+  const q = searchTerm.trim().toLowerCase();
+  let keep: Set<string> | null = null;
+  if (q) {
+    keep = new Set();
+    for (const l of all) {
+      if (!l.code.toLowerCase().includes(q) && !l.name.toLowerCase().includes(q)) continue;
+      for (let c = l; c && !keep.has(c.id); c = c.parent_id ? byId.get(c.parent_id) : null) keep.add(c.id);
+    }
+  }
+  const visible = (id: string | null, type: string) => kids(id, type).filter(l => !keep || keep.has(l.id)).sort(byName);
+
+  const stores = visible(null, 'warehouse');
+  const store = (selectedStore && stores.find(s => s.id === selectedStore)) || stores[0] || null;
+  const zones = store ? visible(store.id, 'zone') : [];
+  const zone = (selectedZone && zones.find(z => z.id === selectedZone)) || null;
+  const bins = zone ? visible(zone.id, 'bin') : [];
+  const bin = (selectedBin && bins.find(b => b.id === selectedBin)) || null;
+
+  const codeSet = new Set(all.map(l => l.code));
   const ensureUniqueCode = (base: string) => {
     let c = base, n = 1;
     while (codeSet.has(c)) { c = `${base}-${n}`; n++; }
     return c;
   };
+  const childCode = (parent: any, name: string) => ensureUniqueCode(`${parent.code}-${name.trim()}`.replace(/\s+/g, '-'));
 
-  // Reset zone selection when store changes
-  useEffect(() => { setSelectedZone(null); setShowBinForm(false); }, [selectedStore]);
-
-  // Fallback if selected items disappear
-  useEffect(() => {
-    if (selectedStore !== ALL && !all.some((l: any) => l.id === selectedStore)) setSelectedStore(ALL);
-  }, [locations, selectedStore]);
-  useEffect(() => {
-    if (selectedZone && !all.some((l: any) => l.id === selectedZone)) setSelectedZone(null);
-  }, [locations, selectedZone]);
+  // ---------- selection ----------
+  const pickStore = (id: string) => { setSelectedStore(id); setSelectedZone(null); setSelectedBin(null); setAdding(null); };
+  const pickZone = (id: string) => { setSelectedZone(id); setSelectedBin(null); setAdding(null); };
 
   // ---------- handlers ----------
-  const handleAddStore = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (savingStore) return;
-    setSavingStore(true);
+  const parentFor = (level: number) => (level === 0 ? null : level === 1 ? store : zone);
+
+  const submitAdd = async () => {
+    if (!adding || saving) return;
+    const parent = parentFor(adding.level);
+    const name = adding.name.trim();
+    const code = adding.level === 0 ? adding.code.trim() : parent ? childCode(parent, name) : '';
+    if (!name || !code || (adding.level > 0 && !parent)) return;
+    setSaving(true);
     try {
-      const res = await onCreateLocation({ code: newStore.code, name: newStore.name, parent_id: null });
-      if (res && res.status === 400) {
-        showToast(`Code "${newStore.code}" already exists`, 'warning');
-        setNewStore({ ...newStore, code: ensureUniqueCode(newStore.code.replace(/-\d+$/, '')) });
+      const res = await onCreateLocation({ code, name, parent_id: parent?.id ?? null });
+      if (res && res.status === 400 && adding.level === 0) {
+        showToast(`Code "${code}" already exists`, 'warning');
+        setAdding({ ...adding, code: ensureUniqueCode(code.replace(/-\d+$/, '')) });
       } else if (res && res.ok) {
-        showToast('Store added', 'success');
-        setNewStore({ code: '', name: '' });
-        setAddingStore(false);
-      } else { showToast('Failed to add store', 'danger'); }
-    } finally { setSavingStore(false); }
+        showToast(`${['Store', 'Zone', 'Bin'][adding.level]} added`, 'success');
+        setAdding({ ...adding, code: '', name: '' }); // stay open: bins are usually added in runs
+      } else {
+        showToast(`Failed to add ${['store', 'zone', 'bin'][adding.level]}`, 'danger');
+      }
+    } finally { setSaving(false); }
   };
 
-  const handleAddZone = async (e: React.FormEvent) => {
-    e.preventDefault();
-    const name = newZoneName.trim();
-    if (!name || savingZone || !selectedStoreObj) return;
-    setSavingZone(true);
-    try {
-      const base = `${selectedStoreObj.code}-${name}`.replace(/\s+/g, '-');
-      const code = ensureUniqueCode(base);
-      const res = await onCreateLocation({ code, name, parent_id: selectedStoreObj.id });
-      if (res && res.ok) {
-        showToast('Zone added', 'success');
-        setNewZoneName('');
-      } else { showToast('Failed to add zone', 'danger'); }
-    } finally { setSavingZone(false); }
-  };
-
-  const handleAddBin = async (e: React.FormEvent) => {
-    e.preventDefault();
-    const name = newBinName.trim();
-    if (!name || savingBin || !selectedZoneObj) return;
-    setSavingBin(true);
-    try {
-      const base = `${selectedZoneObj.code}-${name}`.replace(/\s+/g, '-');
-      const code = ensureUniqueCode(base);
-      const res = await onCreateLocation({ code, name, parent_id: selectedZoneObj.id });
-      if (res && res.ok) {
-        showToast('Bin added', 'success');
-        setNewBinName('');
-      } else { showToast('Failed to add bin', 'danger'); }
-    } finally { setSavingBin(false); }
-  };
-
-  const startRename = (loc: any) => { setRenamingId(loc.id); setRenameValue(loc.name); };
   const commitRename = async () => {
-    const id = renamingId; const name = renameValue.trim();
-    if (!id) return;
-    const cur = all.find((l: any) => l.id === id);
-    if (!name || (cur && name === cur.name)) { setRenamingId(null); return; }
-    const res = onUpdateLocation ? await onUpdateLocation(id, { name }) : null;
+    const r = renaming;
+    setRenaming(null);
+    if (!r) return;
+    const cur = byId.get(r.id);
+    const name = r.value.trim();
+    if (!name || !cur || name === cur.name) return;
+    const res = onUpdateLocation ? await onUpdateLocation(r.id, { name }) : null;
     if (res && res.ok) showToast('Renamed', 'success');
     else if (res && res.status === 400) showToast('Cannot rename system stores', 'warning');
-    setRenamingId(null);
   };
 
-  const handleDelete = async (id: string) => {
-    const err = await onDeleteLocation(id);
+  const handleDelete = async (loc: any) => {
+    const err = await onDeleteLocation(loc.id);
     if (typeof err === 'string') showToast(err, 'danger');
+  };
+
+  // Quarantine hold flag. Set on the STORE and inherited by its zones/bins —
+  // stock held anywhere under it shows on the Quarantine Packing page and cannot
+  // be packed until its lot is dispositioned OK. Editable on system stores too:
+  // a plant may hold elsewhere than the seeded Quarantine warehouse.
+  const toggleQuarantine = async (loc: any) => {
+    if (!onUpdateLocation) return;
+    const next = !loc.is_quarantine;
+    await onUpdateLocation(loc.id, { is_quarantine: next });
+    showToast(next ? `${loc.name} is now a quarantine hold area` : `${loc.name} is no longer a quarantine hold area`, 'success');
   };
 
   // drag-drop: bins dragged onto a zone re-parent
@@ -162,276 +140,193 @@ export default function LocationsView({
     const id = draggingId || e.dataTransfer.getData('text/plain');
     setDraggingId(null); setDragOverId(null);
     if (!id || !onUpdateLocation) return;
-    const loc = all.find((l: any) => l.id === id);
+    const loc = byId.get(id);
     if (!loc || loc.parent_id === zoneId || loc.id === zoneId) return;
     onUpdateLocation(id, { parent_id: zoneId });
   };
 
-  // Quarantine hold flag. Set on the STORE and inherited by its zones/bins —
-  // stock held anywhere under it shows on the Quarantine Packing page and cannot
-  // be packed until its lot is dispositioned OK. Editable on system stores too:
-  // a plant may hold elsewhere than the seeded Quarantine warehouse.
-  const toggleQuarantine = async (loc: any) => {
-    if (!onUpdateLocation) return;
-    const next = !loc.is_quarantine;
-    await onUpdateLocation(loc.id, { is_quarantine: next });
-    showToast(
-      next
-        ? `${loc.name} is now a quarantine hold area`
-        : `${loc.name} is no longer a quarantine hold area`,
-      'success',
-    );
-  };
+  // ---------- row pieces ----------
+  const deleteBlock = (loc: any) => (loc.has_children || all.some(l => l.parent_id === loc.id)) ? 'Remove its sub-locations first' : null;
 
-  const quarantineTitle = (loc: any) => loc.is_quarantine
-    ? 'Quarantine hold area — click to stop holding stock here'
-    : 'Click to make this a quarantine hold area';
-
-  const q = searchTerm.toLowerCase();
-  const matches = (l: any) => l.code.toLowerCase().includes(q) || l.name.toLowerCase().includes(q);
-
-  // ---------- row renderers (shared tree, per-element classic/modern styling) ----------
-  const storeRow = (loc: any) => {
-    const active = selectedStore === loc.id;
-    const over = dragOverId === loc.id;
-    const renaming = renamingId === loc.id;
-    const cnt = zoneCount(loc.id);
+  const rowActions = (loc: any, extra?: React.ReactNode) => {
     const isSystem = !!loc.system_code;
-    const Tag: any = 'div';
-    return (
-      <Tag
-        key={loc.id}
-        type={undefined}
-        onClick={() => !renaming && setSelectedStore(loc.id)}
-        onMouseEnter={() => setHoveredStore(loc.id)}
-        onMouseLeave={() => setHoveredStore(null)}
-        className={undefined}
-        style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '3px 6px', cursor: 'pointer', fontFamily: xpFont, fontSize: 11, color: active ? '#fff' : '#000', background: over ? '#ffe9a8' : active ? 'linear-gradient(to bottom,#3c8cf0,#1a5fd0)' : 'transparent', border: over ? '1px dashed #b8860b' : '1px solid transparent' }}
-      >
-        <i className={`bi ${cnt > 0 ? 'bi-building-fill' : 'bi-building'}`} style={{ color: active ? '#fff' : '#caa55a' }} />
-        {renaming ? (
-          <input autoFocus className={undefined} style={{ ...xpInput, flex: 1, minWidth: 0 }} value={renameValue} onChange={(e) => setRenameValue(e.target.value)} onClick={(e) => e.stopPropagation()} onBlur={commitRename} onKeyDown={(e) => { if (e.key === 'Enter') commitRename(); if (e.key === 'Escape') setRenamingId(null); }} />
-        ) : (
-          <span className={undefined} style={{ flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{loc.name}</span>
+    const block = deleteBlock(loc);
+    const btns = (
+      <>
+        {extra}
+        {canEdit && !isSystem && (
+          <XPActionButton icon="bi-pencil" title="Rename" onClick={() => { setAdding(null); setRenaming({ id: loc.id, value: loc.name }); }} />
         )}
-        {isSystem && <i className="bi bi-lock-fill" title="System store" style={{ color: active ? '#cde' : '#888', fontSize: 9}} />}
-        {(loc.is_quarantine || (canManage && hoveredStore === loc.id)) && (
-          <i
-            className={`bi ${loc.is_quarantine ? 'bi-shield-fill-exclamation' : 'bi-shield'}`}
-            title={quarantineTitle(loc)}
-            onClick={(e) => { e.stopPropagation(); if (canManage) toggleQuarantine(loc); }}
-            style={{ color: loc.is_quarantine ? (active ? '#ffd479' : '#b8860b') : (active ? '#cde' : '#999'), fontSize: 11, cursor: canManage ? 'pointer' : 'default' }}
-          />
+        {canDelete && !isSystem && (
+          <XPActionButton tone="danger" icon="bi-trash" title={block ?? 'Delete'} disabled={!!block} onClick={() => handleDelete(loc)} />
         )}
-        <span className={undefined} style={{ fontSize: 10, color: active ? '#dde' : '#777' }}>{cnt}</span>
-        {canManage && !renaming && !isSystem && hoveredStore === loc.id && (
-          <>
-              <i className="bi bi-pencil" title="Rename" onClick={(e) => { e.stopPropagation(); startRename(loc); }} style={{ color: active ? '#fff' : '#333', fontSize: 11 }} />
-              <i className="bi bi-trash" title="Delete" onClick={(e) => { e.stopPropagation(); handleDelete(loc.id); }} style={{ color: active ? '#fff' : '#c00000', fontSize: 11 }} />
-            </>)}
-      </Tag>
+      </>
     );
+    return extra || (canEdit && !isSystem) || (canDelete && !isSystem) ? btns : undefined;
   };
 
-  const zoneRow = (loc: any) => {
-    const active = selectedZone === loc.id;
-    const over = dragOverId === loc.id;
-    const renaming = renamingId === loc.id;
-    const cnt = binCount(loc.id);
-    const Tag: any = 'div';
-    return (
-      <Tag
-        key={loc.id}
-        type={undefined}
-        onClick={() => !renaming && setSelectedZone(active ? null : loc.id)}
-        onMouseEnter={() => setHoveredZone(loc.id)}
-        onMouseLeave={() => setHoveredZone(null)}
-        onDragOver={(e: React.DragEvent) => onZoneDragOver(e, loc.id)}
-        onDragLeave={() => onZoneDragLeave(loc.id)}
-        onDrop={(e: React.DragEvent) => onZoneDrop(e, loc.id)}
-        className={undefined}
-        style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '3px 6px', cursor: 'pointer', fontFamily: xpFont, fontSize: 11, color: active ? '#fff' : '#000', background: over ? '#ffe9a8' : active ? 'linear-gradient(to bottom,#3c8cf0,#1a5fd0)' : 'transparent', border: over ? '1px dashed #b8860b' : '1px solid transparent' }}
-      >
-        <i className={`bi ${cnt > 0 ? 'bi-folder-fill' : 'bi-folder'}`} style={{ color: active ? '#fff' : '#c8a030' }} />
-        {renaming ? (
-          <input autoFocus className={undefined} style={{ ...xpInput, flex: 1, minWidth: 0 }} value={renameValue} onChange={(e) => setRenameValue(e.target.value)} onClick={(e) => e.stopPropagation()} onBlur={commitRename} onKeyDown={(e) => { if (e.key === 'Enter') commitRename(); if (e.key === 'Escape') setRenamingId(null); }} />
-        ) : (
-          <span className={undefined} style={{ flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{loc.name}</span>
-        )}
-        <span className={undefined} style={{ fontSize: 10, color: active ? '#dde' : '#777' }}>{cnt}</span>
-        {canManage && !renaming && hoveredZone === loc.id && (
-          <>
-              <i className="bi bi-pencil" title="Rename" onClick={(e) => { e.stopPropagation(); startRename(loc); }} style={{ color: active ? '#fff' : '#333', fontSize: 11 }} />
-              <i className="bi bi-trash" title="Delete" onClick={(e) => { e.stopPropagation(); handleDelete(loc.id); }} style={{ color: active ? '#fff' : '#c00000', fontSize: 11 }} />
-            </>)}
-      </Tag>
-    );
-  };
+  const renameRow = (loc: any) => renaming?.id === loc.id && (
+    <ColumnRenameRow
+      key={loc.id}
+      value={renaming.value}
+      onChange={v => setRenaming({ id: loc.id, value: v })}
+      onCommit={commitRename}
+      onCancel={() => setRenaming(null)}
+    />
+  );
 
-  const binRow = (loc: any, i: number) => {
-    const renaming = renamingId === loc.id;
-    return (
-      <tr
-        key={loc.id}
-        draggable={!renaming}
-        onDragStart={(e) => onDragStart(e, loc)}
-        onDragEnd={onDragEnd}
-        onMouseEnter={() => setHoveredBin(loc.id)}
-        onMouseLeave={() => setHoveredBin(null)}
-        style={{
-          ...lvRow(i),
-          cursor: 'grab',
-          background: draggingId === loc.id
-            ? '#fff7d6'
-            : (hoveredBin === loc.id)
-              ? '#f0f6ff'
-              : lvRow(i).background,
-        }}
-      >
-        <td style={{ ...lvTd(), width: 24, textAlign: 'center' }}>
-          <i className={'bi bi-grip-vertical'} style={{ color: '#aaa' }} />
-        </td>
-        <td style={{ ...lvTd(), width: 150, ...({ fontWeight: 'bold', color: '#00008b' }) }}>
-          {loc.code}
-        </td>
-        <td style={lvTd()}>
-          {renaming ? (
-            <input autoFocus className={undefined} style={{ ...xpInput, width: '100%' }} value={renameValue} onChange={(e) => setRenameValue(e.target.value)} onBlur={commitRename} onKeyDown={(e) => { if (e.key === 'Enter') commitRename(); if (e.key === 'Escape') setRenamingId(null); }} />
-          ) : (
-            <span className={undefined} style={{ display: 'block', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{loc.name}</span>
+  const storeRow = (s: any) => renameRow(s) || (
+    <ColumnRow
+      key={s.id}
+      icon={kids(s.id, 'zone').length ? 'bi-building-fill' : 'bi-building'}
+      iconColor="#caa55a"
+      label={s.name}
+      sub={s.code}
+      selected={s.id === store?.id && !zone}
+      onPath={s.id === store?.id && !!zone}
+      onSelect={() => pickStore(s.id)}
+      chevron
+      title={s.full_path || s.name}
+      actions={rowActions(s, canEdit && !s.is_quarantine ? (
+        <XPActionButton icon="bi-shield" title="Make this a quarantine hold area" onClick={() => toggleQuarantine(s)} />
+      ) : undefined)}
+      trailing={
+        <>
+          {s.is_quarantine && (
+            <i
+              className="bi bi-shield-fill-exclamation"
+              title={canEdit ? 'Quarantine hold area — click to stop holding stock here' : 'Quarantine hold area'}
+              onClick={e => { e.stopPropagation(); if (canEdit) toggleQuarantine(s); }}
+              style={{ color: '#b8860b', fontSize: 11, cursor: canEdit ? 'pointer' : 'default' }}
+            />
           )}
-        </td>
-        <td style={{ ...lvTd(), width: 60, textAlign: 'right', ...({ borderRight: 'none' }) }} onClick={(e) => e.stopPropagation()}>
-          {canManage && (
-            <span style={{ display: 'inline-flex', gap: 4 }}>
-                <XPActionButton icon="bi-pencil" title="Rename" onClick={() => startRename(loc)} />
-                <XPActionButton tone="danger" icon="bi-trash" title="Delete" onClick={() => handleDelete(loc.id)} />
-              </span>)}
-        </td>
-      </tr>
-    );
-  };
+          {s.system_code && <i className="bi bi-shield-lock" title="System store" style={{ color: '#a06000', fontSize: 10 }} />}
+          <ColumnCount n={kids(s.id, 'zone').length} title="Zones" />
+        </>
+      }
+    />
+  );
 
-  const renderZonePanel = () => {
-    if (selectedStore === ALL) {
-      return <div style={{ textAlign: 'center', padding: 24, fontFamily: xpFont, fontSize: 11, color: '#888' }}>Select a store to manage zones.</div>;
-    }
-    const zones = zonesOf(selectedStore).filter(matches);
-    if (zones.length === 0) {
-      return <div style={{ textAlign: 'center', padding: 24, fontFamily: xpFont, fontSize: 11, color: '#888' }}>No zones{q ? ' match' : ' yet — add one above'}.</div>;
-    }
-    return zones.map(zoneRow);
-  };
+  const zoneRow = (z: any) => renameRow(z) || (
+    <ColumnRow
+      key={z.id}
+      icon={kids(z.id, 'bin').length ? 'bi-folder-fill' : 'bi-folder'}
+      label={z.name}
+      sub={z.code}
+      selected={z.id === zone?.id && !bin}
+      onPath={z.id === zone?.id && !!bin}
+      onSelect={() => pickZone(z.id)}
+      chevron
+      highlight={dragOverId === z.id}
+      onDragOver={e => onZoneDragOver(e, z.id)}
+      onDragLeave={() => onZoneDragLeave(z.id)}
+      onDrop={e => onZoneDrop(e, z.id)}
+      title={z.full_path || z.name}
+      actions={rowActions(z)}
+      trailing={<ColumnCount n={kids(z.id, 'bin').length} title="Bins" />}
+    />
+  );
 
-  const bins = selectedZone ? binsOf(selectedZone).filter(matches) : [];
+  const binRow = (b: any) => renameRow(b) || (
+    <ColumnRow
+      key={b.id}
+      icon="bi-inbox"
+      iconColor="#7f9db9"
+      label={b.name}
+      sub={b.code}
+      selected={b.id === bin?.id}
+      onSelect={() => setSelectedBin(b.id)}
+      draggable={canEdit && renaming?.id !== b.id}
+      dragging={draggingId === b.id}
+      onDragStart={e => onDragStart(e, b)}
+      onDragEnd={onDragEnd}
+      title={canEdit ? `${b.full_path || b.name} — drag onto another zone to move it` : (b.full_path || b.name)}
+      actions={rowActions(b)}
+      trailing={canEdit ? <i className="bi bi-grip-vertical" style={{ color: '#bbb' }} /> : undefined}
+    />
+  );
 
-  const renderBinPanel = () => {
-    if (!selectedZone) {
-      return <div style={{ textAlign: 'center', padding: 24, fontFamily: xpFont, fontSize: 11, color: '#888' }}>Select a zone to manage bins.</div>;
-    }
-    if (bins.length === 0) {
-      return <div style={{ textAlign: 'center', padding: 24, fontFamily: xpFont, fontSize: 11, color: '#888' }}>No bins{q ? ' match' : ' yet — add one above'}.</div>;
-    }
+  // ---------- panes ----------
+  const addBar = (level: number) => {
+    if (adding?.level !== level) return undefined;
+    const parent = parentFor(level);
+    const name = adding.name;
+    const dup = level > 0 && !!name.trim() && !!parent &&
+      kids(parent.id, LEVELS[level]).some(l => l.name.toLowerCase() === name.trim().toLowerCase());
     return (
-      <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-        <thead style={{ ...lvThead(), position: 'sticky', top: 0 }}>
-          <tr>
-            <th style={{ ...lvTh(), width: 24 }}></th>
-            <th style={{ ...lvTh(), width: 150 }}>Code</th>
-            <th style={lvTh()}>Name</th>
-            <th style={{ ...lvTh(), width: 60, ...({ borderRight: 'none' }) }}></th>
-          </tr>
-        </thead>
-        <tbody>{bins.map(binRow)}</tbody>
-      </table>
+      <ColumnAddBar
+        onSubmit={submitAdd}
+        onCancel={() => setAdding(null)}
+        submitDisabled={saving || !name.trim() || dup || (level === 0 && !adding.code.trim())}
+        hint={level > 0 && parent ? <>code: {name.trim() ? childCode(parent, name) : `${parent.code}-…`}</> : undefined}
+      >
+        {level === 0 && (
+          <ColumnInput autoFocus style={{ flex: '0 0 90px' }} placeholder="Code" value={adding.code}
+            onChange={e => setAdding({ ...adding, code: e.target.value })} />
+        )}
+        <ColumnInput
+          autoFocus={level > 0}
+          placeholder={level === 0 ? 'Store name' : level === 1 ? 'Zone name' : 'Bin / shelf (e.g. A1)'}
+          value={name}
+          invalid={dup && 'Already exists here'}
+          onChange={e => setAdding({ ...adding, name: e.target.value })}
+        />
+      </ColumnAddBar>
     );
   };
+
+  const openAdd = (level: number) => { setRenaming(null); setAdding(adding?.level === level ? null : { level, code: '', name: '' }); };
+
+  const path = [store, zone, bin].filter(Boolean);
+  const statusRight = bin ? <>Bin <b>{bin.code}</b></>
+    : zone ? <><b>{kids(zone.id, 'bin').length}</b> bins</>
+    : store ? <><b>{kids(store.id, 'zone').length}</b> zones · <b>{kids(store.id, 'zone').reduce((n, z) => n + kids(z.id, 'bin').length, 0)}</b> bins</>
+    : null;
 
   return (
     <ShellWindow fill="page" className="fade-in">
       <ShellTitleBar icon="bi-geo-alt-fill" title={t('locations')} />
-      <div className="locations-panes" style={{ flex: 1, minHeight: 0 }}>
-
-        {/* LEFT: stores */}
-        <div
-          className={'loc-pane'}
-          style={{ width: 210, flexShrink: 0, borderRight: '1px solid #b0a898', background: '#f5f4ef', display: 'flex', flexDirection: 'column' }}
-        >
-          <div className={undefined} style={{ ...xpToolbar, justifyContent: 'space-between' }}>
-            <span className={undefined} style={{ fontFamily: xpFont, fontSize: 11, fontWeight: 'bold' }}>Stores</span>
-            {canManage && (
-              <button className={XP_BTN} style={xpBtn({ padding: '1px 6px' })} onClick={() => setAddingStore(v => !v)} title="New store"><i className="bi bi-plus-lg" /></button>)}
-          </div>
-          {addingStore && (
-            <form onSubmit={handleAddStore} style={{ padding: '6px', borderBottom: '1px solid #d8d4c8', display: 'flex', flexDirection: 'column', gap: 4 }}>
-                <input style={xpInput} placeholder="Code (e.g. RAW2)" value={newStore.code} onChange={(e) => setNewStore({ ...newStore, code: e.target.value })} required />
-                <input style={xpInput} placeholder="Name (e.g. Raw Material 2)" value={newStore.name} onChange={(e) => setNewStore({ ...newStore, name: e.target.value })} required />
-                <button type="submit" className={XP_BTN} disabled={savingStore} style={xpBtn({ ...BTN_TONES.success, opacity: savingStore ? 0.6 : 1 })}>{savingStore ? '...' : 'Add store'}</button>
-              </form>)}
-          <div className={undefined} style={{ flex: 1, overflowY: 'auto', padding: '2px 0' }}>
-            {<div onClick={() => setSelectedStore(ALL)} style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '3px 6px', cursor: 'pointer', fontFamily: xpFont, fontSize: 11, fontWeight: 'bold', color: selectedStore === ALL ? '#fff' : '#000', background: selectedStore === ALL ? 'linear-gradient(to bottom,#3c8cf0,#1a5fd0)' : 'transparent' }}>
-                <i className="bi bi-collection" style={{ color: selectedStore === ALL ? '#fff' : '#888' }} /><span style={{ flex: 1 }}>All stores</span><span style={{ fontSize: 10, color: selectedStore === ALL ? '#dde' : '#777' }}>{stores.length}</span>
-              </div>}
-            {<div style={{ height: 1, background: '#d8d4c8', margin: '2px 6px' }} />}
-            {stores.map(storeRow)}
-            {stores.length === 0 && (
-              <div style={{ padding: '4px 8px', fontFamily: xpFont, fontSize: 11, color: '#888' }}>No stores yet</div>)}
-          </div>
-          <div className={undefined} style={{ background: 'linear-gradient(to bottom,#e8e6df,#d5d3cc)', borderTop: '1px solid #b0a898', padding: '2px 8px', fontFamily: xpFont, fontSize: 11, color: '#333' }}>
-            <b>{stores.length}</b> stores · <b>{all.length}</b> total
-          </div>
-        </div>
-
-        {/* MIDDLE: zones */}
-        <div
-          className={'loc-pane'}
-          style={{ width: 200, flexShrink: 0, borderRight: '1px solid #b0a898', background: '#f5f4ef', display: 'flex', flexDirection: 'column' }}
-        >
-          <div className={undefined} style={{ ...xpToolbar, justifyContent: 'space-between' }}>
-            <span className={undefined} style={{ fontFamily: xpFont, fontSize: 11, fontWeight: 'bold', color: '#003080' }}>
-              {selectedStoreObj ? selectedStoreObj.name : 'Zones'}
-            </span>
-            {canManage && selectedStoreObj && (
-              <button className={XP_BTN} style={xpBtn({ padding: '1px 6px', ...BTN_TONES.success })} onClick={() => setShowZoneForm(v => !v)} title="New zone"><i className="bi bi-plus-lg" /></button>)}
-          </div>
-          {canManage && selectedStoreObj && showZoneForm && (
-            <form onSubmit={handleAddZone} style={{ display: 'flex', gap: 4, padding: '4px 6px', background: '#eef3fb', borderBottom: '1px solid #b0c4de' }}>
-                <input autoFocus style={{ ...xpInput, flex: 1, minWidth: 0 }} placeholder="Zone name" value={newZoneName} onChange={(e) => setNewZoneName(e.target.value)} required />
-                <button type="submit" className={XP_BTN} disabled={savingZone} style={xpBtn({ padding: '1px 6px', ...BTN_TONES.success, opacity: savingZone ? 0.6 : 1 })}>{savingZone ? '...' : 'Add'}</button>
-              </form>)}
-          <div className={undefined} style={{ flex: 1, overflowY: 'auto', padding: '2px 0' }}>
-            {renderZonePanel()}
-          </div>
-        </div>
-
-        {/* RIGHT: bins */}
-        <div
-          className={'loc-pane'}
-          style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column' }}
-        >
-          <div className={undefined} style={xpToolbar}>
-            {<span style={{ fontFamily: xpFont, fontSize: 12, fontWeight: 'bold', color: '#003080' }}>{selectedZoneObj ? selectedZoneObj.name : 'Bins'}</span>}
-            <div className={undefined} style={{ flex: 1 }} />
-            <SearchField value={searchTerm} onChange={setSearchTerm} placeholder="Search..." width={160} />
-            {canManage && selectedZoneObj && (
-              <button className={XP_BTN} style={xpBtn({ ...BTN_TONES.success })} onClick={() => setShowBinForm(v => !v)}><i className="bi bi-plus-lg" style={{ marginRight: 3 }} />Add bin</button>)}
-          </div>
-          {canManage && selectedZoneObj && showBinForm && (
-            <form onSubmit={handleAddBin} style={{ display: 'flex', alignItems: 'flex-end', gap: 8, padding: '6px 8px', background: '#eef3fb', borderBottom: '1px solid #b0c4de' }}>
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <label style={xpLabel}>Bin / shelf name (e.g. A1, A2, B1)</label>
-                  <input autoFocus style={{ ...xpInput, width: '100%' }} placeholder="A1" value={newBinName} onChange={(e) => setNewBinName(e.target.value)} required />
-                </div>
-                <span style={{ fontFamily: xpFont, fontSize: 10, color: '#666' }}>code: {selectedZoneObj.code}-{newBinName || '…'}</span>
-                <button type="submit" className={XP_BTN} disabled={savingBin} style={xpBtn({ ...BTN_TONES.success, opacity: savingBin ? 0.6 : 1 })}>{savingBin ? '...' : 'Save'}</button>
-                <button type="button" className={XP_BTN} onClick={() => setShowBinForm(false)} style={xpBtn()}><i className="bi bi-x-lg" /></button>
-              </form>)}
-          <div className={undefined} style={{ flex: 1, overflowY: 'auto' }}>
-            {renderBinPanel()}
-          </div>
-        </div>
-
+      <div style={xpToolbar({ flexShrink: 0, padding: '4px 8px' })}>
+        <SearchField value={searchTerm} onChange={setSearchTerm} placeholder="Search code or name…" width={240} />
+        <ToolbarCount right>
+          {all.filter(l => l.location_type === 'warehouse').length} stores · {all.filter(l => l.location_type === 'bin').length} bins
+        </ToolbarCount>
       </div>
+
+      <ColumnPanes>
+        <ColumnPane
+          label="Stores" title="Stores" count={stores.length}
+          onAdd={canCreate ? () => openAdd(0) : undefined} addTitle="New store"
+          adding={addBar(0)}
+        >
+          {stores.length ? stores.map(storeRow) : <ColumnEmpty>{q ? 'No matches.' : 'No stores yet.'}</ColumnEmpty>}
+        </ColumnPane>
+
+        <ColumnPane
+          label="Zones" title={store ? store.name : 'Zones'} count={store ? zones.length : undefined} dimmed={!store}
+          onAdd={canCreate && store ? () => openAdd(1) : undefined} addTitle={store ? `New zone in ${store.name}` : undefined}
+          adding={addBar(1)}
+        >
+          {!store ? <ColumnEmpty>Select a store.</ColumnEmpty>
+            : zones.length ? zones.map(zoneRow)
+            : <ColumnEmpty>{q ? 'No matches.' : `No zones in ${store.name}${canCreate ? ' — add one with +' : ''}.`}</ColumnEmpty>}
+        </ColumnPane>
+
+        <ColumnPane
+          last label="Bins" title={zone ? zone.name : 'Bins'} count={zone ? bins.length : undefined} dimmed={!zone}
+          onAdd={canCreate && zone ? () => openAdd(2) : undefined} addTitle={zone ? `New bin in ${zone.name}` : undefined}
+          adding={addBar(2)}
+        >
+          {!zone ? <ColumnEmpty>Select a zone.</ColumnEmpty>
+            : bins.length ? bins.map(binRow)
+            : <ColumnEmpty>{q ? 'No matches.' : `No bins in ${zone.name}${canCreate ? ' — add one with +' : ''}.`}</ColumnEmpty>}
+        </ColumnPane>
+      </ColumnPanes>
+
+      <ColumnStatusBar
+        left={path.length ? <><i className="bi bi-geo-alt me-1" style={{ color: '#888' }} />{path.map((p: any) => p.name).join(' › ')}</> : <span style={{ color: '#888' }}>No store selected</span>}
+        right={statusRight}
+      />
     </ShellWindow>
   );
 }

@@ -184,6 +184,8 @@ export const STATUS_FAMILY: Record<string, StatusFamily> = {
     // Blue because it is work in flight — somebody is at the machine — where LOADED
     // above is work nobody has started.
     COLOR_MATCHING: 'blue',
+    // Dyeing monitor: a dyeing WO closed without its bath ever being clocked.
+    NO_RUN: 'gray',
     // DELIVERED is blue, not green: on an MO it means "planned qty met, order still
     // open for logging". Green is reserved for closed/terminal.
     DELIVERED: 'blue',

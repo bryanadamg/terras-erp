@@ -32,12 +32,8 @@ export default function ItemMetadataPage() {
         return res;
     };
 
+    // CategoriesView confirms (with the item count) before calling this.
     const handleDeleteCategory = async (id: string) => {
-        const confirmed = await confirm({
-            title: 'Delete Category', message: 'Are you sure you want to delete this category?',
-            confirmText: 'Delete', variant: 'danger',
-        });
-        if (!confirmed) return;
         const res = await report(await authFetch(`${API_BASE}/categories/${id}`, { method: 'DELETE' }), 'Failed to delete category');
         if (res.ok) refreshItemMetadata();
     };

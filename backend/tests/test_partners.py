@@ -57,6 +57,20 @@ def test_partner_crud(client, auth_headers):
     for key in ("id", "name", "type", "active", "address", "contact_person", "phone", "fax", "email"):
         assert key in lookup[0], key
 
+    # 4c. Update re-sends every field; only the changed one is applied
+    resp = client.put(
+        f"/api/partners/{customer_id}",
+        json={"name": "Test Customer PTEST", "phone": "021 555", "active": True},
+        headers=auth_headers,
+    )
+    assert resp.status_code == 200, resp.text
+    assert resp.json()["phone"] == "021 555"
+
+    # 4d. Search reaches contact fields, not just name/address
+    resp = client.get("/api/partners?search=021 555", headers=auth_headers)
+    assert resp.status_code == 200, resp.text
+    assert [p["name"] for p in resp.json()["items"]] == ["Test Customer PTEST"]
+
     # 5. Delete both
     resp = client.delete(f"/api/partners/{customer_id}", headers=auth_headers)
     assert resp.status_code == 200, resp.text
