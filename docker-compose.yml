@@ -71,8 +71,11 @@ services:
     networks:
       - erp_network
 
+  # Cloudflare tunnel is opt-in: `--profile tunnel` (the Pi deploy passes it).
   tunnel:
     image: cloudflare/cloudflared:2026.9.3
+    profiles:
+      - tunnel
     networks:
       - erp_network
     container_name: erp-cloudflared
