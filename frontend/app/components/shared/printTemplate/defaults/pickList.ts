@@ -60,7 +60,8 @@ const BANDS: Band[] = [
         hideWhenEmpty: true, marginBottom: 10,
         columns: [
             { field: 'no', label: 'No', width: '8%', align: 'center' },
-            { field: 'item', label: 'Barang / Item', width: '56%' },
+            { field: 'item', label: 'Barang / Item', width: '44%' },
+            { field: 'size', label: 'Size', width: '12%', align: 'center', emptyText: '' },
             { field: 'cartons', label: 'Koli', width: '18%', align: 'right', headerAlign: 'center' },
             { field: 'qty', label: 'Qty', width: '18%', align: 'right', headerAlign: 'center' },
         ],
@@ -79,8 +80,9 @@ const BANDS: Band[] = [
         columns: [
             { field: 'no', label: 'No', width: '7%', align: 'center' },
             { field: 'carton', label: 'No. Koli / Carton', width: '27%', mono: true },
-            { field: 'item_code', label: 'Barang / Item', width: '20%' },
-            { field: 'packaging', label: 'Kemasan / Packaging', width: '15%' },
+            { field: 'item_code', label: 'Barang / Item', width: '17%' },
+            { field: 'size', label: 'Size', width: '8%', align: 'center', emptyText: '' },
+            { field: 'packaging', label: 'Kemasan / Packaging', width: '10%' },
             {
                 field: 'qty', label: 'Qty', width: '14%', align: 'right', headerAlign: 'center',
                 footer: { field: 'plist.gross_total_label', bold: true, align: 'right' },

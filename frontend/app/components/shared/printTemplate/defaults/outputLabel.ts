@@ -84,6 +84,7 @@ export const BAG_LABEL_DEFAULT: PrintLayout = {
             id: 'label_identity', type: 'keyvalue', labelWidth: '24%', marginBottom: 6,
             rows: [
                 { field: 'outlabel.item_name', label: 'Artikel', span: 3, bold: true },
+                { field: 'outlabel.size', label: 'Size', bold: true },
                 { field: 'outlabel.color', label: 'Warna' },
                 { field: 'outlabel.width', label: 'Lebar' },
                 { field: 'outlabel.machine', label: 'No. Mesin' },
@@ -115,6 +116,7 @@ export const BEAM_LABEL_DEFAULT: PrintLayout = {
             id: 'label_identity', type: 'keyvalue', labelWidth: '24%', marginBottom: 6,
             rows: [
                 { field: 'outlabel.item_name', label: 'Artikel', span: 3, bold: true },
+                { field: 'outlabel.size', label: 'Size', span: 3, bold: true, hideWhenEmpty: true },
                 { field: 'outlabel.machine', label: 'No. Mesin' },
                 { field: 'outlabel.wo_code', label: 'SPK / WO', fontSize: 9, mono: true },
                 { field: 'outlabel.operator', label: 'Operator' },

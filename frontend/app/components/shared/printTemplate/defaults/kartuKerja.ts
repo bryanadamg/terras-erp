@@ -72,6 +72,7 @@ const KANTONG_BERAT: TallyBand = {
 /** Identity rows every variant carries. */
 const BASE_IDENTITY = (productLabel: string): KeyValueRow[] => [
     { field: 'mo.item_name', label: productLabel, span: 3, bold: true },
+    { field: 'mo.size', label: 'Size', span: 3, bold: true, hideWhenEmpty: true },
     { field: 'wo.status', label: 'Status', span: 1 },
     { field: 'wo.target_end_date', label: 'Target Selesai', span: 1 },
     { field: 'wo.next_destination', label: 'Tujuan', span: 3, bold: true, hideWhenEmpty: true },
@@ -180,6 +181,7 @@ export const KARTU_KERJA_WEAVING: PrintLayout = buildLayout({
     // pre/post-dye stretch pair and a hand-written operator line.
     identityRows: [
         { field: 'mo.item_name', label: 'Artikel', span: 3, bold: true },
+        { field: 'mo.size', label: 'Size', span: 3, bold: true, hideWhenEmpty: true },
         { field: 'attr.color', label: 'Warna', span: 1 },
         { field: 'bom.mesin_lebar', label: 'Lebar', span: 1, unit: 'cm' },
         // These two pair onto one line. If only one is set the survivor pairs with the

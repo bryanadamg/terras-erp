@@ -11,6 +11,7 @@
 import type { FieldDef, ResolvedField } from '../fieldRegistry';
 import type { PrintContext } from '../renderContext';
 import { makeLotBarcodeDataUrl } from './outputLabel';
+import { lotSizeLabel } from '../../LotChips';
 
 export const LOT_LABEL_DOC = 'lot_label';
 
@@ -27,6 +28,7 @@ export const LOTLABEL_FIELDS: FieldDef[] = [
     { key: 'lotlabel.status', label: 'Quality Status', kind: 'text', group: 'Lot' },
     { key: 'lotlabel.item_name', label: 'Artikel', kind: 'text', group: 'Identity' },
     { key: 'lotlabel.item_code', label: 'Kode (item code)', kind: 'text', mono: true, group: 'Identity' },
+    { key: 'lotlabel.size', label: 'Size / Ukuran', kind: 'text', group: 'Identity' },
     { key: 'lotlabel.location', label: 'Lokasi', kind: 'text', group: 'Identity' },
     { key: 'lotlabel.footer_trace', label: 'Traceability Footer (Lot ID)', kind: 'text', group: 'Identity' },
 ];
@@ -55,6 +57,7 @@ export function resolveLotLabelField(key: string, ctx: PrintContext): ResolvedFi
         case 'lotlabel.status': return txt(lot.quality_status);
         case 'lotlabel.item_name': return txt(lot.item_name);
         case 'lotlabel.item_code': return txt(lot.item_code);
+        case 'lotlabel.size': return txt(lotSizeLabel(lot));
         case 'lotlabel.location': return txt(lot.location_name);
         case 'lotlabel.footer_trace': return { text: `Lot ID: ${lot.id || ''}`, empty: false };
         default: return { text: '', empty: true };

@@ -12,6 +12,7 @@
 import type { FieldDef, ResolvedField } from '../fieldRegistry';
 import type { RowSourceDef } from '../rowSources';
 import type { PrintContext } from '../renderContext';
+import { lotSizeLabel } from '../../LotChips';
 import { qtyFmt } from '../../format';
 
 export const SURAT_JALAN_DOC = 'surat_jalan';
@@ -82,6 +83,7 @@ const SJ_LINES: RowSourceDef = {
         { field: 'qty', label: 'QTY' },
         { field: 'unit', label: 'Unit' },
         { field: 'item_name', label: 'NAMA BARANG' },
+        { field: 'size', label: 'SIZE' },
         { field: 'warna', label: 'WARNA' },
         { field: 'color_name', label: 'Colour' },
         { field: 'color_code', label: 'Colour Code' },
@@ -96,6 +98,7 @@ const SJ_LINES: RowSourceDef = {
             qty: num(g.qty),
             unit: g.uom,
             item_name: g.itemName,
+            size: g.size,
             warna: warna(g),
             color_name: g.colorName,
             color_code: g.colorCode,
@@ -135,7 +138,7 @@ const SJ_CARTONS: RowSourceDef = {
                 const first = i === 0;
                 const row: Record<string, any> = {
                     _key: `${g.key}:${i}`,
-                    name: first ? `${g.itemName}${g.colorName ? ` ${g.colorName}` : ''}` : '',
+                    name: first ? [g.itemName, g.size, g.colorName].filter(Boolean).join(' ') : '',
                     dus: first ? (g.cartons.length ? String(g.cartons.length) : '') : '',
                     total: first ? num(g.qty) : '',
                 };
@@ -193,17 +196,19 @@ export function buildSuratJalanContext({
     const lines: any[] = (shp.pick_lists || []).flatMap((pl: any) =>
         (pl.lines || []).map((l: any) => ({ ...l, po_ref: pl.customer_po_ref || pl.sales_order_code || '' })));
 
-    // Two orders for the same shade are two rows on the note, so the PO is in the key.
+    // Two orders for the same shade are two rows on the note, so the PO is in the key;
+    // so are two sizes, which ship as separate quantities.
     const map = new Map<string, any>();
     for (const l of lines) {
         const itemName = l.item_name || itemIndex?.[String(l.item_id)]?.name || l.item_id;
         const colorName = l.color_name
             || (l.attribute_value_ids || []).map((vid: string) => attrName(vid)).filter(Boolean).join(' / ');
-        const key = `${l.item_id}|${colorName}|${l.color_code || ''}|${l.po_ref || ''}`;
+        const size = lotSizeLabel(l) || '';
+        const key = `${l.item_id}|${size}|${colorName}|${l.color_code || ''}|${l.po_ref || ''}`;
         let g = map.get(key);
         if (!g) {
             g = {
-                key, itemName, colorName, colorCode: l.color_code || '', poRef: l.po_ref || '',
+                key, itemName, size, colorName, colorCode: l.color_code || '', poRef: l.po_ref || '',
                 uom: l.item_uom || itemIndex?.[String(l.item_id)]?.uom || '', qty: 0, cartons: [] as number[],
             };
             map.set(key, g);

@@ -22,6 +22,7 @@ export const PCARD_FIELDS: FieldDef[] = [
     { key: 'pcard.company_name', label: 'Company name', kind: 'text', group: 'Packing Order' },
     { key: 'pcard.item', label: 'Barang / Item "name (code)"', kind: 'text', group: 'Packing Order' },
     { key: 'pcard.color', label: 'Warna / Colour', kind: 'text', group: 'Packing Order' },
+    { key: 'pcard.size', label: 'Size / Ukuran', kind: 'text', group: 'Packing Order' },
     { key: 'pcard.variant', label: 'Varian', kind: 'text', group: 'Packing Order' },
     { key: 'pcard.target', label: 'Target (base + selling unit)', kind: 'text', group: 'Packing Order' },
     { key: 'pcard.box_size', label: 'Isi per koli', kind: 'text', group: 'Packing Order' },
@@ -54,6 +55,7 @@ export function resolvePackingCardField(key: string, ctx: PrintContext): Resolve
         case 'pcard.company_name': return txt(ctx.companyName);
         case 'pcard.item': return txt(d.item);
         case 'pcard.color': return txt(po.color_name);
+        case 'pcard.size': return txt(po.size_label);
         case 'pcard.variant': return txt(d.variant);
         case 'pcard.target': return txt(d.target);
         case 'pcard.box_size': return txt(d.boxSize);

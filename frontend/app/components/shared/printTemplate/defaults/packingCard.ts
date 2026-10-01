@@ -20,6 +20,7 @@ const fact = (row: number, label: string | FieldSpec, value: string, extra: Part
 const FACTS: [string | FieldSpec, string, Partial<FieldSpec>?][] = [
     ['Barang / Item', 'pcard.item'],
     ['Warna / Colour', 'pcard.color'],
+    ['Size / Ukuran', 'pcard.size'],
     ['Varian', 'pcard.variant'],
     ['Target', 'pcard.target'],
     ['Isi per koli', 'pcard.box_size'],

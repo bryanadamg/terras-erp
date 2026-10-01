@@ -15,6 +15,7 @@ import JsBarcode from 'jsbarcode';
 import type { FieldDef, ResolvedField } from '../fieldRegistry';
 import type { RowSourceDef } from '../rowSources';
 import type { PrintContext } from '../renderContext';
+import { lotSizeLabel } from '../../LotChips';
 
 export const BAG_LABEL_DOC = 'bag_label';
 export const BEAM_LABEL_DOC = 'beam_label';
@@ -29,6 +30,7 @@ export const OUTLABEL_FIELDS: FieldDef[] = [
     { key: 'outlabel.date', label: 'Production Date', kind: 'date', group: 'Lot' },
     { key: 'outlabel.notes', label: 'Catatan (operator note)', kind: 'text', group: 'Lot' },
     { key: 'outlabel.item_name', label: 'Artikel', kind: 'text', group: 'Identity' },
+    { key: 'outlabel.size', label: 'Size / Ukuran', kind: 'text', group: 'Identity' },
     { key: 'outlabel.color', label: 'Warna', kind: 'text', group: 'Identity' },
     { key: 'outlabel.width', label: 'Lebar (mesin)', kind: 'number', unit: 'cm', group: 'Identity' },
     { key: 'outlabel.machine', label: 'No. Mesin', kind: 'text', group: 'Identity' },
@@ -59,6 +61,7 @@ export function resolveOutputLabelField(key: string, ctx: PrintContext): Resolve
         case 'outlabel.date': return txt(d.date);
         case 'outlabel.notes': return txt(d.notes);
         case 'outlabel.item_name': return txt(d.itemName);
+        case 'outlabel.size': return txt(d.size);
         case 'outlabel.color': return txt(d.color);
         case 'outlabel.width': return txt(d.width);
         case 'outlabel.machine': return txt(d.machine);
@@ -187,6 +190,8 @@ export function buildOutputLabelContext({
             date: tzFormatCustom(c.created_at || new Date().toISOString(), DMY, 'id-ID'),
             notes: rawNote.replace(/\s*\[[^\]]*\]\s*/g, ' ').trim(),
             itemName: mo.item_name || wo.item_name || '',
+            // The MO's size is what add_mo_completion stamps onto the lot.
+            size: lotSizeLabel(mo) || '',
             color,
             width: mo.bom?.mesin_lebar ?? null,
             machine: c.work_center_name || wo.work_center_name || '',

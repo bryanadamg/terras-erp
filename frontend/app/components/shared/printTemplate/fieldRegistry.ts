@@ -12,6 +12,7 @@
 
 import type { PrintContext } from './renderContext';
 import { DOC_MODULES, moduleForField } from './doctypes';
+import { lotSizeLabel } from '../LotChips';
 
 export type FieldKind = 'text' | 'number' | 'date' | 'qr' | 'blank' | 'static' | 'image' | 'barcode';
 
@@ -59,6 +60,7 @@ export const WO_CARD_FIELDS: FieldDef[] = [
     { key: 'wo.work_center_name', label: 'Work Center / Machine', kind: 'text', group: 'Identity' },
     { key: 'wo.status', label: 'Status', kind: 'text', group: 'Identity' },
     { key: 'mo.item_name', label: 'Product / Artikel', kind: 'text', group: 'Identity' },
+    { key: 'mo.size', label: 'Size / Ukuran', kind: 'text', group: 'Identity' },
 
     // Quantities
     { key: 'wo.qty', label: 'Qty', kind: 'number', unit: 'kg', group: 'Quantity' },
@@ -165,6 +167,8 @@ export function resolveField(key: string, ctx: PrintContext): ResolvedField {
             return txt(wo.status);
         case 'mo.item_name':
             return txt(mo.item_name || wo.item_name);
+        case 'mo.size':
+            return txt(lotSizeLabel(mo) || wo.size_label);
 
         case 'wo.qty': {
             const q = Number(wo.qty ?? 0);
