@@ -41,6 +41,9 @@ const BANDS: Band[] = [
         labelWidth: '18%', labelFontSize: BASE, valueFontSize: BASE, ruleColor: RULE, labelBackground: '#f0f0f0',
         rows: [
             { field: 'ms.article', label: 'ARTICLE', span: 3, bold: true, fontSize: 9 },
+            { field: 'ms.size', label: 'Size', span: 3, bold: true, hideWhenEmpty: true },
+            { field: 'ms.color', label: 'Warna', hideWhenEmpty: true },
+            { field: 'ms.color_code', label: 'Kode Warna', bold: true, hideWhenEmpty: true },
             { field: 'ms.code', label: 'No. SPK', mono: true },
             { field: 'ms.qty', label: 'Jml Order', bold: true },
             { field: 'ms.sales_order', label: 'Sales Order', mono: true, hideWhenEmpty: true },

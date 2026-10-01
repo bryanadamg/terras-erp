@@ -69,18 +69,18 @@ export default function MOPrintModal({
     const update = (patch: Partial<PrintSettings>) =>
         onPrintSettingsChange({ ...printSettings, ...patch });
 
-    const { printTemplates } = useData() as any;
+    const { printTemplates, attributes } = useData() as any;
     const { formatCustom: tzFmt } = useTimezone();
     const layout = resolveLayout(MO_SHEET_DOC, printTemplates)!;
     const ctx = useMemo(() => buildMoSheetContext({
-        mo, getItemName, getItemCode, getLocationName, getAttributeValueName, formatDate,
+        mo, attributes, getItemName, getItemCode, getLocationName, getAttributeValueName, formatDate,
         // "Hide children" also stops the material list walking into sub-BOMs.
         boms: hideChildMOs ? [] : boms,
         tzFormatCustom: tzFmt, companyProfile,
         companyName: headerCompanyName || companyProfile?.name || '',
         companyLogoUrl: companyProfile?.logo_url ? `${STATIC_BASE}${companyProfile.logo_url}` : undefined,
         overrides: { headerDepartment, headerApprovedBy, headerReference, showTimeline, showSignatureLine },
-    }), [mo, getItemName, getItemCode, getLocationName, getAttributeValueName, formatDate, hideChildMOs, boms, tzFmt,
+    }), [mo, attributes, getItemName, getItemCode, getLocationName, getAttributeValueName, formatDate, hideChildMOs, boms, tzFmt,
         companyProfile, headerCompanyName, headerDepartment, headerApprovedBy, headerReference, showTimeline, showSignatureLine]);
     const { widthMm: paperW, heightMm: paperH } = paperDimsMm(layout.paper);
 

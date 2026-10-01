@@ -73,6 +73,9 @@ const KANTONG_BERAT: TallyBand = {
 const BASE_IDENTITY = (productLabel: string): KeyValueRow[] => [
     { field: 'mo.item_name', label: productLabel, span: 3, bold: true },
     { field: 'mo.size', label: 'Size', span: 3, bold: true, hideWhenEmpty: true },
+    // Both halves drop together on an uncoloured (greige / warp) order.
+    { field: 'attr.color', label: 'Warna', span: 1, hideWhenEmpty: true },
+    { field: 'mo.color_code', label: 'Kode Warna', span: 1, bold: true, hideWhenEmpty: true },
     { field: 'wo.status', label: 'Status', span: 1 },
     { field: 'wo.target_end_date', label: 'Target Selesai', span: 1 },
     { field: 'wo.next_destination', label: 'Tujuan', span: 3, bold: true, hideWhenEmpty: true },
@@ -183,7 +186,8 @@ export const KARTU_KERJA_WEAVING: PrintLayout = buildLayout({
         { field: 'mo.item_name', label: 'Artikel', span: 3, bold: true },
         { field: 'mo.size', label: 'Size', span: 3, bold: true, hideWhenEmpty: true },
         { field: 'attr.color', label: 'Warna', span: 1 },
-        { field: 'bom.mesin_lebar', label: 'Lebar', span: 1, unit: 'cm' },
+        { field: 'mo.color_code', label: 'Kode Warna', span: 1, bold: true },
+        { field: 'bom.mesin_lebar', label: 'Lebar', span: 3, unit: 'cm' },
         // These two pair onto one line. If only one is set the survivor pairs with the
         // next half-row instead — the old card printed both cells dashed.
         { field: 'bom.mesin_panjang_tarikan', label: 'Tarikan Sblm Celup/Setting', span: 1, hideWhenEmpty: true },

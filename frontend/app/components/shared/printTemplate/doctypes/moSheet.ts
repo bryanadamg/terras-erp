@@ -14,7 +14,8 @@
 
 import type { FieldDef, ResolvedField } from '../fieldRegistry';
 import type { RowSourceDef } from '../rowSources';
-import type { PrintContext } from '../renderContext';
+import { attrValueByRole, moShade, type PrintContext } from '../renderContext';
+import { lotSizeLabel } from '../../LotChips';
 import { STATIC_BASE } from '../../apiBase';
 
 export const MO_SHEET_DOC = 'mo_sheet';
@@ -23,6 +24,9 @@ export const MS_FIELDS: FieldDef[] = [
     { key: 'ms.code', label: 'No. SPK (MO code)', kind: 'text', mono: true, group: 'Order' },
     { key: 'ms.article', label: 'Article (item)', kind: 'text', group: 'Order' },
     { key: 'ms.item_code', label: 'Item Code', kind: 'text', mono: true, group: 'Order' },
+    { key: 'ms.size', label: 'Size / Ukuran', kind: 'text', group: 'Order' },
+    { key: 'ms.color', label: 'Warna', kind: 'text', group: 'Order' },
+    { key: 'ms.color_code', label: 'Kode Warna (colour code)', kind: 'text', group: 'Order' },
     { key: 'ms.qty', label: 'Jml Order', kind: 'number', unit: 'pcs', group: 'Order' },
     { key: 'ms.status', label: 'Status', kind: 'text', group: 'Order' },
     { key: 'ms.output_location', label: 'Output Location', kind: 'text', group: 'Order' },
@@ -87,6 +91,10 @@ export function resolveMoSheetField(key: string, ctx: PrintContext): ResolvedFie
         case 'ms.code': return txt(mo.code);
         case 'ms.article': return txt(d.itemName);
         case 'ms.item_code': return txt(mo.item_code);
+        case 'ms.size': return txt(lotSizeLabel(mo));
+        // Paired on one line: empty only when the order carries no shade at all.
+        case 'ms.color': return d.shade.name || d.shade.code ? present(d.shade.name) : EMPTY;
+        case 'ms.color_code': return d.shade.name || d.shade.code ? present(d.shade.code) : EMPTY;
         case 'ms.qty': return mo.qty == null ? EMPTY : { text: String(mo.qty), empty: false };
         case 'ms.status': return txt(mo.status);
         case 'ms.output_location': return txt(d.outputLocation);
@@ -297,6 +305,7 @@ export function buildMoSheetContext({
             getItemCode: getItemCode || (() => ''),
             getLocationName: loc,
             itemName: m.item_name || getName(m.item_id),
+            shade: moShade(m, attrValueByRole(attributes, m.attribute_value_ids)),
             outputLocation: loc(m.location_id),
             samplePhotoUrl: bom?.sample_photo_url ? `${STATIC_BASE}${bom.sample_photo_url}` : undefined,
             printDate,

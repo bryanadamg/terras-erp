@@ -9,7 +9,7 @@
  */
 
 import type { FieldDef, ResolvedField } from '../fieldRegistry';
-import type { PrintContext } from '../renderContext';
+import { moShade, type PrintContext } from '../renderContext';
 import { makeLotBarcodeDataUrl } from './outputLabel';
 import { lotSizeLabel } from '../../LotChips';
 
@@ -29,6 +29,8 @@ export const LOTLABEL_FIELDS: FieldDef[] = [
     { key: 'lotlabel.item_name', label: 'Artikel', kind: 'text', group: 'Identity' },
     { key: 'lotlabel.item_code', label: 'Kode (item code)', kind: 'text', mono: true, group: 'Identity' },
     { key: 'lotlabel.size', label: 'Size / Ukuran', kind: 'text', group: 'Identity' },
+    { key: 'lotlabel.color', label: 'Warna', kind: 'text', group: 'Identity' },
+    { key: 'lotlabel.color_code', label: 'Kode Warna (colour code)', kind: 'text', group: 'Identity' },
     { key: 'lotlabel.location', label: 'Lokasi', kind: 'text', group: 'Identity' },
     { key: 'lotlabel.footer_trace', label: 'Traceability Footer (Lot ID)', kind: 'text', group: 'Identity' },
 ];
@@ -58,10 +60,18 @@ export function resolveLotLabelField(key: string, ctx: PrintContext): ResolvedFi
         case 'lotlabel.item_name': return txt(lot.item_name);
         case 'lotlabel.item_code': return txt(lot.item_code);
         case 'lotlabel.size': return txt(lotSizeLabel(lot));
+        case 'lotlabel.color': return txt(lotShade(lot).name);
+        case 'lotlabel.color_code': return txt(lotShade(lot).code);
         case 'lotlabel.location': return txt(lot.location_name);
         case 'lotlabel.footer_trace': return { text: `Lot ID: ${lot.id || ''}`, empty: false };
         default: return { text: '', empty: true };
     }
+}
+
+/** Same WARNA / KODE WARNA split as `moShade`, read off the lot's resolved identity. */
+function lotShade(lot: any): { name: string; code: string } {
+    const attrs: any[] = lot?.variant_attributes || [];
+    return moShade(lot, (r: string) => attrs.find(a => a.system_role === r)?.value || '');
 }
 
 const DMY: Intl.DateTimeFormatOptions = { day: '2-digit', month: '2-digit', year: 'numeric' };

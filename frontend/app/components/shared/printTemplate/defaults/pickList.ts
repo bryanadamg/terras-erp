@@ -60,9 +60,10 @@ const BANDS: Band[] = [
         hideWhenEmpty: true, marginBottom: 10,
         columns: [
             { field: 'no', label: 'No', width: '8%', align: 'center' },
-            { field: 'item', label: 'Barang / Item', width: '44%' },
+            { field: 'item', label: 'Barang / Item', width: '34%' },
             { field: 'size', label: 'Size', width: '12%', align: 'center', emptyText: '' },
-            { field: 'cartons', label: 'Koli', width: '18%', align: 'right', headerAlign: 'center' },
+            { field: 'warna', label: 'Warna', width: '14%', emptyText: '' },
+            { field: 'cartons', label: 'Koli', width: '14%', align: 'right', headerAlign: 'center' },
             { field: 'qty', label: 'Qty', width: '18%', align: 'right', headerAlign: 'center' },
         ],
     },
@@ -79,17 +80,18 @@ const BANDS: Band[] = [
         emptyMessage: 'Belum ada koli / no cartons allocated',
         columns: [
             { field: 'no', label: 'No', width: '7%', align: 'center' },
-            { field: 'carton', label: 'No. Koli / Carton', width: '27%', mono: true },
-            { field: 'item_code', label: 'Barang / Item', width: '17%' },
+            { field: 'carton', label: 'No. Koli / Carton', width: '21%', mono: true },
+            { field: 'item_code', label: 'Barang / Item', width: '15%' },
             { field: 'size', label: 'Size', width: '8%', align: 'center', emptyText: '' },
-            { field: 'packaging', label: 'Kemasan / Packaging', width: '10%' },
+            { field: 'warna', label: 'Warna', width: '12%', emptyText: '' },
+            { field: 'packaging', label: 'Kemasan / Packaging', width: '8%' },
             {
-                field: 'qty', label: 'Qty', width: '14%', align: 'right', headerAlign: 'center',
+                field: 'qty', label: 'Qty', width: '13%', align: 'right', headerAlign: 'center',
                 footer: { field: 'plist.gross_total_label', bold: true, align: 'right' },
             },
             // The figure the loader and the carrier both check the load against.
             {
-                field: 'gross', label: 'Bruto', width: '11%', align: 'right', headerAlign: 'center',
+                field: 'gross', label: 'Bruto', width: '10%', align: 'right', headerAlign: 'center',
                 footer: { field: 'plist.gross_total', bold: true, align: 'right' },
             },
             { field: 'check', label: '✓', width: '6%', align: 'center', emptyText: '' },

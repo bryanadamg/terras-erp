@@ -13,7 +13,7 @@
 import type { FieldDef, ResolvedField } from '../fieldRegistry';
 import type { RowSourceDef } from '../rowSources';
 import type { PrintContext } from '../renderContext';
-import { lotSizeLabel } from '../../LotChips';
+import { lotSizeLabel, lotColorLabel } from '../../LotChips';
 
 export const PICK_LIST_DOC = 'pick_list';
 
@@ -69,6 +69,15 @@ export function resolvePickListField(key: string, ctx: PrintContext): ResolvedFi
     }
 }
 
+/**
+ * The shade code a picker checks against the box: the carton's own (its lot's
+ * shade), falling back to the ordered shade on a bulk line with no carton.
+ */
+function lineShade(l: any): string {
+    const own = l.carton_identity ? lotColorLabel(l.carton_identity)?.label : null;
+    return own || l.color_code || l.color_name || '';
+}
+
 const n = (v: any) => { const x = parseFloat(v); return isNaN(x) ? 0 : x; };
 
 const PLIST_SUMMARY: RowSourceDef = {
@@ -82,6 +91,7 @@ const PLIST_SUMMARY: RowSourceDef = {
         { field: 'item_name', label: 'Item name' },
         { field: 'item_code', label: 'Item code' },
         { field: 'size', label: 'Size' },
+        { field: 'warna', label: 'Warna (code)' },
         { field: 'cartons', label: 'Koli' },
         { field: 'qty', label: 'Qty' },
     ],
@@ -93,6 +103,7 @@ const PLIST_SUMMARY: RowSourceDef = {
             item_name: r.name,
             item_code: r.code,
             size: r.size || null,
+            warna: r.warna || null,
             cartons: String(r.cartons),
             qty: `${r.qty.toLocaleString()} ${r.uom}`.trim(),
         })),
@@ -110,6 +121,7 @@ const PLIST_CARTONS: RowSourceDef = {
         { field: 'item_code', label: 'Barang / Item' },
         { field: 'item_name', label: 'Item name' },
         { field: 'size', label: 'Size' },
+        { field: 'warna', label: 'Warna (code)' },
         { field: 'packaging', label: 'Kemasan / Packaging' },
         { field: 'qty', label: 'Qty' },
         { field: 'gross', label: 'Bruto' },
@@ -124,6 +136,7 @@ const PLIST_CARTONS: RowSourceDef = {
             item_code: l.item_code || null,
             item_name: l.item_name || null,
             size: lotSizeLabel(l),
+            warna: lineShade(l) || null,
             packaging: l.packaging_type_name || null,
             qty: `${n(l.qty_picked).toLocaleString()} ${l.item_uom || ''}`.trim(),
             gross: l.gross_weight_kg != null ? `${n(l.gross_weight_kg).toFixed(2)} kg` : null,
@@ -153,12 +166,13 @@ export function buildPickListContext({
     const cartons = lines.filter((l: any) => l.batch_id);
     // What actually ships, per item and size — an order running several sizes of
     // one article ships them as separate quantities, so they never sum together.
-    const byItem: Record<string, { key: string; code: string; name: string; size: string; qty: number; cartons: number; uom: string }> = {};
+    const byItem: Record<string, { key: string; code: string; name: string; size: string; warna: string; qty: number; cartons: number; uom: string }> = {};
     for (const l of lines) {
         const size = lotSizeLabel(l) || '';
-        const key = `${l.item_id}|${size}`;
+        const warna = lineShade(l);
+        const key = `${l.item_id}|${size}|${warna}`;
         const row = byItem[key] || (byItem[key] = {
-            key, code: l.item_code || String(l.item_id), name: l.item_name || '', size, qty: 0, cartons: 0, uom: l.item_uom || '',
+            key, code: l.item_code || String(l.item_id), name: l.item_name || '', size, warna, qty: 0, cartons: 0, uom: l.item_uom || '',
         });
         row.qty += n(l.qty_picked);
         if (l.batch_id) row.cartons += 1;

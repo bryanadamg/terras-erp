@@ -14,7 +14,7 @@
 import JsBarcode from 'jsbarcode';
 import type { FieldDef, ResolvedField } from '../fieldRegistry';
 import type { RowSourceDef } from '../rowSources';
-import type { PrintContext } from '../renderContext';
+import { attrValueByRole, moShade, type PrintContext } from '../renderContext';
 import { lotSizeLabel } from '../../LotChips';
 
 export const BAG_LABEL_DOC = 'bag_label';
@@ -32,6 +32,7 @@ export const OUTLABEL_FIELDS: FieldDef[] = [
     { key: 'outlabel.item_name', label: 'Artikel', kind: 'text', group: 'Identity' },
     { key: 'outlabel.size', label: 'Size / Ukuran', kind: 'text', group: 'Identity' },
     { key: 'outlabel.color', label: 'Warna', kind: 'text', group: 'Identity' },
+    { key: 'outlabel.color_code', label: 'Kode Warna (colour code)', kind: 'text', group: 'Identity' },
     { key: 'outlabel.width', label: 'Lebar (mesin)', kind: 'number', unit: 'cm', group: 'Identity' },
     { key: 'outlabel.machine', label: 'No. Mesin', kind: 'text', group: 'Identity' },
     { key: 'outlabel.operator', label: 'Operator', kind: 'text', group: 'Identity' },
@@ -63,6 +64,7 @@ export function resolveOutputLabelField(key: string, ctx: PrintContext): Resolve
         case 'outlabel.item_name': return txt(d.itemName);
         case 'outlabel.size': return txt(d.size);
         case 'outlabel.color': return txt(d.color);
+        case 'outlabel.color_code': return txt(d.colorCode);
         case 'outlabel.width': return txt(d.width);
         case 'outlabel.machine': return txt(d.machine);
         case 'outlabel.operator': return txt(d.operator);
@@ -157,10 +159,7 @@ export function buildOutputLabelContext({
     const mo = parentMO || {};
     const lotNo = c.output_batch_number || '';
 
-    // WARNA — the system Colors attribute value the MO carries.
-    const colorAttr = attributes.find((a: any) => (a.system_role || '').toLowerCase() === 'color');
-    const moValueIds: string[] = mo.attribute_value_ids || [];
-    const color = colorAttr?.values?.find((v: any) => moValueIds.includes(v.id))?.value || '';
+    const shade = moShade(mo, attrValueByRole(attributes, mo.attribute_value_ids));
 
     // Planned item ids — BOM lines, plus the creation-time snapshot so a BOM edited
     // after the fact doesn't retro-flag every row as SUB.
@@ -192,7 +191,8 @@ export function buildOutputLabelContext({
             itemName: mo.item_name || wo.item_name || '',
             // The MO's size is what add_mo_completion stamps onto the lot.
             size: lotSizeLabel(mo) || '',
-            color,
+            color: shade.name,
+            colorCode: shade.code,
             width: mo.bom?.mesin_lebar ?? null,
             machine: c.work_center_name || wo.work_center_name || '',
             operator: c.operator_name || '',
