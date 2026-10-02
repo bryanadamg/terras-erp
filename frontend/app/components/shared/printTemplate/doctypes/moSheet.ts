@@ -27,6 +27,7 @@ export const MS_FIELDS: FieldDef[] = [
     { key: 'ms.size', label: 'Size / Ukuran', kind: 'text', group: 'Order' },
     { key: 'ms.color', label: 'Warna', kind: 'text', group: 'Order' },
     { key: 'ms.color_code', label: 'Kode Warna (colour code)', kind: 'text', group: 'Order' },
+    { key: 'ms.combo', label: 'Combo', kind: 'text', group: 'Order' },
     { key: 'ms.qty', label: 'Jml Order', kind: 'number', unit: 'pcs', group: 'Order' },
     { key: 'ms.status', label: 'Status', kind: 'text', group: 'Order' },
     { key: 'ms.output_location', label: 'Output Location', kind: 'text', group: 'Order' },
@@ -95,6 +96,7 @@ export function resolveMoSheetField(key: string, ctx: PrintContext): ResolvedFie
         // Paired on one line: empty only when the order carries no shade at all.
         case 'ms.color': return d.shade.name || d.shade.code ? present(d.shade.name) : EMPTY;
         case 'ms.color_code': return d.shade.name || d.shade.code ? present(d.shade.code) : EMPTY;
+        case 'ms.combo': return txt(d.combo);
         case 'ms.qty': return mo.qty == null ? EMPTY : { text: String(mo.qty), empty: false };
         case 'ms.status': return txt(mo.status);
         case 'ms.output_location': return txt(d.outputLocation);
@@ -306,6 +308,7 @@ export function buildMoSheetContext({
             getLocationName: loc,
             itemName: m.item_name || getName(m.item_id),
             shade: moShade(m, attrValueByRole(attributes, m.attribute_value_ids)),
+            combo: attrValueByRole(attributes, m.attribute_value_ids)('combo'),
             outputLocation: loc(m.location_id),
             samplePhotoUrl: bom?.sample_photo_url ? `${STATIC_BASE}${bom.sample_photo_url}` : undefined,
             printDate,

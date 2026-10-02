@@ -87,6 +87,7 @@ export const BAG_LABEL_DEFAULT: PrintLayout = {
                 { field: 'outlabel.size', label: 'Size', bold: true },
                 { field: 'outlabel.color', label: 'Warna' },
                 { field: 'outlabel.color_code', label: 'Kode Warna', bold: true },
+                { field: 'outlabel.combo', label: 'Combo', bold: true, hideWhenEmpty: true },
                 { field: 'outlabel.width', label: 'Lebar' },
                 { field: 'outlabel.machine', label: 'No. Mesin' },
                 { field: 'outlabel.wo_code', label: 'SPK / WO', fontSize: 9, mono: true },

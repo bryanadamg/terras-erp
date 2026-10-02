@@ -11,7 +11,7 @@
 import type { FieldDef, ResolvedField } from '../fieldRegistry';
 import { moShade, type PrintContext } from '../renderContext';
 import { makeLotBarcodeDataUrl } from './outputLabel';
-import { lotSizeLabel } from '../../LotChips';
+import { lotSizeLabel, lotComboLabel } from '../../LotChips';
 
 export const LOT_LABEL_DOC = 'lot_label';
 
@@ -31,6 +31,7 @@ export const LOTLABEL_FIELDS: FieldDef[] = [
     { key: 'lotlabel.size', label: 'Size / Ukuran', kind: 'text', group: 'Identity' },
     { key: 'lotlabel.color', label: 'Warna', kind: 'text', group: 'Identity' },
     { key: 'lotlabel.color_code', label: 'Kode Warna (colour code)', kind: 'text', group: 'Identity' },
+    { key: 'lotlabel.combo', label: 'Combo', kind: 'text', group: 'Identity' },
     { key: 'lotlabel.location', label: 'Lokasi', kind: 'text', group: 'Identity' },
     { key: 'lotlabel.footer_trace', label: 'Traceability Footer (Lot ID)', kind: 'text', group: 'Identity' },
 ];
@@ -62,6 +63,7 @@ export function resolveLotLabelField(key: string, ctx: PrintContext): ResolvedFi
         case 'lotlabel.size': return txt(lotSizeLabel(lot));
         case 'lotlabel.color': return txt(lotShade(lot).name);
         case 'lotlabel.color_code': return txt(lotShade(lot).code);
+        case 'lotlabel.combo': return txt(lotComboLabel(lot));
         case 'lotlabel.location': return txt(lot.location_name);
         case 'lotlabel.footer_trace': return { text: `Lot ID: ${lot.id || ''}`, empty: false };
         default: return { text: '', empty: true };

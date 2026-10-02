@@ -33,6 +33,7 @@ export const OUTLABEL_FIELDS: FieldDef[] = [
     { key: 'outlabel.size', label: 'Size / Ukuran', kind: 'text', group: 'Identity' },
     { key: 'outlabel.color', label: 'Warna', kind: 'text', group: 'Identity' },
     { key: 'outlabel.color_code', label: 'Kode Warna (colour code)', kind: 'text', group: 'Identity' },
+    { key: 'outlabel.combo', label: 'Combo', kind: 'text', group: 'Identity' },
     { key: 'outlabel.width', label: 'Lebar (mesin)', kind: 'number', unit: 'cm', group: 'Identity' },
     { key: 'outlabel.machine', label: 'No. Mesin', kind: 'text', group: 'Identity' },
     { key: 'outlabel.operator', label: 'Operator', kind: 'text', group: 'Identity' },
@@ -65,6 +66,7 @@ export function resolveOutputLabelField(key: string, ctx: PrintContext): Resolve
         case 'outlabel.size': return txt(d.size);
         case 'outlabel.color': return txt(d.color);
         case 'outlabel.color_code': return txt(d.colorCode);
+        case 'outlabel.combo': return txt(d.combo);
         case 'outlabel.width': return txt(d.width);
         case 'outlabel.machine': return txt(d.machine);
         case 'outlabel.operator': return txt(d.operator);
@@ -159,7 +161,8 @@ export function buildOutputLabelContext({
     const mo = parentMO || {};
     const lotNo = c.output_batch_number || '';
 
-    const shade = moShade(mo, attrValueByRole(attributes, mo.attribute_value_ids));
+    const byRole = attrValueByRole(attributes, mo.attribute_value_ids);
+    const shade = moShade(mo, byRole);
 
     // Planned item ids — BOM lines, plus the creation-time snapshot so a BOM edited
     // after the fact doesn't retro-flag every row as SUB.
@@ -193,6 +196,7 @@ export function buildOutputLabelContext({
             size: lotSizeLabel(mo) || '',
             color: shade.name,
             colorCode: shade.code,
+            combo: byRole('combo'),
             width: mo.bom?.mesin_lebar ?? null,
             machine: c.work_center_name || wo.work_center_name || '',
             operator: c.operator_name || '',

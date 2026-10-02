@@ -30,6 +30,9 @@ export const DR_FIELDS: FieldDef[] = [
     { key: 'dr.bath_wo_codes', label: 'No WO (every WO in the bath)', kind: 'text', group: 'Bath' },
     { key: 'dr.bath_item_names', label: 'Nama Item (every item in the bath)', kind: 'text', group: 'Bath' },
     { key: 'dr.bath_mo_codes', label: 'MO (root MOs in the bath)', kind: 'text', group: 'Bath' },
+    { key: 'dr.color_code', label: 'Kode Warna (bath, else recipe)', kind: 'text', group: 'Bath' },
+    { key: 'dr.bath_sizes', label: 'Size (every size in the bath)', kind: 'text', group: 'Bath' },
+    { key: 'dr.bath_combos', label: 'Combo (every combo in the bath)', kind: 'text', group: 'Bath' },
     { key: 'dr.bath_qty', label: 'Qty Order (vessel load, kg)', kind: 'text', group: 'Bath' },
     { key: 'dr.bath_volume', label: 'Volume Air (vessel, L)', kind: 'text', group: 'Bath' },
     { key: 'dr.bath_liquor_ratio', label: 'Liquor Ratio (vessel)', kind: 'text', group: 'Bath' },
@@ -73,6 +76,9 @@ export function resolveDyeRecipeField(key: string, ctx: PrintContext): ResolvedF
         case 'dr.bath_wo_codes': return txt((b.wo_codes || []).join(', '));
         case 'dr.bath_item_names': return txt(uniq(b.item_names).join('\n'));
         case 'dr.bath_mo_codes': return txt(uniq(b.mo_codes).join(', '));
+        case 'dr.color_code': return txt(uniq(b.color_codes).join(', ') || r.color_code);
+        case 'dr.bath_sizes': return txt(uniq(b.sizes).join(', '));
+        case 'dr.bath_combos': return txt(uniq(b.combos).join(', '));
         case 'dr.bath_qty': return txt(num(b.substrate_qty, ' KG'));
         case 'dr.bath_volume': return txt(num(b.volume_liters, ' Liter'));
         case 'dr.bath_liquor_ratio': return txt(b.liquor_ratio ? `1 : ${fmt(b.liquor_ratio)}` : '');
@@ -154,6 +160,9 @@ export interface KartuCelupBath {
     wo_codes: string[];
     item_names: string[];
     mo_codes: string[];
+    color_codes?: string[];
+    sizes?: string[];
+    combos?: string[];
     substrate_qty: number | null;
     volume_liters: number | null;
     liquor_ratio: number | null;

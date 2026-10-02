@@ -13,7 +13,7 @@
 import type { FieldDef, ResolvedField } from '../fieldRegistry';
 import type { RowSourceDef } from '../rowSources';
 import type { PrintContext } from '../renderContext';
-import { lotSizeLabel, lotColorLabel } from '../../LotChips';
+import { lotSizeLabel, lotColorLabel, lotComboLabel } from '../../LotChips';
 
 export const PICK_LIST_DOC = 'pick_list';
 
@@ -92,6 +92,7 @@ const PLIST_SUMMARY: RowSourceDef = {
         { field: 'item_code', label: 'Item code' },
         { field: 'size', label: 'Size' },
         { field: 'warna', label: 'Warna (code)' },
+        { field: 'combo', label: 'Combo' },
         { field: 'cartons', label: 'Koli' },
         { field: 'qty', label: 'Qty' },
     ],
@@ -104,6 +105,7 @@ const PLIST_SUMMARY: RowSourceDef = {
             item_code: r.code,
             size: r.size || null,
             warna: r.warna || null,
+            combo: r.combo || null,
             cartons: String(r.cartons),
             qty: `${r.qty.toLocaleString()} ${r.uom}`.trim(),
         })),
@@ -122,6 +124,7 @@ const PLIST_CARTONS: RowSourceDef = {
         { field: 'item_name', label: 'Item name' },
         { field: 'size', label: 'Size' },
         { field: 'warna', label: 'Warna (code)' },
+        { field: 'combo', label: 'Combo' },
         { field: 'packaging', label: 'Kemasan / Packaging' },
         { field: 'qty', label: 'Qty' },
         { field: 'gross', label: 'Bruto' },
@@ -137,6 +140,7 @@ const PLIST_CARTONS: RowSourceDef = {
             item_name: l.item_name || null,
             size: lotSizeLabel(l),
             warna: lineShade(l) || null,
+            combo: lotComboLabel(l.carton_identity || {}),
             packaging: l.packaging_type_name || null,
             qty: `${n(l.qty_picked).toLocaleString()} ${l.item_uom || ''}`.trim(),
             gross: l.gross_weight_kg != null ? `${n(l.gross_weight_kg).toFixed(2)} kg` : null,
@@ -166,13 +170,14 @@ export function buildPickListContext({
     const cartons = lines.filter((l: any) => l.batch_id);
     // What actually ships, per item and size — an order running several sizes of
     // one article ships them as separate quantities, so they never sum together.
-    const byItem: Record<string, { key: string; code: string; name: string; size: string; warna: string; qty: number; cartons: number; uom: string }> = {};
+    const byItem: Record<string, { key: string; code: string; name: string; size: string; warna: string; combo: string; qty: number; cartons: number; uom: string }> = {};
     for (const l of lines) {
         const size = lotSizeLabel(l) || '';
         const warna = lineShade(l);
-        const key = `${l.item_id}|${size}|${warna}`;
+        const combo = lotComboLabel(l.carton_identity || {}) || '';
+        const key = `${l.item_id}|${size}|${warna}|${combo}`;
         const row = byItem[key] || (byItem[key] = {
-            key, code: l.item_code || String(l.item_id), name: l.item_name || '', size, warna, qty: 0, cartons: 0, uom: l.item_uom || '',
+            key, code: l.item_code || String(l.item_id), name: l.item_name || '', size, warna, combo, qty: 0, cartons: 0, uom: l.item_uom || '',
         });
         row.qty += n(l.qty_picked);
         if (l.batch_id) row.cartons += 1;

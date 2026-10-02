@@ -25,6 +25,7 @@ export const LOT_LABEL_DEFAULT: PrintLayout = {
                 { field: 'lotlabel.size', label: 'Size', span: 3, bold: true, hideWhenEmpty: true },
                 { field: 'lotlabel.color', label: 'Warna', span: 1, hideWhenEmpty: true },
                 { field: 'lotlabel.color_code', label: 'Kode Warna', span: 1, bold: true, hideWhenEmpty: true },
+                { field: 'lotlabel.combo', label: 'Combo', span: 3, bold: true, hideWhenEmpty: true },
                 { field: 'lotlabel.location', label: 'Lokasi', span: 3 },
                 { field: 'lotlabel.notes', label: 'Catatan', span: 3, fontSize: 9, hideWhenEmpty: true },
             ],
