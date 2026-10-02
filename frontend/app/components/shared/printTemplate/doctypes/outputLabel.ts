@@ -25,6 +25,7 @@ export const OUTLABEL_FIELDS: FieldDef[] = [
     { key: 'outlabel.qr', label: 'QR Code (lot number)', kind: 'qr', group: 'Lot' },
     { key: 'outlabel.barcode', label: 'Barcode (Code 128, lot number)', kind: 'image', group: 'Lot' },
     { key: 'outlabel.weight', label: 'Berat (live lot kg)', kind: 'number', unit: 'kg', group: 'Lot' },
+    { key: 'outlabel.birth_weight_note', label: 'Berat awal note (only when the lot is empty)', kind: 'text', group: 'Lot' },
     { key: 'outlabel.bag_seq', label: 'Bag No. (#)', kind: 'text', group: 'Lot' },
     { key: 'outlabel.ends', label: 'Warp Ends (utas)', kind: 'number', group: 'Lot' },
     { key: 'outlabel.date', label: 'Production Date', kind: 'date', group: 'Lot' },
@@ -57,10 +58,13 @@ export function resolveOutputLabelField(key: string, ctx: PrintContext): Resolve
         case 'outlabel.qr': return { text: '', empty: !ctx.qrDataUrl, qrDataUrl: ctx.qrDataUrl };
         case 'outlabel.barcode': return { text: '', empty: !d.barcodeDataUrl, imageUrl: d.barcodeDataUrl || undefined };
         case 'outlabel.weight':
-            if (d.weight > 0) return { text: Number(d.weight).toFixed(2), empty: false };
-            return d.birthWeight > 0
-                ? { text: `Awal: ${Number(d.birthWeight).toFixed(2)}`, empty: false }
-                : { text: EM_DASH, empty: true };
+            return d.weight > 0 ? { text: Number(d.weight).toFixed(2), empty: false } : { text: EM_DASH, empty: true };
+        // Only on a drained lot: BERAT is honestly "—" there, and this says what it
+        // weighed when it was made, so a reprint still tells the floor something.
+        case 'outlabel.birth_weight_note':
+            return !(d.weight > 0) && d.birthWeight > 0
+                ? { text: `${Number(d.birthWeight).toFixed(2)} kg (awal)`, empty: false }
+                : { text: '', empty: true };
         case 'outlabel.bag_seq': return d.bagSeq == null ? { text: EM_DASH, empty: true } : { text: `#${d.bagSeq}`, empty: false };
         case 'outlabel.ends': return txt(d.ends);
         case 'outlabel.date': return txt(d.date);
@@ -187,8 +191,8 @@ export function buildOutputLabelContext({
             barcodeDataUrl: barcodeDataUrl ?? makeLotBarcodeDataUrl(lotNo || String(c.id || '')),
             // BERAT is the lot's CURRENT weight: `qty_completed` is frozen at the
             // completion, so a split or partly staged unit kept printing its birth kg.
-            // A drained lot (a woven-off beam, a fully staged bag) has no current
-            // weight, so its reprint falls back to the birth kg, marked "Awal" (the unit prints after).
+            // A drained lot (a woven-off beam, a fully staged bag) prints "—" here and
+            // its birth kg as the separate `birth_weight_note`.
             weight: Number(lotRemaining ?? c.qty_completed ?? 0),
             birthWeight: Number(c.qty_completed ?? 0),
             bagSeq: bagSeq ?? null,

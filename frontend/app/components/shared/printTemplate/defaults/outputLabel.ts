@@ -7,7 +7,7 @@
  * `@page baglabel` sheet printed.
  */
 
-import type { PrintLayout, Band, FieldSpec } from '../types';
+import type { PrintLayout, Band, FieldSpec, GridItem } from '../types';
 import { PRINT_FONT } from '../../typography';
 
 export const LABEL_PAPER: PrintLayout['paper'] = { size: 'A6', orientation: 'portrait', marginMm: 6 };
@@ -57,7 +57,12 @@ export function labelSignature(prefix: string): Band[] {
     ];
 }
 
-const WEIGHT: FieldSpec = { field: 'outlabel.weight', fontSize: 24, bold: true, ...HERO_LABEL, label: 'BERAT / WEIGHT' };
+const WEIGHT_VALUE: FieldSpec = { field: 'outlabel.weight', fontSize: 24, bold: true, ...HERO_LABEL, label: 'BERAT / WEIGHT' };
+/** BERAT plus, on a drained lot only, a small "19.00 kg (awal)" under it. */
+const WEIGHT: Partial<GridItem> = {
+    stackGap: 1,
+    stack: [WEIGHT_VALUE, { field: 'outlabel.birth_weight_note', fontSize: 8, color: '#555', hideWhenEmpty: true }],
+};
 
 const COMPONENTS: Band = {
     id: 'label_components', type: 'table', source: 'outlabel_components',
