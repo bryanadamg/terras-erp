@@ -57,7 +57,10 @@ export function resolveOutputLabelField(key: string, ctx: PrintContext): Resolve
         case 'outlabel.qr': return { text: '', empty: !ctx.qrDataUrl, qrDataUrl: ctx.qrDataUrl };
         case 'outlabel.barcode': return { text: '', empty: !d.barcodeDataUrl, imageUrl: d.barcodeDataUrl || undefined };
         case 'outlabel.weight':
-            return d.weight > 0 ? { text: Number(d.weight).toFixed(2), empty: false } : { text: EM_DASH, empty: true };
+            if (d.weight > 0) return { text: Number(d.weight).toFixed(2), empty: false };
+            return d.birthWeight > 0
+                ? { text: `Awal: ${Number(d.birthWeight).toFixed(2)}`, empty: false }
+                : { text: EM_DASH, empty: true };
         case 'outlabel.bag_seq': return d.bagSeq == null ? { text: EM_DASH, empty: true } : { text: `#${d.bagSeq}`, empty: false };
         case 'outlabel.ends': return txt(d.ends);
         case 'outlabel.date': return txt(d.date);
@@ -184,7 +187,10 @@ export function buildOutputLabelContext({
             barcodeDataUrl: barcodeDataUrl ?? makeLotBarcodeDataUrl(lotNo || String(c.id || '')),
             // BERAT is the lot's CURRENT weight: `qty_completed` is frozen at the
             // completion, so a split or partly staged unit kept printing its birth kg.
+            // A drained lot (a woven-off beam, a fully staged bag) has no current
+            // weight, so its reprint falls back to the birth kg, marked "Awal" (the unit prints after).
             weight: Number(lotRemaining ?? c.qty_completed ?? 0),
+            birthWeight: Number(c.qty_completed ?? 0),
             bagSeq: bagSeq ?? null,
             // Per-WO planned ends, falling back to the beam item's own — the same
             // precedence add_mo_completion stamps onto the lot.
