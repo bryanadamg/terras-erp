@@ -132,6 +132,32 @@ export default function WOBulkPrintModal({
         return () => { cancelled = true; };
     }, [selectedWOs, hasDyeingWO, authFetch, API_BASE]);
 
+    // The card reads the parent MO's BOM lines (materials), completions (actuals),
+    // attributes and size. The Work Orders list only has flat rows, so it hands in
+    // stub MOs with `bom: null` — which printed an empty Komponen table and no
+    // colour/combo. Any MO that arrives without its BOM is loaded in full here, so
+    // every caller prints the same card. Gates Print like the dose sheet does.
+    const [fullMOs, setFullMOs] = useState<Record<string, any>>({});
+    const [moLoading, setMoLoading] = useState(false);
+    // Keyed on the id string: callers build `manufacturingOrders` inline, so the
+    // array itself is a new reference on every parent render.
+    const missingMoIds = Array.from(new Set(selectedWOs.map(w => String(w.mo_id || ''))))
+        .filter(id => id && !manufacturingOrders.find(m => String(m.id) === id)?.bom)
+        .join(',');
+    useEffect(() => {
+        const ids = missingMoIds ? missingMoIds.split(',') : [];
+        if (!ids.length) { setFullMOs({}); setMoLoading(false); return; }
+        let cancelled = false;
+        setMoLoading(true);
+        Promise.all(ids.map(id => authFetch(`${API_BASE}/manufacturing-orders/${id}`)
+            .then((r: Response) => (r.ok ? r.json() : null))
+            .catch(() => null)))
+            .then(rows => { if (!cancelled) setFullMOs(Object.fromEntries(rows.filter(Boolean).map((m: any) => [String(m.id), m]))); })
+            .finally(() => { if (!cancelled) setMoLoading(false); });
+        return () => { cancelled = true; };
+    }, [missingMoIds, authFetch]);
+    const moFor = (moId: any) => fullMOs[String(moId)] || manufacturingOrders.find(m => m.id === moId);
+
     // Which of the sidebar's band checkboxes actually do anything for this selection.
     // A checkbox can only *drop* a band, never add one back (see TemplateRenderer), so
     // one pointing at a band the saved layout already hides is a dead control — and a
@@ -150,7 +176,7 @@ export default function WOBulkPrintModal({
     };
 
     const renderCard = (wo: any, forPortal: boolean) => {
-        const parentMO = manufacturingOrders.find(m => m.id === wo.mo_id);
+        const parentMO = moFor(wo.mo_id);
         return (
             <div key={wo.id} style={{
                 border: '1px solid #888',
@@ -237,7 +263,7 @@ export default function WOBulkPrintModal({
                                 <div className="wo-print-paper wo-step-card" style={{ background: '#fff', width: `${sheetW}mm`, minHeight: `${sheetH}mm`, padding: `${sheetMargin}mm`, boxShadow: '0 2px 10px rgba(0,0,0,0.25)', color: '#000', fontFamily: PRINT_FONT, display: 'flex', flexDirection: 'column', boxSizing: 'border-box' }}>
                                     <KartuKerjaTemplateCard
                                         workOrder={selectedWOs[0]}
-                                        parentMO={manufacturingOrders.find(m => m.id === selectedWOs[0].mo_id)}
+                                        parentMO={moFor(selectedWOs[0].mo_id)}
                                         qrDataUrl={qrUrls[selectedWOs[0].id] || ''}
                                         settings={settings}
                                         companyName={companyProfile?.name}
@@ -275,9 +301,10 @@ export default function WOBulkPrintModal({
                     <PrintModalFooter
                         onClose={onClose}
                         onPrint={doPrint}
-                        printDisabled={dyeLoading}
-                        printLabel={dyeLoading ? 'Loading doses...' : 'Print'}
-                        note={dyeLoading ? 'Weighing the dye recipe against each bath...' : undefined}
+                        printDisabled={dyeLoading || moLoading}
+                        printLabel={moLoading ? 'Loading orders...' : dyeLoading ? 'Loading doses...' : 'Print'}
+                        note={moLoading ? 'Loading each order\'s BOM and completions...'
+                            : dyeLoading ? 'Weighing the dye recipe against each bath...' : undefined}
                     />
             </PrintModalShell>
 
@@ -288,7 +315,7 @@ export default function WOBulkPrintModal({
                         <div className="wo-print-paper wo-step-card" style={{ background: '#fff', width: '100%', color: '#000', fontFamily: PRINT_FONT, display: 'flex', flexDirection: 'column' }}>
                             <KartuKerjaTemplateCard
                                 workOrder={selectedWOs[0]}
-                                parentMO={manufacturingOrders.find(m => m.id === selectedWOs[0].mo_id)}
+                                parentMO={moFor(selectedWOs[0].mo_id)}
                                 qrDataUrl={qrUrls[selectedWOs[0].id] || ''}
                                 settings={settings}
                                 companyName={companyProfile?.name}
