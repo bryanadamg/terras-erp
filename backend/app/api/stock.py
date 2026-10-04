@@ -74,7 +74,7 @@ async def get_stock_ledger(
     direction: Optional[str] = Query(None, description="'in' (qty >= 0) or 'out' (qty < 0)"),
     sort_by: Optional[str] = Query(None, description="date | item | category | location | qty"),
     sort_dir: Optional[str] = Query(None, description="asc | desc"),
-    window: PageWindow = Depends(PageParams(default_size=100)),
+    window: PageWindow = Depends(PageParams(default_size=100, max_size=1000)),  # ledger print takes 1000
     db: AsyncSession = Depends(get_async_db),
     current_user: User = Depends(require_any_permission("stock_ledger.view", "stock_on_hand.view"))
 ):
