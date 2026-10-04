@@ -198,7 +198,7 @@ export function buildOutputLabelContext({
             bagSeq: bagSeq ?? null,
             // Per-WO planned ends, falling back to the beam item's own — the same
             // precedence add_mo_completion stamps onto the lot.
-            ends: wo.ends ?? mo.item?.ends ?? null,
+            ends: wo.ends ?? mo.item_ends ?? null,
             date: tzFormatCustom(c.created_at || new Date().toISOString(), DMY, 'id-ID'),
             notes: rawNote.replace(/\s*\[[^\]]*\]\s*/g, ' ').trim(),
             itemName: mo.item_name || wo.item_name || '',
