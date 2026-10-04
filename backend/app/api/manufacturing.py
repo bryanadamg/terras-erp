@@ -926,6 +926,7 @@ async def list_work_orders_flat(
             ends=wo.ends,
             staging_status=wo.staging_status or "NOT_STAGED",
             bom_operation_id=str(wo.bom_operation_id) if wo.bom_operation_id else None,
+            planned_recipe_id=str(wo.planned_recipe_id) if wo.planned_recipe_id else None,
             mo_id=str(mo.id),
             mo_code=mo.code,
             root_mo_id=wo_roots[0][0] if wo_roots else None,
