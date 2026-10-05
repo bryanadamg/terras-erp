@@ -1,4 +1,4 @@
-name: Deploy to Raspberry Pi
+name: Deploy to bie-temp
 
 on:
   push:
@@ -13,27 +13,29 @@ jobs:
     needs: test
     runs-on: ubuntu-latest
     steps:
-      - name: Deploy to Pi
+      - name: Deploy to bie-temp
         uses: appleboy/ssh-action@v1.2.5
         env:
           # Frontend npm ci pulls @bryanadamg/terras-ui from GitHub Packages.
           NODE_AUTH_TOKEN: ${{ secrets.NODE_AUTH_TOKEN }}
         with:
-          # Forward the token into the Pi's shell so the compose build secret
-          # can read it; it is never written to disk on the Pi.
+          # Forward the token into the host's shell so the compose build secret
+          # can read it; it is never written to disk by the deploy.
           envs: NODE_AUTH_TOKEN
-          host: ${{ secrets.PI_HOST }}
-          username: ${{ secrets.PI_USER }}
-          key: ${{ secrets.PI_SSH_KEY }}
+          host: ${{ secrets.DEPLOY_HOST }}
+          username: ${{ secrets.DEPLOY_USER }}
+          key: ${{ secrets.DEPLOY_SSH_KEY }}
           proxy_host: ${{ secrets.PROXY_HOST }}
           proxy_username: ${{ secrets.PROXY_USER }}
           proxy_key: ${{ secrets.PROXY_SSH_KEY }}
           script: |
-            cd /home/raspberrypi/Projects/teras-erp
+            cd /home/bie-admin/terras-erp
             git pull origin main
+            # The deploy user is in the docker group, so no sudo (which would
+            # strip NODE_AUTH_TOKEN). The tunnel is opt-in per host: set
+            # COMPOSE_PROFILES=tunnel in that host's .env to bring it up.
             # `up --build` never re-pulls: registry images (db/redis/tunnel) and
             # build bases (python/node) would stay at whatever was first pulled.
-            sudo docker compose --profile tunnel pull --ignore-buildable
-            # sudo strips the environment, so hand the token over explicitly.
-            sudo NODE_AUTH_TOKEN="$NODE_AUTH_TOKEN" docker compose build --pull
-            sudo docker compose --profile tunnel up -d
+            docker compose pull --ignore-buildable
+            docker compose build --pull
+            docker compose up -d

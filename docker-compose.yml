@@ -71,7 +71,7 @@ services:
     networks:
       - erp_network
 
-  # Cloudflare tunnel is opt-in: `--profile tunnel` (the Pi deploy passes it).
+  # Cloudflare tunnel is opt-in: `--profile tunnel`, or COMPOSE_PROFILES=tunnel in the host's .env.
   tunnel:
     image: cloudflare/cloudflared:2026.9.3
     profiles:
