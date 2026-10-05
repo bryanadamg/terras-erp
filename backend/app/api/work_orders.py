@@ -1587,7 +1587,7 @@ async def mount_beam_on_loom(
     await db.commit()
 
     await audit_service.log_activity(
-        db, user_id=current_user.id, action="MOUNT", entity_type="BEAM_MOUNT",
+        db, user_id=current_user.id, action="MOUNT", entity_type="BeamMount",
         entity_id=str(mount.id),
         details=f"Mounted beam on machine '{wc.code or wc.name}'",
         changes={"batch_id": str(payload.batch_id), "work_center_id": str(wc.id)},
@@ -1663,7 +1663,7 @@ async def dismount_beam_from_loom(
             f"({float(weighed):g}), variance {variance:+g}"
         )
     await audit_service.log_activity(
-        db, user_id=current_user.id, action="DISMOUNT", entity_type="BEAM_MOUNT",
+        db, user_id=current_user.id, action="DISMOUNT", entity_type="BeamMount",
         entity_id=str(mount.id),
         details=detail,
         changes={

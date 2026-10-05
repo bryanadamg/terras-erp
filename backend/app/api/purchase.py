@@ -93,7 +93,7 @@ async def create_purchase_order(
 
     await db.commit()
     await audit_service.log_activity(
-        db, current_user.id, "CREATE", "purchase_order", str(po.id),
+        db, current_user.id, "CREATE", "PurchaseOrder", str(po.id),
         details=f"Created PO {po.po_number}"
     )
 
@@ -173,7 +173,7 @@ async def update_purchase_order(
         db,
         user_id=current_user.id,
         action="UPDATE",
-        entity_type="purchase_order",
+        entity_type="PurchaseOrder",
         entity_id=str(po.id),
         details=f"Updated PO {po.po_number}",
     )
@@ -454,7 +454,7 @@ async def close_purchase_order(
         db,
         user_id=current_user.id,
         action="UPDATE",
-        entity_type="purchase_order",
+        entity_type="PurchaseOrder",
         entity_id=str(po.id),
         details=f"Closed PO {po.po_number} as RECEIVED (short/partial delivery)",
         changes={"status": [prev_status, "RECEIVED"]},
@@ -479,7 +479,7 @@ async def delete_purchase_order(
         db,
         user_id=current_user.id,
         action="DELETE",
-        entity_type="purchase_order",
+        entity_type="PurchaseOrder",
         entity_id=str(po.id),
         details=f"Deleted PO {po.po_number}",
         commit=False,

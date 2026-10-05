@@ -66,7 +66,7 @@ def create_location(payload: LocationCreate, db: Session = Depends(get_db), curr
     db.add(loc)
     db.commit()
     db.refresh(loc)
-    db.add(AuditLog(user_id=current_user.id, action="CREATE", entity_type="location", entity_id=str(loc.id), details=f"Created location {loc.code}"))
+    db.add(AuditLog(user_id=current_user.id, action="CREATE", entity_type="Location", entity_id=str(loc.id), details=f"Created location {loc.code}"))
     db.commit()
     broadcast_sync({"type": "MASTER_DATA_UPDATE", "domain": "locations"})
     return loc
@@ -117,7 +117,7 @@ def update_location(location_id: str, payload: LocationUpdate, db: Session = Dep
     # hold somewhere other than the seeded Quarantine warehouse.
     if data.get("is_quarantine") is not None:
         loc.is_quarantine = data["is_quarantine"]
-    db.add(AuditLog(user_id=current_user.id, action="UPDATE", entity_type="location", entity_id=str(loc.id), details=f"Updated location {loc.code}"))
+    db.add(AuditLog(user_id=current_user.id, action="UPDATE", entity_type="Location", entity_id=str(loc.id), details=f"Updated location {loc.code}"))
     db.commit()
     broadcast_sync({"type": "MASTER_DATA_UPDATE", "domain": "locations"})
     db.refresh(loc)
@@ -133,7 +133,7 @@ def delete_location(location_id: str, db: Session = Depends(get_db), current_use
         raise HTTPException(status_code=400, detail="System stores cannot be deleted")
     if db.query(Location).filter(Location.parent_id == loc.id).first():
         raise HTTPException(status_code=400, detail="Remove sub-locations first")
-    db.add(AuditLog(user_id=current_user.id, action="DELETE", entity_type="location", entity_id=str(loc.id), details=f"Deleted location {loc.code}"))
+    db.add(AuditLog(user_id=current_user.id, action="DELETE", entity_type="Location", entity_id=str(loc.id), details=f"Deleted location {loc.code}"))
     db.delete(loc)
     db.commit()
     broadcast_sync({"type": "MASTER_DATA_UPDATE", "domain": "locations"})

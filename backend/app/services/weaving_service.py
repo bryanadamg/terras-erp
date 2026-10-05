@@ -270,7 +270,7 @@ async def audit_and_broadcast_stops(db: AsyncSession, user_id, runs: list, reaso
 
     for run in runs:
         await audit_service.log_activity(
-            db, user_id, "UPDATE", "weaving_run", str(run.id),
+            db, user_id, "UPDATE", "WeavingRun", str(run.id),
             details=f"Auto-stopped: {reason}",
         )
     for wc_id in {str(r.work_center_id) for r in runs}:

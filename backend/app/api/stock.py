@@ -310,7 +310,7 @@ async def create_stock_entry(
         db=db,
         user_id=current_user.id,
         action="create",
-        entity_type="stock_entry",
+        entity_type="StockEntry",
         entity_id=str(item.id),
         changes={
             "item": payload.item_code,
@@ -382,7 +382,7 @@ async def transfer_stock(
         db=db,
         user_id=current_user.id,
         action="TRANSFER",
-        entity_type="stock_entry",
+        entity_type="StockEntry",
         entity_id=str(item.id),
         changes={"item": item.code, "qty": payload.qty, "route": ref, "batch_id": str(payload.batch_id) if payload.batch_id else None},
     )
@@ -461,7 +461,7 @@ async def transfer_stock_bulk(
         db=db,
         user_id=current_user.id,
         action="TRANSFER",
-        entity_type="stock_entry",
+        entity_type="StockEntry",
         entity_id=str(payload.to_location_id),
         details=f"Combined move of {len(payload.lines)} stock rows to {dest_code}",
         changes={

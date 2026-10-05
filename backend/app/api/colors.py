@@ -384,7 +384,7 @@ async def create_color_variant(
     await db.refresh(av)
 
     await audit_service.log_activity(
-        db, str(current_user.id), "CREATE", "attribute_value", str(av.id),
+        db, str(current_user.id), "CREATE", "AttributeValue", str(av.id),
         details=f"Added color variant '{av.value}'", changes={"value": av.value, "hex": av.hex}
     )
     return av
@@ -421,7 +421,7 @@ async def update_color_variant(
     await db.refresh(val)
 
     await audit_service.log_activity(
-        db, str(current_user.id), "UPDATE", "attribute_value", str(val.id),
+        db, str(current_user.id), "UPDATE", "AttributeValue", str(val.id),
         details=f"Renamed color variant '{old_value}' -> '{val.value}'",
         changes={"value": [old_value, val.value], "hex": [old_hex, val.hex]}
     )
@@ -449,7 +449,7 @@ async def delete_color_variant(
         )
 
     await audit_service.log_activity(
-        db, str(current_user.id), "DELETE", "attribute_value", value_id,
+        db, str(current_user.id), "DELETE", "AttributeValue", value_id,
         details=f"Deleted color variant '{label}'", changes={}
     )
     return {"status": "success", "message": "Color variant deleted"}
