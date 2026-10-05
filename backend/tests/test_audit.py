@@ -44,3 +44,10 @@ def test_log_activity_leaves_caller_transaction_alone(client, async_db_session):
         assert (await db.execute(select(Category).filter(Category.id == cat2.id))).first() is not None
 
     client.portal.call(run)
+
+
+def test_audit_entity_types_lists_logged_types(client, auth_headers):
+    client.post("/api/uoms", json={"name": "AuditUnitTypes"}, headers=auth_headers)
+    res = client.get("/api/audit-logs/entity-types", headers=auth_headers)
+    assert res.status_code == 200
+    assert "UOM" in res.json()

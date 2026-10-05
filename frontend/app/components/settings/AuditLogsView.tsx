@@ -7,15 +7,17 @@ import { lvTh, lvRow, LV_XP_FONT, LV_MODERN_FONT, lvThead, ResizableTable } from
 import { StatusChip, CODE_FONT, xpFont, xpBtn, TableSkeleton, useTableSkeletonMetrics, CHIP_RADIUS, XP_BTN, SKEL_PAGE_ROWS } from '../shared/xpTheme';
 import { useData } from '../../context/DataContext';
 import Pager from '../shared/Pager';
+import { API_BASE } from '../shared/apiBase';
 
 // entity_type is a raw model name (WorkOrder, attribute_value, work_center_holiday, ...) — humanize for display.
 function formatEntityType(entityType: string): string {
     return entityType
         .replace(/_/g, ' ')
         .replace(/([a-z0-9])([A-Z])/g, '$1 $2')
+        .replace(/([A-Z]+)([A-Z][a-z])/g, '$1 $2')   // UOMFactor -> UOM Factor
         .split(' ')
         .filter(Boolean)
-        .map(w => w[0].toUpperCase() + w.slice(1).toLowerCase())
+        .map(w => (w.length > 1 && w === w.toUpperCase()) ? w : w[0].toUpperCase() + w.slice(1).toLowerCase())
         .join(' ');
 }
 
@@ -73,10 +75,18 @@ AuditLogRow.displayName = 'AuditLogRow';
 export default function AuditLogsView({ auditLogs, currentPage, totalItems, pageSize, onPageChange, filterType, onFilterChange }: any) {
   const { t } = useLanguage();
   const { users, refreshUsers } = useUser();
-  const { loading: dataLoading, fetchData } = useData();
+  const { loading: dataLoading, fetchData, authFetch } = useData();
   const [refreshing, setRefreshing] = useState(false);
+  const [entityTypes, setEntityTypes] = useState<string[]>([]);
 
   useEffect(() => { if (users.length === 0) refreshUsers(); }, []);
+  // Every entity type actually logged, not a hand-kept subset of them.
+  useEffect(() => {
+      authFetch(`${API_BASE}/audit-logs/entity-types`)
+          .then((r: Response) => (r.ok ? r.json() : []))
+          .then(setEntityTypes)
+          .catch(() => {});
+  }, []);
 
   const handleRefresh = async () => {
       if (refreshing) return;
@@ -108,12 +118,7 @@ export default function AuditLogsView({ auditLogs, currentPage, totalItems, page
   const entityFilterOptions = (
       <>
           <option value="">All Entities</option>
-          <option value="Item">Items</option>
-          <option value="BOM">BOMs</option>
-          <option value="WorkOrder">Work Orders</option>
-          <option value="SalesOrder">Sales Orders</option>
-          <option value="SampleRequest">Samples</option>
-          <option value="StockEntry">Stock</option>
+          {entityTypes.map(et => <option key={et} value={et}>{formatEntityType(et)}</option>)}
       </>
   );
 
