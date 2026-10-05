@@ -87,7 +87,7 @@ async def save_print_template(
     await audit_service.log_activity(
         db, str(current_user.id), action, "PrintTemplate", str(tpl.id),
         details=f"Saved print layout for {doc_type} ({band_count} bands)",
-        changes={"doc_type": doc_type},
+        changes=audit_service.added({"doc_type": doc_type}),
     )
     await manager.broadcast({"type": "PRINT_TEMPLATE_UPDATE", "doc_type": doc_type})
     return tpl
@@ -112,7 +112,7 @@ async def reset_print_template(
     await audit_service.log_activity(
         db, str(current_user.id), "DELETE", "PrintTemplate", tpl_id,
         details=f"Reset print layout for {doc_type} to built-in default",
-        changes={"doc_type": doc_type},
+        changes=audit_service.added({"doc_type": doc_type}),
     )
     await manager.broadcast({"type": "PRINT_TEMPLATE_UPDATE", "doc_type": doc_type})
     return {"ok": True, "doc_type": doc_type}

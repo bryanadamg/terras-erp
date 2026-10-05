@@ -1042,7 +1042,7 @@ async def create_production_run(
         db, user_id=current_user.id, action="CREATE",
         entity_type="ProductionRun", entity_id=str(pr.id),
         details=f"Created Production Run {pr.code} with {len(payload.bom_entries)} BOM entries, {total_root_mo_count} root MOs",
-        changes=payload.model_dump()
+        changes=audit_service.added(payload.model_dump())
     )
     await manager.broadcast({"type": "PRODUCTION_RUN_UPDATE", "pr_id": str(pr.id), "status": "PENDING"})
     return pr

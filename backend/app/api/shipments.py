@@ -512,7 +512,7 @@ async def verify_shipment(
         entity_id=str(shp_id),
         details=f"Verified shipment {shp.code}"
                 + (" with discrepancy" if payload.with_discrepancy else ""),
-        changes={"notes": payload.notes} if payload.notes else None,
+        changes=audit_service.added({"notes": payload.notes}) if payload.notes else None,
     )
     try:
         await manager.broadcast({"type": "SHIPMENT_UPDATE", "id": str(shp_id)})

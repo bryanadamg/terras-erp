@@ -330,6 +330,7 @@ async def update_weaving_run(
             status_code=422,
             detail="Use /pause and /resume to change a run's paused state",
         )
+    before = audit_service.fields_of(run, data)
     for field, value in data.items():
         setattr(run, field, value)
     await db.commit()
@@ -337,7 +338,7 @@ async def update_weaving_run(
 
     await audit_service.log_activity(
         db, current_user.id, "UPDATE", "WeavingRun", str(run.id),
-        details="Updated weaving run", changes=data,
+        details="Updated weaving run", changes=audit_service.diff(before, data),
     )
     await manager.broadcast({"type": "WEAVING_RUN_UPDATE", "action": "update", "work_center_id": str(run.work_center_id)})
     return run
@@ -380,7 +381,7 @@ async def pause_weaving_run(
     await audit_service.log_activity(
         db, current_user.id, "UPDATE", "WeavingRun", str(run.id),
         details=f"Paused weaving run{f': {payload.reason}' if payload.reason else ''}",
-        changes={"status": "PAUSED", "reason": payload.reason},
+        changes={"status": ["RUNNING", "PAUSED"], **({"reason": [None, payload.reason]} if payload.reason else {})},
     )
     await manager.broadcast({"type": "WEAVING_RUN_UPDATE", "action": "pause", "work_center_id": str(run.work_center_id)})
     return run
@@ -414,7 +415,7 @@ async def resume_weaving_run(
 
     await audit_service.log_activity(
         db, current_user.id, "UPDATE", "WeavingRun", str(run.id),
-        details="Resumed weaving run", changes={"status": "RUNNING"},
+        details="Resumed weaving run", changes={"status": ["PAUSED", "RUNNING"]},
     )
     await manager.broadcast({"type": "WEAVING_RUN_UPDATE", "action": "resume", "work_center_id": str(run.work_center_id)})
     return run
@@ -483,6 +484,7 @@ async def set_loom_prep(
     if err:
         raise HTTPException(status_code=422, detail=err)
 
+    prev_prep = wc.prep_status
     wc.prep_status = target
     wc.prep_status_at = datetime.utcnow()
     wc.prep_status_by = current_user.username
@@ -492,7 +494,7 @@ async def set_loom_prep(
     await audit_service.log_activity(
         db, current_user.id, "UPDATE", "WorkCenterLoomPrep", str(wc.id),
         details=f"Loom {wc.code}: {current} → {new_status}",
-        changes={"prep_status": target},
+        changes={"prep_status": [prev_prep, target]},
     )
     await manager.broadcast({"type": "WEAVING_RUN_UPDATE", "action": "prep", "work_center_id": str(wc.id)})
     return {
@@ -1050,11 +1052,12 @@ async def update_calendar(
     current_user: User = Depends(require_permission('calendar.edit')),
 ):
     wc = await _get_wc(db, wc_id)
+    prev_weekdays = wc.working_weekdays
     wc.working_weekdays = sorted(set(int(d) for d in payload.working_weekdays if 0 <= int(d) <= 6))
     await db.commit()
     await audit_service.log_activity(
         db, current_user.id, "UPDATE", "WorkCenterCalendar", str(wc.id),
-        details="Updated working weekdays", changes={"working_weekdays": wc.working_weekdays},
+        details="Updated working weekdays", changes={"working_weekdays": [prev_weekdays, wc.working_weekdays]},
     )
     await manager.broadcast({"type": "WEAVING_RUN_UPDATE", "action": "calendar", "work_center_id": str(wc.id)})
     return {"work_center_id": str(wc.id), "working_weekdays": wc.working_weekdays}
@@ -1139,7 +1142,7 @@ async def update_group_calendar(
     await audit_service.log_activity(
         db, current_user.id, "UPDATE", "WorkCenterCalendar", str(grp.id),
         details=f"Batch calendar on {grp.code} → {len(machine_ids)} machines",
-        changes={"working_weekdays": weekdays, "machines": len(machine_ids)},
+        changes=audit_service.added({"working_weekdays": weekdays, "machines": len(machine_ids)}),
     )
     await manager.broadcast({"type": "WEAVING_RUN_UPDATE", "action": "calendar", "work_center_id": str(grp.id)})
     return {

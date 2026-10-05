@@ -312,13 +312,13 @@ async def create_stock_entry(
         action="CREATE",
         entity_type="StockEntry",
         entity_id=str(item.id),
-        changes={
+        changes=audit_service.added({
             "item": payload.item_code,
             "location": payload.location_code,
             "qty": payload.qty,
             "reason": payload.reference_id,
             "batch_id": str(payload.batch_id) if payload.batch_id else None,
-        },
+        }),
     )
 
     await manager.broadcast({"type": "STOCK_UPDATE"})
@@ -384,7 +384,7 @@ async def transfer_stock(
         action="TRANSFER",
         entity_type="StockEntry",
         entity_id=str(item.id),
-        changes={"item": item.code, "qty": payload.qty, "route": ref, "batch_id": str(payload.batch_id) if payload.batch_id else None},
+        changes=audit_service.added({"item": item.code, "qty": payload.qty, "route": ref, "batch_id": str(payload.batch_id) if payload.batch_id else None}),
     )
 
     await manager.broadcast({"type": "STOCK_UPDATE"})
@@ -464,7 +464,7 @@ async def transfer_stock_bulk(
         entity_type="StockEntry",
         entity_id=str(payload.to_location_id),
         details=f"Combined move of {len(payload.lines)} stock rows to {dest_code}",
-        changes={
+        changes=audit_service.added({
             "destination": dest_code,
             "line_count": len(payload.lines),
             "lines": [
@@ -476,7 +476,7 @@ async def transfer_stock_bulk(
                 }
                 for ln in payload.lines
             ],
-        },
+        }),
     )
 
     await manager.broadcast({"type": "STOCK_UPDATE"})

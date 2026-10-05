@@ -771,7 +771,7 @@ async def update_dyeing_run(
             + (f" — bath {run.volume_air_liters} L" if run.volume_air_liters else "")
             + (f", {dosed} chemical doses weighed" if dosed else "")
         ),
-        changes={k: [before[k], after[k]] for k in after if str(before[k]) != str(after[k])},
+        changes=audit_service.diff(before, after),
     )
     await manager.broadcast({"type": "DYEING_RUN_UPDATE", "wo_id": str(run.work_order_id)})
     return _enrich_dyeing_run(run)
@@ -906,7 +906,7 @@ async def update_dyeing_run_bath(
     await audit_service.log_activity(
         db, current_user.id, "UPDATE", "DyeingRun", run_id,
         details=f"Bath set to {run.volume_air_liters} L on run #{run.run_number}",
-        changes={k: [before[k], after[k]] for k in after if str(before[k]) != str(after[k])},
+        changes=audit_service.diff(before, after),
     )
     await manager.broadcast({"type": "DYEING_RUN_UPDATE", "wo_id": str(run.work_order_id)})
     return _enrich_dyeing_run(run)

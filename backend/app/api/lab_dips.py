@@ -214,7 +214,7 @@ async def create_lab_dip_request(
         entity_type="LabDipRequest",
         entity_id=str(req.id),
         details=f"Created Lab Dip Request {req.code}",
-        changes={"code": req.code, "color_standard": req.color_standard},
+        changes=audit_service.added({"code": req.code, "color_standard": req.color_standard}),
     )
     return _decorate(req)
 
@@ -560,6 +560,14 @@ async def get_lab_dip_report(
     )
 
 
+# Header columns an edit can move; items/dips are diffed row-by-row, not audited here.
+_AUDITED_HEADER_FIELDS = (
+    "customer_id", "base_item_id", "approved_recipe_id", "color_id", "request_date", "season",
+    "customer_article_code", "internal_article_code", "substrate", "color_standard",
+    "request_type", "due_date", "estimated_completion_date", "notes",
+)
+
+
 @router.put("/lab-dips/{request_id}", response_model=LabDipRequestResponse)
 async def update_lab_dip_request(
     request_id: str,
@@ -572,6 +580,7 @@ async def update_lab_dip_request(
     if not req:
         raise HTTPException(status_code=404, detail="Lab dip request not found")
 
+    before = audit_service.fields_of(req, _AUDITED_HEADER_FIELDS)
     req.customer_id = payload.customer_id
     req.base_item_id = payload.base_item_id
     req.approved_recipe_id = payload.approved_recipe_id
@@ -668,7 +677,7 @@ async def update_lab_dip_request(
         entity_type="LabDipRequest",
         entity_id=request_id,
         details=f"Updated Lab Dip Request {req.code}",
-        changes={"color_standard": req.color_standard},
+        changes=audit_service.diff(before, audit_service.fields_of(req, _AUDITED_HEADER_FIELDS)),
     )
     return _decorate(req)
 
@@ -854,7 +863,7 @@ async def update_lab_dip_item_status(
         entity_id=item_id,
         details=f"Updated lab dip item variant status from {previous_status} to {status}"
                 + (f"; minted color {minted_color_code}" if minted_color_code else ""),
-        changes={"status": status, "previous_status": previous_status, "approved_color_code": minted_color_code},
+        changes={"status": [previous_status, status], **({"approved_color_code": [None, minted_color_code]} if minted_color_code else {})},
     )
     # Nudge the manufacturing UI so backfilled root MOs reflect their new color
     # (and their DYEING WO gate unblocks) without a manual refresh.
@@ -924,7 +933,7 @@ async def upload_lab_dip_item_status_image(
         entity_type="LabDipItem",
         entity_id=item_id,
         details=f"Attached {kind} photo to lab dip variant",
-        changes={"image_url": url},
+        changes=audit_service.added({"image_url": url}),
     )
     return {"image_url": url}
 
@@ -957,7 +966,7 @@ async def update_lab_dip_status(
         entity_type="LabDipRequest",
         entity_id=request_id,
         details=f"Updated Lab Dip {req.code} status from {previous_status} to {status}",
-        changes={"status": status, "previous_status": previous_status},
+        changes={"status": [previous_status, status]},
     )
     return {"status": "success", "message": f"Lab dip request updated to {status}"}
 
@@ -1002,7 +1011,7 @@ async def update_dip_status(
         entity_type="LabDipLine",
         entity_id=line_id,
         details=f"Updated dip '{line.color_name}' status from {previous_status} to {status}",
-        changes={"status": status, "previous_status": previous_status},
+        changes={"status": [previous_status, status]},
     )
     return line
 
@@ -1029,6 +1038,6 @@ async def delete_lab_dip_request(
         entity_type="LabDipRequest",
         entity_id=request_id,
         details=f"Deleted Lab Dip Request {code}",
-        changes={"code": code},
+        changes=audit_service.added({"code": code}),
     )
     return {"status": "success"}

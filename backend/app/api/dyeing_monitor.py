@@ -303,7 +303,7 @@ async def update_dyeing_run_rate(
     await audit_service.log_activity(
         db, current_user.id, "UPDATE", "DyeingRun", str(run_id),
         details="Updated dyeing monitor rate inputs",
-        changes={k: {"from": v[0], "to": v[1]} for k, v in changes.items()},
+        changes=changes,
     )
     # The grid is self-fetching; without this the card keeps its old rate until the
     # next manual refresh.

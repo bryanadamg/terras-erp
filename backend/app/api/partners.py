@@ -6,6 +6,7 @@ from app.db.session import get_db
 from app.schemas import PartnerCreate, PartnerResponse, PartnerUpdate, PaginatedPartnerResponse
 from app.models.partner import Partner
 from app.models.audit import AuditLog
+from app.services import audit_service
 from app.core.ws_manager import broadcast_sync
 from app.api.auth import get_current_user, require_permission, require_any_permission, user_has_permission
 from app.core.pagination import PageParams, PageWindow
@@ -33,7 +34,7 @@ def create_partner(payload: PartnerCreate, db: Session = Depends(get_db), curren
     db.add(partner)
     db.flush()  # assigns partner.id so the audit row lands in the same commit
     db.add(AuditLog(user_id=current_user.id, action="CREATE", entity_type="Partner", entity_id=str(partner.id),
-                    details=f"Created partner {partner.name}", changes=payload.model_dump(mode="json")))
+                    details=f"Created partner {partner.name}", changes=audit_service.added(payload.model_dump(mode="json"))))
     db.commit()
     db.refresh(partner)
     broadcast_sync({"type": "MASTER_DATA_UPDATE", "domain": "partners"})

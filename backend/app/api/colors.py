@@ -256,6 +256,7 @@ async def update_color(
             raise HTTPException(status_code=400, detail="Color code already exists")
 
     data = payload.model_dump(exclude_unset=True)
+    before = audit_service.fields_of(c, data)
     for field, val in data.items():
         setattr(c, field, val)
 
@@ -271,7 +272,7 @@ async def update_color(
     counts = await _recipe_counts(db, [c.id])
     await audit_service.log_activity(
         db, str(current_user.id), "UPDATE", "Color", str(c.id),
-        details=f"Updated color {c.code}", changes=data
+        details=f"Updated color {c.code}", changes=audit_service.diff(before, data)
     )
     await manager.broadcast({"type": "COLOR_UPDATE", "id": str(c.id)})
     return _serialize(c, counts.get(c.id, 0))
@@ -385,7 +386,7 @@ async def create_color_variant(
 
     await audit_service.log_activity(
         db, str(current_user.id), "CREATE", "AttributeValue", str(av.id),
-        details=f"Added color variant '{av.value}'", changes={"value": av.value, "hex": av.hex}
+        details=f"Added color variant '{av.value}'", changes=audit_service.added({"value": av.value, "hex": av.hex})
     )
     return av
 
