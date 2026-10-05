@@ -1,9 +1,9 @@
 'use client';
-import React, { useMemo } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import PrintModalShell, { PrintModalFooter } from '../shared/PrintModalShell';
 import { useTimezone } from '../../context/TimezoneContext';
 import { useData } from '../../context/DataContext';
-import { STATIC_BASE } from '../shared/apiBase';
+import { API_BASE, STATIC_BASE } from '../shared/apiBase';
 import TemplateRenderer from '../shared/printTemplate/TemplateRenderer';
 import TemplatePrintPortal from '../shared/printTemplate/TemplatePrintPortal';
 import { resolveLayout } from '../shared/printTemplate/templateStore';
@@ -31,7 +31,7 @@ export interface PrintSettings {
 const HIDDEN_TIP = 'Hidden by the saved print layout — change it in Print Layouts.';
 
 export default function MOPrintModal({
-    mo,
+    mo: moProp,
     onClose,
     printSettings,
     onPrintSettingsChange,
@@ -69,7 +69,25 @@ export default function MOPrintModal({
     const update = (patch: Partial<PrintSettings>) =>
         onPrintSettingsChange({ ...printSettings, ...patch });
 
-    const { printTemplates, attributes } = useData() as any;
+    const { printTemplates, attributes, authFetch } = useData() as any;
+
+    // A shared component MO (the greige) reaches here from the Production Runs
+    // list's slim rows, which carry no BOM — the sheet printed "No BOM found" with
+    // no machine or specs. Load the full order when the BOM is missing.
+    const [fullMO, setFullMO] = useState<any>(null);
+    const needsLoad = !!moProp?.id && !moProp?.bom;
+    useEffect(() => {
+        setFullMO(null);
+        if (!needsLoad) return;
+        let cancelled = false;
+        authFetch(`${API_BASE}/manufacturing-orders/${moProp.id}`)
+            .then((r: Response) => (r.ok ? r.json() : null))
+            .then((m: any) => { if (!cancelled && m) setFullMO(m); })
+            .catch(() => {});
+        return () => { cancelled = true; };
+    }, [moProp?.id, needsLoad, authFetch]);
+    const mo = fullMO || moProp;
+    const loadingMO = needsLoad && !fullMO;
     const { formatCustom: tzFmt } = useTimezone();
     const layout = resolveLayout(MO_SHEET_DOC, printTemplates)!;
     const ctx = useMemo(() => buildMoSheetContext({
@@ -193,7 +211,9 @@ export default function MOPrintModal({
 
                     {/* Footer */}
                     <PrintModalFooter
-                        note="Settings saved automatically"
+                        note={loadingMO ? 'Loading the order\'s BOM...' : 'Settings saved automatically'}
+                        printDisabled={loadingMO}
+                        printLabel={loadingMO ? 'Loading...' : undefined}
                         onClose={onClose}
                         onPrint={() => { onPrint?.(); window.addEventListener('afterprint', onClose, { once: true }); window.print(); }}
                     />
