@@ -37,6 +37,7 @@ export const OUTLABEL_FIELDS: FieldDef[] = [
     { key: 'outlabel.combo', label: 'Combo', kind: 'text', group: 'Identity' },
     { key: 'outlabel.width', label: 'Lebar (mesin)', kind: 'number', unit: 'cm', group: 'Identity' },
     { key: 'outlabel.machine', label: 'No. Mesin', kind: 'text', group: 'Identity' },
+    { key: 'outlabel.destination', label: 'Tujuan Mesin (WO destination)', kind: 'text', group: 'Identity' },
     { key: 'outlabel.operator', label: 'Operator', kind: 'text', group: 'Identity' },
     { key: 'outlabel.wo_code', label: 'SPK / WO Code', kind: 'text', mono: true, group: 'Identity' },
     { key: 'outlabel.mo_code', label: 'MO Code', kind: 'text', mono: true, group: 'Identity' },
@@ -76,6 +77,7 @@ export function resolveOutputLabelField(key: string, ctx: PrintContext): Resolve
         case 'outlabel.combo': return txt(d.combo);
         case 'outlabel.width': return txt(d.width);
         case 'outlabel.machine': return txt(d.machine);
+        case 'outlabel.destination': return txt(d.destination);
         case 'outlabel.operator': return txt(d.operator);
         case 'outlabel.wo_code': return txt(d.woCode);
         case 'outlabel.mo_code': return txt(d.moCode);
@@ -209,6 +211,9 @@ export function buildOutputLabelContext({
             combo: byRole('combo'),
             width: mo.bom?.mesin_lebar ?? null,
             machine: c.work_center_name || wo.work_center_name || '',
+            // Where the unit goes next: the producing WO's planned destination machine
+            // (a beam's loom), else its destination location.
+            destination: wo.next_destination_work_center_name || wo.next_destination_location_name || '',
             operator: c.operator_name || '',
             woCode: wo.code || '',
             moCode: mo.code || '',

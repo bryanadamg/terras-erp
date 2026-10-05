@@ -15,7 +15,7 @@ export const LABEL_PAPER: PrintLayout['paper'] = { size: 'A6', orientation: 'por
 const HERO_LABEL: Partial<FieldSpec> = { showLabel: true };
 
 /** Company / title / date beside the lot QR. `titleField` is `__text` or a data field. */
-export function labelHeader(prefix: string, title: FieldSpec, qrCaption: string): Band {
+export function labelHeader(prefix: string, title: FieldSpec, qrCaption: string, extra: FieldSpec[] = []): Band {
     return {
         id: 'label_header', type: 'grid', gap: 8, borderBottom: '2px solid #000', padding: '0 0 5px', marginBottom: 6,
         items: [
@@ -25,6 +25,7 @@ export function labelHeader(prefix: string, title: FieldSpec, qrCaption: string)
                     { field: 'company.name', fontSize: 10, bold: true, hideWhenEmpty: true },
                     { fontSize: 8, bold: true, color: '#555', ...title },
                     { field: `${prefix}.date`, fontSize: 8, color: '#666' },
+                    ...extra,
                 ],
             },
             { field: `${prefix}.qr`, col: 8, span: 5, row: 1, align: 'right', qrSize: 96, qrCaption },
@@ -109,7 +110,10 @@ export const BAG_LABEL_DEFAULT: PrintLayout = {
 export const BEAM_LABEL_DEFAULT: PrintLayout = {
     version: 1, paper: LABEL_PAPER, fontFamily: PRINT_FONT, paddingMm: 0,
     bands: [
-        labelHeader('outlabel', { field: '__text', text: 'LABEL BOOM / BEAM LABEL' }, 'Scan = Pasang / Mount'),
+        // Tujuan leads the header: whoever carries the beam reads where it goes first.
+        labelHeader('outlabel', { field: '__text', text: 'LABEL BOOM / BEAM LABEL' }, 'Scan = Pasang / Mount', [
+            { field: 'outlabel.destination', fontSize: 16, bold: true, showLabel: true, label: 'TUJUAN MESIN', hideWhenEmpty: true },
+        ]),
         labelLotHero('outlabel', 'NO. BOOM / BEAM No.'),
         {
             // Ends lead: it is the spec that decides which article the warp can weave.
