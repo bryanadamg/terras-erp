@@ -15,6 +15,31 @@ on `main`:
 
 ## [Unreleased]
 
+## [0.38.0] - 2026-10-06
+
+### Added
+- Floor and delivery prints carry the size, colour and combo of what they describe. Kartu Kerja, bag/beam/lot labels, SPK Produksi, Kartu Packing, pick list and Surat Jalan print size (shipped lines split per size), colour variant and colour code; combo prints on every floor and delivery document; Kartu Celup prints size, combo and colour code
+- SPK Produksi prints Lebar, Tarikan, P. Tulisan and Bandul Matang, each paired with its mentah side
+- Beam labels print the producing WO's destination machine as TUJUAN MESIN in the header
+- Audit changes render as old -> new in the Audit Log, the record history pane and item history
+- The Audit Logs entity filter lists every entity type that has been logged instead of a hardcoded six
+
+### Changed
+- Every audit change is recorded as an `[old, new]` pair, entity types are written as their PascalCase model name, and every status move is logged as `STATUS_CHANGE`. Existing rows are backfilled where the old shape is unambiguous, so filters and per-record history match old and new entries alike
+- Deploys target bie-temp instead of the Raspberry Pi, and the Cloudflare tunnel only starts on hosts that opt into it from their own `.env`
+
+### Fixed
+- An audit write no longer commits the caller's half-finished mutation, and a failed audit no longer rolls the caller back — audit rows are written under a savepoint
+- A record's history pane names who made the change and the real action instead of a raw user id and "Event"
+- Audit actions that had no status family are coloured
+- A Kartu Kerja printed from the Work Orders list loads the full MO, so its components, colour, combo and (for dyeing) recipe print. An SPK printed from a shared component node does the same, so the greige sheet prints its BOM, machine and specs
+- Kartu Celup's Warna row prints the colour variant instead of the recipe name
+- A reprinted bag or beam label whose lot is empty keeps BERAT as a dash and prints the produced weight as a small removable "Awal" note beneath it
+- A leftover beam's lot label prints its location and notes, and beam labels fall back to the MO's warp ends instead of a field the API never sent
+- The Surat Jalan prints its Bruto total — shipment pick-list lines now carry carton packaging and weights
+- The Stock Ledger print gets the 1000 rows it asks for instead of being capped at 500
+- The api and frontend containers restart on their own after a crash or host reboot
+
 ## [0.37.0] - 2026-09-29
 
 ### Added
