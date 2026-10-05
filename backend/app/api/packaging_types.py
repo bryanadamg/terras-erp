@@ -66,7 +66,7 @@ async def create_packaging_type(
 
     await audit_service.log_activity(
         db, str(current_user.id), "CREATE", "PackagingType", str(pt.id),
-        details=f"Created packaging type {pt.code}", changes=payload.model_dump(mode="json"),
+        details=f"Created packaging type {pt.code}", changes=audit_service.added(payload.model_dump(mode="json")),
     )
     try:
         await manager.broadcast({"type": "PACKAGING_TYPE_UPDATE", "id": str(pt.id)})
@@ -99,6 +99,7 @@ async def update_packaging_type(
         if dupe:
             raise HTTPException(status_code=400, detail=f"Packaging type {code} already exists")
         data["code"] = code
+    before = audit_service.fields_of(pt, data)
     for k, v in data.items():
         setattr(pt, k, v)
     if pt.is_custom:
@@ -112,7 +113,7 @@ async def update_packaging_type(
     # and never rewrites a printed label or a dispatched note's weight.
     await audit_service.log_activity(
         db, str(current_user.id), "UPDATE", "PackagingType", str(pt.id),
-        details=f"Updated packaging type {pt.code}", changes=data,
+        details=f"Updated packaging type {pt.code}", changes=audit_service.diff(before, data),
     )
     try:
         await manager.broadcast({"type": "PACKAGING_TYPE_UPDATE", "id": str(pt.id)})

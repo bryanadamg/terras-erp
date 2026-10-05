@@ -54,6 +54,30 @@ export interface BuildContextArgs {
     dyeing?: DyeingPrintData | null;
 }
 
+/** The value an order carries for a system attribute (`system_role`), or ''. */
+export function attrValueByRole(attributes: any[] | undefined, valueIds: string[] | undefined) {
+    const ids = valueIds || [];
+    return (systemRole: string): string => {
+        const attr = (attributes || []).find(
+            (a: any) => (a.system_role || '').toLowerCase() === systemRole.toLowerCase()
+        );
+        return attr?.values?.find((v: any) => ids.includes(v.id))?.value || '';
+    };
+}
+
+/**
+ * An order's shade as the floor reads it: WARNA = the colour variant (the `Colors`
+ * attribute, else the Color Library name), KODE WARNA = the Color Library code,
+ * else the mirrored `Color Code` attribute, else a lab dip still pending approval.
+ */
+export function moShade(mo: any, byRole: (systemRole: string) => string): { name: string; code: string } {
+    const m = mo || {};
+    const name = byRole('color') || m.color_name || '';
+    const code = m.color_code || byRole('labdip_color')
+        || (m.labdip_variant_code ? `${m.labdip_variant_code} (lab dip pending)` : '');
+    return { name, code };
+}
+
 const SHORT_DATE: Intl.DateTimeFormatOptions = { day: '2-digit', month: '2-digit', year: '2-digit' };
 
 /**
@@ -65,15 +89,7 @@ export function buildPrintContext({
     workOrder, parentMO, qrDataUrl, companyName, companyLogoUrl, department, attributes = [], tzFormatCustom,
     dyeing = null,
 }: BuildContextArgs): PrintContext {
-    const moValueIds: string[] = parentMO?.attribute_value_ids || [];
-
-    const moAttributeValue = (systemRole: string): string => {
-        const attr = (attributes || []).find(
-            (a: any) => (a.system_role || '').toLowerCase() === systemRole.toLowerCase()
-        );
-        const value = attr?.values?.find((v: any) => moValueIds.includes(v.id));
-        return value?.value || '';
-    };
+    const moAttributeValue = attrValueByRole(attributes, parentMO?.attribute_value_ids);
 
     return {
         workOrder,

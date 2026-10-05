@@ -209,13 +209,14 @@ export const STATUS_FAMILY: Record<string, StatusFamily> = {
     ARCHIVED: 'gray', INACTIVE: 'gray',
     // Audit-log action verbs (backend log_activity() call sites) — same 5-family
     // palette, not a domain status, but reuses it for one consistent chip everywhere.
-    // Full set as of 2026-07: grep `log_activity(` across backend/app for the source list.
+    // Full set as of 2026-10: grep `log_activity(` across backend/app for the source list.
     CREATE: 'green', REACTIVATE: 'green', COMPLETE: 'green', COMPLETION: 'green', DISPATCH: 'green',
-    UPDATE: 'amber',
-    STATUS_CHANGE: 'blue', UPDATE_STATUS: 'blue', UPDATE_ITEM_STATUS: 'blue', UPDATE_COLOR_STATUS: 'blue',
-    UPDATE_DIP_STATUS: 'blue', STAGE: 'blue', TRANSFER: 'blue', IMPORT: 'blue', REASSIGN: 'blue',
-    DELETE: 'red', DEACTIVATE: 'red', REJECT: 'red', DISPOSE: 'red',
-    PRINT: 'gray', SPLIT: 'gray', ARCHIVE: 'gray', REBUILD: 'gray',
+    PACK: 'green', PICK: 'green', VERIFY: 'green',
+    UPDATE: 'amber', REOPEN: 'amber',
+    STATUS_CHANGE: 'blue', STAGE: 'blue', UNSTAGE: 'blue', TRANSFER: 'blue', IMPORT: 'blue',
+    REASSIGN: 'blue', MOUNT: 'blue', DISMOUNT: 'blue', RELEASE: 'blue',
+    DELETE: 'red', DEACTIVATE: 'red', REJECT: 'red', DISPOSE: 'red', CANCEL: 'red',
+    PRINT: 'gray', SPLIT: 'gray', ARCHIVE: 'gray', REBUILD: 'gray', DB_SNAPSHOT: 'gray', DB_RESTORE: 'amber',
     // Scheduled Backups panel (Settings → Database & Backups): audit verbs for the
     // recurring backup job, plus the "Manual"/"Scheduled" snapshot-origin tag and
     // "Success"/"Failed" last-run tag it renders in the same StatusChip.

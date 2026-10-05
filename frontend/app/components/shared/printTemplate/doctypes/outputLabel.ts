@@ -14,7 +14,8 @@
 import JsBarcode from 'jsbarcode';
 import type { FieldDef, ResolvedField } from '../fieldRegistry';
 import type { RowSourceDef } from '../rowSources';
-import type { PrintContext } from '../renderContext';
+import { attrValueByRole, moShade, type PrintContext } from '../renderContext';
+import { lotSizeLabel } from '../../LotChips';
 
 export const BAG_LABEL_DOC = 'bag_label';
 export const BEAM_LABEL_DOC = 'beam_label';
@@ -24,14 +25,19 @@ export const OUTLABEL_FIELDS: FieldDef[] = [
     { key: 'outlabel.qr', label: 'QR Code (lot number)', kind: 'qr', group: 'Lot' },
     { key: 'outlabel.barcode', label: 'Barcode (Code 128, lot number)', kind: 'image', group: 'Lot' },
     { key: 'outlabel.weight', label: 'Berat (live lot kg)', kind: 'number', unit: 'kg', group: 'Lot' },
+    { key: 'outlabel.birth_weight_note', label: 'Berat awal note (only when the lot is empty)', kind: 'text', group: 'Lot' },
     { key: 'outlabel.bag_seq', label: 'Bag No. (#)', kind: 'text', group: 'Lot' },
     { key: 'outlabel.ends', label: 'Warp Ends (utas)', kind: 'number', group: 'Lot' },
     { key: 'outlabel.date', label: 'Production Date', kind: 'date', group: 'Lot' },
     { key: 'outlabel.notes', label: 'Catatan (operator note)', kind: 'text', group: 'Lot' },
     { key: 'outlabel.item_name', label: 'Artikel', kind: 'text', group: 'Identity' },
+    { key: 'outlabel.size', label: 'Size / Ukuran', kind: 'text', group: 'Identity' },
     { key: 'outlabel.color', label: 'Warna', kind: 'text', group: 'Identity' },
+    { key: 'outlabel.color_code', label: 'Kode Warna (colour code)', kind: 'text', group: 'Identity' },
+    { key: 'outlabel.combo', label: 'Combo', kind: 'text', group: 'Identity' },
     { key: 'outlabel.width', label: 'Lebar (mesin)', kind: 'number', unit: 'cm', group: 'Identity' },
     { key: 'outlabel.machine', label: 'No. Mesin', kind: 'text', group: 'Identity' },
+    { key: 'outlabel.destination', label: 'Tujuan Mesin (WO destination)', kind: 'text', group: 'Identity' },
     { key: 'outlabel.operator', label: 'Operator', kind: 'text', group: 'Identity' },
     { key: 'outlabel.wo_code', label: 'SPK / WO Code', kind: 'text', mono: true, group: 'Identity' },
     { key: 'outlabel.mo_code', label: 'MO Code', kind: 'text', mono: true, group: 'Identity' },
@@ -54,14 +60,24 @@ export function resolveOutputLabelField(key: string, ctx: PrintContext): Resolve
         case 'outlabel.barcode': return { text: '', empty: !d.barcodeDataUrl, imageUrl: d.barcodeDataUrl || undefined };
         case 'outlabel.weight':
             return d.weight > 0 ? { text: Number(d.weight).toFixed(2), empty: false } : { text: EM_DASH, empty: true };
+        // Only on a drained lot: BERAT is honestly "—" there, and this says what it
+        // weighed when it was made, so a reprint still tells the floor something.
+        case 'outlabel.birth_weight_note':
+            return !(d.weight > 0) && d.birthWeight > 0
+                ? { text: `${Number(d.birthWeight).toFixed(2)} kg (awal)`, empty: false }
+                : { text: '', empty: true };
         case 'outlabel.bag_seq': return d.bagSeq == null ? { text: EM_DASH, empty: true } : { text: `#${d.bagSeq}`, empty: false };
         case 'outlabel.ends': return txt(d.ends);
         case 'outlabel.date': return txt(d.date);
         case 'outlabel.notes': return txt(d.notes);
         case 'outlabel.item_name': return txt(d.itemName);
+        case 'outlabel.size': return txt(d.size);
         case 'outlabel.color': return txt(d.color);
+        case 'outlabel.color_code': return txt(d.colorCode);
+        case 'outlabel.combo': return txt(d.combo);
         case 'outlabel.width': return txt(d.width);
         case 'outlabel.machine': return txt(d.machine);
+        case 'outlabel.destination': return txt(d.destination);
         case 'outlabel.operator': return txt(d.operator);
         case 'outlabel.wo_code': return txt(d.woCode);
         case 'outlabel.mo_code': return txt(d.moCode);
@@ -154,10 +170,8 @@ export function buildOutputLabelContext({
     const mo = parentMO || {};
     const lotNo = c.output_batch_number || '';
 
-    // WARNA — the system Colors attribute value the MO carries.
-    const colorAttr = attributes.find((a: any) => (a.system_role || '').toLowerCase() === 'color');
-    const moValueIds: string[] = mo.attribute_value_ids || [];
-    const color = colorAttr?.values?.find((v: any) => moValueIds.includes(v.id))?.value || '';
+    const byRole = attrValueByRole(attributes, mo.attribute_value_ids);
+    const shade = moShade(mo, byRole);
 
     // Planned item ids — BOM lines, plus the creation-time snapshot so a BOM edited
     // after the fact doesn't retro-flag every row as SUB.
@@ -179,17 +193,27 @@ export function buildOutputLabelContext({
             barcodeDataUrl: barcodeDataUrl ?? makeLotBarcodeDataUrl(lotNo || String(c.id || '')),
             // BERAT is the lot's CURRENT weight: `qty_completed` is frozen at the
             // completion, so a split or partly staged unit kept printing its birth kg.
+            // A drained lot (a woven-off beam, a fully staged bag) prints "—" here and
+            // its birth kg as the separate `birth_weight_note`.
             weight: Number(lotRemaining ?? c.qty_completed ?? 0),
+            birthWeight: Number(c.qty_completed ?? 0),
             bagSeq: bagSeq ?? null,
             // Per-WO planned ends, falling back to the beam item's own — the same
             // precedence add_mo_completion stamps onto the lot.
-            ends: wo.ends ?? mo.item?.ends ?? null,
+            ends: wo.ends ?? mo.item_ends ?? null,
             date: tzFormatCustom(c.created_at || new Date().toISOString(), DMY, 'id-ID'),
             notes: rawNote.replace(/\s*\[[^\]]*\]\s*/g, ' ').trim(),
             itemName: mo.item_name || wo.item_name || '',
-            color,
+            // The MO's size is what add_mo_completion stamps onto the lot.
+            size: lotSizeLabel(mo) || '',
+            color: shade.name,
+            colorCode: shade.code,
+            combo: byRole('combo'),
             width: mo.bom?.mesin_lebar ?? null,
             machine: c.work_center_name || wo.work_center_name || '',
+            // Where the unit goes next: the producing WO's planned destination machine
+            // (a beam's loom), else its destination location.
+            destination: wo.next_destination_work_center_name || wo.next_destination_location_name || '',
             operator: c.operator_name || '',
             woCode: wo.code || '',
             moCode: mo.code || '',

@@ -1,6 +1,7 @@
 services:
   api:
     build: ./backend
+    restart: unless-stopped
     ports:
       - "8000:8000"
     depends_on:
@@ -54,6 +55,7 @@ services:
       - erp_network
 
   frontend:
+    restart: unless-stopped
     build:
       context: ./frontend
       args:
@@ -69,8 +71,11 @@ services:
     networks:
       - erp_network
 
+  # Cloudflare tunnel is opt-in: `--profile tunnel`, or COMPOSE_PROFILES=tunnel in the host's .env.
   tunnel:
     image: cloudflare/cloudflared:2026.9.3
+    profiles:
+      - tunnel
     networks:
       - erp_network
     container_name: erp-cloudflared

@@ -926,6 +926,7 @@ async def list_work_orders_flat(
             ends=wo.ends,
             staging_status=wo.staging_status or "NOT_STAGED",
             bom_operation_id=str(wo.bom_operation_id) if wo.bom_operation_id else None,
+            planned_recipe_id=str(wo.planned_recipe_id) if wo.planned_recipe_id else None,
             mo_id=str(mo.id),
             mo_code=mo.code,
             root_mo_id=wo_roots[0][0] if wo_roots else None,
@@ -1009,12 +1010,12 @@ async def update_manufacturing_order_status(mo_id: str, status: str, db: AsyncSe
         if new_so_status:
             await audit_service.log_activity(
                 db, current_user.id, "STATUS_CHANGE", "SalesOrder", str(mo.sales_order_id),
-                f"{new_so_status} by root MO {mo.code}",
+                f"{new_so_status} by root MO {mo.code}", commit=False,
             )
 
     await db.commit()
 
-    await audit_service.log_activity(db, current_user.id, "UPDATE_STATUS", "ManufacturingOrder", mo_id, f"{previous_status} -> {status}")
+    await audit_service.log_activity(db, current_user.id, "STATUS_CHANGE", "ManufacturingOrder", mo_id, f"{previous_status} -> {status}")
     await weaving_service.audit_and_broadcast_stops(
         db, current_user.id, stopped_runs, f"MO {status.lower()}")
     await manager.broadcast({"type": "MANUFACTURING_ORDER_UPDATE", "mo_id": mo_id, "status": status, "code": mo.code})
@@ -1758,7 +1759,7 @@ async def add_mo_completion(
             if new_so_status:
                 await audit_service.log_activity(
                     db, current_user.id, "STATUS_CHANGE", "SalesOrder", str(mo.sales_order_id),
-                    f"{new_so_status} by root MO {mo.code}",
+                    f"{new_so_status} by root MO {mo.code}", commit=False,
                 )
 
     # Auto-complete WO if cumulative logged qty reaches WO target

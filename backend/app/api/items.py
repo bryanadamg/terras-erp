@@ -124,7 +124,7 @@ async def create_item_api(payload: ItemCreate, db: AsyncSession = Depends(get_as
         entity_type="Item",
         entity_id=str(item.id),
         details=f"Created item {item.code} ({item.name})",
-        changes=payload.model_dump()
+        changes=audit_service.added(payload.model_dump())
     )
 
     await kpi_service.invalidate_and_broadcast(db, {"type": "KPI_UPDATE"}, {"type": "MASTER_DATA_UPDATE", "domain": "items"})
@@ -185,7 +185,10 @@ async def update_item_api(item_id: str, payload: ItemUpdate, db: AsyncSession = 
     if existing and not category_scope_ok(current_user, existing[0]):
         raise HTTPException(status_code=403, detail="Not authorized for this category")
 
-    item = await item_service.update_item(db, item_id, payload.model_dump(exclude_unset=True))
+    data = payload.model_dump(exclude_unset=True)
+    current = (await db.execute(select(_Item).filter(_Item.id == item_id))).scalars().first()
+    before = audit_service.fields_of(current, data) if current else {}
+    item = await item_service.update_item(db, item_id, data)
     if not item:
         raise HTTPException(status_code=404, detail="Item not found")
     _populate_source_info(item)
@@ -197,7 +200,7 @@ async def update_item_api(item_id: str, payload: ItemUpdate, db: AsyncSession = 
         entity_type="Item",
         entity_id=item_id,
         details=f"Updated item {item.code}",
-        changes=payload.model_dump(exclude_unset=True)
+        changes=audit_service.diff(before, data)
     )
     await kpi_service.invalidate_and_broadcast(db, {"type": "MASTER_DATA_UPDATE", "domain": "items"})
     return item
@@ -247,7 +250,7 @@ async def add_stock_api(payload: StockEntryCreate, db: AsyncSession = Depends(ge
         entity_type="StockEntry",
         entity_id=item.code, 
         details=f"Manual stock adjustment: {payload.qty} for {item.code} at {location.name}",
-        changes=payload.model_dump()
+        changes=audit_service.added(payload.model_dump())
     )
 
     await manager.broadcast({"type": "STOCK_UPDATE"})

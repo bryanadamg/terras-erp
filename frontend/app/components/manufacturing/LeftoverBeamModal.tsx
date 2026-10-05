@@ -112,7 +112,11 @@ export default function LeftoverBeamModal({ wo, onClose, onDone }: Props) {
                 showToast(`Leftover lot ${out.leftover_beam_number} created (${weighed})`, 'success');
                 // Print the new lot label right away — the beam is off the loom
                 // now and the remnant needs a physical tag before it moves.
-                setPrintLot({
+                // The dismount reply carries only the lot's number and kg; the label also
+                // prints its Lokasi and Catatan, so read the enriched lot back by number.
+                const full = await authFetch(`${API_BASE}/batches/resolve?number=${encodeURIComponent(out.leftover_beam_number)}`)
+                    .then((r: Response) => (r.ok ? r.json() : null)).catch(() => null);
+                setPrintLot(full || {
                     id: out.leftover_batch_id,
                     batch_number: out.leftover_beam_number,
                     remaining: out.leftover_qty,

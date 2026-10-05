@@ -159,21 +159,6 @@ def _wo_snapshot(wo: WorkOrder) -> dict:
     return {f: getattr(wo, f, None) for f in _WO_AUDITED_FIELDS}
 
 
-def _wo_diff(before: dict, after: dict) -> dict:
-    """{field: [before, after]} for the fields that actually moved.
-
-    `[old, new]` pairs match the convention already used elsewhere (see
-    api/colors.py). Compared as strings because a Numeric column comes back as
-    Decimal and a UUID column as UUID, so `4 != Decimal('4.0000')` would report a
-    change that never happened.
-    """
-    out = {}
-    for f in _WO_AUDITED_FIELDS:
-        a, b = before.get(f), after.get(f)
-        if (a is None) != (b is None) or (a is not None and str(a) != str(b)):
-            out[f] = [a, b]
-    return out
-
 @router.post("/work-orders", response_model=WorkOrderResponse)
 async def create_work_order(
     payload: WorkOrderCreate,
@@ -291,7 +276,7 @@ async def create_work_order(
         # never sent — code and sequence off the MO's number range, both locations
         # resolved from the work center, planned_recipe_id from the DYEING gate — so
         # the payload alone doesn't say what was actually created.
-        changes={**_wo_snapshot(wo), "code": wo.code, "planned_recipe_id": wo.planned_recipe_id},
+        changes=audit_service.added({**_wo_snapshot(wo), "code": wo.code, "planned_recipe_id": wo.planned_recipe_id}),
     )
     if mo_auto_started:
         # Cutting the first WO starts the order. That is a status change nobody asked
@@ -417,7 +402,7 @@ async def update_work_order(
     # was SENT: every field, whether or not it moved, and with no previous value — so
     # a WO whose qty, work center or locations were rewritten could not be
     # reconstructed from the log, which is the one question asked of it.
-    diff = _wo_diff(before, _wo_snapshot(wo))
+    diff = audit_service.diff(before, _wo_snapshot(wo))
     await audit_service.log_activity(
         db, user_id=current_user.id, action="UPDATE",
         entity_type="WorkOrder", entity_id=wo_id,
@@ -717,7 +702,7 @@ async def create_work_orders_bulk(
         db, user_id=current_user.id, action="CREATE",
         entity_type="WorkOrder", entity_id=str(mo_id),
         details=f"Bulk created {len(wos)} Work Orders for MO '{mo.code}'",
-        changes={"count": len(wos), "mo_id": str(mo_id)}
+        changes=audit_service.added({"count": len(wos), "mo_id": str(mo_id)})
     )
     if mo_auto_started:
         # Same automatic start as the single-WO route — see the note there.
@@ -1372,7 +1357,7 @@ async def stage_wo_materials(
         db, user_id=current_user.id, action="STAGE",
         entity_type="WorkOrder", entity_id=str(wo.id),
         details=f"Staged materials to WO '{wo.code}' (status {wo.staging_status})",
-        changes={"lines": [{"item_id": str(l.item_id), "qty": l.qty} for l in payload.lines]},
+        changes=audit_service.added({"lines": [{"item_id": str(l.item_id), "qty": l.qty} for l in payload.lines]}),
     )
     await manager.broadcast({"type": "WORK_ORDER_UPDATE", "wo_id": str(wo.id), "status": wo.status})
     await manager.broadcast({"type": "STOCK_UPDATE"})
@@ -1466,7 +1451,7 @@ async def unstage_wo_materials(
         db, user_id=current_user.id, action="UNSTAGE",
         entity_type="WorkOrder", entity_id=str(wo.id),
         details=f"Returned staged materials from WO '{wo.code}' (status {wo.staging_status})",
-        changes={"lines": [{"item_id": str(l.item_id), "qty": l.qty} for l in payload.lines]},
+        changes=audit_service.added({"lines": [{"item_id": str(l.item_id), "qty": l.qty} for l in payload.lines]}),
     )
     await manager.broadcast({"type": "WORK_ORDER_UPDATE", "wo_id": str(wo.id), "status": wo.status})
     await manager.broadcast({"type": "STOCK_UPDATE"})
@@ -1587,10 +1572,10 @@ async def mount_beam_on_loom(
     await db.commit()
 
     await audit_service.log_activity(
-        db, user_id=current_user.id, action="MOUNT", entity_type="BEAM_MOUNT",
+        db, user_id=current_user.id, action="MOUNT", entity_type="BeamMount",
         entity_id=str(mount.id),
         details=f"Mounted beam on machine '{wc.code or wc.name}'",
-        changes={"batch_id": str(payload.batch_id), "work_center_id": str(wc.id)},
+        changes=audit_service.added({"batch_id": str(payload.batch_id), "work_center_id": str(wc.id)}),
     )
     await manager.broadcast({"type": "STOCK_UPDATE"})
     await manager.broadcast({"type": "WORK_ORDER_UPDATE"})
@@ -1663,15 +1648,15 @@ async def dismount_beam_from_loom(
             f"({float(weighed):g}), variance {variance:+g}"
         )
     await audit_service.log_activity(
-        db, user_id=current_user.id, action="DISMOUNT", entity_type="BEAM_MOUNT",
+        db, user_id=current_user.id, action="DISMOUNT", entity_type="BeamMount",
         entity_id=str(mount.id),
         details=detail,
-        changes={
+        changes=audit_service.added({
             "to_location_id": str(payload.to_location_id) if payload.to_location_id else None,
             "leftover_batch_id": str(leftover_id) if leftover_id else None,
             "leftover_qty": float(weighed) if weighed is not None else None,
             "leftover_variance": variance,
-        },
+        }),
     )
     await manager.broadcast({"type": "STOCK_UPDATE"})
     await manager.broadcast({"type": "WORK_ORDER_UPDATE"})

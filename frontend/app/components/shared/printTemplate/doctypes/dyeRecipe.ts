@@ -17,7 +17,8 @@ export const DYE_RECIPE_DOC = 'dye_recipe';
 
 export const DR_FIELDS: FieldDef[] = [
     { key: 'dr.code', label: 'Recipe Code', kind: 'text', group: 'Recipe', mono: true },
-    { key: 'dr.name', label: 'Recipe Name (Warna)', kind: 'text', group: 'Recipe' },
+    { key: 'dr.name', label: 'Recipe Name', kind: 'text', group: 'Recipe' },
+    { key: 'dr.color_variant', label: 'Warna (colour variant, e.g. Navy)', kind: 'text', group: 'Recipe' },
     { key: 'dr.color_standard', label: 'Color Matching', kind: 'text', group: 'Recipe' },
     { key: 'dr.substrate_type', label: 'Substrate', kind: 'text', group: 'Recipe' },
     { key: 'dr.liquor_ratio', label: 'Liquor Ratio', kind: 'text', group: 'Recipe' },
@@ -30,6 +31,9 @@ export const DR_FIELDS: FieldDef[] = [
     { key: 'dr.bath_wo_codes', label: 'No WO (every WO in the bath)', kind: 'text', group: 'Bath' },
     { key: 'dr.bath_item_names', label: 'Nama Item (every item in the bath)', kind: 'text', group: 'Bath' },
     { key: 'dr.bath_mo_codes', label: 'MO (root MOs in the bath)', kind: 'text', group: 'Bath' },
+    { key: 'dr.color_code', label: 'Kode Warna (bath, else recipe)', kind: 'text', group: 'Bath' },
+    { key: 'dr.bath_sizes', label: 'Size (every size in the bath)', kind: 'text', group: 'Bath' },
+    { key: 'dr.bath_combos', label: 'Combo (every combo in the bath)', kind: 'text', group: 'Bath' },
     { key: 'dr.bath_qty', label: 'Qty Order (vessel load, kg)', kind: 'text', group: 'Bath' },
     { key: 'dr.bath_volume', label: 'Volume Air (vessel, L)', kind: 'text', group: 'Bath' },
     { key: 'dr.bath_liquor_ratio', label: 'Liquor Ratio (vessel)', kind: 'text', group: 'Bath' },
@@ -61,6 +65,10 @@ export function resolveDyeRecipeField(key: string, ctx: PrintContext): ResolvedF
     switch (key) {
         case 'dr.code': return txt(r.code);
         case 'dr.name': return txt(r.name);
+        // The shade's colour variant (Navy), not the recipe's code-like name: the
+        // bath's orders first, else the variant the recipe's Color Library entry carries.
+        case 'dr.color_variant':
+            return txt(uniq(b.color_variants).join(', ') || r.color_variant_label || r.color_name);
         case 'dr.color_standard': return txt(r.color_standard);
         case 'dr.substrate_type': return txt(r.substrate_type);
         case 'dr.liquor_ratio': return txt(r.liquor_ratio != null ? `1 : ${r.liquor_ratio}` : '');
@@ -73,6 +81,9 @@ export function resolveDyeRecipeField(key: string, ctx: PrintContext): ResolvedF
         case 'dr.bath_wo_codes': return txt((b.wo_codes || []).join(', '));
         case 'dr.bath_item_names': return txt(uniq(b.item_names).join('\n'));
         case 'dr.bath_mo_codes': return txt(uniq(b.mo_codes).join(', '));
+        case 'dr.color_code': return txt(uniq(b.color_codes).join(', ') || r.color_code);
+        case 'dr.bath_sizes': return txt(uniq(b.sizes).join(', '));
+        case 'dr.bath_combos': return txt(uniq(b.combos).join(', '));
         case 'dr.bath_qty': return txt(num(b.substrate_qty, ' KG'));
         case 'dr.bath_volume': return txt(num(b.volume_liters, ' Liter'));
         case 'dr.bath_liquor_ratio': return txt(b.liquor_ratio ? `1 : ${fmt(b.liquor_ratio)}` : '');
@@ -154,6 +165,10 @@ export interface KartuCelupBath {
     wo_codes: string[];
     item_names: string[];
     mo_codes: string[];
+    color_codes?: string[];
+    color_variants?: string[];
+    sizes?: string[];
+    combos?: string[];
     substrate_qty: number | null;
     volume_liters: number | null;
     liquor_ratio: number | null;

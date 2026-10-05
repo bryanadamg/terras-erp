@@ -39,3 +39,16 @@ def get_audit_logs(
     items = window.apply(query.order_by(AuditLog.timestamp.desc())).all()
 
     return window.envelope(items, total)
+
+
+@router.get("/audit-logs/entity-types", response_model=list[str])
+def get_audit_entity_types(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_permission("audit_log.view")),
+):
+    # Feeds the Audit Logs page's entity filter, so it lists what is actually
+    # logged instead of a hand-kept subset. Same gate as the unscoped browse.
+    if not user_has_permission(current_user, 'admin.access'):
+        raise HTTPException(status_code=403, detail="Missing permission: admin.access")
+    rows = db.query(AuditLog.entity_type).distinct().order_by(AuditLog.entity_type).all()
+    return [r[0] for r in rows]

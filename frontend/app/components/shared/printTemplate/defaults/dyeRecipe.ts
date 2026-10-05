@@ -47,8 +47,11 @@ const BANDS: Band[] = [
         rows: [
             kv('Nama Item', 'dr.bath_item_names', { bold: true, hideWhenEmpty: true }),
             kv('No WO', 'dr.bath_wo_codes', { mono: true, hideWhenEmpty: true }),
-            kv('Warna', 'dr.name', { bold: true }),
+            kv('Warna', 'dr.color_variant', { bold: true }),
             kv('Color Matching', 'dr.color_standard'),
+            kv('Kode Warna', 'dr.color_code', { bold: true, emptyText: ' ' }),
+            kv('Combo', 'dr.bath_combos', { emptyText: ' ' }),
+            kv('Size', 'dr.bath_sizes', { bold: true, span: 3, hideWhenEmpty: true }),
             fill('Nomor PO', ' '),
             kv('LOT', 'dr.bath_lots', { emptyText: ' ' }),
             kv('Artikel', 'dr.code'),

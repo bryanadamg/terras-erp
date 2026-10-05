@@ -159,6 +159,7 @@ async def update_combo(
             raise HTTPException(status_code=400, detail="Combo code already exists")
 
     data = payload.model_dump(exclude_unset=True)
+    before = audit_service.fields_of(c, data)
     for field, val in data.items():
         setattr(c, field, val)
 
@@ -175,7 +176,7 @@ async def update_combo(
     c = result.scalars().first()
     await audit_service.log_activity(
         db, str(current_user.id), "UPDATE", "Combo", str(c.id),
-        details=f"Updated combo {c.code}", changes=data
+        details=f"Updated combo {c.code}", changes=audit_service.diff(before, data)
     )
     await manager.broadcast({"type": "COMBO_UPDATE", "id": str(c.id)})
     return _serialize(c, await _usage_count(db, c.attribute_value_id))

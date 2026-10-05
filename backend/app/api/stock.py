@@ -74,7 +74,7 @@ async def get_stock_ledger(
     direction: Optional[str] = Query(None, description="'in' (qty >= 0) or 'out' (qty < 0)"),
     sort_by: Optional[str] = Query(None, description="date | item | category | location | qty"),
     sort_dir: Optional[str] = Query(None, description="asc | desc"),
-    window: PageWindow = Depends(PageParams(default_size=100)),
+    window: PageWindow = Depends(PageParams(default_size=100, max_size=1000)),  # ledger print takes 1000
     db: AsyncSession = Depends(get_async_db),
     current_user: User = Depends(require_any_permission("stock_ledger.view", "stock_on_hand.view"))
 ):
@@ -309,16 +309,16 @@ async def create_stock_entry(
     await audit_service.log_activity(
         db=db,
         user_id=current_user.id,
-        action="create",
-        entity_type="stock_entry",
+        action="CREATE",
+        entity_type="StockEntry",
         entity_id=str(item.id),
-        changes={
+        changes=audit_service.added({
             "item": payload.item_code,
             "location": payload.location_code,
             "qty": payload.qty,
             "reason": payload.reference_id,
             "batch_id": str(payload.batch_id) if payload.batch_id else None,
-        },
+        }),
     )
 
     await manager.broadcast({"type": "STOCK_UPDATE"})
@@ -382,9 +382,9 @@ async def transfer_stock(
         db=db,
         user_id=current_user.id,
         action="TRANSFER",
-        entity_type="stock_entry",
+        entity_type="StockEntry",
         entity_id=str(item.id),
-        changes={"item": item.code, "qty": payload.qty, "route": ref, "batch_id": str(payload.batch_id) if payload.batch_id else None},
+        changes=audit_service.added({"item": item.code, "qty": payload.qty, "route": ref, "batch_id": str(payload.batch_id) if payload.batch_id else None}),
     )
 
     await manager.broadcast({"type": "STOCK_UPDATE"})
@@ -461,10 +461,10 @@ async def transfer_stock_bulk(
         db=db,
         user_id=current_user.id,
         action="TRANSFER",
-        entity_type="stock_entry",
+        entity_type="StockEntry",
         entity_id=str(payload.to_location_id),
         details=f"Combined move of {len(payload.lines)} stock rows to {dest_code}",
-        changes={
+        changes=audit_service.added({
             "destination": dest_code,
             "line_count": len(payload.lines),
             "lines": [
@@ -476,7 +476,7 @@ async def transfer_stock_bulk(
                 }
                 for ln in payload.lines
             ],
-        },
+        }),
     )
 
     await manager.broadcast({"type": "STOCK_UPDATE"})

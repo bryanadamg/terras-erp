@@ -29,7 +29,7 @@ def create_uom(payload: UOMCreate, db: Session = Depends(get_db), current_user: 
     db.add(uom)
     db.commit()
     db.refresh(uom)
-    db.add(AuditLog(user_id=current_user.id, action="CREATE", entity_type="uom", entity_id=str(uom.id), details=f"Created UOM {uom.name}"))
+    db.add(AuditLog(user_id=current_user.id, action="CREATE", entity_type="UOM", entity_id=str(uom.id), details=f"Created UOM {uom.name}"))
     db.commit()
     broadcast_sync({"type": "MASTER_DATA_UPDATE", "domain": "uoms"})
     return uom
@@ -59,7 +59,7 @@ def delete_uom(uom_id: str, db: Session = Depends(get_db), current_user: User = 
         raise HTTPException(status_code=404, detail="UOM not found")
     if uom.is_system:
         raise HTTPException(status_code=400, detail=f"'{uom.name}' is a system UOM and cannot be deleted")
-    db.add(AuditLog(user_id=current_user.id, action="DELETE", entity_type="uom", entity_id=str(uom.id), details=f"Deleted UOM {uom.name}"))
+    db.add(AuditLog(user_id=current_user.id, action="DELETE", entity_type="UOM", entity_id=str(uom.id), details=f"Deleted UOM {uom.name}"))
     db.delete(uom)
     db.commit()
     broadcast_sync({"type": "MASTER_DATA_UPDATE", "domain": "uoms"})
@@ -77,7 +77,7 @@ def create_uom_factor(from_uom_id: str, payload: UOMFactorCreate, db: Session = 
     db.add(factor)
     db.commit()
     db.refresh(factor)
-    db.add(AuditLog(user_id=current_user.id, action="CREATE", entity_type="uom_factor", entity_id=str(factor.id), details=f"Created UOM factor {from_uom.name} -> {to_uom.name}"))
+    db.add(AuditLog(user_id=current_user.id, action="CREATE", entity_type="UOMFactor", entity_id=str(factor.id), details=f"Created UOM factor {from_uom.name} -> {to_uom.name}"))
     db.commit()
     broadcast_sync({"type": "MASTER_DATA_UPDATE", "domain": "uoms"})
     # reload relationships
@@ -90,7 +90,7 @@ def delete_uom_factor(from_uom_id: str, factor_id: str, db: Session = Depends(ge
     factor = db.query(UOMFactor).filter(UOMFactor.id == factor_id, UOMFactor.from_uom_id == from_uom_id).first()
     if not factor:
         raise HTTPException(status_code=404, detail="Factor not found")
-    db.add(AuditLog(user_id=current_user.id, action="DELETE", entity_type="uom_factor", entity_id=str(factor.id), details="Deleted UOM factor"))
+    db.add(AuditLog(user_id=current_user.id, action="DELETE", entity_type="UOMFactor", entity_id=str(factor.id), details="Deleted UOM factor"))
     db.delete(factor)
     db.commit()
     broadcast_sync({"type": "MASTER_DATA_UPDATE", "domain": "uoms"})

@@ -14,7 +14,8 @@
 
 import type { FieldDef, ResolvedField } from '../fieldRegistry';
 import type { RowSourceDef } from '../rowSources';
-import type { PrintContext } from '../renderContext';
+import { attrValueByRole, moShade, type PrintContext } from '../renderContext';
+import { lotSizeLabel } from '../../LotChips';
 import { STATIC_BASE } from '../../apiBase';
 
 export const MO_SHEET_DOC = 'mo_sheet';
@@ -23,6 +24,10 @@ export const MS_FIELDS: FieldDef[] = [
     { key: 'ms.code', label: 'No. SPK (MO code)', kind: 'text', mono: true, group: 'Order' },
     { key: 'ms.article', label: 'Article (item)', kind: 'text', group: 'Order' },
     { key: 'ms.item_code', label: 'Item Code', kind: 'text', mono: true, group: 'Order' },
+    { key: 'ms.size', label: 'Size / Ukuran', kind: 'text', group: 'Order' },
+    { key: 'ms.color', label: 'Warna', kind: 'text', group: 'Order' },
+    { key: 'ms.color_code', label: 'Kode Warna (colour code)', kind: 'text', group: 'Order' },
+    { key: 'ms.combo', label: 'Combo', kind: 'text', group: 'Order' },
     { key: 'ms.qty', label: 'Jml Order', kind: 'number', unit: 'pcs', group: 'Order' },
     { key: 'ms.status', label: 'Status', kind: 'text', group: 'Order' },
     { key: 'ms.output_location', label: 'Output Location', kind: 'text', group: 'Order' },
@@ -45,6 +50,11 @@ export const MS_FIELDS: FieldDef[] = [
     { key: 'ms.tarikan_mentah', label: 'Tarikan Mentah', kind: 'text', group: 'Spesifikasi Teknis' },
     { key: 'ms.p_tulisan', label: 'P. Tulisan', kind: 'text', group: 'Spesifikasi Teknis' },
     { key: 'ms.bandul_1kg', label: 'Bandul 1kg', kind: 'text', group: 'Spesifikasi Teknis' },
+    // The dyed/set (celup) side of each machine measurement.
+    { key: 'ms.lebar_matang', label: 'Lebar Matang', kind: 'text', group: 'Spesifikasi Teknis' },
+    { key: 'ms.tarikan_matang', label: 'Tarikan Matang', kind: 'text', group: 'Spesifikasi Teknis' },
+    { key: 'ms.p_tulisan_matang', label: 'P. Tulisan Matang', kind: 'text', group: 'Spesifikasi Teknis' },
+    { key: 'ms.bandul_1kg_matang', label: 'Bandul 1kg Matang', kind: 'text', group: 'Spesifikasi Teknis' },
     { key: 'ms.kerapatan', label: 'Kerapatan', kind: 'text', group: 'Spesifikasi Teknis' },
     { key: 'ms.sisir_no', label: 'Sisir No.', kind: 'text', group: 'Spesifikasi Teknis' },
     { key: 'ms.pemakaian_obat', label: 'Pemakaian Obat', kind: 'text', group: 'Spesifikasi Teknis' },
@@ -87,6 +97,11 @@ export function resolveMoSheetField(key: string, ctx: PrintContext): ResolvedFie
         case 'ms.code': return txt(mo.code);
         case 'ms.article': return txt(d.itemName);
         case 'ms.item_code': return txt(mo.item_code);
+        case 'ms.size': return txt(lotSizeLabel(mo));
+        // Paired on one line: empty only when the order carries no shade at all.
+        case 'ms.color': return d.shade.name || d.shade.code ? present(d.shade.name) : EMPTY;
+        case 'ms.color_code': return d.shade.name || d.shade.code ? present(d.shade.code) : EMPTY;
+        case 'ms.combo': return txt(d.combo);
         case 'ms.qty': return mo.qty == null ? EMPTY : { text: String(mo.qty), empty: false };
         case 'ms.status': return txt(mo.status);
         case 'ms.output_location': return txt(d.outputLocation);
@@ -107,10 +122,14 @@ export function resolveMoSheetField(key: string, ctx: PrintContext): ResolvedFie
 
         case 'ms.berat_mateng': return pair(b.berat_bahan_mateng, b.berat_bahan_mentah_pelesan, v => `${v} gr/yard`);
         case 'ms.berat_mentah': return pair(b.berat_bahan_mentah_pelesan, b.berat_bahan_mateng, v => `${v} gr/yard`);
-        case 'ms.lebar_mesin': return pair(b.mesin_lebar, b.mesin_panjang_tarikan, v => `${v} mm`);
-        case 'ms.tarikan_mentah': return pair(b.mesin_panjang_tarikan, b.mesin_lebar, v => `${v} cm`);
-        case 'ms.p_tulisan': return pair(b.mesin_panjang_tulisan, b.mesin_panjang_tarikan_bandul_1kg, v => `${v} cm`);
-        case 'ms.bandul_1kg': return pair(b.mesin_panjang_tarikan_bandul_1kg, b.mesin_panjang_tulisan, v => `${v} cm`);
+        case 'ms.lebar_mesin': return pair(b.mesin_lebar, b.celup_lebar, v => `${v} mm`);
+        case 'ms.lebar_matang': return pair(b.celup_lebar, b.mesin_lebar, v => `${v} mm`);
+        case 'ms.tarikan_mentah': return pair(b.mesin_panjang_tarikan, b.celup_panjang_tarikan, v => `${v} cm`);
+        case 'ms.tarikan_matang': return pair(b.celup_panjang_tarikan, b.mesin_panjang_tarikan, v => `${v} cm`);
+        case 'ms.p_tulisan': return pair(b.mesin_panjang_tulisan, b.celup_panjang_tulisan, v => `${v} cm`);
+        case 'ms.p_tulisan_matang': return pair(b.celup_panjang_tulisan, b.mesin_panjang_tulisan, v => `${v} cm`);
+        case 'ms.bandul_1kg': return pair(b.mesin_panjang_tarikan_bandul_1kg, b.celup_panjang_tarikan_bandul_1kg, v => `${v} cm`);
+        case 'ms.bandul_1kg_matang': return pair(b.celup_panjang_tarikan_bandul_1kg, b.mesin_panjang_tarikan_bandul_1kg, v => `${v} cm`);
         case 'ms.kerapatan':
             return pair(b.kerapatan_picks, b.sisir_no, v => `${v} ${b.kerapatan_unit || '/cm'}`);
         case 'ms.sisir_no': return pair(b.sisir_no, b.kerapatan_picks, v => String(v));
@@ -235,7 +254,10 @@ export function moSheetPresence(mo: any, boms: any[] = []) {
         tech: !!b && (
             b.berat_bahan_mateng != null || b.berat_bahan_mentah_pelesan != null ||
             b.mesin_lebar != null || b.mesin_panjang_tarikan != null ||
-            b.mesin_panjang_tulisan != null || b.kerapatan_picks != null ||
+            b.mesin_panjang_tulisan != null || b.mesin_panjang_tarikan_bandul_1kg != null ||
+            b.celup_lebar != null || b.celup_panjang_tarikan != null ||
+            b.celup_panjang_tulisan != null || b.celup_panjang_tarikan_bandul_1kg != null ||
+            b.kerapatan_picks != null ||
             b.sisir_no != null || !!b.pemakaian_obat
         ),
         samplePhoto: !!b?.sample_photo_url,
@@ -297,6 +319,8 @@ export function buildMoSheetContext({
             getItemCode: getItemCode || (() => ''),
             getLocationName: loc,
             itemName: m.item_name || getName(m.item_id),
+            shade: moShade(m, attrValueByRole(attributes, m.attribute_value_ids)),
+            combo: attrValueByRole(attributes, m.attribute_value_ids)('combo'),
             outputLocation: loc(m.location_id),
             samplePhotoUrl: bom?.sample_photo_url ? `${STATIC_BASE}${bom.sample_photo_url}` : undefined,
             printDate,

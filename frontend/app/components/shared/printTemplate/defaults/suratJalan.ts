@@ -76,10 +76,12 @@ const BANDS: Band[] = [
         columns: [
             { field: 'qty', label: 'QTY', width: '8%', align: 'right', headerAlign: 'center' },
             { field: 'unit', label: 'Unit', width: '7%', align: 'center' },
-            { field: 'item_name', label: 'NAMA BARANG', width: '27%' },
-            { field: 'warna', label: 'WARNA', width: '23%', emptyText: '' },
-            { field: 'po_ref', label: 'NO PO', width: '18%', align: 'center', emptyText: '' },
-            { field: 'no_ref', label: 'NO REF', width: '17%', emptyText: '' },
+            { field: 'item_name', label: 'NAMA BARANG', width: '21%' },
+            { field: 'size', label: 'SIZE', width: '7%', align: 'center', emptyText: '' },
+            { field: 'combo', label: 'COMBO', width: '9%', emptyText: '' },
+            { field: 'warna', label: 'WARNA', width: '18%', emptyText: '' },
+            { field: 'po_ref', label: 'NO PO', width: '17%', align: 'center', emptyText: '' },
+            { field: 'no_ref', label: 'NO REF', width: '13%', emptyText: '' },
         ],
     },
     {

@@ -107,6 +107,15 @@ def _decorate_pick_list(pl: PickList) -> PickList:
             # Size of the carton actually picked, stamped on it at packing.
             line.bom_size_snapshot = line.batch.bom_size_snapshot
             line.size_label = stock_service._bom_size_label(line.batch.bom_size_snapshot)
+            # Packaging + weights snapshotted on the carton — the note's Bruto total.
+            pt = line.batch.packaging_type
+            line.packaging_type_name = pt.name if pt else None
+            line.net_weight_kg = (
+                float(line.batch.weight_kg) if line.batch.weight_kg is not None else None
+            )
+            line.gross_weight_kg = (
+                float(line.batch.gross_weight_kg) if line.batch.gross_weight_kg is not None else None
+            )
         if line.batch_id:
             cartons += 1
     pl.carton_count = cartons
@@ -503,7 +512,7 @@ async def verify_shipment(
         entity_id=str(shp_id),
         details=f"Verified shipment {shp.code}"
                 + (" with discrepancy" if payload.with_discrepancy else ""),
-        changes={"notes": payload.notes} if payload.notes else None,
+        changes=audit_service.added({"notes": payload.notes}) if payload.notes else None,
     )
     try:
         await manager.broadcast({"type": "SHIPMENT_UPDATE", "id": str(shp_id)})

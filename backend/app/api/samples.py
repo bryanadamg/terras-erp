@@ -192,7 +192,7 @@ async def create_sample_request(
         entity_type="SampleRequest",
         entity_id=str(sample.id),
         details=f"Created Sample Request {sample.code}",
-        changes={"code": sample.code, "customer_article_code": sample.customer_article_code},
+        changes=audit_service.added({"code": sample.code, "customer_article_code": sample.customer_article_code}),
     )
 
     await kpi_service.invalidate_and_broadcast(db, {"type": "KPI_UPDATE"})
@@ -571,6 +571,16 @@ async def get_color_events(
     return out
 
 
+# Header columns an edit can move; colors are diffed row-by-row, not audited here.
+_AUDITED_HEADER_FIELDS = (
+    "customer_id", "request_date", "project", "customer_article_code", "internal_article_code",
+    "width", "variant_type", "category_value_id", "category", "main_material", "middle_material",
+    "bottom_material", "weft", "warp", "original_weight", "original_weight_unit",
+    "production_weight", "production_weight_unit", "additional_info", "quantity", "sample_size",
+    "estimated_completion_date", "completion_description", "notes",
+)
+
+
 @router.put("/samples/{sample_id}", response_model=SampleRequestResponse)
 async def update_sample_request(
     sample_id: str,
@@ -587,6 +597,7 @@ async def update_sample_request(
     if not sample:
         raise HTTPException(status_code=404, detail="Sample not found")
 
+    before = audit_service.fields_of(sample, _AUDITED_HEADER_FIELDS)
     req_date = date.fromisoformat(payload.request_date) if payload.request_date else date.today()
     est_date = date.fromisoformat(payload.estimated_completion_date) if payload.estimated_completion_date else None
 
@@ -661,7 +672,7 @@ async def update_sample_request(
         entity_type="SampleRequest",
         entity_id=sample_id,
         details=f"Updated Sample Request {sample.code}",
-        changes={"customer_article_code": sample.customer_article_code},
+        changes=audit_service.diff(before, audit_service.fields_of(sample, _AUDITED_HEADER_FIELDS)),
     )
 
     await _enrich_colors_with_items(db, [sample])
@@ -694,11 +705,11 @@ async def update_sample_status(
     await audit_service.log_activity(
         db,
         user_id=current_user.id,
-        action="UPDATE_STATUS",
+        action="STATUS_CHANGE",
         entity_type="SampleRequest",
         entity_id=sample_id,
         details=f"Updated Sample {sample.code} status from {previous_status} to {status}",
-        changes={"status": status, "previous_status": previous_status},
+        changes={"status": [previous_status, status]},
     )
 
     await kpi_service.invalidate_and_broadcast(db, {"type": "KPI_UPDATE"})
@@ -807,11 +818,11 @@ async def update_color_status(
     await audit_service.log_activity(
         db,
         user_id=current_user.id,
-        action="UPDATE_COLOR_STATUS",
+        action="STATUS_CHANGE",
         entity_type="SampleColor",
         entity_id=color_id,
         details=f"Updated color '{color.name}' status from {previous_status} to {status}",
-        changes={"status": status, "previous_status": previous_status},
+        changes={"status": [previous_status, status]},
     )
     return color
 
@@ -951,11 +962,11 @@ async def upload_color_status_image(
     await audit_service.log_activity(
         db,
         user_id=current_user.id,
-        action="UPDATE_COLOR_STATUS",
+        action="STATUS_CHANGE",
         entity_type="SampleColor",
         entity_id=color_id,
         details=f"Attached {kind} photo to color '{color.name}'",
-        changes={"image_url": url},
+        changes=audit_service.added({"image_url": url}),
     )
     return {"image_url": url}
 

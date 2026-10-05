@@ -1182,6 +1182,8 @@ class WorkOrderFlatResponse(BaseModel):
     ends: int | None = None
     staging_status: str = "NOT_STAGED"
     bom_operation_id: str | None = None
+    # Kartu Kerja's dyeing RECIPE box reads this; without it a WO-list print said '—'.
+    planned_recipe_id: str | None = None
     mo_id: str
     mo_code: str
     # Top of the parent_mo_id / MODependency chain. A consolidated component MO is

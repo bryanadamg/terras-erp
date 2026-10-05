@@ -6,6 +6,7 @@ from app.db.session import get_db
 from app.schemas import PartnerCreate, PartnerResponse, PartnerUpdate, PaginatedPartnerResponse
 from app.models.partner import Partner
 from app.models.audit import AuditLog
+from app.services import audit_service
 from app.core.ws_manager import broadcast_sync
 from app.api.auth import get_current_user, require_permission, require_any_permission, user_has_permission
 from app.core.pagination import PageParams, PageWindow
@@ -32,8 +33,8 @@ def create_partner(payload: PartnerCreate, db: Session = Depends(get_db), curren
     )
     db.add(partner)
     db.flush()  # assigns partner.id so the audit row lands in the same commit
-    db.add(AuditLog(user_id=current_user.id, action="CREATE", entity_type="partner", entity_id=str(partner.id),
-                    details=f"Created partner {partner.name}", changes=payload.model_dump(mode="json")))
+    db.add(AuditLog(user_id=current_user.id, action="CREATE", entity_type="Partner", entity_id=str(partner.id),
+                    details=f"Created partner {partner.name}", changes=audit_service.added(payload.model_dump(mode="json"))))
     db.commit()
     db.refresh(partner)
     broadcast_sync({"type": "MASTER_DATA_UPDATE", "domain": "partners"})
@@ -128,7 +129,7 @@ def update_partner(partner_id: uuid.UUID, payload: PartnerUpdate, db: Session = 
             changes[key] = [old, value]
             setattr(partner, key, value)
 
-    db.add(AuditLog(user_id=current_user.id, action="UPDATE", entity_type="partner", entity_id=str(partner.id),
+    db.add(AuditLog(user_id=current_user.id, action="UPDATE", entity_type="Partner", entity_id=str(partner.id),
                     details=f"Updated partner {partner.name}", changes=changes))
     db.commit()
     broadcast_sync({"type": "MASTER_DATA_UPDATE", "domain": "partners"})
@@ -149,7 +150,7 @@ def delete_partner(partner_id: uuid.UUID, db: Session = Depends(get_db), current
         db.add(AuditLog(
             user_id=current_user.id,
             action="DELETE",
-            entity_type="partner",
+            entity_type="Partner",
             entity_id=str(partner.id),
             details=f"Deleted partner {partner.name}"
         ))

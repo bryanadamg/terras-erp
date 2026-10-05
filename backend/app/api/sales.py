@@ -777,9 +777,10 @@ async def delete_sales_order(so_id: uuid.UUID, db: AsyncSession = Depends(get_as
         db,
         user_id=current_user.id,
         action="DELETE",
-        entity_type="sales_order",
+        entity_type="SalesOrder",
         entity_id=str(so.id),
-        details=f"Deleted SO {so.po_number}"
+        details=f"Deleted SO {so.po_number}",
+        commit=False,
     )
     await db.delete(so)
     await db.commit()

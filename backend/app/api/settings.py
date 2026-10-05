@@ -147,6 +147,7 @@ async def update_qty_formula(
     if fallback not in dict(cleaned):
         cleaned.append((fallback, qty_formula_service.SELF_NAME))
 
+    before_rules = {r.size_name: r.expression for r in await qty_formula_service.get_rules(db)}
     rules = await qty_formula_service.replace_rules(db, cleaned, current_user.id)
     await audit_service.log_activity(
         db,
@@ -155,7 +156,7 @@ async def update_qty_formula(
         "QtyFormula",
         "singleton",
         details="Updated production quantity formula",
-        changes={"rules": {r.size_name: r.expression for r in rules}},
+        changes={"rules": [before_rules, {r.size_name: r.expression for r in rules}]},
     )
     return QtyFormulaResponse(
         rules=[QtyFormulaRuleIO(size_name=r.size_name, expression=r.expression) for r in rules],

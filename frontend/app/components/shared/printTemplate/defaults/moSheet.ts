@@ -41,6 +41,10 @@ const BANDS: Band[] = [
         labelWidth: '18%', labelFontSize: BASE, valueFontSize: BASE, ruleColor: RULE, labelBackground: '#f0f0f0',
         rows: [
             { field: 'ms.article', label: 'ARTICLE', span: 3, bold: true, fontSize: 9 },
+            { field: 'ms.size', label: 'Size', span: 3, bold: true, hideWhenEmpty: true },
+            { field: 'ms.color', label: 'Warna', hideWhenEmpty: true },
+            { field: 'ms.color_code', label: 'Kode Warna', bold: true, hideWhenEmpty: true },
+            { field: 'ms.combo', label: 'Combo', span: 3, bold: true, hideWhenEmpty: true },
             { field: 'ms.code', label: 'No. SPK', mono: true },
             { field: 'ms.qty', label: 'Jml Order', bold: true },
             { field: 'ms.sales_order', label: 'Sales Order', mono: true, hideWhenEmpty: true },
@@ -62,10 +66,15 @@ const BANDS: Band[] = [
         rows: [
             { field: 'ms.berat_mateng', label: 'Berat Mateng', hideWhenEmpty: true },
             { field: 'ms.berat_mentah', label: 'Berat Mentah', hideWhenEmpty: true },
+            // Mentah | Matang on each line: off the loom, then after dyeing/setting.
             { field: 'ms.lebar_mesin', label: 'Lebar Mesin', hideWhenEmpty: true },
+            { field: 'ms.lebar_matang', label: 'Lebar Matang', hideWhenEmpty: true },
             { field: 'ms.tarikan_mentah', label: 'Tarikan Mentah', hideWhenEmpty: true },
+            { field: 'ms.tarikan_matang', label: 'Tarikan Matang', hideWhenEmpty: true },
             { field: 'ms.p_tulisan', label: 'P. Tulisan', hideWhenEmpty: true },
+            { field: 'ms.p_tulisan_matang', label: 'P. Tulisan Matang', hideWhenEmpty: true },
             { field: 'ms.bandul_1kg', label: 'Bandul 1kg', hideWhenEmpty: true },
+            { field: 'ms.bandul_1kg_matang', label: 'Bandul 1kg Matang', hideWhenEmpty: true },
             { field: 'ms.kerapatan', label: 'Kerapatan', hideWhenEmpty: true },
             { field: 'ms.sisir_no', label: 'Sisir No.', hideWhenEmpty: true },
             { field: 'ms.pemakaian_obat', label: 'Pemakaian Obat', span: 3, hideWhenEmpty: true },

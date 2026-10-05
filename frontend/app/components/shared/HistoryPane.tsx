@@ -2,8 +2,10 @@ import { useState, useEffect } from 'react';
 import { useLanguage } from '../../context/LanguageContext';
 import { useTimezone } from '../../context/TimezoneContext';
 import { useData } from '../../context/DataContext';
+import { useUser } from '../../context/UserContext';
 import { API_BASE } from './apiBase';
-import { CODE_FONT, xpFont } from './xpTheme';
+import { xpFont } from './xpTheme';
+import AuditChanges from './AuditChanges';
 
 interface HistoryPaneProps {
     entityType: 'Item' | 'SampleRequest' | 'BOM' | 'WorkOrder';
@@ -18,6 +20,9 @@ const ACTION_META: Record<string, { icon: string; color: string; bg: string; lab
     STATUS_CHANGE: { icon: '●', color: '#7a5200', bg: '#fff5d6', label: 'Status'  },
 };
 const DEFAULT_META = { icon: '●', color: '#444', bg: '#f0f0f0', label: 'Event' };
+// Any verb outside the four above (MOUNT, PICK, COMPLETION, ...) shows its own name, not 'Event'.
+const metaFor = (action: string) => ACTION_META[action]
+    ?? { ...DEFAULT_META, label: action.charAt(0) + action.slice(1).toLowerCase().replace(/_/g, ' ') };
 
 const S = {
     wrap: {
@@ -173,16 +178,6 @@ const S = {
         fontSize: 11,
         color: '#000',
     },
-    sunken: {
-        background: '#fff',
-        border: '1px solid',
-        borderColor: '#808080 #dfdfdf #dfdfdf #808080',
-        padding: '4px 6px',
-        fontFamily: CODE_FONT,
-        fontSize: 10,
-        marginTop: 4,
-        overflowX: 'auto' as const,
-    },
     statusBar: {
         background: '#ece9d8',
         borderTop: '1px solid #808080',
@@ -218,19 +213,24 @@ const S = {
 export default function HistoryPane({ entityType, entityId, onClose }: HistoryPaneProps) {
     const { t } = useLanguage();
     const { authFetch } = useData();
+    const { users, refreshUsers } = useUser();
     const { formatCustom: tzFmt } = useTimezone();
     const [logs, setLogs] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
     const [selectedIdx, setSelectedIdx] = useState<number | null>(null);
 
+    useEffect(() => { if (users.length === 0) refreshUsers(); }, []);
+    const userLabel = (id: string | null) => {
+        if (!id) return 'System';
+        const u = users.find((x: any) => x.id === id);
+        return u ? (u.full_name || u.username) : `User ${id.split('-')[0]}`;
+    };
+
     useEffect(() => {
         const fetchHistory = async () => {
             setLoading(true);
             try {
-                const token = localStorage.getItem('access_token');
-                const res = await authFetch(`${API_BASE}/audit-logs?entity_type=${entityType}&entity_id=${entityId}&limit=50`, {
-                    headers: { 'Authorization': `Bearer ${token}` }
-                });
+                const res = await authFetch(`${API_BASE}/audit-logs?entity_type=${entityType}&entity_id=${entityId}&limit=50`);
                 if (res.ok) {
                     const data = await res.json();
                     setLogs(data.items);
@@ -246,23 +246,6 @@ export default function HistoryPane({ entityType, entityId, onClose }: HistoryPa
     }, [entityId, entityType]);
 
     const selected = selectedIdx !== null ? logs[selectedIdx] : null;
-
-    const renderChangeDetail = (changes: any) => {
-        if (!changes || typeof changes !== 'object') return null;
-        const entries = Object.entries(changes);
-        if (entries.length === 0) return null;
-        return (
-            <div style={S.sunken}>
-                {entries.map(([k, v]) => (
-                    <div key={k} style={{ marginBottom: 1 }}>
-                        <span style={{ color: '#1a4a8a', fontWeight: 'bold' }}>{k}</span>
-                        <span style={{ color: '#808080' }}> = </span>
-                        <span style={{ color: '#000' }}>{JSON.stringify(v)}</span>
-                    </div>
-                ))}
-            </div>
-        );
-    };
 
     const fmt = (ts: string) =>
         tzFmt(ts, { day: '2-digit', month: 'short', year: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit' }, 'en-GB');
@@ -312,7 +295,7 @@ export default function HistoryPane({ entityType, entityId, onClose }: HistoryPa
                         </div>
                     ) : (
                         logs.map((log, idx) => {
-                            const meta = ACTION_META[log.action] ?? DEFAULT_META;
+                            const meta = metaFor(log.action);
                             const sel = idx === selectedIdx;
                             return (
                                 <div
@@ -344,15 +327,15 @@ export default function HistoryPane({ entityType, entityId, onClose }: HistoryPa
                                     <span style={{ color: '#808080' }}>Date:</span>
                                     <span>{fmt(selected.timestamp)}</span>
                                     <span style={{ color: '#808080' }}>Action:</span>
-                                    <span style={{ color: (ACTION_META[selected.action] ?? DEFAULT_META).color, fontWeight: 'bold' }}>
-                                        {(ACTION_META[selected.action] ?? DEFAULT_META).label}
+                                    <span style={{ color: metaFor(selected.action).color, fontWeight: 'bold' }}>
+                                        {metaFor(selected.action).label}
                                     </span>
                                     <span style={{ color: '#808080' }}>Description:</span>
                                     <span>{selected.details || 'System activity'}</span>
                                     <span style={{ color: '#808080' }}>Performed by:</span>
-                                    <span>{selected.user_id ? `User #${selected.user_id}` : 'System'}</span>
+                                    <span>{userLabel(selected.user_id)}</span>
                                 </div>
-                                {renderChangeDetail(selected.changes)}
+                                <AuditChanges changes={selected.changes} style={{ marginTop: 4, maxHeight: 'none', overflow: 'visible' }} />
                             </>
                         ) : (
                             <span style={{ color: '#808080', fontStyle: 'italic' }}>

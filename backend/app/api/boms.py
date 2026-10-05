@@ -350,7 +350,7 @@ async def create_bom(payload: BOMCreate, db: AsyncSession = Depends(get_async_db
         entity_type="BOM",
         entity_id=str(refresh_bom.id),
         details=f"Created BOM {refresh_bom.code} for {item.code}",
-        changes=payload.model_dump()
+        changes=audit_service.added(payload.model_dump())
     )
 
     await _sync_beam_ends(db, bom)
@@ -786,7 +786,7 @@ async def update_bom(
         entity_type="BOM",
         entity_id=str(updated_bom.id),
         details=f"Updated BOM {updated_bom.code}",
-        changes={"lines_before": before_lines, "lines_after": after_lines},
+        changes={"lines": [before_lines, after_lines]},
     )
 
     await _sync_beam_ends(db, updated_bom)

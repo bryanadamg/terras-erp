@@ -91,7 +91,7 @@ def create_work_center(payload: WorkCenterCreate, db: Session = Depends(get_db),
     db.add(wc)
     db.commit()
     db.refresh(wc)
-    db.add(AuditLog(user_id=current_user.id, action="CREATE", entity_type="work_center", entity_id=str(wc.id), details=f"Created work center {wc.code}"))
+    db.add(AuditLog(user_id=current_user.id, action="CREATE", entity_type="WorkCenter", entity_id=str(wc.id), details=f"Created work center {wc.code}"))
     db.commit()
     broadcast_sync({"type": "MASTER_DATA_UPDATE", "domain": "routing"})
     return _with_effective_locations(db, wc)
@@ -137,7 +137,7 @@ def update_work_center(wc_id: str, payload: WorkCenterCreate, db: Session = Depe
             db.query(WorkCenter).filter(WorkCenter.id.in_(desc_ids)).update(
                 {"center_type": payload.center_type}, synchronize_session=False
             )
-    db.add(AuditLog(user_id=current_user.id, action="UPDATE", entity_type="work_center", entity_id=str(wc.id), details=f"Updated work center {wc.code}"))
+    db.add(AuditLog(user_id=current_user.id, action="UPDATE", entity_type="WorkCenter", entity_id=str(wc.id), details=f"Updated work center {wc.code}"))
     db.commit()
     broadcast_sync({"type": "MASTER_DATA_UPDATE", "domain": "routing"})
     db.refresh(wc)
@@ -150,7 +150,7 @@ def delete_work_center(wc_id: str, db: Session = Depends(get_db), current_user: 
         raise HTTPException(status_code=404, detail="Work Center not found")
     if db.query(WorkCenter).filter(WorkCenter.parent_id == wc.id).first():
         raise HTTPException(status_code=400, detail="Move or delete the work centers inside this one first")
-    db.add(AuditLog(user_id=current_user.id, action="DELETE", entity_type="work_center", entity_id=str(wc.id), details=f"Deleted work center {wc.code}"))
+    db.add(AuditLog(user_id=current_user.id, action="DELETE", entity_type="WorkCenter", entity_id=str(wc.id), details=f"Deleted work center {wc.code}"))
     db.delete(wc)
     db.commit()
     broadcast_sync({"type": "MASTER_DATA_UPDATE", "domain": "routing"})
@@ -170,7 +170,7 @@ def create_operation(payload: OperationCreate, db: Session = Depends(get_db), cu
     db.add(op)
     db.commit()
     db.refresh(op)
-    db.add(AuditLog(user_id=current_user.id, action="CREATE", entity_type="operation", entity_id=str(op.id), details=f"Created operation {op.code}"))
+    db.add(AuditLog(user_id=current_user.id, action="CREATE", entity_type="Operation", entity_id=str(op.id), details=f"Created operation {op.code}"))
     db.commit()
     broadcast_sync({"type": "MASTER_DATA_UPDATE", "domain": "routing"})
     return op
@@ -187,7 +187,7 @@ def delete_operation(op_id: str, db: Session = Depends(get_db), current_user: Us
         raise HTTPException(status_code=404, detail="Operation not found")
     if op.is_system:
         raise HTTPException(status_code=400, detail="Cannot delete system operation")
-    db.add(AuditLog(user_id=current_user.id, action="DELETE", entity_type="operation", entity_id=str(op.id), details=f"Deleted operation {op.code}"))
+    db.add(AuditLog(user_id=current_user.id, action="DELETE", entity_type="Operation", entity_id=str(op.id), details=f"Deleted operation {op.code}"))
     db.delete(op)
     db.commit()
     broadcast_sync({"type": "MASTER_DATA_UPDATE", "domain": "routing"})

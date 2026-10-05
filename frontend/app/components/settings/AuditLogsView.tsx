@@ -4,18 +4,21 @@ import { useTimezone } from '../../context/TimezoneContext';
 import { useUser } from '../../context/UserContext';
 import { xpToolbar as sharedXpToolbar, ShellWindow, ShellTitleBar } from '../shared/shellTheme';
 import { lvTh, lvRow, LV_XP_FONT, LV_MODERN_FONT, lvThead, ResizableTable } from '../shared/listViewTheme';
-import { StatusChip, CODE_FONT, xpFont, xpBtn, TableSkeleton, useTableSkeletonMetrics, CHIP_RADIUS, XP_BTN, SKEL_PAGE_ROWS } from '../shared/xpTheme';
+import { StatusChip, xpFont, xpBtn, TableSkeleton, useTableSkeletonMetrics, CHIP_RADIUS, XP_BTN, SKEL_PAGE_ROWS } from '../shared/xpTheme';
 import { useData } from '../../context/DataContext';
 import Pager from '../shared/Pager';
+import { API_BASE } from '../shared/apiBase';
+import AuditChanges, { hasAuditChanges } from '../shared/AuditChanges';
 
 // entity_type is a raw model name (WorkOrder, attribute_value, work_center_holiday, ...) — humanize for display.
 function formatEntityType(entityType: string): string {
     return entityType
         .replace(/_/g, ' ')
         .replace(/([a-z0-9])([A-Z])/g, '$1 $2')
+        .replace(/([A-Z]+)([A-Z][a-z])/g, '$1 $2')   // UOMFactor -> UOM Factor
         .split(' ')
         .filter(Boolean)
-        .map(w => w[0].toUpperCase() + w.slice(1).toLowerCase())
+        .map(w => (w.length > 1 && w === w.toUpperCase()) ? w : w[0].toUpperCase() + w.slice(1).toLowerCase())
         .join(' ');
 }
 
@@ -25,12 +28,13 @@ const AuditLogRow = memo(({ log, rowIndex, userName }: any) => {
     const userShort = log.user_id ? log.user_id.split('-')[0] : 'System';
     const userLabel = userName || (log.user_id ? `User ${userShort}` : 'System');
 
-    const rowStyle = { ...lvRow(rowIndex ?? 0), cursor: log.changes ? 'pointer' : 'default' };
+    const hasChanges = hasAuditChanges(log.changes);
+    const rowStyle = { ...lvRow(rowIndex ?? 0), cursor: hasChanges ? 'pointer' : 'default' };
     return (
         <>
             <tr
                 style={showChanges ? { ...rowStyle, background: '#e8f0ff' } : rowStyle}
-                onClick={() => log.changes && setShowChanges(!showChanges)}
+                onClick={() => hasChanges && setShowChanges(!showChanges)}
             >
                 <td style={{ padding: '3px 8px', fontFamily: LV_XP_FONT, fontSize: '10px', color: '#555' }}>
                     {tzDateTime(log.timestamp)}
@@ -46,19 +50,17 @@ const AuditLogRow = memo(({ log, rowIndex, userName }: any) => {
                 </td>
                 <td style={{ padding: '3px 8px', fontFamily: LV_XP_FONT, fontSize: '11px', color: '#444' }}>
                     {log.details}
-                    {log.changes && (
+                    {hasChanges && (
                         <i className={`bi bi-chevron-${showChanges ? 'up' : 'down'} ms-2`} style={{ color: '#0058e6', fontSize: '10px' }}></i>
                     )}
                 </td>
             </tr>
-            {showChanges && log.changes && (
+            {showChanges && hasChanges && (
                 <tr style={{ background: '#f0f4ff' }}>
                     <td colSpan={5} style={{ padding: 0 }}>
                         <div style={{ padding: '6px 12px 8px 32px', borderBottom: '1px solid #c0bdb5' }}>
-                            <div style={{ fontFamily: LV_XP_FONT, fontSize: '10px', fontWeight: 'bold', color: '#444', textTransform: 'uppercase', marginBottom: 4 }}>Technical Diff (JSON)</div>
-                            <pre style={{ fontFamily: CODE_FONT, fontSize: '10px', background: '#ffffff', border: '1px solid #7f9db9', padding: '4px 6px', margin: 0, maxHeight: '160px', overflowY: 'auto', boxShadow: 'inset 1px 1px 0 rgba(0,0,0,0.1)' }}>
-                                {JSON.stringify(log.changes, null, 2)}
-                            </pre>
+                            <div style={{ fontFamily: LV_XP_FONT, fontSize: '10px', fontWeight: 'bold', color: '#444', textTransform: 'uppercase', marginBottom: 4 }}>Changes</div>
+                            <AuditChanges changes={log.changes} />
                         </div>
                     </td>
                 </tr>
@@ -73,10 +75,18 @@ AuditLogRow.displayName = 'AuditLogRow';
 export default function AuditLogsView({ auditLogs, currentPage, totalItems, pageSize, onPageChange, filterType, onFilterChange }: any) {
   const { t } = useLanguage();
   const { users, refreshUsers } = useUser();
-  const { loading: dataLoading, fetchData } = useData();
+  const { loading: dataLoading, fetchData, authFetch } = useData();
   const [refreshing, setRefreshing] = useState(false);
+  const [entityTypes, setEntityTypes] = useState<string[]>([]);
 
   useEffect(() => { if (users.length === 0) refreshUsers(); }, []);
+  // Every entity type actually logged, not a hand-kept subset of them.
+  useEffect(() => {
+      authFetch(`${API_BASE}/audit-logs/entity-types`)
+          .then((r: Response) => (r.ok ? r.json() : []))
+          .then(setEntityTypes)
+          .catch(() => {});
+  }, []);
 
   const handleRefresh = async () => {
       if (refreshing) return;
@@ -108,12 +118,7 @@ export default function AuditLogsView({ auditLogs, currentPage, totalItems, page
   const entityFilterOptions = (
       <>
           <option value="">All Entities</option>
-          <option value="Item">Items</option>
-          <option value="BOM">BOMs</option>
-          <option value="WorkOrder">Work Orders</option>
-          <option value="SalesOrder">Sales Orders</option>
-          <option value="SampleRequest">Samples</option>
-          <option value="StockEntry">Stock</option>
+          {entityTypes.map(et => <option key={et} value={et}>{formatEntityType(et)}</option>)}
       </>
   );
 

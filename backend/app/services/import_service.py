@@ -79,7 +79,7 @@ async def import_items_csv(db: AsyncSession, file_content: bytes, user_id=None):
                 f"Imported {results['success']} item(s) via CSV"
                 + (f", {len(results['errors'])} error(s)" if results["errors"] else "")
             ),
-            changes={"codes": imported_codes} if imported_codes else None,
+            changes=audit_service.added({"codes": imported_codes}) if imported_codes else None,
         )
 
     return results

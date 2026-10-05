@@ -1040,9 +1040,9 @@ async def create_production_run(
 
     await audit_service.log_activity(
         db, user_id=current_user.id, action="CREATE",
-        entity_type="PRODUCTION_RUN", entity_id=str(pr.id),
+        entity_type="ProductionRun", entity_id=str(pr.id),
         details=f"Created Production Run {pr.code} with {len(payload.bom_entries)} BOM entries, {total_root_mo_count} root MOs",
-        changes=payload.model_dump()
+        changes=audit_service.added(payload.model_dump())
     )
     await manager.broadcast({"type": "PRODUCTION_RUN_UPDATE", "pr_id": str(pr.id), "status": "PENDING"})
     return pr
@@ -1074,7 +1074,7 @@ async def update_production_run_status(
     await db.commit()
     await audit_service.log_activity(
         db, user_id=current_user.id, action="STATUS_CHANGE",
-        entity_type="PRODUCTION_RUN", entity_id=pr_id,
+        entity_type="ProductionRun", entity_id=pr_id,
         details=f"Status -> {status}"
     )
     await manager.broadcast({"type": "PRODUCTION_RUN_UPDATE", "pr_id": pr_id, "status": status})
@@ -1124,7 +1124,7 @@ async def delete_production_run(
     await db.commit()
     await audit_service.log_activity(
         db, user_id=current_user.id, action="DELETE",
-        entity_type="PRODUCTION_RUN", entity_id=pr_id,
+        entity_type="ProductionRun", entity_id=pr_id,
         details=f"Deleted Production Run {code} and {mo_count} associated MO(s)"
     )
     await manager.broadcast({"type": "PRODUCTION_RUN_UPDATE", "pr_id": pr_id, "status": "DELETED"})

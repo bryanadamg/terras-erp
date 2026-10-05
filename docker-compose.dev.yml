@@ -61,8 +61,3 @@ services:
       api:
         # Don't sit through the api healthcheck's start_period on every up.
         condition: service_started
-
-  # Cloudflare tunnel is prod-only; profile keeps it out of `up` in dev.
-  tunnel:
-    profiles:
-      - tunnel
