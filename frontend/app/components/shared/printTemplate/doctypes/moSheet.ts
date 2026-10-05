@@ -50,6 +50,11 @@ export const MS_FIELDS: FieldDef[] = [
     { key: 'ms.tarikan_mentah', label: 'Tarikan Mentah', kind: 'text', group: 'Spesifikasi Teknis' },
     { key: 'ms.p_tulisan', label: 'P. Tulisan', kind: 'text', group: 'Spesifikasi Teknis' },
     { key: 'ms.bandul_1kg', label: 'Bandul 1kg', kind: 'text', group: 'Spesifikasi Teknis' },
+    // The dyed/set (celup) side of each machine measurement.
+    { key: 'ms.lebar_matang', label: 'Lebar Matang', kind: 'text', group: 'Spesifikasi Teknis' },
+    { key: 'ms.tarikan_matang', label: 'Tarikan Matang', kind: 'text', group: 'Spesifikasi Teknis' },
+    { key: 'ms.p_tulisan_matang', label: 'P. Tulisan Matang', kind: 'text', group: 'Spesifikasi Teknis' },
+    { key: 'ms.bandul_1kg_matang', label: 'Bandul 1kg Matang', kind: 'text', group: 'Spesifikasi Teknis' },
     { key: 'ms.kerapatan', label: 'Kerapatan', kind: 'text', group: 'Spesifikasi Teknis' },
     { key: 'ms.sisir_no', label: 'Sisir No.', kind: 'text', group: 'Spesifikasi Teknis' },
     { key: 'ms.pemakaian_obat', label: 'Pemakaian Obat', kind: 'text', group: 'Spesifikasi Teknis' },
@@ -117,10 +122,14 @@ export function resolveMoSheetField(key: string, ctx: PrintContext): ResolvedFie
 
         case 'ms.berat_mateng': return pair(b.berat_bahan_mateng, b.berat_bahan_mentah_pelesan, v => `${v} gr/yard`);
         case 'ms.berat_mentah': return pair(b.berat_bahan_mentah_pelesan, b.berat_bahan_mateng, v => `${v} gr/yard`);
-        case 'ms.lebar_mesin': return pair(b.mesin_lebar, b.mesin_panjang_tarikan, v => `${v} mm`);
-        case 'ms.tarikan_mentah': return pair(b.mesin_panjang_tarikan, b.mesin_lebar, v => `${v} cm`);
-        case 'ms.p_tulisan': return pair(b.mesin_panjang_tulisan, b.mesin_panjang_tarikan_bandul_1kg, v => `${v} cm`);
-        case 'ms.bandul_1kg': return pair(b.mesin_panjang_tarikan_bandul_1kg, b.mesin_panjang_tulisan, v => `${v} cm`);
+        case 'ms.lebar_mesin': return pair(b.mesin_lebar, b.celup_lebar, v => `${v} mm`);
+        case 'ms.lebar_matang': return pair(b.celup_lebar, b.mesin_lebar, v => `${v} mm`);
+        case 'ms.tarikan_mentah': return pair(b.mesin_panjang_tarikan, b.celup_panjang_tarikan, v => `${v} cm`);
+        case 'ms.tarikan_matang': return pair(b.celup_panjang_tarikan, b.mesin_panjang_tarikan, v => `${v} cm`);
+        case 'ms.p_tulisan': return pair(b.mesin_panjang_tulisan, b.celup_panjang_tulisan, v => `${v} cm`);
+        case 'ms.p_tulisan_matang': return pair(b.celup_panjang_tulisan, b.mesin_panjang_tulisan, v => `${v} cm`);
+        case 'ms.bandul_1kg': return pair(b.mesin_panjang_tarikan_bandul_1kg, b.celup_panjang_tarikan_bandul_1kg, v => `${v} cm`);
+        case 'ms.bandul_1kg_matang': return pair(b.celup_panjang_tarikan_bandul_1kg, b.mesin_panjang_tarikan_bandul_1kg, v => `${v} cm`);
         case 'ms.kerapatan':
             return pair(b.kerapatan_picks, b.sisir_no, v => `${v} ${b.kerapatan_unit || '/cm'}`);
         case 'ms.sisir_no': return pair(b.sisir_no, b.kerapatan_picks, v => String(v));
@@ -245,7 +254,10 @@ export function moSheetPresence(mo: any, boms: any[] = []) {
         tech: !!b && (
             b.berat_bahan_mateng != null || b.berat_bahan_mentah_pelesan != null ||
             b.mesin_lebar != null || b.mesin_panjang_tarikan != null ||
-            b.mesin_panjang_tulisan != null || b.kerapatan_picks != null ||
+            b.mesin_panjang_tulisan != null || b.mesin_panjang_tarikan_bandul_1kg != null ||
+            b.celup_lebar != null || b.celup_panjang_tarikan != null ||
+            b.celup_panjang_tulisan != null || b.celup_panjang_tarikan_bandul_1kg != null ||
+            b.kerapatan_picks != null ||
             b.sisir_no != null || !!b.pemakaian_obat
         ),
         samplePhoto: !!b?.sample_photo_url,
