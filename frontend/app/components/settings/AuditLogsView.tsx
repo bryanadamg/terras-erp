@@ -4,10 +4,11 @@ import { useTimezone } from '../../context/TimezoneContext';
 import { useUser } from '../../context/UserContext';
 import { xpToolbar as sharedXpToolbar, ShellWindow, ShellTitleBar } from '../shared/shellTheme';
 import { lvTh, lvRow, LV_XP_FONT, LV_MODERN_FONT, lvThead, ResizableTable } from '../shared/listViewTheme';
-import { StatusChip, CODE_FONT, xpFont, xpBtn, TableSkeleton, useTableSkeletonMetrics, CHIP_RADIUS, XP_BTN, SKEL_PAGE_ROWS } from '../shared/xpTheme';
+import { StatusChip, xpFont, xpBtn, TableSkeleton, useTableSkeletonMetrics, CHIP_RADIUS, XP_BTN, SKEL_PAGE_ROWS } from '../shared/xpTheme';
 import { useData } from '../../context/DataContext';
 import Pager from '../shared/Pager';
 import { API_BASE } from '../shared/apiBase';
+import AuditChanges, { hasAuditChanges } from '../shared/AuditChanges';
 
 // entity_type is a raw model name (WorkOrder, attribute_value, work_center_holiday, ...) — humanize for display.
 function formatEntityType(entityType: string): string {
@@ -27,12 +28,13 @@ const AuditLogRow = memo(({ log, rowIndex, userName }: any) => {
     const userShort = log.user_id ? log.user_id.split('-')[0] : 'System';
     const userLabel = userName || (log.user_id ? `User ${userShort}` : 'System');
 
-    const rowStyle = { ...lvRow(rowIndex ?? 0), cursor: log.changes ? 'pointer' : 'default' };
+    const hasChanges = hasAuditChanges(log.changes);
+    const rowStyle = { ...lvRow(rowIndex ?? 0), cursor: hasChanges ? 'pointer' : 'default' };
     return (
         <>
             <tr
                 style={showChanges ? { ...rowStyle, background: '#e8f0ff' } : rowStyle}
-                onClick={() => log.changes && setShowChanges(!showChanges)}
+                onClick={() => hasChanges && setShowChanges(!showChanges)}
             >
                 <td style={{ padding: '3px 8px', fontFamily: LV_XP_FONT, fontSize: '10px', color: '#555' }}>
                     {tzDateTime(log.timestamp)}
@@ -48,19 +50,17 @@ const AuditLogRow = memo(({ log, rowIndex, userName }: any) => {
                 </td>
                 <td style={{ padding: '3px 8px', fontFamily: LV_XP_FONT, fontSize: '11px', color: '#444' }}>
                     {log.details}
-                    {log.changes && (
+                    {hasChanges && (
                         <i className={`bi bi-chevron-${showChanges ? 'up' : 'down'} ms-2`} style={{ color: '#0058e6', fontSize: '10px' }}></i>
                     )}
                 </td>
             </tr>
-            {showChanges && log.changes && (
+            {showChanges && hasChanges && (
                 <tr style={{ background: '#f0f4ff' }}>
                     <td colSpan={5} style={{ padding: 0 }}>
                         <div style={{ padding: '6px 12px 8px 32px', borderBottom: '1px solid #c0bdb5' }}>
-                            <div style={{ fontFamily: LV_XP_FONT, fontSize: '10px', fontWeight: 'bold', color: '#444', textTransform: 'uppercase', marginBottom: 4 }}>Technical Diff (JSON)</div>
-                            <pre style={{ fontFamily: CODE_FONT, fontSize: '10px', background: '#ffffff', border: '1px solid #7f9db9', padding: '4px 6px', margin: 0, maxHeight: '160px', overflowY: 'auto', boxShadow: 'inset 1px 1px 0 rgba(0,0,0,0.1)' }}>
-                                {JSON.stringify(log.changes, null, 2)}
-                            </pre>
+                            <div style={{ fontFamily: LV_XP_FONT, fontSize: '10px', fontWeight: 'bold', color: '#444', textTransform: 'uppercase', marginBottom: 4 }}>Changes</div>
+                            <AuditChanges changes={log.changes} />
                         </div>
                     </td>
                 </tr>

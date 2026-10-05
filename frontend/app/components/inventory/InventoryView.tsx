@@ -9,11 +9,12 @@ import { useTimezone } from '../../context/TimezoneContext';
 import { useData } from '../../context/DataContext';
 import { useUser } from '../../context/UserContext';
 import { API_BASE } from '../shared/apiBase';
-import { XPEmptyState, ExpandedRowPanel, CODE_FONT, TableSkeleton, useTableSkeletonMetrics, useSortable, MenuTriggerButton, FloatingMenu, useFloatingMenu, FormSection, FieldLabel, StatusChip, CodeChip, xpFont, rowStateBg, CHIP_RADIUS, xpInput as xpInputBase, xpBtn as xpBtnBase, BTN_TONES, XP_BTN, SKEL_PAGE_ROWS } from '../shared/xpTheme';
+import { XPEmptyState, ExpandedRowPanel, TableSkeleton, useTableSkeletonMetrics, useSortable, MenuTriggerButton, FloatingMenu, useFloatingMenu, FormSection, FieldLabel, StatusChip, CodeChip, xpFont, rowStateBg, CHIP_RADIUS, xpInput as xpInputBase, xpBtn as xpBtnBase, BTN_TONES, XP_BTN, SKEL_PAGE_ROWS } from '../shared/xpTheme';
 import { xpBevel as sharedXpBevel, xpTitleBar as sharedXpTitleBar, xpToolbar as sharedXpToolbar, SearchField, ToolbarButton, pageFillStyle } from '../shared/shellTheme';
 import TreeSelect, { buildCategoryTree, buildLocationPickerTree } from '../shared/TreeSelect';
 import { Tabs, TabDef } from '../shared/Tabs';
 import { lvThead, useRowSelection, RowCheckbox, SelectAllCheckbox, LV_CHECK_COL_W, LV_EXPANDER_COL_W, ExpanderCell, SortableTh, lvThSticky, lvTdRuled, lvZebra, lvSubTable, lvSubTh, lvSubTd, lvSubRow, Dash, ResizableTable } from '../shared/listViewTheme';
+import AuditChanges, { hasAuditChanges } from '../shared/AuditChanges';
 
 // XP-style category badge colours derived from category name
 function getCategoryTabIcon(name: string): string {
@@ -84,7 +85,7 @@ const ItemEventLogPanel = memo(({ state, userNameById }: { state?: ItemHistorySt
                     <tbody>
                         {logs.map((log: any, i: number) => {
                             const open = openChanges === log.id;
-                            const hasChanges = log.changes && Object.keys(log.changes).length > 0;
+                            const hasChanges = hasAuditChanges(log.changes);
                             return (
                                 <React.Fragment key={log.id}>
                                     <tr
@@ -106,12 +107,7 @@ const ItemEventLogPanel = memo(({ state, userNameById }: { state?: ItemHistorySt
                                     {open && hasChanges && (
                                         <tr>
                                             <td colSpan={4} style={{ padding: '4px 8px 6px'}}>
-                                                <pre style={{
-                                                    margin: 0, fontFamily: CODE_FONT, fontSize: 10, background: '#fff',
-                                                    border: '1px solid #7f9db9',
-                                                    boxShadow: 'inset 1px 1px 0 rgba(0,0,0,0.1)',
-                                                    padding: '4px 6px', maxHeight: 160, overflow: 'auto',
-                                                }}>{JSON.stringify(log.changes, null, 2)}</pre>
+                                                <AuditChanges changes={log.changes} />
                                             </td>
                                         </tr>
                                     )}

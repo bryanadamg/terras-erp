@@ -4,7 +4,8 @@ import { useTimezone } from '../../context/TimezoneContext';
 import { useData } from '../../context/DataContext';
 import { useUser } from '../../context/UserContext';
 import { API_BASE } from './apiBase';
-import { CODE_FONT, xpFont } from './xpTheme';
+import { xpFont } from './xpTheme';
+import AuditChanges from './AuditChanges';
 
 interface HistoryPaneProps {
     entityType: 'Item' | 'SampleRequest' | 'BOM' | 'WorkOrder';
@@ -177,16 +178,6 @@ const S = {
         fontSize: 11,
         color: '#000',
     },
-    sunken: {
-        background: '#fff',
-        border: '1px solid',
-        borderColor: '#808080 #dfdfdf #dfdfdf #808080',
-        padding: '4px 6px',
-        fontFamily: CODE_FONT,
-        fontSize: 10,
-        marginTop: 4,
-        overflowX: 'auto' as const,
-    },
     statusBar: {
         background: '#ece9d8',
         borderTop: '1px solid #808080',
@@ -255,23 +246,6 @@ export default function HistoryPane({ entityType, entityId, onClose }: HistoryPa
     }, [entityId, entityType]);
 
     const selected = selectedIdx !== null ? logs[selectedIdx] : null;
-
-    const renderChangeDetail = (changes: any) => {
-        if (!changes || typeof changes !== 'object') return null;
-        const entries = Object.entries(changes);
-        if (entries.length === 0) return null;
-        return (
-            <div style={S.sunken}>
-                {entries.map(([k, v]) => (
-                    <div key={k} style={{ marginBottom: 1 }}>
-                        <span style={{ color: '#1a4a8a', fontWeight: 'bold' }}>{k}</span>
-                        <span style={{ color: '#808080' }}> = </span>
-                        <span style={{ color: '#000' }}>{JSON.stringify(v)}</span>
-                    </div>
-                ))}
-            </div>
-        );
-    };
 
     const fmt = (ts: string) =>
         tzFmt(ts, { day: '2-digit', month: 'short', year: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit' }, 'en-GB');
@@ -361,7 +335,7 @@ export default function HistoryPane({ entityType, entityId, onClose }: HistoryPa
                                     <span style={{ color: '#808080' }}>Performed by:</span>
                                     <span>{userLabel(selected.user_id)}</span>
                                 </div>
-                                {renderChangeDetail(selected.changes)}
+                                <AuditChanges changes={selected.changes} style={{ marginTop: 4, maxHeight: 'none', overflow: 'visible' }} />
                             </>
                         ) : (
                             <span style={{ color: '#808080', fontStyle: 'italic' }}>
