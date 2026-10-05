@@ -1010,7 +1010,7 @@ async def update_manufacturing_order_status(mo_id: str, status: str, db: AsyncSe
         if new_so_status:
             await audit_service.log_activity(
                 db, current_user.id, "STATUS_CHANGE", "SalesOrder", str(mo.sales_order_id),
-                f"{new_so_status} by root MO {mo.code}",
+                f"{new_so_status} by root MO {mo.code}", commit=False,
             )
 
     await db.commit()
@@ -1759,7 +1759,7 @@ async def add_mo_completion(
             if new_so_status:
                 await audit_service.log_activity(
                     db, current_user.id, "STATUS_CHANGE", "SalesOrder", str(mo.sales_order_id),
-                    f"{new_so_status} by root MO {mo.code}",
+                    f"{new_so_status} by root MO {mo.code}", commit=False,
                 )
 
     # Auto-complete WO if cumulative logged qty reaches WO target

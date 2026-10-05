@@ -482,6 +482,7 @@ async def delete_purchase_order(
         entity_type="purchase_order",
         entity_id=str(po.id),
         details=f"Deleted PO {po.po_number}",
+        commit=False,
     )
     await db.delete(po)
     await db.commit()
