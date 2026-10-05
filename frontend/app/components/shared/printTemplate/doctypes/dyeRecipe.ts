@@ -17,7 +17,8 @@ export const DYE_RECIPE_DOC = 'dye_recipe';
 
 export const DR_FIELDS: FieldDef[] = [
     { key: 'dr.code', label: 'Recipe Code', kind: 'text', group: 'Recipe', mono: true },
-    { key: 'dr.name', label: 'Recipe Name (Warna)', kind: 'text', group: 'Recipe' },
+    { key: 'dr.name', label: 'Recipe Name', kind: 'text', group: 'Recipe' },
+    { key: 'dr.color_variant', label: 'Warna (colour variant, e.g. Navy)', kind: 'text', group: 'Recipe' },
     { key: 'dr.color_standard', label: 'Color Matching', kind: 'text', group: 'Recipe' },
     { key: 'dr.substrate_type', label: 'Substrate', kind: 'text', group: 'Recipe' },
     { key: 'dr.liquor_ratio', label: 'Liquor Ratio', kind: 'text', group: 'Recipe' },
@@ -64,6 +65,10 @@ export function resolveDyeRecipeField(key: string, ctx: PrintContext): ResolvedF
     switch (key) {
         case 'dr.code': return txt(r.code);
         case 'dr.name': return txt(r.name);
+        // The shade's colour variant (Navy), not the recipe's code-like name: the
+        // bath's orders first, else the variant the recipe's Color Library entry carries.
+        case 'dr.color_variant':
+            return txt(uniq(b.color_variants).join(', ') || r.color_variant_label || r.color_name);
         case 'dr.color_standard': return txt(r.color_standard);
         case 'dr.substrate_type': return txt(r.substrate_type);
         case 'dr.liquor_ratio': return txt(r.liquor_ratio != null ? `1 : ${r.liquor_ratio}` : '');
@@ -161,6 +166,7 @@ export interface KartuCelupBath {
     item_names: string[];
     mo_codes: string[];
     color_codes?: string[];
+    color_variants?: string[];
     sizes?: string[];
     combos?: string[];
     substrate_qty: number | null;

@@ -472,6 +472,7 @@ export default function DyeingOrdersTab({ items, recipes, authFetch }: DyeingOrd
                 color_codes: wos.map(w => w.color_code
                     || (w.labdip_variant_code ? `${w.labdip_variant_code} (lab dip pending)` : '')),
                 sizes: wos.map(w => w.size_label),
+                color_variants: wos.map(w => w.color_label),
                 combos: wos.map(w => w.combo_label),
                 substrate_qty: load || null,
                 volume_liters: volume,
