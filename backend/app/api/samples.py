@@ -694,7 +694,7 @@ async def update_sample_status(
     await audit_service.log_activity(
         db,
         user_id=current_user.id,
-        action="UPDATE_STATUS",
+        action="STATUS_CHANGE",
         entity_type="SampleRequest",
         entity_id=sample_id,
         details=f"Updated Sample {sample.code} status from {previous_status} to {status}",
@@ -807,7 +807,7 @@ async def update_color_status(
     await audit_service.log_activity(
         db,
         user_id=current_user.id,
-        action="UPDATE_COLOR_STATUS",
+        action="STATUS_CHANGE",
         entity_type="SampleColor",
         entity_id=color_id,
         details=f"Updated color '{color.name}' status from {previous_status} to {status}",
@@ -951,7 +951,7 @@ async def upload_color_status_image(
     await audit_service.log_activity(
         db,
         user_id=current_user.id,
-        action="UPDATE_COLOR_STATUS",
+        action="STATUS_CHANGE",
         entity_type="SampleColor",
         entity_id=color_id,
         details=f"Attached {kind} photo to color '{color.name}'",

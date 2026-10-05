@@ -1015,7 +1015,7 @@ async def update_manufacturing_order_status(mo_id: str, status: str, db: AsyncSe
 
     await db.commit()
 
-    await audit_service.log_activity(db, current_user.id, "UPDATE_STATUS", "ManufacturingOrder", mo_id, f"{previous_status} -> {status}")
+    await audit_service.log_activity(db, current_user.id, "STATUS_CHANGE", "ManufacturingOrder", mo_id, f"{previous_status} -> {status}")
     await weaving_service.audit_and_broadcast_stops(
         db, current_user.id, stopped_runs, f"MO {status.lower()}")
     await manager.broadcast({"type": "MANUFACTURING_ORDER_UPDATE", "mo_id": mo_id, "status": status, "code": mo.code})

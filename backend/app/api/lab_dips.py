@@ -849,7 +849,7 @@ async def update_lab_dip_item_status(
     await audit_service.log_activity(
         db,
         user_id=current_user.id,
-        action="UPDATE_ITEM_STATUS",
+        action="STATUS_CHANGE",
         entity_type="LabDipItem",
         entity_id=item_id,
         details=f"Updated lab dip item variant status from {previous_status} to {status}"
@@ -920,7 +920,7 @@ async def upload_lab_dip_item_status_image(
     await audit_service.log_activity(
         db,
         user_id=current_user.id,
-        action="UPDATE_ITEM_STATUS",
+        action="STATUS_CHANGE",
         entity_type="LabDipItem",
         entity_id=item_id,
         details=f"Attached {kind} photo to lab dip variant",
@@ -953,7 +953,7 @@ async def update_lab_dip_status(
     await audit_service.log_activity(
         db,
         user_id=current_user.id,
-        action="UPDATE_STATUS",
+        action="STATUS_CHANGE",
         entity_type="LabDipRequest",
         entity_id=request_id,
         details=f"Updated Lab Dip {req.code} status from {previous_status} to {status}",
@@ -998,7 +998,7 @@ async def update_dip_status(
     await audit_service.log_activity(
         db,
         user_id=current_user.id,
-        action="UPDATE_DIP_STATUS",
+        action="STATUS_CHANGE",
         entity_type="LabDipLine",
         entity_id=line_id,
         details=f"Updated dip '{line.color_name}' status from {previous_status} to {status}",

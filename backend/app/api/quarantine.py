@@ -578,7 +578,7 @@ async def set_quarantine_status(
 
     label = value.value if value else "cleared"
     await audit_service.log_activity(
-        db, user_id=current_user.id, action="UPDATE_STATUS", entity_type="Batch",
+        db, user_id=current_user.id, action="STATUS_CHANGE", entity_type="Batch",
         entity_id=str(batches[0].id),
         details=f"Quarantine status set to {label} on {len(batches)} lot(s): "
                 + ", ".join(b.batch_number for b in batches[:10])

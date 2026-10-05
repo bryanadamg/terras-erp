@@ -309,7 +309,7 @@ async def create_stock_entry(
     await audit_service.log_activity(
         db=db,
         user_id=current_user.id,
-        action="create",
+        action="CREATE",
         entity_type="StockEntry",
         entity_id=str(item.id),
         changes={
