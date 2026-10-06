@@ -530,6 +530,16 @@ async def list_batches(
         # which is exactly what a not-yet-created order may claim.
         from app.services import packing_service
         query = query.filter(packing_service.lock_free_condition(for_packing_order_id))
+    if location_id:
+        # "Lots present here" must be decided BEFORE the limit: otherwise the newest
+        # `limit` lots of the item (mostly consumed) fill the window and older lots
+        # that still hold stock here never reach the picker. Same subquery shape as
+        # list_batches_paginated.
+        query = query.filter(Batch.id.in_(
+            select(cast(StockBalance.batch_key, PG_UUID(as_uuid=True)))
+            .filter(StockBalance.location_id == location_id, StockBalance.qty > 0, StockBalance.batch_key != "")
+            .group_by(StockBalance.batch_key)
+        ))
     result = await db.execute(query.offset(skip).limit(limit))
     batches = result.scalars().all()
     enriched = await _enrich_batches(db, batches, location_id, with_source_lots=with_source_lots)
