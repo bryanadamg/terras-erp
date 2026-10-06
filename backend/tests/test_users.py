@@ -142,3 +142,11 @@ def test_non_admin_can_update_own_profile(client, regular_headers, regular_user)
     res = client.put(f"/api/users/{regular_user.id}", json={"full_name": "Updated Name"}, headers=regular_headers)
     assert res.status_code == 200
     assert res.json()["full_name"] == "Updated Name"
+
+
+def test_self_password_change_needs_the_current_password(client, regular_headers, regular_user):
+    url = f"/api/users/{regular_user.id}"
+    assert client.put(url, json={"password": "newpass1"}, headers=regular_headers).status_code == 400
+    assert client.put(url, json={"password": "newpass1", "current_password": "wrong"}, headers=regular_headers).status_code == 400
+    ok = client.put(url, json={"password": "newpass1", "current_password": "regularpass"}, headers=regular_headers)
+    assert ok.status_code == 200, ok.text

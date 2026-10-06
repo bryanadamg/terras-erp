@@ -2692,6 +2692,7 @@ class UserUpdate(BaseModel):
     role_id: Optional[UUID] = None
     permission_ids: Optional[list[UUID]] = None
     password: Optional[str] = None
+    current_password: Optional[str] = None  # required for a non-admin changing their own
     avatar_id: Optional[str] = None
 
 class UserResponse(UserBase):

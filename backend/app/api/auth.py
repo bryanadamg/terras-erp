@@ -331,6 +331,10 @@ def update_user(user_id: str, payload: UserUpdate, db: Session = Depends(get_db)
         user.role_id = role.id
 
     if payload.password is not None:
+        # A bearer token alone must not be enough to lock the owner out. Admins are
+        # exempt: they can reset any account's password anyway.
+        if is_self and not is_admin and not verify_password(payload.current_password or "", user.hashed_password):
+            raise HTTPException(status_code=400, detail="Current password is incorrect")
         user.hashed_password = get_password_hash(payload.password)
 
     if payload.permission_ids is not None:
