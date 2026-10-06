@@ -214,6 +214,21 @@ export default function PrintDesignerView() {
     }, [docType, recordDef, records, recordIds, authFetch, linkDoc, linkQ]);
     const activeRecord = recordList?.find(x => x.id === recordIds[docType]) || recordList?.[0] || null;
 
+    // A document whose print modal makes a second read (`sample.detail`) previews off
+    // the same read; keyed by URL so a stale response never lands on another record.
+    const detailUrl = activeRecord && recordDef?.detail ? recordDef.detail(activeRecord) : null;
+    const [detail, setDetail] = useState<{ url: string; body: any } | null>(null);
+    useEffect(() => {
+        if (!detailUrl) return;
+        let cancelled = false;
+        authFetch(`${API_BASE}${detailUrl}`)
+            .then((r: Response) => (r.ok ? r.json() : null))
+            .catch(() => null)
+            .then((body: any) => { if (!cancelled) setDetail({ url: detailUrl, body }); });
+        return () => { cancelled = true; };
+    }, [detailUrl, authFetch]);
+    const activeDetail = detail && detail.url === detailUrl ? detail.body : undefined;
+
     const logoUrl = companyProfile?.logo_url ? `${STATIC_BASE}${companyProfile.logo_url}` : undefined;
     const customerAddr = useCallback(
         (name: string) => (partners || []).find((pt: any) => pt.name === name)?.address || '',
@@ -225,7 +240,7 @@ export default function PrintDesignerView() {
         tzFormatCustom: formatCustom, customerAddr,
     }), [partners, itemIndex, attributes, companyProfile, logoUrl, formatCustom, customerAddr]);
 
-    const ctx = useMemo(() => recordDef ? recordDef.build(activeRecord || {}, sampleEnv) : buildPrintContext({
+    const ctx = useMemo(() => recordDef ? recordDef.build(activeRecord || {}, sampleEnv, activeDetail) : buildPrintContext({
         workOrder: active?.wo || {},
         parentMO: active?.mo || {},
         // A placeholder QR keeps the cell's true printed size visible without
@@ -236,7 +251,7 @@ export default function PrintDesignerView() {
         attributes,
         tzFormatCustom: formatCustom,
         dyeing: sampleDyeing,
-    }), [recordDef, activeRecord, sampleEnv, active, companyProfile, attributes, formatCustom, sampleDyeing]);
+    }), [recordDef, activeRecord, activeDetail, sampleEnv, active, companyProfile, attributes, formatCustom, sampleDyeing]);
 
     const sampleLoading = isKartu ? loadingSamples : recordList === null;
     const hasSample = isKartu ? !!active : !!activeRecord;
