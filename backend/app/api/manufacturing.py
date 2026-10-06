@@ -1001,7 +1001,9 @@ async def update_manufacturing_order_status(mo_id: str, status: str, db: AsyncSe
     if status not in valid_statuses:
         raise HTTPException(status_code=400, detail="Invalid status")
 
-    if status == "COMPLETED" and not user_has_permission(current_user, 'manufacturing_order.close'):
+    # Closing and reopening a closed order are the same authority: otherwise `edit`
+    # alone undoes a close it could never have made.
+    if (status == "COMPLETED" or previous_status == "COMPLETED") and status != previous_status             and not user_has_permission(current_user, 'manufacturing_order.close'):
         raise HTTPException(status_code=403, detail="Missing permission: manufacturing_order.close")
 
     if status == "IN_PROGRESS" and previous_status != "IN_PROGRESS":
