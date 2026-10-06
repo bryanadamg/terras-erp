@@ -1,7 +1,7 @@
 """PUT /packing/{id} only takes the statuses a user may state; DELIVERED is derived."""
 import uuid
 
-from test_packing_lot_lock import _seed_locations
+from tests.test_packing_lot_lock import _seed_locations
 
 
 def test_put_rejects_derived_and_unknown_status_and_audits_the_move(client, auth_headers):
