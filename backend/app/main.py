@@ -8,6 +8,7 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from fastapi.encoders import jsonable_encoder
 from sqlalchemy import text
+from sqlalchemy.exc import DBAPIError
 from starlette.concurrency import run_in_threadpool
 import asyncio
 import os
@@ -122,6 +123,17 @@ async def validation_exception_handler(request: Request, exc: RequestValidationE
         f"{'.'.join(str(p) for p in e['loc'] if p != 'body')}: {e['msg']}" for e in errors
     )
     return JSONResponse(status_code=422, content={"detail": detail, "errors": errors})
+
+
+@app.exception_handler(DBAPIError)
+async def bad_input_handler(request: Request, exc: DBAPIError):
+    """A value the database can't parse — mostly a malformed id in a path typed
+    `str` — is the caller's mistake, not a server fault: 422, not 500.
+    asyncpg rejects it client-side ("invalid input for query argument"),
+    psycopg2 server-side (SQLSTATE 22P02). Anything else stays a 500."""
+    if "invalid input" in str(exc.orig) or getattr(exc.orig, "pgcode", None) == "22P02":
+        return JSONResponse(status_code=422, content={"detail": "Malformed id or value in the request"})
+    raise exc
 
 
 class CatchAllErrors:
