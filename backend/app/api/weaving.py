@@ -320,16 +320,6 @@ async def update_weaving_run(
         raise HTTPException(status_code=404, detail="Weaving run not found")
 
     data = payload.model_dump(exclude_unset=True)
-    # PAUSED is not a plain column write — it owns a WeavingRunPause interval, and a
-    # status set from here would leave that interval missing (or stuck open), silently
-    # corrupting elapsed working days. Editing a paused run's lines/rate stays fine;
-    # only crossing into or out of PAUSED has to go through the dedicated endpoints.
-    new_status = str(data.get("status") or "").upper() or run.status
-    if new_status != run.status and "PAUSED" in (new_status, run.status):
-        raise HTTPException(
-            status_code=422,
-            detail="Use /pause and /resume to change a run's paused state",
-        )
     before = audit_service.fields_of(run, data)
     for field, value in data.items():
         setattr(run, field, value)

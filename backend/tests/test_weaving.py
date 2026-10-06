@@ -313,3 +313,10 @@ def test_resumed_run_accrues_again():
     assert metrics["elapsed_working_days"] == 7
     assert metrics["paused_working_days"] == 2
     assert metrics["is_paused"] is False
+
+
+def test_patch_payload_cannot_carry_run_lifecycle():
+    # Status/end_date move only through /stop, /pause, /resume (weaving_monitor.stop gate).
+    from app.schemas import WeavingRunUpdate
+    data = WeavingRunUpdate(status="DONE", end_date="2026-01-01", lines=4).model_dump(exclude_unset=True)
+    assert data == {"lines": 4}

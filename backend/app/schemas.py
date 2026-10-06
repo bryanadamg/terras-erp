@@ -4159,8 +4159,8 @@ class WeavingRunUpdate(BaseModel):
     rate_per_line_g_min: float | None = None
     target_efficiency_pct: float | None = None
     actual_qty_override: float | None = None
-    status: str | None = None
-    end_date: date | None = None
+    # No status/end_date: run lifecycle moves only through /stop, /pause, /resume,
+    # which own the end stamp, the pause intervals and the weaving_monitor.stop gate.
     notes: str | None = None
 
 class WeavingRunResponse(ORMResponse):
