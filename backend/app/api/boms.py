@@ -20,6 +20,7 @@ from app.services import audit_service, work_center_service
 from app.models.attribute import AttributeValue
 from app.core.ws_manager import manager
 from app.core.pagination import PageParams, PageWindow
+from app.core.uploads import upload_ext, IMAGE_EXTS, DOCUMENT_EXTS
 
 router = APIRouter()
 
@@ -587,7 +588,7 @@ async def upload_bom_sample_photo(
 
     upload_dir = Path("static/boms")
     upload_dir.mkdir(parents=True, exist_ok=True)
-    ext = os.path.splitext(file.filename or "")[1].lower() or ".jpg"
+    ext = upload_ext(file, IMAGE_EXTS, ".jpg")
     file_path = upload_dir / f"{bom_id}_sample{ext}"
     with file_path.open("wb") as buf:
         await run_in_threadpool(shutil.copyfileobj, file.file, buf)
@@ -611,7 +612,7 @@ async def upload_bom_design_file(
 
     upload_dir = Path("static/boms")
     upload_dir.mkdir(parents=True, exist_ok=True)
-    ext = os.path.splitext(file.filename or "")[1].lower() or ".pdf"
+    ext = upload_ext(file, DOCUMENT_EXTS, ".pdf")
     file_path = upload_dir / f"{bom_id}_design{ext}"
     with file_path.open("wb") as buf:
         await run_in_threadpool(shutil.copyfileobj, file.file, buf)

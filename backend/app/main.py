@@ -19,7 +19,7 @@ from contextlib import asynccontextmanager
 from datetime import datetime, timezone
 
 import mimetypes
-from fastapi.staticfiles import StaticFiles
+from app.core.uploads import SafeStaticFiles
 
 class _HealthCheckFilter(logging.Filter):
     def filter(self, record: logging.LogRecord) -> bool:
@@ -162,7 +162,7 @@ mimetypes.add_type("image/jpeg", ".jpeg")
 # Mount Static Files
 static_path = Path("static")
 static_path.mkdir(exist_ok=True)
-app.mount("/static", StaticFiles(directory="static"), name="static")
+app.mount("/static", SafeStaticFiles(directory="static"), name="static")
 
 # --- Router Configuration ---
 api_router = APIRouter()

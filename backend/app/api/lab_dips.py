@@ -1,4 +1,3 @@
-import os
 import shutil
 import uuid as uuid_lib
 from pathlib import Path
@@ -23,6 +22,7 @@ from app.schemas import (
     LabDipDevelopmentReport, LabDipReportTotals, LabDipReportVariantRow, LabDipReportGroupRow,
 )
 from app.core.pagination import PageParams, PageWindow
+from app.core.uploads import upload_ext, IMAGE_EXTS
 from app.models.auth import User
 from app.api.auth import get_current_user, require_permission, require_any_permission
 from app.services import audit_service
@@ -908,7 +908,7 @@ async def upload_lab_dip_item_status_image(
     upload_dir = Path("static/lab_dips")
     upload_dir.mkdir(parents=True, exist_ok=True)
 
-    ext = os.path.splitext(file.filename or "")[1].lower() or ".jpg"
+    ext = upload_ext(file, IMAGE_EXTS, ".jpg")
     if ext == ".jpeg":
         ext = ".jpg"
     kind = "approval" if item.status == "APPROVED" else "rejection"
