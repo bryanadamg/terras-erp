@@ -56,6 +56,72 @@ jobs:
         working-directory: backend
         run: python -u -m pytest tests -v -n auto
 
+  migrations:
+    # Fresh installs are built from the models (app/db/bootstrap.py) — the
+    # migration chain cannot replay from empty. What deploy actually runs is
+    # "last release's schema + this branch's new revisions", so test exactly that:
+    # bootstrap at the base ref, then upgrade with this checkout, then require the
+    # result to match the models and the chain to have one head.
+    runs-on: ubuntu-latest
+    services:
+      db:
+        image: postgres:15
+        env:
+          POSTGRES_USER: erp
+          POSTGRES_PASSWORD: erp
+          POSTGRES_DB: erp
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U erp -d erp"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      DATABASE_URL: postgresql+psycopg2://erp:erp@localhost:5432/erp
+      REDIS_URL: redis://localhost:6379/0
+      SECRET_KEY: ci-test-signing-key-not-used-anywhere-else
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        working-directory: backend
+        run: pip install -r requirements.txt
+
+      - name: Single alembic head
+        working-directory: backend
+        run: test "$(alembic heads | wc -l)" -eq 1 || { alembic heads; exit 1; }
+
+      - name: Build the base schema
+        env:
+          BEFORE: ${{ github.event.before }}
+        run: |
+          # main deploys diff against the previous main tip; dev and PRs against main.
+          if [ "$GITHUB_REF_NAME" = main ] && [ -n "$BEFORE" ] && ! echo "$BEFORE" | grep -qE '^0+$'; then
+            BASE="$BEFORE"
+          elif [ -n "$GITHUB_BASE_REF" ]; then
+            BASE="origin/$GITHUB_BASE_REF"
+          else
+            BASE=origin/main
+          fi
+          echo "Base: $BASE"
+          git worktree add ../base "$BASE"
+          cd ../base/backend
+          python -m app.db.bootstrap
+          alembic stamp head
+
+      - name: Upgrade to this revision and compare with the models
+        working-directory: backend
+        run: |
+          alembic upgrade head
+          alembic check
+
   frontend:
     runs-on: ubuntu-latest
     env:
