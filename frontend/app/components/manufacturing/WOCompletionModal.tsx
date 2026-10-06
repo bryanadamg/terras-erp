@@ -168,18 +168,22 @@ export default function WOCompletionModal({ mo, onClose, onSaved, workOrder }: W
     useEffect(() => {
         if (!materialItemIds.length) { setBatchesByItem({}); setReservedByItem({}); setConsumedBatches({}); return; }
         const loc = woInputLocId;
+        // Adding a substitute re-runs this; an older response landing last would
+        // drop the newer item's picker and its pick.
+        let cancelled = false;
         Promise.all(materialItemIds.map(id =>
             authFetch(`${API_BASE}/batches?item_id=${id}${loc ? `&location_id=${loc}` : ''}&limit=200`)
                 .then((r: Response) => (r.ok ? r.json() : []))
                 .catch(() => [])
                 .then((data: any[]) => [id, (data || []).filter((b: any) => (b.remaining ?? 0) > 0 && b.quality_status !== 'REJECTED')] as const)
         )).then(pairs => {
+            if (cancelled) return;
             const map: Record<string, any[]> = {};
             const held: Record<string, any[]> = {};
             for (const [id, list] of pairs) {
                 if (!list.length) continue;
-                // Weaving consumes from the merged kg pool — staged beams are
-                // consumed at WO start, so no per-beam pick here.
+                // Warp beams are loom resources: the backend draws them FIFO from the
+                // machine's mounts (beam_service.consume_from_mounts), so no per-beam pick here.
                 if (isWeavingWO && (isBeamItem(id) || list.every((b: any) => b.ends != null))) continue;
                 // A lot staged to another WO is that WO's material: the backend
                 // rejects consuming it, so it is not an option here either.
@@ -213,6 +217,7 @@ export default function WOCompletionModal({ mo, onClose, onSaved, workOrder }: W
                 return next;
             });
         });
+        return () => { cancelled = true; };
     }, [JSON.stringify(materialItemIds), workOrder?.id, isWeavingWO, isBagFedWO]);
 
     // Putaway destination is a planning decision carried by the MO — operator
