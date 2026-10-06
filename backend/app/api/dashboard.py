@@ -6,6 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func
 from app.db.session import get_db, get_async_db
 from app.services import kpi_service, so_fulfilment_service
+from app.services.netting_service import OPEN_SO_STATUSES
 from app.api.auth import get_current_user, require_any_permission, user_has_permission
 from app.models.auth import User
 from app.models.stock_balance import StockBalance
@@ -152,57 +153,35 @@ async def get_dashboard_summary(
         for row in rm_result.all()
     ]
 
-    # --- Sales orders: readiness/shortage analysis over open (PENDING) SOs ---
-    open_so_result = await db.execute(
+    # --- Sales orders: readiness over every open SO ---
+    # Same basis as /delivery-outlook and so_fulfilment_service.derive_status: a
+    # line is covered by cartons dispatched + packed and still in stock, in the
+    # item's stock UoM. Raw on-hand would count bulk nobody has packed yet.
+    open_sos = (await db.execute(
         select(SalesOrder)
-        .where(SalesOrder.status == "PENDING")
-    )
-    open_sos = open_so_result.scalars().all()
+        .options(selectinload(SalesOrder.lines))
+        .where(SalesOrder.status.in_(OPEN_SO_STATUSES))
+    )).scalars().unique().all()
     open_so_count = len(open_sos)
 
-    # Lines for all open SOs (one query)
-    so_ids = [so.id for so in open_sos]
-    lines_by_so: dict = {}
-    needed_item_ids: set = set()
-    if so_ids:
-        lines_result = await db.execute(
-            select(SalesOrderLine).where(SalesOrderLine.sales_order_id.in_(so_ids))
-        )
-        for line in lines_result.scalars().all():
-            lines_by_so.setdefault(line.sales_order_id, []).append(line)
-            needed_item_ids.add(line.item_id)
-
-    # Available stock per item across all locations/variants (one aggregated query)
-    avail_by_item: dict = {}
-    if needed_item_ids:
-        avail_result = await db.execute(
-            select(StockBalance.item_id, func.sum(StockBalance.qty))
-            .where(StockBalance.item_id.in_(needed_item_ids))
-            .group_by(StockBalance.item_id)
-        )
-        avail_by_item = {row[0]: float(row[1] or 0) for row in avail_result.all()}
-
-    # Ordered qty in each item's stock UoM — `StockBalance.qty` is in that unit
-    # while `line.qty` is in yards, so comparing them raw made every kg-stocked
-    # line read as short. See so_fulfilment_service.ordered_qty_in_stock_uom.
-    ordered_base = await so_fulfilment_service.ordered_base_map(
-        db, [line.id for lines in lines_by_so.values() for line in lines]
-    )
+    line_ids = [line.id for so in open_sos for line in so.lines]
+    ordered_base = await so_fulfilment_service.ordered_base_map(db, line_ids)
+    fulfilment = await so_fulfilment_service.fulfilment_map(db, [so.id for so in open_sos])
 
     ready_so_count = 0
     short_so_count = 0
     short_orders: list = []
     for so in open_sos:
-        lines = lines_by_so.get(so.id, [])
-        if not lines:
+        if not so.lines:
             continue
         short_lines = 0
-        for line in lines:
-            available = avail_by_item.get(line.item_id, 0.0)
+        for line in so.lines:
             needed = ordered_base.get(str(line.id))
+            got = fulfilment.get(str(line.id), {})
+            covered = float(got.get("dispatched") or 0) + float(got.get("packed_available") or 0)
             # Unknown requirement counts as short: an unmeasurable line is not
             # evidence the order is ready to ship.
-            if needed is None or available < needed:
+            if needed is None or covered < needed - so_fulfilment_service.EPS:
                 short_lines += 1
         if short_lines == 0:
             ready_so_count += 1
@@ -212,7 +191,7 @@ async def get_dashboard_summary(
                 short_orders.append({
                     "code": so.po_number,
                     "short_lines": short_lines,
-                    "total_lines": len(lines),
+                    "total_lines": len(so.lines),
                 })
 
     delivery_readiness = (ready_so_count / open_so_count * 100) if open_so_count > 0 else 100.0
@@ -249,10 +228,6 @@ async def get_dashboard_summary(
     if see_mfg:
         out["production_yield"] = float(production_yield)
     return out
-
-
-# Open = still owed to the customer. SENT/DELIVERED have left, CANCELLED never ships.
-OPEN_SO_STATUSES = ("PENDING", "READY", "PARTIAL")
 
 
 @router.get("/delivery-outlook")
