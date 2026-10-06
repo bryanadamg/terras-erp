@@ -192,7 +192,9 @@ export default function BOMView({
         if (onDeleteMultipleBOMs) { await onDeleteMultipleBOMs(sel.keys); sel.clear(); }
     };
 
-    const initialItemCode = initialCreateState ? (items.find((i: any) => i.id === initialCreateState.item_id)?.code || '') : '';
+    // `items` is one page; a deep link may name any item, so fall back to the full index.
+    const findDeepLinkItem = (id: string) => items.find((i: any) => i.id === id) || itemIndex?.[String(id)];
+    const initialItemCode = initialCreateState ? (findDeepLinkItem(initialCreateState.item_id)?.code || '') : '';
     const initialAttributeIds = initialCreateState ? (initialCreateState.attribute_value_ids || '').split(',').filter(Boolean) : [];
 
     // The paginated items array is only pulled on demand now (see DataContext:
@@ -203,8 +205,8 @@ export default function BOMView({
     useEffect(() => {
         if (!initialCreateState) return;
         if (items.length === 0) { onEnsureItems?.(); return; }  // wait for items, effect re-runs
-        if (items.find((i: any) => i.id === initialCreateState.item_id)) setIsDesignerOpen(true);
-    }, [initialCreateState, items]);
+        if (findDeepLinkItem(initialCreateState.item_id)) setIsDesignerOpen(true);
+    }, [initialCreateState, items, itemIndex]);
 
     const handleCloseDesigner = () => { setIsDesignerOpen(false); setEditingBOM(null); if (onClearInitialState) onClearInitialState(); };
 
