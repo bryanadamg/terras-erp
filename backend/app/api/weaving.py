@@ -246,6 +246,7 @@ async def create_weaving_run(
     mo = mo_res.scalars().first()
     if not mo:
         raise HTTPException(status_code=404, detail="Manufacturing Order not found")
+    await work_center_service.require_scope(db, current_user, work_center_id=wc.id)
 
     # Parallel runs are the point, double-counting the same order is not: the same WO
     # (or, WO-less, the same MO) may only be active once on a machine, else two runs
@@ -318,6 +319,7 @@ async def update_weaving_run(
     run = res.scalars().first()
     if not run:
         raise HTTPException(status_code=404, detail="Weaving run not found")
+    await work_center_service.require_scope(db, current_user, work_center_id=run.work_center_id)
 
     data = payload.model_dump(exclude_unset=True)
     before = audit_service.fields_of(run, data)
@@ -353,6 +355,7 @@ async def pause_weaving_run(
     run = res.scalars().first()
     if not run:
         raise HTTPException(status_code=404, detail="Weaving run not found")
+    await work_center_service.require_scope(db, current_user, work_center_id=run.work_center_id)
     if run.status != "RUNNING":
         raise HTTPException(
             status_code=422, detail=f"Only a running run can be paused (it is {run.status})",
@@ -388,6 +391,7 @@ async def resume_weaving_run(
     run = res.scalars().first()
     if not run:
         raise HTTPException(status_code=404, detail="Weaving run not found")
+    await work_center_service.require_scope(db, current_user, work_center_id=run.work_center_id)
     if run.status != "PAUSED":
         raise HTTPException(
             status_code=422, detail=f"Only a paused run can be resumed (it is {run.status})",
@@ -421,6 +425,7 @@ async def stop_weaving_run(
     run = res.scalars().first()
     if not run:
         raise HTTPException(status_code=404, detail="Weaving run not found")
+    await work_center_service.require_scope(db, current_user, work_center_id=run.work_center_id)
     await weaving_service.stop_run(db, run, username=current_user.username)
     await db.commit()
     await db.refresh(run)
@@ -442,6 +447,7 @@ async def delete_weaving_run(
     run = res.scalars().first()
     if not run:
         raise HTTPException(status_code=404, detail="Weaving run not found")
+    await work_center_service.require_scope(db, current_user, work_center_id=run.work_center_id)
     wc_id = str(run.work_center_id)
     await db.delete(run)
     await db.commit()
