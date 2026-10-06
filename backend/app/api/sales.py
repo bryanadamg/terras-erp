@@ -723,12 +723,23 @@ async def update_sales_order_status(so_id: uuid.UUID, status: str, db: AsyncSess
     if status not in valid_statuses:
         raise HTTPException(status_code=400, detail="Invalid status")
 
-    if status == "DELIVERED" and not user_has_permission(current_user, 'sales_order.close'):
+    # Closing a delivered order, and undoing that, are the same authority.
+    if "DELIVERED" in (status, prev_status) and status != prev_status             and not user_has_permission(current_user, 'sales_order.close'):
         raise HTTPException(status_code=403, detail="Missing permission: sales_order.close")
 
-    so.status = status
-    if status == "DELIVERED":
-        so.delivered_at = datetime.utcnow()
+    if status in ("DELIVERED", "CANCELLED"):
+        # The two states a person decides; everything else is derived.
+        so.status = status
+        if status == "DELIVERED":
+            so.delivered_at = datetime.utcnow()
+    else:
+        # PENDING/READY/PARTIAL/SENT come from packed + dispatched cartons
+        # (so_fulfilment_service.derive_status). Writing one by hand let "Mark as
+        # Sent" skip the shipment's goods issue, so stock never left. Asking for
+        # any of them re-derives instead — which is also how a closed order reopens.
+        so.status = "PENDING"
+        await so_fulfilment_service.recompute_so_status(db, so.id)
+        status = so.status
 
     # An order that has left the open set no longer holds on-hand FG. Netting
     # already filters reservations by open SO status, so this is bookkeeping, not
@@ -753,7 +764,8 @@ async def update_sales_order_status(so_id: uuid.UUID, status: str, db: AsyncSess
         action="STATUS_CHANGE",
         entity_type="SalesOrder",
         entity_id=str(so.id),
-        details=f"Status: {prev_status} -> {status}"
+        details=f"Status: {prev_status} -> {status}",
+        changes=audit_service.diff({"status": prev_status}, {"status": status}),
     )
 
     await kpi_service.invalidate_and_broadcast(db, {"type": "KPI_UPDATE"})
