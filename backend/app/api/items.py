@@ -36,9 +36,16 @@ async def get_items_lookup(db: AsyncSession = Depends(get_async_db), current_use
     decides whether a PO line gets a Cones or Drums input from it.
     """
     from app.models.item import Item, item_attributes
+    from app.models.sample import SampleRequest, SampleColor
+    # Sample lineage rides along so the BOM designer's "Linked Sample" strip works
+    # for an item off the loaded /items page.
     result = await db.execute(
         select(Item.id, Item.code, Item.name, Item.uom, Item.lot_tracked, Item.ends,
-               Item.variant_type, Item.category_id)
+               Item.variant_type, Item.category_id,
+               SampleRequest.code.label("source_sample_code"),
+               SampleColor.name.label("source_color_name"))
+        .outerjoin(SampleRequest, SampleRequest.id == Item.source_sample_id)
+        .outerjoin(SampleColor, SampleColor.id == Item.source_color_id)
     )
     attr_rows = await db.execute(select(item_attributes.c.item_id, item_attributes.c.attribute_id))
     attrs_by_item: dict[str, list[str]] = {}
@@ -73,6 +80,8 @@ async def get_items_lookup(db: AsyncSession = Depends(get_async_db), current_use
             "attribute_ids": attrs_by_item.get(str(row.id), []),
             "category_id": str(row.category_id) if row.category_id else None,
             "category_path": cat_path(str(row.category_id) if row.category_id else None),
+            "source_sample_code": row.source_sample_code,
+            "source_color_name": row.source_color_name,
         }
         for row in result.all()
     ]

@@ -1521,7 +1521,7 @@ export default function BOMDesigner({
 
                                     {/* Linked sample info strip — root only, when item has a source sample */}
                                     {selectedNodeId === 'root' && (() => {
-                                        const selItem = items.find((i: any) => (i.code || '').trim().toLowerCase() === (selectedNode.item_code || '').trim().toLowerCase());
+                                        const selItem = getItemByCode((selectedNode.item_code || '').trim());
                                         if (!selItem?.source_sample_code) return null;
                                         return (
                                             <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: '#eef4ff', border: '1px solid #b0c8e8', padding: '4px 8px', marginTop: 2 }}>
