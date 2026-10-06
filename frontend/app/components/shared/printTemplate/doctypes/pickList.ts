@@ -24,10 +24,9 @@ export const PLIST_FIELDS: FieldDef[] = [
     { key: 'plist.so_code', label: 'No. SO', kind: 'text', group: 'Pick List' },
     { key: 'plist.customer', label: 'Pelanggan / Customer', kind: 'text', group: 'Pick List' },
     { key: 'plist.carton_count', label: 'Jml koli / Cartons', kind: 'number', group: 'Pick List' },
-    { key: 'plist.delivery_date', label: 'Tgl kirim / Delivery date', kind: 'date', group: 'Pick List' },
-    { key: 'plist.carrier', label: 'Ekspedisi / Carrier', kind: 'text', group: 'Pick List' },
-    { key: 'plist.vehicle_plate', label: 'No. Polisi / Vehicle', kind: 'text', group: 'Pick List' },
-    { key: 'plist.driver', label: 'Sopir / Driver', kind: 'text', group: 'Pick List' },
+    // Delivery date / carrier / vehicle / driver are loading-deck facts that live on
+    // the Shipment (its Surat Jalan prints them); the pick list's own columns are legacy.
+    { key: 'plist.shipment', label: 'Shipment No (once staged)', kind: 'text', group: 'Pick List' },
     { key: 'plist.status', label: 'Status', kind: 'text', group: 'Pick List' },
     { key: 'plist.gross_total_label', label: '"Total bruto" caption (only with a gross total)', kind: 'text', group: 'Totals' },
     { key: 'plist.gross_total', label: 'Total bruto (kg)', kind: 'text', group: 'Totals' },
@@ -52,10 +51,7 @@ export function resolvePickListField(key: string, ctx: PrintContext): ResolvedFi
         case 'plist.so_code': return txt(pl.sales_order_code);
         case 'plist.customer': return txt(pl.customer_name);
         case 'plist.carton_count': return { text: String(d.cartons.length), empty: false };
-        case 'plist.delivery_date': return txt(d.deliveryDate);
-        case 'plist.carrier': return txt(pl.carrier);
-        case 'plist.vehicle_plate': return txt(pl.vehicle_plate);
-        case 'plist.driver': return txt(pl.driver);
+        case 'plist.shipment': return txt(pl.shipment_code);
         case 'plist.status': return txt(pl.status);
         // Cartons packed before packaging was recorded contribute nothing rather
         // than a guessed zero-tare figure; no gross at all prints no total.
@@ -192,7 +188,6 @@ export function buildPickListContext({
             itemRows: Object.values(byItem),
             // Brutto across the picked cartons — net plus the boxes, snapshotted at pack time.
             grossTotal: cartons.reduce((s: number, l: any) => s + (Number(l.gross_weight_kg) || 0), 0),
-            deliveryDate: fmt(p.delivery_date),
         },
         companyName,
         companyLogoUrl,
