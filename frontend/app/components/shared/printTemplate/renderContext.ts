@@ -98,7 +98,9 @@ export function buildPrintContext({
         companyName,
         companyLogoUrl,
         department,
-        printDate: new Date().toLocaleDateString('id-ID', { day: '2-digit', month: '2-digit', year: 'numeric' }),
+        // Company timezone, like every other doctype — the browser's would print
+        // tomorrow's date around midnight from a client in another zone.
+        printDate: tzFormatCustom(new Date().toISOString(), { day: '2-digit', month: '2-digit', year: 'numeric' }, 'id-ID'),
         formatDate: (iso: string) => tzFormatCustom(iso, SHORT_DATE, 'id-ID'),
         moAttributeValue,
         dyeing,
