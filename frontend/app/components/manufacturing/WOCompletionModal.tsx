@@ -14,6 +14,7 @@ import { LotChips, lotSizeLabel } from '../shared/LotChips';
 import { centerTypeOfWC, isContainerWC, isMachineWC, machinesUnderWC, toMachineOptions } from '../shared/workCenterTree';
 import { rejectTitle } from '../shared/rejectDisplay';
 import { API_BASE } from '../shared/apiBase';
+import { isBeamItemRecord } from '../shared/beamItem';
 
 
 const xpInput: React.CSSProperties = xpInputBase({ padding: '0 4px', width: '100%', boxSizing: 'border-box' });
@@ -91,10 +92,7 @@ export default function WOCompletionModal({ mo, onClose, onSaved, workOrder }: W
     const { results: itemResults, onSearch: onSearchItems, resolve: resolveItem } = useItemSearch({ seed: items });
 
     const findItem = (itemId: string) => resolveItem(itemId) || (items || []).find((i: any) => i.id === itemId);
-    const isBeamItem = (itemId: string) => {
-        const it = findItem(itemId);
-        return (it?.category_path || []).some((p: string) => (p || '').toLowerCase() === 'beam');
-    };
+    const isBeamItem = (itemId: string) => isBeamItemRecord(findItem(itemId));
     // WOs created without a machine have no input/output location — stock
     // movement would silently be skipped. Force a machine pick here so the
     // backend can assign locations onto the WO before consuming/producing stock.

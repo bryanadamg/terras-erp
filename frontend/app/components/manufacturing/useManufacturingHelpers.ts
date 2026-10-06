@@ -4,6 +4,7 @@ import { colorHexFor } from '../shared/xpTheme';
 import { attributeValueName, attributeValueHex } from '../shared/attributeChips';
 // Pure, closure-free calculation shared with the floor scanner — see moHelpers.
 import { calculateRequiredQty } from '../shared/moHelpers';
+import { isBeamItemRecord } from '../shared/beamItem';
 
 export interface ManufacturingHelpersInput {
     items: any[];
@@ -107,9 +108,7 @@ export function useManufacturingHelpers({
     const isBatchIdentityItem = (item_id: string) => {
         const item = findItem(item_id);
         if (!item) return false;
-        if (item.lot_tracked) return true;
-        const leafCategory = (item.category_path || [])[item.category_path?.length - 1];
-        return (leafCategory || '').toLowerCase() === 'beam';
+        return !!item.lot_tracked || isBeamItemRecord(item);
     };
 
     const getStockAcrossLocations = (item_id: string, attribute_value_ids: string[] = [], required_qty: number) => {
