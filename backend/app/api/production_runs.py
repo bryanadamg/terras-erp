@@ -221,6 +221,7 @@ def _post_process_pr(pr: ProductionRun):
     from app.api.manufacturing import populate_mo_ids
     # Populate originating SO code (eager-loaded via _pr_load_options)
     pr.sales_order_code = pr.sales_order.po_number if pr.sales_order else None
+    pr.so_customer_name = pr.sales_order.customer_name if pr.sales_order else None
     for mo in pr.manufacturing_orders:
         populate_mo_ids(mo)
 

@@ -638,6 +638,7 @@ class ProductionRunResponse(ORMResponse):
     bom_id: UUID | None = None
     sales_order_id: UUID | None = None
     sales_order_code: str | None = None
+    so_customer_name: str | None = None
     location_id: UUID | None = None
     source_location_id: UUID | None = None
     status: str
@@ -1315,6 +1316,7 @@ class ProductionRunListItem(ORMResponse):
     bom_id: UUID | None = None
     sales_order_id: UUID | None = None
     sales_order_code: str | None = None
+    so_customer_name: str | None = None
     location_id: UUID | None = None
     source_location_id: UUID | None = None
     status: str

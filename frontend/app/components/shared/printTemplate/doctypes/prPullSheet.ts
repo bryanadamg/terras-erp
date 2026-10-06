@@ -17,6 +17,7 @@ export const PR_FIELDS: FieldDef[] = [
     { key: 'pr.code', label: 'Production Run No', kind: 'text', group: 'Production Run', mono: true },
     { key: 'pr.products', label: 'Production Run (BOM items)', kind: 'text', group: 'Production Run' },
     { key: 'pr.sales_order', label: 'Sales Order (empty without one)', kind: 'text', group: 'Production Run' },
+    { key: 'pr.customer', label: 'Customer (from the Sales Order)', kind: 'text', group: 'Production Run' },
     { key: 'pr.due_date', label: 'Due Date', kind: 'date', group: 'Production Run' },
     // The identity grid pairs Due Date with Sales Order when there is one, and gives
     // it the full row when there isn't — two placements, each empty in the other case.
@@ -44,6 +45,7 @@ export function resolvePRPullSheetField(key: string, ctx: PrintContext): Resolve
         case 'pr.code': return txt(pr.code);
         case 'pr.products': return txt(d.products);
         case 'pr.sales_order': return hasSO ? { text: pr.sales_order_code || '—', empty: false } : txt('');
+        case 'pr.customer': return txt(pr.so_customer_name);
         case 'pr.due_date': return txt(d.dueDate);
         case 'pr.due_date_beside_so': return hasSO ? { text: d.dueDate || '—', empty: false } : txt('');
         case 'pr.due_date_alone': return hasSO ? txt('') : { text: d.dueDate || '—', empty: false };
