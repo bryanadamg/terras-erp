@@ -12,6 +12,7 @@ import Pager from '../shared/Pager';
 import { lvThead, LV_STICKY_THEAD, ExpanderCell, useRowSelection, RowCheckbox, SelectAllCheckbox, LV_CHECK_COL_W, LV_EXPANDER_COL_W, lvZebra, TableEmpty, Dash, lvSubTable, lvSubTd, lvSubRow, lvThBanded, ResizableTable } from '../shared/listViewTheme';
 import { FilterChipBar, xpToolbar, ToolbarButton, SearchField, xpTitleBar, viewShellStyle } from '../shared/shellTheme';
 import { STATIC_BASE } from '../shared/apiBase';
+import { matchSubBOM } from '../shared/bomMatch';
 
 const BOM_SCOPE_FILTERS = [
     { value: 'root', label: 'Root BOMs' },
@@ -132,14 +133,7 @@ export default function BOMView({
         const pool = bomsByItemId[line.item_id];
         if (!pool) return undefined;
         const candidates = excludeIds.size ? pool.filter((b: any) => !excludeIds.has(b.id)) : pool;
-        if (candidates.length === 0) return undefined;
-        const lineAttrs = [...(line.attribute_value_ids || [])].sort();
-        const exact = candidates.find((b: any) => {
-            const bAttrs = [...(b.attribute_value_ids || [])].sort();
-            return bAttrs.length === lineAttrs.length && bAttrs.every((id: string, idx: number) => id === lineAttrs[idx]);
-        });
-        if (exact) return exact;
-        return candidates.find((b: any) => (b.attribute_value_ids || []).length === 0);
+        return matchSubBOM(candidates, line);
     };
 
     // Lookup helpers

@@ -16,6 +16,7 @@ import WorkOrderPanel, { PrintChip } from './WorkOrderPanel';
 import { resolveMoBom } from '../shared/moHelpers';
 import { useTimezone } from '../../context/TimezoneContext';
 import { API_BASE } from '../shared/apiBase';
+import { matchSubBOM } from '../shared/bomMatch';
 const WOCompletionModal = dynamic(() => import('./WOCompletionModal'), { ssr: false });
 
 // On the selected (blue) tree row a normal chip fill would fight the highlight, so
@@ -759,7 +760,7 @@ export default function ManufacturingOrdersTab({
                                     {componentLines.map((line: any, i: number) => {
                                         const req = calculateRequiredQty(selectedNode.qty, line, bom);
                                         const { total, isEnough, locs } = getStockAcrossLocations(line.item_id, line.attribute_value_ids || [], req);
-                                        const hasSubBOM = boms.some((b: any) => b.item_id === line.item_id && b.active !== false);
+                                        const hasSubBOM = !!matchSubBOM(boms.filter((b: any) => b.item_id === line.item_id && b.active !== false), line);
                                         const attrLabel = (line.attribute_value_ids || []).map(getAttributeValueName).filter(Boolean).join(', ');
                                         // Zebra on: this is a wide grid, and the stripe is what keeps
                                         // a component's figures tracking across six columns.

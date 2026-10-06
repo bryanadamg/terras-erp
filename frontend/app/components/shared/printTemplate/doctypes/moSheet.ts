@@ -17,6 +17,7 @@ import type { RowSourceDef } from '../rowSources';
 import { attrValueByRole, moShade, type PrintContext } from '../renderContext';
 import { lotSizeLabel } from '../../LotChips';
 import { STATIC_BASE } from '../../apiBase';
+import { matchSubBOM } from '../../bomMatch';
 
 export const MO_SHEET_DOC = 'mo_sheet';
 
@@ -163,7 +164,9 @@ export function resolveMoSheetField(key: string, ctx: PrintContext): ResolvedFie
 /**
  * BOM explosion as the old sheet printed it: each line scaled by its percentage
  * (or legacy absolute qty) and the BOM's wastage %, times the order qty, then the
- * line's own sub-BOM (looked up by item in the caller's BOM list) indented under it.
+ * line's own sub-BOM (variant-matched in the caller's BOM list) indented under it.
+ * Level 0 is the MO's planned_components snapshot when it has one, so a BOM edited
+ * after the order was cut doesn't rewrite what the floor is told to pull.
  */
 function explode(d: any): Record<string, any>[] {
     const mo = d.mo || {};
@@ -172,7 +175,9 @@ function explode(d: any): Record<string, any>[] {
         // ponytail: depth cap only guards a cyclic BOM; the old sheet had none.
         if (level > 12) return;
         for (const line of lines || []) {
-            const subBOM = (d.boms || []).find((x: any) => x.item_id === line.item_id);
+            const subBOM = matchSubBOM(
+                (d.boms || []).filter((x: any) => x.item_id === line.item_id && x.active !== false), line,
+            );
             let scaled = parseFloat(line.percentage) > 0
                 ? (parentQty * parseFloat(line.percentage)) / 100
                 : parentQty * parseFloat(line.qty || 0);
@@ -198,7 +203,8 @@ function explode(d: any): Record<string, any>[] {
             if (subBOM?.lines) walk(subBOM.lines, level + 1, scaled, subBOM);
         }
     };
-    walk(d.bom?.lines || [], 0, 1, d.bom);
+    const planned = mo.planned_components || [];
+    walk(planned.length ? planned : d.bom?.lines || [], 0, 1, d.bom);
     return rows;
 }
 
