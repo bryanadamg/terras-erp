@@ -536,6 +536,8 @@ class ManufacturingOrderResponse(ORMResponse):
     item_ends: int | None = None  # beam warp-ends (utas); authoritative default for beam WO planning
     sales_order_id: UUID | None = None
     sales_order_code: str | None = None
+    so_customer_name: str | None = None  # the SO's customer (own SO, else pegged roots')
+    so_codes: str | None = None          # SO-less MO: the SO(s) its root MO(s) serve
     parent_mo_id: UUID | None = None
     production_run_id: UUID | None = None
     bom_size_id: UUID | None = None
@@ -1244,6 +1246,8 @@ class ManufacturingOrderListItem(ORMResponse):
     item_ends: int | None = None
     sales_order_id: UUID | None = None
     sales_order_code: str | None = None
+    so_customer_name: str | None = None  # the SO's customer (own SO, else pegged roots')
+    so_codes: str | None = None          # SO-less MO: the SO(s) its root MO(s) serve
     parent_mo_id: UUID | None = None
     production_run_id: UUID | None = None
     bom_size_id: UUID | None = None

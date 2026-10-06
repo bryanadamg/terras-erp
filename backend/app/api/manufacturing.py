@@ -14,6 +14,8 @@ from app.models.bom import BOM, BOMLine, BOMSize, BOMOperation
 from app.models.routing import Operation as OperationModel, WorkCenter
 from app.models.location import Location
 from app.models.color import Color
+from app.models.sales import SalesOrder
+from app.models.production_run import ProductionRun
 from app.services import (
     stock_service, audit_service, kpi_service, beam_service, mrp_service,
     work_center_service, so_fulfilment_service, reject_service, weaving_service,
@@ -127,6 +129,7 @@ def populate_mo_ids(mo: ManufacturingOrder):
     # 1b. Populate sales_order_code (if loaded)
     if "sales_order" not in insp.unloaded and mo.sales_order:
         mo.sales_order_code = mo.sales_order.po_number
+        mo.so_customer_name = mo.sales_order.customer_name
 
     # 1c. Populate color spec (Color Library) — color is lazy=joined, always loaded
     if "color" not in insp.unloaded and mo.color:
@@ -615,7 +618,35 @@ async def get_manufacturing_order(
     if mo is None:
         raise HTTPException(status_code=404, detail="Manufacturing order not found")
     populate_mo_ids(mo)
+    if not mo.sales_order_id:
+        mo.so_codes, mo.so_customer_name = await _pegged_sales_orders(db, str(mo.id))
     return mo
+
+
+async def _pegged_sales_orders(db: AsyncSession, mo_id: str) -> tuple[str | None, str | None]:
+    """SO codes + customers an SO-less MO serves, read off its root MO(s).
+
+    A shared component (the greige) carries no sales_order_id: it serves every root
+    it is pegged to, so it can answer to several SOs. A root without its own SO falls
+    back to its production run's, as SO lineage does.
+    """
+    root_ids = [rid for rid, _ in (await resolve_root_mos(db, [mo_id])).get(mo_id, [])]
+    if not root_ids:
+        return None, None
+    rows = (await db.execute(
+        select(SalesOrder.po_number, SalesOrder.customer_name)
+        .join(ManufacturingOrder, or_(
+            ManufacturingOrder.sales_order_id == SalesOrder.id,
+            ManufacturingOrder.production_run_id.in_(
+                select(ProductionRun.id).where(ProductionRun.sales_order_id == SalesOrder.id)
+            ),
+        ))
+        .where(ManufacturingOrder.id.in_(root_ids))
+        .distinct()
+        .order_by(SalesOrder.po_number)
+    )).all()
+    join = lambda vals: ", ".join(dict.fromkeys(v for v in vals if v)) or None
+    return join(r[0] for r in rows), join(r[1] for r in rows)
 
 
 MAX_MO_ANCESTOR_DEPTH = 12

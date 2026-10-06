@@ -93,11 +93,19 @@ export function resolveMoSheetField(key: string, ctx: PrintContext): ResolvedFie
     const bom = d.bom || null;
     const b = bom || {};
     const actualShown = d.showTimeline && (mo.actual_start_date || mo.actual_end_date);
+    const hasSO = !!(mo.sales_order_id || mo.so_codes);
+    // The SO's customer, not the BOM's: the greige BOM is shared across customers.
+    const customer = mo.so_customer_name || b.customer_name;
     switch (key) {
         case 'ms.code': return txt(mo.code);
         case 'ms.article': return txt(d.itemName);
         case 'ms.item_code': return txt(mo.item_code);
-        case 'ms.size': return txt(lotSizeLabel(mo));
+        case 'ms.size': {
+            // "L-72 cm": the floor reads the size by its target measurement.
+            const name = lotSizeLabel(mo);
+            const tm = mo.bom_size_snapshot?.target_measurement;
+            return txt(tm != null ? [name, `${tm} cm`].filter(Boolean).join('-') : name);
+        }
         // Paired on one line: empty only when the order carries no shade at all.
         case 'ms.color': return d.shade.name || d.shade.code ? present(d.shade.name) : EMPTY;
         case 'ms.color_code': return d.shade.name || d.shade.code ? present(d.shade.code) : EMPTY;
@@ -115,10 +123,11 @@ export function resolveMoSheetField(key: string, ctx: PrintContext): ResolvedFie
         case 'ms.machine': return txt(b.work_center_name);
         case 'ms.tolerance': return txt(b.tolerance_percentage != null ? `±${b.tolerance_percentage}%` : '');
 
-        case 'ms.sales_order': return mo.sales_order_id ? present(mo.sales_order_code) : EMPTY;
-        case 'ms.so_customer': return mo.sales_order_id ? present(b.customer_name) : EMPTY;
-        case 'ms.customer_no_so': return mo.sales_order_id ? EMPTY : txt(b.customer_name);
-        case 'ms.customer': return txt(b.customer_name);
+        // A shared component (greige) has no SO of its own; so_codes is what its roots serve.
+        case 'ms.sales_order': return hasSO ? present(mo.sales_order_code || mo.so_codes) : EMPTY;
+        case 'ms.so_customer': return hasSO ? present(customer) : EMPTY;
+        case 'ms.customer_no_so': return hasSO ? EMPTY : txt(customer);
+        case 'ms.customer': return txt(customer);
 
         case 'ms.berat_mateng': return pair(b.berat_bahan_mateng, b.berat_bahan_mentah_pelesan, v => `${v} gr/yard`);
         case 'ms.berat_mentah': return pair(b.berat_bahan_mentah_pelesan, b.berat_bahan_mateng, v => `${v} gr/yard`);
