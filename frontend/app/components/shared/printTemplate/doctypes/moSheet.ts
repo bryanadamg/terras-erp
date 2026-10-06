@@ -14,7 +14,7 @@
 
 import type { FieldDef, ResolvedField } from '../fieldRegistry';
 import type { RowSourceDef } from '../rowSources';
-import { attrValueByRole, moShade, type PrintContext } from '../renderContext';
+import { txt, attrValueByRole, moShade, type PrintContext } from '../renderContext';
 import { lotSizeLabel } from '../../LotChips';
 import { STATIC_BASE } from '../../apiBase';
 import { matchSubBOM } from '../../bomMatch';
@@ -73,11 +73,6 @@ export const MS_FIELDS: FieldDef[] = [
 ];
 
 const EMPTY: ResolvedField = { text: '', empty: true };
-
-function txt(v: any): ResolvedField {
-    const s = v == null || v === '' ? '' : String(v);
-    return { text: s || '—', empty: s === '' };
-}
 
 /** A value whose line prints: a dash when unset, but never empty (never hides the line). */
 const present = (v: any): ResolvedField => ({ text: v == null || v === '' ? '—' : String(v), empty: false });

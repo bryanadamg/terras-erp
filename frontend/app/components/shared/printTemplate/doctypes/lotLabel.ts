@@ -9,7 +9,7 @@
  */
 
 import type { FieldDef, ResolvedField } from '../fieldRegistry';
-import { moShade, type PrintContext } from '../renderContext';
+import { txt, EM_DASH, moShade, type PrintContext } from '../renderContext';
 import { makeLotBarcodeDataUrl } from './outputLabel';
 import { lotSizeLabel, lotComboLabel } from '../../LotChips';
 
@@ -36,12 +36,6 @@ export const LOTLABEL_FIELDS: FieldDef[] = [
     { key: 'lotlabel.footer_trace', label: 'Traceability Footer (Lot ID)', kind: 'text', group: 'Identity' },
 ];
 
-const EM_DASH = '—';
-
-function txt(v: any): ResolvedField {
-    const s = v == null || v === '' ? '' : String(v);
-    return { text: s || EM_DASH, empty: s === '' };
-}
 
 export function resolveLotLabelField(key: string, ctx: PrintContext): ResolvedField {
     const d = ctx.doc || {};

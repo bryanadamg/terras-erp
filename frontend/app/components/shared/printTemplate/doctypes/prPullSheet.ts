@@ -9,7 +9,7 @@
 
 import type { FieldDef, ResolvedField } from '../fieldRegistry';
 import type { RowSourceDef } from '../rowSources';
-import type { PrintContext } from '../renderContext';
+import { txt, type PrintContext } from '../renderContext';
 
 export const PR_PULL_SHEET_DOC = 'pr_pull_sheet';
 
@@ -31,11 +31,6 @@ export const PR_FIELDS: FieldDef[] = [
     { key: 'pr.footer', label: 'Footer small print (No. PR / Printed)', kind: 'text', group: 'Document' },
     { key: 'pr.letterhead_name', label: 'Company name (only when no logo)', kind: 'text', group: 'Document' },
 ];
-
-function txt(v: any): ResolvedField {
-    const s = v == null || v === '' ? '' : String(v);
-    return { text: s || '—', empty: s === '' };
-}
 
 export function resolvePRPullSheetField(key: string, ctx: PrintContext): ResolvedField {
     const d = ctx.doc || {};

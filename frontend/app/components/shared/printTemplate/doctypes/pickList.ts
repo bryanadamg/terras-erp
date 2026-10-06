@@ -12,7 +12,7 @@
 
 import type { FieldDef, ResolvedField } from '../fieldRegistry';
 import type { RowSourceDef } from '../rowSources';
-import type { PrintContext } from '../renderContext';
+import { txt, type PrintContext } from '../renderContext';
 import { lotSizeLabel, lotColorLabel, lotComboLabel } from '../../LotChips';
 
 export const PICK_LIST_DOC = 'pick_list';
@@ -35,10 +35,6 @@ export const PLIST_FIELDS: FieldDef[] = [
     { key: 'plist.sign_line', label: 'Signature "(____)" line', kind: 'text', group: 'Signatures' },
 ];
 
-function txt(v: any): ResolvedField {
-    const s = v == null || v === '' ? '' : String(v);
-    return { text: s || '—', empty: s === '' };
-}
 const NA: ResolvedField = { text: '', empty: true };
 
 export function resolvePickListField(key: string, ctx: PrintContext): ResolvedField {

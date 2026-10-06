@@ -8,7 +8,7 @@
 
 import type { FieldDef, ResolvedField } from '../fieldRegistry';
 import type { RowSourceDef } from '../rowSources';
-import type { PrintContext } from '../renderContext';
+import { txt, type PrintContext } from '../renderContext';
 import { qtyFmt } from '../../format';
 import { refMeta, shortRef } from '../../../dashboard/ledgerRef';
 import { lotSizeLabel, lotComboLabel, lotColorLabel } from '../../LotChips';
@@ -28,11 +28,6 @@ export const SL_FIELDS: FieldDef[] = [
 ];
 
 const fmtQty = qtyFmt(4);   // matches ReportsView, which this prints
-
-function txt(v: any): ResolvedField {
-    const s = v == null || v === '' ? '' : String(v);
-    return { text: s || '—', empty: s === '' };
-}
 
 export function resolveStockLedgerField(key: string, ctx: PrintContext): ResolvedField {
     const d = ctx.doc || {};

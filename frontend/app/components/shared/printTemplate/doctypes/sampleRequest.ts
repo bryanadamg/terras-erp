@@ -10,7 +10,7 @@
 
 import type { FieldDef, ResolvedField } from '../fieldRegistry';
 import type { RowSourceDef } from '../rowSources';
-import type { PrintContext } from '../renderContext';
+import { txt, type PrintContext } from '../renderContext';
 import { STATIC_BASE } from '../../apiBase';
 
 export const SAMPLE_REQUEST_DOC = 'sample_request';
@@ -59,11 +59,6 @@ export const SR_FIELDS: FieldDef[] = [
     { key: 'sr.prepared_role', label: 'Prepared by (title)', kind: 'text', group: 'Signatures' },
     { key: 'sr.internal_report_stamp', label: 'INTERNAL REPORT stamp', kind: 'image', group: 'Signatures' },
 ];
-
-function txt(v: any): ResolvedField {
-    const s = v == null || v === '' ? '' : String(v);
-    return { text: s || '—', empty: s === '' };
-}
 
 function colorRow(c: any): string {
     const boxes = `${c?.is_repeat ? ON : OFF} Repeat / ${c && !c.is_repeat ? ON : OFF} New ${OFF}`;

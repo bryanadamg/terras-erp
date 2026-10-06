@@ -7,6 +7,15 @@
  */
 
 import type { DyeingPrintData } from './dyeingPrintData';
+import type { ResolvedField } from './fieldRegistry';
+
+export const EM_DASH = '—';
+
+/** A text field: the value as a string, or an em dash flagged empty when there is none. */
+export function txt(v: any): ResolvedField {
+    const s = v == null || v === '' ? '' : String(v);
+    return { text: s || EM_DASH, empty: s === '' };
+}
 
 export interface PrintContext {
     /** Kartu Kerja only — null on every other document. */
