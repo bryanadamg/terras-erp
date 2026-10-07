@@ -166,6 +166,12 @@ export function resolveMoSheetField(key: string, ctx: PrintContext): ResolvedFie
 function explode(d: any): Record<string, any>[] {
     const mo = d.mo || {};
     const rows: Record<string, any>[] = [];
+    // A sized sub-assembly is made in the order's own size when its BOM carries it
+    // (MRP's _resolve_sub_size), so the row names the pile: "GREIGE (L)".
+    const moSize = lotSizeLabel(mo) || '';
+    const sizeOf = (bom: any) => moSize && bom?.size_mode === 'sized' && (bom.sizes || []).some(
+        (s: any) => (s.size_name || s.label || '').trim().toLowerCase() === moSize.toLowerCase(),
+    ) ? moSize : '';
     const walk = (lines: any[], level: number, parentQty: number, currentBOM: any) => {
         // ponytail: depth cap only guards a cyclic BOM; the old sheet had none.
         if (level > 12) return;
@@ -181,7 +187,8 @@ function explode(d: any): Record<string, any>[] {
             const attrs = (line.attribute_value_ids || []).map(d.attrName).filter(Boolean);
             // The old sheet indented the qty cell 12px a level; ~5 spaces at this size.
             const indent = ' '.repeat(level * 5);
-            const name = line.item_name || d.getItemName(line.item_id);
+            const sized = sizeOf(subBOM);
+            const name = `${line.item_name || d.getItemName(line.item_id)}${sized ? ` (${sized})` : ''}`;
             rows.push({
                 _key: `${level}:${rows.length}:${line.id}`,
                 level,
@@ -242,7 +249,9 @@ const MS_CHILD_MOS: RowSourceDef = {
         const d = ctx.doc || {};
         return {
             rows: (d.mo?.child_mos || []).map((c: any) => {
-                const item = c.item_name || d.getItemName(c.item_id);
+                const attrs = (c.attribute_value_ids || []).map(d.attrName).filter(Boolean);
+                const item = [c.item_name || d.getItemName(c.item_id), lotSizeLabel(c), attrs.length ? `[${attrs.join(', ')}]` : '']
+                    .filter(Boolean).join(' ');
                 const loc = d.getLocationName(c.location_id) || '';
                 const due = d.fmtDate(c.target_end_date);
                 return {
