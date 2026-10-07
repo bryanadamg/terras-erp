@@ -15,6 +15,20 @@ on `main`:
 
 ## [Unreleased]
 
+## [0.40.0] - 2026-10-07
+
+### Added
+- A new stock entry can book onto an existing lot of its item or a freshly numbered one, landing in the lot's own colour row instead of splitting it into a second variant. A lot of another item is refused
+
+### Fixed
+- Printouts show the size and colour wherever the order carries them. The client reported that only the SPK printed sizes:
+  - The SO Confirmation's Article cell shows the line's size and Color Library shade
+  - The Material Pull Sheet header lists each product with its sizes and quantities, read off the run's root MOs
+  - The SO table print's Size column shows the line's size instead of its attribute values, which move into the Item column
+  - The SPK names the size of a sized sub-assembly ("GREIGE (L)") and each child order's size and attributes
+  - The Kartu Kerja materials table shows each material's attributes, as the SPK does
+- The Kartu Packing reads its size from the SO line's size pick. It read only the legacy BOM-size pointer, which blanked the size on every line written after sizes were decoupled from BOMs
+
 ## [0.39.0] - 2026-10-07
 
 ### Added
