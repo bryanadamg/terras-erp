@@ -14,9 +14,10 @@
 
 import type { FieldDef, ResolvedField } from '../fieldRegistry';
 import type { RowSourceDef } from '../rowSources';
-import { attrValueByRole, moShade, type PrintContext } from '../renderContext';
+import { txt, attrValueByRole, moShade, type PrintContext } from '../renderContext';
 import { lotSizeLabel } from '../../LotChips';
 import { STATIC_BASE } from '../../apiBase';
+import { matchSubBOM } from '../../bomMatch';
 
 export const MO_SHEET_DOC = 'mo_sheet';
 
@@ -73,11 +74,6 @@ export const MS_FIELDS: FieldDef[] = [
 
 const EMPTY: ResolvedField = { text: '', empty: true };
 
-function txt(v: any): ResolvedField {
-    const s = v == null || v === '' ? '' : String(v);
-    return { text: s || '—', empty: s === '' };
-}
-
 /** A value whose line prints: a dash when unset, but never empty (never hides the line). */
 const present = (v: any): ResolvedField => ({ text: v == null || v === '' ? '—' : String(v), empty: false });
 
@@ -93,11 +89,19 @@ export function resolveMoSheetField(key: string, ctx: PrintContext): ResolvedFie
     const bom = d.bom || null;
     const b = bom || {};
     const actualShown = d.showTimeline && (mo.actual_start_date || mo.actual_end_date);
+    const hasSO = !!(mo.sales_order_id || mo.so_codes);
+    // The SO's customer, not the BOM's: the greige BOM is shared across customers.
+    const customer = mo.so_customer_name || b.customer_name;
     switch (key) {
         case 'ms.code': return txt(mo.code);
         case 'ms.article': return txt(d.itemName);
         case 'ms.item_code': return txt(mo.item_code);
-        case 'ms.size': return txt(lotSizeLabel(mo));
+        case 'ms.size': {
+            // "L-72 cm": the floor reads the size by its target measurement.
+            const name = lotSizeLabel(mo);
+            const tm = mo.bom_size_snapshot?.target_measurement;
+            return txt(tm != null ? [name, `${tm} cm`].filter(Boolean).join('-') : name);
+        }
         // Paired on one line: empty only when the order carries no shade at all.
         case 'ms.color': return d.shade.name || d.shade.code ? present(d.shade.name) : EMPTY;
         case 'ms.color_code': return d.shade.name || d.shade.code ? present(d.shade.code) : EMPTY;
@@ -115,10 +119,11 @@ export function resolveMoSheetField(key: string, ctx: PrintContext): ResolvedFie
         case 'ms.machine': return txt(b.work_center_name);
         case 'ms.tolerance': return txt(b.tolerance_percentage != null ? `±${b.tolerance_percentage}%` : '');
 
-        case 'ms.sales_order': return mo.sales_order_id ? present(mo.sales_order_code) : EMPTY;
-        case 'ms.so_customer': return mo.sales_order_id ? present(b.customer_name) : EMPTY;
-        case 'ms.customer_no_so': return mo.sales_order_id ? EMPTY : txt(b.customer_name);
-        case 'ms.customer': return txt(b.customer_name);
+        // A shared component (greige) has no SO of its own; so_codes is what its roots serve.
+        case 'ms.sales_order': return hasSO ? present(mo.sales_order_code || mo.so_codes) : EMPTY;
+        case 'ms.so_customer': return hasSO ? present(customer) : EMPTY;
+        case 'ms.customer_no_so': return hasSO ? EMPTY : txt(customer);
+        case 'ms.customer': return txt(customer);
 
         case 'ms.berat_mateng': return pair(b.berat_bahan_mateng, b.berat_bahan_mentah_pelesan, v => `${v} gr/yard`);
         case 'ms.berat_mentah': return pair(b.berat_bahan_mentah_pelesan, b.berat_bahan_mateng, v => `${v} gr/yard`);
@@ -154,7 +159,9 @@ export function resolveMoSheetField(key: string, ctx: PrintContext): ResolvedFie
 /**
  * BOM explosion as the old sheet printed it: each line scaled by its percentage
  * (or legacy absolute qty) and the BOM's wastage %, times the order qty, then the
- * line's own sub-BOM (looked up by item in the caller's BOM list) indented under it.
+ * line's own sub-BOM (variant-matched in the caller's BOM list) indented under it.
+ * Level 0 is the MO's planned_components snapshot when it has one, so a BOM edited
+ * after the order was cut doesn't rewrite what the floor is told to pull.
  */
 function explode(d: any): Record<string, any>[] {
     const mo = d.mo || {};
@@ -163,7 +170,9 @@ function explode(d: any): Record<string, any>[] {
         // ponytail: depth cap only guards a cyclic BOM; the old sheet had none.
         if (level > 12) return;
         for (const line of lines || []) {
-            const subBOM = (d.boms || []).find((x: any) => x.item_id === line.item_id);
+            const subBOM = matchSubBOM(
+                (d.boms || []).filter((x: any) => x.item_id === line.item_id && x.active !== false), line,
+            );
             let scaled = parseFloat(line.percentage) > 0
                 ? (parentQty * parseFloat(line.percentage)) / 100
                 : parentQty * parseFloat(line.qty || 0);
@@ -189,7 +198,8 @@ function explode(d: any): Record<string, any>[] {
             if (subBOM?.lines) walk(subBOM.lines, level + 1, scaled, subBOM);
         }
     };
-    walk(d.bom?.lines || [], 0, 1, d.bom);
+    const planned = mo.planned_components || [];
+    walk(planned.length ? planned : d.bom?.lines || [], 0, 1, d.bom);
     return rows;
 }
 

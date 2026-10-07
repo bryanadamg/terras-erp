@@ -227,22 +227,29 @@ export default function HistoryPane({ entityType, entityId, onClose }: HistoryPa
     };
 
     useEffect(() => {
+        // The pane stays mounted when the caller switches entity: clear the old
+        // entity's log first, and drop any response for an entity no longer shown.
+        let cancelled = false;
+        setLogs([]);
+        setSelectedIdx(null);
         const fetchHistory = async () => {
             setLoading(true);
             try {
                 const res = await authFetch(`${API_BASE}/audit-logs?entity_type=${entityType}&entity_id=${entityId}&limit=50`);
                 if (res.ok) {
                     const data = await res.json();
+                    if (cancelled) return;
                     setLogs(data.items);
                     if (data.items.length > 0) setSelectedIdx(0);
                 }
             } catch (e) {
                 console.error('Failed to fetch entity history', e);
             } finally {
-                setLoading(false);
+                if (!cancelled) setLoading(false);
             }
         };
         if (entityId) fetchHistory();
+        return () => { cancelled = true; };
     }, [entityId, entityType]);
 
     const selected = selectedIdx !== null ? logs[selectedIdx] : null;

@@ -244,11 +244,7 @@ product.md
 .impeccable/
 docs/superpowers/
 
-# Playwright
-frontend/playwright-report
-frontend/test-results
-frontend/blob-report
-frontend/playwright/.cache
+# Playwright MCP (browser tool scratch)
 .playwright-mcp/
 # TypeScript build cache
 *.tsbuildinfo

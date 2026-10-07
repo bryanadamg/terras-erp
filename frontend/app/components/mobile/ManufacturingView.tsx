@@ -3,7 +3,7 @@
 import { useState, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { useToast } from '../shared/Toast';
-import { STATUS_COLORS, StatusChip, CodeChip, xpFont as XP_FONT } from '../shared/xpTheme';
+import { STATUS_COLORS, StatusChip, CodeChip, xpFont as XP_FONT, statusColor, familyColor } from '../shared/xpTheme';
 import { ToolbarCount } from '../shared/shellTheme';
 import { API_BASE } from '../shared/apiBase';
 import {
@@ -189,7 +189,7 @@ export default function MobileManufacturingView({
                                 <div
                                     style={xpPanel({
                                         padding: '10px 12px',
-                                        borderLeft: `4px solid ${mo.isOverdue ? '#cc0000' : mo.status === 'IN_PROGRESS' ? STATUS_COLORS.IN_PROGRESS : mo.status === 'PENDING' ? STATUS_COLORS.PENDING : '#666'}`,
+                                        borderLeft: `4px solid ${mo.isOverdue ? familyColor('red') : statusColor(mo.status)}`,
                                         cursor: 'pointer',
                                     })}
                                     onClick={() => handleToggleExpand(mo.id)}

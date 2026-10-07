@@ -273,8 +273,8 @@ def user_factory():
     sess = _SASession(conn)
     made: list[tuple] = []
 
-    def _make(codes: list[str], label: str = "user"):
-        role = _Role(name=f"role-{label}-{uuid.uuid4().hex[:6]}")
+    def _make(codes: list[str], label: str = "user", **role_fields):
+        role = _Role(name=f"role-{label}-{uuid.uuid4().hex[:6]}", **role_fields)
         perms = []
         for code in codes:
             perm = sess.query(_Permission).filter(_Permission.code == code).first()

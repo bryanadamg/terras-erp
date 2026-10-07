@@ -1599,6 +1599,9 @@ async def dismount_beam_from_loom(
     it becomes its own leftover lot (LFT-) that any loom can mount later, the
     parent beam is retired at 0, and scale-vs-system drift is written off on the
     parent."""
+    mount_wc = (await db.execute(select(BeamMount.work_center_id).where(BeamMount.id == mount_id))).scalar()
+    if mount_wc:
+        _require_wo_scope(current_user, await _wc_type(db, mount_wc))
     weighed = payload.leftover_qty
     leftover_number: str | None = None
     if float(weighed) > 0:

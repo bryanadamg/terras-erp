@@ -5,7 +5,7 @@ import type {
     PrintLayout, Band, GridBand, GridItem, FieldSpec, KeyValueBand, KeyValueRow,
     TableBand, TableColumn, TallyBand, SignatureBand, SpacerBand, Align, CellStyle,
 } from './types';
-import type { PrintContext } from './renderContext';
+import { EM_DASH, type PrintContext } from './renderContext';
 import { resolveField, fieldDef } from './fieldRegistry';
 import { rowSource } from './rowSources';
 import { CODE_FONT, PRINT_SERIF_FONT } from '../xpTheme';
@@ -41,7 +41,6 @@ const TH: React.CSSProperties = { border: '1px solid #bbb', padding: '2px 5px' }
 // one-line neighbours to the middle of the row.
 const TD: React.CSSProperties = { border: '1px solid #bbb', padding: '2px 5px', wordBreak: 'break-word', verticalAlign: 'top' };
 
-const EM_DASH = '—';
 
 /**
  * Per-print overrides keyed by band id. The print modal's "Step Materials" /

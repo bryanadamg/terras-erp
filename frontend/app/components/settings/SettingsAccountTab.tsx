@@ -19,6 +19,7 @@ export default function SettingsAccountTab() {
     const [selfFullName, setSelfFullName] = useState('');
     const [selfPassword, setSelfPassword] = useState('');
     const [selfConfirmPassword, setSelfConfirmPassword] = useState('');
+    const [selfCurrentPassword, setSelfCurrentPassword] = useState('');
     // Empty means "no recipe stored yet" — seeded from the username instead.
     const [selfAvatarId, setSelfAvatarId] = useState<string>('');
 
@@ -40,6 +41,7 @@ export default function SettingsAccountTab() {
                 return;
             }
             payload.password = selfPassword;
+            payload.current_password = selfCurrentPassword;
         }
         try {
             const res = await authFetch(`${API_BASE}/users/${currentUser.id}`, {
@@ -56,6 +58,7 @@ export default function SettingsAccountTab() {
                 showToast('Account updated successfully', 'success');
                 setSelfPassword('');
                 setSelfConfirmPassword('');
+                setSelfCurrentPassword('');
             } else {
                 const err = await res.json();
                 showToast(`Failed: ${err.detail}`, 'danger');
@@ -112,6 +115,18 @@ export default function SettingsAccountTab() {
 
                     <SettingsPanel icon="bi-key-fill" title="Password">
                         <div style={settingsGrid(200)}>
+                            <div>
+                                <FieldLabel hint="Needed only when setting a new password.">Current Password</FieldLabel>
+                                <input
+                                    type="password"
+                                    autoComplete="current-password"
+                                    style={xpInput({ width: '100%' })}
+                                    value={selfCurrentPassword}
+                                    onChange={e => setSelfCurrentPassword(e.target.value)}
+                                    required={!!selfPassword}
+                                    placeholder="••••••••"
+                                />
+                            </div>
                             <div>
                                 <FieldLabel hint="Leave blank to keep your current password.">New Password</FieldLabel>
                                 <input

@@ -1,6 +1,15 @@
+# Docker's default json-file driver never rotates; on a long-lived host the api's
+# access log alone fills the disk. Every service takes this.
+x-logging: &logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "3"
+
 services:
   api:
     build: ./backend
+    logging: *logging
     restart: unless-stopped
     ports:
       - "8000:8000"
@@ -25,6 +34,7 @@ services:
 
   redis:
     image: redis:8-alpine
+    logging: *logging
     restart: always
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
@@ -36,6 +46,7 @@ services:
 
   db:
     image: postgres:15
+    logging: *logging
     restart: always
     environment:
       POSTGRES_DB: ${POSTGRES_DB}
@@ -55,6 +66,7 @@ services:
       - erp_network
 
   frontend:
+    logging: *logging
     restart: unless-stopped
     build:
       context: ./frontend
@@ -74,6 +86,7 @@ services:
   # Cloudflare tunnel is opt-in: `--profile tunnel`, or COMPOSE_PROFILES=tunnel in the host's .env.
   tunnel:
     image: cloudflare/cloudflared:2026.9.3
+    logging: *logging
     profiles:
       - tunnel
     networks:

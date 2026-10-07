@@ -51,7 +51,8 @@ def refresh_all_kpis(db: Session):
     update_kpi(db, "active_samples", float(active_samples))
 
     # 6. Open Sales Orders (Incoming)
-    open_sos = db.query(SalesOrder).filter(SalesOrder.status == "PENDING").count()
+    from app.services.netting_service import OPEN_SO_STATUSES
+    open_sos = db.query(SalesOrder).filter(SalesOrder.status.in_(OPEN_SO_STATUSES)).count()
     update_kpi(db, "open_sos", float(open_sos))
 
     _snapshot_kpi_history(db)

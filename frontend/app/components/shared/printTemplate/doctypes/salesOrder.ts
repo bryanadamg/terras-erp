@@ -9,7 +9,7 @@
 
 import type { FieldDef, ResolvedField } from '../fieldRegistry';
 import type { RowSourceDef } from '../rowSources';
-import type { PrintContext } from '../renderContext';
+import { txt, type PrintContext } from '../renderContext';
 
 export const SALES_ORDER_DOC = 'sales_order';
 
@@ -26,11 +26,6 @@ export const SO_FIELDS: FieldDef[] = [
     { key: 'so.prepared_by_signed', label: 'Prepared by "( name )" line', kind: 'text', group: 'Signatures' },
     { key: 'so.customer_signed', label: 'Customer "( name )" line', kind: 'text', group: 'Signatures' },
 ];
-
-function txt(v: any): ResolvedField {
-    const s = v == null || v === '' ? '' : String(v);
-    return { text: s || '—', empty: s === '' };
-}
 
 export function resolveSalesOrderField(key: string, ctx: PrintContext): ResolvedField {
     const d = ctx.doc || {};

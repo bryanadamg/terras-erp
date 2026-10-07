@@ -121,16 +121,17 @@ def update_partner(partner_id: uuid.UUID, payload: PartnerUpdate, db: Session = 
     if not user_has_permission(current_user, required):
         raise HTTPException(status_code=403, detail=f"Missing permission: {required}")
 
-    # {field: [old, new]} for fields that actually changed — the form re-sends every field.
-    changes = {}
-    for key, value in payload.model_dump(exclude_unset=True).items():
-        old = getattr(partner, key)
-        if old != value:
-            changes[key] = [old, value]
-            setattr(partner, key, value)
+    # The form re-sends every field; only what moved is audited, and a save that
+    # moved nothing leaves no row.
+    data = payload.model_dump(exclude_unset=True)
+    before = audit_service.fields_of(partner, data)
+    for key, value in data.items():
+        setattr(partner, key, value)
+    changes = audit_service.diff(before, data)
 
-    db.add(AuditLog(user_id=current_user.id, action="UPDATE", entity_type="Partner", entity_id=str(partner.id),
-                    details=f"Updated partner {partner.name}", changes=changes))
+    if changes:
+        db.add(AuditLog(user_id=current_user.id, action="UPDATE", entity_type="Partner", entity_id=str(partner.id),
+                        details=f"Updated partner {partner.name}", changes=changes))
     db.commit()
     broadcast_sync({"type": "MASTER_DATA_UPDATE", "domain": "partners"})
     db.refresh(partner)

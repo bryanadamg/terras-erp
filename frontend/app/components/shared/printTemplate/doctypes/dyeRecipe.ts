@@ -11,7 +11,7 @@
 
 import type { FieldDef, ResolvedField } from '../fieldRegistry';
 import type { RowSourceDef } from '../rowSources';
-import type { PrintContext } from '../renderContext';
+import { txt, type PrintContext } from '../renderContext';
 
 export const DYE_RECIPE_DOC = 'dye_recipe';
 
@@ -47,11 +47,6 @@ export const DR_FIELDS: FieldDef[] = [
     { key: 'dr.letterhead_name', label: 'Company name (only when no logo)', kind: 'text', group: 'Document' },
     { key: 'dr.company_contact', label: 'Company phone · email', kind: 'text', group: 'Document' },
 ];
-
-function txt(v: any): ResolvedField {
-    const s = v == null || v === '' ? '' : String(v);
-    return { text: s || '—', empty: s === '' };
-}
 
 const fmt = (v: any) => Number(v).toLocaleString('id-ID', { maximumFractionDigits: 2 });
 const num = (v: any, unit: string) => (v == null || v === '' || !Number(v) ? '' : `${fmt(v)}${unit}`);

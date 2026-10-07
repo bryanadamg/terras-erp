@@ -280,6 +280,7 @@ async def update_dyeing_run_rate(
     run = res.scalars().first()
     if not run:
         raise HTTPException(status_code=404, detail="Dyeing run not found")
+    await work_center_service.require_scope(db, current_user, work_order_ids=[run.work_order_id])
 
     changes: dict = {}
     if payload.yards_per_min is not None:

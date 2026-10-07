@@ -14,7 +14,7 @@
 import JsBarcode from 'jsbarcode';
 import type { FieldDef, ResolvedField } from '../fieldRegistry';
 import type { RowSourceDef } from '../rowSources';
-import { attrValueByRole, moShade, type PrintContext } from '../renderContext';
+import { txt, EM_DASH, attrValueByRole, moShade, type PrintContext } from '../renderContext';
 import { lotSizeLabel } from '../../LotChips';
 
 export const BAG_LABEL_DOC = 'bag_label';
@@ -45,12 +45,6 @@ export const OUTLABEL_FIELDS: FieldDef[] = [
     { key: 'outlabel.footer_trace', label: 'Traceability Footer (MO + Lot ID)', kind: 'text', group: 'Identity' },
 ];
 
-const EM_DASH = '—';
-
-function txt(v: any): ResolvedField {
-    const s = v == null || v === '' ? '' : String(v);
-    return { text: s || EM_DASH, empty: s === '' };
-}
 
 export function resolveOutputLabelField(key: string, ctx: PrintContext): ResolvedField {
     const d = ctx.doc || {};

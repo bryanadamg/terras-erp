@@ -123,14 +123,6 @@ def category_scope_ok(user: User, category_id) -> bool:
         return True
     return str(category_id) in allowed
 
-def location_scope_ok(user: User, location_id) -> bool:
-    """Role.allowed_locations restricts lot.* actions to matching Location ids.
-    None/empty list = unrestricted. No location context is never restricted."""
-    allowed = user.role.allowed_locations if user.role else None
-    if not allowed or not location_id:
-        return True
-    return str(location_id) in allowed
-
 def require_any_permission(*codes: str):
     """Dependency factory: 403s unless the current user has at least one of `codes`."""
     def _dependency(current_user: Annotated[User, Depends(get_current_user)]) -> User:
@@ -339,6 +331,10 @@ def update_user(user_id: str, payload: UserUpdate, db: Session = Depends(get_db)
         user.role_id = role.id
 
     if payload.password is not None:
+        # A bearer token alone must not be enough to lock the owner out. Admins are
+        # exempt: they can reset any account's password anyway.
+        if is_self and not is_admin and not verify_password(payload.current_password or "", user.hashed_password):
+            raise HTTPException(status_code=400, detail="Current password is incorrect")
         user.hashed_password = get_password_hash(payload.password)
 
     if payload.permission_ids is not None:

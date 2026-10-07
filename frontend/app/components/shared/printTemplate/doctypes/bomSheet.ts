@@ -12,7 +12,7 @@
 
 import type { FieldDef, ResolvedField } from '../fieldRegistry';
 import type { RowSourceDef } from '../rowSources';
-import type { PrintContext } from '../renderContext';
+import { txt, type PrintContext } from '../renderContext';
 import { STATIC_BASE } from '../../apiBase';
 
 export const BOM_SHEET_DOC = 'bom_sheet';
@@ -56,11 +56,6 @@ export const BS_FIELDS: FieldDef[] = [
 ];
 
 const EMPTY: ResolvedField = { text: '', empty: true };
-
-function txt(v: any): ResolvedField {
-    const s = v == null || v === '' ? '' : String(v);
-    return { text: s || '—', empty: s === '' };
-}
 
 /** The old sheet's `fmt`: dash for nothing, else fixed decimals. */
 function fmt(v: any, decimals = 2): string {

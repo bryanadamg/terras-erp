@@ -17,6 +17,7 @@ from app.models.auth import User
 from app.api.auth import get_current_user, require_permission, require_any_permission
 from app.services import audit_service, kpi_service, numbering_service
 from app.core.pagination import PageParams, PageWindow
+from app.core.uploads import upload_ext, IMAGE_EXTS, DOCUMENT_EXTS, SPREADSHEET_EXTS
 from datetime import datetime, date, time, timedelta
 from pathlib import Path
 import shutil, os, uuid
@@ -892,7 +893,7 @@ async def upload_completion_image(
     upload_dir = Path("static/samples")
     upload_dir.mkdir(parents=True, exist_ok=True)
 
-    ext = os.path.splitext(file.filename or "")[1].lower() or ".jpg"
+    ext = upload_ext(file, IMAGE_EXTS, ".jpg")
     if ext == ".jpeg":
         ext = ".jpg"
     file_path = upload_dir / f"{sample_id}_completion{ext}"
@@ -941,7 +942,7 @@ async def upload_color_status_image(
     upload_dir = Path("static/samples")
     upload_dir.mkdir(parents=True, exist_ok=True)
 
-    ext = os.path.splitext(file.filename or "")[1].lower() or ".jpg"
+    ext = upload_ext(file, IMAGE_EXTS, ".jpg")
     if ext == ".jpeg":
         ext = ".jpg"
     kind = "approval" if color.status == "APPROVED" else "rejection"
@@ -986,7 +987,7 @@ async def upload_design_pdf(
     upload_dir = Path("static/samples")
     upload_dir.mkdir(parents=True, exist_ok=True)
 
-    ext = Path(file.filename).suffix.lower() if file.filename else ".pdf"
+    ext = upload_ext(file, DOCUMENT_EXTS | SPREADSHEET_EXTS, ".pdf")
     file_path = upload_dir / f"{sample_id}_design{ext}"
     with file_path.open("wb") as buf:
         await run_in_threadpool(shutil.copyfileobj, file.file, buf)

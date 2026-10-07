@@ -75,7 +75,7 @@ npm run dev    # http://localhost:3000
 
 ```bash
 docker compose exec api pytest        # backend
-cd frontend && npx playwright test    # frontend e2e
+cd frontend && npx tsc --noEmit && npm run lint   # frontend type-check + lint
 ```
 
 ---

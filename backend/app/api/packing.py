@@ -757,6 +757,13 @@ async def create_packing_order(
     return await _response(db, po)
 
 
+PUT_STATUSES = ("PENDING", "IN_PROGRESS", "COMPLETED", "CANCELLED")
+_AUDITED_FIELDS = ("qty_target", "sales_order_id", "sales_order_line_id", "color_id",
+                   "pack_size", "pack_size_alt", "package_label", "pack_basis",
+                   "source_location_id", "output_location_id", "work_center_id", "status",
+                   "target_start_date", "target_end_date", "notes")
+
+
 @router.put("/{po_id}", response_model=PackingOrderResponse)
 async def update_packing_order(
     po_id: uuid.UUID,
@@ -767,6 +774,9 @@ async def update_packing_order(
     po = await _load(db, po_id)
     if not po:
         raise HTTPException(status_code=404, detail="Packing order not found")
+    # DELIVERED is derived from packed qty (below), never stated by a caller.
+    if payload.status is not None and payload.status not in PUT_STATUSES:
+        raise HTTPException(status_code=400, detail=f"Status must be one of {', '.join(PUT_STATUSES)}")
     if po.status in ("COMPLETED", "CANCELLED") and payload.status not in ("IN_PROGRESS", "PENDING"):
         raise HTTPException(status_code=400, detail=f"Cannot edit a {po.status} packing order")
 
@@ -792,6 +802,8 @@ async def update_packing_order(
                 status_code=400,
                 detail=f"Pack the held lots out before closing {po.code} — still on the desk: {detail}",
             )
+
+    before = audit_service.fields_of(po, _AUDITED_FIELDS)
 
     if payload.pack_basis is not None:
         po.pack_basis = _clean_basis(payload.pack_basis)
@@ -871,9 +883,12 @@ async def update_packing_order(
 
     await db.commit()
 
+    changes = audit_service.diff(before, audit_service.fields_of(po, _AUDITED_FIELDS))
     await audit_service.log_activity(
-        db, user_id=current_user.id, action="UPDATE", entity_type="PackingOrder",
-        entity_id=str(po.id), details=f"Updated packing order {po.code}",
+        db, user_id=current_user.id,
+        action="STATUS_CHANGE" if "status" in changes else "UPDATE",
+        entity_type="PackingOrder", entity_id=str(po.id),
+        details=f"Updated packing order {po.code}", changes=changes or None,
     )
     try:
         await manager.broadcast({"type": "PACKING_UPDATE", "id": str(po.id)})

@@ -27,7 +27,7 @@
 import JsBarcode from 'jsbarcode';
 import type { FieldDef, ResolvedField } from '../fieldRegistry';
 import type { RowSourceDef } from '../rowSources';
-import type { PrintContext } from '../renderContext';
+import { txt, type PrintContext } from '../renderContext';
 import { orderBasePerAlt, baseToAlt, lengthPerAlt } from '../../altUnit';
 import { lotSizeLabel, lotComboLabel, lotColorLabel } from '../../LotChips';
 
@@ -65,10 +65,6 @@ export const CARTON_FIELDS: FieldDef[] = [
     { key: 'carton.logo_fallback', label: 'House mark (only when no logo)', kind: 'text', group: 'Brand' },
 ];
 
-function txt(v: any): ResolvedField {
-    const s = v == null || v === '' ? '' : String(v);
-    return { text: s || '—', empty: s === '' };
-}
 const img = (url: string | undefined): ResolvedField => ({ text: '', empty: !url, imageUrl: url || undefined });
 
 export function resolveCartonLabelField(key: string, ctx: PrintContext): ResolvedField {

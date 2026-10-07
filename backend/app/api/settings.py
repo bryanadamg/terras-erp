@@ -11,6 +11,7 @@ from app.schemas import (
     QtyFormulaUpdate,
 )
 from app.models.settings import CompanyProfile
+from app.core.uploads import upload_ext, IMAGE_EXTS
 from app.api.auth import get_current_user, get_current_admin
 from app.models.auth import User
 from app.services import audit_service, qty_formula_service
@@ -64,7 +65,7 @@ async def upload_logo(
     UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
     
     # Save file
-    file_ext = os.path.splitext(file.filename)[1]
+    file_ext = upload_ext(file, IMAGE_EXTS, ".png")
     file_path = UPLOAD_DIR / f"company_logo{file_ext}"
     
     with file_path.open("wb") as buffer:

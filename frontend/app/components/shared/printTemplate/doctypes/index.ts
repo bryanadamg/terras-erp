@@ -70,8 +70,11 @@ export interface SampleSource {
     find?: (id: string, q: string) => string | null;
     /** Picker label. */
     label: (record: any, env: SampleEnv) => string;
+    /** Path to a second read the real print modal also makes (e.g. a run's material
+     *  requirements); its body reaches `build` as `detail`, undefined while loading. */
+    detail?: (record: any) => string | null;
     /** Preview context for one record. */
-    build: (record: any, env: SampleEnv) => PrintContext;
+    build: (record: any, env: SampleEnv, detail?: any) => PrintContext;
 }
 
 export interface DocTypeModule {
@@ -335,10 +338,16 @@ export const DOC_MODULES: DocTypeModule[] = [
             list: '/production-runs?page=1&size=20',
             find: (_id, q) => (q ? `/production-runs?search=${encodeURIComponent(q)}&page=1&size=5` : null),
             label: x => `${x.code}${x.sales_order_code ? ` — ${x.sales_order_code}` : ''}`,
-            // The requirement rows come from a second, per-run endpoint the print
-            // modal calls; a sample preview shows the header over an empty table.
-            build: (x, env) => buildPRPullSheetContext({
-                pr: x, reqs: [], getLocationName: () => '', getAttributeValueName: () => '',
+            // The requirement rows come from a second, per-run endpoint, the one the
+            // print modal calls — without it the preview read "No component requirements".
+            detail: x => (x?.id ? `/production-runs/${x.id}/material-requirements` : null),
+            build: (x, env, reqs) => buildPRPullSheetContext({
+                pr: x, reqs: Array.isArray(reqs) ? reqs : [], isLoading: !!x?.id && reqs === undefined,
+                getLocationName: () => '',
+                getAttributeValueName: (id: any) => {
+                    for (const a of env.attributes || []) { const v = a.values?.find((y: any) => y.id === id); if (v) return v.value; }
+                    return '';
+                },
                 formatDate: (d: any) => (d ? env.tzFormatCustom(d, {}) : '-'),
                 tzFormatCustom: env.tzFormatCustom,
                 companyProfile: env.companyProfile, companyName: env.companyName, companyLogoUrl: env.companyLogoUrl,

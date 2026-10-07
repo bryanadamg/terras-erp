@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { useData } from '../../context/DataContext';
 import { isoDate } from '../shared/format';
 import { useTimezone } from '../../context/TimezoneContext';
@@ -76,7 +76,10 @@ export default function SampleReportView() {
         return (attr?.values ?? []).map((v: any) => ({ id: String(v.id), label: v.value as string }));
     }, [attributes]);
 
+    // Filters change faster than the report returns; only the newest request may land.
+    const loadGen = useRef(0);
     const load = useCallback(async () => {
+        const gen = ++loadGen.current;
         setLoading(true);
         try {
             const qs = new URLSearchParams({ group_by: groupBy });
@@ -86,12 +89,15 @@ export default function SampleReportView() {
             if (categoryValueId && categoryValueId !== 'ALL') qs.set('category_value_id', categoryValueId);
             const res = await authFetch(`${API_BASE}/samples/report?${qs.toString()}`);
             if (!res.ok) throw new Error(String(res.status));
-            setReport(await res.json());
+            const body = await res.json();
+            if (gen !== loadGen.current) return;
+            setReport(body);
         } catch {
+            if (gen !== loadGen.current) return;
             showToast('Failed to load sample report', 'danger');
             setReport(null);
         } finally {
-            setLoading(false);
+            if (gen === loadGen.current) setLoading(false);
         }
     }, [authFetch, dateFrom, dateTo, customerId, categoryValueId, groupBy, showToast]);
 

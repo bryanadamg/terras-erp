@@ -10,7 +10,7 @@
  * manifest + one case in the resolver. Nothing else changes.
  */
 
-import { moShade, type PrintContext } from './renderContext';
+import { txt, EM_DASH, moShade, type PrintContext } from './renderContext';
 import { DOC_MODULES, moduleForField } from './doctypes';
 import { lotSizeLabel } from '../LotChips';
 
@@ -29,7 +29,6 @@ export interface FieldDef {
     group?: string;
 }
 
-const EM_DASH = '—';
 
 /**
  * Letterhead fields every document can place. `__text` prints the placement's own
@@ -127,11 +126,6 @@ export interface ResolvedField {
     imageUrl?: string;
     /** Label the value suggests for itself ("VAT 11%"), used by a row labelled '{auto}'. */
     label?: string;
-}
-
-function txt(v: any): ResolvedField {
-    const s = v == null || v === '' ? '' : String(v);
-    return { text: s || EM_DASH, empty: s === '' };
 }
 
 function num(v: any): ResolvedField {

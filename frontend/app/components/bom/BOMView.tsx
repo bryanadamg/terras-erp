@@ -12,6 +12,7 @@ import Pager from '../shared/Pager';
 import { lvThead, LV_STICKY_THEAD, ExpanderCell, useRowSelection, RowCheckbox, SelectAllCheckbox, LV_CHECK_COL_W, LV_EXPANDER_COL_W, lvZebra, TableEmpty, Dash, lvSubTable, lvSubTd, lvSubRow, lvThBanded, ResizableTable } from '../shared/listViewTheme';
 import { FilterChipBar, xpToolbar, ToolbarButton, SearchField, xpTitleBar, viewShellStyle } from '../shared/shellTheme';
 import { STATIC_BASE } from '../shared/apiBase';
+import { matchSubBOM } from '../shared/bomMatch';
 
 const BOM_SCOPE_FILTERS = [
     { value: 'root', label: 'Root BOMs' },
@@ -132,14 +133,7 @@ export default function BOMView({
         const pool = bomsByItemId[line.item_id];
         if (!pool) return undefined;
         const candidates = excludeIds.size ? pool.filter((b: any) => !excludeIds.has(b.id)) : pool;
-        if (candidates.length === 0) return undefined;
-        const lineAttrs = [...(line.attribute_value_ids || [])].sort();
-        const exact = candidates.find((b: any) => {
-            const bAttrs = [...(b.attribute_value_ids || [])].sort();
-            return bAttrs.length === lineAttrs.length && bAttrs.every((id: string, idx: number) => id === lineAttrs[idx]);
-        });
-        if (exact) return exact;
-        return candidates.find((b: any) => (b.attribute_value_ids || []).length === 0);
+        return matchSubBOM(candidates, line);
     };
 
     // Lookup helpers
@@ -198,7 +192,9 @@ export default function BOMView({
         if (onDeleteMultipleBOMs) { await onDeleteMultipleBOMs(sel.keys); sel.clear(); }
     };
 
-    const initialItemCode = initialCreateState ? (items.find((i: any) => i.id === initialCreateState.item_id)?.code || '') : '';
+    // `items` is one page; a deep link may name any item, so fall back to the full index.
+    const findDeepLinkItem = (id: string) => items.find((i: any) => i.id === id) || itemIndex?.[String(id)];
+    const initialItemCode = initialCreateState ? (findDeepLinkItem(initialCreateState.item_id)?.code || '') : '';
     const initialAttributeIds = initialCreateState ? (initialCreateState.attribute_value_ids || '').split(',').filter(Boolean) : [];
 
     // The paginated items array is only pulled on demand now (see DataContext:
@@ -209,8 +205,8 @@ export default function BOMView({
     useEffect(() => {
         if (!initialCreateState) return;
         if (items.length === 0) { onEnsureItems?.(); return; }  // wait for items, effect re-runs
-        if (items.find((i: any) => i.id === initialCreateState.item_id)) setIsDesignerOpen(true);
-    }, [initialCreateState, items]);
+        if (findDeepLinkItem(initialCreateState.item_id)) setIsDesignerOpen(true);
+    }, [initialCreateState, items, itemIndex]);
 
     const handleCloseDesigner = () => { setIsDesignerOpen(false); setEditingBOM(null); if (onClearInitialState) onClearInitialState(); };
 

@@ -338,3 +338,25 @@ def test_production_run_no_attrs_inherits_bom(client, auth_headers):
         finally:
             _s2.close()
             _c2.close()
+
+
+def test_reopening_a_closed_mo_needs_the_close_permission(user_factory, client, auth_headers):
+    import uuid
+    tag = uuid.uuid4().hex[:6].upper()
+    client.post("/api/uoms", json={"name": "pcs"}, headers=auth_headers)
+    client.post("/api/items", json={"code": f"RO-FG-{tag}", "name": "FG", "uom": "pcs"}, headers=auth_headers)
+    client.post("/api/items", json={"code": f"RO-RM-{tag}", "name": "RM", "uom": "pcs"}, headers=auth_headers)
+    client.post("/api/boms", json={
+        "code": f"BOM-RO-{tag}", "item_code": f"RO-FG-{tag}", "qty": 1,
+        "lines": [{"item_code": f"RO-RM-{tag}", "qty": 1, "percentage": 100.0}],
+    }, headers=auth_headers)
+    bom = next(b for b in client.get("/api/boms", headers=auth_headers).json() if b["code"] == f"BOM-RO-{tag}")
+    mo = client.post("/api/manufacturing-orders", json={"code": f"MO-RO-{tag}", "bom_id": bom["id"], "qty": 1.0},
+                     headers=auth_headers)
+    assert mo.status_code == 200, mo.text
+    url = f"/api/manufacturing-orders/{mo.json()['id']}/status"
+    assert client.put(f"{url}?status=COMPLETED", headers=auth_headers).status_code == 200
+
+    _, editor = user_factory(["manufacturing_order.edit"], "mo-editor")
+    assert client.put(f"{url}?status=IN_PROGRESS", headers=editor).status_code == 403
+    assert client.put(f"{url}?status=IN_PROGRESS", headers=auth_headers).status_code == 200

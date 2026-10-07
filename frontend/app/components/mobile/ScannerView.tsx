@@ -5,6 +5,7 @@ import { Html5QrcodeScanner } from 'html5-qrcode';
 import { StatusChip, xpFont as XP_FONT, CHIP_RADIUS, xpInput as xpInputBase } from '../shared/xpTheme';
 import { MOBILE_BG, MobilePanel, MobileScreenBar, MobileButton, MobileNotice } from './mobileTheme';
 import { API_BASE } from '../shared/apiBase';
+import { isBeamItemRecord } from '../shared/beamItem';
 
 interface MobileScannerViewProps {
     manufacturingOrders: any[];
@@ -145,10 +146,7 @@ export default function MobileScannerView({
     const woPct    = woTarget > 0 ? Math.min(100, Math.round((woDone / woTarget) * 100)) : 0;
 
     const findItem = (itemId: string) => (items || []).find((i: any) => i.id === itemId);
-    const isBeamItem = (itemId: string) => {
-        const it = findItem(itemId);
-        return (it?.category_path || []).some((p: string) => (p || '').toLowerCase() === 'beam');
-    };
+    const isBeamItem = (itemId: string) => isBeamItemRecord(findItem(itemId));
     // Lot output: WO produces a beam (Beam category / BEAM- code / BEAMING work center) or a lot-tracked item
     const woWcType = ((workCenters || []).find((wc: any) => wc.id === scannedWO?.work_center_id)?.center_type || '').toUpperCase();
     const isBeamOutput = !!scannedWO && !!scannedWOParentMO

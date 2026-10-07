@@ -22,7 +22,7 @@ from app.models.work_order import WorkOrder
 from app.models.routing import WorkCenter
 from app.models.auth import User
 from app.api.auth import get_current_user, require_permission, require_any_permission
-from app.services import audit_service, dyeing_dose_service, dyeing_run_service
+from app.services import audit_service, dyeing_dose_service, dyeing_run_service, work_center_service
 from app.core.ws_manager import manager
 from app.core.pagination import PageParams, PageWindow
 from app.schemas import (
@@ -511,6 +511,7 @@ async def create_dyeing_run(
     wo = wo_result.scalars().first()
     if not wo:
         raise HTTPException(status_code=404, detail="Work Order not found")
+    await work_center_service.require_scope(db, current_user, work_order_ids=[wo.id])
 
     run_number = await _get_next_run_number(db, DyeingRun, payload.work_order_id)
     # Default the load from the WO, the same way WO creation's auto-run does. It stays
@@ -594,6 +595,7 @@ async def configure_dyeing_bath_bulk(
     missing = [str(i) for i in payload.work_order_ids if str(i) not in found]
     if missing:
         raise HTTPException(status_code=404, detail=f"Work order(s) not found: {', '.join(missing)}")
+    await work_center_service.require_scope(db, current_user, work_order_ids=[w.id for w in wos])
 
     machines = {str(w.work_center_id) for w in wos}
     if len(machines) > 1:
@@ -702,6 +704,7 @@ async def update_dyeing_run(
     run = result.scalars().first()
     if not run:
         raise HTTPException(status_code=404, detail="Dyeing run not found")
+    await work_center_service.require_scope(db, current_user, work_order_ids=[run.work_order_id])
     # The bath's own close, as everywhere else in this file: a closed bath's setup is
     # history. A run marked COMPLETED only because its WO closed is still editable.
     if run.completed_at is not None:
@@ -805,6 +808,7 @@ async def start_color_matching(
     run = result.scalars().first()
     if not run:
         raise HTTPException(status_code=404, detail="Dyeing run not found")
+    await work_center_service.require_scope(db, current_user, work_order_ids=[run.work_order_id])
     # Gated on the facts, not the derived status, exactly as /start and /complete
     # are: a run reads COMPLETED when its WO closes, and neither that nor anything
     # else about the WO is a reason the colour match did or did not happen.
@@ -853,6 +857,7 @@ async def update_dyeing_run_bath(
     run = result.scalars().first()
     if not run:
         raise HTTPException(status_code=404, detail="Dyeing run not found")
+    await work_center_service.require_scope(db, current_user, work_order_ids=[run.work_order_id])
     # Gated on the bath's OWN close, not on the derived status: a WO closing marks
     # its baths COMPLETED (dyeing_run_service), and a bath nobody ever recorded is
     # still back-fillable after that. Once the bath itself was closed, the recorded
@@ -939,6 +944,7 @@ async def start_dyeing_run(
     run = result.scalars().first()
     if not run:
         raise HTTPException(status_code=404, detail="Dyeing run not found")
+    await work_center_service.require_scope(db, current_user, work_order_ids=[run.work_order_id])
     # Gated on the facts rather than the derived status: `COMPLETED` on a run can
     # mean "its WO closed" as well as "this bath was closed", and only the latter is
     # a reason to refuse. The clock is the only fact this route owns, so the only
@@ -1022,6 +1028,7 @@ async def update_dyeing_run_chemicals(
     run = result.scalars().first()
     if not run:
         raise HTTPException(status_code=404, detail="Dyeing run not found")
+    await work_center_service.require_scope(db, current_user, work_order_ids=[run.work_order_id])
     # The bath's own close, as everywhere else in this file: a closed bath's
     # chemicals are history. A WO-closed run is still open for this.
     if run.completed_at is not None:
@@ -1087,6 +1094,7 @@ async def complete_dyeing_run(
     run = result.scalars().first()
     if not run:
         raise HTTPException(status_code=404, detail="Dyeing run not found")
+    await work_center_service.require_scope(db, current_user, work_order_ids=[run.work_order_id])
     # Guarded on the SHADE, not on the close. Closing the bath is now a floor act of
     # its own (the vessel card's Complete button, which stamps `completed_at` and
     # nothing else), and QC records the shade afterwards — refusing on `completed_at`
@@ -1230,6 +1238,7 @@ async def create_setting_run(
     wo_result = await db.execute(select(WorkOrder).filter(WorkOrder.id == payload.work_order_id))
     if not wo_result.scalars().first():
         raise HTTPException(status_code=404, detail="Work Order not found")
+    await work_center_service.require_scope(db, current_user, work_order_ids=[payload.work_order_id])
 
     run_number = await _get_next_run_number(db, SettingRun, payload.work_order_id)
     run = SettingRun(
@@ -1288,6 +1297,7 @@ async def configure_setting_runs_bulk(
     missing = [str(i) for i in payload.work_order_ids if str(i) not in found]
     if missing:
         raise HTTPException(status_code=404, detail=f"Work order(s) not found: {', '.join(missing)}")
+    await work_center_service.require_scope(db, current_user, work_order_ids=[w.id for w in wos])
 
     if len({str(w.work_center_id) for w in wos}) > 1:
         raise HTTPException(
@@ -1364,6 +1374,7 @@ async def start_setting_run(
     run = result.scalars().first()
     if not run:
         raise HTTPException(status_code=404, detail="Setting run not found")
+    await work_center_service.require_scope(db, current_user, work_order_ids=[run.work_order_id])
     if run.status != "PENDING":
         raise HTTPException(status_code=400, detail=f"Run is already {run.status}")
     run.status = "IN_PROGRESS"
@@ -1392,6 +1403,7 @@ async def complete_setting_run(
     run = result.scalars().first()
     if not run:
         raise HTTPException(status_code=404, detail="Setting run not found")
+    await work_center_service.require_scope(db, current_user, work_order_ids=[run.work_order_id])
     if run.status == "COMPLETED":
         raise HTTPException(status_code=400, detail="Run already completed")
 

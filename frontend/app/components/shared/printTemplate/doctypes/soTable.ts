@@ -8,7 +8,7 @@
 
 import type { FieldDef, ResolvedField } from '../fieldRegistry';
 import type { RowSourceDef } from '../rowSources';
-import type { PrintContext } from '../renderContext';
+import { txt, type PrintContext } from '../renderContext';
 
 export const SO_TABLE_DOC = 'so_table_report';
 
@@ -19,11 +19,6 @@ export const ST_FIELDS: FieldDef[] = [
     { key: 'st.row_count', label: 'Total rows', kind: 'text', group: 'Totals' },
     { key: 'st.order_count', label: 'Total orders', kind: 'text', group: 'Totals' },
 ];
-
-function txt(v: any): ResolvedField {
-    const s = v == null || v === '' ? '' : String(v);
-    return { text: s || '—', empty: s === '' };
-}
 
 export function resolveSoTableField(key: string, ctx: PrintContext): ResolvedField {
     const d = ctx.doc || {};

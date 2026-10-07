@@ -8,6 +8,7 @@ import SearchableSelect from '@bryanadamg/terras-ui/components/Combobox';
 import { useToast } from '../shared/Toast';
 import { CodeChip, CODE_FONT, xpFont, CHIP_RADIUS, BUTTON_RADIUS, xpInput as xpInputBase, xpBtn as xpBtnBase, BTN_TONES, LegendPanel, XP_BTN } from '../shared/xpTheme';
 import { API_BASE } from '../shared/apiBase';
+import { isBeamItemRecord } from '../shared/beamItem';
 
 // Types for Recursive Structure
 interface BOMSizeEntry {
@@ -482,8 +483,7 @@ export default function BOMDesigner({
         getItemByCode(code)?.uom || '',
     [getItemByCode]);
     const isBeamCode = useCallback((code: string) => {
-        const it = getItemByCode(code);
-        return !!it && (((it.category_path || []).some((c: string) => (c || '').toLowerCase() === 'beam')) || it.ends != null);
+        return isBeamItemRecord(getItemByCode(code));
     }, [getItemByCode]);
     // Work center (group, or its parent group) is BEAMING type. Covers inline-created items with no category/ends yet.
     const isBeamWc = useCallback((wcId?: string) => {
@@ -1521,7 +1521,7 @@ export default function BOMDesigner({
 
                                     {/* Linked sample info strip — root only, when item has a source sample */}
                                     {selectedNodeId === 'root' && (() => {
-                                        const selItem = items.find((i: any) => (i.code || '').trim().toLowerCase() === (selectedNode.item_code || '').trim().toLowerCase());
+                                        const selItem = getItemByCode((selectedNode.item_code || '').trim());
                                         if (!selItem?.source_sample_code) return null;
                                         return (
                                             <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: '#eef4ff', border: '1px solid #b0c8e8', padding: '4px 8px', marginTop: 2 }}>

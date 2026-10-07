@@ -4,6 +4,11 @@ on:
   push:
     branches: [main]
 
+# Two quick pushes must not build and `up` over each other on the one host.
+concurrency:
+  group: deploy-bie-temp
+  cancel-in-progress: false
+
 jobs:
   test:
     uses: ./.github/workflows/test.yml
@@ -29,8 +34,11 @@ jobs:
           proxy_username: ${{ secrets.PROXY_USER }}
           proxy_key: ${{ secrets.PROXY_SSH_KEY }}
           script: |
+            # Stop at the first failure: a failed pull must not go on to rebuild
+            # and report the old code as deployed.
+            set -eu
             cd /home/bie-admin/terras-erp
-            git pull origin main
+            git pull --ff-only origin main
             # The deploy user is in the docker group, so no sudo (which would
             # strip NODE_AUTH_TOKEN). The tunnel is opt-in per host: set
             # COMPOSE_PROFILES=tunnel in that host's .env to bring it up.
@@ -38,4 +46,13 @@ jobs:
             # build bases (python/node) would stay at whatever was first pulled.
             docker compose pull --ignore-buildable
             docker compose build --pull
-            docker compose up -d
+            # The api container runs `alembic upgrade head` on start, and several
+            # data migrations have no downgrade — so dump first. Keeps the last 10.
+            mkdir -p snapshots
+            if [ -n "$(docker compose ps -q --status running db)" ]; then
+              docker compose exec -T db sh -c 'pg_dump -U "$POSTGRES_USER" -Fc "$POSTGRES_DB"'                 > "snapshots/predeploy-$(date +%Y%m%d-%H%M%S).dump"
+              ls -1t snapshots/predeploy-*.dump | tail -n +11 | xargs -r rm --
+            fi
+            # --wait fails the job unless every service comes up healthy (api's
+            # healthcheck covers migrations + DB + Redis), so a broken deploy is red.
+            docker compose up -d --wait --wait-timeout 300

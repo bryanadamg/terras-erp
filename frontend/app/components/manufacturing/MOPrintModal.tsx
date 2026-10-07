@@ -73,9 +73,10 @@ export default function MOPrintModal({
 
     // A shared component MO (the greige) reaches here from the Production Runs
     // list's slim rows, which carry no BOM — the sheet printed "No BOM found" with
-    // no machine or specs. Load the full order when the BOM is missing.
+    // no machine or specs. Load the full order when the BOM is missing, or when the
+    // order has no SO of its own — the single-MO read resolves its roots' SO + customer.
     const [fullMO, setFullMO] = useState<any>(null);
-    const needsLoad = !!moProp?.id && !moProp?.bom;
+    const needsLoad = !!moProp?.id && (!moProp?.bom || !moProp?.sales_order_id);
     useEffect(() => {
         setFullMO(null);
         if (!needsLoad) return;

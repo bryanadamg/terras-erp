@@ -2188,10 +2188,6 @@ In stock ${fmtQty(f.baseAvailable)}${bu} · Shipped ${fmtQty(f.baseShipped)}${bu
                                            <XPActionButton tone="primary" icon="bi-collection-play"
                                                title="Create Production Run" onClick={() => onGenerateWO(so)} />
                                        )}
-                                       {canManage && (so.status === 'READY' || so.status === 'PARTIAL') && (
-                                           <XPActionButton tone="neutral" icon="bi-send"
-                                               title="Mark as Sent" onClick={() => onUpdateSOStatus(so.id, 'SENT')} />
-                                       )}
                                        {canManage && so.status === 'SENT' && (
                                            <XPActionButton tone="success" icon="bi-check2-all"
                                                title="Mark as Delivered" onClick={() => onUpdateSOStatus(so.id, 'DELIVERED')} />

@@ -11,7 +11,7 @@
 
 import type { FieldDef, ResolvedField } from '../fieldRegistry';
 import type { RowSourceDef } from '../rowSources';
-import { attrValueByRole, type PrintContext } from '../renderContext';
+import { txt, attrValueByRole, type PrintContext } from '../renderContext';
 import { lotSizeLabel, lotComboLabel } from '../../LotChips';
 import { qtyFmt } from '../../format';
 
@@ -40,11 +40,6 @@ export const SJ_FIELDS: FieldDef[] = [
     { key: 'sj.total_brutto', label: 'Bruto (kg)', kind: 'number', unit: 'KG', group: 'Totals' },
     { key: 'sj.total_brutto_line', label: 'Bruto line ("Bruto : x KG")', kind: 'text', group: 'Totals' },
 ];
-
-function txt(v: any): ResolvedField {
-    const s = v == null || v === '' ? '' : String(v);
-    return { text: s || '—', empty: s === '' };
-}
 
 export function resolveSuratJalanField(key: string, ctx: PrintContext): ResolvedField {
     const d = ctx.doc || {};

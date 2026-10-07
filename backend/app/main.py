@@ -8,6 +8,7 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from fastapi.encoders import jsonable_encoder
 from sqlalchemy import text
+from sqlalchemy.exc import DBAPIError
 from starlette.concurrency import run_in_threadpool
 import asyncio
 import os
@@ -19,7 +20,7 @@ from contextlib import asynccontextmanager
 from datetime import datetime, timezone
 
 import mimetypes
-from fastapi.staticfiles import StaticFiles
+from app.core.uploads import SafeStaticFiles
 
 class _HealthCheckFilter(logging.Filter):
     def filter(self, record: logging.LogRecord) -> bool:
@@ -44,7 +45,7 @@ from app.core.ws_metrics import metrics as ws_metrics
 from app.api.auth import ws_connection_state, get_current_admin
 
 # Keep in sync with /VERSION, frontend/package.json "version", and CHANGELOG.md on release.
-APP_VERSION = "0.38.0"
+APP_VERSION = "0.39.0"
 
 # Process start time, a proxy for "last deployed/updated" — deploy is git pull +
 # docker compose up --build, which always restarts this process.
@@ -124,6 +125,17 @@ async def validation_exception_handler(request: Request, exc: RequestValidationE
     return JSONResponse(status_code=422, content={"detail": detail, "errors": errors})
 
 
+@app.exception_handler(DBAPIError)
+async def bad_input_handler(request: Request, exc: DBAPIError):
+    """A value the database can't parse — mostly a malformed id in a path typed
+    `str` — is the caller's mistake, not a server fault: 422, not 500.
+    asyncpg rejects it client-side ("invalid input for query argument"),
+    psycopg2 server-side (SQLSTATE 22P02). Anything else stays a 500."""
+    if "invalid input" in str(exc.orig) or getattr(exc.orig, "pgcode", None) == "22P02":
+        return JSONResponse(status_code=422, content={"detail": "Malformed id or value in the request"})
+    raise exc
+
+
 class CatchAllErrors:
     """Unhandled exceptions become a logged, JSON 500 with a reference id.
 
@@ -162,7 +174,7 @@ mimetypes.add_type("image/jpeg", ".jpeg")
 # Mount Static Files
 static_path = Path("static")
 static_path.mkdir(exist_ok=True)
-app.mount("/static", StaticFiles(directory="static"), name="static")
+app.mount("/static", SafeStaticFiles(directory="static"), name="static")
 
 # --- Router Configuration ---
 api_router = APIRouter()

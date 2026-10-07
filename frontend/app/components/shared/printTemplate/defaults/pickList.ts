@@ -21,10 +21,7 @@ const FACTS: [string, string][] = [
     ['No. SO', 'plist.so_code'],
     ['Pelanggan / Customer', 'plist.customer'],
     ['Jml koli / Cartons', 'plist.carton_count'],
-    ['Tgl kirim / Delivery date', 'plist.delivery_date'],
-    ['Ekspedisi / Carrier', 'plist.carrier'],
-    ['No. Polisi / Vehicle', 'plist.vehicle_plate'],
-    ['Sopir / Driver', 'plist.driver'],
+    ['No. Pengiriman / Shipment', 'plist.shipment'],
 ];
 
 const BANDS: Band[] = [

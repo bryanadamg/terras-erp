@@ -190,3 +190,27 @@ def decorate_effective_locations(wcs, loc_map: dict) -> None:
         wc.input_location_inherited = in_id is not None and str(src_in) != str(wc.id)
         wc.output_location_inherited = out_id is not None and str(src_out) != str(wc.id)
         wc.reject_location_inherited = rej_id is not None and str(src_rej) != str(wc.id)
+
+
+async def require_scope(db: AsyncSession, user, *, work_order_ids=(), work_center_id=None) -> None:
+    """403 unless the user's role is scoped to the center type of every machine the
+    action touches — the WOs' machines plus an explicit one. Same rule as
+    `auth.wo_scope_ok`; this is the form for routes that only hold ids."""
+    from fastapi import HTTPException
+    from app.models.work_order import WorkOrder
+    from app.api.auth import wo_scope_ok
+
+    if not (user.role and user.role.allowed_work_center_types):
+        return
+    types = set()
+    ids = [i for i in work_order_ids if i]
+    if ids:
+        types |= set((await db.execute(
+            select(WorkCenter.center_type).join(WorkOrder, WorkOrder.work_center_id == WorkCenter.id)
+            .where(WorkOrder.id.in_(ids))
+        )).scalars().all())
+    if work_center_id:
+        types.add((await db.execute(select(WorkCenter.center_type).where(WorkCenter.id == work_center_id))).scalar())
+    for t in types:
+        if not wo_scope_ok(user, t):
+            raise HTTPException(status_code=403, detail=f"Your role is not scoped to work center type '{t}'")

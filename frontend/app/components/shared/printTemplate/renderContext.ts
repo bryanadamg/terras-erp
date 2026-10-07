@@ -7,6 +7,15 @@
  */
 
 import type { DyeingPrintData } from './dyeingPrintData';
+import type { ResolvedField } from './fieldRegistry';
+
+export const EM_DASH = '—';
+
+/** A text field: the value as a string, or an em dash flagged empty when there is none. */
+export function txt(v: any): ResolvedField {
+    const s = v == null || v === '' ? '' : String(v);
+    return { text: s || EM_DASH, empty: s === '' };
+}
 
 export interface PrintContext {
     /** Kartu Kerja only — null on every other document. */
@@ -98,7 +107,9 @@ export function buildPrintContext({
         companyName,
         companyLogoUrl,
         department,
-        printDate: new Date().toLocaleDateString('id-ID', { day: '2-digit', month: '2-digit', year: 'numeric' }),
+        // Company timezone, like every other doctype — the browser's would print
+        // tomorrow's date around midnight from a client in another zone.
+        printDate: tzFormatCustom(new Date().toISOString(), { day: '2-digit', month: '2-digit', year: 'numeric' }, 'id-ID'),
         formatDate: (iso: string) => tzFormatCustom(iso, SHORT_DATE, 'id-ID'),
         moAttributeValue,
         dyeing,

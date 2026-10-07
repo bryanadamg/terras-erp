@@ -53,6 +53,7 @@ const BANDS: Band[] = [
         labelWidth: '18%', labelFontSize: 8, valueFontSize: 8, ruleColor: RULE,
         rows: [
             { field: 'pr.products', label: 'Production Run', span: 3, bold: true, fontSize: 9 },
+            { field: 'pr.customer', label: 'Customer', span: 3, hideWhenEmpty: true },
             { field: 'pr.sales_order', label: 'Sales Order', span: 1, hideWhenEmpty: true, mono: true },
             { field: 'pr.due_date_beside_so', label: 'Due Date', span: 1, hideWhenEmpty: true },
             { field: 'pr.due_date_alone', label: 'Due Date', span: 3, hideWhenEmpty: true },

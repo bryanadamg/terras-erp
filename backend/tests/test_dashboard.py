@@ -47,3 +47,28 @@ def test_kpi_history_is_gated_the_same_way_as_kpis(user_factory, client):
     res = client.get("/api/dashboard/kpis/history?days=7", headers=headers)
     assert res.status_code == 200, res.text
     assert "low_stock" not in res.json(), "history must not reopen what /kpis closes"
+
+
+def test_a_ready_order_still_counts_as_open(client, auth_headers, async_db_session):
+    """READY/PARTIAL are still owed — the summary used to count PENDING only."""
+    import uuid
+    from sqlalchemy import update
+    from app.models.sales import SalesOrder
+
+    before = client.get("/api/dashboard/summary", headers=auth_headers).json()["open_so_count"]
+    client.post("/api/uoms", json={"name": "pcs"}, headers=auth_headers)
+    item = client.post("/api/items", json={"code": f"DSH-{uuid.uuid4().hex[:6]}", "name": "D", "uom": "pcs"},
+                       headers=auth_headers).json()
+    so = client.post("/api/sales-orders", json={
+        "po_number": f"PO-DSH-{uuid.uuid4().hex[:6]}", "customer_name": "Acme",
+        "order_date": "2026-02-04T00:00:00",
+        "lines": [{"item_id": item["id"], "qty": 5.0, "due_date": "2026-03-01T00:00:00", "attribute_value_ids": []}],
+    }, headers=auth_headers).json()
+
+    async def _ready():
+        await async_db_session.execute(update(SalesOrder).where(SalesOrder.id == so["id"]).values(status="READY"))
+        await async_db_session.flush()
+    client.portal.call(_ready)
+
+    after = client.get("/api/dashboard/summary", headers=auth_headers).json()["open_so_count"]
+    assert after == before + 1

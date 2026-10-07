@@ -536,6 +536,8 @@ class ManufacturingOrderResponse(ORMResponse):
     item_ends: int | None = None  # beam warp-ends (utas); authoritative default for beam WO planning
     sales_order_id: UUID | None = None
     sales_order_code: str | None = None
+    so_customer_name: str | None = None  # the SO's customer (own SO, else pegged roots')
+    so_codes: str | None = None          # SO-less MO: the SO(s) its root MO(s) serve
     parent_mo_id: UUID | None = None
     production_run_id: UUID | None = None
     bom_size_id: UUID | None = None
@@ -636,6 +638,7 @@ class ProductionRunResponse(ORMResponse):
     bom_id: UUID | None = None
     sales_order_id: UUID | None = None
     sales_order_code: str | None = None
+    so_customer_name: str | None = None
     location_id: UUID | None = None
     source_location_id: UUID | None = None
     status: str
@@ -1244,6 +1247,8 @@ class ManufacturingOrderListItem(ORMResponse):
     item_ends: int | None = None
     sales_order_id: UUID | None = None
     sales_order_code: str | None = None
+    so_customer_name: str | None = None  # the SO's customer (own SO, else pegged roots')
+    so_codes: str | None = None          # SO-less MO: the SO(s) its root MO(s) serve
     parent_mo_id: UUID | None = None
     production_run_id: UUID | None = None
     bom_size_id: UUID | None = None
@@ -1311,6 +1316,7 @@ class ProductionRunListItem(ORMResponse):
     bom_id: UUID | None = None
     sales_order_id: UUID | None = None
     sales_order_code: str | None = None
+    so_customer_name: str | None = None
     location_id: UUID | None = None
     source_location_id: UUID | None = None
     status: str
@@ -2686,6 +2692,7 @@ class UserUpdate(BaseModel):
     role_id: Optional[UUID] = None
     permission_ids: Optional[list[UUID]] = None
     password: Optional[str] = None
+    current_password: Optional[str] = None  # required for a non-admin changing their own
     avatar_id: Optional[str] = None
 
 class UserResponse(UserBase):
@@ -3228,6 +3235,13 @@ class BatchCreate(BaseModel):
     # with a quantity but nowhere to sit would write a balance row nothing reads.
     qty: Optional[float] = None
     location_id: Optional[UUID] = None
+    # Identity a produced lot gets from its WO/MO, entered by hand for a manual lot.
+    # Size lands on the lot (bom_size_snapshot); attributes + Color Library shade
+    # land in the opening balance's variant_key, so they need an opening qty.
+    ends: Optional[int] = None
+    size_id: Optional[UUID] = None
+    attribute_value_ids: list[UUID] = []
+    color_id: Optional[UUID] = None
 
 class BatchResponse(BaseModel):
     id: UUID
@@ -4153,8 +4167,8 @@ class WeavingRunUpdate(BaseModel):
     rate_per_line_g_min: float | None = None
     target_efficiency_pct: float | None = None
     actual_qty_override: float | None = None
-    status: str | None = None
-    end_date: date | None = None
+    # No status/end_date: run lifecycle moves only through /stop, /pause, /resume,
+    # which own the end stamp, the pause intervals and the weaving_monitor.stop gate.
     notes: str | None = None
 
 class WeavingRunResponse(ORMResponse):

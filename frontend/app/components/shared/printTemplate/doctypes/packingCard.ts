@@ -10,7 +10,7 @@
 
 import type { FieldDef, ResolvedField } from '../fieldRegistry';
 import type { RowSourceDef } from '../rowSources';
-import type { PrintContext } from '../renderContext';
+import { txt, type PrintContext } from '../renderContext';
 import { orderBasePerAlt, baseToAlt, uomIsKg } from '../../altUnit';
 import { orderBoxSizeAlt } from '../../packingBoxes';
 
@@ -41,10 +41,6 @@ export const PCARD_FIELDS: FieldDef[] = [
     { key: 'pcard.sign_line', label: 'Signature "(____)" line', kind: 'text', group: 'Signatures' },
 ];
 
-function txt(v: any): ResolvedField {
-    const s = v == null || v === '' ? '' : String(v);
-    return { text: s || '—', empty: s === '' };
-}
 const NA: ResolvedField = { text: '', empty: true };
 
 export function resolvePackingCardField(key: string, ctx: PrintContext): ResolvedField {

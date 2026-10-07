@@ -14,6 +14,7 @@ from app.models.routing import WorkCenter
 from app.models.manufacturing import ManufacturingOrder, manufacturing_order_values
 from app.models.attribute import Attribute, AttributeValue
 from app.models.color import Color
+from app.models.size import Size
 from app.models.production_run import ProductionRun
 from app.models.sales import SalesOrder
 from app.models.goods_receipt import GoodsReceipt, GoodsReceiptLine
@@ -28,6 +29,33 @@ from datetime import datetime, timezone
 import uuid
 
 router = APIRouter(prefix="/batches", tags=["batches"])
+
+
+async def _require_lot_scope(db: AsyncSession, user: User, batch_id=None, *location_ids) -> None:
+    """403 unless every location this lot action touches is inside the role's
+    ``allowed_locations`` — the lot's current stock rows plus any explicit
+    target bin. A picked warehouse/zone covers every bin beneath it."""
+    allowed = user.role.allowed_locations if user.role else None
+    if not allowed:
+        return
+    touched = {str(l) for l in location_ids if l}
+    if batch_id is not None:
+        touched |= {str(l) for l in (await db.execute(
+            select(StockBalance.location_id).distinct()
+            .filter(StockBalance.batch_key == str(batch_id), StockBalance.qty > 0)
+        )).scalars().all()}
+    if not touched:
+        return
+    # Location tree is small (3 levels): walk each bin up to its root in Python.
+    parent = {str(i): (str(p) if p else None) for i, p in (await db.execute(select(Location.id, Location.parent_id))).all()}
+    allowed_set = {str(a) for a in allowed}
+    for loc in touched:
+        node, ok = loc, False
+        while node and not ok:
+            ok = node in allowed_set
+            node = parent.get(node)
+        if not ok:
+            raise HTTPException(status_code=403, detail="This lot action touches a location outside your role's scope")
 
 
 async def _resolve_gr_origins(db: AsyncSession, batches: list[Batch]) -> None:
@@ -298,6 +326,26 @@ async def create_batch(
         )).scalars().first()
         if not location:
             raise HTTPException(status_code=404, detail="Location not found")
+        await _require_lot_scope(db, current_user, None, location.id)
+
+    if (payload.attribute_value_ids or payload.color_id) and qty <= 0:
+        raise HTTPException(status_code=400, detail="Variant attributes and colour need an opening quantity to be stored on")
+    if payload.ends is not None and payload.ends < 0:
+        raise HTTPException(status_code=400, detail="Ends cannot be negative")
+    size_snapshot = None
+    if payload.size_id:
+        size = (await db.execute(select(Size).filter(Size.id == payload.size_id))).scalars().first()
+        if not size:
+            raise HTTPException(status_code=404, detail="Size not found")
+        size_snapshot = {"size_name": size.name, "label": None}
+    if payload.attribute_value_ids:
+        found = (await db.execute(
+            select(func.count()).select_from(AttributeValue).filter(AttributeValue.id.in_(payload.attribute_value_ids))
+        )).scalar()
+        if found != len(set(payload.attribute_value_ids)):
+            raise HTTPException(status_code=404, detail="Attribute value not found")
+    if payload.color_id and not (await db.execute(select(Color.id).filter(Color.id == payload.color_id))).first():
+        raise HTTPException(status_code=404, detail="Color not found")
 
     batch_number = await generate_batch_number(db)
 
@@ -305,17 +353,21 @@ async def create_batch(
         batch_number=batch_number,
         item_id=payload.item_id,
         notes=payload.notes,
+        ends=payload.ends,
+        bom_size_snapshot=size_snapshot,
         created_by=current_user.username,
     )
     db.add(batch)
     await db.flush()
 
-    # Opening balance: one lotted stock entry at the chosen location, in the
-    # no-variant bucket (a manual lot carries no variant identity of its own).
+    # Opening balance: one lotted stock entry at the chosen location, keyed by
+    # the variant the user entered (empty = the no-variant bucket).
     if qty > 0:
         await stock_service.add_stock_entry(
             db, item_id=payload.item_id, location_id=payload.location_id, qty_change=qty,
             reference_type="Lot Opening", reference_id=batch_number, batch_id=batch.id,
+            attribute_value_ids=[str(v) for v in payload.attribute_value_ids],
+            color_id=payload.color_id,
         )
 
     await db.commit()
@@ -502,6 +554,16 @@ async def list_batches(
         # which is exactly what a not-yet-created order may claim.
         from app.services import packing_service
         query = query.filter(packing_service.lock_free_condition(for_packing_order_id))
+    if location_id:
+        # "Lots present here" must be decided BEFORE the limit: otherwise the newest
+        # `limit` lots of the item (mostly consumed) fill the window and older lots
+        # that still hold stock here never reach the picker. Same subquery shape as
+        # list_batches_paginated.
+        query = query.filter(Batch.id.in_(
+            select(cast(StockBalance.batch_key, PG_UUID(as_uuid=True)))
+            .filter(StockBalance.location_id == location_id, StockBalance.qty > 0, StockBalance.batch_key != "")
+            .group_by(StockBalance.batch_key)
+        ))
     result = await db.execute(query.offset(skip).limit(limit))
     batches = result.scalars().all()
     enriched = await _enrich_batches(db, batches, location_id, with_source_lots=with_source_lots)
@@ -697,6 +759,7 @@ async def delete_batch(
     batch = result.scalars().first()
     if not batch:
         raise HTTPException(status_code=404, detail="Lot not found")
+    await _require_lot_scope(db, current_user, batch.id)
 
     await db.delete(batch)
     await db.commit()
@@ -775,6 +838,7 @@ async def split_batch(
     batch = result.scalars().first()
     if not batch:
         raise HTTPException(status_code=404, detail="Lot not found")
+    await _require_lot_scope(db, current_user, batch.id)
     if reject_service.is_reject_grade(batch.quality_status):
         raise HTTPException(status_code=400, detail="Cannot split a rejected lot")
 
@@ -892,6 +956,7 @@ async def reject_batch(
     batch = result.scalars().first()
     if not batch:
         raise HTTPException(status_code=404, detail="Lot not found")
+    await _require_lot_scope(db, current_user, batch.id)
     if reject_service.is_reject_grade(batch.quality_status):
         raise HTTPException(status_code=400, detail="Lot is already rejected")
 
@@ -905,6 +970,8 @@ async def reject_batch(
         src_wc_id = (await db.execute(
             select(WorkOrder.work_center_id).filter(WorkOrder.id == batch.source_wo_id)
         )).scalar()
+    # Only a bin the user picks is scope-checked; the auto-resolved defect store is routing, not a choice.
+    await _require_lot_scope(db, current_user, None, payload.location_id)
     defect_loc_id = await reject_service.resolve_reject_location(
         db, item_id=batch.item_id, work_center_id=src_wc_id, explicit=payload.location_id,
     )
@@ -1081,6 +1148,7 @@ async def dispose_batch(
     batch = result.scalars().first()
     if not batch:
         raise HTTPException(status_code=404, detail="Lot not found")
+    await _require_lot_scope(db, current_user, batch.id)
     if not reject_service.is_reject_grade(batch.quality_status):
         raise HTTPException(status_code=400, detail="Only rejected lots can be disposed")
 
@@ -1151,6 +1219,7 @@ async def reassign_batch(
     batch = result.scalars().first()
     if not batch:
         raise HTTPException(status_code=404, detail="Lot not found")
+    await _require_lot_scope(db, current_user, batch.id)
     if not reject_service.is_reject_grade(batch.quality_status):
         raise HTTPException(status_code=400, detail="Only rejected lots can be reassigned to another item")
     if str(payload.item_id) == str(batch.item_id):
@@ -1167,6 +1236,7 @@ async def reassign_batch(
         )).scalars().first()
         if not dest_loc:
             raise HTTPException(status_code=404, detail="Location not found")
+        await _require_lot_scope(db, current_user, None, dest_loc.id)
 
     remaining = await _batch_remaining(db, batch.id)
     if remaining <= 1e-9:

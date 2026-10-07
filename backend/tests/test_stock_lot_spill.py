@@ -59,3 +59,25 @@ def test_lotless_deduction_draws_from_lots_fifo(client, auth_headers):
         "item_code": item["code"], "location_code": "SPILL-LOC", "qty": -9,
     }, headers=auth_headers)
     assert r.status_code == 400
+
+
+def test_location_filter_runs_before_the_limit(client, auth_headers):
+    """An older lot still holding stock must survive newer, empty lots filling `limit`."""
+    suffix = uuid.uuid4().hex[:6].upper()
+    _seed_location("SPILL-LOC")
+    locs = {l["code"]: l["id"] for l in client.get("/api/locations", headers=auth_headers).json()}
+    client.post("/api/uoms", json={"name": "kg"}, headers=auth_headers)
+    item = client.post("/api/items", json={
+        "code": f"LIM-{suffix}", "name": "Lim", "uom": "kg", "lot_tracked": True,
+    }, headers=auth_headers).json()
+    held = client.post("/api/batches", json={
+        "item_id": item["id"], "qty": 5, "location_id": locs["SPILL-LOC"],
+    }, headers=auth_headers).json()
+    for _ in range(3):
+        client.post("/api/batches", json={"item_id": item["id"]}, headers=auth_headers)
+
+    res = client.get("/api/batches", params={
+        "item_id": item["id"], "location_id": locs["SPILL-LOC"], "limit": 2,
+    }, headers=auth_headers)
+    assert res.status_code == 200, res.text
+    assert [b["id"] for b in res.json()] == [held["id"]]

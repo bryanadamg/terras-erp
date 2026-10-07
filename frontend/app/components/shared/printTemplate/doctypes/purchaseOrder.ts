@@ -8,7 +8,7 @@
 
 import type { FieldDef, ResolvedField } from '../fieldRegistry';
 import type { RowSourceDef } from '../rowSources';
-import type { PrintContext } from '../renderContext';
+import { txt, type PrintContext } from '../renderContext';
 import { fmtMoney } from '../../format';
 
 export const PURCHASE_ORDER_DOC = 'purchase_order';
@@ -44,10 +44,6 @@ export const PO_FIELDS: FieldDef[] = [
     { key: 'po.approved_by', label: 'Approved by (name)', kind: 'text', group: 'Signatures' },
 ];
 
-function txt(v: any): ResolvedField {
-    const s = v == null || v === '' ? '' : String(v);
-    return { text: s || '—', empty: s === '' };
-}
 /** A value that applies to this PO but may be blank: prints blank, never hides its row. */
 const present = (v: any): ResolvedField => ({ text: v == null ? '' : String(v), empty: false });
 const NA: ResolvedField = { text: '', empty: true };

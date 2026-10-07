@@ -106,3 +106,15 @@ def test_rerunning_configures_the_open_run_rather_than_piling_up(client, auth_he
 
     runs = client.get(f"/api/setting-runs?work_order_id={wo_a}", headers=auth_headers).json()
     assert len(runs) == 1
+
+
+def test_a_role_scoped_elsewhere_cannot_cut_setting_runs(user_factory, client, auth_headers, async_db_session):
+    """Work-center-type scope holds on run routes, not just WO routes."""
+    wo, _ = _setup(client, auth_headers, async_db_session)
+    _, weaver = user_factory(["work_order.log"], "weaver", allowed_work_center_types=["WEAVING"])
+    _, setter = user_factory(["work_order.log"], "setter", allowed_work_center_types=["SETTING"])
+
+    denied = client.post("/api/setting-runs", json={"work_order_id": wo, "substrate_qty": 10}, headers=weaver)
+    assert denied.status_code == 403, denied.text
+    ok = client.post("/api/setting-runs", json={"work_order_id": wo, "substrate_qty": 10}, headers=setter)
+    assert ok.status_code == 200, ok.text

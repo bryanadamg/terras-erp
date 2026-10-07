@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { useData } from '../../context/DataContext';
 import { useTimezone } from '../../context/TimezoneContext';
 import { isoDate } from '../shared/format';
@@ -72,7 +72,10 @@ export default function LabDipReportView() {
         [partners],
     );
 
+    // Filters change faster than the report returns; only the newest request may land.
+    const loadGen = useRef(0);
     const load = useCallback(async () => {
+        const gen = ++loadGen.current;
         setLoading(true);
         try {
             const qs = new URLSearchParams({ group_by: groupBy });
@@ -82,12 +85,15 @@ export default function LabDipReportView() {
             if (kind && kind !== 'ALL') qs.set('kind', kind);
             const res = await authFetch(`${API_BASE}/lab-dips/report?${qs.toString()}`);
             if (!res.ok) throw new Error(String(res.status));
-            setReport(await res.json());
+            const body = await res.json();
+            if (gen !== loadGen.current) return;
+            setReport(body);
         } catch {
+            if (gen !== loadGen.current) return;
             showToast('Failed to load lab dip report', 'danger');
             setReport(null);
         } finally {
-            setLoading(false);
+            if (gen === loadGen.current) setLoading(false);
         }
     }, [authFetch, dateFrom, dateTo, customerId, kind, groupBy, showToast]);
 
