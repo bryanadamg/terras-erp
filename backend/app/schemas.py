@@ -1439,6 +1439,9 @@ class StockEntryCreate(BaseModel):
     qty_boxes: int | None = None
     qty_drums: int | None = None
     batch_id: UUID | None = None
+    # Colour token of the lot's existing balance row, so an entry onto a coloured
+    # lot lands in that row rather than splitting the lot into a second variant.
+    color_id: UUID | None = None
 
 class StockTransferCreate(BaseModel):
     item_id: UUID

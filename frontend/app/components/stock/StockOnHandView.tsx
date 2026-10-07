@@ -1,4 +1,4 @@
-import { useState, useMemo, useRef } from 'react';
+import { useState, useMemo, useRef, useEffect } from 'react';
 import { useLanguage } from '../../context/LanguageContext';
 import { useUser } from '../../context/UserContext';
 import { useServerSort, TableSkeleton, useTableSkeletonMetrics, XPActionButton, FormSection, FieldLabel, CodeChip, CODE_FONT, xpFont, rowStateBg, VariantChip, Chip, REF_TONES, statusTint, xpInput as xpInputBase, xpBtn as xpBtnBase, BTN_TONES, XP_BTN, SKEL_PAGE_ROWS } from '../shared/xpTheme';
@@ -99,6 +99,10 @@ export default function StockOnHandView({ locations, attributes, categories, ite
     const [newItemCode, setNewItemCode] = useState('');
     const [newLocId, setNewLocId] = useState('');
     const [newAttrIds, setNewAttrIds] = useState<string[]>([]);
+    // Lot: '' = no lot, NEW_LOT = mint an auto-numbered lot on save, else a batch id.
+    const NEW_LOT = '__new__';
+    const [newLotId, setNewLotId] = useState('');
+    const [newLots, setNewLots] = useState<any[]>([]);
     const [newQty, setNewQty] = useState('');
     const [newCones, setNewCones] = useState('');
     const [newBoxes, setNewBoxes] = useState('');
@@ -318,10 +322,30 @@ export default function StockOnHandView({ locations, attributes, categories, ite
     }, [newItem, attributes]);
 
     const openNew = () => {
-        setNewItemCode(''); setNewLocId(''); setNewAttrIds([]);
+        setNewItemCode(''); setNewLocId(''); setNewAttrIds([]); setNewLotId('');
         setNewQty(''); setNewCones(''); setNewBoxes(''); setNewDrums('');
         setNewReason(NEW_REASONS[0]); setNewNote('');
         setNewOpen(true);
+    };
+    // The item's existing lots, for booking stock onto one (or a fresh lot).
+    useEffect(() => {
+        if (!newOpen || !newItem?.id) { setNewLots([]); return; }
+        let cancelled = false;
+        (async () => {
+            try {
+                const res = await authFetch(`${apiBase}/batches?item_id=${newItem.id}&limit=500`);
+                if (res.ok && !cancelled) setNewLots(await res.json());
+            } catch { /* transient */ }
+        })();
+        return () => { cancelled = true; };
+    }, [newOpen, newItem?.id]);
+    const newLot = newLots.find((b: any) => String(b.id) === newLotId);
+    // An existing lot already has a variant (its balance row's key): adopt it, so
+    // the entry lands on that row instead of splitting the lot into two variants.
+    const pickNewLot = (id: string) => {
+        setNewLotId(id);
+        const lot = newLots.find((b: any) => String(b.id) === id);
+        if (lot?.variant_key) setNewAttrIds(lot.variant_key.split(',').filter((t: string) => t && !t.startsWith('c:')));
     };
     const setNewAttrValue = (valId: string, attrId: string) => {
         const attr = attributes.find((a: any) => a.id === attrId);
@@ -338,6 +362,20 @@ export default function StockOnHandView({ locations, attributes, categories, ite
         if (isNaN(qty) || qty === 0) { showToast('Enter a non-zero quantity', 'danger'); return; }
         setSavingNew(true);
         try {
+            let batchId: string | null = newLotId && newLotId !== NEW_LOT ? newLotId : null;
+            if (newLotId === NEW_LOT) {
+                const lr = await authFetch(`${apiBase}/batches`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ item_id: newItem?.id }),
+                });
+                if (!lr.ok) {
+                    const err = await lr.json().catch(() => ({}));
+                    throw new Error(err.detail || 'Lot creation failed');
+                }
+                batchId = (await lr.json()).id;
+            }
+            const colorTok = (newLot?.variant_key || '').split(',').find((t: string) => t.startsWith('c:'));
             const res = await authFetch(`${apiBase}/stock`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -345,6 +383,8 @@ export default function StockOnHandView({ locations, attributes, categories, ite
                     item_code: newItemCode,
                     location_code: newLoc.code,
                     attribute_value_ids: newAttrIds,
+                    batch_id: batchId,
+                    color_id: colorTok ? colorTok.slice(2) : null,
                     qty,
                     qty_cones: int(newCones, 0) || null,
                     qty_boxes: int(newBoxes, 0) || null,
@@ -1037,7 +1077,7 @@ export default function StockOnHandView({ locations, attributes, categories, ite
                             options={items.map((it: any) => ({ value: it.code, label: it.name, subLabel: it.code }))}
                             onSearch={onSearchItems}
                             value={newItemCode}
-                            onChange={(code: string) => { setNewItemCode(code); setNewAttrIds([]); }}
+                            onChange={(code: string) => { setNewItemCode(code); setNewAttrIds([]); setNewLotId(''); }}
                             placeholder="Search item..."
                             size="sm"
                         />
@@ -1057,6 +1097,23 @@ export default function StockOnHandView({ locations, attributes, categories, ite
                     ))}
                 </FormSection>
                 <FormSection title="Quantity">
+                    <div style={{ marginBottom: 8 }}>
+                        <FieldLabel hint={newItem?.lot_tracked ? 'This item is lot-tracked' : 'Optional'}>Lot</FieldLabel>
+                        <select
+                            style={{ ...xpSelect, width: '100%' }}
+                            value={newLotId}
+                            onChange={e => pickNewLot(e.target.value)}
+                            disabled={!newItem}
+                        >
+                            <option value="">— no lot —</option>
+                            <option value={NEW_LOT}>+ New lot (auto-numbered)</option>
+                            {newLots.map((b: any) => (
+                                <option key={b.id} value={b.id}>
+                                    {b.batch_number}{b.vendor_lot ? ` (${b.vendor_lot})` : ''}{b.remaining != null ? ` — ${Number(b.remaining).toLocaleString()} left` : ''}
+                                </option>
+                            ))}
+                        </select>
+                    </div>
                     <div style={{ marginBottom: 8 }}>
                         <FieldLabel>Location</FieldLabel>
                         <TreeSelect
