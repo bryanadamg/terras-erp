@@ -48,10 +48,13 @@ jobs:
             docker compose build --pull
             # The api container runs `alembic upgrade head` on start, and several
             # data migrations have no downgrade — so dump first. Keeps the last 10.
-            mkdir -p snapshots
+            # Not ./snapshots: that dir is bind-mounted into api, so docker owns it
+            # as root and the deploy user can't write there.
+            BACKUP_DIR="$HOME/terras-erp-predeploy"
+            mkdir -p "$BACKUP_DIR"
             if [ -n "$(docker compose ps -q --status running db)" ]; then
-              docker compose exec -T db sh -c 'pg_dump -U "$POSTGRES_USER" -Fc "$POSTGRES_DB"'                 > "snapshots/predeploy-$(date +%Y%m%d-%H%M%S).dump"
-              ls -1t snapshots/predeploy-*.dump | tail -n +11 | xargs -r rm --
+              docker compose exec -T db sh -c 'pg_dump -U "$POSTGRES_USER" -Fc "$POSTGRES_DB"'                 > "$BACKUP_DIR/predeploy-$(date +%Y%m%d-%H%M%S).dump"
+              ls -1t "$BACKUP_DIR"/predeploy-*.dump | tail -n +11 | xargs -r rm --
             fi
             # --wait fails the job unless every service comes up healthy (api's
             # healthcheck covers migrations + DB + Redis), so a broken deploy is red.
