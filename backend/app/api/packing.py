@@ -48,6 +48,7 @@ def _load_options():
         selectinload(PackingOrder.sales_order_line)
         .selectinload(SalesOrderLine.bom_size)
         .selectinload(BOMSize.size),
+        selectinload(PackingOrder.sales_order_line).selectinload(SalesOrderLine.size),
         selectinload(PackingOrder.item),
         selectinload(PackingOrder.attribute_values),
         selectinload(PackingOrder.materials).selectinload(PackingOrderMaterial.item),
@@ -232,9 +233,15 @@ def _decorate(po: PackingOrder, units: list = None) -> PackingOrder:
     po.size_label = None
     if po.sales_order_line:
         po.ket_stock = po.sales_order_line.ket_stock
-        bs = po.sales_order_line.bom_size
-        if bs is not None:
-            po.size_label = bs.size_name or bs.label
+        # Same precedence as the SO line's `size_display`: the generic Size pick,
+        # its free label, then the legacy BOMSize pointer. Reading bom_size alone
+        # blanked the size on every line written after the size/BOM decoupling.
+        sol, bs = po.sales_order_line, po.sales_order_line.bom_size
+        po.size_label = (
+            (sol.size.name if sol.size is not None else None)
+            or sol.size_label
+            or ((bs.size_name or bs.label) if bs is not None else None)
+        )
     # Resolved base-UOM qty per alt unit — served, not left to the client, so the
     # pack screens, the labels and this API agree on one conversion.
     po.uom2_base_factor = packing_service.order_base_per_alt(po)
