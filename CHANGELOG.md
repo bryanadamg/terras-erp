@@ -15,6 +15,38 @@ on `main`:
 
 ## [Unreleased]
 
+## [0.39.0] - 2026-10-07
+
+### Added
+- A hand-made lot can carry ends, size, combo, colour variant and colour code, the same identity a produced lot gets, so manually created lots net, print and pick like produced ones
+- The SPK prints the size with its target measurement and the Sales Order's customer, resolving a shared greige order's SO through its root orders. The Material Pull Sheet prints the SO's customer too
+
+### Changed
+- A sales order's status can be set by hand only to DELIVERED or CANCELLED. Every other status is re-derived from fulfilment, so a manual READY can no longer claim stock that isn't packed
+- Uploads are allow-listed by extension and non-image static files are served as downloads, closing stored XSS through uploaded HTML or SVG
+- Reopening a COMPLETED manufacturing order needs the close permission
+- A non-admin changing their own password must give the current one
+- Role location scope (`allowed_locations`) now applies to lot actions, with a picked warehouse covering its bins; work-center-type scope applies to dyeing, setting and weaving runs and beam dismount, and category scope to an item's new category
+- Stopping a weaving run goes through `/stop` and its permission — the run PATCH no longer accepts status or end date. A packing order PUT accepts only whitelisted statuses and audits its changes as a diff
+- Deploys stop on the first error, dump the database before migrations, wait for healthy services and never overlap. CI upgrades the last release's schema through new migrations and fails on multiple heads or model drift
+- Container logs rotate at 10 MB x 3 so a long-lived host cannot fill its disk
+
+### Fixed
+- The SPK explodes from the MO's planned components and matches each sub-BOM by variant, not item alone, so a colour variant's sheet no longer prints another variant's sub-BOM
+- The dashboard counts READY and PARTIAL sales orders as open and judges readiness on packed stock
+- Warp beams are recognised on screen by code and ends as well as category, through one shared check, so a beam filed under another category still gets beam handling in the BOM designer, WO completion and the scanner
+- The lot picker filters to lots stocked at the location before applying its limit, so in-stock lots no longer fall off the list
+- The Kartu Picking prints the shipment number instead of the pick list's legacy delivery-note columns
+- The Kartu Kerja print date is stamped in the company timezone instead of the browser's
+- The Material Pull Sheet designer previews a production run's real material requirements instead of an empty table
+- The BOM designer opens from a deep link, and shows its linked sample, for items off the loaded page
+- The lab dip request list sorts server-side on header click, so codes run in order across pages
+- The lab dip and sample reports, the WO lot picker and the history pane drop stale responses instead of letting a slow earlier one overwrite the newer
+- The mobile MO card rail colours DELIVERED and COMPLETED instead of rendering them gray
+- A malformed id or value is answered with 422 instead of a 500
+- The stock ledger refuses an uncapped `size=0` request
+- Frontend lockfile patches the nanoid, source-map-js and dicebear advisories
+
 ## [0.38.0] - 2026-10-06
 
 ### Added
