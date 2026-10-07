@@ -11,7 +11,7 @@ from app.schemas import (
 )
 from app.models.sales import SalesOrder, SalesOrderLine, sales_order_line_values
 from app.models.attribute import Attribute, AttributeValue
-from app.models.bom import BOMSize
+from app.models.bom import BOM, BOMSize
 from app.models.size import Size
 from app.models.color import Color
 from app.models.production_run import ProductionRun, PRBomEntry
@@ -24,7 +24,7 @@ from app.models.reservation import StockReservation
 from app.models.item import Item as ItemModel
 from app.api.auth import get_current_user, require_permission, require_any_permission, user_has_permission
 from app.models.auth import User
-from app.services import audit_service, kpi_service, netting_service, so_fulfilment_service
+from app.services import audit_service, kpi_service, netting_service, so_fulfilment_service, stock_service
 from app.core.ws_manager import manager
 from app.core.pagination import PageParams, PageWindow
 from typing import Optional
@@ -43,6 +43,8 @@ def _line_opts():
         selectinload(SalesOrder.lines).selectinload(SalesOrderLine.labdip_item),
         selectinload(SalesOrder.lines).selectinload(SalesOrderLine.bom_size).selectinload(BOMSize.size),
         selectinload(SalesOrder.lines).selectinload(SalesOrderLine.size),
+        selectinload(SalesOrder.lines).selectinload(SalesOrderLine.bom)
+        .selectinload(BOM.sizes).selectinload(BOMSize.size),
     )
 
 
@@ -120,6 +122,22 @@ def _populate_line(line: SalesOrderLine) -> None:
             if line.bom_size is not None else None
         )
     )
+    line.size_measurement = line_size_measurement(line, line.size_display)
+
+
+def line_size_measurement(line: SalesOrderLine, size_name: str | None) -> str | None:
+    """The line's size measurement — only once one BOM owns the line.
+
+    A size is a name until a recipe is chosen: two BOMs can call M 60 cm and
+    67 cm, so a BOM-less line honestly has no measurement. The legacy BOMSize
+    pointer is a measured row on its own. Needs `bom.sizes` + `bom_size` loaded.
+    """
+    token = (size_name or "").strip().lower()
+    if line.bom is not None and token:
+        for bs in line.bom.sizes:
+            if (bs.size_name or bs.label or "").strip().lower() == token:
+                return stock_service.size_measurement(bs)
+    return stock_service.size_measurement(line.bom_size)
 
 
 async def _populate_production_runs(db: AsyncSession, orders: list) -> None:

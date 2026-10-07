@@ -11,7 +11,7 @@ import type { RowSourceDef } from '../rowSources';
 import { txt, type PrintContext } from '../renderContext';
 import { qtyFmt } from '../../format';
 import { refMeta, shortRef } from '../../../dashboard/ledgerRef';
-import { lotSizeLabel, lotComboLabel, lotColorLabel } from '../../LotChips';
+import { lotSizeText, lotComboLabel, lotColorLabel } from '../../LotChips';
 
 export const STOCK_LEDGER_DOC = 'stock_ledger_report';
 
@@ -123,7 +123,7 @@ export function buildStockLedgerContext({
         const others = (e.variant_attributes || [])
             .filter((a: any) => !['combo', 'color', 'labdip_color'].includes(a.system_role || ''))
             .map((a: any) => a.value);
-        return [lotSizeLabel(e), lotComboLabel(e), color && `${color.label}${color.pending ? ' (pending)' : ''}`, ...others]
+        return [lotSizeText(e), lotComboLabel(e), color && `${color.label}${color.pending ? ' (pending)' : ''}`, ...others]
             .filter(Boolean).join(', ');
     };
     const now = new Date();

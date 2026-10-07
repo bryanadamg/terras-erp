@@ -111,7 +111,7 @@ export function buildSoTableContext({
                 item_name: line
                     ? [itemName(line.item_id), line.color_name, attrValues(line.attribute_value_ids || [])].filter(Boolean).join(' ')
                     : '',
-                size: line?.size_display || '',
+                size: line ? [line.size_display, line.size_measurement].filter(Boolean).join(' ') : '',
                 qty_yd: line ? num(line.qty) : '',
                 qty_m: line && line.qty ? num(Math.round(line.qty * 0.9144 * 100) / 100) : '',
                 qty_kg: line ? num(line.qty_kg) : '',

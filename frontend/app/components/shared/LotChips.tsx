@@ -45,6 +45,29 @@ export const lotSizeLabel = (b: LotLike): string | null => {
 };
 
 /**
+ * "72 (70–74) cm" off a BOMSize row or snapshot; '' when unmeasured. Mirror of
+ * `stock_service.size_measurement`, which serves the same text on SO lines.
+ */
+export const sizeMeasurement = (bs: any): string => {
+    if (!bs) return '';
+    const n = (v: any) => parseFloat(v);
+    const range = bs.measurement_min != null && bs.measurement_max != null ? `${n(bs.measurement_min)}–${n(bs.measurement_max)}` : '';
+    if (bs.target_measurement != null) return `${n(bs.target_measurement)}${range ? ` (${range})` : ''} cm`;
+    return range ? `${range} cm` : '';
+};
+
+/**
+ * Printed size: the name plus its measurement, "L 72 (70–74) cm". Display only —
+ * compare on `lotSizeKey` (or `lotSizeLabel`), never on this.
+ */
+export const lotSizeText = (b: LotLike): string | null => {
+    const name = lotSizeLabel(b) || '';
+    const m = sizeMeasurement(b?.bom_size_snapshot);
+    // A measurement-only free size is already labelled "157 cm".
+    return [name, m && !name.includes(m) ? m : ''].filter(Boolean).join(' ') || null;
+};
+
+/**
  * Comparison key for a lot's size — the frontend mirror of `_size_ident` in
  * `services/packing_service.py`. Prefers `bom_size_id`, falls back to the
  * snapshot (a free-mode size, or a BOMSize since deleted) with keys sorted so two

@@ -11,7 +11,7 @@
 import type { FieldDef, ResolvedField } from '../fieldRegistry';
 import { txt, EM_DASH, moShade, type PrintContext } from '../renderContext';
 import { makeLotBarcodeDataUrl } from './outputLabel';
-import { lotSizeLabel, lotComboLabel } from '../../LotChips';
+import { lotSizeText, lotComboLabel } from '../../LotChips';
 
 export const LOT_LABEL_DOC = 'lot_label';
 
@@ -54,7 +54,7 @@ export function resolveLotLabelField(key: string, ctx: PrintContext): ResolvedFi
         case 'lotlabel.status': return txt(lot.quality_status);
         case 'lotlabel.item_name': return txt(lot.item_name);
         case 'lotlabel.item_code': return txt(lot.item_code);
-        case 'lotlabel.size': return txt(lotSizeLabel(lot));
+        case 'lotlabel.size': return txt(lotSizeText(lot));
         case 'lotlabel.color': return txt(lotShade(lot).name);
         case 'lotlabel.color_code': return txt(lotShade(lot).code);
         case 'lotlabel.combo': return txt(lotComboLabel(lot));

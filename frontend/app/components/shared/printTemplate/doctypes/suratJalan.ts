@@ -12,7 +12,7 @@
 import type { FieldDef, ResolvedField } from '../fieldRegistry';
 import type { RowSourceDef } from '../rowSources';
 import { txt, attrValueByRole, type PrintContext } from '../renderContext';
-import { lotSizeLabel, lotComboLabel } from '../../LotChips';
+import { lotSizeText, lotComboLabel } from '../../LotChips';
 import { qtyFmt } from '../../format';
 
 export const SURAT_JALAN_DOC = 'surat_jalan';
@@ -200,7 +200,7 @@ export function buildSuratJalanContext({
         const itemName = l.item_name || itemIndex?.[String(l.item_id)]?.name || l.item_id;
         const colorName = l.color_name
             || (l.attribute_value_ids || []).map((vid: string) => attrName(vid)).filter(Boolean).join(' / ');
-        const size = lotSizeLabel(l) || '';
+        const size = lotSizeText(l) || '';
         const combo = lotComboLabel(l.carton_identity || {})
             || attrValueByRole(attributes, l.attribute_value_ids)('combo');
         const key = `${l.item_id}|${size}|${combo}|${colorName}|${l.color_code || ''}|${l.po_ref || ''}`;

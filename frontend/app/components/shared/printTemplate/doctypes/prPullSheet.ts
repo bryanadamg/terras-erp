@@ -10,7 +10,7 @@
 import type { FieldDef, ResolvedField } from '../fieldRegistry';
 import type { RowSourceDef } from '../rowSources';
 import { txt, type PrintContext } from '../renderContext';
-import { lotSizeLabel } from '../../LotChips';
+import { lotSizeText } from '../../LotChips';
 
 export const PR_PULL_SHEET_DOC = 'pr_pull_sheet';
 
@@ -140,7 +140,7 @@ export function buildPRPullSheetContext({
         if (m.parent_mo_id || m.is_shared_component) continue;
         const name = [m.item_name || m.item_code, ...(m.attribute_value_ids || []).map(getAttributeValueName)]
             .filter(Boolean).join(' ');
-        const size = lotSizeLabel(m);
+        const size = lotSizeText(m);
         if (!byProduct.has(name)) byProduct.set(name, []);
         if (size) byProduct.get(name)!.push(`${size} ${Number(Number(m.qty).toFixed(3))}`);
     }

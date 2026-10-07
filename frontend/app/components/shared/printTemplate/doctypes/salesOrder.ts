@@ -77,13 +77,13 @@ const SO_LINES: RowSourceDef = {
             // predate those columns, and the article is what every one already prints.
             article: {
                 title: l.itemName,
-                lines: [l.size_display, l.color_name && `${l.color_name}${l.color_code ? ` (${l.color_code})` : ''}`, ...l.attrs].filter(Boolean),
+                lines: [[l.size_display, l.size_measurement].filter(Boolean).join(' '), l.color_name && `${l.color_name}${l.color_code ? ` (${l.color_code})` : ''}`, ...l.attrs].filter(Boolean),
             },
             item_name: l.itemName,
             item_code: l.item_code || '',
             variant: l.attrs.join(' / '),
             color: l.color_name ? `${l.color_name}${l.color_code ? ` (${l.color_code})` : ''}` : '',
-            size: l.size_display || '',
+            size: [l.size_display, l.size_measurement].filter(Boolean).join(' '),
             qty_unit: `${Number(l.qty).toLocaleString()} ${l.uom}`.trim(),
             qty: Number(l.qty),
             del_request: l.delRequest || null,
