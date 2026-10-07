@@ -10,6 +10,7 @@
 import type { FieldDef, ResolvedField } from '../fieldRegistry';
 import type { RowSourceDef } from '../rowSources';
 import { txt, type PrintContext } from '../renderContext';
+import { lotSizeLabel } from '../../LotChips';
 
 export const PR_PULL_SHEET_DOC = 'pr_pull_sheet';
 
@@ -132,9 +133,22 @@ export function buildPRPullSheetContext({
         }
     }
 
-    const products = p.bom_entries?.length > 0
-        ? p.bom_entries.map((e: any) => e.bom?.item_name || e.bom?.item_code || e.bom?.code).filter(Boolean).join(' / ')
-        : (p.bom?.item_name || p.bom?.item_code || p.bom?.code || '');
+    // Read off the run's root MOs, not its BOM entries: the MOs carry the size and
+    // shade snapshot each entry was split into ("JC 81 RED — L 22.572 · XL 27.086").
+    const byProduct = new Map<string, string[]>();
+    for (const m of (p.manufacturing_orders || []) as any[]) {
+        if (m.parent_mo_id || m.is_shared_component) continue;
+        const name = [m.item_name || m.item_code, ...(m.attribute_value_ids || []).map(getAttributeValueName)]
+            .filter(Boolean).join(' ');
+        const size = lotSizeLabel(m);
+        if (!byProduct.has(name)) byProduct.set(name, []);
+        if (size) byProduct.get(name)!.push(`${size} ${Number(Number(m.qty).toFixed(3))}`);
+    }
+    const products = byProduct.size > 0
+        ? Array.from(byProduct, ([name, sizes]) => (sizes.length ? `${name} — ${sizes.join(' · ')}` : name)).join(' / ')
+        : p.bom_entries?.length > 0
+            ? p.bom_entries.map((e: any) => e.bom?.item_name || e.bom?.item_code || e.bom?.code).filter(Boolean).join(' / ')
+            : (p.bom?.item_name || p.bom?.item_code || p.bom?.code || '');
     const now = new Date().toISOString();
 
     return {
