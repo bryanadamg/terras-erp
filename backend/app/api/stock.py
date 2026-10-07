@@ -291,11 +291,20 @@ async def create_stock_entry(
     if not location:
         raise HTTPException(status_code=404, detail=f"Location '{payload.location_code}' not found")
 
+    if payload.batch_id:
+        from app.models.batch import Batch
+        lot_item = (await db.execute(select(Batch.item_id).filter(Batch.id == payload.batch_id))).scalar()
+        if lot_item is None:
+            raise HTTPException(status_code=404, detail="Lot not found")
+        if lot_item != item.id:
+            raise HTTPException(status_code=400, detail="Lot belongs to a different item")
+
     attribute_value_ids = [str(uid) for uid in payload.attribute_value_ids]
     await stock_service.add_stock_entry(
         db=db,
         item_id=item.id,
         location_id=location.id,
+        color_id=payload.color_id,
         qty_change=payload.qty,
         reference_type=payload.reference_type,
         reference_id=payload.reference_id,

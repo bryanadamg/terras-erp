@@ -38,3 +38,25 @@ def test_lot_create_with_ends_size_and_variant(client, auth_headers):
     r = client.post("/api/batches", json={"item_id": item["id"], "attribute_value_ids": [val_id]},
                     headers=auth_headers)
     assert r.status_code == 400
+
+
+def test_stock_entry_books_onto_lot_of_same_item_only(client, auth_headers):
+    sfx = uuid.uuid4().hex[:6].upper()
+    client.post("/api/uoms", json={"name": "kg"}, headers=auth_headers)
+    with _engine.connect() as conn, _SASession(conn) as sess:
+        loc = Location(code=f"LSE-{sfx}", name="lse")
+        sess.add(loc)
+        sess.commit()
+        loc_id = str(loc.id)
+    a = client.post("/api/items", json={"code": f"LSE-A-{sfx}", "name": "A", "uom": "kg"}, headers=auth_headers).json()
+    b = client.post("/api/items", json={"code": f"LSE-B-{sfx}", "name": "B", "uom": "kg"}, headers=auth_headers).json()
+    lot = client.post("/api/batches", json={"item_id": a["id"]}, headers=auth_headers).json()
+
+    entry = {"item_code": a["code"], "location_code": f"LSE-{sfx}", "qty": 3, "batch_id": lot["id"]}
+    r = client.post("/api/stock", json=entry, headers=auth_headers)
+    assert r.status_code == 201, r.text
+    lots = client.get(f"/api/batches?item_id={a['id']}", headers=auth_headers).json()
+    assert [l["remaining"] for l in lots if l["id"] == lot["id"]] == [3]
+
+    r = client.post("/api/stock", json={**entry, "item_code": b["code"]}, headers=auth_headers)
+    assert r.status_code == 400

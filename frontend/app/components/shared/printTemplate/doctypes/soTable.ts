@@ -49,7 +49,7 @@ const ST_ROWS: RowSourceDef = {
         { field: 'del_confirmation', label: 'Del. Confirmation' },
         { field: 'stock_notes', label: 'Stock Notes' },
         { field: 'item_name', label: 'Item' },
-        { field: 'size', label: 'Size (attributes)' },
+        { field: 'size', label: 'Size' },
         { field: 'qty_yd', label: 'Qty (Yd)' },
         { field: 'qty_m', label: 'Qty (m)' },
         { field: 'qty_kg', label: 'Qty (KG)' },
@@ -106,8 +106,12 @@ export function buildSoTableContext({
                 del_request: line ? dmy(line.due_date) : '',
                 del_confirmation: line ? dmy(line.internal_confirmation_date) : '',
                 stock_notes: line?.ket_stock || '',
-                item_name: line ? itemName(line.item_id) : '',
-                size: line ? attrValues(line.attribute_value_ids || []) : '',
+                // Shade + attributes ride with the item; Size is the line's real size,
+                // not the attribute list it printed before sizes existed.
+                item_name: line
+                    ? [itemName(line.item_id), line.color_name, attrValues(line.attribute_value_ids || [])].filter(Boolean).join(' ')
+                    : '',
+                size: line?.size_display || '',
                 qty_yd: line ? num(line.qty) : '',
                 qty_m: line && line.qty ? num(Math.round(line.qty * 0.9144 * 100) / 100) : '',
                 qty_kg: line ? num(line.qty_kg) : '',

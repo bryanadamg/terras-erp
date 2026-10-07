@@ -73,7 +73,12 @@ const SO_LINES: RowSourceDef = {
         rows: (ctx.doc?.lines || []).map((l: any, i: number) => ({
             _key: l.id ?? i,
             no: String(i + 1),
-            article: { title: l.itemName, lines: l.attrs },
+            // Size and Color Library shade ride in the Article cell: saved layouts
+            // predate those columns, and the article is what every one already prints.
+            article: {
+                title: l.itemName,
+                lines: [l.size_display, l.color_name && `${l.color_name}${l.color_code ? ` (${l.color_code})` : ''}`, ...l.attrs].filter(Boolean),
+            },
             item_name: l.itemName,
             item_code: l.item_code || '',
             variant: l.attrs.join(' / '),
