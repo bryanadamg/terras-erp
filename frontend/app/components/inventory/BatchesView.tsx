@@ -122,7 +122,7 @@ export default function BatchesView({ items, locations, categories, workCenters,
   const { showToast } = useToast();
   const { formatDate: tzDate } = useTimezone();
   const { confirm } = useConfirm();
-  const { companyProfile } = useData() as any;
+  const { companyProfile, attributes = [], sizes = [] } = useData() as any;
 
   const PAGE_SIZE = 50;
   const [itemFilter, setItemFilter] = useState('');
@@ -230,6 +230,11 @@ export default function BatchesView({ items, locations, categories, workCenters,
   const [createNotes, setCreateNotes] = useState('');
   const [createQty, setCreateQty] = useState('');
   const [createLocId, setCreateLocId] = useState('');
+  const [createEnds, setCreateEnds] = useState('');
+  const [createSizeId, setCreateSizeId] = useState('');
+  const [createAttrIds, setCreateAttrIds] = useState<string[]>([]);
+  const [createColorId, setCreateColorId] = useState('');
+  const [createColorOpts, setCreateColorOpts] = useState<any[]>([]);
   // Server typeahead: `items` is only DataContext's current page, so an item off
   // that page is unreachable by typing in a client-filtered list.
   const { results: createItemResults, onSearch: onSearchCreateItem, resolve: resolveCreateItem } =
@@ -239,6 +244,31 @@ export default function BatchesView({ items, locations, categories, workCenters,
     [createItemResults],
   );
   const [creating, setCreating] = useState(false);
+  // Variant pickers: the item's own bound attributes plus Combo / Colors, which a
+  // greige or yarn item rarely binds but a hand-entered lot still needs. Color
+  // Code is the Color Library (30k rows) — searched server-side, not a select.
+  const createItem = createItemId ? resolveCreateItem(createItemId) : null;
+  const createAttrs = React.useMemo(() => {
+    const bound = new Set((createItem?.attribute_ids || []).map(String));
+    return attributes.filter((a: any) =>
+      a.system_role !== 'labdip_color'
+      && (bound.has(String(a.id)) || a.system_role === 'combo' || a.system_role === 'color'));
+  }, [createItem, attributes]);
+  const setCreateAttrValue = (valId: string, attr: any) => {
+    const others = createAttrIds.filter(vid => !attr.values.some((v: any) => v.id === vid));
+    setCreateAttrIds(valId ? [...others, valId] : others);
+  };
+  const searchCreateColor = async (q: string) => {
+    try {
+      const res = await authFetch(`${apiBase}/colors?search=${encodeURIComponent(q.trim())}&size=20`);
+      if (res.ok) {
+        const data = await res.json();
+        const rows = Array.isArray(data) ? data : (data.items || []);
+        // Keep the picked shade in the list so the combobox can still label it.
+        setCreateColorOpts(prev => [...prev.filter(c => String(c.id) === createColorId), ...rows.filter((c: any) => String(c.id) !== createColorId)]);
+      }
+    } catch { /* transient */ }
+  };
 
   // Expandable row trace state
   const [expandedRows, setExpandedRows] = useState<Record<string, boolean>>({});
@@ -397,6 +427,8 @@ export default function BatchesView({ items, locations, categories, workCenters,
     setCreateItemId(id);
     const it = resolveCreateItem(id);
     setCreateLocId(it?.default_putaway_location_id ? String(it.default_putaway_location_id) : '');
+    setCreateEnds(it?.ends != null ? String(it.ends) : '');
+    setCreateAttrIds([]);
   };
 
   const handleCreate = async () => {
@@ -405,6 +437,9 @@ export default function BatchesView({ items, locations, categories, workCenters,
     if (createQty !== '' && (isNaN(qty) || qty < 0)) { showToast('Quantity must be a positive number', 'warning'); return; }
     const hasQty = createQty !== '' && !isNaN(qty) && qty > 0;
     if (hasQty && !createLocId) { showToast('Select a location for the opening quantity', 'warning'); return; }
+    if (!hasQty && (createAttrIds.length || createColorId)) { showToast('Attributes and color code need an opening quantity', 'warning'); return; }
+    const ends = createEnds === '' ? null : parseInt(createEnds, 10);
+    if (ends !== null && (isNaN(ends) || ends < 0)) { showToast('Ends must be a whole number', 'warning'); return; }
     setCreating(true);
     try {
       const res = await authFetch(`${apiBase}/batches`, {
@@ -415,6 +450,10 @@ export default function BatchesView({ items, locations, categories, workCenters,
           notes: createNotes || null,
           qty: hasQty ? qty : null,
           location_id: hasQty ? createLocId : null,
+          ends,
+          size_id: createSizeId || null,
+          attribute_value_ids: hasQty ? createAttrIds : [],
+          color_id: hasQty && createColorId ? createColorId : null,
         }),
       });
       if (res.ok) {
@@ -424,6 +463,10 @@ export default function BatchesView({ items, locations, categories, workCenters,
         setCreateNotes('');
         setCreateQty('');
         setCreateLocId('');
+        setCreateEnds('');
+        setCreateSizeId('');
+        setCreateAttrIds([]);
+        setCreateColorId('');
         fetchBatches();
       } else {
         const err = await res.json();
@@ -1127,6 +1170,58 @@ export default function BatchesView({ items, locations, categories, workCenters,
               />
             </div>
           </div>
+          <div className="mb-3 d-flex gap-2">
+            <div style={{ flex: 1 }}>
+              <label style={{ fontFamily: xpFont, fontSize: 11 }}>Ends (optional)</label>
+              <input
+                type="number"
+                min={0}
+                step={1}
+                style={{ ...xpInput, width: '100%', height: 22 }}
+                value={createEnds}
+                onChange={e => setCreateEnds(e.target.value)}
+                placeholder="—"
+              />
+            </div>
+            <div style={{ flex: 1 }}>
+              <label style={{ fontFamily: xpFont, fontSize: 11 }}>Size (optional)</label>
+              <select
+                style={{ ...xpInput, width: '100%', height: 22 }}
+                value={createSizeId}
+                onChange={e => setCreateSizeId(e.target.value)}
+              >
+                <option value="">—</option>
+                {[...sizes].sort((a: any, b: any) => (a.sort_order ?? 0) - (b.sort_order ?? 0))
+                  .map((sz: any) => <option key={sz.id} value={sz.id}>{sz.name}</option>)}
+              </select>
+            </div>
+          </div>
+          {createAttrs.map((attr: any) => (
+            <div className="mb-3" key={attr.id}>
+              <label style={{ fontFamily: xpFont, fontSize: 11 }}>{attr.name} (optional)</label>
+              <select
+                style={{ ...xpInput, width: '100%', height: 22 }}
+                value={createAttrIds.find(vid => attr.values.some((v: any) => v.id === vid)) || ''}
+                onChange={e => setCreateAttrValue(e.target.value, attr)}
+              >
+                <option value="">—</option>
+                {(attr.values || []).map((v: any) => <option key={v.id} value={v.id}>{v.value}</option>)}
+              </select>
+            </div>
+          ))}
+          <div className="mb-3">
+            <label style={{ fontFamily: xpFont, fontSize: 11 }}>Color Code (optional)</label>
+            <div className="mt-1">
+              <SearchableSelect
+                options={createColorOpts.map((c: any) => ({ value: String(c.id), label: c.code, subLabel: c.name }))}
+                value={createColorId}
+                onChange={setCreateColorId}
+                onSearch={searchCreateColor}
+                placeholder="Search color library..."
+                size="sm"
+              />
+            </div>
+          </div>
           <div className="mb-3">
             <label style={{ fontFamily: xpFont, fontSize: 11 }}>Quantity (optional)</label>
             <input
@@ -1139,7 +1234,7 @@ export default function BatchesView({ items, locations, categories, workCenters,
               placeholder="0"
             />
             <div style={{ fontFamily: xpFont, fontSize: 10, color: '#555', marginTop: 2 }}>
-              Books the lot into stock at the location below. Leave blank to create an empty lot.
+              Books the lot into stock at the location below. Leave blank to create an empty lot (attributes and color code need a quantity).
             </div>
           </div>
           <div className="mb-3">

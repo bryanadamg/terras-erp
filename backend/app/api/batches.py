@@ -14,6 +14,7 @@ from app.models.routing import WorkCenter
 from app.models.manufacturing import ManufacturingOrder, manufacturing_order_values
 from app.models.attribute import Attribute, AttributeValue
 from app.models.color import Color
+from app.models.size import Size
 from app.models.production_run import ProductionRun
 from app.models.sales import SalesOrder
 from app.models.goods_receipt import GoodsReceipt, GoodsReceiptLine
@@ -327,23 +328,46 @@ async def create_batch(
             raise HTTPException(status_code=404, detail="Location not found")
         await _require_lot_scope(db, current_user, None, location.id)
 
+    if (payload.attribute_value_ids or payload.color_id) and qty <= 0:
+        raise HTTPException(status_code=400, detail="Variant attributes and colour need an opening quantity to be stored on")
+    if payload.ends is not None and payload.ends < 0:
+        raise HTTPException(status_code=400, detail="Ends cannot be negative")
+    size_snapshot = None
+    if payload.size_id:
+        size = (await db.execute(select(Size).filter(Size.id == payload.size_id))).scalars().first()
+        if not size:
+            raise HTTPException(status_code=404, detail="Size not found")
+        size_snapshot = {"size_name": size.name, "label": None}
+    if payload.attribute_value_ids:
+        found = (await db.execute(
+            select(func.count()).select_from(AttributeValue).filter(AttributeValue.id.in_(payload.attribute_value_ids))
+        )).scalar()
+        if found != len(set(payload.attribute_value_ids)):
+            raise HTTPException(status_code=404, detail="Attribute value not found")
+    if payload.color_id and not (await db.execute(select(Color.id).filter(Color.id == payload.color_id))).first():
+        raise HTTPException(status_code=404, detail="Color not found")
+
     batch_number = await generate_batch_number(db)
 
     batch = Batch(
         batch_number=batch_number,
         item_id=payload.item_id,
         notes=payload.notes,
+        ends=payload.ends,
+        bom_size_snapshot=size_snapshot,
         created_by=current_user.username,
     )
     db.add(batch)
     await db.flush()
 
-    # Opening balance: one lotted stock entry at the chosen location, in the
-    # no-variant bucket (a manual lot carries no variant identity of its own).
+    # Opening balance: one lotted stock entry at the chosen location, keyed by
+    # the variant the user entered (empty = the no-variant bucket).
     if qty > 0:
         await stock_service.add_stock_entry(
             db, item_id=payload.item_id, location_id=payload.location_id, qty_change=qty,
             reference_type="Lot Opening", reference_id=batch_number, batch_id=batch.id,
+            attribute_value_ids=[str(v) for v in payload.attribute_value_ids],
+            color_id=payload.color_id,
         )
 
     await db.commit()

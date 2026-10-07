@@ -3235,6 +3235,13 @@ class BatchCreate(BaseModel):
     # with a quantity but nowhere to sit would write a balance row nothing reads.
     qty: Optional[float] = None
     location_id: Optional[UUID] = None
+    # Identity a produced lot gets from its WO/MO, entered by hand for a manual lot.
+    # Size lands on the lot (bom_size_snapshot); attributes + Color Library shade
+    # land in the opening balance's variant_key, so they need an opening qty.
+    ends: Optional[int] = None
+    size_id: Optional[UUID] = None
+    attribute_value_ids: list[UUID] = []
+    color_id: Optional[UUID] = None
 
 class BatchResponse(BaseModel):
     id: UUID
