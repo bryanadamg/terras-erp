@@ -569,11 +569,13 @@ export default function SalesOrderView({ items, attributes, boms, salesOrders, p
   // The size NAME (S/M/L/…) stays text in the cell, the measurement rides under
   // it as a chip so the two read apart.
   const formatBomSizeMeasurement = (bs: any): string => {
-      if (bs.measurement_min != null && bs.measurement_max != null) {
-          return `${parseFloat(bs.measurement_min)} cm - ${parseFloat(bs.measurement_max)} cm`;
+      const hasRange = bs.measurement_min != null && bs.measurement_max != null;
+      const range = hasRange ? `${parseFloat(bs.measurement_min)}–${parseFloat(bs.measurement_max)}` : '';
+      // Same shape as the MO side (useManufacturingHelpers): target first, range in parens.
+      if (bs.target_measurement != null) {
+          return `${parseFloat(bs.target_measurement)}${range ? ` (${range})` : ''} cm`;
       }
-      if (bs.target_measurement != null) return `${parseFloat(bs.target_measurement)} cm`;
-      return '';
+      return range ? `${range} cm` : '';
   };
 
   // ── Size, stated without a recipe ───────────────────────────────────────────
