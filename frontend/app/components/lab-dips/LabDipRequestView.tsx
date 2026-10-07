@@ -9,7 +9,7 @@ import { usePaginatedFetch } from '../../context/usePaginatedList';
 import SearchableSelect from '@bryanadamg/terras-ui/components/Combobox';
 import ModalWrapper from '../shared/ModalWrapper';
 import Pager from '../shared/Pager';
-import { StatusChip, StatusCountPill, FormSection, useFloatingMenu, MenuTriggerButton, FloatingMenu, ColorSwatchChip, useSortable, ExpandedRowPanel, CodeChip, CODE_FONT, xpFont, TableSkeleton, useTableSkeletonMetrics, rowStateBg, ChipTone, CHIP_RADIUS, BTN_TONES, XP_BTN, SKEL_PAGE_ROWS } from '../shared/xpTheme';
+import { StatusChip, StatusCountPill, FormSection, useFloatingMenu, MenuTriggerButton, FloatingMenu, ColorSwatchChip, useServerSort, ExpandedRowPanel, CodeChip, CODE_FONT, xpFont, TableSkeleton, useTableSkeletonMetrics, rowStateBg, ChipTone, CHIP_RADIUS, BTN_TONES, XP_BTN, SKEL_PAGE_ROWS } from '../shared/xpTheme';
 import { SearchField, FilterChipBar, ToolbarCount, ToolbarButton, viewShellStyle, PageTitleBar } from '../shared/shellTheme';
 import RequestDetailPanel, { getStatusStripe } from '../shared/RequestDetailPanel';
 import { lvThead, ExpanderCell, LV_EXPANDER_COL_W, SortableTh, lvTh, lvTdRuled, lvZebra, TableEmpty, lvBtn, lvInput, ResizableTable } from '../shared/listViewTheme';
@@ -142,6 +142,11 @@ export default function LabDipRequestView({
     // box (350ms), so no second debounce here; every other filter rides in as a param
     // and any param change restarts at page 1 inside the hook.
     const { authFetch } = useData();
+    // Header sort runs server-side over the whole filtered set; sorting the loaded page
+    // only reordered the 20 rows last-touched order picked, so codes skipped. Starts on
+    // the server default — last-touched first, so a freshly rejected/reopened request
+    // floats to the top — and cycling a header back to off returns to it.
+    const { sort, toggleSort } = useServerSort({ key: 'updated', dir: -1 });
     const {
         rows: labDips, total, meta, loading, page, setPage, refetch: refetchLabDips,
         searchInput: searchTerm, setSearch: setSearchTerm,
@@ -157,6 +162,8 @@ export default function LabDipRequestView({
             // Deep link: the server ranks this request under the active filters and
             // reports the page holding it as `focus_page` (see the effect below).
             focus_id: openRequestId || '',
+            sort_by: sort?.key || '',
+            sort_dir: sort ? (sort.dir === 1 ? 'asc' : 'desc') : '',
         },
     });
 
@@ -393,23 +400,6 @@ export default function LabDipRequestView({
         ...(meta?.variant_counts || {}),
     } as Record<string, number>), [meta]);
 
-    // Sortable columns for the request list. Default sort = most-recently-updated first,
-    // so a freshly rejected/reopened request (its parent updated_at is bumped on any item
-    // status change) floats to the top.
-    const sortCols = useMemo(() => ({
-        code:     (r: any) => r.code,
-        customer: (r: any) => r.customer_id ? getCustomerName(r.customer_id) : '',
-        type:     (r: any) => r.request_type,
-        status:   (r: any) => r.status,
-        updated:  (r: any) => new Date(r.updated_at || r.created_at || 0).getTime(),
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }), [customers]);
-    // Sorting is page-local: it reorders the rows on screen, which is the same trade the
-    // other server-paginated lists make (see PurchaseOrderView). The server's own order
-    // is the default one — last-touched first — so page 1 is the same top of the list
-    // the unsorted view showed.
-    const { sorted, sort, toggle: toggleSort } = useSortable(labDips, sortCols, { key: 'updated', dir: -1 });
-
     // No setPage(1) on a filter change: the hook restarts at page 1 whenever a param
     // changes, and doing it here as well would fire a second fetch.
 
@@ -517,7 +507,7 @@ export default function LabDipRequestView({
                             <TableEmpty colSpan={10} tdStyle={lvTdRuled()}
                                 message={hasActiveFilter ? 'No requests match the current filter.' : isYarn ? 'No yarn lab dip requests yet.' : 'No lab dip requests yet.'} />
                         ))}
-                        {sorted.map((r: any, idx: number) => {
+                        {labDips.map((r: any, idx: number) => {
                             const approved = (r.items || []).filter((it: any) => it.status === 'APPROVED').length;
                             const total = (r.items || []).length;
                             return (

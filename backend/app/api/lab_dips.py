@@ -4,7 +4,7 @@ from pathlib import Path
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File
 from fastapi.concurrency import run_in_threadpool
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, text, func, case, or_, and_, update as sa_update
+from sqlalchemy import select, text, func, case, or_, and_, nullslast, update as sa_update
 from sqlalchemy.orm import joinedload
 from app.db.session import get_async_db
 from app.models.lab_dip import (
@@ -260,6 +260,8 @@ async def get_lab_dips(
     created_from: str | None = None,
     created_to: str | None = None,
     focus_id: str | None = None,
+    sort_by: str | None = None,
+    sort_dir: str = "asc",
     window: PageWindow = Depends(PageParams(default_size=100)),
     db: AsyncSession = Depends(get_async_db),
     current_user: User = Depends(require_any_permission("lab_dip_request.view", "yarn_lab_dip.view", "dye_recipe.view")),
@@ -289,6 +291,26 @@ async def get_lab_dips(
     sort_key = func.coalesce(LabDipRequest.updated_at, LabDipRequest.created_at)
     order_cols = (sort_key.desc(), LabDipRequest.id.desc())
 
+    # A header click sorts the WHOLE filtered set, not the page on screen: sorting a
+    # window client-side only rearranges the rows last-touched order already chose, so
+    # "Request Code" showed 198..191 then jumped to 182. No sort_by keeps the default.
+    id_query = select(LabDipRequest.id).where(*conds)
+    sort_col = {
+        "code": LabDipRequest.code,
+        "customer": Partner.name,
+        "type": LabDipRequest.request_type,
+        "status": LabDipRequest.status,
+        "updated": sort_key,
+    }.get(sort_by or "")
+    if sort_col is not None:
+        descending = (sort_dir or "").lower().startswith("d")
+        order_cols = (
+            nullslast(sort_col.desc() if descending else sort_col.asc()),
+            LabDipRequest.id.desc() if descending else LabDipRequest.id.asc(),
+        )
+        if sort_by == "customer":
+            id_query = id_query.outerjoin(Partner, Partner.id == LabDipRequest.customer_id)
+
     # ?focus_id= (the Color Library "From Lab Dip" deep link) has to reach a request
     # that may sit on any page — so rank it under the active filters and report the
     # page that holds it as `focus_page`.
@@ -299,8 +321,10 @@ async def get_lab_dips(
     # session, so a window that snapped on every request would pin the user to that one
     # page forever. Reporting the page instead lets the client jump once and then page
     # freely.
+    # The rank below is computed in the default order only; a deep link lands before
+    # anyone clicks a header, so a user-chosen sort just skips the jump.
     focus_page = None
-    if focus_id:
+    if focus_id and sort_col is None:
         try:
             focus_uuid = uuid_lib.UUID(str(focus_id))
         except ValueError:
@@ -325,7 +349,7 @@ async def get_lab_dips(
     # loads below fan each request out into many joined rows. Same shape as
     # get_samples in api/samples.py.
     id_rows = await db.execute(
-        window.apply(select(LabDipRequest.id).where(*conds).order_by(*order_cols))
+        window.apply(id_query.order_by(*order_cols))
     )
     ids = [r[0] for r in id_rows.all()]
 
