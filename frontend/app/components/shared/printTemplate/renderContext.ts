@@ -41,6 +41,8 @@ export interface PrintContext {
     formatDate: (iso: string) => string;
     /** Resolve a system attribute value carried by the MO, by system_role. */
     moAttributeValue: (systemRole: string) => string;
+    /** Display value of any attribute value id ('' when unknown). Kartu Kerja only. */
+    attrName?: (valueId: string) => string;
     /**
      * Bath + weighed doses for a dyeing card, fetched by the print surface (see
      * dyeingPrintData.ts). Absent for every other work centre type, and for a
@@ -112,6 +114,10 @@ export function buildPrintContext({
         printDate: tzFormatCustom(new Date().toISOString(), { day: '2-digit', month: '2-digit', year: 'numeric' }, 'id-ID'),
         formatDate: (iso: string) => tzFormatCustom(iso, SHORT_DATE, 'id-ID'),
         moAttributeValue,
+        attrName: (vid: string) => {
+            for (const a of attributes) { const v = a.values?.find((x: any) => x.id === vid); if (v) return v.value; }
+            return '';
+        },
         dyeing,
     };
 }

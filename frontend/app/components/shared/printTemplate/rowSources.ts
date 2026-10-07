@@ -97,12 +97,15 @@ const BOM_STEP_LINES: RowSourceDef = {
                 ? (pct > 0 ? (woQty * pct) / 100 : woQty * parseFloat(line.qty || 0))
                 : null;
             const actual = actualByItem[String(line.item_id)];
+            // Same "name [attrs]" the SPK prints, so a yarn's colour/combo shows here too.
+            const attrs = (line.attribute_value_ids || []).map((v: string) => ctx.attrName?.(v) || '').filter(Boolean);
+            const name = line.item_name || line.item_id;
             return {
                 _key: line.id,
                 item_code: line.item_code || '',
-                item_name: line.item_name || line.item_id,
+                item_name: name,
                 // Composite cell: mono code then name, as the old card rendered it.
-                item: { code: line.item_code || '', name: line.item_name || line.item_id },
+                item: { code: line.item_code || '', name: attrs.length ? `${name} [${attrs.join(', ')}]` : name },
                 required_qty: required,
                 actual_qty: actual ?? null,
                 variance: required != null && actual != null ? actual - required : null,
