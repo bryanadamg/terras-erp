@@ -15,6 +15,12 @@ on `main`:
 
 ## [Unreleased]
 
+## [0.40.1] - 2026-10-08
+
+### Fixed
+- Every printout prints a size with its target measurement and range beside the name, "L 72 (70–74) cm". This covers lot, output and carton labels, the Kartu Packing, pick list, Surat Jalan, SO Confirmation, SO table, Material Pull Sheet, SPK and stock ledger. A measurement appears only once the line's BOM measures that size, because two BOMs can give the same size name different measurements
+- Sales Order lines show the size's target measurement ahead of its range. They used to show only the range and drop the target whenever a range was set
+
 ## [0.40.0] - 2026-10-07
 
 ### Added
