@@ -13,7 +13,7 @@
 import type { FieldDef, ResolvedField } from '../fieldRegistry';
 import type { RowSourceDef } from '../rowSources';
 import { txt, type PrintContext } from '../renderContext';
-import { lotSizeLabel, lotColorLabel, lotComboLabel } from '../../LotChips';
+import { lotSizeText, lotColorLabel, lotComboLabel } from '../../LotChips';
 
 export const PICK_LIST_DOC = 'pick_list';
 
@@ -130,7 +130,7 @@ const PLIST_CARTONS: RowSourceDef = {
             carton: l.batch_number || null,
             item_code: l.item_code || null,
             item_name: l.item_name || null,
-            size: lotSizeLabel(l),
+            size: lotSizeText(l),
             warna: lineShade(l) || null,
             combo: lotComboLabel(l.carton_identity || {}),
             packaging: l.packaging_type_name || null,
@@ -164,7 +164,7 @@ export function buildPickListContext({
     // one article ships them as separate quantities, so they never sum together.
     const byItem: Record<string, { key: string; code: string; name: string; size: string; warna: string; combo: string; qty: number; cartons: number; uom: string }> = {};
     for (const l of lines) {
-        const size = lotSizeLabel(l) || '';
+        const size = lotSizeText(l) || '';
         const warna = lineShade(l);
         const combo = lotComboLabel(l.carton_identity || {}) || '';
         const key = `${l.item_id}|${size}|${warna}|${combo}`;

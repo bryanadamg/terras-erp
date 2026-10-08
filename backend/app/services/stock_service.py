@@ -53,12 +53,26 @@ def _bom_size_label(snapshot: dict | None) -> str | None:
         parts.append(size_name)
     if snapshot.get("label"):
         parts.append(snapshot["label"])
-    if snapshot.get("target_measurement") is not None:
-        meas = f"{float(snapshot['target_measurement'])}"
-        if snapshot.get("measurement_min") is not None and snapshot.get("measurement_max") is not None:
-            meas += f" ({float(snapshot['measurement_min'])}–{float(snapshot['measurement_max'])})"
-        parts.append(meas + " cm")
+    meas = size_measurement(snapshot)
+    if meas:
+        parts.append(meas)
     return " — ".join(parts) or None
+
+
+def size_measurement(bs) -> str | None:
+    """'72 (70–74) cm' off a BOMSize row or its snapshot dict; None when unmeasured.
+
+    Same shape as the frontend's `sizeMeasurement` (LotChips) — prints put it beside
+    the size name, so both sides must say it alike.
+    """
+    if bs is None:
+        return None
+    get = bs.get if isinstance(bs, dict) else (lambda k: getattr(bs, k, None))
+    tm, lo, hi = get("target_measurement"), get("measurement_min"), get("measurement_max")
+    rng = f"{float(lo):g}–{float(hi):g}" if lo is not None and hi is not None else ""
+    if tm is not None:
+        return f"{float(tm):g}{f' ({rng})' if rng else ''} cm"
+    return f"{rng} cm" if rng else None
 
 
 def _parse_variant_key(variant_key: str):

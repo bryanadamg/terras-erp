@@ -1951,6 +1951,8 @@ class SalesOrderLineResponse(SalesOrderLineCreate):
     # stored. Paired with any other attribute values (combo, …) so a picker can
     # tell same-item lines apart the same way it labels a lot (see BatchVariantAttr).
     size_display: str | None = None
+    # "72 (70–74) cm" — only when the line's BOM (or legacy BOMSize) measures it.
+    size_measurement: str | None = None
     variant_attributes: list[BatchVariantAttr] | None = None
     # Derived fulfilment (so_fulfilment_service) — never stored on the line.
     # `packed_available` is what decides whether the order can ship.
@@ -3720,6 +3722,7 @@ class PackingOrderResponse(BaseModel):
     # The order itself carries no size (a run may pack several — see the model),
     # so this is the plan; what the cartons were stamped with is on each unit.
     size_label: str | None = None
+    size_measurement: str | None = None
     attribute_value_ids: list[UUID] = []
     # The order's variant identity in StockBalance form (attribute UUIDs + `c:<uuid>`).
     # Empty string = the order declares no variant, so any lot of the item at the

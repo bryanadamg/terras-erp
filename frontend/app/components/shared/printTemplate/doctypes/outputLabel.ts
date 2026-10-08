@@ -15,7 +15,7 @@ import JsBarcode from 'jsbarcode';
 import type { FieldDef, ResolvedField } from '../fieldRegistry';
 import type { RowSourceDef } from '../rowSources';
 import { txt, EM_DASH, attrValueByRole, moShade, type PrintContext } from '../renderContext';
-import { lotSizeLabel } from '../../LotChips';
+import { lotSizeText } from '../../LotChips';
 
 export const BAG_LABEL_DOC = 'bag_label';
 export const BEAM_LABEL_DOC = 'beam_label';
@@ -199,7 +199,7 @@ export function buildOutputLabelContext({
             notes: rawNote.replace(/\s*\[[^\]]*\]\s*/g, ' ').trim(),
             itemName: mo.item_name || wo.item_name || '',
             // The MO's size is what add_mo_completion stamps onto the lot.
-            size: lotSizeLabel(mo) || '',
+            size: lotSizeText(mo) || '',
             color: shade.name,
             colorCode: shade.code,
             combo: byRole('combo'),

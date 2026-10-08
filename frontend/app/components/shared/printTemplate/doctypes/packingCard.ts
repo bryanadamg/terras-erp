@@ -53,7 +53,7 @@ export function resolvePackingCardField(key: string, ctx: PrintContext): Resolve
         case 'pcard.item': return txt(d.item);
         case 'pcard.color': return txt(po.color_name);
         case 'pcard.color_code': return txt(po.color_code);
-        case 'pcard.size': return txt(po.size_label);
+        case 'pcard.size': return txt([po.size_label, po.size_measurement].filter(Boolean).join(' '));
         case 'pcard.variant': return txt(d.variant);
         case 'pcard.target': return txt(d.target);
         case 'pcard.box_size': return txt(d.boxSize);

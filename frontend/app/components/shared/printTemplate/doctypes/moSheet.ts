@@ -15,7 +15,7 @@
 import type { FieldDef, ResolvedField } from '../fieldRegistry';
 import type { RowSourceDef } from '../rowSources';
 import { txt, attrValueByRole, moShade, type PrintContext } from '../renderContext';
-import { lotSizeLabel } from '../../LotChips';
+import { lotSizeLabel, lotSizeText, sizeMeasurement } from '../../LotChips';
 import { STATIC_BASE } from '../../apiBase';
 import { matchSubBOM } from '../../bomMatch';
 
@@ -97,10 +97,8 @@ export function resolveMoSheetField(key: string, ctx: PrintContext): ResolvedFie
         case 'ms.article': return txt(d.itemName);
         case 'ms.item_code': return txt(mo.item_code);
         case 'ms.size': {
-            // "L-72 cm": the floor reads the size by its target measurement.
-            const name = lotSizeLabel(mo);
-            const tm = mo.bom_size_snapshot?.target_measurement;
-            return txt(tm != null ? [name, `${tm} cm`].filter(Boolean).join('-') : name);
+            // "L 72 (70–74) cm": the floor reads the size by its measurement.
+            return txt(lotSizeText(mo));
         }
         // Paired on one line: empty only when the order carries no shade at all.
         case 'ms.color': return d.shade.name || d.shade.code ? present(d.shade.name) : EMPTY;
@@ -169,9 +167,14 @@ function explode(d: any): Record<string, any>[] {
     // A sized sub-assembly is made in the order's own size when its BOM carries it
     // (MRP's _resolve_sub_size), so the row names the pile: "GREIGE (L)".
     const moSize = lotSizeLabel(mo) || '';
-    const sizeOf = (bom: any) => moSize && bom?.size_mode === 'sized' && (bom.sizes || []).some(
-        (s: any) => (s.size_name || s.label || '').trim().toLowerCase() === moSize.toLowerCase(),
-    ) ? moSize : '';
+    const sizeOf = (bom: any): string => {
+        if (!moSize || bom?.size_mode !== 'sized') return '';
+        const bs = (bom.sizes || []).find(
+            (s: any) => (s.size_name || s.label || '').trim().toLowerCase() === moSize.toLowerCase(),
+        );
+        // The sub-BOM's own measurement for that size, not the parent's.
+        return bs ? [moSize, sizeMeasurement(bs)].filter(Boolean).join(' ') : '';
+    };
     const walk = (lines: any[], level: number, parentQty: number, currentBOM: any) => {
         // ponytail: depth cap only guards a cyclic BOM; the old sheet had none.
         if (level > 12) return;
@@ -250,7 +253,7 @@ const MS_CHILD_MOS: RowSourceDef = {
         return {
             rows: (d.mo?.child_mos || []).map((c: any) => {
                 const attrs = (c.attribute_value_ids || []).map(d.attrName).filter(Boolean);
-                const item = [c.item_name || d.getItemName(c.item_id), lotSizeLabel(c), attrs.length ? `[${attrs.join(', ')}]` : '']
+                const item = [c.item_name || d.getItemName(c.item_id), lotSizeText(c), attrs.length ? `[${attrs.join(', ')}]` : '']
                     .filter(Boolean).join(' ');
                 const loc = d.getLocationName(c.location_id) || '';
                 const due = d.fmtDate(c.target_end_date);

@@ -20,11 +20,12 @@ from app.models.item import Item
 from app.models.location import Location
 from app.models.attribute import AttributeValue
 from app.models.sales import SalesOrder, SalesOrderLine
-from app.models.bom import BOMSize
+from app.models.bom import BOM, BOMSize
 from app.models.stock_balance import StockBalance
 from app.models.routing import WorkCenter
 from app.models.uom import UOM, UOMFactor
 from app.api.auth import get_current_user, require_permission
+from app.api.sales import line_size_measurement
 from app.models.auth import User
 from app.services import (
     audit_service, kpi_service, stock_service, packing_service, so_fulfilment_service,
@@ -49,6 +50,8 @@ def _load_options():
         .selectinload(SalesOrderLine.bom_size)
         .selectinload(BOMSize.size),
         selectinload(PackingOrder.sales_order_line).selectinload(SalesOrderLine.size),
+        selectinload(PackingOrder.sales_order_line).selectinload(SalesOrderLine.bom)
+        .selectinload(BOM.sizes).selectinload(BOMSize.size),
         selectinload(PackingOrder.item),
         selectinload(PackingOrder.attribute_values),
         selectinload(PackingOrder.materials).selectinload(PackingOrderMaterial.item),
@@ -231,6 +234,7 @@ def _decorate(po: PackingOrder, units: list = None) -> PackingOrder:
     # next commit in the request, and an SO edited mid-run must not re-scale
     # cartons already minted.
     po.size_label = None
+    po.size_measurement = None
     if po.sales_order_line:
         po.ket_stock = po.sales_order_line.ket_stock
         # Same precedence as the SO line's `size_display`: the generic Size pick,
@@ -242,6 +246,7 @@ def _decorate(po: PackingOrder, units: list = None) -> PackingOrder:
             or sol.size_label
             or ((bs.size_name or bs.label) if bs is not None else None)
         )
+        po.size_measurement = line_size_measurement(sol, po.size_label)
     # Resolved base-UOM qty per alt unit — served, not left to the client, so the
     # pack screens, the labels and this API agree on one conversion.
     po.uom2_base_factor = packing_service.order_base_per_alt(po)

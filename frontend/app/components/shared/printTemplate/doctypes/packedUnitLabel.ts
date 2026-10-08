@@ -29,7 +29,7 @@ import type { FieldDef, ResolvedField } from '../fieldRegistry';
 import type { RowSourceDef } from '../rowSources';
 import { txt, type PrintContext } from '../renderContext';
 import { orderBasePerAlt, baseToAlt, lengthPerAlt } from '../../altUnit';
-import { lotSizeLabel, lotComboLabel, lotColorLabel } from '../../LotChips';
+import { lotSizeText, lotComboLabel, lotColorLabel } from '../../LotChips';
 
 export const PACKED_UNIT_LABEL_DOC = 'packed_unit_label';
 
@@ -187,7 +187,7 @@ export function buildCartonLabelContext({
         : `${qty.toLocaleString()}  ${o.item_uom || ''}`;
     const shade = lotColorLabel(u)?.label || o.color_name || null;
     const identity = [
-        lotSizeLabel(u),
+        lotSizeText(u),
         lotComboLabel(u),
         ...((u.variant_attributes || []) as any[])
             .filter(a => !['combo', 'color', 'labdip_color'].includes(a.system_role || ''))
