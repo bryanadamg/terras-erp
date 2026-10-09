@@ -1,6 +1,13 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   output: 'standalone',
+  // The browser reaches the API through the /api rewrite below; keep its trailing
+  // slashes intact (FastAPI would bounce the stripped path straight back) and give
+  // slow endpoints (imports, backups, reports) more than the 30s proxy default.
+  skipTrailingSlashRedirect: true,
+  experimental: {
+    proxyTimeout: 300000,
+  },
   eslint: {
     ignoreDuringBuilds: true,
   },

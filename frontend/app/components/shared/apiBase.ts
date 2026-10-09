@@ -5,13 +5,15 @@
 // dev-server rewrite proxy — breaks in the packaged Electron desktop build, which
 // has no such proxy). New code should import from here instead of recomputing it.
 //
-// Leave NEXT_PUBLIC_API_BASE unset and the API is taken to be on port 8000 of
-// whatever host served the page, so an on-prem box whose DHCP address moves (or
-// is reached by a .local name or an SSH tunnel) needs no rebuild. The server-side
-// render has no window and falls back to localhost; fetches run in the browser.
+// Leave NEXT_PUBLIC_API_BASE unset and the API is reached same-origin through the
+// Next.js `/api` rewrite proxy (next.config.js), so the box works from any address
+// that serves the page — a moved DHCP lease, a .local name, an SSH tunnel, or a
+// public IP port-forward where only the frontend port is exposed — with no rebuild
+// and no CORS. The server-side render has no window and falls back to localhost;
+// fetches run in the browser.
 const hostBase =
   typeof window !== 'undefined' && window.location.protocol.startsWith('http')
-    ? `${window.location.protocol}//${window.location.hostname}:8000/api`
+    ? `${window.location.origin}/api`
     : 'http://localhost:8000/api';
 const envBase = process.env.NEXT_PUBLIC_API_BASE || hostBase;
 
