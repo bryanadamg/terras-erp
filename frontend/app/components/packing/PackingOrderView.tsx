@@ -309,9 +309,8 @@ export default function PackingOrderView({ initialCreateState, onClearInitialSta
     }, [locations]);
 
     // Machine picker scope. Packing machines are the MACHINE rows running under a
-    // PACKING centre type; a plant that has not declared that type yet gets every
-    // machine rather than an empty list — the same "never hand back an empty
-    // picker" rule WOCompletionModal applies to its process scope.
+    // PACKING centre type (set on the TYPE node in Routing; it cascades down).
+    // Strict — no fallback to every machine, the picker is optional anyway.
     const machineOptions = useMemo(
         () => toMachineOptions(machinesOfCenterType(workCenters || [], 'PACKING')),
         [workCenters],

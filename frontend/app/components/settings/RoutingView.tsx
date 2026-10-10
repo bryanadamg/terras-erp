@@ -15,7 +15,7 @@ import { lvBtn, lvPrimaryBtn, lvInput, lvLabel, lvTh, lvTd, lvSep, lvRow, lvThea
 const WC_PAGE_SIZE = 20;
 const OP_PAGE_SIZE = 20;
 
-const CENTER_TYPES = ['GENERAL', 'BEAMING', 'WARPING', 'WEAVING', 'DYEING', 'SETTING', 'FINISHING', 'CUTTING'];
+const CENTER_TYPES = ['GENERAL', 'BEAMING', 'WARPING', 'WEAVING', 'DYEING', 'SETTING', 'FINISHING', 'CUTTING', 'PACKING'];
 
 const emptyWC = { code: '', name: '', cost_per_hour: 0, center_type: 'GENERAL', input_location_id: '', output_location_id: '', reject_location_id: '', parent_id: '', node_type: 'MACHINE', beam_slots: 1 };
 
