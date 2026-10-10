@@ -1781,7 +1781,10 @@ async def add_mo_completion(
 
     # Planned qty met -> DELIVERED, NOT COMPLETED. The order stays open so the floor
     # can keep logging (spare beams, extra bags) until someone closes it explicitly.
-    if total_completed >= float(mo.qty) and mo.status not in ("DELIVERED", "COMPLETED"):
+    # "Met" allows the weighing tolerance short: a 19 kg order that weighs out at
+    # 18.8 kg is the same material on a different scale, not an unfinished order.
+    met_frac = 1 - await stock_service.measurement_tolerance_pct(db) / 100
+    if total_completed >= float(mo.qty) * met_frac and mo.status not in ("DELIVERED", "COMPLETED"):
         auto_transitions.append(("ManufacturingOrder", str(mo.id), mo.status, "DELIVERED"))
         mo.status = "DELIVERED"
         mo.actual_end_date = datetime.utcnow()
@@ -1807,7 +1810,7 @@ async def add_mo_completion(
             )
         )
         wo_total = float(wo_total_result.scalar() or 0)
-        if wo_total >= float(wo.qty) and wo.status != "COMPLETED":
+        if wo_total >= float(wo.qty) * met_frac and wo.status != "COMPLETED":
             auto_transitions.append(("WorkOrder", str(wo.id), wo.status, "COMPLETED"))
             wo.status = "COMPLETED"
             wo.actual_end_date = datetime.utcnow()

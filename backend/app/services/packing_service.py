@@ -126,6 +126,80 @@ async def undrained_locked_lots(db: AsyncSession, po: PackingOrder) -> list[tupl
     return [(bn, float(q or 0)) for bn, q in rows if float(q or 0) > 1e-6]
 
 
+async def lot_drawn_qty(db: AsyncSession, batch_id) -> float:
+    """Everything packing has already drawn out of this lot, good + scrap.
+
+    Plus what is still on the desk, this is the lot's book qty — the figure the
+    weighing tolerance is a percentage of. A % of the leftover alone would make the
+    tolerance vanish exactly when it matters: on the last few hundred grams.
+    """
+    if not batch_id:
+        return 0.0
+    return float((await db.execute(
+        select(func.coalesce(func.sum(PackingCompletion.qty + PackingCompletion.qty_rejected), 0))
+        .filter(PackingCompletion.source_batch_id == batch_id)
+    )).scalar() or 0)
+
+
+def within_tolerance(gap: float, lot_qty: float, tol_pct: float) -> bool:
+    return gap <= lot_qty * tol_pct / 100 + 1e-6
+
+
+async def settle_locked_lots(
+    db: AsyncSession, po: PackingOrder, tol_pct: float,
+) -> tuple[list[tuple[str, float]], list[tuple[str, float]]]:
+    """Write off held lots' leftover book qty where it is only a weighing gap.
+
+    The lot was weighed at dyeing and again carton by carton; the two scales never
+    agree to the gram, so a fully packed lot can still book a few hundred grams on
+    the desk that do not physically exist. Inside the tolerance that gap is posted
+    as a MEASURE_VAR ledger row (not scrap — nothing was lost) and the lot drains.
+
+    Returns (written_off, still_left). All or nothing: if any lot holds more than a
+    weighing gap — real cloth still on the desk — nothing is written, so a refused
+    close never leaves half the lots settled.
+    """
+    if not po.source_location_id:
+        return [], []
+    rows = (await db.execute(
+        select(Batch.id, Batch.batch_number, StockBalance.item_id, StockBalance.variant_key, StockBalance.qty)
+        .join(StockBalance, StockBalance.batch_key == cast(Batch.id, String))
+        .filter(
+            Batch.locked_packing_order_id == po.id,
+            StockBalance.location_id == po.source_location_id,
+            StockBalance.qty > 0,
+        )
+    )).all()
+    by_lot: dict = {}
+    for r in rows:
+        by_lot.setdefault(r.id, []).append(r)
+
+    settle, left = [], []
+    for batch_id, lot_rows in by_lot.items():
+        remaining = sum(float(r.qty) for r in lot_rows)
+        if remaining <= 1e-6:
+            continue
+        lot_qty = remaining + await lot_drawn_qty(db, batch_id)
+        entry = (lot_rows[0].batch_number, remaining)
+        if within_tolerance(remaining, lot_qty, tol_pct):
+            settle.append((entry, batch_id, lot_rows))
+        else:
+            left.append(entry)
+    if left:
+        return [], left
+
+    for _, batch_id, lot_rows in settle:
+        for r in lot_rows:
+            attr_ids, color_id = stock_service._parse_variant_key(r.variant_key or "")
+            await stock_service.add_stock_entry(
+                db, item_id=r.item_id, location_id=po.source_location_id,
+                qty_change=-float(r.qty), reference_type=stock_service.MEASURE_VAR,
+                reference_id=po.code, attribute_value_ids=[str(a) for a in attr_ids],
+                color_id=color_id, batch_id=batch_id,
+            )
+    return [entry for entry, _, _ in settle], []
+
+
 def packed_unit_filter():
     """SQL filter selecting only PackedUnit batches — the single definition,
     mirroring `beam_service.beam_item_ids()`. Never inline the column test."""

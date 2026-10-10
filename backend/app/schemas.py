@@ -3197,6 +3197,7 @@ class CompanyProfileBase(BaseModel):
     website: Optional[str] = None
     logo_url: Optional[str] = None
     tax_id: Optional[str] = None
+    measurement_tolerance_pct: float = Field(2.0, ge=0, le=10)
 
 class CompanyProfileUpdate(CompanyProfileBase):
     pass

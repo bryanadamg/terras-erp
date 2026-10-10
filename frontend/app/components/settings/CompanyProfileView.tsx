@@ -13,7 +13,8 @@ export default function CompanyProfileView({ profile, onUpdate, onUploadLogo, au
         phone: '',
         email: '',
         website: '',
-        tax_id: ''
+        tax_id: '',
+        measurement_tolerance_pct: '2',
     });
     const [isSaving, setIsSaving] = useState(false);
     const [isUploading, setIsUploading] = useState(false);
@@ -27,7 +28,8 @@ export default function CompanyProfileView({ profile, onUpdate, onUploadLogo, au
                 phone: profile.phone || '',
                 email: profile.email || '',
                 website: profile.website || '',
-                tax_id: profile.tax_id || ''
+                tax_id: profile.tax_id || '',
+                measurement_tolerance_pct: String(profile.measurement_tolerance_pct ?? 2),
             });
         }
     }, [profile]);
@@ -36,7 +38,7 @@ export default function CompanyProfileView({ profile, onUpdate, onUploadLogo, au
         e.preventDefault();
         setIsSaving(true);
         try {
-            await onUpdate(editProfile);
+            await onUpdate({ ...editProfile, measurement_tolerance_pct: Number(editProfile.measurement_tolerance_pct) || 0 });
             showToast('Company profile updated!', 'success');
         } catch (e) {
             showToast('Failed to update profile', 'danger');
@@ -130,6 +132,11 @@ export default function CompanyProfileView({ profile, onUpdate, onUploadLogo, au
                             <div>
                                 <FieldLabel>Tax ID / NPWP</FieldLabel>
                                 <input style={inputStyle} className={inputClass} value={editProfile.tax_id} onChange={e => setEditProfile({ ...editProfile, tax_id: e.target.value })} />
+                            </div>
+                            <div>
+                                <FieldLabel>Weighing Tolerance (%)</FieldLabel>
+                                <input type="number" min={0} max={10} step={0.1} style={inputStyle} className={inputClass} value={editProfile.measurement_tolerance_pct} onChange={e => setEditProfile({ ...editProfile, measurement_tolerance_pct: e.target.value })} />
+                                <div style={settingsHint()}>How far a scale reading may differ from the book qty and still count as on target.</div>
                             </div>
                         </div>
                     </div>

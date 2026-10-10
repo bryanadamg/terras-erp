@@ -2154,6 +2154,21 @@ function PackingOrderDetail({ po: initialPo, itemById, locationById, locPickerTr
             taken[id] = (taken[id] || 0) + take;
             need -= take;
         }
+        // Scale read heavier than the book: the overflow rides on the last lot drawn
+        // (or the last selected one, if the cartons already used them all up) and
+        // the server books it as weighing variance — or refuses it if it is past
+        // the tolerance, which only it can judge (it is a % of the lot's full book
+        // qty, including what earlier events already drew).
+        if (need > 1e-9) {
+            const sel = lots.filter((x: any) => selSet.has(String(x.id)));
+            const lastId = out.length ? out[out.length - 1].batch_id : (sel.length ? String(sel[0].id) : null);
+            if (lastId) {
+                const row = out.find(o => o.batch_id === lastId);
+                if (row) row.qty = Number((row.qty + need).toFixed(4));
+                else out.push({ batch_id: lastId, qty: Number(need.toFixed(4)) });
+                taken[lastId] = (taken[lastId] || 0) + need;
+            }
+        }
         return out;
     };
 
@@ -2312,6 +2327,8 @@ function PackingOrderDetail({ po: initialPo, itemById, locationById, locPickerTr
     const scrapAlloc = allocateOver(scrap, takeByBatch);
     const drawn = Object.values(takeByBatch).reduce((t, v) => t + v, 0);
     const short = drawTotal > 0 && drawn + 1e-6 < drawTotal;
+    // Drawing past the selected lots' book balance — a weighing gap, not an error.
+    const overBook = Math.max(0, drawTotal - selAvailable);
     // Per-lot payload: one entry per lot touched, carrying its share of each.
     const lotPayload = () => {
         const byId = new Map<string, { batch_id: string; qty: number; qty_rejected: number }>();
@@ -3076,6 +3093,11 @@ function PackingOrderDetail({ po: initialPo, itemById, locationById, locPickerTr
                                             <span style={{ fontWeight: 'normal', color: short ? '#900' : '#555' }}>
                                                 {selectedLots.length} lot{selectedLots.length === 1 ? '' : 's'} · {selAvailable.toFixed(2)} available · drawing{' '}
                                                 <strong>{drawn.toFixed(2)}</strong>{short ? ` of ${drawTotal.toFixed(2)}` : ''}
+                                                {overBook > 1e-6 && (
+                                                    <span style={{ color: '#b46a00', marginLeft: 4 }} title="Cartons weigh more than the lots' book qty. Inside the weighing tolerance (Settings → Company Profile) the gap is booked as a measurement variance.">
+                                                        (+{overBook.toFixed(2)} over book)
+                                                    </span>
+                                                )}
                                                 <button
                                                     type="button"
                                                     className={XP_BTN}

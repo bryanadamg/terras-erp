@@ -15,6 +15,7 @@ const BagLabelPrintModal = dynamic(() => import('./BagLabelPrintModal'), { ssr: 
 const BagScanStageModal = dynamic(() => import('./BagScanStageModal'), { ssr: false });
 import { getChipStyle, PrintChips } from './WorkOrderPanel';
 import Pager from '../shared/Pager';
+import { useData } from '../../context/DataContext';
 import { XPEmptyState, TableSkeleton, useTableSkeletonMetrics, XPStatusBar, useSortable, useFloatingMenu, MenuTriggerButton, FloatingMenu, XPActionButton, ExpandedRowPanel, ProgressBar, CodeChip, CODE_FONT, xpFont, rowStateBg, StatusChip, CHIP_RADIUS, colorLabel, xpInput as xpInputBase, SKEL_PAGE_ROWS } from '../shared/xpTheme';
 import TreeSelect, { TreeSelectOption } from '../shared/TreeSelect';
 import { lvSubTh, lvSubTd, lvSubTable, lvSubRow, ExpanderCell, useRowSelection, RowCheckbox, SelectAllCheckbox, LV_CHECK_COL_W, LV_EXPANDER_COL_W, SortableTh, lvThSticky, lvTd, lvZebra, ResizableTable } from '../shared/listViewTheme';
@@ -157,6 +158,10 @@ export default function WorkOrderListView({
     loading = false,
 }: Props) {
     const router = useRouter();
+    // The weighing tolerance: a step weighed out this far under its target counts as
+    // met — same rule the server uses to auto-complete the WO.
+    const { companyProfile } = useData();
+    const metFrac = 1 - Number(companyProfile?.measurement_tolerance_pct ?? 2) / 100;
     // Dense: the completion log shares its row with the other detail panes.
     const subTh = lvSubTh();
     const subTd = lvSubTd();
@@ -359,7 +364,7 @@ export default function WorkOrderListView({
         }
     };
 
-    const canComplete = (wo: FlatWO) => !wo.qty || (wo.qty_completed_total ?? 0) >= wo.qty;
+    const canComplete = (wo: FlatWO) => !wo.qty || (wo.qty_completed_total ?? 0) >= wo.qty * metFrac;
     // Manual complete allowed below target — warn, then proceed.
     const handleComplete = (wo: FlatWO) => {
         if (!canComplete(wo)) {
@@ -954,7 +959,7 @@ export default function WorkOrderListView({
                                                 </td>
                                                 <td style={{ ...tdBase, fontSize: 10}}>
                                                     {wo.qty != null ? (() => {
-                                                        const done = (wo.qty_completed_total ?? 0) >= wo.qty;
+                                                        const done = (wo.qty_completed_total ?? 0) >= wo.qty * metFrac;
                                                         const pct = Math.min(100, ((wo.qty_completed_total ?? 0) / wo.qty) * 100);
                                                         // Step-level scrap — which routing step / loom lost the material.
                                                         const rej = wo.qty_rejected_total ?? 0;
