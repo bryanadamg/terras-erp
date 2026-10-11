@@ -99,6 +99,24 @@ def line_size_name(sol) -> Optional[str]:
     )
 
 
+async def line_size_names(db: AsyncSession, line_ids) -> dict:
+    """`{so_line_id: size name}` for the lines that name a size; one query."""
+    ids = [i for i in line_ids if i]
+    if not ids:
+        return {}
+    from app.models.sales import SalesOrderLine
+    from app.models.bom import BOMSize
+    lines = (await db.execute(
+        select(SalesOrderLine)
+        .options(
+            selectinload(SalesOrderLine.size),
+            selectinload(SalesOrderLine.bom_size).selectinload(BOMSize.size),
+        )
+        .filter(SalesOrderLine.id.in_(ids))
+    )).scalars().all()
+    return {str(l.id): n for l in lines if (n := line_size_name(l))}
+
+
 async def order_size_name(db: AsyncSession, po: PackingOrder) -> Optional[str]:
     """The one size this order's cartons are for — its SO line's — or None.
 
@@ -107,21 +125,40 @@ async def order_size_name(db: AsyncSession, po: PackingOrder) -> Optional[str]:
     """
     if not po.sales_order_line_id:
         return None
-    from app.models.sales import SalesOrderLine
+    return (await line_size_names(db, [po.sales_order_line_id])).get(str(po.sales_order_line_id))
+
+
+async def batch_size_names(db: AsyncSession, batch_ids) -> dict:
+    """`{batch_id: (batch_number, size name or None)}` — a lot's or carton's size.
+
+    The snapshot first (what the lot was stamped with; a carton inherits it from
+    its source lot), then the live BOMSize row for a lot that only has the id.
+    """
+    ids = [b for b in batch_ids if b]
+    if not ids:
+        return {}
     from app.models.bom import BOMSize
-    sol = (await db.execute(
-        select(SalesOrderLine)
-        .options(
-            selectinload(SalesOrderLine.size),
-            selectinload(SalesOrderLine.bom_size).selectinload(BOMSize.size),
-        )
-        .filter(SalesOrderLine.id == po.sales_order_line_id)
-    )).scalars().first()
-    return line_size_name(sol)
+    from app.models.size import Size
+    rows = (await db.execute(
+        select(Batch.id, Batch.batch_number, Batch.bom_size_snapshot, Size.name, BOMSize.label)
+        .outerjoin(BOMSize, BOMSize.id == Batch.bom_size_id)
+        .outerjoin(Size, Size.id == BOMSize.size_id)
+        .filter(Batch.id.in_(ids))
+    )).all()
+    out = {}
+    for bid, bn, snap, row_size, row_label in rows:
+        snap = snap or {}
+        out[str(bid)] = (bn, snap.get("size_name") or snap.get("label") or row_size or row_label)
+    return out
 
 
-def _fold_size(name) -> str:
-    return (name or "").strip().lower()
+def sizes_conflict(want: Optional[str], have: Optional[str]) -> bool:
+    """Two NAMED sizes that differ. Compared folded — the lot carries its BOM's
+    size row, the SO line a generic Size, and only the name is common to both
+    (the identity SO fulfilment pegs on). A missing size on either side is
+    unknown, not different, so it never conflicts."""
+    w, h = (want or "").strip().lower(), (have or "").strip().lower()
+    return bool(w and h and w != h)
 
 
 async def assert_lot_sizes_match(db: AsyncSession, po: PackingOrder, batch_ids) -> None:
@@ -129,35 +166,41 @@ async def assert_lot_sizes_match(db: AsyncSession, po: PackingOrder, batch_ids) 
 
     An order raised against an SO line packs that line's size: a carton of another
     size counts toward the order's target yet can never ship on the line, so the
-    order reads fulfilled while the customer is short. Compared on the folded size
-    NAME — the lot carries its producing BOM's size row, the line a generic Size,
-    and only the name is common to both (same identity SO fulfilment pegs on).
-    A lot with no size is unknown, not different, and passes.
+    order reads fulfilled while the customer is short.
     """
-    want_name = await order_size_name(db, po)
-    want = _fold_size(want_name)
-    ids = [b for b in batch_ids if b]
-    if not want or not ids:
+    want = await order_size_name(db, po)
+    if not want:
         return
-    from app.models.bom import BOMSize
-    from app.models.size import Size
-    rows = (await db.execute(
-        select(Batch.batch_number, Batch.bom_size_snapshot, Size.name, BOMSize.label)
-        .outerjoin(BOMSize, BOMSize.id == Batch.bom_size_id)
-        .outerjoin(Size, Size.id == BOMSize.size_id)
-        .filter(Batch.id.in_(ids))
-    )).all()
-    wrong = []
-    for bn, snap, row_size, row_label in rows:
-        snap = snap or {}
-        have = snap.get("size_name") or snap.get("label") or row_size or row_label
-        if have and _fold_size(have) != want:
-            wrong.append(f"{bn} ({have})")
+    wrong = [
+        f"{bn} ({have})" for bn, have in (await batch_size_names(db, batch_ids)).values()
+        if sizes_conflict(want, have)
+    ]
     if wrong:
         raise ValueError(
-            f"This order packs size {want_name} — "
+            f"This order packs size {want} — "
             f"lot(s) of another size can't be packed on it: {', '.join(wrong)}"
         )
+
+
+async def assert_cartons_fit_lines(db: AsyncSession, pairs) -> None:
+    """Raise ValueError if any (so_line_id, carton batch_id) pair is a size mismatch.
+
+    The pick list / dispatch half of the packing size gate: a carton goes out
+    only against an SO line ordering its size. Pairs with no carton or no line
+    are skipped (nothing to compare).
+    """
+    pairs = [(l, b) for l, b in pairs if l and b]
+    if not pairs:
+        return
+    want = await line_size_names(db, [l for l, _ in pairs])
+    have = await batch_size_names(db, [b for _, b in pairs])
+    wrong = []
+    for l, b in pairs:
+        bn, size = have.get(str(b), (None, None))
+        if sizes_conflict(want.get(str(l)), size):
+            wrong.append(f"{bn} is size {size}, the line ordered {want[str(l)]}")
+    if wrong:
+        raise ValueError("Carton size doesn't match its SO line: " + "; ".join(wrong))
 
 
 async def claim_lots(db: AsyncSession, po: PackingOrder, batch_ids) -> list[str]:
@@ -1347,11 +1390,13 @@ async def available_packed_units(
     color_id=None,
     exclude_ids: set = None,
     limit: int = 200,
+    size_name: Optional[str] = None,
 ) -> list[tuple[Batch, StockBalance]]:
     """In-stock cartons for an item/variant, oldest first (FIFO).
 
     Returns (carton, its balance row) pairs so callers get the carton qty without
     a second lookup. Rejected lots are excluded, matching every other picker.
+    `size_name` (an SO line's size) drops cartons of another size — unsized ones stay.
     """
     v_key = _generate_variant_key(attribute_value_ids, color_id)
     query = (
@@ -1374,6 +1419,9 @@ async def available_packed_units(
     rows = (await db.execute(query)).all()
     if exclude_ids:
         rows = [r for r in rows if r[0].id not in exclude_ids]
+    if size_name and rows:
+        sizes = await batch_size_names(db, [r[0].id for r in rows])
+        rows = [r for r in rows if not sizes_conflict(size_name, sizes.get(str(r[0].id), (None, None))[1])]
     # A carton is atomic, but nothing in the schema stops it having balance rows at
     # more than one location (e.g. after a manual move that left a zeroed row).
     # Keep one row per carton so a pick suggestion can never list the same physical
@@ -1396,6 +1444,7 @@ async def suggest_units_for_line(
     attribute_value_ids: list[str] = [],
     color_id=None,
     exclude_ids: set = None,
+    size_name: Optional[str] = None,
 ) -> list[tuple[Batch, float]]:
     """Pick whole cartons FIFO until `remaining_qty` is covered.
 
@@ -1405,7 +1454,7 @@ async def suggest_units_for_line(
     units = await available_packed_units(
         db, item_id, location_id=location_id,
         attribute_value_ids=attribute_value_ids, color_id=color_id,
-        exclude_ids=exclude_ids,
+        exclude_ids=exclude_ids, size_name=size_name,
     )
     picked: list[tuple[Batch, float]] = []
     covered = 0.0

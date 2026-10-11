@@ -35,7 +35,7 @@ def sized(client, auth_headers):
     so = client.post("/api/sales-orders", json={
         "po_number": f"PO-SZG-{sfx}", "customer_name": "Size Gate",
         "order_date": "2026-10-12T00:00:00",
-        "lines": [{"item_id": item["id"], "qty": 20, "size_id": ordered["id"],
+        "lines": [{"item_id": item["id"], "qty": 20, "qty_kg": 20, "size_id": ordered["id"],
                    "due_date": "2026-11-01T00:00:00", "attribute_value_ids": []}],
     }, headers=auth_headers)
     assert so.status_code == 200, so.text
@@ -87,3 +87,53 @@ def test_the_lot_picker_reports_which_order_holds_a_lot(client, auth_headers, si
         headers=auth_headers).json()
     held = next(b for b in lots if b["id"] == sized["right"]["id"])
     assert held["locked_packing_order_id"] == po["id"]
+
+
+# --- pick list → dispatch: a carton only goes out on a line ordering its size --
+
+@pytest.fixture
+def cartons(client, auth_headers, sized):
+    """One carton of the ordered size (packed against the SO line) and one of the
+    other size (packed to stock — no SO line, so the pack gate lets it through)."""
+    on_line = sized["order"]().json()
+    res = _pack(client, auth_headers, on_line, sized["right"], sized["box"])
+    assert res.status_code == 200, res.text
+    right = res.json()["packed_units"][0]
+
+    to_stock = client.post("/api/packing", json={
+        "item_id": sized["right"]["item_id"], "qty_target": 5,
+        "source_location_id": on_line["source_location_id"],
+        "output_location_id": on_line["output_location_id"],
+    }, headers=auth_headers).json()
+    res = _pack(client, auth_headers, to_stock, sized["wrong"], sized["box"])
+    assert res.status_code == 200, res.text
+    wrong = res.json()["packed_units"][0]
+    return {"so_id": on_line["sales_order_id"], "line_id": on_line["sales_order_line_id"],
+            "item_id": on_line["item_id"], "right": right, "wrong": wrong}
+
+
+def test_suggestions_skip_cartons_of_another_size(client, auth_headers, cartons):
+    groups = client.get(f"/api/pick-lists/suggest?sales_order_id={cartons['so_id']}",
+                        headers=auth_headers).json()
+    suggested = {c["batch_id"] for g in groups for c in g["cartons"]}
+    assert cartons["right"]["id"] in suggested
+    assert cartons["wrong"]["id"] not in suggested
+
+
+def test_a_pick_list_cannot_put_a_carton_on_a_line_of_another_size(client, auth_headers, cartons):
+    res = client.post("/api/pick-lists", json={
+        "sales_order_id": cartons["so_id"],
+        "lines": [{"sales_order_line_id": cartons["line_id"], "item_id": cartons["item_id"],
+                   "qty_picked": 5, "batch_id": cartons["wrong"]["id"]}],
+    }, headers=auth_headers)
+    assert res.status_code == 400, res.text
+    assert cartons["wrong"]["batch_number"] in res.json()["detail"]
+
+
+def test_scanning_a_carton_of_another_size_is_refused(client, auth_headers, cartons):
+    pl = client.post("/api/pick-lists", json={"sales_order_id": cartons["so_id"]}, headers=auth_headers)
+    assert pl.status_code == 200, pl.text
+    res = client.post(f"/api/pick-lists/{pl.json()['id']}/scan",
+                      json={"code": cartons["wrong"]["batch_number"]}, headers=auth_headers)
+    assert res.status_code == 400, res.text
+    assert "size" in res.json()["detail"]

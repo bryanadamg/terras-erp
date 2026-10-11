@@ -376,6 +376,7 @@ async def _suggest_cartons(db: AsyncSession, so: SalesOrder, source_location_id=
     remaining_alt = await _remaining_alt_by_so_line(db, so)
     ordered_map = await so_fulfilment_service.ordered_base_map(db, [line.id for line in so.lines])
     taken = await packing_service.allocated_unit_ids(db)
+    line_sizes = await packing_service.line_size_names(db, [l.id for l in so.lines])
 
     # Pass 1 — FIFO-pick the cartons for every outstanding line.
     picked: list[tuple[SalesOrderLine, float, list]] = []
@@ -390,6 +391,7 @@ async def _suggest_cartons(db: AsyncSession, so: SalesOrder, source_location_id=
             attribute_value_ids=attr_ids,
             color_id=so_line.color_id,
             exclude_ids=taken,
+            size_name=line_sizes.get(str(so_line.id)),
         )
         for pu, _qty in units:
             taken.add(pu.id)
@@ -468,7 +470,8 @@ async def _suggest_lines(db: AsyncSession, pl: PickList, so: SalesOrder) -> list
 
 
 async def _ready_carton_index(db: AsyncSession) -> dict:
-    """Every unallocated, in-stock carton keyed by (item_id, variant_key), FIFO.
+    """Every unallocated, in-stock carton keyed by (item_id, variant_key), FIFO,
+    as `(qty, size name)` — a line only counts cartons of its own size as ready.
 
     One query for the whole plant instead of per-SO-line lookups: the readiness
     board scores every open order at once, and a per-line query there is an N+1
@@ -487,6 +490,7 @@ async def _ready_carton_index(db: AsyncSession) -> dict:
         .order_by(Batch.created_at.asc(), Batch.package_no.asc())
     )).all()
 
+    sizes = await packing_service.batch_size_names(db, [b.id for b, _ in rows])
     index: dict = {}
     seen = set()
     for batch, bal in rows:
@@ -494,7 +498,8 @@ async def _ready_carton_index(db: AsyncSession) -> dict:
         if batch.id in seen or batch.id in taken:
             continue
         seen.add(batch.id)
-        index.setdefault((str(batch.item_id), bal.variant_key), []).append(float(bal.qty))
+        size = sizes.get(str(batch.id), (None, None))[1]
+        index.setdefault((str(batch.item_id), bal.variant_key), []).append((float(bal.qty), size))
     return index
 
 
@@ -579,6 +584,7 @@ async def list_pickable_orders(
     }
 
     index = await _ready_carton_index(db)
+    line_sizes = await packing_service.line_size_names(db, [l.id for so in so_rows for l in so.lines])
     today = datetime.utcnow().date()
 
     # Whole-order fulfilment for the page in one batched pass — four grouped
@@ -615,8 +621,14 @@ async def list_pickable_orders(
             # one may overshoot the outstanding qty rather than be split.
             covered = 0.0
             line_cartons = 0
-            while pool and covered < rem - 1e-6:
-                covered += pool.pop(0)
+            want_size = line_sizes.get(str(line.id))
+            i = 0
+            while pool and i < len(pool) and covered < rem - 1e-6:
+                qty, size = pool[i]
+                if packing_service.sizes_conflict(want_size, size):
+                    i += 1  # another size — left for the line that orders it
+                    continue
+                covered += pool.pop(i)[0]
                 line_cartons += 1
             cartons_ready += line_cartons
             qty_ready += covered
@@ -833,6 +845,7 @@ async def create_pick_list(
     # written so an order with nothing packed never leaves an empty DRAFT behind.
     remaining_now = await _remaining_by_so_line(db, so)
     taken_now = await packing_service.allocated_unit_ids(db)
+    line_sizes = await packing_service.line_size_names(db, [l.id for l in so.lines])
     has_cartons = False
     for so_line in so.lines:
         if remaining_now.get(str(so_line.id), 0.0) <= 0:
@@ -843,6 +856,7 @@ async def create_pick_list(
             attribute_value_ids=[str(v.id) for v in (so_line.attribute_values or [])],
             color_id=so_line.color_id,
             exclude_ids=taken_now,
+            size_name=line_sizes.get(str(so_line.id)),
             # No limit=1: available_packed_units applies the SQL limit before
             # filtering exclude_ids, so a low limit full of already-allocated
             # cartons would read as "nothing packed".
@@ -858,6 +872,16 @@ async def create_pick_list(
                 "cartons against it before picking."
             ),
         )
+
+    # Explicitly chosen cartons must be the size their line ordered — checked
+    # before the pick list row is written, like the packed-yet gate above.
+    if payload.lines:
+        try:
+            await packing_service.assert_cartons_fit_lines(
+                db, [(l.sales_order_line_id, l.batch_id) for l in payload.lines],
+            )
+        except ValueError as e:
+            raise HTTPException(status_code=400, detail=str(e))
 
     code = await _next_code(db)
     pl = PickList(
@@ -950,6 +974,12 @@ async def update_pick_list(
     # the editor saves before dispatching, and dropping picked_at here would make
     # dispatch reject every carton the floor had already scanned.
     if payload.lines is not None:
+        try:
+            await packing_service.assert_cartons_fit_lines(
+                db, [(l.sales_order_line_id, l.batch_id) for l in payload.lines],
+            )
+        except ValueError as e:
+            raise HTTPException(status_code=400, detail=str(e))
         confirmed = {
             str(old.batch_id): (old.picked_at, old.picked_by)
             for old in pl.lines if old.batch_id and old.picked_at
@@ -1029,9 +1059,22 @@ async def scan_pick_list_unit(
             select(SalesOrder).options(selectinload(SalesOrder.lines)).filter(SalesOrder.id == pl.sales_order_id)
         )
         so = so_result.scalars().first()
-        target = next((sl for sl in (so.lines if so else []) if sl.item_id == pu.item_id), None)
-        if not target:
+        same_item = [sl for sl in (so.lines if so else []) if sl.item_id == pu.item_id]
+        if not same_item:
             raise HTTPException(status_code=400, detail=f"Carton {code} is not an item on this sales order")
+        # One SO can order the same item in several sizes: the carton goes on the
+        # line ordering ITS size, never just the first line of the item.
+        line_sizes = await packing_service.line_size_names(db, [sl.id for sl in same_item])
+        _bn, pu_size = (await packing_service.batch_size_names(db, [pu.id])).get(str(pu.id), (None, None))
+        target = next(
+            (sl for sl in same_item if not packing_service.sizes_conflict(line_sizes.get(str(sl.id)), pu_size)),
+            None,
+        )
+        if not target:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Carton {code} is size {pu_size} — this sales order doesn't order that size",
+            )
         loc = await _unit_location(db, pu)
         qty = 0.0
         if loc:
