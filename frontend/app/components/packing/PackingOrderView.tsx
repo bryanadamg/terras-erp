@@ -18,6 +18,15 @@ import SearchableSelect from '@bryanadamg/terras-ui/components/Combobox';
 import TreeSelect, { buildLocationPickerTree } from '../shared/TreeSelect';
 import { useFinishedGoodsSearch } from '../shared/useEntitySearch';
 import { LotChips, LotChip, lotSizeKey, lotSizeLabel } from '../shared/LotChips';
+
+/** A lot of a different size from the order's SO line — mirror of the server's
+ *  `packing_service.assert_lot_sizes_match` (folded size name; unsized lots and
+ *  orders with no size never mismatch). */
+const packingSizeMismatch = (lot: any, orderSize: string | null | undefined): boolean => {
+    const want = (orderSize || '').trim().toLowerCase();
+    const have = (lotSizeLabel(lot) || '').trim().toLowerCase();
+    return !!want && !!have && want !== have;
+};
 import VariantChips from '../shared/VariantChips';
 import { machinesOfCenterType, toMachineOptions } from '../shared/workCenterTree';
 import {
@@ -2090,21 +2099,32 @@ function PackingOrderDetail({ po: initialPo, itemById, locationById, locPickerTr
                 setHeldLotCount(withStock.filter((b: any) => b.held).length);
                 const available = withStock.filter((b: any) => !b.held);
                 setLots(available);
-                // Default to the ready pool, but only as far as ONE size. The draw is
-                // FIFO (oldest first) and the server refuses a box that straddles two
-                // sizes, so pre-selecting an M lot and an L lot together hands the
-                // packer a selection their first submit 400s on — over a seam they
-                // never chose to cross. Unsized lots are unknown, not a different
-                // size, so they ride along; an unsized oldest lot keeps the old
-                // select-everything behaviour.
-                const oldest = available[available.length - 1];  // /batches is newest-first
-                const leadSize = oldest ? lotSizeKey(oldest) : null;
-                const preselect = leadSize
-                    ? available.filter((b: any) => {
-                        const k = lotSizeKey(b);
-                        return k === null || k === leadSize;
-                    })
-                    : available;
+                // Default selection, most specific first:
+                //  1. the lots this order holds — the pile it was cut for;
+                //  2. else, on an order for a sized SO line, that size's lots (the
+                //     server refuses any other size — packingSizeMismatch);
+                //  3. else the ready pool, as far as ONE size: the draw is FIFO and
+                //     the server refuses a box straddling two sizes, so the oldest
+                //     lot's size leads. This step alone once preselected an older L
+                //     lot for an XL order and left its own held XL lot unchecked.
+                // Unsized lots are unknown, not a different size, so they ride along.
+                const allowed = available.filter((b: any) => !packingSizeMismatch(b, po.size_label));
+                const held = allowed.filter((b: any) => String(b.locked_packing_order_id || '') === String(po.id));
+                let preselect: any[];
+                if (held.length) {
+                    preselect = held;
+                } else if (po.size_label) {
+                    preselect = allowed;
+                } else {
+                    const oldest = allowed[allowed.length - 1];  // /batches is newest-first
+                    const leadSize = oldest ? lotSizeKey(oldest) : null;
+                    preselect = leadSize
+                        ? allowed.filter((b: any) => {
+                            const k = lotSizeKey(b);
+                            return k === null || k === leadSize;
+                        })
+                        : allowed;
+                }
                 setSelectedLots(preselect.map((b: any) => String(b.id)));
             } finally {
                 if (alive) setLotsLoading(false);
@@ -2343,7 +2363,7 @@ function PackingOrderDetail({ po: initialPo, itemById, locationById, locPickerTr
 
     const toggleLot = (id: string, on: boolean) =>
         setSelectedLots(prev => on ? [...prev, id] : prev.filter(x => x !== id));
-    const allIds = lots.map((b: any) => String(b.id));
+    const allIds = lots.filter((b: any) => !packingSizeMismatch(b, po.size_label)).map((b: any) => String(b.id));
     const allSelected = allIds.length > 0 && selectedLots.length === allIds.length;
 
     // Why the log button is dead, in the order the submit handler checks. A
@@ -3118,9 +3138,13 @@ function PackingOrderDetail({ po: initialPo, itemById, locationById, locPickerTr
                                             {lots.map((b: any) => {
                                                 const id = String(b.id);
                                                 const on = selSet.has(id);
+                                                // Shown, not hidden, so the packer sees why a lot on the
+                                                // desk is not offered — this order packs one size.
+                                                const wrongSize = packingSizeMismatch(b, po.size_label);
                                                 return (
-                                                    <label key={id} style={{ ...lvPickerRow(on), fontSize: 10 }}>
-                                                        <RowCheckbox checked={on} label={b.batch_number || 'lot'}
+                                                    <label key={id} style={{ ...lvPickerRow(on), fontSize: 10, ...(wrongSize ? { opacity: 0.5, cursor: 'not-allowed' } : {}) }}
+                                                        title={wrongSize ? `Size ${lotSizeLabel(b)} — this order packs ${po.size_label}` : undefined}>
+                                                        <RowCheckbox checked={on} label={b.batch_number || 'lot'} disabled={wrongSize}
                                                             onChange={() => toggleLot(id, !on)} />
                                                         <div style={{ display: 'flex', flexDirection: 'column', gap: 2, minWidth: 0, flex: 1 }}>
                                                             <div style={{ display: 'flex', alignItems: 'center', gap: 4, flexWrap: 'wrap' }}>

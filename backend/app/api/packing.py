@@ -240,12 +240,8 @@ def _decorate(po: PackingOrder, units: list = None) -> PackingOrder:
         # Same precedence as the SO line's `size_display`: the generic Size pick,
         # its free label, then the legacy BOMSize pointer. Reading bom_size alone
         # blanked the size on every line written after the size/BOM decoupling.
-        sol, bs = po.sales_order_line, po.sales_order_line.bom_size
-        po.size_label = (
-            (sol.size.name if sol.size is not None else None)
-            or sol.size_label
-            or ((bs.size_name or bs.label) if bs is not None else None)
-        )
+        sol = po.sales_order_line
+        po.size_label = packing_service.line_size_name(sol)
         po.size_measurement = line_size_measurement(sol, po.size_label)
     # Resolved base-UOM qty per alt unit — served, not left to the client, so the
     # pack screens, the labels and this API agree on one conversion.
@@ -1013,6 +1009,12 @@ async def add_packing_completion(
         # The picker already hides those, but the picker is UI — this is the gate.
         await packing_service.assert_lots_unlocked(
             db, po.id, [(l.batch_id if l else None) for l in lots],
+        )
+        # Size gate: an order for an XL line packs XL. Without it the picker's FIFO
+        # default once drew an L lot into an XL order — the carton counted toward
+        # the target and could never ship on the line.
+        await packing_service.assert_lot_sizes_match(
+            db, po, [(l.batch_id if l else None) for l in lots],
         )
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))

@@ -3271,6 +3271,9 @@ class BatchResponse(BaseModel):
     packing_order_id: Optional[UUID] = None
     package_no: Optional[int] = None
     alt_qty: Optional[float] = None
+    # The packing order holding this lot (claimed off the desk); the pack form
+    # preselects the order's own held lots first.
+    locked_packing_order_id: Optional[UUID] = None
     quality_status: str = "GOOD"    # GOOD | REJECTED
     quarantine_status: Optional[str] = None  # disposition snapshot; only meaningful when `held` is true
     held: bool = False  # quarantine_status not yet OK AND the batch's current location is a quarantine hold area (populated by list endpoint)

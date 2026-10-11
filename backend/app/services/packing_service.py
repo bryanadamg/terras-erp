@@ -85,6 +85,81 @@ async def assert_lots_unlocked(db: AsyncSession, po_id, batch_ids) -> None:
         raise ValueError(f"These lots are held by another packing order: {detail}")
 
 
+def line_size_name(sol) -> Optional[str]:
+    """The size an SO line was ordered in, by name. Same precedence as the line's
+    `size_display`: the generic Size pick, its free label, then the legacy BOMSize
+    pointer. Relationships `size` and `bom_size.size` must be loaded."""
+    if sol is None:
+        return None
+    bs = sol.bom_size
+    return (
+        (sol.size.name if sol.size is not None else None)
+        or sol.size_label
+        or ((bs.size_name or bs.label) if bs is not None else None)
+    )
+
+
+async def order_size_name(db: AsyncSession, po: PackingOrder) -> Optional[str]:
+    """The one size this order's cartons are for — its SO line's — or None.
+
+    None for an order packing to stock, or against a line that named no size: that
+    order stays size-agnostic and may pack several sizes (see the model comment).
+    """
+    if not po.sales_order_line_id:
+        return None
+    from app.models.sales import SalesOrderLine
+    from app.models.bom import BOMSize
+    sol = (await db.execute(
+        select(SalesOrderLine)
+        .options(
+            selectinload(SalesOrderLine.size),
+            selectinload(SalesOrderLine.bom_size).selectinload(BOMSize.size),
+        )
+        .filter(SalesOrderLine.id == po.sales_order_line_id)
+    )).scalars().first()
+    return line_size_name(sol)
+
+
+def _fold_size(name) -> str:
+    return (name or "").strip().lower()
+
+
+async def assert_lot_sizes_match(db: AsyncSession, po: PackingOrder, batch_ids) -> None:
+    """Raise ValueError if a lot is a different size from the one this order is for.
+
+    An order raised against an SO line packs that line's size: a carton of another
+    size counts toward the order's target yet can never ship on the line, so the
+    order reads fulfilled while the customer is short. Compared on the folded size
+    NAME — the lot carries its producing BOM's size row, the line a generic Size,
+    and only the name is common to both (same identity SO fulfilment pegs on).
+    A lot with no size is unknown, not different, and passes.
+    """
+    want_name = await order_size_name(db, po)
+    want = _fold_size(want_name)
+    ids = [b for b in batch_ids if b]
+    if not want or not ids:
+        return
+    from app.models.bom import BOMSize
+    from app.models.size import Size
+    rows = (await db.execute(
+        select(Batch.batch_number, Batch.bom_size_snapshot, Size.name, BOMSize.label)
+        .outerjoin(BOMSize, BOMSize.id == Batch.bom_size_id)
+        .outerjoin(Size, Size.id == BOMSize.size_id)
+        .filter(Batch.id.in_(ids))
+    )).all()
+    wrong = []
+    for bn, snap, row_size, row_label in rows:
+        snap = snap or {}
+        have = snap.get("size_name") or snap.get("label") or row_size or row_label
+        if have and _fold_size(have) != want:
+            wrong.append(f"{bn} ({have})")
+    if wrong:
+        raise ValueError(
+            f"This order packs size {want_name} — "
+            f"lot(s) of another size can't be packed on it: {', '.join(wrong)}"
+        )
+
+
 async def claim_lots(db: AsyncSession, po: PackingOrder, batch_ids) -> list[str]:
     """Lock lots onto this order. Returns the lot numbers actually claimed.
 
@@ -95,6 +170,7 @@ async def claim_lots(db: AsyncSession, po: PackingOrder, batch_ids) -> list[str]
     if not ids:
         return []
     await assert_lots_unlocked(db, po.id, ids)
+    await assert_lot_sizes_match(db, po, ids)
     batches = (await db.execute(
         select(Batch).filter(Batch.id.in_(ids), Batch.item_id == po.item_id)
     )).scalars().all()
