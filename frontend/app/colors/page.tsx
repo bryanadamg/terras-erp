@@ -93,20 +93,29 @@ export default function ColorsPage() {
     const handleItemSearchChange = setItemSearch;
     const handleSourceFilterChange = setSourceFilter;
 
-    const handleCreate = async (payload: any) => {
+    // Both return the outcome so the modal stays open with the reason on a rejection
+    // (duplicate code, missing permission) instead of closing and losing the form.
+    const handleCreate = async (payload: any): Promise<{ ok: boolean; error?: string }> => {
         const res = await authFetch(`${API_BASE}/colors`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
         if (res.ok) {
             fetchColors();
             showToast(payload.source_lab_dip_line_id ? 'Color created from lab dip' : 'Color created', 'success');
             if (sourceLineId) router.replace('/colors');
+            return { ok: true };
         }
-        else { const e = await res.json().catch(() => ({})); showToast(e.detail || 'Failed to create color', 'danger'); }
+        const e = await res.json().catch(() => ({}));
+        const error = e.detail || 'Failed to create color';
+        showToast(error, 'danger');
+        return { ok: false, error };
     };
 
-    const handleEdit = async (id: string, payload: any) => {
+    const handleEdit = async (id: string, payload: any): Promise<{ ok: boolean; error?: string }> => {
         const res = await authFetch(`${API_BASE}/colors/${id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
-        if (res.ok) { fetchColors(); showToast('Color updated', 'success'); }
-        else { const e = await res.json().catch(() => ({})); showToast(e.detail || 'Failed to update color', 'danger'); }
+        if (res.ok) { fetchColors(); showToast('Color updated', 'success'); return { ok: true }; }
+        const e = await res.json().catch(() => ({}));
+        const error = e.detail || 'Failed to update color';
+        showToast(error, 'danger');
+        return { ok: false, error };
     };
 
     const handleDelete = async (id: string) => {

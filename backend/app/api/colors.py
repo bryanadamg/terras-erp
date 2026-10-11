@@ -388,6 +388,7 @@ async def create_color_variant(
         db, str(current_user.id), "CREATE", "AttributeValue", str(av.id),
         details=f"Added color variant '{av.value}'", changes=audit_service.added({"value": av.value, "hex": av.hex})
     )
+    await manager.broadcast({"type": "MASTER_DATA_UPDATE", "domain": "attributes"})
     return av
 
 
@@ -426,6 +427,7 @@ async def update_color_variant(
         details=f"Renamed color variant '{old_value}' -> '{val.value}'",
         changes={"value": [old_value, val.value], "hex": [old_hex, val.hex]}
     )
+    await manager.broadcast({"type": "MASTER_DATA_UPDATE", "domain": "attributes"})
     return val
 
 
@@ -453,4 +455,5 @@ async def delete_color_variant(
         db, str(current_user.id), "DELETE", "AttributeValue", value_id,
         details=f"Deleted color variant '{label}'", changes={}
     )
+    await manager.broadcast({"type": "MASTER_DATA_UPDATE", "domain": "attributes"})
     return {"status": "success", "message": "Color variant deleted"}
