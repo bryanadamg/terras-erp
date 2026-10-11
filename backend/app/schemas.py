@@ -2372,6 +2372,7 @@ class ColorCreate(BaseModel):
     status: str = "active"
     variant_attribute_value_id: Optional[UUID] = None
     source_lab_dip_line_id: Optional[UUID] = None
+    item_id: Optional[UUID] = None
 
 class ColorUpdate(BaseModel):
     code: Optional[str] = None
@@ -2390,6 +2391,7 @@ class ColorUpdate(BaseModel):
     notes: Optional[str] = None
     status: Optional[str] = None
     variant_attribute_value_id: Optional[UUID] = None
+    item_id: Optional[UUID] = None
 
 class ColorResponse(ORMResponse):
     id: UUID
@@ -2419,6 +2421,7 @@ class ColorResponse(ORMResponse):
     source_lab_dip_code: Optional[str] = None
     source_item_name: Optional[str] = None
     source_item_code: Optional[str] = None
+    item_id: Optional[UUID] = None
     recipe_count: int = 0
     created_at: datetime
 

@@ -7,6 +7,7 @@ import { useDebouncedCommit } from '../../context/usePaginatedList';
 import SearchableSelect from '@bryanadamg/terras-ui/components/Combobox';
 import ModalWrapper from '../shared/ModalWrapper';
 import Pager from '../shared/Pager';
+import { useItemSearch, itemToOption } from '../shared/useEntitySearch';
 import { StatusChip, FormSection, FormError, useFloatingMenu, MenuTriggerButton, FloatingMenu, XPActionButton, ColorSwatchChip, CodeChip, CODE_FONT, SwatchBox, TableSkeleton, useTableSkeletonMetrics, XP_BTN, SKEL_PAGE_ROWS } from '../shared/xpTheme';
 import { SearchField, FilterChipBar, ToolbarButton, viewShellStyle, PageTitleBar } from '../shared/shellTheme';
 import {
@@ -56,6 +57,7 @@ const emptyForm = () => ({
     substrate: '', customer_id: '', customer_color_code: '',
     l_star: '', a_star: '', b_star: '', lab_illuminant: '',
     spectro_notes: '', notes: '', status: 'active', variant_attribute_value_id: '',
+    item_id: '',
 });
 
 export default function ColorLibraryView({
@@ -81,6 +83,7 @@ export default function ColorLibraryView({
     const [sourceLineId, setSourceLineId] = useState<string | null>(null);
     const [formError, setFormError] = useState('');
     const [saving, setSaving] = useState(false);
+    const { results: itemResults, onSearch: onSearchItems, resolve: resolveItem } = useItemSearch({ enabled: isModalOpen });
     const [searchInput, setSearchInput] = useState(search);
     const [itemSearchInput, setItemSearchInput] = useState(itemSearch || '');
 
@@ -133,6 +136,18 @@ export default function ColorLibraryView({
          ...(colorVariantValues || []).map((v: any) => ({ value: v.id, label: v.value }))],
     [colorVariantValues]);
 
+    // Direct item link, for a shade lab-dipped outside this system. The selected item
+    // stays in the options even after the search window moves past it.
+    const itemOptions = useMemo(() => {
+        const opts = itemResults.map(itemToOption);
+        if (form.item_id && !opts.some(o => o.value === form.item_id)) {
+            const it = resolveItem(form.item_id);
+            opts.unshift(it ? itemToOption(it)
+                : { value: form.item_id, label: editing?.source_item_name || form.item_id, subLabel: editing?.source_item_code });
+        }
+        return [{ value: '', label: 'No item' }, ...opts];
+    }, [itemResults, form.item_id, resolveItem, editing]);
+
     const openCreate = () => { setEditing(null); setForm(emptyForm()); setSourceLineId(null); setFormError(''); setIsModalOpen(true); };
     const openEdit = (c: any) => {
         setEditing(c);
@@ -144,6 +159,7 @@ export default function ColorLibraryView({
             lab_illuminant: c.lab_illuminant || '',
             spectro_notes: c.spectro_notes || '', notes: c.notes || '', status: c.status || 'active',
             variant_attribute_value_id: c.variant_attribute_value_id || '',
+            item_id: c.item_id || '',
         });
         setFormError('');
         setIsModalOpen(true);
@@ -158,6 +174,7 @@ export default function ColorLibraryView({
             ...form,
             customer_id: form.customer_id || null,
             variant_attribute_value_id: form.variant_attribute_value_id || null,
+            item_id: form.item_id || null,
             l_star: num(form.l_star), a_star: num(form.a_star), b_star: num(form.b_star),
             lab_illuminant: form.lab_illuminant.trim() || null,
         };
@@ -371,6 +388,16 @@ export default function ColorLibraryView({
                                     value={form.variant_attribute_value_id}
                                     onChange={v => setForm({ ...form, variant_attribute_value_id: v })}
                                     placeholder="Not linked to a variant"
+                                />
+                            </div>
+                            <div>
+                                <label style={lvLabel()}>Item</label>
+                                <SearchableSelect
+                                    options={itemOptions}
+                                    value={form.item_id}
+                                    onChange={v => setForm({ ...form, item_id: v })}
+                                    onSearch={onSearchItems}
+                                    placeholder="Item this shade was dipped for"
                                 />
                             </div>
                             {editing && (
