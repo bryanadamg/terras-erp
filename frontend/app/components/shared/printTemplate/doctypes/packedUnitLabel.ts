@@ -19,9 +19,12 @@
  *   N W/G W  `Batch.weight_kg` / `Batch.gross_weight_kg`, snapshotted at pack time.
  *            Blank means unknown, never zero — the blank fields print a write-on line.
  *
- * The QR encodes the carton's `PU-…` number: that is what the picker scans onto a
- * pick list, and the scanner routes on the prefix — never change its payload. The
- * Code 128 barcodes carry the same values for the customer's goods-in.
+ * The carton's `PU-…` number is the only code on the label: the QR and one wide
+ * Code 128 both carry it, and that is what the picker scans onto a pick list (the
+ * scanner routes on the prefix — never change the payload). The per-field Code 128s
+ * (content, PO, lot, N W, G W) were dropped: nothing scans them, and squeezed into a
+ * third of the label they shrank the PU- barcode past what a scanner reads on
+ * smaller stock.
  */
 
 import JsBarcode from 'jsbarcode';
@@ -45,20 +48,15 @@ export const CARTON_FIELDS: FieldDef[] = [
 
     { key: 'carton.content', label: 'Content (count + base qty)', kind: 'text', group: 'Content' },
     { key: 'carton.ket_stock', label: 'Ket. stock', kind: 'text', group: 'Content' },
-    { key: 'carton.content_barcode', label: 'Content barcode (Code 128)', kind: 'image', group: 'Content' },
 
     { key: 'carton.po_ref', label: 'PO No (customer, else SO)', kind: 'text', group: 'Order' },
     { key: 'carton.so_code', label: 'Our SO No (under a customer PO)', kind: 'text', group: 'Order' },
-    { key: 'carton.po_barcode', label: 'PO No barcode (Code 128)', kind: 'image', group: 'Order' },
     { key: 'carton.lot', label: 'Source Lot No', kind: 'text', group: 'Order' },
-    { key: 'carton.lot_barcode', label: 'Lot No barcode (Code 128)', kind: 'image', group: 'Order' },
 
     { key: 'carton.nw', label: 'Net weight', kind: 'text', group: 'Weight' },
     { key: 'carton.nw_blank', label: 'Net weight write-on line (when unknown)', kind: 'text', group: 'Weight' },
-    { key: 'carton.nw_barcode', label: 'Net weight barcode (Code 128)', kind: 'image', group: 'Weight' },
     { key: 'carton.gw', label: 'Gross weight', kind: 'text', group: 'Weight' },
     { key: 'carton.gw_blank', label: 'Gross weight write-on line (when unknown)', kind: 'text', group: 'Weight' },
-    { key: 'carton.gw_barcode', label: 'Gross weight barcode (Code 128)', kind: 'image', group: 'Weight' },
     { key: 'carton.packaging_type', label: 'Box type "(name)"', kind: 'text', group: 'Weight' },
 
     { key: 'carton.company_name', label: 'Company name', kind: 'text', group: 'Brand' },
@@ -81,18 +79,13 @@ export function resolveCartonLabelField(key: string, ctx: PrintContext): Resolve
         case 'carton.number_barcode': return img(bc.unit);
         case 'carton.content': return txt(d.content);
         case 'carton.ket_stock': return txt(d.ketStock);
-        case 'carton.content_barcode': return img(bc.content);
         case 'carton.po_ref': return txt(d.poRef);
         case 'carton.so_code': return txt(d.soUnderPo);
-        case 'carton.po_barcode': return img(bc.po);
         case 'carton.lot': return txt(d.lot);
-        case 'carton.lot_barcode': return img(bc.lot);
         case 'carton.nw': return txt(d.nw);
         case 'carton.nw_blank': return d.nw ? txt('') : { text: '__________ KG', empty: false };
-        case 'carton.nw_barcode': return img(bc.nw);
         case 'carton.gw': return txt(d.gw);
         case 'carton.gw_blank': return d.gw ? txt('') : { text: '__________ KG', empty: false };
-        case 'carton.gw_barcode': return img(bc.gw);
         case 'carton.packaging_type': return d.packagingType ? { text: `(${d.packagingType})`, empty: false } : txt('');
         case 'carton.company_name': return txt(ctx.companyName);
         case 'carton.logo_fallback': return ctx.companyLogoUrl ? txt('') : { text: 'BIE', empty: false };
@@ -103,24 +96,23 @@ export function resolveCartonLabelField(key: string, ctx: PrintContext): Resolve
 export const CARTON_ROW_SOURCES: RowSourceDef[] = [];
 
 /**
- * Code 128 as a data URL, stretched onto a fixed 96:26 canvas so an `image` field
- * (which keeps aspect ratio) fills the barcode cell the way the old label's
- * `objectFit: fill` did. JsBarcode is synchronous — cheap enough per carton, but
- * the modal still memoizes the set so a repaint never redraws them.
+ * Code 128 as an SVG data URL at its natural proportions, with the quiet zone the
+ * symbology needs (10+ modules each side). SVG so it prints crisp at any paper
+ * size; never stretched to a fixed canvas — a fixed 384 px canvas made the module
+ * widths uneven and, with no margin, the scanner could not find the start bar.
  */
 function makeBarcodeDataUrl(text: string): string {
     if (!text || typeof document === 'undefined') return '';
     try {
-        const src = document.createElement('canvas');
-        JsBarcode(src, text, { format: 'CODE128', displayValue: false, margin: 0, height: 70, width: 2 });
-        const out = document.createElement('canvas');
-        out.width = 384;
-        out.height = 104;
-        const g = out.getContext('2d');
-        if (!g) return src.toDataURL('image/png');
-        g.imageSmoothingEnabled = false;
-        g.drawImage(src, 0, 0, out.width, out.height);
-        return out.toDataURL('image/png');
+        const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+        // Drawn wider than any label (3 px modules) so the image is always scaled
+        // DOWN to its cell; the viewBox is what lets it scale instead of clipping.
+        JsBarcode(svg, text, { format: 'CODE128', displayValue: false, margin: 30, height: 120, width: 3 });
+        const w = svg.getAttribute('width')?.replace('px', '');
+        const h = svg.getAttribute('height')?.replace('px', '');
+        if (w && h && !svg.getAttribute('viewBox')) svg.setAttribute('viewBox', `0 0 ${w} ${h}`);
+        const xml = new XMLSerializer().serializeToString(svg);
+        return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(xml)}`;
     } catch {
         return '';
     }
@@ -142,17 +134,9 @@ const piecesOf = (po: any, u: any): number | null => {
 
 export type CartonBarcodes = Record<string, string>;
 
-/** One barcode per printed field, the same values the old label barcoded. */
-export function cartonBarcodes(po: any, u: any): CartonBarcodes {
-    const pcs = piecesOf(po, u);
-    return {
-        unit: makeBarcodeDataUrl(u.batch_number || String(u.id)),
-        content: makeBarcodeDataUrl(pcs !== null ? `${pcs.toFixed(1)}` : String(Number(u.qty || 0).toFixed(2))),
-        po: makeBarcodeDataUrl(po.customer_po_ref || po.sales_order_code || ''),
-        lot: makeBarcodeDataUrl(lotByCompletion(po)[String(u.packing_completion_id || '')] || ''),
-        nw: makeBarcodeDataUrl(u.weight_kg != null ? String(u.weight_kg) : ''),
-        gw: makeBarcodeDataUrl(u.gross_weight_kg != null ? String(u.gross_weight_kg) : ''),
-    };
+/** The carton number as a Code 128 — the only barcode the label carries. */
+export function cartonBarcodes(_po: any, u: any): CartonBarcodes {
+    return { unit: makeBarcodeDataUrl(u.batch_number || String(u.id)) };
 }
 
 /** The QR payload — the carton's own number, which the scanner routes on. */

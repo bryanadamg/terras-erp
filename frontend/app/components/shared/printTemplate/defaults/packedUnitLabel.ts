@@ -1,8 +1,9 @@
 /**
- * Built-in carton label layout — a transcription of the hand-built A6 sticker in
- * packing/PackedUnitLabelPrintModal.tsx: headline row, then CONTENT / PO. NO /
- * LOT. NO / N W / G W, each with its Code 128 barcode, then our own footer + the
- * PU- QR. Applies until the client saves their own.
+ * Built-in carton label layout: headline row, then CONTENT / PO. NO / LOT. NO /
+ * N W / G W, then the carton's PU- number as a full-width Code 128, then our own
+ * footer + the PU- QR. Only the PU- number is barcoded — it is the one code the
+ * floor scans, and full width keeps it readable on smaller label stock. Applies
+ * until the client saves their own.
  *
  * The ruled table is a grid band whose cells each draw a half-width rule
  * (`cellBox`), inside a half-width band box: touching cells add up to one full
@@ -22,13 +23,11 @@ const cell = (row: number, col: number, span: number, spec: FieldSpec | FieldSpe
 const HALF_RULE = '0.5px solid #000';
 const LBL = { fontSize: 11, bold: true, letterSpacing: 0.5 };
 const VAL = { fontSize: 13, bold: true };
-const BAR = { imageHeight: 26, align: 'center' as const };
 const BLANK = { fontSize: 13, color: '#666', hideWhenEmpty: true };
 
-const row = (r: number, label: string, value: FieldSpec | FieldSpec[], barcode: string): GridItem[] => [
+const row = (r: number, label: string, value: FieldSpec | FieldSpec[]): GridItem[] => [
     cell(r, 1, 3, text(label, LBL)),
-    cell(r, 4, 6, value),
-    cell(r, 10, 3, f(barcode, BAR)),
+    cell(r, 4, 9, value),
 ];
 
 const BANDS: Band[] = [
@@ -36,27 +35,37 @@ const BANDS: Band[] = [
         id: 'carton_table', type: 'grid', gap: 0, alignItems: 'stretch', cellBox: HALF_RULE, box: HALF_RULE,
         marginBottom: 6,
         items: [
-            // Headline: house mark + style/colour, the carton's own PU- number barcoded beside it.
+            // Headline: house mark + style/colour.
             cell(1, 1, 3, [
                 f('company.logo', { imageHeight: 30, align: 'center', hideWhenEmpty: true }),
                 f('carton.logo_fallback', { fontSize: 16, bold: true, letterSpacing: 2, align: 'center', hideWhenEmpty: true }),
             ]),
-            cell(1, 4, 6, [
+            cell(1, 4, 9, [
                 f('carton.headline', { fontSize: 19, bold: true, letterSpacing: 0.5 }),
                 f('carton.identity', { fontSize: 10, bold: true, letterSpacing: 0.5, hideWhenEmpty: true }),
-                f('carton.number_tilde', { fontSize: 10, letterSpacing: 0.5 }),
             ], { stackGap: 2 }),
-            cell(1, 10, 3, f('carton.number_barcode', BAR)),
 
-            ...row(2, 'CONTENT', [f('carton.content', VAL), f('carton.ket_stock', { fontSize: 10, hideWhenEmpty: true })], 'carton.content_barcode'),
-            ...row(3, 'PO. NO', [f('carton.po_ref', VAL), f('carton.so_code', { fontSize: 9, color: '#333', hideWhenEmpty: true })], 'carton.po_barcode'),
-            ...row(4, 'LOT. NO', f('carton.lot', VAL), 'carton.lot_barcode'),
-            ...row(5, 'N W', [f('carton.nw', { ...VAL, hideWhenEmpty: true }), f('carton.nw_blank', BLANK)], 'carton.nw_barcode'),
+            ...row(2, 'CONTENT', [f('carton.content', VAL), f('carton.ket_stock', { fontSize: 10, hideWhenEmpty: true })]),
+            ...row(3, 'PO. NO', [f('carton.po_ref', VAL), f('carton.so_code', { fontSize: 9, color: '#333', hideWhenEmpty: true })]),
+            ...row(4, 'LOT. NO', f('carton.lot', VAL)),
+            ...row(5, 'N W', [f('carton.nw', { ...VAL, hideWhenEmpty: true }), f('carton.nw_blank', BLANK)]),
             ...row(6, 'G W', [
                 f('carton.gw', { ...VAL, hideWhenEmpty: true }),
                 f('carton.gw_blank', BLANK),
                 f('carton.packaging_type', { fontSize: 8, color: '#555', hideWhenEmpty: true }),
-            ], 'carton.gw_barcode'),
+            ]),
+        ],
+    },
+    {
+        // The carton number, barcoded across the full label width: the wider the
+        // bars, the smaller the stock a scanner still reads it on. The number is
+        // printed under it for a hand-keyed fallback.
+        id: 'carton_barcode', type: 'grid', gap: 0, marginBottom: 6,
+        items: [
+            cell(1, 1, 12, [
+                f('carton.number_barcode', { imageHeight: 90, align: 'center' }),
+                f('carton.number', { fontSize: 12, bold: true, letterSpacing: 1, align: 'center' }),
+            ], { stackGap: 2 }),
         ],
     },
     {
