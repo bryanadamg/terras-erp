@@ -161,6 +161,20 @@ export default function WOCompletionModal({ mo, onClose, onSaved, workOrder }: W
         return out;
     };
 
+    // What the lots this log draws from hold for an item — the most it can consume.
+    // The picked lot (single) or the ticked lots (multi); null when none is picked
+    // or the item isn't lot-fed, so there is nothing to cap against.
+    const sourceAvailable = (itemId: string): number | null => {
+        const lots = batchesByItem[itemId];
+        if (!lots?.length) return null;
+        const ids = isMultiLot(itemId)
+            ? (selectedLots[itemId] || [])
+            : (consumedBatches[itemId] ? [consumedBatches[itemId]] : []);
+        if (!ids.length) return null;
+        const set = new Set(ids.map(String));
+        return lots.filter((b: any) => set.has(String(b.id))).reduce((s: number, b: any) => s + Number(b.remaining || 0), 0);
+    };
+
     // Lot input: each material line with batch stock at the input location gets a lot picker
     const materialItemIds = workOrder ? Array.from(new Set(materialRows.map(r => r.item_id))) : [];
     useEffect(() => {
@@ -250,16 +264,23 @@ export default function WOCompletionModal({ mo, onClose, onSaved, workOrder }: W
         setSubPickerIdx(null);
     }, [workOrder?.id]);
 
-    // Recalculate planned qty column and update uncustomized actuals when output qty changes
+    // Recalculate uncustomized actuals when output qty or the source lots change.
+    // Default = output x BOM%, capped at what the picked lots hold: output weighed
+    // heavier than the staged substrate (dye/finish adds weight) is normal, and
+    // consuming past the lot's book qty is a stock error the operator could only
+    // clear by knowing to edit this row down.
     useEffect(() => {
         if (!workOrder) return;
         const qty = parseFloat(qtyCompleted);
         if (!qty || qty <= 0) return;
         setMaterialRows(prev => prev.map(row => {
+            if (row.is_custom) return row;
             const planned = (qty * row.planned_pct) / 100;
-            return row.is_custom ? row : { ...row, actual_qty: planned.toFixed(4) };
+            const avail = sourceAvailable(row.item_id);
+            return { ...row, actual_qty: (avail !== null && avail < planned ? avail : planned).toFixed(4) };
         }));
-    }, [qtyCompleted]);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [qtyCompleted, batchesByItem, selectedLots, consumedBatches]);
 
     const totalCompleted = mo.qty_completed_total ?? 0;
     const target = mo.qty ?? 0;
@@ -814,6 +835,14 @@ export default function WOCompletionModal({ mo, onClose, onSaved, workOrder }: W
                                                                     }}
                                                                     placeholder="0"
                                                                 />
+                                                                {(() => {
+                                                                    const avail = sourceAvailable(row.item_id);
+                                                                    return !row.is_custom && avail !== null && avail + 1e-6 < planned ? (
+                                                                        <div style={{ fontSize: 9, color: '#7a4a00', textAlign: 'right' }} title="Output is heavier than the staged lots hold — consumption defaults to what is staged">
+                                                                            capped at staged {avail.toFixed(3)}
+                                                                        </div>
+                                                                    ) : null;
+                                                                })()}
                                                             </td>
                                                             <td style={{ padding: '2px 6px', textAlign: 'right', color: variance > 0.0001 ? '#900' : variance < -0.0001 ? '#007000' : '#888', fontSize: 10 }}>
                                                                 {qty > 0 && row.actual_qty ? (variance > 0 ? '+' : '') + variance.toFixed(3) : '—'}
