@@ -4,9 +4,13 @@ Deliberately NOT shared with `weaving_service`. A loom runs continuously for day
 and is measured in kg against a calendar of working days; a dye batch fits inside
 one shift and is measured against the clock the floor stamps by hand:
 
-    time-based output = yards_per_min * lines * run_minutes    (yards)
-                      -> restated in the item's stock UOM through its g/y factor
-    progress_pct      = time-based output / WO qty * 100
+    target yards      = WO qty restated in yards through the item's g/y factor
+    expected_minutes  = target yards / (yards_per_min * lines)
+    progress_pct      = run_minutes / expected_minutes * 100
+
+i.e. how long the vessel ran against how long that load needs at its speed. This is
+the same ratio as time-based output (yards_per_min * lines * run_minutes, back
+through g/y) over WO qty -- framed in minutes because that is what the floor stamps.
 
 Both rate factors live on the DyeingRun and are chosen per load: `yards_per_min`
 is how fast ONE rope is run (picked off the `Dyeing Speed` system attribute, not
@@ -109,7 +113,11 @@ def compute_run_metrics(run, target_qty: Optional[float], item, now: datetime) -
     time_qty = (time_yards / yards_per_unit) if (time_yards is not None and yards_per_unit) else None
 
     target = float(target_qty) if target_qty else None
-    progress = (time_qty / target * 100.0) if (time_qty is not None and target) else None
+    # Each figure is rounded to what the row shows before the next step uses it, so
+    # the arithmetic the expand row prints reproduces its own result.
+    target_yards = _round(to_yards(target, item), 1) if target else None
+    expected = _round(target_yards / yd_min, 2) if (target_yards and yd_min) else None
+    progress = (minutes / expected * 100.0) if (minutes is not None and expected) else None
 
     return {
         "clock": clock_state(run.started_at, run.completed_at),
@@ -120,6 +128,8 @@ def compute_run_metrics(run, target_qty: Optional[float], item, now: datetime) -
         "time_yards": _round(time_yards, 1),
         "time_qty": _round(time_qty, 3),
         "target_qty": target,
+        "target_yards": target_yards,
+        "expected_minutes": expected,
         "progress_pct": _round(progress, 1),
         # Why there is no number, so the row can name the missing input rather than
         # showing an unexplained dash.

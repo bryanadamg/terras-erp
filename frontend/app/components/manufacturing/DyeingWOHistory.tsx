@@ -22,40 +22,42 @@ function minutesBetween(a: any, b: any): number | null {
 }
 
 /**
- * Every bath one dyeing WO has had (a re-dye is a second run), one sub-row per
- * phase: matching -> dyeing -> complete. Fetched per WO rather than taken off the
- * monitor row, because the monitor only lists recent batches and a WO's older
- * baths must still show here. Rendered in the monitor's expand row, the same place
- * the WO list shows a WO's completion log.
- */
-/**
- * The monitor row's Output bar written out as arithmetic: speed x ropes x run window
- * -> yards -> the item's stock UOM through its weight factor -> share of the WO qty.
+ * The monitor row's bar written out as arithmetic: the WO qty in yards, the time the
+ * vessel needs for it at its speed, and the time it actually ran against that.
  * Every operand is a figure the backend already returned, so this only lays them out.
  */
 function RunCalc({ r }: { r: any }) {
     const { t } = useLanguage();
-    if (r.time_yards == null) return null;
+    if (r.expected_minutes == null) return null;
     const uom = r.item_uom || '';
+    const yd = t('yd_short');
     const n = (v: any, d = 1) => fmtQty(v, d);
-    const lines: [ReactNode, ReactNode][] = [[
-        <>{n(r.run_minutes)} min × {n(r.yards_per_min, 2)} {t('yd_per_min')} × {r.lines} {t('lines').toLowerCase()}</>,
-        <>{n(r.time_yards)} {t('yd_short')}</>,
-    ]];
-    if (r.weight_per_unit != null && r.time_qty != null) {
-        // A g/m factor weighs metres, so the yards are restated before it applies.
-        const perMetre = r.weight_unit === 'g/m';
+    const muted = (s: string) => <span style={{ fontWeight: 'normal', color: '#666' }}>{s}</span>;
+    const lines: [ReactNode, ReactNode][] = [];
+    if (r.weight_per_unit != null) {
+        // A g/m factor gives metres, so the step ends restated in yards.
         lines.push([
-            <>{n(perMetre ? r.time_yards * 0.9144 : r.time_yards)} {perMetre ? 'm' : t('yd_short')} × {n(r.weight_per_unit, 2)} {r.weight_unit} ÷ 1000</>,
-            <>{n(r.time_qty, 2)} {uom}</>,
+            <>{n(r.target_qty, 2)} {uom} × 1000 ÷ {n(r.weight_per_unit, 2)} {r.weight_unit}{r.weight_unit === 'g/m' ? ` → ${yd}` : ''}</>,
+            <>{n(r.target_yards)} {yd}</>,
         ]);
-    } else if (r.time_qty != null && r.time_qty !== r.time_yards) {
-        lines.push([<>{n(r.time_yards)} {t('yd_short')} → {uom}</>, <>{n(r.time_qty, 2)} {uom}</>]);
+    } else if (r.target_yards !== r.target_qty) {
+        lines.push([<>{n(r.target_qty, 2)} {uom} → {yd}</>, <>{n(r.target_yards)} {yd}</>]);
     }
+    lines.push([
+        <>{n(r.target_yards)} {yd} ÷ ({n(r.yards_per_min, 2)} {t('yd_per_min')} × {r.lines} {t('lines').toLowerCase()})</>,
+        <>{n(r.expected_minutes, 2)} min {muted(t('calc_expected'))}</>,
+    ]);
     if (r.progress_pct != null) {
         lines.push([
-            <>{n(r.time_qty, 2)} ÷ {n(r.target_qty, 2)} {uom}</>,
-            <>{n(r.progress_pct)}% <span style={{ fontWeight: 'normal', color: '#666' }}>{t('calc_of_wo')}</span></>,
+            <>{n(r.run_minutes)} min {t('actual').toLowerCase()} ÷ {n(r.expected_minutes, 2)} min</>,
+            <>{n(r.progress_pct)}%</>,
+        ]);
+    }
+    if (r.time_yards != null) {
+        // What that run time made, for the kg the floor still talks in.
+        lines.push([
+            <>{n(r.run_minutes)} min × {n(r.rate_yd_per_min, 2)} {t('yd_per_min')}</>,
+            <>{n(r.time_yards)} {yd}{r.time_qty != null && r.time_qty !== r.time_yards && <> ≈ {n(r.time_qty, 2)} {uom}</>} {muted(t('calc_output'))}</>,
         ]);
     }
     const subTd = lvSubTd();
@@ -81,6 +83,14 @@ function RunCalc({ r }: { r: any }) {
         </table>
     );
 }
+
+/**
+ * Every bath one dyeing WO has had (a re-dye is a second run), one sub-row per
+ * phase: matching -> dyeing -> complete. Fetched per WO rather than taken off the
+ * monitor row, because the monitor only lists recent batches and a WO's older
+ * baths must still show here. Rendered in the monitor's expand row, the same place
+ * the WO list shows a WO's completion log.
+ */
 
 export default function DyeingWOHistory({ workOrderId, authFetch, apiBase, calc }: {
     workOrderId: string;

@@ -115,6 +115,8 @@ def _no_run_row(wo: WorkOrder) -> dict:
         "time_yards": None,
         "time_qty": None,
         "target_qty": wo.qty,
+        "target_yards": None,
+        "expected_minutes": None,
         "progress_pct": None,
         "missing_rate_inputs": [],
         "missing_gy_factor": False,

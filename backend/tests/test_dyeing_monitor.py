@@ -114,6 +114,10 @@ def test_time_based_output_is_speed_times_window_times_gy():
     assert m["time_yards"] == pytest.approx(64800.0)
     assert m["time_qty"] == pytest.approx(12960.0)
     assert m["progress_pct"] == pytest.approx(50.0)
+    # Basis: 25 920 kg at 200 g/y is 129 600 yd, which 1 080 yd/min needs 120 min
+    # for; the vessel ran 60.
+    assert m["target_yards"] == pytest.approx(129600.0)
+    assert m["expected_minutes"] == pytest.approx(120.0)
     # The factor is echoed so the row can show its arithmetic.
     assert (m["weight_per_unit"], m["weight_unit"]) == (200.0, "g/y")
 
@@ -133,11 +137,29 @@ def test_shown_minutes_reproduce_the_shown_yards():
     assert m["time_yards"] == pytest.approx(m["run_minutes"] * m["rate_yd_per_min"])
 
 
+def test_shown_expected_time_reproduces_the_shown_progress():
+    """28 kg at 31.35 g/y = 893.1 yd; at 54 yd/min that is 16.54 min. A 17.6 min run
+    is 17.6 / 16.54 -- the row prints each step, so each must divide out."""
+    run = _run(yards_per_min=9, lines=6)
+    run.started_at = NOW - timedelta(minutes=17.576)
+    m = svc.compute_run_metrics(run, 28.0, _item(weight_per_unit=31.35), NOW)
+    assert m["target_yards"] == pytest.approx(893.1)
+    assert m["expected_minutes"] == pytest.approx(16.54)
+    assert m["progress_pct"] == pytest.approx(round(17.6 / 16.54 * 100, 1))
+
+
+def test_expected_time_is_known_before_the_clock_starts():
+    m = svc.compute_run_metrics(_run(started_min_ago=None), 25920.0, _item(), NOW)
+    assert m["expected_minutes"] == pytest.approx(120.0)
+    assert m["progress_pct"] is None
+
+
 def test_batch_without_a_picked_speed_reports_no_output_and_says_why():
     m = svc.compute_run_metrics(_run(yards_per_min=None), 25920.0, _item(), NOW)
     assert m["time_qty"] is None
     assert m["progress_pct"] is None
     assert "yards_per_min" in m["missing_rate_inputs"]
+    assert m["expected_minutes"] is None
 
 
 def test_missing_gy_factor_reports_no_output_and_says_why():
