@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useRef } from 'react';
+import { Fragment, useState, useEffect, useMemo, useRef } from 'react';
 import dynamic from 'next/dynamic';
 import CodeConfigModal, { CodeConfig, buildCodeWithCounter } from '../shared/CodeConfigModal';
 import { useToast } from '../shared/Toast';
@@ -42,7 +42,7 @@ const SO_COL_WIDTHS = [
     110, // Stock Notes
     88,  // Req / Conf
     152, // Production Output
-    92,  // Fulfilment
+    150, // Fulfilment
     80,  // Status
     75,  // Actions
 ];
@@ -1063,8 +1063,8 @@ export default function SalesOrderView({ items, attributes, boms, salesOrders, p
   );
 
   // --- Per-line fulfilment (derived server-side by so_fulfilment_service) ---
-  // made >= packed >= in-stock/shipped, so the three are drawn as nested stages on
-  // one track rather than stacked segments — they are not additive.
+  // made >= packed >= in-stock/shipped — not additive, so each stage gets its own
+  // bar against the ordered qty (see fulfilmentCell).
   //
   // MEASURED IN THE ALT SELLING UNIT whenever the line carries one. The customer
   // ordered 2880 Pcs and is owed 2880 Pcs; the kilos are what stock happens to
@@ -1140,26 +1140,25 @@ export default function SalesOrderView({ items, attributes, boms, salesOrders, p
               ? `
 In stock ${fmtQty(f.baseAvailable)}${bu} · Shipped ${fmtQty(f.baseShipped)}${bu} — of ${fmtQty(f.baseOrdered)}${bu}`
               : '');
-      // shipped/packed/made nest (shipped<=packed<=made), so drawn as one stacked
-      // bar: green=shipped, blue=packed-not-yet-shipped, gray=made-not-yet-packed.
-      const shippedPct = f.pct(f.shipped);
-      const packedPct = f.pct(f.packed);
-      const madePct = f.pct(f.made);
+      // One bar per stage, each against the ordered qty: made, packed, shipped.
+      // They nest (shipped <= packed <= made) but are drawn apart, so every stage
+      // is readable without decoding a stacked bar's colours. Green once a stage
+      // meets the order, blue while partial.
+      const met = (v: number) => !!f.ordered && v >= f.ordered - 0.0001;
+      const stages: [string, number][] = [
+          [t('stage_made'), f.made],
+          [t('stage_packed'), f.packed],
+          [t('stage_shipped'), f.shipped],
+      ];
       return (
-          <div title={title} style={{ display:'flex', flexDirection:'column', gap:2, minWidth:78 }}>
-              <ProgressBar
-                  pct={shippedPct} tone="green"
-                  secondaryPct={Math.max(0, packedPct - shippedPct)} secondaryTone="blue"
-                  tertiaryPct={Math.max(0, madePct - packedPct)} tertiaryTone="gray"
-                  height={6}
-              />
-              <div style={{ fontFamily:xpFont, fontSize:'9px', color: f.isReady ? ('#1a5e1a') : '#777' }}>
-                  {f.shipped > 0
-                      ? `${fmtQty(f.shipped)}${u} shipped`
-                      : f.packed > 0
-                          ? `${fmtQty(f.available)}${u} packed`
-                          : f.made > 0 ? `${fmtQty(f.made)}${u} made` : 'not started'}
-              </div>
+          <div title={title} style={{ display:'grid', gridTemplateColumns:'auto 1fr auto', columnGap:4, rowGap:2, alignItems:'center', fontFamily:xpFont, fontSize:'9px' }}>
+              {stages.map(([label, v]) => (
+                  <Fragment key={label}>
+                      <span style={{ color:'#777' }}>{label}</span>
+                      <ProgressBar pct={f.pct(v)} tone={met(v) ? 'green' : 'blue'} height={5} />
+                      <span style={{ textAlign:'right', fontVariantNumeric:'tabular-nums', color: met(v) ? '#1a5e1a' : v > 0 ? '#333' : '#aaa' }}>{fmtQty(v)}</span>
+                  </Fragment>
+              ))}
           </div>
       );
   };
