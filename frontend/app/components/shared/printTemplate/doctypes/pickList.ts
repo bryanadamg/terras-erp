@@ -72,6 +72,13 @@ function lineShade(l: any): string {
 
 const n = (v: any) => { const x = parseFloat(v); return isNaN(x) ? 0 : x; };
 
+/** A carton's qty in the unit the customer ordered in (its packed count — Gross,
+ *  Pcs), falling back to stock UoM for a bulk line or a box packed without one. */
+const lineQty = (l: any): { qty: number; uom: string } =>
+    l.alt_qty != null && l.alt_uom
+        ? { qty: n(l.alt_qty), uom: l.alt_uom }
+        : { qty: n(l.qty_picked), uom: l.item_uom || '' };
+
 const PLIST_SUMMARY: RowSourceDef = {
     id: 'plist_summary',
     label: 'Shipping summary (per item)',
@@ -134,7 +141,7 @@ const PLIST_CARTONS: RowSourceDef = {
             warna: lineShade(l) || null,
             combo: lotComboLabel(l.carton_identity || {}),
             packaging: l.packaging_type_name || null,
-            qty: `${n(l.qty_picked).toLocaleString()} ${l.item_uom || ''}`.trim(),
+            qty: (({ qty, uom }) => `${qty.toLocaleString()} ${uom}`.trim())(lineQty(l)),
             gross: l.gross_weight_kg != null ? `${n(l.gross_weight_kg).toFixed(2)} kg` : null,
             check: null,
         })),
@@ -162,17 +169,26 @@ export function buildPickListContext({
     const cartons = lines.filter((l: any) => l.batch_id);
     // What actually ships, per item and size — an order running several sizes of
     // one article ships them as separate quantities, so they never sum together.
-    const byItem: Record<string, { key: string; code: string; name: string; size: string; warna: string; combo: string; qty: number; cartons: number; uom: string }> = {};
+    // Summed in the alt unit while every line agrees on it; one line without a
+    // count (or in another unit) drops the row back to stock UoM so two unlike
+    // units never add into one figure.
+    const byItem: Record<string, { key: string; code: string; name: string; size: string; warna: string; combo: string; qty: number; cartons: number; uom: string; baseQty: number; baseUom: string; altOk: boolean }> = {};
     for (const l of lines) {
         const size = lotSizeText(l) || '';
         const warna = lineShade(l);
         const combo = lotComboLabel(l.carton_identity || {}) || '';
         const key = `${l.item_id}|${size}|${warna}|${combo}`;
         const row = byItem[key] || (byItem[key] = {
-            key, code: l.item_code || String(l.item_id), name: l.item_name || '', size, warna, combo, qty: 0, cartons: 0, uom: l.item_uom || '',
+            key, code: l.item_code || String(l.item_id), name: l.item_name || '', size, warna, combo, qty: 0, cartons: 0,
+            uom: l.alt_uom || '', baseQty: 0, baseUom: l.item_uom || '', altOk: true,
         });
-        row.qty += n(l.qty_picked);
+        row.baseQty += n(l.qty_picked);
+        row.altOk = row.altOk && l.alt_qty != null && !!l.alt_uom && l.alt_uom === row.uom;
+        row.qty += n(l.alt_qty);
         if (l.batch_id) row.cartons += 1;
+    }
+    for (const r of Object.values(byItem)) {
+        if (!r.altOk) { r.qty = r.baseQty; r.uom = r.baseUom; }
     }
 
     return {
