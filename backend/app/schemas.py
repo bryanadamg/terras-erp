@@ -3877,6 +3877,10 @@ class PickListLineResponse(BaseModel):
     packaging_type_name: str | None = None
     net_weight_kg: float | None = None
     gross_weight_kg: float | None = None
+    # The carton's packed count (`Batch.alt_qty`) and the unit it was counted in
+    # (its packing order's `uom2`). Null on a bulk line or a box packed without one.
+    alt_qty: float | None = None
+    alt_uom: str | None = None
     # Resolved at read time, null on a bulk (cartonless) line. See the class docs
     # for why this is not flattened onto the fields above.
     carton_identity: PickListCartonIdentity | None = None

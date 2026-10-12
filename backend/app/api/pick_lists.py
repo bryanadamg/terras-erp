@@ -161,6 +161,14 @@ async def _decorate_all(db: AsyncSession, pls: list) -> list:
                 bom_size_snapshot=b.bom_size_snapshot if b is not None else None,
                 size_label=stock_service._bom_size_label(b.bom_size_snapshot) if b is not None else None,
             )
+        # The packer's own count per box, in its packing order's unit, so the
+        # modal can read in the SO's alt unit (Gross, Pcs) rather than kilos.
+        alt_uoms = await _packing_order_alt_uoms(db, [l.batch.packing_order_id for l in lines if l.batch])
+        for l in lines:
+            b = l.batch
+            if b is not None and b.alt_qty is not None:
+                l.alt_qty = float(b.alt_qty)
+                l.alt_uom = alt_uoms.get(str(b.packing_order_id)) or None
     for pl in pls:
         _decorate(pl)
     return pls
@@ -235,7 +243,7 @@ async def _remaining_by_so_line(db: AsyncSession, so: SalesOrder, exclude_pl_id=
     return remaining
 
 
-async def _remaining_alt_by_so_line(db: AsyncSession, so: SalesOrder) -> dict:
+async def _remaining_alt_by_so_line(db: AsyncSession, so: SalesOrder, exclude_pl_id=None) -> dict:
     """The same "ordered - already picked" subtraction as `_remaining_by_so_line`,
     but counted in the line's own alt selling unit (`SalesOrderLine.uom2`).
 
@@ -249,13 +257,16 @@ async def _remaining_alt_by_so_line(db: AsyncSession, so: SalesOrder) -> dict:
     of a carton that holds 12. A carton packed with no alt count contributes
     nothing, which can only understate what is left, never over-pick it.
     """
-    rows = (await db.execute(
+    query = (
         select(PickListLine.sales_order_line_id, func.coalesce(func.sum(Batch.alt_qty), 0))
         .join(PickList, PickListLine.pick_list_id == PickList.id)
         .join(Batch, PickListLine.batch_id == Batch.id)
         .filter(PickList.sales_order_id == so.id, PickList.status != "CANCELLED")
         .group_by(PickListLine.sales_order_line_id)
-    )).all()
+    )
+    if exclude_pl_id:
+        query = query.filter(PickList.id != exclude_pl_id)
+    rows = (await db.execute(query)).all()
     picked_map = {str(sol_id): float(qty) for sol_id, qty in rows}
     out = {}
     for line in so.lines:
@@ -798,12 +809,16 @@ async def get_pick_list(
 @router.get("/{pl_id}/remaining")
 async def get_remaining_for_pick_list(
     pl_id: uuid.UUID,
+    alt: bool = False,
     db: AsyncSession = Depends(get_async_db),
     current_user: User = Depends(get_current_user),
 ):
     """Per-SO-line qty still available to allocate to this DRAFT, excluding its own
     lines. Lets the editor compute remaining/over-pick without loading every pick
-    list in the system to sum qty_picked client-side."""
+    list in the system to sum qty_picked client-side.
+
+    `alt=true` answers in each line's alt selling unit instead (`{line_id: qty}`,
+    absent for a line with no alt unit)."""
     pl_result = await db.execute(select(PickList).filter(PickList.id == pl_id))
     pl = pl_result.scalars().first()
     if not pl:
@@ -814,6 +829,9 @@ async def get_remaining_for_pick_list(
     so = so_result.scalars().first()
     if not so:
         raise HTTPException(status_code=404, detail="Sales order not found")
+    if alt:
+        rem_alt = await _remaining_alt_by_so_line(db, so, exclude_pl_id=pl_id)
+        return {k: q for k, (q, _u) in rem_alt.items()}
     return await _remaining_by_so_line(db, so, exclude_pl_id=pl_id)
 
 
