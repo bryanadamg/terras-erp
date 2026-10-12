@@ -334,7 +334,7 @@ export default function DyeingMonitorView() {
                                             <tr>
                                                 <td colSpan={COLS} style={{ padding: 0 }}>
                                                     <ExpandedRowPanel>
-                                                        <DyeingWOHistory workOrderId={r.work_order_id} authFetch={authFetch} apiBase={API_BASE} />
+                                                        <DyeingWOHistory workOrderId={r.work_order_id} authFetch={authFetch} apiBase={API_BASE} calc={r} />
                                                     </ExpandedRowPanel>
                                                 </td>
                                             </tr>

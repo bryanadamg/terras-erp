@@ -1,11 +1,11 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, type ReactNode } from 'react';
 import { useLanguage } from '../../context/LanguageContext';
 import { useTimezone } from '../../context/TimezoneContext';
 import { StatusChip } from '../shared/xpTheme';
 import { lvSubTable, lvSubTh, lvSubTd, lvSubRow } from '../shared/listViewTheme';
-import { fmtMinutes } from '../shared/format';
+import { fmtMinutes, fmtQty } from '../shared/format';
 
 /** A phase stamp as the floor writes it: "28 Sept 2026, 12:00". Shared with the
  *  monitor's Color matching / Start / Complete columns so the two never drift. */
@@ -28,10 +28,66 @@ function minutesBetween(a: any, b: any): number | null {
  * baths must still show here. Rendered in the monitor's expand row, the same place
  * the WO list shows a WO's completion log.
  */
-export default function DyeingWOHistory({ workOrderId, authFetch, apiBase }: {
+/**
+ * The monitor row's Output bar written out as arithmetic: speed x ropes x run window
+ * -> yards -> the item's stock UOM through its weight factor -> share of the WO qty.
+ * Every operand is a figure the backend already returned, so this only lays them out.
+ */
+function RunCalc({ r }: { r: any }) {
+    const { t } = useLanguage();
+    if (r.time_yards == null) return null;
+    const uom = r.item_uom || '';
+    const n = (v: any, d = 1) => fmtQty(v, d);
+    const lines: [ReactNode, ReactNode][] = [[
+        <>{n(r.run_minutes)} min × {n(r.yards_per_min, 2)} {t('yd_per_min')} × {r.lines} {t('lines').toLowerCase()}</>,
+        <>{n(r.time_yards)} {t('yd_short')}</>,
+    ]];
+    if (r.weight_per_unit != null && r.time_qty != null) {
+        // A g/m factor weighs metres, so the yards are restated before it applies.
+        const perMetre = r.weight_unit === 'g/m';
+        lines.push([
+            <>{n(perMetre ? r.time_yards * 0.9144 : r.time_yards)} {perMetre ? 'm' : t('yd_short')} × {n(r.weight_per_unit, 2)} {r.weight_unit} ÷ 1000</>,
+            <>{n(r.time_qty, 2)} {uom}</>,
+        ]);
+    } else if (r.time_qty != null && r.time_qty !== r.time_yards) {
+        lines.push([<>{n(r.time_yards)} {t('yd_short')} → {uom}</>, <>{n(r.time_qty, 2)} {uom}</>]);
+    }
+    if (r.progress_pct != null) {
+        lines.push([
+            <>{n(r.time_qty, 2)} ÷ {n(r.target_qty, 2)} {uom}</>,
+            <>{n(r.progress_pct)}% <span style={{ fontWeight: 'normal', color: '#666' }}>{t('calc_of_wo')}</span></>,
+        ]);
+    }
+    const subTd = lvSubTd();
+    return (
+        <table style={{ ...lvSubTable(), width: 'auto' }}>
+            <thead>
+                <tr>
+                    <th colSpan={3} style={lvSubTh()}>
+                        {t('calc_title')} · #{r.run_number}
+                        {r.clock === 'IN_PROGRESS' && <span style={{ fontWeight: 'normal', color: '#666' }}> ({t('running')})</span>}
+                    </th>
+                </tr>
+            </thead>
+            <tbody>
+                {lines.map(([expr, result], i) => (
+                    <tr key={i} style={lvSubRow(0)}>
+                        <td style={{ ...subTd, whiteSpace: 'nowrap', textAlign: 'right', fontVariantNumeric: 'tabular-nums', color: '#444' }}>{expr}</td>
+                        <td style={{ ...subTd, padding: '0 2px', color: '#888' }}>=</td>
+                        <td style={{ ...subTd, whiteSpace: 'nowrap', textAlign: 'right', fontVariantNumeric: 'tabular-nums', fontWeight: 'bold' }}>{result}</td>
+                    </tr>
+                ))}
+            </tbody>
+        </table>
+    );
+}
+
+export default function DyeingWOHistory({ workOrderId, authFetch, apiBase, calc }: {
     workOrderId: string;
     authFetch: (url: string, init?: RequestInit) => Promise<Response>;
     apiBase: string;
+    /** The monitor row whose Output bar to explain beside the history. */
+    calc?: any;
 }) {
     const { t } = useLanguage();
     const fmtStamp = useFmtStamp();
@@ -53,6 +109,7 @@ export default function DyeingWOHistory({ workOrderId, authFetch, apiBase }: {
     const subTh = lvSubTh();
     const subTd = lvSubTd();
     return (
+        <div style={{ display: 'flex', gap: 12, alignItems: 'flex-start', flexWrap: 'wrap' }}>
         <table style={{ ...lvSubTable(), maxWidth: 760 }}>
             <thead>
                 <tr>
@@ -95,5 +152,7 @@ export default function DyeingWOHistory({ workOrderId, authFetch, apiBase }: {
                 })}
             </tbody>
         </table>
+        {calc && <RunCalc r={calc} />}
+        </div>
     );
 }

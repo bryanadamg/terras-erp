@@ -114,12 +114,23 @@ def test_time_based_output_is_speed_times_window_times_gy():
     assert m["time_yards"] == pytest.approx(64800.0)
     assert m["time_qty"] == pytest.approx(12960.0)
     assert m["progress_pct"] == pytest.approx(50.0)
+    # The factor is echoed so the row can show its arithmetic.
+    assert (m["weight_per_unit"], m["weight_unit"]) == (200.0, "g/y")
 
 
 def test_yard_stocked_item_compares_yards_directly():
     m = svc.compute_run_metrics(_run(), 64800.0, _item(uom="yard", weight_per_unit=None, weight_unit=None), NOW)
     assert m["time_qty"] == pytest.approx(64800.0)
     assert m["progress_pct"] == pytest.approx(100.0)
+    assert m["weight_per_unit"] is None
+
+
+def test_shown_minutes_reproduce_the_shown_yards():
+    """The row prints its arithmetic, so the minutes it shows must multiply out."""
+    run = _run()
+    run.started_at = NOW - timedelta(minutes=17.576)
+    m = svc.compute_run_metrics(run, 25920.0, _item(), NOW)
+    assert m["time_yards"] == pytest.approx(m["run_minutes"] * m["rate_yd_per_min"])
 
 
 def test_batch_without_a_picked_speed_reports_no_output_and_says_why():

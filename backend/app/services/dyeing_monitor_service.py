@@ -98,7 +98,9 @@ def compute_run_metrics(run, target_qty: Optional[float], item, now: datetime) -
     lines = int(run.lines or 0)
     ypm = float(run.yards_per_min) if run.yards_per_min is not None else None
     yd_min = yards_per_minute(ypm, lines)
-    minutes = run_minutes(run.started_at, run.completed_at, now)
+    # Rounded before it multiplies, so the arithmetic the row shows (17.6 min x ...)
+    # reproduces its own yards exactly. 0.1 min is 6 s -- finer than a hand stamp.
+    minutes = _round(run_minutes(run.started_at, run.completed_at, now), 1)
 
     time_yards = yd_min * minutes if (yd_min is not None and minutes is not None) else None
     # Yards one stock unit buys (1000/g-per-yard for a kg item, 1 for a yard item),
@@ -125,4 +127,13 @@ def compute_run_metrics(run, target_qty: Optional[float], item, now: datetime) -
             ([] if ypm else ["yards_per_min"]) + ([] if lines else ["lines"])
         ),
         "missing_gy_factor": yards_per_unit is None,
+        # The weight factor the yards were divided through, so the row can show its
+        # arithmetic. Only set for a weighed item -- a length item needs no factor.
+        **_weight_factor(item, yards_per_unit),
     }
+
+
+def _weight_factor(item, yards_per_unit: Optional[float]) -> dict:
+    if yards_per_unit is None or not packing_service.uom_is_kg(getattr(item, "uom", None)):
+        return {"weight_per_unit": None, "weight_unit": None}
+    return {"weight_per_unit": float(item.weight_per_unit), "weight_unit": item.weight_unit.strip().lower()}

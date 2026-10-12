@@ -118,6 +118,8 @@ def _no_run_row(wo: WorkOrder) -> dict:
         "progress_pct": None,
         "missing_rate_inputs": [],
         "missing_gy_factor": False,
+        "weight_per_unit": None,
+        "weight_unit": None,
     }
 
 
