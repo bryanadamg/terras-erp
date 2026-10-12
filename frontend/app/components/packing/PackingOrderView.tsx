@@ -18,6 +18,15 @@ import SearchableSelect from '@bryanadamg/terras-ui/components/Combobox';
 import TreeSelect, { buildLocationPickerTree } from '../shared/TreeSelect';
 import { useFinishedGoodsSearch } from '../shared/useEntitySearch';
 import { LotChips, LotChip, lotSizeKey, lotSizeLabel } from '../shared/LotChips';
+
+/** A lot of a different size from the order's SO line — mirror of the server's
+ *  `packing_service.assert_lot_sizes_match` (folded size name; unsized lots and
+ *  orders with no size never mismatch). */
+const packingSizeMismatch = (lot: any, orderSize: string | null | undefined): boolean => {
+    const want = (orderSize || '').trim().toLowerCase();
+    const have = (lotSizeLabel(lot) || '').trim().toLowerCase();
+    return !!want && !!have && want !== have;
+};
 import VariantChips from '../shared/VariantChips';
 import { machinesOfCenterType, toMachineOptions } from '../shared/workCenterTree';
 import {
@@ -309,9 +318,8 @@ export default function PackingOrderView({ initialCreateState, onClearInitialSta
     }, [locations]);
 
     // Machine picker scope. Packing machines are the MACHINE rows running under a
-    // PACKING centre type; a plant that has not declared that type yet gets every
-    // machine rather than an empty list — the same "never hand back an empty
-    // picker" rule WOCompletionModal applies to its process scope.
+    // PACKING centre type (set on the TYPE node in Routing; it cascades down).
+    // Strict — no fallback to every machine, the picker is optional anyway.
     const machineOptions = useMemo(
         () => toMachineOptions(machinesOfCenterType(workCenters || [], 'PACKING')),
         [workCenters],
@@ -2091,21 +2099,32 @@ function PackingOrderDetail({ po: initialPo, itemById, locationById, locPickerTr
                 setHeldLotCount(withStock.filter((b: any) => b.held).length);
                 const available = withStock.filter((b: any) => !b.held);
                 setLots(available);
-                // Default to the ready pool, but only as far as ONE size. The draw is
-                // FIFO (oldest first) and the server refuses a box that straddles two
-                // sizes, so pre-selecting an M lot and an L lot together hands the
-                // packer a selection their first submit 400s on — over a seam they
-                // never chose to cross. Unsized lots are unknown, not a different
-                // size, so they ride along; an unsized oldest lot keeps the old
-                // select-everything behaviour.
-                const oldest = available[available.length - 1];  // /batches is newest-first
-                const leadSize = oldest ? lotSizeKey(oldest) : null;
-                const preselect = leadSize
-                    ? available.filter((b: any) => {
-                        const k = lotSizeKey(b);
-                        return k === null || k === leadSize;
-                    })
-                    : available;
+                // Default selection, most specific first:
+                //  1. the lots this order holds — the pile it was cut for;
+                //  2. else, on an order for a sized SO line, that size's lots (the
+                //     server refuses any other size — packingSizeMismatch);
+                //  3. else the ready pool, as far as ONE size: the draw is FIFO and
+                //     the server refuses a box straddling two sizes, so the oldest
+                //     lot's size leads. This step alone once preselected an older L
+                //     lot for an XL order and left its own held XL lot unchecked.
+                // Unsized lots are unknown, not a different size, so they ride along.
+                const allowed = available.filter((b: any) => !packingSizeMismatch(b, po.size_label));
+                const held = allowed.filter((b: any) => String(b.locked_packing_order_id || '') === String(po.id));
+                let preselect: any[];
+                if (held.length) {
+                    preselect = held;
+                } else if (po.size_label) {
+                    preselect = allowed;
+                } else {
+                    const oldest = allowed[allowed.length - 1];  // /batches is newest-first
+                    const leadSize = oldest ? lotSizeKey(oldest) : null;
+                    preselect = leadSize
+                        ? allowed.filter((b: any) => {
+                            const k = lotSizeKey(b);
+                            return k === null || k === leadSize;
+                        })
+                        : allowed;
+                }
                 setSelectedLots(preselect.map((b: any) => String(b.id)));
             } finally {
                 if (alive) setLotsLoading(false);
@@ -2154,6 +2173,21 @@ function PackingOrderDetail({ po: initialPo, itemById, locationById, locPickerTr
             out.push({ batch_id: id, qty: Number(take.toFixed(4)) });
             taken[id] = (taken[id] || 0) + take;
             need -= take;
+        }
+        // Scale read heavier than the book: the overflow rides on the last lot drawn
+        // (or the last selected one, if the cartons already used them all up) and
+        // the server books it as weighing variance — or refuses it if it is past
+        // the tolerance, which only it can judge (it is a % of the lot's full book
+        // qty, including what earlier events already drew).
+        if (need > 1e-9) {
+            const sel = lots.filter((x: any) => selSet.has(String(x.id)));
+            const lastId = out.length ? out[out.length - 1].batch_id : (sel.length ? String(sel[0].id) : null);
+            if (lastId) {
+                const row = out.find(o => o.batch_id === lastId);
+                if (row) row.qty = Number((row.qty + need).toFixed(4));
+                else out.push({ batch_id: lastId, qty: Number(need.toFixed(4)) });
+                taken[lastId] = (taken[lastId] || 0) + need;
+            }
         }
         return out;
     };
@@ -2313,6 +2347,8 @@ function PackingOrderDetail({ po: initialPo, itemById, locationById, locPickerTr
     const scrapAlloc = allocateOver(scrap, takeByBatch);
     const drawn = Object.values(takeByBatch).reduce((t, v) => t + v, 0);
     const short = drawTotal > 0 && drawn + 1e-6 < drawTotal;
+    // Drawing past the selected lots' book balance — a weighing gap, not an error.
+    const overBook = Math.max(0, drawTotal - selAvailable);
     // Per-lot payload: one entry per lot touched, carrying its share of each.
     const lotPayload = () => {
         const byId = new Map<string, { batch_id: string; qty: number; qty_rejected: number }>();
@@ -2327,7 +2363,7 @@ function PackingOrderDetail({ po: initialPo, itemById, locationById, locPickerTr
 
     const toggleLot = (id: string, on: boolean) =>
         setSelectedLots(prev => on ? [...prev, id] : prev.filter(x => x !== id));
-    const allIds = lots.map((b: any) => String(b.id));
+    const allIds = lots.filter((b: any) => !packingSizeMismatch(b, po.size_label)).map((b: any) => String(b.id));
     const allSelected = allIds.length > 0 && selectedLots.length === allIds.length;
 
     // Why the log button is dead, in the order the submit handler checks. A
@@ -3077,6 +3113,11 @@ function PackingOrderDetail({ po: initialPo, itemById, locationById, locPickerTr
                                             <span style={{ fontWeight: 'normal', color: short ? '#900' : '#555' }}>
                                                 {selectedLots.length} lot{selectedLots.length === 1 ? '' : 's'} · {selAvailable.toFixed(2)} available · drawing{' '}
                                                 <strong>{drawn.toFixed(2)}</strong>{short ? ` of ${drawTotal.toFixed(2)}` : ''}
+                                                {overBook > 1e-6 && (
+                                                    <span style={{ color: '#b46a00', marginLeft: 4 }} title="Cartons weigh more than the lots' book qty. Inside the weighing tolerance (Settings → Company Profile) the gap is booked as a measurement variance.">
+                                                        (+{overBook.toFixed(2)} over book)
+                                                    </span>
+                                                )}
                                                 <button
                                                     type="button"
                                                     className={XP_BTN}
@@ -3097,9 +3138,13 @@ function PackingOrderDetail({ po: initialPo, itemById, locationById, locPickerTr
                                             {lots.map((b: any) => {
                                                 const id = String(b.id);
                                                 const on = selSet.has(id);
+                                                // Shown, not hidden, so the packer sees why a lot on the
+                                                // desk is not offered — this order packs one size.
+                                                const wrongSize = packingSizeMismatch(b, po.size_label);
                                                 return (
-                                                    <label key={id} style={{ ...lvPickerRow(on), fontSize: 10 }}>
-                                                        <RowCheckbox checked={on} label={b.batch_number || 'lot'}
+                                                    <label key={id} style={{ ...lvPickerRow(on), fontSize: 10, ...(wrongSize ? { opacity: 0.5, cursor: 'not-allowed' } : {}) }}
+                                                        title={wrongSize ? `Size ${lotSizeLabel(b)} — this order packs ${po.size_label}` : undefined}>
+                                                        <RowCheckbox checked={on} label={b.batch_number || 'lot'} disabled={wrongSize}
                                                             onChange={() => toggleLot(id, !on)} />
                                                         <div style={{ display: 'flex', flexDirection: 'column', gap: 2, minWidth: 0, flex: 1 }}>
                                                             <div style={{ display: 'flex', alignItems: 'center', gap: 4, flexWrap: 'wrap' }}>

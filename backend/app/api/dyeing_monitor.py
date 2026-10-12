@@ -24,7 +24,7 @@ from app.models.work_order import WorkOrder
 from app.api.auth import require_permission, require_any_permission
 from app.core.pagination import PageParams, PageWindow
 from app.schemas import DyeingRunMonitorUpdate
-from app.services import audit_service, dyeing_monitor_service, mo_variant_service, work_center_service
+from app.services import audit_service, dyeing_monitor_service, mo_variant_service, staging_service, work_center_service
 from app.core.ws_manager import manager
 
 router = APIRouter()
@@ -60,13 +60,14 @@ _WO_LOADS = (
 )
 
 
-def _row(run: DyeingRun, now: datetime) -> dict:
+def _row(run: DyeingRun, now: datetime, staged: dict[str, float]) -> dict:
     wo = run.work_order
     mo = wo.manufacturing_order if wo else None
-    wc = wo.work_center if wo else None
-    # The mass the WO was cut for. `substrate_qty` is seeded from it and only
-    # stands in for a WO with no qty of its own.
-    target = wo.qty if (wo and wo.qty) else run.substrate_qty
+    # What went into the vessel: the lots staged to the WO, else the mass the WO was
+    # cut for. `substrate_qty` is seeded from the WO and only stands in for a WO
+    # with no qty of its own.
+    staged_qty = staged.get(str(wo.id)) if wo else None
+    target = staged_qty or (wo.qty if (wo and wo.qty) else run.substrate_qty)
     return {
         "id": str(run.id),
         "run_number": run.run_number,
@@ -75,6 +76,8 @@ def _row(run: DyeingRun, now: datetime) -> dict:
         "started_at": run.started_at,
         "completed_at": run.completed_at,
         **svc.compute_run_metrics(run, target, mo.item if mo else None, now),
+        "target_source": "staged" if staged_qty else "wo",
+        "wo_qty": wo.qty if wo else None,
     }
 
 
@@ -115,9 +118,15 @@ def _no_run_row(wo: WorkOrder) -> dict:
         "time_yards": None,
         "time_qty": None,
         "target_qty": wo.qty,
+        "target_source": "wo",
+        "wo_qty": wo.qty,
+        "target_yards": None,
+        "expected_minutes": None,
         "progress_pct": None,
         "missing_rate_inputs": [],
         "missing_gy_factor": False,
+        "weight_per_unit": None,
+        "weight_unit": None,
     }
 
 
@@ -249,7 +258,9 @@ async def dyeing_monitor(
     by_key: dict = {}
     if run_ids:
         res = await db.execute(select(DyeingRun).options(*_RUN_LOADS).where(DyeingRun.id.in_(run_ids)))
-        by_key.update({("run", r.id): _row(r, now) for r in res.unique().scalars().all()})
+        runs = res.unique().scalars().all()
+        staged = await staging_service.staged_loads(db, list({r.work_order.id: r.work_order for r in runs if r.work_order}.values()))
+        by_key.update({("run", r.id): _row(r, now, staged) for r in runs})
     if wo_ids:
         res = await db.execute(select(WorkOrder).options(*_WO_LOADS).where(WorkOrder.id.in_(wo_ids)))
         by_key.update({("wo", w.id): _no_run_row(w) for w in res.unique().scalars().all()})

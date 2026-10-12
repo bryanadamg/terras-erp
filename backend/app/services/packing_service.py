@@ -85,6 +85,124 @@ async def assert_lots_unlocked(db: AsyncSession, po_id, batch_ids) -> None:
         raise ValueError(f"These lots are held by another packing order: {detail}")
 
 
+def line_size_name(sol) -> Optional[str]:
+    """The size an SO line was ordered in, by name. Same precedence as the line's
+    `size_display`: the generic Size pick, its free label, then the legacy BOMSize
+    pointer. Relationships `size` and `bom_size.size` must be loaded."""
+    if sol is None:
+        return None
+    bs = sol.bom_size
+    return (
+        (sol.size.name if sol.size is not None else None)
+        or sol.size_label
+        or ((bs.size_name or bs.label) if bs is not None else None)
+    )
+
+
+async def line_size_names(db: AsyncSession, line_ids) -> dict:
+    """`{so_line_id: size name}` for the lines that name a size; one query."""
+    ids = [i for i in line_ids if i]
+    if not ids:
+        return {}
+    from app.models.sales import SalesOrderLine
+    from app.models.bom import BOMSize
+    lines = (await db.execute(
+        select(SalesOrderLine)
+        .options(
+            selectinload(SalesOrderLine.size),
+            selectinload(SalesOrderLine.bom_size).selectinload(BOMSize.size),
+        )
+        .filter(SalesOrderLine.id.in_(ids))
+    )).scalars().all()
+    return {str(l.id): n for l in lines if (n := line_size_name(l))}
+
+
+async def order_size_name(db: AsyncSession, po: PackingOrder) -> Optional[str]:
+    """The one size this order's cartons are for — its SO line's — or None.
+
+    None for an order packing to stock, or against a line that named no size: that
+    order stays size-agnostic and may pack several sizes (see the model comment).
+    """
+    if not po.sales_order_line_id:
+        return None
+    return (await line_size_names(db, [po.sales_order_line_id])).get(str(po.sales_order_line_id))
+
+
+async def batch_size_names(db: AsyncSession, batch_ids) -> dict:
+    """`{batch_id: (batch_number, size name or None)}` — a lot's or carton's size.
+
+    The snapshot first (what the lot was stamped with; a carton inherits it from
+    its source lot), then the live BOMSize row for a lot that only has the id.
+    """
+    ids = [b for b in batch_ids if b]
+    if not ids:
+        return {}
+    from app.models.bom import BOMSize
+    from app.models.size import Size
+    rows = (await db.execute(
+        select(Batch.id, Batch.batch_number, Batch.bom_size_snapshot, Size.name, BOMSize.label)
+        .outerjoin(BOMSize, BOMSize.id == Batch.bom_size_id)
+        .outerjoin(Size, Size.id == BOMSize.size_id)
+        .filter(Batch.id.in_(ids))
+    )).all()
+    out = {}
+    for bid, bn, snap, row_size, row_label in rows:
+        snap = snap or {}
+        out[str(bid)] = (bn, snap.get("size_name") or snap.get("label") or row_size or row_label)
+    return out
+
+
+def sizes_conflict(want: Optional[str], have: Optional[str]) -> bool:
+    """Two NAMED sizes that differ. Compared folded — the lot carries its BOM's
+    size row, the SO line a generic Size, and only the name is common to both
+    (the identity SO fulfilment pegs on). A missing size on either side is
+    unknown, not different, so it never conflicts."""
+    w, h = (want or "").strip().lower(), (have or "").strip().lower()
+    return bool(w and h and w != h)
+
+
+async def assert_lot_sizes_match(db: AsyncSession, po: PackingOrder, batch_ids) -> None:
+    """Raise ValueError if a lot is a different size from the one this order is for.
+
+    An order raised against an SO line packs that line's size: a carton of another
+    size counts toward the order's target yet can never ship on the line, so the
+    order reads fulfilled while the customer is short.
+    """
+    want = await order_size_name(db, po)
+    if not want:
+        return
+    wrong = [
+        f"{bn} ({have})" for bn, have in (await batch_size_names(db, batch_ids)).values()
+        if sizes_conflict(want, have)
+    ]
+    if wrong:
+        raise ValueError(
+            f"This order packs size {want} — "
+            f"lot(s) of another size can't be packed on it: {', '.join(wrong)}"
+        )
+
+
+async def assert_cartons_fit_lines(db: AsyncSession, pairs) -> None:
+    """Raise ValueError if any (so_line_id, carton batch_id) pair is a size mismatch.
+
+    The pick list / dispatch half of the packing size gate: a carton goes out
+    only against an SO line ordering its size. Pairs with no carton or no line
+    are skipped (nothing to compare).
+    """
+    pairs = [(l, b) for l, b in pairs if l and b]
+    if not pairs:
+        return
+    want = await line_size_names(db, [l for l, _ in pairs])
+    have = await batch_size_names(db, [b for _, b in pairs])
+    wrong = []
+    for l, b in pairs:
+        bn, size = have.get(str(b), (None, None))
+        if sizes_conflict(want.get(str(l)), size):
+            wrong.append(f"{bn} is size {size}, the line ordered {want[str(l)]}")
+    if wrong:
+        raise ValueError("Carton size doesn't match its SO line: " + "; ".join(wrong))
+
+
 async def claim_lots(db: AsyncSession, po: PackingOrder, batch_ids) -> list[str]:
     """Lock lots onto this order. Returns the lot numbers actually claimed.
 
@@ -95,6 +213,7 @@ async def claim_lots(db: AsyncSession, po: PackingOrder, batch_ids) -> list[str]
     if not ids:
         return []
     await assert_lots_unlocked(db, po.id, ids)
+    await assert_lot_sizes_match(db, po, ids)
     batches = (await db.execute(
         select(Batch).filter(Batch.id.in_(ids), Batch.item_id == po.item_id)
     )).scalars().all()
@@ -124,6 +243,80 @@ async def undrained_locked_lots(db: AsyncSession, po: PackingOrder) -> list[tupl
         .group_by(Batch.batch_number)
     )).all()
     return [(bn, float(q or 0)) for bn, q in rows if float(q or 0) > 1e-6]
+
+
+async def lot_drawn_qty(db: AsyncSession, batch_id) -> float:
+    """Everything packing has already drawn out of this lot, good + scrap.
+
+    Plus what is still on the desk, this is the lot's book qty — the figure the
+    weighing tolerance is a percentage of. A % of the leftover alone would make the
+    tolerance vanish exactly when it matters: on the last few hundred grams.
+    """
+    if not batch_id:
+        return 0.0
+    return float((await db.execute(
+        select(func.coalesce(func.sum(PackingCompletion.qty + PackingCompletion.qty_rejected), 0))
+        .filter(PackingCompletion.source_batch_id == batch_id)
+    )).scalar() or 0)
+
+
+def within_tolerance(gap: float, lot_qty: float, tol_pct: float) -> bool:
+    return gap <= lot_qty * tol_pct / 100 + 1e-6
+
+
+async def settle_locked_lots(
+    db: AsyncSession, po: PackingOrder, tol_pct: float,
+) -> tuple[list[tuple[str, float]], list[tuple[str, float]]]:
+    """Write off held lots' leftover book qty where it is only a weighing gap.
+
+    The lot was weighed at dyeing and again carton by carton; the two scales never
+    agree to the gram, so a fully packed lot can still book a few hundred grams on
+    the desk that do not physically exist. Inside the tolerance that gap is posted
+    as a MEASURE_VAR ledger row (not scrap — nothing was lost) and the lot drains.
+
+    Returns (written_off, still_left). All or nothing: if any lot holds more than a
+    weighing gap — real cloth still on the desk — nothing is written, so a refused
+    close never leaves half the lots settled.
+    """
+    if not po.source_location_id:
+        return [], []
+    rows = (await db.execute(
+        select(Batch.id, Batch.batch_number, StockBalance.item_id, StockBalance.variant_key, StockBalance.qty)
+        .join(StockBalance, StockBalance.batch_key == cast(Batch.id, String))
+        .filter(
+            Batch.locked_packing_order_id == po.id,
+            StockBalance.location_id == po.source_location_id,
+            StockBalance.qty > 0,
+        )
+    )).all()
+    by_lot: dict = {}
+    for r in rows:
+        by_lot.setdefault(r.id, []).append(r)
+
+    settle, left = [], []
+    for batch_id, lot_rows in by_lot.items():
+        remaining = sum(float(r.qty) for r in lot_rows)
+        if remaining <= 1e-6:
+            continue
+        lot_qty = remaining + await lot_drawn_qty(db, batch_id)
+        entry = (lot_rows[0].batch_number, remaining)
+        if within_tolerance(remaining, lot_qty, tol_pct):
+            settle.append((entry, batch_id, lot_rows))
+        else:
+            left.append(entry)
+    if left:
+        return [], left
+
+    for _, batch_id, lot_rows in settle:
+        for r in lot_rows:
+            attr_ids, color_id = stock_service._parse_variant_key(r.variant_key or "")
+            await stock_service.add_stock_entry(
+                db, item_id=r.item_id, location_id=po.source_location_id,
+                qty_change=-float(r.qty), reference_type=stock_service.MEASURE_VAR,
+                reference_id=po.code, attribute_value_ids=[str(a) for a in attr_ids],
+                color_id=color_id, batch_id=batch_id,
+            )
+    return [entry for entry, _, _ in settle], []
 
 
 def packed_unit_filter():
@@ -1197,11 +1390,13 @@ async def available_packed_units(
     color_id=None,
     exclude_ids: set = None,
     limit: int = 200,
+    size_name: Optional[str] = None,
 ) -> list[tuple[Batch, StockBalance]]:
     """In-stock cartons for an item/variant, oldest first (FIFO).
 
     Returns (carton, its balance row) pairs so callers get the carton qty without
     a second lookup. Rejected lots are excluded, matching every other picker.
+    `size_name` (an SO line's size) drops cartons of another size — unsized ones stay.
     """
     v_key = _generate_variant_key(attribute_value_ids, color_id)
     query = (
@@ -1224,6 +1419,9 @@ async def available_packed_units(
     rows = (await db.execute(query)).all()
     if exclude_ids:
         rows = [r for r in rows if r[0].id not in exclude_ids]
+    if size_name and rows:
+        sizes = await batch_size_names(db, [r[0].id for r in rows])
+        rows = [r for r in rows if not sizes_conflict(size_name, sizes.get(str(r[0].id), (None, None))[1])]
     # A carton is atomic, but nothing in the schema stops it having balance rows at
     # more than one location (e.g. after a manual move that left a zeroed row).
     # Keep one row per carton so a pick suggestion can never list the same physical
@@ -1246,6 +1444,7 @@ async def suggest_units_for_line(
     attribute_value_ids: list[str] = [],
     color_id=None,
     exclude_ids: set = None,
+    size_name: Optional[str] = None,
 ) -> list[tuple[Batch, float]]:
     """Pick whole cartons FIFO until `remaining_qty` is covered.
 
@@ -1255,7 +1454,7 @@ async def suggest_units_for_line(
     units = await available_packed_units(
         db, item_id, location_id=location_id,
         attribute_value_ids=attribute_value_ids, color_id=color_id,
-        exclude_ids=exclude_ids,
+        exclude_ids=exclude_ids, size_name=size_name,
     )
     picked: list[tuple[Batch, float]] = []
     covered = 0.0

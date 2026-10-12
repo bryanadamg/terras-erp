@@ -25,7 +25,8 @@ export default function SettingsPage() {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(profile)
         });
-        if (res.ok) fetchData('settings');
+        if (!res.ok) throw new Error('Failed to update profile');
+        fetchData('settings');
     };
 
     const handleUploadLogo = async (formData: FormData) => {

@@ -1,6 +1,6 @@
 import uuid
 from datetime import datetime
-from sqlalchemy import String, Text, Integer, Boolean, DateTime, ForeignKey
+from sqlalchemy import String, Text, Integer, Boolean, DateTime, ForeignKey, Float
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column
 from app.db.base import Base
@@ -18,6 +18,10 @@ class CompanyProfile(Base):
     website: Mapped[str | None] = mapped_column(String(255), nullable=True)
     logo_url: Mapped[str | None] = mapped_column(String(512), nullable=True) # Relative path to static logo
     tax_id: Mapped[str | None] = mapped_column(String(100), nullable=True) # For invoices/POs
+    # How far a scale reading may disagree with the book qty and still count as the
+    # same material (% of the lot / order qty). Inside it, packing posts the gap as a
+    # MEASURE_VAR ledger row and a WO short by it still auto-completes.
+    measurement_tolerance_pct: Mapped[float] = mapped_column(Float, default=2.0, server_default="2", nullable=False)
 
 
 class BackupSchedule(Base):

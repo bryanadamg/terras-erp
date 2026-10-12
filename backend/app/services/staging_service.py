@@ -200,3 +200,49 @@ async def wo_codes(db: AsyncSession, wo_ids: Iterable) -> dict[str, str]:
         return {}
     rows = await db.execute(select(WorkOrder.id, WorkOrder.code).where(WorkOrder.id.in_(ids)))
     return {str(i): c for i, c in rows.all()}
+
+
+# Steps whose staged lots ARE the step's load: greige in, the same fabric out, in the
+# same kg. Weaving is not one -- its staged rows are warp beams (warp only, often
+# two per WO), nothing like the greige it outputs.
+STAGED_LOAD_CENTER_TYPES = ("DYEING", "CELUP", "SETTING")
+
+
+def largest_staged(net_by_item: dict) -> float | None:
+    """The substrate staged to a WO, from its net lot-staged qty per item.
+
+    The substrate is the largest staged item -- the same call work_queue_service
+    makes off requirements, since a dye bath's chemicals are dosed per 100 kg of it.
+    In practice only greige lots are staged; this keeps a lot-tracked chemical, if one
+    ever is, from being added to the fabric. None when nothing is left staged (e.g.
+    fully reversed), so the caller falls back to the WO qty.
+    """
+    best = max((float(q or 0) for q in net_by_item.values()), default=0.0)
+    return best if best > 1e-9 else None
+
+
+async def staged_loads(db: AsyncSession, wos: Iterable[WorkOrder]) -> dict[str, float]:
+    """`{wo id: staged substrate qty}` for the WOs that have lots staged.
+
+    Netted 'Staging' ledger rows at each WO's input location -- the same rows the
+    WO's staging panel totals (api/work_orders.py `_wo_staged_lots`), so a lot
+    consumed by the step still counts toward the load it was.
+    """
+    input_loc = {str(w.id): w.input_location_id for w in wos if w.input_location_id}
+    if not input_loc:
+        return {}
+    rows = await db.execute(
+        select(StockLedger.reference_id, StockLedger.location_id, StockLedger.item_id, func.sum(StockLedger.qty_change))
+        .where(
+            StockLedger.reference_type == "Staging",
+            StockLedger.reference_id.in_(list(input_loc)),
+            StockLedger.batch_id.isnot(None),
+        )
+        .group_by(StockLedger.reference_id, StockLedger.location_id, StockLedger.item_id)
+    )
+    per_wo: dict[str, dict] = {}
+    for wo_id, loc_id, item_id, net in rows.all():
+        if loc_id == input_loc[wo_id]:
+            per_wo.setdefault(wo_id, {})[item_id] = net
+    loads = {wo_id: largest_staged(items) for wo_id, items in per_wo.items()}
+    return {k: v for k, v in loads.items() if v is not None}

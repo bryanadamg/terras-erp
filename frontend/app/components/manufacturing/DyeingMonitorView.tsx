@@ -154,16 +154,17 @@ export default function DyeingMonitorView() {
         }
         const uom = r.item_uom || '';
         const pct = r.progress_pct;
-        // Running = blue (still accruing). Stopped: green once the clock covered the
-        // WO's mass, amber when it came off short.
+        // Actual run time against the time the WO qty needs at this speed. Running =
+        // blue (still accruing). Stopped: green once it ran the full expected time,
+        // amber when it came off short.
         const tone = r.clock === DONE ? ((pct ?? 0) >= 100 ? 'green' : 'amber') : 'blue';
         return (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
                 <ProgressBar pct={Math.min(Number(pct) || 0, 100)} tone={tone} height={10}
-                    title={`${fmt(r.time_yards, 0)} ${t('yd_short')}`} />
+                    title={`${fmt(r.time_qty, 1)} / ${fmt(r.target_qty, 1)} ${uom} ${r.target_source === 'staged' ? t('calc_staged').toLowerCase() : t('calc_wo_qty')} · ${fmt(r.time_yards, 0)} ${t('yd_short')}`} />
                 <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 10 }}>
                     <span>
-                        <b>{fmt(r.time_qty, 1)}</b> / {fmt(r.target_qty, 1)} {uom}
+                        <b>{r.run_minutes == null ? '—' : fmtMinutes(r.run_minutes)}</b> / {fmtMinutes(r.expected_minutes)}
                     </span>
                     <b>{pct == null ? '—' : `${fmt(pct, 1)}%`}</b>
                 </div>
@@ -334,7 +335,7 @@ export default function DyeingMonitorView() {
                                             <tr>
                                                 <td colSpan={COLS} style={{ padding: 0 }}>
                                                     <ExpandedRowPanel>
-                                                        <DyeingWOHistory workOrderId={r.work_order_id} authFetch={authFetch} apiBase={API_BASE} />
+                                                        <DyeingWOHistory workOrderId={r.work_order_id} authFetch={authFetch} apiBase={API_BASE} calc={r} />
                                                     </ExpandedRowPanel>
                                                 </td>
                                             </tr>

@@ -481,7 +481,7 @@ export default function ManufacturingOrdersTab({
                                                 {node.item_ends} ends · {node.qty} {getItemUom(node.item_id)}
                                             </div>
                                         )}
-                                        {((node.attribute_value_ids || []).length > 0 || node.bom_size_id) && (
+                                        {((node.attribute_value_ids || []).length > 0 || node.bom_size_id || node.bom_size_snapshot) && (
                                             <div style={{ display: 'flex', gap: 2, flexWrap: 'wrap', marginTop: 2 }}>
                                                 {(node.attribute_value_ids || []).map((id: string) => {
                                                     const hex = getAttributeValueHex(id);
@@ -1157,7 +1157,7 @@ export default function ManufacturingOrdersTab({
                                                     <div style={{ fontWeight: 'bold', color: '#000', fontSize: '11px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                                                         {mo.item_name || getItemName(mo.item_id)}
                                                     </div>
-                                                    {((mo.attribute_value_ids || []).length > 0 || mo.bom_size_id) && (
+                                                    {((mo.attribute_value_ids || []).length > 0 || mo.bom_size_id || mo.bom_size_snapshot) && (
                                                         <div style={{ display: 'flex', gap: 3, flexWrap: 'nowrap', overflow: 'hidden', marginTop: 2 }}>
                                                             {(mo.attribute_value_ids || []).map((id: string) => {
                                                                 const hex = getAttributeValueHex(id);
@@ -1167,8 +1167,8 @@ export default function ManufacturingOrdersTab({
                                                                     >{getAttributeValueName(id)}</VariantChip>
                                                                 );
                                                             })}
-                                                            {mo.bom_size_id && (() => {
-                                                                const label = getBomSizeLabel(mo.bom_id, mo.bom_size_id);
+                                                            {(mo.bom_size_id || mo.bom_size_snapshot) && (() => {
+                                                                const label = getBomSizeLabel(mo.bom_id, mo.bom_size_id, mo.bom_size_snapshot);
                                                                 return label ? (
                                                                     <VariantChip kind="size" truncate>{label}</VariantChip>
                                                                 ) : null;

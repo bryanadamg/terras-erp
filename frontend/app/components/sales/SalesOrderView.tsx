@@ -10,7 +10,7 @@ const SOTablePrintModal = dynamic(() => import('./SOTablePrintModal'), { ssr: fa
 import { useTimezone } from '../../context/TimezoneContext';
 import { useData } from '../../context/DataContext';
 import { useUser } from '../../context/UserContext';
-import { nextSortState, StatusChip, statusTint, TableSkeleton, useTableSkeletonMetrics, ProgressBar, useFloatingMenu, MenuTriggerButton, FloatingMenu, XPActionButton, FormSection, FieldLabel, xpBtn, xpInput as xpInputBase, CodeChip, CODE_FONT, xpFont, CHIP_RADIUS, CODE_CHIP_RADIUS, Chip, VariantChip, VariantKind, variantChipTone, colorLabel, colorHexFor, BTN_TONES, XP_BTN, SKEL_PAGE_ROWS } from '../shared/xpTheme';
+import { nextSortState, StatusChip, statusTint, familyTint, familyColor, TableSkeleton, useTableSkeletonMetrics, ProgressBar, useFloatingMenu, MenuTriggerButton, FloatingMenu, XPActionButton, FormSection, FieldLabel, xpBtn, xpInput as xpInputBase, CodeChip, CODE_FONT, xpFont, CHIP_RADIUS, CODE_CHIP_RADIUS, Chip, VariantChip, VariantKind, variantChipTone, colorLabel, colorHexFor, BTN_TONES, XP_BTN, SKEL_PAGE_ROWS } from '../shared/xpTheme';
 
 import { qtyFmt } from '../shared/format';
 import { useComboSearch, useFinishedGoodsSearch } from '../shared/useEntitySearch';
@@ -42,7 +42,7 @@ const SO_COL_WIDTHS = [
     110, // Stock Notes
     88,  // Req / Conf
     152, // Production Output
-    92,  // Fulfilment
+    150, // Fulfilment
     80,  // Status
     75,  // Actions
 ];
@@ -1063,8 +1063,8 @@ export default function SalesOrderView({ items, attributes, boms, salesOrders, p
   );
 
   // --- Per-line fulfilment (derived server-side by so_fulfilment_service) ---
-  // made >= packed >= in-stock/shipped, so the three are drawn as nested stages on
-  // one track rather than stacked segments — they are not additive.
+  // made >= packed >= in-stock/shipped — not additive, so each stage gets its own
+  // bar against the ordered qty (see fulfilmentCell).
   //
   // MEASURED IN THE ALT SELLING UNIT whenever the line carries one. The customer
   // ordered 2880 Pcs and is owed 2880 Pcs; the kilos are what stock happens to
@@ -1140,26 +1140,32 @@ export default function SalesOrderView({ items, attributes, boms, salesOrders, p
               ? `
 In stock ${fmtQty(f.baseAvailable)}${bu} · Shipped ${fmtQty(f.baseShipped)}${bu} — of ${fmtQty(f.baseOrdered)}${bu}`
               : '');
-      // shipped/packed/made nest (shipped<=packed<=made), so drawn as one stacked
-      // bar: green=shipped, blue=packed-not-yet-shipped, gray=made-not-yet-packed.
-      const shippedPct = f.pct(f.shipped);
-      const packedPct = f.pct(f.packed);
-      const madePct = f.pct(f.made);
+      // One bar per stage, each against the ordered qty, joined into one box with
+      // label and qty inside: made >= packed >= shipped, so the fills read as a
+      // descending staircase. Green once a stage meets the order, blue while partial.
+      if (f.made <= 0 && f.packed <= 0 && f.shipped <= 0) {
+          return <span title={title} style={{ fontFamily:xpFont, fontSize:'9px', color:'#aaa' }}>{t('stage_not_started')}</span>;
+      }
+      const met = (v: number) => !!f.ordered && v >= f.ordered - 0.0001;
+      const stages: [string, number][] = [
+          [t('stage_made'), f.made],
+          [t('stage_packed'), f.packed],
+          [t('stage_shipped'), f.shipped],
+      ];
       return (
-          <div title={title} style={{ display:'flex', flexDirection:'column', gap:2, minWidth:78 }}>
-              <ProgressBar
-                  pct={shippedPct} tone="green"
-                  secondaryPct={Math.max(0, packedPct - shippedPct)} secondaryTone="blue"
-                  tertiaryPct={Math.max(0, madePct - packedPct)} tertiaryTone="gray"
-                  height={6}
-              />
-              <div style={{ fontFamily:xpFont, fontSize:'9px', color: f.isReady ? ('#1a5e1a') : '#777' }}>
-                  {f.shipped > 0
-                      ? `${fmtQty(f.shipped)}${u} shipped`
-                      : f.packed > 0
-                          ? `${fmtQty(f.available)}${u} packed`
-                          : f.made > 0 ? `${fmtQty(f.made)}${u} made` : 'not started'}
-              </div>
+          <div title={title} style={{ border:'1px solid #b8c4de', borderRadius:CHIP_RADIUS, overflow:'hidden', background:'#fff', fontFamily:xpFont, fontSize:'9px' }}>
+              {stages.map(([label, v], i) => {
+                  const tone = familyTint(met(v) ? 'green' : 'blue');
+                  return (
+                      <div key={label} style={{ position:'relative', height:13, lineHeight:'13px', borderTop: i ? '1px solid #fff' : undefined }}>
+                          {v > 0 && <div style={{ position:'absolute', inset:0, width:`${f.pct(v)}%`, background:tone.background, borderRight:`2px solid ${familyColor(met(v) ? 'green' : 'blue')}` }} />}
+                          <div style={{ position:'relative', display:'flex', justifyContent:'space-between', padding:'0 4px', color: v > 0 ? tone.color : '#aaa' }}>
+                              <span>{label}</span>
+                              <span style={{ fontVariantNumeric:'tabular-nums', fontWeight: met(v) ? 'bold' : undefined }}>{fmtQty(v)}</span>
+                          </div>
+                      </div>
+                  );
+              })}
           </div>
       );
   };

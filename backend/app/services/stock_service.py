@@ -5,7 +5,19 @@ from app.models.stock_ledger import StockLedger
 from app.models.stock_balance import StockBalance
 from app.models.attribute import AttributeValue
 from app.models.item import Item
+from app.models.settings import CompanyProfile
 from fastapi import HTTPException
+
+# Ledger reference_type for a scale-vs-book gap written off inside the tolerance —
+# never scrap: the material it moves never physically existed (or was never booked).
+MEASURE_VAR = "MEASURE_VAR"
+DEFAULT_MEASUREMENT_TOLERANCE_PCT = 2.0
+
+
+async def measurement_tolerance_pct(db: AsyncSession) -> float:
+    """Weighing tolerance (% of lot / order qty) from the company profile singleton."""
+    pct = (await db.execute(select(CompanyProfile.measurement_tolerance_pct).limit(1))).scalar()
+    return DEFAULT_MEASUREMENT_TOLERANCE_PCT if pct is None else float(pct)
 
 def _generate_variant_key(attribute_value_ids: list[str], color_id=None) -> str:
     """Standardizes variant identification string.

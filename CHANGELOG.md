@@ -15,6 +15,28 @@ on `main`:
 
 ## [Unreleased]
 
+## [0.41.0] - 2026-10-12
+
+### Added
+- A weighing tolerance lets small gaps between the scale and the book weight through, so they no longer block closing a packing order or completing a WO
+- A new colour can be linked straight to an item, for shades lab-dipped outside the system
+- SO fulfilment shows made, packed and shipped as one bar each against the ordered qty, joined in one box with inline labels. Lines nothing has touched yet read "not started"
+- The pick list modal, Kartu Picking, Surat Jalan and Perincian show ordered, remaining, carton and summary quantities in the SO line's alt unit
+- The dyeing monitor bar compares a run's actual time against the time the WO needs at its speed. That time is worked out from the lots staged to the WO, or from its qty when none are staged. The expanded row shows the time-to-weight arithmetic behind the bar
+- The dyeing bath history shows each phase's duration as a connector between its two time stamps
+- The WO list bar shows lots staged to dyeing and setting steps that haven't been processed yet
+
+### Fixed
+- Cartons can only be picked, staged and dispatched against an SO line that orders their size. A packing order for a sized line packs only that size, and the pack form preselects held lots first
+- The carton label fits A6 landscape: a table with the QR code boxed beside it, and a PU- barcode underneath that encodes only the PU- number, with a quiet zone so it scans on small label stock
+- The SO printout shows line qty in Yd with the alt unit under it, instead of the item's stock unit
+- MO size chips all read "{size}-{target} ({min}-{max})". A blank range in the snapshot is filled from the live BOM size, and the list row uses the MO's own size snapshot, as the tree does
+- When the output weighs more than expected, the WO log defaults material consumption to what the picked lots hold
+- The WO list's staged qty sits on its own line, so it no longer runs into the Target / Done column
+- New Color needs the `color_code.create` permission and keeps its modal open when a save is rejected. Variant edits now update other screens live
+- The packing machine picker lists only PACKING work centers
+- The app reaches the API through the Next.js proxy on the same origin, so forwarding only the frontend port is enough
+
 ## [0.40.1] - 2026-10-08
 
 ### Fixed

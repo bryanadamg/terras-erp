@@ -32,7 +32,7 @@ from app.api.auth import require_permission, require_any_permission, user_has_pe
 from app.models.auth import User
 from app.services import (
     audit_service, kpi_service, so_fulfilment_service, numbering_service, dispatch_service,
-    stock_service,
+    stock_service, packing_service,
 )
 from app.core.ws_manager import manager
 
@@ -169,6 +169,15 @@ async def _decorate_cartons(db: AsyncSession, shps: list[Shipment]) -> None:
             bom_size_snapshot=b.bom_size_snapshot if b is not None else None,
             size_label=stock_service._bom_size_label(b.bom_size_snapshot) if b is not None else None,
         )
+    # Each box's packed count in its packing order's unit — the Surat Jalan reads
+    # in the SO's alt unit (Gross, Pcs), as the pick list does.
+    from app.api.pick_lists import _packing_order_alt_uoms
+    alt_uoms = await _packing_order_alt_uoms(db, [l.batch.packing_order_id for l in lines if l.batch])
+    for l in lines:
+        b = l.batch
+        if b is not None and b.alt_qty is not None:
+            l.alt_qty = float(b.alt_qty)
+            l.alt_uom = alt_uoms.get(str(b.packing_order_id)) or None
 
 
 def _decorate(shp: Shipment) -> Shipment:
@@ -240,6 +249,21 @@ async def _pick_list_rollup(db: AsyncSession, pl_ids: list[uuid.UUID]) -> dict:
     return {str(pid): (int(c), float(q), at) for pid, c, q, at in rows}
 
 
+async def _assert_sizes_fit(db: AsyncSession, pick_lists) -> None:
+    """Every carton on these pick lists is the size its SO line ordered.
+
+    Checked again at staging and dispatch, not only when the carton was picked:
+    pick lists written before the gate existed (or edited around it) must not
+    reach the truck.
+    """
+    try:
+        await packing_service.assert_cartons_fit_lines(
+            db, [(l.sales_order_line_id, l.batch_id) for pl in pick_lists for l in pl.lines],
+        )
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
 async def _resolve_members(
     db: AsyncSession, pl_ids: list[uuid.UUID], shp: Optional[Shipment] = None
 ) -> list[PickList]:
@@ -280,6 +304,9 @@ async def _resolve_members(
                 detail=f"{pl.code}: {len(unconfirmed)} carton(s) not scanned by the picker",
             )
         customers.add((pl.sales_order.customer_name if pl.sales_order else None) or "")
+    # The Surat Jalan prints each carton against its SO line — a carton of another
+    # size would put the wrong size on the customer's delivery note.
+    await _assert_sizes_fit(db, found)
     if len(customers) > 1:
         raise HTTPException(
             status_code=400,
@@ -591,6 +618,7 @@ async def dispatch_shipment(
         lines = dispatch_service.assert_issuable(pl)
         shortages += await dispatch_service.check_availability(db, pl, lines)
         loaded.append((pl, lines))
+    await _assert_sizes_fit(db, [pl for pl, _ in loaded])
     if shortages:
         raise HTTPException(status_code=400, detail="Insufficient stock — " + "; ".join(shortages))
 

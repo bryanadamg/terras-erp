@@ -62,6 +62,7 @@ const SO_LINES: RowSourceDef = {
         { field: 'size', label: 'Size' },
         { field: 'qty_unit', label: 'Qty/Unit' },
         { field: 'qty', label: 'Qty (number)', numeric: true },
+        { field: 'alt_unit', label: 'Alt Unit' },
         { field: 'del_request', label: 'Del. Request' },
         { field: 'internal_confirmation', label: 'Internal Confirmation' },
         // Hand-filled on the signed copy — no data behind these on purpose.
@@ -84,8 +85,12 @@ const SO_LINES: RowSourceDef = {
             variant: l.attrs.join(' / '),
             color: l.color_name ? `${l.color_name}${l.color_code ? ` (${l.color_code})` : ''}` : '',
             size: [l.size_display, l.size_measurement].filter(Boolean).join(' '),
-            qty_unit: `${Number(l.qty).toLocaleString()} ${l.uom}`.trim(),
+            // The ordered qty with the selling unit under it — "720 Yd / 5 Gross". A
+            // composite cell so saved layouts, which all print `qty_unit`, gain the
+            // alt unit without being re-edited.
+            qty_unit: { title: l.qtyText, lines: l.altText ? [l.altText] : [] },
             qty: Number(l.qty),
+            alt_unit: l.altText,
             del_request: l.delRequest || null,
             internal_confirmation: l.internalConfirmation || null,
             del_confirmation: null,
@@ -137,7 +142,12 @@ export function buildSalesOrderContext({
             lines: (s.lines || []).map((l: any) => ({
                 ...l,
                 itemName: l.item_name || itemIndex?.[String(l.item_id)]?.name || l.item_id,
-                uom: itemIndex?.[String(l.item_id)]?.uom || '',
+                // SO line qty is always yards (the SO form stores it as such and the
+                // list labels it Yd) — never the item's stock unit, which printed
+                // "720 kg" for a 720 Yd line.
+                qtyText: `${Number(l.qty).toLocaleString()} Yd`,
+                altText: l.qty2 != null && l.qty2 !== '' && l.uom2
+                    ? `${Number(l.qty2).toLocaleString()} ${l.uom2}` : '',
                 attrs: (l.attribute_value_ids || []).map(attrName).filter(Boolean),
                 delRequest: dmy(l.due_date),
                 internalConfirmation: dmy(l.internal_confirmation_date),

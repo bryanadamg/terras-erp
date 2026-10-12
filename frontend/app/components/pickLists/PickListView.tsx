@@ -1238,6 +1238,7 @@ function PickListEditor({ pl: initialPl, itemById, locPickerTreeOptions, authFet
     const [so, setSo] = useState<any | null>(null);
     const [soLoading, setSoLoading] = useState(true);
     const [remainingMap, setRemainingMap] = useState<Record<string, number>>({});
+    const [remainingAltMap, setRemainingAltMap] = useState<Record<string, number>>({});
     const soLines: any[] = so?.lines || [];
 
     const [lines, setLines] = useState<any[]>(() => (initialPl.lines || []).map((l: any) => ({ ...l })));
@@ -1276,9 +1277,13 @@ function PickListEditor({ pl: initialPl, itemById, locPickerTreeOptions, authFet
             setSo(soData);
             setSoLoading(false);
 
-            const remRes = await authFetch(`${API_BASE}/pick-lists/${initialPl.id}/remaining`);
+            const [remRes, remAltRes] = await Promise.all([
+                authFetch(`${API_BASE}/pick-lists/${initialPl.id}/remaining`),
+                authFetch(`${API_BASE}/pick-lists/${initialPl.id}/remaining?alt=true`),
+            ]);
             if (cancelled) return;
             if (remRes && remRes.ok) setRemainingMap(await remRes.json());
+            if (remAltRes && remAltRes.ok) setRemainingAltMap(await remAltRes.json());
         })();
         return () => { cancelled = true; };
     }, [initialPl.sales_order_id, initialPl.id, authFetch]);
@@ -1475,6 +1480,20 @@ function PickListEditor({ pl: initialPl, itemById, locPickerTreeOptions, authFet
                             // alone, which left the neighbouring figures reading as a bare
                             // count of something.
                             const lineUom = sl.base_uom || it?.uom || '';
+                            // The customer orders and is owed in the line's alt unit (Gross,
+                            // Pcs), so read the row in it when the SO line has one; kilos
+                            // stay as the carton's secondary figure. The picked total only
+                            // switches when every carton counted in that same unit — a bulk
+                            // line or a box packed without a count can't be summed into it.
+                            const altUom = sl.alt_uom || '';
+                            const onAlt = !!altUom && sl.qty_ordered_alt != null;
+                            const orderedAlt = onAlt ? num(sl.qty_ordered_alt) : null;
+                            const remAltRaw = remainingAltMap[String(sl.id)];
+                            const remAlt = onAlt ? (remAltRaw != null ? num(remAltRaw) : orderedAlt) : null;
+                            const pickedOnAlt = onAlt && rows.length > 0
+                                && rows.every((r: any) => r.alt_qty != null && r.alt_uom === altUom);
+                            const totalPickedAlt = pickedOnAlt
+                                ? rows.reduce((s: number, r: any) => s + num(r.alt_qty), 0) : null;
                             return (
                                 <React.Fragment key={sl.id}>
                                     <tr style={{ background: '#f5f4ef' }}>
@@ -1486,17 +1505,24 @@ function PickListEditor({ pl: initialPl, itemById, locPickerTreeOptions, authFet
                                         <td style={td} />
                                         <td style={td} />
                                         <td style={{ ...td, textAlign: 'right' }}>
-                                            {ordered !== null
+                                            {orderedAlt !== null
+                                                ? <span title={ordered !== null ? `${ordered.toLocaleString()} ${lineUom}` : undefined}>{orderedAlt.toLocaleString()} {altUom}</span>
+                                                : ordered !== null
                                                 ? `${ordered.toLocaleString()} ${lineUom}`
                                                 : <span style={{ color: '#999' }} title="This item is stocked by weight but carries no g/y or g/m on its master, so the ordered yards cannot be restated in it">&mdash;</span>}
                                         </td>
-                                        <td style={{ ...td, textAlign: 'right', color: rem !== null && rem > 0 ? '#0a3e0a' : '#999' }}>
-                                            {rem !== null
+                                        <td style={{ ...td, textAlign: 'right', color: (remAlt ?? rem) !== null && (remAlt ?? rem)! > 0 ? '#0a3e0a' : '#999' }}>
+                                            {remAlt !== null
+                                                ? <span title={rem !== null ? `${rem.toLocaleString()} ${lineUom}` : undefined}>{remAlt.toLocaleString()} <span style={{ color: '#888' }}>{altUom}</span></span>
+                                                : rem !== null
                                                 ? <>{rem.toLocaleString()} <span style={{ color: '#888' }}>{lineUom}</span></>
                                                 : <span>&mdash;</span>}
                                         </td>
-                                        <td style={{ ...td, textAlign: 'right', fontWeight: 'bold' }}>
-                                            {totalPicked.toLocaleString()} <span style={{ color: '#888', fontWeight: 'normal' }}>{lineUom}</span>
+                                        <td style={{ ...td, textAlign: 'right', fontWeight: 'bold' }}
+                                            title={totalPickedAlt !== null ? `${totalPicked.toLocaleString()} ${lineUom}` : undefined}>
+                                            {totalPickedAlt !== null
+                                                ? <>{totalPickedAlt.toLocaleString()} <span style={{ color: '#888', fontWeight: 'normal' }}>{altUom}</span></>
+                                                : <>{totalPicked.toLocaleString()} <span style={{ color: '#888', fontWeight: 'normal' }}>{lineUom}</span></>}
                                         </td>
                                         <td style={td} colSpan={3}>
                                             {rows.length === 0 && <span style={{ fontSize: 10, color: '#c00' }}>No packed cartons available</span>}
@@ -1561,8 +1587,20 @@ function PickListEditor({ pl: initialPl, itemById, locPickerTreeOptions, authFet
                                                     a click that does nothing. Bulk lines keep the real field. */}
                                                 {r.batch_id ? (
                                                     <span title="A carton ships whole — its qty comes from stock">
-                                                        {num(r.qty_picked).toLocaleString()}
-                                                        <span style={{ color: '#888', marginLeft: 3 }}>{lineUom}</span>
+                                                        {r.alt_qty != null && r.alt_uom ? (
+                                                            <>
+                                                                {num(r.alt_qty).toLocaleString()}
+                                                                <span style={{ color: '#888', marginLeft: 3 }}>{r.alt_uom}</span>
+                                                                <span style={{ color: '#888', fontSize: 10, marginLeft: 4 }}>
+                                                                    ({num(r.qty_picked).toLocaleString()} {lineUom})
+                                                                </span>
+                                                            </>
+                                                        ) : (
+                                                            <>
+                                                                {num(r.qty_picked).toLocaleString()}
+                                                                <span style={{ color: '#888', marginLeft: 3 }}>{lineUom}</span>
+                                                            </>
+                                                        )}
                                                     </span>
                                                 ) : (
                                                     <input type="number" min={0}

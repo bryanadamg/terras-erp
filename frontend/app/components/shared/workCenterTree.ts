@@ -68,16 +68,16 @@ export const toMachineOptions = (list: any[]): WCOption[] =>
         .map((wc: any) => ({ value: String(wc.id), label: wc.name, subLabel: wc.code }));
 
 /**
- * Machines that run under one centre type (e.g. 'PACKING'), falling back to every
- * machine when the plant has not declared that type yet — an unfilterable picker
- * beats an empty one, the same rule WOCompletionModal applies to its process scope.
+ * Machines that run under one centre type (e.g. 'PACKING'), read through
+ * `centerTypeOfWC` so a machine inherits its TYPE's. Strict: a plant that has not
+ * declared the type gets an empty list, not every machine — a packing picker
+ * offering looms is worse than none (the machine is optional on every caller).
  */
 export function machinesOfCenterType(workCenters: any[], type: string): any[] {
     const machines = (workCenters || []).filter((wc: any) => isMachineWC(wc));
     const t = String(type || '').toUpperCase();
     if (!t) return machines;
-    const matching = machines.filter((wc: any) => centerTypeOfWC(workCenters || [], wc) === t);
-    return matching.length ? matching : machines;
+    return machines.filter((wc: any) => centerTypeOfWC(workCenters || [], wc) === t);
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

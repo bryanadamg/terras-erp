@@ -778,6 +778,7 @@ async def update_lab_dip_item_status(
             # A shade dipped for a customer belongs to that customer; without this the
             # library row reads as a House color. No customer on the request → House.
             customer_id=(parent.customer_id if parent else None),
+            item_id=item.item_id,
         )
         db.add(color)
         await db.flush()

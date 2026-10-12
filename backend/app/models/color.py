@@ -65,10 +65,16 @@ class Color(Base):
     source_lab_dip_line_id: Mapped[Optional[uuid.UUID]] = mapped_column(
         UUID(as_uuid=True), ForeignKey("lab_dip_lines.id", ondelete="SET NULL"), nullable=True, index=True
     )
+    # Item the shade was approved for, set directly when the lab dip happened outside
+    # this system (no LabDipItem to derive it from). Approval-minted shades also stamp it.
+    item_id: Mapped[Optional[uuid.UUID]] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("items.id", ondelete="SET NULL"), nullable=True, index=True
+    )
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
     customer = relationship("Partner", foreign_keys=[customer_id])
     attribute_value = relationship("AttributeValue", foreign_keys=[attribute_value_id])
     variant_attribute_value = relationship("AttributeValue", foreign_keys=[variant_attribute_value_id])
     source_lab_dip_line = relationship("LabDipLine", foreign_keys=[source_lab_dip_line_id])
+    item = relationship("Item", foreign_keys=[item_id])
     recipes: Mapped[List["DyeRecipe"]] = relationship("DyeRecipe", back_populates="color")

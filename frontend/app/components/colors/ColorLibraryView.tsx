@@ -7,7 +7,8 @@ import { useDebouncedCommit } from '../../context/usePaginatedList';
 import SearchableSelect from '@bryanadamg/terras-ui/components/Combobox';
 import ModalWrapper from '../shared/ModalWrapper';
 import Pager from '../shared/Pager';
-import { StatusChip, FormSection, useFloatingMenu, MenuTriggerButton, FloatingMenu, XPActionButton, ColorSwatchChip, CodeChip, CODE_FONT, SwatchBox, TableSkeleton, useTableSkeletonMetrics, XP_BTN, SKEL_PAGE_ROWS } from '../shared/xpTheme';
+import { useItemSearch, itemToOption } from '../shared/useEntitySearch';
+import { StatusChip, FormSection, FormError, useFloatingMenu, MenuTriggerButton, FloatingMenu, XPActionButton, ColorSwatchChip, CodeChip, CODE_FONT, SwatchBox, TableSkeleton, useTableSkeletonMetrics, XP_BTN, SKEL_PAGE_ROWS } from '../shared/xpTheme';
 import { SearchField, FilterChipBar, ToolbarButton, viewShellStyle, PageTitleBar } from '../shared/shellTheme';
 import {
     LV_XP_FONT, lvInput, lvBtn, lvPrimaryBtn, lvLabel, lvTh, lvTd, lvSep, lvRow, lvThead, TableEmpty, ResizableTable } from '../shared/listViewTheme';
@@ -43,8 +44,8 @@ interface Props {
     onItemSearchChange?: (s: string) => void;
     onSourceFilterChange?: (v: string) => void;
     onPageChange: (p: number) => void;
-    onCreate: (payload: any) => void;
-    onEdit: (id: string, payload: any) => void;
+    onCreate: (payload: any) => Promise<{ ok: boolean; error?: string }>;
+    onEdit: (id: string, payload: any) => Promise<{ ok: boolean; error?: string }>;
     onDelete: (id: string) => void;
     prefill?: { source_lab_dip_line_id: string; values: Record<string, string> } | null;
     embedded?: boolean;   // when tabbed under the Colors shell, drop own title + outer frame
@@ -56,6 +57,7 @@ const emptyForm = () => ({
     substrate: '', customer_id: '', customer_color_code: '',
     l_star: '', a_star: '', b_star: '', lab_illuminant: '',
     spectro_notes: '', notes: '', status: 'active', variant_attribute_value_id: '',
+    item_id: '',
 });
 
 export default function ColorLibraryView({
@@ -67,6 +69,8 @@ export default function ColorLibraryView({
     const { confirm } = useConfirm();
     const { hasPermission, hasAnyPermission } = useUser();
     const canManage = hasAnyPermission('color_code.create', 'color_code.edit', 'color_code.archive');
+    // The New Color button needs create specifically — an edit/archive-only role saw it and 403'd on submit.
+    const canCreate = hasPermission('color_code.create');
     const router = useRouter();
     const { openId: menuOpenId, pos: menuPos, toggle: menuToggle, close: menuClose } = useFloatingMenu(160);
 
@@ -77,6 +81,9 @@ export default function ColorLibraryView({
     const [editing, setEditing] = useState<any>(null);
     const [form, setForm] = useState(emptyForm());
     const [sourceLineId, setSourceLineId] = useState<string | null>(null);
+    const [formError, setFormError] = useState('');
+    const [saving, setSaving] = useState(false);
+    const { results: itemResults, onSearch: onSearchItems, resolve: resolveItem } = useItemSearch({ enabled: isModalOpen });
     const [searchInput, setSearchInput] = useState(search);
     const [itemSearchInput, setItemSearchInput] = useState(itemSearch || '');
 
@@ -92,6 +99,7 @@ export default function ColorLibraryView({
             setEditing(null);
             setForm({ ...emptyForm(), ...prefill.values });
             setSourceLineId(prefill.source_lab_dip_line_id);
+            setFormError('');
             setIsModalOpen(true);
         }
     }, [prefill?.source_lab_dip_line_id]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -128,7 +136,19 @@ export default function ColorLibraryView({
          ...(colorVariantValues || []).map((v: any) => ({ value: v.id, label: v.value }))],
     [colorVariantValues]);
 
-    const openCreate = () => { setEditing(null); setForm(emptyForm()); setSourceLineId(null); setIsModalOpen(true); };
+    // Direct item link, for a shade lab-dipped outside this system. The selected item
+    // stays in the options even after the search window moves past it.
+    const itemOptions = useMemo(() => {
+        const opts = itemResults.map(itemToOption);
+        if (form.item_id && !opts.some(o => o.value === form.item_id)) {
+            const it = resolveItem(form.item_id);
+            opts.unshift(it ? itemToOption(it)
+                : { value: form.item_id, label: editing?.source_item_name || form.item_id, subLabel: editing?.source_item_code });
+        }
+        return [{ value: '', label: 'No item' }, ...opts];
+    }, [itemResults, form.item_id, resolveItem, editing]);
+
+    const openCreate = () => { setEditing(null); setForm(emptyForm()); setSourceLineId(null); setFormError(''); setIsModalOpen(true); };
     const openEdit = (c: any) => {
         setEditing(c);
         setForm({
@@ -139,11 +159,13 @@ export default function ColorLibraryView({
             lab_illuminant: c.lab_illuminant || '',
             spectro_notes: c.spectro_notes || '', notes: c.notes || '', status: c.status || 'active',
             variant_attribute_value_id: c.variant_attribute_value_id || '',
+            item_id: c.item_id || '',
         });
+        setFormError('');
         setIsModalOpen(true);
     };
 
-    const handleSubmit = (e: React.FormEvent) => {
+    const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!form.code.trim() || !form.name.trim()) return;
         // CIELAB axes are numeric columns: send a number when filled, null when blank.
@@ -152,15 +174,16 @@ export default function ColorLibraryView({
             ...form,
             customer_id: form.customer_id || null,
             variant_attribute_value_id: form.variant_attribute_value_id || null,
+            item_id: form.item_id || null,
             l_star: num(form.l_star), a_star: num(form.a_star), b_star: num(form.b_star),
             lab_illuminant: form.lab_illuminant.trim() || null,
         };
-        if (editing) {
-            onEdit(editing.id, payload);
-        } else {
-            if (sourceLineId) payload.source_lab_dip_line_id = sourceLineId;
-            onCreate(payload);
-        }
+        if (!editing && sourceLineId) payload.source_lab_dip_line_id = sourceLineId;
+        setFormError('');
+        setSaving(true);
+        const res = editing ? await onEdit(editing.id, payload) : await onCreate(payload);
+        setSaving(false);
+        if (!res?.ok) { setFormError(res?.error || 'Could not save this color.'); return; }
         setIsModalOpen(false);
         setEditing(null);
         setForm(emptyForm());
@@ -219,7 +242,7 @@ export default function ColorLibraryView({
                 <span style={{ marginLeft: 'auto', fontSize: 11, color: '#333' }}>
                     {total.toLocaleString()} color{total !== 1 ? 's' : ''}
                 </span>
-                {canManage && (
+                {canCreate && (
                     <>
                         <span style={lvSep()} />
                         <ToolbarButton tone="create" icon="bi-plus-lg" onClick={openCreate}>New Color</ToolbarButton>
@@ -339,13 +362,14 @@ export default function ColorLibraryView({
                 footer={
                     <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
                         <button type="button" className={XP_BTN} style={lvBtn()} onClick={() => setIsModalOpen(false)}>Cancel</button>
-                        <button type="submit" form="color-form" className={XP_BTN} style={lvPrimaryBtn()}>
-                            {editing ? 'Save' : 'Create'}
+                        <button type="submit" form="color-form" className={XP_BTN} style={lvPrimaryBtn()} disabled={saving}>
+                            {saving ? 'Saving…' : editing ? 'Save' : 'Create'}
                         </button>
                     </div>
                 }
             >
                 <form id="color-form" onSubmit={handleSubmit}>
+                    <FormError>{formError}</FormError>
                     {/* 1. Identity — code + name (+ status when editing) always top-most. */}
                     <FormSection title="Identity">
                         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
@@ -364,6 +388,16 @@ export default function ColorLibraryView({
                                     value={form.variant_attribute_value_id}
                                     onChange={v => setForm({ ...form, variant_attribute_value_id: v })}
                                     placeholder="Not linked to a variant"
+                                />
+                            </div>
+                            <div>
+                                <label style={lvLabel()}>Item</label>
+                                <SearchableSelect
+                                    options={itemOptions}
+                                    value={form.item_id}
+                                    onChange={v => setForm({ ...form, item_id: v })}
+                                    onSearch={onSearchItems}
+                                    placeholder="Item this shade was dipped for"
                                 />
                             </div>
                             {editing && (

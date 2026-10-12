@@ -83,8 +83,9 @@ def _serialize(c: Color, recipe_count: int = 0, provenance: tuple | None = None)
     d["recipe_count"] = recipe_count
     d["source_lab_dip_request_id"] = provenance[0] if provenance else None
     d["source_lab_dip_code"] = provenance[1] if provenance else None
-    d["source_item_name"] = provenance[2] if provenance else None
-    d["source_item_code"] = provenance[3] if provenance else None
+    # Lab-dip-derived item wins; the direct link covers shades dipped outside the system.
+    d["source_item_name"] = (provenance[2] if provenance else None) or (c.item.name if c.item else None)
+    d["source_item_code"] = (provenance[3] if provenance else None) or (c.item.code if c.item else None)
     return d
 
 
@@ -101,7 +102,7 @@ async def list_colors(
     db: AsyncSession = Depends(get_async_db),
     current_user: User = Depends(get_current_user),
 ):
-    q = select(Color).options(joinedload(Color.customer), joinedload(Color.variant_attribute_value))
+    q = select(Color).options(joinedload(Color.customer), joinedload(Color.variant_attribute_value), joinedload(Color.item))
     count_q = select(func.count(Color.id))
 
     if search:
@@ -125,16 +126,16 @@ async def list_colors(
         count_q = count_q.filter(Color.variant_attribute_value_id == variant_attribute_value_id)
     if item_search:
         item_like = f"%{item_search}%"
-        # "Item" is provenance-derived (the FG variant a shade was approved for via
-        # LabDipItem.approved_color_id), not a direct FK on Color — see _lab_dip_provenance.
+        # "Item" is either lab-dip provenance (LabDipItem.approved_color_id — see
+        # _lab_dip_provenance) or the direct Color.item_id link for external dips.
+        item_match = or_(Item.name.ilike(item_like), Item.code.ilike(item_like))
         matching_color_ids = select(LabDipItem.approved_color_id).join(
             Item, LabDipItem.item_id == Item.id
-        ).filter(
-            LabDipItem.approved_color_id.isnot(None),
-            or_(Item.name.ilike(item_like), Item.code.ilike(item_like)),
-        )
-        q = q.filter(Color.id.in_(matching_color_ids))
-        count_q = count_q.filter(Color.id.in_(matching_color_ids))
+        ).filter(LabDipItem.approved_color_id.isnot(None), item_match)
+        matching_item_ids = select(Item.id).filter(item_match)
+        cond = Color.id.in_(matching_color_ids) | Color.item_id.in_(matching_item_ids)
+        q = q.filter(cond)
+        count_q = count_q.filter(cond)
     if source:
         # Which lab dip book a shade came from. Like `item_search`, this is
         # provenance-derived rather than a column on Color, so it can never drift
@@ -223,7 +224,7 @@ async def create_color(
 
     await db.commit()
     result = await db.execute(
-        select(Color).options(joinedload(Color.customer), joinedload(Color.variant_attribute_value)).filter(Color.id == color.id)
+        select(Color).options(joinedload(Color.customer), joinedload(Color.variant_attribute_value), joinedload(Color.item)).filter(Color.id == color.id)
     )
     c = result.scalars().first()
     await audit_service.log_activity(
@@ -266,7 +267,7 @@ async def update_color(
 
     await db.commit()
     result = await db.execute(
-        select(Color).options(joinedload(Color.customer), joinedload(Color.variant_attribute_value)).filter(Color.id == color_id)
+        select(Color).options(joinedload(Color.customer), joinedload(Color.variant_attribute_value), joinedload(Color.item)).filter(Color.id == color_id)
     )
     c = result.scalars().first()
     counts = await _recipe_counts(db, [c.id])
@@ -388,6 +389,7 @@ async def create_color_variant(
         db, str(current_user.id), "CREATE", "AttributeValue", str(av.id),
         details=f"Added color variant '{av.value}'", changes=audit_service.added({"value": av.value, "hex": av.hex})
     )
+    await manager.broadcast({"type": "MASTER_DATA_UPDATE", "domain": "attributes"})
     return av
 
 
@@ -426,6 +428,7 @@ async def update_color_variant(
         details=f"Renamed color variant '{old_value}' -> '{val.value}'",
         changes={"value": [old_value, val.value], "hex": [old_hex, val.hex]}
     )
+    await manager.broadcast({"type": "MASTER_DATA_UPDATE", "domain": "attributes"})
     return val
 
 
@@ -453,4 +456,5 @@ async def delete_color_variant(
         db, str(current_user.id), "DELETE", "AttributeValue", value_id,
         details=f"Deleted color variant '{label}'", changes={}
     )
+    await manager.broadcast({"type": "MASTER_DATA_UPDATE", "domain": "attributes"})
     return {"status": "success", "message": "Color variant deleted"}

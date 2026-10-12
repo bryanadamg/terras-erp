@@ -870,6 +870,12 @@ async def list_work_orders_flat(
     # Root MO per WO — the top of the parent/pegging chain, so the floor can jump from
     # any step (including consolidated component MOs) to the order it ultimately feeds.
     root_map = await resolve_root_mos(db, [str(wo.manufacturing_order_id) for wo in wos])
+    # Lots staged to the steps whose staged lots are their load (dyeing, setting), so
+    # the progress bar can show what is on the line beside what is done.
+    staged_map = await staging_service.staged_loads(db, [
+        wo for wo in wos
+        if wo.work_center and (wo.work_center.center_type or "").upper() in staging_service.STAGED_LOAD_CENTER_TYPES
+    ])
 
     result = []
     for wo in wos:
@@ -956,6 +962,7 @@ async def list_work_orders_flat(
             next_destination_work_center_name=wo.next_destination_work_center_name,
             ends=wo.ends,
             staging_status=wo.staging_status or "NOT_STAGED",
+            staged_qty=staged_map.get(str(wo.id)),
             bom_operation_id=str(wo.bom_operation_id) if wo.bom_operation_id else None,
             planned_recipe_id=str(wo.planned_recipe_id) if wo.planned_recipe_id else None,
             mo_id=str(mo.id),
@@ -1781,7 +1788,10 @@ async def add_mo_completion(
 
     # Planned qty met -> DELIVERED, NOT COMPLETED. The order stays open so the floor
     # can keep logging (spare beams, extra bags) until someone closes it explicitly.
-    if total_completed >= float(mo.qty) and mo.status not in ("DELIVERED", "COMPLETED"):
+    # "Met" allows the weighing tolerance short: a 19 kg order that weighs out at
+    # 18.8 kg is the same material on a different scale, not an unfinished order.
+    met_frac = 1 - await stock_service.measurement_tolerance_pct(db) / 100
+    if total_completed >= float(mo.qty) * met_frac and mo.status not in ("DELIVERED", "COMPLETED"):
         auto_transitions.append(("ManufacturingOrder", str(mo.id), mo.status, "DELIVERED"))
         mo.status = "DELIVERED"
         mo.actual_end_date = datetime.utcnow()
@@ -1807,7 +1817,7 @@ async def add_mo_completion(
             )
         )
         wo_total = float(wo_total_result.scalar() or 0)
-        if wo_total >= float(wo.qty) and wo.status != "COMPLETED":
+        if wo_total >= float(wo.qty) * met_frac and wo.status != "COMPLETED":
             auto_transitions.append(("WorkOrder", str(wo.id), wo.status, "COMPLETED"))
             wo.status = "COMPLETED"
             wo.actual_end_date = datetime.utcnow()

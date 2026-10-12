@@ -410,6 +410,8 @@ async def get_production_run_material_requirements(
         db, {c.item_id for mo in pr.manufacturing_orders for c in mo.planned_components}
     )
 
+    # Same weighing tolerance the MO's own DELIVERED transition allows short.
+    met_frac = 1 - await stock_service.measurement_tolerance_pct(db) / 100
     for mo in pr.manufacturing_orders:
         produced = produced_by_mo.get(mo.id, 0.0)
         # Closed orders make no more output and consume no more material.
@@ -435,7 +437,7 @@ async def get_production_run_material_requirements(
             mo_id=mo.id, mo_code=mo.code, mo_qty=float(mo.qty), qty_produced=produced,
             wo_count=wo_count,
             status=("NOT_STARTED" if produced <= _QTY_EPS
-                    else ("OK" if produced >= float(mo.qty) - _QTY_EPS else "SHORT")),
+                    else ("OK" if produced >= float(mo.qty) * met_frac - _QTY_EPS else "SHORT")),
         ))
 
         for comp in mo.planned_components:

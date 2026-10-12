@@ -4,9 +4,13 @@ Deliberately NOT shared with `weaving_service`. A loom runs continuously for day
 and is measured in kg against a calendar of working days; a dye batch fits inside
 one shift and is measured against the clock the floor stamps by hand:
 
-    time-based output = yards_per_min * lines * run_minutes    (yards)
-                      -> restated in the item's stock UOM through its g/y factor
-    progress_pct      = time-based output / WO qty * 100
+    target yards      = load restated in yards through the item's g/y factor
+    expected_minutes  = target yards / (yards_per_min * lines)
+    progress_pct      = run_minutes / expected_minutes * 100
+
+i.e. how long the vessel ran against how long that load needs at its speed. This is
+the same ratio as time-based output (yards_per_min * lines * run_minutes, back
+through g/y) over the load -- framed in minutes because that is what the floor stamps.
 
 Both rate factors live on the DyeingRun and are chosen per load: `yards_per_min`
 is how fast ONE rope is run (picked off the `Dyeing Speed` system attribute, not
@@ -15,10 +19,11 @@ between the monitor's Start and Complete stamps. Any factor missing yields None 
 never 0, which would read as a vessel producing nothing rather than a batch nobody
 has set a speed for.
 
-The comparison is against the WO's assigned qty, not logged completions: the
-question the floor asks is "did the machine run long enough, fast enough, for the
-mass it was given", and a completion logged a minute after Complete must not make a
-full batch read short.
+The load is what was physically put in the vessel: the lots staged to the WO when
+there are any, else the WO's assigned qty. Never logged completions: the question
+the floor asks is "did the machine run long enough, fast enough, for the mass it
+was given", and a completion logged a minute after Complete must not make a full
+batch read short.
 """
 from datetime import datetime, timezone
 from typing import Optional
@@ -98,7 +103,9 @@ def compute_run_metrics(run, target_qty: Optional[float], item, now: datetime) -
     lines = int(run.lines or 0)
     ypm = float(run.yards_per_min) if run.yards_per_min is not None else None
     yd_min = yards_per_minute(ypm, lines)
-    minutes = run_minutes(run.started_at, run.completed_at, now)
+    # Rounded before it multiplies, so the arithmetic the row shows (17.6 min x ...)
+    # reproduces its own yards exactly. 0.1 min is 6 s -- finer than a hand stamp.
+    minutes = _round(run_minutes(run.started_at, run.completed_at, now), 1)
 
     time_yards = yd_min * minutes if (yd_min is not None and minutes is not None) else None
     # Yards one stock unit buys (1000/g-per-yard for a kg item, 1 for a yard item),
@@ -107,7 +114,11 @@ def compute_run_metrics(run, target_qty: Optional[float], item, now: datetime) -
     time_qty = (time_yards / yards_per_unit) if (time_yards is not None and yards_per_unit) else None
 
     target = float(target_qty) if target_qty else None
-    progress = (time_qty / target * 100.0) if (time_qty is not None and target) else None
+    # Each figure is rounded to what the row shows before the next step uses it, so
+    # the arithmetic the expand row prints reproduces its own result.
+    target_yards = _round(to_yards(target, item), 1) if target else None
+    expected = _round(target_yards / yd_min, 2) if (target_yards and yd_min) else None
+    progress = (minutes / expected * 100.0) if (minutes is not None and expected) else None
 
     return {
         "clock": clock_state(run.started_at, run.completed_at),
@@ -118,6 +129,8 @@ def compute_run_metrics(run, target_qty: Optional[float], item, now: datetime) -
         "time_yards": _round(time_yards, 1),
         "time_qty": _round(time_qty, 3),
         "target_qty": target,
+        "target_yards": target_yards,
+        "expected_minutes": expected,
         "progress_pct": _round(progress, 1),
         # Why there is no number, so the row can name the missing input rather than
         # showing an unexplained dash.
@@ -125,4 +138,13 @@ def compute_run_metrics(run, target_qty: Optional[float], item, now: datetime) -
             ([] if ypm else ["yards_per_min"]) + ([] if lines else ["lines"])
         ),
         "missing_gy_factor": yards_per_unit is None,
+        # The weight factor the yards were divided through, so the row can show its
+        # arithmetic. Only set for a weighed item -- a length item needs no factor.
+        **_weight_factor(item, yards_per_unit),
     }
+
+
+def _weight_factor(item, yards_per_unit: Optional[float]) -> dict:
+    if yards_per_unit is None or not packing_service.uom_is_kg(getattr(item, "uom", None)):
+        return {"weight_per_unit": None, "weight_unit": None}
+    return {"weight_per_unit": float(item.weight_per_unit), "weight_unit": item.weight_unit.strip().lower()}

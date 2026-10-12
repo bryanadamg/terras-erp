@@ -240,12 +240,8 @@ def _decorate(po: PackingOrder, units: list = None) -> PackingOrder:
         # Same precedence as the SO line's `size_display`: the generic Size pick,
         # its free label, then the legacy BOMSize pointer. Reading bom_size alone
         # blanked the size on every line written after the size/BOM decoupling.
-        sol, bs = po.sales_order_line, po.sales_order_line.bom_size
-        po.size_label = (
-            (sol.size.name if sol.size is not None else None)
-            or sol.size_label
-            or ((bs.size_name or bs.label) if bs is not None else None)
-        )
+        sol = po.sales_order_line
+        po.size_label = packing_service.line_size_name(sol)
         po.size_measurement = line_size_measurement(sol, po.size_label)
     # Resolved base-UOM qty per alt unit — served, not left to the client, so the
     # pack screens, the labels and this API agree on one conversion.
@@ -802,17 +798,24 @@ async def update_packing_order(
     # planned, and over-packing the remainder is the correct floor behaviour, the
     # same way an MO's qty is a target and not a ceiling.
     #
+    # A leftover inside the weighing tolerance is not cloth on the desk, only the
+    # gap between the dyeing scale and the packing scale — it is written off as a
+    # measurement variance instead of forcing a phantom carton.
+    #
     # Ordering is load-bearing: this runs a SELECT, the session autoflushes on it,
     # and validating after the setattr loop below would therefore persist the very
     # status it is about to refuse.
+    variances: list[tuple[str, float]] = []
     if payload.status == "COMPLETED":
-        left = await packing_service.undrained_locked_lots(db, po)
+        tol = await stock_service.measurement_tolerance_pct(db)
+        variances, left = await packing_service.settle_locked_lots(db, po, tol)
         if left:
             uom = (po.item.uom if po.item else "") or ""
             detail = ", ".join(f"{bn} ({qty:g} {uom})".strip() for bn, qty in left)
             raise HTTPException(
                 status_code=400,
-                detail=f"Pack the held lots out before closing {po.code} — still on the desk: {detail}",
+                detail=f"Pack the held lots out before closing {po.code} — still on the desk "
+                       f"(more than the {tol:g}% weighing tolerance): {detail}",
             )
 
     before = audit_service.fields_of(po, _AUDITED_FIELDS)
@@ -902,6 +905,13 @@ async def update_packing_order(
         entity_type="PackingOrder", entity_id=str(po.id),
         details=f"Updated packing order {po.code}", changes=changes or None,
     )
+    if variances:
+        await audit_service.log_activity(
+            db, user_id=current_user.id, action="MEASURE_VAR",
+            entity_type="PackingOrder", entity_id=str(po.id),
+            details=f"Closed {po.code}: wrote off weighing variance "
+                    + ", ".join(f"-{q:g} on {bn}" for bn, q in variances),
+        )
     try:
         await manager.broadcast({"type": "PACKING_UPDATE", "id": str(po.id)})
         # Status/qty/location edits (cancelling included) change whether this
@@ -1000,6 +1010,12 @@ async def add_packing_completion(
         await packing_service.assert_lots_unlocked(
             db, po.id, [(l.batch_id if l else None) for l in lots],
         )
+        # Size gate: an order for an XL line packs XL. Without it the picker's FIFO
+        # default once drew an L lot into an XL order — the carton counted toward
+        # the target and could never ship on the line.
+        await packing_service.assert_lot_sizes_match(
+            db, po, [(l.batch_id if l else None) for l in lots],
+        )
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
 
@@ -1083,6 +1099,7 @@ async def add_packing_completion(
     # box-size path (that split only ever happens inside one lot), so this
     # stays empty and the per-lot mint below runs unchanged for it.
     box_groups: dict[int, list[dict]] = {}
+    measure_gains: list[tuple] = []  # (batch_id, excess) booked in as weighing variance
     for idx, lot in enumerate(lots):
         lot_qty = lot_qtys[idx]
         lot_reject = lot_rejects[idx]
@@ -1151,10 +1168,25 @@ async def add_packing_completion(
         # offcuts.
         needed = lot_qty + lot_reject
         if available + 1e-6 < needed:
-            raise HTTPException(
-                status_code=400,
-                detail=f"Insufficient stock at source — have {available}, need {needed}",
+            # Cartons weighed heavier than the book: inside the weighing tolerance
+            # (a % of the lot's book qty) the excess is booked in as a measurement
+            # variance first, so the draw records what the scale actually read.
+            excess = needed - available
+            lot_book = available + await packing_service.lot_drawn_qty(db, batch_id)
+            tol = await stock_service.measurement_tolerance_pct(db)
+            if not packing_service.within_tolerance(excess, lot_book, tol):
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"Insufficient stock at source — have {available:g}, need {needed:g} "
+                           f"(over by more than the {tol:g}% weighing tolerance)",
+                )
+            await stock_service.add_stock_entry(
+                db, item_id=po.item_id, location_id=po.source_location_id,
+                qty_change=excess, reference_type=stock_service.MEASURE_VAR,
+                reference_id=po.code, attribute_value_ids=[str(a) for a in attr_ids],
+                color_id=color_id, batch_id=batch_id,
             )
+            measure_gains.append((batch_id, excess))
 
         completion = PackingCompletion(
             packing_order_id=po.id,
@@ -1349,6 +1381,8 @@ async def add_packing_completion(
             + (f"; rejected {total_rejected:g}" if total_rejected > 0 else "")
             + (f" → {reject_loc_name}" if total_rejected > 0 and reject_loc_name else "")
             + (f": {reject_reason}" if total_rejected > 0 and reject_reason else "")
+            + (f"; weighing variance +{sum(q for _, q in measure_gains):g} over book"
+               if measure_gains else "")
         ),
     )
     await kpi_service.invalidate_and_broadcast(db, {"type": "PACKING_UPDATE", "id": str(po_id)}, {"type": "STOCK_UPDATE"})

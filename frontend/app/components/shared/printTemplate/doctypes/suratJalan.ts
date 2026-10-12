@@ -208,16 +208,28 @@ export function buildSuratJalanContext({
         if (!g) {
             g = {
                 key, itemName, size, combo, colorName, colorCode: l.color_code || '', poRef: l.po_ref || '',
-                uom: l.item_uom || itemIndex?.[String(l.item_id)]?.uom || '', qty: 0, cartons: [] as number[],
+                uom: l.alt_uom || '', qty: 0, cartons: [] as number[],
+                baseUom: l.item_uom || itemIndex?.[String(l.item_id)]?.uom || '', baseQty: 0, baseCartons: [] as number[],
+                altOk: true,
             };
             map.set(key, g);
         }
+        // Counted in the SO's alt unit (the cartons' packed count — Gross, Pcs)
+        // while every line in the group carries one in the same unit; one bulk
+        // line or box packed without a count drops the whole row to stock UoM, so
+        // two unlike units never add into one figure.
+        g.altOk = g.altOk && l.alt_qty != null && !!l.alt_uom && l.alt_uom === g.uom;
         const q = Number(l.qty_picked) || 0;
-        g.qty += q;
+        const a = Number(l.alt_qty) || 0;
+        g.baseQty += q;
+        g.qty += a;
         // Bulk ship lines carry no carton, so they add qty without a Dus tally.
-        if (l.batch_number) g.cartons.push(q);
+        if (l.batch_number) { g.baseCartons.push(q); g.cartons.push(a); }
     }
     const groups = Array.from(map.values());
+    for (const g of groups) {
+        if (!g.altOk) { g.qty = g.baseQty; g.uom = g.baseUom; g.cartons = g.baseCartons; }
+    }
 
     const customerName = shp.customer_name || '';
     const doc = {

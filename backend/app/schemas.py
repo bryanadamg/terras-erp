@@ -1184,6 +1184,9 @@ class WorkOrderFlatResponse(BaseModel):
     next_destination_work_center_name: str | None = None
     ends: int | None = None
     staging_status: str = "NOT_STAGED"
+    # Substrate lots staged to a dyeing/setting WO (net); None for other steps or
+    # when nothing is staged. See staging_service.staged_loads.
+    staged_qty: float | None = None
     bom_operation_id: str | None = None
     # Kartu Kerja's dyeing RECIPE box reads this; without it a WO-list print said '—'.
     planned_recipe_id: str | None = None
@@ -2372,6 +2375,7 @@ class ColorCreate(BaseModel):
     status: str = "active"
     variant_attribute_value_id: Optional[UUID] = None
     source_lab_dip_line_id: Optional[UUID] = None
+    item_id: Optional[UUID] = None
 
 class ColorUpdate(BaseModel):
     code: Optional[str] = None
@@ -2390,6 +2394,7 @@ class ColorUpdate(BaseModel):
     notes: Optional[str] = None
     status: Optional[str] = None
     variant_attribute_value_id: Optional[UUID] = None
+    item_id: Optional[UUID] = None
 
 class ColorResponse(ORMResponse):
     id: UUID
@@ -2419,6 +2424,7 @@ class ColorResponse(ORMResponse):
     source_lab_dip_code: Optional[str] = None
     source_item_name: Optional[str] = None
     source_item_code: Optional[str] = None
+    item_id: Optional[UUID] = None
     recipe_count: int = 0
     created_at: datetime
 
@@ -3197,6 +3203,7 @@ class CompanyProfileBase(BaseModel):
     website: Optional[str] = None
     logo_url: Optional[str] = None
     tax_id: Optional[str] = None
+    measurement_tolerance_pct: float = Field(2.0, ge=0, le=10)
 
 class CompanyProfileUpdate(CompanyProfileBase):
     pass
@@ -3270,6 +3277,9 @@ class BatchResponse(BaseModel):
     packing_order_id: Optional[UUID] = None
     package_no: Optional[int] = None
     alt_qty: Optional[float] = None
+    # The packing order holding this lot (claimed off the desk); the pack form
+    # preselects the order's own held lots first.
+    locked_packing_order_id: Optional[UUID] = None
     quality_status: str = "GOOD"    # GOOD | REJECTED
     quarantine_status: Optional[str] = None  # disposition snapshot; only meaningful when `held` is true
     held: bool = False  # quarantine_status not yet OK AND the batch's current location is a quarantine hold area (populated by list endpoint)
@@ -3867,6 +3877,10 @@ class PickListLineResponse(BaseModel):
     packaging_type_name: str | None = None
     net_weight_kg: float | None = None
     gross_weight_kg: float | None = None
+    # The carton's packed count (`Batch.alt_qty`) and the unit it was counted in
+    # (its packing order's `uom2`). Null on a bulk line or a box packed without one.
+    alt_qty: float | None = None
+    alt_uom: str | None = None
     # Resolved at read time, null on a bulk (cartonless) line. See the class docs
     # for why this is not flattened onto the fields above.
     carton_identity: PickListCartonIdentity | None = None
