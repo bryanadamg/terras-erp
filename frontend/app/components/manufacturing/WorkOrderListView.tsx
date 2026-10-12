@@ -979,8 +979,11 @@ export default function WorkOrderListView({
                                                                     title={staged != null ? `${(wo.qty_completed_total ?? 0).toFixed(1)} done · ${staged.toFixed(1)} staged · ${wo.qty} WO` : undefined} />
                                                                 <span style={{ fontSize: 9, color: done ? '#007000' : '#555', whiteSpace: 'nowrap' }}>
                                                                     {(wo.qty_completed_total ?? 0).toFixed(1)}/{wo.qty}
-                                                                    {staged != null && <span style={{ color: '#777' }}> · staged {staged.toFixed(1)}</span>}
                                                                 </span>
+                                                                {/* Own line, like rej below: on one line it overran the 86px column. */}
+                                                                {staged != null && (
+                                                                    <span style={{ fontSize: 9, color: '#777', whiteSpace: 'nowrap' }}>staged {staged.toFixed(1)}</span>
+                                                                )}
                                                                 {rej > 0 && (
                                                                     <span
                                                                         title={`${rej.toFixed(2)} rejected on this step of ${prod.toFixed(2)} produced — yield ${((wo.qty_completed_total ?? 0) / prod * 100).toFixed(1)}%`}
