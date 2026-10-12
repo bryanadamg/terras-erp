@@ -44,10 +44,12 @@ export function useManufacturingHelpers({
     const getAttributeValueHex = (valId: string): string | null => attributeValueHex(attributes, valId);
 
     const getBomSizeLabel = (bomId: string, bomSizeId: string, snapshot?: any): string => {
-        const src = snapshot || (() => {
-            const bom = boms.find((b: any) => b.id === bomId);
-            return bom ? (bom.sizes || []).find((s: any) => s.id === bomSizeId) : null;
-        })();
+        const live = (boms.find((b: any) => b.id === bomId)?.sizes || []).find((s: any) => s.id === bomSizeId);
+        // Snapshot wins, but a field it captured blank (e.g. min/max added to the BOM
+        // size after the MO was made) falls back to the live BOM size.
+        const src = snapshot
+            ? Object.fromEntries(Object.entries({ ...live, ...snapshot }).map(([k, v]) => [k, v ?? live?.[k]]))
+            : live;
         if (!src) return '';
         // Every MO size chip reads "{size}-{target} ({min}-{max})", e.g. "L-72 (70-74)".
         const n = (v: any) => `${parseFloat(v)}`;
