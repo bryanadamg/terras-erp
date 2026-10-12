@@ -169,6 +169,15 @@ async def _decorate_cartons(db: AsyncSession, shps: list[Shipment]) -> None:
             bom_size_snapshot=b.bom_size_snapshot if b is not None else None,
             size_label=stock_service._bom_size_label(b.bom_size_snapshot) if b is not None else None,
         )
+    # Each box's packed count in its packing order's unit — the Surat Jalan reads
+    # in the SO's alt unit (Gross, Pcs), as the pick list does.
+    from app.api.pick_lists import _packing_order_alt_uoms
+    alt_uoms = await _packing_order_alt_uoms(db, [l.batch.packing_order_id for l in lines if l.batch])
+    for l in lines:
+        b = l.batch
+        if b is not None and b.alt_qty is not None:
+            l.alt_qty = float(b.alt_qty)
+            l.alt_uom = alt_uoms.get(str(b.packing_order_id)) or None
 
 
 def _decorate(shp: Shipment) -> Shipment:
