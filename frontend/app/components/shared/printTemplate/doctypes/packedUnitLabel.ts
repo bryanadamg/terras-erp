@@ -19,12 +19,12 @@
  *   N W/G W  `Batch.weight_kg` / `Batch.gross_weight_kg`, snapshotted at pack time.
  *            Blank means unknown, never zero — the blank fields print a write-on line.
  *
- * The carton's `PU-…` number is the only code on the label: the QR and one wide
- * Code 128 both carry it, and that is what the picker scans onto a pick list (the
- * scanner routes on the prefix — never change the payload). The per-field Code 128s
- * (content, PO, lot, N W, G W) were dropped: nothing scans them, and squeezed into a
- * third of the label they shrank the PU- barcode past what a scanner reads on
- * smaller stock.
+ * The carton's `PU-…` number is the only code on the label: the QR (phone
+ * cameras) and one Code 128 (handheld scanners) both carry it, and that is what the
+ * picker scans onto a pick list (the scanner routes on the prefix — never change
+ * the payload). The per-field Code 128s (content, PO, lot, N W, G W) were dropped:
+ * nothing scans them, and squeezed into a quarter of the label the PU- barcode
+ * beside them had no quiet zone and would not scan.
  */
 
 import JsBarcode from 'jsbarcode';
@@ -105,9 +105,13 @@ function makeBarcodeDataUrl(text: string): string {
     if (!text || typeof document === 'undefined') return '';
     try {
         const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
-        // Drawn wider than any label (3 px modules) so the image is always scaled
-        // DOWN to its cell; the viewBox is what lets it scale instead of clipping.
-        JsBarcode(svg, text, { format: 'CODE128', displayValue: false, margin: 30, height: 120, width: 3 });
+        // Quiet zone left/right only (10 modules); the placement's imageHeight then
+        // sets the printed size and the width follows the bars' ratio. The viewBox
+        // is what lets the image scale instead of clipping.
+        JsBarcode(svg, text, {
+            format: 'CODE128', displayValue: false, height: 120, width: 3,
+            margin: 0, marginLeft: 30, marginRight: 30,
+        });
         const w = svg.getAttribute('width')?.replace('px', '');
         const h = svg.getAttribute('height')?.replace('px', '');
         if (w && h && !svg.getAttribute('viewBox')) svg.setAttribute('viewBox', `0 0 ${w} ${h}`);

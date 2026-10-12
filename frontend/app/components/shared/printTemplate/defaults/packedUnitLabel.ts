@@ -1,9 +1,9 @@
 /**
  * Built-in carton label layout: headline row, then CONTENT / PO. NO / LOT. NO /
- * N W / G W, then the carton's PU- number as a full-width Code 128, then our own
- * footer + the PU- QR. Only the PU- number is barcoded — it is the one code the
- * floor scans, and full width keeps it readable on smaller label stock. Applies
- * until the client saves their own.
+ * N W / G W, then the carton's PU- number as a Code 128 on its own row, then our
+ * own footer + the PU- QR. Only the PU- number is coded — it is the one code the
+ * floor scans; the QR is for phone cameras, the barcode for handheld scanners.
+ * Sized for A6, the only stock it prints on. Applies until the client saves their own.
  *
  * The ruled table is a grid band whose cells each draw a half-width rule
  * (`cellBox`), inside a half-width band box: touching cells add up to one full
@@ -57,13 +57,13 @@ const BANDS: Band[] = [
         ],
     },
     {
-        // The carton number, barcoded across the full label width: the wider the
-        // bars, the smaller the stock a scanner still reads it on. The number is
+        // The carton number on its own row, sized for A6: ~63 x 13 mm, bars of
+        // ~0.3 mm — comfortably above what a handheld or phone reads. The number is
         // printed under it for a hand-keyed fallback.
         id: 'carton_barcode', type: 'grid', gap: 0, marginBottom: 6,
         items: [
             cell(1, 1, 12, [
-                f('carton.number_barcode', { imageHeight: 90, align: 'center' }),
+                f('carton.number_barcode', { imageHeight: 48, align: 'center' }),
                 f('carton.number', { fontSize: 12, bold: true, letterSpacing: 1, align: 'center' }),
             ], { stackGap: 2 }),
         ],
