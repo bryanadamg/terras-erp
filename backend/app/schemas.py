@@ -1184,6 +1184,9 @@ class WorkOrderFlatResponse(BaseModel):
     next_destination_work_center_name: str | None = None
     ends: int | None = None
     staging_status: str = "NOT_STAGED"
+    # Substrate lots staged to a dyeing/setting WO (net); None for other steps or
+    # when nothing is staged. See staging_service.staged_loads.
+    staged_qty: float | None = None
     bom_operation_id: str | None = None
     # Kartu Kerja's dyeing RECIPE box reads this; without it a WO-list print said '—'.
     planned_recipe_id: str | None = None

@@ -111,6 +111,7 @@ interface FlatWO {
     bom_line_item_ids?: string[];
     bom_operation_id?: string | null;
     staging_status?: string;
+    staged_qty?: number | null;    // substrate lots staged (dyeing/setting only)
     mo_id: string;
     mo_code: string;
     root_mo_id?: string | null;
@@ -961,14 +962,24 @@ export default function WorkOrderListView({
                                                     {wo.qty != null ? (() => {
                                                         const done = (wo.qty_completed_total ?? 0) >= wo.qty * metFrac;
                                                         const pct = Math.min(100, ((wo.qty_completed_total ?? 0) / wo.qty) * 100);
+                                                        // Staged lots not yet processed, stacked after the done fill —
+                                                        // the bar still measures the WO qty, so a partly staged order
+                                                        // never reads done; the empty tail is what is not staged yet.
+                                                        const staged = wo.staged_qty ?? null;
+                                                        const onLinePct = staged != null
+                                                            ? Math.min(100 - pct, Math.max(0, staged - (wo.qty_completed_total ?? 0)) / wo.qty * 100)
+                                                            : 0;
                                                         // Step-level scrap — which routing step / loom lost the material.
                                                         const rej = wo.qty_rejected_total ?? 0;
                                                         const prod = (wo.qty_completed_total ?? 0) + rej;
                                                         return (
                                                             <div style={{ display: 'flex', flexDirection: 'column', gap: 1, alignItems: 'flex-end' }}>
-                                                                <ProgressBar pct={pct} tone={done ? 'green' : 'blue'} hatched width={72} height={8} />
+                                                                <ProgressBar pct={pct} tone={done ? 'green' : 'blue'} hatched width={72} height={8}
+                                                                    secondaryPct={onLinePct || undefined} secondaryTone="gray"
+                                                                    title={staged != null ? `${(wo.qty_completed_total ?? 0).toFixed(1)} done · ${staged.toFixed(1)} staged · ${wo.qty} WO` : undefined} />
                                                                 <span style={{ fontSize: 9, color: done ? '#007000' : '#555', whiteSpace: 'nowrap' }}>
                                                                     {(wo.qty_completed_total ?? 0).toFixed(1)}/{wo.qty}
+                                                                    {staged != null && <span style={{ color: '#777' }}> · staged {staged.toFixed(1)}</span>}
                                                                 </span>
                                                                 {rej > 0 && (
                                                                     <span

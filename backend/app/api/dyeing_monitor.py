@@ -20,12 +20,11 @@ from app.models.dyeing_setting import DyeingRun
 from app.models.item import Item
 from app.models.manufacturing import ManufacturingOrder
 from app.models.routing import WorkCenter
-from app.models.stock_ledger import StockLedger
 from app.models.work_order import WorkOrder
 from app.api.auth import require_permission, require_any_permission
 from app.core.pagination import PageParams, PageWindow
 from app.schemas import DyeingRunMonitorUpdate
-from app.services import audit_service, dyeing_monitor_service, mo_variant_service, work_center_service
+from app.services import audit_service, dyeing_monitor_service, mo_variant_service, staging_service, work_center_service
 from app.core.ws_manager import manager
 
 router = APIRouter()
@@ -59,33 +58,6 @@ _WO_LOADS = (
     .selectinload(ManufacturingOrder.attribute_values).joinedload(AttributeValue.attribute),
     joinedload(WorkOrder.manufacturing_order).selectinload(ManufacturingOrder.item),
 )
-
-
-async def _staged_loads(db: AsyncSession, wos: list[WorkOrder]) -> dict[str, float]:
-    """`{wo id: staged substrate qty}` for the WOs that have lots staged.
-
-    Netted 'Staging' ledger rows at each WO's input location -- the same rows the
-    WO's staging panel totals (api/work_orders.py `_wo_staged_lots`), so a lot
-    consumed by the bath still counts toward the load it was.
-    """
-    input_loc = {str(w.id): w.input_location_id for w in wos if w.input_location_id}
-    if not input_loc:
-        return {}
-    rows = await db.execute(
-        select(StockLedger.reference_id, StockLedger.location_id, StockLedger.item_id, func.sum(StockLedger.qty_change))
-        .where(
-            StockLedger.reference_type == "Staging",
-            StockLedger.reference_id.in_(list(input_loc)),
-            StockLedger.batch_id.isnot(None),
-        )
-        .group_by(StockLedger.reference_id, StockLedger.location_id, StockLedger.item_id)
-    )
-    per_wo: dict[str, dict] = {}
-    for wo_id, loc_id, item_id, net in rows.all():
-        if loc_id == input_loc[wo_id]:
-            per_wo.setdefault(wo_id, {})[item_id] = net
-    loads = {wo_id: svc.staged_load(items) for wo_id, items in per_wo.items()}
-    return {k: v for k, v in loads.items() if v is not None}
 
 
 def _row(run: DyeingRun, now: datetime, staged: dict[str, float]) -> dict:
@@ -287,7 +259,7 @@ async def dyeing_monitor(
     if run_ids:
         res = await db.execute(select(DyeingRun).options(*_RUN_LOADS).where(DyeingRun.id.in_(run_ids)))
         runs = res.unique().scalars().all()
-        staged = await _staged_loads(db, list({r.work_order.id: r.work_order for r in runs if r.work_order}.values()))
+        staged = await staging_service.staged_loads(db, list({r.work_order.id: r.work_order for r in runs if r.work_order}.values()))
         by_key.update({("run", r.id): _row(r, now, staged) for r in runs})
     if wo_ids:
         res = await db.execute(select(WorkOrder).options(*_WO_LOADS).where(WorkOrder.id.in_(wo_ids)))

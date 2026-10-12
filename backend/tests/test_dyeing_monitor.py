@@ -11,6 +11,7 @@ import pytest
 from app.services import dyeing_monitor_service as svc
 from app.services import dyeing_run_service
 from app.services import packing_service
+from app.services import staging_service
 
 
 NOW = datetime(2026, 9, 6, 12, 0, tzinfo=timezone.utc)
@@ -158,9 +159,9 @@ def test_staged_load_is_the_substrate_not_the_chemicals():
     """28.5 kg of greige staged beside 0.4 kg of a lot-tracked dye: the load is the
     greige alone. A fully reversed staging (net 0) leaves no load, so the row falls
     back to the WO qty."""
-    assert svc.staged_load({"greige": 28.5, "dye": 0.4}) == pytest.approx(28.5)
-    assert svc.staged_load({"greige": 0.0}) is None
-    assert svc.staged_load({}) is None
+    assert staging_service.largest_staged({"greige": 28.5, "dye": 0.4}) == pytest.approx(28.5)
+    assert staging_service.largest_staged({"greige": 0.0}) is None
+    assert staging_service.largest_staged({}) is None
 
 
 def test_batch_without_a_picked_speed_reports_no_output_and_says_why():

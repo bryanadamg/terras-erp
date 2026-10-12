@@ -94,19 +94,6 @@ def to_yards(qty: Optional[float], item) -> Optional[float]:
     )
 
 
-def staged_load(net_by_item: dict) -> Optional[float]:
-    """The substrate staged to a dyeing WO, from its net lot-staged qty per item.
-
-    The substrate is the largest staged item -- the same call work_queue_service
-    makes off requirements, since a dye bath's chemicals are dosed per 100 kg of it.
-    In practice only greige lots are staged; this keeps a lot-tracked chemical, if one
-    ever is, from being added to the fabric. None when nothing is left staged (e.g.
-    fully reversed), so the caller falls back to the WO qty.
-    """
-    best = max((float(q or 0) for q in net_by_item.values()), default=0.0)
-    return best if best > 1e-9 else None
-
-
 def _round(v: Optional[float], places: int) -> Optional[float]:
     return None if v is None else round(v, places)
 
