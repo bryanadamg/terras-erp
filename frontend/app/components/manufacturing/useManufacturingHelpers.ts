@@ -49,18 +49,15 @@ export function useManufacturingHelpers({
             return bom ? (bom.sizes || []).find((s: any) => s.id === bomSizeId) : null;
         })();
         if (!src) return '';
-        const parts: string[] = [];
-        const sizeName = src.size_name || src.size?.name;
-        if (sizeName) parts.push(sizeName);
-        if (src.label) parts.push(src.label);
-        if (src.target_measurement != null) {
-            let meas = `${parseFloat(src.target_measurement)}`;
-            if (src.measurement_min != null && src.measurement_max != null) {
-                meas += ` (${parseFloat(src.measurement_min)}–${parseFloat(src.measurement_max)})`;
-            }
-            parts.push(meas + ' cm');
-        }
-        return parts.join(' — ') || '';
+        // Every MO size chip reads "{size}-{target} ({min}-{max})", e.g. "L-72 (70-74)".
+        const n = (v: any) => `${parseFloat(v)}`;
+        const name = (src.size_name || src.size?.name || src.label || '').trim();
+        const target = src.target_measurement != null ? n(src.target_measurement) : '';
+        const range = src.measurement_min != null && src.measurement_max != null
+            ? ` (${n(src.measurement_min)}-${n(src.measurement_max)})` : '';
+        // A measurement-only free size is already labelled "157 cm" — don't repeat the target.
+        const head = [name, target && !name.includes(target) ? target : ''].filter(Boolean).join('-');
+        return `${head}${range}`.trim();
     };
 
     const formatDate = (date: string | null) => {
