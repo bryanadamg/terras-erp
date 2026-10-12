@@ -85,7 +85,7 @@ function FieldValue({ item, ctx, docType }: {
     if (def?.kind === 'qr') {
         const size = item.qrSize ?? 140;
         const framed = item.qrFrame !== false;
-        return (
+        const qr = (
             <div style={{ ...(framed ? { border: '2px solid #000', padding: 4 } : {}), textAlign: 'center', display: 'inline-block' }}>
                 {resolved.qrDataUrl ? (
                     <img
@@ -106,6 +106,9 @@ function FieldValue({ item, ctx, docType }: {
                 )}
             </div>
         );
+        // Inline-block, so its own `align` needs a block to align it within — a
+        // stacked field's wrapper doesn't apply one.
+        return item.align ? <div style={{ textAlign: item.align }}>{qr}</div> : qr;
     }
 
     if (def?.kind === 'blank') {

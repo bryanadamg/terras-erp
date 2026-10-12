@@ -1,9 +1,9 @@
 /**
- * Built-in carton label layout: headline row, then CONTENT / PO. NO / LOT. NO /
- * N W / G W, then the carton's PU- number as a Code 128 on its own row, then our
- * own footer + the PU- QR. Only the PU- number is coded — it is the one code the
- * floor scans; the QR is for phone cameras, the barcode for handheld scanners.
- * Sized for A6, the only stock it prints on. Applies until the client saves their own.
+ * Built-in carton label layout, A6 landscape: the ruled table (headline, CONTENT /
+ * PO. NO / LOT. NO / N W / G W) with the PU- QR and our footer boxed beside it,
+ * then the carton's PU- number as a Code 128 underneath. Only the PU- number is
+ * coded — it is the one code the floor scans; the QR is for phone cameras, the
+ * barcode for handheld scanners. Applies until the client saves their own.
  *
  * The ruled table is a grid band whose cells each draw a half-width rule
  * (`cellBox`), inside a half-width band box: touching cells add up to one full
@@ -25,9 +25,11 @@ const LBL = { fontSize: 11, bold: true, letterSpacing: 0.5 };
 const VAL = { fontSize: 13, bold: true };
 const BLANK = { fontSize: 13, color: '#666', hideWhenEmpty: true };
 
+// A6 landscape: the ruled table on the left two-thirds, the QR + our footer boxed
+// in the right third beside it, the PU- barcode centred underneath.
 const row = (r: number, label: string, value: FieldSpec | FieldSpec[]): GridItem[] => [
-    cell(r, 1, 3, text(label, LBL)),
-    cell(r, 4, 9, value),
+    cell(r, 1, 2, text(label, LBL)),
+    cell(r, 3, 6, value),
 ];
 
 const BANDS: Band[] = [
@@ -36,11 +38,11 @@ const BANDS: Band[] = [
         marginBottom: 6,
         items: [
             // Headline: house mark + style/colour.
-            cell(1, 1, 3, [
+            cell(1, 1, 2, [
                 f('company.logo', { imageHeight: 30, align: 'center', hideWhenEmpty: true }),
                 f('carton.logo_fallback', { fontSize: 16, bold: true, letterSpacing: 2, align: 'center', hideWhenEmpty: true }),
             ]),
-            cell(1, 4, 9, [
+            cell(1, 3, 6, [
                 f('carton.headline', { fontSize: 19, bold: true, letterSpacing: 0.5 }),
                 f('carton.identity', { fontSize: 10, bold: true, letterSpacing: 0.5, hideWhenEmpty: true }),
             ], { stackGap: 2 }),
@@ -54,13 +56,22 @@ const BANDS: Band[] = [
                 f('carton.gw_blank', BLANK),
                 f('carton.packaging_type', { fontSize: 8, color: '#555', hideWhenEmpty: true }),
             ]),
+
+            // Our handle, not the customer's: the picker's phone scans this QR onto
+            // a pick list. Spans every table row so the box runs the table's height.
+            cell(1, 9, 4, [
+                f('carton.qr', { qrSize: 104, qrCaption: '', qrFrame: false, align: 'center' }),
+                f('carton.company_name', { fontSize: 9, color: '#333', align: 'center', hideWhenEmpty: true }),
+                f('carton.package_line', { fontSize: 9, color: '#333', align: 'center' }),
+                f('carton.packed_date', { fontSize: 9, color: '#333', align: 'center', emptyText: '' }),
+            ], { rowSpan: 6, stackGap: 3 }),
         ],
     },
     {
-        // The carton number on its own row, sized for A6: ~63 x 13 mm, bars of
-        // ~0.3 mm — comfortably above what a handheld or phone reads. The number is
-        // printed under it for a hand-keyed fallback.
-        id: 'carton_barcode', type: 'grid', gap: 0, marginBottom: 6,
+        // The carton number for handheld scanners, ~63 x 13 mm: bars of ~0.3 mm,
+        // comfortably above what a handheld or phone reads. The number is printed
+        // under it for a hand-keyed fallback.
+        id: 'carton_barcode', type: 'grid', gap: 0, marginBottom: 0,
         items: [
             cell(1, 1, 12, [
                 f('carton.number_barcode', { imageHeight: 48, align: 'center' }),
@@ -68,23 +79,11 @@ const BANDS: Band[] = [
             ], { stackGap: 2 }),
         ],
     },
-    {
-        // Our handle, not the customer's: the picker scans this QR onto a pick list.
-        id: 'carton_footer', type: 'grid', gap: 6, alignItems: 'end', marginBottom: 0,
-        items: [
-            cell(1, 1, 8, [
-                f('carton.company_name', { fontSize: 9, color: '#333', hideWhenEmpty: true }),
-                f('carton.package_line', { fontSize: 9, color: '#333' }),
-                f('carton.packed_date', { fontSize: 9, color: '#333', emptyText: '' }),
-            ], { stackGap: 0 }),
-            cell(1, 9, 4, f('carton.qr', { qrSize: 72, qrCaption: '', qrFrame: false }), { align: 'right' }),
-        ],
-    },
 ];
 
 export const PACKED_UNIT_LABEL_DEFAULT: PrintLayout = {
     version: 1,
-    paper: { size: 'A6', orientation: 'portrait', marginMm: 6 },
+    paper: { size: 'A6', orientation: 'landscape', marginMm: 6 },
     fontFamily: PRINT_FONT,
     bands: BANDS,
 };
