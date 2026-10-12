@@ -59,31 +59,39 @@ export default function DyeingWOHistory({ workOrderId, authFetch, apiBase }: {
                     <th style={{ ...subTh, width: 50 }}>{t('history_bath')}</th>
                     <th style={{ ...subTh, width: 130 }}>{t('history_step')}</th>
                     <th style={{ ...subTh, width: 150 }}>{t('history_when')}</th>
-                    <th style={{ ...subTh, width: 80, textAlign: 'right' }}>{t('history_duration')}</th>
                     <th style={subTh}>{t('status')}</th>
                 </tr>
             </thead>
             <tbody>
                 {runs.flatMap((run, ri) => {
+                    // The gap belongs between two stamps, so it renders as a connector
+                    // row between them rather than in a column beside the later one.
                     const steps = [
-                        { label: t('start_color_matching'), at: run.color_matching_at, gap: null as number | null, hint: '' },
-                        { label: t('start_batch'), at: run.started_at, gap: minutesBetween(run.color_matching_at, run.started_at), hint: t('phase_prep_gap') },
-                        { label: t('complete_batch'), at: run.completed_at, gap: minutesBetween(run.started_at, run.completed_at), hint: t('phase_run_gap') },
+                        { label: t('start_color_matching'), at: run.color_matching_at, gap: null as number | null, gapLabel: '', hint: '' },
+                        { label: t('start_batch'), at: run.started_at, gap: minutesBetween(run.color_matching_at, run.started_at), gapLabel: t('gap_matching'), hint: t('phase_prep_gap') },
+                        { label: t('complete_batch'), at: run.completed_at, gap: minutesBetween(run.started_at, run.completed_at), gapLabel: t('gap_on_machine'), hint: t('phase_run_gap') },
                     ];
-                    return steps.map((s, si) => (
+                    return steps.flatMap((s, si) => [
+                        ...(s.gap != null ? [
+                            <tr key={`${run.id}-${si}-gap`} style={lvSubRow(ri)}>
+                                <td style={{ ...subTd, borderTop: 'none', borderBottom: 'none', padding: '0 4px' }} />
+                                <td colSpan={3} title={s.hint} style={{ ...subTd, borderTop: 'none', borderBottom: 'none', padding: '0 4px', fontSize: 10, color: '#666', whiteSpace: 'nowrap' }}>
+                                    <span style={{ display: 'inline-block', borderLeft: '2px solid #b8b4a8', height: 16, verticalAlign: 'middle', margin: '0 8px 0 6px' }} />
+                                    <i className="bi bi-arrow-down" style={{ marginRight: 4 }} />
+                                    <b style={{ color: '#333' }}>{fmtMinutes(s.gap)}</b> {s.gapLabel}
+                                </td>
+                            </tr>,
+                        ] : []),
                         <tr key={`${run.id}-${si}`} style={lvSubRow(ri)}>
                             <td style={{ ...subTd, fontWeight: 'bold' }}>{si === 0 ? `#${run.run_number}` : ''}</td>
                             <td style={{ ...subTd, fontWeight: 'bold' }}>{s.label}</td>
                             <td style={{ ...subTd, whiteSpace: 'nowrap', color: s.at ? '#222' : '#aaa' }}>{fmtStamp(s.at)}</td>
-                            <td style={{ ...subTd, textAlign: 'right', color: '#555' }} title={s.hint || undefined}>
-                                {s.gap != null ? fmtMinutes(s.gap) : ''}
-                            </td>
                             <td style={subTd}>
                                 {si === 0 && <StatusChip status={run.status || 'PENDING'} tint />}
                                 {si === 0 && run.operator_name && <span style={{ marginLeft: 6, color: '#555' }}>{run.operator_name}</span>}
                             </td>
-                        </tr>
-                    ));
+                        </tr>,
+                    ]);
                 })}
             </tbody>
         </table>
