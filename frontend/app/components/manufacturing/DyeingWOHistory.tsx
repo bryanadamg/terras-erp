@@ -22,8 +22,9 @@ function minutesBetween(a: any, b: any): number | null {
 }
 
 /**
- * The monitor row's bar written out as arithmetic: the WO qty in yards, the time the
- * vessel needs for it at its speed, and the time it actually ran against that.
+ * The monitor row's bar written out as arithmetic: the load (lots staged, else the WO
+ * qty) in yards, the time the vessel needs for it at its speed, and the time it
+ * actually ran against that.
  * Every operand is a figure the backend already returned, so this only lays them out.
  */
 function RunCalc({ r }: { r: any }) {
@@ -33,7 +34,11 @@ function RunCalc({ r }: { r: any }) {
     const yd = t('yd_short');
     const n = (v: any, d = 1) => fmtQty(v, d);
     const muted = (s: string) => <span style={{ fontWeight: 'normal', color: '#666' }}>{s}</span>;
-    const lines: [ReactNode, ReactNode][] = [];
+    const staged = r.target_source === 'staged';
+    const lines: [ReactNode, ReactNode][] = [[
+        <>{t(staged ? 'calc_staged' : 'calc_wo_qty')}</>,
+        <>{n(r.target_qty, 2)} {uom}{staged && r.wo_qty != null && r.wo_qty !== r.target_qty && <> {muted(`(WO ${n(r.wo_qty, 2)} ${uom})`)}</>}</>,
+    ]];
     if (r.weight_per_unit != null) {
         // A g/m factor gives metres, so the step ends restated in yards.
         lines.push([

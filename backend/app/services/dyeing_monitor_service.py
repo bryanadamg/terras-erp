@@ -4,13 +4,13 @@ Deliberately NOT shared with `weaving_service`. A loom runs continuously for day
 and is measured in kg against a calendar of working days; a dye batch fits inside
 one shift and is measured against the clock the floor stamps by hand:
 
-    target yards      = WO qty restated in yards through the item's g/y factor
+    target yards      = load restated in yards through the item's g/y factor
     expected_minutes  = target yards / (yards_per_min * lines)
     progress_pct      = run_minutes / expected_minutes * 100
 
 i.e. how long the vessel ran against how long that load needs at its speed. This is
 the same ratio as time-based output (yards_per_min * lines * run_minutes, back
-through g/y) over WO qty -- framed in minutes because that is what the floor stamps.
+through g/y) over the load -- framed in minutes because that is what the floor stamps.
 
 Both rate factors live on the DyeingRun and are chosen per load: `yards_per_min`
 is how fast ONE rope is run (picked off the `Dyeing Speed` system attribute, not
@@ -19,10 +19,11 @@ between the monitor's Start and Complete stamps. Any factor missing yields None 
 never 0, which would read as a vessel producing nothing rather than a batch nobody
 has set a speed for.
 
-The comparison is against the WO's assigned qty, not logged completions: the
-question the floor asks is "did the machine run long enough, fast enough, for the
-mass it was given", and a completion logged a minute after Complete must not make a
-full batch read short.
+The load is what was physically put in the vessel: the lots staged to the WO when
+there are any, else the WO's assigned qty. Never logged completions: the question
+the floor asks is "did the machine run long enough, fast enough, for the mass it
+was given", and a completion logged a minute after Complete must not make a full
+batch read short.
 """
 from datetime import datetime, timezone
 from typing import Optional
@@ -91,6 +92,19 @@ def to_yards(qty: Optional[float], item) -> Optional[float]:
         getattr(item, "weight_per_unit", None),
         getattr(item, "weight_unit", None),
     )
+
+
+def staged_load(net_by_item: dict) -> Optional[float]:
+    """The substrate staged to a dyeing WO, from its net lot-staged qty per item.
+
+    The substrate is the largest staged item -- the same call work_queue_service
+    makes off requirements, since a dye bath's chemicals are dosed per 100 kg of it.
+    In practice only greige lots are staged; this keeps a lot-tracked chemical, if one
+    ever is, from being added to the fabric. None when nothing is left staged (e.g.
+    fully reversed), so the caller falls back to the WO qty.
+    """
+    best = max((float(q or 0) for q in net_by_item.values()), default=0.0)
+    return best if best > 1e-9 else None
 
 
 def _round(v: Optional[float], places: int) -> Optional[float]:

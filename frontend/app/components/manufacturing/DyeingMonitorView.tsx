@@ -161,7 +161,7 @@ export default function DyeingMonitorView() {
         return (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
                 <ProgressBar pct={Math.min(Number(pct) || 0, 100)} tone={tone} height={10}
-                    title={`${fmt(r.time_qty, 1)} / ${fmt(r.target_qty, 1)} ${uom} · ${fmt(r.time_yards, 0)} ${t('yd_short')}`} />
+                    title={`${fmt(r.time_qty, 1)} / ${fmt(r.target_qty, 1)} ${uom} ${r.target_source === 'staged' ? t('calc_staged').toLowerCase() : t('calc_wo_qty')} · ${fmt(r.time_yards, 0)} ${t('yd_short')}`} />
                 <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 10 }}>
                     <span>
                         <b>{r.run_minutes == null ? '—' : fmtMinutes(r.run_minutes)}</b> / {fmtMinutes(r.expected_minutes)}

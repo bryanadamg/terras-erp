@@ -154,6 +154,15 @@ def test_expected_time_is_known_before_the_clock_starts():
     assert m["progress_pct"] is None
 
 
+def test_staged_load_is_the_substrate_not_the_chemicals():
+    """28.5 kg of greige staged beside 0.4 kg of a lot-tracked dye: the load is the
+    greige alone. A fully reversed staging (net 0) leaves no load, so the row falls
+    back to the WO qty."""
+    assert svc.staged_load({"greige": 28.5, "dye": 0.4}) == pytest.approx(28.5)
+    assert svc.staged_load({"greige": 0.0}) is None
+    assert svc.staged_load({}) is None
+
+
 def test_batch_without_a_picked_speed_reports_no_output_and_says_why():
     m = svc.compute_run_metrics(_run(yards_per_min=None), 25920.0, _item(), NOW)
     assert m["time_qty"] is None
