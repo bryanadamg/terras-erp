@@ -2123,7 +2123,11 @@ class SOAllocationLine(BaseModel):
     item_name: str = ""
     uom: str = ""
     size: str | None = None
-    color: str | None = None
+    # Shade as the SO table shows it: the line's variant values (Colors "NAVY",
+    # Combo, ...) plus the Color Library code — whose name is often the code again.
+    variant_attributes: list[BatchVariantAttr] | None = None
+    color_code: str | None = None
+    color_hex: str | None = None
     ordered: float | None = None    # None = no weight on the item, can't allocate
     dispatched: float = 0.0
     allocated: float = 0.0

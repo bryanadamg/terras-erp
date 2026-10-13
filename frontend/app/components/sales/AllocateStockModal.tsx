@@ -140,7 +140,15 @@ export default function AllocateStockModal({ so, authFetch, onClose, onDone }: {
                                 <strong style={{ fontSize: '0.75rem' }}>{l.item_name}</strong>
                                 <CodeChip code={l.item_code} tier={2} />
                                 {l.size && <VariantChip kind="size">{String(l.size).toUpperCase()}</VariantChip>}
-                                {l.color && <VariantChip kind="color">{l.color}</VariantChip>}
+                                {/* Same chips as the SO table: the ordered Colors value (NAVY) with its
+                                    swatch, then the Color Library code, then combo / material. */}
+                                {(l.variant_attributes || [])
+                                    .filter((v: any) => v.system_role === 'color')
+                                    .map((v: any) => <VariantChip key={v.value} kind="color" swatch={v.hex}>{v.value}</VariantChip>)}
+                                {l.color_code && <VariantChip kind="color" swatch={l.color_hex}>{l.color_code}</VariantChip>}
+                                {(l.variant_attributes || [])
+                                    .filter((v: any) => v.system_role === 'combo' || v.system_role === 'material')
+                                    .map((v: any) => <VariantChip key={v.value} kind={v.system_role}>{v.value}</VariantChip>)}
                                 <span style={{ flex: 1 }} />
                                 {stat('Ordered', l.ordered === null ? '—' : `${qtyFmt(2)(l.ordered)} ${l.uom}`)}
                                 {stat('Shipped', qtyFmt(2)(l.dispatched))}

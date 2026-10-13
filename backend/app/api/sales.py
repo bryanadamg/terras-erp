@@ -559,6 +559,7 @@ async def _allocation_lines(db: AsyncSession, so: SalesOrder) -> list[SOAllocati
             packed_at=b.created_at, reservation_id=reservation_id,
         )
 
+    await _populate_variant_attrs(db, [so])
     out = []
     for line in so.lines:
         _populate_line(line)
@@ -586,7 +587,9 @@ async def _allocation_lines(db: AsyncSession, so: SalesOrder) -> list[SOAllocati
             item_name=getattr(line, "item_name", "") or "",
             uom=f.get("base_uom", "") or "",
             size=line.size_display,
-            color=" ".join(x for x in (getattr(line, "color_name", None), getattr(line, "color_code", None)) if x) or None,
+            variant_attributes=getattr(line, "variant_attributes", None),
+            color_code=getattr(line, "color_code", None) or getattr(line, "color_name", None),
+            color_hex=getattr(line, "color_hex", None),
             ordered=ordered,
             dispatched=dispatched,
             allocated=allocated,
