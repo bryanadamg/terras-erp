@@ -140,9 +140,13 @@ const SJ_CARTONS: RowSourceDef = {
                     _key: `${g.key}:${i}`,
                     name: first ? [g.itemName, g.size, g.combo, g.colorName].filter(Boolean).join(' ') : '',
                     dus: first ? (g.cartons.length ? String(g.cartons.length) : '') : '',
-                    total: first ? num(g.qty) : '',
+                    total: first ? (g.altOk ? `${num(g.qty)} ${g.uom}\n${num(g.baseQty)} ${g.baseUom}` : num(g.qty)) : '',
                 };
-                g.cartons.slice(i, i + slots.length).forEach((q: number, k: number) => { row[slots[k]] = num(q); });
+                // An alt count alone ("1,79") doesn't say what it counts — the carton's
+                // stock-UoM weight goes under it, the way stock on-hand shows "10 kg / 12 Pcs".
+                g.cartons.slice(i, i + slots.length).forEach((q: number, k: number) => {
+                    row[slots[k]] = g.altOk ? `${num(q)}\n${num(g.baseCartons[i + k])} ${g.baseUom}` : num(q);
+                });
                 rows.push(row);
             }
         }
