@@ -203,6 +203,17 @@ async def assert_cartons_fit_lines(db: AsyncSession, pairs) -> None:
         raise ValueError("Carton size doesn't match its SO line: " + "; ".join(wrong))
 
 
+async def assert_not_pinned_elsewhere(db: AsyncSession, so_id, batch_ids) -> None:
+    """Raise ValueError if any carton is allocated to an order other than `so_id`."""
+    ids = {b for b in batch_ids if b}
+    if not ids:
+        return
+    clash = ids & set(await pinned_carton_ids(db, exclude_so_id=so_id))
+    if clash:
+        names = (await db.execute(select(Batch.batch_number).filter(Batch.id.in_(clash)))).scalars().all()
+        raise ValueError(f"Allocated to another order: {', '.join(sorted(names))}")
+
+
 async def claim_lots(db: AsyncSession, po: PackingOrder, batch_ids) -> list[str]:
     """Lock lots onto this order. Returns the lot numbers actually claimed.
 
@@ -1368,18 +1379,44 @@ async def consume_packaging_materials(
         )
 
 
-async def allocated_unit_ids(db: AsyncSession) -> set:
+async def allocated_unit_ids(db: AsyncSession, so_id=None) -> set:
     """Carton batch ids already sitting on a live (non-cancelled) pick list.
 
     Cartons are soft-reserved, not locked to an SO — but a carton already on
-    someone else's open pick list must not be suggested twice.
+    someone else's open pick list must not be suggested twice. With `so_id`,
+    also every carton "Allocate from stock" pinned to ANOTHER order: that one is
+    a hard claim, so picking it for this order would ship another customer's box.
     """
     result = await db.execute(
         select(PickListLine.batch_id)
         .join(PickList, PickListLine.pick_list_id == PickList.id)
         .filter(PickListLine.batch_id.isnot(None), PickList.status != "CANCELLED")
     )
-    return {r[0] for r in result.all() if r[0]}
+    taken = {r[0] for r in result.all() if r[0]}
+    if so_id:
+        taken |= set(await pinned_carton_ids(db, exclude_so_id=so_id))
+    return taken
+
+
+async def pinned_carton_ids(db: AsyncSession, so_id=None, exclude_so_id=None) -> dict:
+    """`{batch_id: sales_order_line_id}` for cartons pinned by an ACTIVE
+    allocation of an open order — just `so_id`'s, or everyone's but `exclude_so_id`."""
+    from app.models.reservation import StockReservation
+    from app.models.sales import SalesOrder
+    q = (
+        select(StockReservation.batch_id, StockReservation.sales_order_line_id)
+        .join(SalesOrder, SalesOrder.id == StockReservation.sales_order_id)
+        .filter(
+            StockReservation.batch_id.isnot(None),
+            StockReservation.status == "ACTIVE",
+            SalesOrder.status.in_(("PENDING", "READY", "PARTIAL")),
+        )
+    )
+    if so_id:
+        q = q.filter(StockReservation.sales_order_id == so_id)
+    if exclude_so_id:
+        q = q.filter(StockReservation.sales_order_id != exclude_so_id)
+    return {b: l for b, l in (await db.execute(q)).all()}
 
 
 async def available_packed_units(
@@ -1391,8 +1428,10 @@ async def available_packed_units(
     exclude_ids: set = None,
     limit: int = 200,
     size_name: Optional[str] = None,
+    prefer_ids: set = None,
 ) -> list[tuple[Batch, StockBalance]]:
-    """In-stock cartons for an item/variant, oldest first (FIFO).
+    """In-stock cartons for an item/variant, oldest first (FIFO) — except
+    `prefer_ids` (cartons allocated to the asking order), which come first.
 
     Returns (carton, its balance row) pairs so callers get the carton qty without
     a second lookup. Rejected lots are excluded, matching every other picker.
@@ -1410,7 +1449,11 @@ async def available_packed_units(
             StockBalance.variant_key == v_key,
             StockBalance.qty > 0,
         )
-        .order_by(Batch.created_at.asc(), Batch.package_no.asc())
+        .order_by(
+            # In SQL, not after: the limit would otherwise cut preferred cartons off.
+            *([Batch.id.notin_(list(prefer_ids))] if prefer_ids else []),
+            Batch.created_at.asc(), Batch.package_no.asc(),
+        )
         .limit(limit)
     )
     if location_id:
@@ -1445,8 +1488,10 @@ async def suggest_units_for_line(
     color_id=None,
     exclude_ids: set = None,
     size_name: Optional[str] = None,
+    prefer_ids: set = None,
 ) -> list[tuple[Batch, float]]:
-    """Pick whole cartons FIFO until `remaining_qty` is covered.
+    """Pick whole cartons FIFO until `remaining_qty` is covered — the line's own
+    allocated cartons (`prefer_ids`) first.
 
     Cartons are indivisible here on purpose: the picker moves a physical box, so
     the last carton may overshoot the outstanding qty rather than be split.
@@ -1454,7 +1499,7 @@ async def suggest_units_for_line(
     units = await available_packed_units(
         db, item_id, location_id=location_id,
         attribute_value_ids=attribute_value_ids, color_id=color_id,
-        exclude_ids=exclude_ids, size_name=size_name,
+        exclude_ids=exclude_ids, size_name=size_name, prefer_ids=prefer_ids,
     )
     picked: list[tuple[Batch, float]] = []
     covered = 0.0

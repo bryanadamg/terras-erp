@@ -1412,7 +1412,7 @@ In stock ${fmtQty(f.baseAvailable)}${bu} · Shipped ${fmtQty(f.baseShipped)}${bu
                                                            {r.production_run_code
                                                                ? lineageCodeChip(r.production_run_code, () => goToPR(r.production_run_code), 'pr')
                                                                : r.sales_order_line_id
-                                                                   ? <span style={{ color: '#777' }}>Allocated</span>
+                                                                   ? <span style={{ color: '#777' }}>Allocated{r.batch_number && <> &middot; <CodeChip code={r.batch_number} tier={2} /></>}</span>
                                                                    : <span style={{ color: '#999' }}>&mdash;</span>}
                                                        </td>
                                                        <td style={{ ...tdStyle, textAlign: 'right' }}>
@@ -2191,7 +2191,7 @@ In stock ${fmtQty(f.baseAvailable)}${bu} · Shipped ${fmtQty(f.baseShipped)}${bu
                                        )}
                                        {hasPermission('sales_order.edit') && ['PENDING', 'READY', 'PARTIAL'].includes(so.status) && (
                                            <XPActionButton tone="success" icon="bi-box-seam"
-                                               title="Allocate from stock — reserve finished goods already on hand to this order instead of producing them"
+                                               title="Allocate from stock — pick packed cartons already on hand for this order instead of producing them"
                                                onClick={() => setAllocatingSO(so)} />
                                        )}
                                        {so.status === 'PENDING' && (

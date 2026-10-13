@@ -386,8 +386,11 @@ async def _suggest_cartons(db: AsyncSession, so: SalesOrder, source_location_id=
     remaining = await _remaining_by_so_line(db, so)
     remaining_alt = await _remaining_alt_by_so_line(db, so)
     ordered_map = await so_fulfilment_service.ordered_base_map(db, [line.id for line in so.lines])
-    taken = await packing_service.allocated_unit_ids(db)
+    taken = await packing_service.allocated_unit_ids(db, so_id=so.id)
     line_sizes = await packing_service.line_size_names(db, [l.id for l in so.lines])
+    # Cartons allocated to this order go out first — they're the boxes the
+    # planner promised it; leaving them behind would hold them for nothing.
+    pinned = await packing_service.pinned_carton_ids(db, so_id=so.id)
 
     # Pass 1 — FIFO-pick the cartons for every outstanding line.
     picked: list[tuple[SalesOrderLine, float, list]] = []
@@ -403,6 +406,7 @@ async def _suggest_cartons(db: AsyncSession, so: SalesOrder, source_location_id=
             color_id=so_line.color_id,
             exclude_ids=taken,
             size_name=line_sizes.get(str(so_line.id)),
+            prefer_ids={b for b, l in pinned.items() if l == so_line.id},
         )
         for pu, _qty in units:
             taken.add(pu.id)
@@ -862,7 +866,7 @@ async def create_pick_list(
     # until a packing order has minted some. Checked before the pick list row is
     # written so an order with nothing packed never leaves an empty DRAFT behind.
     remaining_now = await _remaining_by_so_line(db, so)
-    taken_now = await packing_service.allocated_unit_ids(db)
+    taken_now = await packing_service.allocated_unit_ids(db, so_id=so.id)
     line_sizes = await packing_service.line_size_names(db, [l.id for l in so.lines])
     has_cartons = False
     for so_line in so.lines:
@@ -897,6 +901,9 @@ async def create_pick_list(
         try:
             await packing_service.assert_cartons_fit_lines(
                 db, [(l.sales_order_line_id, l.batch_id) for l in payload.lines],
+            )
+            await packing_service.assert_not_pinned_elsewhere(
+                db, so.id, [l.batch_id for l in payload.lines],
             )
         except ValueError as e:
             raise HTTPException(status_code=400, detail=str(e))
@@ -996,6 +1003,9 @@ async def update_pick_list(
             await packing_service.assert_cartons_fit_lines(
                 db, [(l.sales_order_line_id, l.batch_id) for l in payload.lines],
             )
+            await packing_service.assert_not_pinned_elsewhere(
+                db, pl.sales_order_id, [l.batch_id for l in payload.lines],
+            )
         except ValueError as e:
             raise HTTPException(status_code=400, detail=str(e))
         confirmed = {
@@ -1070,9 +1080,9 @@ async def scan_pick_list_unit(
     if line is None:
         # Not suggested — claim it for an SO line ordering this item, if the
         # carton is not already committed to another live pick list.
-        taken = await packing_service.allocated_unit_ids(db)
+        taken = await packing_service.allocated_unit_ids(db, so_id=pl.sales_order_id)
         if pu.id in taken:
-            raise HTTPException(status_code=400, detail=f"Carton {code} is already on another pick list")
+            raise HTTPException(status_code=400, detail=f"Carton {code} is already on another pick list or allocated to another order")
         so_result = await db.execute(
             select(SalesOrder).options(selectinload(SalesOrder.lines)).filter(SalesOrder.id == pl.sales_order_id)
         )

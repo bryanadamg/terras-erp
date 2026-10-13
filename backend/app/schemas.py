@@ -2071,8 +2071,11 @@ class StockReservationResponse(ORMResponse):
     sales_order_id: UUID
     production_run_id: UUID | None = None
     production_run_code: str | None = None
-    # Set when allocated straight to an order line (no Production Run).
+    # Set when allocated straight to an order line (no Production Run), with
+    # the carton it pins.
     sales_order_line_id: UUID | None = None
+    batch_id: UUID | None = None
+    batch_number: str | None = None
     item_id: UUID
     item_code: str = ""
     item_name: str = ""
@@ -2098,6 +2101,20 @@ class SOReservationSummary(BaseModel):
     total_released: float = 0.0
 
 
+class SOAllocCarton(BaseModel):
+    """A packed carton offered to (or already pinned to) an SO line."""
+    batch_id: UUID
+    batch_number: str
+    package_no: int | None = None
+    location: str | None = None
+    qty: float = 0.0                # base uom; for a pinned carton, still held
+    alt_qty: float | None = None
+    alt_uom: str | None = None
+    size: str | None = None
+    packed_at: datetime | None = None
+    reservation_id: UUID | None = None  # pinned cartons only
+
+
 class SOAllocationLine(BaseModel):
     """One SO line's case for "Allocate from stock" — all qtys in `uom`."""
     sales_order_line_id: UUID
@@ -2111,14 +2128,14 @@ class SOAllocationLine(BaseModel):
     dispatched: float = 0.0
     allocated: float = 0.0
     needed: float = 0.0             # ordered - dispatched - allocated
-    on_hand: float = 0.0
-    free: float = 0.0               # on_hand not claimed by MOs or open orders
-    suggested: float = 0.0          # min(needed, free)
+    free: float = 0.0               # on-hand not claimed by MOs or open orders
+    cartons: list[SOAllocCarton] = []            # pickable: packed to stock, unclaimed
+    allocated_cartons: list[SOAllocCarton] = []  # already pinned to this line
 
 
 class SOAllocateLine(BaseModel):
     sales_order_line_id: UUID
-    qty: float = Field(gt=0)
+    batch_ids: list[UUID] = Field(min_length=1)
 
 
 class SOAllocateRequest(BaseModel):

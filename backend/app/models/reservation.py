@@ -2,7 +2,7 @@ import uuid
 from datetime import datetime
 from typing import Optional
 
-from sqlalchemy import String, Text, ForeignKey, DateTime, Numeric, JSON, Index
+from sqlalchemy import String, Text, ForeignKey, DateTime, Numeric, JSON, Index, text
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -19,7 +19,9 @@ class StockReservation(Base):
     stock away again (`Availability._demand` is built only from open MOs'
     planned components, so a netted-away root leaves no trace).
 
-    Grain is deliberately (item, variant_key) qty — NOT a pinned batch. Netting is
+    Grain for PR-netted rows is deliberately (item, variant_key) qty — NOT a
+    pinned batch (an SO-level allocation, by contrast, pins one named carton per
+    row via `batch_id`; netting still reads it by qty like any other). Netting is
     plant-level and location-agnostic (see netting_service), the lot that actually
     ships is chosen far later at PackingCompletion, and `Batch.packed_for_so_id`
     is already a soft tag by design; a hard lot pin here would contradict all
@@ -56,6 +58,11 @@ class StockReservation(Base):
     # re-points these onto the equivalent new line the same way it does packing.
     sales_order_line_id: Mapped[Optional[uuid.UUID]] = mapped_column(
         UUID(as_uuid=True), ForeignKey("sales_order_lines.id", ondelete="SET NULL"), nullable=True, index=True
+    )
+    # The packed carton an SO-level allocation pins (qty = its balance when pinned).
+    # At most one ACTIVE row per carton — partial unique index below.
+    batch_id: Mapped[Optional[uuid.UUID]] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("batches.id", ondelete="CASCADE"), nullable=True
     )
 
     item_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("items.id"), index=True)
@@ -96,3 +103,7 @@ class StockReservation(Base):
 # The netting ledger's hot path: every Availability build scans ACTIVE rows and
 # groups them by (item_id, variant_key).
 Index("ix_stock_reservations_item_variant", StockReservation.item_id, StockReservation.variant_key)
+Index(
+    "uq_stock_reservations_active_batch", StockReservation.batch_id, unique=True,
+    postgresql_where=text("status = 'ACTIVE' AND batch_id IS NOT NULL"),
+)

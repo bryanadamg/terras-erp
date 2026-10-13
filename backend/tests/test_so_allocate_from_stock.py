@@ -1,13 +1,15 @@
-"""SO-level "Allocate from stock": reserve on-hand FG to an order line, no PR.
+"""SO-level "Allocate from stock": pin named packed cartons to an order line.
 
-Pins the rules that make it safe: you can't allocate more than is free or more
-than the line still needs, an allocation is a claim other orders' allocations
-(and PR netting) see, and a line covered by cartons packed to stock reads READY.
+Pins the rules that make it safe: only unclaimed cartons packed to stock are
+offered, a pinned carton is invisible to other orders' allocation and pick
+lists, the last carton may overshoot what's needed but one more may not, and a
+line covered by its pinned cartons reads READY without a packing order.
 """
 import uuid
 
 
-def _seed(client, auth_headers, async_db_session, stock_qty, carton=False):
+def _seed(client, auth_headers, async_db_session, carton_qtys, packed_for_so=None):
+    """An item with one packed carton per qty, packed to stock unless `packed_for_so`."""
     from app.models.batch import Batch
     from app.models.location import Location
     from app.models.packing import PackingOrder
@@ -17,28 +19,26 @@ def _seed(client, auth_headers, async_db_session, stock_qty, carton=False):
     item = client.post("/api/items", json={
         "code": f"ALLOC-{uuid.uuid4().hex[:6]}", "name": "Alloc FG", "uom": "pcs",
     }, headers=auth_headers).json()
+    ids = []
 
     async def seed():
         loc = Location(code=f"ALLOC-{uuid.uuid4().hex[:6]}", name="Alloc loc")
-        async_db_session.add(loc)
+        po = PackingOrder(code=f"PCK-{uuid.uuid4().hex[:6]}", item_id=item["id"], sales_order_id=packed_for_so)
+        async_db_session.add_all([loc, po])
         await async_db_session.flush()
-        batch_key = ""
-        if carton:
-            # A carton packed to stock: packing order with no SO tag.
-            po = PackingOrder(code=f"PCK-{uuid.uuid4().hex[:6]}", item_id=item["id"])
-            async_db_session.add(po)
-            await async_db_session.flush()
-            b = Batch(batch_number=f"PU-{uuid.uuid4().hex[:8]}", item_id=item["id"], packing_order_id=po.id)
+        for n, qty in enumerate(carton_qtys, 1):
+            b = Batch(batch_number=f"PU-{uuid.uuid4().hex[:8]}", item_id=item["id"],
+                      packing_order_id=po.id, package_no=n)
             async_db_session.add(b)
             await async_db_session.flush()
-            batch_key = str(b.id)
-        async_db_session.add(StockBalance(
-            item_id=item["id"], location_id=loc.id, variant_key="", batch_key=batch_key, qty=stock_qty,
-        ))
+            async_db_session.add(StockBalance(
+                item_id=item["id"], location_id=loc.id, variant_key="", batch_key=str(b.id), qty=qty,
+            ))
+            ids.append(str(b.id))
         await async_db_session.commit()
 
     client.portal.call(seed)
-    return item
+    return item, ids
 
 
 def _so(client, auth_headers, item, qty):
@@ -49,50 +49,71 @@ def _so(client, auth_headers, item, qty):
     }, headers=auth_headers).json()
 
 
-def test_allocate_caps_at_free_and_needed_and_blocks_other_orders(client, auth_headers, async_db_session):
-    item = _seed(client, auth_headers, async_db_session, stock_qty=30)
-    so = _so(client, auth_headers, item, 50)
-    line_id = so["lines"][0]["id"]
-    url = f"/api/sales-orders/{so['id']}"
+def _allocate(client, auth_headers, so, batch_ids):
+    return client.post(f"/api/sales-orders/{so['id']}/allocate", json={
+        "lines": [{"sales_order_line_id": so["lines"][0]["id"], "batch_ids": batch_ids}],
+    }, headers=auth_headers)
 
-    [a] = client.get(f"{url}/allocation", headers=auth_headers).json()
-    assert (a["needed"], a["free"], a["suggested"]) == (50, 30, 30)
 
-    r = client.post(f"{url}/allocate", json={"lines": [{"sales_order_line_id": line_id, "qty": 40}]}, headers=auth_headers)
-    assert r.status_code == 400 and "free in stock" in r.json()["detail"]
+def _offered(client, auth_headers, so):
+    [a] = client.get(f"/api/sales-orders/{so['id']}/allocation", headers=auth_headers).json()
+    return a
 
-    r = client.post(f"{url}/allocate", json={"lines": [{"sales_order_line_id": line_id, "qty": 30}]}, headers=auth_headers)
+
+def test_pinned_carton_is_claimed_until_released(client, auth_headers, async_db_session):
+    item, (a, b) = _seed(client, auth_headers, async_db_session, [20, 20])
+    so = _so(client, auth_headers, item, 30)
+
+    line = _offered(client, auth_headers, so)
+    assert line["needed"] == 30 and {c["batch_id"] for c in line["cartons"]} == {a, b}
+
+    r = _allocate(client, auth_headers, so, [a])
     assert r.status_code == 200, r.text
-    [a] = r.json()
-    assert (a["allocated"], a["needed"], a["free"]) == (30, 20, 0)
+    [line] = r.json()
+    assert (line["allocated"], line["needed"]) == (20, 10)
+    assert [c["batch_id"] for c in line["allocated_cartons"]] == [a]
+    assert [c["batch_id"] for c in line["cartons"]] == [b]
 
-    # The line carries it, so the SO page can subtract it when seeding a PR.
-    got = client.get(url, headers=auth_headers).json()
-    assert got["lines"][0]["qty_allocated"] == 30
-
-    # A second order for the same item sees nothing left.
+    # Another order neither sees it to allocate nor can put it on a pick list.
     other = _so(client, auth_headers, item, 10)
-    [b] = client.get(f"/api/sales-orders/{other['id']}/allocation", headers=auth_headers).json()
-    assert b["free"] == 0
+    assert [c["batch_id"] for c in _offered(client, auth_headers, other)["cartons"]] == [b]
+    assert _allocate(client, auth_headers, other, [a]).status_code == 409
+    r = client.post("/api/pick-lists", json={"sales_order_id": other["id"], "lines": [{
+        "sales_order_line_id": other["lines"][0]["id"], "item_id": item["id"], "qty_picked": 20, "batch_id": a,
+    }]}, headers=auth_headers)
+    assert r.status_code == 400 and "Allocated to another order" in r.json()["detail"]
 
-    # Releasing hands it back.
-    [res] = client.get(f"{url}/reservations", headers=auth_headers).json()["reservations"]
-    assert res["sales_order_line_id"] == line_id and res["production_run_id"] is None
-    client.post(f"{url}/reservations/{res['id']}/release", headers=auth_headers)
-    [b] = client.get(f"/api/sales-orders/{other['id']}/allocation", headers=auth_headers).json()
-    assert b["free"] == 30
+    # The carton number rides the reservation, and releasing frees the box.
+    [res] = client.get(f"/api/sales-orders/{so['id']}/reservations", headers=auth_headers).json()["reservations"]
+    assert res["batch_id"] == a and res["batch_number"]
+    client.post(f"/api/sales-orders/{so['id']}/reservations/{res['id']}/release", headers=auth_headers)
+    assert {c["batch_id"] for c in _offered(client, auth_headers, other)["cartons"]} == {a, b}
 
 
-def test_allocation_over_packed_stock_cartons_makes_the_order_ready(client, auth_headers, async_db_session):
-    item = _seed(client, auth_headers, async_db_session, stock_qty=50, carton=True)
+def test_last_carton_may_overshoot_but_one_more_may_not(client, auth_headers, async_db_session):
+    item, (a, b) = _seed(client, auth_headers, async_db_session, [20, 20])
+    so = _so(client, auth_headers, item, 15)
+    r = _allocate(client, auth_headers, so, [a, b])
+    assert r.status_code == 400 and "still needed" in r.json()["detail"]
+    assert _allocate(client, auth_headers, so, [a]).status_code == 200
+
+
+def test_cartons_packed_for_an_open_order_are_not_offered(client, auth_headers, async_db_session):
+    owner = _so(client, auth_headers, client.post("/api/items", json={
+        "code": f"OWN-{uuid.uuid4().hex[:6]}", "name": "x", "uom": "pcs"}, headers=auth_headers).json(), 1)
+    item, _ = _seed(client, auth_headers, async_db_session, [20], packed_for_so=owner["id"])
+    so = _so(client, auth_headers, item, 20)
+    assert _offered(client, auth_headers, so)["cartons"] == []
+
+
+def test_order_covered_by_pinned_cartons_is_ready(client, auth_headers, async_db_session):
+    item, (a, b) = _seed(client, auth_headers, async_db_session, [25, 25])
     so = _so(client, auth_headers, item, 50)
     assert so["status"] == "PENDING"
 
-    r = client.post(f"/api/sales-orders/{so['id']}/allocate",
-                    json={"lines": [{"sales_order_line_id": so["lines"][0]["id"], "qty": 50}]},
-                    headers=auth_headers)
-    assert r.status_code == 200, r.text
+    assert _allocate(client, auth_headers, so, [a, b]).status_code == 200
 
     got = client.get(f"/api/sales-orders/{so['id']}", headers=auth_headers).json()
     assert got["lines"][0]["qty_packed_available"] == 50
+    assert got["lines"][0]["qty_allocated"] == 50
     assert got["status"] == "READY"

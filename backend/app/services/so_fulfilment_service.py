@@ -55,7 +55,7 @@ from app.models.manufacturing import ManufacturingOrder, MOCompletion, MODepende
 from app.models.packing import PackingCompletion, PackingOrder
 from app.models.pick_list import PickList, PickListLine
 from app.models.reservation import StockReservation
-from app.models.sales import SalesOrder, SalesOrderLine, sales_order_line_values
+from app.models.sales import SalesOrder, SalesOrderLine
 from app.models.size import Size
 from app.models.stock_balance import StockBalance
 from app.models.work_order import WorkOrder
@@ -582,96 +582,44 @@ async def fulfilment_map(db: AsyncSession, so_ids: list) -> dict:
 
 
 async def _fold_allocations(db: AsyncSession, line_rows: list, out: dict) -> None:
-    """Count "Allocate from stock" reservations toward a line's `packed_available`.
+    """Count "Allocate from stock" cartons toward a line's `packed_available`.
 
-    A line allocated from cartons already packed to stock is as shippable as one
-    packed against the order -- the pick list accepts any matching carton -- so it
-    must be able to reach READY without a packing order. Only cartons packed to
-    stock (no SO tag) count, and not ones on another order's live pick list; the
-    allocation is a qty, so the fold is capped by both it and those cartons.
-    Allocated bulk (not yet packed) adds nothing until it is packed for the line.
+    A line covered by cartons pinned to it is as shippable as one packed against
+    the order, so it must be able to reach READY without a packing order. Each
+    allocation pins one named carton (`StockReservation.batch_id`); what counts
+    is that carton's balance while it is still on hand and still GOOD. The
+    allocate endpoint only offers cartons NOT packed for an order, so none of
+    these is already in the packing-order sum above.
     """
     line_ids = [r[0] for r in line_rows]
-    held = {
-        str(sol_id): _f(qty)
-        for sol_id, qty in (
-            await db.execute(
-                select(
-                    StockReservation.sales_order_line_id,
-                    func.sum(StockReservation.qty - StockReservation.qty_released),
-                )
-                .filter(
-                    StockReservation.sales_order_line_id.in_(line_ids),
-                    StockReservation.status == "ACTIVE",
-                )
-                .group_by(StockReservation.sales_order_line_id)
-            )
-        ).all()
-        if _f(qty) > EPS
-    }
-    if not held:
-        return
-
-    # Deferred: packing_service imports app.api.batches, which is heavier than
-    # this module should pull in for the common no-allocation case.
-    from app.services import packing_service
-
-    rows = [r for r in line_rows if str(r[0]) in held]
-    attrs: dict[str, list[str]] = {}
-    for sol_id, av_id in (
+    for sol_id, held, qty, alt in (
         await db.execute(
             select(
-                sales_order_line_values.c.sales_order_line_id,
-                sales_order_line_values.c.attribute_value_id,
-            ).filter(sales_order_line_values.c.sales_order_line_id.in_([r[0] for r in rows]))
+                StockReservation.sales_order_line_id,
+                func.sum(StockReservation.qty - StockReservation.qty_released),
+                func.coalesce(func.sum(StockBalance.qty), 0),
+                func.coalesce(func.sum(Batch.alt_qty), 0),
+            )
+            .select_from(StockReservation)
+            .outerjoin(Batch, (Batch.id == StockReservation.batch_id) & (Batch.quality_status == "GOOD"))
+            .outerjoin(
+                StockBalance,
+                (StockBalance.batch_key == cast(Batch.id, String)) & (StockBalance.qty > 0),
+            )
+            .filter(
+                StockReservation.sales_order_line_id.in_(line_ids),
+                StockReservation.status == "ACTIVE",
+            )
+            .group_by(StockReservation.sales_order_line_id)
         )
     ).all():
-        attrs.setdefault(str(sol_id), []).append(str(av_id))
-    sizes = await packing_service.line_size_names(db, [r[0] for r in rows])
-
-    # Cartons on a live pick list, by the order picking them. Another order's
-    # claim excludes a carton; this order's own picked cartons stay in stock (and
-    # in the count) until dispatch.
-    on_lists: dict = {}
-    for b, so_id in (
-        await db.execute(
-            select(PickListLine.batch_id, PickList.sales_order_id)
-            .join(PickList, PickListLine.pick_list_id == PickList.id)
-            .filter(PickListLine.batch_id.isnot(None), PickList.status != "CANCELLED")
-        )
-    ).all():
-        on_lists[b] = so_id
-
-    for r in rows:
-        key = str(r[0])
-        stat = out[key]
-        stat["allocated"] = held[key]
-        taken = {b for b, so_id in on_lists.items() if so_id != r[1]}
-        units = await packing_service.available_packed_units(
-            db, r[2], attribute_value_ids=attrs.get(key, []), color_id=r[5],
-            exclude_ids=taken, limit=10_000, size_name=sizes.get(key),
-        )
-        po_ids = {b.packing_order_id for b, _ in units}
-        to_stock = {
-            i for (i,) in (
-                await db.execute(
-                    select(PackingOrder.id).filter(
-                        PackingOrder.id.in_(po_ids), PackingOrder.sales_order_id.is_(None)
-                    )
-                )
-            ).all()
-        } if po_ids else set()
-        base = alt = 0.0
-        for batch, bal in units:
-            if batch.packing_order_id not in to_stock:
-                continue
-            if base >= held[key] - EPS:
-                break
-            base += _f(bal.qty)
-            alt += _f(batch.alt_qty)
-        stat["packed_available"] += min(base, held[key])
+        stat = out.get(str(sol_id))
+        if stat is None:
+            continue
+        stat["allocated"] = max(0.0, _f(held))
+        stat["packed_available"] += _f(qty)
         if stat["packed_available_alt"] is not None:
-            stat["packed_available_alt"] = round(stat["packed_available_alt"] + alt, 2)
+            stat["packed_available_alt"] = round(stat["packed_available_alt"] + _f(alt), 2)
 
 
 # --- MO progress (the SO table's "how much has been produced?" column) -----

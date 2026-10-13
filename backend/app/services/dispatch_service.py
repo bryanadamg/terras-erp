@@ -121,7 +121,7 @@ async def release_reservations(db: AsyncSession, pl: PickList, pick_lines: list[
     reservation keeps standing.
 
     Matched on (sales order, item, variant_key) — the reservation's own grain.
-    Drawn down oldest-first; a row is marked RELEASED once it is exhausted.
+    Drawn down shipped-carton pins first, then oldest-first; a row is marked RELEASED once it is exhausted.
     Returns the total qty released, for the caller's audit line.
     """
     sol_attrs, sol_colors = _variant_maps(pl)
@@ -145,6 +145,11 @@ async def release_reservations(db: AsyncSession, pl: PickList, pick_lines: list[
         )
         .order_by(StockReservation.created_at)
     )).scalars().all()
+    # A pinned carton that just shipped releases its own row first; a pin whose
+    # carton did NOT ship goes last, so it keeps holding the box still on the
+    # shelf. Otherwise oldest-first, as before.
+    shipped_cartons = {l.batch_id for l in pick_lines if l.batch_id}
+    rows = sorted(rows, key=lambda r: 0 if r.batch_id in shipped_cartons else (1 if r.batch_id is None else 2))
 
     now = datetime.utcnow()
     total = 0.0
