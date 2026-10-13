@@ -741,7 +741,7 @@ async def get_stock_balance_paginated(
                 ManufacturingOrder.id, ManufacturingOrder.code, WorkOrder.code,
                 ManufacturingOrder.labdip_variant_code, Color.code, Color.name,
                 func.coalesce(Color.hex, attr_color_hex),
-                Batch.alt_qty, PackingOrder.uom2,
+                Batch.alt_qty, func.coalesce(Batch.alt_uom, PackingOrder.uom2),
             ))
             .options(selectinload(StockBalance.attribute_values))
             .order_by(*order)

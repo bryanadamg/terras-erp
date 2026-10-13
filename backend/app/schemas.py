@@ -1553,8 +1553,8 @@ class StockBalanceResponse(BaseModel):
     color_name: str | None = None
     color_hex: str | None = None
     labdip_variant_code: str | None = None
-    # Packed-carton rows only: the count the packer put in the box, in the packing
-    # order's alt selling unit (12 Pcs, 4 Pic) — Batch.alt_qty + PackingOrder.uom2.
+    # Lot rows only: the counted alt figure (12 Pcs, 4 Pic) — a carton's packed count
+    # in its packing order's uom2, or a hand-made lot's own Batch.alt_uom.
     alt_qty: float | None = None
     alt_uom: str | None = None
 
@@ -3258,6 +3258,10 @@ class BatchCreate(BaseModel):
     size_id: Optional[UUID] = None
     attribute_value_ids: list[UUID] = []
     color_id: Optional[UUID] = None
+    # Counted alt-unit figure beside the kg (12 Pcs). Stored, never converted —
+    # the kg is the stock qty, so an alt count needs an opening qty to sit beside.
+    alt_qty: Optional[float] = None
+    alt_uom: Optional[str] = None
 
 class BatchResponse(BaseModel):
     id: UUID
@@ -3281,6 +3285,7 @@ class BatchResponse(BaseModel):
     packing_order_id: Optional[UUID] = None
     package_no: Optional[int] = None
     alt_qty: Optional[float] = None
+    alt_uom: Optional[str] = None
     # The packing order holding this lot (claimed off the desk); the pack form
     # preselects the order's own held lots first.
     locked_packing_order_id: Optional[UUID] = None
