@@ -96,6 +96,31 @@ def join_size(name: str | None, measurement: str | None) -> str | None:
     return f"{nm} {m}" if m.startswith("(") else f"{nm}-{m}"
 
 
+# Fill a size snapshot's BLANK measurements from its live BOMSize. The snapshot
+# exists so a later BOM edit can't re-spec an in-flight lot — but a range entered
+# after the MO was cut is not a re-spec, it is the spec arriving late, and every
+# lot of that MO would otherwise print "L-72" forever. Set values are never touched.
+_FILL_SIZE_GAPS_SQL = """
+UPDATE {table} t SET bom_size_snapshot = (t.bom_size_snapshot::jsonb || jsonb_strip_nulls(jsonb_build_object(
+    'target_measurement', CASE WHEN t.bom_size_snapshot->>'target_measurement' IS NULL THEN bs.target_measurement::float8 END,
+    'measurement_min', CASE WHEN t.bom_size_snapshot->>'measurement_min' IS NULL THEN bs.measurement_min::float8 END,
+    'measurement_max', CASE WHEN t.bom_size_snapshot->>'measurement_max' IS NULL THEN bs.measurement_max::float8 END
+)))::{cast}
+FROM bom_sizes bs
+WHERE bs.id = t.bom_size_id AND bs.bom_id = :bom_id AND t.bom_size_snapshot IS NOT NULL
+  AND ((t.bom_size_snapshot->>'target_measurement' IS NULL AND bs.target_measurement IS NOT NULL)
+    OR (t.bom_size_snapshot->>'measurement_min' IS NULL AND bs.measurement_min IS NOT NULL)
+    OR (t.bom_size_snapshot->>'measurement_max' IS NULL AND bs.measurement_max IS NOT NULL))
+"""
+
+
+async def fill_size_snapshot_gaps(db: AsyncSession, bom_id) -> None:
+    """Backfill blank measurements on every MO and lot snapshot of this BOM's sizes."""
+    from sqlalchemy import text
+    for table, cast in (("manufacturing_orders", "jsonb"), ("batches", "json")):
+        await db.execute(text(_FILL_SIZE_GAPS_SQL.format(table=table, cast=cast)), {"bom_id": bom_id})
+
+
 def _parse_variant_key(variant_key: str):
     """Inverse of _generate_variant_key: split a stored key back into
     (attribute_value_ids, color_id). Used when re-posting stock derived from an

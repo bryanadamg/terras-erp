@@ -16,7 +16,7 @@ from app.models.production_run import PRBomEntrySize
 from app.schemas import BOMCreate, BOMUpdate, BOMResponse, BOMLookupResponse, BOMSummaryResponse, BOMSummaryPageResponse, BOMTreeResponse, SizeResponse, BOMAutomatorProfileCreate, BOMAutomatorProfileResponse, BOMCodeResolveRequest, BOMCodeResolveResponse, BOMItemLookupRequest, BOMItemLookupResponse, BOMItemLookupEntry
 from app.models.auth import User, BOMAutomatorProfile
 from app.api.auth import get_current_user, require_permission, require_any_permission
-from app.services import audit_service, work_center_service
+from app.services import audit_service, stock_service, work_center_service
 from app.models.attribute import AttributeValue
 from app.core.ws_manager import manager
 from app.core.pagination import PageParams, PageWindow
@@ -768,6 +768,9 @@ async def update_bom(
             if ref_pr.first():
                 continue
             await db.delete(sz)
+
+        await db.flush()
+        await stock_service.fill_size_snapshot_gaps(db, bom.id)
 
     await db.commit()
 
