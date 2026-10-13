@@ -23,8 +23,9 @@ const LOT_STATUS_FILTERS = [
 import TreeSelect, { buildLocationFilterTree, buildLocationPickerTree, expandLocationFilterValue, buildCategoryTree } from '../shared/TreeSelect';
 import SearchableSelect from '@bryanadamg/terras-ui/components/Combobox';
 import { useItemSearch, itemToOption } from '../shared/useEntitySearch';
-import { lotSizeLabel, lotComboLabel, lotColorLabel, type LotVariantAttr } from '../shared/LotChips';
+import { lotSizeText, lotComboLabel, lotColorLabel, type LotVariantAttr } from '../shared/LotChips';
 import { isRejectGrade } from '../shared/rejectDisplay';
+import { basePerAlt, altToBase } from '../shared/altUnit';
 import { ExpanderCell, SortableTh, lvZebra, lvThead, lvTh, TableEmpty, EMPTY_DASH, ResizableTable } from '../shared/listViewTheme';
 import { Tabs, TabDef } from '../shared/Tabs';
 import { rejectGradeLabel } from '../shared/rejectDisplay';
@@ -122,7 +123,7 @@ export default function BatchesView({ items, locations, categories, workCenters,
   const { showToast } = useToast();
   const { formatDate: tzDate } = useTimezone();
   const { confirm } = useConfirm();
-  const { companyProfile, attributes = [], sizes = [] } = useData() as any;
+  const { companyProfile, attributes = [], sizes = [], uoms = [] } = useData() as any;
 
   const PAGE_SIZE = 50;
   const [itemFilter, setItemFilter] = useState('');
@@ -235,6 +236,9 @@ export default function BatchesView({ items, locations, categories, workCenters,
   const [createAttrIds, setCreateAttrIds] = useState<string[]>([]);
   const [createColorId, setCreateColorId] = useState('');
   const [createColorOpts, setCreateColorOpts] = useState<any[]>([]);
+  const [createAltQty, setCreateAltQty] = useState('');
+  const [createAltUom, setCreateAltUom] = useState('');
+  const [createAltFactor, setCreateAltFactor] = useState('');
   // Server typeahead: `items` is only DataContext's current page, so an item off
   // that page is unreachable by typing in a client-filtered list.
   const { results: createItemResults, onSearch: onSearchCreateItem, resolve: resolveCreateItem } =
@@ -248,6 +252,20 @@ export default function BatchesView({ items, locations, categories, workCenters,
   // greige or yarn item rarely binds but a hand-entered lot still needs. Color
   // Code is the Color Library (30k rows) — searched server-side, not a select.
   const createItem = createItemId ? resolveCreateItem(createItemId) : null;
+  // Alt count (12 Pcs) beside the kg. Both typed = two facts, stored as is; only
+  // the alt typed = kg derived through the UOM factor and the item's g/y.
+  const createAltFactors = (uoms.find((u: any) => u.name === createAltUom)?.factors || []) as any[];
+  const createAltQtyNum = parseFloat(createAltQty) || 0;
+  const createAltPer = (() => {
+    const f = createAltFactors.find((x: any) => String(parseFloat(x.value)) === createAltFactor);
+    if (!f) return null;
+    return basePerAlt({
+      factor: parseFloat(f.value), lengthUom: f.to_uom_name, itemUom: createItem?.uom,
+      weightPerUnit: createItem?.weight_per_unit, weightUnit: createItem?.weight_unit,
+    });
+  })();
+  const createDerivedQty = createAltQtyNum > 0 && createAltPer ? altToBase(createAltQtyNum, createAltPer) : null;
+  const createEffQty = createQty !== '' ? parseFloat(createQty) : (createDerivedQty ?? NaN);
   const createAttrs = React.useMemo(() => {
     const bound = new Set((createItem?.attribute_ids || []).map(String));
     return attributes.filter((a: any) =>
@@ -433,9 +451,15 @@ export default function BatchesView({ items, locations, categories, workCenters,
 
   const handleCreate = async () => {
     if (!createItemId) { showToast('Select an item', 'warning'); return; }
-    const qty = parseFloat(createQty);
+    const qty = createEffQty;
     if (createQty !== '' && (isNaN(qty) || qty < 0)) { showToast('Quantity must be a positive number', 'warning'); return; }
-    const hasQty = createQty !== '' && !isNaN(qty) && qty > 0;
+    if (createAltQty !== '' && !(createAltQtyNum > 0)) { showToast('Alt qty must be a positive number', 'warning'); return; }
+    if (createAltQtyNum > 0 && !createAltUom) { showToast('Select the alt unit', 'warning'); return; }
+    if (createAltQtyNum > 0 && createQty === '' && createDerivedQty === null) {
+      showToast(createAltFactor ? 'Set g/y on the item, or enter the weight' : 'Select the alt factor, or enter the weight', 'warning');
+      return;
+    }
+    const hasQty = !isNaN(qty) && qty > 0;
     if (hasQty && !createLocId) { showToast('Select a location for the opening quantity', 'warning'); return; }
     if (!hasQty && (createAttrIds.length || createColorId)) { showToast('Attributes and color code need an opening quantity', 'warning'); return; }
     const ends = createEnds === '' ? null : parseInt(createEnds, 10);
@@ -454,6 +478,8 @@ export default function BatchesView({ items, locations, categories, workCenters,
           size_id: createSizeId || null,
           attribute_value_ids: hasQty ? createAttrIds : [],
           color_id: hasQty && createColorId ? createColorId : null,
+          alt_qty: createAltQtyNum > 0 ? createAltQtyNum : null,
+          alt_uom: createAltQtyNum > 0 ? createAltUom : null,
         }),
       });
       if (res.ok) {
@@ -467,6 +493,9 @@ export default function BatchesView({ items, locations, categories, workCenters,
         setCreateSizeId('');
         setCreateAttrIds([]);
         setCreateColorId('');
+        setCreateAltQty('');
+        setCreateAltUom('');
+        setCreateAltFactor('');
         fetchBatches();
       } else {
         const err = await res.json();
@@ -764,7 +793,7 @@ export default function BatchesView({ items, locations, categories, workCenters,
   // attributes). Same identity vocabulary as the staging/completion lot pickers —
   // see components/shared/LotChips.tsx for the label rules.
   const attrsCell = (b: Batch) => {
-    const sz = lotSizeLabel(b);
+    const sz = lotSizeText(b);
     const combo = lotComboLabel(b);
     const shade = lotColorLabel(b);
     if (!sz && !combo && !shade) return emDash;
@@ -1223,7 +1252,7 @@ export default function BatchesView({ items, locations, categories, workCenters,
             </div>
           </div>
           <div className="mb-3">
-            <label style={{ fontFamily: xpFont, fontSize: 11 }}>Quantity (optional)</label>
+            <label style={{ fontFamily: xpFont, fontSize: 11 }}>Quantity{createItem?.uom ? ` (${createItem.uom})` : ''} (optional)</label>
             <input
               type="number"
               min={0}
@@ -1231,14 +1260,60 @@ export default function BatchesView({ items, locations, categories, workCenters,
               style={{ ...xpInput, width: '100%', height: 22 }}
               value={createQty}
               onChange={e => setCreateQty(e.target.value)}
-              placeholder="0"
+              placeholder={createDerivedQty !== null ? String(createDerivedQty) : '0'}
             />
             <div style={{ fontFamily: xpFont, fontSize: 10, color: '#555', marginTop: 2 }}>
               Books the lot into stock at the location below. Leave blank to create an empty lot (attributes and color code need a quantity).
             </div>
           </div>
           <div className="mb-3">
-            <label style={{ fontFamily: xpFont, fontSize: 11 }}>Location{createQty && parseFloat(createQty) > 0 ? '' : ' (optional)'}</label>
+            <label style={{ fontFamily: xpFont, fontSize: 11 }}>Alt Qty (optional)</label>
+            <div style={{ display: 'flex', gap: 4 }}>
+              <input
+                type="number"
+                min={0}
+                step="any"
+                style={{ ...xpInput, flex: 1, minWidth: 0, height: 22 }}
+                value={createAltQty}
+                onChange={e => setCreateAltQty(e.target.value)}
+                placeholder="0"
+              />
+              <select
+                style={{ ...xpInput, height: 22 }}
+                value={createAltUom}
+                onChange={e => { setCreateAltUom(e.target.value); setCreateAltFactor(''); }}
+              >
+                <option value="">Unit</option>
+                {uoms.map((u: any) => <option key={u.id} value={u.name}>{u.name}</option>)}
+              </select>
+              {createAltFactors.length > 0 && (
+                <select
+                  style={{ ...xpInput, height: 22 }}
+                  value={createAltFactor}
+                  onChange={e => setCreateAltFactor(e.target.value)}
+                  title={`How much one ${createAltUom} is`}
+                >
+                  <option value="">1 {createAltUom} = ?</option>
+                  {createAltFactors.map((f: any) => (
+                    <option key={f.id} value={String(parseFloat(f.value))}>
+                      1 {createAltUom} = {parseFloat(f.value)} {f.to_uom_name || 'Yard'}{f.label ? ` (${f.label})` : ''}
+                    </option>
+                  ))}
+                </select>
+              )}
+            </div>
+            <div style={{ fontFamily: xpFont, fontSize: 10, color: createAltQtyNum > 0 && createQty === '' && createDerivedQty === null ? '#a00' : '#555', marginTop: 2 }}>
+              {createAltQtyNum > 0 && createQty === ''
+                ? (createDerivedQty !== null
+                    ? `≈ ${createDerivedQty} ${createItem?.uom || ''} booked from the alt qty — type the weight above to use the scale reading instead.`
+                    : createAltFactor
+                      ? `Can't convert to ${createItem?.uom || 'the stock unit'}: set g/y on the item, or enter the weight above.`
+                      : 'Pick the factor to derive the weight, or enter the weight above.')
+                : 'Counted pieces stored beside the weight, e.g. 12 Pcs.'}
+            </div>
+          </div>
+          <div className="mb-3">
+            <label style={{ fontFamily: xpFont, fontSize: 11 }}>Location{createEffQty > 0 ? '' : ' (optional)'}</label>
             <div className="mt-1">
               <TreeSelect
                 options={locationPickerTree}

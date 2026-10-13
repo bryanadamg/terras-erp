@@ -26,6 +26,9 @@ export interface LotLike {
     // line's size is a live BOMSize row, not a stamped copy, so the server sends
     // the label alone (SalesOrderLineResponse / PickableOrderLine).
     size_label?: string | null;
+    // Server-resolved "72 (70-74)" for the same snapshot-less rows (SO line,
+    // packing order) — `stock_service.size_measurement`.
+    size_measurement?: string | null;
     variant_attributes?: LotVariantAttr[] | null;
     color_code?: string | null;
     color_name?: string | null;
@@ -45,27 +48,40 @@ export const lotSizeLabel = (b: LotLike): string | null => {
 };
 
 /**
- * "72 (70–74) cm" off a BOMSize row or snapshot; '' when unmeasured. Mirror of
- * `stock_service.size_measurement`, which serves the same text on SO lines.
+ * "72 (70-74)" off a BOMSize row or snapshot — "(70-74)" when only the range is
+ * set, '' when unmeasured. Mirror of `stock_service.size_measurement`, which
+ * serves the same text on SO lines and packing orders.
  */
 export const sizeMeasurement = (bs: any): string => {
     if (!bs) return '';
-    const n = (v: any) => parseFloat(v);
-    const range = bs.measurement_min != null && bs.measurement_max != null ? `${n(bs.measurement_min)}–${n(bs.measurement_max)}` : '';
-    if (bs.target_measurement != null) return `${n(bs.target_measurement)}${range ? ` (${range})` : ''} cm`;
-    return range ? `${range} cm` : '';
+    const n = (v: any) => `${parseFloat(v)}`;
+    const target = bs.target_measurement != null ? n(bs.target_measurement) : '';
+    const range = bs.measurement_min != null && bs.measurement_max != null
+        ? `(${n(bs.measurement_min)}-${n(bs.measurement_max)})` : '';
+    return [target, range].filter(Boolean).join(' ');
 };
 
 /**
- * Printed size: the name plus its measurement, "L 72 (70–74) cm". Display only —
- * compare on `lotSizeKey` (or `lotSizeLabel`), never on this.
+ * The one size format every chip, label and print uses: "{size}-{target} ({min}-{max})",
+ * e.g. "L-72 (70-74)", "L (70-74)", "L". `measurement` is `sizeMeasurement`'s text.
+ * Mirror of `stock_service.join_size`.
  */
-export const lotSizeText = (b: LotLike): string | null => {
-    const name = lotSizeLabel(b) || '';
-    const m = sizeMeasurement(b?.bom_size_snapshot);
-    // A measurement-only free size is already labelled "157 cm".
-    return [name, m && !name.includes(m) ? m : ''].filter(Boolean).join(' ') || null;
+export const joinSize = (name?: string | null, measurement?: string | null): string => {
+    const nm = (name || '').trim();
+    let m = (measurement || '').trim();
+    // A measurement-only free size is already labelled "157 cm" — don't repeat the target.
+    const target = m.match(/^[\d.]+/)?.[0];
+    if (target && nm.includes(target)) m = m.slice(target.length).trim();
+    if (!nm || !m) return nm || m;
+    return m.startsWith('(') ? `${nm} ${m}` : `${nm}-${m}`;
 };
+
+/**
+ * A lot's (or SO line's / packing order's) size in the `joinSize` format. Display
+ * only — compare on `lotSizeKey` (or `lotSizeLabel`), never on this.
+ */
+export const lotSizeText = (b: LotLike): string | null =>
+    joinSize(lotSizeLabel(b), sizeMeasurement(b?.bom_size_snapshot) || b?.size_measurement) || null;
 
 /**
  * Comparison key for a lot's size — the frontend mirror of `_size_ident` in
@@ -167,7 +183,7 @@ export function LotChips({
     qtyUnit?: string;
     showOtherAttrs?: boolean;
 }) {
-    const size = lotSizeLabel(batch);
+    const size = lotSizeText(batch);
     const combo = lotComboLabel(batch);
     const color = lotColorLabel(batch);
     // color + labdip_color are already folded into the single shade chip above.

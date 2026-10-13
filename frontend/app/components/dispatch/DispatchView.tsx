@@ -15,7 +15,7 @@ import { LV_XP_FONT, lvBtn, lvInput, lvTd, lvLabel, lvRow, lvSubTh, lvSubTd, lvS
 import { ShellWindow, ShellTitleBar, SearchField, FilterChipBar, ToolbarCount, xpToolbar } from '../shared/shellTheme';
 import Pager from '../shared/Pager';
 import ModalWrapper from '../shared/ModalWrapper';
-import { LotChip, LotChips, LotChipRow, lotSizeLabel, lotComboLabel, lotColorLabel } from '../shared/LotChips';
+import { LotChip, LotChips, LotChipRow, lotSizeLabel, lotSizeText, lotComboLabel, lotColorLabel } from '../shared/LotChips';
 import { qtyFmt, toNum as num } from '../shared/format';
 import { API_BASE } from '../shared/apiBase';
 const SuratJalanPrintModal = dynamic(() => import('./SuratJalanPrintModal'), { ssr: false });
@@ -742,7 +742,7 @@ function cartonChips(c: any) {
     );
     if (hasCarton) return <LotChipRow><LotChips batch={ci} /></LotChipRow>;
 
-    const size = c.size_label || lotSizeLabel(ci || {});
+    const size = c.size_label || lotSizeText(ci || {});
     const color = colorLabel(c.color_code, c.color_name);
     if (!size && !color) return <span style={{ color: '#bbb' }}>{EMPTY_DASH}</span>;
     return (

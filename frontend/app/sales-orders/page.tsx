@@ -121,10 +121,13 @@ export default function SalesOrdersPage() {
         // `null` means the item has no weight and no operator-entered qty_kg, so there
         // is no honest number to plan against. Return it as-is and let the caller drop
         // the whole group rather than substitute 0 or the yardage.
+        //
+        // Stock already allocated to the line ("Allocate from stock") is not
+        // produced again — the run plans only what the shelf can't cover.
         const pickQty = (l: any): number | null =>
             l.qty_ordered_base === null || l.qty_ordered_base === undefined
                 ? null
-                : parseFloat(l.qty_ordered_base) || 0;
+                : Math.max(0, (parseFloat(l.qty_ordered_base) || 0) - (parseFloat(l.qty_allocated) || 0));
 
         for (const [, groupLines] of attrGroupMap) {
             const firstLine = groupLines[0];
@@ -213,7 +216,8 @@ export default function SalesOrdersPage() {
                         size_token: lineSizeToken(l) || undefined,
                         size_label: l.size_display || undefined,
                         qty: pickQty(l)!,
-                    }));
+                    }))
+                    .filter((sz: any) => sz.qty > 0);
                 if (uncoveredSizes.length > 0) {
                     entries.push({
                         bom_id: matchingBOM?.id || '',
@@ -238,8 +242,8 @@ export default function SalesOrdersPage() {
                     const entryAttrs = [...(e.attribute_value_ids || [])].sort().join(',');
                     return entryAttrs === sortedLineAttrs && String(e.color_id || '') === String(lineColorId || '') && String(e.labdip_variant_code || '') === String(lineLabdip || '');
                 });
-                if (!covered) {
-                    const totalQty = groupLines.reduce((acc: number, l: any) => acc + pickQty(l)!, 0);
+                const totalQty = groupLines.reduce((acc: number, l: any) => acc + pickQty(l)!, 0);
+                if (!covered && totalQty > 0) {
                     entries.push({
                         bom_id: matchingBOM?.id || '',
                         item_id: firstLine.item_id,
@@ -267,7 +271,7 @@ export default function SalesOrdersPage() {
             if (missingBomCount > 0) {
                 showToast(`${missingBomCount} item(s) have no matching BOM. Please create recipes first.`, 'warning');
             } else if (unweighedItems.size === 0) {
-                showToast('All items already have a Production Run.', 'info');
+                showToast('Nothing left to produce — every line is covered by a Production Run or by stock allocated to it.', 'info');
             }
             return;
         }

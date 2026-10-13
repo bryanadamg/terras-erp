@@ -332,6 +332,17 @@ async def create_batch(
         raise HTTPException(status_code=400, detail="Variant attributes and colour need an opening quantity to be stored on")
     if payload.ends is not None and payload.ends < 0:
         raise HTTPException(status_code=400, detail="Ends cannot be negative")
+    alt_uom = (payload.alt_uom or "").strip() or None
+    alt_qty = payload.alt_qty if payload.alt_qty else None
+    if alt_qty is not None:
+        if alt_qty < 0:
+            raise HTTPException(status_code=400, detail="Alt qty cannot be negative")
+        if not alt_uom:
+            raise HTTPException(status_code=400, detail="Select the alt unit")
+        if qty <= 0:
+            raise HTTPException(status_code=400, detail="An alt qty needs the opening quantity it describes")
+    else:
+        alt_uom = None
     size_snapshot = None
     if payload.size_id:
         size = (await db.execute(select(Size).filter(Size.id == payload.size_id))).scalars().first()
@@ -355,6 +366,8 @@ async def create_batch(
         notes=payload.notes,
         ends=payload.ends,
         bom_size_snapshot=size_snapshot,
+        alt_qty=alt_qty,
+        alt_uom=alt_uom,
         created_by=current_user.username,
     )
     db.add(batch)
@@ -382,6 +395,7 @@ async def create_batch(
         db, current_user.id, "CREATE", "Batch", str(batch.id),
         details=f"Created batch {batch_number} for item {payload.item_id}"
         + (f" with {qty:g} at {location.name}" if qty > 0 else "")
+        + (f" ({alt_qty:g} {alt_uom})" if alt_qty is not None else "")
     )
     if qty > 0:
         await manager.broadcast({"type": "STOCK_UPDATE"})
@@ -882,19 +896,20 @@ async def split_batch(
         # brutto follows from the snapshotted tare.
         sub.weight_kg = qty
         sub.gross_weight_kg = packing_service.gross_weight(qty, batch.tare_kg)
-        # The packed count of the piece. Prorated by weight only as a default —
-        # `alt_qty` is a COUNT the packer made, so a caller splitting a 12-Pcs box
-        # states how many pieces went into the new one rather than inheriting
-        # 8.0004 Pcs from a kg ratio.
-        if batch.alt_qty is not None:
-            parent_alt = float(batch.alt_qty)
-            child_alt = (
-                float(payload.alt_qty) if payload.alt_qty is not None
-                else round(parent_alt * qty / remaining, 4) if remaining > 0 else 0.0
-            )
-            child_alt = max(0.0, min(child_alt, parent_alt))
-            sub.alt_qty = child_alt
-            batch.alt_qty = round(parent_alt - child_alt, 4)
+    # The packed count of the piece — a carton's, or a hand-made lot's own.
+    # Prorated by weight only as a default — `alt_qty` is a COUNT someone made, so a caller splitting a 12-Pcs box
+    # states how many pieces went into the new one rather than inheriting
+    # 8.0004 Pcs from a kg ratio.
+    if batch.alt_qty is not None:
+        parent_alt = float(batch.alt_qty)
+        child_alt = (
+            float(payload.alt_qty) if payload.alt_qty is not None
+            else round(parent_alt * qty / remaining, 4) if remaining > 0 else 0.0
+        )
+        child_alt = max(0.0, min(child_alt, parent_alt))
+        sub.alt_qty = child_alt
+        sub.alt_uom = batch.alt_uom
+        batch.alt_qty = round(parent_alt - child_alt, 4)
     db.add(sub)
     await db.flush()
 

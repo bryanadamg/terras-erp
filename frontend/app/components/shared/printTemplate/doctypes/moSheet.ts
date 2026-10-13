@@ -15,7 +15,7 @@
 import type { FieldDef, ResolvedField } from '../fieldRegistry';
 import type { RowSourceDef } from '../rowSources';
 import { txt, attrValueByRole, moShade, type PrintContext } from '../renderContext';
-import { lotSizeLabel, lotSizeText, sizeMeasurement } from '../../LotChips';
+import { lotSizeLabel, lotSizeText, sizeMeasurement, joinSize } from '../../LotChips';
 import { STATIC_BASE } from '../../apiBase';
 import { matchSubBOM } from '../../bomMatch';
 
@@ -173,7 +173,7 @@ function explode(d: any): Record<string, any>[] {
             (s: any) => (s.size_name || s.label || '').trim().toLowerCase() === moSize.toLowerCase(),
         );
         // The sub-BOM's own measurement for that size, not the parent's.
-        return bs ? [moSize, sizeMeasurement(bs)].filter(Boolean).join(' ') : '';
+        return bs ? joinSize(moSize, sizeMeasurement(bs)) : '';
     };
     const walk = (lines: any[], level: number, parentQty: number, currentBOM: any) => {
         // ponytail: depth cap only guards a cyclic BOM; the old sheet had none.

@@ -7,9 +7,11 @@ import SearchableSelect from '@bryanadamg/terras-ui/components/Combobox';
 import ModalWrapper from '../shared/ModalWrapper';
 const SalesPrintModal = dynamic(() => import('./SalesPrintModal'), { ssr: false });
 const SOTablePrintModal = dynamic(() => import('./SOTablePrintModal'), { ssr: false });
+const AllocateStockModal = dynamic(() => import('./AllocateStockModal'), { ssr: false });
 import { useTimezone } from '../../context/TimezoneContext';
 import { useData } from '../../context/DataContext';
 import { useUser } from '../../context/UserContext';
+import { joinSize, sizeMeasurement } from '../shared/LotChips';
 import { nextSortState, StatusChip, statusTint, familyTint, familyColor, TableSkeleton, useTableSkeletonMetrics, ProgressBar, useFloatingMenu, MenuTriggerButton, FloatingMenu, XPActionButton, FormSection, FieldLabel, xpBtn, xpInput as xpInputBase, CodeChip, CODE_FONT, xpFont, CHIP_RADIUS, CODE_CHIP_RADIUS, Chip, VariantChip, VariantKind, variantChipTone, colorLabel, colorHexFor, BTN_TONES, XP_BTN, SKEL_PAGE_ROWS } from '../shared/xpTheme';
 
 import { qtyFmt } from '../shared/format';
@@ -44,7 +46,7 @@ const SO_COL_WIDTHS = [
     152, // Production Output
     150, // Fulfilment
     80,  // Status
-    75,  // Actions
+    110, // Actions — lineage + allocate + PR + menu must fit, or they spill into Status
 ];
 const SO_TABLE_MIN_WIDTH = SO_COL_WIDTHS.reduce((a, b) => a + b, 0);
 
@@ -123,6 +125,7 @@ export default function SalesOrderView({ items, attributes, boms, salesOrders, p
   // because it answers the same question the lineage modal is opened to answer —
   // "where is my order?" — for the half that has no MO to show.
   const [lineageReservations, setLineageReservations] = useState<any[]>([]);
+  const [allocatingSO, setAllocatingSO] = useState<any>(null);
 
   const openLineage = async (so: any) => {
     setLineageSO(so);
@@ -566,18 +569,6 @@ export default function SalesOrderView({ items, attributes, boms, salesOrders, p
       return forItem.filter((b: any) => (b.attribute_value_ids || []).map(String).includes(String(comboValueId)));
   };
 
-  // The size NAME (S/M/L/…) stays text in the cell, the measurement rides under
-  // it as a chip so the two read apart.
-  const formatBomSizeMeasurement = (bs: any): string => {
-      const hasRange = bs.measurement_min != null && bs.measurement_max != null;
-      const range = hasRange ? `${parseFloat(bs.measurement_min)}–${parseFloat(bs.measurement_max)}` : '';
-      // Same shape as the MO side (useManufacturingHelpers): target first, range in parens.
-      if (bs.target_measurement != null) {
-          return `${parseFloat(bs.target_measurement)}${range ? ` (${range})` : ''} cm`;
-      }
-      return range ? `${range} cm` : '';
-  };
-
   // ── Size, stated without a recipe ───────────────────────────────────────────
   // Sizes physically live on BOMSize rows, so a size list used to require a BOM
   // pick first — which is exactly what forced sales to choose the recipe. The
@@ -605,7 +596,7 @@ export default function SalesOrderView({ items, attributes, boms, salesOrders, p
       const nameless: any[] = [];
       for (const bom of scope) {
           for (const bs of (bom.sizes || [])) {
-              const measurement = formatBomSizeMeasurement(bs);
+              const measurement = sizeMeasurement(bs);
               const token = sizeToken(bs);
               if (!token) {
                   if (scope.length === 1 && measurement) {
@@ -660,12 +651,12 @@ export default function SalesOrderView({ items, attributes, boms, salesOrders, p
           // Nameless (measurement-only) size: the legacy pointer is the only
           // thing that identifies it, and the measurement is its label.
           const bs = line.bom_size_id ? findBomSize(line.bom_size_id) : null;
-          return bs ? { name: formatBomSizeMeasurement(bs), measurement: '' } : { name: '', measurement: '' };
+          return bs ? { name: sizeMeasurement(bs), measurement: '' } : { name: '', measurement: '' };
       }
       const scope = line.bom_id ? boms.filter((b: any) => b.id === line.bom_id) : [];
       for (const bom of scope) {
           const bs = (bom.sizes || []).find((x: any) => sizeToken(x) === name.trim().toLowerCase());
-          if (bs) return { name, measurement: formatBomSizeMeasurement(bs) };
+          if (bs) return { name, measurement: sizeMeasurement(bs) };
       }
       return { name, measurement: '' };
   };
@@ -1343,6 +1334,10 @@ In stock ${fmtQty(f.baseAvailable)}${bu} · Shipped ${fmtQty(f.baseShipped)}${bu
        )}
 
        {/* Production Lineage Modal — SO → PR → MO → WO → beams */}
+       {allocatingSO && (
+           <AllocateStockModal so={allocatingSO} authFetch={authFetch}
+               onClose={() => setAllocatingSO(null)} onDone={() => refreshSalesOrders?.()} />
+       )}
        {(lineageSO || lineageData) && (
            <ModalWrapper
                isOpen={!!(lineageSO || lineageData)}
@@ -1416,7 +1411,9 @@ In stock ${fmtQty(f.baseAvailable)}${bu} · Shipped ${fmtQty(f.baseShipped)}${bu
                                                        <td style={tdStyle}>
                                                            {r.production_run_code
                                                                ? lineageCodeChip(r.production_run_code, () => goToPR(r.production_run_code), 'pr')
-                                                               : <span style={{ color: '#999' }}>&mdash;</span>}
+                                                               : r.sales_order_line_id
+                                                                   ? <span style={{ color: '#777' }}>Allocated{r.batch_number && <> &middot; <CodeChip code={r.batch_number} tier={2} /></>}</span>
+                                                                   : <span style={{ color: '#999' }}>&mdash;</span>}
                                                        </td>
                                                        <td style={{ ...tdStyle, textAlign: 'right' }}>
                                                            {canManage && r.status === 'ACTIVE' && (
@@ -1903,7 +1900,7 @@ In stock ${fmtQty(f.baseAvailable)}${bu} · Shipped ${fmtQty(f.baseShipped)}${bu
                                                >
                                                    <option value="">No specific size</option>
                                                    {sizeOptions.map((o: any) => (
-                                                       <option key={o.value} value={o.value}>{o.measurement ? `${o.name} — ${o.measurement}` : o.name}</option>
+                                                       <option key={o.value} value={o.value}>{joinSize(o.name, o.measurement)}</option>
                                                    ))}
                                                </select>
                                            </div>
@@ -1952,7 +1949,7 @@ In stock ${fmtQty(f.baseAvailable)}${bu} · Shipped ${fmtQty(f.baseShipped)}${bu
                                    })()}
                                    {(() => {
                                        const { name, measurement } = getLineSizeParts(line);
-                                       return name ? <div style={{color:'#005',fontSize:'10px',fontWeight:'bold'}}><i className="bi bi-rulers me-1"></i>{measurement ? `${name} — ${measurement}` : name}</div> : null;
+                                       return name ? <div style={{color:'#005',fontSize:'10px',fontWeight:'bold'}}><i className="bi bi-rulers me-1"></i>{joinSize(name, measurement)}</div> : null;
                                    })()}
                                    {line.no_color_swatch && <div style={{color:'#a33',fontSize:'10px',fontWeight:'bold'}}><i className="bi bi-palette me-1"></i>No Color Swatch</div>}
                                </div>
@@ -2187,10 +2184,15 @@ In stock ${fmtQty(f.baseAvailable)}${bu} · Shipped ${fmtQty(f.baseShipped)}${bu
                                // button is present (buttons flow from the right edge).
                                const actionsCellContent = (
                                    <div style={{ display:'flex', gap:2, justifyContent:'flex-end', alignItems:'center' }}>
-                                       {soPRs.length > 0 && (
+                                       {(soPRs.length > 0 || Number(so.reserved_qty) > 0) && (
                                            <XPActionButton tone="neutral" icon="bi-diagram-3"
                                                title="View full production lineage — PR, MO, WO and beams created for this SO"
                                                onClick={() => openLineage(so)} />
+                                       )}
+                                       {hasPermission('sales_order.edit') && ['PENDING', 'READY', 'PARTIAL'].includes(so.status) && (
+                                           <XPActionButton tone="success" icon="bi-box-seam"
+                                               title="Allocate from stock — pick packed cartons already on hand for this order instead of producing them"
+                                               onClick={() => setAllocatingSO(so)} />
                                        )}
                                        {so.status === 'PENDING' && (
                                            <XPActionButton tone="primary" icon="bi-collection-play"
@@ -2264,14 +2266,8 @@ In stock ${fmtQty(f.baseAvailable)}${bu} · Shipped ${fmtQty(f.baseShipped)}${bu
                                            <td style={lineTd(isFirst, isLast)}>
                                                {line.size_display ? (() => {
                                                    const { name, measurement } = getLineSizeParts(line);
-                                                   return (
-                                                       <div style={{ display:'flex', flexWrap:'nowrap' as const, gap:3, alignItems:'center' }}>
-                                                           <VariantChip kind="size" title={`Size: ${name}`}>{name}</VariantChip>
-                                                           {measurement && (
-                                                               <VariantChip kind="size" icon={null} title={`Measurement: ${measurement}`}>{measurement}</VariantChip>
-                                                           )}
-                                                       </div>
-                                                   );
+                                                   const size = joinSize(name, measurement);
+                                                   return <VariantChip kind="size" title={`Size: ${size}`}>{size}</VariantChip>;
                                                })() : (
                                                    <span style={{ fontFamily:xpFont, fontSize:'9px', color:'#ccc' }}>—</span>
                                                )}

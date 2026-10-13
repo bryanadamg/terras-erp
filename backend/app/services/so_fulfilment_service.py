@@ -54,6 +54,7 @@ from app.models.item import Item
 from app.models.manufacturing import ManufacturingOrder, MOCompletion, MODependency
 from app.models.packing import PackingCompletion, PackingOrder
 from app.models.pick_list import PickList, PickListLine
+from app.models.reservation import StockReservation
 from app.models.sales import SalesOrder, SalesOrderLine
 from app.models.size import Size
 from app.models.stock_balance import StockBalance
@@ -70,6 +71,9 @@ _ZERO = {
     "packed": 0.0,
     "packed_available": 0.0,
     "dispatched": 0.0,
+    # Stock reserved straight to this line by "Allocate from stock" and not yet
+    # shipped. Not one of the four stages -- see `_fold_allocations`.
+    "allocated": 0.0,
     # Denominator for the four above, in their own unit. None = not derivable;
     # see `ordered_qty_in_stock_uom`.
     "ordered_base": None,
@@ -505,6 +509,8 @@ async def fulfilment_map(db: AsyncSession, so_ids: list) -> dict:
             if out[str(sol_id)]["packed_available_alt"] is not None:
                 out[str(sol_id)]["packed_available_alt"] = round(_f(alt), 2)
 
+    await _fold_allocations(db, line_rows, out)
+
     # --- made: root MO completions, matched to lines on the variant tuple ---
     mo_rows = (
         await db.execute(
@@ -573,6 +579,47 @@ async def fulfilment_map(db: AsyncSession, so_ids: list) -> dict:
         stat["made_alt"] = _to_alt(stat["made"], stat["ordered_base"], stat["ordered_alt"])
 
     return out
+
+
+async def _fold_allocations(db: AsyncSession, line_rows: list, out: dict) -> None:
+    """Count "Allocate from stock" cartons toward a line's `packed_available`.
+
+    A line covered by cartons pinned to it is as shippable as one packed against
+    the order, so it must be able to reach READY without a packing order. Each
+    allocation pins one named carton (`StockReservation.batch_id`); what counts
+    is that carton's balance while it is still on hand and still GOOD. The
+    allocate endpoint only offers cartons NOT packed for an order, so none of
+    these is already in the packing-order sum above.
+    """
+    line_ids = [r[0] for r in line_rows]
+    for sol_id, held, qty, alt in (
+        await db.execute(
+            select(
+                StockReservation.sales_order_line_id,
+                func.sum(StockReservation.qty - StockReservation.qty_released),
+                func.coalesce(func.sum(StockBalance.qty), 0),
+                func.coalesce(func.sum(Batch.alt_qty), 0),
+            )
+            .select_from(StockReservation)
+            .outerjoin(Batch, (Batch.id == StockReservation.batch_id) & (Batch.quality_status == "GOOD"))
+            .outerjoin(
+                StockBalance,
+                (StockBalance.batch_key == cast(Batch.id, String)) & (StockBalance.qty > 0),
+            )
+            .filter(
+                StockReservation.sales_order_line_id.in_(line_ids),
+                StockReservation.status == "ACTIVE",
+            )
+            .group_by(StockReservation.sales_order_line_id)
+        )
+    ).all():
+        stat = out.get(str(sol_id))
+        if stat is None:
+            continue
+        stat["allocated"] = max(0.0, _f(held))
+        stat["packed_available"] += _f(qty)
+        if stat["packed_available_alt"] is not None:
+            stat["packed_available_alt"] = round(stat["packed_available_alt"] + _f(alt), 2)
 
 
 # --- MO progress (the SO table's "how much has been produced?" column) -----

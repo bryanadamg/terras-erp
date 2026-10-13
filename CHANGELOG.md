@@ -15,6 +15,23 @@ on `main`:
 
 ## [Unreleased]
 
+## [0.42.0] - 2026-10-13
+
+### Added
+- Allocate from stock on a sales order reserves on-hand finished goods to its lines, so a later Production Run only plans the remainder. It picks named packed cartons and pins them to the SO line, holding them from other orders and suggesting them first on that line's pick list. Each line shows its ordered colour beside the code, e.g. NAVY 00001-B-6
+- New Lot takes an alt count beside the kg, e.g. 10 kg / 12 Pcs, and works out the kg from g/y when only the alt count is typed
+- Stock on-hand shows a packed carton's alt-unit count under its base qty, e.g. 10 kg / 12 Pcs
+
+### Changed
+- Every size chip, label and printout reads "{size}-{target} ({min}-{max})", e.g. L-72 (70-74). This now includes packing orders, lot pickers, dispatch, batches and the quarantine packing variant column, which also shows the colour variant
+
+### Fixed
+- The Surat Jalan Perincian labels each carton with its alt unit, e.g. 1,79 Gross. Carton slots are fully ruled boxed cells, also when the layout is loaded from a saved one, and the dotted write-on option is gone
+- The Surat Jalan WARNA column prints the ordered colour with its code, e.g. NAVY ( 00001-B-6 ), instead of the code twice
+- A size range entered on the BOM after its MOs were cut now reaches those MOs and their lots
+- A pack's over-book weight is spread across its lots pro rata, so one small lot no longer trips the weighing tolerance
+- The SO table's Actions column and the Dyeing Monitor's Variant column are wider, so buttons no longer spill into Status and size, shade and colour chips sit on one line
+
 ## [0.41.0] - 2026-10-12
 
 ### Added

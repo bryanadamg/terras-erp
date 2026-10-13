@@ -57,6 +57,9 @@ class Batch(Base):
     # holds 12 — a printed count has to be the count that was packed. Null for
     # every batch that is not a carton, and for cartons packed with no alt unit.
     alt_qty: Mapped[Optional[float]] = mapped_column(Numeric(14, 4), nullable=True)
+    # Unit of `alt_qty` on a hand-made lot, which has no packing order to read it
+    # off. Null on cartons — theirs is the packing order's `uom2`.
+    alt_uom: Mapped[Optional[str]] = mapped_column(String(32), nullable=True)
     # --- Packaging / brutto ---------------------------------------------------
     # Which physical box this carton is packed in, and what that box weighs.
     # `tare_kg` is SNAPSHOTTED off the master (or typed by the packer on a custom

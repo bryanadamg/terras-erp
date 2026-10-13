@@ -369,6 +369,7 @@ async def create_manufacturing_order(payload: ManufacturingOrderCreate, db: Asyn
             source_location_id=(source_location.id if source_location else None),
             sales_order_id=payload.sales_order_id,
             bom_size_id=payload.bom_size_id,
+            bom_size_snapshot=(await mrp_service.bom_size_snapshot(db, payload.bom_size_id)) if payload.bom_size_id else None,
             qty=payload.qty,
             target_start_date=payload.target_start_date,
             target_end_date=payload.target_end_date,

@@ -9,6 +9,7 @@
 import type { FieldDef, ResolvedField } from '../fieldRegistry';
 import type { RowSourceDef } from '../rowSources';
 import { txt, type PrintContext } from '../renderContext';
+import { joinSize } from '../../LotChips';
 
 export const SO_TABLE_DOC = 'so_table_report';
 
@@ -111,7 +112,7 @@ export function buildSoTableContext({
                 item_name: line
                     ? [itemName(line.item_id), line.color_name, attrValues(line.attribute_value_ids || [])].filter(Boolean).join(' ')
                     : '',
-                size: line ? [line.size_display, line.size_measurement].filter(Boolean).join(' ') : '',
+                size: line ? joinSize(line.size_display, line.size_measurement) : '',
                 qty_yd: line ? num(line.qty) : '',
                 qty_m: line && line.qty ? num(Math.round(line.qty * 0.9144 * 100) / 100) : '',
                 qty_kg: line ? num(line.qty_kg) : '',

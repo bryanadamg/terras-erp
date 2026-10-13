@@ -52,7 +52,7 @@ const signatures = (id: string): SignatureBand => ({
 });
 
 const slot = (n: number): TableColumn => ({
-    field: `carton_${n}`, label: '', width: '5.5%', align: 'center', dotted: true, emptyText: '',
+    field: `carton_${n}`, label: '', width: '5.5%', align: 'center', emptyText: '',
 });
 
 const BANDS: Band[] = [

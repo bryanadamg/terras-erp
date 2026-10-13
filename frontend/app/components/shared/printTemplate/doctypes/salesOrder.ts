@@ -10,6 +10,7 @@
 import type { FieldDef, ResolvedField } from '../fieldRegistry';
 import type { RowSourceDef } from '../rowSources';
 import { txt, type PrintContext } from '../renderContext';
+import { joinSize } from '../../LotChips';
 
 export const SALES_ORDER_DOC = 'sales_order';
 
@@ -78,13 +79,13 @@ const SO_LINES: RowSourceDef = {
             // predate those columns, and the article is what every one already prints.
             article: {
                 title: l.itemName,
-                lines: [[l.size_display, l.size_measurement].filter(Boolean).join(' '), l.color_name && `${l.color_name}${l.color_code ? ` (${l.color_code})` : ''}`, ...l.attrs].filter(Boolean),
+                lines: [joinSize(l.size_display, l.size_measurement), l.color_name && `${l.color_name}${l.color_code ? ` (${l.color_code})` : ''}`, ...l.attrs].filter(Boolean),
             },
             item_name: l.itemName,
             item_code: l.item_code || '',
             variant: l.attrs.join(' / '),
             color: l.color_name ? `${l.color_name}${l.color_code ? ` (${l.color_code})` : ''}` : '',
-            size: [l.size_display, l.size_measurement].filter(Boolean).join(' '),
+            size: joinSize(l.size_display, l.size_measurement),
             // The ordered qty with the selling unit under it — "720 Yd / 5 Gross". A
             // composite cell so saved layouts, which all print `qty_unit`, gain the
             // alt unit without being re-edited.

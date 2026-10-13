@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, func, or_, nullslast, delete as sa_delete, update as sa_update
+from sqlalchemy import select, func, or_, nullslast, text, cast, String, delete as sa_delete, update as sa_update
 from sqlalchemy.orm import selectinload, joinedload
 from sqlalchemy.exc import IntegrityError
 from app.db.session import get_async_db
@@ -8,23 +8,26 @@ from app.schemas import (
     SalesOrderCreate, SalesOrderUpdate, SalesOrderResponse, PaginatedSalesOrderResponse,
     SOPRCoverageEntry, SOPRCoverageResponse,
     StockReservationResponse, SOReservationSummary,
+    SOAllocationLine, SOAllocateRequest, SOAllocCarton,
 )
 from app.models.sales import SalesOrder, SalesOrderLine, sales_order_line_values
 from app.models.attribute import Attribute, AttributeValue
 from app.models.bom import BOM, BOMSize
 from app.models.size import Size
+from sqlalchemy.orm import aliased
 from app.models.color import Color
 from app.models.production_run import ProductionRun, PRBomEntry
 from app.models.manufacturing import ManufacturingOrder
 from app.models.work_order import WorkOrder
 from app.models.batch import Batch
+from app.models.location import Location
 from app.models.stock_balance import StockBalance
 from app.models.packing import PackingOrder
 from app.models.reservation import StockReservation
 from app.models.item import Item as ItemModel
 from app.api.auth import get_current_user, require_permission, require_any_permission, user_has_permission
 from app.models.auth import User
-from app.services import audit_service, kpi_service, netting_service, so_fulfilment_service, stock_service
+from app.services import audit_service, kpi_service, netting_service, packing_service, so_fulfilment_service, stock_service
 from app.core.ws_manager import manager
 from app.core.pagination import PageParams, PageWindow
 from typing import Optional
@@ -32,6 +35,8 @@ from datetime import datetime
 import uuid
 
 router = APIRouter(prefix="/sales-orders", tags=["sales"])
+
+LineSize = aliased(Size)
 
 
 def _line_opts():
@@ -79,6 +84,7 @@ async def _populate_fulfilment(db: AsyncSession, orders: list) -> None:
             line.qty_packed_alt = f.get("packed_alt")
             line.qty_packed_available_alt = f.get("packed_available_alt")
             line.qty_dispatched_alt = f.get("dispatched_alt")
+            line.qty_allocated = f.get("allocated", 0.0)
 
 
 async def _populate_mo_progress(db: AsyncSession, orders: list) -> None:
@@ -401,12 +407,16 @@ async def get_so_reservations(
         # Size is joined as a column, not through BOMSize.size — that relationship
         # is lazy and this is an async route (MissingGreenlet on first access).
         select(StockReservation, ItemModel, ProductionRun.code, Color,
-               BOMSize.label, Size.name)
+               BOMSize.label, Size.name, SalesOrderLine.size_label, LineSize.name, Batch.batch_number)
         .join(ItemModel, ItemModel.id == StockReservation.item_id)
         .outerjoin(ProductionRun, ProductionRun.id == StockReservation.production_run_id)
         .outerjoin(Color, Color.id == StockReservation.color_id)
         .outerjoin(BOMSize, BOMSize.id == StockReservation.bom_size_id)
         .outerjoin(Size, Size.id == BOMSize.size_id)
+        # An allocated-from-stock row names its size on the SO line instead.
+        .outerjoin(SalesOrderLine, SalesOrderLine.id == StockReservation.sales_order_line_id)
+        .outerjoin(LineSize, LineSize.id == SalesOrderLine.size_id)
+        .outerjoin(Batch, Batch.id == StockReservation.batch_id)
         .filter(StockReservation.sales_order_id == so_id)
         .order_by(StockReservation.created_at)
     )
@@ -417,7 +427,7 @@ async def get_so_reservations(
     out: list[StockReservationResponse] = []
     total_reserved = 0.0
     total_released = 0.0
-    for r, item, pr_code, color, size_label, size_name in rows:
+    for r, item, pr_code, color, size_label, size_name, line_label, line_size, batch_number in rows:
         remaining = float(r.qty or 0) - float(r.qty_released or 0)
         if r.status == "ACTIVE":
             total_reserved += max(0.0, remaining)
@@ -427,6 +437,9 @@ async def get_so_reservations(
             sales_order_id=r.sales_order_id,
             production_run_id=r.production_run_id,
             production_run_code=pr_code,
+            sales_order_line_id=r.sales_order_line_id,
+            batch_id=r.batch_id,
+            batch_number=batch_number,
             item_id=r.item_id,
             item_code=item.code if item else "",
             item_name=item.name if item else "",
@@ -436,7 +449,7 @@ async def get_so_reservations(
             color_id=r.color_id,
             color_code=color.code if color else None,
             color_name=color.name if color else None,
-            size_label=size_label or size_name,
+            size_label=size_label or size_name or line_size or line_label,
             qty=float(r.qty or 0),
             qty_released=float(r.qty_released or 0),
             qty_remaining=max(0.0, remaining),
@@ -485,6 +498,222 @@ async def release_so_reservation(
     )
     await manager.broadcast({"type": "SALES_ORDER_UPDATE", "id": str(so_id)})
     return await get_so_reservations(so_id, False, db, current_user)
+
+
+async def _allocation_lines(db: AsyncSession, so: SalesOrder) -> list[SOAllocationLine]:
+    """Per line: what's still owed, the free on-hand qty, and the packed cartons
+    that could cover it.
+
+    `free` comes from the same Availability ledger Production Run netting uses,
+    so what is allocated here is exactly what that netting no longer sees.
+    Cartons offered are packed to stock (or for an order no longer open), GOOD,
+    on hand, the line's item/variant/size, and claimed by nobody: not pinned by
+    another allocation, not on any live pick list.
+    """
+    fulfilment = await so_fulfilment_service.fulfilment_map(db, [so.id])
+    avail = await netting_service.Availability.create(db)
+    pinned_all = await packing_service.pinned_carton_ids(db)
+    exclude = await packing_service.allocated_unit_ids(db, so_id=so.id) | set(pinned_all)
+    line_sizes = await packing_service.line_size_names(db, [l.id for l in so.lines])
+
+    per_line: dict[str, list] = {}
+    for line in so.lines:
+        per_line[str(line.id)] = await packing_service.available_packed_units(
+            db, line.item_id, attribute_value_ids=[str(v.id) for v in line.attribute_values],
+            color_id=line.color_id, exclude_ids=exclude, limit=500,
+            size_name=line_sizes.get(str(line.id)),
+        )
+
+    # This order's pinned cartons, still held — shown per line, releasable.
+    pinned_rows = (await db.execute(
+        select(StockReservation, Batch, StockBalance)
+        .join(Batch, Batch.id == StockReservation.batch_id)
+        .outerjoin(StockBalance, (StockBalance.batch_key == cast(Batch.id, String)) & (StockBalance.qty > 0))
+        .filter(StockReservation.sales_order_id == so.id, StockReservation.status == "ACTIVE")
+        .order_by(Batch.created_at)
+    )).all()
+
+    batches = [b for units in per_line.values() for b, _ in units] + [b for _, b, _ in pinned_rows]
+    bals = [bal for units in per_line.values() for _, bal in units] + [bal for _, _, bal in pinned_rows if bal]
+    po_rows = {
+        po_id: (po_so_status, uom2)
+        for po_id, po_so_status, uom2 in (await db.execute(
+            select(PackingOrder.id, SalesOrder.status, PackingOrder.uom2)
+            .outerjoin(SalesOrder, SalesOrder.id == PackingOrder.sales_order_id)
+            .filter(PackingOrder.id.in_({b.packing_order_id for b in batches}))
+        )).all()
+    } if batches else {}
+    loc_codes = dict((await db.execute(
+        select(Location.id, Location.code).filter(Location.id.in_({b.location_id for b in bals}))
+    )).all()) if bals else {}
+    size_names = await packing_service.batch_size_names(db, [b.id for b in batches])
+
+    def carton(b: Batch, bal, qty=None, reservation_id=None) -> SOAllocCarton:
+        return SOAllocCarton(
+            batch_id=b.id, batch_number=b.batch_number, package_no=b.package_no,
+            location=loc_codes.get(bal.location_id) if bal else None,
+            qty=float(qty if qty is not None else (bal.qty if bal else 0)),
+            alt_qty=float(b.alt_qty) if b.alt_qty is not None else None,
+            alt_uom=(po_rows.get(b.packing_order_id, (None, None))[1] or b.alt_uom),
+            size=size_names.get(str(b.id), (None, None))[1],
+            packed_at=b.created_at, reservation_id=reservation_id,
+        )
+
+    await _populate_variant_attrs(db, [so])
+    out = []
+    for line in so.lines:
+        _populate_line(line)
+        f = fulfilment.get(str(line.id)) or {}
+        ordered = f.get("ordered_base")
+        dispatched = float(f.get("dispatched") or 0)
+        allocated = float(f.get("allocated") or 0)
+        _on_hand, free = await avail.free_on_hand(
+            line.item_id, [str(v.id) for v in line.attribute_values], line.color_id,
+            size_token=_line_size_token(avail.sizes, line),
+        )
+        offered = [
+            carton(b, bal) for b, bal in per_line[str(line.id)]
+            # Packed for an order that is still open = that order's box.
+            if po_rows.get(b.packing_order_id, (None,))[0] not in netting_service.OPEN_SO_STATUSES
+        ]
+        mine = [
+            carton(b, bal, qty=float(r.qty or 0) - float(r.qty_released or 0), reservation_id=r.id)
+            for r, b, bal in pinned_rows if r.sales_order_line_id == line.id
+        ]
+        out.append(SOAllocationLine(
+            sales_order_line_id=line.id,
+            item_id=line.item_id,
+            item_code=getattr(line, "item_code", "") or "",
+            item_name=getattr(line, "item_name", "") or "",
+            uom=f.get("base_uom", "") or "",
+            size=line.size_display,
+            variant_attributes=getattr(line, "variant_attributes", None),
+            color_code=getattr(line, "color_code", None) or getattr(line, "color_name", None),
+            color_hex=getattr(line, "color_hex", None),
+            ordered=ordered,
+            dispatched=dispatched,
+            allocated=allocated,
+            needed=max(0.0, ordered - dispatched - allocated) if ordered is not None else 0.0,
+            free=free,
+            cartons=offered,
+            allocated_cartons=mine,
+        ))
+    return out
+
+
+def _line_size_token(sizes, line: SalesOrderLine) -> str:
+    # Same precedence `_load_reservations` reads a reservation's size with
+    # (BOMSize first, then the line's own), or the row would land in another bucket.
+    return (sizes.token_for_bom_size(line.bom_size)
+            or sizes.token_for_size_id(line.size_id, line.size_label))
+
+
+async def _load_so_with_lines(db: AsyncSession, so_id) -> SalesOrder:
+    so = (await db.execute(
+        select(SalesOrder).options(*_line_opts()).filter(SalesOrder.id == so_id)
+    )).scalars().first()
+    if not so:
+        raise HTTPException(status_code=404, detail="SO not found")
+    return so
+
+
+@router.get("/{so_id}/allocation", response_model=list[SOAllocationLine])
+async def get_so_allocation(
+    so_id: uuid.UUID,
+    db: AsyncSession = Depends(get_async_db),
+    current_user: User = Depends(require_permission("sales_order.view")),
+):
+    """Per line: what is still needed and the packed cartons that could cover it."""
+    return await _allocation_lines(db, await _load_so_with_lines(db, so_id))
+
+
+@router.post("/{so_id}/allocate", response_model=list[SOAllocationLine])
+async def allocate_so_from_stock(
+    so_id: uuid.UUID,
+    payload: SOAllocateRequest,
+    db: AsyncSession = Depends(get_async_db),
+    current_user: User = Depends(require_permission("sales_order.edit")),
+):
+    """Pin named packed cartons straight to SO lines — no Production Run.
+
+    The industry-standard path for an order the shelf can already fill: the
+    planner picks the boxes, they are promised here, the order ships them through
+    Pick List/Shipment (its pick list suggests them first; nobody else's can take
+    them), and a Production Run created later plans only the remainder. Each
+    carton is one StockReservation row (production_run_id NULL, batch_id set), so
+    netting, the SO page and goods-issue release treat it like any reservation.
+    """
+    # ponytail: one global lock serialises allocations against each other (two
+    # planners can't both take the last pile); PR netting doesn't take it. The
+    # unique index on an ACTIVE batch_id is the hard guard for the carton itself.
+    await db.execute(text("SELECT pg_advisory_xact_lock(hashtext('so_stock_allocation'))"))
+    so = await _load_so_with_lines(db, so_id)
+    if so.status not in netting_service.OPEN_SO_STATUSES:
+        raise HTTPException(status_code=400, detail=f"Cannot allocate stock to a {so.status} order")
+
+    lines_by_id = {str(l.id): l for l in so.lines}
+    state = {str(a.sales_order_line_id): a for a in await _allocation_lines(db, so)}
+    sizes = await netting_service.SizeResolver.create(db)
+    # `free` is per line; two lines of one order can draw on the same pile, so
+    # what earlier lines of this request took is deducted as we go.
+    taken: dict[tuple, float] = {}
+    seen: set = set()
+    created = []
+    for req in payload.lines:
+        key = str(req.sales_order_line_id)
+        line, a = lines_by_id.get(key), state.get(key)
+        if line is None:
+            raise HTTPException(status_code=404, detail=f"Line {key} is not on this order")
+        label = f"{a.item_code or a.item_name}{f' {a.size}' if a.size else ''}"
+        if a.ordered is None:
+            raise HTTPException(status_code=400, detail=f"{label}: no weight per unit on the item, so the ordered qty can't be stated in {a.uom or 'its stock unit'}")
+        offered = {c.batch_id: c for c in a.cartons}
+        picked = []
+        for bid in req.batch_ids:
+            if bid in seen or bid not in offered:
+                raise HTTPException(status_code=409, detail=f"{label}: a chosen carton is no longer available for this line — reload and pick again")
+            seen.add(bid)
+            picked.append(offered[bid])
+        total = sum(c.qty for c in picked)
+        # Cartons are whole boxes: the last may overshoot, one more may not.
+        if total - min(c.qty for c in picked) >= a.needed - 1e-6:
+            raise HTTPException(status_code=400, detail=f"{label}: {total:g} {a.uom} is more cartons than the {a.needed:g} still needed")
+        bucket = (str(line.item_id), stock_service._generate_variant_key(
+            [str(v.id) for v in line.attribute_values], line.color_id), _line_size_token(sizes, line))
+        if total > a.free - taken.get(bucket, 0.0) + 1e-6:
+            raise HTTPException(status_code=400, detail=f"{label}: only {max(a.free - taken.get(bucket, 0.0), 0):g} {a.uom} is free — the rest of this stock is already promised to open MOs or other orders")
+        taken[bucket] = taken.get(bucket, 0.0) + total
+        for c in picked:
+            created.append(StockReservation(
+                sales_order_id=so.id,
+                sales_order_line_id=line.id,
+                batch_id=c.batch_id,
+                item_id=line.item_id,
+                variant_key=bucket[1],
+                attribute_value_ids=[str(v.id) for v in line.attribute_values],
+                color_id=line.color_id,
+                bom_size_id=line.bom_size_id,
+                qty=c.qty,
+                created_by_id=current_user.id,
+            ))
+    db.add_all(created)
+    try:
+        await db.flush()
+    except IntegrityError:
+        await db.rollback()
+        raise HTTPException(status_code=409, detail="A chosen carton was just allocated elsewhere — reload and pick again")
+    await so_fulfilment_service.recompute_so_status(db, so.id)
+    await db.commit()
+
+    numbers = [c.batch_number for a in state.values() for c in a.cartons if c.batch_id in seen]
+    await audit_service.log_activity(
+        db, user_id=current_user.id, action="ALLOCATE",
+        entity_type="SalesOrder", entity_id=str(so.id),
+        details=f"Allocated {len(created)} carton(s) from stock to SO {so.po_number}: {', '.join(numbers)}",
+        changes={"cartons": [{"sales_order_line_id": str(r.sales_order_line_id), "batch_id": str(r.batch_id), "qty": r.qty} for r in created]},
+    )
+    await manager.broadcast({"type": "SALES_ORDER_UPDATE", "id": str(so.id)})
+    return await _allocation_lines(db, await _load_so_with_lines(db, so_id))
 
 
 @router.get("/{so_id}/pr-coverage", response_model=SOPRCoverageResponse)
@@ -609,6 +838,7 @@ async def update_sales_order(so_id: uuid.UUID, payload: SalesOrderUpdate, db: As
     # variant identity here, then re-point them onto the equivalent new line below.
     old_identity = {}
     pack_refs = []
+    alloc_refs = []
     if line_ids:
         old_identity = {
             str(r[0]): (r[1], r[2], r[3], r[4], r[5], r[6])
@@ -626,6 +856,13 @@ async def update_sales_order(so_id: uuid.UUID, payload: SalesOrderUpdate, db: As
             await db.execute(
                 select(PackingOrder.id, PackingOrder.sales_order_line_id)
                 .where(PackingOrder.sales_order_line_id.in_(line_ids))
+            )
+        ).all()
+        # Allocations from stock hang off the line the same way.
+        alloc_refs = (
+            await db.execute(
+                select(StockReservation.id, StockReservation.sales_order_line_id)
+                .where(StockReservation.sales_order_line_id.in_(line_ids))
             )
         ).all()
 
@@ -663,7 +900,7 @@ async def update_sales_order(so_id: uuid.UUID, payload: SalesOrderUpdate, db: As
         db.add(db_line)
         new_lines.append(db_line)
 
-    if pack_refs:
+    if pack_refs or alloc_refs:
         await db.flush()  # ids are assigned on INSERT, not on construction
         new_by_identity = {}
         for l in new_lines:
@@ -676,6 +913,14 @@ async def update_sales_order(so_id: uuid.UUID, payload: SalesOrderUpdate, db: As
                 await db.execute(
                     sa_update(PackingOrder)
                     .where(PackingOrder.id == po_id)
+                    .values(sales_order_line_id=new_id)
+                )
+        for r_id, old_line_id in alloc_refs:
+            new_id = new_by_identity.get(old_identity.get(str(old_line_id)))
+            if new_id:
+                await db.execute(
+                    sa_update(StockReservation)
+                    .where(StockReservation.id == r_id)
                     .values(sales_order_line_id=new_id)
                 )
 

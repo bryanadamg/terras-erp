@@ -60,3 +60,39 @@ def test_stock_entry_books_onto_lot_of_same_item_only(client, auth_headers):
 
     r = client.post("/api/stock", json={**entry, "item_code": b["code"]}, headers=auth_headers)
     assert r.status_code == 400
+
+
+def test_lot_create_with_alt_count(client, auth_headers):
+    """A hand-made lot stores its counted alt unit beside the kg; splits prorate it."""
+    sfx = uuid.uuid4().hex[:6].upper()
+    client.post("/api/uoms", json={"name": "kg"}, headers=auth_headers)
+    with _engine.connect() as conn, _SASession(conn) as sess:
+        loc = Location(code=f"LCA-{sfx}", name="lca")
+        sess.add(loc)
+        sess.commit()
+        loc_id = str(loc.id)
+    item = client.post("/api/items", json={
+        "code": f"LCA-{sfx}", "name": "Lca", "uom": "kg", "lot_tracked": True,
+    }, headers=auth_headers).json()
+
+    # An alt count needs the kg it describes.
+    r = client.post("/api/batches", json={"item_id": item["id"], "alt_qty": 12, "alt_uom": "Pcs"},
+                    headers=auth_headers)
+    assert r.status_code == 400
+    r = client.post("/api/batches", json={"item_id": item["id"], "qty": 10, "location_id": loc_id,
+                                          "alt_qty": 12}, headers=auth_headers)
+    assert r.status_code == 400
+
+    r = client.post("/api/batches", json={"item_id": item["id"], "qty": 10, "location_id": loc_id,
+                                          "alt_qty": 12, "alt_uom": "Pcs"}, headers=auth_headers)
+    assert r.status_code == 200, r.text
+    lot = r.json()
+    assert (lot["alt_qty"], lot["alt_uom"]) == (12, "Pcs")
+
+    rows = client.get(f"/api/stock/balance/paginated?search={lot['batch_number']}",
+                      headers=auth_headers).json()["items"]
+    assert [(b["alt_qty"], b["alt_uom"]) for b in rows] == [(12, "Pcs")]
+
+    child = client.post(f"/api/batches/{lot['id']}/split", json={"qty": 5}, headers=auth_headers)
+    assert child.status_code == 200, child.text
+    assert (child.json()["alt_qty"], child.json()["alt_uom"]) == (6, "Pcs")

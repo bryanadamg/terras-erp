@@ -1553,6 +1553,10 @@ class StockBalanceResponse(BaseModel):
     color_name: str | None = None
     color_hex: str | None = None
     labdip_variant_code: str | None = None
+    # Lot rows only: the counted alt figure (12 Pcs, 4 Pic) — a carton's packed count
+    # in its packing order's uom2, or a hand-made lot's own Batch.alt_uom.
+    alt_qty: float | None = None
+    alt_uom: str | None = None
 
 class PaginatedStockBalanceResponse(BaseModel):
     """Envelope for GET /stock/balance/paginated — the Stock On-Hand grid.
@@ -1985,6 +1989,9 @@ class SalesOrderLineResponse(SalesOrderLineCreate):
     qty_packed_alt: float | None = None
     qty_packed_available_alt: float | None = None
     qty_dispatched_alt: float | None = None
+    # Stock reserved to this line by "Allocate from stock", still unshipped, in
+    # `base_uom`. A Production Run handed this order plans only what's left.
+    qty_allocated: float = 0
     # Production progress (qty made vs planned) of the MOs behind this line, plus
     # the stage the floor is on. Populated by the list endpoint only
     # (_populate_mo_progress); None means no MO exists for the line yet, which the
@@ -2064,6 +2071,11 @@ class StockReservationResponse(ORMResponse):
     sales_order_id: UUID
     production_run_id: UUID | None = None
     production_run_code: str | None = None
+    # Set when allocated straight to an order line (no Production Run), with
+    # the carton it pins.
+    sales_order_line_id: UUID | None = None
+    batch_id: UUID | None = None
+    batch_number: str | None = None
     item_id: UUID
     item_code: str = ""
     item_name: str = ""
@@ -2087,6 +2099,51 @@ class SOReservationSummary(BaseModel):
     reservations: list[StockReservationResponse] = []
     total_reserved: float = 0.0     # sum of qty_remaining on ACTIVE rows
     total_released: float = 0.0
+
+
+class SOAllocCarton(BaseModel):
+    """A packed carton offered to (or already pinned to) an SO line."""
+    batch_id: UUID
+    batch_number: str
+    package_no: int | None = None
+    location: str | None = None
+    qty: float = 0.0                # base uom; for a pinned carton, still held
+    alt_qty: float | None = None
+    alt_uom: str | None = None
+    size: str | None = None
+    packed_at: datetime | None = None
+    reservation_id: UUID | None = None  # pinned cartons only
+
+
+class SOAllocationLine(BaseModel):
+    """One SO line's case for "Allocate from stock" — all qtys in `uom`."""
+    sales_order_line_id: UUID
+    item_id: UUID
+    item_code: str = ""
+    item_name: str = ""
+    uom: str = ""
+    size: str | None = None
+    # Shade as the SO table shows it: the line's variant values (Colors "NAVY",
+    # Combo, ...) plus the Color Library code — whose name is often the code again.
+    variant_attributes: list[BatchVariantAttr] | None = None
+    color_code: str | None = None
+    color_hex: str | None = None
+    ordered: float | None = None    # None = no weight on the item, can't allocate
+    dispatched: float = 0.0
+    allocated: float = 0.0
+    needed: float = 0.0             # ordered - dispatched - allocated
+    free: float = 0.0               # on-hand not claimed by MOs or open orders
+    cartons: list[SOAllocCarton] = []            # pickable: packed to stock, unclaimed
+    allocated_cartons: list[SOAllocCarton] = []  # already pinned to this line
+
+
+class SOAllocateLine(BaseModel):
+    sales_order_line_id: UUID
+    batch_ids: list[UUID] = Field(min_length=1)
+
+
+class SOAllocateRequest(BaseModel):
+    lines: list[SOAllocateLine] = Field(min_length=1)
 
 
 # --- Sample Request Schemas ---
@@ -3254,6 +3311,10 @@ class BatchCreate(BaseModel):
     size_id: Optional[UUID] = None
     attribute_value_ids: list[UUID] = []
     color_id: Optional[UUID] = None
+    # Counted alt-unit figure beside the kg (12 Pcs). Stored, never converted —
+    # the kg is the stock qty, so an alt count needs an opening qty to sit beside.
+    alt_qty: Optional[float] = None
+    alt_uom: Optional[str] = None
 
 class BatchResponse(BaseModel):
     id: UUID
@@ -3277,6 +3338,7 @@ class BatchResponse(BaseModel):
     packing_order_id: Optional[UUID] = None
     package_no: Optional[int] = None
     alt_qty: Optional[float] = None
+    alt_uom: Optional[str] = None
     # The packing order holding this lot (claimed off the desk); the pack form
     # preselects the order's own held lots first.
     locked_packing_order_id: Optional[UUID] = None

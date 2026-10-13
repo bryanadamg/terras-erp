@@ -27,7 +27,7 @@ const COL_W: (number | string)[] = [
     150,               // MO
     '15%',             // Work Order
     '12%',             // Item
-    '12%',             // Variant
+    300,               // Variant — size + shade + code chips on one line
     80,                // Vessel
     96,                // Status
     110,               // Speed
@@ -218,7 +218,7 @@ export default function DyeingMonitorView() {
                 {Toolbar}
                 <div style={{ flex: 1, minHeight: 0, overflow: 'auto', background: '#ffffff' }}>
                     <ResizableTable defaults={COL_W}
-                        style={{ width: '100%', minWidth: 1500, borderCollapse: 'collapse', tableLayout: 'fixed', fontFamily: xpFont, fontSize: 11, background: '#fff' }}>
+                        style={{ width: '100%', minWidth: 1620, borderCollapse: 'collapse', tableLayout: 'fixed', fontFamily: xpFont, fontSize: 11, background: '#fff' }}>
                         <thead>
                             <tr>
                                 <th style={thStyle} />

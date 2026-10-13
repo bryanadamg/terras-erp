@@ -18,7 +18,7 @@ import {
     OriginChip, OriginChipRow, colorLabel, colorTitle, resolveColorHex, XP_BTN, SKEL_PAGE_ROWS } from '../shared/xpTheme';
 import Pager from '../shared/Pager';
 import { API_BASE } from '../shared/apiBase';
-import { LotChips, LotChip, LotChipRow, LotVariantAttr, lotSizeLabel, lotComboLabel } from '../shared/LotChips';
+import { LotChips, LotChip, LotChipRow, LotVariantAttr, lotSizeText, lotComboLabel } from '../shared/LotChips';
 import { qtyFmt } from '../shared/format';
 
 /**
@@ -953,11 +953,17 @@ export default function QuarantinePackingView() {
                                             // Size/combo are carried on the lot record, not the group —
                                             // but every lot in a group shares the same bom_size_id /
                                             // combo_value_id, so the first lot's snapshot speaks for all.
-                                            // Colour has its own column already, so it's left out here.
+                                            // The Colour column shows the shade code only, so the colour
+                                            // variant (e.g. "NAVY") is listed here with the other attributes.
+                                            // Values that only repeat that code are skipped.
                                             const sample = g.lots[0];
-                                            const size = sample ? lotSizeLabel(sample) : null;
+                                            const size = sample ? lotSizeText(sample) : null;
                                             const combo = sample ? lotComboLabel(sample) : null;
-                                            if (!size && !combo) return <span style={{ color: '#ccc' }}>—</span>;
+                                            const shade = (g.color_code || '').trim().toLowerCase();
+                                            const others = (sample?.variant_attributes || []).filter(a =>
+                                                !['combo', 'labdip_color'].includes(a.system_role || '')
+                                                && a.value.trim().toLowerCase() !== shade);
+                                            if (!size && !combo && !others.length) return <span style={{ color: '#ccc' }}>—</span>;
                                             return (
                                                 <LotChipRow>
                                                     {size && (
@@ -970,6 +976,12 @@ export default function QuarantinePackingView() {
                                                             {combo}
                                                         </LotChip>
                                                     )}
+                                                    {others.map((a, i) => (
+                                                        <LotChip key={i} tone={a.system_role === 'color' ? 'color' : 'material'}
+                                                            swatch={a.hex || null} title={`${a.name}: ${a.value}`}>
+                                                            {a.value}
+                                                        </LotChip>
+                                                    ))}
                                                 </LotChipRow>
                                             );
                                         })()}

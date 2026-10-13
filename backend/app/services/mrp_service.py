@@ -138,6 +138,23 @@ async def snapshot_bom_lines(db: AsyncSession, mo: ManufacturingOrder, bom: BOM)
         ))
 
 
+async def bom_size_snapshot(db: AsyncSession, bom_size_id) -> Optional[dict]:
+    """The BOM size spec an MO freezes at creation (see `stock_service.fill_size_snapshot_gaps`)."""
+    bom_sz = (await db.execute(
+        select(BOMSize).options(joinedload(BOMSize.size)).filter(BOMSize.id == bom_size_id)
+    )).unique().scalars().first()
+    if not bom_sz:
+        return None
+    f = lambda v: float(v) if v is not None else None
+    return {
+        "size_name": bom_sz.size.name if bom_sz.size else None,
+        "label": bom_sz.label,
+        "target_measurement": f(bom_sz.target_measurement),
+        "measurement_min": f(bom_sz.measurement_min),
+        "measurement_max": f(bom_sz.measurement_max),
+    }
+
+
 async def create_mo_recursive(
     db: AsyncSession,
     bom_id: uuid.UUID,
@@ -250,18 +267,7 @@ async def create_mo_recursive(
 
     # Snapshot BOM size spec at creation time
     if bom_size_id and parent_mo_id is None:
-        sz_result = await db.execute(
-            select(BOMSize).options(joinedload(BOMSize.size)).filter(BOMSize.id == bom_size_id)
-        )
-        bom_sz = sz_result.unique().scalars().first()
-        if bom_sz:
-            mo.bom_size_snapshot = {
-                "size_name": bom_sz.size.name if bom_sz.size else None,
-                "label": bom_sz.label,
-                "target_measurement": float(bom_sz.target_measurement) if bom_sz.target_measurement is not None else None,
-                "measurement_min": float(bom_sz.measurement_min) if bom_sz.measurement_min is not None else None,
-                "measurement_max": float(bom_sz.measurement_max) if bom_sz.measurement_max is not None else None,
-            }
+        mo.bom_size_snapshot = await bom_size_snapshot(db, bom_size_id)
 
     # Snapshot BOM lines at creation time so future BOM edits don't affect this MO
     await snapshot_bom_lines(db, mo, bom)

@@ -1,3 +1,4 @@
+import re
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func
 from sqlalchemy.orm import joinedload, selectinload
@@ -56,35 +57,68 @@ def variant_matches(want_key: str, have_key: str) -> bool:
 
 
 def _bom_size_label(snapshot: dict | None) -> str | None:
-    """Human-readable label from a BOMSize snapshot dict (size_name/label/measurement)."""
+    """A BOMSize snapshot dict as "L-72 (70-74)" — the one size format (`join_size`)."""
     if not snapshot:
         return None
-    parts = []
-    size_name = snapshot.get("size_name") or (snapshot.get("size") or {}).get("name")
-    if size_name:
-        parts.append(size_name)
-    if snapshot.get("label"):
-        parts.append(snapshot["label"])
-    meas = size_measurement(snapshot)
-    if meas:
-        parts.append(meas)
-    return " — ".join(parts) or None
+    name = snapshot.get("size_name") or (snapshot.get("size") or {}).get("name") or snapshot.get("label")
+    return join_size(name, size_measurement(snapshot))
 
 
 def size_measurement(bs) -> str | None:
-    """'72 (70–74) cm' off a BOMSize row or its snapshot dict; None when unmeasured.
+    """'72 (70-74)' off a BOMSize row or its snapshot dict — '(70-74)' when only the
+    range is set, None when unmeasured.
 
-    Same shape as the frontend's `sizeMeasurement` (LotChips) — prints put it beside
-    the size name, so both sides must say it alike.
+    Same text as the frontend's `sizeMeasurement` (LotChips) — both sides glue it
+    to the size name through `join_size`.
     """
     if bs is None:
         return None
     get = bs.get if isinstance(bs, dict) else (lambda k: getattr(bs, k, None))
     tm, lo, hi = get("target_measurement"), get("measurement_min"), get("measurement_max")
-    rng = f"{float(lo):g}–{float(hi):g}" if lo is not None and hi is not None else ""
-    if tm is not None:
-        return f"{float(tm):g}{f' ({rng})' if rng else ''} cm"
-    return f"{rng} cm" if rng else None
+    target = f"{float(tm):g}" if tm is not None else ""
+    rng = f"({float(lo):g}-{float(hi):g})" if lo is not None and hi is not None else ""
+    return " ".join(p for p in (target, rng) if p) or None
+
+
+def join_size(name: str | None, measurement: str | None) -> str | None:
+    """"{size}-{target} ({min}-{max})", e.g. "L-72 (70-74)", "L (70-74)", "L".
+
+    Mirror of the frontend's `joinSize` (LotChips) — every chip, label and print
+    reads a size this way.
+    """
+    nm, m = (name or "").strip(), (measurement or "").strip()
+    # A measurement-only free size is already labelled "157 cm" — don't repeat the target.
+    target = re.match(r"[\d.]+", m)
+    if target and target.group() in nm:
+        m = m[target.end():].strip()
+    if not nm or not m:
+        return nm or m or None
+    return f"{nm} {m}" if m.startswith("(") else f"{nm}-{m}"
+
+
+# Fill a size snapshot's BLANK measurements from its live BOMSize. The snapshot
+# exists so a later BOM edit can't re-spec an in-flight lot — but a range entered
+# after the MO was cut is not a re-spec, it is the spec arriving late, and every
+# lot of that MO would otherwise print "L-72" forever. Set values are never touched.
+_FILL_SIZE_GAPS_SQL = """
+UPDATE {table} t SET bom_size_snapshot = (t.bom_size_snapshot::jsonb || jsonb_strip_nulls(jsonb_build_object(
+    'target_measurement', CASE WHEN t.bom_size_snapshot->>'target_measurement' IS NULL THEN bs.target_measurement::float8 END,
+    'measurement_min', CASE WHEN t.bom_size_snapshot->>'measurement_min' IS NULL THEN bs.measurement_min::float8 END,
+    'measurement_max', CASE WHEN t.bom_size_snapshot->>'measurement_max' IS NULL THEN bs.measurement_max::float8 END
+)))::{cast}
+FROM bom_sizes bs
+WHERE bs.id = t.bom_size_id AND bs.bom_id = :bom_id AND t.bom_size_snapshot IS NOT NULL
+  AND ((t.bom_size_snapshot->>'target_measurement' IS NULL AND bs.target_measurement IS NOT NULL)
+    OR (t.bom_size_snapshot->>'measurement_min' IS NULL AND bs.measurement_min IS NOT NULL)
+    OR (t.bom_size_snapshot->>'measurement_max' IS NULL AND bs.measurement_max IS NOT NULL))
+"""
+
+
+async def fill_size_snapshot_gaps(db: AsyncSession, bom_id) -> None:
+    """Backfill blank measurements on every MO and lot snapshot of this BOM's sizes."""
+    from sqlalchemy import text
+    for table, cast in (("manufacturing_orders", "jsonb"), ("batches", "json")):
+        await db.execute(text(_FILL_SIZE_GAPS_SQL.format(table=table, cast=cast)), {"bom_id": bom_id})
 
 
 def _parse_variant_key(variant_key: str):

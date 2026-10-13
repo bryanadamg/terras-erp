@@ -570,6 +570,7 @@ async def get_stock_balance_paginated(
     from app.models.manufacturing import ManufacturingOrder, manufacturing_order_values
     from app.models.color import Color
     from app.models.attribute import Attribute, AttributeValue
+    from app.models.packing import PackingOrder
     from app.services.stock_service import _bom_size_label
 
     # A shade's hex can live in the Color Library row (Color.hex) or, when that's
@@ -674,6 +675,7 @@ async def get_stock_balance_paginated(
             .outerjoin(WorkOrder, WorkOrder.id == Batch.source_wo_id)
             .outerjoin(ManufacturingOrder, ManufacturingOrder.id == WorkOrder.manufacturing_order_id)
             .outerjoin(Color, Color.id == ManufacturingOrder.color_id)
+            .outerjoin(PackingOrder, PackingOrder.id == Batch.packing_order_id)
             .where(*conditions)
         )
 
@@ -739,6 +741,7 @@ async def get_stock_balance_paginated(
                 ManufacturingOrder.id, ManufacturingOrder.code, WorkOrder.code,
                 ManufacturingOrder.labdip_variant_code, Color.code, Color.name,
                 func.coalesce(Color.hex, attr_color_hex),
+                Batch.alt_qty, func.coalesce(Batch.alt_uom, PackingOrder.uom2),
             ))
             .options(selectinload(StockBalance.attribute_values))
             .order_by(*order)
@@ -749,9 +752,11 @@ async def get_stock_balance_paginated(
     for (bal, i_name, i_code, i_uom, i_ends, i_cat_id, cat_name, loc_name,
          b_number, b_vendor_lot, b_quality, b_notes, b_snapshot, b_ends,
          mo_id, mo_code, wo_code,
-         mo_labdip_code, color_code, color_name, color_hex) in rows:
+         mo_labdip_code, color_code, color_name, color_hex,
+         b_alt_qty, po_uom2) in rows:
         lotted = bool(bal.batch_key)
         notes = (b_notes or "").strip() if lotted else ""
+        alt_uom = (po_uom2 or "").strip() if lotted and b_alt_qty is not None else ""
         items.append({
             "item_id": bal.item_id,
             "item_name": i_name or str(bal.item_id),
@@ -785,6 +790,8 @@ async def get_stock_balance_paginated(
             "color_name": color_name if lotted else None,
             "color_hex": color_hex if lotted else None,
             "labdip_variant_code": mo_labdip_code if lotted else None,
+            "alt_qty": float(b_alt_qty) if alt_uom else None,
+            "alt_uom": alt_uom or None,
         })
 
     return window.envelope(
