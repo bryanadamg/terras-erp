@@ -67,7 +67,10 @@ export function resolveSuratJalanField(key: string, ctx: PrintContext): Resolved
     }
 }
 
-const warna = (g: any) => (g.colorCode ? `${g.colorName || ''} ( ${g.colorCode} )`.trim() : g.colorName || '');
+// "NAVY ( 00001-B-6 )". A Color Library row named after its own code would read
+// "00001-B-6 ( 00001-B-6 )", so the code is only bracketed when it adds something.
+const warna = (g: any) => (g.colorCode && g.colorCode !== g.colorName
+    ? `${g.colorName || ''} ( ${g.colorCode} )`.trim() : g.colorName || g.colorCode || '');
 
 const SJ_LINES: RowSourceDef = {
     id: 'sj_lines',
@@ -198,7 +201,10 @@ export function buildSuratJalanContext({
     const map = new Map<string, any>();
     for (const l of lines) {
         const itemName = l.item_name || itemIndex?.[String(l.item_id)]?.name || l.item_id;
-        const colorName = l.color_name
+        // The SO line's Colors value is the colour variant the customer ordered (NAVY);
+        // the Color Library name is often just the lab-dip code again.
+        const colorName = attrValueByRole(attributes, l.attribute_value_ids)('color')
+            || l.color_name
             || (l.attribute_value_ids || []).map((vid: string) => attrName(vid)).filter(Boolean).join(' / ');
         const size = lotSizeText(l) || '';
         const combo = lotComboLabel(l.carton_identity || {})
