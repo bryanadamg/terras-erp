@@ -1553,6 +1553,10 @@ class StockBalanceResponse(BaseModel):
     color_name: str | None = None
     color_hex: str | None = None
     labdip_variant_code: str | None = None
+    # Packed-carton rows only: the count the packer put in the box, in the packing
+    # order's alt selling unit (12 Pcs, 4 Pic) — Batch.alt_qty + PackingOrder.uom2.
+    alt_qty: float | None = None
+    alt_uom: str | None = None
 
 class PaginatedStockBalanceResponse(BaseModel):
     """Envelope for GET /stock/balance/paginated — the Stock On-Hand grid.
