@@ -46,7 +46,7 @@ const SO_COL_WIDTHS = [
     152, // Production Output
     150, // Fulfilment
     80,  // Status
-    75,  // Actions
+    110, // Actions — lineage + allocate + PR + menu must fit, or they spill into Status
 ];
 const SO_TABLE_MIN_WIDTH = SO_COL_WIDTHS.reduce((a, b) => a + b, 0);
 
