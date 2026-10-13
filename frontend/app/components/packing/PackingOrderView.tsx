@@ -17,7 +17,7 @@ import ModalWrapper from '../shared/ModalWrapper';
 import SearchableSelect from '@bryanadamg/terras-ui/components/Combobox';
 import TreeSelect, { buildLocationPickerTree } from '../shared/TreeSelect';
 import { useFinishedGoodsSearch } from '../shared/useEntitySearch';
-import { LotChips, LotChip, lotSizeKey, lotSizeLabel } from '../shared/LotChips';
+import { LotChips, LotChip, lotSizeKey, lotSizeLabel, lotSizeText } from '../shared/LotChips';
 
 /** A lot of a different size from the order's SO line — mirror of the server's
  *  `packing_service.assert_lot_sizes_match` (folded size name; unsized lots and
@@ -413,7 +413,7 @@ export default function PackingOrderView({ initialCreateState, onClearInitialSta
             if (v.role === 'combo' && !combo) combo = v.value;
             else if (v.role === 'color' && !colorVariant) { colorVariant = v.value; colorVariantHex = v.hex; }
         }
-        let size: string | null = po.size_label || null;
+        let size: string | null = lotSizeText(po);
         if (!size) {
             const stamped = Array.from(new Set(
                 (po.packed_units || []).map((u: any) => u.size_label).filter(Boolean)

@@ -26,6 +26,9 @@ export interface LotLike {
     // line's size is a live BOMSize row, not a stamped copy, so the server sends
     // the label alone (SalesOrderLineResponse / PickableOrderLine).
     size_label?: string | null;
+    // Server-resolved "72 (70–74) cm" for the same snapshot-less rows (SO line,
+    // packing order) — `stock_service.size_measurement`.
+    size_measurement?: string | null;
     variant_attributes?: LotVariantAttr[] | null;
     color_code?: string | null;
     color_name?: string | null;
@@ -62,7 +65,7 @@ export const sizeMeasurement = (bs: any): string => {
  */
 export const lotSizeText = (b: LotLike): string | null => {
     const name = lotSizeLabel(b) || '';
-    const m = sizeMeasurement(b?.bom_size_snapshot);
+    const m = sizeMeasurement(b?.bom_size_snapshot) || (b?.size_measurement || '').trim();
     // A measurement-only free size is already labelled "157 cm".
     return [name, m && !name.includes(m) ? m : ''].filter(Boolean).join(' ') || null;
 };
@@ -167,7 +170,7 @@ export function LotChips({
     qtyUnit?: string;
     showOtherAttrs?: boolean;
 }) {
-    const size = lotSizeLabel(batch);
+    const size = lotSizeText(batch);
     const combo = lotComboLabel(batch);
     const color = lotColorLabel(batch);
     // color + labdip_color are already folded into the single shade chip above.

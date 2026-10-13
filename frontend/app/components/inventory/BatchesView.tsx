@@ -23,7 +23,7 @@ const LOT_STATUS_FILTERS = [
 import TreeSelect, { buildLocationFilterTree, buildLocationPickerTree, expandLocationFilterValue, buildCategoryTree } from '../shared/TreeSelect';
 import SearchableSelect from '@bryanadamg/terras-ui/components/Combobox';
 import { useItemSearch, itemToOption } from '../shared/useEntitySearch';
-import { lotSizeLabel, lotComboLabel, lotColorLabel, type LotVariantAttr } from '../shared/LotChips';
+import { lotSizeText, lotComboLabel, lotColorLabel, type LotVariantAttr } from '../shared/LotChips';
 import { isRejectGrade } from '../shared/rejectDisplay';
 import { ExpanderCell, SortableTh, lvZebra, lvThead, lvTh, TableEmpty, EMPTY_DASH, ResizableTable } from '../shared/listViewTheme';
 import { Tabs, TabDef } from '../shared/Tabs';
@@ -764,7 +764,7 @@ export default function BatchesView({ items, locations, categories, workCenters,
   // attributes). Same identity vocabulary as the staging/completion lot pickers —
   // see components/shared/LotChips.tsx for the label rules.
   const attrsCell = (b: Batch) => {
-    const sz = lotSizeLabel(b);
+    const sz = lotSizeText(b);
     const combo = lotComboLabel(b);
     const shade = lotColorLabel(b);
     if (!sz && !combo && !shade) return emDash;
