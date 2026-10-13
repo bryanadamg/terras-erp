@@ -133,8 +133,6 @@ export interface TableColumn {
     emptyText?: string;
     /** Heading alignment when it differs from the cells (a right-aligned qty under a centred heading). */
     headerAlign?: Align;
-    /** Dotted write-on line instead of a boxed cell (the Perincian carton slots). */
-    dotted?: boolean;
     /** Monospace cells (codes, carton numbers). */
     mono?: boolean;
     /** Cell text colour. A row's own `_style` for this column wins. */

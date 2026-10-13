@@ -868,8 +868,6 @@ export default function InspectorPanel({ layout, docType, selection, onChange, o
                         </Row>
                         <CheckField label="Bold" checked={!!col.bold}
                             onChange={v => patchCol({ bold: v || undefined })} />
-                        <CheckField label="Dotted write-on line" checked={!!col.dotted}
-                            onChange={v => patchCol({ dotted: v || undefined })} />
                         <CheckField label="Monospace" checked={!!col.mono}
                             onChange={v => patchCol({ mono: v || undefined })} />
                         <CheckField label="Detail lines grey and smaller" checked={!!col.mutedDetail}
