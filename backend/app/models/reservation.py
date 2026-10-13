@@ -12,8 +12,9 @@ from app.db.base import Base
 class StockReservation(Base):
     """A qty of on-hand finished goods promised to one sales order.
 
-    Written by `POST /production-runs` when root-FG netting covers part of an
-    entry from stock: the covered qty produces no MO, so without this row nothing
+    Written by `POST /sales-orders/{id}/allocate` (planner reserves on-hand
+    stock straight to an SO line — no run, no MO), or by `POST /production-runs`
+    when root-FG netting covers part of an entry from stock: the covered qty produces no MO, so without this row nothing
     anywhere records that the pile is spoken for and the NEXT order nets the same
     stock away again (`Availability._demand` is built only from open MOs'
     planned components, so a netted-away root leaves no trace).
@@ -49,6 +50,12 @@ class StockReservation(Base):
     )
     pr_bom_entry_id: Mapped[Optional[uuid.UUID]] = mapped_column(
         UUID(as_uuid=True), ForeignKey("pr_bom_entries.id", ondelete="CASCADE"), nullable=True
+    )
+    # Set only by SO-level "Allocate from stock" (production_run_id is then NULL).
+    # SET NULL, not CASCADE: an SO edit rebuilds every line, and update_sales_order
+    # re-points these onto the equivalent new line the same way it does packing.
+    sales_order_line_id: Mapped[Optional[uuid.UUID]] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("sales_order_lines.id", ondelete="SET NULL"), nullable=True, index=True
     )
 
     item_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("items.id"), index=True)

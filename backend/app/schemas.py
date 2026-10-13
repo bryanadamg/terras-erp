@@ -1989,6 +1989,9 @@ class SalesOrderLineResponse(SalesOrderLineCreate):
     qty_packed_alt: float | None = None
     qty_packed_available_alt: float | None = None
     qty_dispatched_alt: float | None = None
+    # Stock reserved to this line by "Allocate from stock", still unshipped, in
+    # `base_uom`. A Production Run handed this order plans only what's left.
+    qty_allocated: float = 0
     # Production progress (qty made vs planned) of the MOs behind this line, plus
     # the stage the floor is on. Populated by the list endpoint only
     # (_populate_mo_progress); None means no MO exists for the line yet, which the
@@ -2068,6 +2071,8 @@ class StockReservationResponse(ORMResponse):
     sales_order_id: UUID
     production_run_id: UUID | None = None
     production_run_code: str | None = None
+    # Set when allocated straight to an order line (no Production Run).
+    sales_order_line_id: UUID | None = None
     item_id: UUID
     item_code: str = ""
     item_name: str = ""
@@ -2091,6 +2096,33 @@ class SOReservationSummary(BaseModel):
     reservations: list[StockReservationResponse] = []
     total_reserved: float = 0.0     # sum of qty_remaining on ACTIVE rows
     total_released: float = 0.0
+
+
+class SOAllocationLine(BaseModel):
+    """One SO line's case for "Allocate from stock" — all qtys in `uom`."""
+    sales_order_line_id: UUID
+    item_id: UUID
+    item_code: str = ""
+    item_name: str = ""
+    uom: str = ""
+    size: str | None = None
+    color: str | None = None
+    ordered: float | None = None    # None = no weight on the item, can't allocate
+    dispatched: float = 0.0
+    allocated: float = 0.0
+    needed: float = 0.0             # ordered - dispatched - allocated
+    on_hand: float = 0.0
+    free: float = 0.0               # on_hand not claimed by MOs or open orders
+    suggested: float = 0.0          # min(needed, free)
+
+
+class SOAllocateLine(BaseModel):
+    sales_order_line_id: UUID
+    qty: float = Field(gt=0)
+
+
+class SOAllocateRequest(BaseModel):
+    lines: list[SOAllocateLine] = Field(min_length=1)
 
 
 # --- Sample Request Schemas ---

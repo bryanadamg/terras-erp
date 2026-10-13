@@ -68,7 +68,7 @@ from app.models.location import Location
 from app.models.manufacturing import ManufacturingOrder
 from app.models.production_run import ProductionRun
 from app.models.reservation import StockReservation
-from app.models.sales import SalesOrder
+from app.models.sales import SalesOrder, SalesOrderLine
 from app.models.batch import Batch
 from app.models.bom import BOM, BOMLine, BOMSize
 from app.models.size import Size
@@ -438,9 +438,13 @@ class Availability:
                 StockReservation.qty_released,
                 BOMSize.size_id,
                 BOMSize.label,
+                SalesOrderLine.size_id,
+                SalesOrderLine.size_label,
             )
             .join(SalesOrder, SalesOrder.id == StockReservation.sales_order_id)
             .outerjoin(BOMSize, BOMSize.id == StockReservation.bom_size_id)
+            # An SO-level allocation states its size on the line, not a BOMSize.
+            .outerjoin(SalesOrderLine, SalesOrderLine.id == StockReservation.sales_order_line_id)
             .where(
                 StockReservation.status == "ACTIVE",
                 SalesOrder.status.in_(OPEN_SO_STATUSES),
@@ -451,11 +455,12 @@ class Availability:
                 ),
             )
         )).all()
-        for item_id, vkey, qty, released, sid, label in rows:
+        for item_id, vkey, qty, released, sid, label, line_sid, line_label in rows:
             remaining = float(qty or 0) - float(released or 0)
             if remaining <= 0:
                 continue
-            tok = self.sizes.token_for_size_id(sid, label)
+            tok = (self.sizes.token_for_size_id(sid, label)
+                   or self.sizes.token_for_size_id(line_sid, line_label))
             self._reserved[(str(item_id), vkey or "", tok)] += remaining
 
     async def _on_hand_buckets(self, item_id: str, vkey: str) -> dict[str, float]:
@@ -582,6 +587,25 @@ class Availability:
         vkey = _generate_variant_key([str(a) for a in (attribute_value_ids or [])], color_id)
         ledger = await self._ledger(item_s, vkey)
         return gross_req - self._draw(ledger, normalize_size_token(size_token), gross_req)
+
+    async def free_on_hand(self, item_id, attribute_value_ids, color_id=None,
+                           size_token: str = "") -> tuple[float, float]:
+        """(on_hand, free) for a demand at `size_token` — what may be allocated
+        straight to an order. Unlike net_free, scheduled receipts (open MOs' output)
+        don't count: they are not on the shelf yet. Every other claim does — open
+        MOs' demand and every open order's reservation, the asking order's own
+        included, so allocating twice can't double-reserve the same pile."""
+        item_s = str(item_id)
+        vkey = _generate_variant_key([str(a) for a in (attribute_value_ids or [])], color_id)
+        buckets = await self._on_hand_buckets(item_s, vkey)
+        tokens = set(buckets) | {
+            t for src in (self._demand, self._reserved) for (i, v, t) in src if i == item_s and v == vkey
+        }
+        eligible = self._eligible_tokens(tokens, normalize_size_token(size_token))
+        on_hand = sum(buckets.get(t, 0.0) for t in eligible)
+        claimed = sum(self._demand.get((item_s, vkey, t), 0.0) + self._reserved.get((item_s, vkey, t), 0.0)
+                      for t in eligible)
+        return on_hand, max(0.0, on_hand - claimed)
 
 
 # ─────────────────────────────────────────────────────────────────────────────

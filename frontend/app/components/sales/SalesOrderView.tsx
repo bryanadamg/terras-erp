@@ -7,6 +7,7 @@ import SearchableSelect from '@bryanadamg/terras-ui/components/Combobox';
 import ModalWrapper from '../shared/ModalWrapper';
 const SalesPrintModal = dynamic(() => import('./SalesPrintModal'), { ssr: false });
 const SOTablePrintModal = dynamic(() => import('./SOTablePrintModal'), { ssr: false });
+const AllocateStockModal = dynamic(() => import('./AllocateStockModal'), { ssr: false });
 import { useTimezone } from '../../context/TimezoneContext';
 import { useData } from '../../context/DataContext';
 import { useUser } from '../../context/UserContext';
@@ -124,6 +125,7 @@ export default function SalesOrderView({ items, attributes, boms, salesOrders, p
   // because it answers the same question the lineage modal is opened to answer —
   // "where is my order?" — for the half that has no MO to show.
   const [lineageReservations, setLineageReservations] = useState<any[]>([]);
+  const [allocatingSO, setAllocatingSO] = useState<any>(null);
 
   const openLineage = async (so: any) => {
     setLineageSO(so);
@@ -1332,6 +1334,10 @@ In stock ${fmtQty(f.baseAvailable)}${bu} · Shipped ${fmtQty(f.baseShipped)}${bu
        )}
 
        {/* Production Lineage Modal — SO → PR → MO → WO → beams */}
+       {allocatingSO && (
+           <AllocateStockModal so={allocatingSO} authFetch={authFetch}
+               onClose={() => setAllocatingSO(null)} onDone={() => refreshSalesOrders?.()} />
+       )}
        {(lineageSO || lineageData) && (
            <ModalWrapper
                isOpen={!!(lineageSO || lineageData)}
@@ -1405,7 +1411,9 @@ In stock ${fmtQty(f.baseAvailable)}${bu} · Shipped ${fmtQty(f.baseShipped)}${bu
                                                        <td style={tdStyle}>
                                                            {r.production_run_code
                                                                ? lineageCodeChip(r.production_run_code, () => goToPR(r.production_run_code), 'pr')
-                                                               : <span style={{ color: '#999' }}>&mdash;</span>}
+                                                               : r.sales_order_line_id
+                                                                   ? <span style={{ color: '#777' }}>Allocated</span>
+                                                                   : <span style={{ color: '#999' }}>&mdash;</span>}
                                                        </td>
                                                        <td style={{ ...tdStyle, textAlign: 'right' }}>
                                                            {canManage && r.status === 'ACTIVE' && (
@@ -2176,10 +2184,15 @@ In stock ${fmtQty(f.baseAvailable)}${bu} · Shipped ${fmtQty(f.baseShipped)}${bu
                                // button is present (buttons flow from the right edge).
                                const actionsCellContent = (
                                    <div style={{ display:'flex', gap:2, justifyContent:'flex-end', alignItems:'center' }}>
-                                       {soPRs.length > 0 && (
+                                       {(soPRs.length > 0 || Number(so.reserved_qty) > 0) && (
                                            <XPActionButton tone="neutral" icon="bi-diagram-3"
                                                title="View full production lineage — PR, MO, WO and beams created for this SO"
                                                onClick={() => openLineage(so)} />
+                                       )}
+                                       {hasPermission('sales_order.edit') && ['PENDING', 'READY', 'PARTIAL'].includes(so.status) && (
+                                           <XPActionButton tone="success" icon="bi-box-seam"
+                                               title="Allocate from stock — reserve finished goods already on hand to this order instead of producing them"
+                                               onClick={() => setAllocatingSO(so)} />
                                        )}
                                        {so.status === 'PENDING' && (
                                            <XPActionButton tone="primary" icon="bi-collection-play"
