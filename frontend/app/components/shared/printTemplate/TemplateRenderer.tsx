@@ -396,7 +396,8 @@ function TableBandView({ band, ctx, rows, onSelect }: {
     const td: React.CSSProperties = { ...TD, border: rule };
     const headerBg = band.headerBackground === 'none' ? undefined : (band.headerBackground ?? '#f0f0f0');
     const cellStyle = (col: TableColumn, own?: CellStyle): React.CSSProperties => ({
-        ...(col.dotted ? { ...TD, border: 'none', borderBottom: '1px dotted #777' } : td),
+        // Dotted underline to write on, but still ruled left/right so each slot reads as its own column.
+        ...(col.dotted ? { ...TD, border: 'none', borderLeft: rule, borderRight: rule, borderBottom: '1px dotted #777' } : td),
         textAlign: col.align ?? 'left',
         fontWeight: (own?.bold ?? col.bold) ? 'bold' : 'normal',
         fontFamily: col.mono ? CODE_FONT : undefined,
