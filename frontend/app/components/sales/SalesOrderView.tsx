@@ -10,6 +10,7 @@ const SOTablePrintModal = dynamic(() => import('./SOTablePrintModal'), { ssr: fa
 import { useTimezone } from '../../context/TimezoneContext';
 import { useData } from '../../context/DataContext';
 import { useUser } from '../../context/UserContext';
+import { joinSize, sizeMeasurement } from '../shared/LotChips';
 import { nextSortState, StatusChip, statusTint, familyTint, familyColor, TableSkeleton, useTableSkeletonMetrics, ProgressBar, useFloatingMenu, MenuTriggerButton, FloatingMenu, XPActionButton, FormSection, FieldLabel, xpBtn, xpInput as xpInputBase, CodeChip, CODE_FONT, xpFont, CHIP_RADIUS, CODE_CHIP_RADIUS, Chip, VariantChip, VariantKind, variantChipTone, colorLabel, colorHexFor, BTN_TONES, XP_BTN, SKEL_PAGE_ROWS } from '../shared/xpTheme';
 
 import { qtyFmt } from '../shared/format';
@@ -566,18 +567,6 @@ export default function SalesOrderView({ items, attributes, boms, salesOrders, p
       return forItem.filter((b: any) => (b.attribute_value_ids || []).map(String).includes(String(comboValueId)));
   };
 
-  // The size NAME (S/M/L/…) stays text in the cell, the measurement rides under
-  // it as a chip so the two read apart.
-  const formatBomSizeMeasurement = (bs: any): string => {
-      const hasRange = bs.measurement_min != null && bs.measurement_max != null;
-      const range = hasRange ? `${parseFloat(bs.measurement_min)}–${parseFloat(bs.measurement_max)}` : '';
-      // Same shape as the MO side (useManufacturingHelpers): target first, range in parens.
-      if (bs.target_measurement != null) {
-          return `${parseFloat(bs.target_measurement)}${range ? ` (${range})` : ''} cm`;
-      }
-      return range ? `${range} cm` : '';
-  };
-
   // ── Size, stated without a recipe ───────────────────────────────────────────
   // Sizes physically live on BOMSize rows, so a size list used to require a BOM
   // pick first — which is exactly what forced sales to choose the recipe. The
@@ -605,7 +594,7 @@ export default function SalesOrderView({ items, attributes, boms, salesOrders, p
       const nameless: any[] = [];
       for (const bom of scope) {
           for (const bs of (bom.sizes || [])) {
-              const measurement = formatBomSizeMeasurement(bs);
+              const measurement = sizeMeasurement(bs);
               const token = sizeToken(bs);
               if (!token) {
                   if (scope.length === 1 && measurement) {
@@ -660,12 +649,12 @@ export default function SalesOrderView({ items, attributes, boms, salesOrders, p
           // Nameless (measurement-only) size: the legacy pointer is the only
           // thing that identifies it, and the measurement is its label.
           const bs = line.bom_size_id ? findBomSize(line.bom_size_id) : null;
-          return bs ? { name: formatBomSizeMeasurement(bs), measurement: '' } : { name: '', measurement: '' };
+          return bs ? { name: sizeMeasurement(bs), measurement: '' } : { name: '', measurement: '' };
       }
       const scope = line.bom_id ? boms.filter((b: any) => b.id === line.bom_id) : [];
       for (const bom of scope) {
           const bs = (bom.sizes || []).find((x: any) => sizeToken(x) === name.trim().toLowerCase());
-          if (bs) return { name, measurement: formatBomSizeMeasurement(bs) };
+          if (bs) return { name, measurement: sizeMeasurement(bs) };
       }
       return { name, measurement: '' };
   };
@@ -1903,7 +1892,7 @@ In stock ${fmtQty(f.baseAvailable)}${bu} · Shipped ${fmtQty(f.baseShipped)}${bu
                                                >
                                                    <option value="">No specific size</option>
                                                    {sizeOptions.map((o: any) => (
-                                                       <option key={o.value} value={o.value}>{o.measurement ? `${o.name} — ${o.measurement}` : o.name}</option>
+                                                       <option key={o.value} value={o.value}>{joinSize(o.name, o.measurement)}</option>
                                                    ))}
                                                </select>
                                            </div>
@@ -1952,7 +1941,7 @@ In stock ${fmtQty(f.baseAvailable)}${bu} · Shipped ${fmtQty(f.baseShipped)}${bu
                                    })()}
                                    {(() => {
                                        const { name, measurement } = getLineSizeParts(line);
-                                       return name ? <div style={{color:'#005',fontSize:'10px',fontWeight:'bold'}}><i className="bi bi-rulers me-1"></i>{measurement ? `${name} — ${measurement}` : name}</div> : null;
+                                       return name ? <div style={{color:'#005',fontSize:'10px',fontWeight:'bold'}}><i className="bi bi-rulers me-1"></i>{joinSize(name, measurement)}</div> : null;
                                    })()}
                                    {line.no_color_swatch && <div style={{color:'#a33',fontSize:'10px',fontWeight:'bold'}}><i className="bi bi-palette me-1"></i>No Color Swatch</div>}
                                </div>
@@ -2264,14 +2253,8 @@ In stock ${fmtQty(f.baseAvailable)}${bu} · Shipped ${fmtQty(f.baseShipped)}${bu
                                            <td style={lineTd(isFirst, isLast)}>
                                                {line.size_display ? (() => {
                                                    const { name, measurement } = getLineSizeParts(line);
-                                                   return (
-                                                       <div style={{ display:'flex', flexWrap:'nowrap' as const, gap:3, alignItems:'center' }}>
-                                                           <VariantChip kind="size" title={`Size: ${name}`}>{name}</VariantChip>
-                                                           {measurement && (
-                                                               <VariantChip kind="size" icon={null} title={`Measurement: ${measurement}`}>{measurement}</VariantChip>
-                                                           )}
-                                                       </div>
-                                                   );
+                                                   const size = joinSize(name, measurement);
+                                                   return <VariantChip kind="size" title={`Size: ${size}`}>{size}</VariantChip>;
                                                })() : (
                                                    <span style={{ fontFamily:xpFont, fontSize:'9px', color:'#ccc' }}>—</span>
                                                )}

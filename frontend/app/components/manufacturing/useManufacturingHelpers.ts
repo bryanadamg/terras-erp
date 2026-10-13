@@ -1,5 +1,6 @@
 import { useTimezone } from '../../context/TimezoneContext';
 import { colorHexFor } from '../shared/xpTheme';
+import { joinSize, sizeMeasurement } from '../shared/LotChips';
 // One definition of "what does this attribute value look like" — see attributeChips.
 import { attributeValueName, attributeValueHex } from '../shared/attributeChips';
 // Pure, closure-free calculation shared with the floor scanner — see moHelpers.
@@ -51,15 +52,8 @@ export function useManufacturingHelpers({
             ? Object.fromEntries(Object.entries({ ...live, ...snapshot }).map(([k, v]) => [k, v ?? live?.[k]]))
             : live;
         if (!src) return '';
-        // Every MO size chip reads "{size}-{target} ({min}-{max})", e.g. "L-72 (70-74)".
-        const n = (v: any) => `${parseFloat(v)}`;
-        const name = (src.size_name || src.size?.name || src.label || '').trim();
-        const target = src.target_measurement != null ? n(src.target_measurement) : '';
-        const range = src.measurement_min != null && src.measurement_max != null
-            ? ` (${n(src.measurement_min)}-${n(src.measurement_max)})` : '';
-        // A measurement-only free size is already labelled "157 cm" — don't repeat the target.
-        const head = [name, target && !name.includes(target) ? target : ''].filter(Boolean).join('-');
-        return `${head}${range}`.trim();
+        // "{size}-{target} ({min}-{max})", e.g. "L-72 (70-74)" — the format every size chip uses.
+        return joinSize(src.size_name || src.size?.name || src.label, sizeMeasurement(src));
     };
 
     const formatDate = (date: string | null) => {

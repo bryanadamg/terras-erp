@@ -13,6 +13,7 @@ import type { RowSourceDef } from '../rowSources';
 import { txt, type PrintContext } from '../renderContext';
 import { orderBasePerAlt, baseToAlt, uomIsKg } from '../../altUnit';
 import { orderBoxSizeAlt } from '../../packingBoxes';
+import { joinSize } from '../../LotChips';
 
 export const PACKING_CARD_DOC = 'packing_card';
 
@@ -53,7 +54,7 @@ export function resolvePackingCardField(key: string, ctx: PrintContext): Resolve
         case 'pcard.item': return txt(d.item);
         case 'pcard.color': return txt(po.color_name);
         case 'pcard.color_code': return txt(po.color_code);
-        case 'pcard.size': return txt([po.size_label, po.size_measurement].filter(Boolean).join(' '));
+        case 'pcard.size': return txt(joinSize(po.size_label, po.size_measurement));
         case 'pcard.variant': return txt(d.variant);
         case 'pcard.target': return txt(d.target);
         case 'pcard.box_size': return txt(d.boxSize);
