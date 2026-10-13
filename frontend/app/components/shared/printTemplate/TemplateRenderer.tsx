@@ -401,7 +401,6 @@ function TableBandView({ band, ctx, rows, onSelect }: {
         fontWeight: (own?.bold ?? col.bold) ? 'bold' : 'normal',
         fontFamily: col.mono ? CODE_FONT : undefined,
         color: own?.color ?? col.color,
-        whiteSpace: 'pre-line',
         ...(own?.background ? { background: own.background } : {}),
     });
     const padRows = Math.max(0, (band.minRows ?? 0) - rows.length);
