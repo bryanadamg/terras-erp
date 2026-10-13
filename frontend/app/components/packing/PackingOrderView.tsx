@@ -2174,19 +2174,31 @@ function PackingOrderDetail({ po: initialPo, itemById, locationById, locPickerTr
             taken[id] = (taken[id] || 0) + take;
             need -= take;
         }
-        // Scale read heavier than the book: the overflow rides on the last lot drawn
-        // (or the last selected one, if the cartons already used them all up) and
-        // the server books it as weighing variance — or refuses it if it is past
-        // the tolerance, which only it can judge (it is a % of the lot's full book
-        // qty, including what earlier events already drew).
+        // Scale read heavier than the book: the overflow is spread over the lots
+        // drawn, pro rata to each one's draw, and the server books it as weighing
+        // variance — or refuses it if it is past the tolerance, which only it can
+        // judge (a % of each lot's full book qty). Piling it all on the last lot
+        // once refused a pack 5% over book in total because that one 7 kg lot
+        // read 17% over on its own.
         if (need > 1e-9) {
-            const sel = lots.filter((x: any) => selSet.has(String(x.id)));
-            const lastId = out.length ? out[out.length - 1].batch_id : (sel.length ? String(sel[0].id) : null);
-            if (lastId) {
-                const row = out.find(o => o.batch_id === lastId);
-                if (row) row.qty = Number((row.qty + need).toFixed(4));
-                else out.push({ batch_id: lastId, qty: Number(need.toFixed(4)) });
-                taken[lastId] = (taken[lastId] || 0) + need;
+            if (out.length) {
+                const base = out.reduce((t, o) => t + o.qty, 0);
+                let left = need;
+                out.forEach((o, i) => {
+                    const add = i === out.length - 1 ? left : Number((need * o.qty / base).toFixed(4));
+                    left -= add;
+                    o.qty = Number((o.qty + add).toFixed(4));
+                    taken[o.batch_id] = (taken[o.batch_id] || 0) + add;
+                });
+            } else {
+                // Nothing left on the lots (scrap after the cartons took it all):
+                // the overflow rides on the first selected lot.
+                const sel = lots.filter((x: any) => selSet.has(String(x.id)));
+                if (sel.length) {
+                    const id = String(sel[0].id);
+                    out.push({ batch_id: id, qty: Number(need.toFixed(4)) });
+                    taken[id] = (taken[id] || 0) + need;
+                }
             }
         }
         return out;
