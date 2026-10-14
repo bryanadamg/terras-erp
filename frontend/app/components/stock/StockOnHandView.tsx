@@ -418,17 +418,18 @@ export default function StockOnHandView({ locations, attributes, categories, ite
         for (const l of (locations || [])) m[l.id] = l;
         return m;
     }, [locations]);
-    // Walk up to the root warehouse (handles 2-level zone and 3-level bin).
-    const getWarehouseId = (locId: string): string | null => {
-        const loc = locMap[locId];
-        if (!loc?.parent_id) return null;
-        const parent = locMap[String(loc.parent_id)];
-        if (!parent?.parent_id) return String(loc.parent_id); // parent is warehouse
-        return String(parent.parent_id); // grandparent is warehouse (bin case)
-    };
-    const getWarehouseName = (locId: string): string => {
-        const wid = getWarehouseId(locId);
-        return wid ? (locMap[wid]?.name || '') : '';
+    // Every ancestor name, root warehouse first — a bin keeps its zone
+    // (Finished Goods / GD FINISH GOODS 1 / A1), at any depth.
+    const getAncestorNames = (locId: string): string[] => {
+        const out: string[] = [];
+        const seen = new Set<string>();
+        let p = locMap[locId]?.parent_id;
+        while (p && !seen.has(String(p)) && locMap[String(p)]) {
+            seen.add(String(p));
+            out.unshift(locMap[String(p)].name || '');
+            p = locMap[String(p)].parent_id;
+        }
+        return out;
     };
 
     // Combined Warehouse → Location dropdown. Top-level locations with children
@@ -699,11 +700,11 @@ export default function StockOnHandView({ locations, attributes, categories, ite
                 </td>
                 <td style={{ padding: '4px 8px', fontFamily: xpFont, fontSize: '11px', overflow: 'hidden', ...colDivider }}>
                     <div style={{ display: 'flex', flexWrap: 'wrap', gap: 3, maxWidth: '100%' }} className={undefined}>
-                        {getWarehouseName(bal.location_id) && (
-                            <Chip tone={REF_TONES.warehouse} truncate size="xs">
-                                {getWarehouseName(bal.location_id)}
+                        {getAncestorNames(bal.location_id).map((name, i) => (
+                            <Chip key={i} tone={REF_TONES.warehouse} truncate size="xs">
+                                {name}
                             </Chip>
-                        )}
+                        ))}
                         <Chip tone={REF_TONES.bin} truncate size="xs">
                             {bal.location_name || getLocationName(bal.location_id)}
                         </Chip>
