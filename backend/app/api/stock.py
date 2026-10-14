@@ -377,13 +377,13 @@ async def transfer_stock(
     await stock_service.add_stock_entry(
         db, item_id=item.id, location_id=payload.from_location_id,
         qty_change=-payload.qty, reference_type="Transfer", reference_id=ref,
-        attribute_value_ids=attrs, batch_id=payload.batch_id,
+        attribute_value_ids=attrs, batch_id=payload.batch_id, color_id=payload.color_id,
         cones_change=-c, boxes_change=-b, drums_change=-d,
     )
     await stock_service.add_stock_entry(
         db, item_id=item.id, location_id=payload.to_location_id,
         qty_change=payload.qty, reference_type="Transfer", reference_id=ref,
-        attribute_value_ids=attrs, batch_id=payload.batch_id,
+        attribute_value_ids=attrs, batch_id=payload.batch_id, color_id=payload.color_id,
         cones_change=c, boxes_change=b, drums_change=d,
     )
     await db.commit()
@@ -456,13 +456,13 @@ async def transfer_stock_bulk(
         await stock_service.add_stock_entry(
             db, item_id=item.id, location_id=ln.from_location_id,
             qty_change=-ln.qty, reference_type="Transfer", reference_id=ref,
-            attribute_value_ids=attrs, batch_id=ln.batch_id,
+            attribute_value_ids=attrs, batch_id=ln.batch_id, color_id=ln.color_id,
             cones_change=-c, boxes_change=-b, drums_change=-d,
         )
         await stock_service.add_stock_entry(
             db, item_id=item.id, location_id=payload.to_location_id,
             qty_change=ln.qty, reference_type="Transfer", reference_id=ref,
-            attribute_value_ids=attrs, batch_id=ln.batch_id,
+            attribute_value_ids=attrs, batch_id=ln.batch_id, color_id=ln.color_id,
             cones_change=c, boxes_change=b, drums_change=d,
         )
     await db.commit()
@@ -770,6 +770,7 @@ async def get_stock_balance_paginated(
             "location_id": bal.location_id,
             "location_name": loc_name or str(bal.location_id),
             "attribute_value_ids": [v.id for v in bal.attribute_values],
+            "color_id": stock_service._parse_variant_key(bal.variant_key)[1],
             "qty": float(bal.qty),
             "qty_cones": int(bal.qty_cones or 0),
             "qty_boxes": int(bal.qty_boxes or 0),

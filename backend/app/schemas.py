@@ -1453,6 +1453,7 @@ class StockTransferCreate(BaseModel):
     qty: float
     batch_id: UUID | None = None
     attribute_value_ids: list[UUID] = []
+    color_id: UUID | None = None
     qty_cones: int | None = None
     qty_boxes: int | None = None
     qty_drums: int | None = None
@@ -1466,6 +1467,7 @@ class StockBulkTransferLine(BaseModel):
     qty: float
     batch_id: UUID | None = None
     attribute_value_ids: list[UUID] = []
+    color_id: UUID | None = None
     qty_cones: int | None = None
     qty_boxes: int | None = None
     qty_drums: int | None = None
@@ -1527,6 +1529,9 @@ class StockBalanceResponse(BaseModel):
     item_category_id: UUID | None = None
     item_category_name: str | None = None
     attribute_value_ids: list[UUID] = []
+    # FG shade folded into variant_key as `c:<uuid>` — moves/adjusts must send it
+    # back or they address a balance row that doesn't exist.
+    color_id: UUID | None = None
     location_id: UUID
     location_name: str = ""
     qty: float
