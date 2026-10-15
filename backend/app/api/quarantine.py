@@ -99,7 +99,7 @@ async def list_quarantine_stock(
     Grouping is derived, not stored: a lot carries `source_wo_id`, and the WO
     carries the MO — the same chain `_resolve_batch_origins` walks for lineage.
     Stock with no lot (or a lot not born on a WO) has no MO and lands in one
-    "No MO" group so nothing held is invisible.
+    "No MO" group (one per item and variant) so nothing held is invisible.
 
     Pagination is over *groups*, applied after grouping, because an MO's lots
     must never be split across pages — the whole point of the row is its rollup.
@@ -373,6 +373,11 @@ async def list_quarantine_stock(
     # batch (setattr, same as the lot pickers) — the group row already carries
     # color/labdip from `origin`, but combo has no home there, and a lot's own
     # size (`bom_size_snapshot`) isn't surfaced anywhere on this page at all.
+    # A manual lot (no producing MO) carries its shade/attributes only in its
+    # balance key — hand it over so the stock-key fallback can read them back.
+    for bal, b, _, _ in rows:
+        if b is not None and not b.source_wo_id:
+            b.variant_key = bal.variant_key or ""
     all_batches = [b for (_, b, _, _) in rows if b is not None] + [b for (b, _, _, _, _) in history]
     await _resolve_batch_variants(db, all_batches)
 
@@ -382,10 +387,19 @@ async def list_quarantine_stock(
         info = origin.get(batch.source_wo_id) if batch is not None else None
         # An MO can produce more than one item (component MOs), and the same item
         # can arrive from different MOs — key on both so a row is always one
-        # (order, product) pair the way the packing order downstream is.
-        key = f"{info['mo_id'] if info else UNASSIGNED}:{item.id}"
+        # (order, product) pair the way the packing order downstream is. With no
+        # MO the variant is the only identity, so two colours stay two rows.
+        vkey = "" if info else (getattr(batch, "variant_key", None) or "")
+        key = f"{info['mo_id'] if info else UNASSIGNED}:{item.id}" + (f":{vkey}" if vkey else "")
         grp = groups.get(key)
         if grp is None:
+            if not info and batch is not None and getattr(batch, "color_code", None):
+                info_color = {
+                    "color_id": stock_service._parse_variant_key(vkey)[1],
+                    "color_code": batch.color_code, "color_name": batch.color_name, "color_hex": batch.color_hex,
+                }
+            else:
+                info_color = info or {}
             grp = QuarantineGroupResponse(
                 key=key,
                 mo_id=info["mo_id"] if info else None,
@@ -395,10 +409,10 @@ async def list_quarantine_stock(
                 production_run_code=info["production_run_code"] if info else None,
                 sales_order_id=info["sales_order_id"] if info else None,
                 sales_order_code=info["sales_order_code"] if info else None,
-                color_id=info["color_id"] if info else None,
-                color_code=info["color_code"] if info else None,
-                color_name=info["color_name"] if info else None,
-                color_hex=info["color_hex"] if info else None,
+                color_id=info_color.get("color_id"),
+                color_code=info_color.get("color_code"),
+                color_name=info_color.get("color_name"),
+                color_hex=info_color.get("color_hex"),
                 labdip_variant_code=info["labdip_variant_code"] if info else None,
                 combo_value_id=info["combo_value_id"] if info else None,
                 bom_size_id=info["bom_size_id"] if info else None,
