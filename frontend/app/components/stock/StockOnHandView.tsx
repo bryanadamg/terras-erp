@@ -775,7 +775,7 @@ export default function StockOnHandView({ locations, attributes, categories, ite
                                 swatch={colorInfo.hex || null}
                                 title={colorInfo.pending
                                     ? `Shade pending lab dip approval: ${colorInfo.label}`
-                                    : `Color: ${colorInfo.name && colorInfo.name !== colorInfo.label ? `${colorInfo.label} — ${colorInfo.name}` : colorInfo.label}`}
+                                    : `Color: ${colorInfo.label}`}
                             >
                                 {colorInfo.label}{colorInfo.pending ? ' (pending)' : ''}
                             </VariantChip>
