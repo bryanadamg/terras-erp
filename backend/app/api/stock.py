@@ -542,7 +542,7 @@ _SOH_SORT_KEYS = ("item", "itemCategory", "location", "warehouse", "batch", "mo"
 async def get_stock_balance_paginated(
     search: Optional[str] = Query(None, description="Matches item name/code, item category, location, warehouse, lot number, supplier lot, lot notes, MO/WO code"),
     location_id: Optional[str] = Query(None, description="Location id — matches that location plus any bin directly under it"),
-    warehouse_id: Optional[str] = Query(None, description="Root-warehouse id above the row's location; '__uncat__' = location with no warehouse above it"),
+    warehouse_id: Optional[str] = Query(None, description="Root-warehouse id above the row's location; '__uncat__' = stock on a top-level location itself"),
     category_id: Optional[str] = Query(None, description="Item category id, or comma-separated ids (a category plus its descendants)"),
     mo_code: Optional[str] = Query(None, description="Exact MO code — set by clicking a row's MO chip"),
     wo_code: Optional[str] = Query(None, description="Exact WO code — set by clicking a row's WO chip"),
@@ -599,8 +599,10 @@ async def get_stock_balance_paginated(
     LocL = aliased(Location)
     LocP = aliased(Location)
     LocG = aliased(Location)
-    wh_id_expr = func.coalesce(LocG.id, LocP.id)
-    wh_name_expr = func.coalesce(LocG.name, LocP.name)
+    # Root warehouse of the row — the location itself when it has no parent, so
+    # stock booked straight onto a warehouse is still "in" that warehouse.
+    wh_id_expr = func.coalesce(LocG.id, LocP.id, LocL.id)
+    wh_name_expr = func.coalesce(LocG.name, LocP.name, LocL.name)
 
     # An all-zero balance row is not stock; get_all_stock_balances drops it in Python
     # and this must drop the same rows or the two endpoints disagree on `total`.
@@ -625,7 +627,7 @@ async def get_stock_balance_paginated(
         conditions.append(or_(StockBalance.location_id == location_id, LocL.parent_id == location_id))
     if warehouse_id:
         if warehouse_id == "__uncat__":
-            conditions.append(wh_id_expr.is_(None))
+            conditions.append(LocL.parent_id.is_(None))
         else:
             conditions.append(wh_id_expr == warehouse_id)
     if category_id:
