@@ -13,6 +13,7 @@ import {
     formulaSummary,
 } from '../shared/qtyFormula';
 import QtyFormulaModal from '../shared/QtyFormulaModal';
+import { joinSize, sizeMeasurement } from '../shared/LotChips';
 import { useUser } from '../../context/UserContext';
 import { API_BASE } from '../shared/apiBase';
 
@@ -251,7 +252,8 @@ function BomEntryRow({
                         {sizes.map((s: any) => (
                             <div key={s.id}>
                                 <label style={xpLabel({ fontWeight: 'bold', fontSize: 10 })}>
-                                    {s.label || s.size?.name || s.size_name || (s.target_measurement ? String(s.target_measurement) : `S${s.id.slice(0, 4)}`)}
+                                    {/* Size with its BOM measurement and range — "L-72 (70-74)". */}
+                                    {joinSize(s.label || s.size?.name || s.size_name, sizeMeasurement(s)) || `S${s.id.slice(0, 4)}`}
                                 </label>
                                 <input
                                     type="number" min="0" style={xpInput()} placeholder="0"
