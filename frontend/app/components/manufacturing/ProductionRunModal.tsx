@@ -4,7 +4,7 @@ import ModalWrapper from '../shared/ModalWrapper';
 import SearchableSelect from '@bryanadamg/terras-ui/components/Combobox';
 import { useData } from '../../context/DataContext';
 import NettingPlanTable, { useNettingPreview } from './NettingPlanTable';
-import { xpFont, xpInput as _xpInput, xpLabel as _xpLabel, ModalFooterActions, CHIP_RADIUS, BUTTON_RADIUS, XP_BTN } from '../shared/xpTheme';
+import { xpFont, xpInput as _xpInput, xpLabel as _xpLabel, ModalFooterActions, CHIP_RADIUS, BUTTON_RADIUS, XP_BTN, colorLabel } from '../shared/xpTheme';
 import {
     QtyFormulaRule,
     DEFAULT_QTY_FORMULA,
@@ -91,7 +91,7 @@ function BomEntryRow({
     onRemove: () => void;
     canRemove: boolean;
 }) {
-    const { itemIndex } = useData();
+    const { itemIndex, authFetch } = useData();
     const selectedBom = boms.find((b: any) => b.id === entry.bomId) || null;
     const sizes = selectedBom?.sizes || [];
     // Scoped to the ordered item when the SO named one — the planner is choosing
@@ -105,11 +105,39 @@ function BomEntryRow({
     const itemUom: string = item?.uom || '';
     const itemAttrIds: string[] = item?.attribute_ids?.map(String) || [];
     const bomAttrIds: string[] = selectedBom?.attribute_value_ids || [];
+    // A colour-type FG gets the same two pickers as an SO line — Colour Code
+    // (Color Library -> color_id) and the Colors variant (attribute_value_ids) —
+    // so a run made to stock, with no SO to inherit them from, can still name them.
+    const pickColor = !!selectedBom && item?.variant_type === 'color' && !entry.locked;
+    const colorsAttr = pickColor ? attributes.find((a: any) => a.system_role === 'color') : null;
     const freeAttributes = !selectedBom ? [] : attributes.filter((attr: any) => {
         if (!attr.values?.length) return false;
-        if (!itemAttrIds.includes(String(attr.id))) return false;
+        if (pickColor && attr.system_role === 'labdip_color') return false;
+        if (!itemAttrIds.includes(String(attr.id)) && attr !== colorsAttr) return false;
         return !(attr.values || []).some((v: any) => bomAttrIds.includes(v.id));
     });
+
+    // Server-side Color Library search (30k+ shades can't be client-cached).
+    const [colorSearch, setColorSearch] = useState('');
+    const [colorResults, setColorResults] = useState<any[]>([]);
+    useEffect(() => {
+        if (!pickColor) return;
+        const h = setTimeout(async () => {
+            try {
+                const res = await authFetch(`${API_BASE}/colors?search=${encodeURIComponent(colorSearch.trim())}&size=20`);
+                if (res.ok) {
+                    const data = await res.json();
+                    setColorResults(Array.isArray(data) ? data : (data.items || []));
+                }
+            } catch { /* transient */ }
+        }, 300);
+        return () => clearTimeout(h);
+    }, [colorSearch, pickColor, authFetch]);
+    const colorOptions = [
+        ...(entry.colorId && !colorResults.some(c => c.id === entry.colorId)
+            ? [{ value: entry.colorId, label: entry.colorLabel || entry.colorId }] : []),
+        ...colorResults.map((c: any) => ({ value: c.id, label: colorLabel(c.code, c.name) })),
+    ];
 
     const handleAttrChange = (attr: any, valId: string) => {
         const attrValueIds: string[] = (attr.values || []).map((v: any) => v.id);
@@ -156,6 +184,24 @@ function BomEntryRow({
                     </div>
                 )}
             </div>
+
+            {pickColor && (
+                <div style={{ marginBottom: 6 }}>
+                    <label style={xpLabel()}>Color Code</label>
+                    <SearchableSelect
+                        options={colorOptions}
+                        value={entry.colorId || ''}
+                        onSearch={setColorSearch}
+                        onChange={val => onChange({
+                            ...entry,
+                            colorId: val || undefined,
+                            colorLabel: colorOptions.find(o => o.value === val)?.label,
+                            labdipVariantCode: undefined,
+                        })}
+                        placeholder="-- Search color library --"
+                    />
+                </div>
+            )}
 
             {freeAttributes.map((attr: any) => {
                 // Color Code (labdip_color) is resolved on the SO via the Color
