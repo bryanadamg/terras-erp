@@ -65,3 +65,34 @@ def test_item_without_a_store_still_nets_plant_wide(store_and_floor):
     _, plain = store_and_floor
     _, detail = _consume(plain, 20.0)
     assert detail["on_hand"] == pytest.approx(12.0)
+
+
+def test_preview_net_from_names_the_store(store_and_floor):
+    """The preview's Net from column names the store the on-hand was counted in."""
+    import asyncio
+    import os
+
+    from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
+    from sqlalchemy.pool import NullPool
+
+    from app.services.netting_service import Availability, _apply_store, _location_name_map
+
+    stored, plain = store_and_floor
+    url = os.environ["DATABASE_URL"]
+    if "+asyncpg" not in url:
+        url = url.replace("postgresql+psycopg2://", "postgresql://").replace("postgresql://", "postgresql+asyncpg://", 1)
+
+    async def run():
+        engine = create_async_engine(url, poolclass=NullPool)
+        try:
+            async with async_sessionmaker(engine, expire_on_commit=False)() as db:
+                avail = await Availability.create(db)
+                nodes = [{"item_id": i, "net_from_location_id": None, "net_from_location_name": ""} for i in (stored, plain)]
+                await _apply_store(avail, nodes, await _location_name_map(db))
+                return nodes
+        finally:
+            await engine.dispose()
+
+    with_store, without = asyncio.run(run())
+    assert with_store["net_from_location_name"] == "Store"
+    assert without["net_from_location_name"] == ""

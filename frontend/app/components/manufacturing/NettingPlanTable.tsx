@@ -246,7 +246,7 @@ export default function NettingPlanTable({
                 padding: '5px 10px', fontSize: 9, color: '#94a3b8',
                 borderTop: '1px solid #c0bdb5',
             }}>
-                Net free = on hand + incoming − demand from other open orders − stock reserved to other sales orders, at the source location (rolled up across its spots). Components covered by stock are not produced; on a sales-order run, the covered finished goods are reserved to that order so a later order cannot plan against the same stock. "Pooled separately" items are decoupling points — their demand is recorded but no order is created here; replenish them on a standalone pooled order.
+                Net free = on hand + incoming − demand from other open orders − stock reserved to other sales orders, counted only in each item's store (its putaway location, shown under Net from; plant-wide when none is set), so leftovers at production spots are not free stock. Components covered by stock are not produced; on a sales-order run, the covered finished goods are reserved to that order so a later order cannot plan against the same stock. "Pooled separately" items are decoupling points — their demand is recorded but no order is created here; replenish them on a standalone pooled order.
             </div>
         </div>
     );

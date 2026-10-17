@@ -352,6 +352,7 @@ class Availability:
         self._remaining: dict[tuple, dict[str, float]] = {}
         self._onhand: dict[tuple, dict[str, float]] = {}        # (item, vkey) -> {token: on-hand}
         self._store: dict[str, set | None] = {}                 # item -> store location subtree
+        self.store_root: dict[str, object] = {}                 # item -> its putaway location id
         self._loc_children: dict | None = None
         self.sizes: SizeResolver = SizeResolver()               # shared with the report surfaces
 
@@ -481,6 +482,7 @@ class Availability:
             if not put:
                 self._store[item_id] = None
             else:
+                self.store_root[item_id] = put
                 if self._loc_children is None:
                     self._loc_children = defaultdict(list)
                     for lid, parent in (await self.db.execute(select(Location.id, Location.parent_id))).all():
@@ -650,6 +652,18 @@ class Availability:
 # inherited-source behaviour and net-free). Keep them in sync with the create
 # path if its netting/location logic changes.
 # ─────────────────────────────────────────────────────────────────────────────
+
+async def _apply_store(avail: "Availability", nodes: list[dict], loc_names: dict) -> None:
+    """Net from = the store each node's on-hand was actually counted in (see
+    `_store_scope`), not the planned source location netting never looks at."""
+    for n in nodes:
+        item_s = str(n["item_id"])
+        await avail._store_scope(item_s)
+        root = avail.store_root.get(item_s)
+        if root:
+            n["net_from_location_id"] = root
+            n["net_from_location_name"] = loc_names.get(str(root), "")
+
 
 async def _location_name_map(db: AsyncSession) -> dict:
     rows = (await db.execute(select(Location.id, Location.name, Location.code))).all()
@@ -1005,6 +1019,7 @@ async def preview_production_run(db, bom_entries, location, source_location, exc
         current_gen = next_gen
         level += 1
 
+    await _apply_store(avail, nodes, loc_names)
     await _apply_chips(db, nodes)
     return nodes
 
@@ -1068,5 +1083,6 @@ async def preview_mo(db, bom_id, qty, location, source_location, create_nested=T
         loc_id = location.id if location else None
         src = source_location.id if source_location else loc_id
         await _preview_children(db, avail, bom_id, float(qty), src, loc_id, 1, nodes, loc_names)
+    await _apply_store(avail, nodes, loc_names)
     await _apply_chips(db, nodes)
     return nodes
