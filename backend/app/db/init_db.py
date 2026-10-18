@@ -331,7 +331,10 @@ def seed_system_locations(db):
             by_code = db.query(Location).filter(Location.code == w["code"]).first()
             if by_code:
                 by_code.system_code = w["system_code"]
-                by_code.location_type = 'warehouse'
+                # Only a top-level row is a warehouse — a nested one keeps the
+                # type its depth gives it, or it would render as a second root.
+                if by_code.parent_id is None:
+                    by_code.location_type = 'warehouse'
                 db.commit()
             else:
                 db.add(Location(
