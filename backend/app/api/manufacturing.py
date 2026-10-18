@@ -1688,9 +1688,12 @@ async def add_mo_completion(
                     )
                     continue
                 in_batch = batch_by_item.get(str(ai.item_id))
+                # Unlotted: the key staging posted it under — the planned component's
+                # attrs (same as the BOM% path below); a true substitute has none.
+                planned = next((c for c in step_comps if str(c.item_id) == str(ai.item_id)), None)
                 b_attrs, b_color = (
                     await stock_service.batch_variant(db, in_batch.id, wo_input_loc)
-                    if in_batch else ([], None)
+                    if in_batch else ([uuid.UUID(s) for s in (planned.attribute_value_ids or [])] if planned else [], None)
                 )
                 await stock_service.add_stock_entry(
                     db,
