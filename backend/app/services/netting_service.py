@@ -80,7 +80,7 @@ from app.models.attribute import Attribute, AttributeValue
 from app.models.color import Color
 from app.models.item import Item
 from app.services import reject_service
-from app.services.stock_service import _generate_variant_key
+from app.services.stock_service import _generate_variant_key, join_size, size_measurement
 from app.services.mrp_service import (
     _line_decoupled, _combo_attr_id, _line_combo_value_ids, _effective_combo, active_sub_bom,
 )
@@ -789,12 +789,14 @@ async def _apply_chips(db: AsyncSession, nodes: list[dict]) -> None:
 
     size_map: dict[str, str] = {}
     if size_ids:
-        for sid, label, sname in (await db.execute(
-            select(BOMSize.id, BOMSize.label, Size.name)
+        for bs, sname in (await db.execute(
+            select(BOMSize, Size.name)
             .outerjoin(Size, Size.id == BOMSize.size_id)
             .where(BOMSize.id.in_(size_ids))
         )).all():
-            size_map[str(sid)] = sname or label or ""
+            # "L-72 (70-74)" — the size with its BOM target and range, as every
+            # size chip and the run's own qty inputs read it.
+            size_map[str(bs.id)] = join_size(sname or bs.label, size_measurement(bs)) or ""
 
     color_map: dict[str, dict] = {}
     if color_ids:
