@@ -555,7 +555,8 @@ async def _allocation_lines(db: AsyncSession, so: SalesOrder) -> list[SOAllocati
             qty=float(qty if qty is not None else (bal.qty if bal else 0)),
             alt_qty=float(b.alt_qty) if b.alt_qty is not None else None,
             alt_uom=(po_rows.get(b.packing_order_id, (None, None))[1] or b.alt_uom),
-            size=size_names.get(str(b.id), (None, None))[1],
+            # Display only — the carton's stamped size with its target and range.
+            size=stock_service._bom_size_label(b.bom_size_snapshot) or size_names.get(str(b.id), (None, None))[1],
             packed_at=b.created_at, reservation_id=reservation_id,
         )
 
@@ -586,7 +587,8 @@ async def _allocation_lines(db: AsyncSession, so: SalesOrder) -> list[SOAllocati
             item_code=getattr(line, "item_code", "") or "",
             item_name=getattr(line, "item_name", "") or "",
             uom=f.get("base_uom", "") or "",
-            size=line.size_display,
+            # Display only ("L-72 (70-74)") — nothing compares on this field.
+            size=stock_service.join_size(line.size_display, line.size_measurement),
             variant_attributes=getattr(line, "variant_attributes", None),
             color_code=getattr(line, "color_code", None) or getattr(line, "color_name", None),
             color_hex=getattr(line, "color_hex", None),
