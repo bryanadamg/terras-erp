@@ -10,7 +10,7 @@
 
 import type { FieldDef, ResolvedField } from '../fieldRegistry';
 import type { RowSourceDef } from '../rowSources';
-import { txt, type PrintContext } from '../renderContext';
+import { txt, moShade, attrValueByRole, type PrintContext } from '../renderContext';
 import { orderBasePerAlt, baseToAlt, uomIsKg } from '../../altUnit';
 import { orderBoxSizeAlt } from '../../packingBoxes';
 import { joinSize } from '../../LotChips';
@@ -52,8 +52,9 @@ export function resolvePackingCardField(key: string, ctx: PrintContext): Resolve
         case 'pcard.qr': return { text: '', empty: !ctx.qrDataUrl, qrDataUrl: ctx.qrDataUrl };
         case 'pcard.company_name': return txt(ctx.companyName);
         case 'pcard.item': return txt(d.item);
-        case 'pcard.color': return txt(po.color_name);
-        case 'pcard.color_code': return txt(po.color_code);
+        // Same split as the Kartu Kerja: WARNA = Colors variant, KODE WARNA = code.
+        case 'pcard.color': return txt(d.shade?.name);
+        case 'pcard.color_code': return txt(d.shade?.code);
         case 'pcard.size': return txt(joinSize(po.size_label, po.size_measurement));
         case 'pcard.variant': return txt(d.variant);
         case 'pcard.target': return txt(d.target);
@@ -157,6 +158,7 @@ export function buildPackingCardContext({
         parentMO: null,
         doc: {
             po: p,
+            shade: moShade(p, attrValueByRole(attributes, p.attribute_value_ids)),
             item: `${p.item_name || ''} (${p.item_code || ''})`,
             variant: (p.attribute_value_ids || []).map(attrName).filter(Boolean).join(', '),
             // Both units: the packer counts in the selling unit the order was taken

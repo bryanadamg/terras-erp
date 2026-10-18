@@ -17,7 +17,7 @@ import ModalWrapper from '../shared/ModalWrapper';
 import SearchableSelect from '@bryanadamg/terras-ui/components/Combobox';
 import TreeSelect, { buildLocationPickerTree } from '../shared/TreeSelect';
 import { useFinishedGoodsSearch } from '../shared/useEntitySearch';
-import { LotChips, LotChip, lotSizeKey, lotSizeLabel, lotSizeText } from '../shared/LotChips';
+import { LotChips, LotChip, lotSizeKey, lotSizeLabel, lotSizeText, lotColorLabel } from '../shared/LotChips';
 
 /** A lot of a different size from the order's SO line — mirror of the server's
  *  `packing_service.assert_lot_sizes_match` (folded size name; unsized lots and
@@ -422,6 +422,15 @@ export default function PackingOrderView({ initialCreateState, onClearInitialSta
         }
         return { combo, colorVariant, colorVariantHex, size };
     };
+    // One colour text, same rule as the lot chips: code first, then the Colors
+    // variant (NAVY) when it says something the code doesn't.
+    const colourOf = (po: any): string | null => {
+        const v = variantOf(po);
+        return lotColorLabel({
+            color_code: po.color_code, color_name: po.color_name, color_hex: po.color_hex,
+            variant_attributes: v.colorVariant ? [{ name: 'Colors', system_role: 'color', value: v.colorVariant, hex: v.colorVariantHex }] : [],
+        })?.label || null;
+    };
 
     // Expanded row — same three-pane shape as the WO list detail panel (info,
     // outputs, log), so a supervisor reads a packing order the way they read a WO.
@@ -467,7 +476,7 @@ export default function PackingOrderView({ initialCreateState, onClearInitialSta
                                 <div style={colHeader}>Info</div>
                                 {infoRow('Item', po.item_code || it?.code || '—')}
                                 {infoRow('Sales Order', po.sales_order_code || 'to stock')}
-                                {po.color_name && infoRow('Colour', po.color_name)}
+                                {colourOf(po) && infoRow('Colour', colourOf(po))}
                                 {/* Counted unit first, same as Target below: the box holds a
                                     stated number of pieces and the kilos are its estimate. */}
                                 {infoRow(`${po.package_label} size`, (() => {
@@ -882,6 +891,7 @@ export default function PackingOrderView({ initialCreateState, onClearInitialSta
             {detail && (
                 <PackingOrderDetail
                     po={detail}
+                    colourText={colourOf(detail)}
                     itemById={itemById}
                     machineOptions={machineOptions}
                     locationById={locationById}
@@ -1831,7 +1841,7 @@ function PackingOrderForm({ locPickerTreeOptions, machineOptions, defaultSourceL
 // The one deliberate divergence is the qty entry: a WO completion states a
 // single number, but a pack event is a LIST of physical boxes, so the carton
 // list is the entry and the totals are read off it.
-function PackingOrderDetail({ po: initialPo, itemById, locationById, locPickerTreeOptions, machineOptions, authFetch, showToast, onClose, onChanged, onPrintCard, onPrintLabels }: any) {
+function PackingOrderDetail({ po: initialPo, colourText, itemById, locationById, locPickerTreeOptions, machineOptions, authFetch, showToast, onClose, onChanged, onPrintCard, onPrintLabels }: any) {
     const { hasPermission } = useUser();
     const { formatDateTime: tzDateTime } = useTimezone();
     const canManage = hasPermission('sales.manage');
@@ -2632,7 +2642,7 @@ function PackingOrderDetail({ po: initialPo, itemById, locationById, locPickerTr
                                     Weigh only
                                 </span>
                             )}
-                            {po.color_name && <span>Colour: <strong>{po.color_name}</strong></span>}
+                            {colourText && <span>Colour: <strong>{colourText}</strong></span>}
                             <StatusChip status={po.status} tint />
                         </div>
                     </div>
