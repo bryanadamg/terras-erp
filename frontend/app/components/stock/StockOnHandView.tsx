@@ -422,27 +422,6 @@ export default function StockOnHandView({ locations, attributes, categories, ite
     }, [locations]);
     const getAncestorNames = (locId: string): string[] => locationAncestorNames(locMap, locId);
 
-    // Combined Warehouse → Location dropdown. Top-level locations with children
-    // are warehouse groups; childless top-level locations hold stock directly and
-    // fall under "No Warehouse".
-    const byName = (a: any, b: any) => (a.name || '').localeCompare(b.name || '');
-    const topLevel = useMemo(() => (locations || []).filter((l: any) => !l.parent_id), [locations]);
-    const childrenByWh = useMemo(() => {
-        const m: Record<string, any[]> = {};
-        for (const l of (locations || [])) {
-            if (l.parent_id) (m[l.parent_id] ||= []).push(l);
-        }
-        for (const k of Object.keys(m)) m[k].sort(byName);
-        return m;
-    }, [locations]);
-    const warehouseGroups = useMemo(
-        () => topLevel.filter((w: any) => (childrenByWh[w.id] || []).length > 0).sort(byName),
-        [topLevel, childrenByWh]
-    );
-    const standaloneLocs = useMemo(
-        () => topLevel.filter((w: any) => (childrenByWh[w.id] || []).length === 0).sort(byName),
-        [topLevel, childrenByWh]
-    );
 
     // Encode warehouse-vs-location into one select value; the two filter states
     // stay mutually exclusive (a specific location overrides a whole-warehouse pick).
