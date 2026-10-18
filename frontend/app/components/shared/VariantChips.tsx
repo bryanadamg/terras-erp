@@ -35,6 +35,9 @@ export default function VariantChips({
     scale = 'xs', style,
 }: VariantChipsProps) {
     if (!combo && !size && !colorVariant && !colorCode && !labdipCode) return null;
+    // A Colors value that only repeats the shade code is the same fact twice.
+    const showVariant = !!colorVariant
+        && colorVariant.trim().toLowerCase() !== (colorCode || '').trim().toLowerCase();
 
     return (
         <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, ...style }}>
@@ -44,7 +47,7 @@ export default function VariantChips({
             {size && (
                 <VariantChip kind="size" size={scale} title={`Size: ${size}`}>{size}</VariantChip>
             )}
-            {colorVariant && (
+            {showVariant && (
                 <VariantChip
                     kind="color" size={scale}
                     // The attribute value carries its own hex on the Attributes page; a
