@@ -1084,10 +1084,9 @@ async def get_mo_putaway_suggestion(
 
     def _opt(l: Location) -> PutawayBinOption:
         t, i = totals.get(str(l.id), (0.0, 0.0))
-        pn = l.parent_name
         return PutawayBinOption(
             id=l.id, code=l.code, name=l.name,
-            full_path=f"{pn} / {l.name}" if pn else (l.name or l.code),
+            full_path=l.full_path,
             total_on_hand=t, item_on_hand=i,
         )
 

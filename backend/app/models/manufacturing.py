@@ -224,8 +224,7 @@ class ManufacturingOrder(Base):
         loc = self.planned_putaway_location
         if not loc:
             return None
-        pn = loc.parent_name
-        return f"{pn} / {loc.name}" if pn else (loc.name or loc.code)
+        return loc.full_path
 
 
 class MOCompletion(Base):
