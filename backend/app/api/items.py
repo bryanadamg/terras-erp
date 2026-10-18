@@ -240,11 +240,22 @@ async def add_stock_api(payload: StockEntryCreate, db: AsyncSession = Depends(ge
             if not val or val.attribute_id not in valid_attr_ids:
                  raise HTTPException(status_code=400, detail=f"Invalid attribute value {val_id} for this item")
 
+    if payload.batch_id:
+        from app.models.batch import Batch
+        lot_item = (await db.execute(select(Batch.item_id).filter(Batch.id == payload.batch_id))).scalar()
+        if lot_item is None:
+            raise HTTPException(status_code=404, detail="Lot not found")
+        if lot_item != item.id:
+            raise HTTPException(status_code=400, detail="Lot belongs to a different item")
+
     await stock_service.add_stock_entry(
         db,
         item_id=item.id,
         location_id=location.id,
         attribute_value_ids=[str(vid) for vid in payload.attribute_value_ids],
+        # Same identity POST /stock keeps — dropping either addressed the wrong row.
+        color_id=payload.color_id,
+        batch_id=payload.batch_id,
         qty_change=payload.qty,
         reference_type="manual",
         reference_id="manual_entry",
