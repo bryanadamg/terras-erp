@@ -2101,6 +2101,11 @@ async def complete_manufacturing_order_with_batches(
             attr_ids = [uuid.UUID(s) for s in comp.attribute_value_ids]
             key = (str(comp.item_id), ",".join(sorted(str(v) for v in attr_ids)))
             batch_id, _ = batch_map.get(key, (None, req))
+            # A lot is deducted under the key its balance row holds (shade, its
+            # MO's attrs), not the BOM line's — same rule as the completions route.
+            color_id = None
+            if batch_id:
+                attr_ids, color_id = await stock_service.batch_variant(db, batch_id, deduct_loc_id)
 
             await stock_service.add_stock_entry(
                 db,
@@ -2110,6 +2115,7 @@ async def complete_manufacturing_order_with_batches(
                 reference_type="Manufacturing Order",
                 reference_id=mo.code,
                 attribute_value_ids=attr_ids,
+                color_id=color_id,
                 batch_id=batch_id,
             )
 
