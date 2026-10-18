@@ -4114,6 +4114,7 @@ class PickableOrderLine(BaseModel):
     # Ordered variant identity, resolved from this line's own stock variant key
     # (attributes + Color Library shade) plus its BOM size.
     size_label: str | None = None
+    size_measurement: str | None = None
     variant_attributes: list[BatchVariantAttr] | None = None
     color_id: UUID | None = None
     color_code: str | None = None
@@ -4230,6 +4231,7 @@ class PickListSuggestedLine(BaseModel):
     # carry what is physically in each box — they can differ, and the planner
     # unchecking a carton is exactly who needs to see that.
     size_label: str | None = None
+    size_measurement: str | None = None
     variant_attributes: list[BatchVariantAttr] | None = None
     color_id: UUID | None = None
     color_code: str | None = None

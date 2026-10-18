@@ -15,7 +15,7 @@ from app.schemas import (
 from app.models.pick_list import PickList, PickListLine
 from app.models.batch import Batch
 from app.models.sales import SalesOrder, SalesOrderLine
-from app.models.bom import BOMSize
+from app.models.bom import BOM, BOMSize
 from app.api.auth import get_current_user, require_permission, require_any_permission
 from app.models.auth import User
 from app.services import (
@@ -314,17 +314,22 @@ def _ordered_identity(so_line: SalesOrderLine, variants: dict) -> dict:
     labels a carton. Two lines of the same item differing only by shade are
     otherwise indistinguishable on a board that lists orders, not lines.
     """
+    from app.api.sales import line_size_measurement
     v = variants.get(_line_variant_key(so_line)) or {}
     # Size as text. The generic pick the order actually carries comes first; the
     # legacy per-BOM pointer is the fallback for pre-decoupling lines.
     size = getattr(so_line, "bom_size", None)
     generic = getattr(so_line, "size", None)
+    size_label = (
+        (generic.name if generic is not None else None)
+        or so_line.size_label
+        or ((size.size_name or size.label) if size is not None else None)
+    )
     return dict(
-        size_label=(
-            (generic.name if generic is not None else None)
-            or so_line.size_label
-            or ((size.size_name or size.label) if size is not None else None)
-        ),
+        size_label=size_label,
+        # Kept apart from the name (which sizes are compared on); `lotSizeText`
+        # joins them for display — "L-72 (70-74)", same as the SO screen.
+        size_measurement=line_size_measurement(so_line, size_label),
         variant_attributes=v.get("variant_attributes") or None,
         color_id=v.get("color_id"),
         color_code=v.get("color_code"),
@@ -588,6 +593,8 @@ async def list_pickable_orders(
             # so stopping at bom_size only moves the lazy load one hop deeper.
             selectinload(SalesOrder.lines).selectinload(SalesOrderLine.bom_size).selectinload(BOMSize.size),
             selectinload(SalesOrder.lines).selectinload(SalesOrderLine.size),
+            # `_ordered_identity` reads the measurement off the line's own recipe.
+            selectinload(SalesOrder.lines).selectinload(SalesOrderLine.bom).selectinload(BOM.sizes),
         )
         .filter(SalesOrder.status.in_(["PENDING", "READY", "PARTIAL"]))
     )).scalars().all()
@@ -763,6 +770,8 @@ async def suggest_pick_list_cartons(
             # so stopping at bom_size only moves the lazy load one hop deeper.
             selectinload(SalesOrder.lines).selectinload(SalesOrderLine.bom_size).selectinload(BOMSize.size),
             selectinload(SalesOrder.lines).selectinload(SalesOrderLine.size),
+            # `_ordered_identity` reads the measurement off the line's own recipe.
+            selectinload(SalesOrder.lines).selectinload(SalesOrderLine.bom).selectinload(BOM.sizes),
         )
         .filter(SalesOrder.id == sales_order_id)
     )
@@ -850,6 +859,11 @@ async def create_pick_list(
         .options(
             selectinload(SalesOrder.lines).selectinload(SalesOrderLine.attribute_values),
             selectinload(SalesOrder.lines).selectinload(SalesOrderLine.item),
+            # The auto-fill path labels lines via `_ordered_identity` — size rows
+            # and the recipe's sizes must be loaded, or an async lazy load fails.
+            selectinload(SalesOrder.lines).selectinload(SalesOrderLine.bom_size).selectinload(BOMSize.size),
+            selectinload(SalesOrder.lines).selectinload(SalesOrderLine.size),
+            selectinload(SalesOrder.lines).selectinload(SalesOrderLine.bom).selectinload(BOM.sizes),
         )
         .filter(SalesOrder.id == payload.sales_order_id)
     )
