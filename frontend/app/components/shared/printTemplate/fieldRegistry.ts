@@ -12,7 +12,7 @@
 
 import { txt, EM_DASH, moShade, type PrintContext } from './renderContext';
 import { DOC_MODULES, moduleForField } from './doctypes';
-import { lotSizeLabel } from '../LotChips';
+import { lotSizeText } from '../LotChips';
 
 export type FieldKind = 'text' | 'number' | 'date' | 'qr' | 'blank' | 'static' | 'image' | 'barcode';
 
@@ -163,7 +163,8 @@ export function resolveField(key: string, ctx: PrintContext): ResolvedField {
         case 'mo.item_name':
             return txt(mo.item_name || wo.item_name);
         case 'mo.size':
-            return txt(lotSizeLabel(mo) || wo.size_label);
+            // Size with its BOM target and range ("L-72 (70-74)"), as the MO sheet prints it.
+            return txt(lotSizeText(mo) || wo.size_label);
 
         case 'wo.qty': {
             const q = Number(wo.qty ?? 0);
