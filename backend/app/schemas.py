@@ -1558,6 +1558,9 @@ class StockBalanceResponse(BaseModel):
     color_name: str | None = None
     color_hex: str | None = None
     labdip_variant_code: str | None = None
+    # Attributes behind the row's variant_key (name/system_role/value/hex) — lets
+    # the grid name the Colors variant beside the shade code, same as lot chips.
+    variant_attributes: list[dict] = []
     # Lot rows only: the counted alt figure (12 Pcs, 4 Pic) — a carton's packed count
     # in its packing order's uom2, or a hand-made lot's own Batch.alt_uom.
     alt_qty: float | None = None

@@ -750,6 +750,11 @@ async def get_stock_balance_paginated(
         )
     )).all()
 
+    # The row's own key names its shade and attributes — the only source for a lot
+    # with no MO (manual BAT, PU carton) or an unlotted coloured row. One query
+    # per kind for the page (describe_variant_keys).
+    by_key = await stock_service.describe_variant_keys(db, {r[0].variant_key for r in rows})
+
     items = []
     for (bal, i_name, i_code, i_uom, i_ends, i_cat_id, cat_name, loc_name,
          b_number, b_vendor_lot, b_quality, b_notes, b_snapshot, b_ends,
@@ -759,6 +764,10 @@ async def get_stock_balance_paginated(
         lotted = bool(bal.batch_key)
         notes = (b_notes or "").strip() if lotted else ""
         alt_uom = (po_uom2 or "").strip() if lotted and b_alt_qty is not None else ""
+        key_info = by_key.get(bal.variant_key) or {}
+        # The producing MO's shade wins (same order as the lot pages); the key fills in.
+        shade = (color_code, color_name, color_hex) if (lotted and color_code) else (
+            key_info.get("color_code"), key_info.get("color_name"), key_info.get("color_hex"))
         items.append({
             "item_id": bal.item_id,
             "item_name": i_name or str(bal.item_id),
@@ -789,9 +798,10 @@ async def get_stock_balance_paginated(
             # Shade identity of the MO that produced this lot (Color Library, via
             # source_wo -> MO.color_id) — same resolution /batches/paginated uses
             # (_resolve_batch_origins), so a lot's shade chip agrees everywhere.
-            "color_code": color_code if lotted else None,
-            "color_name": color_name if lotted else None,
-            "color_hex": color_hex if lotted else None,
+            "color_code": shade[0],
+            "color_name": shade[1],
+            "color_hex": shade[2],
+            "variant_attributes": key_info.get("variant_attributes") or [],
             "labdip_variant_code": mo_labdip_code if lotted else None,
             "alt_qty": float(b_alt_qty) if alt_uom else None,
             "alt_uom": alt_uom or None,
