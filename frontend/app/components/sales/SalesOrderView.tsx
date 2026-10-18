@@ -1027,7 +1027,10 @@ export default function SalesOrderView({ items, attributes, boms, salesOrders, p
       const comboValId = comboAttr ? attrIds.find(vid => comboAttr.values?.some((v: any) => v.id === vid)) : undefined;
       const plainIds = attrIds.filter(vid => vid !== colorValId && vid !== comboValId);
       const chips: { label: string; hex: string | null; kind: VariantKind; icon?: string | null }[] = [];
-      if (colorValId) chips.push({ label: getAttributeValueName(colorValId), hex: getAttributeValueHex(colorValId), kind: 'color' });
+      const variantName = colorValId ? getAttributeValueName(colorValId) : '';
+      // A Colors value that only repeats the shade code is the same fact twice.
+      if (colorValId && variantName.trim().toLowerCase() !== (colorLabel || '').trim().toLowerCase())
+          chips.push({ label: variantName, hex: getAttributeValueHex(colorValId), kind: 'color' });
       if (colorLabel) chips.push({ label: colorLabel, hex: colorHex || null, kind: 'color' });
       else if (pendingLabdip) chips.push({ label: pendingLabdip, hex: null, kind: 'pending' });
       if (comboValId) chips.push({ label: getAttributeValueName(comboValId), hex: null, kind: 'combo' });

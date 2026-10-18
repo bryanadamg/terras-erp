@@ -569,6 +569,7 @@ async def get_all_stock_balances(db: AsyncSession, user=None, item_ids: list | N
             "location_id": r.location_id,
             "location_name": r.location.name if r.location else str(r.location_id),
             "attribute_value_ids": [v.id for v in r.attribute_values],
+            "color_id": _parse_variant_key(r.variant_key)[1],
             "qty": float(r.qty),
             "qty_cones": int(r.qty_cones or 0),
             "qty_boxes": int(r.qty_boxes or 0),

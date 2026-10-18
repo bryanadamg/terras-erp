@@ -75,14 +75,26 @@ def _variant_maps(pl: PickList) -> tuple[dict, dict]:
     return sol_attrs, sol_colors
 
 
+async def _line_variant(db: AsyncSession, l: PickListLine, src, sol_attrs: dict, sol_colors: dict) -> tuple:
+    """(attribute_value_ids, color_id) the line's stock actually sits under.
+
+    A carton is keyed by what was packed, which may carry more (or a later-backfilled
+    shade) than its SO line states — read it off the carton's own balance row, or the
+    deduction addresses a row that doesn't exist ("have 0.0"). Bulk lines keep the
+    SO line's variant.
+    """
+    if l.batch_id:
+        return await stock_service.batch_variant(db, l.batch_id, src)
+    return sol_attrs.get(str(l.sales_order_line_id), []), sol_colors.get(str(l.sales_order_line_id))
+
+
 async def check_availability(db: AsyncSession, pl: PickList, pick_lines: list[PickListLine]) -> list[str]:
     """Shortage messages for `pl`, empty when every line can be deducted."""
     sol_attrs, sol_colors = _variant_maps(pl)
     shortages: list[str] = []
     for l in pick_lines:
         src = l.source_location_id or pl.source_location_id
-        attr_ids = sol_attrs.get(str(l.sales_order_line_id), [])
-        color_id = sol_colors.get(str(l.sales_order_line_id))
+        attr_ids, color_id = await _line_variant(db, l, src, sol_attrs, sol_colors)
         batch_key = str(l.batch_id) if l.batch_id else ""
         bal = await stock_service.get_stock_balance(db, l.item_id, src, attr_ids, batch_key, color_id=color_id)
         if bal + (-float(l.qty_picked)) < 0:
@@ -97,6 +109,7 @@ async def issue_stock(db: AsyncSession, pl: PickList, pick_lines: list[PickListL
     sol_attrs, sol_colors = _variant_maps(pl)
     for l in pick_lines:
         src = l.source_location_id or pl.source_location_id
+        attr_ids, color_id = await _line_variant(db, l, src, sol_attrs, sol_colors)
         await stock_service.add_stock_entry(
             db,
             item_id=l.item_id,
@@ -104,8 +117,8 @@ async def issue_stock(db: AsyncSession, pl: PickList, pick_lines: list[PickListL
             qty_change=-float(l.qty_picked),
             reference_type="PICKING",
             reference_id=pl.code,
-            attribute_value_ids=sol_attrs.get(str(l.sales_order_line_id), []),
-            color_id=sol_colors.get(str(l.sales_order_line_id)),
+            attribute_value_ids=attr_ids,
+            color_id=color_id,
             batch_id=l.batch_id,
         )
 

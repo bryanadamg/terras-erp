@@ -407,7 +407,7 @@ async def get_so_reservations(
         # Size is joined as a column, not through BOMSize.size — that relationship
         # is lazy and this is an async route (MissingGreenlet on first access).
         select(StockReservation, ItemModel, ProductionRun.code, Color,
-               BOMSize.label, Size.name, SalesOrderLine.size_label, LineSize.name, Batch.batch_number)
+               BOMSize, Size.name, SalesOrderLine.size_label, LineSize.name, Batch.batch_number)
         .join(ItemModel, ItemModel.id == StockReservation.item_id)
         .outerjoin(ProductionRun, ProductionRun.id == StockReservation.production_run_id)
         .outerjoin(Color, Color.id == StockReservation.color_id)
@@ -427,7 +427,8 @@ async def get_so_reservations(
     out: list[StockReservationResponse] = []
     total_reserved = 0.0
     total_released = 0.0
-    for r, item, pr_code, color, size_label, size_name, line_label, line_size, batch_number in rows:
+    for r, item, pr_code, color, bom_size, size_name, line_label, line_size, batch_number in rows:
+        size_label = bom_size.label if bom_size is not None else None
         remaining = float(r.qty or 0) - float(r.qty_released or 0)
         if r.status == "ACTIVE":
             total_reserved += max(0.0, remaining)
@@ -449,7 +450,10 @@ async def get_so_reservations(
             color_id=r.color_id,
             color_code=color.code if color else None,
             color_name=color.name if color else None,
-            size_label=size_label or size_name or line_size or line_label,
+            # A BOM-sized reservation carries its target and range ("L-72 (70-74)");
+            # a line-sized one names a size no recipe has measured yet.
+            size_label=(stock_service.join_size(size_label or size_name, stock_service.size_measurement(bom_size))
+                        if bom_size is not None else None) or line_size or line_label,
             qty=float(r.qty or 0),
             qty_released=float(r.qty_released or 0),
             qty_remaining=max(0.0, remaining),
@@ -555,7 +559,8 @@ async def _allocation_lines(db: AsyncSession, so: SalesOrder) -> list[SOAllocati
             qty=float(qty if qty is not None else (bal.qty if bal else 0)),
             alt_qty=float(b.alt_qty) if b.alt_qty is not None else None,
             alt_uom=(po_rows.get(b.packing_order_id, (None, None))[1] or b.alt_uom),
-            size=size_names.get(str(b.id), (None, None))[1],
+            # Display only — the carton's stamped size with its target and range.
+            size=stock_service._bom_size_label(b.bom_size_snapshot) or size_names.get(str(b.id), (None, None))[1],
             packed_at=b.created_at, reservation_id=reservation_id,
         )
 
@@ -586,7 +591,8 @@ async def _allocation_lines(db: AsyncSession, so: SalesOrder) -> list[SOAllocati
             item_code=getattr(line, "item_code", "") or "",
             item_name=getattr(line, "item_name", "") or "",
             uom=f.get("base_uom", "") or "",
-            size=line.size_display,
+            # Display only ("L-72 (70-74)") — nothing compares on this field.
+            size=stock_service.join_size(line.size_display, line.size_measurement),
             variant_attributes=getattr(line, "variant_attributes", None),
             color_code=getattr(line, "color_code", None) or getattr(line, "color_name", None),
             color_hex=getattr(line, "color_hex", None),

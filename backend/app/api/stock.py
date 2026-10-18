@@ -377,13 +377,13 @@ async def transfer_stock(
     await stock_service.add_stock_entry(
         db, item_id=item.id, location_id=payload.from_location_id,
         qty_change=-payload.qty, reference_type="Transfer", reference_id=ref,
-        attribute_value_ids=attrs, batch_id=payload.batch_id,
+        attribute_value_ids=attrs, batch_id=payload.batch_id, color_id=payload.color_id,
         cones_change=-c, boxes_change=-b, drums_change=-d,
     )
     await stock_service.add_stock_entry(
         db, item_id=item.id, location_id=payload.to_location_id,
         qty_change=payload.qty, reference_type="Transfer", reference_id=ref,
-        attribute_value_ids=attrs, batch_id=payload.batch_id,
+        attribute_value_ids=attrs, batch_id=payload.batch_id, color_id=payload.color_id,
         cones_change=c, boxes_change=b, drums_change=d,
     )
     await db.commit()
@@ -456,13 +456,13 @@ async def transfer_stock_bulk(
         await stock_service.add_stock_entry(
             db, item_id=item.id, location_id=ln.from_location_id,
             qty_change=-ln.qty, reference_type="Transfer", reference_id=ref,
-            attribute_value_ids=attrs, batch_id=ln.batch_id,
+            attribute_value_ids=attrs, batch_id=ln.batch_id, color_id=ln.color_id,
             cones_change=-c, boxes_change=-b, drums_change=-d,
         )
         await stock_service.add_stock_entry(
             db, item_id=item.id, location_id=payload.to_location_id,
             qty_change=ln.qty, reference_type="Transfer", reference_id=ref,
-            attribute_value_ids=attrs, batch_id=ln.batch_id,
+            attribute_value_ids=attrs, batch_id=ln.batch_id, color_id=ln.color_id,
             cones_change=c, boxes_change=b, drums_change=d,
         )
     await db.commit()
@@ -542,7 +542,7 @@ _SOH_SORT_KEYS = ("item", "itemCategory", "location", "warehouse", "batch", "mo"
 async def get_stock_balance_paginated(
     search: Optional[str] = Query(None, description="Matches item name/code, item category, location, warehouse, lot number, supplier lot, lot notes, MO/WO code"),
     location_id: Optional[str] = Query(None, description="Location id — matches that location plus any bin directly under it"),
-    warehouse_id: Optional[str] = Query(None, description="Root-warehouse id above the row's location; '__uncat__' = location with no warehouse above it"),
+    warehouse_id: Optional[str] = Query(None, description="Root-warehouse id above the row's location; '__uncat__' = stock on a top-level location itself"),
     category_id: Optional[str] = Query(None, description="Item category id, or comma-separated ids (a category plus its descendants)"),
     mo_code: Optional[str] = Query(None, description="Exact MO code — set by clicking a row's MO chip"),
     wo_code: Optional[str] = Query(None, description="Exact WO code — set by clicking a row's WO chip"),
@@ -599,8 +599,10 @@ async def get_stock_balance_paginated(
     LocL = aliased(Location)
     LocP = aliased(Location)
     LocG = aliased(Location)
-    wh_id_expr = func.coalesce(LocG.id, LocP.id)
-    wh_name_expr = func.coalesce(LocG.name, LocP.name)
+    # Root warehouse of the row — the location itself when it has no parent, so
+    # stock booked straight onto a warehouse is still "in" that warehouse.
+    wh_id_expr = func.coalesce(LocG.id, LocP.id, LocL.id)
+    wh_name_expr = func.coalesce(LocG.name, LocP.name, LocL.name)
 
     # An all-zero balance row is not stock; get_all_stock_balances drops it in Python
     # and this must drop the same rows or the two endpoints disagree on `total`.
@@ -625,7 +627,7 @@ async def get_stock_balance_paginated(
         conditions.append(or_(StockBalance.location_id == location_id, LocL.parent_id == location_id))
     if warehouse_id:
         if warehouse_id == "__uncat__":
-            conditions.append(wh_id_expr.is_(None))
+            conditions.append(LocL.parent_id.is_(None))
         else:
             conditions.append(wh_id_expr == warehouse_id)
     if category_id:
@@ -748,6 +750,11 @@ async def get_stock_balance_paginated(
         )
     )).all()
 
+    # The row's own key names its shade and attributes — the only source for a lot
+    # with no MO (manual BAT, PU carton) or an unlotted coloured row. One query
+    # per kind for the page (describe_variant_keys).
+    by_key = await stock_service.describe_variant_keys(db, {r[0].variant_key for r in rows})
+
     items = []
     for (bal, i_name, i_code, i_uom, i_ends, i_cat_id, cat_name, loc_name,
          b_number, b_vendor_lot, b_quality, b_notes, b_snapshot, b_ends,
@@ -757,6 +764,10 @@ async def get_stock_balance_paginated(
         lotted = bool(bal.batch_key)
         notes = (b_notes or "").strip() if lotted else ""
         alt_uom = (po_uom2 or "").strip() if lotted and b_alt_qty is not None else ""
+        key_info = by_key.get(bal.variant_key) or {}
+        # The producing MO's shade wins (same order as the lot pages); the key fills in.
+        shade = (color_code, color_name, color_hex) if (lotted and color_code) else (
+            key_info.get("color_code"), key_info.get("color_name"), key_info.get("color_hex"))
         items.append({
             "item_id": bal.item_id,
             "item_name": i_name or str(bal.item_id),
@@ -770,6 +781,7 @@ async def get_stock_balance_paginated(
             "location_id": bal.location_id,
             "location_name": loc_name or str(bal.location_id),
             "attribute_value_ids": [v.id for v in bal.attribute_values],
+            "color_id": stock_service._parse_variant_key(bal.variant_key)[1],
             "qty": float(bal.qty),
             "qty_cones": int(bal.qty_cones or 0),
             "qty_boxes": int(bal.qty_boxes or 0),
@@ -786,9 +798,10 @@ async def get_stock_balance_paginated(
             # Shade identity of the MO that produced this lot (Color Library, via
             # source_wo -> MO.color_id) — same resolution /batches/paginated uses
             # (_resolve_batch_origins), so a lot's shade chip agrees everywhere.
-            "color_code": color_code if lotted else None,
-            "color_name": color_name if lotted else None,
-            "color_hex": color_hex if lotted else None,
+            "color_code": shade[0],
+            "color_name": shade[1],
+            "color_hex": shade[2],
+            "variant_attributes": key_info.get("variant_attributes") or [],
             "labdip_variant_code": mo_labdip_code if lotted else None,
             "alt_qty": float(b_alt_qty) if alt_uom else None,
             "alt_uom": alt_uom or None,

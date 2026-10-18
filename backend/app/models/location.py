@@ -57,6 +57,9 @@ class Location(Base):
         remote_side="Location.id",
         backref=backref("children", lazy="selectin"),
         lazy="joined",
+        # Two hops so a bin arrives with its zone AND warehouse — full_path below
+        # can then name all three without IO (the tree is 3 levels).
+        join_depth=2,
     )
 
     # These properties must NEVER trigger lazy IO — Location is serialized inside
@@ -66,6 +69,19 @@ class Location(Base):
         if "parent" in sa_inspect(self).unloaded:
             return None
         return self.parent.name if self.parent else None
+
+    @property
+    def full_path(self) -> str:
+        """"Warehouse / Zone / Bin" from the eager-loaded parents; stops at the
+        first parent that isn't loaded rather than lazy-loading it."""
+        names, cur, seen = [], self, set()
+        while cur is not None and cur.id not in seen:
+            seen.add(cur.id)
+            names.append(cur.name or cur.code)
+            if "parent" in sa_inspect(cur).unloaded:
+                break
+            cur = cur.parent
+        return " / ".join(reversed(names))
 
     @property
     def has_children(self) -> bool:

@@ -47,9 +47,10 @@ export default function LeftoverBeamModal({ wo, onClose, onDone }: Props) {
     // Newly-minted leftover lot to print right after a successful dismount.
     const [printLot, setPrintLot] = useState<any>(null);
 
-    // Stock lives only in leaf locations — same filter the monitor's unmount strip uses.
+    // Any childless location is a destination — a warehouse with no zones holds
+    // stock directly (same leaf rule as the backend's putaway bins).
     const leafLocations = useMemo(
-        () => (locations || []).filter((l: any) => !l.has_children && l.location_type !== 'warehouse'),
+        () => (locations || []).filter((l: any) => !l.has_children),
         [locations],
     );
     const locLabel = (l: any) => l.full_path || (l.parent_name ? `${l.parent_name} / ${l.name}` : l.name);

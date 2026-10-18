@@ -15,6 +15,26 @@ on `main`:
 
 ## [Unreleased]
 
+## [0.43.0] - 2026-10-18
+
+### Added
+- New Production Run made to stock offers Color Code and Colors variant pickers for a colour-type finished good, not only when the run comes from an SO
+- Lot Management and Stock On Hand name a lot's colour as code plus variant in one chip, e.g. 00001-B-6 · NAVY, also when the Color Library name only repeats the code
+
+### Changed
+- MRP net free counts on-hand only in each item's putaway location (and the zones and bins under it), so a remnant left on the production floor no longer cancels or shrinks a new run. Items with no putaway location still net plant-wide. The net requirement preview's Net from column names that location
+- Locations read as the full Warehouse / Zone / Bin path wherever a bin name alone was ambiguous: Stock On Hand, the Stock Ledger report and print, MO putaway, the MO tab and sheet, the PR pull sheet and Quarantine Packing
+- Sizes show the BOM target and range, e.g. L-72 (70-74), on the New Production Run qty inputs and preview, the Kartu Kerja, the pick readiness board, Allocate Stock and SO reservations
+
+### Fixed
+- Moving or adjusting coloured finished goods on Stock On Hand no longer fails with "Insufficient stock. Current: 0.0"
+- Shipment dispatch, scanning an unsuggested carton onto a pick list, logging actual material use on a WO, and rejecting an unlotted completion after its MO's colour was set all use the stock's real colour and attributes, instead of failing or booking 0
+- Filtering Stock On Hand by a warehouse includes stock booked straight onto the warehouse, not only its zones and bins
+- Manual lots and packed cartons keep their colour and attributes on Quarantine Packing, Lot Management (also once used up), WO staging and Stock On Hand, and manual lots of different colours no longer merge into one Greige row
+- The colour no longer shows twice when the Colors variant repeats the shade code, on WO, monitor, packing and SO chips and the SO printouts. The Kartu Packing prints WARNA as the variant and KODE WARNA as the code
+- Beam unmount and leftover lists include warehouses without zones
+- Moving a location updates its type and its children's, and refuses a move that would nest past warehouse > zone > bin
+
 ## [0.42.0] - 2026-10-13
 
 ### Added

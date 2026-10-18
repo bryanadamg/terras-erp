@@ -5,8 +5,9 @@ requirement is netted against *net-free* available stock BEFORE its component
 MO is created. Fully-covered components are skipped (and their own sub-tree is
 NOT exploded); partially-covered components are resized to the shortfall.
 
-    net_free(item, variant, location)
-        = on_hand     -- StockBalance, rolled up across the location's leaf spots
+    net_free(item, variant)
+        = on_hand     -- StockBalance in the item's store (its putaway location and
+                         everything under it), plant-wide when it has none
         + incoming    -- outstanding output of OTHER open MOs producing the item,
                          excluding COMMITTED output (see below)
         - required    -- outstanding component demand of OTHER open MOs
@@ -33,8 +34,11 @@ Scope notes (Tier 1):
   deliberately keep producing an item that already carries stock (e.g. greige
   stockpiling). A single ad-hoc MO created via POST /manufacturing-orders is
   make-to-order and its root is still never netted; only its descendants are.
-- Cross-location supply (transfer instead of make) is NOT modelled here; netting
-  is scoped to each node's planned source location and its leaf spots.
+- Store scope: on-hand counts only inside the item's putaway location subtree
+  (FG -> Finished Goods, greige -> Greige Store, beam -> WIP / GD Beam), so a
+  remnant left at a production spot is treated as still in use, not as free
+  stock that cancels a new order. An item with no putaway location nets
+  plant-wide. Incoming/demand stay plant-wide — an MO's output lands in the store.
 - Safety stock and BOM tolerance % are ignored (gross = qty x percentage / 100);
   this mirrors the qty an MO is actually sized at.
 - net_free is a creation-time snapshot for COMPONENTS: no reservation row is
@@ -76,7 +80,7 @@ from app.models.attribute import Attribute, AttributeValue
 from app.models.color import Color
 from app.models.item import Item
 from app.services import reject_service
-from app.services.stock_service import _generate_variant_key
+from app.services.stock_service import _generate_variant_key, join_size, size_measurement
 from app.services.mrp_service import (
     _line_decoupled, _combo_attr_id, _line_combo_value_ids, _effective_combo, active_sub_bom,
 )
@@ -293,8 +297,9 @@ def allocate_onhand(buckets: dict[str, float], rows: list[tuple[str, float]]) ->
     return out
 
 
-async def onhand_size_rows(db: AsyncSession, item_ids) -> dict:
-    """(item_id, variant_key, size_token) -> good on-hand, plant-wide.
+async def onhand_size_rows(db: AsyncSession, item_ids, location_ids=None) -> dict:
+    """(item_id, variant_key, size_token) -> good on-hand, plant-wide unless
+    `location_ids` scopes it.
 
     The size of a physical pile is only ever recorded on its lot
     (`Batch.bom_size_snapshot`), so balances are joined out to their batch; a row
@@ -310,6 +315,7 @@ async def onhand_size_rows(db: AsyncSession, item_ids) -> dict:
         .where(
             StockBalance.item_id.in_(list(item_ids)),
             StockBalance.batch_key.not_in(rejected_batch_keys()),
+            *([StockBalance.location_id.in_(list(location_ids))] if location_ids is not None else []),
         )
     )).all()
     for iid, vkey, qty, snapshot in rows:
@@ -345,6 +351,9 @@ class Availability:
         # (item, vkey) -> {size_token: running free qty}; the ledger is per-bucket
         self._remaining: dict[tuple, dict[str, float]] = {}
         self._onhand: dict[tuple, dict[str, float]] = {}        # (item, vkey) -> {token: on-hand}
+        self._store: dict[str, set | None] = {}                 # item -> store location subtree
+        self.store_root: dict[str, object] = {}                 # item -> its putaway location id
+        self._loc_children: dict | None = None
         self.sizes: SizeResolver = SizeResolver()               # shared with the report surfaces
 
     @classmethod
@@ -463,12 +472,37 @@ class Availability:
                    or self.sizes.token_for_size_id(line_sid, line_label))
             self._reserved[(str(item_id), vkey or "", tok)] += remaining
 
+    async def _store_scope(self, item_id: str) -> set | None:
+        """The item's putaway location plus every location under it, or None
+        (plant-wide) when the item master names no putaway location."""
+        if item_id not in self._store:
+            put = (await self.db.execute(
+                select(Item.default_putaway_location_id).where(Item.id == item_id)
+            )).scalar()
+            if not put:
+                self._store[item_id] = None
+            else:
+                self.store_root[item_id] = put
+                if self._loc_children is None:
+                    self._loc_children = defaultdict(list)
+                    for lid, parent in (await self.db.execute(select(Location.id, Location.parent_id))).all():
+                        if parent:
+                            self._loc_children[parent].append(lid)
+                scope, stack = set(), [put]
+                while stack:
+                    cur = stack.pop()
+                    if cur not in scope:
+                        scope.add(cur)
+                        stack.extend(self._loc_children.get(cur, []))
+                self._store[item_id] = scope
+        return self._store[item_id]
+
     async def _on_hand_buckets(self, item_id: str, vkey: str) -> dict[str, float]:
-        """On-hand of (item, variant) split by size token, summed across ALL stock
-        locations (single-plant scope). Same query the report surfaces use."""
+        """On-hand of (item, variant) split by size token, inside the item's store
+        (see `_store_scope`). Same query the report surfaces use."""
         cache_key = (item_id, vkey)
         if cache_key not in self._onhand:
-            rows = await onhand_size_rows(self.db, [item_id])
+            rows = await onhand_size_rows(self.db, [item_id], await self._store_scope(item_id))
             buckets: dict[str, float] = defaultdict(float)
             for (iid, vk, tok), qty in rows.items():
                 if iid == item_id and vk == vkey:
@@ -619,6 +653,18 @@ class Availability:
 # path if its netting/location logic changes.
 # ─────────────────────────────────────────────────────────────────────────────
 
+async def _apply_store(avail: "Availability", nodes: list[dict], loc_names: dict) -> None:
+    """Net from = the store each node's on-hand was actually counted in (see
+    `_store_scope`), not the planned source location netting never looks at."""
+    for n in nodes:
+        item_s = str(n["item_id"])
+        await avail._store_scope(item_s)
+        root = avail.store_root.get(item_s)
+        if root:
+            n["net_from_location_id"] = root
+            n["net_from_location_name"] = loc_names.get(str(root), "")
+
+
 async def _location_name_map(db: AsyncSession) -> dict:
     rows = (await db.execute(select(Location.id, Location.name, Location.code))).all()
     return {str(i): (n or c or "") for i, n, c in rows}
@@ -743,12 +789,14 @@ async def _apply_chips(db: AsyncSession, nodes: list[dict]) -> None:
 
     size_map: dict[str, str] = {}
     if size_ids:
-        for sid, label, sname in (await db.execute(
-            select(BOMSize.id, BOMSize.label, Size.name)
+        for bs, sname in (await db.execute(
+            select(BOMSize, Size.name)
             .outerjoin(Size, Size.id == BOMSize.size_id)
             .where(BOMSize.id.in_(size_ids))
         )).all():
-            size_map[str(sid)] = sname or label or ""
+            # "L-72 (70-74)" — the size with its BOM target and range, as every
+            # size chip and the run's own qty inputs read it.
+            size_map[str(bs.id)] = join_size(sname or bs.label, size_measurement(bs)) or ""
 
     color_map: dict[str, dict] = {}
     if color_ids:
@@ -973,6 +1021,7 @@ async def preview_production_run(db, bom_entries, location, source_location, exc
         current_gen = next_gen
         level += 1
 
+    await _apply_store(avail, nodes, loc_names)
     await _apply_chips(db, nodes)
     return nodes
 
@@ -1036,5 +1085,6 @@ async def preview_mo(db, bom_id, qty, location, source_location, create_nested=T
         loc_id = location.id if location else None
         src = source_location.id if source_location else loc_id
         await _preview_children(db, avail, bom_id, float(qty), src, loc_id, 1, nodes, loc_names)
+    await _apply_store(avail, nodes, loc_names)
     await _apply_chips(db, nodes)
     return nodes

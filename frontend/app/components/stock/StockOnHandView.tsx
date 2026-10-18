@@ -8,7 +8,7 @@ import { useToast } from '../shared/Toast';
 import SearchableSelect from '@bryanadamg/terras-ui/components/Combobox';
 import ModalWrapper from '../shared/ModalWrapper';
 import Pager from '../shared/Pager';
-import TreeSelect, { buildLocationFilterTree, buildLocationPickerTree, buildCategoryTree } from '../shared/TreeSelect';
+import TreeSelect, { buildLocationFilterTree, buildLocationPickerTree, buildCategoryTree, locationAncestorNames } from '../shared/TreeSelect';
 import { lotColorLabel } from '../shared/LotChips';
 import { formatAlt } from '../shared/altUnit';
 import { useRowSelection, RowCheckbox, SelectAllCheckbox, SortableTh, lvThSticky, lvZebra, Dash, ResizableTable } from '../shared/listViewTheme';
@@ -158,6 +158,7 @@ export default function StockOnHandView({ locations, attributes, categories, ite
                     qty,
                     batch_id: transferTarget.batch_key || null,
                     attribute_value_ids: transferTarget.attribute_value_ids || [],
+                    color_id: transferTarget.color_id || null,
                     qty_cones: transferCones ? parseInt(transferCones, 10) : null,
                     qty_boxes: transferBoxes ? parseInt(transferBoxes, 10) : null,
                     qty_drums: transferDrums ? parseInt(transferDrums, 10) : null,
@@ -208,6 +209,7 @@ export default function StockOnHandView({ locations, attributes, categories, ite
                 qty,
                 batch_id: bal.batch_key || null,
                 attribute_value_ids: bal.attribute_value_ids || [],
+                color_id: bal.color_id || null,
                 qty_cones: whole ? (bal.qty_cones || null) : null,
                 qty_boxes: whole ? (bal.qty_boxes || null) : null,
                 qty_drums: whole ? (bal.qty_drums || null) : null,
@@ -292,6 +294,7 @@ export default function StockOnHandView({ locations, attributes, categories, ite
                     item_code: t.item_code,
                     location_code: locationCode,
                     attribute_value_ids: t.attribute_value_ids || [],
+                    color_id: t.color_id || null,
                     qty: qtyDelta,
                     qty_cones: coneDelta || null,
                     qty_boxes: boxDelta || null,
@@ -409,46 +412,16 @@ export default function StockOnHandView({ locations, attributes, categories, ite
     };
 
     const getLocationName = (id: string) => locations.find((l: any) => l.id === id)?.name || id;
+    // "Warehouse / Zone / Bin" where a bare bin name (A1) would be ambiguous.
+    const getLocationPath = (id: string): string => locations.find((l: any) => l.id === id)?.full_path || '';
 
     const locMap = useMemo(() => {
         const m: Record<string, any> = {};
         for (const l of (locations || [])) m[l.id] = l;
         return m;
     }, [locations]);
-    // Walk up to the root warehouse (handles 2-level zone and 3-level bin).
-    const getWarehouseId = (locId: string): string | null => {
-        const loc = locMap[locId];
-        if (!loc?.parent_id) return null;
-        const parent = locMap[String(loc.parent_id)];
-        if (!parent?.parent_id) return String(loc.parent_id); // parent is warehouse
-        return String(parent.parent_id); // grandparent is warehouse (bin case)
-    };
-    const getWarehouseName = (locId: string): string => {
-        const wid = getWarehouseId(locId);
-        return wid ? (locMap[wid]?.name || '') : '';
-    };
+    const getAncestorNames = (locId: string): string[] => locationAncestorNames(locMap, locId);
 
-    // Combined Warehouse → Location dropdown. Top-level locations with children
-    // are warehouse groups; childless top-level locations hold stock directly and
-    // fall under "No Warehouse".
-    const byName = (a: any, b: any) => (a.name || '').localeCompare(b.name || '');
-    const topLevel = useMemo(() => (locations || []).filter((l: any) => !l.parent_id), [locations]);
-    const childrenByWh = useMemo(() => {
-        const m: Record<string, any[]> = {};
-        for (const l of (locations || [])) {
-            if (l.parent_id) (m[l.parent_id] ||= []).push(l);
-        }
-        for (const k of Object.keys(m)) m[k].sort(byName);
-        return m;
-    }, [locations]);
-    const warehouseGroups = useMemo(
-        () => topLevel.filter((w: any) => (childrenByWh[w.id] || []).length > 0).sort(byName),
-        [topLevel, childrenByWh]
-    );
-    const standaloneLocs = useMemo(
-        () => topLevel.filter((w: any) => (childrenByWh[w.id] || []).length === 0).sort(byName),
-        [topLevel, childrenByWh]
-    );
 
     // Encode warehouse-vs-location into one select value; the two filter states
     // stay mutually exclusive (a specific location overrides a whole-warehouse pick).
@@ -610,7 +583,7 @@ export default function StockOnHandView({ locations, attributes, categories, ite
         <FormSection title="Stock">
             <div style={{ fontWeight: 'bold' }}>{bal.item_name}</div>
             <div style={{ fontSize: 10, color: '#666' }}>
-                {locPrefix}: {bal.location_name || getLocationName(bal.location_id)}
+                {locPrefix}: {getLocationPath(bal.location_id) || bal.location_name}
                 {bal.batch_key ? ` · Lot: ${bal.batch_number || bal.batch_key}` : ''}
                 {' · '}{qtyLabel}: {bal.qty} {bal.item_uom || ''}
             </div>
@@ -696,11 +669,11 @@ export default function StockOnHandView({ locations, attributes, categories, ite
                 </td>
                 <td style={{ padding: '4px 8px', fontFamily: xpFont, fontSize: '11px', overflow: 'hidden', ...colDivider }}>
                     <div style={{ display: 'flex', flexWrap: 'wrap', gap: 3, maxWidth: '100%' }} className={undefined}>
-                        {getWarehouseName(bal.location_id) && (
-                            <Chip tone={REF_TONES.warehouse} truncate size="xs">
-                                {getWarehouseName(bal.location_id)}
+                        {getAncestorNames(bal.location_id).map((name, i) => (
+                            <Chip key={i} tone={REF_TONES.warehouse} truncate size="xs">
+                                {name}
                             </Chip>
-                        )}
+                        ))}
                         <Chip tone={REF_TONES.bin} truncate size="xs">
                             {bal.location_name || getLocationName(bal.location_id)}
                         </Chip>
@@ -771,7 +744,7 @@ export default function StockOnHandView({ locations, attributes, categories, ite
                                 swatch={colorInfo.hex || null}
                                 title={colorInfo.pending
                                     ? `Shade pending lab dip approval: ${colorInfo.label}`
-                                    : `Color: ${colorInfo.name && colorInfo.name !== colorInfo.label ? `${colorInfo.label} — ${colorInfo.name}` : colorInfo.label}`}
+                                    : `Color: ${colorInfo.label}`}
                             >
                                 {colorInfo.label}{colorInfo.pending ? ' (pending)' : ''}
                             </VariantChip>
@@ -943,7 +916,7 @@ export default function StockOnHandView({ locations, attributes, categories, ite
                                                 <div style={{ fontWeight: 'bold' }}>{bal.item_name}</div>
                                                 <CodeChip code={bal.item_code} tier={2} />
                                             </td>
-                                            <td style={{ padding: '3px 6px' }}>{bal.location_name || getLocationName(bal.location_id)}</td>
+                                            <td style={{ padding: '3px 6px' }}>{getLocationPath(bal.location_id) || bal.location_name}</td>
                                             <td style={{ padding: '3px 6px', fontFamily: CODE_FONT, fontSize: 10 }}>
                                                 <div>{bal.batch_key ? (bal.batch_number || bal.batch_key) : '—'}</div>
                                                 {bal.mo_code && <div style={{ color: '#2a4a2a' }}>MO {bal.mo_code}</div>}

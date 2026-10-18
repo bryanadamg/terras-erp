@@ -1688,9 +1688,12 @@ async def add_mo_completion(
                     )
                     continue
                 in_batch = batch_by_item.get(str(ai.item_id))
+                # Unlotted: the key staging posted it under — the planned component's
+                # attrs (same as the BOM% path below); a true substitute has none.
+                planned = next((c for c in step_comps if str(c.item_id) == str(ai.item_id)), None)
                 b_attrs, b_color = (
                     await stock_service.batch_variant(db, in_batch.id, wo_input_loc)
-                    if in_batch else ([], None)
+                    if in_batch else ([uuid.UUID(s) for s in (planned.attribute_value_ids or [])] if planned else [], None)
                 )
                 await stock_service.add_stock_entry(
                     db,
@@ -1972,6 +1975,23 @@ async def reject_mo_completion(
         # output location for legacy rows) into the defect store, so it stops
         # counting as good stock but is still visible as reject on-hand.
         out_loc = comp.output_location_id or (wo.output_location_id if wo else None)
+        # The key this output was BOOKED under — the MO's shade/attrs may have been
+        # set since (lab-dip backfill, Set Color), and the current key would miss it.
+        from app.models.stock_ledger import StockLedger
+        posted = (await db.execute(
+            select(StockLedger)
+            .options(selectinload(StockLedger.attribute_values))
+            .where(
+                StockLedger.item_id == mo.item_id,
+                StockLedger.location_id == out_loc,
+                StockLedger.reference_type == "Manufacturing Order",
+                StockLedger.reference_id == mo.code,
+                StockLedger.batch_id.is_(None),
+                StockLedger.qty_change == float(comp.qty_completed),
+            )
+            .order_by(func.abs(func.extract("epoch", StockLedger.created_at - comp.created_at)))
+            .limit(1)
+        )).scalars().first()
         moved = await reject_service.move_unlotted_reject(
             db,
             item_id=mo.item_id,
@@ -1979,8 +1999,8 @@ async def reject_mo_completion(
             from_location_id=out_loc,
             to_location_id=reject_loc,
             reference_id=mo.code,
-            attribute_value_ids=[v.id for v in mo.attribute_values],
-            color_id=mo.color_id,
+            attribute_value_ids=[v.id for v in (posted.attribute_values if posted else mo.attribute_values)],
+            color_id=posted.color_id if posted else mo.color_id,
         )
         relocated = float(comp.qty_completed) if moved else 0.0
         if not moved:
@@ -2081,6 +2101,11 @@ async def complete_manufacturing_order_with_batches(
             attr_ids = [uuid.UUID(s) for s in comp.attribute_value_ids]
             key = (str(comp.item_id), ",".join(sorted(str(v) for v in attr_ids)))
             batch_id, _ = batch_map.get(key, (None, req))
+            # A lot is deducted under the key its balance row holds (shade, its
+            # MO's attrs), not the BOM line's — same rule as the completions route.
+            color_id = None
+            if batch_id:
+                attr_ids, color_id = await stock_service.batch_variant(db, batch_id, deduct_loc_id)
 
             await stock_service.add_stock_entry(
                 db,
@@ -2090,6 +2115,7 @@ async def complete_manufacturing_order_with_batches(
                 reference_type="Manufacturing Order",
                 reference_id=mo.code,
                 attribute_value_ids=attr_ids,
+                color_id=color_id,
                 batch_id=batch_id,
             )
 

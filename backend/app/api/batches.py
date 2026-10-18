@@ -196,7 +196,23 @@ async def _resolve_variants_from_stock_key(db: AsyncSession, batches: list[Batch
 
     Only fills what the MO walk above left empty: a produced lot's own MO is the
     better authority on its shade, and this must never overwrite it.
+
+    A batch that arrives without `variant_key` (a bare Batch row, or a used-up lot
+    whose only balance rows are at 0) gets it read here — biggest row first, no qty
+    filter, same rule as `stock_service.batch_variant` — so the fallback works for
+    every caller, not only `_enrich_batches`.
     """
+    missing = {str(b.id): b for b in batches if getattr(b, "variant_key", None) is None}
+    if missing:
+        rows = (await db.execute(
+            select(StockBalance.batch_key, StockBalance.variant_key)
+            .filter(StockBalance.batch_key.in_(list(missing)))
+            .order_by(StockBalance.batch_key, StockBalance.qty.desc())
+        )).all()
+        for key, vkey in rows:
+            b = missing.pop(key, None)
+            if b is not None:
+                b.variant_key = vkey or ""
     pending = [
         b for b in batches
         if not getattr(b, "variant_attributes", None) and getattr(b, "variant_key", None)

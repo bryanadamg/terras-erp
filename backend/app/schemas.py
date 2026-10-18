@@ -1453,6 +1453,7 @@ class StockTransferCreate(BaseModel):
     qty: float
     batch_id: UUID | None = None
     attribute_value_ids: list[UUID] = []
+    color_id: UUID | None = None
     qty_cones: int | None = None
     qty_boxes: int | None = None
     qty_drums: int | None = None
@@ -1466,6 +1467,7 @@ class StockBulkTransferLine(BaseModel):
     qty: float
     batch_id: UUID | None = None
     attribute_value_ids: list[UUID] = []
+    color_id: UUID | None = None
     qty_cones: int | None = None
     qty_boxes: int | None = None
     qty_drums: int | None = None
@@ -1527,6 +1529,9 @@ class StockBalanceResponse(BaseModel):
     item_category_id: UUID | None = None
     item_category_name: str | None = None
     attribute_value_ids: list[UUID] = []
+    # FG shade folded into variant_key as `c:<uuid>` — moves/adjusts must send it
+    # back or they address a balance row that doesn't exist.
+    color_id: UUID | None = None
     location_id: UUID
     location_name: str = ""
     qty: float
@@ -1553,6 +1558,9 @@ class StockBalanceResponse(BaseModel):
     color_name: str | None = None
     color_hex: str | None = None
     labdip_variant_code: str | None = None
+    # Attributes behind the row's variant_key (name/system_role/value/hex) — lets
+    # the grid name the Colors variant beside the shade code, same as lot chips.
+    variant_attributes: list[dict] = []
     # Lot rows only: the counted alt figure (12 Pcs, 4 Pic) — a carton's packed count
     # in its packing order's uom2, or a hand-made lot's own Batch.alt_uom.
     alt_qty: float | None = None
@@ -4106,6 +4114,7 @@ class PickableOrderLine(BaseModel):
     # Ordered variant identity, resolved from this line's own stock variant key
     # (attributes + Color Library shade) plus its BOM size.
     size_label: str | None = None
+    size_measurement: str | None = None
     variant_attributes: list[BatchVariantAttr] | None = None
     color_id: UUID | None = None
     color_code: str | None = None
@@ -4222,6 +4231,7 @@ class PickListSuggestedLine(BaseModel):
     # carry what is physically in each box — they can differ, and the planner
     # unchecking a carton is exactly who needs to see that.
     size_label: str | None = None
+    size_measurement: str | None = None
     variant_attributes: list[BatchVariantAttr] | None = None
     color_id: UUID | None = None
     color_code: str | None = None

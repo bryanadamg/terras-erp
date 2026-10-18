@@ -118,13 +118,14 @@ export const lotColorLabel = (b: LotLike): { label: string; name?: string | null
     const attrCode = attrs.find(a => a.system_role === 'labdip_color');
     const attrName = attrs.find(a => a.system_role === 'color');
     const code = b?.color_code || attrCode?.value || null;
-    const name = b?.color_name || attrName?.value || null;
+    // A library row often just repeats its code as its name — then the Colors
+    // variant (e.g. NAVY) is the real name and must not be shadowed by it.
+    const libName = b?.color_name && b.color_name !== code ? b.color_name : null;
+    const name = libName || attrName?.value || null;
     if (code || name) {
-        // Code and name are usually the same text — show the code alone, same as
-        // every other page's colour chip, and keep the name only for the tooltip
-        // when it actually says something the code doesn't.
+        // One chip, code first; the name only when it says something the code doesn't.
         return {
-            label: code || name || '',
+            label: code && name && name !== code ? `${code} · ${name}` : (code || name || ''),
             name,
             hex: resolveColorHex(b?.color_hex, attrs),
             pending: false,
@@ -214,13 +215,12 @@ export function LotChips({
         );
     }
     if (color) {
-        const colorFull = color.name && color.name !== color.label ? `${color.label} — ${color.name}` : color.label;
         chips.push(
             <LotChip
                 key="color"
                 tone={color.pending ? 'pending' : 'color'}
                 swatch={color.hex || null}
-                title={color.pending ? `Shade pending lab dip approval: ${colorFull}` : `Color: ${colorFull}`}
+                title={color.pending ? `Shade pending lab dip approval: ${color.label}` : `Color: ${color.label}`}
             >
                 {color.label}{color.pending ? ' (pending)' : ''}
             </LotChip>,

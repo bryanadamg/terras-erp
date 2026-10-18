@@ -68,9 +68,10 @@ export default function WorkCenterMonitorModal({ isOpen, onClose, workCenter, au
     // unmount permission — putting warp up and taking it down are different calls.
     const canMount = hasPermission('work_order.edit');
 
-    // Stock lives only in leaf locations — same filter/label the PR modal uses.
+    // Any childless location is a destination — a warehouse with no zones holds
+    // stock directly (same leaf rule as the backend's putaway bins).
     const leafLocations = useMemo(
-        () => (locations || []).filter((l: any) => !l.has_children && l.location_type !== 'warehouse'),
+        () => (locations || []).filter((l: any) => !l.has_children),
         [locations],
     );
     const locLabel = (l: any) => l.full_path || (l.parent_name ? `${l.parent_name} / ${l.name}` : l.name);

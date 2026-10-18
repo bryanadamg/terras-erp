@@ -34,7 +34,12 @@ export function useManufacturingHelpers({
     const getItemUom = (id: string) => findItem(id)?.uom || '';
     const getItemEnds = (id: string) => { const v = findItem(id)?.ends; return v != null ? v : null; };
     const getBOMCode = (id: string) => boms.find((b: any) => b.id === id)?.code || id;
-    const getLocationName = (id: string) => locations.find((l: any) => l.id === id)?.name || id;
+    // Full "Warehouse / Zone / Bin" — bins are named like "A1" in every zone, so a
+    // bare name is ambiguous on the MO tab, the MO sheet and the pull sheet.
+    const getLocationName = (id: string) => {
+        const l = locations.find((x: any) => x.id === id);
+        return l?.full_path || l?.name || id;
+    };
     const getWCName = (id: string) => workCenters.find((w: any) => w.id === id)?.name || id;
 
     const getAttributeValueName = (valId: string) => attributeValueName(attributes, valId);

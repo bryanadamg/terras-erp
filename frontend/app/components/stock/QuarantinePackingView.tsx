@@ -143,7 +143,9 @@ const DERIVED_FILTERS = [
 ];
 
 export default function QuarantinePackingView() {
-    const { authFetch, subscribeLiveEvents } = useData();
+    const { authFetch, subscribeLiveEvents, locations } = useData();
+    // Hold bins are named alike across areas — show the full Warehouse / Zone / Bin.
+    const locPath = (id: string | null) => (id && (locations || []).find((x: any) => x.id === id)?.full_path) || '';
     const { hasPermission } = useUser();
     const { formatTime: tzTime, formatCustom: tzCustom } = useTimezone();
     const { showToast } = useToast();
@@ -789,7 +791,7 @@ export default function QuarantinePackingView() {
                                     </>
                                 )}
                             </td>
-                            <td style={{ ...lotTd, ...dim }}>{l.location_name || '—'}</td>
+                            <td style={{ ...lotTd, ...dim }}>{locPath(l.location_id) || l.location_name || '—'}</td>
                             <td style={{ ...lotTd, ...dim }}>
                                 {l.quarantine_status
                                     ? <StatusChip status={l.quarantine_status.replace(/\s+/g, '_')} label={l.quarantine_status} />

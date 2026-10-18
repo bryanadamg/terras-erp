@@ -9,7 +9,7 @@
 import type { FieldDef, ResolvedField } from '../fieldRegistry';
 import type { RowSourceDef } from '../rowSources';
 import { txt, type PrintContext } from '../renderContext';
-import { joinSize } from '../../LotChips';
+import { joinSize, lotColorLabel } from '../../LotChips';
 
 export const SO_TABLE_DOC = 'so_table_report';
 
@@ -110,7 +110,7 @@ export function buildSoTableContext({
                 // Shade + attributes ride with the item; Size is the line's real size,
                 // not the attribute list it printed before sizes existed.
                 item_name: line
-                    ? [itemName(line.item_id), line.color_name, attrValues(line.attribute_value_ids || [])].filter(Boolean).join(' ')
+                    ? [itemName(line.item_id), lotColorLabel({ color_code: line.color_code, color_name: line.color_name })?.label, attrValues(line.attribute_value_ids || [])].filter(Boolean).join(' ')
                     : '',
                 size: line ? joinSize(line.size_display, line.size_measurement) : '',
                 qty_yd: line ? num(line.qty) : '',
