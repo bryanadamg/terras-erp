@@ -412,6 +412,8 @@ export default function StockOnHandView({ locations, attributes, categories, ite
     };
 
     const getLocationName = (id: string) => locations.find((l: any) => l.id === id)?.name || id;
+    // "Warehouse / Zone / Bin" where a bare bin name (A1) would be ambiguous.
+    const getLocationPath = (id: string): string => locations.find((l: any) => l.id === id)?.full_path || '';
 
     const locMap = useMemo(() => {
         const m: Record<string, any> = {};
@@ -602,7 +604,7 @@ export default function StockOnHandView({ locations, attributes, categories, ite
         <FormSection title="Stock">
             <div style={{ fontWeight: 'bold' }}>{bal.item_name}</div>
             <div style={{ fontSize: 10, color: '#666' }}>
-                {locPrefix}: {bal.location_name || getLocationName(bal.location_id)}
+                {locPrefix}: {getLocationPath(bal.location_id) || bal.location_name}
                 {bal.batch_key ? ` · Lot: ${bal.batch_number || bal.batch_key}` : ''}
                 {' · '}{qtyLabel}: {bal.qty} {bal.item_uom || ''}
             </div>
@@ -935,7 +937,7 @@ export default function StockOnHandView({ locations, attributes, categories, ite
                                                 <div style={{ fontWeight: 'bold' }}>{bal.item_name}</div>
                                                 <CodeChip code={bal.item_code} tier={2} />
                                             </td>
-                                            <td style={{ padding: '3px 6px' }}>{bal.location_name || getLocationName(bal.location_id)}</td>
+                                            <td style={{ padding: '3px 6px' }}>{getLocationPath(bal.location_id) || bal.location_name}</td>
                                             <td style={{ padding: '3px 6px', fontFamily: CODE_FONT, fontSize: 10 }}>
                                                 <div>{bal.batch_key ? (bal.batch_number || bal.batch_key) : '—'}</div>
                                                 {bal.mo_code && <div style={{ color: '#2a4a2a' }}>MO {bal.mo_code}</div>}
