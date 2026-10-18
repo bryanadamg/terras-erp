@@ -8,7 +8,7 @@ import {
     xpFont, xpBtn, xpInput, xpSelect, xpSep, CODE_FONT,
     TableSkeleton, useTableSkeletonMetrics, XPEmptyState, useServerSort, CodeChip, Chip, REF_TONES, XP_BTN, SKEL_PAGE_ROWS } from '../shared/xpTheme';
 import { LotChips, lotSizeLabel, lotColorLabel } from '../shared/LotChips';
-import TreeSelect, { buildLocationFilterTree, expandLocationFilterValue, buildCategoryTree, expandCategoryFilterValue } from '../shared/TreeSelect';
+import TreeSelect, { buildLocationFilterTree, expandLocationFilterValue, buildCategoryTree, expandCategoryFilterValue, locationAncestorNames } from '../shared/TreeSelect';
 import Pager from '../shared/Pager';
 import { xpBevel as sharedXpBevel, xpTitleBar as sharedXpTitleBar, xpToolbar as sharedXpToolbar, SearchField, FilterChipBar, SegmentedBar, FilterChipOption, pageFillStyle, flexFillStyle } from '../shared/shellTheme';
 import { lvThead, SortableTh, lvZebra, Dash, ResizableTable } from '../shared/listViewTheme';
@@ -87,13 +87,13 @@ export default function ReportsView(_props: any) {
     const getItemName = (e: any) => e.item_name || itemIndex?.[String(e.item_id)]?.name || e.item_id;
     const getItemCode = (e: any) => e.item_code || itemIndex?.[String(e.item_id)]?.code || '';
     const getLocName = (e: any) => e.location_name || locations.find((l: any) => l.id === e.location_id)?.name || e.location_id;
-    // A location's parent warehouse name (locations carry parent_name; matches Stock On-Hand).
+    // Every ancestor of the row's location, warehouse first (matches Stock On-Hand).
     const locMap = useMemo(() => {
         const m: Record<string, any> = {};
         for (const l of (locations || [])) m[l.id] = l;
         return m;
     }, [locations]);
-    const getWarehouseName = (e: any): string => locMap[e.location_id]?.parent_name || '';
+    const getAncestorNames = (e: any): string[] => locationAncestorNames(locMap, e.location_id);
     const skel = useTableSkeletonMetrics('stock-ledger-classic', listBodyRef, rows.length > 0);
 
     const net = totalIn + totalOut;
@@ -283,7 +283,7 @@ export default function ReportsView(_props: any) {
                 </td>
                 <td style={{ ...xpCell, fontSize: '11px', overflow: 'hidden' }}>
                     <div style={{ display: 'flex', flexWrap: 'wrap', gap: 3, maxWidth: '100%' }}>
-                        {getWarehouseName(e) && <Chip tone={REF_TONES.warehouse} truncate size="xs">{getWarehouseName(e)}</Chip>}
+                        {getAncestorNames(e).map((name, i) => <Chip key={i} tone={REF_TONES.warehouse} truncate size="xs">{name}</Chip>)}
                         <Chip tone={REF_TONES.bin} truncate size="xs">{getLocName(e)}</Chip>
                     </div>
                 </td>

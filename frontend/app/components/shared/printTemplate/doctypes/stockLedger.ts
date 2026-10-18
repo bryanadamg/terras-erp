@@ -85,7 +85,7 @@ const SL_ROWS: RowSourceDef = {
             item_name: e.item_name,
             item_code: e.item_code,
             attributes: e.attrs,
-            location: e.warehouse ? `${e.warehouse} / ${e.location_name || ''}` : e.location_name,
+            location: e.location_path || e.location_name,
             lot: e.vendor_lot ? `${e.batch_number || '—'} (Supplier: ${e.vendor_lot})` : (e.batch_number || '—'),
             movement: `${e.qty_change >= 0 ? '+' : ''}${fmtQty(e.qty_change)} ${e.item_uom || ''}`.trim(),
             qty: Number(e.qty_change),
@@ -134,7 +134,8 @@ export function buildStockLedgerContext({
             rows: (entries || []).map((e: any) => ({
                 ...e,
                 date: e.created_at ? formatDateTime(e.created_at) : '',
-                warehouse: locMap[e.location_id]?.parent_name || '',
+                // Full Warehouse / Zone / Bin path — a bin's parent alone is its zone.
+                location_path: locMap[e.location_id]?.full_path || '',
                 attrs: variantText(e),
             })),
             periodLabel,

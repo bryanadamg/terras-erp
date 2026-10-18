@@ -8,7 +8,7 @@ import { useToast } from '../shared/Toast';
 import SearchableSelect from '@bryanadamg/terras-ui/components/Combobox';
 import ModalWrapper from '../shared/ModalWrapper';
 import Pager from '../shared/Pager';
-import TreeSelect, { buildLocationFilterTree, buildLocationPickerTree, buildCategoryTree } from '../shared/TreeSelect';
+import TreeSelect, { buildLocationFilterTree, buildLocationPickerTree, buildCategoryTree, locationAncestorNames } from '../shared/TreeSelect';
 import { lotColorLabel } from '../shared/LotChips';
 import { formatAlt } from '../shared/altUnit';
 import { useRowSelection, RowCheckbox, SelectAllCheckbox, SortableTh, lvThSticky, lvZebra, Dash, ResizableTable } from '../shared/listViewTheme';
@@ -418,19 +418,7 @@ export default function StockOnHandView({ locations, attributes, categories, ite
         for (const l of (locations || [])) m[l.id] = l;
         return m;
     }, [locations]);
-    // Every ancestor name, root warehouse first — a bin keeps its zone
-    // (Finished Goods / GD FINISH GOODS 1 / A1), at any depth.
-    const getAncestorNames = (locId: string): string[] => {
-        const out: string[] = [];
-        const seen = new Set<string>();
-        let p = locMap[locId]?.parent_id;
-        while (p && !seen.has(String(p)) && locMap[String(p)]) {
-            seen.add(String(p));
-            out.unshift(locMap[String(p)].name || '');
-            p = locMap[String(p)].parent_id;
-        }
-        return out;
-    };
+    const getAncestorNames = (locId: string): string[] => locationAncestorNames(locMap, locId);
 
     // Combined Warehouse → Location dropdown. Top-level locations with children
     // are warehouse groups; childless top-level locations hold stock directly and

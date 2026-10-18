@@ -400,6 +400,22 @@ export function buildLocationPickerTree(locations: any[], excludeId?: string): T
 }
 
 /**
+ * Every ancestor name of a location, root warehouse first — a bin keeps its zone
+ * (Finished Goods / GD FINISH GOODS 1 / A1). `locById` maps id -> location row.
+ */
+export function locationAncestorNames(locById: Record<string, any>, locId: string): string[] {
+  const out: string[] = [];
+  const seen = new Set<string>();
+  let p = locById[String(locId)]?.parent_id;
+  while (p && !seen.has(String(p)) && locById[String(p)]) {
+    seen.add(String(p));
+    out.unshift(locById[String(p)].name || '');
+    p = locById[String(p)].parent_id;
+  }
+  return out;
+}
+
+/**
  * Expand a buildLocationFilterTree() select value ('wh:<id>' or 'loc:<id>') into
  * the full list of matching location ids (the node itself + all descendants),
  * so a server-side filter can match stock recorded at any depth below it.
