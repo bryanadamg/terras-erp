@@ -1975,6 +1975,23 @@ async def reject_mo_completion(
         # output location for legacy rows) into the defect store, so it stops
         # counting as good stock but is still visible as reject on-hand.
         out_loc = comp.output_location_id or (wo.output_location_id if wo else None)
+        # The key this output was BOOKED under — the MO's shade/attrs may have been
+        # set since (lab-dip backfill, Set Color), and the current key would miss it.
+        from app.models.stock_ledger import StockLedger
+        posted = (await db.execute(
+            select(StockLedger)
+            .options(selectinload(StockLedger.attribute_values))
+            .where(
+                StockLedger.item_id == mo.item_id,
+                StockLedger.location_id == out_loc,
+                StockLedger.reference_type == "Manufacturing Order",
+                StockLedger.reference_id == mo.code,
+                StockLedger.batch_id.is_(None),
+                StockLedger.qty_change == float(comp.qty_completed),
+            )
+            .order_by(func.abs(func.extract("epoch", StockLedger.created_at - comp.created_at)))
+            .limit(1)
+        )).scalars().first()
         moved = await reject_service.move_unlotted_reject(
             db,
             item_id=mo.item_id,
@@ -1982,8 +1999,8 @@ async def reject_mo_completion(
             from_location_id=out_loc,
             to_location_id=reject_loc,
             reference_id=mo.code,
-            attribute_value_ids=[v.id for v in mo.attribute_values],
-            color_id=mo.color_id,
+            attribute_value_ids=[v.id for v in (posted.attribute_values if posted else mo.attribute_values)],
+            color_id=posted.color_id if posted else mo.color_id,
         )
         relocated = float(comp.qty_completed) if moved else 0.0
         if not moved:
