@@ -1106,7 +1106,9 @@ async def scan_pick_list_unit(
         loc = await _unit_location(db, pu)
         qty = 0.0
         if loc:
-            qty = await stock_service.get_stock_balance(db, pu.item_id, loc, [], str(pu.id))
+            # The carton's own key — a coloured / attributed carton isn't keyed "".
+            ids, cid = await stock_service.batch_variant(db, pu.id, loc)
+            qty = await stock_service.get_stock_balance(db, pu.item_id, loc, ids, str(pu.id), color_id=cid)
         line = PickListLine(
             pick_list_id=pl.id,
             sales_order_line_id=target.id,
