@@ -407,7 +407,7 @@ async def get_so_reservations(
         # Size is joined as a column, not through BOMSize.size — that relationship
         # is lazy and this is an async route (MissingGreenlet on first access).
         select(StockReservation, ItemModel, ProductionRun.code, Color,
-               BOMSize.label, Size.name, SalesOrderLine.size_label, LineSize.name, Batch.batch_number)
+               BOMSize, Size.name, SalesOrderLine.size_label, LineSize.name, Batch.batch_number)
         .join(ItemModel, ItemModel.id == StockReservation.item_id)
         .outerjoin(ProductionRun, ProductionRun.id == StockReservation.production_run_id)
         .outerjoin(Color, Color.id == StockReservation.color_id)
@@ -427,7 +427,8 @@ async def get_so_reservations(
     out: list[StockReservationResponse] = []
     total_reserved = 0.0
     total_released = 0.0
-    for r, item, pr_code, color, size_label, size_name, line_label, line_size, batch_number in rows:
+    for r, item, pr_code, color, bom_size, size_name, line_label, line_size, batch_number in rows:
+        size_label = bom_size.label if bom_size is not None else None
         remaining = float(r.qty or 0) - float(r.qty_released or 0)
         if r.status == "ACTIVE":
             total_reserved += max(0.0, remaining)
@@ -449,7 +450,10 @@ async def get_so_reservations(
             color_id=r.color_id,
             color_code=color.code if color else None,
             color_name=color.name if color else None,
-            size_label=size_label or size_name or line_size or line_label,
+            # A BOM-sized reservation carries its target and range ("L-72 (70-74)");
+            # a line-sized one names a size no recipe has measured yet.
+            size_label=(stock_service.join_size(size_label or size_name, stock_service.size_measurement(bom_size))
+                        if bom_size is not None else None) or line_size or line_label,
             qty=float(r.qty or 0),
             qty_released=float(r.qty_released or 0),
             qty_remaining=max(0.0, remaining),
