@@ -30,12 +30,33 @@ def _assert_parent_ok(db: Session, parent_id, *, moving_id=None) -> str | None:
     if not parent:
         raise HTTPException(status_code=404, detail="Parent location not found")
     child_type = _infer_child_type(parent)
-    # Moving an existing location: ensure its children wouldn't exceed depth
-    if moving_id:
-        has_children = db.query(Location).filter(Location.parent_id == moving_id).first()
-        if has_children and child_type == 'bin':
-            raise HTTPException(status_code=400, detail="This location has sub-locations; cannot nest it as a bin")
+    # Moving an existing location: its whole subtree must still fit in 3 levels
+    # (a node with grandchildren can only be a warehouse, one with children can't
+    # be a bin). In a 3-level tree this also rules out moving under a descendant.
+    if moving_id and _subtree_height(db, moving_id) > _DEPTH_ROOM[child_type]:
+        raise HTTPException(status_code=400, detail="This location has sub-locations; moving it there would exceed 3 levels (warehouse > zone > bin)")
     return child_type
+
+
+_TYPE_BY_DEPTH = ('warehouse', 'zone', 'bin')
+_DEPTH_ROOM = {'warehouse': 2, 'zone': 1, 'bin': 0}
+
+
+def _children(db: Session, loc_id) -> list:
+    return db.query(Location).filter(Location.parent_id == loc_id).all()
+
+
+def _subtree_height(db: Session, loc_id) -> int:
+    kids = _children(db, loc_id)
+    return 0 if not kids else 1 + max(_subtree_height(db, k.id) for k in kids)
+
+
+def _retype_subtree(db: Session, loc: Location, loc_type: str) -> None:
+    """location_type follows depth — re-derive it for a moved node and everything under it."""
+    loc.location_type = loc_type
+    nxt = _TYPE_BY_DEPTH[min(_TYPE_BY_DEPTH.index(loc_type) + 1, 2)]
+    for kid in _children(db, loc.id):
+        _retype_subtree(db, kid, nxt)
 
 
 def _compute_full_path(loc_id, id_to_name: dict, id_to_parent: dict) -> str:
@@ -111,8 +132,9 @@ def update_location(location_id: str, payload: LocationUpdate, db: Session = Dep
     if "parent_id" in data:
         if loc.system_code:
             raise HTTPException(status_code=400, detail="System stores cannot be moved")
-        _assert_parent_ok(db, data["parent_id"], moving_id=loc.id)
+        new_type = _assert_parent_ok(db, data["parent_id"], moving_id=loc.id)
         loc.parent_id = data["parent_id"]
+        _retype_subtree(db, loc, new_type)
     # Hold-area flag is editable on system stores too — a plant may run its QC
     # hold somewhere other than the seeded Quarantine warehouse.
     if data.get("is_quarantine") is not None:
