@@ -318,14 +318,6 @@ export default function ProductionRunModal({
     // dialog read-only, which is the only place the rule is written out in full.
     const canEditFormula = hasPermission('admin.access');
 
-    // Leaf locations only (stock sits in leaves), labelled "Warehouse / Spot" —
-    // matches the MO creation panel's dropdowns.
-    const leafLocations = useMemo(
-        () => locations.filter((l: any) => !l.has_children && l.location_type !== 'warehouse'),
-        [locations]
-    );
-    const locLabel = (l: any) => l.full_path || (l.parent_name ? `${l.parent_name} / ${l.name}` : l.name);
-
     const [bomEntries, setBomEntries] = useState<BomEntryState[]>(() => {
         if (initialBomEntries && initialBomEntries.length > 0) {
             return initialBomEntries.map(e => ({
