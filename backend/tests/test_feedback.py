@@ -17,7 +17,7 @@ def test_anonymous_issue_carries_no_identity():
     issue = _issue(False)
     assert "Siti" not in issue["body"] and "siti" not in issue["body"]
     assert issue["title"] == "[bug] MO tab freezes"
-    assert issue["labels"] == ["feedback", "bug"]
+    assert issue["labels"] == ["feedback", "bug", "terras-erp"]
     assert "/manufacturing" in issue["body"] and "0.43.0" in issue["body"]
 
 

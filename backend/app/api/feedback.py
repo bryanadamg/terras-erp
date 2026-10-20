@@ -1,5 +1,8 @@
 """In-app feedback, forwarded to GitHub Issues.
 
+The form is terras-ui's `FeedbackDialog`, shared with terras-sku, whose
+`POST /api/v1/feedback` keeps the same contract in its own copy of this route.
+
 Anonymous by default: the issue carries no user identity unless the submitter
 ticks `include_name`. Login is still required, so only real users can post. For
 the same reason this route deliberately skips `audit_service.log_activity` —
@@ -22,6 +25,8 @@ from app.models.auth import User
 router = APIRouter()
 logger = logging.getLogger(__name__)
 
+APP_NAME = "terras-erp"
+
 
 class FeedbackCreate(BaseModel):
     kind: Literal["bug", "idea", "question"]
@@ -35,7 +40,7 @@ def build_issue(payload: FeedbackCreate, user: User, app_version: str, today: da
     first_line = message.splitlines()[0] if message else ""
     title = f"[{payload.kind}] {first_line[:80]}"
     context = [
-        f"**App:** teras-erp {app_version}",
+        f"**App:** {APP_NAME} {app_version}",
         f"**Page:** `{payload.page or '-'}`",
         f"**Date:** {today.isoformat()}",
     ]
@@ -46,7 +51,7 @@ def build_issue(payload: FeedbackCreate, user: User, app_version: str, today: da
     return {
         "title": title,
         "body": message + "\n\n---\n" + "  \n".join(context),
-        "labels": ["feedback", payload.kind],
+        "labels": ["feedback", payload.kind, APP_NAME],
     }
 
 
