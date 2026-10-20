@@ -389,6 +389,7 @@ const translations = {
         // Feedback
         'send_feedback': 'Send feedback',
         'send': 'Send',
+        'feedback_sending': 'Sending…',
         'feedback_type': 'Type',
         'feedback_bug': 'Bug / something broken',
         'feedback_idea': 'Idea / improvement',
@@ -770,6 +771,7 @@ const translations = {
         // Feedback
         'send_feedback': 'Kirim masukan',
         'send': 'Kirim',
+        'feedback_sending': 'Mengirim…',
         'feedback_type': 'Jenis',
         'feedback_bug': 'Bug / ada yang rusak',
         'feedback_idea': 'Ide / perbaikan',
