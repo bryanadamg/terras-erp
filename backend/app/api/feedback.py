@@ -13,7 +13,6 @@ role or user agent): on a small shop floor those alone can name the sender.
 import logging
 import os
 from datetime import date
-from typing import Literal
 
 import httpx
 from fastapi import APIRouter, Depends, HTTPException
@@ -28,8 +27,10 @@ logger = logging.getLogger(__name__)
 APP_NAME = "terras-erp"
 
 
+# No type/category field: the form is one text box on purpose, and whoever
+# triages the inbox labels the issue. A stale browser tab still posting the old
+# `kind` field is fine — pydantic ignores unknown fields.
 class FeedbackCreate(BaseModel):
-    kind: Literal["bug", "idea", "question"]
     message: str = Field(min_length=1, max_length=5000)
     page: str = Field(default="", max_length=300)
     include_name: bool = False
@@ -38,7 +39,7 @@ class FeedbackCreate(BaseModel):
 def build_issue(payload: FeedbackCreate, user: User, app_version: str, today: date) -> dict:
     message = payload.message.strip()
     first_line = message.splitlines()[0] if message else ""
-    title = f"[{payload.kind}] {first_line[:80]}"
+    title = first_line if len(first_line) <= 80 else first_line[:79] + "…"
     context = [
         f"**App:** {APP_NAME} {app_version}",
         f"**Page:** `{payload.page or '-'}`",
@@ -51,7 +52,7 @@ def build_issue(payload: FeedbackCreate, user: User, app_version: str, today: da
     return {
         "title": title,
         "body": message + "\n\n---\n" + "  \n".join(context),
-        "labels": ["feedback", payload.kind, APP_NAME],
+        "labels": ["feedback", APP_NAME],
     }
 
 
