@@ -43,10 +43,6 @@ export default function FeedbackButton() {
                     icon={<i className="bi bi-chat-square-text"></i>}
                     labels={{
                         title: t('send_feedback'),
-                        type: t('feedback_type'),
-                        bug: t('feedback_bug'),
-                        idea: t('feedback_idea'),
-                        question: t('feedback_question'),
                         message: t('feedback_message'),
                         includeName: t('feedback_include_name'),
                         anonymousHint: t('feedback_anonymous_hint'),
