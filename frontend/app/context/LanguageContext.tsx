@@ -386,6 +386,19 @@ const translations = {
         // Sales order fulfilment
         'so_no_weight': 'no weight',
         'so_no_weight_hint': 'This item is stocked by weight but has no weight per yard on its item master, so the ordered yardage cannot be converted. Set Weight per unit on the item to see fulfilment progress.',
+        // Feedback
+        'send_feedback': 'Send feedback',
+        'send': 'Send',
+        'feedback_type': 'Type',
+        'feedback_bug': 'Bug / something broken',
+        'feedback_idea': 'Idea / improvement',
+        'feedback_question': 'Question',
+        'feedback_message': 'What happened or what would help?',
+        'feedback_include_name': 'Include my name so the team can follow up',
+        'feedback_anonymous_hint': 'Sent anonymously: only the page and app version are attached.',
+        'feedback_named_hint': 'Your name and username will be attached.',
+        'feedback_sent': 'Thanks! Your feedback was sent.',
+        'feedback_failed': 'Could not send feedback. Please try again later.',
         // Headers
         'powered_by': 'Powered by',
     },
@@ -754,6 +767,19 @@ const translations = {
         // Sales order fulfilment
         'so_no_weight': 'tanpa berat',
         'so_no_weight_hint': 'Barang ini disimpan dalam satuan berat tetapi tidak punya berat per yard di master barang, jadi yardage pesanan tidak bisa dikonversi. Isi Berat per unit di barang untuk melihat progres pemenuhan.',
+        // Feedback
+        'send_feedback': 'Kirim masukan',
+        'send': 'Kirim',
+        'feedback_type': 'Jenis',
+        'feedback_bug': 'Bug / ada yang rusak',
+        'feedback_idea': 'Ide / perbaikan',
+        'feedback_question': 'Pertanyaan',
+        'feedback_message': 'Apa yang terjadi atau apa yang akan membantu?',
+        'feedback_include_name': 'Sertakan nama saya agar tim bisa menindaklanjuti',
+        'feedback_anonymous_hint': 'Dikirim secara anonim: hanya halaman dan versi aplikasi yang dilampirkan.',
+        'feedback_named_hint': 'Nama dan username Anda akan dilampirkan.',
+        'feedback_sent': 'Terima kasih! Masukan Anda sudah terkirim.',
+        'feedback_failed': 'Gagal mengirim masukan. Silakan coba lagi nanti.',
         // Headers
         'powered_by': 'Ditenagai oleh',
     }
