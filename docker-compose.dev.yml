@@ -12,9 +12,9 @@
 # Build once (`--build`) after changing requirements.txt / package.json only.
 services:
   api:
-    # Separate tag: a dev build must not overwrite teras-erp-api:latest, or a
+    # Separate tag: a dev build must not overwrite terras-erp-api:latest, or a
     # later plain `docker compose up -d` would start the dev image as "prod".
-    image: teras-erp-api:dev
+    image: terras-erp-api:dev
     build:
       context: ./backend
     # Same boot chain as prod (pre-start -> migrate -> seed) but uvicorn reloads.
@@ -40,7 +40,7 @@ services:
       - ./snapshots:/app/snapshots
 
   frontend:
-    image: teras-erp-frontend:dev
+    image: terras-erp-frontend:dev
     build:
       context: ./frontend
       target: dev
