@@ -4,7 +4,6 @@ import React, { useEffect, useId } from 'react';
 import UIModal from '@bryanadamg/terras-ui/components/Modal';
 import UIWindowCloseButton from '@bryanadamg/terras-ui/components/WindowCloseButton';
 import type { ShellTone } from '@bryanadamg/terras-ui/types';
-import { XP_BTN } from './xpTheme';
 import { MODAL_Z } from './zLayers';
 
 // Shared z-index tier for anything that must render as an overlay but can't use
@@ -56,14 +55,14 @@ export function useInactiveChromeWhileOpen(active: boolean) {
  * The window close button — one face for every window title bar (ModalWrapper's
  * dialogs AND PrintModalShell's print previews). A thin adapter over terras-ui's
  * WindowCloseButton, which was extracted from this file and moved the red hover
- * out of React state into a `.terras-win-close` rule in terras-ui/chrome. It
- * keeps `.xp-btn` as well, so it still lifts like every other button here.
+ * out of React state into a `.terras-win-close` rule in terras-ui/chrome, and
+ * lifts like every other button here through the package's own `.terras-btn`.
  * Print modals used to render a bare text glyph with no chrome at all, which is
  * the drift this replaces — a print preview is a window, so its close button is
  * the same close button.
  */
 export function WindowCloseButton({ onClose }: { onClose: () => void }) {
-    return <UIWindowCloseButton onClose={onClose} className={`${XP_BTN} terras-btn terras-win-close`} />;
+    return <UIWindowCloseButton onClose={onClose} />;
 }
 
 interface ModalWrapperProps {

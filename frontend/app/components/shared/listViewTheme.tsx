@@ -1,6 +1,6 @@
 'use client';
 import React from 'react';
-import { xpFont, modernFont, SortMark, SortState, BUTTON_RADIUS, BTN_TONES } from './xpTheme';
+import { xpFont, modernFont, SortMark, SortState, BUTTON_RADIUS, BTN_TONES, xpBtn } from './xpTheme';
 import type { BtnTone } from './xpTheme';
 import { toLayoutPx } from '@bryanadamg/terras-ui/scale';
 
@@ -30,14 +30,6 @@ export const lvInput = (extra: React.CSSProperties = {}): React.CSSProperties =>
 
 // Classic faces come from xpTheme's BTN_TONES (single source, shared with the
 // classic-only `xpBtn`); only the modern half lives here.
-const LV_CLASSIC_TONES = BTN_TONES;
-
-const LV_MODERN_TONES: Record<BtnTone, React.CSSProperties> = {
-    default: {},
-    primary: { fontWeight: 600, background: '#2563eb', color: '#fff', border: 'none' },
-    success: { fontWeight: 600, background: '#16a34a', color: '#fff', border: 'none' },
-    danger:  { fontWeight: 600, background: '#dc2626', color: '#fff', border: 'none' },
-};
 
 // THE button face, both themes, all four intents. `extra` still spreads last so a
 // caller can size or disable it; it is not the place to repaint the face.
@@ -45,12 +37,8 @@ const LV_MODERN_TONES: Record<BtnTone, React.CSSProperties> = {
 // a button is sized by its label, and a long flexible sibling must not squeeze it
 // until that label wraps. `extra` spreads last, so a deliberately flexible button
 // still overrides it.
-export const lvBtn = (tone: BtnTone = 'default', extra: React.CSSProperties = {}): React.CSSProperties => ({
-    fontFamily: LV_XP_FONT, fontSize: 11, padding: '2px 10px', cursor: 'pointer',
-    background: 'linear-gradient(to bottom, #ffffff 0%, #d4d0c8 100%)',
-    border: '1px solid', borderColor: '#dfdfdf #808080 #808080 #dfdfdf', color: '#000',
-    borderRadius: BUTTON_RADIUS, flexShrink: 0, ...LV_CLASSIC_TONES[tone], ...extra,
-});
+export const lvBtn = (tone: BtnTone = 'default', extra: React.CSSProperties = {}): React.CSSProperties =>
+    xpBtn({ ...BTN_TONES[tone], ...extra });
 
 // Emphasised primary button (blue), dual-theme. Kept as the name most call sites
 // already use; it is just `lvBtn('primary')`.

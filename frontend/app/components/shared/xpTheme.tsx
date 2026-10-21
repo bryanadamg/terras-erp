@@ -6,7 +6,8 @@ import { xpFont, modernFont, CODE_FONT, PRINT_FONT, PRINT_SERIF_FONT } from './t
 import { FloatingLayer, POPOUT_DELAY, TIP_DELAY, Tooltip, TooltipSurface, useHoverAnchor, isClipped } from './Tooltip';
 import UIToggleChip from '@bryanadamg/terras-ui/components/ToggleChip';
 import UIProgressBar, { progressToneColor as uiProgressToneColor } from '@bryanadamg/terras-ui/components/ProgressBar';
-import { field as uiField } from '@bryanadamg/terras-ui/styles';
+import { field as uiField, button as uiButton, BTN_TONES as UI_BTN_TONES } from '@bryanadamg/terras-ui/styles';
+import UIButton from '@bryanadamg/terras-ui/components/Button';
 
 /**
  * Shared Windows XP "classic" theme primitives.
@@ -355,11 +356,12 @@ export const WINDOW_RADIUS_INNER = WINDOW_RADIUS - 2;
 // pinned to the top of the viewport, so it stays square on purpose.
 export const PANEL_RADIUS = WINDOW_RADIUS;
 
-// The class that carries the shared button hover/press motion (see the BUTTONS
-// block in globals.css). Tag any classic button with it instead of hand-rolling
+// The class that carries the shared button hover/press motion — terras-ui's
+// `.terras-btn` (terras-ui/chrome), the same rule set this app's `.xp-btn` was
+// extracted into. Tag any classic button with it instead of hand-rolling
 // onMouseEnter/onMouseLeave state — it animates filter/transform/box-shadow only,
 // so it layers over whatever inline gradient face the button paints.
-export const XP_BTN = 'xp-btn';
+export const XP_BTN = 'terras-btn';
 
 // StatusChip is the XP-flavoured chip used in BOTH themes (it always renders on
 // xpFont), so it takes the classic geometry in both rather than threading a
@@ -975,23 +977,18 @@ export function ProgressBar(props: {
 
 // The four button intents. `default` is the bare XP face `xpBtn` already paints, so
 // it is empty; the other three are patches you spread over it (or hand to
-// `lvBtn(tone)`, which owns the modern half). ~19 local copies used to
-// carry their own blue/green/red — three different blues and three different greens
-// across BOMDesigner, the WO modals and the print modals — which is why the faces
-// live here now. Adding a fifth tone is almost never the answer.
+// `lvBtn(tone)`). ~19 local copies used to carry their own blue/green/red — three
+// different blues and three different greens across BOMDesigner, the WO modals and
+// the print modals — which is why the faces were centralised, and then moved into
+// terras-ui, whose Button paints from this same table. Adding a fifth tone is
+// almost never the answer.
 export type BtnTone = 'default' | 'primary' | 'success' | 'danger';
 
-export const BTN_TONES: Record<BtnTone, React.CSSProperties> = {
-    default: {},
-    primary: { background: 'linear-gradient(to bottom, #316ac5, #1a4a8a)', color: '#fff', borderColor: '#1a3a7a #0a1a4a #0a1a4a #1a3a7a', fontWeight: 'bold' },
-    success: { background: 'linear-gradient(to bottom, #5ec85e, #2d7a2d)', color: '#fff', borderColor: '#1a5e1a #0a3e0a #0a3e0a #1a5e1a', fontWeight: 'bold' },
-    danger:  { background: 'linear-gradient(to bottom, #c84040, #8e0000)', color: '#fff', borderColor: '#8e0000 #5e0000 #5e0000 #8e0000', fontWeight: 'bold' },
-};
+export const BTN_TONES: Record<BtnTone, React.CSSProperties> = UI_BTN_TONES;
 
-export const xpBtn = (extra: React.CSSProperties = {}): React.CSSProperties => ({
-    fontFamily: xpFont, fontSize: '11px', padding: '2px 10px', cursor: 'pointer',
-    background: 'linear-gradient(to bottom, #ffffff 0%, #d4d0c8 100%)', border: '1px solid',
-    borderColor: '#dfdfdf #808080 #808080 #dfdfdf', color: '#000000', borderRadius: BUTTON_RADIUS,
+// The raised XP button face as a style object, for call sites that keep their own
+// `<button>`. terras-ui's `button()` primitive — the face its <Button> paints.
+export const xpBtn = (extra: React.CSSProperties = {}): React.CSSProperties => uiButton({
     // A button is sized by its label, never by what is next to it. Flex items
     // shrink by default, so a long sibling — a modal footer's "why this is
     // disabled" hint, a toolbar's filter summary — squeezed the buttons until
@@ -1033,12 +1030,6 @@ export const xpPanel = (extra: React.CSSProperties = {}): React.CSSProperties =>
     ...extra,
 });
 
-const MODAL_FOOTER_CLASSIC_TONES: Record<'success' | 'primary' | 'danger', React.CSSProperties> = {
-    success: { background: 'linear-gradient(to bottom, #5ec85e, #2d7a2d)', borderColor: '#8fe08f #0a3e0a #0a3e0a #8fe08f', color: '#fff' },
-    primary: { background: 'linear-gradient(to bottom, #6090e0, #2050c0)', borderColor: '#90b8f0 #102060 #102060 #90b8f0', color: '#fff' },
-    danger:  { background: 'linear-gradient(to bottom, #e08080, #c03030)', borderColor: '#f0b0b0 #801010 #801010 #f0b0b0', color: '#fff' },
-};
-
 // THE standard footer for create/edit modals (PR, MO, and similar full-form
 // modals): a muted Cancel + a solid bevel-gradient submit button. Classic
 // theme needs the same manual bevel branch as XPActionButton/ConfirmModal —
@@ -1068,49 +1059,22 @@ export function ModalFooterActions({
     onExtra?: () => void;
     extraLabel?: string;
 }) {
-    const tone = MODAL_FOOTER_CLASSIC_TONES[variant];
+    // Footer buttons run wider than a toolbar's: the dialog's two or three
+    // actions are the only thing on the row.
     return (
         <>
             {onExtra && extraLabel && (
-                <button
-                    type="button"
-                    className={XP_BTN}
-                    onClick={onExtra}
-                    style={{
-                        fontFamily: xpFont, fontSize: 11, padding: '3px 16px', cursor: 'pointer',
-                        borderRadius: BUTTON_RADIUS, border: '1px solid', borderColor: '#dfdfdf #808080 #808080 #dfdfdf',
-                        background: 'linear-gradient(to bottom, #fff, #d4d0c8)', color: '#8a1a1a',
-                    }}
-                >
+                <UIButton onClick={onExtra} style={{ padding: '3px 16px', color: '#8a1a1a' }}>
                     {extraLabel}
-                </button>
+                </UIButton>
             )}
-            <button
-                type="button"
-                className={XP_BTN}
-                onClick={onCancel}
-                style={{
-                    fontFamily: xpFont, fontSize: 11, padding: '3px 16px', cursor: 'pointer',
-                    borderRadius: BUTTON_RADIUS, border: '1px solid', borderColor: '#dfdfdf #808080 #808080 #dfdfdf',
-                    background: 'linear-gradient(to bottom, #fff, #d4d0c8)', color: '#000',
-                }}
-            >
+            <UIButton onClick={onCancel} style={{ padding: '3px 16px' }}>
                 {cancelLabel}
-            </button>
+            </UIButton>
             {onSubmit && submitLabel && (
-                <button
-                    type="button"
-                    className={XP_BTN}
-                    onClick={onSubmit}
-                    disabled={submitting || disabled}
-                    style={{
-                        fontFamily: xpFont, fontSize: 11, fontWeight: 'bold', padding: '3px 20px', cursor: submitting || disabled ? 'default' : 'pointer',
-                        borderRadius: BUTTON_RADIUS, border: '1px solid', opacity: submitting || disabled ? 0.6 : 1,
-                        ...tone,
-                    }}
-                >
+                <UIButton tone={variant} onClick={onSubmit} disabled={submitting || disabled} style={{ padding: '3px 20px' }}>
                     {(submitting ? submittingLabel : submitLabel).toUpperCase()}
-                </button>
+                </UIButton>
             )}
         </>
     );

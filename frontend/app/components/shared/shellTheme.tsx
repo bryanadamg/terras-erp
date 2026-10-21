@@ -1,9 +1,10 @@
 'use client';
 import React from 'react';
-import { xpFont, modernFont, ChipTone, ChipSeg, BUTTON_RADIUS, XP_BTN } from './xpTheme';
+import { ChipTone, ChipSeg } from './xpTheme';
+import UIButton from '@bryanadamg/terras-ui/components/Button';
 import UIWindow from '@bryanadamg/terras-ui/components/Window';
 import { bevel, titleBar, toolbar } from '@bryanadamg/terras-ui/styles';
-import type { ShellTone } from '@bryanadamg/terras-ui/types';
+import type { ButtonTone, ShellTone } from '@bryanadamg/terras-ui/types';
 import UIFilterChipBar from '@bryanadamg/terras-ui/components/FilterChipBar';
 import UISegmentedBar from '@bryanadamg/terras-ui/components/SegmentedBar';
 import { SearchField as UISearchField } from '@bryanadamg/terras-ui/components/Field';
@@ -121,22 +122,15 @@ export function ToolbarCount({ children, right = false, style }: {
 // theme branch. Use this instead of inlining another one.
 export type ToolbarButtonTone = 'create' | 'launch' | 'neutral' | 'danger';
 
-const TOOLBAR_BTN_CLASSIC: Record<ToolbarButtonTone, React.CSSProperties> = {
-    create:  { background: 'linear-gradient(to bottom, #5ec85e, #2d7a2d)', borderColor: '#1a5e1a #0a3e0a #0a3e0a #1a5e1a', color: '#ffffff', fontWeight: 'bold' },
-    launch:  { background: 'linear-gradient(to bottom, #5a9ae0, #0058e6)', borderColor: '#003080 #001840 #001840 #003080', color: '#ffffff', fontWeight: 'bold' },
-    neutral: { background: 'linear-gradient(to bottom, #ffffff, #d4d0c8)', borderColor: '#dfdfdf #808080 #808080 #dfdfdf', color: '#000000' },
-    danger:  { background: 'linear-gradient(to bottom, #ff6060, #cc0000)', borderColor: '#800000 #4a0000 #4a0000 #800000', color: '#ffffff' },
-};
-
-const TOOLBAR_BTN_MODERN: Record<ToolbarButtonTone, string> = {
-    create: 'btn-success text-white',
-    launch: 'btn-primary',
-    neutral: 'btn-outline-secondary',
-    danger: 'btn-danger',
+// Toolbar intents onto terras-ui's four button tones: the green CTA is `success`,
+// the blue second CTA is `primary`. Same faces as every other button in the app,
+// rather than the toolbar's own brighter blue and red.
+const TOOLBAR_TONE: Record<ToolbarButtonTone, ButtonTone> = {
+    create: 'success', launch: 'primary', neutral: 'default', danger: 'danger',
 };
 
 export function ToolbarButton({
-    tone = 'neutral', icon, children, onClick, disabled = false, testId, printable = false, title, style,
+    tone = 'neutral', icon, children, onClick, disabled = false, testId, title, style,
 }: {
     /** create = green CTA ("Add X"/"Create"/"New Lot"). launch = blue CTA for a
      * second, distinct create-like action on the same toolbar (e.g. "New
@@ -147,31 +141,23 @@ export function ToolbarButton({
     onClick: (e: React.MouseEvent) => void;
     disabled?: boolean;
     testId?: string;
-    /** Tags the modern button `btn-print` (picked up by the classic-theme CSS
-     * override) — pass for the Print action specifically. */
+    /** No-op since the modern theme went; still accepted so the Print call sites compile. */
     printable?: boolean;
     title?: string;
     style?: React.CSSProperties;
 }) {
     return (
-        <button
-            type="button"
+        <UIButton
+            tone={TOOLBAR_TONE[tone]}
+            icon={icon ? <i className={`bi ${icon}`} /> : undefined}
             data-testid={testId}
-            className={XP_BTN}
             onClick={onClick}
             disabled={disabled}
             title={title}
-            style={{
-                fontFamily: xpFont, fontSize: '11px', padding: '2px 10px',
-                cursor: disabled ? 'default' : 'pointer', opacity: disabled ? 0.5 : 1,
-                border: '1px solid', borderRadius: BUTTON_RADIUS,
-                ...TOOLBAR_BTN_CLASSIC[tone],
-                ...style,
-            }}
+            style={style}
         >
-            {icon && <i className={`bi ${icon}`} style={{ marginRight: 4 }}></i>}
             {children}
-        </button>
+        </UIButton>
     );
 }
 
