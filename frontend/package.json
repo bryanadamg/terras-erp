@@ -9,7 +9,7 @@
     "lint": "next lint --dir app"
   },
   "dependencies": {
-    "@bryanadamg/terras-ui": "^0.26.0",
+    "@bryanadamg/terras-ui": "^0.26.1",
     "@dicebear/collection": "^9.4.2",
     "@dicebear/core": "^9.4.3",
     "bootstrap": "^5.3.8",
