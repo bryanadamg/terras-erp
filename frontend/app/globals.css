@@ -1194,45 +1194,8 @@ table {
    a toast is a bevelled panel with a tone stripe rather than the XP tooltip body
    it used to borrow. */
 
-/* Row / select-all multi-select checkboxes (RowCheckbox, SelectAllCheckbox in
-   listViewTheme.tsx). Hover ring only — the box itself never moves, so a dense
-   list doesn't reflow under the cursor. Disabled boxes stay flat. */
-.lv-check {
-    transition: box-shadow 0.12s ease;
-}
-/* Classic checkboxes are bare native inputs (no form-check-input class), which
-   Chromium/Edge render with rounded corners regardless of CSS. box-shadow
-   always follows an element's own border-radius, so without this the hover
-   ring boxes the rounded glyph in a sharp square. Modern theme's checkbox
-   already carries Bootstrap's own border-radius, so its ring already matches. */
-.ui-style-classic .lv-check {
-    border-radius: 3px;
-}
-.lv-check:hover:not(:disabled) {
-    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.20);
-}
-.ui-style-classic .lv-check:hover:not(:disabled) {
-    box-shadow: 0 0 0 2px rgba(26, 61, 107, 0.30);
-}
-
-/* Row-disclosure chevron (ExpandToggle in listViewTheme.tsx). One glyph
-   (bi-chevron-right) rotated 90deg for the open state, so hover previews the
-   open direction and springs back on pointer-leave when nothing was clicked.
-   inline-block is required: transform is ignored on a non-replaced inline. */
-.lv-chev {
-    display: inline-block;
-    transform: rotate(0deg);
-    transform-origin: 50% 50%;
-    transition: transform 0.16s cubic-bezier(0.34, 1.4, 0.64, 1);
-}
-.lv-chev-open,
-.lv-chev-btn:hover .lv-chev,
-.lv-chev-btn:focus-visible .lv-chev {
-    transform: rotate(90deg);
-}
-@media (prefers-reduced-motion: reduce) {
-    .lv-chev { transition: none; }
-}
+/* Row checkboxes and the row-disclosure chevron are terras-ui's `.terras-check`
+   and `.terras-chev` (terras-ui/chrome), extracted from the rules that stood here. */
 
 /* ── MOBILE SHELL: touch sizing for the shared classic primitives ──────────
    The phone screens render the same `SearchField` / `FilterChipBar` controls the
@@ -1255,17 +1218,11 @@ table {
   min-width: 0 !important;
 }
 
-/* ── HOVER SURFACES: app tooltip + clipped-chip popout ─────────────────────
-   Both layers are body portals rendered by components/shared/Tooltip.tsx; only
-   the entrance animation lives here (React can't express keyframes inline).
-   The tooltip fades in from just under its anchor; the chip popout grows out of
-   the chip's own left edge, so it reads as the same chip finishing itself rather
-   than as a second badge appearing next to it. */
-@keyframes tip-in {
-    from { opacity: 0; transform: translateY(-2px); }
-    to   { opacity: 1; transform: none; }
-}
-.tip-anim { animation: tip-in 110ms ease-out; }
+/* ── HOVER SURFACES: clipped-chip popout ───────────────────────────────────
+   Both hover layers are body portals (terras-ui's FloatingLayer). The tooltip's
+   fade-in is terras-ui's `.terras-tip-anim`; the chip popout's lives here: it
+   grows out of the chip's own left edge, so it reads as the same chip finishing
+   itself rather than as a second badge appearing next to it. */
 
 @keyframes chip-pop-in {
     from { opacity: 0.55; transform: scaleX(0.94); }
@@ -1276,7 +1233,7 @@ table {
     transform-origin: left center;
 }
 @media (prefers-reduced-motion: reduce) {
-    .tip-anim, .chip-pop-anim { animation: none; }
+    .chip-pop-anim { animation: none; }
 }
 
 /* ── BUTTONS: one radius, one hover/press motion ──────────────────────────────

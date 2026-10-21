@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useMemo, useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { layoutRectOf, layoutScroll } from '@bryanadamg/terras-ui/scale';
 import { xpFont, modernFont, CODE_FONT, PRINT_FONT, PRINT_SERIF_FONT } from './typography';
 import { FloatingLayer, POPOUT_DELAY, TIP_DELAY, Tooltip, TooltipSurface, useHoverAnchor, isClipped } from './Tooltip';
@@ -8,6 +8,12 @@ import UIToggleChip from '@bryanadamg/terras-ui/components/ToggleChip';
 import UIProgressBar, { progressToneColor as uiProgressToneColor } from '@bryanadamg/terras-ui/components/ProgressBar';
 import { field as uiField, button as uiButton, BTN_TONES as UI_BTN_TONES } from '@bryanadamg/terras-ui/styles';
 import UIButton from '@bryanadamg/terras-ui/components/Button';
+import UIActionButton from '@bryanadamg/terras-ui/components/ActionButton';
+import UIEmptyState from '@bryanadamg/terras-ui/components/EmptyState';
+// Extracted into terras-ui from this file with the same values; imported, not
+// just re-exported, because this file's own TableSkeletons still draw with them.
+import { FieldLabel, FormError } from '@bryanadamg/terras-ui/components/Field';
+import { SkeletonBar, ListSkeleton, PanelSkeleton, CardGridSkeleton, SKEL_PAGE_ROWS } from '@bryanadamg/terras-ui/components/Skeleton';
 
 /**
  * Shared Windows XP "classic" theme primitives.
@@ -143,7 +149,7 @@ export function CodeChip({ code, tier = 1, tone = 'default', link = false, title
                     </FloatingLayer>
                 )
                 : (
-                    <FloatingLayer rect={rect} anchorEl={anchorEl} className="tip-anim">
+                    <FloatingLayer rect={rect} anchorEl={anchorEl} className="terras-tip-anim">
                         <TooltipSurface>{tip}</TooltipSurface>
                     </FloatingLayer>
                 ))}
@@ -473,7 +479,7 @@ export function Chip({
                     </FloatingLayer>
                 )
                 : (
-                    <FloatingLayer rect={rect} anchorEl={anchorEl} className="tip-anim">
+                    <FloatingLayer rect={rect} anchorEl={anchorEl} className="terras-tip-anim">
                         <TooltipSurface>{title}</TooltipSurface>
                     </FloatingLayer>
                 ))}
@@ -1267,28 +1273,7 @@ export function SectionTitle({ icon, children, right }: { icon: string; children
 // and then costs a line forever, so it goes in `title` and the global tooltip
 // layer renders it. A form of ten fields with ten captions reads as prose, which
 // is the state this prop exists to get out of.
-export function FieldLabel({ children, hint, title, right }: { children: React.ReactNode; hint?: string; title?: string; right?: React.ReactNode }) {
-    return (
-        <>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 2 }}>
-                <label
-                    title={title}
-                    style={{ fontFamily: xpFont, fontSize: 11, fontWeight: 'bold', color: '#2b2822', margin: 0 }}
-                >
-                    {children}
-                </label>
-                {right}
-            </div>
-            {hint && (
-                <div
-                    style={{ fontFamily: xpFont, fontSize: 10, color: '#938c76', fontStyle: 'italic', marginBottom: 3 }}
-                >
-                    {hint}
-                </div>
-            )}
-        </>
-    );
-}
+export { FieldLabel };
 
 /**
  * Validation / submit-failure banner for a form or modal body. Three files had
@@ -1300,20 +1285,7 @@ export function FieldLabel({ children, hint, title, right }: { children: React.R
  * Not for status callouts (a "late" badge, a scanner error): those carry icons and
  * their own reds. This is specifically "what you just submitted was rejected".
  */
-export function FormError({ children, style }: {
-    children?: React.ReactNode;
-    style?: React.CSSProperties;
-}) {
-    if (!children) return null;
-    return (
-        <div
-            role="alert"
-            style={{ background: '#f5e8e8', border: '1px solid #8e0000', color: '#8e0000', padding: '4px 8px', fontSize: 11, marginBottom: 10, fontFamily: xpFont, ...style }}
-        >
-            {children}
-        </div>
-    );
-}
+export { FormError };
 
 // ── Loading / empty states ───────────────────────────────────────────────────
 
@@ -1353,12 +1325,11 @@ export function XPLoading({ label = 'Loading...', fullScreen = false }: { label?
 // XPLoading survives only where there is genuinely no shape to promise — a
 // transient wait inside a flow whose next screen depends on what comes back
 // (ScanDispatcher resolving a scanned code) — and for in-button spinners, which
-// are Bootstrap's and stay as they are. Shimmer keyframes: globals.css .xp-skel.
+// are Bootstrap's and stay as they are. Shimmer: terras-ui's `.terras-skel` (BootShell's
+// pre-hydration bars still use the identical globals.css `.xp-skel`).
 
 /** One shimmering placeholder bar. */
-export function SkeletonBar({ width = '100%', height = 9 }: { width?: number | string; height?: number }) {
-    return <span className="xp-skel" style={{ display: 'block', width, height, borderRadius: 2 }} />;
-}
+export { SkeletonBar };
 
 // Deterministic width pattern — a fixed cycle, not Math.random(), so the
 // skeleton doesn't reshuffle on every re-render while the fetch is in flight.
@@ -1393,7 +1364,7 @@ const skelWidth = (row: number, col: number) => SKEL_WIDTHS[(row * 3 + col * 5) 
  * Panel-sized lists (dashboard tiles) pass their own literal instead; 30 rows in
  * a 250px panel is the same mistake in the other direction.
  */
-export const SKEL_PAGE_ROWS = 30;
+export { SKEL_PAGE_ROWS };
 
 export function TableSkeleton({ rows = 6, cols, tdStyle, rowHeight, fillHeight }: {
     /** Row count when `fillHeight` is unknown — `SKEL_PAGE_ROWS` for a full page. */
@@ -1461,60 +1432,7 @@ export function TableSkeleton({ rows = 6, cols, tdStyle, rowHeight, fillHeight }
  * `count` is how many placeholder cards to draw: enough to fill the fold, not
  * the real count (unknown while loading).
  */
-export function CardGridSkeleton({
-    count = 8, minWidth = 250, gap = 12,
-    headerStrip = true, bodyLines = 3, bar = true, bodyHeight,
-}: {
-    count?: number;
-    /** Must match the real grid's minmax() floor. */
-    minWidth?: number;
-    gap?: number;
-    /** Draw the coloured title strip cards carry across their top. */
-    headerStrip?: boolean;
-    bodyLines?: number;
-    /** Draw a progress-bar-shaped block under the lines. */
-    bar?: boolean;
-    /** Force a card body height when the real card is taller than the lines imply. */
-    bodyHeight?: number;
-}) {
-    return (
-        <div style={{ display: 'grid', gridTemplateColumns: `repeat(auto-fill, minmax(${minWidth}px, 1fr))`, gap }}>
-            {Array.from({ length: count }, (_, i) => (
-                <div
-                    key={i}
-                    style={{ border: '2px solid', borderColor: '#ffffff #808080 #808080 #ffffff', background: '#ece9d8' }}
-                >
-                    {headerStrip && (
-                        <div
-                            style={{
-                                display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 6,
-                                padding: '4px 7px',
-                                background: '#a6a6a6',
-                                borderBottom: '1px solid #00000033',
-                            }}
-                        >
-                            <SkeletonBar width={skelWidth(i, 0)} height={9} />
-                            <SkeletonBar width={44} height={9} />
-                        </div>
-                    )}
-                    <div
-                        style={{
-                            padding: '7px 8px',
-                            background: '#fff',
-                            display: 'flex', flexDirection: 'column', gap: 6,
-                            minHeight: bodyHeight,
-                        }}
-                    >
-                        {Array.from({ length: bodyLines }, (_, l) => (
-                            <SkeletonBar key={l} width={skelWidth(i, l + 1)} height={8} />
-                        ))}
-                        {bar && <SkeletonBar width="100%" height={10} />}
-                    </div>
-                </div>
-            ))}
-        </div>
-    );
-}
+export { CardGridSkeleton };
 
 /**
  * Stand-in for a whole table *including* its header — for the views where the
@@ -1580,43 +1498,7 @@ export function TableBlockSkeleton({
  * rows. For drill-in panels and modal tabs, where what arrives is a block of
  * fields rather than rows or cards.
  */
-export function PanelSkeleton({
-    sections = 2, rows = 4, caption = true,
-}: {
-    sections?: number;
-    /** Label/value rows per section. */
-    rows?: number;
-    caption?: boolean;
-}) {
-    return (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 12, padding: 8}}>
-            {Array.from({ length: sections }, (_, s) => (
-                <div key={s}>
-                    {caption && (
-                        <div
-                            style={{
-                                padding: '3px 6px',
-                                background: '#ece9d8',
-                                borderBottom: '1px solid #b0a898',
-                                marginBottom: 8,
-                            }}
-                        >
-                            <SkeletonBar width={s % 2 ? 120 : 150} height={9} />
-                        </div>
-                    )}
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: 7}}>
-                        {Array.from({ length: rows }, (_, r) => (
-                            <div key={r} style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
-                                <SkeletonBar width={92} height={8} />
-                                <SkeletonBar width={skelWidth(s + r, r)} height={8} />
-                            </div>
-                        ))}
-                    </div>
-                </div>
-            ))}
-        </div>
-    );
-}
+export { PanelSkeleton };
 
 // Measured row heights, keyed by table. Module-level so a remount reuses the
 // value; sessionStorage so a reload does too. Column counts are NOT cached —
@@ -1751,18 +1633,7 @@ export function useTableSkeletonMetrics(
 }
 
 /** Placeholder rows for a non-table list pane (the dyeing/setting WO rails). */
-export function ListSkeleton({ rows = 5, padding = '6px 8px' }: { rows?: number; padding?: string }) {
-    return (
-        <div>
-            {Array.from({ length: rows }, (_, r) => (
-                <div key={`skel-${r}`} style={{ padding, display: 'flex', flexDirection: 'column', gap: 5 }}>
-                    <SkeletonBar width={skelWidth(r, 0)} />
-                    <SkeletonBar width={skelWidth(r, 1)} height={7} />
-                </div>
-            ))}
-        </div>
-    );
-}
+export { ListSkeleton };
 
 // ── Status bar (classic Windows bottom strip) ───────────────────────────────
 
@@ -1784,84 +1655,22 @@ export function XPStatusBar({ children, right, style }: { children: React.ReactN
 }
 
 // ── Client-side table sorting ────────────────────────────────────────────────
-
-export type SortState = { key: string; dir: 1 | -1 } | null;
-
-const isNil = (v: any) => v === null || v === undefined || v === '';
-
-function compareValues(a: any, b: any): number {
-    if (isNil(a) && isNil(b)) return 0;
-    if (typeof a === 'number' && typeof b === 'number') return a - b;
-    const na = Number(a), nb = Number(b);
-    if (!isNaN(na) && !isNaN(nb) && String(a).trim() !== '' && String(b).trim() !== '') return na - nb;
-    return String(a).localeCompare(String(b), undefined, { numeric: true, sensitivity: 'base' });
-}
-
-/**
- * The header-click transition, shared by client-side and server-side sorting:
- * unsorted -> asc -> desc -> unsorted, and a click on a different column starts
- * that column at asc. Pure, so a view whose sort state lives somewhere other than
- * local state (DataContext, a URL param) gets the same behaviour as useSortable.
- */
-export function nextSortState(prev: SortState, key: string): SortState {
-    if (prev?.key !== key) return { key, dir: 1 };
-    return prev.dir === 1 ? { key, dir: -1 } : null;
-}
-
-/**
- * Sort state for a list the SERVER sorts — the view holds one page, so a column
- * header has to change a query param rather than reorder the rows in memory.
- * Sorting a page client-side puts the wrong rows on page 1 entirely, so reach for
- * this (not useSortable) whenever the rows arrive windowed.
- */
-export function useServerSort(initial: SortState = null) {
-    const [sort, setSort] = useState<SortState>(initial);
-    const toggleSort = useCallback((key: string) => setSort(prev => nextSortState(prev, key)), []);
-    return { sort, setSort, toggleSort };
-}
-
-/**
- * Sort rows client-side by a column key. `columns` maps key -> accessor.
- * toggle() cycles asc -> desc -> off per column. Empty values sort last in both directions.
- * Only correct when the view holds the WHOLE set — for a windowed list use useServerSort.
- */
-export function useSortable<T>(rows: T[], columns: Record<string, (row: T) => any>, initialSort: SortState = null) {
-    const [sort, setSort] = useState<SortState>(initialSort);
-
-    const sorted = useMemo(() => {
-        if (!sort || !columns[sort.key]) return rows;
-        const acc = columns[sort.key];
-        return [...rows].sort((ra, rb) => {
-            const a = acc(ra), b = acc(rb);
-            if (isNil(a) !== isNil(b)) return isNil(a) ? 1 : -1;
-            return compareValues(a, b) * sort.dir;
-        });
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [rows, sort]);
-
-    const toggle = (key: string) => setSort(prev => nextSortState(prev, key));
-
-    return { sorted, sort, toggle };
-}
-
-/** Arrow indicator for a sortable column header. */
-export function SortMark({ sort, colKey }: { sort: SortState; colKey: string }) {
-    if (sort?.key !== colKey) return null;
-    return <span style={{ marginLeft: 3, fontSize: 8 }}>{sort.dir === 1 ? '▲' : '▼'}</span>;
-}
+// Extracted into terras-ui's Table module unchanged — same compare (numeric
+// strings as numbers, empties last both ways), same asc → desc → off cycle — so
+// these are re-exports and the call sites keep importing from xpTheme.
+// `useSortable` only for a view holding the whole set; windowed lists use
+// `useServerSort` and sort on the server.
+export type { SortState } from '@bryanadamg/terras-ui/components/Table';
+export { nextSortState, useServerSort, useSortable, SortMark } from '@bryanadamg/terras-ui/components/Table';
 
 export function XPEmptyState({ message, icon = 'bi-inbox', children }: { message: string; icon?: string; children?: React.ReactNode }) {
+    // terras-ui's EmptyState was extracted from this one. Its icon slot sets
+    // line-height 1; the glyph here sat at Bootstrap's 1.5, so put that back or
+    // the well comes out ~8px shorter.
     return (
-        <div style={{
-            background: '#ffffff', border: '1px solid',
-            borderColor: '#808080 #ffffff #ffffff #808080',
-            padding: '28px 16px', textAlign: 'center',
-            fontFamily: xpFont, color: '#666666',
-        }}>
-            <i className={`bi ${icon}`} style={{ fontSize: 22, color: '#a0a0a0', display: 'block', marginBottom: 6 }} />
-            <div style={{ fontSize: 11, fontStyle: 'italic' }}>{message}</div>
+        <UIEmptyState message={message} icon={<i className={`bi ${icon}`} style={{ display: 'block', lineHeight: 1.5 }} />}>
             {children}
-        </div>
+        </UIEmptyState>
     );
 }
 
@@ -1922,31 +1731,14 @@ export function MenuTriggerButton({ onClick, title = 'More actions' }: { onClick
 
 // ── Flat table-row action button ────────────────────────────────────────────
 // The compact, flat (non-beveled) icon/label button used in table action
-// columns — WO table, Lot Management, dyeing Stage/Log. Classic renders a
-// single-border flat button (NOT the raised 4-color XP bevel, which reads as
-// chunky/glossy at this size); modern maps the tone onto btn-outline-*.
+// columns — WO table, Lot Management, dyeing Stage/Log. Extracted into terras-ui's
+// ActionButton: same five tones (now --terras-action-* tokens), same styled
+// tooltip — beside an icon-only button, below a labelled one. The package takes
+// the icon as a node; call sites here keep passing a bootstrap-icon class.
 // Pair with MenuTriggerButton for the "⋯" overflow in the same column.
 export type XPActionTone = 'neutral' | 'primary' | 'success' | 'warning' | 'danger';
 
-const XP_ACTION_TONES: Record<XPActionTone, { bg: string; border: string; fg: string }> = {
-    neutral: { bg: 'linear-gradient(to bottom, #f0efe6, #dddbd0)', border: '#909090', fg: '#333333' },
-    primary: { bg: 'linear-gradient(to bottom, #cfe0ff, #8fb3e8)', border: '#335599', fg: '#0a2a66' },
-    success: { bg: 'linear-gradient(to bottom, #b0e8b0, #70c870)', border: '#0a3e0a', fg: '#004000' },
-    warning: { bg: 'linear-gradient(to bottom, #ffe0b0, #e8b060)', border: '#99631a', fg: '#663300' },
-    danger:  { bg: 'linear-gradient(to bottom, #f0c0c0, #d07070)', border: '#992222', fg: '#600000' },
-};
-
-const XP_ACTION_MODERN: Record<XPActionTone, string> = {
-    neutral: 'btn-outline-secondary',
-    primary: 'btn-outline-primary',
-    success: 'btn-outline-success',
-    warning: 'btn-outline-warning',
-    danger:  'btn-outline-danger',
-};
-
-export function XPActionButton({
-    tone = 'neutral', icon, label, title, onClick, disabled = false, className,
-}: {
+export function XPActionButton({ icon, ...rest }: {
     tone?: XPActionTone;
     icon?: string;               // bootstrap-icon class, e.g. 'bi-box-seam'
     label?: React.ReactNode;     // optional text; icon-only when omitted
@@ -1955,33 +1747,7 @@ export function XPActionButton({
     disabled?: boolean;
     className?: string;          // extra classes — pass 'xp-menu-trigger' when this button opens a FloatingMenu
 }) {
-    const iconEl = icon ? <i className={`bi ${icon}`} /> : null;
-    // Icon-only action buttons are the densest tooltip consumer in the app (a whole
-    // action column of them), so they take the styled surface rather than the OS
-    // one that arrives a second later in a different font.
-    // Icon-only ones also take the bubble BESIDE the button: underneath it is the
-    // next row's action button, which the bubble would hide just as the user aims
-    // at it. A labelled button is wide enough that below is still fine.
-    const tip = (btn: React.ReactElement) => title
-        ? <Tooltip content={title} placement={label ? 'bottom' : 'side'}>{btn}</Tooltip>
-        : btn;
-    const t = XP_ACTION_TONES[tone];
-    return tip(
-        <button
-            type="button"
-            onClick={onClick}
-            disabled={disabled}
-            className={[XP_BTN, className].filter(Boolean).join(' ')}
-            style={{
-                fontFamily: xpFont, fontSize: 11, lineHeight: 1, padding: '2px 4px',
-                cursor: disabled ? 'default' : 'pointer', opacity: disabled ? 0.5 : 1,
-                background: t.bg, border: `1px solid ${t.border}`, color: t.fg,
-                display: 'inline-flex', alignItems: 'center', gap: 4, borderRadius: BUTTON_RADIUS,
-            }}
-        >
-            {iconEl}{label}
-        </button>
-    );
+    return <UIActionButton {...rest} icon={icon ? <i className={`bi ${icon}`} /> : undefined} />;
 }
 
 export type FloatingMenuItem = {
@@ -2024,87 +1790,13 @@ export function FloatingMenu({ pos, items, minWidth = 175 }: { pos: { top: numbe
     );
 }
 
-// ── Expanded-row panel ──────────────────────────────────────────────────────
-// Standard shape for any "expand this table row" detail panel (WO tree/detail,
-// PR material requirements, and any future one). Two cues, no depth:
-//   • a saturated left rail in the row-selection blue — pegs the panel to the
-//     highlighted row it dropped out of, so the two read as one unit;
-//   • heavy top/bottom rules — bracket the expansion as a break in the list.
-// The body stays the same flat white as the rows, so wide content gets the full
-// row width instead of a nested frame eating padding on both sides. This
-// replaced an inset/recessed frame whose stacked shadows read as muddy rather
-// than deep, especially against Classic's beige — no depth shadows here.
-//
-// The frame is painted with `inset` box-shadow, NOT `border`, and that is load-
-// bearing: this panel lives in a `<td colSpan>` spanning every column, so any
-// border or padding it declares feeds into that cell's min-content width, which
-// auto table layout then distributes back across all the columns — the row above
-// visibly jumps sideways on expand. Shadows never participate in layout, so the
-// panel costs zero width. A call site that overrides `padding` must keep its left
-// value >= RAIL_W — the rail paints inside the padding box, so with less reserve
-// it sits on top of the content's first few pixels.
-// Always pair the two: ExpandedRowPanel is the frame, ExpandedRowPanelBody the
-// padded content box.
-const RAIL_W = { classic: 4, modern: 3 };
-const RULE_W = 2;
-
-/** The rail + edge rules as a paint-only frame. Exported for the two views whose panel can't be a component (absolutely positioned, or a two-pane workspace keeping its own grounds) — they apply this to the `<td>` and must stay in sync with the component. `railColor` overrides the selection blue where the rail carries meaning (e.g. health on Booking Stock). */
-export function expandedRowFrame(railColor?: string): React.CSSProperties {
-    const rail = RAIL_W.classic;
-    const rule = '#808080';
-    return {
-        boxShadow: [
-            `inset ${rail}px 0 0 0 ${railColor || ('#316ac5')}`,
-            `inset 0 ${RULE_W}px 0 0 ${rule}`,
-            `inset 0 -${RULE_W}px 0 0 ${rule}`,
-        ].join(', '),
-    };
-}
-
-// ---------------------------------------------------------------------------
-// Row state backgrounds
-// ---------------------------------------------------------------------------
-// Three states a list row can be in, three grounds — never mix them up:
-//   expanded    this row's detail panel is open below it. Selection blue, light.
-//   selected    checked for a bulk action. Same hue, darker, so a selected row
-//               that is also expanded still reads as selected.
-//   highlighted transient attention only — scroll target, search hit. Amber.
-// Blue is the expand convention app-wide (matches the ExpandedRowPanel rail);
-// amber never means "open". Every list that expands a row must paint
-// rowStateBg('expanded') and nothing hand-rolled.
-export type RowState = 'expanded' | 'selected' | 'highlighted';
-
-const ROW_STATE_BG: Record<RowState, { classic: string; modern: string }> = {
-    expanded: { classic: '#d6e4f7', modern: '#eef2ff' },
-    selected: { classic: '#b8d0ef', modern: '#dbe4ff' },
-    highlighted: { classic: '#fff8c4', modern: '#fef9c3' },
-};
-
-export const rowStateBg = (state: RowState): string =>
-    ROW_STATE_BG[state].classic;
-
-export function ExpandedRowPanel({ children, style }: { children: React.ReactNode; style?: React.CSSProperties }) {
-    return (
-        <div style={{
-            ...expandedRowFrame(),
-            background: '#fff',
-            padding: 5,
-            ...style,
-        }}>
-            {children}
-        </div>
-    );
-}
-
-/** Padded, transparent content box inside an ExpandedRowPanel — the panel already supplies the ground, so this adds no second background or frame. Pass `style` to override padding/border for layouts that need their own (e.g. a fixed-height two-pane body). */
-export function ExpandedRowPanelBody({ children, style }: { children: React.ReactNode; style?: React.CSSProperties }) {
-    return (
-        <div style={{
-            padding: '4px 8px',
-            ...style,
-        }}>
-            {children}
-        </div>
-    );
-}
-
+// ── Expanded-row panel + row-state grounds ──────────────────────────────────
+// Extracted into terras-ui's Table module: the same 4px selection-blue rail and
+// 2px rules, painted as inset box-shadow (a border would feed the colSpan cell's
+// min-content width back into auto layout and shove the row above sideways), and
+// the same three row grounds — expanded / selected / highlighted, never mixed up.
+// rowStateBg now returns a `var(--terras-row-state-*)`, which `.ui-style-classic`
+// sets to the old literals: it resolves under MainLayout's .app-container and
+// ModalWrapper's body, which is where every list row lives.
+export type { RowState } from '@bryanadamg/terras-ui/components/Table';
+export { rowStateBg, expandedRowFrame, ExpandedRowPanel, ExpandedRowPanelBody } from '@bryanadamg/terras-ui/components/Table';
