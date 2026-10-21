@@ -31,6 +31,32 @@ export default function FeedbackButton() {
         showToast(t('feedback_sent'), 'success');
     };
 
+    // Built outside the JSX on purpose: as a variable it type-checks against
+    // terras-ui versions whose FeedbackDialog doesn't know every key yet (an
+    // object literal there is an excess-property error), and an older dialog
+    // just ignores the keys it doesn't use.
+    const labels = {
+        title: t('send_feedback'),
+        message: t('feedback_message'),
+        attach: t('feedback_attach'),
+        pasteHint: t('feedback_paste_hint'),
+        editHint: t('feedback_edit_hint'),
+        blackoutHint: t('feedback_blackout_hint'),
+        undo: t('feedback_undo'),
+        done: t('feedback_done'),
+        remove: t('feedback_remove'),
+        limit: t('feedback_limit'),
+        tooLarge: t('feedback_too_large'),
+        notImage: t('feedback_not_image'),
+        includeName: t('feedback_include_name'),
+        anonymousHint: t('feedback_anonymous_hint'),
+        namedHint: t('feedback_named_hint'),
+        cancel: t('cancel'),
+        send: t('send'),
+        sending: t('feedback_sending'),
+        failed: t('feedback_failed'),
+    };
+
     return (
         <>
             <button data-testid="feedback-btn" className="btn btn-sm btn-light" onClick={() => setOpen(true)} title={t('send_feedback')}>
@@ -41,17 +67,7 @@ export default function FeedbackButton() {
                     onClose={() => setOpen(false)}
                     onSubmit={submit}
                     icon={<i className="bi bi-chat-square-text"></i>}
-                    labels={{
-                        title: t('send_feedback'),
-                        message: t('feedback_message'),
-                        includeName: t('feedback_include_name'),
-                        anonymousHint: t('feedback_anonymous_hint'),
-                        namedHint: t('feedback_named_hint'),
-                        cancel: t('cancel'),
-                        send: t('send'),
-                        sending: t('feedback_sending'),
-                        failed: t('feedback_failed'),
-                    }}
+                    labels={labels}
                 />
             )}
         </>
