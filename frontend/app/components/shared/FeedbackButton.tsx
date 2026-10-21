@@ -28,7 +28,10 @@ export default function FeedbackButton() {
             const err = await res.json().catch(() => null);
             throw new Error(err?.detail || t('feedback_failed'));
         }
-        showToast(t('feedback_sent'), 'success');
+        // 202 + queued: saved on the server, waiting for its retry loop to
+        // reach GitHub — not lost, but not in the inbox yet either.
+        const { queued } = await res.json();
+        showToast(t(queued ? 'feedback_queued' : 'feedback_sent'), 'success');
     };
 
     return (

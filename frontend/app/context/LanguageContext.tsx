@@ -405,6 +405,7 @@ const translations = {
         'feedback_anonymous_hint': 'Sent anonymously: only the page and app version are attached.',
         'feedback_named_hint': 'Your name and username will be attached.',
         'feedback_sent': 'Thanks! Your feedback was sent.',
+        'feedback_queued': "Thanks! It's saved and will be sent as soon as the server can reach the feedback inbox.",
         'feedback_failed': 'Could not send feedback. Please try again later.',
         // Headers
         'powered_by': 'Powered by',
@@ -793,6 +794,7 @@ const translations = {
         'feedback_anonymous_hint': 'Dikirim secara anonim: hanya halaman dan versi aplikasi yang dilampirkan.',
         'feedback_named_hint': 'Nama dan username Anda akan dilampirkan.',
         'feedback_sent': 'Terima kasih! Masukan Anda sudah terkirim.',
+        'feedback_queued': 'Terima kasih! Masukan sudah tersimpan dan akan dikirim begitu server bisa menjangkau kotak masukan.',
         'feedback_failed': 'Gagal mengirim masukan. Silakan coba lagi nanti.',
         // Headers
         'powered_by': 'Ditenagai oleh',
