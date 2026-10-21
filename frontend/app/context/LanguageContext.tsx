@@ -407,6 +407,7 @@ const translations = {
         'feedback_sent': 'Thanks! Your feedback was sent.',
         'feedback_queued': "Thanks! It's saved and will be sent as soon as the server can reach the feedback inbox.",
         'feedback_failed': 'Could not send feedback. Please try again later.',
+        'feedback_offline': "Couldn't reach the server. Check your connection and try again.",
         // Headers
         'powered_by': 'Powered by',
     },
@@ -796,6 +797,7 @@ const translations = {
         'feedback_sent': 'Terima kasih! Masukan Anda sudah terkirim.',
         'feedback_queued': 'Terima kasih! Masukan sudah tersimpan dan akan dikirim begitu server bisa menjangkau kotak masukan.',
         'feedback_failed': 'Gagal mengirim masukan. Silakan coba lagi nanti.',
+        'feedback_offline': 'Tidak bisa terhubung ke server. Periksa koneksi Anda lalu coba lagi.',
         // Headers
         'powered_by': 'Ditenagai oleh',
     }

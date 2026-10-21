@@ -64,6 +64,7 @@ export default function FeedbackButton() {
                         send: t('send'),
                         sending: t('feedback_sending'),
                         failed: t('feedback_failed'),
+                        offline: t('feedback_offline'),
                     }}
                 />
             )}
