@@ -117,8 +117,11 @@ body {
    property on :root would freeze the active value.
    ============================================================ */
 :root {
-  --xp-title-blue: linear-gradient(to right, #0058e6 0%, #08a5ff 100%);
-  --xp-title-blue-border: #003080;
+  /* The never-dimmed pair: what a window's own title bar paints with. */
+  --xp-title-blue-active: linear-gradient(to right, #0058e6 0%, #08a5ff 100%);
+  --xp-title-blue-border-active: #003080;
+  --xp-title-blue: var(--xp-title-blue-active);
+  --xp-title-blue-border: var(--xp-title-blue-border-active);
   /* Flat left-end of the title gradient, for the sidebar brand block: it sits to
      the LEFT of the header, so re-running the gradient there would end bright at
      the seam and restart dark in the header. Flat = an invisible join. Declared
@@ -129,6 +132,21 @@ body.window-chrome-inactive {
   --xp-title-blue: linear-gradient(to right, #7a96b8 0%, #a8bcd4 100%);
   --xp-title-blue-border: #6a819b;
   --xp-title-flat: #7a96b8;
+}
+/* terras-ui's title bars (Window.TitleBar, Modal, `titleBar`) read
+   --terras-title-blue, which terras-ui/css sets to a literal on
+   .ui-style-classic. Re-point it at the dimmable pair on <body> and on the
+   theme root (both below :root, so it re-resolves when the class flips). */
+body,
+.ui-style-classic {
+  --terras-title-blue: var(--xp-title-blue);
+  --terras-title-blue-border: var(--xp-title-blue-border);
+}
+/* A window must not dim itself: a dialog's own title bar stays active. Its
+   body is a .ui-style-classic again, so page chrome nested inside still dims. */
+[role="dialog"] {
+  --terras-title-blue: var(--xp-title-blue-active);
+  --terras-title-blue-border: var(--xp-title-blue-border-active);
 }
 
 .ui-style-classic {
