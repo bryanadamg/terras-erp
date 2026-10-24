@@ -37,8 +37,9 @@ Scope notes (Tier 1):
 - Store scope: on-hand counts only inside the item's putaway location subtree
   (FG -> Finished Goods, greige -> Greige Store, beam -> WIP / GD Beam), so a
   remnant left at a production spot is treated as still in use, not as free
-  stock that cancels a new order. An item with no putaway location nets
-  plant-wide. Incoming/demand stay plant-wide — an MO's output lands in the store.
+  stock that cancels a new order. A beam with no putaway location defaults to
+  the BEAMING work-center type's output location; any other item with none
+  nets plant-wide. Incoming/demand stay plant-wide — an MO's output lands in the store.
 - Safety stock and BOM tolerance % are ignored (gross = qty x percentage / 100);
   this mirrors the qty an MO is actually sized at.
 - net_free is a creation-time snapshot for COMPONENTS: no reservation row is
@@ -472,13 +473,32 @@ class Availability:
                    or self.sizes.token_for_size_id(line_sid, line_label))
             self._reserved[(str(item_id), vkey or "", tok)] += remaining
 
+    async def _beam_store(self):
+        """Where beaming puts its output — the BEAMING work-center type's output
+        location (Gudang Beam). Cached; None when no BEAMING type names one."""
+        if not hasattr(self, "_beam_store_id"):
+            from app.models.routing import WorkCenter
+            self._beam_store_id = (await self.db.execute(
+                select(WorkCenter.output_location_id)
+                .where(func.upper(WorkCenter.center_type) == "BEAMING",
+                       WorkCenter.node_type == "TYPE",
+                       WorkCenter.output_location_id.isnot(None))
+                .limit(1)
+            )).scalar()
+        return self._beam_store_id
+
     async def _store_scope(self, item_id: str) -> set | None:
         """The item's putaway location plus every location under it, or None
-        (plant-wide) when the item master names no putaway location."""
+        (plant-wide) when it has none. A beam with no putaway of its own defaults
+        to where beaming outputs (Gudang Beam), so beam items don't each need it set."""
         if item_id not in self._store:
             put = (await self.db.execute(
                 select(Item.default_putaway_location_id).where(Item.id == item_id)
             )).scalar()
+            if not put:
+                from app.services.beam_service import beam_item_ids
+                if item_id in await beam_item_ids(self.db, [item_id]):
+                    put = await self._beam_store()
             if not put:
                 self._store[item_id] = None
             else:

@@ -96,3 +96,50 @@ def test_preview_net_from_names_the_store(store_and_floor):
     with_store, without = asyncio.run(run())
     assert with_store["net_from_location_name"] == "Store"
     assert without["net_from_location_name"] == ""
+
+
+@pytest.fixture
+def beam_without_putaway():
+    """A beam item with no putaway of its own; beaming outputs to STORE."""
+    from app.db.session import SessionLocal
+    from app.models.item import Item
+    from app.models.location import Location
+    from app.models.routing import WorkCenter
+    from app.models.stock_balance import StockBalance
+
+    tag = str(_uuid.uuid4())[:8]
+    store, bin_, floor = _uuid.uuid4(), _uuid.uuid4(), _uuid.uuid4()
+    beam, wc = _uuid.uuid4(), _uuid.uuid4()
+    db = SessionLocal()
+    try:
+        db.add(Location(id=store, code=f"NB-STORE-{tag}", name="Gudang Beam", location_type="warehouse"))
+        db.add(Location(id=floor, code=f"NB-FLOOR-{tag}", name="Loom floor", location_type="warehouse"))
+        db.flush()
+        db.add(Location(id=bin_, code=f"NB-BIN-{tag}", name="Bin", location_type="bin", parent_id=store))
+        db.add(WorkCenter(id=wc, code=f"NB-WARP-{tag}", name="Warp", center_type="BEAMING",
+                          node_type="TYPE", output_location_id=store))
+        db.add(Item(id=beam, code=f"BEAM-NB-{tag}", name="Beam", uom="pcs"))
+        db.flush()
+        db.add(StockBalance(item_id=beam, location_id=bin_, variant_key="", batch_key="", qty=5))
+        db.add(StockBalance(item_id=beam, location_id=floor, variant_key="", batch_key="", qty=7))
+        db.commit()
+    finally:
+        db.close()
+
+    yield beam
+
+    db = SessionLocal()
+    try:
+        db.query(StockBalance).filter(StockBalance.item_id == beam).delete()
+        db.query(Item).filter(Item.id == beam).delete()
+        db.query(WorkCenter).filter(WorkCenter.id == wc).delete()
+        db.query(Location).filter(Location.id == bin_).delete()
+        db.query(Location).filter(Location.id.in_([store, floor])).delete()
+        db.commit()
+    finally:
+        db.close()
+
+
+def test_beam_without_putaway_nets_in_the_beaming_output_store(beam_without_putaway):
+    _, detail = _consume(beam_without_putaway, 20.0)
+    assert detail["on_hand"] == pytest.approx(5.0)   # Gudang Beam's bin, not the loom floor
