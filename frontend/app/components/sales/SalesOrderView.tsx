@@ -1786,16 +1786,13 @@ In stock ${fmtQty(f.baseAvailable)}${bu} · Shipped ${fmtQty(f.baseShipped)}${bu
                                            <button type="button" onClick={clearLabdip} style={{fontFamily:xpFont,fontSize:'10px',border:'1px solid #7f9db9',background:'#ece9d8',padding:'1px 6px',cursor:'pointer'}}>Change</button>
                                        </div>
                                    ) : (
-                                       <div style={{position:'relative'}}>
-                                           <input
-                                               type="text"
+                                       <div style={{position:'relative'}}
+                                           onFocus={() => setColorFocused(true)}
+                                           onBlur={() => setTimeout(() => setColorFocused(false), 150)}>
+                                           {/* React focus events bubble, so the wrapper sees the field's focus/blur. */}
+                                           <SearchField value={colorSearch} onChange={setColorSearch}
                                                placeholder="Search approved color, or pick a pending lab dip below..."
-                                               value={colorSearch}
-                                               onChange={e => setColorSearch(e.target.value)}
-                                               onFocus={() => setColorFocused(true)}
-                                               onBlur={() => setTimeout(() => setColorFocused(false), 150)}
-                                               style={{fontFamily:xpFont,fontSize:'11px',border:'1px solid #7f9db9',height:'22px',borderRadius:0,padding:'1px 4px',background:'#ffffff',outline:'none',width:'100%'}}
-                                           />
+                                               style={{display:'flex',width:'100%'}} />
                                            {colorFocused && (colorResults.length > 0 || labdipResults.length > 0) && (
                                                <div style={{position:'absolute',zIndex:20,top:'100%',left:0,right:0,maxHeight:220,overflowY:'auto',background:'#ffffff',border:'1px solid #7f9db9'}}>
                                                    {labdipResults.length > 0 && (
