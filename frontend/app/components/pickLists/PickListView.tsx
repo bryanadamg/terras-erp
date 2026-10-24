@@ -12,7 +12,7 @@ import { useConfirm } from '../../context/ConfirmContext';
 import { LotChip, LotChips, LotChipRow } from '../shared/LotChips';
 import { XPStatusBar, XPEmptyState, TableSkeleton, useTableSkeletonMetrics, StatusChip, Chip, statusTint, useFloatingMenu, MenuTriggerButton, FloatingMenu, ExpandedRowPanel, XPActionButton, CODE_FONT, rowStateBg, CHIP_RADIUS, XP_BTN, ProgressBar, progressToneColor, useSortable, SKEL_PAGE_ROWS } from '../shared/xpTheme';
 import { LV_XP_FONT, lvBtn, lvInput, lvTd, lvLabel, lvRow, lvSubTh, lvSubTd, lvSubRow, ExpanderCell, lvThSticky, lvSubTable, RowCheckboxCell, LV_CHECK_COL_W, SortableTh, ResizableTable } from '../shared/listViewTheme';
-import { ShellWindow, ShellTitleBar, xpToolbar, FilterChipBar, ToolbarCount } from '../shared/shellTheme';
+import { ShellWindow, ShellTitleBar, xpToolbar, FilterChipBar, ToolbarCount, SearchField } from '../shared/shellTheme';
 import Pager from '../shared/Pager';
 import ModalWrapper from '../shared/ModalWrapper';
 import { Tabs } from '../shared/Tabs';
@@ -62,11 +62,11 @@ export default function PickListView() {
     const [tab, setTab] = useRememberedTab<PLTab>('pick-lists', 'topick', ['topick', 'lists']);
 
     // Page window, fetch, loading flag and the stale-response race guard all come
-    // from the shared hook (context/usePaginatedList.ts). No filters on this list —
-    // the register shows every pick list, newest first.
+    // from the shared hook (context/usePaginatedList.ts), including the debounced
+    // server-side `?search=`. Otherwise unfiltered — every pick list, newest first.
     const {
         rows: pickLists, total: plTotal, loading, page: plPage, setPage: setPlPage,
-        refetch: reloadPickLists,
+        refetch: reloadPickLists, searchInput: plSearch, setSearch: setPlSearch,
     } = usePaginatedFetch<any>({
         endpoint: `${API_BASE}/pick-lists`,
         authFetch,
@@ -497,6 +497,7 @@ export default function PickListView() {
                 <button className={XP_BTN} style={xpBtn()} onClick={loadAll} title="Refresh">
                     <i className="bi bi-arrow-clockwise" style={{ marginRight: 4 }} />Refresh
                 </button>
+                <SearchField value={plSearch} onChange={setPlSearch} placeholder="Search code, SO, customer, SJ…" width={240} style={{ marginLeft: 6 }} />
                 <span style={{ marginLeft: 'auto', fontSize: 11, color: '#333' }}>
                     {plTotal.toLocaleString()} pick list{plTotal !== 1 ? 's' : ''}
                 </span>
