@@ -737,14 +737,20 @@ function SOPickerBoard({ pickableSOs, loading, tzDate, canManage, onRefresh, onP
     // "Ready" filter — hides orders with nothing packed yet, since those can't
     // be picked at all today; the planner's actual queue is the rest.
     const [readyOnly, setReadyOnly] = useState(false);
+    // Client-side: the board is one unpaginated array already in memory.
+    const [search, setSearch] = useState('');
     const readyCount = useMemo(
         () => pickableSOs.filter((so: any) => num(so.cartons_ready) > 0).length,
         [pickableSOs],
     );
-    const filtered = useMemo(
-        () => readyOnly ? pickableSOs.filter((so: any) => num(so.cartons_ready) > 0) : pickableSOs,
-        [pickableSOs, readyOnly],
-    );
+    const filtered = useMemo(() => {
+        const q = search.trim().toLowerCase();
+        return pickableSOs.filter((so: any) =>
+            (!readyOnly || num(so.cartons_ready) > 0)
+            && (!q || [so.po_number, so.customer_po_ref, so.customer_name,
+                ...(so.lines || []).flatMap((l: any) => [l.item_code, l.item_name])]
+                .some(v => v && String(v).toLowerCase().includes(q))));
+    }, [pickableSOs, readyOnly, search]);
     const { sorted, sort, toggle: toggleSort } = useSortable(filtered, {
         po: (so: any) => so.po_number,
         customer: (so: any) => so.customer_name,
@@ -760,6 +766,7 @@ function SOPickerBoard({ pickableSOs, loading, tzDate, canManage, onRefresh, onP
                 <button className={XP_BTN} style={xpBtn()} onClick={onRefresh} title="Re-score open orders">
                     <i className="bi bi-arrow-clockwise" style={{ marginRight: 4 }} />Refresh
                 </button>
+                <SearchField value={search} onChange={setSearch} placeholder="Search SO, customer, item…" width={220} style={{ marginLeft: 6 }} />
                 <FilterChipBar
                     style={{ marginLeft: 10 }}
                     value={readyOnly ? 'ready' : 'all'}
@@ -784,7 +791,7 @@ function SOPickerBoard({ pickableSOs, loading, tzDate, canManage, onRefresh, onP
                 {loading
                     ? <div style={{ fontSize: 11, color: '#888', padding: '12px 8px' }}>Scoring open orders...</div>
                     : sorted.length === 0
-                    ? <XPEmptyState icon="bi-inbox" message={readyOnly ? "No orders ready to pick right now." : "No open sales orders with anything outstanding."} />
+                    ? <XPEmptyState icon="bi-inbox" message={search.trim() ? "No orders match your search." : readyOnly ? "No orders ready to pick right now." : "No open sales orders with anything outstanding."} />
                     : (
                         <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                             <thead>
