@@ -1,0 +1,34 @@
+# LAN HTTPS for the shop floor: phone browsers only expose the camera (QR
+# scanning) on a secure origin. There's no domain, so Caddy signs a cert for
+# the server's LAN IP with its own local CA; each phone installs that CA once
+# from http://<LAN_IP>/ca.crt. The root lives in ./caddy_data — losing it
+# means re-installing the CA on every phone.
+{
+	local_certs
+	skip_install_trust
+	# The http:// block below redirects itself; Caddy's own redirect would also swallow /ca.crt.
+	auto_https disable_redirects
+	# Browsers send no SNI when connecting by IP, and inside Docker the local
+	# address is the container's, so tell Caddy which cert to fall back to.
+	default_sni {$LAN_IP}
+}
+
+https://{$LAN_IP} {
+	tls internal
+	# Straight to the API (incl. the WebSocket, which Next's rewrite proxy doesn't carry).
+	@backend path /api/* /static/*
+	reverse_proxy @backend api:8000
+	reverse_proxy frontend:3000
+}
+
+http:// {
+	handle /ca.crt {
+		root * /data/caddy/pki/authorities/local
+		rewrite * /root.crt
+		header Content-Type application/x-x509-ca-cert
+		file_server
+	}
+	handle {
+		redir https://{host}{uri} permanent
+	}
+}
