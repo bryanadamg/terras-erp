@@ -3398,6 +3398,10 @@ class BatchResponse(BaseModel):
     # The beam-side twin of reserved_wo_id/reserved_wo_code above.
     mounted_wc_id: Optional[UUID] = None
     mounted_wc_code: Optional[str] = None
+    # Warp beams only: the yarns the beam was warped from — the BEAMING completion's
+    # actual items, read off the root BM- lot so a leftover (LFT-) inherits them.
+    # [{item_code, item_name}]; printed as "Komponen Benang" on the lot label.
+    beam_components: Optional[list[dict]] = None
 
     class Config:
         from_attributes = True
