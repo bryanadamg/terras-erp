@@ -12,7 +12,7 @@ import { useConfirm } from '../../context/ConfirmContext';
 import { LotChip, LotChips, LotChipRow } from '../shared/LotChips';
 import { XPStatusBar, XPEmptyState, TableSkeleton, useTableSkeletonMetrics, StatusChip, Chip, statusTint, useFloatingMenu, MenuTriggerButton, FloatingMenu, ExpandedRowPanel, XPActionButton, CODE_FONT, rowStateBg, CHIP_RADIUS, XP_BTN, ProgressBar, progressToneColor, useSortable, SKEL_PAGE_ROWS } from '../shared/xpTheme';
 import { LV_XP_FONT, lvBtn, lvInput, lvTd, lvLabel, lvRow, lvSubTh, lvSubTd, lvSubRow, ExpanderCell, lvThSticky, lvSubTable, RowCheckboxCell, LV_CHECK_COL_W, SortableTh, ResizableTable } from '../shared/listViewTheme';
-import { ShellWindow, ShellTitleBar, xpToolbar, FilterChipBar, ToolbarCount } from '../shared/shellTheme';
+import { ShellWindow, ShellTitleBar, xpToolbar, FilterChipBar, ToolbarCount, SearchField } from '../shared/shellTheme';
 import Pager from '../shared/Pager';
 import ModalWrapper from '../shared/ModalWrapper';
 import { Tabs } from '../shared/Tabs';
@@ -62,11 +62,11 @@ export default function PickListView() {
     const [tab, setTab] = useRememberedTab<PLTab>('pick-lists', 'topick', ['topick', 'lists']);
 
     // Page window, fetch, loading flag and the stale-response race guard all come
-    // from the shared hook (context/usePaginatedList.ts). No filters on this list —
-    // the register shows every pick list, newest first.
+    // from the shared hook (context/usePaginatedList.ts), including the debounced
+    // server-side `?search=`. Otherwise unfiltered — every pick list, newest first.
     const {
         rows: pickLists, total: plTotal, loading, page: plPage, setPage: setPlPage,
-        refetch: reloadPickLists,
+        refetch: reloadPickLists, searchInput: plSearch, setSearch: setPlSearch,
     } = usePaginatedFetch<any>({
         endpoint: `${API_BASE}/pick-lists`,
         authFetch,
@@ -497,6 +497,7 @@ export default function PickListView() {
                 <button className={XP_BTN} style={xpBtn()} onClick={loadAll} title="Refresh">
                     <i className="bi bi-arrow-clockwise" style={{ marginRight: 4 }} />Refresh
                 </button>
+                <SearchField value={plSearch} onChange={setPlSearch} placeholder="Search code, SO, customer, SJ…" width={240} style={{ marginLeft: 6 }} />
                 <span style={{ marginLeft: 'auto', fontSize: 11, color: '#333' }}>
                     {plTotal.toLocaleString()} pick list{plTotal !== 1 ? 's' : ''}
                 </span>
@@ -736,14 +737,20 @@ function SOPickerBoard({ pickableSOs, loading, tzDate, canManage, onRefresh, onP
     // "Ready" filter — hides orders with nothing packed yet, since those can't
     // be picked at all today; the planner's actual queue is the rest.
     const [readyOnly, setReadyOnly] = useState(false);
+    // Client-side: the board is one unpaginated array already in memory.
+    const [search, setSearch] = useState('');
     const readyCount = useMemo(
         () => pickableSOs.filter((so: any) => num(so.cartons_ready) > 0).length,
         [pickableSOs],
     );
-    const filtered = useMemo(
-        () => readyOnly ? pickableSOs.filter((so: any) => num(so.cartons_ready) > 0) : pickableSOs,
-        [pickableSOs, readyOnly],
-    );
+    const filtered = useMemo(() => {
+        const q = search.trim().toLowerCase();
+        return pickableSOs.filter((so: any) =>
+            (!readyOnly || num(so.cartons_ready) > 0)
+            && (!q || [so.po_number, so.customer_po_ref, so.customer_name,
+                ...(so.lines || []).flatMap((l: any) => [l.item_code, l.item_name])]
+                .some(v => v && String(v).toLowerCase().includes(q))));
+    }, [pickableSOs, readyOnly, search]);
     const { sorted, sort, toggle: toggleSort } = useSortable(filtered, {
         po: (so: any) => so.po_number,
         customer: (so: any) => so.customer_name,
@@ -759,6 +766,7 @@ function SOPickerBoard({ pickableSOs, loading, tzDate, canManage, onRefresh, onP
                 <button className={XP_BTN} style={xpBtn()} onClick={onRefresh} title="Re-score open orders">
                     <i className="bi bi-arrow-clockwise" style={{ marginRight: 4 }} />Refresh
                 </button>
+                <SearchField value={search} onChange={setSearch} placeholder="Search SO, customer, item…" width={220} style={{ marginLeft: 6 }} />
                 <FilterChipBar
                     style={{ marginLeft: 10 }}
                     value={readyOnly ? 'ready' : 'all'}
@@ -783,7 +791,7 @@ function SOPickerBoard({ pickableSOs, loading, tzDate, canManage, onRefresh, onP
                 {loading
                     ? <div style={{ fontSize: 11, color: '#888', padding: '12px 8px' }}>Scoring open orders...</div>
                     : sorted.length === 0
-                    ? <XPEmptyState icon="bi-inbox" message={readyOnly ? "No orders ready to pick right now." : "No open sales orders with anything outstanding."} />
+                    ? <XPEmptyState icon="bi-inbox" message={search.trim() ? "No orders match your search." : readyOnly ? "No orders ready to pick right now." : "No open sales orders with anything outstanding."} />
                     : (
                         <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                             <thead>

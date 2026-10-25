@@ -1,6 +1,6 @@
 {
   "name": "terras-erp-frontend",
-  "version": "0.43.0",
+  "version": "0.44.0",
   "private": true,
   "scripts": {
     "dev": "next dev",
@@ -9,7 +9,7 @@
     "lint": "next lint --dir app"
   },
   "dependencies": {
-    "@bryanadamg/terras-ui": "^0.20.0",
+    "@bryanadamg/terras-ui": "^1.0.0",
     "@dicebear/collection": "^9.4.2",
     "@dicebear/core": "^9.4.3",
     "bootstrap": "^5.3.8",

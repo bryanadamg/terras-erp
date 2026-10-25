@@ -37,15 +37,15 @@ from app.db.session import engine
 from app.core.db_manager import db_manager
 from app.core.scheduler import backup_scheduler
 from app.db.base import Base
-from app.services import backup_schedule_service, event_log_service
-from app.api import items, locations, stock, attributes, boms, manufacturing, categories, routing, auth, uoms, sales, samples, audit, admin, dashboard, partners, purchase, settings, production_runs, work_orders, batches, dyeing_setting, preferences, lab_dips, packing, pick_lists, shipments, colors, combos, packaging_types, weaving, print_templates, production_reports, quarantine, work_queue, dyeing_monitor
+from app.services import backup_schedule_service, event_log_service, feedback_service
+from app.api import items, locations, stock, attributes, boms, manufacturing, categories, routing, auth, uoms, sales, samples, audit, admin, dashboard, partners, purchase, settings, production_runs, work_orders, batches, dyeing_setting, preferences, lab_dips, packing, pick_lists, shipments, colors, combos, packaging_types, weaving, print_templates, production_reports, quarantine, work_queue, dyeing_monitor, feedback
 from app.core.ws_manager import manager, WS_CLOSE_TOKEN_EXPIRED
 from app.core.ws_events import can_receive
 from app.core.ws_metrics import metrics as ws_metrics
 from app.api.auth import ws_connection_state, get_current_admin
 
 # Keep in sync with /VERSION, frontend/package.json "version", and CHANGELOG.md on release.
-APP_VERSION = "0.43.0"
+APP_VERSION = "0.44.0"
 
 # Process start time, a proxy for "last deployed/updated" — deploy is git pull +
 # docker compose up --build, which always restarts this process.
@@ -73,9 +73,12 @@ async def lifespan(app: FastAPI):
     # Drain any live events that never reached Redis — from a crash mid-publish or
     # a bus outage — and keep the delivery buffer trimmed.
     relay_task = asyncio.create_task(_event_relay_loop())
+    # Resend feedback reports that couldn't reach GitHub when they were written.
+    feedback_task = asyncio.create_task(_feedback_retry_loop())
     yield
     # Shutdown: Close Redis connections
     relay_task.cancel()
+    feedback_task.cancel()
     await manager.stop()
     backup_scheduler.shutdown()
 
@@ -104,6 +107,21 @@ async def _event_relay_loop():
         except Exception:
             # A relay that dies takes recovery with it, so it never gets to.
             logger.exception("Live-event relay pass failed")
+
+
+async def _feedback_retry_loop():
+    while True:
+        try:
+            await asyncio.sleep(feedback_service.RETRY_SECONDS)
+            async with db_manager.async_session_factory() as session:
+                sent = await feedback_service.send_pending(session)
+            if sent:
+                logger.info("Delivered %d queued feedback report(s)", sent)
+        except asyncio.CancelledError:
+            raise
+        except Exception:
+            # Same rule as the relay: a loop that dies stops retrying for good.
+            logger.exception("Feedback retry pass failed")
 
 app = FastAPI(
     title="Terras ERP",
@@ -215,6 +233,7 @@ api_router.include_router(dyeing_monitor.router)
 api_router.include_router(preferences.router)
 api_router.include_router(print_templates.router)
 api_router.include_router(production_reports.router)
+api_router.include_router(feedback.router)
 
 # How long a socket may sit accepted-but-unauthenticated before it is dropped.
 # Generous enough for a slow mobile link, short enough that an unauthenticated

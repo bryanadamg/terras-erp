@@ -6,6 +6,7 @@ import type { Band } from '../shared/printTemplate/types';
 import { bandAcceptsFields, placedFieldKeys } from '../shared/printTemplate/bandOps';
 import { describeBand } from '../shared/printTemplate/bandLabel';
 import { xpFont } from '../shared/xpTheme';
+import { SearchField } from '../shared/shellTheme';
 
 /**
  * The fields a document *can* carry, as a list you can add from.
@@ -110,18 +111,8 @@ export default function FieldPalette({
                         : 'Select a grid or label/value section first.'}
             </div>
 
-            <input
-                type="text"
-                value={search}
-                placeholder="Search fields..."
-                onChange={e => setSearch(e.target.value)}
-                style={{
-                        fontFamily: xpFont, fontSize: 11, border: '1px solid #7f9db9',
-                        boxShadow: 'inset 1px 1px 0 rgba(0,0,0,0.1)', padding: '1px 4px',
-                        background: '#fff', color: '#000', height: 19, width: '100%',
-                        boxSizing: 'border-box', outline: 'none', borderRadius: 0, marginBottom: 4,
-                    }}
-            />
+            <SearchField value={search} onChange={setSearch} placeholder="Search fields..."
+                style={{ display: 'flex', width: '100%', marginBottom: 4 }} />
 
             {matches
                 ? (matches.length === 0

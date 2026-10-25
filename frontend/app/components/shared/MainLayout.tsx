@@ -16,6 +16,7 @@ import { routeTitle, PREFETCH_ROUTES, ROUTE_PERMISSIONS } from './navConfig';
 import { useDocumentTitle } from '../../hooks/useDocumentTitle';
 import AccessDenied from './AccessDenied';
 import LiveFeedIndicator from './LiveFeedIndicator';
+import FeedbackButton from './FeedbackButton';
 import LogoutButton from '@bryanadamg/terras-ui/components/LogoutButton';
 
 export default function MainLayout({ children }: { children: React.ReactNode }) {
@@ -149,6 +150,7 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
                     <div className="d-flex align-items-center gap-2 gap-md-3">
                         <LiveFeedIndicator />
                         <button data-testid="scanner-btn" className="btn btn-sm btn-light" onClick={() => router.push('/scanner')} title="Scan QR Code"><i className="bi bi-qr-code-scan"></i></button>
+                        <FeedbackButton />
                         <div className="d-flex align-items-center me-1">
                             <select 
                                 data-testid="language-select"

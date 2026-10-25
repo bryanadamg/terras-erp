@@ -1,6 +1,10 @@
 'use client';
 import React from 'react';
-import { xpFont, modernFont, ChipTone, ChipSeg, BUTTON_RADIUS, PANEL_RADIUS, XP_BTN } from './xpTheme';
+import { ChipTone, ChipSeg } from './xpTheme';
+import UIButton from '@bryanadamg/terras-ui/components/Button';
+import UIWindow from '@bryanadamg/terras-ui/components/Window';
+import { bevel, titleBar, toolbar } from '@bryanadamg/terras-ui/styles';
+import type { ButtonTone, ShellTone } from '@bryanadamg/terras-ui/types';
 import UIFilterChipBar from '@bryanadamg/terras-ui/components/FilterChipBar';
 import UISegmentedBar from '@bryanadamg/terras-ui/components/SegmentedBar';
 import { SearchField as UISearchField } from '@bryanadamg/terras-ui/components/Field';
@@ -13,23 +17,25 @@ import { segAt as uiSegAt } from '@bryanadamg/terras-ui/styles';
 // objects (same `boxShadow: '2px 2px 4px rgba(0,0,0,0.3)'` bevel, same blue
 // title-bar gradient, same toolbar strip) — this is the single source now.
 // Migrate a view's local copy when you touch it; don't hand-roll a new one.
+//
+// The style objects and components below are now thin adapters over terras-ui's
+// `bevel` / `titleBar` / `toolbar` primitives and its `Window` — the package
+// extracted them from this file. They stay exported under their old names so the
+// call sites are untouched.
 
 // `overflow: hidden` is part of the chrome, not a caller concern: the title bar,
 // toolbar and table inside are all square-cornered, so without the clip they poke
 // out of PANEL_RADIUS. It clips at the padding box (radius minus the 2px bevel),
 // which is what makes the bar's corner read as one curve with the frame's.
-export const xpBevel = (extra: React.CSSProperties = {}): React.CSSProperties => ({
-    border: '2px solid', borderColor: '#dfdfdf #808080 #808080 #dfdfdf',
-    boxShadow: '2px 2px 4px rgba(0,0,0,0.3)', background: '#ece9d8',
-    borderRadius: PANEL_RADIUS, overflow: 'hidden',
-    ...extra,
-});
+export const xpBevel = (extra: React.CSSProperties = {}): React.CSSProperties => bevel(extra);
 
 // Title-bar tones. Blue is the default window chrome; the others exist for
 // dashboard-style panel stacks where the bar itself carries the severity of what
 // it heads (alerts = red, production = amber, informational = grey). Same five
-// semantic families as STATUS_FAMILY — don't add a sixth hue here.
-export type ShellTone = 'blue' | 'red' | 'amber' | 'green' | 'grey';
+// semantic families as STATUS_FAMILY — don't add a sixth hue here. The bars
+// themselves paint from terras-ui's tokens; this table is for chrome that has to
+// match a bar without being one (SectionHomeView's tiles).
+export type { ShellTone };
 
 export const TITLE_TONES: Record<ShellTone, { background: string; border: string }> = {
     blue:  { background: 'var(--xp-title-blue)', border: 'var(--xp-title-blue-border)' },
@@ -39,19 +45,12 @@ export const TITLE_TONES: Record<ShellTone, { background: string; border: string
     grey:  { background: 'linear-gradient(to bottom, #6a6a6a, #4a4a4a)',        border: '#222222' },
 };
 
-export const xpTitleBar = (extra: React.CSSProperties = {}, tone: ShellTone = 'blue'): React.CSSProperties => ({
-    background: TITLE_TONES[tone].background, color: '#ffffff',
-    fontFamily: xpFont, fontSize: 12, fontWeight: 'bold', padding: '4px 8px',
-    boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.3)', borderBottom: `1px solid ${TITLE_TONES[tone].border}`,
-    display: 'flex', justifyContent: 'space-between', alignItems: 'center', minHeight: 26,
-    ...extra,
-});
+// Blue still dims with the window focus: globals.css points terras-ui's
+// --terras-title-blue at --xp-title-blue.
+export const xpTitleBar = (extra: React.CSSProperties = {}, tone: ShellTone = 'blue'): React.CSSProperties =>
+    titleBar(extra, tone);
 
-export const xpToolbar = (extra: React.CSSProperties = {}): React.CSSProperties => ({
-    background: 'linear-gradient(to bottom, #f5f4ef, #e0dfd8)', borderBottom: '1px solid #b0a898',
-    padding: '3px 6px', display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' as const,
-    ...extra,
-});
+export const xpToolbar = (extra: React.CSSProperties = {}): React.CSSProperties => toolbar(extra);
 
 // ── Toolbar contents ─────────────────────────────────────────────────────────
 // `xpToolbar` above is the strip; these three are what goes IN it. Every list
@@ -112,16 +111,7 @@ export function ToolbarCount({ children, right = false, style }: {
     right?: boolean;
     style?: React.CSSProperties;
 }) {
-    return (
-        <span style={{
-            flexShrink: 0, whiteSpace: 'nowrap',
-            ...(right ? { marginLeft: 'auto' } : {}),
-            ...({ fontFamily: xpFont, fontSize: 11, color: '#333333' }),
-            ...style,
-        }}>
-            {children}
-        </span>
-    );
+    return <UIWindow.Count right={right} style={style}>{children}</UIWindow.Count>;
 }
 
 // Toolbar-level labeled action buttons — "Create X" / "New X" / "Print" / "Import"
@@ -132,22 +122,15 @@ export function ToolbarCount({ children, right = false, style }: {
 // theme branch. Use this instead of inlining another one.
 export type ToolbarButtonTone = 'create' | 'launch' | 'neutral' | 'danger';
 
-const TOOLBAR_BTN_CLASSIC: Record<ToolbarButtonTone, React.CSSProperties> = {
-    create:  { background: 'linear-gradient(to bottom, #5ec85e, #2d7a2d)', borderColor: '#1a5e1a #0a3e0a #0a3e0a #1a5e1a', color: '#ffffff', fontWeight: 'bold' },
-    launch:  { background: 'linear-gradient(to bottom, #5a9ae0, #0058e6)', borderColor: '#003080 #001840 #001840 #003080', color: '#ffffff', fontWeight: 'bold' },
-    neutral: { background: 'linear-gradient(to bottom, #ffffff, #d4d0c8)', borderColor: '#dfdfdf #808080 #808080 #dfdfdf', color: '#000000' },
-    danger:  { background: 'linear-gradient(to bottom, #ff6060, #cc0000)', borderColor: '#800000 #4a0000 #4a0000 #800000', color: '#ffffff' },
-};
-
-const TOOLBAR_BTN_MODERN: Record<ToolbarButtonTone, string> = {
-    create: 'btn-success text-white',
-    launch: 'btn-primary',
-    neutral: 'btn-outline-secondary',
-    danger: 'btn-danger',
+// Toolbar intents onto terras-ui's four button tones: the green CTA is `success`,
+// the blue second CTA is `primary`. Same faces as every other button in the app,
+// rather than the toolbar's own brighter blue and red.
+const TOOLBAR_TONE: Record<ToolbarButtonTone, ButtonTone> = {
+    create: 'success', launch: 'primary', neutral: 'default', danger: 'danger',
 };
 
 export function ToolbarButton({
-    tone = 'neutral', icon, children, onClick, disabled = false, testId, printable = false, title, style,
+    tone = 'neutral', icon, children, onClick, disabled = false, testId, title, style,
 }: {
     /** create = green CTA ("Add X"/"Create"/"New Lot"). launch = blue CTA for a
      * second, distinct create-like action on the same toolbar (e.g. "New
@@ -158,31 +141,23 @@ export function ToolbarButton({
     onClick: (e: React.MouseEvent) => void;
     disabled?: boolean;
     testId?: string;
-    /** Tags the modern button `btn-print` (picked up by the classic-theme CSS
-     * override) — pass for the Print action specifically. */
+    /** No-op since the modern theme went; still accepted so the Print call sites compile. */
     printable?: boolean;
     title?: string;
     style?: React.CSSProperties;
 }) {
     return (
-        <button
-            type="button"
+        <UIButton
+            tone={TOOLBAR_TONE[tone]}
+            icon={icon ? <i className={`bi ${icon}`} /> : undefined}
             data-testid={testId}
-            className={XP_BTN}
             onClick={onClick}
             disabled={disabled}
             title={title}
-            style={{
-                fontFamily: xpFont, fontSize: '11px', padding: '2px 10px',
-                cursor: disabled ? 'default' : 'pointer', opacity: disabled ? 0.5 : 1,
-                border: '1px solid', borderRadius: BUTTON_RADIUS,
-                ...TOOLBAR_BTN_CLASSIC[tone],
-                ...style,
-            }}
+            style={style}
         >
-            {icon && <i className={`bi ${icon}`} style={{ marginRight: 4 }}></i>}
             {children}
-        </button>
+        </UIButton>
     );
 }
 
@@ -327,14 +302,17 @@ export function ShellWindow({ fill = 'page', className, style, children }: {
     style?: React.CSSProperties;
     children: React.ReactNode;
 }) {
-    const fillStyle = fillStyleFor(fill);
+    // The package's own `fill` sizes 'page' as height: 100%; this app's page
+    // convention is the --app-vh one above, so the sizing stays here. `fill={false}`
+    // was a plain block here and stays one (the package frame is always a flex column).
     return (
-        <div
-            style={{ ...xpBevel(), ...fillStyle, ...style }}
+        <UIWindow
+            fill={false}
             className={className}
+            style={{ ...(fill === false ? { display: 'block' } : fillStyleFor(fill)), ...style }}
         >
             {children}
-        </div>
+        </UIWindow>
     );
 }
 
@@ -362,14 +340,7 @@ export function PageTitleBar({ icon, title, right, style }: {
     // the seven PageTitleBar pages (Colors, Color/Combo Library, Attributes, Lab
     // Dips, Dyeing & Setting, Settings) with a visibly taller bar than every
     // xpTitleBar page next to them. One bar height, app-wide.
-    const base: React.CSSProperties = xpTitleBar({ justifyContent: 'flex-start', gap: 8, flexShrink: 0 });
-    return (
-        <div style={{ ...base, ...style }}>
-            <i className={`bi ${icon}`} style={undefined} />
-            {title}
-            {right && <span style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 6 }}>{right}</span>}
-        </div>
-    );
+    return <UIWindow.TitleBar icon={<i className={`bi ${icon}`} />} title={title} right={right} style={style} />;
 }
 
 /**
@@ -385,10 +356,5 @@ export function ShellTitleBar({ icon, title, subtitle, right, tone = 'blue' }: {
     right?: React.ReactNode;      // action button(s) — e.g. "+ Add"
     tone?: ShellTone;             // classic-only bar color; modern keeps the white card-header
 }) {
-    return (
-        <div style={xpTitleBar({}, tone)}>
-            <span><i className={`bi ${icon}`} style={{ marginRight: 6 }} />{title}</span>
-            {right}
-        </div>
-    );
+    return <UIWindow.TitleBar icon={<i className={`bi ${icon}`} />} title={title} right={right} tone={tone} />;
 }

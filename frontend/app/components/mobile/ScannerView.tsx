@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { Html5QrcodeScanner } from 'html5-qrcode';
 import { StatusChip, xpFont as XP_FONT, CHIP_RADIUS, xpInput as xpInputBase } from '../shared/xpTheme';
-import { MOBILE_BG, MobilePanel, MobileScreenBar, MobileButton, MobileNotice } from './mobileTheme';
+import { MOBILE_BG, MobilePanel, MobileScreenBar, MobileButton, MobileNotice, MobileSearchField } from './mobileTheme';
 import { API_BASE } from '../shared/apiBase';
 import { isBeamItemRecord } from '../shared/beamItem';
 
@@ -656,14 +656,10 @@ export default function MobileScannerView({
                                         <div style={{ fontFamily: XP_FONT, fontSize: 10, fontWeight: 'bold', color: '#000080', marginBottom: 6 }}>
                                             Select substitute for: {materialRows[subPickerIdx]?.orig_item_code}
                                         </div>
-                                        <input
-                                            type="text"
-                                            autoFocus
-                                            placeholder="Type item code or name (min 2 chars)..."
-                                            value={subQuery}
-                                            onChange={e => setSubQuery(e.target.value)}
-                                            style={{ ...xpInput, marginBottom: 6 }}
-                                        />
+                                        <div style={{ display: 'flex', marginBottom: 6 }}>
+                                            <MobileSearchField value={subQuery} onChange={setSubQuery} autoFocus
+                                                placeholder="Type item code or name (min 2 chars)..." />
+                                        </div>
                                         {subQuery.length >= 2 && filteredItems.length === 0 && (
                                             <div style={{ fontFamily: XP_FONT, fontSize: 11, color: '#888', padding: '4px 0' }}>No items found.</div>
                                         )}

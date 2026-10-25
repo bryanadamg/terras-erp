@@ -1,6 +1,10 @@
 'use client';
 import React from 'react';
-import { xpFont, modernFont, SortMark, SortState, BUTTON_RADIUS, BTN_TONES } from './xpTheme';
+import { xpFont, modernFont, BUTTON_RADIUS, BTN_TONES, xpBtn } from './xpTheme';
+import {
+    CHECK_COL_W, EXPANDER_COL_W,
+    RowCheckboxCell as UIRowCheckboxCell, ExpanderCell as UIExpanderCell,
+} from '@bryanadamg/terras-ui/components/Table';
 import type { BtnTone } from './xpTheme';
 import { toLayoutPx } from '@bryanadamg/terras-ui/scale';
 
@@ -30,14 +34,6 @@ export const lvInput = (extra: React.CSSProperties = {}): React.CSSProperties =>
 
 // Classic faces come from xpTheme's BTN_TONES (single source, shared with the
 // classic-only `xpBtn`); only the modern half lives here.
-const LV_CLASSIC_TONES = BTN_TONES;
-
-const LV_MODERN_TONES: Record<BtnTone, React.CSSProperties> = {
-    default: {},
-    primary: { fontWeight: 600, background: '#2563eb', color: '#fff', border: 'none' },
-    success: { fontWeight: 600, background: '#16a34a', color: '#fff', border: 'none' },
-    danger:  { fontWeight: 600, background: '#dc2626', color: '#fff', border: 'none' },
-};
 
 // THE button face, both themes, all four intents. `extra` still spreads last so a
 // caller can size or disable it; it is not the place to repaint the face.
@@ -45,12 +41,8 @@ const LV_MODERN_TONES: Record<BtnTone, React.CSSProperties> = {
 // a button is sized by its label, and a long flexible sibling must not squeeze it
 // until that label wraps. `extra` spreads last, so a deliberately flexible button
 // still overrides it.
-export const lvBtn = (tone: BtnTone = 'default', extra: React.CSSProperties = {}): React.CSSProperties => ({
-    fontFamily: LV_XP_FONT, fontSize: 11, padding: '2px 10px', cursor: 'pointer',
-    background: 'linear-gradient(to bottom, #ffffff 0%, #d4d0c8 100%)',
-    border: '1px solid', borderColor: '#dfdfdf #808080 #808080 #dfdfdf', color: '#000',
-    borderRadius: BUTTON_RADIUS, flexShrink: 0, ...LV_CLASSIC_TONES[tone], ...extra,
-});
+export const lvBtn = (tone: BtnTone = 'default', extra: React.CSSProperties = {}): React.CSSProperties =>
+    xpBtn({ ...BTN_TONES[tone], ...extra });
 
 // Emphasised primary button (blue), dual-theme. Kept as the name most call sites
 // already use; it is just `lvBtn('primary')`.
@@ -243,34 +235,10 @@ export function TableEmpty({ colSpan, message, icon, tdStyle }: {
 // columns come from a config array (weaving output report, work-order list,
 // booking stock) keeps ONE component call instead of branching the whole cell on
 // `c.sortKey ? <th sortable> : <th>`.
-export function SortableTh({ sort, colKey, onSort, children, style, className, title, colSpan }: {
-    sort?: SortState;
-    colKey?: string | null;
-    onSort?: (key: string) => void;
-    children?: React.ReactNode;
-    style?: React.CSSProperties;
-    className?: string;
-    title?: string;
-    colSpan?: number;
-}) {
-    if (!colKey || !onSort) {
-        return <th className={className} colSpan={colSpan} title={title} style={style}>{children}</th>;
-    }
-    const key = colKey;
-    const dir = sort?.key === key ? (sort.dir === 1 ? 'ascending' : 'descending') : 'none';
-    return (
-        <th
-            className={className}
-            colSpan={colSpan}
-            title={title ?? 'Sort'}
-            aria-sort={dir as React.AriaAttributes['aria-sort']}
-            style={{ ...style, cursor: 'pointer', userSelect: 'none' }}
-            onClick={() => onSort(key)}
-        >
-            {children}<SortMark sort={sort ?? null} colKey={key} />
-        </th>
-    );
-}
+// Extracted into terras-ui's Table module as-is: pointer, no text selection (a
+// double-click would select the label instead of sorting twice), the "Sort"
+// title, aria-sort and the arrow.
+export { SortableTh } from '@bryanadamg/terras-ui/components/Table';
 
 // ── Row multi-select ──────────────────────────────────────────────────────────
 // The checkbox half of a bulk-action list. Six views grew their own copy of this
@@ -285,85 +253,12 @@ export function SortableTh({ sort, colKey, onSort, children, style, className, t
 // Select-all is deliberately page-scoped — ticking 4000 filtered rows in one
 // click is never what the user meant — while individually selected rows on other
 // pages stay selected.
-export const LV_CHECK_COL_W = 28;
-
-export const lvCheckTd = (base: React.CSSProperties = {}): React.CSSProperties => ({
-    ...lvTd(),
-    ...base,
-    width: LV_CHECK_COL_W, textAlign: 'center', padding: '3px 4px', verticalAlign: 'middle',
-});
-
-export interface RowSelection<T> {
-    /** key → row, for the bulk action and the row's own `checked` test. */
-    selected: Record<string, T>;
-    keys: string[];
-    items: T[];
-    entries: [string, T][];
-    count: number;
-    isSelected: (row: T) => boolean;
-    isSelectedKey: (key: string) => boolean;
-    toggle: (row: T) => void;
-    /** For rows handed to a memoised child that only knows the id. */
-    toggleKey: (key: string) => void;
-    deselectKey: (key: string) => void;
-    /** Header checkbox: adds/removes every eligible row on the current page. */
-    togglePage: () => void;
-    allPageSelected: boolean;
-    /** Some — but not all — of this page is selected: the indeterminate state. */
-    someSelected: boolean;
-    /** Eligible rows on this page; 0 means the header checkbox has nothing to do. */
-    pageEligibleCount: number;
-    clear: () => void;
-}
-
-export function useRowSelection<T>(
-    rows: T[],
-    keyOf: (row: T) => string,
-    opts: { selectable?: (row: T) => boolean } = {},
-): RowSelection<T> {
-    const [selected, setSelected] = React.useState<Record<string, T>>({});
-    const { selectable } = opts;
-    const eligible = selectable ? rows.filter(selectable) : rows;
-
-    const isSelectedKey = (key: string) => !!selected[key];
-    const isSelected = (row: T) => isSelectedKey(keyOf(row));
-
-    const setRow = (row: T, on: boolean) => setSelected(prev => {
-        const next = { ...prev };
-        const k = keyOf(row);
-        if (on) next[k] = row; else delete next[k];
-        return next;
-    });
-
-    const allPageSelected = eligible.length > 0 && eligible.every(r => !!selected[keyOf(r)]);
-    const anyPageSelected = eligible.some(r => !!selected[keyOf(r)]);
-
-    return {
-        selected,
-        keys: Object.keys(selected),
-        items: Object.values(selected),
-        entries: Object.entries(selected) as [string, T][],
-        count: Object.keys(selected).length,
-        isSelected,
-        isSelectedKey,
-        toggle: (row: T) => setRow(row, !isSelected(row)),
-        toggleKey: (key: string) => {
-            const row = rows.find(r => keyOf(r) === key);
-            if (row) setRow(row, !isSelectedKey(key));
-        },
-        deselectKey: (key: string) => setSelected(prev => { const n = { ...prev }; delete n[key]; return n; }),
-        togglePage: () => setSelected(prev => {
-            const next = { ...prev };
-            if (allPageSelected) { for (const r of eligible) delete next[keyOf(r)]; }
-            else { for (const r of eligible) next[keyOf(r)] = r; }
-            return next;
-        }),
-        allPageSelected,
-        someSelected: anyPageSelected && !allPageSelected,
-        pageEligibleCount: eligible.length,
-        clear: () => setSelected({}),
-    };
-}
+// Extracted into terras-ui's Table module from here: the hook, the two boxes
+// (the header box owns the indeterminate ref-poke) and the hover ring, now
+// chrome.css `.terras-check` (was `.lv-check`).
+export const LV_CHECK_COL_W = CHECK_COL_W;
+export type { RowSelection } from '@bryanadamg/terras-ui/components/Table';
+export { useRowSelection, RowCheckbox, SelectAllCheckbox } from '@bryanadamg/terras-ui/components/Table';
 
 // Row of a checkbox PICKER list — the lot pickers in the WO completion, WO
 // staging and packing-log modals, which are `<label>` stacks rather than tables.
@@ -376,65 +271,10 @@ export const lvPickerRow = (on: boolean): React.CSSProperties => ({
     background: on ? ('#e6f0ff') : 'transparent',
 });
 
-const checkboxStyle = (enabled: boolean): React.CSSProperties =>
-    ({ margin: 0, cursor: enabled ? 'pointer' : 'not-allowed', verticalAlign: 'middle' });
-
-// The hover ring lives in globals.css (`.lv-check`), not in the style object: an
-// inline style can't express `:hover`, and every call site is a bare `<input>`
-// with no wrapper to hang a mouseenter on. Both themes get a branch there.
-const checkboxClass = () => ('lv-check');
-
-export function RowCheckbox({ checked, onChange, disabled, title, label }: {
-    checked: boolean; onChange: () => void;
-    disabled?: boolean; title?: string; label?: string;
-}) {
-    return (
-        <input
-            type="checkbox"
-            className={checkboxClass()}
-            style={checkboxStyle(!disabled)}
-            checked={checked}
-            disabled={disabled}
-            title={title}
-            aria-label={label ? `Select ${label}` : 'Select row'}
-            onChange={onChange}
-            // The row around it is usually clickable (expand / open): a tick must
-            // never also fire that.
-            onClick={e => e.stopPropagation()}
-        />
-    );
-}
-
-/** Header checkbox. Owns the `indeterminate` ref-poke: four views each derived
- *  the partial state from their own `someSelected` expression, and Stock On-Hand
- *  had no partial state at all — its header read as fully unchecked with half
- *  the page ticked. */
-export function SelectAllCheckbox({ allSelected, someSelected, onChange, disabled, title }: {
-    allSelected: boolean; someSelected: boolean; onChange: () => void;
-    disabled?: boolean; title?: string;
-}) {
-    return (
-        <input
-            type="checkbox"
-            className={checkboxClass()}
-            style={checkboxStyle(!disabled)}
-            checked={allSelected}
-            disabled={disabled}
-            ref={el => { if (el) el.indeterminate = someSelected && !allSelected; }}
-            onChange={onChange}
-            title={title ?? (allSelected ? 'Clear selection on this page' : 'Select every row on this page')}
-            aria-label={allSelected ? 'Clear selection on this page' : 'Select every row on this page'}
-        />
-    );
-}
-
-/** `<td>` + row checkbox, geometry fixed like ExpanderCell. */
-export function RowCheckboxCell({ tdStyle, tdClassName, ...cb }: React.ComponentProps<typeof RowCheckbox> & { tdStyle?: React.CSSProperties; tdClassName?: string }) {
-    return (
-        <td style={lvCheckTd(tdStyle)} className={tdClassName}>
-            <RowCheckbox {...cb} />
-        </td>
-    );
+/** `<td>` + row checkbox. The package cell fixes only the column geometry; this
+ *  list's gridline (lvTd's right rule and 11px face) goes underneath it. */
+export function RowCheckboxCell({ tdStyle, ...rest }: React.ComponentProps<typeof UIRowCheckboxCell>) {
+    return <UIRowCheckboxCell {...rest} tdStyle={{ ...lvTd(), ...tdStyle }} />;
 }
 
 // ── Row-detail disclosure ─────────────────────────────────────────────────────
@@ -462,73 +302,23 @@ export function RowCheckboxCell({ tdStyle, tdClassName, ...cb }: React.Component
 // place. Pair `ExpanderCell` with `rowStateBg('expanded')` on the row —
 // the two halves of the same convention. `ExpandToggle` on its own is for a
 // non-table disclosure, not for smuggling the glyph back into a data cell.
-export const LV_EXPANDER_COL_W = 22;
+export const LV_EXPANDER_COL_W = EXPANDER_COL_W;
 
-// `base` is the caller's own cell style (their `tdBase`/`xpTd` with its borders
-// and font). It is spread BEFORE the column geometry so the width/alignment of
-// the expander column can never drift, while the table keeps its own gridlines.
-export const lvExpanderTd = (base: React.CSSProperties = {}): React.CSSProperties => ({
-    ...lvTd(),
-    ...base,
-    width: LV_EXPANDER_COL_W, textAlign: 'center', padding: '3px 4px', verticalAlign: 'middle',
-});
-
-export interface ExpandToggleProps {
-    expanded: boolean;
-    /** Same handler the row's onClick uses. Always pass it: the button stops
-     *  propagation, so a row-clickable table does not toggle twice, and the
-     *  expander becomes tab-reachable instead of mouse-only. */
-    onToggle: () => void;
-    /** What is being disclosed, for the screen-reader label ("Show lot lineage"). */
-    label?: string;
-    /** id of the panel element, for aria-controls. */
-    panelId?: string;
-    /** `alert` recolours the open glyph when the panel holds a problem
-     *  (a Production Run with a material shortfall). */
-    tone?: 'default' | 'alert';
-    style?: React.CSSProperties;
-}
-
-export function ExpandToggle({ expanded, onToggle, label = 'details', panelId, tone = 'default', style }: ExpandToggleProps) {
-    const color = tone === 'alert' && expanded ? '#c00000' : ('#0058e6');
+/** The dedicated chevron column, over terras-ui's ExpanderCell (extracted from
+ *  here). Puts back what the package can't know: the bootstrap chevron (it ships
+ *  an SVG, no icon set), this app's #0058e6 (its default is XP's #0054e3), and
+ *  lvTd's gridline under the column geometry. `fontSize: 9` on the button keeps
+ *  the rotating wrapper glyph-sized, as when the <i> itself rotated. */
+export function ExpanderCell({ tdStyle, tone = 'default', expanded, style, ...rest }: React.ComponentProps<typeof UIExpanderCell>) {
     return (
-        <button
-            type="button"
-            // The row itself is usually clickable too; without this the click
-            // would toggle twice and land back where it started.
-            onClick={e => { e.stopPropagation(); onToggle(); }}
-            aria-expanded={expanded}
-            aria-controls={panelId}
-            title={`${expanded ? 'Hide' : 'Show'} ${label}`}
-            aria-label={`${expanded ? 'Hide' : 'Show'} ${label}`}
-            className="lv-chev-btn"
-            style={{
-                background: 'none', border: 'none', padding: 0, margin: 0, cursor: 'pointer',
-                display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-                lineHeight: 1, color, flexShrink: 0, ...style,
-            }}
-        >
-            {/* Always the right-chevron glyph; "down" is a 90° CSS rotation of it
-                (globals.css `.lv-chev`), so hovering can preview the open state
-                and spring back when the pointer leaves without a click. Swapping
-                bi-chevron-right→bi-chevron-down would have no state to animate
-                between. */}
-            <i
-                className={`bi bi-chevron-right lv-chev${expanded ? ' lv-chev-open' : ''}`}
-                style={{ fontSize: 9 }}
-                aria-hidden="true"
-            />
-        </button>
-    );
-}
-
-/** The dedicated first column: geometry + toggle in one, so a list only ever
- *  writes `<ExpanderCell … />` instead of a `<td>` wrapping an `<i>`. */
-export function ExpanderCell({ tdStyle, tdClassName, ...toggle }: ExpandToggleProps & { tdStyle?: React.CSSProperties; tdClassName?: string }) {
-    return (
-        <td style={lvExpanderTd(tdStyle)} className={tdClassName}>
-            <ExpandToggle {...toggle} />
-        </td>
+        <UIExpanderCell
+            icon={<i className="bi bi-chevron-right" style={{ fontSize: 9 }} aria-hidden="true" />}
+            {...rest}
+            expanded={expanded}
+            tone={tone}
+            style={{ color: tone === 'alert' && expanded ? '#c00000' : '#0058e6', fontSize: 9, ...style }}
+            tdStyle={{ ...lvTd(), ...tdStyle }}
+        />
     );
 }
 

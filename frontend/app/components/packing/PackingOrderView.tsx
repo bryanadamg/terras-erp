@@ -11,7 +11,7 @@ import { useToast } from '../shared/Toast';
 import { useConfirm } from '../../context/ConfirmContext';
 import { XPStatusBar, XPEmptyState, TableSkeleton, useTableSkeletonMetrics, StatusChip, useFloatingMenu, MenuTriggerButton, FloatingMenu, FormSection, SectionTitle, FieldLabel, XPActionButton, LegendPanel, ExpandedRowPanel, ProgressBar, CodeChip, Chip, CODE_FONT, rowStateBg, CHIP_RADIUS, BTN_TONES, XP_BTN, SKEL_PAGE_ROWS } from '../shared/xpTheme';
 import { LV_XP_FONT, lvBtn, lvInput, lvTd, lvRow, lvSubTh, lvSubTd, lvSubRow, ExpanderCell, RowCheckbox, lvThSticky, lvPickerRow, lvSubTable, ResizableTable } from '../shared/listViewTheme';
-import { ShellWindow, ShellTitleBar, xpToolbar, ToolbarButton } from '../shared/shellTheme';
+import { ShellWindow, ShellTitleBar, xpToolbar, ToolbarButton, SearchField } from '../shared/shellTheme';
 import Pager from '../shared/Pager';
 import ModalWrapper from '../shared/ModalWrapper';
 import SearchableSelect from '@bryanadamg/terras-ui/components/Combobox';
@@ -273,10 +273,11 @@ export default function PackingOrderView({ initialCreateState, onClearInitialSta
 
     // Page window, fetch, `loading` (true from first paint, so the list shows the
     // loader rather than "none yet") and the stale-response race guard all come from
-    // the shared hook (context/usePaginatedList.ts). This list carries no search box
-    // or filters; the footer's open/closed tallies are counted separately below.
+    // the shared hook (context/usePaginatedList.ts), including the debounced
+    // server-side `?search=`; the footer's open/closed tallies are counted separately below.
     const {
         rows: orders, total, loading, page, setPage, refetch: reloadOrders,
+        searchInput, setSearch,
     } = usePaginatedFetch<any>({
         endpoint: `${API_BASE}/packing`,
         authFetch,
@@ -712,6 +713,7 @@ export default function PackingOrderView({ initialCreateState, onClearInitialSta
             />
             <div style={xpToolbar()}>
                 <ToolbarButton tone="neutral" icon="bi-arrow-clockwise" onClick={loadAll}>Refresh</ToolbarButton>
+                <SearchField value={searchInput} onChange={setSearch} placeholder="Search code, item, colour, SO, customer…" width={260} style={{ marginLeft: 6 }} />
                 <span style={{ marginLeft: 'auto', fontSize: 11, color: '#333' }}>
                     {total.toLocaleString()} order{total !== 1 ? 's' : ''}
                 </span>
@@ -751,7 +753,7 @@ export default function PackingOrderView({ initialCreateState, onClearInitialSta
                             <TableSkeleton rows={SKEL_PAGE_ROWS} cols={skel.cols ?? PO_COLS} tdStyle={td} rowHeight={skel.rowHeight} fillHeight={skel.fillHeight} />
                         ) : (
                             <tr><td colSpan={PO_COLS} style={{ padding: 0 }}>
-                                <XPEmptyState icon="bi-box2" message='No packing orders yet. Click "New Packing Order" to pack finished goods into cartons.' />
+                                <XPEmptyState icon="bi-box2" message={searchInput.trim() ? 'No packing orders match your search.' : 'No packing orders yet. Click "New Packing Order" to pack finished goods into cartons.'} />
                             </td></tr>
                         ))}
                         {orders.map((po: any, idx: number) => {

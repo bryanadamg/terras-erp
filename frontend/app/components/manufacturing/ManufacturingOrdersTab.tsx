@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import dynamic from 'next/dynamic';
 import CalendarView from '../shared/CalendarView';
 import ManufacturingSearchBar from './ManufacturingSearchBar';
-import { ToolbarButton, FilterChipBar, TITLE_TONES } from '../shared/shellTheme';
+import { ToolbarButton, FilterChipBar, TITLE_TONES, SearchField } from '../shared/shellTheme';
 import Pager from '../shared/Pager';
 import { Tabs } from '../shared/Tabs';
 import ModalWrapper from '../shared/ModalWrapper';
@@ -1429,14 +1429,8 @@ export default function ManufacturingOrdersTab({
                                 </div>
                             )}
                             <div style={{ fontWeight: 'bold', marginBottom: 4 }}>Pick an approved color</div>
-                            <input
-                                type="text"
-                                placeholder="Search color code / name / Pantone..."
-                                value={colorModalSearch}
-                                onChange={e => setColorModalSearch(e.target.value)}
-                                style={{ fontFamily: xpFont, fontSize: 11, border: '1px solid', borderColor: '#808080 #dfdfdf #dfdfdf #808080', background: '#fff', height: 22, padding: '0 4px', outline: 'none', width: '100%', borderRadius: 0 }}
-                                className={undefined}
-                            />
+                            <SearchField value={colorModalSearch} onChange={setColorModalSearch}
+                                placeholder="Search color code / name / Pantone..." style={{ display: 'flex', width: '100%' }} />
                             <div style={{ maxHeight: 200, overflowY: 'auto', border: colorModalResults.length ? '1px solid #ccc' : 'none', marginTop: 4 }}>
                                 {colorModalResults.map((c: any) => (
                                     <div

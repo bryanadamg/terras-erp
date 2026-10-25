@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, func, cast, String
+from sqlalchemy import select, func, cast, String, or_
 from sqlalchemy.orm import selectinload
 from typing import Optional
 from datetime import datetime
@@ -13,6 +13,7 @@ from app.schemas import (
     PickListSuggestedLine, PickListSuggestedCarton, PickListCartonIdentity,
 )
 from app.models.pick_list import PickList, PickListLine
+from app.models.shipment import Shipment
 from app.models.batch import Batch
 from app.models.sales import SalesOrder, SalesOrderLine
 from app.models.bom import BOM, BOMSize
@@ -546,6 +547,7 @@ async def _unit_location(db: AsyncSession, pu: Batch):
 async def list_pick_lists(
     status: Optional[str] = None,
     sales_order_id: Optional[uuid.UUID] = None,
+    search: Optional[str] = None,
     window: PageWindow = Depends(PageParams(default_size=100)),
     db: AsyncSession = Depends(get_async_db),
     current_user: User = Depends(get_current_user),
@@ -558,6 +560,21 @@ async def list_pick_lists(
     if sales_order_id:
         query = query.filter(PickList.sales_order_id == sales_order_id)
         count_query = count_query.filter(PickList.sales_order_id == sales_order_id)
+    if search:
+        like = f"%{search.strip()}%"
+        # Same columns the register shows: list code, SO, customer, their PO and
+        # the delivery note (legacy rows carry it on the pick list itself).
+        cond = or_(
+            PickList.code.ilike(like),
+            PickList.delivery_note_number.ilike(like),
+            SalesOrder.po_number.ilike(like),
+            SalesOrder.customer_name.ilike(like),
+            SalesOrder.customer_po_ref.ilike(like),
+            Shipment.code.ilike(like),
+            Shipment.delivery_note_number.ilike(like),
+        )
+        query = query.outerjoin(PickList.sales_order).outerjoin(PickList.shipment).filter(cond)
+        count_query = count_query.select_from(PickList).outerjoin(PickList.sales_order).outerjoin(PickList.shipment).filter(cond)
 
     total = (await db.execute(count_query)).scalar() or 0
     result = await db.execute(window.apply(query.order_by(PickList.created_at.desc())))

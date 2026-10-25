@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, func, cast, String, nulls_last, and_, inspect as sa_inspect
+from sqlalchemy import select, func, cast, String, nulls_last, and_, or_, inspect as sa_inspect
 from sqlalchemy.orm import selectinload, aliased
 from typing import Optional
 from datetime import datetime
@@ -17,6 +17,7 @@ from app.models.packing import (
 )
 from app.models.batch import Batch
 from app.models.item import Item
+from app.models.color import Color
 from app.models.location import Location
 from app.models.attribute import AttributeValue
 from app.models.sales import SalesOrder, SalesOrderLine
@@ -596,6 +597,7 @@ async def list_packing_orders(
     status: Optional[str] = None,
     sales_order_id: Optional[uuid.UUID] = None,
     item_id: Optional[uuid.UUID] = None,
+    search: Optional[str] = None,
     window: PageWindow = Depends(PageParams(default_size=100)),
     db: AsyncSession = Depends(get_async_db),
     current_user: User = Depends(get_current_user),
@@ -611,6 +613,26 @@ async def list_packing_orders(
     if item_id:
         query = query.filter(PackingOrder.item_id == item_id)
         count_query = count_query.filter(PackingOrder.item_id == item_id)
+    if search:
+        like = f"%{search.strip()}%"
+        # The list's own columns: order code, item, colour, SO and its customer.
+        cond = or_(
+            PackingOrder.code.ilike(like),
+            Item.code.ilike(like),
+            Item.name.ilike(like),
+            Color.code.ilike(like),
+            Color.name.ilike(like),
+            SalesOrder.po_number.ilike(like),
+            SalesOrder.customer_name.ilike(like),
+            SalesOrder.customer_po_ref.ilike(like),
+        )
+        def _joined(q):
+            return (q.outerjoin(Item, PackingOrder.item_id == Item.id)
+                     .outerjoin(Color, PackingOrder.color_id == Color.id)
+                     .outerjoin(SalesOrder, PackingOrder.sales_order_id == SalesOrder.id)
+                     .filter(cond))
+        query = _joined(query)
+        count_query = _joined(count_query.select_from(PackingOrder))
 
     total = (await db.execute(count_query)).scalar() or 0
     result = await db.execute(window.apply(query.order_by(PackingOrder.created_at.desc())))
