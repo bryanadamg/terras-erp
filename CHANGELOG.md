@@ -15,6 +15,16 @@ on `main`:
 
 ## [Unreleased]
 
+## [0.44.0] - 2026-10-25
+
+### Added
+- In-app feedback button: send a message, and optionally your name, with up to 3 screenshots. Reports are saved before sending and retried every 5 minutes, so they survive GitHub, the token or the internet being unavailable. The toast says when a report was saved for later instead of claiming it was sent, and an unsent message is kept for the tab's lifetime if the dialog is closed
+- Search fields on the Pick Lists tab, the To Pick board and the Packing Orders page, searched server-side
+
+### Changed
+- Beam items with no putaway location now net in the BEAMING output store (Gudang Beam) instead of plant-wide
+- Buttons, modals, windows, status chips, form sections, tooltips, table helpers, skeletons and empty states now come from the shared terras-ui 1.0.0 library, and every remaining search box uses the shared search field
+
 ## [0.43.0] - 2026-10-18
 
 ### Added
