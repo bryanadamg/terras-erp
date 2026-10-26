@@ -16,6 +16,11 @@ from app.models.partner import Partner
 from app.models.attribute import Attribute, AttributeValue
 from app.models.manufacturing import ManufacturingOrder
 from app.models.sales import SalesOrderLine
+from app.models.dyeing_setting import DyeRecipe
+from app.models.stock_ledger import StockLedger
+from app.models.packing import PackingOrder
+from app.models.reservation import StockReservation
+from app.models.production_run import PRBomEntry
 from app.schemas import (
     LabDipRequestCreate, LabDipRequestUpdate, LabDipRequestResponse, LabDipLineResponse,
     PaginatedLabDipRequestResponse,
@@ -729,9 +734,10 @@ async def update_lab_dip_item_status(
     if status not in valid_statuses:
         raise HTTPException(status_code=400, detail="Invalid status")
 
-    # APPROVED is terminal — a minted shade can never be re-opened.
-    if item.status == "APPROVED":
-        raise HTTPException(status_code=400, detail="Variant is APPROVED and locked; its status cannot be changed")
+    # APPROVED is locked, with one exit: a customer reject after approval revokes it
+    # to REJECTED (handled below) — only while the minted shade is still unused.
+    if item.status == "APPROVED" and status != "REJECTED":
+        raise HTTPException(status_code=400, detail="Variant is APPROVED and locked; it can only be revoked to REJECTED")
     # REJECTED rests but is reopenable: the only exit is back to IN_PROGRESS for another
     # round. Re-rejecting or jumping straight to APPROVED from REJECTED is blocked.
     if item.status == "REJECTED" and status != "IN_PROGRESS":
@@ -827,6 +833,11 @@ async def update_lab_dip_item_status(
         )
         backfilled_mo_ids = [str(m) for m in mo_ids]
 
+    revoked_color_code = None
+    revoked_color_id = item.approved_color_id
+    if status == "REJECTED" and item.status == "APPROVED":
+        revoked_color_code, backfilled_mo_ids = await _revoke_approved_color(db, item, parent)
+
     if status == "REJECTED":
         reason_v = (reason or "").strip() or None
         notes_v = (notes or "").strip() or None
@@ -887,14 +898,72 @@ async def update_lab_dip_item_status(
         entity_type="LabDipItem",
         entity_id=item_id,
         details=f"Updated lab dip item variant status from {previous_status} to {status}"
-                + (f"; minted color {minted_color_code}" if minted_color_code else ""),
-        changes={"status": [previous_status, status], **({"approved_color_code": [None, minted_color_code]} if minted_color_code else {})},
+                + (f"; minted color {minted_color_code}" if minted_color_code else "")
+                + (f"; revoked approval, archived color {revoked_color_code}" if revoked_color_code else ""),
+        changes={
+            "status": [previous_status, status],
+            **({"approved_color_code": [None, minted_color_code]} if minted_color_code else {}),
+            **({"approved_color_code": [revoked_color_code, None]} if revoked_color_code else {}),
+        },
     )
-    # Nudge the manufacturing UI so backfilled root MOs reflect their new color
-    # (and their DYEING WO gate unblocks) without a manual refresh.
+    # Nudge the manufacturing UI so backfilled root MOs reflect their new (or revoked)
+    # color — and their DYEING WO gate re-evaluates — without a manual refresh.
     for mo_id in backfilled_mo_ids:
         await manager.broadcast({"type": "MANUFACTURING_ORDER_UPDATE", "mo_id": mo_id})
+    if revoked_color_code:
+        await manager.broadcast({"type": "COLOR_UPDATE", "id": str(revoked_color_id)})
     return {"status": "success", "color_code": minted_color_code, "backfilled_mo_count": len(backfilled_mo_ids)}
+
+
+async def _revoke_approved_color(db: AsyncSession, item, parent) -> tuple[str | None, list[str]]:
+    """Undo an approval's side effects so the variant can rest as REJECTED.
+
+    Refused once the shade has been used for real (a recipe, stock, packing, a
+    reservation, a PR entry, or an MO/SO line that picked it by hand) — at that point
+    the colour is production history and only a new lab dip can replace it. Otherwise:
+    un-stamp the MO/SO rows the approval backfilled, archive the colour (kept, not
+    deleted, so the code stays reserved and the audit trail resolves), and clear the
+    variant's approved_* fields. Returns (archived code, un-stamped MO ids).
+    """
+    color = (await db.execute(select(Color).filter(Color.id == item.approved_color_id))).scalars().first()
+    item.approved_set = None
+    item.approved_color_id = None
+    if color is None:
+        return None, []
+
+    variant_code = item.locked_variant_code or f"{_seq_part(parent)}-{_variant_letter(item.variant_seq)}"
+    not_backfilled = or_(ManufacturingOrder.labdip_variant_code.is_(None), ManufacturingOrder.labdip_variant_code != variant_code)
+    so_not_backfilled = or_(SalesOrderLine.labdip_variant_code.is_(None), SalesOrderLine.labdip_variant_code != variant_code)
+    uses = (
+        ("dye recipe", select(func.count()).select_from(DyeRecipe).filter(DyeRecipe.color_id == color.id)),
+        ("stock movement", select(func.count()).select_from(StockLedger).filter(StockLedger.color_id == color.id)),
+        ("packing order", select(func.count()).select_from(PackingOrder).filter(PackingOrder.color_id == color.id)),
+        ("stock reservation", select(func.count()).select_from(StockReservation).filter(StockReservation.color_id == color.id)),
+        ("production run entry", select(func.count()).select_from(PRBomEntry).filter(PRBomEntry.color_id == color.id)),
+        ("manufacturing order", select(func.count()).select_from(ManufacturingOrder).filter(ManufacturingOrder.color_id == color.id, not_backfilled)),
+        ("sales order line", select(func.count()).select_from(SalesOrderLine).filter(SalesOrderLine.color_id == color.id, so_not_backfilled)),
+    )
+    used = [f"{n} {label}(s)" for label, q in uses if (n := (await db.execute(q)).scalar_one())]
+    if used:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Color {color.code} is already in use ({', '.join(used)}); its approval can no longer be revoked",
+        )
+
+    mo_ids = (await db.execute(
+        select(ManufacturingOrder.id).filter(
+            ManufacturingOrder.color_id == color.id, ManufacturingOrder.labdip_variant_code == variant_code,
+        )
+    )).scalars().all()
+    if mo_ids:
+        await db.execute(sa_update(ManufacturingOrder).where(ManufacturingOrder.id.in_(mo_ids)).values(color_id=None))
+    await db.execute(
+        sa_update(SalesOrderLine)
+        .where(SalesOrderLine.color_id == color.id, SalesOrderLine.labdip_variant_code == variant_code)
+        .values(color_id=None)
+    )
+    color.status = "archived"
+    return color.code, [str(m) for m in mo_ids]
 
 
 @router.post("/lab-dips/{request_id}/items/{item_id}/status-image")
