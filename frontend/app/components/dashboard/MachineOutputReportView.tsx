@@ -19,7 +19,7 @@
 //
 // Every row carries its reject events (reason, operator, defect store), so the
 // expanded panel answers "what was rejected and where did it go" in one place.
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useLanguage } from '../../context/LanguageContext';
 import { useTimezone } from '../../context/TimezoneContext';
 import { useData } from '../../context/DataContext';
@@ -72,7 +72,7 @@ interface ReportColumn {
 export default function MachineOutputReportView() {
     const { t } = useLanguage();
     const { formatDate: tzDate, formatTime: tzTime } = useTimezone();
-    const { authFetch, workCenters = [] } = useData();
+    const { authFetch, subscribeLiveEvents, workCenters = [] } = useData();
     const { hasPermission } = useUser();
     // Reading the report and taking it off the system are separate grants.
     const canExport = hasPermission('production_output.export');
@@ -108,8 +108,9 @@ export default function MachineOutputReportView() {
     const isPackingSource = isPacking || isOperator;
     const isMachineLevel = mode === 'machine' || mode === 'group';
 
-    const fetchReport = useCallback(async () => {
-        setLoading(true);
+    // `silent`: a live reload keeps the table on screen instead of flashing the skeleton.
+    const fetchReport = useCallback(async (silent = false) => {
+        if (!silent) setLoading(true);
         setError('');
         try {
             const p = new URLSearchParams();
@@ -145,6 +146,14 @@ export default function MachineOutputReportView() {
     }, [API_BASE, authFetch, startDate, endDate, scope, mode, isPackingSource, isOperator, hideIdle, completedOnly]);
 
     useEffect(() => { fetchReport(); }, [fetchReport]);
+    // A logged completion, reject or WO status change broadcasts 'production' — reload
+    // in place, debounced since one log can fan out into several events.
+    const liveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+    useEffect(() => subscribeLiveEvents(['production'], () => {
+        if (liveTimer.current) clearTimeout(liveTimer.current);
+        liveTimer.current = setTimeout(() => fetchReport(true), 300);
+    }), [subscribeLiveEvents, fetchReport]);
+    useEffect(() => () => { if (liveTimer.current) clearTimeout(liveTimer.current); }, []);
     // Row identity differs per grouping, so a stale expanded key would open nothing.
     useEffect(() => { setExpanded(null); }, [mode]);
 
@@ -819,7 +828,7 @@ export default function MachineOutputReportView() {
                             <SegmentedBar actions={presetActions} />
                             <div style={{ flex: 1 }} />
                             <span style={{ ...lbl, whiteSpace: 'nowrap' }}>{sorted.length} rows</span>
-                            <button className={XP_BTN} style={xpBtn({ padding: '1px 6px' })} onClick={fetchReport} title="Refresh"><i className="bi bi-arrow-clockwise" /></button>
+                            <button className={XP_BTN} style={xpBtn({ padding: '1px 6px' })} onClick={() => fetchReport()} title="Refresh"><i className="bi bi-arrow-clockwise" /></button>
                             {canExport && (
                                 <button className={XP_BTN} style={xpBtn({ padding: '1px 6px' })} onClick={exportCsv} disabled={!sorted.length} title="Export CSV"><i className="bi bi-filetype-csv" /></button>
                             )}
