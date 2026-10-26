@@ -517,6 +517,16 @@ export default function StockOnHandView({ locations, attributes, categories, ite
     // aggregates come back as envelope extras because they must describe the whole
     // filtered set, not this page.
     const categoryParam = useMemo(() => (catMatchSet ? Array.from(catMatchSet).join(',') : ''), [catMatchSet]);
+    const gridParams = {
+        location_id: locationFilter,
+        warehouse_id: warehouseFilter,
+        category_id: categoryParam,
+        mo_code: moFilter,
+        wo_code: woFilter,
+        hide_rejected: hideRejected,
+        sort_by: sort?.key,
+        sort_dir: sort ? (sort.dir === 1 ? 'asc' : 'desc') : '',
+    };
     const {
         rows: pageRows, total, meta, loading, page, setPage,
         searchInput: search, setSearch, refetch,
@@ -524,22 +534,35 @@ export default function StockOnHandView({ locations, attributes, categories, ite
         endpoint: `${apiBase}/stock/balance/paginated`,
         authFetch,
         pageSize: STOCK_PAGE_SIZE,
-        params: {
-            location_id: locationFilter,
-            warehouse_id: warehouseFilter,
-            category_id: categoryParam,
-            mo_code: moFilter,
-            wo_code: woFilter,
-            hide_rejected: hideRejected,
-            sort_by: sort?.key,
-            sort_dir: sort ? (sort.dir === 1 ? 'asc' : 'desc') : '',
-        },
+        params: gridParams,
         onError: m => showToast(m, 'danger'),
     });
     // Post-mutation reload. The grid's own page is what the operator is looking at;
     // DataContext's shared feed follows the STOCK_UPDATE broadcast the mutation
     // endpoints emit, so it does not need a second full pull here.
     const reload = () => refetch();
+
+    // Same filters + search as the grid, so the file is exactly the filtered set.
+    const [exporting, setExporting] = useState(false);
+    const exportExcel = async () => {
+        const sp = new URLSearchParams();
+        for (const [k, v] of Object.entries({ ...gridParams, search })) {
+            if (v) sp.set(k, String(v));
+        }
+        setExporting(true);
+        try {
+            const res = await authFetch(`${apiBase}/stock/balance/export?${sp}`);
+            if (!res.ok) { showToast('Export failed', 'danger'); return; }
+            const url = URL.createObjectURL(await res.blob());
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = res.headers.get('Content-Disposition')?.match(/filename="(.+)"/)?.[1] || 'stock-on-hand.xlsx';
+            a.click();
+            URL.revokeObjectURL(url);
+        } finally {
+            setExporting(false);
+        }
+    };
 
     const negativeCount = Number(meta.negative_count || 0);
     const rejectedCount = Number(meta.rejected_count || 0);
@@ -1231,6 +1254,12 @@ export default function StockOnHandView({ locations, attributes, categories, ite
                     title={'Refresh'}
                 >
                     <i className={'bi bi-arrow-clockwise'} style={{ marginRight: 4 }} />Refresh
+                </button>
+            )}
+            {col('col-md-2',
+                <button style={xpBtn()} className={XP_BTN} onClick={exportExcel} disabled={exporting || total === 0}
+                    title="Download every row matching the current filters as an Excel file">
+                    <i className="bi bi-file-earmark-excel" style={{ marginRight: 4 }} />{exporting ? 'Exporting…' : 'Export Excel'}
                 </button>
             )}
             {canRebuild && col('col-md-2',

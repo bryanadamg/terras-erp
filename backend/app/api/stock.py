@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, Response
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import Session
 from sqlalchemy import select, func
@@ -20,6 +20,7 @@ from app.models.purchase import PurchaseOrder
 from datetime import datetime
 from typing import Optional
 import asyncio as _asyncio
+import io
 import time
 import uuid as _uuid
 
@@ -818,6 +819,69 @@ async def get_stock_balance_paginated(
         rejected_qty=rejected_qty,
         total_kg=total_kg,
         total_rows=total_rows,
+    )
+
+
+@router.get("/stock/balance/export")
+async def export_stock_balance(
+    search: Optional[str] = Query(None),
+    location_id: Optional[str] = Query(None),
+    warehouse_id: Optional[str] = Query(None),
+    category_id: Optional[str] = Query(None),
+    mo_code: Optional[str] = Query(None),
+    wo_code: Optional[str] = Query(None),
+    hide_rejected: bool = Query(False),
+    sort_by: Optional[str] = Query(None),
+    sort_dir: str = Query("asc"),
+    db: AsyncSession = Depends(get_async_db),
+    current_user: User = Depends(require_any_permission("stock_on_hand.view", "lot.view", "work_order.view", "booking_stock.view", "quarantine.view")),
+):
+    """The Stock On-Hand grid as an .xlsx — the whole filtered set, not the page.
+
+    Reuses the paginated endpoint uncapped so the file can never disagree with
+    what the grid shows for the same filters.
+    """
+    from openpyxl import Workbook
+    from openpyxl.styles import Font
+
+    data = await get_stock_balance_paginated(
+        search=search, location_id=location_id, warehouse_id=warehouse_id,
+        category_id=category_id, mo_code=mo_code, wo_code=wo_code,
+        hide_rejected=hide_rejected, sort_by=sort_by, sort_dir=sort_dir,
+        window=PageWindow(page=1, size=0, offset=0, limit=None),
+        db=db, current_user=current_user,
+    )
+
+    wb = Workbook()
+    ws = wb.active
+    ws.title = "Stock On Hand"
+    ws.append([
+        "Item Code", "Item Name", "Ends", "Category", "Location", "Lot", "Supplier Lot",
+        "MO", "WO", "Color", "Attributes", "Qty", "UOM", "Cones", "Boxes", "Drums",
+        "QC Status", "Notes",
+    ])
+    for r in data["items"]:
+        color = " ".join(x for x in (r["color_code"], r["color_name"]) if x)
+        attrs = ", ".join(f"{a['name']}: {a['value']}" for a in r["variant_attributes"])
+        ws.append([
+            r["item_code"], r["item_name"], r["item_ends"], r["item_category_name"],
+            r["location_name"], r["batch_number"], r["vendor_lot"], r["mo_code"], r["wo_code"],
+            color or None, attrs or None, r["qty"], r["item_uom"],
+            r["qty_cones"] or None, r["qty_boxes"] or None, r["qty_drums"] or None,
+            r["quality_status"], r["batch_notes"],
+        ])
+    ws.append([])
+    ws.append(["Total kg", None, None, None, None, None, None, None, None, None, None, data["total_kg"], "kg"])
+    for cell in (*ws[1], *ws[ws.max_row]):
+        cell.font = Font(bold=True)
+    ws.freeze_panes = "A2"
+
+    buf = io.BytesIO()
+    wb.save(buf)
+    return Response(
+        content=buf.getvalue(),
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        headers={"Content-Disposition": f'attachment; filename="stock-on-hand_{datetime.now():%Y%m%d-%H%M}.xlsx"'},
     )
 
 

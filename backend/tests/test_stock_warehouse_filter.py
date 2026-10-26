@@ -40,3 +40,22 @@ def test_warehouse_filter_includes_stock_on_the_warehouse(client, auth_headers):
     assert len([b for b in r.json()["items"] if b["item_id"] == item["id"]]) == 3
     # Footer kg total follows the filter, not the page or the whole plant.
     assert r.json()["total_kg"] == 3
+
+
+def test_export_xlsx_is_the_filtered_set(client, auth_headers):
+    import io
+    from openpyxl import load_workbook
+    suffix = uuid.uuid4().hex[:6].upper()
+    wh_id = _seed_tree(suffix)
+    client.post("/api/uoms", json={"name": "kg"}, headers=auth_headers)
+    item = client.post("/api/items", json={"code": f"WHX-{suffix}", "name": "Whx", "uom": "kg"}, headers=auth_headers).json()
+    for code, qty in ((f"WHF-{suffix}", 1.5), (f"WHF-{suffix}-Z-B", 2)):
+        client.post("/api/stock", json={"item_code": item["code"], "location_code": code, "qty": qty}, headers=auth_headers)
+
+    r = client.get("/api/stock/balance/export", params={"warehouse_id": wh_id, "search": item["code"]}, headers=auth_headers)
+    assert r.status_code == 200, r.text
+    ws = load_workbook(io.BytesIO(r.content)).active
+    rows = list(ws.iter_rows(values_only=True))
+    assert rows[0][0] == "Item Code"
+    assert sorted(row[11] for row in rows[1:3]) == [1.5, 2]
+    assert rows[-1][0] == "Total kg" and rows[-1][11] == 3.5
