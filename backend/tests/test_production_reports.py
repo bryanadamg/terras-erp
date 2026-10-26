@@ -49,3 +49,44 @@ def test_wo_status_filter_is_parsed_as_a_list(client, auth_headers):
     )
     assert res.status_code == 200, res.text
     assert res.json()["wo_status"] == ["COMPLETED", "IN_PROGRESS"]
+
+
+def test_log_pegs_to_the_machine_picked_on_it_not_the_wos_group(client, auth_headers, async_db_session):
+    """A WO cut on a GROUP gets its machine only from the log form. Reading the WO
+    first filed that output under the group, so the picked loom read 0."""
+    import uuid
+    from app.models.manufacturing import ManufacturingOrder, MOCompletion
+    from app.models.routing import WorkCenter
+    from app.models.work_order import WorkOrder
+
+    tag = str(uuid.uuid4())[:8]
+    client.post("/api/uoms", json={"name": "kg"}, headers=auth_headers)
+    client.post("/api/items", json={"code": f"PR-FG-{tag}", "name": "Greige", "uom": "kg"}, headers=auth_headers)
+    client.post("/api/items", json={"code": f"PR-RM-{tag}", "name": "Yarn", "uom": "kg"}, headers=auth_headers)
+    client.post("/api/boms", json={
+        "code": f"BOM-PR-{tag}", "item_code": f"PR-FG-{tag}", "qty": 1,
+        "lines": [{"item_code": f"PR-RM-{tag}", "qty": 1, "percentage": 100.0}],
+    }, headers=auth_headers)
+    bom = next(b for b in client.get("/api/boms", headers=auth_headers).json() if b["code"] == f"BOM-PR-{tag}")
+
+    async def _seed():
+        group = WorkCenter(code=f"GRP-{tag}", name="Loom bank", center_type="WEAVING", node_type="GROUP")
+        async_db_session.add(group)
+        await async_db_session.flush()
+        loom = WorkCenter(code=f"LM-{tag}", name="Loom 7", node_type="MACHINE", parent_id=group.id)
+        mo = ManufacturingOrder(code=f"MO-PR-{tag}", bom_id=uuid.UUID(bom["id"]), item_id=uuid.UUID(bom["item_id"]), qty=10)
+        async_db_session.add_all([loom, mo])
+        await async_db_session.flush()
+        wo = WorkOrder(manufacturing_order_id=mo.id, name="Weave", work_center_id=group.id, qty=10)
+        async_db_session.add(wo)
+        await async_db_session.flush()
+        async_db_session.add(MOCompletion(mo_id=mo.id, work_order_id=wo.id, work_center_id=loom.id, qty_completed=4))
+        await async_db_session.flush()
+        return str(loom.id), str(group.id)
+
+    loom_id, group_id = client.portal.call(_seed)
+
+    rows = client.get(f"/api/reports/machine-output?group_id={group_id}", headers=auth_headers).json()["rows"]
+    by_wc = {r["work_center_id"]: r for r in rows}
+    assert by_wc[loom_id]["qty_good"] == 4
+    assert group_id not in by_wc
