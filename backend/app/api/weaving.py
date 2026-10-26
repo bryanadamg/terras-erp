@@ -529,7 +529,7 @@ def _run_card(run: WeavingRun, metrics: dict, projection: Optional[dict],
         "mo_code": mo.code if mo else None,
         "item_code": mo.item_code if mo else None,
         "item_name": mo.item_name if mo else None,
-        "target_qty": float(mo.qty) if mo else None,
+        "target_qty": proj.get("target_qty", _target_qty(mo, wo)),
         "wo_qty": proj.get("wo_qty"),
         "status": run.status,
         "start_date": run.start_date,
@@ -768,7 +768,7 @@ async def _run_payload(db: AsyncSession, run: WeavingRun, weekdays, holidays, to
         "mo_code": mo.code if mo else None,
         "item_code": mo.item_code if mo else None,
         "item_name": mo.item_name if mo else None,
-        "target_qty": float(mo.qty) if mo else None,
+        "target_qty": proj.get("target_qty", _target_qty(mo, wo)),
         "work_order_id": str(run.work_order_id) if run.work_order_id else None,
         "wo_code": wo.code if wo else proj.get("wo_code"),
         "wo_qty": float(wo.qty) if (wo and wo.qty is not None) else proj.get("wo_qty"),
@@ -862,6 +862,18 @@ async def work_center_performance(
     }
 
 
+def _projection_key(run: WeavingRun):
+    """Runs projected together: same WO, or same MO for a run with no WO."""
+    return run.work_order_id or run.mo_id
+
+
+def _target_qty(mo, wo) -> Optional[float]:
+    """A run weaves toward its WO's qty; the MO's is only the fallback."""
+    if wo is not None and wo.qty is not None:
+        return float(wo.qty)
+    return float(mo.qty) if mo else None
+
+
 async def _project_runs(db: AsyncSession, runs: list, today: date, actual_by_run: Optional[dict] = None) -> dict:
     """Completion projection for each of `runs`, keyed by run id.
 
@@ -871,8 +883,10 @@ async def _project_runs(db: AsyncSession, runs: list, today: date, actual_by_run
     what tells a planner to add a machine or add working days — see
     weaving_service.lateness.
 
-    An MO can be woven on several looms at once, so a run's projection combines every
-    active run of the same MO. Everything that walk needs is loaded in batch; doing
+    The projection is per WO: an MO is split into WOs, each with its own qty and due
+    date, so a run walks to its WO's qty (the MO's only when the run has no WO). A WO
+    can be woven on several looms at once, so a run's projection combines every
+    active run of the same WO. Everything that walk needs is loaded in batch; doing
     it per run with its own queries is what made the old `_project_mo` an N+1.
 
     A PAUSED run still projects, at the rate it achieved before it was parked. The
@@ -895,6 +909,9 @@ async def _project_runs(db: AsyncSession, runs: list, today: date, actual_by_run
     all_runs = {r.id: r for r in sib_res.scalars().all()}
     for r in runs:
         all_runs.setdefault(r.id, r)
+    # Siblings were fetched per MO; keep only those sharing a requested run's WO.
+    keys = {_projection_key(r) for r in runs}
+    all_runs = {rid: r for rid, r in all_runs.items() if _projection_key(r) in keys}
 
     # Pause intervals for every run in the rollup, batched — the per-run metrics below
     # need them or a parked run's achieved rate would be diluted by its parked days.
@@ -922,7 +939,7 @@ async def _project_runs(db: AsyncSession, runs: list, today: date, actual_by_run
         )).scalars().all()
     }
 
-    wo_ids = {r.work_order_id for r in runs if r.work_order_id}
+    wo_ids = {r.work_order_id for r in all_runs.values() if r.work_order_id}
     wos = {
         wo.id: wo for wo in (await db.execute(
             select(WorkOrder).where(WorkOrder.id.in_(wo_ids))
@@ -945,12 +962,13 @@ async def _project_runs(db: AsyncSession, runs: list, today: date, actual_by_run
             run, actual, weekdays, holidays, today, pauses=pauses_by_run.get(run.id, [])),
             weekdays, holidays, wc)
 
-    # Roll the per-run numbers up per MO once, then hand the same rollup to every run
-    # of that MO — two runs of one MO must never report different completion dates.
-    by_mo: dict = {}
+    # Roll the per-run numbers up per WO once, then hand the same rollup to every run
+    # of that WO — two runs of one WO must never report different completion dates.
+    by_key: dict = {}
     for run in all_runs.values():
         m, weekdays, holidays, wc = metrics[run.id]
-        agg = by_mo.setdefault(run.mo_id, {
+        agg = by_key.setdefault(_projection_key(run), {
+            "run": run,
             "target_daily": 0.0, "actual": 0.0, "earliest": None, "elapsed": 0,
             "target_machines": [], "reality_machines": [], "machines_meta": [],
         })
@@ -967,10 +985,12 @@ async def _project_runs(db: AsyncSession, runs: list, today: date, actual_by_run
             "lines": m["lines"],
         })
 
-    mo_projection: dict = {}
-    for mo_id, agg in by_mo.items():
-        mo = mos.get(mo_id)
-        target_qty = float(mo.qty) if mo else 0.0
+    projection: dict = {}
+    for key, agg in by_key.items():
+        run = agg["run"]
+        mo = mos.get(run.mo_id)
+        wo = wos.get(run.work_order_id) if run.work_order_id else None
+        target_qty = _target_qty(mo, wo) or 0.0
         target_completion = (
             weaving_service.walk_to_target(agg["target_machines"], target_qty, agg["earliest"])
             if agg["earliest"] else None
@@ -984,7 +1004,7 @@ async def _project_runs(db: AsyncSession, runs: list, today: date, actual_by_run
         unreachable = (
             reality_completion is None and agg["elapsed"] > 0 and target_qty > agg["actual"]
         )
-        mo_projection[mo_id] = {
+        projection[key] = {
             "mo_code": mo.code if mo else None,
             "item_code": mo.item_code if mo else None,
             "target_qty": target_qty,
@@ -999,7 +1019,7 @@ async def _project_runs(db: AsyncSession, runs: list, today: date, actual_by_run
 
     out: dict = {}
     for run in runs:
-        base = mo_projection.get(run.mo_id)
+        base = projection.get(_projection_key(run))
         if not base:
             continue
         wo = wos.get(run.work_order_id) if run.work_order_id else None
