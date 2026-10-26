@@ -24,6 +24,7 @@ from datetime import datetime
 from typing import Optional
 
 from fastapi import APIRouter, Depends, Query
+from pydantic import BaseModel, Field
 from sqlalchemy import select, func, and_, case
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -39,6 +40,7 @@ from app.models.sales import SalesOrder
 from app.models.work_order import WorkOrder
 from app.api.auth import require_permission
 from app.services import work_center_service
+from app.services.xlsx_service import xlsx_response
 
 router = APIRouter()
 
@@ -922,3 +924,25 @@ async def _packing_operator_report(
         "rows": rows,
         "totals": totals,
     }
+
+
+class ProductionOutputExport(BaseModel):
+    sheet: str = Field(max_length=64)
+    filename: str = Field(max_length=128)
+    header: list[str]
+    rows: list[list[str | float | int | None]]
+
+
+@router.post("/reports/production-output/export")
+async def export_production_output(
+    payload: ProductionOutputExport,
+    current_user: User = Depends(require_permission("production_output.export")),
+):
+    """The report grid as an .xlsx, laid out by the client's own column definitions.
+
+    Each grouping (machine / group / WO / packing / operator) renders a
+    different column set with client-side formatting; rebuilding those here would
+    let the file drift from the screen. So the client posts exactly the rows it
+    shows and this only renders them — gated on the export grant, same as before.
+    """
+    return xlsx_response(payload.sheet, payload.header, payload.rows, payload.filename)

@@ -5,6 +5,7 @@ import { useServerSort, TableSkeleton, useTableSkeletonMetrics, XPActionButton, 
 import { usePaginatedFetch } from '../../context/usePaginatedList';
 import { xpBevel as sharedXpBevel, xpTitleBar as sharedXpTitleBar, xpToolbar as sharedXpToolbar, SearchField, ToolbarButton, pageFillStyle, flexFillStyle } from '../shared/shellTheme';
 import { useToast } from '../shared/Toast';
+import { saveResponse } from '../shared/download';
 import SearchableSelect from '@bryanadamg/terras-ui/components/Combobox';
 import ModalWrapper from '../shared/ModalWrapper';
 import Pager from '../shared/Pager';
@@ -553,12 +554,7 @@ export default function StockOnHandView({ locations, attributes, categories, ite
         try {
             const res = await authFetch(`${apiBase}/stock/balance/export?${sp}`);
             if (!res.ok) { showToast('Export failed', 'danger'); return; }
-            const url = URL.createObjectURL(await res.blob());
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = res.headers.get('Content-Disposition')?.match(/filename="(.+)"/)?.[1] || 'stock-on-hand.xlsx';
-            a.click();
-            URL.revokeObjectURL(url);
+            await saveResponse(res, 'stock-on-hand.xlsx');
         } finally {
             setExporting(false);
         }

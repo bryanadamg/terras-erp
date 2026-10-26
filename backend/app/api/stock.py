@@ -1,9 +1,10 @@
-from fastapi import APIRouter, Depends, HTTPException, Query, Response
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import Session
 from sqlalchemy import select, func
 from app.db.session import get_async_db, get_db
 from app.services import stock_service, audit_service, kpi_service
+from app.services.xlsx_service import xlsx_response
 from app.core.ws_manager import manager
 from app.core.pagination import PageParams, PageWindow
 from app.schemas import StockLedgerResponse, StockBalanceResponse, PaginatedStockBalanceResponse, PaginatedStockLedgerResponse, StockEntryCreate, StockTransferCreate, StockBulkTransferCreate, BookingStockRow, BookingDemandMO, BookingSupplyMO, BookingReservedSO, PaginatedBookingStockResponse
@@ -20,7 +21,6 @@ from app.models.purchase import PurchaseOrder
 from datetime import datetime
 from typing import Optional
 import asyncio as _asyncio
-import io
 import time
 import uuid as _uuid
 
@@ -841,9 +841,6 @@ async def export_stock_balance(
     Reuses the paginated endpoint uncapped so the file can never disagree with
     what the grid shows for the same filters.
     """
-    from openpyxl import Workbook
-    from openpyxl.styles import Font
-
     data = await get_stock_balance_paginated(
         search=search, location_id=location_id, warehouse_id=warehouse_id,
         category_id=category_id, mo_code=mo_code, wo_code=wo_code,
@@ -852,36 +849,27 @@ async def export_stock_balance(
         db=db, current_user=current_user,
     )
 
-    wb = Workbook()
-    ws = wb.active
-    ws.title = "Stock On Hand"
-    ws.append([
-        "Item Code", "Item Name", "Ends", "Category", "Location", "Lot", "Supplier Lot",
-        "MO", "WO", "Color", "Attributes", "Qty", "UOM", "Cones", "Boxes", "Drums",
-        "QC Status", "Notes",
-    ])
-    for r in data["items"]:
+    def _row(r: dict) -> list:
         color = " ".join(x for x in (r["color_code"], r["color_name"]) if x)
         attrs = ", ".join(f"{a['name']}: {a['value']}" for a in r["variant_attributes"])
-        ws.append([
+        return [
             r["item_code"], r["item_name"], r["item_ends"], r["item_category_name"],
             r["location_name"], r["batch_number"], r["vendor_lot"], r["mo_code"], r["wo_code"],
             color or None, attrs or None, r["qty"], r["item_uom"],
             r["qty_cones"] or None, r["qty_boxes"] or None, r["qty_drums"] or None,
             r["quality_status"], r["batch_notes"],
-        ])
-    ws.append([])
-    ws.append(["Total kg", None, None, None, None, None, None, None, None, None, None, data["total_kg"], "kg"])
-    for cell in (*ws[1], *ws[ws.max_row]):
-        cell.font = Font(bold=True)
-    ws.freeze_panes = "A2"
+        ]
 
-    buf = io.BytesIO()
-    wb.save(buf)
-    return Response(
-        content=buf.getvalue(),
-        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-        headers={"Content-Disposition": f'attachment; filename="stock-on-hand_{datetime.now():%Y%m%d-%H%M}.xlsx"'},
+    return xlsx_response(
+        "Stock On Hand",
+        [
+            "Item Code", "Item Name", "Ends", "Category", "Location", "Lot", "Supplier Lot",
+            "MO", "WO", "Color", "Attributes", "Qty", "UOM", "Cones", "Boxes", "Drums",
+            "QC Status", "Notes",
+        ],
+        (_row(r) for r in data["items"]),
+        "stock-on-hand",
+        footer=["Total kg", None, None, None, None, None, None, None, None, None, None, data["total_kg"], "kg"],
     )
 
 

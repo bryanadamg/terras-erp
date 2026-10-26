@@ -160,9 +160,9 @@ export const RESOURCE_ACTIONS: Record<string, PermissionMatrixAction[]> = {
     // It is seeded and enforced but had no row here, so it could only be handed
     // out by the seeded roles — never from the Roles/User modals.
     reports: [VIEW],
-    // Production Output report — CSV export is its own grant so a role can read
+    // Production Output report — Excel export is its own grant so a role can read
     // the shop-floor numbers without being able to take the data off the system.
-    production_output: [A('export', 'Export CSV'), VIEW],
+    production_output: [A('export', 'Export Excel'), VIEW],
     audit_log: [VIEW],
     print_layout: [EDIT],
     system_admin: [CREATE, A('edit', 'edit'), DELETE],

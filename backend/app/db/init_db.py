@@ -543,7 +543,7 @@ def seed_rbac(db):
             # shop-floor output/reject numbers. export is separate from view so
             # reading the report never implies taking the data off the system.
             ("production_output.view", "View Production Output Report"),
-            ("production_output.export", "Export Production Output CSV"),
+            ("production_output.export", "Export Production Output Excel"),
             ("audit_log.view", "View Audit Log"),
             ("print_layout.edit", "Edit Print Layouts"),
             ("system_admin.create", "Create System Admin Records"),
