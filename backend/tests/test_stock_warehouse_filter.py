@@ -38,3 +38,5 @@ def test_warehouse_filter_includes_stock_on_the_warehouse(client, auth_headers):
     r = client.get("/api/stock/balance/paginated", params={"warehouse_id": wh_id, "search": item["code"]}, headers=auth_headers)
     assert r.status_code == 200, r.text
     assert len([b for b in r.json()["items"] if b["item_id"] == item["id"]]) == 3
+    # Footer kg total follows the filter, not the page or the whole plant.
+    assert r.json()["total_kg"] == 3

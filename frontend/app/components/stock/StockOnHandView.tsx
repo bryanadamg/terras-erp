@@ -549,6 +549,8 @@ export default function StockOnHandView({ locations, attributes, categories, ite
     // Unfiltered balance-row count ("Total: N SKUs"), served as an aggregate since the
     // client no longer holds every row.
     const totalRows = Number(meta.total_rows || 0);
+    // Sum of kg-stocked rows across the whole filtered set (not just this page).
+    const totalKg = Number(meta.total_kg || 0);
 
     // Skeleton sizing: measure one real row so the placeholders shown on the next
     // load are exactly as tall as the rows that replace them. Classic and modern
@@ -1308,7 +1310,8 @@ export default function StockOnHandView({ locations, attributes, categories, ite
                                 <b>{rejectedCount}</b> rejected ({rejectedQty.toLocaleString('en-US', { maximumFractionDigits: 3 })})
                             </span>
                         )}
-                        <span style={{ marginLeft: 'auto', color: '#666' }}>Total: {totalRows} SKUs</span>
+                        <span style={{ marginLeft: 'auto' }} title="Sum of kg-stocked rows matching the current filters"><b>{totalKg.toLocaleString('en-US', { maximumFractionDigits: 3 })}</b> kg</span>
+                        <span style={{ color: '#666' }}>Total: {totalRows} SKUs</span>
                     </div>
                 <Pager page={page} total={total} pageSize={STOCK_PAGE_SIZE} onPageChange={setPage} hideWhenEmpty />
             </div>

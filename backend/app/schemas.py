@@ -1581,6 +1581,7 @@ class PaginatedStockBalanceResponse(BaseModel):
     negative_count: int = 0
     rejected_count: int = 0
     rejected_qty: float = 0
+    total_kg: float = 0
     total_rows: int = 0
 
 class UOMCreate(BaseModel):

@@ -688,11 +688,14 @@ async def get_stock_balance_paginated(
         func.coalesce(func.sum(case((StockBalance.qty < 0, 1), else_=0)), 0),
         func.coalesce(func.sum(case((rejected_expr, 1), else_=0)), 0),
         func.coalesce(func.sum(case((rejected_expr, StockBalance.qty), else_=0)), 0),
+        # Weight on screen: only kg-stocked items add up meaningfully (pcs/yard don't).
+        func.coalesce(func.sum(case((func.lower(func.trim(Item.uom)) == "kg", StockBalance.qty), else_=0)), 0),
     )))).first()
     total = int(agg[0] or 0)
     negative_count = int(agg[1] or 0)
     rejected_count = int(agg[2] or 0)
     rejected_qty = float(agg[3] or 0)
+    total_kg = float(agg[4] or 0)
 
     # Unfiltered row count — the footer's "Total: N SKUs", which used to be the length
     # of the whole client-side array.
@@ -813,6 +816,7 @@ async def get_stock_balance_paginated(
         negative_count=negative_count,
         rejected_count=rejected_count,
         rejected_qty=rejected_qty,
+        total_kg=total_kg,
         total_rows=total_rows,
     )
 
