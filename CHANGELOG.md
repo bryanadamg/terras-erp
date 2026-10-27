@@ -15,6 +15,11 @@ on `main`:
 
 ## [Unreleased]
 
+## [0.45.1] - 2026-10-27
+
+### Fixed
+- Short-closing a partially shipped sales order asks for the reason in the app's own window instead of a browser popup
+
 ## [0.45.0] - 2026-10-27
 
 ### Added
