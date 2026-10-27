@@ -1,7 +1,9 @@
 from datetime import datetime, timedelta, timezone
 from typing import Any, Union
 from jose import jwt
-from passlib.context import CryptContext
+import base64
+import hashlib
+import hmac
 import os
 
 # Configuration
@@ -19,13 +21,32 @@ if not SECRET_KEY:
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24 # 24 hours
 
-pwd_context = CryptContext(schemes=["pbkdf2_sha256"], deprecated="auto")
+# PBKDF2-SHA256 in passlib's modular-crypt format ($pbkdf2-sha256$rounds$salt$hash,
+# "adapted" base64: '.' for '+', no padding), so hashes written while passlib was
+# a dependency keep verifying and new ones stay readable by it.
+_PBKDF2_PREFIX = "$pbkdf2-sha256$"
+_PBKDF2_ROUNDS = 29000
+
+def _ab64_encode(data: bytes) -> str:
+    return base64.b64encode(data).decode().rstrip("=").replace("+", ".")
+
+def _ab64_decode(data: str) -> bytes:
+    data = data.replace(".", "+")
+    return base64.b64decode(data + "=" * (-len(data) % 4))
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:
-    return pwd_context.verify(plain_password, hashed_password)
+    try:
+        rounds, salt, digest = hashed_password.removeprefix(_PBKDF2_PREFIX).split("$")
+        expected = _ab64_decode(digest)
+        actual = hashlib.pbkdf2_hmac("sha256", plain_password.encode(), _ab64_decode(salt), int(rounds), len(expected))
+    except (ValueError, AttributeError):
+        return False
+    return hashed_password.startswith(_PBKDF2_PREFIX) and hmac.compare_digest(actual, expected)
 
 def get_password_hash(password: str) -> str:
-    return pwd_context.hash(password)
+    salt = os.urandom(16)
+    digest = hashlib.pbkdf2_hmac("sha256", password.encode(), salt, _PBKDF2_ROUNDS)
+    return f"{_PBKDF2_PREFIX}{_PBKDF2_ROUNDS}${_ab64_encode(salt)}${_ab64_encode(digest)}"
 
 def create_access_token(subject: Union[str, Any], expires_delta: timedelta = None) -> str:
     if expires_delta:
