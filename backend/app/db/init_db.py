@@ -1,4 +1,6 @@
 import logging
+import os
+import secrets
 from pathlib import Path
 from sqlalchemy import or_, text
 from app.db.base import Base  # noqa: F401 — triggers all model registrations before individual imports
@@ -652,25 +654,23 @@ def seed_rbac(db):
                 role.default_avatar_id = EXECUTIVE_AVATAR_TEMPLATE
         db.commit()
 
-        # Only seed demo accounts on a truly empty user table (first boot).
+        # Only seed the first admin on a truly empty user table (first boot).
         # Per-username existence checks would resurrect an account an admin
         # deliberately deleted in production on every subsequent restart.
+        # No shared default password: INITIAL_ADMIN_PASSWORD, else a random one
+        # printed once to the startup log.
         if db.query(User).count() == 0:
-            users_data = [
-                ("admin", "System Admin", "Administrator"),
-                ("store_mgr", "Budi Store", "Store Manager"),
-                ("prod_mgr", "Siti Production", "Production Manager"),
-                ("operator", "Joko Worker", "Operator"),
-            ]
-            for uname, fname, rname in users_data:
-                role = db.query(Role).filter(Role.name == rname).first()
-                db.add(User(
-                    username=uname,
-                    full_name=fname,
-                    role_id=role.id,
-                    hashed_password=get_password_hash("password"),
-                ))
+            password = os.getenv("INITIAL_ADMIN_PASSWORD") or secrets.token_urlsafe(12)
+            role = db.query(Role).filter(Role.name == "Administrator").first()
+            db.add(User(
+                username="admin",
+                full_name="System Admin",
+                role_id=role.id,
+                hashed_password=get_password_hash(password),
+            ))
             db.commit()
+            if not os.getenv("INITIAL_ADMIN_PASSWORD"):
+                logger.warning(f"Seeded user 'admin' with generated password: {password}")
 
         logger.info("Seeded RBAC (Roles, Permissions, Users)")
     except Exception as e:
