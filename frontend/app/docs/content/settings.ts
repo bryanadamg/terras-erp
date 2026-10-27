@@ -21,7 +21,7 @@ export const settingsPage: DocPage = {
         },
         {
             heading: 'Database Infrastructure',
-            body: 'Terras ERP supports hot-swapping the active database connection without a server restart. From the Settings panel, administrators can configure and test alternate database URLs (PostgreSQL or SQLite), switch the active connection, take point-in-time snapshot backups, and schedule those backups to run automatically on a recurring basis.',
+            body: 'Terras ERP supports hot-swapping the active database connection without a server restart. From the Settings panel, administrators can configure and test alternate PostgreSQL database URLs, switch the active connection, take point-in-time snapshot backups, and schedule those backups to run automatically on a recurring basis.',
         },
         {
             heading: 'UI Preferences',
