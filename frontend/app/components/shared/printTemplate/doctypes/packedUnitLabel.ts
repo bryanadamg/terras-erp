@@ -5,8 +5,8 @@
  * TemplatePrintPortal one context per carton). Field sources, none re-entered at
  * print time:
  *   CONTENT  the carton's own `alt_qty` — the count the packer put in the box, in
- *            the order's `uom2` — with the base qty in brackets, and the length
- *            those pieces make up when the factor says so. Read off the carton
+ *            the order's `uom2` — with the length those pieces make up in
+ *            brackets when the factor says so. Read off the carton
  *            rather than divided out of its qty: for a kg item that qty is the
  *            scale reading, and 10.62 kg over 0.9 kg/Pcs prints 11.8 pieces for a
  *            box holding 12. Cartons packed before the count was recorded fall
@@ -51,7 +51,7 @@ export const CARTON_FIELDS: FieldDef[] = [
     { key: 'carton.qr', label: 'QR Code (carton number, scan to pick)', kind: 'qr', group: 'Carton' },
     { key: 'carton.number_barcode', label: 'Carton number barcode (Code 128)', kind: 'image', group: 'Carton' },
 
-    { key: 'carton.content', label: 'Content (count + base qty)', kind: 'text', group: 'Content' },
+    { key: 'carton.content', label: 'Content (count + length)', kind: 'text', group: 'Content' },
     { key: 'carton.ket_stock', label: 'Ket. stock', kind: 'text', group: 'Content' },
 
     { key: 'carton.po_ref', label: 'PO No (customer, else SO)', kind: 'text', group: 'Order' },
@@ -172,16 +172,16 @@ export function buildCartonLabelContext({
     const u = unit || {};
     const pcs = piecesOf(o, u);
     const qty = Number(u.qty || 0);
-    // "12 Pic ( 600 Yd / 10.62 KG )" — pieces lead because that is what the
-    // receiving side counts; the bracket carries the length and the measured base qty.
+    // "12 Pic ( 600 Yd )" — pieces lead because that is what the receiving side
+    // counts; the bracket carries the length when the order's factor gives one. No
+    // base qty: `u.qty` is the live balance, so a reprint after picking read 0 kg.
     const altLength = lengthPerAlt({ factor: o.uom2_factor, lengthUom: o.uom2_length_uom });
-    const bracket = [
-        pcs !== null && altLength ? `${(pcs * altLength.qty).toLocaleString()}  ${altLength.uom}` : null,
-        `${qty.toLocaleString()}  ${o.item_uom || ''}`.trim(),
-    ].filter(Boolean).join('  /  ');
-    const content = pcs !== null
-        ? `${Number(pcs.toFixed(2)).toLocaleString()}  ${o.uom2 || 'Pcs'}   ( ${bracket} )`
-        : `${qty.toLocaleString()}  ${o.item_uom || ''}`;
+    const pcsText = pcs !== null ? `${Number(pcs.toFixed(2)).toLocaleString()}  ${o.uom2 || 'Pcs'}` : '';
+    const content = pcs === null
+        ? `${qty.toLocaleString()}  ${o.item_uom || ''}`
+        : altLength
+            ? `${pcsText}   ( ${(pcs * altLength.qty).toLocaleString()}  ${altLength.uom} )`
+            : pcsText;
     const attrs = (u.variant_attributes || []) as any[];
     // An unapproved lab dip has no code yet; its variant code stands in (lotColorLabel's pending case).
     const colorCode = u.color_code || attrs.find(a => a.system_role === 'labdip_color')?.value || u.labdip_variant_code || '';
