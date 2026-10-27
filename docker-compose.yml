@@ -83,22 +83,6 @@ services:
     networks:
       - erp_network
 
-  # Cloudflare tunnel is opt-in: `--profile tunnel`, or COMPOSE_PROFILES=tunnel in the host's .env.
-  tunnel:
-    image: cloudflare/cloudflared:2026.9.3
-    logging: *logging
-    profiles:
-      - tunnel
-    networks:
-      - erp_network
-    container_name: erp-cloudflared
-    restart: always
-    command: tunnel run
-    volumes:
-      - ./cloudflared:/etc/cloudflared
-    depends_on:
-      - frontend
-
   # LAN HTTPS (opt-in: COMPOSE_PROFILES=https + LAN_IP in the host's .env). See caddy/Caddyfile.
   caddy:
     image: caddy:2.11.7-alpine
