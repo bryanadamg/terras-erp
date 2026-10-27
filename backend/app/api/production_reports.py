@@ -3,10 +3,12 @@
 Answers "what did each machine / work order produce between these two dates, and
 how much of it was scrapped?" from the completion logs. Invariants:
 
-* The machine a completion belongs to is read through its **work order**
-  (`COALESCE(work_orders.work_center_id, mo_completions.work_center_id)`) — the
-  operator-supplied `MOCompletion.work_center_id` is an optional form field and
-  is only the fallback for MO-level logs with no WO attached.
+* The machine a completion belongs to is the one **on the log**
+  (`COALESCE(mo_completions.work_center_id, work_orders.work_center_id)`). A WO
+  cut on a GROUP/TYPE is only pinned to a machine when the operator picks one in
+  the log form, so reading the WO first pegged that output to the parent node.
+  Blank picks are already backfilled from the WO at log time; the WO is only the
+  fallback for old logs that predate that backfill.
 * "Everything under this node" is resolved through the recursive CTE in
   `work_center_service`, never a one-hop `parent_id ==` filter: the GROUP tier is
   optional, so machines may hang one *or* two levels below a TYPE.
@@ -22,6 +24,7 @@ from datetime import datetime
 from typing import Optional
 
 from fastapi import APIRouter, Depends, Query
+from pydantic import BaseModel, Field
 from sqlalchemy import select, func, and_, case
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -37,6 +40,7 @@ from app.models.sales import SalesOrder
 from app.models.work_order import WorkOrder
 from app.api.auth import require_permission
 from app.services import work_center_service
+from app.services.xlsx_service import xlsx_response
 
 router = APIRouter()
 
@@ -179,8 +183,8 @@ async def machine_output_report(
         sub = await work_center_service.descendant_ids(db, group_id)
         scope_ids = [uuid.UUID(str(group_id))] + [uuid.UUID(str(x)) for x in sub]
 
-    # ── Completion aggregates, pegged through the WO ─────────────────────────
-    eff_wc = func.coalesce(WorkOrder.work_center_id, MOCompletion.work_center_id)
+    # ── Completion aggregates, pegged to the log's machine ───────────────────
+    eff_wc = func.coalesce(MOCompletion.work_center_id, WorkOrder.work_center_id)
     # Rejected logs don't count as output; scrap is summed over every log because a
     # partial reject stays active with the scrapped qty moved onto qty_rejected.
     qty_good = func.sum(case((MOCompletion.rejected == False, MOCompletion.qty_completed), else_=0))  # noqa: E712
@@ -920,3 +924,25 @@ async def _packing_operator_report(
         "rows": rows,
         "totals": totals,
     }
+
+
+class ProductionOutputExport(BaseModel):
+    sheet: str = Field(max_length=64)
+    filename: str = Field(max_length=128)
+    header: list[str]
+    rows: list[list[str | float | int | None]]
+
+
+@router.post("/reports/production-output/export")
+async def export_production_output(
+    payload: ProductionOutputExport,
+    current_user: User = Depends(require_permission("production_output.export")),
+):
+    """The report grid as an .xlsx, laid out by the client's own column definitions.
+
+    Each grouping (machine / group / WO / packing / operator) renders a
+    different column set with client-side formatting; rebuilding those here would
+    let the file drift from the screen. So the client posts exactly the rows it
+    shows and this only renders them — gated on the export grant, same as before.
+    """
+    return xlsx_response(payload.sheet, payload.header, payload.rows, payload.filename)

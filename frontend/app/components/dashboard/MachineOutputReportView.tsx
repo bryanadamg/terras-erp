@@ -19,11 +19,13 @@
 //
 // Every row carries its reject events (reason, operator, defect store), so the
 // expanded panel answers "what was rejected and where did it go" in one place.
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useLanguage } from '../../context/LanguageContext';
 import { useTimezone } from '../../context/TimezoneContext';
 import { useData } from '../../context/DataContext';
 import { useUser } from '../../context/UserContext';
+import { useToast } from '../shared/Toast';
+import { saveResponse } from '../shared/download';
 import {
     xpFont, xpBtn, xpInput, xpSep, TableBlockSkeleton, XPEmptyState,
     useSortable, WorkCenterChip, StatusChip, ExpandedRowPanel, ProgressBar, rowStateBg, XP_BTN,
@@ -65,15 +67,16 @@ interface ReportColumn {
     width?: number;
     /** Cell body. `classic` lets a cell pick XP vs Bootstrap typography. */
     render: (r: any) => React.ReactNode;
-    /** Flat value for the CSV export. */
-    csv: (r: any) => string | number;
+    /** Flat value for the Excel export. */
+    xlsx: (r: any) => string | number;
 }
 
 export default function MachineOutputReportView() {
     const { t } = useLanguage();
     const { formatDate: tzDate, formatTime: tzTime } = useTimezone();
-    const { authFetch, workCenters = [] } = useData();
+    const { authFetch, subscribeLiveEvents, workCenters = [] } = useData();
     const { hasPermission } = useUser();
+    const { showToast } = useToast();
     // Reading the report and taking it off the system are separate grants.
     const canExport = hasPermission('production_output.export');
 
@@ -108,8 +111,9 @@ export default function MachineOutputReportView() {
     const isPackingSource = isPacking || isOperator;
     const isMachineLevel = mode === 'machine' || mode === 'group';
 
-    const fetchReport = useCallback(async () => {
-        setLoading(true);
+    // `silent`: a live reload keeps the table on screen instead of flashing the skeleton.
+    const fetchReport = useCallback(async (silent = false) => {
+        if (!silent) setLoading(true);
         setError('');
         try {
             const p = new URLSearchParams();
@@ -145,6 +149,14 @@ export default function MachineOutputReportView() {
     }, [API_BASE, authFetch, startDate, endDate, scope, mode, isPackingSource, isOperator, hideIdle, completedOnly]);
 
     useEffect(() => { fetchReport(); }, [fetchReport]);
+    // A logged completion, reject or WO status change broadcasts 'production' — reload
+    // in place, debounced since one log can fan out into several events.
+    const liveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+    useEffect(() => subscribeLiveEvents(['production'], () => {
+        if (liveTimer.current) clearTimeout(liveTimer.current);
+        liveTimer.current = setTimeout(() => fetchReport(true), 300);
+    }), [subscribeLiveEvents, fetchReport]);
+    useEffect(() => () => { if (liveTimer.current) clearTimeout(liveTimer.current); }, []);
     // Row identity differs per grouping, so a stale expanded key would open nothing.
     useEffect(() => { setExpanded(null); }, [mode]);
 
@@ -267,25 +279,25 @@ export default function MachineOutputReportView() {
         const shared: ReportColumn[] = [
             {
                 key: 'output', label: 'Output', sortKey: 'output', align: 'right',
-                render: r => outputCell(r), csv: r => r.qty_good ?? 0,
+                render: r => outputCell(r), xlsx: r => r.qty_good ?? 0,
             },
             {
                 key: 'share', label: 'Share', width: 110,
                 render: r => <ProgressBar pct={(r.qty_good / maxOutput) * 100} tone="blue" height={8} />,
-                csv: () => '',
+                xlsx: () => '',
             },
             {
                 key: 'scrap', label: 'QC Reject', sortKey: 'scrap', align: 'right',
-                render: r => rejectCell(r), csv: r => r.qty_rejected ?? 0,
+                render: r => rejectCell(r), xlsx: r => r.qty_rejected ?? 0,
             },
             {
                 key: 'rejectPct', label: 'Reject %', sortKey: 'rejectPct', align: 'right',
-                render: r => rejectPctCell(r), csv: r => r.reject_pct ?? '',
+                render: r => rejectPctCell(r), xlsx: r => r.reject_pct ?? '',
             },
         ];
         const lastLog: ReportColumn = {
             key: 'last', label: 'Last log', sortKey: 'last',
-            render: r => lastLogCell(r), csv: r => r.last_log || '',
+            render: r => lastLogCell(r), xlsx: r => r.last_log || '',
         };
 
         if (isOperator) {
@@ -298,7 +310,7 @@ export default function MachineOutputReportView() {
                         // qty is only as good as what someone typed in the box.
                         r.has_account ? (r.username || '') : 'typed name — no user account',
                     ),
-                    csv: r => r.operator_name || '',
+                    xlsx: r => r.operator_name || '',
                 },
                 ...shared,
                 {
@@ -309,11 +321,11 @@ export default function MachineOutputReportView() {
                             {r.cartons_rejected ? <span style={{ color: '#c00000', marginLeft: 4 }}>(-{r.cartons_rejected})</span> : null}
                         </>
                     ),
-                    csv: r => `${r.cartons || 0}${r.cartons_rejected ? ` (-${r.cartons_rejected})` : ''}`,
+                    xlsx: r => `${r.cartons || 0}${r.cartons_rejected ? ` (-${r.cartons_rejected})` : ''}`,
                 },
                 {
                     key: 'days', label: 'Days', sortKey: 'days', align: 'right',
-                    render: r => r.days_active || 0, csv: r => r.days_active ?? 0,
+                    render: r => r.days_active || 0, xlsx: r => r.days_active ?? 0,
                 },
                 {
                     // Days that produced, not days in the window — a packer who was
@@ -323,11 +335,11 @@ export default function MachineOutputReportView() {
                         ? <Dash />
                         : <><span style={{ fontWeight: 'bold' }}>{fmtQty(r.qty_per_day)}</span>
                             <span style={{ fontSize: 10, color: '#888', marginLeft: 3 }}>{uomOf(r)}</span></>),
-                    csv: r => r.qty_per_day ?? '',
+                    xlsx: r => r.qty_per_day ?? '',
                 },
                 {
                     key: 'orders', label: 'Orders', sortKey: 'orders', align: 'right',
-                    render: r => r.order_count || 0, csv: r => r.order_count ?? 0,
+                    render: r => r.order_count || 0, xlsx: r => r.order_count ?? 0,
                 },
                 lastLog,
             ];
@@ -338,21 +350,21 @@ export default function MachineOutputReportView() {
                 {
                     key: 'name', label: 'Packing Order', sortKey: 'name',
                     render: r => twoLine(r.po_code, [r.sales_order_code, r.customer_name].filter(Boolean).join(' · ') || 'to stock'),
-                    csv: r => r.po_code || '',
+                    xlsx: r => r.po_code || '',
                 },
                 {
                     key: 'item', label: 'Item', sortKey: 'item',
                     render: r => twoLine(r.item_code || '—', r.item_name),
-                    csv: r => r.item_code || r.item_name || '',
+                    xlsx: r => r.item_code || r.item_name || '',
                 },
                 {
                     key: 'status', label: 'Status', sortKey: 'status',
                     render: r => (r.po_status ? <StatusChip status={r.po_status} tint /> : <Dash />),
-                    csv: r => r.po_status || '',
+                    xlsx: r => r.po_status || '',
                 },
                 {
                     key: 'target', label: 'Target', sortKey: 'target', align: 'right',
-                    render: r => fmtQty(r.qty_target), csv: r => r.qty_target ?? 0,
+                    render: r => fmtQty(r.qty_target), xlsx: r => r.qty_target ?? 0,
                 },
                 ...shared,
                 {
@@ -363,7 +375,7 @@ export default function MachineOutputReportView() {
                             {r.cartons_rejected ? <span style={{ color: '#c00000', marginLeft: 4 }}>(-{r.cartons_rejected})</span> : null}
                         </>
                     ),
-                    csv: r => `${r.cartons || 0}${r.cartons_rejected ? ` (-${r.cartons_rejected})` : ''}`,
+                    xlsx: r => `${r.cartons || 0}${r.cartons_rejected ? ` (-${r.cartons_rejected})` : ''}`,
                 },
                 lastLog,
             ];
@@ -377,27 +389,27 @@ export default function MachineOutputReportView() {
                         r.wo_code || '(MO-level log)',
                         [r.wo_name, r.mo_code].filter(Boolean).join(' · '),
                     ),
-                    csv: r => r.wo_code || r.mo_code || '',
+                    xlsx: r => r.wo_code || r.mo_code || '',
                 },
                 {
                     key: 'item', label: 'Item', sortKey: 'item',
                     render: r => twoLine(r.item_code || '—', r.item_name),
-                    csv: r => r.item_code || r.item_name || '',
+                    xlsx: r => r.item_code || r.item_name || '',
                 },
                 {
                     key: 'machine', label: 'Machine', sortKey: 'machine',
                     render: r => twoLine(r.work_center_name || '—', r.work_center_code),
-                    csv: r => r.work_center_name || '',
+                    xlsx: r => r.work_center_name || '',
                 },
                 {
                     key: 'status', label: 'Status', sortKey: 'status',
                     render: r => (r.wo_status ? <StatusChip status={r.wo_status} tint /> : <Dash />),
-                    csv: r => r.wo_status || '',
+                    xlsx: r => r.wo_status || '',
                 },
                 {
                     key: 'target', label: 'Target', sortKey: 'target', align: 'right',
                     render: r => (r.wo_qty != null ? fmtQty(r.wo_qty) : <Dash />),
-                    csv: r => r.wo_qty ?? '',
+                    xlsx: r => r.wo_qty ?? '',
                 },
                 ...shared,
                 lastLog,
@@ -413,44 +425,55 @@ export default function MachineOutputReportView() {
                         ? ` · ${r.machine_count || 0} machines`
                         : (r.group_name ? ` · ${r.group_name}` : (r.type_name ? ` · ${r.type_name}` : ''))}`,
                 ),
-                csv: r => r.work_center_name || '',
+                xlsx: r => r.work_center_name || '',
             },
             {
                 key: 'type', label: 'Type',
                 render: r => (r.center_type
                     ? <WorkCenterChip type={r.center_type} name={r.work_center_name} />
                     : <Dash />),
-                csv: r => r.center_type || '',
+                xlsx: r => r.center_type || '',
             },
             {
                 key: 'wos', label: 'WOs', sortKey: 'wos', align: 'right',
-                render: r => r.wo_count || 0, csv: r => r.wo_count ?? 0,
+                render: r => r.wo_count || 0, xlsx: r => r.wo_count ?? 0,
             },
             {
                 key: 'logs', label: 'Logs', sortKey: 'logs', align: 'right',
-                render: r => r.logs || 0, csv: r => r.logs ?? 0,
+                render: r => r.logs || 0, xlsx: r => r.logs ?? 0,
             },
             ...shared,
             {
                 key: 'yield', label: 'Yield', sortKey: 'yield', align: 'right',
-                render: r => fmtPct(r.yield_pct), csv: r => r.yield_pct ?? '',
+                render: r => fmtPct(r.yield_pct), xlsx: r => r.yield_pct ?? '',
             },
             lastLog,
         ];
     }, [isOperator, isPacking, isWoMode, isGroupMode, maxOutput, true, tzDate, tzTime]);
 
-    const exportCsv = () => {
-        const head = columns.filter(c => c.key !== 'share').map(c => c.label);
-        const body = sorted.map((r: any) => columns.filter(c => c.key !== 'share').map(c => c.csv(r)));
-        const csv = [head, ...body]
-            .map(line => line.map(c => `"${String(c).replace(/"/g, '""')}"`).join(','))
-            .join('\r\n');
-        const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8;' }));
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `${isOperator ? 'packing-operator' : isPacking ? 'packing' : mode}-output_${startDate || 'all'}_${endDate || 'now'}.csv`;
-        a.click();
-        URL.revokeObjectURL(url);
+    // Excel of exactly what's on screen: the server only renders these rows, so the
+    // file can't drift from the grid's per-grouping columns.
+    const [exporting, setExporting] = useState(false);
+    const exportExcel = async () => {
+        const cols = columns.filter(c => c.key !== 'share');
+        const name = isOperator ? 'packing-operator' : isPacking ? 'packing' : mode;
+        setExporting(true);
+        try {
+            const res = await authFetch(`${API_BASE}/reports/production-output/export`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    sheet: 'Production Output',
+                    filename: `${name}-output_${startDate || 'all'}_${endDate || 'now'}`,
+                    header: cols.map(c => c.label),
+                    rows: sorted.map((r: any) => cols.map(c => c.xlsx(r))),
+                }),
+            });
+            if (!res.ok) { showToast('Export failed', 'danger'); return; }
+            await saveResponse(res, `${name}-output.xlsx`);
+        } finally {
+            setExporting(false);
+        }
     };
 
     // ── Expanded detail (shared by both themes) ──────────────────────────────
@@ -819,9 +842,12 @@ export default function MachineOutputReportView() {
                             <SegmentedBar actions={presetActions} />
                             <div style={{ flex: 1 }} />
                             <span style={{ ...lbl, whiteSpace: 'nowrap' }}>{sorted.length} rows</span>
-                            <button className={XP_BTN} style={xpBtn({ padding: '1px 6px' })} onClick={fetchReport} title="Refresh"><i className="bi bi-arrow-clockwise" /></button>
+                            <button className={XP_BTN} style={xpBtn({ padding: '1px 6px' })} onClick={() => fetchReport()} title="Refresh"><i className="bi bi-arrow-clockwise" /></button>
                             {canExport && (
-                                <button className={XP_BTN} style={xpBtn({ padding: '1px 6px' })} onClick={exportCsv} disabled={!sorted.length} title="Export CSV"><i className="bi bi-filetype-csv" /></button>
+                                <button className={XP_BTN} style={xpBtn()} onClick={exportExcel} disabled={exporting || !sorted.length}
+                                    title="Download the rows shown as an Excel file">
+                                    <i className="bi bi-file-earmark-excel" style={{ marginRight: 4 }} />{exporting ? 'Exporting…' : 'Export Excel'}
+                                </button>
                             )}
                         </div>
                     </>

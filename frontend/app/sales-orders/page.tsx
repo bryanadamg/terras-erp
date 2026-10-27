@@ -291,8 +291,9 @@ export default function SalesOrdersPage() {
         return res;
     };
 
-    const handleUpdateSOStatus = async (soId: string, status: string) => {
-        const res = await authFetch(`${API_BASE}/sales-orders/${soId}/status?status=${status}`, { method: 'PUT' });
+    const handleUpdateSOStatus = async (soId: string, status: string, reason?: string) => {
+        const qs = new URLSearchParams({ status, ...(reason ? { reason } : {}) });
+        const res = await authFetch(`${API_BASE}/sales-orders/${soId}/status?${qs}`, { method: 'PUT' });
         if (res.ok) {
             refreshSalesOrders();
             showToast(`Order status updated to ${status}`, 'success');

@@ -15,7 +15,12 @@ export const LOT_LABEL_DEFAULT: PrintLayout = {
         labelLotHero('lotlabel', 'NO. LOT (KANTONG)'),
         {
             id: 'label_metrics', type: 'grid', gap: 6, cellBox: '1px solid #999', marginBottom: 6,
-            items: [{ field: 'lotlabel.weight', col: 1, span: 12, row: 1, fontSize: 24, bold: true, showLabel: true, label: 'BERAT / WEIGHT' }],
+            items: [
+                // Stacked, not side by side: UTAS only prints on a beam lot, and grid
+                // cells are fixed-position, so a hidden half would leave a gap.
+                { field: 'lotlabel.ends', col: 1, span: 12, row: 1, fontSize: 24, bold: true, showLabel: true, label: 'UTAS / ENDS', hideWhenEmpty: true },
+                { field: 'lotlabel.weight', col: 1, span: 12, row: 2, fontSize: 24, bold: true, showLabel: true, label: 'BERAT / WEIGHT' },
+            ],
         },
         {
             id: 'label_identity', type: 'keyvalue', labelWidth: '26%', marginBottom: 6,
@@ -29,6 +34,11 @@ export const LOT_LABEL_DEFAULT: PrintLayout = {
                 { field: 'lotlabel.location', label: 'Lokasi', span: 3 },
                 { field: 'lotlabel.notes', label: 'Catatan', span: 3, fontSize: 9, hideWhenEmpty: true },
             ],
+        },
+        {
+            id: 'label_components', type: 'table', source: 'lotlabel_components',
+            title: 'Komponen Benang', titleUppercase: true, fontSize: 9, hideWhenEmpty: true, marginBottom: 6,
+            columns: [{ field: 'item', label: 'Komponen' }],
         },
         ...labelSignature('lotlabel'),
     ],

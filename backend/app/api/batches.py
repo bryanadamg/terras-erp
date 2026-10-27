@@ -5,7 +5,7 @@ from sqlalchemy.dialects.postgresql import UUID as PG_UUID
 from sqlalchemy.orm import selectinload, joinedload, aliased
 from app.db.session import get_async_db
 from app.models.batch import Batch, BatchConsumption, BeamMount
-from app.models.manufacturing import MOCompletion
+from app.models.manufacturing import MOCompletion, MOCompletionItem
 from app.models.item import Item
 from app.models.stock_balance import StockBalance
 from app.models.location import Location
@@ -255,6 +255,43 @@ async def _resolve_source_lots(db: AsyncSession, batches: list[Batch]) -> None:
     for b in batches:
         if b.source_wo_id:
             b.source_lots = sorted(lot_map.get(b.id, set()))
+
+
+async def _resolve_beam_components(db: AsyncSession, batches: list[Batch]) -> None:
+    """Populate beam_components on warp beams (`ends` set): the yarns the BEAMING
+    completion consumed. A leftover LFT- lot (or a leftover of a leftover) carries
+    no completion of its own, so walk parent_batch_id up to the lot that has one —
+    a few short hops, one query per level."""
+    beams = [b for b in batches if b.ends is not None]
+    if not beams:
+        return
+    root_of = {b.id: b.id for b in beams}       # beam → current ancestor
+    parent_of = {b.id: b.parent_batch_id for b in beams}
+    pending = {b.id for b in beams if b.parent_batch_id}
+    for _ in range(10):
+        if not pending:
+            break
+        for bid in pending:
+            root_of[bid] = parent_of[bid]
+        ups = {root_of[bid] for bid in pending}
+        rows = (await db.execute(select(Batch.id, Batch.parent_batch_id).where(Batch.id.in_(ups)))).all()
+        parents = {i: p for i, p in rows}
+        pending = {bid for bid in pending if parents.get(root_of[bid])}
+        for bid in pending:
+            parent_of[bid] = parents[root_of[bid]]
+    rows = (await db.execute(
+        select(MOCompletion.output_batch_id, Item.code, Item.name)
+        .join(MOCompletionItem, MOCompletionItem.completion_id == MOCompletion.id)
+        .join(Item, Item.id == MOCompletionItem.item_id)
+        .where(MOCompletion.output_batch_id.in_(set(root_of.values())))
+        .distinct()
+        .order_by(Item.code)
+    )).all()
+    by_root: dict = {}
+    for out_id, code, name in rows:
+        by_root.setdefault(out_id, []).append({"item_code": code, "item_name": name})
+    for b in beams:
+        b.beam_components = by_root.get(root_of[b.id]) or None
 
 
 def _build_batch_number(date_str: str, counter: int) -> str:
@@ -531,6 +568,7 @@ async def _enrich_batches(db: AsyncSession, batches: list[Batch], location_id: u
     await _resolve_gr_origins(db, list(batches))
     await _resolve_batch_origins(db, list(batches))
     await _resolve_batch_variants(db, list(batches))
+    await _resolve_beam_components(db, list(batches))
     if with_source_lots:
         await _resolve_source_lots(db, list(batches))
     return batches

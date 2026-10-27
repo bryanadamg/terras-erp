@@ -208,3 +208,59 @@ def test_scrap_without_a_defect_store_writes_off_rather_than_500s(client, auth_h
     assert float(res.json()["qty_rejected"]) == 2.0
     # Written off one-sided: it is gone from the good bin either way.
     assert _balance(client, auth_headers, item["id"], locs["PACK-SRC"]) == 0.0
+
+
+def test_scrap_goes_to_the_packing_machines_defect_store(client, auth_headers):
+    """No item default, but the machine's parent names a defect store — that wins.
+
+    Packing resolved only explicit → item default, so a reject on a festoning
+    machine whose group carries the store was written off one-sided instead.
+    """
+    suffix = uuid.uuid4().hex[:6].upper()
+    _seed_locations("PACK-SRC", "PACK-OUT", "PACK-GRP-REJ")
+    locs = _location_ids(client, auth_headers)
+
+    # /api/work-centers is a sync router; seeded directly so the async packing
+    # side can see it (same reason as `_seed_locations`).
+    from app.db.session import engine as _engine
+    from sqlalchemy.orm import Session as _SASession
+    from app.models.routing import WorkCenter as _WC
+    conn = _engine.connect()
+    sess = _SASession(conn)
+    try:
+        parent = _WC(code=f"FST-{suffix}", name="Festoning", center_type="PACKING",
+                     node_type="TYPE", reject_location_id=locs["PACK-GRP-REJ"])
+        sess.add(parent)
+        sess.flush()
+        machine = _WC(code=f"FST-{suffix}-01", name="Festoning 01", center_type="PACKING",
+                      node_type="MACHINE", parent_id=parent.id)
+        sess.add(machine)
+        sess.commit()
+        machine_id = str(machine.id)
+    finally:
+        sess.close()
+        conn.close()
+
+    client.post("/api/uoms", json={"name": "kg"}, headers=auth_headers)
+    item = client.post("/api/items", json={
+        "code": f"PK-WC-{suffix}", "name": "Pack FG wc bin", "uom": "kg",
+    }, headers=auth_headers).json()
+    client.post("/api/items/stock", json={
+        "item_code": item["code"], "location_code": "PACK-SRC", "qty": 10,
+        "reference_id": "INIT",
+    }, headers=auth_headers)
+    po = client.post("/api/packing", json={
+        "item_id": item["id"], "qty_target": 10, "pack_size": 4,
+        "source_location_id": locs["PACK-SRC"],
+        "output_location_id": locs["PACK-OUT"],
+        "work_center_id": machine_id,
+    }, headers=auth_headers).json()
+
+    res = client.post(f"/api/packing/{po['id']}/complete", json={
+        "qty": 8, "boxes": [4, 4], "box_weights": [4, 4],
+        "box_packaging_type_ids": [_box(client, auth_headers)] * 2,
+        "qty_rejected": 2,
+    }, headers=auth_headers)
+    assert res.status_code == 200, res.text
+    assert _balance(client, auth_headers, item["id"], locs["PACK-SRC"]) == 0.0
+    assert _balance(client, auth_headers, item["id"], locs["PACK-GRP-REJ"]) == 2.0

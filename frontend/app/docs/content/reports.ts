@@ -32,7 +32,7 @@ export const reportsPage: DocPage = {
         },
         {
             heading: 'Production Output & QC Reject',
-            body: 'The Production Output report answers "what did we make, and how much was rejected". Four views share one date range: Per Machine and Per Group roll output up the work-centre tree; Per Work Order is the result sheet for a finished order (target, hasil, QC reject, reject % of hasil) with a "Completed WOs only" filter; Packing reports the same columns per packing order, since packing rejects have no machine to peg to. Expanding any row lists its reject events — quantity, reason, who rejected it, and the defect store the scrap was moved into. Everything exports to CSV.',
+            body: 'The Production Output report answers "what did we make, and how much was rejected". Four views share one date range: Per Machine and Per Group roll output up the work-centre tree; Per Work Order is the result sheet for a finished order (target, hasil, QC reject, reject % of hasil) with a "Completed WOs only" filter; Packing reports the same columns per packing order, since packing rejects have no machine to peg to. Expanding any row lists its reject events — quantity, reason, who rejected it, and the defect store the scrap was moved into. Everything exports to Excel.',
         },
         {
             heading: 'Reject Locations',

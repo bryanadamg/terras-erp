@@ -99,6 +99,26 @@ services:
     depends_on:
       - frontend
 
+  # LAN HTTPS (opt-in: COMPOSE_PROFILES=https + LAN_IP in the host's .env). See caddy/Caddyfile.
+  caddy:
+    image: caddy:2.11.7-alpine
+    logging: *logging
+    profiles:
+      - https
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      LAN_IP: ${LAN_IP:-localhost}
+    volumes:
+      - ./caddy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - ./caddy_data:/data
+    depends_on:
+      - frontend
+    networks:
+      - erp_network
+
 # Read from the NODE_AUTH_TOKEN environment variable — the repo-root .env is
 # enough for local builds; the Pi deploy forwards it from a GitHub secret.
 secrets:

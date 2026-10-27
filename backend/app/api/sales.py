@@ -175,35 +175,79 @@ async def _populate_production_runs(db: AsyncSession, orders: list) -> None:
 
 
 async def _populate_reserved(db: AsyncSession, orders: list) -> None:
-    """Attach `reserved_qty` — on-hand FG this order's PR took from stock.
+    """Attach `reserved_qty` — on-hand FG this order holds, from PR netting or
+    "Allocate from stock" — plus the same hold in each line's alt unit.
 
     Needed on the list, not just behind a click: an order whose PR covered
     everything from stock has a PR chip and no MOs at all, which reads as a
     failed run unless the row can say "700 came from stock". One grouped query
     scoped to the page's SO ids, same shape as `_populate_production_runs`.
 
+    Alt counts follow so_fulfilment_service: an allocated carton's own
+    `Batch.alt_qty`, never divided out of its kilos; a PR hold (no carton) goes
+    through its line's ordered pair. Runs after `_populate_fulfilment`, which
+    puts that pair on the lines.
+
     Must be declared on SalesOrderResponse or response_model drops it silently.
     """
     if not orders:
         return
-    totals: dict[str, float] = {}
-    for so_id, qty, released in (
+    rows = (
         await db.execute(
             select(
                 StockReservation.sales_order_id,
+                StockReservation.sales_order_line_id,
+                StockReservation.item_id,
+                StockReservation.variant_key,
+                StockReservation.bom_size_id,
                 StockReservation.qty,
                 StockReservation.qty_released,
-            ).filter(
+                Batch.alt_qty,
+            )
+            .outerjoin(Batch, Batch.id == StockReservation.batch_id)
+            .filter(
                 StockReservation.sales_order_id.in_([o.id for o in orders]),
                 StockReservation.status == "ACTIVE",
             )
         )
-    ).all():
-        held = float(qty or 0) - float(released or 0)
-        if held > 0:
-            totals[str(so_id)] = totals.get(str(so_id), 0.0) + held
+    ).all()
+    by_so: dict[str, list] = {}
+    for r in rows:
+        by_so.setdefault(str(r.sales_order_id), []).append(r)
+
     for so in orders:
-        so.reserved_qty = totals.get(str(so.id), 0.0)
+        held_total, uom, alt, alt_ok = 0.0, "", {}, True
+        for r in by_so.get(str(so.id), []):
+            qty = float(r.qty or 0)
+            held = qty - float(r.qty_released or 0)
+            if held <= 0:
+                continue
+            held_total += held
+            # ponytail: first line matching item/variant/size; two SO lines of the
+            # same variant share one conversion pair anyway.
+            line = next((l for l in so.lines if r.sales_order_line_id and l.id == r.sales_order_line_id), None) \
+                or next((l for l in so.lines
+                         if l.item_id == r.item_id
+                         and stock_service._generate_variant_key([str(v.id) for v in l.attribute_values], l.color_id) == r.variant_key
+                         and (r.bom_size_id is None or l.bom_size_id == r.bom_size_id)), None)
+            if line is None:
+                alt_ok = False
+                continue
+            uom = uom or getattr(line, "base_uom", "") or ""
+            if not getattr(line, "alt_uom", ""):
+                alt_ok = False
+                continue
+            if r.alt_qty is not None and qty > 0:
+                n = float(r.alt_qty) * held / qty
+            else:
+                n = so_fulfilment_service._to_alt(held, line.qty_ordered_base, line.qty_ordered_alt)
+            if n is None:
+                alt_ok = False
+                continue
+            alt[line.alt_uom] = alt.get(line.alt_uom, 0.0) + n
+        so.reserved_qty = held_total
+        so.reserved_uom = uom
+        so.reserved_alt = {k: round(v, 2) for k, v in alt.items()} if alt_ok else {}
 
 
 async def _populate_variant_attrs(db: AsyncSession, orders: list) -> None:
@@ -977,7 +1021,7 @@ async def _close_reservations(db: AsyncSession, so_id, new_status: str) -> int:
 
 
 @router.put("/{so_id}/status", response_model=SalesOrderResponse)
-async def update_sales_order_status(so_id: uuid.UUID, status: str, db: AsyncSession = Depends(get_async_db), current_user: User = Depends(require_permission('sales_order.edit'))):
+async def update_sales_order_status(so_id: uuid.UUID, status: str, reason: str | None = None, db: AsyncSession = Depends(get_async_db), current_user: User = Depends(require_permission('sales_order.edit'))):
     result = await db.execute(
         select(SalesOrder)
         .options(*_line_opts())
@@ -995,6 +1039,16 @@ async def update_sales_order_status(so_id: uuid.UUID, status: str, db: AsyncSess
     # Closing a delivered order, and undoing that, are the same authority.
     if "DELIVERED" in (status, prev_status) and status != prev_status             and not user_has_permission(current_user, 'sales_order.close'):
         raise HTTPException(status_code=403, detail="Missing permission: sales_order.close")
+
+    # Closing is "the customer has it all" (SENT), or a deliberate short-close of
+    # a partly shipped order — which has to say why. Anything earlier would
+    # close an order nobody shipped.
+    reason = (reason or "").strip()
+    if status == "DELIVERED" and prev_status != "DELIVERED":
+        if prev_status == "PARTIAL" and not reason:
+            raise HTTPException(status_code=400, detail="A reason is required to close a partially shipped order")
+        if prev_status not in ("SENT", "PARTIAL"):
+            raise HTTPException(status_code=400, detail=f"Cannot close a {prev_status} order — only SENT or PARTIAL orders can be closed")
 
     if status in ("DELIVERED", "CANCELLED"):
         # The two states a person decides; everything else is derived.
@@ -1033,7 +1087,7 @@ async def update_sales_order_status(so_id: uuid.UUID, status: str, db: AsyncSess
         action="STATUS_CHANGE",
         entity_type="SalesOrder",
         entity_id=str(so.id),
-        details=f"Status: {prev_status} -> {status}",
+        details=f"Status: {prev_status} -> {status}" + (f" (reason: {reason})" if reason else ""),
         changes=audit_service.diff({"status": prev_status}, {"status": status}),
     )
 

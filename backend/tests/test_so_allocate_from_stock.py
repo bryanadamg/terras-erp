@@ -117,3 +117,51 @@ def test_order_covered_by_pinned_cartons_is_ready(client, auth_headers, async_db
     assert got["lines"][0]["qty_packed_available"] == 50
     assert got["lines"][0]["qty_allocated"] == 50
     assert got["status"] == "READY"
+
+
+def test_list_states_the_allocated_hold_in_the_alt_unit(client, auth_headers, async_db_session):
+    """The "from stock" chip reads the carton's own piece count, not a kilo division."""
+    from sqlalchemy import update
+    from app.models.batch import Batch
+
+    item, (a, b) = _seed(client, auth_headers, async_db_session, [20, 20])
+
+    async def count_pieces():
+        await async_db_session.execute(update(Batch).where(Batch.id.in_([uuid.UUID(a), uuid.UUID(b)])).values(alt_qty=48))
+        await async_db_session.commit()
+    client.portal.call(count_pieces)
+
+    so = client.post("/api/sales-orders", json={
+        "po_number": f"PO-AL-{uuid.uuid4().hex[:6]}", "customer_name": "Acme",
+        "order_date": "2026-02-04T00:00:00",
+        "lines": [{"item_id": item["id"], "qty": 30, "qty2": 72, "uom2": "Pcs",
+                   "due_date": "2026-03-01T00:00:00", "attribute_value_ids": []}],
+    }, headers=auth_headers).json()
+    assert _allocate(client, auth_headers, so, [a]).status_code == 200
+
+    [row] = client.get(f"/api/sales-orders?search={so['po_number']}", headers=auth_headers).json()["items"]
+    assert row["reserved_qty"] == 20
+    assert row["reserved_alt"] == {"Pcs": 48}
+
+
+def test_list_converts_a_pr_hold_through_the_lines_ordered_pair(client, auth_headers, async_db_session):
+    """A PR-netted hold has no carton to count, so it scales by the line's qty2 : ordered qty."""
+    from app.models.reservation import StockReservation
+
+    item, _ = _seed(client, auth_headers, async_db_session, [])
+    so = client.post("/api/sales-orders", json={
+        "po_number": f"PO-AL-{uuid.uuid4().hex[:6]}", "customer_name": "Acme",
+        "order_date": "2026-02-04T00:00:00",
+        "lines": [{"item_id": item["id"], "qty": 30, "qty2": 72, "uom2": "Pcs",
+                   "due_date": "2026-03-01T00:00:00", "attribute_value_ids": []}],
+    }, headers=auth_headers).json()
+
+    async def hold():
+        async_db_session.add(StockReservation(sales_order_id=uuid.UUID(so["id"]), item_id=uuid.UUID(item["id"]),
+                                              variant_key="", qty=15))
+        await async_db_session.commit()
+    client.portal.call(hold)
+
+    [row] = client.get(f"/api/sales-orders?search={so['po_number']}", headers=auth_headers).json()["items"]
+    assert row["reserved_qty"] == 15
+    assert row["reserved_alt"] == {"Pcs": 36}

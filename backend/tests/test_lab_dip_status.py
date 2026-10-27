@@ -3,9 +3,9 @@
 A lab dip is the colour-matching gate in front of production, so the two rules
 that matter are about what CANNOT be undone and what can:
 
-* APPROVED is terminal. The approval mints a Color into the library and ties it
-  to production; re-opening it would leave that shade minted against a variant
-  that is no longer approved.
+* APPROVED is locked. The approval mints a Color into the library and ties it
+  to production. The one exit is a customer reject after approval: revoking to
+  REJECTED archives the shade — refused once the shade is used for real.
 * REJECTED rests but reopens — and only to IN_PROGRESS, for another round. Going
   straight from REJECTED to APPROVED would skip the re-dip the rejection asked for.
 """
@@ -67,16 +67,59 @@ def test_a_rejected_variant_reopens_only_to_in_progress(client, auth_headers, la
     assert res.status_code == 200, res.text
 
 
-def test_approved_is_terminal(client, auth_headers, lab_dip):
+def test_approved_only_exits_to_rejected(client, auth_headers, lab_dip):
     item_id = lab_dip["items"][0]["id"]
 
     res = _set_status(client, auth_headers, lab_dip, item_id, "APPROVED", set_value="1")
     assert res.status_code == 200, res.text
 
-    for attempt in ("REJECTED", "IN_PROGRESS", "PENDING"):
-        res = _set_status(client, auth_headers, lab_dip, item_id, attempt)
+    for attempt in ("IN_PROGRESS", "PENDING", "APPROVED"):
+        res = _set_status(client, auth_headers, lab_dip, item_id, attempt, set_value="2")
         assert res.status_code == 400, f"{attempt}: {res.text}"
         assert "locked" in res.json()["detail"]
+
+
+def _color(client, auth_headers, code):
+    res = client.get(f"/api/colors?search={code}&status=", headers=auth_headers)
+    assert res.status_code == 200, res.text
+    body = res.json()
+    rows = body["items"] if isinstance(body, dict) else body
+    return next(c for c in rows if c["code"] == code)
+
+
+def test_revoking_an_approval_archives_the_shade_and_rejects(client, auth_headers, lab_dip):
+    """Customer approved, then rejected: the variant goes to REJECTED, the minted
+    colour is archived, and a later round can approve a fresh set."""
+    item_id = lab_dip["items"][0]["id"]
+    code = _set_status(client, auth_headers, lab_dip, item_id, "APPROVED", set_value="5").json()["color_code"]
+
+    res = _set_status(client, auth_headers, lab_dip, item_id, "REJECTED", reason="Customer%20rejected")
+    assert res.status_code == 200, res.text
+
+    req = client.get(f"/api/lab-dips?search={lab_dip['code']}", headers=auth_headers).json()["items"][0]
+    it = req["items"][0]
+    assert it["status"] == "REJECTED"
+    assert it["approved_color_code"] is None
+    assert it["rejection_count"] == 1
+    assert _color(client, auth_headers, code)["status"] == "archived"
+
+    assert _set_status(client, auth_headers, lab_dip, item_id, "IN_PROGRESS").status_code == 200
+    res = _set_status(client, auth_headers, lab_dip, item_id, "APPROVED", set_value="6")
+    assert res.status_code == 200, res.text
+
+
+def test_a_shade_already_in_use_cannot_be_revoked(client, auth_headers, lab_dip):
+    item_id = lab_dip["items"][0]["id"]
+    code = _set_status(client, auth_headers, lab_dip, item_id, "APPROVED", set_value="1").json()["color_code"]
+    recipe = client.post("/api/dye-recipes", json={
+        "code": f"DR-{uuid.uuid4().hex[:6]}", "name": "Uses the shade",
+        "color_id": _color(client, auth_headers, code)["id"], "lines": [],
+    }, headers=auth_headers)
+    assert recipe.status_code == 200, recipe.text
+
+    res = _set_status(client, auth_headers, lab_dip, item_id, "REJECTED")
+    assert res.status_code == 400, res.text
+    assert "already in use" in res.json()["detail"]
 
 
 def test_approving_requires_a_set_index(client, auth_headers, lab_dip):

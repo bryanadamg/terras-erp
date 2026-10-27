@@ -26,7 +26,7 @@ import { SO_TABLE_DOC, ST_FIELDS, ST_ROW_SOURCES, resolveSoTableField, buildSoTa
 import { SO_TABLE_DEFAULT } from '../defaults/soTable';
 import { BAG_LABEL_DOC, BEAM_LABEL_DOC, OUTLABEL_FIELDS, OUTLABEL_ROW_SOURCES, resolveOutputLabelField, buildOutputLabelContext, outputLabelSampleRecords } from './outputLabel';
 import { BAG_LABEL_DEFAULT, BEAM_LABEL_DEFAULT } from '../defaults/outputLabel';
-import { LOT_LABEL_DOC, LOTLABEL_FIELDS, resolveLotLabelField, buildLotLabelContext } from './lotLabel';
+import { LOT_LABEL_DOC, LOTLABEL_FIELDS, LOTLABEL_ROW_SOURCES, resolveLotLabelField, buildLotLabelContext } from './lotLabel';
 import { LOT_LABEL_DEFAULT } from '../defaults/lotLabel';
 import { PACKED_UNIT_LABEL_DOC, CARTON_FIELDS, CARTON_ROW_SOURCES, resolveCartonLabelField, buildCartonLabelContext } from './packedUnitLabel';
 import { PACKED_UNIT_LABEL_DEFAULT } from '../defaults/packedUnitLabel';
@@ -229,7 +229,7 @@ export const DOC_MODULES: DocTypeModule[] = [
         fieldPrefix: 'lotlabel.',
         fields: LOTLABEL_FIELDS,
         resolve: resolveLotLabelField,
-        rowSources: [],
+        rowSources: LOTLABEL_ROW_SOURCES,
         defaultLayout: LOT_LABEL_DEFAULT,
         sample: {
             noun: 'lots',

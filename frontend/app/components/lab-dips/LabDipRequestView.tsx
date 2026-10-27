@@ -253,13 +253,14 @@ export default function LabDipRequestView({
 
     // Reject dialog: confirm before locking a variant, capturing a reason + optional notes
     // (mirrors the sample-request reject flow).
-    const [reject, setReject] = useState<{ reqId: string; itemId: string; seq: string; variant: string } | null>(null);
+    // `revokes` = the approved color code being revoked (customer rejected after approval).
+    const [reject, setReject] = useState<{ reqId: string; itemId: string; seq: string; variant: string; revokes?: string | null } | null>(null);
     const [rejectReason, setRejectReason] = useState(REJECT_REASONS[0]);
     const [rejectNotes, setRejectNotes] = useState('');
     const [rejectImage, setRejectImage] = useState<File | null>(null);
     const openReject = (reqId: string, v: any) => {
-        if (v.status === 'APPROVED' || v.status === 'REJECTED') return; // locked
-        setReject({ reqId, itemId: v.id, seq: v.seq, variant: v.variant });
+        if (v.status === 'REJECTED') return; // locked; APPROVED may still be revoked
+        setReject({ reqId, itemId: v.id, seq: v.seq, variant: v.variant, revokes: v.status === 'APPROVED' ? v.approvedCode : null });
         setRejectReason(REJECT_REASONS[0]);
         setRejectNotes('');
         setRejectImage(null);
@@ -593,7 +594,8 @@ export default function LabDipRequestView({
                                         const fmt = (d: any) => d ? tzDate(d) : '—';
                                         const recipeLabel = recipeOptions.find((o: any) => o.value === r.approved_recipe_id)?.label;
                                         // Progress/Reject toggle: clicking the active one reverts to PENDING.
-                                        // APPROVED/REJECTED are terminal (locked) — guarded here and on the server.
+                                        // APPROVED/REJECTED are locked — guarded here and on the server. APPROVED's
+                                        // one exit is Rejected (revoke), routed through openReject.
                                         const setItemStatus = (itemId: string, cur: string, next: string) => {
                                             if (cur === 'APPROVED' || cur === 'REJECTED') return;
                                             doUpdateItemStatus(r.id, itemId, cur === next ? 'PENDING' : next);
@@ -613,7 +615,7 @@ export default function LabDipRequestView({
                                         // One row per selected item: item name, color code+variant, status, update control.
                                         const rows = (r.items || []).map((it: any) => {
                                             const status = it.status || 'PENDING';
-                                            const locked = status === 'APPROVED' || status === 'REJECTED';
+                                            const locked = status === 'REJECTED';
                                             const variantCode = it.variant_code || `${seqPart(r.code)}-${variantLetter(it.variant_seq ?? 0)}`;
                                             const codeParts = splitVariantCode(variantCode);
                                             const stripe = getStatusStripe(status);
@@ -656,7 +658,7 @@ export default function LabDipRequestView({
                                                             onChange={key => {
                                                                 if (key === 'progress') setItemStatus(it.id, status, 'IN_PROGRESS');
                                                                 else if (key === 'approved') openApproval(r.id, { id: it.id, status, seq: codeParts.seq, variant: codeParts.variant, colorNames: itemColorNames(r, it), customerName: r.customer_id ? getCustomerName(r.customer_id) : null });
-                                                                else if (key === 'rejected') openReject(r.id, { id: it.id, status, seq: codeParts.seq, variant: codeParts.variant });
+                                                                else if (key === 'rejected') openReject(r.id, { id: it.id, status, seq: codeParts.seq, variant: codeParts.variant, approvedCode: it.approved_color_code });
                                                             }}
                                                         />
                                                     ) : <span style={{ color: '#999' }}>—</span>,
@@ -1005,7 +1007,7 @@ export default function LabDipRequestView({
                 isOpen={!!reject}
                 modeless
                 onClose={() => setReject(null)}
-                title={<><i className="bi bi-x-octagon me-2" />Reject Variant</>}
+                title={<><i className="bi bi-x-octagon me-2" />{reject?.revokes ? 'Revoke Approval' : 'Reject Variant'}</>}
                 variant="danger"
                 size="sm"
                 footer={
@@ -1013,7 +1015,7 @@ export default function LabDipRequestView({
                         <button type="button" className={XP_BTN} style={xpBtn()} onClick={() => setReject(null)}>Cancel</button>
                         <button type="button" className={XP_BTN} style={xpBtn({ background: 'linear-gradient(to bottom, #d32f2f, #8b0000)', borderColor: '#7f0000 #4a0000 #4a0000 #7f0000', color: '#fff', fontWeight: 'bold' })}
                             onClick={confirmReject}>
-                            Reject Variant
+                            {reject?.revokes ? 'Revoke Approval' : 'Reject Variant'}
                         </button>
                     </>
                 }
@@ -1027,6 +1029,11 @@ export default function LabDipRequestView({
                         <div style={{ fontSize: 11, color: '#555', marginBottom: 10 }}>
                             This rejection is logged for traceability. The variant rests as Rejected — reopen it for another round when ready.
                         </div>
+                        {reject.revokes && (
+                            <div style={{ fontSize: 11, color: '#7f0000', background: '#f8d7da', border: '1px solid #a01a1a', padding: '4px 6px', marginBottom: 10 }}>
+                                This variant is approved. Revoking archives color <b>{reject.revokes}</b> and clears it from orders that were waiting on this lab dip. Refused if the color is already used (recipe, stock, packing).
+                            </div>
+                        )}
                         <label style={xpLbl()}>Rejection Reason</label>
                         <select style={{ ...xpInput(), width: '100%', boxSizing: 'border-box' as const, marginBottom: 10 }}
                             value={rejectReason} onChange={e => setRejectReason(e.target.value)}>

@@ -4,6 +4,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy import select, func
 from app.db.session import get_async_db, get_db
 from app.services import stock_service, audit_service, kpi_service
+from app.services.xlsx_service import xlsx_response
 from app.core.ws_manager import manager
 from app.core.pagination import PageParams, PageWindow
 from app.schemas import StockLedgerResponse, StockBalanceResponse, PaginatedStockBalanceResponse, PaginatedStockLedgerResponse, StockEntryCreate, StockTransferCreate, StockBulkTransferCreate, BookingStockRow, BookingDemandMO, BookingSupplyMO, BookingReservedSO, PaginatedBookingStockResponse
@@ -688,11 +689,14 @@ async def get_stock_balance_paginated(
         func.coalesce(func.sum(case((StockBalance.qty < 0, 1), else_=0)), 0),
         func.coalesce(func.sum(case((rejected_expr, 1), else_=0)), 0),
         func.coalesce(func.sum(case((rejected_expr, StockBalance.qty), else_=0)), 0),
+        # Weight on screen: only kg-stocked items add up meaningfully (pcs/yard don't).
+        func.coalesce(func.sum(case((func.lower(func.trim(Item.uom)) == "kg", StockBalance.qty), else_=0)), 0),
     )))).first()
     total = int(agg[0] or 0)
     negative_count = int(agg[1] or 0)
     rejected_count = int(agg[2] or 0)
     rejected_qty = float(agg[3] or 0)
+    total_kg = float(agg[4] or 0)
 
     # Unfiltered row count — the footer's "Total: N SKUs", which used to be the length
     # of the whole client-side array.
@@ -813,7 +817,59 @@ async def get_stock_balance_paginated(
         negative_count=negative_count,
         rejected_count=rejected_count,
         rejected_qty=rejected_qty,
+        total_kg=total_kg,
         total_rows=total_rows,
+    )
+
+
+@router.get("/stock/balance/export")
+async def export_stock_balance(
+    search: Optional[str] = Query(None),
+    location_id: Optional[str] = Query(None),
+    warehouse_id: Optional[str] = Query(None),
+    category_id: Optional[str] = Query(None),
+    mo_code: Optional[str] = Query(None),
+    wo_code: Optional[str] = Query(None),
+    hide_rejected: bool = Query(False),
+    sort_by: Optional[str] = Query(None),
+    sort_dir: str = Query("asc"),
+    db: AsyncSession = Depends(get_async_db),
+    current_user: User = Depends(require_any_permission("stock_on_hand.view", "lot.view", "work_order.view", "booking_stock.view", "quarantine.view")),
+):
+    """The Stock On-Hand grid as an .xlsx — the whole filtered set, not the page.
+
+    Reuses the paginated endpoint uncapped so the file can never disagree with
+    what the grid shows for the same filters.
+    """
+    data = await get_stock_balance_paginated(
+        search=search, location_id=location_id, warehouse_id=warehouse_id,
+        category_id=category_id, mo_code=mo_code, wo_code=wo_code,
+        hide_rejected=hide_rejected, sort_by=sort_by, sort_dir=sort_dir,
+        window=PageWindow(page=1, size=0, offset=0, limit=None),
+        db=db, current_user=current_user,
+    )
+
+    def _row(r: dict) -> list:
+        color = " ".join(x for x in (r["color_code"], r["color_name"]) if x)
+        attrs = ", ".join(f"{a['name']}: {a['value']}" for a in r["variant_attributes"])
+        return [
+            r["item_code"], r["item_name"], r["item_ends"], r["item_category_name"],
+            r["location_name"], r["batch_number"], r["vendor_lot"], r["mo_code"], r["wo_code"],
+            color or None, attrs or None, r["qty"], r["item_uom"],
+            r["qty_cones"] or None, r["qty_boxes"] or None, r["qty_drums"] or None,
+            r["quality_status"], r["batch_notes"],
+        ]
+
+    return xlsx_response(
+        "Stock On Hand",
+        [
+            "Item Code", "Item Name", "Ends", "Category", "Location", "Lot", "Supplier Lot",
+            "MO", "WO", "Color", "Attributes", "Qty", "UOM", "Cones", "Boxes", "Drums",
+            "QC Status", "Notes",
+        ],
+        (_row(r) for r in data["items"]),
+        "stock-on-hand",
+        footer=["Total kg", None, None, None, None, None, None, None, None, None, None, data["total_kg"], "kg"],
     )
 
 

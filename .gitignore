@@ -226,6 +226,7 @@ build/
 postgres_data/
 snapshots/
 cloudflared/
+caddy_data/
 
 # Uploaded files
 static/

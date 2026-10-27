@@ -1,6 +1,6 @@
 /**
- * Built-in carton label layout, A6 landscape: the ruled table (headline, CONTENT /
- * PO. NO / LOT. NO / N W / G W) with the PU- QR and our footer boxed beside it,
+ * Built-in carton label layout, A6 landscape: the ruled table (style code, COLOR CODE /
+ * COLOR / COMBO / SIZE / CONTENT / PO. NO / LOT. NO / N W / G W) with the PU- QR and our footer boxed beside it,
  * then the carton's PU- number as a Code 128 underneath. Only the PU- number is
  * coded — it is the one code the floor scans; the QR is for phone cameras, the
  * barcode for handheld scanners. Applies until the client saves their own.
@@ -37,21 +37,25 @@ const BANDS: Band[] = [
         id: 'carton_table', type: 'grid', gap: 0, alignItems: 'stretch', cellBox: HALF_RULE, box: HALF_RULE,
         marginBottom: 6,
         items: [
-            // Headline: house mark + style/colour.
+            // Headline: house mark + style code. Shade, combo and size get their own rows.
             cell(1, 1, 2, [
                 f('company.logo', { imageHeight: 30, align: 'center', hideWhenEmpty: true }),
                 f('carton.logo_fallback', { fontSize: 16, bold: true, letterSpacing: 2, align: 'center', hideWhenEmpty: true }),
             ]),
             cell(1, 3, 6, [
-                f('carton.headline', { fontSize: 19, bold: true, letterSpacing: 0.5 }),
+                f('carton.headline', { fontSize: 18, bold: true, letterSpacing: 0.5 }),
                 f('carton.identity', { fontSize: 10, bold: true, letterSpacing: 0.5, hideWhenEmpty: true }),
             ], { stackGap: 2 }),
 
-            ...row(2, 'CONTENT', [f('carton.content', VAL), f('carton.ket_stock', { fontSize: 10, hideWhenEmpty: true })]),
-            ...row(3, 'PO. NO', [f('carton.po_ref', VAL), f('carton.so_code', { fontSize: 9, color: '#333', hideWhenEmpty: true })]),
-            ...row(4, 'LOT. NO', f('carton.lot', VAL)),
-            ...row(5, 'N W', [f('carton.nw', { ...VAL, hideWhenEmpty: true }), f('carton.nw_blank', BLANK)]),
-            ...row(6, 'G W', [
+            ...row(2, 'COLOR CODE', f('carton.color_code', VAL)),
+            ...row(3, 'COLOR', f('carton.color_name', VAL)),
+            ...row(4, 'COMBO', f('carton.combo', VAL)),
+            ...row(5, 'SIZE', f('carton.size', VAL)),
+            ...row(6, 'CONTENT', [f('carton.content', VAL), f('carton.ket_stock', { fontSize: 10, hideWhenEmpty: true })]),
+            ...row(7, 'PO. NO', [f('carton.po_ref', VAL), f('carton.so_code', { fontSize: 9, color: '#333', hideWhenEmpty: true })]),
+            ...row(8, 'LOT. NO', f('carton.lot', VAL)),
+            ...row(9, 'N W', [f('carton.nw', { ...VAL, hideWhenEmpty: true }), f('carton.nw_blank', BLANK)]),
+            ...row(10, 'G W', [
                 f('carton.gw', { ...VAL, hideWhenEmpty: true }),
                 f('carton.gw_blank', BLANK),
                 f('carton.packaging_type', { fontSize: 8, color: '#555', hideWhenEmpty: true }),
@@ -64,7 +68,7 @@ const BANDS: Band[] = [
                 f('carton.company_name', { fontSize: 9, color: '#333', align: 'center', hideWhenEmpty: true }),
                 f('carton.package_line', { fontSize: 9, color: '#333', align: 'center' }),
                 f('carton.packed_date', { fontSize: 9, color: '#333', align: 'center', emptyText: '' }),
-            ], { rowSpan: 6, stackGap: 3 }),
+            ], { rowSpan: 10, stackGap: 3 }),
         ],
     },
     {

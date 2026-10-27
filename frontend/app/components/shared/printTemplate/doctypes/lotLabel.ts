@@ -9,6 +9,7 @@
  */
 
 import type { FieldDef, ResolvedField } from '../fieldRegistry';
+import type { RowSourceDef } from '../rowSources';
 import { txt, EM_DASH, moShade, type PrintContext } from '../renderContext';
 import { makeLotBarcodeDataUrl } from './outputLabel';
 import { lotSizeText, lotComboLabel } from '../../LotChips';
@@ -23,6 +24,7 @@ export const LOTLABEL_FIELDS: FieldDef[] = [
     { key: 'lotlabel.qr', label: 'QR Code (lot number)', kind: 'qr', group: 'Lot' },
     { key: 'lotlabel.barcode', label: 'Barcode (Code 128, lot number)', kind: 'image', group: 'Lot' },
     { key: 'lotlabel.weight', label: 'Berat (remaining kg)', kind: 'number', unit: 'kg', group: 'Lot' },
+    { key: 'lotlabel.ends', label: 'Warp Ends (utas)', kind: 'number', group: 'Lot' },
     { key: 'lotlabel.date', label: 'Lot Created Date', kind: 'date', group: 'Lot' },
     { key: 'lotlabel.notes', label: 'Catatan (lot notes)', kind: 'text', group: 'Lot' },
     { key: 'lotlabel.status', label: 'Quality Status', kind: 'text', group: 'Lot' },
@@ -49,6 +51,7 @@ export function resolveLotLabelField(key: string, ctx: PrintContext): ResolvedFi
             const kg = Number(lot.remaining ?? 0);
             return kg > 0 ? { text: kg.toFixed(2), empty: false } : { text: EM_DASH, empty: true };
         }
+        case 'lotlabel.ends': return txt(lot.ends);
         case 'lotlabel.date': return txt(d.date);
         case 'lotlabel.notes': return txt(lot.notes);
         case 'lotlabel.status': return txt(lot.quality_status);
@@ -63,6 +66,31 @@ export function resolveLotLabelField(key: string, ctx: PrintContext): ResolvedFi
         default: return { text: '', empty: true };
     }
 }
+
+/** "Komponen Benang" — a warp beam's yarns, off the root BM- lot's BEAMING
+ *  completion (backend `_resolve_beam_components`), so a leftover LFT- lot prints
+ *  them too. Empty for any non-beam lot. */
+const LOTLABEL_COMPONENTS: RowSourceDef = {
+    id: 'lotlabel_components',
+    label: 'Beam yarn components',
+    docTypes: [LOT_LABEL_DOC],
+    seedColumns: ['item'],
+    columns: [
+        { field: 'item', label: 'Komponen' },
+        { field: 'item_code', label: 'Item Code' },
+        { field: 'item_name', label: 'Item Name' },
+    ],
+    resolve: (ctx) => ({
+        rows: (ctx.doc?.lot?.beam_components || []).map((r: any, i: number) => ({
+            _key: r.item_code || i,
+            item: { code: r.item_code || '', name: r.item_name || r.item_code || '' },
+            item_code: r.item_code || '',
+            item_name: r.item_name || '',
+        })),
+    }),
+};
+
+export const LOTLABEL_ROW_SOURCES: RowSourceDef[] = [LOTLABEL_COMPONENTS];
 
 /** Same WARNA / KODE WARNA split as `moShade`, read off the lot's resolved identity. */
 function lotShade(lot: any): { name: string; code: string } {

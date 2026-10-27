@@ -1581,6 +1581,7 @@ class PaginatedStockBalanceResponse(BaseModel):
     negative_count: int = 0
     rejected_count: int = 0
     rejected_qty: float = 0
+    total_kg: float = 0
     total_rows: int = 0
 
 class UOMCreate(BaseModel):
@@ -2046,6 +2047,10 @@ class SalesOrderResponse(BaseModel):
     # Same deal (_populate_reserved): on-hand FG this order's PR netted away and
     # now holds. 0 on mutation responses.
     reserved_qty: float = 0.0
+    # The same hold in the item's stock UoM label, and restated per alt selling
+    # unit ({"Pcs": 240}). Empty when any part of the hold can't be stated in it.
+    reserved_uom: str = ""
+    reserved_alt: dict[str, float] = {}
     class Config:
         from_attributes = True
 
@@ -3398,6 +3403,10 @@ class BatchResponse(BaseModel):
     # The beam-side twin of reserved_wo_id/reserved_wo_code above.
     mounted_wc_id: Optional[UUID] = None
     mounted_wc_code: Optional[str] = None
+    # Warp beams only: the yarns the beam was warped from — the BEAMING completion's
+    # actual items, read off the root BM- lot so a leftover (LFT-) inherits them.
+    # [{item_code, item_name}]; printed as "Komponen Benang" on the lot label.
+    beam_components: Optional[list[dict]] = None
 
     class Config:
         from_attributes = True

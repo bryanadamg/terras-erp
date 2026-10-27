@@ -33,7 +33,7 @@ export const usersPage: DocPage = {
                 'View is the base grant — every row\'s other actions need it. The page itself is gated on <resource>.view, so a create right without view leaves the user on an Access Denied screen. The grid therefore ticks View automatically when you grant any other action on that row, and keeps it ticked while one is still granted.',
                 'work_order.create — add Work Orders and use Plan Beaming; work_order.log records production, work_order.stage issues materials',
                 'reports.view — access the Dashboard and the Reports section',
-                'production_output.view / .export — read the Production Output report / take it off the system as CSV',
+                'production_output.view / .export — read the Production Output report / take it off the system as an Excel file',
                 'admin.access — full system access; bypasses every check. Granted by assigning the Administrator role, not from the permission grid.',
             ],
         },
