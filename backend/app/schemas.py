@@ -2047,6 +2047,10 @@ class SalesOrderResponse(BaseModel):
     # Same deal (_populate_reserved): on-hand FG this order's PR netted away and
     # now holds. 0 on mutation responses.
     reserved_qty: float = 0.0
+    # The same hold in the item's stock UoM label, and restated per alt selling
+    # unit ({"Pcs": 240}). Empty when any part of the hold can't be stated in it.
+    reserved_uom: str = ""
+    reserved_alt: dict[str, float] = {}
     class Config:
         from_attributes = True
 

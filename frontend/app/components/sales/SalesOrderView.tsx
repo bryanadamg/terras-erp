@@ -2135,6 +2135,11 @@ In stock ${fmtQty(f.baseAvailable)}${bu} · Shipped ${fmtQty(f.baseShipped)}${bu
                                // Without the chip an order fully covered from stock shows a PR that
                                // created no MOs, which reads as a failed run.
                                const soReserved: number = Number(so.reserved_qty || 0);
+                               // Alt count first — it's what the customer ordered in; kilos ride after.
+                               const soReservedLabel = [
+                                   ...Object.entries(so.reserved_alt || {}).map(([u, n]) => `${qtyFmt(2)(Number(n))} ${u}`),
+                                   `${qtyFmt(2)(soReserved)}${so.reserved_uom ? ` ${so.reserved_uom}` : ''}`,
+                               ].join(' · ');
 
                                const poCellContent = (
                                    <>
@@ -2165,7 +2170,7 @@ In stock ${fmtQty(f.baseAvailable)}${bu} · Shipped ${fmtQty(f.baseShipped)}${bu
                                                    icon="bi-box-seam" size="xs"
                                                    title="Part of this order is covered by finished goods already in stock, reserved to it. That part has no manufacturing order."
                                                    onClick={() => openLineage(so)} style={{ fontFamily: CODE_FONT }}>
-                                                   {qtyFmt(2)(soReserved)} from stock
+                                                   {soReservedLabel} from stock
                                                </Chip>
                                            </div>
                                        )}
