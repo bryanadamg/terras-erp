@@ -126,6 +126,8 @@ export default function SalesOrderView({ items, attributes, boms, salesOrders, p
   // "where is my order?" — for the half that has no MO to show.
   const [lineageReservations, setLineageReservations] = useState<any[]>([]);
   const [allocatingSO, setAllocatingSO] = useState<any>(null);
+  // Short-closing a PARTIAL order: the backend refuses it without a reason.
+  const [shortClose, setShortClose] = useState<{ so: any; reason: string } | null>(null);
 
   const openLineage = async (so: any) => {
     setLineageSO(so);
@@ -1341,6 +1343,30 @@ In stock ${fmtQty(f.baseAvailable)}${bu} · Shipped ${fmtQty(f.baseShipped)}${bu
            <AllocateStockModal so={allocatingSO} authFetch={authFetch}
                onClose={() => setAllocatingSO(null)} onDone={() => refreshSalesOrders?.()} />
        )}
+       {shortClose && (
+           <ModalWrapper
+               isOpen
+               onClose={() => setShortClose(null)}
+               title={<><i className="bi bi-check2-square me-2"></i>Close Short — {shortClose.so.po_number}</>}
+               size="sm"
+               modeless
+               footer={<>
+                   <button type="button" className={XP_BTN} style={xpBtn()} onClick={() => setShortClose(null)}>{t('cancel')}</button>
+                   <button type="button" className={XP_BTN} disabled={!shortClose.reason.trim()}
+                       style={shortClose.reason.trim() ? xpBtn({ ...BTN_TONES.primary, padding: '2px 16px' }) : { ...xpBtn(), opacity: 0.5 }}
+                       onClick={async () => { await onUpdateSOStatus(shortClose.so.id, 'DELIVERED', shortClose.reason.trim()); setShortClose(null); }}>
+                       Close Order
+                   </button>
+               </>}
+           >
+               <p style={{ fontFamily: xpFont, fontSize: 12, marginBottom: 8 }}>
+                   This order is only partly shipped. Closing it marks it delivered and releases its remaining stock holds.
+               </p>
+               <FieldLabel>Reason</FieldLabel>
+               <textarea autoFocus rows={3} style={xpInput({ width: '100%', resize: 'vertical' })}
+                   value={shortClose.reason} onChange={e => setShortClose({ ...shortClose, reason: e.target.value })} />
+           </ModalWrapper>
+       )}
        {(lineageSO || lineageData) && (
            <ModalWrapper
                isOpen={!!(lineageSO || lineageData)}
@@ -2210,11 +2236,7 @@ In stock ${fmtQty(f.baseAvailable)}${bu} · Shipped ${fmtQty(f.baseShipped)}${bu
                                        {canManage && so.status === 'PARTIAL' && (
                                            <XPActionButton tone="warning" icon="bi-check2-square"
                                                title="Close short — mark delivered without shipping the rest"
-                                               onClick={() => {
-                                                   // ponytail: native prompt, swap for a styled modal if ConfirmContext grows an input
-                                                   const reason = window.prompt('Reason for closing this order before it is fully shipped:')?.trim();
-                                                   if (reason) onUpdateSOStatus(so.id, 'DELIVERED', reason);
-                                               }} />
+                                               onClick={() => setShortClose({ so, reason: '' })} />
                                        )}
                                        <MenuTriggerButton onClick={(e) => toggleMenu(so.id, e)} />
                                    </div>
