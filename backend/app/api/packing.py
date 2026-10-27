@@ -1082,6 +1082,7 @@ async def add_packing_completion(
     reject_reason = (payload.reject_reason or "").strip() or None
     reject_loc = await reject_service.resolve_reject_location(
         db, item_id=po.item_id, explicit=payload.reject_location_id,
+        work_center_id=payload.work_center_id or po.work_center_id,
     ) if any(r > 0 for r in lot_rejects) else None
 
     # An explicit, user-edited box list spans the whole event (every lot
@@ -1465,6 +1466,7 @@ async def reject_packing_completion(
     grade = reject_service.normalize_grade(payload.usable)
     reject_loc = await reject_service.resolve_reject_location(
         db, item_id=po.item_id, explicit=payload.reject_location_id,
+        work_center_id=comp.work_center_id or po.work_center_id,
     )
 
     # Carton qty is never stored on the Batch — it lives in the StockBalance row
