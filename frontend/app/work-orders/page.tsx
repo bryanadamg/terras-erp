@@ -127,7 +127,7 @@ export default function WorkOrdersPage() {
         const res = await authFetch(`${API_BASE}/manufacturing-orders/${moId}`);
         if (!res.ok) return null;
         return res.json();
-    }, [authFetch, API_BASE]);
+    }, [authFetch]);
 
     return (
         <WorkOrderListView
