@@ -1,3 +1,4 @@
+import time
 from datetime import timedelta, datetime, timezone
 from typing import Annotated
 from fastapi import APIRouter, Depends, HTTPException, status
@@ -15,6 +16,12 @@ from jose import JWTError, jwt
 router = APIRouter()
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="api/token")
+
+# Failed-login lockout, keyed by user id so unknown usernames can't grow it.
+# ponytail: in-process, correct for the single uvicorn worker; move to Redis if workers > 1
+LOGIN_MAX_FAILS = 10
+LOGIN_LOCK_SECONDS = 15 * 60
+_login_fails: dict[str, list[float]] = {}
 
 # --- Dependencies ---
 def get_current_user(token: Annotated[str, Depends(oauth2_scheme)], db: Session = Depends(get_db)):
@@ -164,12 +171,23 @@ def login_for_access_token(
     db: Session = Depends(get_db)
 ):
     user = db.query(User).filter(User.username == form_data.username).first()
+    if user:
+        now = time.monotonic()
+        fails = [t for t in _login_fails.get(str(user.id), []) if now - t < LOGIN_LOCK_SECONDS]
+        if len(fails) >= LOGIN_MAX_FAILS:
+            raise HTTPException(
+                status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+                detail="Too many failed sign-ins. Try again in 15 minutes.",
+            )
     if not user or not verify_password(form_data.password, user.hashed_password) or not user.is_active:
+        if user:
+            _login_fails[str(user.id)] = fails + [now]
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Incorrect username or password",
             headers={"WWW-Authenticate": "Bearer"},
         )
+    _login_fails.pop(str(user.id), None)
 
     user.last_login_at = datetime.now(timezone.utc)
     db.commit()

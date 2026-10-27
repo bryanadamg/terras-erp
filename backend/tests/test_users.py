@@ -150,3 +150,13 @@ def test_self_password_change_needs_the_current_password(client, regular_headers
     assert client.put(url, json={"password": "newpass1", "current_password": "wrong"}, headers=regular_headers).status_code == 400
     ok = client.put(url, json={"password": "newpass1", "current_password": "regularpass"}, headers=regular_headers)
     assert ok.status_code == 200, ok.text
+
+
+def test_login_locks_after_repeated_failures(client, regular_user):
+    from app.api.auth import LOGIN_MAX_FAILS
+    bad = {"username": "regular_test", "password": "wrong"}
+    for _ in range(LOGIN_MAX_FAILS):
+        assert client.post("/api/token", data=bad).status_code == 401
+    # Locked even with the right password
+    ok = {"username": "regular_test", "password": "regularpass"}
+    assert client.post("/api/token", data=ok).status_code == 429

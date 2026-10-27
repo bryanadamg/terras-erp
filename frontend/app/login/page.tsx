@@ -141,9 +141,9 @@ export default function LoginPage() {
             onSubmit={async (username, password) => {
                 const result = await login(username, password);
                 if (result === true) return true;
-                return result === 'network_error'
-                    ? 'Cannot reach server — check your connection'
-                    : 'Invalid username or password';
+                if (result === 'network_error') return 'Cannot reach server — check your connection';
+                if (result === 'locked') return 'Too many failed sign-ins — try again in 15 minutes';
+                return 'Invalid username or password';
             }}
             status={systemStatus}
             version={version ?? undefined}
