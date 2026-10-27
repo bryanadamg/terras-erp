@@ -15,6 +15,25 @@ on `main`:
 
 ## [Unreleased]
 
+## [0.45.0] - 2026-10-27
+
+### Added
+- Short-close a partially shipped sales order with a reason. An SO can no longer be closed before it reaches SENT
+- Export to Excel on Stock On Hand (the filtered rows) and on the Production Output report
+- The Stock On Hand footer shows the total kg of the filtered rows
+- The Production Output report reloads live as completion logs come in
+- Revoke an approved lab dip variant back to rejected, as long as its colour isn't used yet
+- The SO from-stock chip shows the held qty in the alt unit beside the kg
+- Carton labels print the colour code, colour, combo and size on separate rows
+- Lot labels for beam unmount leftovers print the warp ends and the beam's yarn components
+- Opt-in LAN HTTPS (Caddy) so phone browsers can open the scanner camera
+
+### Fixed
+- Packing rejects go to the machine's defect store instead of being written off
+- Carton labels no longer print 0 kg after a carton has been picked
+- Production Output credits each log to the machine picked on the log, not to the WO's group
+- The weaving monitor targets and projects the WO qty, not the MO qty
+
 ## [0.44.0] - 2026-10-25
 
 ### Added
