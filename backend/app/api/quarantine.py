@@ -286,6 +286,14 @@ async def list_quarantine_stock(
     on_hand_loc_ids = {loc.id for (_, _, _, loc) in rows}
     if on_hand_item_ids and on_hand_loc_ids:
         open_orders: list[tuple] = []
+        # Orders that took lots off this desk answer for that pile, not for a
+        # number: their locked lots are already reported wholly claimed above, so
+        # letting their open qty FIFO-claim free lots too would count them twice
+        # and grey out Pack over stock nobody holds.
+        lot_holders = set((await db.execute(
+            select(Batch.locked_packing_order_id).distinct()
+            .filter(Batch.locked_packing_order_id.in_(packing_service.open_order_ids()))
+        )).scalars().all())
         for po in (await db.execute(
             select(PackingOrder)
             .options(
@@ -313,6 +321,8 @@ async def list_quarantine_stock(
             # for 2880 Pcs that boxed all of them off lighter-than-estimated cloth is
             # done, and a raw qty_target - qty_packed subtraction would leave it
             # claiming the hold bin forever. See packing_service.is_target_met.
+            if po.id in lot_holders:
+                continue
             open_qty = packing_service.open_qty(po)
             if open_qty <= 1e-6:
                 continue
