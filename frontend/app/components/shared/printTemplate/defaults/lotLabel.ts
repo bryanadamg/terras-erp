@@ -37,8 +37,9 @@ export const LOT_LABEL_DEFAULT: PrintLayout = {
         },
         {
             id: 'label_components', type: 'table', source: 'lotlabel_components',
-            title: 'Komponen Benang', titleUppercase: true, fontSize: 9, hideWhenEmpty: true, marginBottom: 6,
-            columns: [{ field: 'item', label: 'Komponen' }],
+            // Same wording as the Kartu Kerja's materials table, which the floor asked to match.
+            title: 'Material (berdasarkan BOM)', titleUppercase: true, fontSize: 9, hideWhenEmpty: true, marginBottom: 6,
+            columns: [{ field: 'item', label: 'Komponen', align: 'left' }],
         },
         ...labelSignature('lotlabel'),
     ],
