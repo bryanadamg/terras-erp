@@ -2202,6 +2202,15 @@ In stock ${fmtQty(f.baseAvailable)}${bu} · Shipped ${fmtQty(f.baseShipped)}${bu
                                            <XPActionButton tone="success" icon="bi-check2-all"
                                                title="Mark as Delivered" onClick={() => onUpdateSOStatus(so.id, 'DELIVERED')} />
                                        )}
+                                       {canManage && so.status === 'PARTIAL' && (
+                                           <XPActionButton tone="warning" icon="bi-check2-square"
+                                               title="Close short — mark delivered without shipping the rest"
+                                               onClick={() => {
+                                                   // ponytail: native prompt, swap for a styled modal if ConfirmContext grows an input
+                                                   const reason = window.prompt('Reason for closing this order before it is fully shipped:')?.trim();
+                                                   if (reason) onUpdateSOStatus(so.id, 'DELIVERED', reason);
+                                               }} />
+                                       )}
                                        <MenuTriggerButton onClick={(e) => toggleMenu(so.id, e)} />
                                    </div>
                                );

@@ -977,7 +977,7 @@ async def _close_reservations(db: AsyncSession, so_id, new_status: str) -> int:
 
 
 @router.put("/{so_id}/status", response_model=SalesOrderResponse)
-async def update_sales_order_status(so_id: uuid.UUID, status: str, db: AsyncSession = Depends(get_async_db), current_user: User = Depends(require_permission('sales_order.edit'))):
+async def update_sales_order_status(so_id: uuid.UUID, status: str, reason: str | None = None, db: AsyncSession = Depends(get_async_db), current_user: User = Depends(require_permission('sales_order.edit'))):
     result = await db.execute(
         select(SalesOrder)
         .options(*_line_opts())
@@ -995,6 +995,16 @@ async def update_sales_order_status(so_id: uuid.UUID, status: str, db: AsyncSess
     # Closing a delivered order, and undoing that, are the same authority.
     if "DELIVERED" in (status, prev_status) and status != prev_status             and not user_has_permission(current_user, 'sales_order.close'):
         raise HTTPException(status_code=403, detail="Missing permission: sales_order.close")
+
+    # Closing is "the customer has it all" (SENT), or a deliberate short-close of
+    # a partly shipped order — which has to say why. Anything earlier would
+    # close an order nobody shipped.
+    reason = (reason or "").strip()
+    if status == "DELIVERED" and prev_status != "DELIVERED":
+        if prev_status == "PARTIAL" and not reason:
+            raise HTTPException(status_code=400, detail="A reason is required to close a partially shipped order")
+        if prev_status not in ("SENT", "PARTIAL"):
+            raise HTTPException(status_code=400, detail=f"Cannot close a {prev_status} order — only SENT or PARTIAL orders can be closed")
 
     if status in ("DELIVERED", "CANCELLED"):
         # The two states a person decides; everything else is derived.
@@ -1033,7 +1043,7 @@ async def update_sales_order_status(so_id: uuid.UUID, status: str, db: AsyncSess
         action="STATUS_CHANGE",
         entity_type="SalesOrder",
         entity_id=str(so.id),
-        details=f"Status: {prev_status} -> {status}",
+        details=f"Status: {prev_status} -> {status}" + (f" (reason: {reason})" if reason else ""),
         changes=audit_service.diff({"status": prev_status}, {"status": status}),
     )
 
