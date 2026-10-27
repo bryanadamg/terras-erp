@@ -11,9 +11,10 @@
  *            scale reading, and 10.62 kg over 0.9 kg/Pcs prints 11.8 pieces for a
  *            box holding 12. Cartons packed before the count was recorded fall
  *            back to that division.
- *   HEADLINE style code + the CARTON's own shade (resolved off its stock key by
- *            the API), so a label can never claim a colour the box isn't. Size,
- *            combo and other variant attributes print on the line beneath.
+ *   HEADLINE style code; any other variant attributes print on the line beneath.
+ *   COLOR CODE / COLOR / COMBO / SIZE  each on its own row, off the CARTON's own
+ *            stock key (resolved by the API), so a label can never claim a colour
+ *            the box isn't.
  *   PO. NO   the customer's own `customer_po_ref`, our SO number under it.
  *   LOT. NO  the source lot the carton was packed from (via its completion).
  *   N W/G W  `Batch.weight_kg` / `Batch.gross_weight_kg`, snapshotted at pack time.
@@ -37,8 +38,12 @@ import { lotSizeText, lotComboLabel, lotColorLabel } from '../../LotChips';
 export const PACKED_UNIT_LABEL_DOC = 'packed_unit_label';
 
 export const CARTON_FIELDS: FieldDef[] = [
-    { key: 'carton.headline', label: 'Style + shade headline', kind: 'text', group: 'Carton' },
-    { key: 'carton.identity', label: 'Size / combo / variant line', kind: 'text', group: 'Carton' },
+    { key: 'carton.headline', label: 'Style code headline', kind: 'text', group: 'Carton' },
+    { key: 'carton.identity', label: 'Other variant attributes line', kind: 'text', group: 'Carton' },
+    { key: 'carton.color_code', label: 'Color code', kind: 'text', group: 'Carton' },
+    { key: 'carton.color_name', label: 'Color (variant name)', kind: 'text', group: 'Carton' },
+    { key: 'carton.combo', label: 'Combo', kind: 'text', group: 'Carton' },
+    { key: 'carton.size', label: 'Size', kind: 'text', group: 'Carton' },
     { key: 'carton.number', label: 'Carton number (PU-)', kind: 'text', mono: true, group: 'Carton' },
     { key: 'carton.number_tilde', label: 'Carton number "~PU-…"', kind: 'text', group: 'Carton' },
     { key: 'carton.package_line', label: 'Order code + package no', kind: 'text', group: 'Carton' },
@@ -71,6 +76,10 @@ export function resolveCartonLabelField(key: string, ctx: PrintContext): Resolve
     switch (key) {
         case 'carton.headline': return txt(d.headline);
         case 'carton.identity': return txt(d.identity);
+        case 'carton.color_code': return txt(d.colorCode);
+        case 'carton.color_name': return txt(d.colorName);
+        case 'carton.combo': return txt(d.combo);
+        case 'carton.size': return txt(d.size);
         case 'carton.number': return txt(d.unitNumber);
         case 'carton.number_tilde': return d.unitNumber ? { text: `~${d.unitNumber}`, empty: false } : txt('');
         case 'carton.package_line': return txt(d.packageLine);
@@ -173,22 +182,26 @@ export function buildCartonLabelContext({
     const content = pcs !== null
         ? `${Number(pcs.toFixed(2)).toLocaleString()}  ${o.uom2 || 'Pcs'}   ( ${bracket} )`
         : `${qty.toLocaleString()}  ${o.item_uom || ''}`;
-    const shade = lotColorLabel(u)?.label || o.color_name || null;
-    const identity = [
-        lotSizeText(u),
-        lotComboLabel(u),
-        ...((u.variant_attributes || []) as any[])
-            .filter(a => !['combo', 'color', 'labdip_color'].includes(a.system_role || ''))
-            .map(a => a.value),
-    ].filter(Boolean).join('  ·  ');
+    const attrs = (u.variant_attributes || []) as any[];
+    // An unapproved lab dip has no code yet; its variant code stands in (lotColorLabel's pending case).
+    const colorCode = u.color_code || attrs.find(a => a.system_role === 'labdip_color')?.value || u.labdip_variant_code || '';
+    const colorName = lotColorLabel(u)?.name || (o.color_name !== colorCode ? o.color_name : '') || '';
+    const identity = attrs
+        .filter(a => !['combo', 'color', 'labdip_color'].includes(a.system_role || ''))
+        .map(a => a.value)
+        .filter(Boolean).join('  ·  ');
     const dmy = (iso: string) => (iso ? tzFormatCustom(iso, { day: '2-digit', month: '2-digit', year: 'numeric' }, 'id-ID') : '');
 
     return {
         workOrder: null,
         parentMO: null,
         doc: {
-            headline: [u.item_code || o.item_code, shade].filter(Boolean).join(' ') || u.item_name || o.item_name || '',
+            headline: u.item_code || o.item_code || u.item_name || o.item_name || '',
             identity,
+            colorCode,
+            colorName,
+            combo: lotComboLabel(u) || '',
+            size: lotSizeText(u) || '',
             unitNumber: u.batch_number || '',
             packageLine: `${o.code || ''} · ${(o.package_label || 'Carton').toUpperCase()} #${u.package_no ?? '—'}`,
             packedDate: u.created_at ? dmy(u.created_at) : '',
