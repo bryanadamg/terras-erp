@@ -665,7 +665,7 @@ export default function WorkOrderPanel({
                                     <span
                                         style={{ display: 'flex', alignItems: 'center', gap: 4, minWidth: 0, cursor: 'pointer' }}
                                         title={wo.code || `Step ${wo.sequence}`}
-                                        onClick={() => router.push(`/work-orders?wo=${wo.id}`)}
+                                        onClick={() => router.push(`/work-orders?wo=${encodeURIComponent(wo.code)}`)}
                                     >
                                         <span style={{
                                             width: 6, height: 6, borderRadius: '50%', flexShrink: 0,

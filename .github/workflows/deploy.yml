@@ -40,9 +40,8 @@ jobs:
             cd /home/bie-admin/terras-erp
             git pull --ff-only origin main
             # The deploy user is in the docker group, so no sudo (which would
-            # strip NODE_AUTH_TOKEN). The tunnel is opt-in per host: set
-            # COMPOSE_PROFILES=tunnel in that host's .env to bring it up.
-            # `up --build` never re-pulls: registry images (db/redis/tunnel) and
+            # strip NODE_AUTH_TOKEN).
+            # `up --build` never re-pulls: registry images (db/redis) and
             # build bases (python/node) would stay at whatever was first pulled.
             docker compose pull --ignore-buildable
             docker compose build --pull

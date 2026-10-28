@@ -132,9 +132,9 @@ class ConnectionManager:
                 state.writer.cancel()
         if self.pubsub:
             await self.pubsub.unsubscribe(self.channel_name)
-            await self.pubsub.close()
+            await self.pubsub.aclose()
         if self.redis:
-            await self.redis.close()
+            await self.redis.aclose()
 
     async def _listen_to_redis(self):
         """Internal task to listen for Redis messages and broadcast to local clients."""

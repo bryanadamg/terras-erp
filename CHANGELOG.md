@@ -15,6 +15,25 @@ on `main`:
 
 ## [Unreleased]
 
+## [1.0.0] - 2026-10-28
+
+### Added
+- The sales order table shows each order's dispatched shipment codes as green chips under its status
+- An account locks for 15 minutes after 10 failed sign-ins
+
+### Changed
+- A fresh install creates only the `admin` account, with `INITIAL_ADMIN_PASSWORD` or a generated password printed once in the startup log, instead of four demo accounts sharing `password`
+- Passwords are hashed with PBKDF2; existing passwords keep working
+- Lot labels title the beam yarn table "Material (berdasarkan BOM)", matching the work order card
+
+### Removed
+- SQLite support: the app now refuses database URLs that aren't PostgreSQL
+- The optional Cloudflare tunnel service
+
+### Fixed
+- The work order code link on the manufacturing order panel finds the work order again
+- Quarantine Packing no longer counts a lot-locking packing order's claim twice, which greyed out Pack over free released lots
+
 ## [0.45.1] - 2026-10-27
 
 ### Fixed

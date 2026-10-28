@@ -58,7 +58,7 @@ interface UserContextType {
     hasCategoryScope: (categoryId?: string | null) => boolean;
     hasLocationScope: (locationId?: string | null) => boolean;
     refreshUsers: () => Promise<void>;
-    login: (username: string, password: string) => Promise<boolean | 'network_error'>;
+    login: (username: string, password: string) => Promise<boolean | 'network_error' | 'locked'>;
     logout: () => void;
     loading: boolean;
     bootPhase: BootPhase;
@@ -77,7 +77,7 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
     const [loading, setLoading] = useState(true);
     const [bootPhase, setBootPhase] = useState<BootPhase>('hydrating');
 
-    const login = async (username, password): Promise<boolean | 'network_error'> => {
+    const login = async (username, password): Promise<boolean | 'network_error' | 'locked'> => {
         const formData = new FormData();
         formData.append('username', username);
         formData.append('password', password);
@@ -88,6 +88,7 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
                 body: formData,
             });
 
+            if (res.status === 429) return 'locked';
             if (!res.ok) return false;
 
             const data = await res.json();

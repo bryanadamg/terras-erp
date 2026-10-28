@@ -23,6 +23,8 @@ from app.models.batch import Batch
 from app.models.location import Location
 from app.models.stock_balance import StockBalance
 from app.models.packing import PackingOrder
+from app.models.pick_list import PickList
+from app.models.shipment import Shipment
 from app.models.reservation import StockReservation
 from app.models.item import Item as ItemModel
 from app.api.auth import get_current_user, require_permission, require_any_permission, user_has_permission
@@ -172,6 +174,33 @@ async def _populate_production_runs(db: AsyncSession, orders: list) -> None:
         by_so.setdefault(str(so_id), []).append({"id": pr_id, "code": code})
     for so in orders:
         so.production_runs = by_so.get(str(so.id), [])
+
+
+async def _populate_shipments(db: AsyncSession, orders: list) -> None:
+    """Attach the dispatched shipment codes (SHP-…) that carried each order's goods.
+
+    A shipment reaches an SO only through its pick lists, so one shipment shows
+    once per SO however many of its pick lists belong to it. `shipments` must be
+    declared on SalesOrderResponse or response_model drops it silently.
+    """
+    if not orders:
+        return
+    by_so: dict[str, list] = {}
+    for so_id, code in (
+        await db.execute(
+            select(PickList.sales_order_id, Shipment.code)
+            .join(Shipment, PickList.shipment_id == Shipment.id)
+            .filter(
+                PickList.sales_order_id.in_([o.id for o in orders]),
+                Shipment.status == "DISPATCHED",
+            )
+            .distinct()
+            .order_by(Shipment.code)
+        )
+    ).all():
+        by_so.setdefault(str(so_id), []).append(code)
+    for so in orders:
+        so.shipments = by_so.get(str(so.id), [])
 
 
 async def _populate_reserved(db: AsyncSession, orders: list) -> None:
@@ -419,6 +448,7 @@ async def get_sales_orders(
     await _populate_fulfilment(db, list(orders))
     await _populate_variant_attrs(db, list(orders))
     await _populate_production_runs(db, list(orders))
+    await _populate_shipments(db, list(orders))
     await _populate_reserved(db, list(orders))
     await _populate_mo_progress(db, list(orders))
 

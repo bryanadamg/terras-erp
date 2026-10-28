@@ -31,7 +31,7 @@ _SNAPSHOT_NAME_RE = re.compile(r"^snapshot_(?P<label>.+)_(?P<ts>\d{8}_\d{6})\.\w
 # host, so a snapshot bundles both: one .zip holding the dump plus the whole static tree
 # at its original relative paths, which is what keeps those references resolvable.
 _STATIC_DIR = Path("static")
-_DUMP_NAMES = ("database.sql", "database.sqlite")
+_DUMP_NAMES = ("database.sql",)
 
 
 def _bundle_snapshot(dump_path: Path, arcname: str, zip_path: Path) -> int:
@@ -163,12 +163,6 @@ class DatabaseManager:
                         raise Exception(f"pg_dump failed: {stderr.decode()}")
                     kind = "Postgres"
 
-                elif "sqlite" in self._current_url:
-                    db_path = self._current_url.replace("sqlite:///", "")
-                    dump_path = Path(tmp) / "database.sqlite"
-                    await run_in_threadpool(shutil.copy2, db_path, dump_path)
-                    kind = "SQLite"
-
                 else:
                     return DatabaseResponse(message="Unsupported database provider for snapshots", status=False)
 
@@ -253,7 +247,7 @@ class DatabaseManager:
         self._restore_state = {"status": "running", "phase": "Reading snapshot", "pct": 2,
                                "filename": safe_name, "started_at": started.isoformat()}
         try:
-            # .zip = bundle (dump + uploaded files). Bare .sql/.sqlite still restore as
+            # .zip = bundle (dump + uploaded files). Bare .sql files still restore as
             # before, so snapshots taken before bundling — and hand-made pg_dumps — keep
             # working; they simply carry no files.
             if filepath.suffix.lower() == ".zip":
@@ -325,13 +319,6 @@ class DatabaseManager:
                 stdout, stderr = await proc.communicate()
                 if proc.returncode != 0:
                     raise Exception(f"pg_restore failed: {stderr.decode()}")
-
-            elif "sqlite" in self._current_url:
-                db_path = self._current_url.replace("sqlite:///", "")
-                # Threadpool like every other copy here: a restore is a whole
-                # database file, and copying it on the loop stalls every other
-                # request for the duration.
-                await run_in_threadpool(shutil.copy2, filepath, db_path)
 
             self._set_restore_phase("Reconnecting", 95)
             res = self.initialize(self._current_url)
@@ -406,20 +393,6 @@ class DatabaseManager:
                 stdout, stderr = await mig_proc.communicate()
                 if mig_proc.returncode != 0:
                     raise Exception(f"migration replay failed: {stderr.decode()}")
-
-            elif "sqlite" in self._current_url:
-                db_path = self._current_url.replace("sqlite:///", "")
-                if os.path.exists(db_path):
-                    os.remove(db_path)
-
-                mig_proc = await asyncio.create_subprocess_exec(
-                    "alembic", "upgrade", "head",
-                    env={**os.environ, "DATABASE_URL": self._current_url},
-                    stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE
-                )
-                stdout, stderr = await mig_proc.communicate()
-                if mig_proc.returncode != 0:
-                    raise Exception(f"migration replay failed: {stderr.decode()}")
             else:
                 return DatabaseResponse(message="Unsupported database provider for wipe", status=False)
 
@@ -439,6 +412,10 @@ class DatabaseManager:
         """
         Initializes both sync and async database engines.
         """
+        # The app runs Postgres-only SQL (jsonb, gen_random_uuid, async sessions), so
+        # any other provider would connect and then fail on the first real query.
+        if "postgresql" not in database_url:
+            return DatabaseResponse(message="Only PostgreSQL databases are supported", status=False)
         with self._init_lock:
             try:
                 # 1. Sync Engine
@@ -446,40 +423,37 @@ class DatabaseManager:
                     self._engine.dispose()
 
                 self._current_url = database_url
-                connect_args = {"check_same_thread": False} if "sqlite" in database_url else {}
-                
+
                 self._engine = create_engine(
                     database_url,
                     pool_pre_ping=False, # Disabled to prevent shared-state Greenlet errors
                     pool_size=20,
                     max_overflow=10,
                     pool_recycle=3600,
-                    connect_args=connect_args
                 )
-                
+
                 self._session_factory = sessionmaker(
                     autocommit=False,
                     autoflush=False,
                     bind=self._engine
                 )
 
-                # 2. Async Engine (only for PostgreSQL)
-                if "postgresql" in database_url:
-                    async_url = database_url.replace("postgresql+psycopg2://", "postgresql+asyncpg://")
-                    self._async_engine = create_async_engine(
-                        async_url,
-                        pool_pre_ping=False, # Disabled to prevent asyncpg do_ping Greenlet errors
-                        pool_size=20,
-                        max_overflow=10,
-                        pool_recycle=3600
-                    )
-                    self._async_session_factory = async_sessionmaker(
-                        autocommit=False,
-                        autoflush=False,
-                        expire_on_commit=False, # Critical for Pydantic serialization
-                        bind=self._async_engine,
-                        class_=AsyncSession
-                    )
+                # 2. Async Engine
+                async_url = database_url.replace("postgresql+psycopg2://", "postgresql+asyncpg://")
+                self._async_engine = create_async_engine(
+                    async_url,
+                    pool_pre_ping=False, # Disabled to prevent asyncpg do_ping Greenlet errors
+                    pool_size=20,
+                    max_overflow=10,
+                    pool_recycle=3600
+                )
+                self._async_session_factory = async_sessionmaker(
+                    autocommit=False,
+                    autoflush=False,
+                    expire_on_commit=False, # Critical for Pydantic serialization
+                    bind=self._async_engine,
+                    class_=AsyncSession
+                )
 
                 return DatabaseResponse(message="Database initialized successfully", status=True)
             except Exception as e:
