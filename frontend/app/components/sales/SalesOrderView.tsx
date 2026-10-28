@@ -45,7 +45,7 @@ const SO_COL_WIDTHS = [
     88,  // Req / Conf
     152, // Production Output
     150, // Fulfilment
-    80,  // Status
+    100, // Status — wide enough for the SHP- shipment chip
     110, // Actions — lineage + allocate + PR + menu must fit, or they spill into Status
 ];
 const SO_TABLE_MIN_WIDTH = SO_COL_WIDTHS.reduce((a, b) => a + b, 0);
@@ -2207,7 +2207,17 @@ In stock ${fmtQty(f.baseAvailable)}${bu} · Shipped ${fmtQty(f.baseShipped)}${bu
                                    <>
                                        <StatusChip status={so.status} tint />
                                        {so.delivered_at && <div className="extra-small text-muted mt-1" style={{ fontSize:'9px' }}>Del: {formatDate(so.delivered_at)}</div>}
-                                       {(so.shipments || []).length > 0 && <div className="extra-small text-muted mt-1" style={{ fontSize:'9px', fontFamily: CODE_FONT }}>{so.shipments.join(', ')}</div>}
+                                       {(so.shipments || []).length > 0 && (
+                                           <div style={{ display:'flex', flexDirection:'column' as const, alignItems:'flex-start', gap:2, marginTop:3 }}>
+                                               {so.shipments.map((code: string) => (
+                                                   <Chip key={code} tone={statusTint('DISPATCHED')} bold truncate
+                                                       icon="bi-truck" size="sm" title={`Shipped on ${code}`}
+                                                       style={{ fontFamily: CODE_FONT }}>
+                                                       {code}
+                                                   </Chip>
+                                               ))}
+                                           </div>
+                                       )}
                                    </>
                                );
 
