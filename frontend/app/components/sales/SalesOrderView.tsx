@@ -2207,6 +2207,7 @@ In stock ${fmtQty(f.baseAvailable)}${bu} · Shipped ${fmtQty(f.baseShipped)}${bu
                                    <>
                                        <StatusChip status={so.status} tint />
                                        {so.delivered_at && <div className="extra-small text-muted mt-1" style={{ fontSize:'9px' }}>Del: {formatDate(so.delivered_at)}</div>}
+                                       {(so.shipments || []).length > 0 && <div className="extra-small text-muted mt-1" style={{ fontSize:'9px', fontFamily: CODE_FONT }}>{so.shipments.join(', ')}</div>}
                                    </>
                                );
 

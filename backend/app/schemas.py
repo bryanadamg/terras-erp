@@ -2044,6 +2044,8 @@ class SalesOrderResponse(BaseModel):
     # responses leave it empty — every SO mutation refetches the list, so nothing
     # renders off a stale [].
     production_runs: list[SOPRRef] = []
+    # Same deal (_populate_shipments): codes of DISPATCHED shipments carrying it.
+    shipments: list[str] = []
     # Same deal (_populate_reserved): on-hand FG this order's PR netted away and
     # now holds. 0 on mutation responses.
     reserved_qty: float = 0.0
