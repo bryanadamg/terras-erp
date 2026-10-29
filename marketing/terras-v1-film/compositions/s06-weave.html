@@ -1,0 +1,56 @@
+<template>
+  <style>
+    #root { position: absolute; inset: 0; background: var(--color-ground); }
+    #s06-card { position: absolute; left: 260px; top: 110px; width: 1400px; height: 620px; background: #fff; border: 2px solid #1a7a1a; border-radius: 10px; overflow: hidden; box-shadow: 0 18px 40px rgba(0,0,40,0.25); }
+    #s06-bar { height: 62px; background: linear-gradient(to right, #1a7a1a 0%, #2ea42e 100%); color: #fff; font-weight: 700; font-size: 30px; display: flex; align-items: center; justify-content: space-between; padding: 0 24px; text-shadow: 1px 1px 0 rgba(0,0,0,0.3); }
+    #s06-body { padding: 26px 34px; display: grid; grid-template-columns: 1fr 1fr; gap: 20px 60px; }
+    #s06-wo { grid-column: 1 / 3; font-size: 30px; color: #0058e6; }
+    #s06-eff { font-size: 150px; font-weight: 700; color: #2d7a2d; line-height: 1; }
+    #s06-eff small { font-size: 60px; }
+    .s06-kv { font-size: 30px; display: flex; justify-content: space-between; border-bottom: 1px solid #e0dfd8; padding: 10px 0; }
+    #s06-track { grid-column: 1 / 3; height: 26px; background: #e8e8e8; border: 2px solid #7a7a7a; border-radius: 3px; position: relative; overflow: hidden; }
+    #s06-fill { position: absolute; left: 0; top: 0; bottom: 0; width: 100%; background: linear-gradient(to bottom, #5ec85e, #2d7a2d); transform-origin: 0% 50%; }
+    #s06-target { position: absolute; left: 90%; top: -4px; bottom: -4px; width: 4px; background: #1a1a1a; }
+    #s06-warp { grid-column: 1 / 3; display: flex; align-items: center; gap: 20px; font-size: 30px; }
+    #s06-lot { position: absolute; left: 1130px; top: 640px; z-index: 5; }
+    #s06-cap { position: absolute; left: 260px; top: 820px; font-weight: 700; font-size: 80px; color: var(--color-ink); }
+    #s06-cap .w { display: inline-block; }
+  </style>
+  <div data-hf-id="hf-utsa" id="root" data-composition-id="s06" data-width="1920" data-height="1080">
+    <div data-hf-id="hf-uuz5" id="s06-card">
+      <div data-hf-id="hf-k0oq" id="s06-bar"><span data-hf-id="hf-ydtn">L1 07 — LOOM 1</span><span data-hf-id="hf-qkit" class="chip c-green">RUNNING</span></div>
+      <div data-hf-id="hf-h3fn" id="s06-body">
+        <div data-hf-id="hf-ugm5" id="s06-wo" class="code">WO-WEAVE-0042-03 · MO-0042-03</div>
+        <div data-hf-id="hf-xx7s" id="s06-eff"><span data-hf-id="hf-ttse" id="s06-num">0.0</span><small data-hf-id="hf-ew4z">%</small></div>
+        <div data-hf-id="hf-yeow">
+          <div data-hf-id="hf-qq61" class="s06-kv"><span data-hf-id="hf-9cno">Target</span><b data-hf-id="hf-v5kb">90%</b></div>
+          <div data-hf-id="hf-y40d" class="s06-kv"><span data-hf-id="hf-c6iz">Actual</span><b data-hf-id="hf-h87j">1,240 / 1,320 kg</b></div>
+          <div data-hf-id="hf-zaxg" class="s06-kv"><span data-hf-id="hf-pb6g">Lines</span><b data-hf-id="hf-jyhw">10</b></div>
+        </div>
+        <div data-hf-id="hf-4kmw" id="s06-track"><div data-hf-id="hf-hwuc" id="s06-fill"></div><div data-hf-id="hf-0pf8" id="s06-target"></div></div>
+        <div data-hf-id="hf-q3j5" id="s06-warp"><span data-hf-id="hf-i3gz">Warp</span><span data-hf-id="hf-vwic" class="chip c-blue">BM-20261020-0003</span><span data-hf-id="hf-watd" class="chip c-blue">BM-20261020-0004</span><b data-hf-id="hf-09qs">2 / 2 pcs</b></div>
+      </div>
+    </div>
+    <span data-hf-id="hf-ws03" id="s06-lot" class="chip c-amber code" style="font-size:30px; padding:6px 16px;">GRG-20261028-0004</span>
+    <div data-hf-id="hf-d359" id="s06-cap"><span data-hf-id="hf-69r7" class="w" id="s06-c1">Every</span> <span data-hf-id="hf-bz9u" class="w" id="s06-c2">loom,</span> <span data-hf-id="hf-ez56" class="w" id="s06-c3">live.</span></div>
+  </div>
+  <script>
+    const tl = gsap.timeline({ paused: true });
+    // Lands as the phone's push finishes: comes in slightly large and settles.
+    tl.fromTo("#s06-card", { scale: 1.12, opacity: 0.45, filter: "blur(10px)" }, { scale: 1, opacity: 1, filter: "blur(0px)", duration: 0.45, ease: "expo.out" }, 0);
+    const e = { v: 0 };
+    tl.fromTo(e, { v: 0 }, { v: 92.4, duration: 1.1, ease: "power2.out", onUpdate: () => {
+      const el = document.querySelector("#s06-num"); if (el) el.textContent = e.v.toFixed(1);
+    } }, 0.35);
+    tl.fromTo("#s06-fill", { scaleX: 0 }, { scaleX: 0.924, duration: 1.1, ease: "power2.out" }, 0.35);
+    tl.fromTo("#s06-warp .chip", { opacity: 0, scale: 0.8 }, { opacity: 1, scale: 1, duration: 0.3, ease: "back.out(1.6)", stagger: 0.1 }, 0.6);
+    ["#s06-c1","#s06-c2","#s06-c3"].forEach((w, i) => {
+      tl.fromTo(w, { opacity: 0, filter: "blur(6px)" }, { opacity: 1, filter: "blur(0px)", duration: 0.13 }, 1.0 + i * 0.08);
+    });
+    // The greige lot drops out of the loom and carries into the dye house.
+    tl.fromTo("#s06-lot", { opacity: 0, y: -60 }, { opacity: 1, y: 0, duration: 0.35, ease: "expo.out" }, 1.6);
+    tl.to(["#s06-card", "#s06-cap"], { opacity: 0, filter: "blur(8px)", duration: 0.25, ease: "power3.in" }, 2.45);
+    tl.to("#s06-lot", { x: 150 - 1130, y: 190 - 640, duration: 0.5, ease: "power2.inOut" }, 2.45);
+    window.__timelines["s06"] = tl;
+  </script>
+</template>

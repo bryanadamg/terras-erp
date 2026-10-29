@@ -1,0 +1,103 @@
+<!doctype html>
+<html
+  lang="en"
+  data-composition-variables='[
+    {"id":"color-ground","type":"color","label":"Workspace ground","default":"#ece9d8"},
+    {"id":"color-blue","type":"color","label":"XP blue","default":"#0058e6"},
+    {"id":"color-accent","type":"color","label":"Accent (green)","default":"#2d7a2d"},
+    {"id":"color-ink","type":"color","label":"Ink","default":"#1a1a1a"}
+  ]'
+>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=1920, height=1080" />
+    <script src="https://cdn.jsdelivr.net/npm/gsap@3.14.2/dist/gsap.min.js"></script>
+    <style>
+      @font-face { font-family: "XP"; src: local("Tahoma"); font-weight: 400; }
+      @font-face { font-family: "XP"; src: local("Tahoma Bold"), local("Tahoma-Bold"); font-weight: 700; }
+      :root {
+        --color-ground: #ece9d8;
+        --color-blue: #0058e6;
+        --color-accent: #2d7a2d;
+        --color-ink: #1a1a1a;
+        --font-display: "XP";
+        --font-code: Consolas, "Courier New", monospace;
+        --title-bar: linear-gradient(to right, #0058e6 0%, #08a5ff 100%);
+        --table-head: linear-gradient(to bottom, #ffffff 0%, #d6d3ce 100%);
+      }
+      * { margin: 0; padding: 0; box-sizing: border-box; }
+      html, body {
+        margin: 0;
+        width: 1920px;
+        height: 1080px;
+        overflow: hidden;
+        background: var(--color-ground);
+        font-family: var(--font-display);
+        color: var(--color-ink);
+      }
+      #root { width: 100%; height: 100%; position: relative; }
+      #ground { position: absolute; inset: 0; background: var(--color-ground); }
+
+      /* Shared XP chrome, rebuilt from terras-ui tokens at ~2.2x the app's 11 px scale. */
+      .xp-win { position: absolute; background: #fff; border: 2px solid #0831d9; border-radius: 12px 12px 4px 4px; box-shadow: 0 18px 40px rgba(0,0,40,0.28); overflow: hidden; }
+      .xp-title { height: 56px; background: var(--title-bar); color: #fff; font-weight: 700; font-size: 28px; display: flex; align-items: center; gap: 14px; padding: 0 20px; text-shadow: 1px 1px 0 rgba(0,0,0,0.35); }
+      .xp-title img { width: 34px; height: 34px; }
+      .xp-body { background: var(--color-ground); }
+      .xp-th { background: var(--table-head); border-bottom: 2px solid #aca899; font-weight: 700; font-size: 28px; color: #222; }
+      .chip { display: inline-flex; align-items: center; gap: 8px; border: 2px solid; border-radius: 3px; font-weight: 700; font-size: 28px; padding: 2px 12px; white-space: nowrap; line-height: 1.3; }
+      .c-blue { background: #dce4f5; border-color: #3a5faa; color: #0d2a6e; }
+      .c-amber { background: #fff3cd; border-color: #b8860b; color: #5d3800; }
+      .c-green { background: #d4edda; border-color: #27713a; color: #0c3a1a; }
+      .c-gray { background: #e8e8e8; border-color: #7a7a7a; color: #222; }
+      .c-pink { background: #fde4ef; border-color: #b0477a; color: #5a1035; }
+      .c-slate { background: #e6e9f0; border-color: #4a5a78; color: #1c2840; }
+      .code { font-family: var(--font-code); font-weight: 700; }
+      .title-line { font-weight: 700; font-size: 96px; letter-spacing: -0.01em; line-height: 1.1; }
+      .title-line .w { display: inline-block; }
+    </style>
+  </head>
+  <body>
+    <div data-hf-id="hf-y704"
+      id="root"
+      data-composition-id="main"
+      data-start="0"
+      data-duration="37.5"
+      data-width="1920"
+      data-height="1080"
+      data-motion-blur="on"
+    >
+      <div data-hf-id="hf-7hg0" id="ground"></div>
+
+      <div data-hf-id="hf-l2p1" id="s01" data-composition-id="s01" data-composition-src="compositions/s01-order.html" data-start="0" data-duration="3" data-track-index="1" data-track-kind="graphics" data-width="1920" data-height="1080"></div>
+      <div data-hf-id="hf-92lh" id="s02" data-composition-id="s02" data-composition-src="compositions/s02-tension.html" data-start="3" data-duration="3" data-track-index="1" data-track-kind="graphics" data-width="1920" data-height="1080"></div>
+      <div data-hf-id="hf-jegr" id="s03" data-composition-id="s03" data-composition-src="compositions/s03-reveal.html" data-start="6" data-duration="2" data-track-index="1" data-track-kind="graphics" data-width="1920" data-height="1080"></div>
+      <div data-hf-id="hf-wnvb" id="s04" data-composition-id="s04" data-composition-src="compositions/s04-plan.html" data-start="8" data-duration="4.5" data-track-index="1" data-track-kind="graphics" data-width="1920" data-height="1080"></div>
+      <div data-hf-id="hf-lqt5" id="s05" data-composition-id="s05" data-composition-src="compositions/s05-scan.html" data-start="12.5" data-duration="3.5" data-track-index="1" data-track-kind="graphics" data-width="1920" data-height="1080"></div>
+      <div data-hf-id="hf-x5yl" id="s06" data-composition-id="s06" data-composition-src="compositions/s06-weave.html" data-start="16" data-duration="3" data-track-index="1" data-track-kind="graphics" data-width="1920" data-height="1080"></div>
+      <div data-hf-id="hf-6oyu" id="s07" data-composition-id="s07" data-composition-src="compositions/s07-dye.html" data-start="19" data-duration="4" data-track-index="1" data-track-kind="graphics" data-width="1920" data-height="1080"></div>
+      <div data-hf-id="hf-s49d" id="s08" data-composition-id="s08" data-composition-src="compositions/s08-pack.html" data-start="23" data-duration="3.5" data-track-index="1" data-track-kind="graphics" data-width="1920" data-height="1080"></div>
+      <div data-hf-id="hf-a2wi" id="s09" data-composition-id="s09" data-composition-src="compositions/s09-verify.html" data-start="26.5" data-duration="3.5" data-track-index="1" data-track-kind="graphics" data-width="1920" data-height="1080"></div>
+      <div data-hf-id="hf-z0wg" id="s10" data-composition-id="s10" data-composition-src="compositions/s10-trace.html" data-start="30" data-duration="3.5" data-track-index="1" data-track-kind="graphics" data-width="1920" data-height="1080"></div>
+      <div data-hf-id="hf-tv57" id="s11" data-composition-id="s11" data-composition-src="compositions/s11-endcard.html" data-start="33.5" data-duration="4" data-track-index="1" data-track-kind="graphics" data-width="1920" data-height="1080"></div>
+
+      <!-- SFX: start = picture time + 1 frame - the file's measured peak -->
+      <audio data-hf-id="hf-vq6j" id="sfx-pop-qty" class="clip" src="assets/sfx/pop.mp3" data-start="0.31" data-duration="0.72" data-track-index="5" data-volume="0.8"></audio>
+      <audio data-hf-id="hf-j7zu" id="sfx-whoosh-flood" class="clip" src="assets/sfx/whoosh-short.mp3" data-start="2.74" data-duration="0.57" data-track-index="6" data-volume="0.5"></audio>
+      <audio data-hf-id="hf-12p7" id="sfx-riser-reveal" class="clip" src="assets/sfx/riser.mp3" data-start="4.13" data-media-start="1.4" data-duration="2.9" data-track-index="7" data-volume="0.2" data-fade-out="0.4"></audio>
+      <audio data-hf-id="hf-0w1x" id="sfx-click-create" class="clip" src="assets/sfx/click.mp3" data-start="9.44" data-duration="0.36" data-track-index="5" data-volume="0.9"></audio>
+      <audio data-hf-id="hf-fwwd" id="sfx-pop-greige" class="clip" src="assets/sfx/pop.mp3" data-start="10.06" data-duration="0.72" data-track-index="6" data-volume="0.7"></audio>
+      <audio data-hf-id="hf-ixyb" id="sfx-ping-scan" class="clip" src="assets/sfx/ping.mp3" data-start="13.71" data-duration="1.32" data-track-index="5" data-volume="0.8"></audio>
+      <audio data-hf-id="hf-zao5" id="sfx-whoosh-loom" class="clip" src="assets/sfx/whoosh.mp3" data-start="15.79" data-duration="0.57" data-track-index="6" data-volume="0.45"></audio>
+      <audio data-hf-id="hf-i0l6" id="sfx-typing-dose" class="clip" src="assets/sfx/typing.mp3" data-start="19.05" data-duration="1.5" data-track-index="5" data-volume="0.6"></audio>
+      <audio data-hf-id="hf-u463" id="sfx-click-print" class="clip" src="assets/sfx/click-soft.mp3" data-start="23.06" data-duration="0.36" data-track-index="6" data-volume="0.8"></audio>
+      <audio data-hf-id="hf-m6oi" id="sfx-pop-verified" class="clip" src="assets/sfx/pop.mp3" data-start="27.63" data-duration="0.72" data-track-index="5" data-volume="0.7"></audio>
+      <audio data-hf-id="hf-wqj2" id="sfx-click-dispatch" class="clip" src="assets/sfx/click.mp3" data-start="28.64" data-duration="0.36" data-track-index="6" data-volume="0.8"></audio>
+      <audio data-hf-id="hf-lujs" id="sfx-riser-trace" class="clip" src="assets/sfx/riser.mp3" data-start="29.55" data-media-start="1.4" data-duration="2.9" data-track-index="7" data-volume="0.2" data-fade-out="0.4"></audio>
+      <audio data-hf-id="hf-4vaf" id="sfx-impact-end" class="clip" src="assets/sfx/impact-bass-1.mp3" data-start="34.11" data-duration="2.1" data-track-index="5" data-volume="0.35"></audio>
+    </div>
+    <script>
+      window.__timelines = window.__timelines || {};
+      window.__timelines["main"] = gsap.timeline({ paused: true });
+    </script>
+  </body>
+</html>

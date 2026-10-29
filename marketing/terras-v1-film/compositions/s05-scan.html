@@ -1,0 +1,79 @@
+<template>
+  <style>
+    #root { position: absolute; inset: 0; background: var(--color-ground); }
+    #s05-card { position: absolute; left: 170px; top: 90px; width: 860px; height: 900px; background: #fff; border: 2px solid #000; box-shadow: 0 18px 40px rgba(0,0,40,0.22); padding: 36px; }
+    #s05-card h2 { font-size: 46px; font-weight: 700; letter-spacing: 0.04em; border-bottom: 3px solid #000; padding-bottom: 14px; margin-bottom: 18px; display: flex; justify-content: space-between; align-items: center; }
+    #s05-card h2 img { width: 54px; height: 54px; }
+    .s05-kv { display: grid; grid-template-columns: 200px 1fr; font-size: 30px; border-bottom: 1px solid #000; padding: 14px 0; }
+    .s05-kv b { font-weight: 700; }
+    #s05-qr { position: absolute; right: 36px; bottom: 36px; width: 300px; height: 300px; }
+    #s05-qrcode { position: absolute; right: 36px; bottom: 344px; font-size: 22px; }
+    #s05-phone { position: absolute; left: 1210px; top: 60px; width: 470px; height: 960px; background: #1e1e1e; border-radius: 56px; padding: 22px; box-shadow: 0 24px 50px rgba(0,0,40,0.35); }
+    #s05-screen { position: relative; width: 100%; height: 100%; border-radius: 38px; overflow: hidden; background: var(--color-ground); }
+    #s05-bar { height: 86px; background: var(--title-bar); color: #fff; font-weight: 700; font-size: 30px; display: flex; align-items: center; gap: 14px; padding: 0 24px; }
+    #s05-bar img { width: 40px; height: 40px; }
+    #s05-view { position: absolute; left: 24px; top: 120px; width: 378px; height: 470px; background: #3a3a3a; border-radius: 8px; overflow: hidden; }
+    #s05-vqr { position: absolute; left: 64px; top: 110px; width: 250px; height: 250px; background: #fff; padding: 12px; }
+    #s05-frame { position: absolute; left: 50px; top: 96px; width: 278px; height: 278px; border: 6px solid #fff; border-radius: 6px; }
+    #s05-hint { position: absolute; left: 24px; top: 616px; width: 378px; font-size: 28px; color: #333; text-align: center; }
+    #s05-log { position: absolute; left: 0; top: 86px; width: 100%; bottom: 0; background: var(--color-ground); padding: 24px; display: flex; flex-direction: column; gap: 18px; }
+    #s05-log .code { font-size: 28px; }
+    .s05-lbl { font-size: 28px; color: #444; font-weight: 700; }
+    .s05-field { background: #fff; border: 2px solid #7f9db9; border-radius: 3px; height: 74px; font-size: 40px; font-weight: 700; display: flex; align-items: center; padding: 0 18px; }
+    #s05-log { opacity: 0; }
+    #s05-go { height: 80px; border-radius: 3px; border: 2px solid #0a4a0a; background: linear-gradient(to bottom, #5ec85e, #2d7a2d); color: #fff; font-weight: 700; font-size: 30px; display: flex; align-items: center; justify-content: center; margin-top: 8px; }
+  </style>
+  <div data-hf-id="hf-fvbf" id="root" data-composition-id="s05" data-width="1920" data-height="1080">
+    <div data-hf-id="hf-v9g8" id="s05-card">
+      <h2 data-hf-id="hf-u4rr">KARTU KERJA <img data-hf-id="hf-s4o1" src="assets/terras-mark.svg" alt="" /></h2>
+      <div data-hf-id="hf-v78s" class="s05-kv"><b data-hf-id="hf-vgxu">No. WO</b><span data-hf-id="hf-uknp" class="code">WO-GRG-0042-02</span></div>
+      <div data-hf-id="hf-w1l0" class="s05-kv"><b data-hf-id="hf-4tqt">MO</b><span data-hf-id="hf-dmrv" class="code">MO-0042-03</span></div>
+      <div data-hf-id="hf-uunx" class="s05-kv"><b data-hf-id="hf-4ana">Item</b><span data-hf-id="hf-xvn8">GREIGE 38 NS</span></div>
+      <div data-hf-id="hf-v8yy" class="s05-kv"><b data-hf-id="hf-pows">Size</b><span data-hf-id="hf-y5us">L 72 (70-74) cm</span></div>
+      <div data-hf-id="hf-x8i3" class="s05-kv"><b data-hf-id="hf-c8hf">Mesin</b><span data-hf-id="hf-naan">L1 07</span></div>
+      <div data-hf-id="hf-xmt4" class="s05-kv"><b data-hf-id="hf-w5zc">Target</b><span data-hf-id="hf-nsnj">1,320 kg</span></div>
+      <img data-hf-id="hf-xtuf" id="s05-qr" src="assets/qr-wo.svg" alt="QR" />
+    </div>
+
+    <div data-hf-id="hf-21su" id="s05-phone">
+      <div data-hf-id="hf-94zm" id="s05-screen">
+        <div data-hf-id="hf-zmrd" id="s05-bar"><img data-hf-id="hf-vwdx" src="assets/terras-mark.svg" alt="" />Scanner</div>
+        <div data-hf-id="hf-22tt" id="s05-view">
+          <img data-hf-id="hf-v73u" id="s05-vqr" src="assets/qr-wo.svg" alt="" />
+          <div data-hf-id="hf-cf4h" id="s05-frame"></div>
+        </div>
+        <div data-hf-id="hf-flzq" id="s05-hint">Point at a Kartu Kerja QR</div>
+        <div data-hf-id="hf-rec0" id="s05-log">
+          <span data-hf-id="hf-7kg9" class="code">WO-GRG-0042-02</span>
+          <span data-hf-id="hf-gdyt" class="s05-lbl">Output qty</span>
+          <div data-hf-id="hf-nn47" class="s05-field"><span data-hf-id="hf-7xyr" id="s05-qty">48.6</span>&nbsp;kg</div>
+          <span data-hf-id="hf-c07y" class="s05-lbl">Output lot</span>
+          <div data-hf-id="hf-rkgw" class="s05-field code" style="font-size:30px;">GRG-20261028-0004</div>
+          <div data-hf-id="hf-zayl" id="s05-go">Log production</div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <script>
+    const tl = gsap.timeline({ paused: true });
+    // Arrives through the whip from the right.
+    tl.fromTo("#s05-card", { x: 1700 }, { x: 0, duration: 0.5, ease: "expo.out" }, 0);
+    tl.fromTo("#s05-phone", { x: 900, rotation: 6 }, { x: 0, rotation: 0, duration: 0.6, ease: "expo.out" }, 0.45);
+    tl.fromTo("#s05-vqr", { scale: 0.7, opacity: 0.4 }, { scale: 1, opacity: 1, duration: 0.5, ease: "power2.out" }, 0.9);
+    // Lock on: frame turns green on the ping.
+    tl.to("#s05-frame", { borderColor: "#2ea42e", scale: 0.96, duration: 0.08 }, 1.5);
+    tl.to("#s05-frame", { scale: 1, duration: 0.2, ease: "expo.out" }, 1.58);
+    // The scan opens the work order's log form.
+    tl.fromTo("#s05-log", { opacity: 0, filter: "blur(8px)" }, { opacity: 1, filter: "blur(0px)", duration: 0.15 }, 1.75);
+    const q = { v: 0 };
+    tl.fromTo(q, { v: 0 }, { v: 48.6, duration: 0.6, ease: "power2.out", onUpdate: () => {
+      const el = document.querySelector("#s05-qty"); if (el) el.textContent = q.v.toFixed(1);
+    } }, 2.0);
+    tl.to("#s05-go", { scale: 0.95, duration: 0.06 }, 2.75);
+    tl.to("#s05-go", { scale: 1, duration: 0.15, ease: "expo.out" }, 2.81);
+    // The phone pushes toward the camera into the loom.
+    tl.to("#s05-card", { x: -300, opacity: 0, duration: 0.3, ease: "power3.in" }, 3.1);
+    tl.to("#s05-phone", { scale: 3.2, x: -500, opacity: 0.25, duration: 0.4, ease: "power3.in" }, 3.1);
+    window.__timelines["s05"] = tl;
+  </script>
+</template>

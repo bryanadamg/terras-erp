@@ -1,0 +1,59 @@
+<template>
+  <style>
+    #root { position: absolute; inset: 0; background: var(--color-ground); }
+    #s01-title { position: absolute; left: 110px; top: 130px; color: var(--color-ink); }
+    #s01-win { left: 110px; top: 330px; width: 1700px; height: 330px; }
+    #s01-head, #s01-row { display: grid; grid-template-columns: 330px 290px 430px 170px 300px 180px; align-items: center; }
+    #s01-head { height: 58px; }
+    #s01-head div { padding: 0 18px; border-right: 1px solid #c0bdb5; }
+    #s01-row { height: 214px; background: #fff; font-size: 28px; }
+    #s01-row > div { padding: 0 18px; display: flex; flex-direction: column; gap: 12px; justify-content: center; height: 100%; border-right: 1px solid #e0dfd8; }
+    #s01-row .sub { font-size: 28px; color: #555; }
+    #s01-qty-wrap { transform-origin: 0% 50%; display: inline-flex; flex-direction: column; gap: 10px; position: relative; z-index: 3; }
+    #s01-flood { position: absolute; left: 1350px; top: 486px; width: 230px; height: 48px; background: var(--color-blue); border-radius: 3px; z-index: 10; }
+  </style>
+  <div data-hf-id="hf-q5mn" id="root" data-composition-id="s01" data-width="1920" data-height="1080">
+    <div data-hf-id="hf-aujy" id="s01-title" class="title-line">
+      <span data-hf-id="hf-w9td" class="w" id="s01-w1">10,000 yards.</span>
+      <span data-hf-id="hf-gwqo" class="w" id="s01-w2">Navy.</span>
+      <span data-hf-id="hf-8x8a" class="w" id="s01-w3">Friday.</span>
+    </div>
+
+    <div data-hf-id="hf-0h36" id="s01-win" class="xp-win">
+      <div data-hf-id="hf-f1ik" class="xp-title"><img data-hf-id="hf-s4o1" src="assets/terras-mark.svg" alt="" />Sales Orders</div>
+      <div data-hf-id="hf-m982" id="s01-head" class="xp-th">
+        <div data-hf-id="hf-r89a">PO# / Ref</div><div data-hf-id="hf-suoo">Customer</div><div data-hf-id="hf-g1f3">Item</div><div data-hf-id="hf-nv4h">Size</div><div data-hf-id="hf-l04k">Qty</div><div data-hf-id="hf-qwv6">Status</div>
+      </div>
+      <div data-hf-id="hf-y1um" id="s01-row">
+        <div data-hf-id="hf-yeow"><span data-hf-id="hf-qjri" class="code">SO-2026-10-00042</span><span data-hf-id="hf-arit" class="sub">PO 7781</span></div>
+        <div data-hf-id="hf-bckn">PT DEMO GARMEN</div>
+        <div data-hf-id="hf-y7yw"><span data-hf-id="hf-n84d" class="code">DEMO TAPE 38 NS</span><span data-hf-id="hf-uckh"><span data-hf-id="hf-aepk" class="chip c-slate">NAVY</span></span></div>
+        <div data-hf-id="hf-x11t"><span data-hf-id="hf-l73p"><span data-hf-id="hf-wr9c" class="chip c-pink">L 72 cm</span></span></div>
+        <div data-hf-id="hf-xfcu">
+          <div data-hf-id="hf-l8tv" id="s01-qty-wrap">
+            <span data-hf-id="hf-me0s"><span data-hf-id="hf-2ssu" class="chip c-blue" id="s01-qty">10,000 Yd</span></span>
+            <span data-hf-id="hf-lzpr"><span data-hf-id="hf-qxtn" class="chip c-gray">9,144 m</span></span>
+          </div>
+        </div>
+        <div data-hf-id="hf-w8fr"><span data-hf-id="hf-n6mu"><span data-hf-id="hf-i6q1" class="chip c-amber">PENDING</span></span></div>
+      </div>
+    </div>
+
+    <div data-hf-id="hf-eu12" id="s01-flood"></div>
+  </div>
+  <script>
+    const tl = gsap.timeline({ paused: true });
+    // Frame 0 is the thumbnail: the whole order is already on screen.
+    // The qty is the hook: punch it.
+    tl.fromTo("#s01-qty-wrap", { scale: 1 }, { scale: 1.9, duration: 0.45, ease: "expo.out" }, 0.4);
+    tl.fromTo("#s01-qty", { backgroundColor: "#dce4f5" }, { backgroundColor: "#ffffff", duration: 0.3 }, 0.4);
+    // Title, word by word, blur in, no translate.
+    ["#s01-w1", "#s01-w2", "#s01-w3"].forEach((w, i) => {
+      tl.fromTo(w, { opacity: 0, filter: "blur(6px)" }, { opacity: 1, filter: "blur(0px)", duration: 0.13, ease: "power2.out" }, 0.75 + i * 0.32);
+    });
+    // The qty chip becomes the next world: blue grows past the frame.
+    tl.fromTo("#s01-flood", { opacity: 0, scale: 1, borderRadius: 3 }, { opacity: 1, duration: 0.08 }, 2.35);
+    tl.to("#s01-flood", { scale: 46, borderRadius: 0, duration: 0.6, ease: "power3.in" }, 2.38);
+    window.__timelines["s01"] = tl;
+  </script>
+</template>
