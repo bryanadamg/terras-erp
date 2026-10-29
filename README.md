@@ -7,9 +7,9 @@
 **Current release: v1.0.0** (2026-10-28) — see [`CHANGELOG.md`](CHANGELOG.md).
 
 <p align="center">
-  <a href="marketing/terras-v1.mp4"><img src="marketing/terras-v1.gif" alt="Terras ERP v1.0: one sales order travels through planning, the loom, the dye bath and a carton label to a verified dispatch, then every lot traces back to its yarn" width="800" /></a>
+  <img src="marketing/terras-v1.gif" alt="Terras ERP v1.0: one sales order travels through planning, the loom, the dye bath and a carton label to a verified dispatch, then every lot traces back to its yarn" width="800" />
   <br />
-  <sub>37 s, with sound: <a href="marketing/terras-v1.mp4">watch the MP4</a>. All data shown is demo data.</sub>
+  <sub>All data shown is demo data.</sub>
 </p>
 
 **Terras ERP** is a manufacturing and inventory ERP built for textile factories — warping, weaving, dyeing, and finishing lines where lot traceability and shop-floor speed matter as much as the paperwork. It runs the full loop from sales order to production planning, shop-floor execution, dyeing/setting recipes, and dispatch, with every stock movement and QC decision logged for audit.
