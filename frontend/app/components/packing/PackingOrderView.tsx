@@ -32,7 +32,7 @@ import { machinesOfCenterType, toMachineOptions } from '../shared/workCenterTree
 import {
     BoxGroup, emptyBoxGroup, seedBoxGroups, expandBoxGroups, groupCount, groupTotal,
     filledBoxRows, hasUnweighedBox, uomIsKg, boxAltTotal, boxAltPayload, orderBoxSizeAlt,
-    hasUnboxedBox, hasUnweighedTare, boxPackagingPayload, boxTarePayload,
+    hasUnboxedBox, hasUnweighedTare, boxPackagingPayload, boxTarePayload, boxNotePayload,
     findPackagingType, isCustomType, effectiveTare,
 } from '../shared/packingBoxes';
 import { usePackagingTypes } from '../shared/usePackagingTypes';
@@ -89,6 +89,7 @@ const CARTON_COUNT_W = 56;
 // list stays aligned instead of jumping a column wide on one line.
 const PACKAGING_W = 104;
 const TARE_W = 46;
+const NOTE_W = 110;
 
 // Pack progress, measured in whatever the order is COUNTED in. Read by both the
 // list row's bar and the pack modal's header panel, so the two can never quote
@@ -2437,6 +2438,7 @@ function PackingOrderDetail({ po: initialPo, colourText, itemById, locationById,
             box_alt_qtys: boxAlts,
             box_packaging_type_ids: boxPackaging,
             box_tares: boxTares,
+            box_notes: boxNotePayload(boxRows),
             work_center_id: workCenterId || null,
             operator: operator || null,
             notes: packNotes || null,
@@ -2723,6 +2725,7 @@ function PackingOrderDetail({ po: initialPo, colourText, itemById, locationById,
                                             )}
                                             <span style={{ width: PACKAGING_W, flexShrink: 0 }}>Packaging</span>
                                             <span style={{ width: TARE_W, flexShrink: 0, textAlign: 'right' }}>Tare</span>
+                                            <span style={{ width: NOTE_W, flexShrink: 0 }}>Note</span>
                                             <span style={{ width: 78, flexShrink: 0, textAlign: 'right' }}>Line total</span>
                                             <span style={{ width: 40, flexShrink: 0 }} />
                                         </div>
@@ -2839,6 +2842,14 @@ function PackingOrderDetail({ po: initialPo, colourText, itemById, locationById,
                                                             })()}
                                                         </span>
                                                     )}
+                                                    <input
+                                                        style={{ ...xpInput, width: NOTE_W, flexShrink: 0 }}
+                                                        value={g.note || ''}
+                                                        onChange={e => updateGroup(i, { note: e.target.value })}
+                                                        maxLength={200}
+                                                        placeholder="note"
+                                                        title={`Printed on the label of every ${po.package_label.toLowerCase()} on this line`}
+                                                    />
                                                     {/* The addition half: what this line contributes to the pack
                                                         total, so the packer never multiplies in their head. */}
                                                     <span style={{

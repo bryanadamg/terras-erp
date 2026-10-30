@@ -366,6 +366,9 @@ class Carton(NamedTuple):
     # alignment with the qty they describe.
     packaging_type_id: Optional[uuid.UUID] = None
     tare_kg: Optional[float] = None
+    # The packer's free-text note, printed on the label. Whole per box, like
+    # packaging: both halves of a seam split are the same physical carton.
+    note: Optional[str] = None
 
 
 # --- Alt (selling) unit conversion -----------------------------------------
@@ -752,6 +755,7 @@ def allocate_boxes_to_lots(
     alt_qtys: Optional[list[Optional[float]]] = None,
     packaging_type_ids: Optional[list] = None,
     tares: Optional[list[Optional[float]]] = None,
+    notes: Optional[list[Optional[str]]] = None,
     lot_sizes: Optional[list] = None,
     package_label: str = "Box",
 ) -> list[list[Carton]]:
@@ -855,6 +859,7 @@ def allocate_boxes_to_lots(
             cartons.append(Carton(
                 take, share, alt_share, box_idx,
                 packaging_type_id=_pkg(box_idx), tare_kg=_at(tares, box_idx),
+                note=(notes[box_idx] or None) if notes and box_idx < len(notes) else None,
             ))
             remaining = round(remaining - take, 4)
             if whole_box:
@@ -1221,6 +1226,7 @@ async def mint_packed_units(
             packaging_type_id=carton.packaging_type_id,
             tare_kg=carton.tare_kg,
             gross_weight_kg=gross_weight(net_weight, carton.tare_kg),
+            notes=carton.note,
             # Allocated per carton, not as a pre-reserved block: a block computed
             # up front overlaps a completion posted concurrently on the same order.
             package_no=await _next_package_no(db, po.id),
@@ -1303,6 +1309,7 @@ async def mint_merged_packed_unit(
     # piece that already supplies this carton's operator and variant identity.
     packaging_type_id = pieces[-1].get("packaging_type_id")
     tare_kg = pieces[-1].get("tare_kg")
+    note = pieces[-1].get("note")
 
     bom_size_id, bom_size_snapshot = await lot_size_identity(
         db, [p["source_batch_id"] for p in pieces]
@@ -1320,6 +1327,7 @@ async def mint_merged_packed_unit(
         packaging_type_id=packaging_type_id,
         tare_kg=tare_kg,
         gross_weight_kg=gross_weight(weight_kg, tare_kg),
+        notes=note,
         package_no=await _next_package_no(db, po.id),
         package_label=po.package_label or "Carton",
         packed_for_so_id=po.sales_order_id,

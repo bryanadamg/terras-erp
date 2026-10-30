@@ -3630,6 +3630,8 @@ class PackingCompletionCreate(BaseModel):
     # other type, so a stale value from a re-picked row cannot leak onto a
     # standard box.
     box_tares: list[float | None] | None = None
+    # Free-text note per carton, positional against `boxes`, printed on its label.
+    box_notes: list[str | None] | None = None
     source_batch_id: UUID | None = None
     # Multi-lot pack: one completion row is written per lot, so each keeps a
     # truthful source_batch_id and its own carton range.
@@ -3701,6 +3703,8 @@ class PackedUnitResponse(BaseModel):
     packaging_type_code: str | None = None
     tare_kg: float | None = None
     gross_weight_kg: float | None = None
+    # The packer's free-text note for this carton, printed on its label.
+    notes: str | None = None
     location_id: UUID | None = None
     location_name: str | None = None
     packing_order_id: UUID | None = None
