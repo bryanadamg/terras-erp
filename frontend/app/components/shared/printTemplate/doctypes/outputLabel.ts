@@ -27,6 +27,7 @@ export const OUTLABEL_FIELDS: FieldDef[] = [
     { key: 'outlabel.weight', label: 'Berat (live lot kg)', kind: 'number', unit: 'kg', group: 'Lot' },
     { key: 'outlabel.birth_weight_note', label: 'Berat awal note (only when the lot is empty)', kind: 'text', group: 'Lot' },
     { key: 'outlabel.bag_seq', label: 'Bag No. (#)', kind: 'text', group: 'Lot' },
+    { key: 'outlabel.cones', label: 'Jumlah Cones (logged)', kind: 'number', group: 'Lot' },
     { key: 'outlabel.ends', label: 'Warp Ends (utas)', kind: 'number', group: 'Lot' },
     { key: 'outlabel.date', label: 'Production Date', kind: 'date', group: 'Lot' },
     { key: 'outlabel.notes', label: 'Catatan (operator note)', kind: 'text', group: 'Lot' },
@@ -61,6 +62,7 @@ export function resolveOutputLabelField(key: string, ctx: PrintContext): Resolve
                 ? { text: `${Number(d.birthWeight).toFixed(2)} kg (awal)`, empty: false }
                 : { text: '', empty: true };
         case 'outlabel.bag_seq': return d.bagSeq == null ? { text: EM_DASH, empty: true } : { text: `#${d.bagSeq}`, empty: false };
+        case 'outlabel.cones': return d.cones > 0 ? { text: String(d.cones), empty: false } : { text: EM_DASH, empty: true };
         case 'outlabel.ends': return txt(d.ends);
         case 'outlabel.date': return txt(d.date);
         case 'outlabel.notes': return txt(d.notes);
@@ -192,6 +194,9 @@ export function buildOutputLabelContext({
             weight: Number(lotRemaining ?? c.qty_completed ?? 0),
             birthWeight: Number(c.qty_completed ?? 0),
             bagSeq: bagSeq ?? null,
+            // Cone tally the operator logged with the bag (covering output) — as logged,
+            // not reduced by later splits/staging.
+            cones: Number(c.qty_cones ?? 0),
             // Per-WO planned ends, falling back to the beam item's own — the same
             // precedence add_mo_completion stamps onto the lot.
             ends: wo.ends ?? mo.item_ends ?? null,
