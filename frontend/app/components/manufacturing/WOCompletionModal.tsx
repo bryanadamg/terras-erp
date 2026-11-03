@@ -83,6 +83,9 @@ export default function WOCompletionModal({ mo, onClose, onSaved, workOrder }: W
     // Bag labels: one sticker per weighed bag (= one lotted completion on this WO)
     const [labelBags, setLabelBags] = useState<any[] | null>(null);
     const [labelSeqStart, setLabelSeqStart] = useState(1);
+    // Set once a log saves a new bag: the form swaps for that bag's label preview,
+    // and onSaved/onClose wait until the preview is closed (or printed).
+    const [savedMO, setSavedMO] = useState<any | null>(null);
 
     // Substitute picker: server typeahead, not a filter over DataContext's `items`
     // (only a 50-row, newest-first page — a candidate outside it was unreachable no
@@ -397,6 +400,21 @@ export default function WOCompletionModal({ mo, onClose, onSaved, workOrder }: W
             }
             const updated = await res.json();
             showToast(`Logged ${qty} — total ${(updated.qty_completed_total ?? 0).toFixed(2)} / ${target}`, 'success');
+            // The entry just logged = the one this WO didn't have before. If it made
+            // a lot, go straight to its label (with its real bag number) for printing.
+            const seen = new Set((mo.completions || []).map((c: any) => String(c.id)));
+            const bags = workOrder
+                ? (updated.completions || [])
+                    .filter((c: any) => String(c.work_order_id || '') === String(workOrder.id) && !c.rejected && c.output_batch_number)
+                    .sort((a: any, b: any) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime())
+                : [];
+            const idx = bags.findIndex((c: any) => !seen.has(String(c.id)));
+            if (idx >= 0) {
+                setLabelSeqStart(idx + 1);
+                setLabelBags([bags[idx]]);
+                setSavedMO(updated);
+                return;
+            }
             onSaved(updated);
             onClose();
         } catch (err: any) {
@@ -441,6 +459,20 @@ export default function WOCompletionModal({ mo, onClose, onSaved, workOrder }: W
 
     const wcOptions = toMachineOptions(machineScope);
     const itemOptions = itemResults.map(itemToOption);
+
+    // Just logged a bag: show only its label — the form is gone so it can't be
+    // submitted twice — and finish the save when the preview closes.
+    if (savedMO && labelBags) {
+        return (
+            <BagLabelPrintModal
+                bags={labelBags}
+                workOrder={workOrder}
+                parentMO={savedMO}
+                seqStart={labelSeqStart}
+                onClose={() => { onSaved(savedMO); onClose(); }}
+            />
+        );
+    }
 
     return (
         <ModalWrapper
