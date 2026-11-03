@@ -90,6 +90,7 @@ export const BAG_LABEL_DEFAULT: PrintLayout = {
             id: 'label_identity', type: 'keyvalue', labelWidth: '24%', marginBottom: 6,
             rows: [
                 { field: 'outlabel.item_name', label: 'Artikel', span: 3, bold: true },
+                { field: 'outlabel.cones', label: 'Cones', span: 3, bold: true, hideWhenEmpty: true },
                 { field: 'outlabel.size', label: 'Size', bold: true },
                 { field: 'outlabel.color', label: 'Warna' },
                 { field: 'outlabel.color_code', label: 'Kode Warna', bold: true },

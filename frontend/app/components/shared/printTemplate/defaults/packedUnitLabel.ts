@@ -1,6 +1,6 @@
 /**
  * Built-in carton label layout, A6 landscape: the ruled table (style code, COLOR CODE /
- * COLOR / COMBO / SIZE / CONTENT / PO. NO / LOT. NO / N W / G W) with the PU- QR and our footer boxed beside it,
+ * COLOR / COMBO / SIZE / CONTENT / PO. NO / LOT. NO / N W / G W / NOTE) with the PU- QR and our footer boxed beside it,
  * then the carton's PU- number as a Code 128 underneath. Only the PU- number is
  * coded — it is the one code the floor scans; the QR is for phone cameras, the
  * barcode for handheld scanners. Applies until the client saves their own.
@@ -60,6 +60,7 @@ const BANDS: Band[] = [
                 f('carton.gw_blank', BLANK),
                 f('carton.packaging_type', { fontSize: 8, color: '#555', hideWhenEmpty: true }),
             ]),
+            ...row(11, 'NOTE', f('carton.notes', { fontSize: 11, bold: true })),
 
             // Our handle, not the customer's: the picker's phone scans this QR onto
             // a pick list. Spans every table row so the box runs the table's height.
@@ -68,7 +69,7 @@ const BANDS: Band[] = [
                 f('carton.company_name', { fontSize: 9, color: '#333', align: 'center', hideWhenEmpty: true }),
                 f('carton.package_line', { fontSize: 9, color: '#333', align: 'center' }),
                 f('carton.packed_date', { fontSize: 9, color: '#333', align: 'center', emptyText: '' }),
-            ], { rowSpan: 10, stackGap: 3 }),
+            ], { rowSpan: 11, stackGap: 3 }),
         ],
     },
     {

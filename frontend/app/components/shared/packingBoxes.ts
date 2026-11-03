@@ -29,6 +29,8 @@ export type BoxRow = {
      *  flagged `is_custom`: a standard box's tare comes off the master and the
      *  server ignores anything sent here for one. */
     tare: string;
+    /** Free-text note printed on this carton's label. Optional. */
+    note?: string;
 };
 
 /** One row of the packaging master (`GET /packaging-types`). */
@@ -102,6 +104,9 @@ export type BoxGroup = {
      *  of custom boxes is one weighing. Split the line if two custom boxes
      *  really differ. Ignored for a standard type. */
     tare: string;
+    /** Free-text note printed on the label of every carton in the group —
+     *  split the line for a note that only fits one box. */
+    note?: string;
 };
 
 export const emptyBoxGroup = (): BoxGroup =>
@@ -123,6 +128,7 @@ export const expandBoxGroups = (groups: BoxGroup[]): BoxRow[] =>
             alt: g.alt,
             packagingTypeId: g.packagingTypeId,
             tare: g.tare,
+            note: g.note,
         })),
     );
 
@@ -296,6 +302,10 @@ export const boxPackagingPayload = (rows: BoxRow[]): (string | null)[] =>
 /** Tares to send, positional against `filledBoxRows`. Only a custom box's is
  *  sent: the server takes the master's tare for every other type, and shipping a
  *  stale figure from a re-picked row would just be noise on the wire. */
+/** Carton notes to send, positional against `filledBoxRows`. */
+export const boxNotePayload = (rows: BoxRow[]): (string | null)[] =>
+    filledBoxRows(rows).map(b => b.note?.trim() || null);
+
 export const boxTarePayload = (rows: BoxRow[], types: PackagingType[]): (number | null)[] =>
     filledBoxRows(rows).map(b =>
         isCustomType(b.packagingTypeId, types) && n(b.tare) > 0 ? n(b.tare) : null);

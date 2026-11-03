@@ -108,6 +108,7 @@ def _pu_response(b, bal, po_code=None, loc_name=None, variant=None) -> PackedUni
         packaging_type_code=b.packaging_type.code if b.packaging_type else None,
         tare_kg=float(b.tare_kg) if b.tare_kg is not None else None,
         gross_weight_kg=float(b.gross_weight_kg) if b.gross_weight_kg is not None else None,
+        notes=b.notes,
         qty=float(bal.qty) if bal else 0.0,
         location_id=bal.location_id if bal else None,
         location_name=loc_name,
@@ -1105,6 +1106,7 @@ async def add_packing_completion(
                 alt_qtys=list(payload.box_alt_qtys) if payload.box_alt_qtys else None,
                 packaging_type_ids=list(payload.box_packaging_type_ids) if payload.box_packaging_type_ids else None,
                 tares=list(payload.box_tares) if payload.box_tares else None,
+                notes=list(payload.box_notes) if payload.box_notes else None,
                 lot_sizes=lot_size_rows,
                 package_label=po.package_label or "Box",
             )
@@ -1295,6 +1297,7 @@ async def add_packing_completion(
                 box_groups.setdefault(piece.box_index, []).append({
                     "qty": piece.qty, "weight_kg": piece.weight_kg, "alt_qty": piece.alt_qty,
                     "packaging_type_id": piece.packaging_type_id, "tare_kg": piece.tare_kg,
+                    "note": piece.note,
                     "source_batch_id": batch_id, "completion": completion,
                     "attr_ids": str_attr_ids, "color_id": color_id,
                 })

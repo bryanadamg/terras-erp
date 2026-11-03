@@ -165,3 +165,15 @@ def test_packaging_is_optional_to_the_allocator_itself():
     # the two separate is what lets the error name the cartons.
     allocated = ps.allocate_boxes_to_lots([5], [5], weights=[5.1])
     assert allocated[0][0].packaging_type_id is None
+
+
+def test_a_carton_note_rides_with_its_box_across_a_lot_seam():
+    # The note prints on the label, so both halves of a seam-split box (one
+    # physical carton) carry it whole, and an unnoted box stays None.
+    allocated = ps.allocate_boxes_to_lots(
+        [5, 5], [8, 2],
+        weights=[8.2, 2.0],
+        packaging_type_ids=[BOX_L, BOX_S],
+        notes=["Sambungan 2x", None],
+    )
+    assert [c.note for lot in allocated for c in lot] == ["Sambungan 2x", "Sambungan 2x", None]

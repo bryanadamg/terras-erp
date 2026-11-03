@@ -1,0 +1,34 @@
+<template>
+  <style>
+    #root { position: absolute; inset: 0; background: var(--color-blue); color: #fff; }
+    #s02-l1 { position: absolute; left: 160px; top: 250px; }
+    #s02-l2 { position: absolute; left: 160px; top: 640px; }
+    #s02-ticker { position: absolute; left: 160px; top: 420px; height: 120px; width: 1400px; overflow: hidden; }
+    #s02-col { position: absolute; left: 0; top: 0; }
+    #s02-col div { height: 120px; line-height: 120px; font-size: 84px; font-weight: 700; color: #bcd6ff; }
+  </style>
+  <div data-hf-id="hf-m6ce" id="root" data-composition-id="s02" data-width="1920" data-height="1080">
+    <div data-hf-id="hf-i7vk" id="s02-l1" class="title-line"><span data-hf-id="hf-vhug" class="w" id="s02-w1">Six</span> <span data-hf-id="hf-udw4" class="w" id="s02-w2">departments.</span></div>
+    <div data-hf-id="hf-w6ck" id="s02-ticker" data-layout-allow-overflow>
+      <div data-hf-id="hf-9v7f" id="s02-col">
+        <div data-hf-id="hf-tek8">Sales</div><div data-hf-id="hf-slu9">Planning</div><div data-hf-id="hf-kb8p">Weaving</div><div data-hf-id="hf-ssqa">Dyeing</div><div data-hf-id="hf-3mjz">Packing</div><div data-hf-id="hf-pp36">Dispatch</div>
+      </div>
+    </div>
+    <div data-hf-id="hf-t3d7" id="s02-l2" class="title-line"><span data-hf-id="hf-2bhu" class="w" id="s02-w3">One</span> <span data-hf-id="hf-lbmb" class="w" id="s02-w4">order.</span></div>
+  </div>
+  <script>
+    const tl = gsap.timeline({ paused: true });
+    tl.fromTo("#s02-w1", { opacity: 0, filter: "blur(6px)" }, { opacity: 1, filter: "blur(0px)", duration: 0.13 }, 0.12);
+    tl.fromTo("#s02-w2", { opacity: 0, filter: "blur(6px)" }, { opacity: 1, filter: "blur(0px)", duration: 0.13 }, 0.19);
+    // Department names roll through like a slot machine, one every 0.24 s.
+    tl.fromTo("#s02-col", { y: 120, opacity: 0 }, { y: 0, opacity: 1, duration: 0.15, ease: "power3.out" }, 0.4);
+    for (let i = 1; i < 6; i++) {
+      tl.to("#s02-col", { y: -120 * i, duration: 0.12, ease: "power3.out" }, 0.4 + i * 0.24);
+    }
+    tl.fromTo("#s02-w3", { opacity: 0, filter: "blur(6px)" }, { opacity: 1, filter: "blur(0px)", duration: 0.13 }, 1.85);
+    tl.fromTo("#s02-w4", { opacity: 0, filter: "blur(6px)" }, { opacity: 1, filter: "blur(0px)", duration: 0.13 }, 1.92);
+    // Exit: blur out word by word.
+    tl.to(["#s02-w1", "#s02-w2", "#s02-col", "#s02-w3", "#s02-w4"], { opacity: 0, filter: "blur(8px)", duration: 0.18, ease: "power3.in", stagger: 0.04 }, 2.7);
+    window.__timelines["s02"] = tl;
+  </script>
+</template>

@@ -1,0 +1,44 @@
+<template>
+  <style>
+    #root { position: absolute; inset: 0; background: var(--color-ground); }
+    #s10-title { position: absolute; left: 110px; top: 150px; color: var(--color-ink); }
+    #s10-title .g { color: var(--color-accent); }
+    .s10-node { position: absolute; top: 470px; width: 290px; display: flex; flex-direction: column; gap: 14px; }
+    .s10-node .k { font-size: 28px; font-weight: 700; letter-spacing: 0.04em; color: #555; text-transform: uppercase; }
+    .s10-node .chip { font-size: 28px; padding: 8px 4px; align-self: flex-start; justify-content: center; }
+    .s10-node .i { font-size: 28px; color: #333; }
+    .s10-link { position: absolute; top: 534px; height: 4px; width: 57px; background: #1a1a1a; transform-origin: 100% 50%; }
+    .s10-link::after { content: ""; position: absolute; right: -2px; top: -8px; border-left: 14px solid #1a1a1a; border-top: 10px solid transparent; border-bottom: 10px solid transparent; }
+    #s10-chain { position: absolute; inset: 0; }
+  </style>
+  <div data-hf-id="hf-8k65" id="root" data-composition-id="s10" data-width="1920" data-height="1080">
+    <div data-hf-id="hf-qqfk" id="s10-title" class="title-line"><span data-hf-id="hf-ilca" class="w" id="s10-w1">Every</span> <span data-hf-id="hf-8exx" class="w" id="s10-w2">lot,</span> <span data-hf-id="hf-h2sh" class="w g" id="s10-w3">traced</span> <span data-hf-id="hf-jc8t" class="w" id="s10-w4">back.</span></div>
+    <div data-hf-id="hf-tczf" id="s10-chain">
+      <div data-hf-id="hf-z5tb" class="s10-node" id="s10-n1" style="left:110px;"><span data-hf-id="hf-9fql" class="k">Yarn lot</span><span data-hf-id="hf-mlfm" class="chip c-gray code">YRN-20261012-0019</span><span data-hf-id="hf-s3j6" class="i">Supplier lot, received</span></div>
+      <div data-hf-id="hf-edhn" class="s10-link" id="s10-l1" style="left:404px;"></div>
+      <div data-hf-id="hf-wt07" class="s10-node" id="s10-n2" style="left:465px;"><span data-hf-id="hf-r681" class="k">Warp beam</span><span data-hf-id="hf-h0el" class="chip c-blue code">BM-20261020-0003</span><span data-hf-id="hf-sdc1" class="i">Beaming, 4,800 ends</span></div>
+      <div data-hf-id="hf-82in" class="s10-link" id="s10-l2" style="left:759px;"></div>
+      <div data-hf-id="hf-tpw9" class="s10-node" id="s10-n3" style="left:820px;"><span data-hf-id="hf-nw47" class="k">Greige</span><span data-hf-id="hf-mqt4" class="chip c-amber code">GRG-20261028-0004</span><span data-hf-id="hf-b1c7" class="i">Loom L1 07</span></div>
+      <div data-hf-id="hf-drfu" class="s10-link" id="s10-l3" style="left:1114px;"></div>
+      <div data-hf-id="hf-8pj8" class="s10-node" id="s10-n4" style="left:1175px;"><span data-hf-id="hf-92gt" class="k">Dyed lot</span><span data-hf-id="hf-bn45" class="chip c-slate code">DYE-20261029-0002</span><span data-hf-id="hf-fscz" class="i">NAVY bath</span></div>
+      <div data-hf-id="hf-3pd0" class="s10-link" id="s10-l4" style="left:1469px;"></div>
+      <div data-hf-id="hf-iqb0" class="s10-node" id="s10-n5" style="left:1530px;"><span data-hf-id="hf-6x9v" class="k">Carton</span><span data-hf-id="hf-yw1d" class="chip c-green code">PU-20261030-0007</span><span data-hf-id="hf-5107" class="i">SHP-00042, dispatched</span></div>
+    </div>
+  </div>
+  <script>
+    const tl = gsap.timeline({ paused: true });
+    // Trace starts at the carton and walks back to the yarn.
+    tl.fromTo("#s10-n5", { opacity: 0, scale: 1.15, filter: "blur(8px)" }, { opacity: 1, scale: 1, filter: "blur(0px)", duration: 0.3, ease: "expo.out" }, 0.1);
+    const steps = [["#s10-l4", "#s10-n4"], ["#s10-l3", "#s10-n3"], ["#s10-l2", "#s10-n2"], ["#s10-l1", "#s10-n1"]];
+    steps.forEach(([link, node], i) => {
+      const t = 0.45 + i * 0.34;
+      tl.fromTo(link, { scaleX: 0 }, { scaleX: 1, duration: 0.18, ease: "power2.out" }, t);
+      tl.fromTo(node, { opacity: 0, x: 40 }, { opacity: 1, x: 0, duration: 0.3, ease: "expo.out" }, t + 0.12);
+    });
+    ["#s10-w1","#s10-w2","#s10-w3","#s10-w4"].forEach((w, i) => {
+      tl.fromTo(w, { opacity: 0, filter: "blur(6px)" }, { opacity: 1, filter: "blur(0px)", duration: 0.13 }, 1.85 + i * 0.09);
+    });
+    tl.to(["#s10-title", "#s10-chain"], { opacity: 0, filter: "blur(8px)", duration: 0.2, ease: "power3.in" }, 3.25);
+    window.__timelines["s10"] = tl;
+  </script>
+</template>

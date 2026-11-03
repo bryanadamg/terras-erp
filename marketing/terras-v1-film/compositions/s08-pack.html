@@ -1,0 +1,54 @@
+<template>
+  <style>
+    #root { position: absolute; inset: 0; background: #ffffff; }
+    #s08-slot { position: absolute; left: 360px; top: 56px; width: 1200px; height: 72px; background: #3a3a3a; border-radius: 16px; z-index: 3; box-shadow: 0 8px 18px rgba(0,0,0,0.25); }
+    #s08-slot::after { content: ""; position: absolute; left: 40px; right: 40px; bottom: 14px; height: 8px; background: #111; border-radius: 4px; }
+    #s08-feed { position: absolute; left: 410px; top: 116px; width: 1100px; height: 720px; overflow: hidden; }
+    #s08-label { position: absolute; left: 0; top: 0; width: 1100px; height: 700px; background: #fff; border: 4px solid #000; padding: 26px; box-shadow: 0 10px 24px rgba(0,0,0,0.18); }
+    #s08-grid { display: grid; grid-template-columns: 1fr 300px; gap: 26px; }
+    .s08-r { display: grid; grid-template-columns: 170px 1fr; border-bottom: 2px solid #000; font-size: 30px; padding: 8px 0; }
+    .s08-r b { font-weight: 700; }
+    #s08-qrbox { border: 3px solid #000; padding: 14px; height: 300px; }
+    #s08-qrbox img { width: 100%; height: 100%; }
+    #s08-bar { margin-top: 22px; display: flex; flex-direction: column; align-items: center; gap: 6px; }
+    #s08-bar img { width: 760px; height: 96px; }
+    #s08-bar span { font-size: 30px; }
+    #s08-cap { position: absolute; left: 410px; top: 880px; font-weight: 700; font-size: 80px; color: var(--color-ink); }
+    #s08-cap .w { display: inline-block; }
+  </style>
+  <div data-hf-id="hf-dzp0" id="root" data-composition-id="s08" data-width="1920" data-height="1080">
+    <div data-hf-id="hf-7i8t" id="s08-slot"></div>
+    <div data-hf-id="hf-udbp" id="s08-feed">
+      <div data-hf-id="hf-il6p" id="s08-label">
+        <div data-hf-id="hf-vuf1" id="s08-grid">
+          <div data-hf-id="hf-yeow">
+            <div data-hf-id="hf-x74u" class="s08-r"><b data-hf-id="hf-4ana">Item</b><span data-hf-id="hf-u9ys">DEMO TAPE 38 NS</span></div>
+            <div data-hf-id="hf-8zlu" class="s08-r"><b data-hf-id="hf-hcc0">Warna</b><span data-hf-id="hf-hlql">NAVY</span></div>
+            <div data-hf-id="hf-9dwv" class="s08-r"><b data-hf-id="hf-pows">Size</b><span data-hf-id="hf-y5us">L 72 (70-74) cm</span></div>
+            <div data-hf-id="hf-9s7w" class="s08-r"><b data-hf-id="hf-itxv">Qty</b><span data-hf-id="hf-h2rb">1 Gross × 144 Yd</span></div>
+            <div data-hf-id="hf-a6ix" class="s08-r"><b data-hf-id="hf-nmww">N.W.</b><span data-hf-id="hf-jgt8">25.4 kg</span></div>
+            <div data-hf-id="hf-akty" class="s08-r"><b data-hf-id="hf-fe09">G.W.</b><span data-hf-id="hf-7x96">26.1 kg</span></div>
+            <div data-hf-id="hf-az4z" class="s08-r"><b data-hf-id="hf-lqyf">SO</b><span data-hf-id="hf-qjri" class="code">SO-2026-10-00042</span></div>
+          </div>
+          <div data-hf-id="hf-rsrr" id="s08-qrbox"><img data-hf-id="hf-hkok" src="assets/qr-pu.svg" alt="QR" /></div>
+        </div>
+        <div data-hf-id="hf-jiic" id="s08-bar"><img data-hf-id="hf-3ite" src="assets/barcode-pu.svg" alt="barcode" /><span data-hf-id="hf-ar2y" class="code">PU-20261030-0007</span></div>
+      </div>
+    </div>
+    <div data-hf-id="hf-ralf" id="s08-cap"><span data-hf-id="hf-eiox" class="w" id="s08-c1">Every</span> <span data-hf-id="hf-mdna" class="w" id="s08-c2">carton,</span> <span data-hf-id="hf-57k2" class="w" id="s08-c3">its</span> <span data-hf-id="hf-ubrt" class="w" id="s08-c4">own</span> <span data-hf-id="hf-sk2u" class="w" id="s08-c5">label.</span></div>
+  </div>
+  <script>
+    const tl = gsap.timeline({ paused: true });
+    tl.fromTo("#s08-slot", { y: -160 }, { y: 0, duration: 0.4, ease: "expo.out" }, 0);
+    // Printing: the label feeds out at a constant rate.
+    tl.fromTo("#s08-label", { y: -700 }, { y: 0, duration: 1.1, ease: "none" }, 0.1);
+    ["#s08-c1","#s08-c2","#s08-c3","#s08-c4","#s08-c5"].forEach((w, i) => {
+      tl.fromTo(w, { opacity: 0, filter: "blur(6px)" }, { opacity: 1, filter: "blur(0px)", duration: 0.13 }, 0.9 + i * 0.07);
+    });
+    // The carton joins the shipment: shrink and carry down to the deck row.
+    tl.to(["#s08-slot", "#s08-cap"], { opacity: 0, duration: 0.2, ease: "power3.in" }, 2.95);
+    tl.set("#s08-feed", { overflow: "visible" }, 2.95);
+    tl.to("#s08-label", { scale: 0.12, x: 135, y: 8, opacity: 0, duration: 0.5, ease: "power2.inOut" }, 2.95);
+    window.__timelines["s08"] = tl;
+  </script>
+</template>

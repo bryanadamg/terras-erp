@@ -1,0 +1,67 @@
+<template>
+  <style>
+    #root { position: absolute; inset: 0; background: var(--color-ground); }
+    #s07-paper { position: absolute; inset: 0; background: #ffffff; opacity: 0; }
+    #s07-in .chip { opacity: 0; }
+    #s07-win { left: 110px; top: 100px; width: 1700px; height: 690px; background: var(--color-ground); }
+    #s07-in { position: absolute; left: 40px; top: 90px; display: flex; align-items: center; gap: 18px; font-size: 28px; font-weight: 700; }
+    #s07-bath { position: absolute; left: 40px; top: 170px; width: 760px; background: #fff; border: 2px solid #7f9db9; }
+    .s07-kv { display: grid; grid-template-columns: 260px 1fr; align-items: center; height: 82px; padding: 0 22px; border-bottom: 1px solid #e0dfd8; font-size: 30px; }
+    .s07-kv b { font-weight: 700; }
+    #s07-tank { position: relative; height: 34px; background: #e8e8e8; border: 2px solid #7a7a7a; border-radius: 3px; overflow: hidden; margin-top: 8px; }
+    #s07-water { position: absolute; inset: 0; background: linear-gradient(to bottom, #4a90d9, #2563c4); transform-origin: 0% 50%; }
+    #s07-dose { position: absolute; left: 860px; top: 170px; width: 800px; background: #fff; border: 2px solid #7f9db9; }
+    .s07-tr { display: grid; grid-template-columns: 360px 130px 1fr; align-items: center; height: 82px; padding: 0 22px; border-bottom: 1px solid #e0dfd8; font-size: 30px; }
+    .s07-tr.h { height: 56px; font-size: 28px; }
+    .s07-g { text-align: right; font-weight: 700; font-family: var(--font-code); }
+    #s07-cap { position: absolute; left: 110px; top: 860px; font-weight: 700; font-size: 80px; color: var(--color-ink); }
+    #s07-cap .w { display: inline-block; }
+    #s07-carry { position: absolute; left: 150px; top: 190px; }
+  </style>
+  <div data-hf-id="hf-w6kl" id="root" data-composition-id="s07" data-width="1920" data-height="1080">
+    <div data-hf-id="hf-aenm" id="s07-paper"></div>
+    <div data-hf-id="hf-ml0e" id="s07-stage">
+      <div data-hf-id="hf-6cto" id="s07-win" class="xp-win">
+        <div data-hf-id="hf-ce94" class="xp-title"><img data-hf-id="hf-s4o1" src="assets/terras-mark.svg" alt="" />Terras ERP — Dyeing Orders · NAVY bath</div>
+        <div data-hf-id="hf-uv3s" id="s07-in">Input lot <span data-hf-id="hf-hxnm" class="chip c-amber code" style="font-size:30px; padding:6px 16px;">GRG-20261028-0004</span></div>
+        <div data-hf-id="hf-1ai7" id="s07-bath">
+          <div data-hf-id="hf-y5lq" class="s07-kv"><span data-hf-id="hf-jw4d">Load</span><b data-hf-id="hf-co64">120 kg</b></div>
+          <div data-hf-id="hf-ekea" class="s07-kv"><span data-hf-id="hf-310m">Liquor ratio</span><b data-hf-id="hf-6i3b">1 : 10</b></div>
+          <div data-hf-id="hf-frb2" class="s07-kv" style="height:110px;"><span data-hf-id="hf-ujl7">Volume</span><div data-hf-id="hf-yeow"><b data-hf-id="hf-a7t7"><span data-hf-id="hf-ie6y" id="s07-vol">0</span> L</b><div data-hf-id="hf-ml98" id="s07-tank"><div data-hf-id="hf-3ffl" id="s07-water"></div></div></div></div>
+          <div data-hf-id="hf-eypb" class="s07-kv"><span data-hf-id="hf-nh3y">Ropes</span><b data-hf-id="hf-ubk3">4</b></div>
+          <div data-hf-id="hf-fd0c" class="s07-kv"><span data-hf-id="hf-nd30">Speed</span><b data-hf-id="hf-5jy5">Sedang</b></div>
+        </div>
+        <div data-hf-id="hf-7ee7" id="s07-dose">
+          <div data-hf-id="hf-2qa6" class="s07-tr h xp-th"><div data-hf-id="hf-g1qg">Chemical</div><div data-hf-id="hf-ddw6">g/L</div><div data-hf-id="hf-iqp2" style="text-align:right;">Dose</div></div>
+          <div data-hf-id="hf-hedj" class="s07-tr"><div data-hf-id="hf-1q1o">REACTIVE NAVY DM</div><div data-hf-id="hf-ti5j">2.5</div><div data-hf-id="hf-5ip5" class="s07-g"><span data-hf-id="hf-mjqu" id="s07-d1">0</span> g</div></div>
+          <div data-hf-id="hf-r12f" class="s07-tr"><div data-hf-id="hf-3t14">SALT</div><div data-hf-id="hf-yjc4">40</div><div data-hf-id="hf-h0il" class="s07-g"><span data-hf-id="hf-31gz" id="s07-d2">0</span> g</div></div>
+          <div data-hf-id="hf-qmre" class="s07-tr"><div data-hf-id="hf-4bod">SODA ASH</div><div data-hf-id="hf-v1fm">15</div><div data-hf-id="hf-i7fo" class="s07-g"><span data-hf-id="hf-8tig" id="s07-d3">0</span> g</div></div>
+        </div>
+      </div>
+      <div data-hf-id="hf-zmpg" id="s07-cap"><span data-hf-id="hf-zzp2" class="w" id="s07-c1">Dosed</span> <span data-hf-id="hf-shk8" class="w" id="s07-c2">from</span> <span data-hf-id="hf-0bfk" class="w" id="s07-c3">the</span> <span data-hf-id="hf-g9gz" class="w" id="s07-c4">bath</span> <span data-hf-id="hf-378u" class="w" id="s07-c5">you</span> <span data-hf-id="hf-dnra" class="w" id="s07-c6">filled.</span></div>
+    </div>
+    <span data-hf-id="hf-hmro" id="s07-carry" class="chip c-amber code" style="font-size:30px; padding:6px 16px;">GRG-20261028-0004</span>
+  </div>
+  <script>
+    const tl = gsap.timeline({ paused: true });
+    const fmt = (n) => Math.round(n).toLocaleString("en-US");
+    tl.fromTo("#s07-win", { clipPath: "inset(0% 100% 0% 0%)" }, { clipPath: "inset(0% 0% 0% 0%)", duration: 0.45, ease: "expo.out" }, 0);
+    // The carried lot chip is already in place; the window's own chip takes over under it.
+    tl.to("#s07-carry", { opacity: 0, duration: 0.1 }, 0.5);
+    tl.set("#s07-in .chip", { opacity: 1 }, 0.45);
+    // Fill the bath: volume and every dose are one function of the same water level.
+    const b = { v: 0 };
+    tl.fromTo(b, { v: 0 }, { v: 1200, duration: 1.3, ease: "power2.inOut", onUpdate: () => {
+      const set = (id, val) => { const el = document.querySelector(id); if (el) el.textContent = fmt(val); };
+      set("#s07-vol", b.v); set("#s07-d1", b.v * 2.5); set("#s07-d2", b.v * 40); set("#s07-d3", b.v * 15);
+    } }, 0.5);
+    tl.fromTo("#s07-water", { scaleX: 0 }, { scaleX: 1, duration: 1.3, ease: "power2.inOut" }, 0.5);
+    ["#s07-c1","#s07-c2","#s07-c3","#s07-c4","#s07-c5","#s07-c6"].forEach((w, i) => {
+      tl.fromTo(w, { opacity: 0, filter: "blur(6px)" }, { opacity: 1, filter: "blur(0px)", duration: 0.13 }, 1.6 + i * 0.07);
+    });
+    // Colour flood to paper white: the label printer's world.
+    tl.to("#s07-stage", { opacity: 0, filter: "blur(10px)", duration: 0.25, ease: "power3.in" }, 3.6);
+    tl.to("#s07-paper", { opacity: 1, duration: 0.35, ease: "power2.inOut" }, 3.6);
+    window.__timelines["s07"] = tl;
+  </script>
+</template>

@@ -57,6 +57,7 @@ export const CARTON_FIELDS: FieldDef[] = [
     { key: 'carton.po_ref', label: 'PO No (customer, else SO)', kind: 'text', group: 'Order' },
     { key: 'carton.so_code', label: 'Our SO No (under a customer PO)', kind: 'text', group: 'Order' },
     { key: 'carton.lot', label: 'Source Lot No', kind: 'text', group: 'Order' },
+    { key: 'carton.notes', label: 'Note (typed per carton at pack time)', kind: 'text', group: 'Order' },
 
     { key: 'carton.nw', label: 'Net weight', kind: 'text', group: 'Weight' },
     { key: 'carton.nw_blank', label: 'Net weight write-on line (when unknown)', kind: 'text', group: 'Weight' },
@@ -91,6 +92,7 @@ export function resolveCartonLabelField(key: string, ctx: PrintContext): Resolve
         case 'carton.po_ref': return txt(d.poRef);
         case 'carton.so_code': return txt(d.soUnderPo);
         case 'carton.lot': return txt(d.lot);
+        case 'carton.notes': return txt(d.notes);
         case 'carton.nw': return txt(d.nw);
         case 'carton.nw_blank': return d.nw ? txt('') : { text: '__________ KG', empty: false };
         case 'carton.gw': return txt(d.gw);
@@ -212,6 +214,7 @@ export function buildCartonLabelContext({
             // reads the top line, we reconcile on the bottom.
             soUnderPo: o.customer_po_ref && o.sales_order_code ? o.sales_order_code : '',
             lot: lotByCompletion(o)[String(u.packing_completion_id || '')] || '',
+            notes: u.notes || '',
             nw: u.weight_kg != null ? `${Number(u.weight_kg).toFixed(2)}  KG` : '',
             gw: u.gross_weight_kg != null ? `${Number(u.gross_weight_kg).toFixed(2)}  KG` : '',
             // Which box that tare came from — reprinting an old carton must show the
