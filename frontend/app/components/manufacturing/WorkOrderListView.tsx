@@ -429,8 +429,10 @@ export default function WorkOrderListView({
     const renderDetailPanel = (wo: FlatWO) => {
         const bomItemIds = new Set<string>(wo.bom_line_item_ids || []);
         const completions: any[] = wo.completions || [];
-        // Bag labels apply to lot-producing steps (each weighed bag = one lot).
-        const isLotWOType = ['WEAVING', 'TENUN', 'DYEING', 'CELUP', 'BEAMING', 'SETTING'].includes((wo.work_center_type || '').toUpperCase());
+        // Bag labels apply to any log entry that produced a lot (each weighed bag =
+        // one lot) — keyed on the lot itself, not a work-center-type whitelist, so
+        // "Others" steps like covering get labels too.
+        const hasLabelableLot = (c: any) => !c.rejected && !!c.output_batch_number;
         // A beaming WO's output units are warp beams, not bags — same label modal,
         // different template (beam_label), so the button has to say so or the floor
         // reads it as the wrong sticker.
@@ -547,7 +549,7 @@ export default function WorkOrderListView({
                         <div style={{ padding: '6px 8px', background: '#f5f4ef', overflow: 'hidden' }}>
                             <div style={{ ...colHeaderStyle, display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 6 }}>
                                 <span>Completion Log ({completions.length})</span>
-                                {isLotWOType && completions.some((c: any) => !c.rejected) && (
+                                {completions.some(hasLabelableLot) && (
                                     <button
                                         type="button"
                                         onClick={() => openBagLabels(wo)}
@@ -608,7 +610,7 @@ export default function WorkOrderListView({
                                                             <td style={{ ...subTd, color: '#555' }}>
                                                                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 4 }}>
                                                                     <span>{c.work_center_name || '—'}</span>
-                                                                    {isLotWOType && !c.rejected && c.output_batch_number && (
+                                                                    {hasLabelableLot(c) && (
                                                                         <button
                                                                             type="button"
                                                                             onClick={() => openBagLabels(wo, c.id)}
