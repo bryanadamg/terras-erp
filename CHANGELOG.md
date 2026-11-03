@@ -15,6 +15,16 @@ on `main`:
 
 ## [Unreleased]
 
+## [1.1.0] - 2026-11-03
+
+### Added
+- Logging a completion that produces a lot opens that bag's label straight away, ready to print
+- Bag labels print the cone count logged with the bag (shown only when cones were entered)
+- A per-carton note on the pack form, printed on the carton label
+
+### Fixed
+- Work orders in the "Others" tab (e.g. covering) get Bag Labels / Label buttons on their completion log, not just weaving, dyeing, beaming and setting
+
 ## [1.0.0] - 2026-10-28
 
 ### Added
