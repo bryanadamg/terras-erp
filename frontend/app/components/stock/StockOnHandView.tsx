@@ -40,7 +40,8 @@ interface StockOnHandViewProps {
 // squeezing chip columns into overlapping percentages.
 const COL_W = {
     check: 34, item: 230, ends: 60, category: 140, location: 190, lot: 150, mo: 170, wo: 170, attrs: 260,
-    qty: 110, uom: 60, packaging: 130, notes: 190, actions: 74,
+    // 140: a carton's "0.08 Gross @ 144 Yd" line must not spill into UOM.
+    qty: 140, uom: 60, packaging: 130, notes: 190, actions: 74,
 };
 const TABLE_MIN_WIDTH = Object.values(COL_W).reduce((a, b) => a + b, 0);
 
