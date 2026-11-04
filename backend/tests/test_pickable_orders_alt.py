@@ -133,6 +133,8 @@ def test_cartons_in_the_lines_selling_unit_are_suggested_first(client, auth_head
     [line] = r.json()
     assert {c["batch_id"] for c in line["cartons"]} == ids["pic"]
     assert sum(c["alt_qty"] for c in line["cartons"]) == 6
+    # Each row can say "2 Pic @ 36 Yd": the carton's own packing order's length per unit.
+    assert {(c["alt_factor"], c["alt_factor_uom"]) for c in line["cartons"]} == {(36, "yard")}
 
     # The readiness board claims cartons in the same order, so it agrees.
     rb = client.get("/api/pick-lists/pickable-orders", headers=auth_headers)

@@ -4221,6 +4221,9 @@ class PickListSuggestedCarton(BaseModel):
     # in stock UoM alone.
     alt_qty: float | None = None
     alt_uom: str | None = None
+    # Length of ONE alt unit off the carton's packing order ("1 Pic = 36 yard").
+    alt_factor: float | None = None
+    alt_factor_uom: str | None = None
 
     # --- Variant identity ---------------------------------------------------
     # Same field names as PackedUnitResponse / a lot, so `LotChips` labels a

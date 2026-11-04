@@ -20,6 +20,7 @@ const PickListPrintModal = dynamic(() => import('./PickListPrintModal'), { ssr: 
 import TreeSelect, { buildLocationPickerTree } from '../shared/TreeSelect';
 import { API_BASE } from '../shared/apiBase';
 import { qtyFmt } from '../shared/format';
+import { altPerUnit } from '../shared/altUnit';
 
 
 // ── Classic XP theme primitives (match StockOnHandView / LocationsView) ──────
@@ -1160,7 +1161,7 @@ function PickListSuggestionModal({ so, groups, loading, creating, itemById, canS
                                                     <span style={{ color: '#888', marginLeft: 3 }}>{uom}</span>
                                                     {c.alt_qty != null && c.alt_uom && (
                                                         <span style={{ color: '#888' }}>
-                                                            {' · '}{num(c.alt_qty).toLocaleString()} {c.alt_uom}
+                                                            {' · '}{num(c.alt_qty).toLocaleString()} {c.alt_uom}{altPerUnit(c.alt_factor, c.alt_factor_uom)}
                                                         </span>
                                                     )}
                                                 </td>

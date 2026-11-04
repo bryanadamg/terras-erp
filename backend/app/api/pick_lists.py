@@ -281,17 +281,24 @@ async def _remaining_alt_by_so_line(db: AsyncSession, so: SalesOrder, exclude_pl
     return out
 
 
-async def _packing_order_alt_uoms(db: AsyncSession, po_ids: list) -> dict:
-    """`{packing_order_id: uom2}` — the unit each carton's `alt_qty` was counted
-    in, in one query rather than a hop per box."""
+async def _packing_order_alt_specs(db: AsyncSession, po_ids: list) -> dict:
+    """`{packing_order_id: (uom2, uom2_factor, uom2_length_uom)}` — the unit each
+    carton's `alt_qty` was counted in and how long one of it is (1 Pic = 36 yd),
+    in one query rather than a hop per box."""
     from app.models.packing import PackingOrder
     ids = {str(p) for p in po_ids if p}
     if not ids:
         return {}
     rows = (await db.execute(
-        select(PackingOrder.id, PackingOrder.uom2).filter(PackingOrder.id.in_(ids))
+        select(PackingOrder.id, PackingOrder.uom2, PackingOrder.uom2_factor, PackingOrder.uom2_length_uom)
+        .filter(PackingOrder.id.in_(ids))
     )).all()
-    return {str(pid): (u or "").strip() for pid, u in rows}
+    return {str(pid): ((u or "").strip(), float(f) if f else None, lu) for pid, u, f, lu in rows}
+
+
+async def _packing_order_alt_uoms(db: AsyncSession, po_ids: list) -> dict:
+    """`{packing_order_id: uom2}` — just the unit, see `_packing_order_alt_specs`."""
+    return {k: v[0] for k, v in (await _packing_order_alt_specs(db, po_ids)).items()}
 
 
 def _line_variant_key(so_line: SalesOrderLine) -> str:
@@ -430,7 +437,7 @@ async def _suggest_cartons(db: AsyncSession, so: SalesOrder, source_location_id=
     # necessarily the unit this line is sold in (packed in Pcs, ordered in Gross).
     # Carry the box's own label rather than restating it in the line's — the two
     # are only summed together where they agree.
-    carton_alt_uom = await _packing_order_alt_uoms(
+    carton_alt = await _packing_order_alt_specs(
         db, [pu.packing_order_id for _l, _r, units in picked for pu, _q in units]
     )
     keys = {bal.variant_key for bal in balances.values() if bal.variant_key}
@@ -443,6 +450,7 @@ async def _suggest_cartons(db: AsyncSession, so: SalesOrder, source_location_id=
         cartons: list[PickListSuggestedCarton] = []
         for pu, qty in units:
             bal = balances.get(str(pu.id))
+            c_uom, c_factor, c_factor_uom = carton_alt.get(str(pu.packing_order_id), ("", None, None))
             cartons.append(PickListSuggestedCarton(
                 batch_id=pu.id, batch_number=pu.batch_number,
                 package_no=pu.package_no, qty=qty,
@@ -450,7 +458,9 @@ async def _suggest_cartons(db: AsyncSession, so: SalesOrder, source_location_id=
                 # carton packed with no alt unit even when the line has one — the
                 # modal then shows kilos alone for that row rather than a zero.
                 alt_qty=float(pu.alt_qty) if pu.alt_qty is not None else None,
-                alt_uom=carton_alt_uom.get(str(pu.packing_order_id)) or None,
+                alt_uom=c_uom or None,
+                alt_factor=c_factor,
+                alt_factor_uom=c_factor_uom if c_factor else None,
                 source_location_id=bal.location_id if bal else None,
                 **_carton_identity(pu, bal, variants),
             ))
