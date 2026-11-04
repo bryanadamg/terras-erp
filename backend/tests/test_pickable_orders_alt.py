@@ -70,3 +70,72 @@ def test_outstanding_in_selling_unit(client, auth_headers, orders):
     mixed = rows[orders["mixed"]]
     assert (mixed["qty_outstanding_alt"], mixed["outstanding_alt_uom"]) == (None, None)
     assert sorted((l["qty_outstanding_alt"], l["alt_uom"]) for l in mixed["lines"]) == [(5, "Pic"), (20, "Pcs")]
+
+
+@pytest.fixture
+def pic_line_with_older_gross_cartons():
+    """SO-2026-11-00001's shape: 6 Pic @ 36 yd ordered; two older Gross cartons
+    alone cover its kilos, the three Pic cartons packed for it are newer."""
+    from datetime import datetime
+    from sqlalchemy.orm import Session
+    from app.db.session import engine
+    from app.models.batch import Batch
+    from app.models.item import Item
+    from app.models.location import Location
+    from app.models.packing import PackingOrder
+    from app.models.sales import SalesOrder, SalesOrderLine
+    from app.models.stock_balance import StockBalance
+
+    conn = engine.connect()
+    sess = Session(conn)
+    tag = uuid.uuid4().hex[:6]
+    item = Item(code=f"FG-PIC-{tag}", name="Pic FG", uom="KG")
+    loc = Location(code=f"FG-{tag}", name="FG")
+    sess.add_all([item, loc])
+    sess.flush()
+    gross = PackingOrder(code=f"PCK-G-{tag}", item_id=item.id, uom2="Gross", uom2_factor=144, uom2_length_uom="yard")
+    pic = PackingOrder(code=f"PCK-P-{tag}", item_id=item.id, uom2="Pic", uom2_factor=36, uom2_length_uom="yard")
+    so = SalesOrder(po_number=f"SO-PIC-{tag}", customer_name="Pic Customer")
+    sess.add_all([gross, pic, so])
+    sess.flush()
+    sess.add(SalesOrderLine(sales_order_id=so.id, item_id=item.id, qty=216, qty_kg=38.88,
+                            qty2=6, uom2="Pic", uom2_factor=36))
+    cartons = [(gross, 26.64, 1, datetime(2026, 10, 28)), (gross, 15, 0.08, datetime(2026, 10, 28, 0, 1))] + \
+              [(pic, 13.32, 2, datetime(2026, 11, 4, 0, n)) for n in range(3)]
+    batches = []
+    for n, (po, kg, alt, at) in enumerate(cartons, 1):
+        b = Batch(batch_number=f"PU-{tag}-{n}", item_id=item.id, packing_order_id=po.id,
+                  package_no=n, alt_qty=alt, created_at=at)
+        sess.add(b)
+        sess.flush()
+        sess.add(StockBalance(item_id=item.id, location_id=loc.id, variant_key="", batch_key=str(b.id), qty=kg))
+        batches.append(b)
+    sess.commit()
+    yield {"so_id": str(so.id), "po_number": so.po_number, "pic": {str(b.id) for b in batches[2:]}}
+
+    ids = [str(b.id) for b in batches]
+    sess.query(StockBalance).filter(StockBalance.batch_key.in_(ids)).delete(synchronize_session=False)
+    sess.query(Batch).filter(Batch.item_id == item.id).delete(synchronize_session=False)
+    sess.query(SalesOrderLine).filter(SalesOrderLine.sales_order_id == so.id).delete(synchronize_session=False)
+    sess.query(SalesOrder).filter(SalesOrder.id == so.id).delete(synchronize_session=False)
+    sess.query(PackingOrder).filter(PackingOrder.item_id == item.id).delete(synchronize_session=False)
+    sess.query(Location).filter(Location.id == loc.id).delete(synchronize_session=False)
+    sess.query(Item).filter(Item.id == item.id).delete(synchronize_session=False)
+    sess.commit()
+    sess.close()
+    conn.close()
+
+
+def test_cartons_in_the_lines_selling_unit_are_suggested_first(client, auth_headers, pic_line_with_older_gross_cartons):
+    ids = pic_line_with_older_gross_cartons
+    r = client.get(f"/api/pick-lists/suggest?sales_order_id={ids['so_id']}", headers=auth_headers)
+    assert r.status_code == 200, r.text
+    [line] = r.json()
+    assert {c["batch_id"] for c in line["cartons"]} == ids["pic"]
+    assert sum(c["alt_qty"] for c in line["cartons"]) == 6
+
+    # The readiness board claims cartons in the same order, so it agrees.
+    rb = client.get("/api/pick-lists/pickable-orders", headers=auth_headers)
+    assert rb.status_code == 200, rb.text
+    board = {o["po_number"]: o for o in rb.json()}
+    assert board[ids["po_number"]]["cartons_ready"] == 3

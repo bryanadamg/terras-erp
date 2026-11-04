@@ -12,7 +12,7 @@ from collections import Counter, deque
 from datetime import datetime
 from typing import NamedTuple, Optional
 
-from sqlalchemy import select, func, cast, String, or_
+from sqlalchemy import select, func, cast, String, or_, case
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -1427,6 +1427,15 @@ async def pinned_carton_ids(db: AsyncSession, so_id=None, exclude_so_id=None) ->
     return {b: l for b, l in (await db.execute(q)).all()}
 
 
+def same_alt_unit(carton_uom2, carton_factor, line_uom2, line_factor) -> bool:
+    """A carton counted in the line's own selling unit — same unit name and, when
+    the line states one, the same length per unit (1 Pic = 36 yd, not 50 m)."""
+    want = (line_uom2 or "").strip().lower()
+    if not want or (carton_uom2 or "").strip().lower() != want:
+        return False
+    return not line_factor or (carton_factor is not None and abs(float(carton_factor) - float(line_factor)) < 1e-6)
+
+
 async def available_packed_units(
     db: AsyncSession,
     item_id,
@@ -1437,18 +1446,30 @@ async def available_packed_units(
     limit: int = 200,
     size_name: Optional[str] = None,
     prefer_ids: set = None,
+    prefer_alt: Optional[tuple] = None,
 ) -> list[tuple[Batch, StockBalance]]:
     """In-stock cartons for an item/variant, oldest first (FIFO) — except
-    `prefer_ids` (cartons allocated to the asking order), which come first.
+    `prefer_ids` (cartons allocated to the asking order), which come first, then
+    cartons counted in `prefer_alt` = (uom2, uom2_factor), the line's own selling
+    unit (see `same_alt_unit`). Without that, an older Gross carton covers a Pic
+    line's kilos and the Pic cartons packed for it are never suggested.
 
     Returns (carton, its balance row) pairs so callers get the carton qty without
     a second lookup. Rejected lots are excluded, matching every other picker.
     `size_name` (an SO line's size) drops cartons of another size — unsized ones stay.
     """
     v_key = _generate_variant_key(attribute_value_ids, color_id)
+    alt_rank = []
+    want_uom = ((prefer_alt or (None, None))[0] or "").strip().lower()
+    if want_uom:
+        same = func.lower(func.trim(PackingOrder.uom2)) == want_uom
+        if prefer_alt[1]:
+            same = same & (func.abs(PackingOrder.uom2_factor - float(prefer_alt[1])) < 1e-6)
+        alt_rank = [case((same, 0), else_=1)]
     query = (
         select(Batch, StockBalance)
         .join(StockBalance, StockBalance.batch_key == cast(Batch.id, String))
+        .outerjoin(PackingOrder, PackingOrder.id == Batch.packing_order_id)
         .filter(
             packed_unit_filter(),
             Batch.item_id == item_id,
@@ -1460,6 +1481,7 @@ async def available_packed_units(
         .order_by(
             # In SQL, not after: the limit would otherwise cut preferred cartons off.
             *([Batch.id.notin_(list(prefer_ids))] if prefer_ids else []),
+            *alt_rank,
             Batch.created_at.asc(), Batch.package_no.asc(),
         )
         .limit(limit)
@@ -1497,6 +1519,7 @@ async def suggest_units_for_line(
     exclude_ids: set = None,
     size_name: Optional[str] = None,
     prefer_ids: set = None,
+    prefer_alt: Optional[tuple] = None,
 ) -> list[tuple[Batch, float]]:
     """Pick whole cartons FIFO until `remaining_qty` is covered — the line's own
     allocated cartons (`prefer_ids`) first.
@@ -1508,6 +1531,7 @@ async def suggest_units_for_line(
         db, item_id, location_id=location_id,
         attribute_value_ids=attribute_value_ids, color_id=color_id,
         exclude_ids=exclude_ids, size_name=size_name, prefer_ids=prefer_ids,
+        prefer_alt=prefer_alt,
     )
     picked: list[tuple[Batch, float]] = []
     covered = 0.0

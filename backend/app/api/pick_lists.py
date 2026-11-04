@@ -413,6 +413,7 @@ async def _suggest_cartons(db: AsyncSession, so: SalesOrder, source_location_id=
             exclude_ids=taken,
             size_name=line_sizes.get(str(so_line.id)),
             prefer_ids={b for b, l in pinned.items() if l == so_line.id},
+            prefer_alt=(so_line.uom2, so_line.uom2_factor),
         )
         for pu, _qty in units:
             taken.add(pu.id)
@@ -492,17 +493,20 @@ async def _suggest_lines(db: AsyncSession, pl: PickList, so: SalesOrder) -> list
 
 async def _ready_carton_index(db: AsyncSession) -> dict:
     """Every unallocated, in-stock carton keyed by (item_id, variant_key), FIFO,
-    as `(qty, size name)` — a line only counts cartons of its own size as ready.
+    as `(qty, size name, uom2, uom2_factor)` — a line only counts cartons of its
+    own size as ready, and claims ones in its own selling unit first.
 
     One query for the whole plant instead of per-SO-line lookups: the readiness
     board scores every open order at once, and a per-line query there is an N+1
     that grows with the order book.
     """
     from app.models.stock_balance import StockBalance
+    from app.models.packing import PackingOrder
     taken = await packing_service.allocated_unit_ids(db)
     rows = (await db.execute(
-        select(Batch, StockBalance)
+        select(Batch, StockBalance, PackingOrder.uom2, PackingOrder.uom2_factor)
         .join(StockBalance, StockBalance.batch_key == cast(Batch.id, String))
+        .outerjoin(PackingOrder, PackingOrder.id == Batch.packing_order_id)
         .filter(
             packing_service.packed_unit_filter(),
             Batch.quality_status == "GOOD",
@@ -511,16 +515,16 @@ async def _ready_carton_index(db: AsyncSession) -> dict:
         .order_by(Batch.created_at.asc(), Batch.package_no.asc())
     )).all()
 
-    sizes = await packing_service.batch_size_names(db, [b.id for b, _ in rows])
+    sizes = await packing_service.batch_size_names(db, [r[0].id for r in rows])
     index: dict = {}
     seen = set()
-    for batch, bal in rows:
+    for batch, bal, uom2, factor in rows:
         # A carton is atomic; a stray second balance row must not double-count it.
         if batch.id in seen or batch.id in taken:
             continue
         seen.add(batch.id)
         size = sizes.get(str(batch.id), (None, None))[1]
-        index.setdefault((str(batch.item_id), bal.variant_key), []).append((float(bal.qty), size))
+        index.setdefault((str(batch.item_id), bal.variant_key), []).append((float(bal.qty), size, uom2, factor))
     return index
 
 
@@ -671,16 +675,23 @@ async def list_pickable_orders(
             # Whole cartons only — the picker moves a physical box, so the last
             # one may overshoot the outstanding qty rather than be split.
             covered = 0.0
-            line_cartons = 0
             want_size = line_sizes.get(str(line.id))
-            i = 0
-            while pool and i < len(pool) and covered < rem - 1e-6:
-                qty, size = pool[i]
+            # Same claim order as `_suggest_cartons`: cartons in the line's own
+            # selling unit first, FIFO within each group (sorted() is stable).
+            order = sorted(range(len(pool or [])), key=lambda j: not packing_service.same_alt_unit(
+                pool[j][2], pool[j][3], line.uom2, line.uom2_factor))
+            chosen = []
+            for j in order:
+                if covered >= rem - 1e-6:
+                    break
+                qty, size, _u, _f = pool[j]
                 if packing_service.sizes_conflict(want_size, size):
-                    i += 1  # another size — left for the line that orders it
-                    continue
-                covered += pool.pop(i)[0]
-                line_cartons += 1
+                    continue  # another size — left for the line that orders it
+                covered += qty
+                chosen.append(j)
+            for j in sorted(chosen, reverse=True):
+                pool.pop(j)
+            line_cartons = len(chosen)
             cartons_ready += line_cartons
             qty_ready += covered
             it = line.item
