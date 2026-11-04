@@ -1046,14 +1046,15 @@ function PickListSuggestionModal({ so, groups, loading, creating, itemById, canS
                         const selectedQty = sel.reduce((s: number, c: any) => s + num(c.qty), 0);
                         const over = selectedQty > num(g.remaining_qty) + 1e-6;
                         // A selected total in the alt unit is only reported when EVERY
-                        // checked carton carries a count AND counted it in the unit this
-                        // line is sold in. Part-counted, or a box packed in Pcs against a
-                        // line ordered in Gross, would print a total the boxes don't hold;
-                        // the kilos beside it are the whole truth either way.
+                        // checked carton's count can be stated in the unit this line is
+                        // sold in — the server restates each box (`alt_qty_line`: a 1 Gross
+                        // @ 144 yd box on a Pic @ 36 yd line is 4 Pic) and sends null when
+                        // nothing bridges the units; the kilos beside it are the whole
+                        // truth either way.
                         const altUom = g.alt_uom || '';
                         const selectedAlt = altUom && sel.length
-                            && sel.every((c: any) => c.alt_qty != null && c.alt_uom === altUom)
-                            ? sel.reduce((s: number, c: any) => s + num(c.alt_qty), 0)
+                            && sel.every((c: any) => c.alt_qty_line != null)
+                            ? Math.round(sel.reduce((s: number, c: any) => s + num(c.alt_qty_line), 0) * 100) / 100
                             : null;
 
                         // --- Coverage bar ------------------------------------------------
@@ -1506,9 +1507,9 @@ function PickListEditor({ pl: initialPl, itemById, locPickerTreeOptions, authFet
                             const remAltRaw = remainingAltMap[String(sl.id)];
                             const remAlt = onAlt ? (remAltRaw != null ? num(remAltRaw) : orderedAlt) : null;
                             const pickedOnAlt = onAlt && rows.length > 0
-                                && rows.every((r: any) => r.alt_qty != null && r.alt_uom === altUom);
+                                && rows.every((r: any) => r.alt_qty_line != null);
                             const totalPickedAlt = pickedOnAlt
-                                ? rows.reduce((s: number, r: any) => s + num(r.alt_qty), 0) : null;
+                                ? Math.round(rows.reduce((s: number, r: any) => s + num(r.alt_qty_line), 0) * 100) / 100 : null;
                             return (
                                 <React.Fragment key={sl.id}>
                                     <tr style={{ background: '#f5f4ef' }}>

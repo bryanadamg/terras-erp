@@ -3972,6 +3972,9 @@ class PickListLineResponse(BaseModel):
     # (its packing order's `uom2`). Null on a bulk line or a box packed without one.
     alt_qty: float | None = None
     alt_uom: str | None = None
+    # `alt_qty` restated in the SO line's alt unit (a 1 Gross @ 144 yd box on a
+    # Pic @ 36 yd line = 4). Null when nothing bridges the two units.
+    alt_qty_line: float | None = None
     # Resolved at read time, null on a bulk (cartonless) line. See the class docs
     # for why this is not flattened onto the fields above.
     carton_identity: PickListCartonIdentity | None = None
@@ -4221,6 +4224,9 @@ class PickListSuggestedCarton(BaseModel):
     # in stock UoM alone.
     alt_qty: float | None = None
     alt_uom: str | None = None
+    # `alt_qty` restated in the SO line's alt unit (a 1 Gross @ 144 yd box on a
+    # Pic @ 36 yd line = 4). Null when nothing bridges the two units.
+    alt_qty_line: float | None = None
     # Length of ONE alt unit off the carton's packing order ("1 Pic = 36 yard").
     alt_factor: float | None = None
     alt_factor_uom: str | None = None

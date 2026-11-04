@@ -170,7 +170,9 @@ export const orderBasePerAlt = (po: any, item?: any): number | null => {
  *  factor (`1 Box = 10 kg`) shows as quoted; '' when there is no factor. */
 export const altPerUnit = (factor?: number | null, factorUom?: string | null): string => {
     if (!factor) return '';
-    const len = lengthPerAlt({ factor, lengthUom: factorUom });
+    // A factor with no unit recorded is a legacy one, entered in yards (same rule
+    // as basePerAlt and the server's _yards_per_alt) — never print a bare "@ 36".
+    const len = lengthPerAlt({ factor, lengthUom: factorUom || 'yard' });
     return ` @ ${(len?.qty ?? factor).toLocaleString()} ${len?.uom ?? factorUom ?? ''}`.trimEnd();
 };
 

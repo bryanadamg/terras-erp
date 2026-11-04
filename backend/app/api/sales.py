@@ -232,8 +232,12 @@ async def _populate_reserved(db: AsyncSession, orders: list) -> None:
                 StockReservation.qty,
                 StockReservation.qty_released,
                 Batch.alt_qty,
+                func.coalesce(Batch.alt_uom, PackingOrder.uom2).label("c_uom"),
+                PackingOrder.uom2_factor.label("c_factor"),
+                PackingOrder.uom2_length_uom.label("c_len"),
             )
             .outerjoin(Batch, Batch.id == StockReservation.batch_id)
+            .outerjoin(PackingOrder, PackingOrder.id == Batch.packing_order_id)
             .filter(
                 StockReservation.sales_order_id.in_([o.id for o in orders]),
                 StockReservation.status == "ACTIVE",
@@ -243,6 +247,7 @@ async def _populate_reserved(db: AsyncSession, orders: list) -> None:
     by_so: dict[str, list] = {}
     for r in rows:
         by_so.setdefault(str(r.sales_order_id), []).append(r)
+    length_uom = await packing_service.alt_length_uoms(db)
 
     for so in orders:
         held_total, uom, alt, alt_ok = 0.0, "", {}, True
@@ -267,7 +272,12 @@ async def _populate_reserved(db: AsyncSession, orders: list) -> None:
                 alt_ok = False
                 continue
             if r.alt_qty is not None and qty > 0:
-                n = float(r.alt_qty) * held / qty
+                # The carton's own count, restated in the line's unit (a Gross box
+                # held for a Pic line is 4 Pic, not "1"); None if nothing bridges them.
+                n = packing_service.alt_in_line_unit(
+                    r.alt_qty, (r.c_uom, r.c_factor, r.c_len),
+                    (line.uom2, line.uom2_factor, length_uom(line.uom2, line.uom2_factor)))
+                n = None if n is None else n * held / qty
             else:
                 n = so_fulfilment_service._to_alt(held, line.qty_ordered_base, line.qty_ordered_alt)
             if n is None:

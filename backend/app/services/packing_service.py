@@ -1429,11 +1429,65 @@ async def pinned_carton_ids(db: AsyncSession, so_id=None, exclude_so_id=None) ->
 
 def same_alt_unit(carton_uom2, carton_factor, line_uom2, line_factor) -> bool:
     """A carton counted in the line's own selling unit — same unit name and, when
-    the line states one, the same length per unit (1 Pic = 36 yd, not 50 m)."""
+    both state one, the same length per unit (1 Pic = 36 yd is not 1 Pic = 50 m).
+    A side with no length (a hand-made lot's bare "Gross") matches on the name."""
     want = (line_uom2 or "").strip().lower()
     if not want or (carton_uom2 or "").strip().lower() != want:
         return False
-    return not line_factor or (carton_factor is not None and abs(float(carton_factor) - float(line_factor)) < 1e-6)
+    return not line_factor or not carton_factor or abs(float(carton_factor) - float(line_factor)) < 1e-6
+
+
+# --- A carton's count restated in a sales order line's alt unit -------------
+# A Gross carton can be picked or allocated against a Pic line. Its `alt_qty`
+# (1 Gross) must never be added to the line's Pic count as-is. Same unit -> as
+# counted; different units that both have a length -> through the length
+# (1 Gross @ 144 yd = 4 Pic @ 36 yd); otherwise None, and the caller drops that
+# figure to "unknown" so the screen falls back to the base qty instead of adding
+# two unlike counts. Every alt sum over cartons goes through this.
+
+def _yards_per_alt(uom2, factor, length_uom) -> Optional[float]:
+    """Yards in ONE alt unit: its factor through its length unit (legacy factors
+    with no unit were entered in yards), or 1 when the unit is itself a length."""
+    if factor:
+        return convert_length(float(factor), length_uom or "yard", "yard")
+    if normalize_length_uom(uom2):
+        return convert_length(1.0, uom2, "yard")
+    return None
+
+
+def alt_in_line_unit(alt_qty, carton: tuple, line: tuple) -> Optional[float]:
+    """`alt_qty` counted in `carton` = (uom2, factor, length_uom), restated in
+    `line` = (uom2, factor, length_uom); None when nothing bridges the two."""
+    if alt_qty is None:
+        return None
+    # A count with no unit recorded anywhere (no Batch.alt_uom, no packing order
+    # uom2) was counted in the line's own unit — the rule before units were stored.
+    if not (carton[0] or "").strip() or same_alt_unit(carton[0], carton[1], line[0], line[1]):
+        return float(alt_qty)
+    c, l = _yards_per_alt(*carton), _yards_per_alt(*line)
+    return float(alt_qty) * c / l if c and l else None
+
+
+async def alt_length_uoms(db: AsyncSession):
+    """`lookup(uom2, factor) -> length unit name or None`, off the UOM master's
+    factor rows (`Pic -> yard = 36`) — what a packing order stores as
+    `uom2_length_uom`, for an SO line, which stores no unit. One query."""
+    from sqlalchemy.orm import aliased
+    from app.models.uom import UOM, UOMFactor
+    frm, to = aliased(UOM), aliased(UOM)
+    rows = (await db.execute(
+        select(frm.name, UOMFactor.value, to.name)
+        .select_from(UOMFactor)
+        .join(frm, frm.id == UOMFactor.from_uom_id)
+        .join(to, to.id == UOMFactor.to_uom_id)
+    )).all()
+    table = {((f or "").strip().lower(), round(float(v), 4)): t for f, v, t in rows if v is not None}
+
+    def lookup(uom2, factor):
+        if not uom2 or not factor:
+            return None
+        return table.get(((uom2 or "").strip().lower(), round(float(factor), 4)))
+    return lookup
 
 
 async def available_packed_units(
@@ -1464,7 +1518,9 @@ async def available_packed_units(
     if want_uom:
         same = func.lower(func.trim(PackingOrder.uom2)) == want_uom
         if prefer_alt[1]:
-            same = same & (func.abs(PackingOrder.uom2_factor - float(prefer_alt[1])) < 1e-6)
+            # Same rule as same_alt_unit: a carton with no length matches on the name.
+            same = same & (PackingOrder.uom2_factor.is_(None)
+                           | (func.abs(PackingOrder.uom2_factor - float(prefer_alt[1])) < 1e-6))
         alt_rank = [case((same, 0), else_=1)]
     query = (
         select(Batch, StockBalance)
