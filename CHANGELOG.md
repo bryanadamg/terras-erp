@@ -15,6 +15,21 @@ on `main`:
 
 ## [Unreleased]
 
+## [1.2.0] - 2026-11-04
+
+### Added
+- Stock On Hand, Allocate from stock and the Pick Cartons dialog show how long one selling unit is beside a carton's count (e.g. "2 Pic @ 36 Yd")
+- The pick readiness board shows Outstanding in the sales order's selling unit (e.g. "6 Pic"), with the kg beneath
+- A Print Layouts help page
+
+### Changed
+- The in-app help is rewritten across every module to match the current screens
+
+### Fixed
+- Pick suggestions offer cartons packed in the order's own selling unit first, so Pic cartons packed for a Pic order are no longer passed over for older Gross cartons
+- A carton packed in a different unit from the order is counted in the order's unit (1 Gross @ 144 yd = 4 Pic @ 36 yd) when it's picked, shipped, packed or allocated, instead of being added as if the units were the same; when no length links the two units, the figure shows in kg
+- A long per-unit length in the Stock On Hand Qty column no longer spills into the UOM column
+
 ## [1.1.0] - 2026-11-03
 
 ### Added
