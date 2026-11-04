@@ -45,8 +45,8 @@ export const docsSidebar: DocSection[] = [
         items: [
             { slug: 'inventory', label: 'Inventory & Items', icon: 'bi-box-seam' },
             { slug: 'stock', label: 'Stock & Locations', icon: 'bi-boxes' },
-            { slug: 'bom', label: 'BOM Designer', icon: 'bi-diagram-3' },
-            { slug: 'manufacturing', label: 'Manufacturing', icon: 'bi-gear' },
+            { slug: 'bom', label: 'BOM & Routing', icon: 'bi-diagram-3' },
+            { slug: 'manufacturing', label: 'Production', icon: 'bi-gear' },
             { slug: 'quality-quarantine', label: 'Quality & Quarantine', icon: 'bi-shield-exclamation' },
             { slug: 'sales-orders', label: 'Sales Orders', icon: 'bi-cart3' },
             { slug: 'packing-dispatch', label: 'Packing & Dispatch', icon: 'bi-truck' },
