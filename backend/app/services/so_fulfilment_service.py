@@ -59,6 +59,7 @@ from app.models.sales import SalesOrder, SalesOrderLine
 from app.models.size import Size
 from app.models.stock_balance import StockBalance
 from app.models.work_order import WorkOrder
+from app.services import packing_service
 
 EPS = 1e-6
 
@@ -174,6 +175,17 @@ def ordered_qty_in_stock_uom(
 _REJECTED_CARTON = ("REJECTED", "REJECT_USABLE")
 
 
+def _add_carton_alt(stat: dict, field: str, alt, carton: tuple, line: tuple) -> None:
+    """Add one carton's count to `stat[field]`, restated in the line's alt unit
+    (`packing_service.alt_in_line_unit`). A carton that can't be restated turns
+    the figure to None for good — the screens then fall back to base qty rather
+    than draw a bar out of two units. A carton with no count adds nothing."""
+    if stat.get(field) is None or alt is None:
+        return
+    n = packing_service.alt_in_line_unit(alt, carton, line)
+    stat[field] = None if n is None else round(stat[field] + n, 4)
+
+
 def _to_alt(base_qty, ordered_base, ordered_alt) -> float | None:
     """A base-UoM qty restated as an alt count, through this line's ordered pair.
 
@@ -258,7 +270,7 @@ async def _line_rows(db: AsyncSession, so_ids: list) -> list:
 
     Positional indices are load-bearing: 1..5 for `_mo_claimants`, 6..10 for
     `ordered_qty_in_stock_uom`, 11..12 for the size token (`_size_tokenizer`),
-    13..14 for the alt selling unit. One query for the whole page, never per order.
+    13..15 for the alt selling unit (qty2, uom2, uom2_factor). One query for the whole page, never per order.
     """
     return (
         await db.execute(
@@ -278,6 +290,7 @@ async def _line_rows(db: AsyncSession, so_ids: list) -> list:
                 SalesOrderLine.size_label,
                 SalesOrderLine.qty2,
                 SalesOrderLine.uom2,
+                SalesOrderLine.uom2_factor,
             )
             .join(Item, Item.id == SalesOrderLine.item_id)
             .filter(SalesOrderLine.sales_order_id.in_(so_ids))
@@ -384,6 +397,11 @@ async def fulfilment_map(db: AsyncSession, so_ids: list) -> dict:
 
     line_ids = [r[0] for r in line_rows]
     out = {str(r[0]): dict(_ZERO) for r in line_rows}
+    # Each line's alt unit as (uom2, factor, length unit) — cartons are restated in it.
+    length_uom = await packing_service.alt_length_uoms(db)
+    alt_spec = {str(r[0]): (r[14], r[15], length_uom(r[14], r[15])) for r in line_rows}
+    # A carton's own unit: a hand-made lot's Batch.alt_uom, else its packing order's.
+    carton_cols = (func.coalesce(Batch.alt_uom, PackingOrder.uom2), PackingOrder.uom2_factor, PackingOrder.uom2_length_uom)
     for r in line_rows:
         out[str(r[0])]["ordered_base"] = ordered_qty_in_stock_uom(
             r[6], r[8], qty_kg=r[7], weight_per_unit=r[9], weight_unit=r[10]
@@ -408,36 +426,34 @@ async def fulfilment_map(db: AsyncSession, so_ids: list) -> dict:
     # uncartonised (`batch_id` null, free qty) and has no count to add. Those are
     # measured separately and converted below, so a mixed order neither loses the
     # bulk qty nor restates the counted cartons through an estimate.
-    _has_alt = Batch.alt_qty.isnot(None)
-    for sol_id, qty, carton_alt, carton_base in (
+    # One row per pick line (not a SQL sum): each carton's count is restated in
+    # the line's own unit, so a Gross box shipped on a Pic line adds Pic.
+    uncounted: dict = {}
+    for sol_id, qty, alt, *carton in (
         await db.execute(
-            select(
-                PickListLine.sales_order_line_id,
-                func.coalesce(func.sum(PickListLine.qty_picked), 0),
-                func.coalesce(func.sum(Batch.alt_qty), 0),
-                func.coalesce(
-                    func.sum(case((_has_alt, PickListLine.qty_picked), else_=0)), 0
-                ),
-            )
+            select(PickListLine.sales_order_line_id, PickListLine.qty_picked, Batch.alt_qty, *carton_cols)
             .join(PickList, PickListLine.pick_list_id == PickList.id)
             .outerjoin(Batch, Batch.id == PickListLine.batch_id)
+            .outerjoin(PackingOrder, PackingOrder.id == Batch.packing_order_id)
             .filter(
                 PickList.sales_order_id.in_(so_ids),
                 PickList.status == "DISPATCHED",
             )
-            .group_by(PickListLine.sales_order_line_id)
         )
     ).all():
         key = str(sol_id)
         if key not in out:
             continue
-        out[key]["dispatched"] = _f(qty)
-        if out[key]["dispatched_alt"] is None:
+        out[key]["dispatched"] += _f(qty)
+        if alt is None:
+            uncounted[key] = uncounted.get(key, 0.0) + _f(qty)
+        else:
+            _add_carton_alt(out[key], "dispatched_alt", alt, tuple(carton), alt_spec[key])
+    for key, stat in out.items():
+        if stat["dispatched_alt"] is None:
             continue
-        bulk = _to_alt(
-            _f(qty) - _f(carton_base), out[key]["ordered_base"], out[key]["ordered_alt"]
-        )
-        out[key]["dispatched_alt"] = round(_f(carton_alt) + _f(bulk), 2)
+        bulk = _to_alt(uncounted.get(key, 0.0), stat["ordered_base"], stat["ordered_alt"])
+        stat["dispatched_alt"] = round(stat["dispatched_alt"] + _f(bulk), 2)
 
     # --- packed: every carton ever minted against the line ---
     for sol_id, qty in (
@@ -459,23 +475,19 @@ async def fulfilment_map(db: AsyncSession, so_ids: list) -> dict:
     # that left stock, and the piece count lives one level down on each carton it
     # minted. Rejected cartons drop out here exactly as rejected completions drop
     # out of `qty_packed` -- scrap was not packed.
-    for sol_id, alt in (
+    for sol_id, alt, *carton in (
         await db.execute(
-            select(
-                PackingOrder.sales_order_line_id,
-                func.coalesce(func.sum(Batch.alt_qty), 0),
-            )
+            select(PackingOrder.sales_order_line_id, Batch.alt_qty, *carton_cols)
             .select_from(PackingOrder)
             .join(Batch, Batch.packing_order_id == PackingOrder.id)
             .filter(
                 PackingOrder.sales_order_line_id.in_(line_ids),
                 Batch.quality_status.notin_(_REJECTED_CARTON),
             )
-            .group_by(PackingOrder.sales_order_line_id)
         )
     ).all():
-        if str(sol_id) in out and out[str(sol_id)]["packed_alt"] is not None:
-            out[str(sol_id)]["packed_alt"] = round(_f(alt), 2)
+        if str(sol_id) in out:
+            _add_carton_alt(out[str(sol_id)], "packed_alt", alt, tuple(carton), alt_spec[str(sol_id)])
 
     # --- packed_available: cartons still holding stock. Carton qty lives only in
     # the StockBalance row keyed by the batch, never on the Batch itself.
@@ -483,15 +495,16 @@ async def fulfilment_map(db: AsyncSession, so_ids: list) -> dict:
     # what's pickable (readiness board query, carton-scan endpoint) — a rejected or
     # disposed carton still has StockBalance.qty > 0 sitting in the defect store,
     # but it can never be picked, so it must not count toward READY either.
-    for sol_id, qty, alt in (
+    for sol_id, qty, alt, *carton in (
         await db.execute(
             select(
                 PackingOrder.sales_order_line_id,
-                func.coalesce(func.sum(StockBalance.qty), 0),
+                StockBalance.qty,
                 # The piece count of those same cartons, in the one pass -- the
                 # join is identical, so a second query would only be a second
                 # chance for the two to disagree about which cartons are in stock.
-                func.coalesce(func.sum(Batch.alt_qty), 0),
+                Batch.alt_qty,
+                *carton_cols,
             )
             .select_from(PackingOrder)
             .join(Batch, Batch.packing_order_id == PackingOrder.id)
@@ -501,15 +514,17 @@ async def fulfilment_map(db: AsyncSession, so_ids: list) -> dict:
                 Batch.quality_status == "GOOD",
                 StockBalance.qty > 0,
             )
-            .group_by(PackingOrder.sales_order_line_id)
         )
     ).all():
         if str(sol_id) in out:
-            out[str(sol_id)]["packed_available"] = _f(qty)
-            if out[str(sol_id)]["packed_available_alt"] is not None:
-                out[str(sol_id)]["packed_available_alt"] = round(_f(alt), 2)
+            out[str(sol_id)]["packed_available"] += _f(qty)
+            _add_carton_alt(out[str(sol_id)], "packed_available_alt", alt, tuple(carton), alt_spec[str(sol_id)])
 
-    await _fold_allocations(db, line_rows, out)
+    await _fold_allocations(db, line_rows, out, alt_spec, carton_cols)
+    for stat in out.values():
+        for k in ("packed_alt", "packed_available_alt"):
+            if stat.get(k) is not None:
+                stat[k] = round(stat[k], 2)
 
     # --- made: root MO completions, matched to lines on the variant tuple ---
     mo_rows = (
@@ -581,7 +596,7 @@ async def fulfilment_map(db: AsyncSession, so_ids: list) -> dict:
     return out
 
 
-async def _fold_allocations(db: AsyncSession, line_rows: list, out: dict) -> None:
+async def _fold_allocations(db: AsyncSession, line_rows: list, out: dict, alt_spec: dict, carton_cols: tuple) -> None:
     """Count "Allocate from stock" cartons toward a line's `packed_available`.
 
     A line covered by cartons pinned to it is as shippable as one packed against
@@ -592,16 +607,20 @@ async def _fold_allocations(db: AsyncSession, line_rows: list, out: dict) -> Non
     these is already in the packing-order sum above.
     """
     line_ids = [r[0] for r in line_rows]
-    for sol_id, held, qty, alt in (
+    held_by_line: dict = {}
+    for sol_id, held, qty, alt, *carton in (
         await db.execute(
             select(
                 StockReservation.sales_order_line_id,
-                func.sum(StockReservation.qty - StockReservation.qty_released),
-                func.coalesce(func.sum(StockBalance.qty), 0),
-                func.coalesce(func.sum(Batch.alt_qty), 0),
+                StockReservation.qty - StockReservation.qty_released,
+                StockBalance.qty,
+                # Only a carton still on hand counts toward packed_available_alt.
+                case((StockBalance.qty > 0, Batch.alt_qty), else_=None),
+                *carton_cols,
             )
             .select_from(StockReservation)
             .outerjoin(Batch, (Batch.id == StockReservation.batch_id) & (Batch.quality_status == "GOOD"))
+            .outerjoin(PackingOrder, PackingOrder.id == Batch.packing_order_id)
             .outerjoin(
                 StockBalance,
                 (StockBalance.batch_key == cast(Batch.id, String)) & (StockBalance.qty > 0),
@@ -610,16 +629,16 @@ async def _fold_allocations(db: AsyncSession, line_rows: list, out: dict) -> Non
                 StockReservation.sales_order_line_id.in_(line_ids),
                 StockReservation.status == "ACTIVE",
             )
-            .group_by(StockReservation.sales_order_line_id)
         )
     ).all():
         stat = out.get(str(sol_id))
         if stat is None:
             continue
-        stat["allocated"] = max(0.0, _f(held))
+        held_by_line[str(sol_id)] = held_by_line.get(str(sol_id), 0.0) + _f(held)
         stat["packed_available"] += _f(qty)
-        if stat["packed_available_alt"] is not None:
-            stat["packed_available_alt"] = round(stat["packed_available_alt"] + _f(alt), 2)
+        _add_carton_alt(stat, "packed_available_alt", alt, tuple(carton), alt_spec[str(sol_id)])
+    for key, held in held_by_line.items():
+        out[key]["allocated"] = max(0.0, held)
 
 
 # --- MO progress (the SO table's "how much has been produced?" column) -----

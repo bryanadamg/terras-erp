@@ -11,7 +11,7 @@ import ModalWrapper from '../shared/ModalWrapper';
 import Pager from '../shared/Pager';
 import TreeSelect, { buildLocationFilterTree, buildLocationPickerTree, buildCategoryTree, locationAncestorNames } from '../shared/TreeSelect';
 import { lotColorLabel } from '../shared/LotChips';
-import { formatAlt } from '../shared/altUnit';
+import { formatAlt, altPerUnit } from '../shared/altUnit';
 import { useRowSelection, RowCheckbox, SelectAllCheckbox, SortableTh, lvThSticky, lvZebra, Dash, ResizableTable } from '../shared/listViewTheme';
 
 const STOCK_PAGE_SIZE = 50;
@@ -40,7 +40,8 @@ interface StockOnHandViewProps {
 // squeezing chip columns into overlapping percentages.
 const COL_W = {
     check: 34, item: 230, ends: 60, category: 140, location: 190, lot: 150, mo: 170, wo: 170, attrs: 260,
-    qty: 110, uom: 60, packaging: 130, notes: 190, actions: 74,
+    // 140: a carton's "0.08 Gross @ 144 Yd" line must not spill into UOM.
+    qty: 140, uom: 60, packaging: 130, notes: 190, actions: 74,
 };
 const TABLE_MIN_WIDTH = Object.values(COL_W).reduce((a, b) => a + b, 0);
 
@@ -793,7 +794,7 @@ export default function StockOnHandView({ locations, attributes, categories, ite
                     {Number(bal.qty).toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 3 })}
                     {/* Packed cartons carry the count in the order's selling unit. */}
                     {bal.alt_uom && bal.alt_qty != null && (
-                        <div style={{ fontSize: '10px', fontWeight: 'normal', color: '#666' }}>{formatAlt(bal.alt_qty, bal.alt_uom)}</div>
+                        <div style={{ fontSize: '10px', fontWeight: 'normal', color: '#666' }}>{formatAlt(bal.alt_qty, bal.alt_uom)}{altPerUnit(bal.alt_factor, bal.alt_factor_uom)}</div>
                     )}
                 </td>
                 <td className={undefined} style={{ padding: '4px 8px', fontFamily: xpFont, fontSize: '10px', color: '#666', whiteSpace: 'nowrap', ...colDivider }}>

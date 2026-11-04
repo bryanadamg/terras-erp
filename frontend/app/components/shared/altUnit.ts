@@ -166,6 +166,16 @@ export const orderBasePerAlt = (po: any, item?: any): number | null => {
 };
 
 /** "12 Pcs" / "12 Pcs (60 Yd)" for display next to a base figure. */
+/** " @ 36 Yd" — what ONE alt unit holds, off a carton's packing order. A non-length
+ *  factor (`1 Box = 10 kg`) shows as quoted; '' when there is no factor. */
+export const altPerUnit = (factor?: number | null, factorUom?: string | null): string => {
+    if (!factor) return '';
+    // A factor with no unit recorded is a legacy one, entered in yards (same rule
+    // as basePerAlt and the server's _yards_per_alt) — never print a bare "@ 36".
+    const len = lengthPerAlt({ factor, lengthUom: factorUom || 'yard' });
+    return ` @ ${(len?.qty ?? factor).toLocaleString()} ${len?.uom ?? factorUom ?? ''}`.trimEnd();
+};
+
 export const formatAlt = (
     qtyAlt: number | null | undefined,
     uom?: string | null,

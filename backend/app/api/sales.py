@@ -232,8 +232,12 @@ async def _populate_reserved(db: AsyncSession, orders: list) -> None:
                 StockReservation.qty,
                 StockReservation.qty_released,
                 Batch.alt_qty,
+                func.coalesce(Batch.alt_uom, PackingOrder.uom2).label("c_uom"),
+                PackingOrder.uom2_factor.label("c_factor"),
+                PackingOrder.uom2_length_uom.label("c_len"),
             )
             .outerjoin(Batch, Batch.id == StockReservation.batch_id)
+            .outerjoin(PackingOrder, PackingOrder.id == Batch.packing_order_id)
             .filter(
                 StockReservation.sales_order_id.in_([o.id for o in orders]),
                 StockReservation.status == "ACTIVE",
@@ -243,6 +247,7 @@ async def _populate_reserved(db: AsyncSession, orders: list) -> None:
     by_so: dict[str, list] = {}
     for r in rows:
         by_so.setdefault(str(r.sales_order_id), []).append(r)
+    length_uom = await packing_service.alt_length_uoms(db)
 
     for so in orders:
         held_total, uom, alt, alt_ok = 0.0, "", {}, True
@@ -267,7 +272,12 @@ async def _populate_reserved(db: AsyncSession, orders: list) -> None:
                 alt_ok = False
                 continue
             if r.alt_qty is not None and qty > 0:
-                n = float(r.alt_qty) * held / qty
+                # The carton's own count, restated in the line's unit (a Gross box
+                # held for a Pic line is 4 Pic, not "1"); None if nothing bridges them.
+                n = packing_service.alt_in_line_unit(
+                    r.alt_qty, (r.c_uom, r.c_factor, r.c_len),
+                    (line.uom2, line.uom2_factor, length_uom(line.uom2, line.uom2_factor)))
+                n = None if n is None else n * held / qty
             else:
                 n = so_fulfilment_service._to_alt(held, line.qty_ordered_base, line.qty_ordered_alt)
             if n is None:
@@ -614,9 +624,10 @@ async def _allocation_lines(db: AsyncSession, so: SalesOrder) -> list[SOAllocati
     batches = [b for units in per_line.values() for b, _ in units] + [b for _, b, _ in pinned_rows]
     bals = [bal for units in per_line.values() for _, bal in units] + [bal for _, _, bal in pinned_rows if bal]
     po_rows = {
-        po_id: (po_so_status, uom2)
-        for po_id, po_so_status, uom2 in (await db.execute(
-            select(PackingOrder.id, SalesOrder.status, PackingOrder.uom2)
+        po_id: (po_so_status, uom2, factor, factor_uom)
+        for po_id, po_so_status, uom2, factor, factor_uom in (await db.execute(
+            select(PackingOrder.id, SalesOrder.status, PackingOrder.uom2,
+                   PackingOrder.uom2_factor, PackingOrder.uom2_length_uom)
             .outerjoin(SalesOrder, SalesOrder.id == PackingOrder.sales_order_id)
             .filter(PackingOrder.id.in_({b.packing_order_id for b in batches}))
         )).all()
@@ -627,12 +638,15 @@ async def _allocation_lines(db: AsyncSession, so: SalesOrder) -> list[SOAllocati
     size_names = await packing_service.batch_size_names(db, [b.id for b in batches])
 
     def carton(b: Batch, bal, qty=None, reservation_id=None) -> SOAllocCarton:
+        _, _u, factor, factor_uom = po_rows.get(b.packing_order_id, (None, None, None, None))
         return SOAllocCarton(
             batch_id=b.id, batch_number=b.batch_number, package_no=b.package_no,
             location=loc_codes.get(bal.location_id) if bal else None,
             qty=float(qty if qty is not None else (bal.qty if bal else 0)),
             alt_qty=float(b.alt_qty) if b.alt_qty is not None else None,
-            alt_uom=(po_rows.get(b.packing_order_id, (None, None))[1] or b.alt_uom),
+            alt_uom=(_u or b.alt_uom),
+            alt_factor=float(factor) if factor else None,
+            alt_factor_uom=factor_uom if factor else None,
             # Display only — the carton's stamped size with its target and range.
             size=stock_service._bom_size_label(b.bom_size_snapshot) or size_names.get(str(b.id), (None, None))[1],
             packed_at=b.created_at, reservation_id=reservation_id,

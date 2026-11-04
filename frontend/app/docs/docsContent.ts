@@ -45,8 +45,8 @@ export const docsSidebar: DocSection[] = [
         items: [
             { slug: 'inventory', label: 'Inventory & Items', icon: 'bi-box-seam' },
             { slug: 'stock', label: 'Stock & Locations', icon: 'bi-boxes' },
-            { slug: 'bom', label: 'BOM Designer', icon: 'bi-diagram-3' },
-            { slug: 'manufacturing', label: 'Manufacturing', icon: 'bi-gear' },
+            { slug: 'bom', label: 'BOM & Routing', icon: 'bi-diagram-3' },
+            { slug: 'manufacturing', label: 'Production', icon: 'bi-gear' },
             { slug: 'quality-quarantine', label: 'Quality & Quarantine', icon: 'bi-shield-exclamation' },
             { slug: 'sales-orders', label: 'Sales Orders', icon: 'bi-cart3' },
             { slug: 'packing-dispatch', label: 'Packing & Dispatch', icon: 'bi-truck' },
@@ -60,6 +60,7 @@ export const docsSidebar: DocSection[] = [
         title: 'Administration',
         items: [
             { slug: 'settings', label: 'Settings', icon: 'bi-sliders' },
+            { slug: 'print-layouts', label: 'Print Layouts', icon: 'bi-printer' },
             { slug: 'users', label: 'User Management', icon: 'bi-people' },
             { slug: 'audit-logs', label: 'Audit Logs', icon: 'bi-clipboard-check' },
         ],
@@ -82,6 +83,7 @@ import { samplesPage } from './content/samples';
 import { dyeingSettingPage } from './content/dyeing-setting';
 import { reportsPage } from './content/reports';
 import { settingsPage } from './content/settings';
+import { printLayoutsPage } from './content/print-layouts';
 import { usersPage } from './content/users';
 import { auditLogsPage } from './content/audit-logs';
 
@@ -100,6 +102,7 @@ export const docsPages: Record<string, DocPage> = {
     'dyeing-setting': dyeingSettingPage,
     reports: reportsPage,
     settings: settingsPage,
+    'print-layouts': printLayoutsPage,
     users: usersPage,
     'audit-logs': auditLogsPage,
 };

@@ -5,6 +5,7 @@ import ModalWrapper from '../shared/ModalWrapper';
 import { useToast } from '../shared/Toast';
 import { xpBtn, XP_BTN, BTN_TONES, CODE_FONT, xpFont, CodeChip, VariantChip, XPActionButton } from '../shared/xpTheme';
 import { qtyFmt } from '../shared/format';
+import { altPerUnit } from '../shared/altUnit';
 import { API_BASE } from '../shared/apiBase';
 
 // "Allocate from stock": the planner picks named packed cartons already on hand
@@ -100,7 +101,7 @@ export default function AllocateStockModal({ so, authFetch, onClose, onDone }: {
             {label} <span style={{ fontFamily: CODE_FONT, fontWeight: strong ? 700 : 400, color: '#000' }}>{value}</span>
         </span>
     );
-    const cartonQty = (c: any) => <>{qtyFmt(2)(c.qty)}{c.alt_qty != null && <span style={{ color: '#777' }}> / {qtyFmt(2)(c.alt_qty)} {c.alt_uom || ''}</span>}</>;
+    const cartonQty = (c: any) => <>{qtyFmt(2)(c.qty)}{c.alt_qty != null && <span style={{ color: '#777' }}> / {qtyFmt(2)(c.alt_qty)} {c.alt_uom || ''}{altPerUnit(c.alt_factor, c.alt_factor_uom)}</span>}</>;
     const cartonNo = (c: any) => <><CodeChip code={c.batch_number} tier={2} />{c.package_no != null && <span style={{ color: '#777', marginLeft: 4 }}>#{c.package_no}</span>}</>;
 
     return (
