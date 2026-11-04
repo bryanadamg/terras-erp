@@ -748,6 +748,7 @@ async def get_stock_balance_paginated(
                 ManufacturingOrder.labdip_variant_code, Color.code, Color.name,
                 func.coalesce(Color.hex, attr_color_hex),
                 Batch.alt_qty, func.coalesce(Batch.alt_uom, PackingOrder.uom2),
+                PackingOrder.uom2_factor, PackingOrder.uom2_length_uom,
             ))
             .options(selectinload(StockBalance.attribute_values))
             .order_by(*order)
@@ -764,7 +765,7 @@ async def get_stock_balance_paginated(
          b_number, b_vendor_lot, b_quality, b_notes, b_snapshot, b_ends,
          mo_id, mo_code, wo_code,
          mo_labdip_code, color_code, color_name, color_hex,
-         b_alt_qty, po_uom2) in rows:
+         b_alt_qty, po_uom2, po_factor, po_length_uom) in rows:
         lotted = bool(bal.batch_key)
         notes = (b_notes or "").strip() if lotted else ""
         alt_uom = (po_uom2 or "").strip() if lotted and b_alt_qty is not None else ""
@@ -809,6 +810,10 @@ async def get_stock_balance_paginated(
             "labdip_variant_code": mo_labdip_code if lotted else None,
             "alt_qty": float(b_alt_qty) if alt_uom else None,
             "alt_uom": alt_uom or None,
+            # Length of ONE alt unit ("1 Pic = 36 yard") — per packing order, not per
+            # item, so it rides the carton's own order. Null on hand-made lots.
+            "alt_factor": float(po_factor) if alt_uom and po_factor else None,
+            "alt_factor_uom": (po_length_uom or None) if alt_uom and po_factor else None,
         })
 
     return window.envelope(

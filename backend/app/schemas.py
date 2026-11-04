@@ -1565,6 +1565,9 @@ class StockBalanceResponse(BaseModel):
     # in its packing order's uom2, or a hand-made lot's own Batch.alt_uom.
     alt_qty: float | None = None
     alt_uom: str | None = None
+    # Length of ONE alt unit off the carton's packing order ("1 Pic = 36 yard").
+    alt_factor: float | None = None
+    alt_factor_uom: str | None = None
 
 class PaginatedStockBalanceResponse(BaseModel):
     """Envelope for GET /stock/balance/paginated — the Stock On-Hand grid.

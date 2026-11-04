@@ -11,8 +11,16 @@ import ModalWrapper from '../shared/ModalWrapper';
 import Pager from '../shared/Pager';
 import TreeSelect, { buildLocationFilterTree, buildLocationPickerTree, buildCategoryTree, locationAncestorNames } from '../shared/TreeSelect';
 import { lotColorLabel } from '../shared/LotChips';
-import { formatAlt } from '../shared/altUnit';
+import { formatAlt, lengthPerAlt } from '../shared/altUnit';
 import { useRowSelection, RowCheckbox, SelectAllCheckbox, SortableTh, lvThSticky, lvZebra, Dash, ResizableTable } from '../shared/listViewTheme';
+
+// " @ 36 Yd" — what one alt unit holds, off the carton's packing order. A non-length
+// factor (`1 Box = 10 kg`) shows as quoted; hand-made lots have none.
+const altPerUnit = (bal: any): string => {
+    if (!bal.alt_factor) return '';
+    const len = lengthPerAlt({ factor: bal.alt_factor, lengthUom: bal.alt_factor_uom });
+    return ` @ ${(len?.qty ?? bal.alt_factor).toLocaleString()} ${len?.uom ?? bal.alt_factor_uom ?? ''}`.trimEnd();
+};
 
 const STOCK_PAGE_SIZE = 50;
 
@@ -793,7 +801,7 @@ export default function StockOnHandView({ locations, attributes, categories, ite
                     {Number(bal.qty).toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 3 })}
                     {/* Packed cartons carry the count in the order's selling unit. */}
                     {bal.alt_uom && bal.alt_qty != null && (
-                        <div style={{ fontSize: '10px', fontWeight: 'normal', color: '#666' }}>{formatAlt(bal.alt_qty, bal.alt_uom)}</div>
+                        <div style={{ fontSize: '10px', fontWeight: 'normal', color: '#666' }}>{formatAlt(bal.alt_qty, bal.alt_uom)}{altPerUnit(bal)}</div>
                     )}
                 </td>
                 <td className={undefined} style={{ padding: '4px 8px', fontFamily: xpFont, fontSize: '10px', color: '#666', whiteSpace: 'nowrap', ...colDivider }}>

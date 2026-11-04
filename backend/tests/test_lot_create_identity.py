@@ -91,7 +91,8 @@ def test_lot_create_with_alt_count(client, auth_headers):
 
     rows = client.get(f"/api/stock/balance/paginated?search={lot['batch_number']}",
                       headers=auth_headers).json()["items"]
-    assert [(b["alt_qty"], b["alt_uom"]) for b in rows] == [(12, "Pcs")]
+    # No packing order -> no "@ 5 Yd" per-unit length to show.
+    assert [(b["alt_qty"], b["alt_uom"], b["alt_factor"]) for b in rows] == [(12, "Pcs", None)]
 
     child = client.post(f"/api/batches/{lot['id']}/split", json={"qty": 5}, headers=auth_headers)
     assert child.status_code == 200, child.text
