@@ -4127,6 +4127,10 @@ class PickableOrderLine(BaseModel):
     item_name: str | None = None
     item_uom: str | None = None
     qty_outstanding: float = 0
+    # The same outstanding in the SO line's selling unit (6 Pic). Null when the
+    # line has no alt unit.
+    qty_outstanding_alt: float | None = None
+    alt_uom: str | None = None
     qty_ready: float = 0
     cartons_ready: int = 0
     # Ordered variant identity, resolved from this line's own stock variant key
@@ -4157,6 +4161,10 @@ class PickableOrderResponse(BaseModel):
     line_count: int = 0
     lines_outstanding: int = 0
     qty_outstanding: float = 0
+    # Outstanding in the selling unit — null when any outstanding line has no alt
+    # unit or the lines mix units (Pcs + Pic), so two unlike counts never add.
+    qty_outstanding_alt: float | None = None
+    outstanding_alt_uom: str | None = None
     # Qty covered by whole cartons available now; may overshoot qty_outstanding
     # on the last carton, since a carton is never split.
     qty_ready: float = 0

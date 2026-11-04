@@ -643,7 +643,13 @@ async def list_pickable_orders(
     out: list[PickableOrderResponse] = []
     for so in ordered:
         remaining = await _remaining_by_so_line(db, so)
+        remaining_alt = await _remaining_alt_by_so_line(db, so)
         qty_outstanding = 0.0
+        # Outstanding restated in the SO's selling unit, summed only while every
+        # outstanding line counts in the same one (same rule as the fulfilment alt).
+        out_alt = 0.0
+        out_alt_uoms: set[str] = set()
+        out_alt_ok = True
         qty_ready = 0.0
         cartons_ready = 0
         lines_outstanding = 0
@@ -654,6 +660,12 @@ async def list_pickable_orders(
                 continue
             lines_outstanding += 1
             qty_outstanding += rem
+            rem_alt, rem_alt_uom = remaining_alt.get(str(line.id), (None, None))
+            if rem_alt is None:
+                out_alt_ok = False
+            else:
+                out_alt += rem_alt
+                out_alt_uoms.add(rem_alt_uom)
             key = (str(line.item_id), _line_variant_key(line))
             pool = index.get(key)
             # Whole cartons only — the picker moves a physical box, so the last
@@ -679,6 +691,8 @@ async def list_pickable_orders(
                 item_name=it.name if it else None,
                 item_uom=it.uom if it else None,
                 qty_outstanding=round(rem, 4),
+                qty_outstanding_alt=round(rem_alt, 2) if rem_alt is not None else None,
+                alt_uom=rem_alt_uom,
                 qty_ready=round(covered, 4),
                 cartons_ready=line_cartons,
                 **_ordered_identity(line, variants),
@@ -743,6 +757,8 @@ async def list_pickable_orders(
             line_count=len(so.lines or []),
             lines_outstanding=lines_outstanding,
             qty_outstanding=round(qty_outstanding, 4),
+            qty_outstanding_alt=round(out_alt, 2) if out_alt_ok and len(out_alt_uoms) == 1 else None,
+            outstanding_alt_uom=next(iter(out_alt_uoms)) if out_alt_ok and len(out_alt_uoms) == 1 else None,
             qty_ready=round(qty_ready, 4),
             cartons_ready=cartons_ready,
             has_open_pick_list=str(so.id) in draft_so_ids,

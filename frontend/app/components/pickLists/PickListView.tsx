@@ -844,6 +844,7 @@ function SOPickerBoard({ pickableSOs, loading, tzDate, canManage, onRefresh, onP
                                                                 </span>
                                                                 <LotChips batch={l} />
                                                                 <span style={{ fontSize: 9, color: num(l.cartons_ready) > 0 ? '#0a3e0a' : '#999' }}>
+                                                                    {l.qty_outstanding_alt != null && l.alt_uom && `${num(l.qty_outstanding_alt).toLocaleString()} ${l.alt_uom} · `}
                                                                     {num(l.qty_outstanding).toLocaleString()} {l.item_uom || ''}
                                                                     {' · '}
                                                                     {l.cartons_ready} ctn ready
@@ -862,7 +863,12 @@ function SOPickerBoard({ pickableSOs, loading, tzDate, canManage, onRefresh, onP
                                                 </div>
                                             </td>
                                             <td style={{ ...td, textAlign: 'right' }}>
-                                                {num(so.qty_outstanding).toLocaleString()}
+                                                {so.qty_outstanding_alt != null && so.outstanding_alt_uom
+                                                    ? <>
+                                                        {num(so.qty_outstanding_alt).toLocaleString()} {so.outstanding_alt_uom}
+                                                        <div style={{ fontSize: 9, color: '#888' }}>{num(so.qty_outstanding).toLocaleString()} {so.base_uom || ''}</div>
+                                                    </>
+                                                    : num(so.qty_outstanding).toLocaleString()}
                                                 <div style={{ fontSize: 9, color: '#888' }}>
                                                     {so.lines_outstanding} of {so.line_count} line{so.line_count === 1 ? '' : 's'}
                                                 </div>
