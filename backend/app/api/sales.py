@@ -614,9 +614,10 @@ async def _allocation_lines(db: AsyncSession, so: SalesOrder) -> list[SOAllocati
     batches = [b for units in per_line.values() for b, _ in units] + [b for _, b, _ in pinned_rows]
     bals = [bal for units in per_line.values() for _, bal in units] + [bal for _, _, bal in pinned_rows if bal]
     po_rows = {
-        po_id: (po_so_status, uom2)
-        for po_id, po_so_status, uom2 in (await db.execute(
-            select(PackingOrder.id, SalesOrder.status, PackingOrder.uom2)
+        po_id: (po_so_status, uom2, factor, factor_uom)
+        for po_id, po_so_status, uom2, factor, factor_uom in (await db.execute(
+            select(PackingOrder.id, SalesOrder.status, PackingOrder.uom2,
+                   PackingOrder.uom2_factor, PackingOrder.uom2_length_uom)
             .outerjoin(SalesOrder, SalesOrder.id == PackingOrder.sales_order_id)
             .filter(PackingOrder.id.in_({b.packing_order_id for b in batches}))
         )).all()
@@ -627,12 +628,15 @@ async def _allocation_lines(db: AsyncSession, so: SalesOrder) -> list[SOAllocati
     size_names = await packing_service.batch_size_names(db, [b.id for b in batches])
 
     def carton(b: Batch, bal, qty=None, reservation_id=None) -> SOAllocCarton:
+        _, _u, factor, factor_uom = po_rows.get(b.packing_order_id, (None, None, None, None))
         return SOAllocCarton(
             batch_id=b.id, batch_number=b.batch_number, package_no=b.package_no,
             location=loc_codes.get(bal.location_id) if bal else None,
             qty=float(qty if qty is not None else (bal.qty if bal else 0)),
             alt_qty=float(b.alt_qty) if b.alt_qty is not None else None,
-            alt_uom=(po_rows.get(b.packing_order_id, (None, None))[1] or b.alt_uom),
+            alt_uom=(_u or b.alt_uom),
+            alt_factor=float(factor) if factor else None,
+            alt_factor_uom=factor_uom if factor else None,
             # Display only — the carton's stamped size with its target and range.
             size=stock_service._bom_size_label(b.bom_size_snapshot) or size_names.get(str(b.id), (None, None))[1],
             packed_at=b.created_at, reservation_id=reservation_id,

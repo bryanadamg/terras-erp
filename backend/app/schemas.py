@@ -2128,6 +2128,9 @@ class SOAllocCarton(BaseModel):
     qty: float = 0.0                # base uom; for a pinned carton, still held
     alt_qty: float | None = None
     alt_uom: str | None = None
+    # Length of ONE alt unit off the carton's packing order ("1 Pic = 36 yard").
+    alt_factor: float | None = None
+    alt_factor_uom: str | None = None
     size: str | None = None
     packed_at: datetime | None = None
     reservation_id: UUID | None = None  # pinned cartons only

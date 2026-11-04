@@ -165,3 +165,23 @@ def test_list_converts_a_pr_hold_through_the_lines_ordered_pair(client, auth_hea
     [row] = client.get(f"/api/sales-orders?search={so['po_number']}", headers=auth_headers).json()["items"]
     assert row["reserved_qty"] == 15
     assert row["reserved_alt"] == {"Pcs": 36}
+
+
+def test_offered_carton_states_the_length_of_one_alt_unit(client, auth_headers, async_db_session):
+    """"2 Pic @ 36 Yd" — the per-unit length rides the carton's own packing order."""
+    from sqlalchemy import select, update
+    from app.models.batch import Batch
+    from app.models.packing import PackingOrder
+
+    item, (a,) = _seed(client, auth_headers, async_db_session, [13])
+
+    async def pic_of_36_yards():
+        po_id = (await async_db_session.execute(select(Batch.packing_order_id).where(Batch.id == uuid.UUID(a)))).scalar()
+        await async_db_session.execute(update(PackingOrder).where(PackingOrder.id == po_id)
+                                       .values(uom2="Pic", uom2_factor=36, uom2_length_uom="yard"))
+        await async_db_session.execute(update(Batch).where(Batch.id == uuid.UUID(a)).values(alt_qty=2))
+        await async_db_session.commit()
+    client.portal.call(pic_of_36_yards)
+
+    [c] = _offered(client, auth_headers, _so(client, auth_headers, item, 13))["cartons"]
+    assert (c["alt_qty"], c["alt_uom"], c["alt_factor"], c["alt_factor_uom"]) == (2, "Pic", 36, "yard")
