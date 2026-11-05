@@ -71,6 +71,7 @@ export const WO_CARD_FIELDS: FieldDef[] = [
     { key: 'wo.target_end_date', label: 'Target Selesai', kind: 'date', group: 'Routing' },
     { key: 'wo.next_destination', label: 'Tujuan', kind: 'text', group: 'Routing' },
     { key: 'mo.putaway_location', label: 'Simpan di Rak', kind: 'text', group: 'Routing' },
+    { key: 'wo.notes', label: 'Catatan (WO notes)', kind: 'text', group: 'Routing' },
     { key: 'wo.recipe_status', label: 'Recipe', kind: 'text', group: 'Routing' },
 
     // Variant / spec (from the MO's attributes and the BOM)
@@ -192,6 +193,9 @@ export function resolveField(key: string, ctx: PrintContext): ResolvedField {
         }
         case 'mo.putaway_location':
             return txt(mo.planned_putaway_location_name);
+        case 'wo.notes':
+            // Typed when the WO is planned, e.g. the Beam ID on Plan Beaming.
+            return txt(String(wo.notes ?? '').trim());
         case 'wo.recipe_status':
             return wo.planned_recipe_id
                 ? { text: 'Assigned', empty: false }
