@@ -1066,30 +1066,10 @@ table {
     margin: 6mm;
   }
 
-  /* WO bulk print — hide everything except the bulk portal */
-  body.wo-bulk-print-active > *:not(.wo-bulk-print-portal) {
-    display: none !important;
-  }
-  body.wo-bulk-print-active .wo-bulk-print-portal {
-    display: block !important;
-    width: 100% !important;
-  }
+  /* Default sheet for any print that names no @page of its own. */
   @page {
     size: A4 portrait;
     margin: 8mm;
-  }
-  .wo-bulk-page-group {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    grid-template-rows: 1fr 1fr;
-    gap: 4mm;
-    break-after: page;
-    page-break-after: always;
-    height: calc(297mm - 16mm);
-  }
-  .wo-bulk-page-group:last-child {
-    break-after: auto;
-    page-break-after: auto;
   }
 
   /* Template documents (TemplatePrintPortal) — the portal alone, on a page the
