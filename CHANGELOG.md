@@ -15,6 +15,14 @@ on `main`:
 
 ## [Unreleased]
 
+## [1.2.1] - 2026-11-05
+
+### Added
+- Work cards print the work order's notes (e.g. the Beam ID typed on Plan Beaming) as a Catatan row; a customised card layout can add it from the designer as "Catatan (WO notes)"
+
+### Changed
+- Bulk printing work cards prints one work order per sheet, at the paper size set in the card's print layout, instead of four cards on an A4 page, so a roll (POS) printer gets one card per work order
+
 ## [1.2.0] - 2026-11-04
 
 ### Added

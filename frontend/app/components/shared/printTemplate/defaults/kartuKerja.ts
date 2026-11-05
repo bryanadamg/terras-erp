@@ -80,6 +80,7 @@ const BASE_IDENTITY = (productLabel: string): KeyValueRow[] => [
     { field: 'wo.status', label: 'Status', span: 1 },
     { field: 'wo.target_end_date', label: 'Target Selesai', span: 1 },
     { field: 'wo.next_destination', label: 'Tujuan', span: 3, bold: true, hideWhenEmpty: true },
+    { field: 'wo.notes', label: 'Catatan', span: 3, hideWhenEmpty: true },
 ];
 
 function buildLayout(spec: VariantSpec): PrintLayout {
@@ -198,6 +199,7 @@ export const KARTU_KERJA_WEAVING: PrintLayout = buildLayout({
         { field: 'wo.target_end_date', label: 'Target Selesai', span: 1 },
         { field: 'wo.next_destination', label: 'Tujuan', span: 3, bold: true, hideWhenEmpty: true },
         { field: 'mo.putaway_location', label: 'Simpan di Rak', span: 3, bold: true, hideWhenEmpty: true },
+        { field: 'wo.notes', label: 'Catatan', span: 3, hideWhenEmpty: true },
         { field: '__blank', label: 'Operator', span: 3, fill: true },
     ],
     tally: KANTONG_BERAT,
