@@ -3,12 +3,15 @@
 // Warp prep popup — who drew in ("rumus") or tied in ("sambungan") each beam, and
 // over how many ends. Shown after Stage/Mount on every beam about to go up, and
 // again to correct a mount afterwards. That work is paid per end, so the per-
-// operator prep report (Production Output → Warp Prep) sums what is entered here.
+// operator prep report (Production Output → Drawing-in / Tying-in) sums what is
+// entered here.
 //
-// One operator field covers both cases the floor has: pick a user account from the
-// list, or type the name of a floor worker who has no login. Only an exact match
-// to an account is pegged to it; anything else is stored as a typed name.
-import React, { useEffect, useId, useMemo, useState } from 'react';
+// The operator field is the shared Combobox over user accounts. It has no free-text
+// mode, so whatever is typed into its search is offered back as one more option —
+// "typed name, no account" — for a floor worker who has no login. Such a pick is
+// valued `name:<text>`; any other value is an account id.
+import React, { useEffect, useState } from 'react';
+import SearchableSelect, { ComboboxOption } from '@bryanadamg/terras-ui/components/Combobox';
 import ModalWrapper from '../shared/ModalWrapper';
 import { useData } from '../../context/DataContext';
 import { useLanguage } from '../../context/LanguageContext';
@@ -40,27 +43,28 @@ export interface BeamPrepBeam {
 
 interface Operator { id: string; username: string; full_name: string | null }
 
-interface Row { operator: string; prep_type: BeamPrepType | ''; ends: string }
+/** `operator`: an account id, `name:<typed text>`, or '' for none yet. */
+interface Row { operator: string; term: string; prep_type: BeamPrepType | ''; ends: string }
 
 interface Props {
     beams: BeamPrepBeam[];
     onClose: () => void;
-    /** Resolves when the mount/correction went through; the modal closes itself. */
+    /** Resolves false when the mount/correction failed, keeping the popup open. */
     onConfirm: (prepByBatch: Record<string, BeamPrep>) => Promise<boolean | void> | boolean | void;
     submitLabel?: string;
 }
 
-const opLabel = (o: Operator) => (o.full_name ? `${o.full_name} (${o.username})` : o.username);
+const TYPED = 'name:';
 
 export default function BeamPrepModal({ beams, onClose, onConfirm, submitLabel }: Props) {
     const { authFetch } = useData() as any;
     const { t } = useLanguage();
     const { showToast } = useToast();
-    const listId = useId();
     const [operators, setOperators] = useState<Operator[]>([]);
     const [submitting, setSubmitting] = useState(false);
     const [rows, setRows] = useState<Record<string, Row>>(() => Object.fromEntries(beams.map(b => [b.batch_id, {
-        operator: b.prep?.operator || '',
+        operator: b.prep?.operator_user_id || (b.prep?.operator ? `${TYPED}${b.prep.operator}` : ''),
+        term: '',
         prep_type: (b.prep?.prep_type as BeamPrepType) || '',
         ends: String(b.prep?.ends ?? b.ends ?? ''),
     }])));
@@ -72,37 +76,20 @@ export default function BeamPrepModal({ beams, onClose, onConfirm, submitLabel }
             .catch(() => setOperators([]));
     }, [authFetch]);
 
-    // Typed text → account. The datalist offers "Full Name (username)", but a
-    // supervisor may also type just the username or the full name; a name two
-    // accounts share stays a typed name rather than a guess.
-    const accountFor = useMemo(() => {
-        const byKey = new Map<string, Operator | null>();
-        const put = (k: string | null, o: Operator) => {
-            if (!k) return;
-            const key = k.trim().toLowerCase();
-            byKey.set(key, byKey.has(key) && byKey.get(key)?.id !== o.id ? null : o);
-        };
-        operators.forEach(o => { put(opLabel(o), o); put(o.username, o); put(o.full_name, o); });
-        return (text: string) => byKey.get(text.trim().toLowerCase()) || null;
-    }, [operators]);
+    const accountOptions: ComboboxOption[] = operators.map(o => ({
+        value: o.id, label: o.full_name || o.username, subLabel: o.username,
+    }));
 
-    // A correction opens on the account's id, which may predate the list loading.
-    useEffect(() => {
-        if (!operators.length) return;
-        setRows(prev => {
-            const next = { ...prev };
-            let changed = false;
-            beams.forEach(b => {
-                const id = b.prep?.operator_user_id;
-                const o = id ? operators.find(x => x.id === id) : null;
-                if (o && next[b.batch_id] && !accountFor(next[b.batch_id].operator)) {
-                    next[b.batch_id] = { ...next[b.batch_id], operator: opLabel(o) };
-                    changed = true;
-                }
-            });
-            return changed ? next : prev;
-        });
-    }, [operators, beams, accountFor]);
+    // Accounts, plus the typed name being searched for and the one already picked.
+    const optionsFor = (r: Row): ComboboxOption[] => {
+        const typed = new Set<string>();
+        if (r.term.trim()) typed.add(r.term.trim());
+        if (r.operator.startsWith(TYPED)) typed.add(r.operator.slice(TYPED.length));
+        const extra = [...typed]
+            .filter(name => !accountOptions.some(o => o.label.toLowerCase() === name.toLowerCase()))
+            .map(name => ({ value: `${TYPED}${name}`, label: name, subLabel: t('beam_prep_no_account') }));
+        return [...extra, ...accountOptions];
+    };
 
     const set = (id: string, patch: Partial<Row>) => setRows(prev => ({ ...prev, [id]: { ...prev[id], ...patch } }));
 
@@ -111,18 +98,17 @@ export default function BeamPrepModal({ beams, onClose, onConfirm, submitLabel }
         for (const b of beams) {
             const r = rows[b.batch_id];
             const name = b.beam_number || '';
-            if (!r.operator.trim()) { showToast(t('beam_prep_need_operator').replace('{beam}', name), 'danger'); return; }
+            if (!r.operator) { showToast(t('beam_prep_need_operator').replace('{beam}', name), 'danger'); return; }
             if (!r.prep_type) { showToast(t('beam_prep_need_type').replace('{beam}', name), 'danger'); return; }
             const ends = parseInt(r.ends, 10);
             if (!ends || ends <= 0) { showToast(t('beam_prep_need_ends').replace('{beam}', name), 'danger'); return; }
-            const acct = accountFor(r.operator);
+            const typed = r.operator.startsWith(TYPED);
             out[b.batch_id] = {
                 prep_type: r.prep_type,
                 ends,
-                operator_user_id: acct?.id || null,
-                // The account's name is the snapshot when one matched; the typed
-                // text otherwise — the only identity a worker without a login has.
-                operator: acct ? (acct.full_name || acct.username) : r.operator.trim(),
+                operator_user_id: typed ? null : r.operator,
+                // Blank for an account: the backend snapshots the account's name.
+                operator: typed ? r.operator.slice(TYPED.length) : null,
             };
         }
         setSubmitting(true);
@@ -150,6 +136,7 @@ export default function BeamPrepModal({ beams, onClose, onConfirm, submitLabel }
     return (
         <ModalWrapper
             isOpen
+            modeless
             level={2}
             onClose={onClose}
             title={t('beam_prep_title')}
@@ -165,9 +152,6 @@ export default function BeamPrepModal({ beams, onClose, onConfirm, submitLabel }
         >
             <div style={{ fontFamily: xpFont, fontSize: 11 }}>
                 <div style={{ color: '#555', marginBottom: 8 }}>{t('beam_prep_hint')}</div>
-                <datalist id={listId}>
-                    {operators.map(o => <option key={o.id} value={opLabel(o)} />)}
-                </datalist>
                 <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                     <thead>
                         <tr style={{ background: '#d4d0c8' }}>
@@ -180,24 +164,19 @@ export default function BeamPrepModal({ beams, onClose, onConfirm, submitLabel }
                     <tbody>
                         {beams.map(b => {
                             const r = rows[b.batch_id];
-                            const acct = r.operator.trim() ? accountFor(r.operator) : null;
                             return (
                                 <tr key={b.batch_id}>
                                     <td style={{ ...lvTd(), fontWeight: 'bold', whiteSpace: 'nowrap' }}>{b.beam_number || '—'}</td>
-                                    <td style={lvTd()}>
-                                        <input
-                                            list={listId}
+                                    <td style={{ ...lvTd(), minWidth: 230 }}>
+                                        <SearchableSelect
+                                            options={optionsFor(r)}
                                             value={r.operator}
-                                            onChange={e => set(b.batch_id, { operator: e.target.value })}
+                                            onChange={v => set(b.batch_id, { operator: v })}
+                                            // '' arrives on close; keep the last term so a typed
+                                            // pick stays in the list behind the trigger.
+                                            onSearch={term => { if (term) set(b.batch_id, { term }); }}
                                             placeholder={t('beam_prep_operator_ph')}
-                                            style={xpInput({ width: 220 })}
-                                            autoFocus={b === beams[0]}
                                         />
-                                        {r.operator.trim() && (
-                                            <div style={{ fontSize: 9, color: acct ? '#1a5e1a' : '#8a5a00' }}>
-                                                {acct ? t('beam_prep_has_account') : t('beam_prep_no_account')}
-                                            </div>
-                                        )}
                                     </td>
                                     <td style={{ ...lvTd(), whiteSpace: 'nowrap' }}>
                                         <div style={{ display: 'flex', gap: 4 }}>
