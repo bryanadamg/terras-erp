@@ -10,6 +10,7 @@ import { LotChips, LotChip } from '../shared/LotChips';
 import { CodeChip, xpFont, xpInput as xpInputBase, xpBtn as xpBtnBase, BTN_TONES, XP_BTN } from '../shared/xpTheme';
 import type { StagedLot } from './WOStagingModal';
 import { API_BASE } from '../shared/apiBase';
+import BeamPrepModal, { BeamPrep } from './BeamPrepModal';
 
 const xpInput: React.CSSProperties = xpInputBase({ fontSize: 13, height: 28, padding: '0 6px', width: '100%', boxSizing: 'border-box' });
 const xpBtn = (primary?: boolean): React.CSSProperties => xpBtnBase(primary ? { ...BTN_TONES.success, padding: '2px 14px' } : {});
@@ -103,7 +104,8 @@ export default function BagScanStageModal({ wo, onClose, onStaged, onManualMode 
     const [scanValue, setScanValue] = useState('');
     const [cameraOn, setCameraOn] = useState(false);
     const [submitting, setSubmitting] = useState(false);
-    const [labelLots, setLabelLots] = useState<any[] | null>(null);  // leftover lots to relabel after a split
+    const [labelLots, setLabelLots] = useState<any[] | null>(null);
+    const [prepOpen, setPrepOpen] = useState(false);   // drawing-in / tying-in popup for the beams in the cart  // leftover lots to relabel after a split
 
     const inputRef = useRef<HTMLInputElement | null>(null);
     const recentRef = useRef<Record<string, number>>({});   // code -> last-seen ms, debounce repeats
@@ -262,19 +264,23 @@ export default function BagScanStageModal({ wo, onClose, onStaged, onManualMode 
         setStageQtys(prev => { const n = { ...prev }; delete n[id]; return n; });
     };
 
-    const submit = async () => {
-        if (!cart.length) { showToast('Scan at least one lot first', 'danger'); return; }
+    // `prepByBatch` arrives from the drawing-in / tying-in popup: a cart with beams
+    // opens it first, and only its Save sends the mount.
+    const submit = async (prepByBatch?: Record<string, BeamPrep>): Promise<boolean> => {
+        if (!cart.length) { showToast('Scan at least one lot first', 'danger'); return false; }
 
         // Validate each BAG's stage qty (0 < qty <= remaining). Beams carry no qty.
         for (const b of bagCart) {
             const rem = Number(b.remaining || 0);
             const q = stagedOf(b);
-            if (q <= 0) { showToast(`${b.batch_number}: stage qty must be positive`, 'warning'); return; }
-            if (q > rem + 1e-6) { showToast(`${b.batch_number}: stage qty exceeds ${rem.toFixed(2)} kg`, 'warning'); return; }
+            if (q <= 0) { showToast(`${b.batch_number}: stage qty must be positive`, 'warning'); return false; }
+            if (q > rem + 1e-6) { showToast(`${b.batch_number}: stage qty exceeds ${rem.toFixed(2)} kg`, 'warning'); return false; }
         }
 
         const missingSrc = bagCart.find(b => !(b.location_id || reqByItem[String(b.item_id)]?.source_location_id));
-        if (missingSrc) { showToast(`${missingSrc.batch_number || 'A lot'} has no source location`, 'danger'); return; }
+        if (missingSrc) { showToast(`${missingSrc.batch_number || 'A lot'} has no source location`, 'danger'); return false; }
+
+        if (beamCart.length && !prepByBatch) { setPrepOpen(true); return false; }
 
         setSubmitting(true);
         try {
@@ -295,7 +301,7 @@ export default function BagScanStageModal({ wo, onClose, onStaged, onManualMode 
                     if (!res.ok) {
                         const err = await res.json().catch(() => null);
                         showToast(`Split failed for ${b.batch_number}: ${err?.detail || ''}`, 'danger');
-                        return;
+                        return false;
                     }
                     leftovers.push(await res.json());
                 }
@@ -312,6 +318,7 @@ export default function BagScanStageModal({ wo, onClose, onStaged, onManualMode 
                     source_location_id: b.location_id || rr?.source_location_id || null,
                     batch_id: b.id,
                     attribute_value_ids: rr?.attribute_value_ids || [],
+                    ...(rr?.is_beam && prepByBatch?.[b.id] ? { prep: prepByBatch[b.id] } : {}),
                 };
             });
             const res = await authFetch(`${API_BASE}/work-orders/${wo.id}/stage`, {
@@ -322,7 +329,7 @@ export default function BagScanStageModal({ wo, onClose, onStaged, onManualMode 
             if (!res.ok) {
                 const err = await res.json().catch(() => null);
                 showToast(err?.detail || 'Staging failed', 'danger');
-                return;
+                return false;
             }
             const updated = await res.json().catch(() => null);
             const parts: string[] = [];
@@ -333,6 +340,7 @@ export default function BagScanStageModal({ wo, onClose, onStaged, onManualMode 
             // Relabel any leftover bags before closing; else close straight away.
             if (leftovers.length) setLabelLots(leftovers);
             else onClose();
+            return true;
         } finally {
             setSubmitting(false);
         }
@@ -359,7 +367,7 @@ export default function BagScanStageModal({ wo, onClose, onStaged, onManualMode 
             footer={
                 <>
                     <button className={XP_BTN} style={xpBtn(false)} onClick={onClose} disabled={submitting}>Cancel</button>
-                    <button className={XP_BTN} style={xpBtn(true)} onClick={submit} disabled={submitting || loading || cart.length === 0}>
+                    <button className={XP_BTN} style={xpBtn(true)} onClick={() => submit()} disabled={submitting || loading || cart.length === 0}>
                         {submitting ? 'Staging...' : submitLabel}
                     </button>
                 </>
@@ -596,6 +604,14 @@ export default function BagScanStageModal({ wo, onClose, onStaged, onManualMode 
             </div>
         </ModalWrapper>
 
+        {prepOpen && (
+            <BeamPrepModal
+                beams={beamCart.map(b => ({ batch_id: b.id, beam_number: b.batch_number, ends: b.ends }))}
+                submitLabel={submitLabel}
+                onClose={() => setPrepOpen(false)}
+                onConfirm={byBatch => submit(byBatch)}
+            />
+        )}
         {labelLots && (
             <LotLabelPrintModal
                 lots={labelLots}
