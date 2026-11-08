@@ -20,7 +20,7 @@ how much of it was scrapped?" from the completion logs. Invariants:
   query keyed on `COALESCE(...work_center_id)`. Same columns, different source.
 """
 import uuid
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Optional
 
 from fastapi import APIRouter, Depends, Query
@@ -30,7 +30,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.session import get_async_db
 from app.models.auth import User
-from app.models.batch import Batch
+from app.models.batch import Batch, BeamMount
 from app.models.item import Item
 from app.models.location import Location
 from app.models.manufacturing import ManufacturingOrder, MOCompletion
@@ -921,6 +921,143 @@ async def _packing_operator_report(
         "start_date": _iso(start_date),
         "end_date": _iso(end_date),
         "status": statuses,
+        "rows": rows,
+        "totals": totals,
+    }
+
+
+def _beam_prep_rows(rows_raw) -> tuple[list[dict], dict]:
+    """Group warp-prep mounts onto the operator who did them, ends split by type.
+
+    Identity is the account (`prep_operator_user_id`); a mount by a floor worker
+    with no login keys on the typed name under `name:` and is flagged
+    `has_account=False` — same rule as the per-packer report, so a supervisor sees
+    which ends rest on a typed name.
+    """
+    def _ends() -> dict:
+        return {"draw_in_ends": 0, "tying_in_ends": 0, "total_ends": 0,
+                "draw_in_beams": 0, "tying_in_beams": 0, "beams": 0}
+
+    def _add(b: dict, kind: str, ends: int) -> None:
+        tag = "draw_in" if kind == "DRAW_IN" else "tying_in"
+        b[f"{tag}_ends"] += ends
+        b[f"{tag}_beams"] += 1
+        b["total_ends"] += ends
+        b["beams"] += 1
+
+    ops: dict[str, dict] = {}
+    for r in rows_raw:
+        if r.user_id:
+            key = str(r.user_id)
+            name = r.full_name or r.username or r.operator_text or "(unknown)"
+        else:
+            typed = (r.operator_text or "").strip()
+            key = f"name:{typed.lower()}"
+            name = typed or "(unattributed)"
+        op = ops.get(key)
+        if op is None:
+            op = ops[key] = {
+                "operator_key": key,
+                "operator_user_id": str(r.user_id) if r.user_id else None,
+                "operator_name": name,
+                "username": r.username,
+                "has_account": bool(r.user_id),
+                "days": {}, "mounts": [], "last_log": None,
+                **_ends(),
+            }
+        ends = int(r.ends or 0)
+        stamp = _iso(r.mounted_at)
+        day = r.mounted_at.date().isoformat() if r.mounted_at else "-"
+        _add(op, r.prep_type, ends)
+        d = op["days"].get(day)
+        if d is None:
+            d = op["days"][day] = {"date": day, **_ends()}
+        _add(d, r.prep_type, ends)
+        if stamp and (op["last_log"] or "") < stamp:
+            op["last_log"] = stamp
+        op["mounts"].append({
+            "mount_id": str(r.mount_id),
+            "beam_number": r.beam_number,
+            "item_code": r.item_code,
+            "work_center_code": r.wc_code,
+            "wo_code": r.wo_code,
+            "prep_type": r.prep_type,
+            "ends": ends,
+            "mounted_at": stamp,
+            "mounted_by": r.mounted_by,
+        })
+
+    rows = []
+    for op in ops.values():
+        # Ascending: a pay period is read oldest day first.
+        op["days"] = sorted(op["days"].values(), key=lambda x: x["date"])
+        op["days_active"] = len(op["days"])
+        rows.append(op)
+    rows.sort(key=lambda x: -x["total_ends"])
+
+    totals = _ends()
+    for op in rows:
+        for k in totals:
+            totals[k] += op[k]
+    totals["operator_count"] = len(rows)
+    totals["unattributed_count"] = sum(1 for x in rows if not x["has_account"])
+    return rows, totals
+
+
+@router.get("/reports/beam-prep-output")
+async def beam_prep_output_report(
+    start_date: Optional[datetime] = Query(None),
+    end_date: Optional[datetime] = Query(None),
+    db: AsyncSession = Depends(get_async_db),
+    current_user: User = Depends(require_permission("production_output.view")),
+):
+    """Warp prep per operator — ends drawn in ("rumus") and tied in ("sambungan").
+
+    Read off `BeamMount.prep_*`, stamped when each beam was mounted: one person per
+    beam, paid per end, so this is the per-head figure payroll reads. Dated by the
+    mount, since prep is finished by the time the beam goes up. Mounts made before
+    prep was recorded carry no prep and are left out.
+    """
+    # mounted_at is timestamptz; a bare date from the picker is read as UTC, the
+    # same clock the naive-timestamp reports filter on.
+    def _aware(dt: Optional[datetime]) -> Optional[datetime]:
+        return dt.replace(tzinfo=timezone.utc) if dt and dt.tzinfo is None else dt
+
+    conds = [BeamMount.prep_type.isnot(None)]
+    if start_date:
+        conds.append(BeamMount.mounted_at >= _aware(start_date))
+    if end_date:
+        conds.append(BeamMount.mounted_at <= _aware(end_date))
+
+    rows_raw = (await db.execute(
+        select(
+            BeamMount.id.label("mount_id"),
+            BeamMount.prep_type.label("prep_type"),
+            BeamMount.prep_ends.label("ends"),
+            BeamMount.prep_operator_user_id.label("user_id"),
+            BeamMount.prep_operator.label("operator_text"),
+            BeamMount.mounted_at.label("mounted_at"),
+            BeamMount.mounted_by.label("mounted_by"),
+            User.username.label("username"),
+            User.full_name.label("full_name"),
+            Batch.batch_number.label("beam_number"),
+            Item.code.label("item_code"),
+            func.coalesce(WorkCenter.code, WorkCenter.name).label("wc_code"),
+            WorkOrder.code.label("wo_code"),
+        )
+        .outerjoin(User, BeamMount.prep_operator_user_id == User.id)
+        .outerjoin(Batch, BeamMount.batch_id == Batch.id)
+        .outerjoin(Item, BeamMount.item_id == Item.id)
+        .outerjoin(WorkCenter, BeamMount.work_center_id == WorkCenter.id)
+        .outerjoin(WorkOrder, BeamMount.source_wo_id == WorkOrder.id)
+        .where(and_(*conds))
+        .order_by(BeamMount.mounted_at.desc())
+    )).all()
+
+    rows, totals = _beam_prep_rows(rows_raw)
+    return {
+        "start_date": _iso(start_date),
+        "end_date": _iso(end_date),
         "rows": rows,
         "totals": totals,
     }
