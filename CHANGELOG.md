@@ -15,6 +15,13 @@ on `main`:
 
 ## [Unreleased]
 
+## [1.2.2] - 2026-11-08
+
+### Added
+- Mounting a warp beam — from Stage on a weaving work order, Scan, or the loom's beam tab — asks who drew it in (Rumus) or tied it in (Sambungan) and over how many ends; the operator is picked from user accounts, or typed as a name for floor workers without a login
+- The loom's beam list shows each mounted beam's drawing-in / tying-in record, with an Edit link for a supervisor to correct it
+- A Drawing-in / Tying-in view in the Production Output report: ends per operator split by type, with a by-day breakdown and the beams behind it, exportable to Excel
+
 ## [1.2.1] - 2026-11-05
 
 ### Added
