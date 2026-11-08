@@ -16,6 +16,9 @@
 //   operator       — per packer, from `PackingCompletion.operator_user_id` (the
 //                    account that logged it, not the typed name), expanding to a
 //                    per-day breakdown: the per-head output figure.
+// and a third source (`/reports/beam-prep-output`):
+//   prep           — per drawing-in / tying-in operator, ends split by type, read
+//                    off the prep record stamped on every beam mount (paid per end).
 //
 // Every row carries its reject events (reason, operator, defect store), so the
 // expanded panel answers "what was rejected and where did it go" in one place.
@@ -57,7 +60,7 @@ const uomOf = (row: any): string => {
 // red rather than leaving it to the reader to spot in a column of numbers.
 const REJECT_ALERT_PCT = 5;
 
-type Mode = 'machine' | 'group' | 'wo' | 'packing' | 'operator';
+type Mode = 'machine' | 'group' | 'wo' | 'packing' | 'operator' | 'prep';
 
 interface ReportColumn {
     key: string;
@@ -105,6 +108,7 @@ export default function MachineOutputReportView() {
     const isWoMode = mode === 'wo';
     const isPacking = mode === 'packing';
     const isOperator = mode === 'operator';
+    const isPrep = mode === 'prep';
     // Both grains come off /reports/packing-output, so anything that depends on the
     // SOURCE (no work centre to scope by, no lot on a reject) tests this, and only
     // the column/row shape tests isPacking vs isOperator.
@@ -121,7 +125,9 @@ export default function MachineOutputReportView() {
             if (endDate) p.set('end_date', `${endDate}T23:59:59`);
 
             let url: string;
-            if (isPackingSource) {
+            if (isPrep) {
+                url = `${API_BASE}/reports/beam-prep-output?${p.toString()}`;
+            } else if (isPackingSource) {
                 // Packing is its own source — no work-centre scope applies to it.
                 if (isOperator) p.set('group_by', 'operator');
                 url = `${API_BASE}/reports/packing-output?${p.toString()}`;
@@ -146,7 +152,7 @@ export default function MachineOutputReportView() {
         } finally {
             setLoading(false);
         }
-    }, [API_BASE, authFetch, startDate, endDate, scope, mode, isPackingSource, isOperator, hideIdle, completedOnly]);
+    }, [API_BASE, authFetch, startDate, endDate, scope, mode, isPackingSource, isOperator, isPrep, hideIdle, completedOnly]);
 
     useEffect(() => { fetchReport(); }, [fetchReport]);
     // A logged completion, reject or WO status change broadcasts 'production' — reload
@@ -191,19 +197,19 @@ export default function MachineOutputReportView() {
     // "Rejects only" is a client-side cut of the loaded rows, not another request —
     // the reject events already ship with every row.
     const visibleRows = useMemo(
-        () => (rejectsOnly ? rows.filter((r: any) => (r.qty_rejected || 0) > 0) : rows),
-        [rows, rejectsOnly],
+        () => (rejectsOnly && !isPrep ? rows.filter((r: any) => (r.qty_rejected || 0) > 0) : rows),
+        [rows, rejectsOnly, isPrep],
     );
 
     const rowKey = useCallback((r: any): string => {
-        if (isOperator) return String(r.operator_key);
+        if (isOperator || isPrep) return String(r.operator_key);
         if (isPacking) return String(r.packing_order_id);
         if (isWoMode) return String(r.work_order_id || `${r.work_center_id}:${r.mo_code}`);
         return String(r.work_center_id);
-    }, [isOperator, isPacking, isWoMode]);
+    }, [isOperator, isPrep, isPacking, isWoMode]);
 
     const sortCols = useMemo(() => ({
-        name:      (r: any) => (isOperator ? r.operator_name : isPacking ? r.po_code : isWoMode ? (r.wo_code || r.mo_code || '') : r.work_center_name) || '',
+        name:      (r: any) => (isOperator || isPrep ? r.operator_name : isPacking ? r.po_code : isWoMode ? (r.wo_code || r.mo_code || '') : r.work_center_name) || '',
         cartons:   (r: any) => r.cartons || 0,
         days:      (r: any) => r.days_active || 0,
         perDay:    (r: any) => (r.qty_per_day ?? -1),
@@ -219,7 +225,11 @@ export default function MachineOutputReportView() {
         wos:       (r: any) => r.wo_count || 0,
         logs:      (r: any) => r.logs || 0,
         last:      (r: any) => r.last_log || '',
-    }), [isOperator, isPacking, isWoMode]);
+        drawIn:    (r: any) => r.draw_in_ends || 0,
+        tyingIn:   (r: any) => r.tying_in_ends || 0,
+        totalEnds: (r: any) => r.total_ends || 0,
+        beams:     (r: any) => r.beams || 0,
+    }), [isOperator, isPrep, isPacking, isWoMode]);
     const { sorted, sort, toggle } = useSortable(visibleRows, sortCols);
 
     const applyPreset = (kind: 'today' | 'yesterday' | '7d' | '30d' | 'month') => {
@@ -299,6 +309,44 @@ export default function MachineOutputReportView() {
             key: 'last', label: 'Last log', sortKey: 'last',
             render: r => lastLogCell(r), xlsx: r => r.last_log || '',
         };
+
+        if (isPrep) {
+            const endsCell = (ends: number, beams: number) => (
+                <>
+                    <span style={{ fontWeight: 'bold', color: ends ? '#1a5e1a' : '#aaa' }}>{(ends || 0).toLocaleString()}</span>
+                    <span style={{ fontSize: 10, color: '#888', marginLeft: 3 }}>({beams || 0})</span>
+                </>
+            );
+            return [
+                {
+                    key: 'name', label: t('operator'), sortKey: 'name',
+                    render: r => twoLine(r.operator_name, r.has_account ? (r.username || '') : t('beam_prep_no_account')),
+                    xlsx: r => r.operator_name || '',
+                },
+                {
+                    key: 'drawIn', label: `${t('prep_draw_in')} — ${t('ends')} (beams)`, sortKey: 'drawIn', align: 'right',
+                    render: r => endsCell(r.draw_in_ends, r.draw_in_beams), xlsx: r => r.draw_in_ends ?? 0,
+                },
+                {
+                    key: 'tyingIn', label: `${t('prep_tying_in')} — ${t('ends')} (beams)`, sortKey: 'tyingIn', align: 'right',
+                    render: r => endsCell(r.tying_in_ends, r.tying_in_beams), xlsx: r => r.tying_in_ends ?? 0,
+                },
+                {
+                    key: 'totalEnds', label: `Total ${t('ends')}`, sortKey: 'totalEnds', align: 'right',
+                    render: r => <span style={{ fontWeight: 'bold' }}>{(r.total_ends || 0).toLocaleString()}</span>,
+                    xlsx: r => r.total_ends ?? 0,
+                },
+                {
+                    key: 'beams', label: 'Beams', sortKey: 'beams', align: 'right',
+                    render: r => r.beams || 0, xlsx: r => r.beams ?? 0,
+                },
+                {
+                    key: 'days', label: 'Days', sortKey: 'days', align: 'right',
+                    render: r => r.days_active || 0, xlsx: r => r.days_active ?? 0,
+                },
+                { ...lastLog, label: 'Last mount' },
+            ];
+        }
 
         if (isOperator) {
             return [
@@ -449,14 +497,14 @@ export default function MachineOutputReportView() {
             },
             lastLog,
         ];
-    }, [isOperator, isPacking, isWoMode, isGroupMode, maxOutput, true, tzDate, tzTime]);
+    }, [isOperator, isPrep, isPacking, isWoMode, isGroupMode, maxOutput, true, tzDate, tzTime, t]);
 
     // Excel of exactly what's on screen: the server only renders these rows, so the
     // file can't drift from the grid's per-grouping columns.
     const [exporting, setExporting] = useState(false);
     const exportExcel = async () => {
         const cols = columns.filter(c => c.key !== 'share');
-        const name = isOperator ? 'packing-operator' : isPacking ? 'packing' : mode;
+        const name = isPrep ? 'warp-prep' : isOperator ? 'packing-operator' : isPacking ? 'packing' : mode;
         setExporting(true);
         try {
             const res = await authFetch(`${API_BASE}/reports/production-output/export`, {
@@ -488,6 +536,71 @@ export default function MachineOutputReportView() {
                 </div>
             </div>
         );
+
+        if (isPrep) {
+            const prepLabel = (k: string) => t(k === 'DRAW_IN' ? 'prep_draw_in' : 'prep_tying_in');
+            // The payroll grain: ends this operator prepared on each day of the window.
+            const prepDays = (
+                <table style={{ ...lvSubTable(), border: 'none' }}>
+                    <thead><tr>
+                        <th style={dth}>Day</th>
+                        <th style={{ ...dth, textAlign: 'right' }}>{t('prep_draw_in')}</th>
+                        <th style={{ ...dth, textAlign: 'right' }}>{t('prep_tying_in')}</th>
+                        <th style={{ ...dth, textAlign: 'right' }}>Total {t('ends')}</th>
+                        <th style={{ ...dth, textAlign: 'right' }}>Beams</th>
+                    </tr></thead>
+                    <tbody>
+                        {(r.days || []).map((d: any) => (
+                            <tr key={d.date}>
+                                <td style={{ ...dtd, fontWeight: 'bold' }}>{d.date}</td>
+                                <td style={{ ...dtd, textAlign: 'right' }}>{(d.draw_in_ends || 0).toLocaleString()}</td>
+                                <td style={{ ...dtd, textAlign: 'right' }}>{(d.tying_in_ends || 0).toLocaleString()}</td>
+                                <td style={{ ...dtd, textAlign: 'right', fontWeight: 'bold' }}>{(d.total_ends || 0).toLocaleString()}</td>
+                                <td style={{ ...dtd, textAlign: 'right' }}>{d.beams}</td>
+                            </tr>
+                        ))}
+                    </tbody>
+                </table>
+            );
+            const prepMounts = (
+                <table style={{ ...lvSubTable(), border: 'none' }}>
+                    <thead><tr>
+                        <th style={dth}>When</th>
+                        <th style={dth}>{t('beam')}</th>
+                        <th style={dth}>Loom</th>
+                        <th style={dth}>Work Order</th>
+                        <th style={dth}>{t('beam_prep_type')}</th>
+                        <th style={{ ...dth, textAlign: 'right' }}>{t('ends')}</th>
+                        <th style={dth}>By</th>
+                    </tr></thead>
+                    <tbody>
+                        {(r.mounts || []).map((m: any) => (
+                            <tr key={m.mount_id}>
+                                <td style={dtd}>
+                                    <div>{m.mounted_at ? tzDate(m.mounted_at) : '—'}</div>
+                                    <div style={{ fontSize: 9, color: '#777' }}>{m.mounted_at ? tzTime(m.mounted_at) : ''}</div>
+                                </td>
+                                <td style={dtd}>
+                                    <div style={{ fontWeight: 'bold' }}>{m.beam_number || '—'}</div>
+                                    <div style={{ fontSize: 9, color: '#777' }}>{m.item_code || ''}</div>
+                                </td>
+                                <td style={dtd}>{m.work_center_code || <Dash />}</td>
+                                <td style={dtd}>{m.wo_code || <Dash />}</td>
+                                <td style={dtd}>{prepLabel(m.prep_type)}</td>
+                                <td style={{ ...dtd, textAlign: 'right', fontWeight: 'bold' }}>{(m.ends || 0).toLocaleString()}</td>
+                                <td style={dtd}>{m.mounted_by || <Dash />}</td>
+                            </tr>
+                        ))}
+                    </tbody>
+                </table>
+            );
+            return (
+                <ExpandedRowPanel style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+                    {block(`By day (${(r.days || []).length})`, prepDays)}
+                    {block(`Beams (${(r.mounts || []).length})`, prepMounts)}
+                </ExpandedRowPanel>
+            );
+        }
 
         const itemsTable = (
             <table style={{ ...lvSubTable(), border: 'none' }}>
@@ -716,9 +829,10 @@ export default function MachineOutputReportView() {
         );
     };
 
-    const emptyIcon = isOperator ? 'bi-person-badge' : isPacking ? 'bi-box-seam' : isWoMode ? 'bi-card-checklist' : 'bi-cpu';
+    const emptyIcon = isPrep ? 'bi-person-gear' : isOperator ? 'bi-person-badge' : isPacking ? 'bi-box-seam' : isWoMode ? 'bi-card-checklist' : 'bi-cpu';
     const emptyMessage = rows.length === 0
-        ? (isOperator ? 'No packing logged by anyone in this period'
+        ? (isPrep ? 'No beams mounted with drawing-in / tying-in recorded in this period'
+            : isOperator ? 'No packing logged by anyone in this period'
             : isPacking ? 'No packing logged in this period'
             : isWoMode ? 'No work order output in this period'
             : hideIdle ? 'No production logged in this period' : 'No machines in scope')
@@ -730,6 +844,7 @@ export default function MachineOutputReportView() {
         { value: 'wo', label: 'Per Work Order' },
         { value: 'packing', label: 'Packing' },
         { value: 'operator', label: 'Per Packer' },
+        { value: 'prep', label: t('beam_prep_title') },
     ];
 
     // Same preset row in both themes — one list, rendered by SegmentedBar.
@@ -739,6 +854,22 @@ export default function MachineOutputReportView() {
 
     // Summary tiles — mode-aware, reject % always present since that is the ask.
     const statTiles = useMemo(() => {
+        if (isPrep) {
+            const n = (v: number) => (v || 0).toLocaleString();
+            return [
+                { label: t('prep_draw_in'), value: n(totals.draw_in_ends), color: '#1a5e1a', cls: 'text-success' },
+                { label: t('prep_tying_in'), value: n(totals.tying_in_ends), color: '#1a5e1a', cls: 'text-success' },
+                { label: `Total ${t('ends')}`, value: n(totals.total_ends), color: '#1a3d7a', cls: 'text-primary' },
+                { label: 'Beams', value: n(totals.beams), color: '#1a3d7a', cls: 'text-primary' },
+                { label: t('operator'), value: String(totals.operator_count || 0), color: '#4a2a7a', cls: 'text-dark' },
+                {
+                    label: 'No account',
+                    value: String(totals.unattributed_count || 0),
+                    color: totals.unattributed_count ? '#c00000' : '#777',
+                    cls: totals.unattributed_count ? 'text-danger' : 'text-muted',
+                },
+            ];
+        }
         const base = [
             { label: 'Output', value: fmtQty(totals.qty_good || 0), color: '#1a5e1a', cls: 'text-success' },
             { label: 'QC Reject', value: fmtQty(totals.qty_rejected || 0), color: '#c00000', cls: 'text-danger' },
@@ -775,7 +906,7 @@ export default function MachineOutputReportView() {
                 ? [{ label: 'Machines', value: `${totals.active_machine_count || 0}/${totals.machine_count || 0}`, color: '#4a2a7a', cls: 'text-dark' }]
                 : [{ label: 'Reject events', value: String(totals.reject_events || 0), color: '#4a2a7a', cls: 'text-dark' }]),
         ];
-    }, [totals, isOperator, isPacking, isMachineLevel]);
+    }, [totals, isOperator, isPrep, isPacking, isMachineLevel, t]);
 
     // ── Render — one tree, classic vs modern chosen per element ─────────────
     const toolbar: React.CSSProperties = sharedXpToolbar({ padding: '4px 6px', gap: '5px', flexWrap: 'nowrap', overflowX: 'auto' });
@@ -808,7 +939,7 @@ export default function MachineOutputReportView() {
                                 allowEmpty
                                 emptyLabel="All Work Centres"
                                 style={{ width: 200 }}
-                                disabled={isPackingSource}
+                                disabled={isPackingSource || isPrep}
                             />
                             <div style={xpSep} />
                             <span style={lbl}>View:</span>
@@ -826,10 +957,12 @@ export default function MachineOutputReportView() {
                                     Hide machines with no output
                                 </label>
                             )}
-                            <label style={{ ...lbl, display: 'flex', alignItems: 'center', gap: 4, whiteSpace: 'nowrap' }}>
-                                <input type="checkbox" checked={rejectsOnly} onChange={e => setRejectsOnly(e.target.checked)} />
-                                With rejects only
-                            </label>
+                            {!isPrep && (
+                                <label style={{ ...lbl, display: 'flex', alignItems: 'center', gap: 4, whiteSpace: 'nowrap' }}>
+                                    <input type="checkbox" checked={rejectsOnly} onChange={e => setRejectsOnly(e.target.checked)} />
+                                    With rejects only
+                                </label>
+                            )}
                             <div style={{ flex: 1 }} />
                         </div>
 
