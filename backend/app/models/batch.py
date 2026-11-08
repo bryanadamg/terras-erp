@@ -185,6 +185,19 @@ class BeamMount(Base):
     dismounted_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
     dismounted_by: Mapped[Optional[str]] = mapped_column(String(128), nullable=True)
 
+    # Warp prep done before the beam went up — drawing-in ("rumus", threaded from
+    # scratch) or tying-in ("sambungan", knotted onto the old warp) — paid per end,
+    # so the per-operator prep report sums these. One person per beam. Required on
+    # every new mount by beam_service.mount_beam; NULL only on mounts that predate it.
+    # Identity is the account when the worker has one; `prep_operator` is the display
+    # snapshot, and the only identity for a floor worker with no login.
+    prep_type: Mapped[Optional[str]] = mapped_column(String(16), nullable=True)  # DRAW_IN | TYING_IN
+    prep_ends: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
+    prep_operator_user_id: Mapped[Optional[uuid.UUID]] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("users.id", ondelete="SET NULL"), nullable=True
+    )
+    prep_operator: Mapped[Optional[str]] = mapped_column(String(128), nullable=True)
+
     batch = relationship("Batch", foreign_keys=[batch_id])
     item = relationship("Item")
     work_center = relationship("WorkCenter", lazy="joined")

@@ -199,6 +199,18 @@ def login_for_access_token(
 def read_users_me(current_user: Annotated[User, Depends(get_current_active_user)]):
     return current_user
 
+@router.get("/users/operators")
+def list_operators(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user),
+):
+    """Active accounts as a name list, for operator pickers on floor forms (e.g. who
+    drew in a warp beam). Deliberately not admin-gated like GET /users, and carries
+    nothing beyond id and name."""
+    users = db.query(User).filter(User.is_active.is_(True)).order_by(User.full_name, User.username).all()
+    return [{"id": str(u.id), "username": u.username, "full_name": u.full_name} for u in users]
+
+
 @router.get("/users", response_model=list[UserResponse])
 def get_users(db: Session = Depends(get_db), current_user: User = Depends(get_current_admin)):
     return db.query(User).all()

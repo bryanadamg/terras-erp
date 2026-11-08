@@ -20,7 +20,7 @@ from app.schemas import (
     WorkOrderCreate, WorkOrderResponse, WORequiredMaterial, WOStagePayload, WOUnstagePayload,
     PutawayBinOption, PutawaySuggestionResponse,
     WorkOrderMarkPrintedBulk, BeamMountResponse, BeamMountCreate, BeamDismountPayload,
-    BeamDismountResult, AvailableBeamRow, LoomBeamStatus, WOStagedLot,
+    BeamDismountResult, AvailableBeamRow, LoomBeamStatus, WOStagedLot, BeamPrep,
 )
 from app.models.auth import User
 from app.api.auth import get_current_user, require_permission, require_any_permission, wo_scope_ok
@@ -1278,7 +1278,7 @@ async def stage_wo_materials(
             await beam_service.mount_beam(
                 db, batch_id=line.batch_id, work_center_id=wo.work_center_id,
                 qty=qty if qty > 0 else None, source_wo_id=wo.id,
-                user=current_user.username,
+                user=current_user.username, prep=line.prep,
             )
             staged_any = True
             continue
@@ -1496,7 +1496,19 @@ def _mount_out(mount: BeamMount, remaining: float) -> BeamMountResponse:
         mounted_by=mount.mounted_by,
         dismounted_at=mount.dismounted_at,
         dismounted_by=mount.dismounted_by,
+        prep_type=mount.prep_type,
+        prep_ends=mount.prep_ends,
+        prep_operator_user_id=mount.prep_operator_user_id,
+        prep_operator=mount.prep_operator,
     )
+
+
+_PREP_FIELDS = ("prep_type", "prep_ends", "prep_operator_user_id", "prep_operator")
+
+
+def _prep_fields(mount: BeamMount) -> dict:
+    """A mount's prep record as plain audit values."""
+    return {f: (str(v) if isinstance(v, uuid.UUID) else v) for f, v in audit_service.fields_of(mount, _PREP_FIELDS).items()}
 
 
 async def _mounts_out(db: AsyncSession, pairs: list[tuple[BeamMount, float]]) -> list[BeamMountResponse]:
@@ -1566,7 +1578,7 @@ async def mount_beam_on_loom(
 
     mount = await beam_service.mount_beam(
         db, batch_id=payload.batch_id, work_center_id=wc.id, qty=payload.qty,
-        source_wo_id=payload.source_wo_id, user=current_user.username,
+        source_wo_id=payload.source_wo_id, user=current_user.username, prep=payload.prep,
     )
     await db.commit()
 
@@ -1574,7 +1586,10 @@ async def mount_beam_on_loom(
         db, user_id=current_user.id, action="MOUNT", entity_type="BeamMount",
         entity_id=str(mount.id),
         details=f"Mounted beam on machine '{wc.code or wc.name}'",
-        changes=audit_service.added({"batch_id": str(payload.batch_id), "work_center_id": str(wc.id)}),
+        changes=audit_service.added({
+            "batch_id": str(payload.batch_id), "work_center_id": str(wc.id),
+            **_prep_fields(mount),
+        }),
     )
     await manager.broadcast({"type": "STOCK_UPDATE"})
     await manager.broadcast({"type": "WORK_ORDER_UPDATE"})
@@ -1583,6 +1598,48 @@ async def mount_beam_on_loom(
         if str(m.id) == str(mount.id):
             return (await _mounts_out(db, [(m, q)]))[0]
     return (await _mounts_out(db, [(mount, 0.0)]))[0]
+
+
+@router.patch("/beam-mounts/{mount_id}/prep", response_model=BeamMountResponse)
+async def update_beam_prep(
+    mount_id: str,
+    payload: BeamPrep,
+    db: AsyncSession = Depends(get_async_db),
+    current_user: User = Depends(require_permission('work_order.edit')),
+):
+    """Correct who drew in / tied in a beam, the prep type, or its end count.
+
+    For a supervisor fixing a wrong pick after the fact — the prep report is what
+    pay is read from. Works on dismounted beams too: the work was still done.
+    """
+    mount = (await db.execute(
+        select(BeamMount).options(selectinload(BeamMount.batch), selectinload(BeamMount.item))
+        .where(BeamMount.id == mount_id)
+    )).scalars().first()
+    if not mount:
+        raise HTTPException(status_code=404, detail="Beam mount not found")
+    wc_type = mount.work_center.center_type if mount.work_center else None
+    _require_wo_scope(current_user, wc_type)
+
+    before = _prep_fields(mount)
+    await beam_service.apply_prep(db, mount, payload)
+    after = _prep_fields(mount)
+    await db.commit()
+
+    await audit_service.log_activity(
+        db, user_id=current_user.id, action="UPDATE", entity_type="BeamMount",
+        entity_id=str(mount.id),
+        details=f"Corrected warp prep on beam '{mount.batch.batch_number if mount.batch else mount.batch_id}'",
+        changes=audit_service.diff(before, after),
+    )
+    await manager.broadcast({"type": "WORK_ORDER_UPDATE"})
+
+    remaining = 0.0
+    if mount.dismounted_at is None:
+        for m, q in await beam_service.active_mounts(db, mount.work_center_id):
+            if str(m.id) == str(mount.id):
+                remaining = q
+    return (await _mounts_out(db, [(mount, remaining)]))[0]
 
 
 @router.post("/beam-mounts/{mount_id}/dismount", response_model=BeamDismountResult)
