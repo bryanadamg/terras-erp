@@ -45,6 +45,7 @@ from app.models.routing import WorkCenter
 from app.models.item import Item
 from app.models.category import Category
 from app.models.stock_balance import StockBalance
+from app.models.auth import User
 from app.models.batch import Batch, BatchConsumption, BeamMount
 from app.services import stock_service, work_center_service, reject_service
 
@@ -140,6 +141,27 @@ async def mounted_pcs(db: AsyncSession, work_center_id, item_id=None) -> int:
     return sum(1 for _, q in await active_mounts(db, work_center_id, item_id) if q > 1e-9)
 
 
+async def apply_prep(db: AsyncSession, mount: BeamMount, prep) -> None:
+    """Stamp who drew in / tied in this beam, and over how many ends.
+
+    `prep` is a schemas.BeamPrep. The operator is an account when one is picked —
+    its name becomes the display snapshot unless one was typed — else the typed
+    name alone, for a floor worker with no login. Caller commits."""
+    name = (prep.operator or "").strip() or None
+    user_id = prep.operator_user_id
+    if user_id:
+        u = (await db.execute(select(User).where(User.id == user_id))).scalars().first()
+        if not u:
+            raise HTTPException(status_code=404, detail="Operator account not found")
+        name = name or u.full_name or u.username
+    if not name:
+        raise HTTPException(status_code=422, detail="Pick or type the operator who prepared the beam")
+    mount.prep_type = prep.prep_type
+    mount.prep_ends = int(prep.ends)
+    mount.prep_operator_user_id = user_id
+    mount.prep_operator = name
+
+
 async def mount_beam(
     db: AsyncSession,
     batch_id,
@@ -147,10 +169,15 @@ async def mount_beam(
     qty: float | None = None,
     source_wo_id=None,
     user: str | None = None,
+    prep=None,
 ) -> BeamMount:
     """Mount a beam on a loom: move it to the loom's input location and open a
     BeamMount. Idempotent per beam — a beam already mounted on this loom is
-    returned as-is rather than double-moved. Caller commits."""
+    returned as-is rather than double-moved. Caller commits.
+
+    A new mount requires `prep` (schemas.BeamPrep): every warp is drawn in or tied
+    in before it goes up, and that work is paid per end — a mount without it would
+    silently drop someone's output from the prep report."""
     batch = (await db.execute(select(Batch).where(Batch.id == batch_id))).scalars().first()
     if not batch:
         raise HTTPException(status_code=404, detail="Beam not found")
@@ -192,6 +219,12 @@ async def mount_beam(
 
     # Where the beam physically is now. A beam is plant-level stock and not
     # pinned to a fixed store, so find it rather than assume a source.
+    if prep is None:
+        raise HTTPException(
+            status_code=422,
+            detail=f"Enter who drew in / tied in beam {batch.batch_number} before mounting it",
+        )
+
     rows = (
         await db.execute(
             select(StockBalance.location_id, StockBalance.qty).where(
@@ -238,6 +271,7 @@ async def mount_beam(
         source_wo_id=source_wo_id,
         mounted_by=user,
     )
+    await apply_prep(db, mount, prep)
     db.add(mount)
     await db.flush()
     return mount

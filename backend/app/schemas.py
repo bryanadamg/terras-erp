@@ -2,7 +2,7 @@ from pydantic import BaseModel, Field
 from pydantic import ConfigDict
 from uuid import UUID
 from datetime import datetime, date
-from typing import Optional, Any
+from typing import Optional, Any, Literal
 
 class ORMResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
@@ -966,12 +966,26 @@ class WORequiredMaterial(BaseModel):
     staged_lots: list[WOStagedLot] = []
 
 
+class BeamPrep(BaseModel):
+    """Who drew in / tied in a warp beam, and over how many ends — the per-end
+    piece-rate record taken when the beam is mounted (see BeamMount.prep_*).
+
+    The operator is an account when the worker has one, else a typed name for a
+    floor worker with no login; one of the two is required.
+    """
+    prep_type: Literal["DRAW_IN", "TYING_IN"]
+    ends: int = Field(gt=0)
+    operator_user_id: UUID | None = None
+    operator: str | None = Field(default=None, max_length=128)
+
+
 class WOStageLine(BaseModel):
     item_id: UUID
     qty: float
     source_location_id: UUID | None = None      # defaults to the line's resolved source
     batch_id: UUID | None = None                # required for lot-tracked materials
     attribute_value_ids: list[UUID] = []
+    prep: BeamPrep | None = None                # required when the line mounts a warp beam
 
 
 class WOStagePayload(BaseModel):
@@ -1032,12 +1046,17 @@ class BeamMountResponse(BaseModel):
     mounted_by: str | None = None
     dismounted_at: datetime | None = None
     dismounted_by: str | None = None
+    prep_type: str | None = None
+    prep_ends: int | None = None
+    prep_operator_user_id: UUID | None = None
+    prep_operator: str | None = None
 
 
 class BeamMountCreate(BaseModel):
     batch_id: UUID
     qty: float | None = None            # default: move the beam's whole remaining stock
     source_wo_id: UUID | None = None    # WO whose screen triggered it (audit only)
+    prep: BeamPrep | None = None        # required for a new mount
 
 
 class BeamDismountPayload(BaseModel):

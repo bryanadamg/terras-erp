@@ -31,6 +31,7 @@ import { Tabs, TabDef } from '../shared/Tabs';
 import { LotChips } from '../shared/LotChips';
 import { WorkingDaysSection, HolidayCalendarSection, useNationalHolidays } from '../shared/productionCalendar';
 import LotLabelPrintModal from './LotLabelPrintModal';
+import BeamPrepModal, { BeamPrep, BeamPrepBeam } from './BeamPrepModal';
 
 // Measurement accents from the shared five-family palette — see DESIGN.md's one
 // semantic layer rule; the weaving grid resolves the same three.
@@ -98,6 +99,9 @@ export default function WorkCenterMonitorModal({ isOpen, onClose, workCenter, au
     const [freeLoading, setFreeLoading] = useState(false);
     const [beamSearch, setBeamSearch] = useState('');
     const [mountingId, setMountingId] = useState<string | null>(null);
+    // Drawing-in / tying-in popup: a beam about to go up (`mount_id` absent), or a
+    // mounted beam whose prep record is being corrected (`mount_id` set).
+    const [prepFor, setPrepFor] = useState<(BeamPrepBeam & { mount_id?: string }) | null>(null);
     // Camera mount: the picker's search box already accepts a keyboard-wedge
     // scanner (Enter -> handleBeamScan), which covers a laser gun at the loom but
     // not a phone. Same decode path either way — the camera just feeds the string.
@@ -256,23 +260,43 @@ export default function WorkCenterMonitorModal({ isOpen, onClose, workCenter, au
         }
     }, [wcId, apiBase, authFetch, beamSearch]);
 
-    const mount = async (batchId: string) => {
+    // Every beam going up asks who drew it in / tied it in first — paid per end —
+    // so Mount (or a scan) opens the prep popup and its Save sends the mount.
+    const mount = (b: any) => setPrepFor({ batch_id: b.batch_id, beam_number: b.beam_number, ends: b.ends });
+
+    const doMount = async (batchId: string, prep: BeamPrep): Promise<boolean> => {
         setMountingId(batchId);
         try {
             const res = await authFetch(`${apiBase}/work-centers/${wcId}/beam-mounts`, {
                 method: 'POST', headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ batch_id: batchId }),
+                body: JSON.stringify({ batch_id: batchId, prep }),
             });
             if (!res.ok) {
                 const d = await res.json().catch(() => null);
                 showToast(d?.detail || t('mount_failed'), 'danger');
-                return;
+                return false;
             }
             showToast(t('mount_done'), 'success');
             await Promise.all([load(), loadFreeBeams()]);
+            return true;
         } finally {
             setMountingId(null);
         }
+    };
+
+    const savePrep = async (mountId: string, prep: BeamPrep): Promise<boolean> => {
+        const res = await authFetch(`${apiBase}/beam-mounts/${mountId}/prep`, {
+            method: 'PATCH', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(prep),
+        });
+        if (!res.ok) {
+            const d = await res.json().catch(() => null);
+            showToast(d?.detail || t('mount_failed'), 'danger');
+            return false;
+        }
+        showToast(t('beam_prep_saved'), 'success');
+        await load();
+        return true;
     };
 
     // Enter in the picker's search — typed, or a barcode scanner firing Enter
@@ -290,7 +314,7 @@ export default function WorkCenterMonitorModal({ isOpen, onClose, workCenter, au
             const exact = rows.find((b: any) => (b.beam_number || '').toUpperCase() === trimmed.toUpperCase());
             if (exact) {
                 setBeamSearch('');
-                await mount(exact.batch_id);
+                mount(exact);
             } else if (rows.length === 0) {
                 showToast(t('no_free_beams'), 'danger');
             }
@@ -1223,7 +1247,7 @@ export default function WorkCenterMonitorModal({ isOpen, onClose, workCenter, au
                                                                         icon="bi-arrow-bar-up"
                                                                         label={mountingId === b.batch_id ? '...' : t('mount_confirm')}
                                                                         disabled={mountingId === b.batch_id}
-                                                                        onClick={() => mount(b.batch_id)}
+                                                                        onClick={() => mount(b)}
                                                                     />
                                                                 </td>
                                                             </tr>
@@ -1273,6 +1297,25 @@ export default function WorkCenterMonitorModal({ isOpen, onClose, workCenter, au
                                                 <td style={{ ...lvTd(), color: '#666' }}>
                                                     {fmtDate(m.mounted_at)}
                                                     {m.mounted_by ? ` · ${m.mounted_by}` : ''}
+                                                    {/* Who prepared the warp — the per-end pay record. */}
+                                                    <div style={{ fontSize: 10, color: m.prep_type ? '#333' : AMBER }}>
+                                                        {m.prep_type
+                                                            ? `${t(m.prep_type === 'DRAW_IN' ? 'prep_draw_in' : 'prep_tying_in')} · ${m.prep_operator || '—'} · ${m.prep_ends ?? '—'} ${t('ends').toLowerCase()}`
+                                                            : t('beam_prep_missing')}
+                                                        {canMount && (
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => setPrepFor({
+                                                                    mount_id: m.id, batch_id: m.batch_id, beam_number: m.beam_number, ends: m.ends,
+                                                                    prep: m.prep_type ? {
+                                                                        prep_type: m.prep_type, ends: m.prep_ends,
+                                                                        operator_user_id: m.prep_operator_user_id, operator: m.prep_operator,
+                                                                    } : null,
+                                                                })}
+                                                                style={{ marginLeft: 6, border: 'none', background: 'none', padding: 0, color: BLUE, cursor: 'pointer', fontSize: 10, textDecoration: 'underline' }}
+                                                            >{t('beam_prep_edit')}</button>
+                                                        )}
+                                                    </div>
                                                 </td>
                                                 <td style={{ ...lvTd(), borderRight: 'none', textAlign: 'right' }}>
                                                     {canManage && unmountingId !== m.id && (
@@ -1415,6 +1458,17 @@ export default function WorkCenterMonitorModal({ isOpen, onClose, workCenter, au
 
             </div>
         </ModalWrapper>
+        {prepFor && (
+            <BeamPrepModal
+                beams={[prepFor]}
+                submitLabel={prepFor.mount_id ? undefined : t('mount_confirm')}
+                onClose={() => setPrepFor(null)}
+                onConfirm={byBatch => {
+                    const prep = byBatch[prepFor.batch_id];
+                    return prepFor.mount_id ? savePrep(prepFor.mount_id, prep) : doMount(prepFor.batch_id, prep);
+                }}
+            />
+        )}
         {printLot && (
             <LotLabelPrintModal
                 lots={[printLot]}

@@ -9,6 +9,7 @@ import { LotChips, LotChip } from '../shared/LotChips';
 import { CodeChip, xpFont, xpInput as xpInputBase, xpBtn as xpBtnBase, BTN_TONES, XP_BTN } from '../shared/xpTheme';
 import { RowCheckbox, lvPickerRow } from '../shared/listViewTheme';
 import { API_BASE } from '../shared/apiBase';
+import BeamPrepModal, { BeamPrep, BeamPrepBeam } from './BeamPrepModal';
 
 const xpInput: React.CSSProperties = xpInputBase({ padding: '0 4px', boxSizing: 'border-box' });
 const xpBtn = (primary?: boolean): React.CSSProperties => xpBtnBase(primary ? { ...BTN_TONES.success, padding: '2px 14px' } : {});
@@ -86,6 +87,8 @@ export default function WOStagingModal({ wo, onClose, onStaged, onScanMode }: Pr
     const [loading, setLoading] = useState(true);
     const [submitting, setSubmitting] = useState(false);
     const [loom, setLoom] = useState<LoomBeamStatus | null>(null);
+    // Beams awaiting the drawing-in / tying-in popup, with the stage lines to send after it.
+    const [prep, setPrep] = useState<{ beams: BeamPrepBeam[]; lines: any[] } | null>(null);
     const locPickerTreeOptions = useMemo(() => buildLocationPickerTree(locations || []), [locations]);
 
     // Order identity for the header strip: what this WO is actually making — size
@@ -267,22 +270,43 @@ export default function WOStagingModal({ wo, onClose, onStaged, onScanMode }: Pr
             ); return;
         }
 
+        // Every beam going up asks who drew it in / tied it in first — that work is
+        // paid per end — and the mount is only sent once that popup is saved.
+        const beams: BeamPrepBeam[] = rows
+            .filter(r => r.is_beam)
+            .flatMap(r => {
+                const selected = new Set(batchByItem[r.item_id] || []);
+                return (batchesByItem[r.item_id] || [])
+                    .filter((b: any) => selected.has(b.id))
+                    .map((b: any) => ({ batch_id: b.id, beam_number: b.batch_number, ends: b.ends }));
+            });
+        if (beams.length) {
+            setPrep({ beams, lines });
+            return;
+        }
+        await post(lines);
+    };
+
+    const post = async (lines: any[], prepByBatch: Record<string, BeamPrep> = {}): Promise<boolean> => {
         setSubmitting(true);
         try {
             const res = await authFetch(`${API_BASE}/work-orders/${wo.id}/stage`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ lines }),
+                body: JSON.stringify({
+                    lines: lines.map(l => (l.batch_id && prepByBatch[l.batch_id] ? { ...l, prep: prepByBatch[l.batch_id] } : l)),
+                }),
             });
             if (!res.ok) {
                 const err = await res.json().catch(() => null);
                 showToast(err?.detail || 'Staging failed', 'danger');
-                return;
+                return false;
             }
             const updated = await res.json().catch(() => null);
             showToast(hasBeams ? 'Beam mounted on machine.' : 'Materials staged to line.', 'success');
             onStaged(updated);
             onClose();
+            return true;
         } finally {
             setSubmitting(false);
         }
@@ -320,6 +344,7 @@ export default function WOStagingModal({ wo, onClose, onStaged, onScanMode }: Pr
     };
 
     return (
+        <>
         <ModalWrapper
             isOpen
             onClose={onClose}
@@ -647,5 +672,14 @@ export default function WOStagingModal({ wo, onClose, onStaged, onScanMode }: Pr
                     )}
             </div>
         </ModalWrapper>
+        {prep && (
+            <BeamPrepModal
+                beams={prep.beams}
+                submitLabel="Mount Beam"
+                onClose={() => setPrep(null)}
+                onConfirm={byBatch => post(prep.lines, byBatch)}
+            />
+        )}
+        </>
     );
 }
