@@ -1165,7 +1165,8 @@ async def scan_pick_list_unit(
         raise HTTPException(status_code=400, detail=f"Pick list already {pl.status}")
 
     code = (payload.code or "").strip()
-    pu_result = await db.execute(select(Batch).filter(Batch.batch_number == code))
+    # Case-insensitive: a USB scanner with Caps Lock on types the code lowercase.
+    pu_result = await db.execute(select(Batch).filter(func.upper(Batch.batch_number) == code.upper()))
     pu = pu_result.scalars().first()
     if not pu:
         raise HTTPException(status_code=404, detail=f"No lot or carton found for '{code}'")

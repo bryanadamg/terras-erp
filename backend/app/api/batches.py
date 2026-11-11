@@ -791,7 +791,7 @@ async def resolve_batch_by_number(
     the lot number. Exact match; 404 if unknown. Declared before /{batch_id} so
     'resolve' isn't parsed as a UUID path param."""
     result = await db.execute(
-        select(Batch).options(joinedload(Batch.item)).filter(Batch.batch_number == number.strip())
+        select(Batch).options(joinedload(Batch.item)).filter(func.upper(Batch.batch_number) == number.strip().upper())
     )
     batch = result.scalars().first()
     if not batch:
