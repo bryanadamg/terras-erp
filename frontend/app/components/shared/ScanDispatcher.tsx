@@ -108,6 +108,26 @@ export default function ScanDispatcher({ onClose }: { onClose: () => void }) {
 
     const scannerRef = useRef<Html5QrcodeScanner | null>(null);
     const scanLockRef = useRef(false);
+    const inputRef = useRef<HTMLInputElement | null>(null);
+
+    // A USB (keyboard-wedge) scanner types into whatever has focus. On this page
+    // nothing did, so a scanned Kartu Kerja went nowhere with no feedback at all.
+    // Focus the code box, and pull any stray keystroke (focus on the page body or
+    // the camera buttons) back into it — focusing on keydown lands that same
+    // character in the box, so the first one isn't lost.
+    useEffect(() => {
+        if (mode || woLoading) return;
+        inputRef.current?.focus();
+        const onKey = (e: KeyboardEvent) => {
+            const el = document.activeElement as HTMLElement | null;
+            if (!inputRef.current || el === inputRef.current) return;
+            if (el && /^(INPUT|TEXTAREA|SELECT)$/.test(el.tagName)) return;
+            if (e.ctrlKey || e.metaKey || e.altKey || e.key.length !== 1) return;
+            inputRef.current.focus();
+        };
+        document.addEventListener('keydown', onKey, true);
+        return () => document.removeEventListener('keydown', onKey, true);
+    }, [mode, woLoading]);
 
     const loadWOData = useCallback(async () => {
         const [moRes, bomsRes, balanceRes] = await Promise.all([
@@ -271,6 +291,8 @@ export default function ScanDispatcher({ onClose }: { onClose: () => void }) {
                     {/* Also the USB-wedge path: a keyboard-emulating scanner types
                         the code here and submits with Enter. */}
                     <input
+                        ref={inputRef}
+                        autoFocus
                         style={xpInput}
                         placeholder="PL-00001, PU-20260802-0001, PCK-00001"
                         value={manualCode}
