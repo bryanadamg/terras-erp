@@ -39,7 +39,7 @@ from app.models.routing import WorkCenter
 from app.models.sales import SalesOrder
 from app.models.work_order import WorkOrder
 from app.api.auth import require_permission
-from app.services import work_center_service
+from app.services import packing_service, work_center_service
 from app.services.xlsx_service import xlsx_response
 
 router = APIRouter()
@@ -757,6 +757,9 @@ async def _packing_operator_report(
             PackingOrder.status.label("po_status"),
             PackingOrder.package_label.label("package_label"),
             PackingOrder.item_id.label("item_id"),
+            # The order's own sampled g/y — wins over the item's when restating in yards.
+            PackingOrder.sample_weight_per_unit.label("sample_weight_per_unit"),
+            PackingOrder.sample_weight_unit.label("sample_weight_unit"),
             SalesOrder.po_number.label("so_code"),
             SalesOrder.customer_name.label("customer_name"),
         )
@@ -775,8 +778,14 @@ async def _packing_operator_report(
         items = {str(i.id): i for i in res.scalars().all()}
 
     def _bucket(seed: dict) -> dict:
+        # yards_good stays None until a log of a length-convertible item lands in it,
+        # so "no conversion" reads as a dash rather than 0 yards.
         return {"qty_good": 0.0, "qty_rejected": 0.0, "cartons": 0,
-                "cartons_rejected": 0, "logs": 0, **seed}
+                "cartons_rejected": 0, "logs": 0, "yards_good": None, **seed}
+
+    def _add_yards(b: dict, yards: Optional[float]) -> None:
+        if yards is not None:
+            b["yards_good"] = (b["yards_good"] or 0.0) + yards
 
     ops: dict[str, dict] = {}
     for r in rows_raw:
@@ -815,6 +824,9 @@ async def _packing_operator_report(
         it = items.get(str(r.item_id)) if r.item_id else None
         stamp = _iso(r.logged_at)
         day = r.logged_at.date().isoformat() if r.logged_at else "-"
+        # Good qty restated in yards through the order's g/y (sampled, else the
+        # item's). None when the item has no length conversion (pcs, gsm).
+        yards = packing_service.to_yards(good, it.uom, *packing_service.order_weight_spec(r, it)) if it else None
 
         for bucket, bkey, seed in (
             (op_row["items"], str(r.item_id) if r.item_id else "?", {
@@ -845,6 +857,7 @@ async def _packing_operator_report(
             b["cartons"] += good_cartons
             b["cartons_rejected"] += rej_cartons
             b["logs"] += 1
+            _add_yards(b, yards)
             if "last_log" in b and stamp and (b["last_log"] or "") < stamp:
                 b["last_log"] = stamp
 
@@ -853,6 +866,7 @@ async def _packing_operator_report(
         op_row["cartons"] += good_cartons
         op_row["cartons_rejected"] += rej_cartons
         op_row["logs"] += 1
+        _add_yards(op_row, yards)
         if stamp:
             if op_row["first_log"] is None or stamp < op_row["first_log"]:
                 op_row["first_log"] = stamp
@@ -881,6 +895,8 @@ async def _packing_operator_report(
         for b in bucket.values():
             b["reject_pct"] = _reject_pct(b["qty_good"], b["qty_rejected"])
             b["yield_pct"] = _yield_pct(b["qty_good"], b["qty_rejected"])
+            if b["yards_good"] is not None:
+                b["yards_good"] = round(b["yards_good"], 2)
             out.append(b)
         return out
 
@@ -896,6 +912,12 @@ async def _packing_operator_report(
         op_row["days_active"] = len(op_row["days"])
         op_row["qty_per_day"] = (
             round(op_row["qty_good"] / op_row["days_active"], 3) if op_row["days_active"] else None
+        )
+        if op_row["yards_good"] is not None:
+            op_row["yards_good"] = round(op_row["yards_good"], 2)
+        op_row["yards_per_day"] = (
+            round(op_row["yards_good"] / op_row["days_active"], 2)
+            if op_row["days_active"] and op_row["yards_good"] is not None else None
         )
         op_row["reject_pct"] = _reject_pct(op_row["qty_good"], op_row["qty_rejected"])
         op_row["yield_pct"] = _yield_pct(op_row["qty_good"], op_row["qty_rejected"])
@@ -913,6 +935,8 @@ async def _packing_operator_report(
         "reject_events": sum(len(x["rejects"]) for x in rows),
         "unattributed_count": sum(1 for x in rows if not x["has_account"]),
     }
+    yard_rows = [x["yards_good"] for x in rows if x["yards_good"] is not None]
+    totals["yards_good"] = round(sum(yard_rows), 2) if yard_rows else None
     totals["yield_pct"] = _yield_pct(totals["qty_good"], totals["qty_rejected"])
     totals["reject_pct"] = _reject_pct(totals["qty_good"], totals["qty_rejected"])
 

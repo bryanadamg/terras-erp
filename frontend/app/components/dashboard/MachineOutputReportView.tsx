@@ -48,6 +48,11 @@ const fmtDate = (d: Date) =>
 
 // UOMs differ per item, so a row total is only meaningful when its items agree.
 // A WO/packing row states its own item's uom directly.
+// Output restated in yards (server-side, via the order's g/y). Null = the item has
+// no length conversion, shown as a dash rather than 0.
+const fmtYards2 = qtyFmt(2);
+const fmtYards = (n: number | null | undefined) => (n == null ? null : `${fmtYards2(n)} Yd`);
+
 const uomOf = (row: any): string => {
     if (row.uom) return String(row.uom);
     const set = new Set((row.items || []).map((i: any) => i.uom).filter(Boolean));
@@ -219,6 +224,7 @@ export default function MachineOutputReportView() {
         status:    (r: any) => r.wo_status || r.po_status || '',
         target:    (r: any) => (isPacking ? r.qty_target : r.wo_qty) || 0,
         output:    (r: any) => r.qty_good || 0,
+        yards:     (r: any) => (r.yards_good ?? -1),
         scrap:     (r: any) => r.qty_rejected || 0,
         rejectPct: (r: any) => (r.reject_pct ?? -1),
         yield:     (r: any) => (r.yield_pct ?? -1),
@@ -360,7 +366,13 @@ export default function MachineOutputReportView() {
                     ),
                     xlsx: r => r.operator_name || '',
                 },
-                ...shared,
+                shared[0],
+                {
+                    key: 'yards', label: 'Yards', sortKey: 'yards', align: 'right',
+                    render: r => (r.yards_good == null ? <Dash /> : <span style={{ fontWeight: 'bold', color: '#1a5e1a' }}>{fmtYards(r.yards_good)}</span>),
+                    xlsx: r => r.yards_good ?? '',
+                },
+                ...shared.slice(1),
                 {
                     key: 'cartons', label: 'Cartons', sortKey: 'cartons', align: 'right',
                     render: r => (
@@ -382,7 +394,8 @@ export default function MachineOutputReportView() {
                     render: r => (r.qty_per_day == null
                         ? <Dash />
                         : <><span style={{ fontWeight: 'bold' }}>{fmtQty(r.qty_per_day)}</span>
-                            <span style={{ fontSize: 10, color: '#888', marginLeft: 3 }}>{uomOf(r)}</span></>),
+                            <span style={{ fontSize: 10, color: '#888', marginLeft: 3 }}>{uomOf(r)}</span>
+                            {r.yards_per_day != null && <div style={{ fontSize: 10, color: '#777' }}>{fmtYards(r.yards_per_day)}</div>}</>),
                     xlsx: r => r.qty_per_day ?? '',
                 },
                 {
@@ -620,7 +633,10 @@ export default function MachineOutputReportView() {
                                 <div style={{ fontWeight: 'bold' }}>{it.item_name || '(unknown item)'}</div>
                                 <div style={{ fontSize: 9, color: '#777' }}>{it.item_code}</div>
                             </td>
-                            <td style={{ ...dtd, textAlign: 'right', fontWeight: 'bold', color: '#1a5e1a' }}>{fmtQty(it.qty_good)} <span style={{ color: '#888', fontWeight: 'normal' }}>{it.uom}</span></td>
+                            <td style={{ ...dtd, textAlign: 'right', fontWeight: 'bold', color: '#1a5e1a' }}>
+                                {fmtQty(it.qty_good)} <span style={{ color: '#888', fontWeight: 'normal' }}>{it.uom}</span>
+                                {it.yards_good != null && <div style={{ fontSize: 9, color: '#777', fontWeight: 'normal' }}>{fmtYards(it.yards_good)}</div>}
+                            </td>
                             <td style={{ ...dtd, textAlign: 'right', color: it.qty_rejected ? '#c00000' : '#aaa' }}>{fmtQty(it.qty_rejected)}</td>
                             <td style={{ ...dtd, textAlign: 'right' }}>{fmtPct(it.reject_pct)}</td>
                             <td style={{ ...dtd, textAlign: 'right' }}>{it.logs}</td>
@@ -701,6 +717,7 @@ export default function MachineOutputReportView() {
                 <thead><tr>
                     <th style={dth}>Day</th>
                     <th style={{ ...dth, textAlign: 'right' }}>Output</th>
+                    <th style={{ ...dth, textAlign: 'right' }}>Yards</th>
                     <th style={{ ...dth, textAlign: 'right' }}>Cartons</th>
                     <th style={{ ...dth, textAlign: 'right' }}>QC Reject</th>
                     <th style={{ ...dth, textAlign: 'right' }}>Reject %</th>
@@ -708,11 +725,12 @@ export default function MachineOutputReportView() {
                 </tr></thead>
                 <tbody>
                     {(r.days || []).length === 0 ? (
-                        <tr><td style={{ ...dtd, color: '#999' }} colSpan={6}>No output logged</td></tr>
+                        <tr><td style={{ ...dtd, color: '#999' }} colSpan={7}>No output logged</td></tr>
                     ) : r.days.map((d: any) => (
                         <tr key={d.date}>
                             <td style={{ ...dtd, fontWeight: 'bold' }}>{d.date}</td>
                             <td style={{ ...dtd, textAlign: 'right', fontWeight: 'bold', color: '#1a5e1a' }}>{fmtQty(d.qty_good)}</td>
+                            <td style={{ ...dtd, textAlign: 'right' }}>{fmtYards(d.yards_good) ?? <Dash />}</td>
                             <td style={{ ...dtd, textAlign: 'right' }}>
                                 {d.cartons || 0}
                                 {d.cartons_rejected ? <span style={{ color: '#c00000' }}> (-{d.cartons_rejected})</span> : null}
@@ -748,7 +766,10 @@ export default function MachineOutputReportView() {
                                 </div>
                             </td>
                             <td style={dtd}>{o.item_code || o.item_name || '—'}</td>
-                            <td style={{ ...dtd, textAlign: 'right', fontWeight: 'bold' }}>{fmtQty(o.qty_good)} <span style={{ color: '#888', fontWeight: 'normal' }}>{o.uom}</span></td>
+                            <td style={{ ...dtd, textAlign: 'right', fontWeight: 'bold' }}>
+                                {fmtQty(o.qty_good)} <span style={{ color: '#888', fontWeight: 'normal' }}>{o.uom}</span>
+                                {o.yards_good != null && <div style={{ fontSize: 9, color: '#777', fontWeight: 'normal' }}>{fmtYards(o.yards_good)}</div>}
+                            </td>
                             <td style={{ ...dtd, textAlign: 'right' }}>{o.cartons || 0}</td>
                             <td style={{ ...dtd, textAlign: 'right', color: o.qty_rejected ? '#c00000' : '#aaa' }}>{fmtQty(o.qty_rejected)}</td>
                             <td style={dtd}>
@@ -878,7 +899,9 @@ export default function MachineOutputReportView() {
         ];
         if (isOperator) {
             return [
-                ...base,
+                base[0],
+                { label: 'Yards', value: fmtYards(totals.yards_good) ?? '-', color: '#1a5e1a', cls: 'text-success' },
+                ...base.slice(1),
                 { label: 'Cartons', value: `${totals.cartons || 0}`, color: '#1a3d7a', cls: 'text-primary' },
                 { label: 'Packers', value: String(totals.operator_count || 0), color: '#4a2a7a', cls: 'text-dark' },
                 // Logs with no account behind them. Zero is the healthy reading;

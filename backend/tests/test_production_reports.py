@@ -110,3 +110,51 @@ def test_excel_export_needs_the_export_grant_and_keeps_formulas_as_text(user_fac
     ws = load_workbook(io.BytesIO(res.content)).active
     assert [c.value for c in ws[1]] == ["Machine", "Output"]
     assert ws["A2"].data_type == "s" and ws["B2"].value == 4.5
+
+
+def test_per_packer_output_is_restated_in_yards_through_the_orders_g_y(client, auth_headers, async_db_session):
+    """Packers are paid per yard, so the per-packer report restates kg output in
+    yards — the order's sampled g/y wins over the item's, and an item with no
+    length conversion reads null (a dash), not 0."""
+    import uuid
+    from app.models.item import Item
+    from app.models.packing import PackingCompletion, PackingOrder
+
+    tag = str(uuid.uuid4())[:8]
+    op = f"packer-{tag}"
+
+    async def _seed():
+        cloth = Item(code=f"PY-{tag}", name="Cloth", uom="kg", weight_per_unit=100, weight_unit="g/y")
+        sampled = Item(code=f"PS-{tag}", name="Sampled", uom="kg", weight_per_unit=100, weight_unit="g/y")
+        plain = Item(code=f"PP-{tag}", name="Buttons", uom="pcs")
+        async_db_session.add_all([cloth, sampled, plain])
+        await async_db_session.flush()
+        orders = [
+            PackingOrder(code=f"PA-{tag}", item_id=cloth.id, qty_target=10),
+            # Sampled at 200 g/y: 2 kg is 10 yd, not the item's 20.
+            PackingOrder(code=f"PB-{tag}", item_id=sampled.id, qty_target=10,
+                         sample_weight_per_unit=200, sample_weight_unit="g/y"),
+            PackingOrder(code=f"PC-{tag}", item_id=plain.id, qty_target=10),
+        ]
+        async_db_session.add_all(orders)
+        await async_db_session.flush()
+        async_db_session.add_all([
+            PackingCompletion(packing_order_id=orders[0].id, qty=1, package_count=1, operator=op),  # 10 yd
+            PackingCompletion(packing_order_id=orders[1].id, qty=2, package_count=1, operator=op),  # 10 yd
+            PackingCompletion(packing_order_id=orders[2].id, qty=5, package_count=1, operator=op),  # no yards
+            # A wholly rejected log counts no good yards.
+            PackingCompletion(packing_order_id=orders[0].id, qty=3, package_count=1, operator=op, rejected=True),
+        ])
+        await async_db_session.flush()
+
+    client.portal.call(_seed)
+
+    res = client.get("/api/reports/packing-output?group_by=operator", headers=auth_headers)
+    assert res.status_code == 200, res.text
+    row = next(r for r in res.json()["rows"] if r["operator_name"] == op)
+    assert row["yards_good"] == 20
+    assert row["yards_per_day"] == 20
+    by_item = {i["item_code"]: i for i in row["items"]}
+    assert by_item[f"PY-{tag}"]["yards_good"] == 10
+    assert by_item[f"PS-{tag}"]["yards_good"] == 10
+    assert by_item[f"PP-{tag}"]["yards_good"] is None
