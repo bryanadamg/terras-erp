@@ -891,7 +891,7 @@ async def export_stock_balance(
         ],
         (_row(r) for r in data["items"]),
         "stock-on-hand",
-        footer=["Total", None, None, None, None, None, None, None, None, None, None, data["total_kg"], "kg",
+        footer=["Total kg", None, None, None, None, None, None, None, None, None, None, data["total_kg"], "kg",
                 round(sum(r["qty_yards"] or 0 for r in data["items"]), 2)],
     )
 
