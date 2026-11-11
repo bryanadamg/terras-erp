@@ -15,6 +15,20 @@ on `main`:
 
 ## [Unreleased]
 
+## [1.3.0] - 2026-11-11
+
+### Added
+- Stock On Hand shows each row's qty in yards when it converts: greige through the item's g/y (or the packing order's sampled g/y), packed cartons through their counted length (e.g. 12 Pcs × 5 Yd = 60 Yd)
+- The Stock On Hand Excel export adds Yards, Alt Qty, Alt UOM and Per Alt Unit columns, with total yards in the footer
+- The Production Output report's Per Packer view shows output in yards (column, per-day average, summary tile, and the by-day / by-item / packing-order breakdowns) when the item has a g/y
+
+### Fixed
+- Scanning a work card with a USB barcode scanner on the Scanner page did nothing; the code box now has the cursor from the start and catches scans even after clicking elsewhere on the page
+- The same USB-scanner problem on the pick and packing scanner screens, the Pick List's Scan Cartons box (only the first carton registered) and the loom's mount-beam search
+- Scanned work cards, cartons and lots are found even when the PC's Caps Lock is on
+- Logging work order output now opens the new bag's label for printing straight away, as intended in 1.1.0; the save response was missing the new log, so the label never appeared
+- The dashboard KPIs failed to refresh after every production log
+
 ## [1.2.2] - 2026-11-08
 
 ### Added
