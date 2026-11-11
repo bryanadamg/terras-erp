@@ -16,6 +16,7 @@ import {
 import { usePackagingTypes } from '../shared/usePackagingTypes';
 import { orderBasePerAlt, altToBase, baseToAlt } from '../shared/altUnit';
 import { API_BASE } from '../shared/apiBase';
+import { useScannerFocus } from '../shared/useScannerFocus';
 
 
 const xpInput: React.CSSProperties = xpInputBase({ fontSize: 13, height: 'auto', padding: '6px 8px', width: '100%', boxSizing: 'border-box' });
@@ -47,6 +48,9 @@ export default function PackingScanView({ authFetch, initialCode, onClose }: { a
     const [unit, setUnit] = useState<any | null>(null);
     const [error, setError] = useState<string | null>(null);
     const [manualCode, setManualCode] = useState('');
+    // USB scanner path: keep the code box focused whenever it is on screen.
+    const codeRef = useRef<HTMLInputElement | null>(null);
+    useScannerFocus(codeRef);
     const scannerRef = useRef<Html5QrcodeScanner | null>(null);
     const scanLockRef = useRef(false);
 
@@ -374,6 +378,8 @@ export default function PackingScanView({ authFetch, initialCode, onClose }: { a
                     </MobilePanel>
                     <MobilePanel icon="bi-keyboard-fill" title="Or type a code">
                         <input
+                            ref={codeRef}
+                            autoFocus
                             style={xpInput}
                             placeholder="PCK-00001 or PU-20260802-0001"
                             value={manualCode}

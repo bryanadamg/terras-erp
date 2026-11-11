@@ -6,6 +6,7 @@ import { StatusChip, xpFont as XP_FONT, xpInput as xpInputBase } from '../shared
 import { MOBILE_BG, MobilePanel, MobileScreenBar, MobileButton, MobileNotice } from './mobileTheme';
 import { LotChips } from '../shared/LotChips';
 import { API_BASE } from '../shared/apiBase';
+import { useScannerFocus } from '../shared/useScannerFocus';
 
 const xpInput: React.CSSProperties = xpInputBase({ fontSize: 13, height: 'auto', padding: '6px 8px', width: '100%', boxSizing: 'border-box' });
 
@@ -51,6 +52,10 @@ export default function PickScanView({ authFetch, initialCode, onClose }: { auth
     const [error, setError] = useState<string | null>(null);
     const [flash, setFlash] = useState<string | null>(null);
     const [manualCode, setManualCode] = useState('');
+    // USB scanner path: keep the code box focused (it unmounts while a lone
+    // carton is shown, so autoFocus re-takes focus when it comes back).
+    const codeRef = useRef<HTMLInputElement | null>(null);
+    useScannerFocus(codeRef);
     const [busy, setBusy] = useState(false);
     const scannerRef = useRef<Html5QrcodeScanner | null>(null);
     const scanLockRef = useRef(false);
@@ -270,6 +275,8 @@ export default function PickScanView({ authFetch, initialCode, onClose }: { auth
                         {/* Also the USB-wedge path: a keyboard-emulating scanner types
                             the code here and submits with Enter. */}
                         <input
+                            ref={codeRef}
+                            autoFocus
                             style={xpInput}
                             placeholder={pl ? 'PU-20260802-0001' : 'PL-00001 or PU-20260802-0001'}
                             value={manualCode}

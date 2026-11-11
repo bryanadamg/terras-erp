@@ -558,7 +558,7 @@ async def resolve_packed_unit(
 ):
     """Scanner lookup: PU-YYYYMMDD-NNNN -> the carton it names."""
     result = await db.execute(
-        select(Batch).options(selectinload(Batch.item)).filter(Batch.batch_number == code.strip())
+        select(Batch).options(selectinload(Batch.item)).filter(func.upper(Batch.batch_number) == code.strip().upper())
     )
     b = result.scalars().first()
     if not b:

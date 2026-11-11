@@ -109,8 +109,11 @@ def get_all_cached_kpis(db: Session):
 async def invalidate_kpis_async(db: AsyncSession):
     """Mark all cached KPIs stale so the next dashboard fetch recomputes them."""
     from sqlalchemy import update
-    from datetime import datetime, timezone
-    await db.execute(update(KPICache).values(updated_at=datetime(1970, 1, 1, tzinfo=timezone.utc)))
+    from datetime import datetime
+    # Naive on purpose: updated_at is a TIMESTAMP WITHOUT TIME ZONE (read as UTC),
+    # and asyncpg refuses an aware value for it — this raised on every log, so no
+    # async mutation ever actually marked the KPIs stale.
+    await db.execute(update(KPICache).values(updated_at=datetime(1970, 1, 1)))
     await db.commit()
 
 

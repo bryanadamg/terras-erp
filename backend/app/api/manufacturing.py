@@ -248,6 +248,12 @@ async def load_mo_tree(db: AsyncSession, root_ids: list) -> dict:
             selectinload(ManufacturingOrder.completions),
         )
         .filter(ManufacturingOrder.id.in_(all_ids))
+        # The session keeps objects across commit (expire_on_commit=False), so a route
+        # that loaded this MO, added a log and then calls here got the MO back from the
+        # identity map with its OLD completions list — the new log was missing from
+        # the response, and the WO log form never opened that log's bag label.
+        # Re-read every loaded attribute and collection from the database.
+        .execution_options(populate_existing=True)
     )
     mo_map = {mo.id: mo for mo in result.unique().scalars().all()}
 

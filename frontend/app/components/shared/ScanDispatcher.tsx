@@ -10,6 +10,7 @@ import { useIsMobile } from '../../hooks/useIsMobile';
 import { xpFont as XP_FONT, XPLoading, xpInput as xpInputBase } from './xpTheme';
 import { MOBILE_BG, MobilePanel, MobileScreenBar, MobileButton, MobileNotice } from '../mobile/mobileTheme';
 import { API_BASE } from './apiBase';
+import { useScannerFocus } from './useScannerFocus';
 
 // One camera per session: the branch views are only mounted after a code has
 // already been decoded here, so their own readers never race this one.
@@ -63,7 +64,8 @@ function classify(raw: string): { mode: ScanMode; code: string } | null {
     const code = raw.trim();
     if (!code) return null;
     const upper = code.toUpperCase();
-    if (isUUID(code)) return { mode: 'wo', code };
+    // WO ids are lowercase; a USB scanner with Caps Lock on types them uppercase.
+    if (isUUID(code)) return { mode: 'wo', code: code.toLowerCase() };
     // PK- is the legacy pick-list prefix from when the table was packing_orders.
     if (upper.startsWith('PL-') || upper.startsWith('PK-')) return { mode: 'pick', code };
     if (upper.startsWith('PU-')) return { mode: 'pick', code };
@@ -108,6 +110,9 @@ export default function ScanDispatcher({ onClose }: { onClose: () => void }) {
 
     const scannerRef = useRef<Html5QrcodeScanner | null>(null);
     const scanLockRef = useRef(false);
+    const inputRef = useRef<HTMLInputElement | null>(null);
+    // A scanned Kartu Kerja used to go nowhere: nothing on this page had focus.
+    useScannerFocus(inputRef, !mode && !woLoading);
 
     const loadWOData = useCallback(async () => {
         const [moRes, bomsRes, balanceRes] = await Promise.all([
@@ -271,6 +276,8 @@ export default function ScanDispatcher({ onClose }: { onClose: () => void }) {
                     {/* Also the USB-wedge path: a keyboard-emulating scanner types
                         the code here and submits with Enter. */}
                     <input
+                        ref={inputRef}
+                        autoFocus
                         style={xpInput}
                         placeholder="PL-00001, PU-20260802-0001, PCK-00001"
                         value={manualCode}

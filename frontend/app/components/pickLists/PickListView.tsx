@@ -1304,7 +1304,10 @@ function PickListEditor({ pl: initialPl, itemById, locPickerTreeOptions, authFet
         return () => { cancelled = true; };
     }, [initialPl.sales_order_id, initialPl.id, authFetch]);
 
-    useEffect(() => { if (!readOnly) scanRef.current?.focus(); }, [readOnly]);
+    // Re-focus once the box is re-enabled after a scan — focusing in scan()'s
+    // finally ran while it was still disabled, so every scan after the first
+    // went nowhere.
+    useEffect(() => { if (!readOnly && !scanning) scanRef.current?.focus(); }, [readOnly, scanning]);
 
     const applyServer = (fresh: any) => {
         setPl(fresh);
@@ -1355,7 +1358,7 @@ function PickListEditor({ pl: initialPl, itemById, locPickerTreeOptions, authFet
                 const e = await res.json().catch(() => ({}));
                 showToast(`${e.detail || 'Scan failed'}`, 'danger');
             }
-        } finally { setScanning(false); scanRef.current?.focus(); }
+        } finally { setScanning(false); }
     };
 
     const removeLine = (idx: number) => setLines(prev => prev.filter((_, i) => i !== idx));
