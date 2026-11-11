@@ -71,6 +71,10 @@ def test_work_order_lifecycle(client, auth_headers):
         "work_order_id": wo_id,
     }, headers=auth_headers)
     assert completion_res.status_code == 200, completion_res.text
+    # The response must carry the log just made — the WO log form finds the new
+    # bag in it to open its label. It came back with the pre-log list (stale
+    # identity map), so the label never opened.
+    assert [c["work_order_id"] for c in completion_res.json()["completions"]] == [wo_id]
 
     client.put(f"/api/work-orders/{wo_id}/status?status=COMPLETED", headers=auth_headers)
 
