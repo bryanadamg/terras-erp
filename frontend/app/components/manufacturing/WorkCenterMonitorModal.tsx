@@ -1193,6 +1193,9 @@ export default function WorkCenterMonitorModal({ isOpen, onClose, workCenter, au
                                                 value={beamSearch}
                                                 onChange={setBeamSearch}
                                                 placeholder={t('mount_beam_search')}
+                                                // Opened by clicking Mount — focus here so a USB scanner's
+                                                // beam read lands in the box, not on that button.
+                                                autoFocus
                                                 icon="bi-upc-scan"
                                                 width={220}
                                             />

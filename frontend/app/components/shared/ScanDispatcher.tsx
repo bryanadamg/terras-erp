@@ -10,6 +10,7 @@ import { useIsMobile } from '../../hooks/useIsMobile';
 import { xpFont as XP_FONT, XPLoading, xpInput as xpInputBase } from './xpTheme';
 import { MOBILE_BG, MobilePanel, MobileScreenBar, MobileButton, MobileNotice } from '../mobile/mobileTheme';
 import { API_BASE } from './apiBase';
+import { useScannerFocus } from './useScannerFocus';
 
 // One camera per session: the branch views are only mounted after a code has
 // already been decoded here, so their own readers never race this one.
@@ -63,7 +64,8 @@ function classify(raw: string): { mode: ScanMode; code: string } | null {
     const code = raw.trim();
     if (!code) return null;
     const upper = code.toUpperCase();
-    if (isUUID(code)) return { mode: 'wo', code };
+    // WO ids are lowercase; a USB scanner with Caps Lock on types them uppercase.
+    if (isUUID(code)) return { mode: 'wo', code: code.toLowerCase() };
     // PK- is the legacy pick-list prefix from when the table was packing_orders.
     if (upper.startsWith('PL-') || upper.startsWith('PK-')) return { mode: 'pick', code };
     if (upper.startsWith('PU-')) return { mode: 'pick', code };
@@ -109,25 +111,8 @@ export default function ScanDispatcher({ onClose }: { onClose: () => void }) {
     const scannerRef = useRef<Html5QrcodeScanner | null>(null);
     const scanLockRef = useRef(false);
     const inputRef = useRef<HTMLInputElement | null>(null);
-
-    // A USB (keyboard-wedge) scanner types into whatever has focus. On this page
-    // nothing did, so a scanned Kartu Kerja went nowhere with no feedback at all.
-    // Focus the code box, and pull any stray keystroke (focus on the page body or
-    // the camera buttons) back into it — focusing on keydown lands that same
-    // character in the box, so the first one isn't lost.
-    useEffect(() => {
-        if (mode || woLoading) return;
-        inputRef.current?.focus();
-        const onKey = (e: KeyboardEvent) => {
-            const el = document.activeElement as HTMLElement | null;
-            if (!inputRef.current || el === inputRef.current) return;
-            if (el && /^(INPUT|TEXTAREA|SELECT)$/.test(el.tagName)) return;
-            if (e.ctrlKey || e.metaKey || e.altKey || e.key.length !== 1) return;
-            inputRef.current.focus();
-        };
-        document.addEventListener('keydown', onKey, true);
-        return () => document.removeEventListener('keydown', onKey, true);
-    }, [mode, woLoading]);
+    // A scanned Kartu Kerja used to go nowhere: nothing on this page had focus.
+    useScannerFocus(inputRef, !mode && !woLoading);
 
     const loadWOData = useCallback(async () => {
         const [moRes, bomsRes, balanceRes] = await Promise.all([
