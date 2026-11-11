@@ -5,7 +5,6 @@ import dynamic from 'next/dynamic';
 import { Html5QrcodeScanner } from 'html5-qrcode';
 import { useData } from '../../context/DataContext';
 import { useUser } from '../../context/UserContext';
-import { useToast } from './Toast';
 import { useIsMobile } from '../../hooks/useIsMobile';
 import { xpFont as XP_FONT, XPLoading, xpInput as xpInputBase } from './xpTheme';
 import { MOBILE_BG, MobilePanel, MobileScreenBar, MobileButton, MobileNotice } from '../mobile/mobileTheme';
@@ -15,7 +14,9 @@ import { useScannerFocus } from './useScannerFocus';
 // One camera per session: the branch views are only mounted after a code has
 // already been decoded here, so their own readers never race this one.
 const MobileScannerView = dynamic(() => import('../mobile/ScannerView'), { ssr: false });
-const QRScannerView = dynamic(() => import('./QRScannerView'), { ssr: false });
+// PC: a scanned Kartu Kerja opens the same log form as the Work Orders page —
+// one form for lots/beams/substitutes, and its bag label pops up after the save.
+const WOCompletionModal = dynamic(() => import('../manufacturing/WOCompletionModal'), { ssr: false });
 const PickScanView = dynamic(() => import('../mobile/PickScanView'), { ssr: false });
 const PackingScanView = dynamic(() => import('../mobile/PackingScanView'), { ssr: false });
 
@@ -92,9 +93,8 @@ function classify(raw: string): { mode: ScanMode; code: string } | null {
  * only after a UUID actually lands.
  */
 export default function ScanDispatcher({ onClose }: { onClose: () => void }) {
-    const { items, boms, locations, attributes, stockBalance, workCenters, fetchData, authFetch } = useData() as any;
+    const { items, workCenters, authFetch } = useData() as any;
     const { hasAnyPermission } = useUser();
-    const { showToast } = useToast();
     const isMobile = useIsMobile();
 
     const [mode, setMode] = useState<ScanMode | null>(null);
@@ -105,8 +105,8 @@ export default function ScanDispatcher({ onClose }: { onClose: () => void }) {
     // WO payload — fetched lazily, only once a WO code has been scanned.
     const [woLoading, setWoLoading] = useState(false);
     const [localMOs, setLocalMOs] = useState<any[]>([]);
-    const [localBoms, setLocalBoms] = useState<any[]>([]);
-    const [localStockBalance, setLocalStockBalance] = useState<any[]>([]);
+    // PC log target: the scanned WO (flat-list shape the log form reads) + its MO.
+    const [logTarget, setLogTarget] = useState<{ mo: any; wo: any } | null>(null);
 
     const scannerRef = useRef<Html5QrcodeScanner | null>(null);
     const scanLockRef = useRef(false);
@@ -114,18 +114,13 @@ export default function ScanDispatcher({ onClose }: { onClose: () => void }) {
     // A scanned Kartu Kerja used to go nowhere: nothing on this page had focus.
     useScannerFocus(inputRef, !mode && !woLoading);
 
+    // Phone WO screen only: it walks the MO tree itself.
     const loadWOData = useCallback(async () => {
-        const [moRes, bomsRes, balanceRes] = await Promise.all([
-            // all_levels=true so consolidated shared-component MOs (parent_mo_id=None,
-            // is_shared_component=True, linked via MODependency) are returned too — their
-            // WO QR codes are scanned on the floor but they're absent from the root tree.
-            authFetch(`${API_BASE}/manufacturing-orders?skip=0&limit=9999&all_levels=true`),
-            authFetch(`${API_BASE}/boms`),
-            authFetch(`${API_BASE}/stock/balance`),
-        ]);
+        // all_levels=true so consolidated shared-component MOs (parent_mo_id=None,
+        // is_shared_component=True, linked via MODependency) are returned too — their
+        // WO QR codes are scanned on the floor but they're absent from the root tree.
+        const moRes = await authFetch(`${API_BASE}/manufacturing-orders?skip=0&limit=9999&all_levels=true`);
         if (moRes.ok) { const d = await moRes.json(); setLocalMOs(Array.isArray(d) ? d : (d.items || [])); }
-        if (bomsRes.ok) { setLocalBoms(await bomsRes.json()); }
-        if (balanceRes.ok) { setLocalStockBalance(await balanceRes.json()); }
     }, [authFetch]);
 
     const route = useCallback(async (raw: string) => {
@@ -147,10 +142,25 @@ export default function ScanDispatcher({ onClose }: { onClose: () => void }) {
             setWoLoading(true);
             await scannerRef.current?.clear().catch(() => {});
             scannerRef.current = null;
-            try { await loadWOData(); } finally { setWoLoading(false); }
+            try {
+                if (isMobile) {
+                    await loadWOData();
+                } else {
+                    // Only this WO and its MO — not every order plus the whole stock table.
+                    const woRes = await authFetch(`${API_BASE}/work-orders?wo_id=${encodeURIComponent(hit.code)}`);
+                    const wo = woRes.ok ? (await woRes.json()).items?.[0] : null;
+                    const moRes = wo ? await authFetch(`${API_BASE}/manufacturing-orders/${wo.mo_id}`) : null;
+                    const mo = moRes?.ok ? await moRes.json() : null;
+                    if (!wo || !mo) {
+                        setError(`Work order "${hit.code.slice(0, 8)}..." not found.`);
+                        return;
+                    }
+                    setLogTarget({ mo, wo });
+                }
+            } finally { setWoLoading(false); }
         }
         setMode(hit.mode);
-    }, [hasAnyPermission, loadWOData]);
+    }, [hasAnyPermission, loadWOData, isMobile, authFetch]);
 
     // Camera runs only while no branch has taken over.
     useEffect(() => {
@@ -198,18 +208,11 @@ export default function ScanDispatcher({ onClose }: { onClose: () => void }) {
 
     const back = useCallback(() => {
         setMode(null);
+        setLogTarget(null);
         setSeedCode(null);
         setError(null);
         setManualCode('');
     }, []);
-
-    const handleUpdateWOStatus = async (woId: string, status: string) => {
-        const res = await authFetch(`${API_BASE}/work-orders/${woId}/status?status=${status}`, { method: 'PUT' });
-        if (res.ok) { fetchData(); return true; }
-        const err = await res.json().catch(() => ({}));
-        showToast(`Error: ${err.detail}`, 'danger');
-        return false;
-    };
 
     if (mode === 'pick') {
         return <PickScanView authFetch={authFetch} initialCode={seedCode || undefined} onClose={back} />;
@@ -231,28 +234,9 @@ export default function ScanDispatcher({ onClose }: { onClose: () => void }) {
                 />
             );
         }
-        return (
-            // ui-scale-exempt: html5-qrcode sizes the camera viewfinder and its scan
-            // overlay from its own element measurements, which the interface zoom
-            // would skew. A camera view wants 1:1 anyway.
-            <div className="container-fluid py-2 h-100 ui-scale-exempt">
-                <div className="row justify-content-center">
-                    <div className="col-md-8 col-lg-6">
-                        <QRScannerView
-                            workOrders={localMOs}
-                            items={items}
-                            boms={localBoms}
-                            locations={locations}
-                            attributes={attributes}
-                            stockBalance={localStockBalance}
-                            initialWOId={seedCode || undefined}
-                            onUpdateStatus={handleUpdateWOStatus}
-                            onClose={back}
-                        />
-                    </div>
-                </div>
-            </div>
-        );
+        if (!logTarget) return null;
+        // Save -> its bag label (if the log made a lot) -> close -> back to the scan box.
+        return <WOCompletionModal mo={logTarget.mo} workOrder={logTarget.wo} onSaved={() => {}} onClose={back} />;
     }
 
     if (woLoading) return <XPLoading label="Loading work order..." />;
