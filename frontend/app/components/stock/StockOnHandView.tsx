@@ -796,6 +796,10 @@ export default function StockOnHandView({ locations, attributes, categories, ite
                     {bal.alt_uom && bal.alt_qty != null && (
                         <div style={{ fontSize: '10px', fontWeight: 'normal', color: '#666' }}>{formatAlt(bal.alt_qty, bal.alt_uom)}{altPerUnit(bal.alt_factor, bal.alt_factor_uom)}</div>
                     )}
+                    {/* The same qty in yards, via the carton's counted length or the item's g/y. */}
+                    {bal.qty_yards != null && !/^(y|yd|yds|yard|yards)$/i.test((bal.item_uom || '').trim()) && (
+                        <div style={{ fontSize: '10px', fontWeight: 'normal', color: '#666' }}>{Number(bal.qty_yards).toLocaleString('en-US', { maximumFractionDigits: 2 })} Yd</div>
+                    )}
                 </td>
                 <td className={undefined} style={{ padding: '4px 8px', fontFamily: xpFont, fontSize: '10px', color: '#666', whiteSpace: 'nowrap', ...colDivider }}>
                     {bal.item_uom || ''}

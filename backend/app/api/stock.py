@@ -3,7 +3,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import Session
 from sqlalchemy import select, func
 from app.db.session import get_async_db, get_db
-from app.services import stock_service, audit_service, kpi_service
+from app.services import stock_service, audit_service, kpi_service, packing_service
 from app.services.xlsx_service import xlsx_response
 from app.core.ws_manager import manager
 from app.core.pagination import PageParams, PageWindow
@@ -741,6 +741,7 @@ async def get_stock_balance_paginated(
             joined(select(
                 StockBalance,
                 Item.name, Item.code, Item.uom, Item.ends, Item.category_id, Category.name,
+                Item.weight_per_unit, Item.weight_unit,
                 LocL.name,
                 Batch.batch_number, Batch.vendor_lot, Batch.quality_status, Batch.notes,
                 Batch.bom_size_snapshot, Batch.ends,
@@ -749,6 +750,7 @@ async def get_stock_balance_paginated(
                 func.coalesce(Color.hex, attr_color_hex),
                 Batch.alt_qty, func.coalesce(Batch.alt_uom, PackingOrder.uom2),
                 PackingOrder.uom2_factor, PackingOrder.uom2_length_uom,
+                PackingOrder.sample_weight_per_unit, PackingOrder.sample_weight_unit,
             ))
             .options(selectinload(StockBalance.attribute_values))
             .order_by(*order)
@@ -761,15 +763,25 @@ async def get_stock_balance_paginated(
     by_key = await stock_service.describe_variant_keys(db, {r[0].variant_key for r in rows})
 
     items = []
-    for (bal, i_name, i_code, i_uom, i_ends, i_cat_id, cat_name, loc_name,
+    for (bal, i_name, i_code, i_uom, i_ends, i_cat_id, cat_name, i_wpu, i_wunit, loc_name,
          b_number, b_vendor_lot, b_quality, b_notes, b_snapshot, b_ends,
          mo_id, mo_code, wo_code,
          mo_labdip_code, color_code, color_name, color_hex,
-         b_alt_qty, po_uom2, po_factor, po_length_uom) in rows:
+         b_alt_qty, po_uom2, po_factor, po_length_uom, po_sample_wpu, po_sample_wunit) in rows:
         lotted = bool(bal.batch_key)
         notes = (b_notes or "").strip() if lotted else ""
         alt_uom = (po_uom2 or "").strip() if lotted and b_alt_qty is not None else ""
         key_info = by_key.get(bal.variant_key) or {}
+        # Qty restated in yards. A carton counted in a length-based selling unit
+        # (2 Pic @ 36 Yd) is its counted length; anything else goes through the
+        # g/y — the packing order's sampled one if the carton has one, else the
+        # item's. None when nothing bridges the UOM to a length.
+        qty_yards = None
+        if alt_uom and po_factor:
+            qty_yards = packing_service.convert_length(float(b_alt_qty) * float(po_factor), po_length_uom, "yard")
+        if qty_yards is None:
+            wpu, wunit = (po_sample_wpu, po_sample_wunit) if (po_sample_wpu and po_sample_wunit) else (i_wpu, i_wunit)
+            qty_yards = packing_service.to_yards(bal.qty, i_uom, wpu, wunit)
         # The producing MO's shade wins (same order as the lot pages); the key fills in.
         shade = (color_code, color_name, color_hex) if (lotted and color_code) else (
             key_info.get("color_code"), key_info.get("color_name"), key_info.get("color_hex"))
@@ -814,6 +826,7 @@ async def get_stock_balance_paginated(
             # item, so it rides the carton's own order. Null on hand-made lots.
             "alt_factor": float(po_factor) if alt_uom and po_factor else None,
             "alt_factor_uom": (po_length_uom or None) if alt_uom and po_factor else None,
+            "qty_yards": round(qty_yards, 2) if qty_yards is not None else None,
         })
 
     return window.envelope(
@@ -861,6 +874,9 @@ async def export_stock_balance(
             r["item_code"], r["item_name"], r["item_ends"], r["item_category_name"],
             r["location_name"], r["batch_number"], r["vendor_lot"], r["mo_code"], r["wo_code"],
             color or None, attrs or None, r["qty"], r["item_uom"],
+            r["qty_yards"], r["alt_qty"], r["alt_uom"],
+            # Length of one alt unit, e.g. "36 Yard" for 1 Pic.
+            f"{r['alt_factor']:g} {r['alt_factor_uom'] or ''}".strip() if r["alt_factor"] else None,
             r["qty_cones"] or None, r["qty_boxes"] or None, r["qty_drums"] or None,
             r["quality_status"], r["batch_notes"],
         ]
@@ -869,12 +885,14 @@ async def export_stock_balance(
         "Stock On Hand",
         [
             "Item Code", "Item Name", "Ends", "Category", "Location", "Lot", "Supplier Lot",
-            "MO", "WO", "Color", "Attributes", "Qty", "UOM", "Cones", "Boxes", "Drums",
+            "MO", "WO", "Color", "Attributes", "Qty", "UOM",
+            "Yards", "Alt Qty", "Alt UOM", "Per Alt Unit", "Cones", "Boxes", "Drums",
             "QC Status", "Notes",
         ],
         (_row(r) for r in data["items"]),
         "stock-on-hand",
-        footer=["Total kg", None, None, None, None, None, None, None, None, None, None, data["total_kg"], "kg"],
+        footer=["Total", None, None, None, None, None, None, None, None, None, None, data["total_kg"], "kg",
+                round(sum(r["qty_yards"] or 0 for r in data["items"]), 2)],
     )
 
 
