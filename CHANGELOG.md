@@ -15,6 +15,12 @@ on `main`:
 
 ## [Unreleased]
 
+## [1.3.1] - 2026-11-12
+
+### Changed
+- Scanning a work card (Kartu Kerja) on a PC opens the work order's log form, the same one as on the Work Orders page, instead of a Start / Complete / Cancel screen; saving opens the new bag's label for printing, and closing it returns to the scanner ready for the next card. A pending work order starts on its first log; closing or cancelling a work order is done from the Work Orders page
+- The phone scanner loads faster after a work card scan, since it no longer fetches every BOM and the full stock table it never used
+
 ## [1.3.0] - 2026-11-11
 
 ### Added
