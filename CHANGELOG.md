@@ -15,6 +15,26 @@ on `main`:
 
 ## [Unreleased]
 
+## [1.4.0] - 2026-11-12
+
+### Added
+- Packing orders, pick lists and shipments have their own grantable permissions instead of riding on the old sales-manage permission
+- Company profile and the qty formula can be managed by anyone holding the System Admin edit permission, which used to be a toggle that did nothing
+- Categories and Units tabs open on their own view permissions (category.view, uom.view) instead of attribute.view; Dyeing Orders / Setting Orders and the loom monitor's Calendar / Beams tabs likewise open on dye_order.view, setting_order.view, calendar.view and beam.view
+
+### Changed
+- Buttons and menu actions only appear for users holding the matching permission: lot create / split / reject / dispose / delete, attribute and unit create / edit / delete, Receive Goods on purchase orders, Close / Reopen on manufacturing orders, the sales order's Create Production Run shortcut, the Colors create-recipe shortcut, print buttons (card and label printing now separate), and lab dip / sample request status changes
+- The loom monitor's single "manage" permission is split into start, stop, run-edit, calendar and unmount
+- Reading packing orders, cartons and pick lists requires a warehouse permission
+- The unused Reports View toggle is retired
+- Pages load faster: each table shows as soon as its own data arrives, the server runs 4 workers so parallel requests no longer queue, and pages stop re-sending their requests after the first load
+
+### Fixed
+- Sidebar links sometimes needed a second click, because rows were rebuilt on every data refresh
+- The sidebar Dashboard link went through an extra redirect
+- Dashboard KPI refreshes reached only some users; they now reach everyone
+- Phones stalled when first connecting to the server before falling back to HTTP/2
+
 ## [1.3.1] - 2026-11-12
 
 ### Changed
