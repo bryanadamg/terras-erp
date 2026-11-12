@@ -17,7 +17,7 @@ from app.models.shipment import Shipment
 from app.models.batch import Batch
 from app.models.sales import SalesOrder, SalesOrderLine
 from app.models.bom import BOM, BOMSize
-from app.api.auth import get_current_user, require_permission
+from app.api.auth import require_permission, require_any_permission
 from app.models.auth import User
 from app.services import (
     audit_service, kpi_service, stock_service, packing_service, so_fulfilment_service,
@@ -27,6 +27,10 @@ from app.core.ws_manager import manager
 from app.core.pagination import PageParams, PageWindow
 
 router = APIRouter(prefix="/pick-lists", tags=["pick-lists"])
+
+# The Dispatch deck opens a pick list's cartons, and Print Layouts picks one as
+# sample data, so the reads are wider than the Pick Lists page itself.
+PICK_LIST_READ = ("pick_list.view", "pick_list.scan", "shipment.view", "print_layout.edit")
 
 # Statuses PUT may set. The rest are owned by their own transitions.
 EDITABLE_STATUSES = ("DRAFT", "PICKING", "PICKED")
@@ -596,7 +600,7 @@ async def list_pick_lists(
     search: Optional[str] = None,
     window: PageWindow = Depends(PageParams(default_size=100)),
     db: AsyncSession = Depends(get_async_db),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_any_permission(*PICK_LIST_READ)),
 ):
     query = select(PickList).options(*_load_options())
     count_query = select(func.count(PickList.id))
@@ -632,7 +636,7 @@ async def list_pick_lists(
 @router.get("/pickable-orders", response_model=list[PickableOrderResponse])
 async def list_pickable_orders(
     db: AsyncSession = Depends(get_async_db),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_permission('pick_list.view')),
 ):
     """Open sales orders scored for picking: soonest delivery first, showing what
     is actually packed and waiting for each.
@@ -836,7 +840,7 @@ async def suggest_pick_list_cartons(
     sales_order_id: uuid.UUID,
     source_location_id: Optional[uuid.UUID] = None,
     db: AsyncSession = Depends(get_async_db),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_permission('pick_list.view')),
 ):
     """Preview of what creating a pick list for this order would auto-fill —
     lets the planner uncheck a carton (e.g. the only one available overshoots
@@ -871,7 +875,7 @@ async def suggest_pick_list_cartons(
 async def resolve_pick_list(
     code: str,
     db: AsyncSession = Depends(get_async_db),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_any_permission('pick_list.view', 'pick_list.scan')),
 ):
     """Scanner lookup: PL-NNNNN -> the pick list it names.
 
@@ -897,7 +901,7 @@ async def resolve_pick_list(
 async def get_pick_list(
     pl_id: uuid.UUID,
     db: AsyncSession = Depends(get_async_db),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_any_permission(*PICK_LIST_READ)),
 ):
     pl = await _load(db, pl_id)
     if not pl:
@@ -910,7 +914,7 @@ async def get_remaining_for_pick_list(
     pl_id: uuid.UUID,
     alt: bool = False,
     db: AsyncSession = Depends(get_async_db),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_permission('pick_list.view')),
 ):
     """Per-SO-line qty still available to allocate to this DRAFT, excluding its own
     lines. Lets the editor compute remaining/over-pick without loading every pick

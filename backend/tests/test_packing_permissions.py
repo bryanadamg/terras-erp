@@ -33,3 +33,15 @@ def test_packer_can_save_setup_but_not_close(user_factory, client, auth_headers)
     for body in ({"status": "CANCELLED"}, {"qty_target": 99}):
         r = client.put(f"/api/packing/{po['id']}", json=body, headers=packer)
         assert r.status_code == 403, (body, r.text)
+
+
+def test_packing_and_pick_list_reads_need_a_warehouse_code(user_factory, client):
+    _, outsider = user_factory(["item.view"], "outsider")
+    _, picker = user_factory(["pick_list.scan"], "picker")
+    for url in ("/api/packing", "/api/packing/packed-units", "/api/pick-lists",
+                "/api/pick-lists/pickable-orders"):
+        assert client.get(url, headers=outsider).status_code == 403, url
+    # A picker reads lists and cartons (to resolve scans) but not the pick planner.
+    assert client.get("/api/pick-lists", headers=picker).status_code == 200
+    assert client.get("/api/packing/packed-units", headers=picker).status_code == 200
+    assert client.get("/api/pick-lists/pickable-orders", headers=picker).status_code == 403
