@@ -72,6 +72,8 @@ export default function ManufacturingOrdersTab({
     const { showToast } = useToast();
     const { authFetch, fetchData, loading: dataLoading } = useData();
     const canPrint = useUser().hasPermission('manufacturing_order.print');
+    // Close and reopen are one authority server-side (update_mo_status).
+    const canClose = useUser().hasPermission('manufacturing_order.close');
     const { formatCustom: tzFmt } = useTimezone();
     const {
         getItemName, getItemCode, getItemUom, getItemEnds, uomBadgeStyle,
@@ -610,12 +612,12 @@ export default function ManufacturingOrdersTab({
                             )}
                             {/* Delivered = qty met but still open. Closing is the explicit
                                 act that stops further logging (industry: SAP TECO). */}
-                            {canManage && selectedNode.status === 'DELIVERED' && (
+                            {canClose && selectedNode.status === 'DELIVERED' && (
                                 <button className="btn btn-sm btn-success py-0 px-2" style={{ fontSize: '0.72rem' }} onClick={() => onUpdateStatus(selectedNode.id, 'COMPLETED')}>
                                     <i className="bi bi-lock-fill me-1"></i>Close Order
                                 </button>
                             )}
-                            {canManage && selectedNode.status === 'COMPLETED' && (
+                            {canClose && selectedNode.status === 'COMPLETED' && (
                                 <button className="btn btn-sm btn-outline-secondary py-0 px-2" style={{ fontSize: '0.72rem' }} onClick={() => onUpdateStatus(selectedNode.id, 'IN_PROGRESS')}>
                                     <i className="bi bi-unlock me-1"></i>Reopen
                                 </button>
