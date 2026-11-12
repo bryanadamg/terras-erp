@@ -12,7 +12,7 @@ from app.schemas import (
 )
 from app.models.settings import CompanyProfile
 from app.core.uploads import upload_ext, IMAGE_EXTS
-from app.api.auth import get_current_user, get_current_admin
+from app.api.auth import get_current_user, require_permission
 from app.models.auth import User
 from app.services import audit_service, qty_formula_service
 import shutil
@@ -39,7 +39,7 @@ async def get_company_profile(db: AsyncSession = Depends(get_async_db), current_
 async def update_company_profile(
     payload: CompanyProfileUpdate,
     db: AsyncSession = Depends(get_async_db),
-    current_user: User = Depends(get_current_admin)
+    current_user: User = Depends(require_permission('system_admin.edit'))
 ):
     result = await db.execute(select(CompanyProfile))
     profile = result.scalars().first()
@@ -59,7 +59,7 @@ async def update_company_profile(
 async def upload_logo(
     file: UploadFile = File(...),
     db: AsyncSession = Depends(get_async_db),
-    current_user: User = Depends(get_current_admin)
+    current_user: User = Depends(require_permission('system_admin.edit'))
 ):
     # Ensure dir exists
     UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
@@ -114,7 +114,7 @@ async def get_qty_formula(
 async def update_qty_formula(
     payload: QtyFormulaUpdate,
     db: AsyncSession = Depends(get_async_db),
-    current_user: User = Depends(get_current_admin),
+    current_user: User = Depends(require_permission('system_admin.edit')),
 ):
     known = await qty_formula_service.size_names(db)
     fallback = qty_formula_service.FALLBACK

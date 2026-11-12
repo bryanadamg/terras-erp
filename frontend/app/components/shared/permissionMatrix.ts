@@ -108,7 +108,7 @@ export const PERMISSION_MATRIX: PermissionMatrixSection[] = [
             { resource: 'production_output', label: 'Production Output' },
             { resource: 'audit_log', label: 'Audit Log' },
             { resource: 'print_layout', label: 'Print Lay Out' },
-            { resource: 'system_admin', label: 'System Admin' },
+            { resource: 'system_admin', label: 'General Settings' },
         ],
     },
 ];
@@ -176,7 +176,9 @@ export const RESOURCE_ACTIONS: Record<string, PermissionMatrixAction[]> = {
     production_output: [A('export', 'Export Excel'), VIEW],
     audit_log: [VIEW],
     print_layout: [EDIT],
-    system_admin: [CREATE, A('edit', 'edit'), DELETE],
+    // Settings → General: company profile, logo, qty formula. Users, roles and
+    // backups stay admin.access only.
+    system_admin: [EDIT],
 };
 
 export function permissionCode(resource: string, actionCode: string): string {

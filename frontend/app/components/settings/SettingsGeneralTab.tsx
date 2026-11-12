@@ -17,7 +17,7 @@ export default function SettingsGeneralTab({
 }: any) {
     const { showToast } = useToast();
     const { hasPermission } = useUser();
-    const isAdmin = hasPermission('admin.access');
+    const isAdmin = hasPermission('system_admin.edit');
     const { uiScale, setUiScale } = useTheme();
     const { timezone, setTimezone } = useTimezone();
 
@@ -51,7 +51,7 @@ export default function SettingsGeneralTab({
                                     disabled={!isAdmin}
                                 />
                                 {!isAdmin && (
-                                    <div style={settingsHint()}>Only admins can change the application name.</div>
+                                    <div style={settingsHint()}>Needs the Edit General Settings permission.</div>
                                 )}
                             </div>
                             <div>
@@ -102,9 +102,9 @@ export default function SettingsGeneralTab({
                 </SettingsPanel>
             </div>
 
-            {/* Company Profile (Admin Only). Wider basis: it carries a 200px logo
-                well plus the address fields beside it. */}
-            {hasPermission('admin.access') && (
+            {/* Company Profile (system_admin.edit). Wider basis: it carries a 200px
+                logo well plus the address fields beside it. */}
+            {isAdmin && (
                 <div style={settingsCol(560, 1)}>
                     <CompanyProfileView
                         profile={companyProfile}

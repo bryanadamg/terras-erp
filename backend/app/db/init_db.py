@@ -557,9 +557,8 @@ def seed_rbac(db):
             ("production_output.export", "Export Production Output Excel"),
             ("audit_log.view", "View Audit Log"),
             ("print_layout.edit", "Edit Print Layouts"),
-            ("system_admin.create", "Create System Admin Records"),
-            ("system_admin.edit", "Edit System Admin Records"),
-            ("system_admin.delete", "Delete System Admin Records"),
+            # Settings → General: company profile, logo and the per-size qty formula.
+            ("system_admin.edit", "Edit Company Profile & Qty Formula"),
         ]
 
         db_perms = {}
