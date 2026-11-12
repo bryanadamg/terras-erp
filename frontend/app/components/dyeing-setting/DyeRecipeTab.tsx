@@ -715,7 +715,7 @@ export default function DyeRecipeTab({ items, attributes, authFetch, initialColo
                         pos={menuPos}
                         items={[
                             { key: 'edit', label: 'Edit', icon: 'bi-pencil', hidden: !canManage, onClick: () => { menuClose(); openEdit(recipe); } },
-                            { key: 'print', label: 'Print Recipe Card', icon: 'bi-printer', onClick: () => { menuClose(); setSelectedId(String(recipe.id)); setSelectedRow(recipe); setShowPrint(true); } },
+                            { key: 'print', label: 'Print Recipe Card', icon: 'bi-printer', hidden: !hasPermission('dye_recipe.print'), onClick: () => { menuClose(); setSelectedId(String(recipe.id)); setSelectedRow(recipe); setShowPrint(true); } },
                             { key: 'delete', label: 'Delete', icon: 'bi-trash', danger: true, hidden: !canManage, onClick: () => { menuClose(); handleDelete(recipe); } },
                         ]}
                     />

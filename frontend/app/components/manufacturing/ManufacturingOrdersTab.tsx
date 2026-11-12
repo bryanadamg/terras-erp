@@ -17,6 +17,7 @@ import { resolveMoBom } from '../shared/moHelpers';
 import { useTimezone } from '../../context/TimezoneContext';
 import { API_BASE } from '../shared/apiBase';
 import { matchSubBOM } from '../shared/bomMatch';
+import { useUser } from '../../context/UserContext';
 const WOCompletionModal = dynamic(() => import('./WOCompletionModal'), { ssr: false });
 
 // On the selected (blue) tree row a normal chip fill would fight the highlight, so
@@ -70,6 +71,7 @@ export default function ManufacturingOrdersTab({
 }: any) {
     const { showToast } = useToast();
     const { authFetch, fetchData, loading: dataLoading } = useData();
+    const canPrint = useUser().hasPermission('manufacturing_order.print');
     const { formatCustom: tzFmt } = useTimezone();
     const {
         getItemName, getItemCode, getItemUom, getItemEnds, uomBadgeStyle,
@@ -618,14 +620,14 @@ export default function ManufacturingOrdersTab({
                                     <i className="bi bi-unlock me-1"></i>Reopen
                                 </button>
                             )}
-                            <button
+                            {canPrint && <button
                                 title="Print this MO"
                                 className={XP_BTN}
                                 style={{ fontFamily: xpFont, fontSize: '10px', padding: '1px 8px', background: 'linear-gradient(to bottom,#f0efe6,#dddbd0)', border: '1px solid', borderColor: '#dfdfdf #808080 #808080 #dfdfdf', cursor: 'pointer', color: '#000', borderRadius: BUTTON_RADIUS }}
                                 onClick={() => handlePrintMO(selectedNode, true)}
                             >
                                 <i className="bi bi-printer me-1"></i>Print
-                            </button>
+                            </button>}
                         </div>
                     </div>
 
@@ -1023,7 +1025,7 @@ export default function ManufacturingOrdersTab({
                         {canManage && (
                             <ToolbarButton tone="create" icon="bi-plus-lg" onClick={onNewMO}>New MO</ToolbarButton>
                         )}
-                        {onPrint && (
+                        {onPrint && canPrint && (
                             <ToolbarButton tone="neutral" icon="bi-printer" printable onClick={onPrint}>Print</ToolbarButton>
                         )}
                     </>
@@ -1307,7 +1309,7 @@ export default function ManufacturingOrdersTab({
                             <FloatingMenu
                                 pos={moMenuPos}
                                 items={[
-                                    { key: 'print', icon: 'bi-printer', label: 'Print', onClick: () => { closeMoMenu(); handlePrintMO(menuMO); } },
+                                    { key: 'print', icon: 'bi-printer', label: 'Print', hidden: !canPrint, onClick: () => { closeMoMenu(); handlePrintMO(menuMO); } },
                                     { key: 'delete', icon: 'bi-trash', label: 'Delete', danger: true, hidden: !canManage, onClick: () => { closeMoMenu(); onDeleteMO(menuMO.id); } },
                                 ]}
                             />

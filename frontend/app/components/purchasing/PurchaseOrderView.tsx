@@ -1028,6 +1028,7 @@ export default function PurchaseOrderView({ items, itemResults, onSearchItems, a
                            },
                            {
                                key: 'print', icon: 'bi-printer', label: 'Print',
+                               hidden: !hasPermission('purchase_order.print'),
                                onClick: () => { closeMenu(); handlePrintPO(menuPo); },
                            },
                            {

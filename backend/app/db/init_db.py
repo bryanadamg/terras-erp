@@ -542,7 +542,6 @@ def seed_rbac(db):
             ("lab_dip_request.edit", "Edit Lab Dip Requests"),
             ("lab_dip_request.delete", "Delete Lab Dip Requests"),
             ("lab_dip_request.update_status", "Update Lab Dip Request Status"),
-            ("lab_dip_request.print", "Print Lab Dip Requests"),
             ("lab_dip_request.view", "View Lab Dip Requests"),
             # Yarn Lab Dip
             ("yarn_lab_dip.view", "View Yarn Lab Dips"),
@@ -609,7 +608,7 @@ def seed_rbac(db):
                 "color_code.create", "color_code.edit", "color_code.archive", "color_code.create_recipe", "color_code.view",
                 "color_variant.create", "color_variant.edit", "color_variant.delete",
                 "lab_dip_request.create", "lab_dip_request.edit", "lab_dip_request.delete",
-                "lab_dip_request.update_status", "lab_dip_request.print", "lab_dip_request.view",
+                "lab_dip_request.update_status", "lab_dip_request.view",
                 "yarn_lab_dip.view",
                 "stock_ledger.view",
                 "production_output.view", "production_output.export",

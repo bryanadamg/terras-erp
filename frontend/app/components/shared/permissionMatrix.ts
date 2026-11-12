@@ -168,7 +168,7 @@ export const RESOURCE_ACTIONS: Record<string, PermissionMatrixAction[]> = {
     setting_order: [VIEW],
     color_code: [CREATE, EDIT, A('archive', 'Archive'), A('create_recipe', 'Create Dyeing Recipe'), VIEW],
     color_variant: [CREATE, EDIT, DELETE],
-    lab_dip_request: [CREATE, EDIT, DELETE, A('update_status', 'Update Status'), A('print', 'Print'), VIEW],
+    lab_dip_request: [CREATE, EDIT, DELETE, A('update_status', 'Update Status'), VIEW],
     yarn_lab_dip: [VIEW],
 
     // Production Output report — Excel export is its own grant so a role can read

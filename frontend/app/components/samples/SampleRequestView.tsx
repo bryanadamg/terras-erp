@@ -1056,7 +1056,7 @@ export default function SampleRequestView({ samples, customers, onCreateSample, 
                    minWidth={170}
                    items={[
                        { key: 'edit', label: 'Edit Request', icon: 'bi-pencil', hidden: !canManage, onClick: () => { closeRowMenu(); openEditModal(s); } },
-                       { key: 'print', label: 'Print SPK Sample', icon: 'bi-printer', onClick: () => { closeRowMenu(); setPrintSample(s); } },
+                       { key: 'print', label: 'Print SPK Sample', icon: 'bi-printer', hidden: !hasPermission('sample_request.print'), onClick: () => { closeRowMenu(); setPrintSample(s); } },
                        { key: 'log', label: 'View Event Log', icon: 'bi-clock-history', onClick: () => { closeRowMenu(); setHistoryEntityId(s.id); } },
                    ]}
                />

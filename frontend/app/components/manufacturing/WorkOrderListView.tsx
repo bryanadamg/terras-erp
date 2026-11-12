@@ -168,6 +168,8 @@ export default function WorkOrderListView({
     const subTd = lvSubTd();
     const { hasPermission, hasAnyPermission } = useUser();
     const canManage = hasAnyPermission('work_order.edit', 'work_order.delete', 'work_order.print_card', 'work_order.stage');
+    const canPrintCard = hasPermission('work_order.print_card');
+    const canPrintLabel = hasPermission('work_order.print_label');
     const { formatCustom: tzFmt } = useTimezone();
     const fmtDate = (v: any) => {
         if (!v) return '—';
@@ -549,7 +551,7 @@ export default function WorkOrderListView({
                         <div style={{ padding: '6px 8px', background: '#f5f4ef', overflow: 'hidden' }}>
                             <div style={{ ...colHeaderStyle, display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 6 }}>
                                 <span>Completion Log ({completions.length})</span>
-                                {completions.some(hasLabelableLot) && (
+                                {canPrintLabel && completions.some(hasLabelableLot) && (
                                     <button
                                         type="button"
                                         onClick={() => openBagLabels(wo)}
@@ -610,7 +612,7 @@ export default function WorkOrderListView({
                                                             <td style={{ ...subTd, color: '#555' }}>
                                                                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 4 }}>
                                                                     <span>{c.work_center_name || '—'}</span>
-                                                                    {hasLabelableLot(c) && (
+                                                                    {canPrintLabel && hasLabelableLot(c) && (
                                                                         <button
                                                                             type="button"
                                                                             onClick={() => openBagLabels(wo, c.id)}
@@ -693,7 +695,7 @@ export default function WorkOrderListView({
                         <span style={{ fontSize: 10, color: '#cce0ff', marginLeft: 4 }}>
                             {filtered.length} of {flatWOs.length} steps
                         </span>
-                        {sel.count > 0 && (
+                        {canPrintCard && sel.count > 0 && (
                             <button
                                 onClick={() => setBulkPrintOpen(true)}
                                 style={{ fontFamily: xpFont, fontSize: 10, padding: '1px 8px', background: 'linear-gradient(to bottom,#b0e8b0,#70c870)', border: '1px solid #0a3e0a', cursor: 'pointer', color: '#004000', marginLeft: 8 }}

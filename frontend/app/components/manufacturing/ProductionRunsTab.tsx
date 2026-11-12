@@ -9,6 +9,7 @@ import { useData } from '../../context/DataContext';
 import { statusChipStyle, useFloatingMenu, MenuTriggerButton, FloatingMenu, XPActionButton, ExpandedRowPanel, ExpandedRowPanelBody, ProgressBar, CodeChip, CODE_FONT, xpFont, TableSkeleton, SkeletonBar, useTableSkeletonMetrics, rowStateBg, StatusChip, CHIP_RADIUS, familyColor, VariantChip, SKEL_PAGE_ROWS } from '../shared/xpTheme';
 import { lvSubTh, lvSubTd, lvSubTable, lvSubRow, ExpanderCell, LV_EXPANDER_COL_W, lvZebra, lvThead, lvTh, ResizableTable } from '../shared/listViewTheme';
 import { API_BASE } from '../shared/apiBase';
+import { useUser } from '../../context/UserContext';
 const PRMaterialPullSheetModal = dynamic(() => import('./PRMaterialPullSheetModal'), { ssr: false });
 
 // Column defs for the expanded row's material table. Module-level so the loading
@@ -106,6 +107,7 @@ export default function ProductionRunsTab({
     const { showToast } = useToast();
     const router = useRouter();
     const { authFetch, loading: dataLoading } = useData();
+    const canPrint = useUser().hasPermission('production_run.print');
 
     // Skeleton sizing: measure one real row so the placeholders shown on the next
     // load are exactly as tall as the rows that replace them.
@@ -260,7 +262,7 @@ export default function ProductionRunsTab({
                             {canManage && (
                                 <ToolbarButton tone="launch" icon="bi-collection-play" onClick={onNewProductionRun}>New Production Run</ToolbarButton>
                             )}
-                            {onPrint && (
+                            {onPrint && canPrint && (
                                 <ToolbarButton tone="neutral" icon="bi-printer" printable onClick={onPrint}>Print</ToolbarButton>
                             )}
                         </>
@@ -430,12 +432,14 @@ export default function ProductionRunsTab({
                                         <td style={{ ...tdStyle, fontSize: 10 }}>{formatDate(pr.target_end_date)}</td>
                                         <td style={{ ...tdStyle, textAlign: 'right', whiteSpace: 'nowrap' }} onClick={(e) => e.stopPropagation()}>
                                             <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: '4px' }}>
-                                                <XPActionButton
-                                                    tone="primary"
-                                                    icon="bi-printer"
-                                                    title="Print Material Pull Sheet"
-                                                    onClick={() => handlePrintPR(pr)}
-                                                />
+                                                {canPrint && (
+                                                    <XPActionButton
+                                                        tone="primary"
+                                                        icon="bi-printer"
+                                                        title="Print Material Pull Sheet"
+                                                        onClick={() => handlePrintPR(pr)}
+                                                    />
+                                                )}
                                                 <MenuTriggerButton onClick={(e) => togglePrMenu(pr.id, e)} />
                                             </div>
                                         </td>

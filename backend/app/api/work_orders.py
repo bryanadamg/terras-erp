@@ -23,7 +23,7 @@ from app.schemas import (
     BeamDismountResult, AvailableBeamRow, LoomBeamStatus, WOStagedLot, BeamPrep,
 )
 from app.models.auth import User
-from app.api.auth import get_current_user, require_permission, require_any_permission, wo_scope_ok
+from app.api.auth import get_current_user, require_permission, require_any_permission, wo_scope_ok, user_has_permission
 from app.api.batches import (
     generate_batch_number, _resolve_batch_origins, _resolve_batch_variants,
 )
@@ -511,15 +511,26 @@ async def update_work_order_status(
     )
     return result.scalars().first()
 
+# Kartu Kerja and bag labels are separate grants (the label printer often sits
+# with a different person from the card printer).
+PRINT_PERMS = {"card": "work_order.print_card", "labels": "work_order.print_label"}
+
+
+def _require_print(user: User, kind: str) -> None:
+    if not user_has_permission(user, PRINT_PERMS[kind]):
+        raise HTTPException(status_code=403, detail=f"Missing permission: {PRINT_PERMS[kind]}")
+
+
 @router.post("/work-orders/mark-printed-bulk")
 async def mark_work_orders_printed_bulk(
     payload: WorkOrderMarkPrintedBulk,
     db: AsyncSession = Depends(get_async_db),
-    current_user: User = Depends(require_permission('work_order.print_card')),
+    current_user: User = Depends(require_any_permission(*PRINT_PERMS.values())),
 ):
     """Stamp print time on many WOs at once (bulk Kartu Kerja print)."""
     if payload.kind not in ("card", "labels"):
         raise HTTPException(status_code=400, detail="kind must be 'card' or 'labels'")
+    _require_print(current_user, payload.kind)
     if not payload.ids:
         return {"updated": 0}
     result = await db.execute(select(WorkOrder).filter(WorkOrder.id.in_(payload.ids)))
@@ -556,12 +567,13 @@ async def mark_work_order_printed(
     wo_id: str,
     kind: str = "card",
     db: AsyncSession = Depends(get_async_db),
-    current_user: User = Depends(require_permission('work_order.print_card')),
+    current_user: User = Depends(require_any_permission(*PRINT_PERMS.values())),
 ):
     """Stamp print time on a WO. kind='card' (Kartu Kerja) or 'labels' (bag labels).
     Idempotent — reprints just overwrite with a newer timestamp."""
     if kind not in ("card", "labels"):
         raise HTTPException(status_code=400, detail="kind must be 'card' or 'labels'")
+    _require_print(current_user, kind)
     result = await db.execute(
         select(WorkOrder).options(*_wo_options()).filter(WorkOrder.id == wo_id)
     )

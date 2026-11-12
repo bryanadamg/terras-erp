@@ -3,6 +3,7 @@ import dynamic from 'next/dynamic';
 import { useLanguage } from '../../context/LanguageContext';
 import { useTimezone } from '../../context/TimezoneContext';
 import { useData } from '../../context/DataContext';
+import { useUser } from '../../context/UserContext';
 import { usePaginatedFetch } from '../../context/usePaginatedList';
 import {
     xpFont, xpBtn, xpInput, xpSelect, xpSep, CODE_FONT,
@@ -44,6 +45,7 @@ export default function ReportsView(_props: any) {
     const { t } = useLanguage();
     const { formatDate: tzDate, formatTime: tzTime } = useTimezone();
     const { authFetch, locations = [], categories = [], itemIndex, companyProfile } = useData();
+    const canPrint = useUser().hasPermission('stock_ledger.print');
 
     // Filters. Default to the trailing 30 days, not all-time — an unbounded ledger
     // query scans the whole (ever-growing) stock_ledger history for its count/sum
@@ -246,7 +248,7 @@ export default function ReportsView(_props: any) {
             <div style={{ flex: 1 }} />
             {hasFilters && <button className={XP_BTN} style={xpBtn({ fontSize: '10px', padding: '1px 6px' })} onClick={clearFilters} title="Clear filters"><i className="bi bi-x-lg" /></button>}
             <button className={XP_BTN} style={xpBtn({ padding: '1px 6px' })} onClick={refetch} title="Refresh"><i className="bi bi-arrow-clockwise" /></button>
-            <button className={XP_BTN} style={xpBtn({ padding: '1px 6px' })} onClick={handlePrint} disabled={printLoading} title={printLoading ? 'Loading...' : t('print')}><i className={printLoading ? 'bi bi-hourglass-split' : 'bi bi-printer'} /></button>
+            {canPrint && <button className={XP_BTN} style={xpBtn({ padding: '1px 6px' })} onClick={handlePrint} disabled={printLoading} title={printLoading ? 'Loading...' : t('print')}><i className={printLoading ? 'bi bi-hourglass-split' : 'bi bi-printer'} /></button>}
         </div>;
 
     // ── Summary strip — one stat list, per-branch tile rendering ─────────────
