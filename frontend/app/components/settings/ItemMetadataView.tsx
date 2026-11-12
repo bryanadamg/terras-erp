@@ -47,7 +47,16 @@ export default function ItemMetadataView({
         'uom.create', 'uom.edit', 'uom.delete',
     );
 
-    const [tab, setTab] = useRememberedTab<Tab>('item-metadata', 'attributes', ['attributes', 'categories', 'uom']);
+    // Each tab opens on its own .view code; the page itself opens on any of them.
+    const allTabs: { key: Tab; label: string; perm: string }[] = [
+        { key: 'attributes', label: 'Attributes', perm: 'attribute.view' },
+        { key: 'categories', label: 'Categories', perm: 'category.view' },
+        { key: 'uom', label: 'Units of Measure', perm: 'uom.view' },
+    ];
+    const visibleTabs = allTabs.filter(t => hasPermission(t.perm));
+    const visibleKeys = visibleTabs.map(t => t.key);
+    const [rememberedTab, setTab] = useRememberedTab<Tab>('item-metadata', visibleKeys[0] ?? 'attributes', visibleKeys);
+    const tab = visibleKeys.includes(rememberedTab) ? rememberedTab : visibleKeys[0];
 
     return (
         <div className="fade-in" style={viewShellStyle()}>
@@ -57,11 +66,7 @@ export default function ItemMetadataView({
             <Tabs
                 activeKey={tab}
                 onChange={k => setTab(k as Tab)}
-                tabs={[
-                    { key: 'attributes', label: 'Attributes' },
-                    { key: 'categories', label: 'Categories' },
-                    { key: 'uom', label: 'Units of Measure' },
-                ]}
+                tabs={visibleTabs.map(({ key, label }) => ({ key, label }))}
             />
 
             <div style={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
