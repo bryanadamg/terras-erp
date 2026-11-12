@@ -870,7 +870,7 @@ export default function PurchaseOrderView({ items, itemResults, onSearchItems, a
                                    </td>
                                    <td style={{ ...tdBase, borderRight: 'none', textAlign: 'right' as const }}>
                                        <div style={{ display: 'flex', gap: 2, justifyContent: 'flex-end', alignItems: 'center' }}>
-                                           {canManage && po.status !== 'RECEIVED' && (
+                                           {hasPermission('purchase_order.receive_goods') && po.status !== 'RECEIVED' && (
                                                <button
                                                        className={XP_BTN}
                                                        style={xpBtn({ ...BTN_TONES.success, padding: 0, width: 20, height: 20, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: '12px' })}
