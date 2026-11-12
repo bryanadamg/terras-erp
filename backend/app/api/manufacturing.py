@@ -742,6 +742,7 @@ async def list_work_orders_flat(
     search: str = Query(""),
     component_item_id: str = Query(""),
     unprinted: bool = Query(False),
+    wo_id: str = Query("", description="One work order by id — a scanned Kartu Kerja QR carries only the id"),
     order_by: str = Query(
         "",
         description="'color' groups the window by the MO's Color Library shade, then "
@@ -781,6 +782,11 @@ async def list_work_orders_flat(
         bom_ids_subq = select(BOMLine.bom_id).where(BOMLine.item_id == component_item_id).scalar_subquery()
         mo_ids_subq = select(ManufacturingOrder.id).where(ManufacturingOrder.bom_id.in_(bom_ids_subq)).scalar_subquery()
         conditions.append(WorkOrderModel.manufacturing_order_id.in_(mo_ids_subq))
+    if wo_id:
+        try:
+            conditions.append(WorkOrderModel.id == uuid.UUID(wo_id))
+        except ValueError:
+            raise HTTPException(status_code=422, detail="wo_id must be a UUID")
     if status:
         conditions.append(WorkOrderModel.status == status)
     if work_center_id:
