@@ -71,6 +71,8 @@ export default function ColorLibraryView({
     const canManage = hasAnyPermission('color_code.create', 'color_code.edit', 'color_code.archive');
     // The New Color button needs create specifically — an edit/archive-only role saw it and 403'd on submit.
     const canCreate = hasPermission('color_code.create');
+    // The shortcut opens the recipe form prefilled; saving it is still dye_recipe.create.
+    const canCreateRecipe = hasPermission('color_code.create_recipe') && hasPermission('dye_recipe.create');
     const router = useRouter();
     const { openId: menuOpenId, pos: menuPos, toggle: menuToggle, close: menuClose } = useFloatingMenu(160);
 
@@ -319,7 +321,7 @@ export default function ColorLibraryView({
                                             onClick={() => openEdit(c)}
                                         />
                                         )}
-                                        {canManage && (
+                                        {canCreateRecipe && (
                                         <XPActionButton
                                             tone="primary"
                                             icon="bi-droplet-half"
