@@ -40,12 +40,12 @@ export default function ItemMetadataView({
     onCreateAttribute, onUpdateAttribute, onDeleteAttribute,
     onAddValue, onUpdateValue, onDeleteValue,
 }: Props) {
-    const { hasPermission, hasAnyPermission } = useUser();
-    const canManage = hasAnyPermission(
-        'attribute.create', 'attribute.edit', 'attribute.delete',
-        'category.create', 'category.edit', 'category.delete',
-        'uom.create', 'uom.edit', 'uom.delete',
-    );
+    const { hasPermission } = useUser();
+    const canFor = (resource: string) => ({
+        create: hasPermission(`${resource}.create`),
+        edit: hasPermission(`${resource}.edit`),
+        delete: hasPermission(`${resource}.delete`),
+    });
 
     // Each tab opens on its own .view code; the page itself opens on any of them.
     const allTabs: { key: Tab; label: string; perm: string }[] = [
@@ -73,7 +73,7 @@ export default function ItemMetadataView({
                 {tab === 'attributes' && (
                     <AttributesLibraryView
                         attributes={attributes || []}
-                        canManage={canManage}
+                        can={canFor('attribute')}
                         onCreateAttribute={onCreateAttribute}
                         onUpdateAttribute={onUpdateAttribute}
                         onDeleteAttribute={onDeleteAttribute}
@@ -93,7 +93,7 @@ export default function ItemMetadataView({
                 {tab === 'uom' && (
                     <UOMLibraryView
                         uoms={uoms || []}
-                        canManage={canManage}
+                        can={canFor('uom')}
                         onCreateUOM={onCreateUOM}
                         onDeleteUOM={onDeleteUOM}
                         onSaveUOMFactor={onSaveUOMFactor}

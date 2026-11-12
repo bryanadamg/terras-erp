@@ -36,7 +36,8 @@ const roleLabel = (role?: string | null) => (role ? ROLE_LABELS[role] || role : 
 
 interface Props {
     attributes: any[];
-    canManage: boolean;
+    // One flag per backend gate, so a button only shows when its endpoint will accept it.
+    can: { create: boolean; edit: boolean; delete: boolean };
     onCreateAttribute: (p: any) => Promise<Response>;
     onUpdateAttribute: (id: string, name: string) => void;
     onDeleteAttribute: (id: string) => void;
@@ -55,7 +56,7 @@ const nextNumber = (values: string[]) => {
 // place on the right. Replaces a table that
 // capped each row at 8 value chips and routed every edit through a modal.
 export default function AttributesLibraryView({
-    attributes, canManage,
+    attributes, can,
     onCreateAttribute, onUpdateAttribute, onDeleteAttribute,
     onAddValue, onUpdateValue, onDeleteValue,
 }: Props) {
@@ -86,7 +87,7 @@ export default function AttributesLibraryView({
         setSelectedId(id); setValueFilter(''); setValueDraft(''); setNameDraft(null);
     };
 
-    const locked = !canManage || !!selected?.is_system;
+    const locked = !can.edit || !!selected?.is_system;
     const values: any[] = selected?.values || [];
     const vq = valueFilter.trim().toLowerCase();
     const shownValues = vq ? values.filter(v => v.value.toLowerCase().includes(vq)) : values;
@@ -160,7 +161,7 @@ export default function AttributesLibraryView({
                 footer={
                     <>
                         <ToolbarCount>{filtered.length} attribute{filtered.length !== 1 ? 's' : ''}</ToolbarCount>
-                        {canManage && (
+                        {can.create && (
                             <span style={{ marginLeft: 'auto' }}>
                                 <ToolbarButton tone="create" icon="bi-plus-lg" onClick={openCreate}>New Attribute</ToolbarButton>
                             </span>
@@ -189,7 +190,7 @@ export default function AttributesLibraryView({
             </ColumnPane>
 
             {/* ── Right: selected attribute ────────────────────────────────── */}
-            <DetailPane empty={canManage ? 'Select an attribute, or create a new one.' : 'Select an attribute.'}>
+            <DetailPane empty={can.create ? 'Select an attribute, or create a new one.' : 'Select an attribute.'}>
                 {selected && (
                     <>
                         <DetailHeader
@@ -223,13 +224,13 @@ export default function AttributesLibraryView({
                                     )}
                                 </>
                             }
-                            actions={canManage && !selected.is_system ? (
+                            actions={can.delete && !selected.is_system ? (
                                 <button type="button" className={XP_BTN} style={lvBtn('danger')} onClick={() => onDeleteAttribute(selected.id)}>
                                     <i className="bi bi-trash me-1" />Delete Attribute
                                 </button>
                             ) : undefined}
                         >
-                            {selected.is_system && canManage && (
+                            {selected.is_system && can.edit && (
                                 <span style={{ color: '#804800' }}>
                                     Name is protected — the system looks this attribute up by role. Values can be managed below.
                                 </span>
@@ -242,7 +243,7 @@ export default function AttributesLibraryView({
                             <ToolbarCount right>
                                 {vq ? `${shownValues.length} of ${values.length}` : values.length} value{values.length !== 1 ? 's' : ''}
                             </ToolbarCount>
-                            {canManage && (
+                            {can.create && (
                                 <>
                                     <span style={lvSep()} />
                                     <input
@@ -268,12 +269,12 @@ export default function AttributesLibraryView({
                                 <DetailRow
                                     key={val.id}
                                     index={vi}
-                                    actions={canManage ? (
+                                    actions={can.delete ? (
                                         <XPActionButton tone="danger" icon="bi-trash" title={`Delete "${val.value}"`} onClick={() => handleDeleteValue(val)} />
                                     ) : undefined}
                                 >
                                     <span style={{ width: 28, textAlign: 'right', fontSize: 10, color: '#999', flexShrink: 0 }}>{values.indexOf(val) + 1}</span>
-                                    {canManage ? (
+                                    {can.edit ? (
                                         <input
                                             // re-mount on server change so the field follows a refresh
                                             key={val.value}
