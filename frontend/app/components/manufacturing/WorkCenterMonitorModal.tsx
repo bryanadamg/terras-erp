@@ -597,9 +597,11 @@ export default function WorkCenterMonitorModal({ isOpen, onClose, workCenter, au
     // ── Tab bar ──────────────────────────────────────────────────────────────
     const tabs: TabDef[] = [
         { key: 'performance', label: t('performance'), icon: 'bi-graph-up-arrow' },
-        { key: 'calendar', label: t('work_calendar'), icon: 'bi-calendar3' },
+        ...(canEditCalendar || hasPermission('calendar.view')
+            ? [{ key: 'calendar', label: t('work_calendar'), icon: 'bi-calendar3' } as TabDef]
+            : []),
         // Warp is machine state, so it lives on the machine — not on any WO.
-        ...(((workCenter?.center_type || '').toUpperCase() === 'WEAVING'
+        ...((canUnmount || hasPermission('beam.view')) && ((workCenter?.center_type || '').toUpperCase() === 'WEAVING'
             || (workCenter?.center_type || '').toUpperCase() === 'TENUN')
             ? [{ key: 'beams', label: t('beams_on_loom'), icon: 'bi-arrow-bar-up' } as TabDef]
             : []),

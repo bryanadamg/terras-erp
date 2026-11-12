@@ -617,7 +617,8 @@ def seed_rbac(db):
             # "work_order.manage" used to imply. Tighten via the Roles page if a
             # site actually wants operators editing/deleting WOs.
             "Operator": ["work_order.log", "work_order.view", "work_order.stage",
-                         "weaving_monitor.view", "dyeing_monitor.view"],
+                         "weaving_monitor.view", "dyeing_monitor.view",
+                         "calendar.view", "beam.view"],
             # QC desk: dispositions held stock on the Quarantine Packing page and
             # scraps bad lots. Read-only everywhere else — releasing to packing is
             # the only write this role owns.
