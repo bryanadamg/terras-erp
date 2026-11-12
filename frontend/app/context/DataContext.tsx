@@ -1099,7 +1099,10 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
         } catch (e) { reportRefreshError('dashboard KPIs', e); }
     }, [currentUser, reportRefreshError]);
 
-    const handleTabHover = (tab: string) => fetchData(tab);
+    // useCallback, not a bare arrow: it sits in the context value's memo deps, and a
+    // fresh function every render made that memo recompute every render — so every
+    // useData() consumer re-rendered on unrelated provider state changes.
+    const handleTabHover = useCallback((tab: string) => fetchData(tab), [fetchData]);
 
     useEffect(() => { if (currentUser) fetchData(); }, [currentUser, itemPage, woPage, prPage, auditPage, reportPage, soPage, poPage, itemSearch, moSearch, prFilterQuery, soSearch, soCustomerSearch, soStatusFilter, soSort, poSearch, poStatusFilter, categoryL1, categoryL2, categoryL3, auditType, fetchData]);
 
