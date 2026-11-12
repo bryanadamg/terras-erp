@@ -129,11 +129,16 @@ export default function Sidebar({ activeTab, setActiveTab, onTabHover, appName, 
     if (onTabHover) onTabHover(tab);
   };
 
-  // Shorthand: a nav link row
-  const NavItem = ({
+  // Shorthand: a nav link row. Called as a plain function, never as <NavItem/>:
+  // a component declared inside Sidebar is a NEW type every render, so React
+  // tore down and rebuilt every row each time any DataContext fetch landed. A
+  // row replaced between mousedown and mouseup swallows the click — the
+  // "sidebar needs clicking twice" bug.
+  const navItem = ({
     tab, label, icon, isSub = false, isDeepSub = false,
   }: { tab: string; label: string; icon: string; isSub?: boolean; isDeepSub?: boolean }) => (
     <div
+      key={tab}
       style={navStyle(activeTab === tab, hovered === tab, isSub, isDeepSub)}
       onClick={(e) => handleTabClick(tab, e)}
       {...H(tab)}
@@ -145,8 +150,8 @@ export default function Sidebar({ activeTab, setActiveTab, onTabHover, appName, 
 
   // Section header — clickable, navigates to that section's home mini-dashboard.
   // Highlighted when its own page OR any child page is active, so the group-level
-  // "where am I" never gets lost.
-  const SectionHeader = ({ section, childActive }: { section: NavSection; childActive: boolean }) => {
+  // "where am I" never gets lost. Plain function for the same reason as navItem.
+  const sectionHeader = ({ section, childActive }: { section: NavSection; childActive: boolean }) => {
     const navKey = `sections/${section.key}`;
     const active = activeTab === `sections-${section.key}` || childActive;
     return (
@@ -229,7 +234,7 @@ export default function Sidebar({ activeTab, setActiveTab, onTabHover, appName, 
         </div>
 
         {/* ── Dashboard ── */}
-        <NavItem tab="dashboard" label={t('dashboard') || 'Dashboard'} icon="bi-house-door" />
+        {navItem({ tab: 'dashboard', label: t('dashboard') || 'Dashboard', icon: 'bi-house-door' })}
 
         {/* ── Sections (single source of truth: navConfig.ts) ── */}
         {NAV_SECTIONS.map((section) => {
@@ -241,10 +246,8 @@ export default function Sidebar({ activeTab, setActiveTab, onTabHover, appName, 
           if (visibleItems.length === 0) return null;
           return (
             <Fragment key={section.key}>
-              <SectionHeader section={section} childActive={visibleItems.some((i) => i.tab === activeTab)} />
-              {visibleItems.map((i) => (
-                <NavItem key={i.tab} tab={i.tab} label={navLabel(t, i)} icon={i.icon} isSub />
-              ))}
+              {sectionHeader({ section, childActive: visibleItems.some((i) => i.tab === activeTab) })}
+              {visibleItems.map((i) => navItem({ tab: i.tab, label: navLabel(t, i), icon: i.icon, isSub: true }))}
             </Fragment>
           );
         })}
