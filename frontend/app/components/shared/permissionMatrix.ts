@@ -105,7 +105,6 @@ export const PERMISSION_MATRIX: PermissionMatrixSection[] = [
     {
         section: 'Platform',
         resources: [
-            { resource: 'reports', label: 'Dashboard & Reports' },
             { resource: 'production_output', label: 'Production Output' },
             { resource: 'audit_log', label: 'Audit Log' },
             { resource: 'print_layout', label: 'Print Lay Out' },
@@ -172,10 +171,6 @@ export const RESOURCE_ACTIONS: Record<string, PermissionMatrixAction[]> = {
     lab_dip_request: [CREATE, EDIT, DELETE, A('update_status', 'Update Status'), A('print', 'Print'), VIEW],
     yarn_lab_dip: [VIEW],
 
-    // reports.view gates the Dashboard and the Reports nav section (navConfig).
-    // It is seeded and enforced but had no row here, so it could only be handed
-    // out by the seeded roles — never from the Roles/User modals.
-    reports: [VIEW],
     // Production Output report — Excel export is its own grant so a role can read
     // the shop-floor numbers without being able to take the data off the system.
     production_output: [A('export', 'Export Excel'), VIEW],

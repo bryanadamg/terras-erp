@@ -364,7 +364,6 @@ def seed_rbac(db):
         # matching superset of these granular codes, so nothing lost access.
         perms_data = [
             ("admin.access", "Full System Access"),
-            ("reports.view", "View Reports"),
             # Sales Order
             ("sales_order.create", "Create Sales Orders"),
             ("sales_order.edit", "Edit Sales Orders"),
@@ -550,9 +549,9 @@ def seed_rbac(db):
             # Platform
             ("stock_ledger.print", "Print Stock Ledger"),
             ("stock_ledger.view", "View Stock Ledger"),
-            # Production Output report — its own grant rather than the broad
-            # reports.view, so a role can be given the dashboard without the
-            # shop-floor output/reject numbers. export is separate from view so
+            # Production Output report — its own grant, so the shop-floor
+            # output/reject numbers are never implied by anything else. export is
+            # separate from view so
             # reading the report never implies taking the data off the system.
             ("production_output.view", "View Production Output Report"),
             ("production_output.export", "Export Production Output Excel"),
@@ -592,7 +591,6 @@ def seed_rbac(db):
                 "purchase_order.receive_goods", "purchase_order.print", "purchase_order.view", "purchase_order.close",
                 "supplier.create", "supplier.edit", "supplier.delete", "supplier.view",
                 "stock_ledger.print", "stock_ledger.view",
-                "reports.view",
                 "production_output.view", "production_output.export",
             ],
             "Production Manager": [
@@ -614,7 +612,7 @@ def seed_rbac(db):
                 "lab_dip_request.create", "lab_dip_request.edit", "lab_dip_request.delete",
                 "lab_dip_request.update_status", "lab_dip_request.print", "lab_dip_request.view",
                 "yarn_lab_dip.view",
-                "stock_ledger.view", "reports.view",
+                "stock_ledger.view",
                 "production_output.view", "production_output.export",
             ],
             # Floor operator: log/stage/view only — not the full Edit/Delete access
@@ -629,7 +627,7 @@ def seed_rbac(db):
                 "quarantine.view", "quarantine.set_status",
                 "lot.qc_reject", "lot.view",
                 "stock_on_hand.view", "manufacturing_order.view", "work_order.view",
-                "item.view", "reports.view",
+                "item.view",
                 "production_output.view",
             ],
         }

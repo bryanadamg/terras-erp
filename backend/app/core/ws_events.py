@@ -30,9 +30,8 @@ ADMIN_CODE = "admin.access"
 EVENT_PERMISSIONS: dict[str, tuple[str, ...]] = {
     # ── Manufacturing ────────────────────────────────────────────────────────
     # The MO board, the PR page, the WO list and the weaving monitor all refetch
-    # off these (frontend LiveKind 'production'). reports.view is deliberately
-    # ABSENT: a dashboard-only user's KPIs refresh from KPI_UPDATE below, so
-    # they never need the MO code/status payload.
+    # off these (frontend LiveKind 'production'). A dashboard-only user's KPIs
+    # refresh from KPI_UPDATE below, so they never need the MO code/status payload.
     "MANUFACTURING_ORDER_UPDATE": (
         "manufacturing_order.view",
         "production_run.view",
@@ -106,7 +105,9 @@ EVENT_PERMISSIONS: dict[str, tuple[str, ...]] = {
     # that makes every carton's brutto come from these rows.
     "PACKAGING_TYPE_UPDATE": ("packaging_type.view", "packing_order.view"),
     # ── Platform ─────────────────────────────────────────────────────────────
-    "KPI_UPDATE": ("reports.view",),
+    # A bare refetch ping, no payload. Everyone has a dashboard, and its endpoints
+    # already drop each widget the caller can't see (api/dashboard.py).
+    "KPI_UPDATE": (),
     # A print layout changed. Carries no business data and every print modal in
     # the app reads templates, so this one is open to any authenticated user.
     "PRINT_TEMPLATE_UPDATE": (),
