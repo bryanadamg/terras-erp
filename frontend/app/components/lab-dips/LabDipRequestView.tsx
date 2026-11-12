@@ -120,8 +120,11 @@ export default function LabDipRequestView({
     useToast();
     const router = useRouter();
     const { formatDate: tzDate, formatDateTime: tzDateTime } = useTimezone();
-    const { hasPermission, hasAnyPermission } = useUser();
-    const canManage = hasAnyPermission('lab_dip_request.create', 'lab_dip_request.edit', 'lab_dip_request.delete');
+    const { hasPermission } = useUser();
+    const canCreate = hasPermission('lab_dip_request.create');
+    const canEdit = hasPermission('lab_dip_request.edit');
+    const canDelete = hasPermission('lab_dip_request.delete');
+    const canUpdateStatus = hasPermission('lab_dip_request.update_status');
     const { openId: menuOpenId, pos: menuPos, toggle: menuToggle, close: menuClose } = useFloatingMenu(160);
 
     const [statusFilter, setStatusFilter] = useState('ALL');
@@ -476,7 +479,7 @@ export default function LabDipRequestView({
                     <button className={XP_BTN} style={xpBtn()} onClick={clearFilters} title="Clear all filters">Clear</button>
                 )}
                 <ToolbarCount right>{total} item{total !== 1 ? 's' : ''}</ToolbarCount>
-                {canManage && (
+                {canCreate && (
                     <>
                         <span style={{ width: 1, height: 20, background: '#a0988c', margin: '0 2px' }} />
                         <ToolbarButton tone="create" icon="bi-plus-lg" onClick={openCreate}>New {requestNoun}</ToolbarButton>
@@ -584,7 +587,7 @@ export default function LabDipRequestView({
                                         </td>
                                         <td style={{ ...lvTdRuled(), borderRight: 'none', textAlign: 'right' as const }} onClick={e => e.stopPropagation()}>
                                             <div style={{ display: 'flex', gap: 3, justifyContent: 'flex-end', alignItems: 'center' }}>
-                                                {canManage && (
+                                                {(canEdit || canDelete) && (
                                                 <MenuTriggerButton onClick={e => menuToggle(String(r.id), e)} />
                                                 )}
                                             </div>
@@ -645,7 +648,7 @@ export default function LabDipRequestView({
                                                             {it.rejection_count}x
                                                         </button>
                                                     ) : <span style={{ color: '#aaa', fontSize: 11}}>—</span>,
-                                                    canManage ? (
+                                                    canUpdateStatus ? (
                                                         <FilterChipBar
                                                             disabled={locked}
                                                             flat
@@ -679,7 +682,7 @@ export default function LabDipRequestView({
                                                         >
                                                             <i className="bi bi-box-arrow-up-right" style={{ fontSize: 10}} />
                                                         </button>
-                                                    ) : (status === 'REJECTED' && canManage) ? (
+                                                    ) : (status === 'REJECTED' && canUpdateStatus) ? (
                                                         <button
                                                             type="button"
                                                             title={`Reopen ${variantCode} for another round (keeps rejection history)`}
@@ -721,7 +724,7 @@ export default function LabDipRequestView({
                                         const rightHeader = (
                                             <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '6px 10px', flexWrap: 'wrap' as const, borderBottom: '1px solid #d0cdc8', background: '#fff' }}>
                                                 <span style={{ fontSize: 10, fontWeight: 'bold', color: '#111'}}>Request Status:</span>
-                                                <select style={{ ...xpInput(), width: 140 }} value={r.status} disabled={!canManage} onChange={e => doUpdateStatus(r.id, e.target.value)}>
+                                                <select style={{ ...xpInput(), width: 140 }} value={r.status} disabled={!canUpdateStatus} onChange={e => doUpdateStatus(r.id, e.target.value)}>
                                                     {REQUEST_STATUSES.map(s => <option key={s} value={s}>{s}</option>)}
                                                 </select>
                                             </div>
@@ -772,13 +775,13 @@ export default function LabDipRequestView({
                 // Row lookup in the loaded page is safe: the ⋯ menu is opened from a row
                 // that is on screen, and it closes on any list change.
                 const r = labDips.find((x: any) => String(x.id) === menuOpenId);
-                if (!r || !canManage) return null;
+                if (!r || !(canEdit || canDelete)) return null;
                 return (
                     <FloatingMenu
                         pos={menuPos}
                         items={[
-                            { key: 'edit', label: 'Edit', icon: 'bi-pencil', onClick: () => { menuClose(); openEdit(r); } },
-                            { key: 'delete', label: 'Delete', icon: 'bi-trash', danger: true, onClick: () => { menuClose(); doDelete(r.id); } },
+                            { key: 'edit', label: 'Edit', icon: 'bi-pencil', hidden: !canEdit, onClick: () => { menuClose(); openEdit(r); } },
+                            { key: 'delete', label: 'Delete', icon: 'bi-trash', danger: true, hidden: !canDelete, onClick: () => { menuClose(); doDelete(r.id); } },
                         ]}
                     />
                 );

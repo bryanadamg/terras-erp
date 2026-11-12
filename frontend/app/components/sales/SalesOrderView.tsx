@@ -97,6 +97,9 @@ export default function SalesOrderView({ items, attributes, boms, salesOrders, p
       filters: { soSearch: searchTerm, setSoSearch: setSearchTerm, soCustomerSearch: customerSearch, setSoCustomerSearch: setCustomerSearch, soStatusFilter: statusFilter, setSoStatusFilter: setStatusFilter, soSort, setSoSort },
   } = useData();
   const { hasPermission, hasAnyPermission } = useUser();
+  const canPrint = hasPermission('sales_order.print');
+  // The SO-side shortcut; the run itself is still saved under production_run.create.
+  const canCreatePR = hasPermission('sales_order.create_pr') && hasPermission('production_run.create');
   const canManage = hasAnyPermission('sales_order.create', 'sales_order.edit', 'sales_order.delete', 'sales_order.close');
 
   // Floating "more actions" menu (Edit / Print / Delete)
@@ -2102,9 +2105,11 @@ In stock ${fmtQty(f.baseAvailable)}${bu} · Shipped ${fmtQty(f.baseShipped)}${bu
                    {soTotal} order{soTotal !== 1 ? 's' : ''}
                </ToolbarCount>
                <div style={{ display: 'flex', gap: 4, marginLeft: 'auto' }} className={undefined}>
+                   {canPrint && (
                    <ToolbarButton tone="neutral" icon="bi-printer" printable disabled={printLoading} onClick={handleOpenTablePrint}>
                        {printLoading ? 'Loading…' : 'Print Table'}
                    </ToolbarButton>
+                   )}
                    {canManage && (
                        <ToolbarButton tone="create" icon="bi-plus-lg" onClick={() => setIsCreateOpen(true)}>
                            {t('create')}
@@ -2236,7 +2241,7 @@ In stock ${fmtQty(f.baseAvailable)}${bu} · Shipped ${fmtQty(f.baseShipped)}${bu
                                                title="Allocate from stock — pick packed cartons already on hand for this order instead of producing them"
                                                onClick={() => setAllocatingSO(so)} />
                                        )}
-                                       {so.status === 'PENDING' && (
+                                       {canCreatePR && so.status === 'PENDING' && (
                                            <XPActionButton tone="primary" icon="bi-collection-play"
                                                title="Create Production Run" onClick={() => onGenerateWO(so)} />
                                        )}
@@ -2438,6 +2443,7 @@ In stock ${fmtQty(f.baseAvailable)}${bu} · Shipped ${fmtQty(f.baseShipped)}${bu
                            },
                            {
                                key: 'print', icon: 'bi-printer', label: 'Print',
+                               hidden: !canPrint,
                                onClick: () => { closeMenu(); handlePrintSO(menuSo); },
                            },
                            {

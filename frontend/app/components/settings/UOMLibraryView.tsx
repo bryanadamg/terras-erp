@@ -11,7 +11,8 @@ import {
 
 interface Props {
     uoms: any[];
-    canManage: boolean;
+    // One flag per backend gate, so a button only shows when its endpoint will accept it.
+    can: { create: boolean; edit: boolean; delete: boolean };
     onCreateUOM: (name: string) => Promise<Response>;
     onDeleteUOM: (id: string) => void;
     onSaveUOMFactor: (fromUomId: string, toUomId: string, value: number) => void;
@@ -27,7 +28,7 @@ const num = (v: any) => String(Number(v));
 // m as the target of Pcs), so the layout never treats system as "base". Each unit
 // shows both directions: what one of it holds, and what packs into it.
 // Chrome: shared/columnBrowser.tsx master/detail, same as the Attributes tab.
-export default function UOMLibraryView({ uoms, canManage, onCreateUOM, onDeleteUOM, onSaveUOMFactor, onDeleteUOMFactor }: Props) {
+export default function UOMLibraryView({ uoms, can, onCreateUOM, onDeleteUOM, onSaveUOMFactor, onDeleteUOMFactor }: Props) {
     const { confirm } = useConfirm();
 
     const [search, setSearch] = useState('');
@@ -135,7 +136,7 @@ export default function UOMLibraryView({ uoms, canManage, onCreateUOM, onDeleteU
         <DetailRow
             key={f.id}
             index={i}
-            actions={canManage ? <XPActionButton tone="danger" icon="bi-trash" title="Delete conversion" onClick={() => deleteFactor(f)} /> : undefined}
+            actions={can.edit ? <XPActionButton tone="danger" icon="bi-trash" title="Delete conversion" onClick={() => deleteFactor(f)} /> : undefined}
         >
             <span style={{ flex: 1 }}>{label}</span>
         </DetailRow>
@@ -146,7 +147,7 @@ export default function UOMLibraryView({ uoms, canManage, onCreateUOM, onDeleteU
         return (
             <>
                 <DetailCaption title={<>1 {u.name} holds</>} count={selFactors.length} />
-                {selFactors.length === 0 && <ColumnEmpty>{canManage
+                {selFactors.length === 0 && <ColumnEmpty>{can.edit
                     ? `Not defined — use the bar above if ${u.name} is a pack of something, e.g. 1 ${u.name} = 2.5 kg.`
                     : 'Not defined.'}</ColumnEmpty>}
                 {selFactors.map((f, i) => factorRow(f, i, <>1 <b>{u.name}</b> = {num(f.value)} {f.to_uom_name}</>))}
@@ -168,7 +169,7 @@ export default function UOMLibraryView({ uoms, canManage, onCreateUOM, onDeleteU
                 footer={
                     <>
                         <ToolbarCount>{filtered.length} unit{filtered.length !== 1 ? 's' : ''}</ToolbarCount>
-                        {canManage && (
+                        {can.create && (
                             <span style={{ marginLeft: 'auto' }}>
                                 <ToolbarButton tone="create" icon="bi-plus-lg" onClick={openCreate}>New UOM</ToolbarButton>
                             </span>
@@ -188,7 +189,7 @@ export default function UOMLibraryView({ uoms, canManage, onCreateUOM, onDeleteU
                         <DetailHeader
                             title={selected.name}
                             chips={selected.is_system ? <Chip tone={BROWSER_TONES.system} icon="bi-shield-lock" size="xs">System</Chip> : undefined}
-                            actions={canManage && !selected.is_system ? (
+                            actions={can.delete && !selected.is_system ? (
                                 <button type="button" className={XP_BTN} style={lvBtn('danger')} onClick={() => onDeleteUOM(selected.id)}>
                                     <i className="bi bi-trash me-1" />Delete Unit
                                 </button>
@@ -199,7 +200,7 @@ export default function UOMLibraryView({ uoms, canManage, onCreateUOM, onDeleteU
                         </DetailHeader>
 
                         {/* Add bar: 1 <selected> = N <target> */}
-                        {canManage && (
+                        {can.edit && (
                             <div style={xpToolbar({ flexShrink: 0 })}>
                                 <span style={{ fontSize: 11 }}>1 <b>{selected.name}</b> =</span>
                                 <input

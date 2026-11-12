@@ -57,6 +57,7 @@ export default function SampleRequestView({ samples, customers, onCreateSample, 
   const { formatDate: tzDate } = useTimezone();
   const { hasPermission, hasAnyPermission } = useUser();
   const canManage = hasAnyPermission('sample_request.create', 'sample_request.edit', 'sample_request.delete');
+  const canUpdateStatus = hasPermission('sample_request.update_status');
 
   const handleApproveColor = (sampleId: string, colorId: string, colorName: string) => {
       setApproveTarget({ sampleId, colorId, colorName });
@@ -1037,11 +1038,11 @@ export default function SampleRequestView({ samples, customers, onCreateSample, 
                pos={dropdownPos}
                minWidth={180}
                items={[
-                   { key: 'in-production', label: 'Mark In Production', icon: 'bi-gear', onClick: () => { onUpdateStatus(openDropdownId, 'IN_PRODUCTION'); closeDropdown(); } },
-                   { key: 'sent', label: 'Mark Sent to Client', icon: 'bi-send', onClick: () => { onUpdateStatus(openDropdownId, 'SENT'); closeDropdown(); } },
-                   { key: 'approved', label: 'Client Approved', icon: 'bi-check-lg', onClick: () => { onUpdateStatus(openDropdownId, 'APPROVED'); closeDropdown(); } },
-                   { key: 'rejected', label: 'Client Rejected', icon: 'bi-x-lg', danger: true, onClick: () => { onUpdateStatus(openDropdownId, 'REJECTED'); closeDropdown(); } },
-                   { key: 'delete', label: 'Delete Request', icon: 'bi-trash', danger: true, hidden: !onDeleteSample, onClick: () => { onDeleteSample?.(openDropdownId); closeDropdown(); } },
+                   { key: 'in-production', label: 'Mark In Production', icon: 'bi-gear', hidden: !canUpdateStatus, onClick: () => { onUpdateStatus(openDropdownId, 'IN_PRODUCTION'); closeDropdown(); } },
+                   { key: 'sent', label: 'Mark Sent to Client', icon: 'bi-send', hidden: !canUpdateStatus, onClick: () => { onUpdateStatus(openDropdownId, 'SENT'); closeDropdown(); } },
+                   { key: 'approved', label: 'Client Approved', icon: 'bi-check-lg', hidden: !canUpdateStatus, onClick: () => { onUpdateStatus(openDropdownId, 'APPROVED'); closeDropdown(); } },
+                   { key: 'rejected', label: 'Client Rejected', icon: 'bi-x-lg', danger: true, hidden: !canUpdateStatus, onClick: () => { onUpdateStatus(openDropdownId, 'REJECTED'); closeDropdown(); } },
+                   { key: 'delete', label: 'Delete Request', icon: 'bi-trash', danger: true, hidden: !onDeleteSample || !hasPermission('sample_request.delete'), onClick: () => { onDeleteSample?.(openDropdownId); closeDropdown(); } },
                ]}
            />
        )}
@@ -1056,7 +1057,7 @@ export default function SampleRequestView({ samples, customers, onCreateSample, 
                    minWidth={170}
                    items={[
                        { key: 'edit', label: 'Edit Request', icon: 'bi-pencil', hidden: !canManage, onClick: () => { closeRowMenu(); openEditModal(s); } },
-                       { key: 'print', label: 'Print SPK Sample', icon: 'bi-printer', onClick: () => { closeRowMenu(); setPrintSample(s); } },
+                       { key: 'print', label: 'Print SPK Sample', icon: 'bi-printer', hidden: !hasPermission('sample_request.print'), onClick: () => { closeRowMenu(); setPrintSample(s); } },
                        { key: 'log', label: 'View Event Log', icon: 'bi-clock-history', onClick: () => { closeRowMenu(); setHistoryEntityId(s.id); } },
                    ]}
                />
@@ -1299,7 +1300,7 @@ export default function SampleRequestView({ samples, customers, onCreateSample, 
                                    {/* Actions — Update icon button + "⋯" overflow (Edit / Print / Log) */}
                                    <td style={{ ...tdBase, borderRight: 'none', textAlign: 'right' as const }}>
                                        <div style={{ display: 'flex', gap: 3, justifyContent: 'flex-end', alignItems: 'center' }} onClick={e => e.stopPropagation()}>
-                                           {canManage && (
+                                           {(canUpdateStatus || hasPermission('sample_request.delete')) && (
                                                <XPActionButton
                                                    tone="primary"
                                                    icon="bi-arrow-repeat"
@@ -1393,13 +1394,13 @@ export default function SampleRequestView({ samples, customers, onCreateSample, 
                                                        {c.rejection_notes && <div style={{ fontSize: 9, color: '#555', fontFamily: xpFont, fontStyle: 'italic', marginTop: 1 }}>{c.rejection_notes}</div>}
                                                        {/* Rejected rests but is reopenable — remaking the variant is a new attempt,
                                                            which is what the sample report counts. Only exit is back to In Production. */}
-                                                       {canManage && (
+                                                       {canUpdateStatus && (
                                                            <div style={{ marginTop: 4 }}>
                                                                <ToggleChip on={false} onClick={() => onUpdateColorStatus(s.id, c.id, 'IN_PRODUCTION')} tone="amber" flat title="Reopen for another attempt (logs a new process run)">&#8635; Reopen</ToggleChip>
                                                            </div>
                                                        )}
                                                    </div>
-                                               ) : canManage ? (
+                                               ) : canUpdateStatus ? (
                                                    <div className={undefined} role="group" style={{ display: 'inline-flex' }}>
                                                        <ToggleChip on={isInProd} onClick={() => onUpdateColorStatus(s.id, c.id, isInProd ? 'PENDING' : 'IN_PRODUCTION')} tone="amber" flat seg="first" title={isInProd ? 'Reset to Pending' : 'Set In Production'}>&#9881; In Prod</ToggleChip>
                                                        <ToggleChip on={isSent} onClick={() => onUpdateColorStatus(s.id, c.id, isSent ? 'PENDING' : 'SENT')} tone="blue" flat seg="mid" title={isSent ? 'Reset to Pending' : 'Mark Sent to Customer'}>&#187; Sent</ToggleChip>

@@ -10,6 +10,7 @@ import SettingOrdersTab from './SettingOrdersTab';
 import { xpFont, FORM_SECTION_BLUE, xpInput as xpInputBase, xpBtn as xpBtnBase } from '../shared/xpTheme';
 import { viewShellStyle, PageTitleBar } from '../shared/shellTheme';
 import { API_BASE } from '../shared/apiBase';
+import { useUser } from '../../context/UserContext';
 
 // ── XP Style Constants ─────────────────────────────────────────────────────────
 const modernFont = 'system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif';
@@ -27,17 +28,22 @@ const xpPanel: React.CSSProperties = {
 // ── Tab definitions ───────────────────────────────────────────────────────────
 type TabKey = 'recipes' | 'dyeing' | 'setting';
 
-const TABS: TabDef<TabKey>[] = [
-    { key: 'recipes', label: 'Dye Recipes',     icon: 'bi-journal-text' },
-    { key: 'dyeing',  label: 'Dyeing Orders',   icon: 'bi-droplet-half' },
-    { key: 'setting', label: 'Setting Orders',  icon: 'bi-thermometer-half' },
+// Each tab opens on its own .view code; the route opens on any of them.
+const TABS: (TabDef<TabKey> & { perm: string })[] = [
+    { key: 'recipes', label: 'Dye Recipes',     icon: 'bi-journal-text',     perm: 'dye_recipe.view' },
+    { key: 'dyeing',  label: 'Dyeing Orders',   icon: 'bi-droplet-half',     perm: 'dye_order.view' },
+    { key: 'setting', label: 'Setting Orders',  icon: 'bi-thermometer-half', perm: 'setting_order.view' },
 ];
 
 export default function DyeingSettingView() {
     const { authFetch, items, attributes } = useData();
     const searchParams = useSearchParams();
     const router = useRouter();
-    const [activeTab, setActiveTab] = useRememberedTab<TabKey>('dyeing-setting', 'recipes', TABS.map(t => t.key));
+    const { hasPermission } = useUser();
+    const visibleTabs = TABS.filter(t => hasPermission(t.perm));
+    const visibleKeys = visibleTabs.map(t => t.key);
+    const [rememberedTab, setActiveTab] = useRememberedTab<TabKey>('dyeing-setting', visibleKeys[0] ?? 'recipes', visibleKeys);
+    const activeTab = visibleKeys.includes(rememberedTab) ? rememberedTab : visibleKeys[0];
     const [recipes, setRecipes] = useState<any[]>([]);
 
     // Deep-link from Color Library "create recipe for this color": force the recipes
@@ -80,7 +86,7 @@ export default function DyeingSettingView() {
             <PageTitleBar icon="bi-droplet-fill" title="Dyeing & Setting" />
 
             {/* Tabs bar */}
-            <Tabs tabs={TABS} activeKey={activeTab} onChange={handleTabChange} />
+            <Tabs tabs={visibleTabs} activeKey={activeTab} onChange={handleTabChange} />
 
             {/* Content area */}
             <div style={{

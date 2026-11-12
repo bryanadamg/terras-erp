@@ -53,10 +53,10 @@ export const NAV_SECTIONS: NavSection[] = [
     },
     {
         key: 'inventory', label: 'Inventory', i18nKey: 'inventory', icon: 'bi-box-seam', accent: 'blue',
-        permissions: ['item.view', 'attribute.view', 'stock_on_hand.view', 'lot.view', 'location.view', 'combo_library.view', 'packaging_type.view', 'booking_stock.view'],
+        permissions: ['item.view', 'attribute.view', 'category.view', 'uom.view', 'stock_on_hand.view', 'lot.view', 'location.view', 'combo_library.view', 'packaging_type.view', 'booking_stock.view'],
         items: [
             { tab: 'inventory', label: 'Item Inventory', i18nKey: 'item_inventory', icon: 'bi-list-check', permission: 'item.view' },
-            { tab: 'item-metadata', label: 'Attributes', i18nKey: 'attributes', icon: 'bi-tag', permission: 'attribute.view' },
+            { tab: 'item-metadata', label: 'Attributes', i18nKey: 'attributes', icon: 'bi-tag', permission: ['attribute.view', 'category.view', 'uom.view'] },
             { tab: 'combos', label: 'Combo Library', icon: 'bi-grid-3x3-gap', permission: 'combo_library.view' },
             // The box master the pack screens pick from — bounded reference data
             // (a handful of rows), sitting beside the other masters rather than
@@ -106,10 +106,10 @@ export const NAV_SECTIONS: NavSection[] = [
         // color_variant.* is listed alongside the .view codes because the section gate
         // (Sidebar) hides the whole section when none match — without it a variant-only
         // role could reach /colors by URL but never see it in the nav.
-        permissions: ['dye_recipe.view', 'color_code.view', 'lab_dip_request.view', 'yarn_lab_dip.view',
+        permissions: ['dye_recipe.view', 'dye_order.view', 'setting_order.view', 'color_code.view', 'lab_dip_request.view', 'yarn_lab_dip.view',
             'color_variant.create', 'color_variant.edit', 'color_variant.delete'],
         items: [
-            { tab: 'dyeing-setting', label: 'Dyeing & Setting', icon: 'bi-palette', permission: 'dye_recipe.view' },
+            { tab: 'dyeing-setting', label: 'Dyeing & Setting', icon: 'bi-palette', permission: ['dye_recipe.view', 'dye_order.view', 'setting_order.view'] },
             // Two tabs, two grants: the Color Code catalog (color_code.view) and the
             // Colors-variant list (color_variant.*). ANY-of, because a role granted only
             // variant management could otherwise not reach the page its grant is for; the
@@ -128,27 +128,25 @@ export const NAV_SECTIONS: NavSection[] = [
         // pick_list.scan is deliberately absent: the picker's only surface is the
         // QUICK SCAN button, which sits above the sections and is always visible.
         // Listing it here would open an otherwise empty Warehouse section for them.
-        permissions: ['quarantine.view', 'sales.manage', 'shipment.view'],
+        permissions: ['quarantine.view', 'packing_order.view', 'pick_list.view', 'shipment.view'],
         items: [
-            // Packing Orders / Pick Lists are a separate feature not covered by the
-            // Permissions config spreadsheet — still gated on the legacy blob code.
             // QC hold desk feeding Packing Orders — sits immediately before it in
             // the flow, so it sits immediately above it here.
             { tab: 'quarantine-packing', label: 'Quarantine Packing', icon: 'bi-shield-exclamation', permission: 'quarantine.view' },
-            { tab: 'packing', label: 'Packing Orders', icon: 'bi-box2', permission: 'sales.manage' },
-            { tab: 'pick-lists', label: 'Pick Lists', icon: 'bi-clipboard-check', permission: 'sales.manage' },
+            { tab: 'packing', label: 'Packing Orders', icon: 'bi-box2', permission: 'packing_order.view' },
+            { tab: 'pick-lists', label: 'Pick Lists', icon: 'bi-clipboard-check', permission: 'pick_list.view' },
             // No Pick Scanner leaf: the floor half of a pick list is reached by
             // scanning the PL- QR at QUICK SCAN, which routes to it. A dedicated
             // entry only asked the picker to choose a scanner before scanning.
             // Loading deck. Deliberately its own page and not a Pick Lists tab: the
             // Surat Jalan check must be done by someone other than the picker, so
             // the two surfaces carry different permissions.
-            { tab: 'dispatch', label: 'Dispatch', icon: 'bi-truck', permission: ['shipment.view', 'sales.manage'] },
+            { tab: 'dispatch', label: 'Dispatch', icon: 'bi-truck', permission: 'shipment.view' },
         ],
     },
     {
         key: 'reports', label: 'Reports', i18nKey: 'reports', icon: 'bi-bar-chart', accent: 'grey',
-        permissions: ['stock_ledger.view', 'production_output.view', 'reports.view'],
+        permissions: ['stock_ledger.view', 'production_output.view'],
         items: [
             { tab: 'reports', label: 'Stock Ledger', i18nKey: 'stock_ledger', icon: 'bi-journal-text', permission: 'stock_ledger.view' },
             { tab: 'machine-report', label: 'Production Output', i18nKey: 'machine_report', icon: 'bi-clipboard-data', permission: 'production_output.view' },

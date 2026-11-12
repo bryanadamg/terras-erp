@@ -16,7 +16,7 @@ import { settingsActions, settingsHint } from './settingsStyles';
 
 export default function QtyFormulaPanel() {
     const { hasPermission } = useUser();
-    const canEdit = hasPermission('admin.access');
+    const canEdit = hasPermission('system_admin.edit');
     const editor = useQtyFormulaEditor();
 
     return (

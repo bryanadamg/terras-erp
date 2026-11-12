@@ -15,6 +15,7 @@ import { centerTypeOfWC, isContainerWC, isMachineWC, machinesUnderWC, toMachineO
 import { rejectTitle } from '../shared/rejectDisplay';
 import { API_BASE } from '../shared/apiBase';
 import { isBeamItemRecord } from '../shared/beamItem';
+import { useUser } from '../../context/UserContext';
 
 
 const xpInput: React.CSSProperties = xpInputBase({ padding: '0 4px', width: '100%', boxSizing: 'border-box' });
@@ -81,6 +82,7 @@ export default function WOCompletionModal({ mo, onClose, onSaved, workOrder }: W
     const moSizeLabel = lotSizeLabel(mo) || '';
     const moSizeToken = moSizeLabel.toLowerCase();
     // Bag labels: one sticker per weighed bag (= one lotted completion on this WO)
+    const canPrintLabel = useUser().hasPermission('work_order.print_label');
     const [labelBags, setLabelBags] = useState<any[] | null>(null);
     const [labelSeqStart, setLabelSeqStart] = useState(1);
     // Set once a log saves a new bag: the form swaps for that bag's label preview,
@@ -409,7 +411,7 @@ export default function WOCompletionModal({ mo, onClose, onSaved, workOrder }: W
                     .sort((a: any, b: any) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime())
                 : [];
             const idx = bags.findIndex((c: any) => !seen.has(String(c.id)));
-            if (idx >= 0) {
+            if (idx >= 0 && canPrintLabel) {
                 setLabelSeqStart(idx + 1);
                 setLabelBags([bags[idx]]);
                 setSavedMO(updated);
@@ -971,7 +973,7 @@ export default function WOCompletionModal({ mo, onClose, onSaved, workOrder }: W
                         {completions.length > 0 && (
                             <LegendPanel
                                 title="Previous Entries"
-                                right={workOrder && woBags.length > 0 ? (
+                                right={canPrintLabel && workOrder && woBags.length > 0 ? (
                                     <button
                                         type="button"
                                         className={XP_BTN}
@@ -1030,7 +1032,7 @@ export default function WOCompletionModal({ mo, onClose, onSaved, workOrder }: W
                                                             <span style={{ fontSize: 9, fontWeight: 'bold', color: '#900' }} title={rejectTitle(c, 'Rejected')}>
                                                                 REJECTED
                                                             </span>
-                                                        ) : bagSeqById[String(c.id)] ? (
+                                                        ) : canPrintLabel && bagSeqById[String(c.id)] ? (
                                                             <button
                                                                 type="button"
                                                                 className={XP_BTN}

@@ -17,6 +17,7 @@ import { resolveMoBom } from '../shared/moHelpers';
 import { useTimezone } from '../../context/TimezoneContext';
 import { API_BASE } from '../shared/apiBase';
 import { matchSubBOM } from '../shared/bomMatch';
+import { useUser } from '../../context/UserContext';
 const WOCompletionModal = dynamic(() => import('./WOCompletionModal'), { ssr: false });
 
 // On the selected (blue) tree row a normal chip fill would fight the highlight, so
@@ -70,6 +71,9 @@ export default function ManufacturingOrdersTab({
 }: any) {
     const { showToast } = useToast();
     const { authFetch, fetchData, loading: dataLoading } = useData();
+    const canPrint = useUser().hasPermission('manufacturing_order.print');
+    // Close and reopen are one authority server-side (update_mo_status).
+    const canClose = useUser().hasPermission('manufacturing_order.close');
     const { formatCustom: tzFmt } = useTimezone();
     const {
         getItemName, getItemCode, getItemUom, getItemEnds, uomBadgeStyle,
@@ -408,6 +412,11 @@ export default function ManufacturingOrdersTab({
             }
         }
         const showBreakdown = parentMOBreakdown.length > 0;
+        const compHeaders = ['Component', 'Variant', 'Required', ...(showBreakdown ? ['Breakdown'] : []), 'In Stock', 'Available At'];
+        // The grid reads /boms (live-BOM fallback, SUB-BOM chip) and /stock/balance
+        // (In Stock), which now land independently of the MO list. Until both have,
+        // a row would read 0 on hand — a false red stock-out — so skeleton instead.
+        const detailLoading = dataLoading.boms || dataLoading.stockBalance;
 
         const selectNode = (nodeId: string) => {
             setSelectedTreeNodes(prev => ({ ...prev, [rootMO.id]: nodeId }));
@@ -608,24 +617,24 @@ export default function ManufacturingOrdersTab({
                             )}
                             {/* Delivered = qty met but still open. Closing is the explicit
                                 act that stops further logging (industry: SAP TECO). */}
-                            {canManage && selectedNode.status === 'DELIVERED' && (
+                            {canClose && selectedNode.status === 'DELIVERED' && (
                                 <button className="btn btn-sm btn-success py-0 px-2" style={{ fontSize: '0.72rem' }} onClick={() => onUpdateStatus(selectedNode.id, 'COMPLETED')}>
                                     <i className="bi bi-lock-fill me-1"></i>Close Order
                                 </button>
                             )}
-                            {canManage && selectedNode.status === 'COMPLETED' && (
+                            {canClose && selectedNode.status === 'COMPLETED' && (
                                 <button className="btn btn-sm btn-outline-secondary py-0 px-2" style={{ fontSize: '0.72rem' }} onClick={() => onUpdateStatus(selectedNode.id, 'IN_PROGRESS')}>
                                     <i className="bi bi-unlock me-1"></i>Reopen
                                 </button>
                             )}
-                            <button
+                            {canPrint && <button
                                 title="Print this MO"
                                 className={XP_BTN}
                                 style={{ fontFamily: xpFont, fontSize: '10px', padding: '1px 8px', background: 'linear-gradient(to bottom,#f0efe6,#dddbd0)', border: '1px solid', borderColor: '#dfdfdf #808080 #808080 #dfdfdf', cursor: 'pointer', color: '#000', borderRadius: BUTTON_RADIUS }}
                                 onClick={() => handlePrintMO(selectedNode, true)}
                             >
                                 <i className="bi bi-printer me-1"></i>Print
-                            </button>
+                            </button>}
                         </div>
                     </div>
 
@@ -731,7 +740,7 @@ export default function ManufacturingOrdersTab({
                         display: 'flex', alignItems: 'center', gap: '6px'
                     }}>
                         <i className="bi bi-boxes"></i>BOM Components
-                        {componentLines.length === 0 && <span style={{ fontWeight: 'normal', color: '#888' }}>— No BOM linked</span>}
+                        {componentLines.length === 0 && !detailLoading && <span style={{ fontWeight: 'normal', color: '#888' }}>— No BOM linked</span>}
                         {fromSnapshot ? (
                             <span title="The recipe snapshotted when this order was created — later BOM edits do not change it" style={{ fontWeight: 'normal', color: '#555', fontSize: 9 }}>
                                 as planned
@@ -745,11 +754,11 @@ export default function ManufacturingOrdersTab({
 
                     {/* Components table */}
                     <div style={{ flex: 1, overflowY: 'auto' }}>
-                        {componentLines.length > 0 ? (
+                        {componentLines.length > 0 || detailLoading ? (
                             <table style={lvSubTable()}>
                                 <thead>
                                     <tr style={{ position: 'sticky', top: 0 }}>
-                                        {['Component', 'Variant', 'Required', ...(showBreakdown ? ['Breakdown'] : []), 'In Stock', 'Available At'].map(h => (
+                                        {compHeaders.map(h => (
                                             // Full cell borders rather than lvSubTd's single rule — this
                                             // is a grid, and the verticals separate the paired figures.
                                             <th key={h} style={{ ...lvSubTh(), border: '1px solid #808080', textAlign: h === 'Required' || h === 'In Stock' ? 'right' : 'left' }}>{h}</th>
@@ -757,7 +766,9 @@ export default function ManufacturingOrdersTab({
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    {componentLines.map((line: any, i: number) => {
+                                    {detailLoading ? (
+                                        <TableSkeleton rows={Math.max(componentLines.length, 3)} cols={compHeaders.length} />
+                                    ) : componentLines.map((line: any, i: number) => {
                                         const req = calculateRequiredQty(selectedNode.qty, line, bom);
                                         const { total, isEnough, locs } = getStockAcrossLocations(line.item_id, line.attribute_value_ids || [], req);
                                         const hasSubBOM = !!matchSubBOM(boms.filter((b: any) => b.item_id === line.item_id && b.active !== false), line);
@@ -1023,7 +1034,7 @@ export default function ManufacturingOrdersTab({
                         {canManage && (
                             <ToolbarButton tone="create" icon="bi-plus-lg" onClick={onNewMO}>New MO</ToolbarButton>
                         )}
-                        {onPrint && (
+                        {onPrint && canPrint && (
                             <ToolbarButton tone="neutral" icon="bi-printer" printable onClick={onPrint}>Print</ToolbarButton>
                         )}
                     </>
@@ -1307,7 +1318,7 @@ export default function ManufacturingOrdersTab({
                             <FloatingMenu
                                 pos={moMenuPos}
                                 items={[
-                                    { key: 'print', icon: 'bi-printer', label: 'Print', onClick: () => { closeMoMenu(); handlePrintMO(menuMO); } },
+                                    { key: 'print', icon: 'bi-printer', label: 'Print', hidden: !canPrint, onClick: () => { closeMoMenu(); handlePrintMO(menuMO); } },
                                     { key: 'delete', icon: 'bi-trash', label: 'Delete', danger: true, hidden: !canManage, onClick: () => { closeMoMenu(); onDeleteMO(menuMO.id); } },
                                 ]}
                             />

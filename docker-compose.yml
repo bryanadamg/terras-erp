@@ -26,6 +26,12 @@ services:
       start_period: 30s
     env_file:
       - .env
+    environment:
+      # uvicorn worker processes (its --workers default). One process serialized every
+      # request — a page's 10–25 parallel fetches queued behind each other on one core.
+      # Each worker's DB pool shrinks to match (core/db_manager.py), and only one of
+      # them runs backups and the event relay (main.py's leader lock).
+      WEB_CONCURRENCY: "4"
     volumes:
       - ./static:/app/static
       - ./snapshots:/app/snapshots

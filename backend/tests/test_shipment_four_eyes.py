@@ -3,8 +3,8 @@
 VERIFIED means a SECOND person counted the cartons against the printed Surat
 Jalan. Two rules carry that, and neither is visible in the happy path:
 
-* `shipment.verify` is the one permission in this domain that `sales.manage`
-  does NOT satisfy — a control everyone already holds is not a control.
+* `shipment.verify` is never implied by the planner's other shipment.* codes —
+  a control everyone already holds is not a control.
 * the person who staged the load cannot verify it, admins excepted.
 
 Pick lists are seeded straight through the sync session rather than packed and
@@ -39,8 +39,9 @@ def checker(user_factory):
 
 @pytest.fixture
 def planner(user_factory):
-    """Holds the legacy blob code and nothing else — must NOT be able to verify."""
-    return user_factory(["sales.manage"], "planner")
+    """Holds every other shipment code — must still NOT be able to verify."""
+    return user_factory(["shipment.view", "shipment.create", "shipment.edit",
+                         "shipment.dispatch", "shipment.delete"], "planner")
 
 
 @pytest.fixture
@@ -79,7 +80,7 @@ def _stage(client, headers, pl):
     return res.json()
 
 
-def test_sales_manage_cannot_verify(picked_list, picker, planner, client):
+def test_planner_without_verify_cannot_verify(picked_list, picker, planner, client):
     """The whole point of the separate code: staging is a planner act, the count
     is not."""
     _, picker_headers = picker

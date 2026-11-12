@@ -364,7 +364,6 @@ def seed_rbac(db):
         # matching superset of these granular codes, so nothing lost access.
         perms_data = [
             ("admin.access", "Full System Access"),
-            ("reports.view", "View Reports"),
             # Sales Order
             ("sales_order.create", "Create Sales Orders"),
             ("sales_order.edit", "Edit Sales Orders"),
@@ -439,13 +438,23 @@ def seed_rbac(db):
             # that lets a lot be packed, so it is deliberately separate from lot.*.
             ("quarantine.view", "View Quarantine Packing"),
             ("quarantine.set_status", "Set Quarantine Status"),
-            # Pick List — floor half only. Everything else on the pick list router
-            # (create/edit/dispatch/delete) stays on the legacy sales.manage blob;
-            # this exists so a picker can confirm cartons without holding it.
+            # Packing Order — `log` is the floor half (record packed cartons, reject
+            # a completion); `edit` is the order's own settings and closing it.
+            ("packing_order.create", "Create Packing Orders"),
+            ("packing_order.edit", "Edit/Close Packing Orders"),
+            ("packing_order.delete", "Delete Packing Orders"),
+            ("packing_order.log", "Log Packed Cartons"),
+            ("packing_order.view", "View Packing Orders"),
+            # Pick List — `scan` is the floor half: a picker confirms cartons
+            # without being able to create, edit or delete the list itself.
+            ("pick_list.create", "Create Pick Lists"),
+            ("pick_list.edit", "Edit Pick Lists"),
+            ("pick_list.delete", "Delete Pick Lists"),
             ("pick_list.scan", "Scan Cartons onto Pick Lists"),
-            # Shipment — the loading deck. `shipment.verify` is the four-eyes gate
-            # and is the ONE code here that sales.manage does not satisfy: a check
-            # every planner can tick is not a check. Keep it on a separate role.
+            ("pick_list.view", "View Pick Lists"),
+            # Shipment — the loading deck. `shipment.verify` is the four-eyes gate:
+            # keep it on a different role from whoever stages, a check every
+            # planner can tick is not a check.
             ("shipment.view", "View Shipments"),
             ("shipment.create", "Stage Shipments"),
             ("shipment.edit", "Edit Shipments"),
@@ -533,24 +542,22 @@ def seed_rbac(db):
             ("lab_dip_request.edit", "Edit Lab Dip Requests"),
             ("lab_dip_request.delete", "Delete Lab Dip Requests"),
             ("lab_dip_request.update_status", "Update Lab Dip Request Status"),
-            ("lab_dip_request.print", "Print Lab Dip Requests"),
             ("lab_dip_request.view", "View Lab Dip Requests"),
             # Yarn Lab Dip
             ("yarn_lab_dip.view", "View Yarn Lab Dips"),
             # Platform
             ("stock_ledger.print", "Print Stock Ledger"),
             ("stock_ledger.view", "View Stock Ledger"),
-            # Production Output report — its own grant rather than the broad
-            # reports.view, so a role can be given the dashboard without the
-            # shop-floor output/reject numbers. export is separate from view so
+            # Production Output report — its own grant, so the shop-floor
+            # output/reject numbers are never implied by anything else. export is
+            # separate from view so
             # reading the report never implies taking the data off the system.
             ("production_output.view", "View Production Output Report"),
             ("production_output.export", "Export Production Output Excel"),
             ("audit_log.view", "View Audit Log"),
             ("print_layout.edit", "Edit Print Layouts"),
-            ("system_admin.create", "Create System Admin Records"),
-            ("system_admin.edit", "Edit System Admin Records"),
-            ("system_admin.delete", "Delete System Admin Records"),
+            # Settings → General: company profile, logo and the per-size qty formula.
+            ("system_admin.edit", "Edit Company Profile & Qty Formula"),
         ]
 
         db_perms = {}
@@ -582,7 +589,6 @@ def seed_rbac(db):
                 "purchase_order.receive_goods", "purchase_order.print", "purchase_order.view", "purchase_order.close",
                 "supplier.create", "supplier.edit", "supplier.delete", "supplier.view",
                 "stock_ledger.print", "stock_ledger.view",
-                "reports.view",
                 "production_output.view", "production_output.export",
             ],
             "Production Manager": [
@@ -602,16 +608,17 @@ def seed_rbac(db):
                 "color_code.create", "color_code.edit", "color_code.archive", "color_code.create_recipe", "color_code.view",
                 "color_variant.create", "color_variant.edit", "color_variant.delete",
                 "lab_dip_request.create", "lab_dip_request.edit", "lab_dip_request.delete",
-                "lab_dip_request.update_status", "lab_dip_request.print", "lab_dip_request.view",
+                "lab_dip_request.update_status", "lab_dip_request.view",
                 "yarn_lab_dip.view",
-                "stock_ledger.view", "reports.view",
+                "stock_ledger.view",
                 "production_output.view", "production_output.export",
             ],
             # Floor operator: log/stage/view only — not the full Edit/Delete access
             # "work_order.manage" used to imply. Tighten via the Roles page if a
             # site actually wants operators editing/deleting WOs.
             "Operator": ["work_order.log", "work_order.view", "work_order.stage",
-                         "weaving_monitor.view", "dyeing_monitor.view"],
+                         "weaving_monitor.view", "dyeing_monitor.view",
+                         "calendar.view", "beam.view"],
             # QC desk: dispositions held stock on the Quarantine Packing page and
             # scraps bad lots. Read-only everywhere else — releasing to packing is
             # the only write this role owns.
@@ -619,7 +626,7 @@ def seed_rbac(db):
                 "quarantine.view", "quarantine.set_status",
                 "lot.qc_reject", "lot.view",
                 "stock_on_hand.view", "manufacturing_order.view", "work_order.view",
-                "item.view", "reports.view",
+                "item.view",
                 "production_output.view",
             ],
         }

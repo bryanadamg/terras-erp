@@ -25,7 +25,7 @@ from app.models.bom import BOM, BOMSize
 from app.models.stock_balance import StockBalance
 from app.models.routing import WorkCenter
 from app.models.uom import UOM, UOMFactor
-from app.api.auth import get_current_user, require_permission
+from app.api.auth import require_permission, require_any_permission, user_has_permission
 from app.api.sales import line_size_measurement
 from app.models.auth import User
 from app.services import (
@@ -36,6 +36,15 @@ from app.core.ws_manager import manager
 from app.core.pagination import PageParams, PageWindow
 
 router = APIRouter(prefix="/packing", tags=["packing"])
+
+# Read gates — every screen that reads these, not just the Packing page: the
+# mobile pack scanner (log/edit), the Lot page's carton-label reprint (lot.view)
+# and the Print Layouts sample picker (print_layout.edit).
+PACKING_READ = ("packing_order.view", "packing_order.log", "packing_order.edit",
+                "lot.view", "print_layout.edit")
+# A carton (PackedUnit) is read by the pack side and by everyone downstream that
+# handles it: pickers resolving a scanned PU- code, the dispatch deck, lots.
+PACKED_UNIT_READ = PACKING_READ + ("pick_list.view", "pick_list.scan", "shipment.view")
 
 
 # --- helpers ---------------------------------------------------------------
@@ -505,7 +514,7 @@ async def list_packed_units(
     in_stock_only: bool = True,
     limit: int = Query(200, le=1000),
     db: AsyncSession = Depends(get_async_db),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_any_permission(*PACKED_UNIT_READ)),
 ):
     query = (
         select(Batch, StockBalance, PackingOrder.code)
@@ -554,7 +563,7 @@ async def list_packed_units(
 async def resolve_packed_unit(
     code: str,
     db: AsyncSession = Depends(get_async_db),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_any_permission(*PACKED_UNIT_READ)),
 ):
     """Scanner lookup: PU-YYYYMMDD-NNNN -> the carton it names."""
     result = await db.execute(
@@ -601,7 +610,7 @@ async def list_packing_orders(
     search: Optional[str] = None,
     window: PageWindow = Depends(PageParams(default_size=100)),
     db: AsyncSession = Depends(get_async_db),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_any_permission(*PACKING_READ)),
 ):
     query = select(PackingOrder).options(*_load_options())
     count_query = select(func.count(PackingOrder.id))
@@ -649,7 +658,7 @@ async def list_packing_orders(
 async def get_packing_order(
     po_id: uuid.UUID,
     db: AsyncSession = Depends(get_async_db),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_any_permission(*PACKING_READ)),
 ):
     po = await _load(db, po_id)
     if not po:
@@ -662,7 +671,7 @@ async def get_packing_order(
 async def create_packing_order(
     payload: PackingOrderCreate,
     db: AsyncSession = Depends(get_async_db),
-    current_user: User = Depends(require_permission('sales.manage')),
+    current_user: User = Depends(require_permission('packing_order.create')),
 ):
     item = (await db.execute(select(Item).filter(Item.id == payload.item_id))).scalars().first()
     if not item:
@@ -795,13 +804,24 @@ _AUDITED_FIELDS = ("qty_target", "sales_order_id", "sales_order_line_id", "color
                    "target_start_date", "target_end_date", "notes")
 
 
+PACKER_FIELDS = {"sample_weight_per_unit", "sample_weight_unit",
+                 "source_location_id", "output_location_id", "work_center_id"}
+
+
 @router.put("/{po_id}", response_model=PackingOrderResponse)
 async def update_packing_order(
     po_id: uuid.UUID,
     payload: PackingOrderUpdate,
     db: AsyncSession = Depends(get_async_db),
-    current_user: User = Depends(require_permission('sales.manage')),
+    current_user: User = Depends(require_any_permission('packing_order.edit', 'packing_order.log')),
 ):
+    # A packer (log only) may save the floor setup the pack screen asks for —
+    # sampled weight, locations, machine. Everything else, closing included, is
+    # the order owner's edit right.
+    if not user_has_permission(current_user, 'packing_order.edit'):
+        extra = set(payload.model_dump(exclude_none=True)) - PACKER_FIELDS
+        if extra:
+            raise HTTPException(status_code=403, detail="Missing permission: packing_order.edit")
     po = await _load(db, po_id)
     if not po:
         raise HTTPException(status_code=404, detail="Packing order not found")
@@ -953,7 +973,7 @@ async def add_packing_completion(
     po_id: uuid.UUID,
     payload: PackingCompletionCreate,
     db: AsyncSession = Depends(get_async_db),
-    current_user: User = Depends(require_permission('sales.manage')),
+    current_user: User = Depends(require_permission('packing_order.log')),
 ):
     """Log one pack event: consume bulk FG + packaging, mint cartons.
 
@@ -1424,7 +1444,7 @@ async def reject_packing_completion(
     completion_id: uuid.UUID,
     payload: PackingCompletionReject,
     db: AsyncSession = Depends(get_async_db),
-    current_user: User = Depends(require_permission('sales.manage')),
+    current_user: User = Depends(require_permission('packing_order.log')),
 ):
     """QC-reject cartons produced by one pack event — the packing-side mirror of
     the WO completion reject.
@@ -1542,7 +1562,7 @@ async def reject_packing_completion(
 async def mark_card_printed(
     po_id: uuid.UUID,
     db: AsyncSession = Depends(get_async_db),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_any_permission(*PACKING_READ)),
 ):
     po = await _load(db, po_id)
     if not po:
@@ -1561,7 +1581,7 @@ async def mark_card_printed(
 async def delete_packing_order(
     po_id: uuid.UUID,
     db: AsyncSession = Depends(get_async_db),
-    current_user: User = Depends(require_permission('sales.manage')),
+    current_user: User = Depends(require_permission('packing_order.delete')),
 ):
     result = await db.execute(
         select(PackingOrder).options(selectinload(PackingOrder.completions)).filter(PackingOrder.id == po_id)

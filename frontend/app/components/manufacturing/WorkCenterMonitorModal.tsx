@@ -61,11 +61,16 @@ interface Props {
 
 export default function WorkCenterMonitorModal({ isOpen, onClose, workCenter, authFetch, apiBase }: Props) {
     const { t } = useLanguage();
-    const { hasPermission, hasAnyPermission } = useUser();
+    const { hasPermission } = useUser();
     const { locations } = useData();
     const { showToast } = useToast();
-    const canManage = hasAnyPermission('weaving_monitor.start', 'calendar.edit', 'beam.unmount');
-    // Mounting is gated on what the endpoint enforces (work_order.edit), not on the
+    // One flag per endpoint gate: start/prep, stop/pause/resume, run edits, calendar, unmount.
+    const canStart = hasPermission('weaving_monitor.start');
+    const canStop = hasPermission('weaving_monitor.stop');
+    const canEditCalendar = hasPermission('calendar.edit');
+    const canUnmount = hasPermission('beam.unmount');
+    // Mounting and run edits (target, lines, rate) are gated on what their endpoints
+    // enforce (work_order.edit), not on the
     // unmount permission — putting warp up and taking it down are different calls.
     const canMount = hasPermission('work_order.edit');
 
@@ -377,7 +382,7 @@ export default function WorkCenterMonitorModal({ isOpen, onClose, workCenter, au
     // which is now always for a manager, since a loom already running one WO is
     // exactly where a second one gets added.
     useEffect(() => {
-        if (!isOpen || !wcId || !canManage) return;
+        if (!isOpen || !wcId || !canStart) return;
         let cancelled = false;
         setWoCandsLoading(true);
         authFetch(`${apiBase}/work-centers/${wcId}/candidate-wos`)
@@ -386,12 +391,12 @@ export default function WorkCenterMonitorModal({ isOpen, onClose, workCenter, au
             .catch(() => { if (!cancelled) setWoCands([]); })
             .finally(() => { if (!cancelled) setWoCandsLoading(false); });
         return () => { cancelled = true; };
-    }, [isOpen, wcId, canManage, data?.active_runs?.length, apiBase, authFetch]);
+    }, [isOpen, wcId, canStart, data?.active_runs?.length, apiBase, authFetch]);
 
     // MOs offered in the fallback picker: scoped to this machine's WOs, widened
     // to every open MO only when the operator asks for it.
     useEffect(() => {
-        if (!isOpen || !wcId || !canManage || !moMode) return;
+        if (!isOpen || !wcId || !canStart || !moMode) return;
         let cancelled = false;
         setMoCandsLoading(true);
         authFetch(`${apiBase}/work-centers/${wcId}/candidate-mos?include_all=${moCandsAll}`)
@@ -400,7 +405,7 @@ export default function WorkCenterMonitorModal({ isOpen, onClose, workCenter, au
             .catch(() => { if (!cancelled) setMoCands([]); })
             .finally(() => { if (!cancelled) setMoCandsLoading(false); });
         return () => { cancelled = true; };
-    }, [isOpen, wcId, canManage, moMode, moCandsAll, apiBase, authFetch]);
+    }, [isOpen, wcId, canStart, moMode, moCandsAll, apiBase, authFetch]);
 
     // Loom prep walk (STAGED → DRAW_IN → TUNING) — state comes from the beam-mounts
     // call, which derives it server-side, so this panel and the monitor card always
@@ -592,9 +597,11 @@ export default function WorkCenterMonitorModal({ isOpen, onClose, workCenter, au
     // ── Tab bar ──────────────────────────────────────────────────────────────
     const tabs: TabDef[] = [
         { key: 'performance', label: t('performance'), icon: 'bi-graph-up-arrow' },
-        { key: 'calendar', label: t('work_calendar'), icon: 'bi-calendar3' },
+        ...(canEditCalendar || hasPermission('calendar.view')
+            ? [{ key: 'calendar', label: t('work_calendar'), icon: 'bi-calendar3' } as TabDef]
+            : []),
         // Warp is machine state, so it lives on the machine — not on any WO.
-        ...(((workCenter?.center_type || '').toUpperCase() === 'WEAVING'
+        ...((canUnmount || hasPermission('beam.view')) && ((workCenter?.center_type || '').toUpperCase() === 'WEAVING'
             || (workCenter?.center_type || '').toUpperCase() === 'TENUN')
             ? [{ key: 'beams', label: t('beams_on_loom'), icon: 'bi-arrow-bar-up' } as TabDef]
             : []),
@@ -724,7 +731,7 @@ export default function WorkCenterMonitorModal({ isOpen, onClose, workCenter, au
                         tint
                     />
                 )}
-                {canManage && (
+                {canStop && (
                     <span style={{ marginLeft: 'auto', display: 'inline-flex', gap: 6 }}>
                         {/* Park vs close. Pause keeps the run and its earned efficiency
                             and is the reprioritise action; Stop closes the run for good. */}
@@ -786,7 +793,7 @@ export default function WorkCenterMonitorModal({ isOpen, onClose, workCenter, au
                             ) : (
                                 <>
                                     <span>{t('target')} {fmt(run.target_efficiency_pct, 0)}% · <span style={{ color: effColor, fontWeight: 'bold' }}>{onTarget ? t('on_target') : t('below_target')}</span></span>
-                                    {canManage && (
+                                    {canMount && (
                                         <XPActionButton tone="neutral" icon="bi-pencil-square" title="Edit target" onClick={() => { setTargetVal(String(run.target_efficiency_pct ?? '')); setTargetRunId(run.id); }} />
                                     )}
                                 </>
@@ -838,7 +845,7 @@ export default function WorkCenterMonitorModal({ isOpen, onClose, workCenter, au
                         ) : (
                             <span className="d-flex align-items-center gap-1">
                                 {run.lines}
-                                {canManage && <XPActionButton tone="neutral" icon="bi-pencil-square" title="Edit lines" onClick={() => { setLinesVal(String(run.lines ?? '')); setLinesRunId(run.id); }} />}
+                                {canMount && <XPActionButton tone="neutral" icon="bi-pencil-square" title="Edit lines" onClick={() => { setLinesVal(String(run.lines ?? '')); setLinesRunId(run.id); }} />}
                             </span>
                         )} />
                         <Stat label={t('rate_per_line')} value={editingRate ? (
@@ -850,7 +857,7 @@ export default function WorkCenterMonitorModal({ isOpen, onClose, workCenter, au
                         ) : (
                             <span className="d-flex align-items-center gap-1">
                                 {fmt(run.rate_per_line_g_min, 2)}<span style={{ fontSize: 9, fontWeight: 'normal', color: '#888' }}>g/min</span>
-                                {canManage && <XPActionButton tone="neutral" icon="bi-pencil-square" title="Edit rate" onClick={() => { setRateVal(String(run.rate_per_line_g_min ?? '')); setRateRunId(run.id); }} />}
+                                {canMount && <XPActionButton tone="neutral" icon="bi-pencil-square" title="Edit rate" onClick={() => { setRateVal(String(run.rate_per_line_g_min ?? '')); setRateRunId(run.id); }} />}
                             </span>
                         )} />
                         <Stat label={t('target_100_day')} value={fmt(run.target_100_per_day_kg, 2)} unit="kg" />
@@ -889,7 +896,7 @@ export default function WorkCenterMonitorModal({ isOpen, onClose, workCenter, au
 
                     {/* No run: read-only viewers get the shared empty state; managers go
                         straight to the start-run form — no extra click to get there. */}
-                    {!loading && !runs.length && !canManage && (
+                    {!loading && !runs.length && !canStart && (
                         <XPEmptyState icon="bi-stoplights" message={t('no_active_run')} />
                     )}
 
@@ -905,7 +912,7 @@ export default function WorkCenterMonitorModal({ isOpen, onClose, workCenter, au
                                     {loom?.prep_status_by ? ` · ${loom.prep_status_by}` : ''}
                                     {loom?.prep_status_at ? ` · ${fmtDate(loom.prep_status_at)}` : ''}
                                 </span>
-                                {canManage && nextLoomStep && (
+                                {canStart && nextLoomStep && (
                                     <XPActionButton
                                         tone={nextLoomStep === 'TUNING' ? 'warning' : 'primary'}
                                         icon={nextLoomStep === 'TUNING' ? 'bi-sliders' : 'bi-arrows-collapse-vertical'}
@@ -914,7 +921,7 @@ export default function WorkCenterMonitorModal({ isOpen, onClose, workCenter, au
                                         onClick={() => setPrep(nextLoomStep)}
                                     />
                                 )}
-                                {canManage && loomStatus !== 'STAGED' && (
+                                {canStart && loomStatus !== 'STAGED' && (
                                     <XPActionButton
                                         tone="neutral"
                                         icon="bi-arrow-counterclockwise"
@@ -931,7 +938,7 @@ export default function WorkCenterMonitorModal({ isOpen, onClose, workCenter, au
                     {/* Start a run. A loom runs one WO per combo at the same time, so
                         this form stays reachable while runs are active — collapsed
                         behind a button then, so the running WOs read first. */}
-                    {!loading && canManage && runs.length > 0 && !startOpen && (
+                    {!loading && canStart && runs.length > 0 && !startOpen && (
                         <div style={{ marginBottom: 10 }}>
                             <XPActionButton
                                 tone="success"
@@ -942,7 +949,7 @@ export default function WorkCenterMonitorModal({ isOpen, onClose, workCenter, au
                         </div>
                     )}
 
-                    {!loading && canManage && (runs.length === 0 || startOpen) && (
+                    {!loading && canStart && (runs.length === 0 || startOpen) && (
                         <FormSection
                             title={<SecTitle icon="bi-play-circle">{runs.length ? t('start_another_run') : t('start_run')}</SecTitle>}
                         >
@@ -1121,7 +1128,7 @@ export default function WorkCenterMonitorModal({ isOpen, onClose, workCenter, au
                     <WorkingDaysSection
                         weekdays={weekdays}
                         onToggleWeekday={toggleWeekday}
-                        canEdit={canManage}
+                        canEdit={canEditCalendar}
                         onSave={saveCalendar}
                     />
                     <HolidayCalendarSection
@@ -1130,12 +1137,12 @@ export default function WorkCenterMonitorModal({ isOpen, onClose, workCenter, au
                         weekdays={weekdays}
                         holidays={holidays}
                         national={national}
-                        canEdit={canManage}
+                        canEdit={canEditCalendar}
                         onToggleDay={(ds, existing, nat) => {
                             if (existing?.id) deleteHoliday(existing.id);
                             else addHolidayDate(ds, nat || null);
                         }}
-                        headerAction={canManage ? (
+                        headerAction={canEditCalendar ? (
                             <XPActionButton tone="neutral" icon="bi-download"
                                 label={`${t('import_id_holidays')} ${calRef.getFullYear()}`} onClick={importNational} />
                         ) : undefined}
@@ -1321,7 +1328,7 @@ export default function WorkCenterMonitorModal({ isOpen, onClose, workCenter, au
                                                     </div>
                                                 </td>
                                                 <td style={{ ...lvTd(), borderRight: 'none', textAlign: 'right' }}>
-                                                    {canManage && unmountingId !== m.id && (
+                                                    {canUnmount && unmountingId !== m.id && (
                                                         <XPActionButton
                                                             tone="warning"
                                                             icon="bi-box-arrow-up"

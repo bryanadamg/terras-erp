@@ -69,6 +69,14 @@ export const PERMISSION_MATRIX: PermissionMatrixSection[] = [
         ],
     },
     {
+        section: 'Warehouse',
+        resources: [
+            { resource: 'packing_order', label: 'Packing Order' },
+            { resource: 'pick_list', label: 'Pick List' },
+            { resource: 'shipment', label: 'Shipment / Dispatch' },
+        ],
+    },
+    {
         section: 'Manufacturing',
         resources: [
             { resource: 'bom', label: 'Bill of Material' },
@@ -97,11 +105,10 @@ export const PERMISSION_MATRIX: PermissionMatrixSection[] = [
     {
         section: 'Platform',
         resources: [
-            { resource: 'reports', label: 'Dashboard & Reports' },
             { resource: 'production_output', label: 'Production Output' },
             { resource: 'audit_log', label: 'Audit Log' },
             { resource: 'print_layout', label: 'Print Lay Out' },
-            { resource: 'system_admin', label: 'System Admin' },
+            { resource: 'system_admin', label: 'General Settings' },
         ],
     },
 ];
@@ -133,6 +140,14 @@ export const RESOURCE_ACTIONS: Record<string, PermissionMatrixAction[]> = {
     location: [CREATE, EDIT, DELETE, VIEW],
     stock_ledger: [A('print', 'Print'), VIEW],
 
+    // log = record packed cartons on the floor; edit = the order's settings + close.
+    packing_order: [CREATE, EDIT, DELETE, A('log', 'Log Packing'), VIEW],
+    // scan is the picker's grant: confirm cartons without owning the list.
+    pick_list: [CREATE, EDIT, DELETE, A('scan', 'Scan Cartons'), VIEW],
+    // verify is the four-eyes deck check — give it to a different role from the
+    // one that stages (create), or the check is the same pair of eyes twice.
+    shipment: [A('create', 'Stage'), EDIT, A('verify', 'Verify'), A('dispatch', 'Dispatch'), DELETE, VIEW],
+
     bom: [CREATE, EDIT, DELETE, VIEW],
     routing: [CREATE, EDIT, DELETE, VIEW],
     production_run: [CREATE, EDIT, DELETE, A('print', 'Print'), VIEW],
@@ -153,19 +168,17 @@ export const RESOURCE_ACTIONS: Record<string, PermissionMatrixAction[]> = {
     setting_order: [VIEW],
     color_code: [CREATE, EDIT, A('archive', 'Archive'), A('create_recipe', 'Create Dyeing Recipe'), VIEW],
     color_variant: [CREATE, EDIT, DELETE],
-    lab_dip_request: [CREATE, EDIT, DELETE, A('update_status', 'Update Status'), A('print', 'Print'), VIEW],
+    lab_dip_request: [CREATE, EDIT, DELETE, A('update_status', 'Update Status'), VIEW],
     yarn_lab_dip: [VIEW],
 
-    // reports.view gates the Dashboard and the Reports nav section (navConfig).
-    // It is seeded and enforced but had no row here, so it could only be handed
-    // out by the seeded roles — never from the Roles/User modals.
-    reports: [VIEW],
     // Production Output report — Excel export is its own grant so a role can read
     // the shop-floor numbers without being able to take the data off the system.
     production_output: [A('export', 'Export Excel'), VIEW],
     audit_log: [VIEW],
     print_layout: [EDIT],
-    system_admin: [CREATE, A('edit', 'edit'), DELETE],
+    // Settings → General: company profile, logo, qty formula. Users, roles and
+    // backups stay admin.access only.
+    system_admin: [EDIT],
 };
 
 export function permissionCode(resource: string, actionCode: string): string {
@@ -185,6 +198,7 @@ const INTENT_BY_ACTION: Record<string, PermissionIntent> = {
     edit: 'edit', adjust: 'edit', move: 'edit', split: 'edit', stage: 'edit',
     log: 'edit', import: 'edit', update_status: 'edit', set_status: 'edit',
     receive_goods: 'edit', unmount: 'edit', start: 'edit',
+    scan: 'edit', verify: 'edit', dispatch: 'edit',
     delete: 'delete', archive: 'delete', qc_reject: 'delete', close: 'delete', stop: 'delete',
     print: 'print', print_card: 'print', print_label: 'print', export: 'print',
     view: 'view',

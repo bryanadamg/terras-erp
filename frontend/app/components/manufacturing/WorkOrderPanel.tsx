@@ -969,7 +969,7 @@ export default function WorkOrderPanel({
                         items={[
                             {
                                 key: 'print', icon: 'bi-printer', label: 'Print',
-                                hidden: !parentMO,
+                                hidden: !parentMO || !hasPermission('work_order.print_card'),
                                 onClick: () => { closeMenu(); setPrintWO(menuWO); },
                             },
                             {

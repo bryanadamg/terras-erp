@@ -387,7 +387,10 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
     const [categoryL2, setCategoryL2] = useState('');
     const [categoryL3, setCategoryL3] = useState('');
     const [auditType, setAuditType] = useState('');
-    const [isInitialLoad, setIsInitialLoad] = useState(true);
+    // A ref, not state: nothing renders from it, and as a fetchData dependency its
+    // first-load flip rebuilt fetchData, which re-ran the fetch effect and pulled the
+    // landing page's whole data set a second time.
+    const isInitialLoadRef = useRef(true);
 
     // Tracks which domains have received at least one response (success or
     // failure) since page load. Views use this to distinguish "still loading"
@@ -573,7 +576,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
             const savedCache = localStorage.getItem(CACHE_KEY);
             let masterFetched = false;
 
-            if (isInitialLoad && savedCache) {
+            if (isInitialLoadRef.current && savedCache) {
                 const parsed = JSON.parse(savedCache);
                 if (Date.now() - parsed.timestamp < CACHE_TTL) {
                     const data = parsed.data;
@@ -585,7 +588,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
                     setCompanyProfile(data.companyProfile || null);
                     setPrintTemplates(data.printTemplates || []);
                     setItemIndex(data.itemIndex || {});
-                    setIsInitialLoad(false); masterFetched = true;
+                    isInitialLoadRef.current = false; masterFetched = true;
                     // Master data served from cache issues no /partners request, so the
                     // domain would otherwise never leave its loading state.
                     setLoadedOnce(prev => ({ ...prev, partners: true }));
@@ -598,7 +601,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
 
             // 1. MASTER DATA (Locations, Partners, etc.)
             // Fetch if initial load OR explicitly targeted OR on Settings/Locations page
-            if ((isInitialLoad && !masterFetched) || fetchTarget === 'settings' || fetchTarget === 'locations' || fetchTarget === 'item-metadata' || fetchTarget === 'routing') {
+            if ((isInitialLoadRef.current && !masterFetched) || fetchTarget === 'settings' || fetchTarget === 'locations' || fetchTarget === 'item-metadata' || fetchTarget === 'routing') {
                 requests.push(authFetch(`${API_BASE}/locations`, { headers })); requestTypes.push('locations');
                 requests.push(authFetch(`${API_BASE}/attributes`, { headers })); requestTypes.push('attributes');
                 requests.push(authFetch(`${API_BASE}/categories`, { headers })); requestTypes.push('categories');
@@ -623,7 +626,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
             // stale (unbounded, in fact: any later master write re-stamps the cache
             // timestamp while carrying the old templates forward). One small row per
             // customised doc type, so the extra request is cheap.
-            if (isInitialLoad || fetchTarget === 'settings' || fetchTarget === 'print-designer') {
+            if (isInitialLoadRef.current || fetchTarget === 'settings' || fetchTarget === 'print-designer') {
                 requests.push(authFetch(`${API_BASE}/print-templates`, { headers })); requestTypes.push('print-templates');
             }
 
@@ -772,27 +775,27 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
                 requestTypes.push('audit-logs');
             }
 
-            // Count responses as they land so the app-load bar is measured, not
-            // simulated. Wrapping preserves Promise.all's reject-on-first-error.
-            let tracked = requests;
-            if (!bootTrackedRef.current && requests.length > 0) {
+            // Each response is applied the moment it lands, not after the whole
+            // batch: a page's table used to sit on its skeleton until the slowest
+            // sibling request finished (the MO list waited on /production-runs,
+            // /boms and /stock/balance it never reads). A view that reads a
+            // sibling domain gates on that domain's own `loading` flag instead.
+            const total = requests.length;
+            if (!bootTrackedRef.current && total > 0) {
                 bootTrackedRef.current = true;
                 trackBoot = true;
-                const total = requests.length;
-                let done = 0;
                 setLoadProgress({ done: 0, total });
-                const tick = () => { done += 1; setLoadProgress({ done, total }); };
-                tracked = requests.map(p => p.then(
-                    (r) => { tick(); return r; },
-                    (e) => { tick(); throw e; },
-                ));
             }
-            const responses = await Promise.all(tracked);
+            let done = 0;
+            // A flag can cover several requests (the four dashboard payloads share
+            // `dashboard`, and the view drops a panel whose payload is absent once
+            // the flag reads loaded), so it flips only when the LAST of its
+            // requests in this batch settles.
+            const outstanding: Record<string, number> = {};
+            requestTypes.forEach(t => { const d = LOADING_KEY[t]; if (d) outstanding[d] = (outstanding[d] || 0) + 1; });
             const newMasterData: any = {};
             const failedTypes: string[] = [];
-            const touchedDomains = new Set(requestTypes.map(t => LOADING_KEY[t]).filter(Boolean));
-            for (let i = 0; i < responses.length; i++) {
-                const res = responses[i]; const type = requestTypes[i];
+            const apply = async (res: Response, type: string) => {
                 if (!res.ok) {
                     console.warn(`[DataContext] ${type} fetch failed: HTTP ${res.status} ${res.url}`);
                     // 403 = this user's role simply isn't granted that domain. Read
@@ -802,7 +805,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
                     // load. 401 already logged the user out inside authFetch.
                     // Real failures (500, 404) still report.
                     if (res.status !== 403 && res.status !== 401) failedTypes.push(`${type} (${res.status})`);
-                    continue;
+                    return;
                 }
                 const data = await res.json();
                 switch(type) {
@@ -837,21 +840,28 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
                     case 'purchase-orders': setPurchaseOrders(data.items || []); setPoTotal(data.total || 0); setPoStatusCounts(data.status_counts || {}); break;
                     case 'audit-logs': setAuditLogs(data.items); setAuditTotal(data.total); break;
                 }
-            }
-            if (touchedDomains.size > 0) {
-                setLoadedOnce(prev => {
-                    const next = { ...prev };
-                    touchedDomains.forEach(d => { next[d] = true; });
-                    return next;
-                });
-            }
+            };
+            const results = await Promise.allSettled(requests.map((p, i) => p
+                .then(res => apply(res, requestTypes[i]))
+                // Flag flips AFTER the data setter, success or HTTP failure alike,
+                // so no render ever sees "loaded" over a still-empty list.
+                .finally(() => {
+                    const d = LOADING_KEY[requestTypes[i]];
+                    if (d && --outstanding[d] === 0) setLoadedOnce(prev => (prev[d] ? prev : { ...prev, [d]: true }));
+                    if (trackBoot) setLoadProgress({ done: ++done, total });
+                })));
             if (failedTypes.length > 0) {
                 showToast(`Some data could not be loaded: ${failedTypes.join(', ')}`, 'warning');
             }
+            // A request that never got a response (offline, DNS, bad JSON) goes to
+            // the catch below, as before — and skips the cache write and the
+            // isInitialLoad flip, so the next fetch retries the master set whole.
+            const crashed = results.find((r): r is PromiseRejectedResult => r.status === 'rejected');
+            if (crashed) throw crashed.reason;
             if (Object.keys(newMasterData).length > 0) {
                 const cache = JSON.parse(localStorage.getItem(CACHE_KEY) || '{"data":{}}');
                 localStorage.setItem(CACHE_KEY, JSON.stringify({ timestamp: Date.now(), data: { ...cache.data, ...newMasterData } }));
-                setIsInitialLoad(false);
+                isInitialLoadRef.current = false;
             }
         } catch (e) {
             console.error("Fetch Error", e);
@@ -874,7 +884,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
         const p = run().finally(() => { delete inFlightRef.current[inFlightKey]; });
         inFlightRef.current[inFlightKey] = p;
         return p;
-    }, [currentUser, windowKey, itemPage, woPage, prPage, auditPage, reportPage, soPage, poPage, itemSearch, moSearch, prFilterQuery, soQuery, poQuery, categoryL1, categoryL2, categoryL3, auditType, isInitialLoad, pageSize, showToast]);
+    }, [currentUser, windowKey, itemPage, woPage, prPage, auditPage, reportPage, soPage, poPage, itemSearch, moSearch, prFilterQuery, soQuery, poQuery, categoryL1, categoryL2, categoryL3, auditType, pageSize, showToast]);
 
     // Every targeted refresh below used to swallow its failure with a
     // console.error: the screen kept showing the rows it already had, with
@@ -1099,7 +1109,10 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
         } catch (e) { reportRefreshError('dashboard KPIs', e); }
     }, [currentUser, reportRefreshError]);
 
-    const handleTabHover = (tab: string) => fetchData(tab);
+    // useCallback, not a bare arrow: it sits in the context value's memo deps, and a
+    // fresh function every render made that memo recompute every render — so every
+    // useData() consumer re-rendered on unrelated provider state changes.
+    const handleTabHover = useCallback((tab: string) => fetchData(tab), [fetchData]);
 
     useEffect(() => { if (currentUser) fetchData(); }, [currentUser, itemPage, woPage, prPage, auditPage, reportPage, soPage, poPage, itemSearch, moSearch, prFilterQuery, soSearch, soCustomerSearch, soStatusFilter, soSort, poSearch, poStatusFilter, categoryL1, categoryL2, categoryL3, auditType, fetchData]);
 
