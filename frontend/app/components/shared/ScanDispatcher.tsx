@@ -51,12 +51,12 @@ const BRANCHES: Record<ScanMode, Branch> = {
     wo: { mode: 'wo', permissions: [], denied: '' },
     pick: {
         mode: 'pick',
-        permissions: ['pick_list.scan', 'sales.manage'],
+        permissions: ['pick_list.scan'],
         denied: 'That is a pick code, but your account cannot pick.',
     },
     packing: {
         mode: 'packing',
-        permissions: ['sales.manage'],
+        permissions: ['packing_order.log', 'packing_order.edit'],
         denied: 'That is a packing code, but your account cannot pack.',
     },
 };

@@ -28,7 +28,7 @@ from app.schemas import (
 from app.models.shipment import Shipment
 from app.models.pick_list import PickList, PickListLine
 from app.models.sales import SalesOrder, SalesOrderLine
-from app.api.auth import require_permission, require_any_permission, user_has_permission
+from app.api.auth import require_permission, user_has_permission
 from app.models.auth import User
 from app.services import (
     audit_service, kpi_service, so_fulfilment_service, numbering_service, dispatch_service,
@@ -323,7 +323,7 @@ async def list_shipments(
     search: Optional[str] = None,
     window: PageWindow = Depends(PageParams(default_size=20, max_size=200)),
     db: AsyncSession = Depends(get_async_db),
-    current_user: User = Depends(require_any_permission('shipment.view', 'sales.manage')),
+    current_user: User = Depends(require_permission('shipment.view')),
 ):
     query = select(Shipment).options(*_load_options())
     count_q = select(func.count(Shipment.id))
@@ -351,7 +351,7 @@ async def list_shipments(
 @router.get("/stageable", response_model=list[StageablePickListResponse])
 async def stageable_pick_lists(
     db: AsyncSession = Depends(get_async_db),
-    current_user: User = Depends(require_any_permission('shipment.view', 'sales.manage')),
+    current_user: User = Depends(require_permission('shipment.view')),
 ):
     """The loading-deck inbox: finished picks not yet on any shipment."""
     rows = (await db.execute(
@@ -384,7 +384,7 @@ async def stageable_pick_lists(
 async def get_shipment(
     shp_id: uuid.UUID,
     db: AsyncSession = Depends(get_async_db),
-    current_user: User = Depends(require_any_permission('shipment.view', 'sales.manage')),
+    current_user: User = Depends(require_permission('shipment.view')),
 ):
     shp = await _load(db, shp_id)
     if not shp:
@@ -397,7 +397,7 @@ async def get_shipment(
 async def create_shipment(
     payload: ShipmentCreate,
     db: AsyncSession = Depends(get_async_db),
-    current_user: User = Depends(require_any_permission('shipment.create', 'sales.manage')),
+    current_user: User = Depends(require_permission('shipment.create')),
 ):
     """Stage picked goods on the loading deck and mint the Surat Jalan number."""
     members = await _resolve_members(db, payload.pick_list_ids)
@@ -445,7 +445,7 @@ async def update_shipment(
     shp_id: uuid.UUID,
     payload: ShipmentUpdate,
     db: AsyncSession = Depends(get_async_db),
-    current_user: User = Depends(require_any_permission('shipment.edit', 'sales.manage')),
+    current_user: User = Depends(require_permission('shipment.edit')),
 ):
     shp = await _load(db, shp_id)
     if not shp:
@@ -502,9 +502,8 @@ async def verify_shipment(
     """The deck check: a second person counted the cartons against the printed
     Surat Jalan.
 
-    `shipment.verify` is deliberately NOT satisfied by `sales.manage`. Every other
-    endpoint here accepts the legacy blob code so existing planner roles keep
-    working, but a control that anyone with sales.manage can satisfy is not a
+    `shipment.verify` is its own grant, never bundled with the planner's
+    shipment.* codes: a control that anyone who stages can satisfy is not a
     control. Same reason the staging user is blocked below: four eyes means two
     people, and the check exists precisely because the first pair already looked.
     Administrators (`admin.access`) are exempt from the staging-user block —
@@ -555,7 +554,7 @@ async def verify_shipment(
 async def reopen_shipment(
     shp_id: uuid.UUID,
     db: AsyncSession = Depends(get_async_db),
-    current_user: User = Depends(require_any_permission('shipment.edit', 'sales.manage')),
+    current_user: User = Depends(require_permission('shipment.edit')),
 ):
     """Undo a verification so the load can be corrected. Clears the check outright
     rather than keeping it — a stale tick on changed contents is worse than none."""
@@ -590,7 +589,7 @@ async def reopen_shipment(
 async def dispatch_shipment(
     shp_id: uuid.UUID,
     db: AsyncSession = Depends(get_async_db),
-    current_user: User = Depends(require_any_permission('shipment.dispatch', 'sales.manage')),
+    current_user: User = Depends(require_permission('shipment.dispatch')),
 ):
     """Goods issue. Deducts finished-goods stock for every member pick list and
     flips their sales orders to SENT/PARTIAL."""
@@ -681,7 +680,7 @@ async def dispatch_shipment(
 async def cancel_shipment(
     shp_id: uuid.UUID,
     db: AsyncSession = Depends(get_async_db),
-    current_user: User = Depends(require_any_permission('shipment.edit', 'sales.manage')),
+    current_user: User = Depends(require_permission('shipment.edit')),
 ):
     shp = await _load(db, shp_id)
     if not shp:
@@ -713,7 +712,7 @@ async def cancel_shipment(
 async def delete_shipment(
     shp_id: uuid.UUID,
     db: AsyncSession = Depends(get_async_db),
-    current_user: User = Depends(require_any_permission('shipment.delete', 'sales.manage')),
+    current_user: User = Depends(require_permission('shipment.delete')),
 ):
     shp = await _load(db, shp_id)
     if not shp:

@@ -88,9 +88,11 @@ export default function DispatchView() {
     const { showToast } = useToast();
     const { confirm } = useConfirm();
     const { hasPermission } = useUser();
-    const canManage = hasPermission('sales.manage') || hasPermission('shipment.create');
+    const canStage = hasPermission('shipment.create');
+    const canEdit = hasPermission('shipment.edit');
+    const canDelete = hasPermission('shipment.delete');
     const canVerify = hasPermission('shipment.verify');
-    const canDispatch = hasPermission('sales.manage') || hasPermission('shipment.dispatch');
+    const canDispatch = hasPermission('shipment.dispatch');
 
     const [deck, setDeck] = useState<any[]>([]);
     const [deckLoading, setDeckLoading] = useState(true);
@@ -299,7 +301,7 @@ export default function DispatchView() {
                             One Surat Jalan = one customer
                         </span>
                     )}
-                    {canManage && (
+                    {canStage && (
                         <button className={XP_BTN} style={xpBtnGreen()} disabled={mixedCustomers} onClick={() => stageNow(selectedDeck)}>
                             Stage on Deck
                         </button>
@@ -369,7 +371,7 @@ export default function DispatchView() {
                                         <td style={td}><StatusChip status="PICKED" /></td>
                                         <td style={td}>{EMPTY_DASH}</td>
                                         <td style={{ ...td, textAlign: 'right' }} onClick={e => e.stopPropagation()}>
-                                            {canManage && (
+                                            {canStage && (
                                                 <XPActionButton
                                                     tone="success"
                                                     icon="bi-truck"
@@ -424,7 +426,7 @@ export default function DispatchView() {
                                                     <XPActionButton tone="success" icon="bi-check2-square" title="Verify Load" onClick={() => setVerifying(shp)} />
                                                 </span>
                                             )}
-                                            {canManage && shp.status === 'VERIFIED' && (
+                                            {canEdit && shp.status === 'VERIFIED' && (
                                                 <span style={{ marginRight: 2 }}>
                                                     <XPActionButton tone="warning" icon="bi-arrow-counterclockwise" title="Reopen" onClick={() => doAction(shp, 'reopen')} />
                                                 </span>
@@ -478,11 +480,11 @@ export default function DispatchView() {
                         // promoted to the row's action column — the things a deck user
                         // reaches for every time a shipment is in that state. Only Edit,
                         // Cancel and Delete are left in the overflow menu.
-                        ...(canManage && ['DRAFT', 'STAGED'].includes(menuShipment.status)
+                        ...(canEdit && ['DRAFT', 'STAGED'].includes(menuShipment.status)
                             ? [{ key: 'edit', label: 'Edit', icon: 'bi-pencil', onClick: () => { menuClose(); openEdit(menuShipment); } }] : []),
-                        ...(canManage && menuShipment.status !== 'DISPATCHED'
+                        ...(canEdit && menuShipment.status !== 'DISPATCHED'
                             ? [{ key: 'cancel', label: 'Cancel', icon: 'bi-x-circle', onClick: () => { menuClose(); doAction(menuShipment, 'cancel', `Cancel ${menuShipment.code}? Pick lists return to the deck.`); } }] : []),
-                        ...(canManage && menuShipment.status !== 'DISPATCHED'
+                        ...(canDelete && menuShipment.status !== 'DISPATCHED'
                             ? [{ key: 'delete', label: 'Delete', icon: 'bi-trash', onClick: () => { menuClose(); doDelete(menuShipment); } }] : []),
                     ]}
                 />

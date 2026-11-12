@@ -128,22 +128,20 @@ export const NAV_SECTIONS: NavSection[] = [
         // pick_list.scan is deliberately absent: the picker's only surface is the
         // QUICK SCAN button, which sits above the sections and is always visible.
         // Listing it here would open an otherwise empty Warehouse section for them.
-        permissions: ['quarantine.view', 'sales.manage', 'shipment.view'],
+        permissions: ['quarantine.view', 'packing_order.view', 'pick_list.view', 'shipment.view'],
         items: [
-            // Packing Orders / Pick Lists are a separate feature not covered by the
-            // Permissions config spreadsheet — still gated on the legacy blob code.
             // QC hold desk feeding Packing Orders — sits immediately before it in
             // the flow, so it sits immediately above it here.
             { tab: 'quarantine-packing', label: 'Quarantine Packing', icon: 'bi-shield-exclamation', permission: 'quarantine.view' },
-            { tab: 'packing', label: 'Packing Orders', icon: 'bi-box2', permission: 'sales.manage' },
-            { tab: 'pick-lists', label: 'Pick Lists', icon: 'bi-clipboard-check', permission: 'sales.manage' },
+            { tab: 'packing', label: 'Packing Orders', icon: 'bi-box2', permission: 'packing_order.view' },
+            { tab: 'pick-lists', label: 'Pick Lists', icon: 'bi-clipboard-check', permission: 'pick_list.view' },
             // No Pick Scanner leaf: the floor half of a pick list is reached by
             // scanning the PL- QR at QUICK SCAN, which routes to it. A dedicated
             // entry only asked the picker to choose a scanner before scanning.
             // Loading deck. Deliberately its own page and not a Pick Lists tab: the
             // Surat Jalan check must be done by someone other than the picker, so
             // the two surfaces carry different permissions.
-            { tab: 'dispatch', label: 'Dispatch', icon: 'bi-truck', permission: ['shipment.view', 'sales.manage'] },
+            { tab: 'dispatch', label: 'Dispatch', icon: 'bi-truck', permission: 'shipment.view' },
         ],
     },
     {

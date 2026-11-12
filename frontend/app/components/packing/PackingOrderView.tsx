@@ -269,7 +269,11 @@ export default function PackingOrderView({ initialCreateState, onClearInitialSta
     const { showToast } = useToast();
     const { confirm } = useConfirm();
     const { hasPermission } = useUser();
-    const canManage = hasPermission('sales.manage');
+    const canCreate = hasPermission('packing_order.create');
+    const canEdit = hasPermission('packing_order.edit');
+    const canDelete = hasPermission('packing_order.delete');
+    // Packing cartons is `log`; edit also opens the pack screen (setup fields).
+    const canPack = hasPermission('packing_order.log') || canEdit;
     const router = useRouter();
 
     // Page window, fetch, `loading` (true from first paint, so the list shows the
@@ -718,7 +722,7 @@ export default function PackingOrderView({ initialCreateState, onClearInitialSta
                 <span style={{ marginLeft: 'auto', fontSize: 11, color: '#333' }}>
                     {total.toLocaleString()} order{total !== 1 ? 's' : ''}
                 </span>
-                {canManage && (
+                {canCreate && (
                     <ToolbarButton tone="create" icon="bi-plus-lg" title="Order finished goods packed into cartons" onClick={() => setCreating(true)}>
                         New Packing Order
                     </ToolbarButton>
@@ -823,25 +827,25 @@ export default function PackingOrderView({ initialCreateState, onClearInitialSta
                                     <td style={{ ...td, textAlign: 'right', whiteSpace: 'nowrap' }} onClick={e => e.stopPropagation()}>
                                         {/* Pack is the row's primary action — inline, same shape as
                                             "log production output" on the WO list, not buried in the menu. */}
-                                        {canManage && !closed && (
-                                            <>
-                                                <span style={{ marginRight: 2 }}>
-                                                    <XPActionButton
-                                                        tone="success"
-                                                        icon="bi-plus-lg"
-                                                        title="Pack — log cartons against this order"
-                                                        onClick={() => setDetail(po)}
-                                                    />
-                                                </span>
-                                                <span style={{ marginRight: 2 }}>
-                                                    <XPActionButton
-                                                        tone="primary"
-                                                        icon="bi-check2-square"
-                                                        title="Close Order — no further cartons can be packed"
-                                                        onClick={() => closeOrder(po)}
-                                                    />
-                                                </span>
-                                            </>
+                                        {canPack && !closed && (
+                                            <span style={{ marginRight: 2 }}>
+                                                <XPActionButton
+                                                    tone="success"
+                                                    icon="bi-plus-lg"
+                                                    title="Pack — log cartons against this order"
+                                                    onClick={() => setDetail(po)}
+                                                />
+                                            </span>
+                                        )}
+                                        {canEdit && !closed && (
+                                            <span style={{ marginRight: 2 }}>
+                                                <XPActionButton
+                                                    tone="primary"
+                                                    icon="bi-check2-square"
+                                                    title="Close Order — no further cartons can be packed"
+                                                    onClick={() => closeOrder(po)}
+                                                />
+                                            </span>
                                         )}
                                         <MenuTriggerButton onClick={e => menuToggle(String(po.id), e)} />
                                     </td>
@@ -865,10 +869,10 @@ export default function PackingOrderView({ initialCreateState, onClearInitialSta
                         items={[
                             // Open/Pack is inline on the row for anyone who can pack; the menu
                             // still carries it for closed orders and read-only users.
-                            { key: 'open', label: closed ? 'View' : 'Pack', icon: 'bi-box-seam', hidden: canManage && !closed, onClick: () => { menuClose(); setDetail(po); } },
+                            { key: 'open', label: closed ? 'View' : 'Pack', icon: 'bi-box-seam', hidden: canPack && !closed, onClick: () => { menuClose(); setDetail(po); } },
                             { key: 'card', label: 'Print Packing Card', icon: 'bi-printer', onClick: () => { menuClose(); setPrintCard(po); } },
                             { key: 'labels', label: 'Print Carton Labels', icon: 'bi-tags', hidden: !(po.packed_units || []).length, onClick: () => { menuClose(); setPrintLabels({ order: po, units: po.packed_units || [] }); } },
-                            { key: 'delete', label: 'Delete', icon: 'bi-trash', danger: true, hidden: !(canManage && !(po.completions || []).length), onClick: () => { menuClose(); deleteOrder(po); } },
+                            { key: 'delete', label: 'Delete', icon: 'bi-trash', danger: true, hidden: !(canDelete && !(po.completions || []).length), onClick: () => { menuClose(); deleteOrder(po); } },
                         ]}
                     />
                 );
@@ -1847,10 +1851,10 @@ function PackingOrderForm({ locPickerTreeOptions, machineOptions, defaultSourceL
 function PackingOrderDetail({ po: initialPo, colourText, itemById, locationById, locPickerTreeOptions, machineOptions, authFetch, showToast, onClose, onChanged, onPrintCard, onPrintLabels }: any) {
     const { hasPermission } = useUser();
     const { formatDateTime: tzDateTime } = useTimezone();
-    const canManage = hasPermission('sales.manage');
+    const canPack = hasPermission('packing_order.log') || hasPermission('packing_order.edit');
     const [po, setPo] = useState<any>(initialPo);
     const closed = po.status === 'COMPLETED' || po.status === 'CANCELLED';
-    const readOnly = closed || !canManage;
+    const readOnly = closed || !canPack;
 
     const it = itemById[String(po.item_id)];
     const uom = po.item_uom || it?.uom || '';

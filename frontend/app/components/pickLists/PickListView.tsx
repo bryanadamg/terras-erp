@@ -51,7 +51,8 @@ export default function PickListView() {
     const { showToast } = useToast();
     const { confirm } = useConfirm();
     const { hasPermission } = useUser();
-    const canManage = hasPermission('sales.manage');
+    const canCreate = hasPermission('pick_list.create');
+    const canDelete = hasPermission('pick_list.delete');
 
     // Two surfaces for one planner: "To Pick" is the release board (which order
     // do I cut a list for next), "Pick Lists" is the register of lists already
@@ -488,7 +489,7 @@ export default function PickListView() {
                     pickableSOs={pickableSOs}
                     loading={pickableLoading}
                     tzDate={tzDate}
-                    canManage={canManage}
+                    canManage={canCreate}
                     onRefresh={loadPickable}
                     onPick={openSuggestFor}
                 />
@@ -581,7 +582,7 @@ export default function PickListView() {
                     <FloatingMenu
                         pos={menuPos}
                         items={[
-                            { key: 'delete', label: 'Delete', icon: 'bi-trash', danger: true, hidden: !(canManage && pl.status !== 'DISPATCHED'), onClick: () => { menuClose(); deletePL(pl); } },
+                            { key: 'delete', label: 'Delete', icon: 'bi-trash', danger: true, hidden: !(canDelete && pl.status !== 'DISPATCHED'), onClick: () => { menuClose(); deletePL(pl); } },
                         ]}
                     />
                 );
@@ -1242,7 +1243,7 @@ function PickListSuggestionModal({ so, groups, loading, creating, itemById, canS
 // ── editor ───────────────────────────────────────────────────────────────────
 function PickListEditor({ pl: initialPl, itemById, locPickerTreeOptions, authFetch, onClose, onSaved, showToast }: any) {
     const { hasPermission, currentUser } = useUser();
-    const canManage = hasPermission('sales.manage');
+    const canManage = hasPermission('pick_list.edit');
 
     // Lines are server-owned here: scanning mutates them on the backend and the
     // response replaces the local copy. Only header fields and bulk-line qty are

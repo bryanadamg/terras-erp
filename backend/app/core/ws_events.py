@@ -9,9 +9,7 @@ effective permission codes are snapshotted onto the connection, and
 
 Each entry is a UNION — hold ANY listed code and the event is delivered. That
 mirrors the read-side GETs, which are gated with unions of the same granular
-codes. Codes come from the seed list in `db/init_db.py`; the legacy blob
-`sales.manage` appears wherever the matching page is still gated on it (Packing
-Orders, Pick Lists, Dispatch).
+codes. Codes come from the seed list in `db/init_db.py`.
 
 The unions are wider than the page that owns the event, on purpose: a WO event
 moves the MO board, a stock event moves the work queue. The rule for adding a
@@ -85,10 +83,10 @@ EVENT_PERMISSIONS: dict[str, tuple[str, ...]] = {
         "stock_on_hand.view",
     ),
     # ── Sales / outbound ─────────────────────────────────────────────────────
-    "SALES_ORDER_UPDATE": ("sales_order.view", "sales.manage"),
-    "PACKING_UPDATE": ("sales.manage", "sales_order.view", "shipment.view", "pick_list.scan"),
-    "PICK_LIST_UPDATE": ("sales.manage", "pick_list.scan", "shipment.view", "sales_order.view"),
-    "SHIPMENT_UPDATE": ("shipment.view", "sales.manage"),
+    "SALES_ORDER_UPDATE": ("sales_order.view", "packing_order.view", "pick_list.view"),
+    "PACKING_UPDATE": ("packing_order.view", "pick_list.view", "sales_order.view", "shipment.view", "pick_list.scan"),
+    "PICK_LIST_UPDATE": ("pick_list.view", "pick_list.scan", "shipment.view", "sales_order.view"),
+    "SHIPMENT_UPDATE": ("shipment.view", "pick_list.view"),
     # ── Masters ──────────────────────────────────────────────────────────────
     "BOM_UPDATE": (
         "bom.view",
@@ -103,10 +101,10 @@ EVENT_PERMISSIONS: dict[str, tuple[str, ...]] = {
         "item.view",
     ),
     "COMBO_UPDATE": ("combo_library.view", "item.view", "bom.view"),
-    # The box master changed. `sales.manage` is on the list because the pack
-    # screens (not just the master page) read it — their picker and the tare that
-    # makes every carton's brutto come from these rows.
-    "PACKAGING_TYPE_UPDATE": ("packaging_type.view", "sales.manage"),
+    # The box master changed. `packing_order.view` is on the list because the
+    # pack screens (not just the master page) read it — their picker and the tare
+    # that makes every carton's brutto come from these rows.
+    "PACKAGING_TYPE_UPDATE": ("packaging_type.view", "packing_order.view"),
     # ── Platform ─────────────────────────────────────────────────────────────
     "KPI_UPDATE": ("reports.view",),
     # A print layout changed. Carries no business data and every print modal in

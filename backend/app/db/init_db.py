@@ -439,13 +439,23 @@ def seed_rbac(db):
             # that lets a lot be packed, so it is deliberately separate from lot.*.
             ("quarantine.view", "View Quarantine Packing"),
             ("quarantine.set_status", "Set Quarantine Status"),
-            # Pick List — floor half only. Everything else on the pick list router
-            # (create/edit/dispatch/delete) stays on the legacy sales.manage blob;
-            # this exists so a picker can confirm cartons without holding it.
+            # Packing Order — `log` is the floor half (record packed cartons, reject
+            # a completion); `edit` is the order's own settings and closing it.
+            ("packing_order.create", "Create Packing Orders"),
+            ("packing_order.edit", "Edit/Close Packing Orders"),
+            ("packing_order.delete", "Delete Packing Orders"),
+            ("packing_order.log", "Log Packed Cartons"),
+            ("packing_order.view", "View Packing Orders"),
+            # Pick List — `scan` is the floor half: a picker confirms cartons
+            # without being able to create, edit or delete the list itself.
+            ("pick_list.create", "Create Pick Lists"),
+            ("pick_list.edit", "Edit Pick Lists"),
+            ("pick_list.delete", "Delete Pick Lists"),
             ("pick_list.scan", "Scan Cartons onto Pick Lists"),
-            # Shipment — the loading deck. `shipment.verify` is the four-eyes gate
-            # and is the ONE code here that sales.manage does not satisfy: a check
-            # every planner can tick is not a check. Keep it on a separate role.
+            ("pick_list.view", "View Pick Lists"),
+            # Shipment — the loading deck. `shipment.verify` is the four-eyes gate:
+            # keep it on a different role from whoever stages, a check every
+            # planner can tick is not a check.
             ("shipment.view", "View Shipments"),
             ("shipment.create", "Stage Shipments"),
             ("shipment.edit", "Edit Shipments"),

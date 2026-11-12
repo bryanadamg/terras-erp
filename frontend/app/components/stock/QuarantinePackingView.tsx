@@ -152,7 +152,7 @@ export default function QuarantinePackingView() {
     const router = useRouter();
 
     const canSetStatus = hasPermission('quarantine.set_status');
-    const canPack = hasPermission('sales.manage');
+    const canPack = hasPermission('packing_order.create');
 
     const [statuses, setStatuses] = useState<StatusOption[]>([]);
     const [saving, setSaving] = useState<string | null>(null);
@@ -1020,7 +1020,7 @@ export default function QuarantinePackingView() {
                                             icon="bi-box2"
                                             label="Pack"
                                             title={
-                                                !canPack ? 'Needs the Manage Sales Orders permission'
+                                                !canPack ? 'Needs the Create Packing Orders permission'
                                                     : qtyFree <= 0 ? (g.qty_released > 0
                                                         ? `All ${fmtQty(g.qty_released)} ${g.uom || ''} released here is already allocated to open packing orders — close, cancel or raise one to free it`
                                                         : 'No released stock on this MO yet')

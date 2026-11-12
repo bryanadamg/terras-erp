@@ -29,7 +29,7 @@ export const usersPage: DocPage = {
                 'work_order.create adds work orders and uses Plan Beaming. work_order.log records production, work_order.stage issues materials to a work order, and work_order.print_card / print_label print the Kartu Kerja and labels.',
                 'shipment.verify is the loading-deck check on Warehouse → Dispatch. Give it to a different person than the one who stages the Surat Jalan: the system will not let the same person do both.',
                 'pick_list.scan lets a picker confirm cartons on a pick list through QUICK SCAN without any other pick list rights.',
-                'Packing Orders and Pick Lists are still opened by the older broad code sales.manage.',
+                'packing_order.log records packed cartons (and saves the sampled weight, locations and machine on the pack screen); packing_order.edit also changes and closes the order. pick_list.create / edit / delete manage pick lists, and shipment.create stages a Surat Jalan on the Dispatch deck.',
                 'quarantine.set_status is the release decision that lets a held lot be packed. It is kept apart from the lot permissions on purpose.',
                 'reports.view opens the Dashboard and Reports. production_output.view and production_output.export read the Production Output report and download it as Excel.',
                 'print_layout.edit opens Administration → Print Layouts. audit_log.view opens Audit Logs.',

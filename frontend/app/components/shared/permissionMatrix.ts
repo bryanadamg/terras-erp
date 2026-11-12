@@ -69,6 +69,14 @@ export const PERMISSION_MATRIX: PermissionMatrixSection[] = [
         ],
     },
     {
+        section: 'Warehouse',
+        resources: [
+            { resource: 'packing_order', label: 'Packing Order' },
+            { resource: 'pick_list', label: 'Pick List' },
+            { resource: 'shipment', label: 'Shipment / Dispatch' },
+        ],
+    },
+    {
         section: 'Manufacturing',
         resources: [
             { resource: 'bom', label: 'Bill of Material' },
@@ -133,6 +141,14 @@ export const RESOURCE_ACTIONS: Record<string, PermissionMatrixAction[]> = {
     location: [CREATE, EDIT, DELETE, VIEW],
     stock_ledger: [A('print', 'Print'), VIEW],
 
+    // log = record packed cartons on the floor; edit = the order's settings + close.
+    packing_order: [CREATE, EDIT, DELETE, A('log', 'Log Packing'), VIEW],
+    // scan is the picker's grant: confirm cartons without owning the list.
+    pick_list: [CREATE, EDIT, DELETE, A('scan', 'Scan Cartons'), VIEW],
+    // verify is the four-eyes deck check — give it to a different role from the
+    // one that stages (create), or the check is the same pair of eyes twice.
+    shipment: [A('create', 'Stage'), EDIT, A('verify', 'Verify'), A('dispatch', 'Dispatch'), DELETE, VIEW],
+
     bom: [CREATE, EDIT, DELETE, VIEW],
     routing: [CREATE, EDIT, DELETE, VIEW],
     production_run: [CREATE, EDIT, DELETE, A('print', 'Print'), VIEW],
@@ -185,6 +201,7 @@ const INTENT_BY_ACTION: Record<string, PermissionIntent> = {
     edit: 'edit', adjust: 'edit', move: 'edit', split: 'edit', stage: 'edit',
     log: 'edit', import: 'edit', update_status: 'edit', set_status: 'edit',
     receive_goods: 'edit', unmount: 'edit', start: 'edit',
+    scan: 'edit', verify: 'edit', dispatch: 'edit',
     delete: 'delete', archive: 'delete', qc_reject: 'delete', close: 'delete', stop: 'delete',
     print: 'print', print_card: 'print', print_label: 'print', export: 'print',
     view: 'view',
