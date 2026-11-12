@@ -1,6 +1,6 @@
 'use client';
 
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { API_BASE } from '../components/shared/apiBase';
 import { rememberAvatar, rememberIdentity } from '../components/shared/avatarCache';
 import { resolveRecipe, serializeRecipe } from '../components/shared/avatarRecipe';
@@ -100,10 +100,13 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
         }
     };
 
-    const logout = () => {
+    // Stable on purpose: DataContext's authFetch is memoized on it, and every list
+    // effect depends on authFetch — a fresh logout each render re-sent each page's
+    // requests once per UserProvider render (3 extra on boot).
+    const logout = useCallback(() => {
         localStorage.removeItem('access_token');
         setCurrentUser(null);
-    };
+    }, []);
 
     const fetchCurrentUser = async (token) => {
         try {

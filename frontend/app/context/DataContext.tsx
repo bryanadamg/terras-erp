@@ -387,7 +387,10 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
     const [categoryL2, setCategoryL2] = useState('');
     const [categoryL3, setCategoryL3] = useState('');
     const [auditType, setAuditType] = useState('');
-    const [isInitialLoad, setIsInitialLoad] = useState(true);
+    // A ref, not state: nothing renders from it, and as a fetchData dependency its
+    // first-load flip rebuilt fetchData, which re-ran the fetch effect and pulled the
+    // landing page's whole data set a second time.
+    const isInitialLoadRef = useRef(true);
 
     // Tracks which domains have received at least one response (success or
     // failure) since page load. Views use this to distinguish "still loading"
@@ -573,7 +576,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
             const savedCache = localStorage.getItem(CACHE_KEY);
             let masterFetched = false;
 
-            if (isInitialLoad && savedCache) {
+            if (isInitialLoadRef.current && savedCache) {
                 const parsed = JSON.parse(savedCache);
                 if (Date.now() - parsed.timestamp < CACHE_TTL) {
                     const data = parsed.data;
@@ -585,7 +588,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
                     setCompanyProfile(data.companyProfile || null);
                     setPrintTemplates(data.printTemplates || []);
                     setItemIndex(data.itemIndex || {});
-                    setIsInitialLoad(false); masterFetched = true;
+                    isInitialLoadRef.current = false; masterFetched = true;
                     // Master data served from cache issues no /partners request, so the
                     // domain would otherwise never leave its loading state.
                     setLoadedOnce(prev => ({ ...prev, partners: true }));
@@ -598,7 +601,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
 
             // 1. MASTER DATA (Locations, Partners, etc.)
             // Fetch if initial load OR explicitly targeted OR on Settings/Locations page
-            if ((isInitialLoad && !masterFetched) || fetchTarget === 'settings' || fetchTarget === 'locations' || fetchTarget === 'item-metadata' || fetchTarget === 'routing') {
+            if ((isInitialLoadRef.current && !masterFetched) || fetchTarget === 'settings' || fetchTarget === 'locations' || fetchTarget === 'item-metadata' || fetchTarget === 'routing') {
                 requests.push(authFetch(`${API_BASE}/locations`, { headers })); requestTypes.push('locations');
                 requests.push(authFetch(`${API_BASE}/attributes`, { headers })); requestTypes.push('attributes');
                 requests.push(authFetch(`${API_BASE}/categories`, { headers })); requestTypes.push('categories');
@@ -623,7 +626,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
             // stale (unbounded, in fact: any later master write re-stamps the cache
             // timestamp while carrying the old templates forward). One small row per
             // customised doc type, so the extra request is cheap.
-            if (isInitialLoad || fetchTarget === 'settings' || fetchTarget === 'print-designer') {
+            if (isInitialLoadRef.current || fetchTarget === 'settings' || fetchTarget === 'print-designer') {
                 requests.push(authFetch(`${API_BASE}/print-templates`, { headers })); requestTypes.push('print-templates');
             }
 
@@ -858,7 +861,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
             if (Object.keys(newMasterData).length > 0) {
                 const cache = JSON.parse(localStorage.getItem(CACHE_KEY) || '{"data":{}}');
                 localStorage.setItem(CACHE_KEY, JSON.stringify({ timestamp: Date.now(), data: { ...cache.data, ...newMasterData } }));
-                setIsInitialLoad(false);
+                isInitialLoadRef.current = false;
             }
         } catch (e) {
             console.error("Fetch Error", e);
@@ -881,7 +884,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
         const p = run().finally(() => { delete inFlightRef.current[inFlightKey]; });
         inFlightRef.current[inFlightKey] = p;
         return p;
-    }, [currentUser, windowKey, itemPage, woPage, prPage, auditPage, reportPage, soPage, poPage, itemSearch, moSearch, prFilterQuery, soQuery, poQuery, categoryL1, categoryL2, categoryL3, auditType, isInitialLoad, pageSize, showToast]);
+    }, [currentUser, windowKey, itemPage, woPage, prPage, auditPage, reportPage, soPage, poPage, itemSearch, moSearch, prFilterQuery, soQuery, poQuery, categoryL1, categoryL2, categoryL3, auditType, pageSize, showToast]);
 
     // Every targeted refresh below used to swallow its failure with a
     // console.error: the screen kept showing the rows it already had, with
