@@ -106,10 +106,10 @@ export const NAV_SECTIONS: NavSection[] = [
         // color_variant.* is listed alongside the .view codes because the section gate
         // (Sidebar) hides the whole section when none match — without it a variant-only
         // role could reach /colors by URL but never see it in the nav.
-        permissions: ['dye_recipe.view', 'color_code.view', 'lab_dip_request.view', 'yarn_lab_dip.view',
+        permissions: ['dye_recipe.view', 'dye_order.view', 'setting_order.view', 'color_code.view', 'lab_dip_request.view', 'yarn_lab_dip.view',
             'color_variant.create', 'color_variant.edit', 'color_variant.delete'],
         items: [
-            { tab: 'dyeing-setting', label: 'Dyeing & Setting', icon: 'bi-palette', permission: 'dye_recipe.view' },
+            { tab: 'dyeing-setting', label: 'Dyeing & Setting', icon: 'bi-palette', permission: ['dye_recipe.view', 'dye_order.view', 'setting_order.view'] },
             // Two tabs, two grants: the Color Code catalog (color_code.view) and the
             // Colors-variant list (color_variant.*). ANY-of, because a role granted only
             // variant management could otherwise not reach the page its grant is for; the
