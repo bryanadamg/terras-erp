@@ -1,4 +1,5 @@
 import asyncio
+import json
 import threading
 import logging
 import os
@@ -32,6 +33,41 @@ _SNAPSHOT_NAME_RE = re.compile(r"^snapshot_(?P<label>.+)_(?P<ts>\d{8}_\d{6})\.\w
 # at its original relative paths, which is what keeps those references resolvable.
 _STATIC_DIR = Path("static")
 _DUMP_NAMES = ("database.sql",)
+
+# uvicorn reads WEB_CONCURRENCY as its --workers default. Every worker owns its own
+# sync + async pools, so each one's share is cut to keep the total under Postgres'
+# max_connections (100) with room left for pg_dump/psql and the migration step.
+API_WORKERS = max(1, int(os.getenv("WEB_CONCURRENCY") or 1))
+_POOL_SIZE = max(5, 20 // API_WORKERS)
+_MAX_OVERFLOW = max(5, 10 // API_WORKERS)
+
+# Restore progress is polled by whichever worker the request lands on, while the
+# restore itself runs in one of them, so it is kept in a file every worker of the
+# container sees instead of in process memory. /tmp is per container: a recreated
+# container starts "idle", same as a restarted process did.
+RESTORE_STATE_PATH = Path(tempfile.gettempdir()) / "terras-erp-restore-state.json"
+
+
+def read_json_file(path: Path, default):
+    try:
+        return json.loads(path.read_text())
+    except (OSError, ValueError):
+        return default
+
+
+def write_json_file(path: Path, value) -> None:
+    # Write-then-rename so a reader never sees half a file.
+    tmp = path.with_name(f"{path.name}.{os.getpid()}.tmp")
+    tmp.write_text(json.dumps(value))
+    os.replace(tmp, path)
+
+
+def _pid_alive(pid) -> bool:
+    try:
+        os.kill(int(pid), 0)
+        return True
+    except (OSError, ValueError, TypeError):
+        return False
 
 
 def _bundle_snapshot(dump_path: Path, arcname: str, zip_path: Path) -> int:
@@ -112,14 +148,28 @@ class DatabaseManager:
         # the HTTP request open: the psql load outlives a proxy's idle timeout, and a
         # client polling for phases needs answers while the schema is dropped — which is
         # exactly when nothing can be read out of the database itself.
-        self._restore_state: dict = {"status": "idle"}
+
+    @property
+    def _restore_state(self) -> dict:
+        state = read_json_file(RESTORE_STATE_PATH, {"status": "idle"})
+        # The worker running it died mid-restore: report that instead of "running" forever.
+        if state.get("status") == "running" and not _pid_alive(state.get("pid")):
+            return {**state, "status": "error", "phase": "Failed", "pct": 100,
+                    "message": "Restore was interrupted: the API worker running it stopped"}
+        return state
+
+    @_restore_state.setter
+    def _restore_state(self, value: dict) -> None:
+        if value.get("status") == "running":
+            value = {**value, "pid": os.getpid()}
+        write_json_file(RESTORE_STATE_PATH, value)
 
     @property
     def restore_state(self) -> dict:
-        return dict(self._restore_state)
+        return self._restore_state
 
     def _set_restore_phase(self, phase: str, pct: int, **extra) -> None:
-        self._restore_state.update({"status": "running", "phase": phase, "pct": pct, **extra})
+        self._restore_state = {**self._restore_state, "status": "running", "phase": phase, "pct": pct, **extra}
 
     async def create_snapshot(self, label: str = "manual") -> DatabaseResponse:
         """Creates a snapshot of the current database plus every uploaded file, as one
@@ -427,8 +477,8 @@ class DatabaseManager:
                 self._engine = create_engine(
                     database_url,
                     pool_pre_ping=False, # Disabled to prevent shared-state Greenlet errors
-                    pool_size=20,
-                    max_overflow=10,
+                    pool_size=_POOL_SIZE,
+                    max_overflow=_MAX_OVERFLOW,
                     pool_recycle=3600,
                 )
 
@@ -443,8 +493,8 @@ class DatabaseManager:
                 self._async_engine = create_async_engine(
                     async_url,
                     pool_pre_ping=False, # Disabled to prevent asyncpg do_ping Greenlet errors
-                    pool_size=20,
-                    max_overflow=10,
+                    pool_size=_POOL_SIZE,
+                    max_overflow=_MAX_OVERFLOW,
                     pool_recycle=3600
                 )
                 self._async_session_factory = async_sessionmaker(

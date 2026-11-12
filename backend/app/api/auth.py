@@ -1,4 +1,6 @@
+import os
 import time
+import redis
 from datetime import timedelta, datetime, timezone
 from typing import Annotated
 from fastapi import APIRouter, Depends, HTTPException, status
@@ -17,11 +19,39 @@ router = APIRouter()
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="api/token")
 
-# Failed-login lockout, keyed by user id so unknown usernames can't grow it.
-# ponytail: in-process, correct for the single uvicorn worker; move to Redis if workers > 1
+# Failed-login lockout, keyed by user id so unknown usernames can't grow it. Counted
+# in Redis so every uvicorn worker sees the same tally (an in-process count would give
+# each worker its own 10 tries). Each failure restarts the 15-minute window. If Redis
+# is down, the count falls back to this process alone rather than blocking sign-in.
 LOGIN_MAX_FAILS = 10
 LOGIN_LOCK_SECONDS = 15 * 60
 _login_fails: dict[str, list[float]] = {}
+_login_redis = redis.Redis.from_url(os.getenv("REDIS_URL", "redis://redis:6379/0"), socket_timeout=1, socket_connect_timeout=1)
+
+
+def _login_fail_count(user_id: str) -> int:
+    try:
+        return int(_login_redis.get(f"login_fails:{user_id}") or 0)
+    except redis.RedisError:
+        now = time.monotonic()
+        return len([t for t in _login_fails.get(user_id, []) if now - t < LOGIN_LOCK_SECONDS])
+
+
+def _record_login_fail(user_id: str) -> None:
+    try:
+        key = f"login_fails:{user_id}"
+        _login_redis.pipeline().incr(key).expire(key, LOGIN_LOCK_SECONDS).execute()
+    except redis.RedisError:
+        now = time.monotonic()
+        _login_fails[user_id] = [t for t in _login_fails.get(user_id, []) if now - t < LOGIN_LOCK_SECONDS] + [now]
+
+
+def _clear_login_fails(user_id: str) -> None:
+    _login_fails.pop(user_id, None)
+    try:
+        _login_redis.delete(f"login_fails:{user_id}")
+    except redis.RedisError:
+        pass
 
 # --- Dependencies ---
 def get_current_user(token: Annotated[str, Depends(oauth2_scheme)], db: Session = Depends(get_db)):
@@ -172,22 +202,20 @@ def login_for_access_token(
 ):
     user = db.query(User).filter(User.username == form_data.username).first()
     if user:
-        now = time.monotonic()
-        fails = [t for t in _login_fails.get(str(user.id), []) if now - t < LOGIN_LOCK_SECONDS]
-        if len(fails) >= LOGIN_MAX_FAILS:
+        if _login_fail_count(str(user.id)) >= LOGIN_MAX_FAILS:
             raise HTTPException(
                 status_code=status.HTTP_429_TOO_MANY_REQUESTS,
                 detail="Too many failed sign-ins. Try again in 15 minutes.",
             )
     if not user or not verify_password(form_data.password, user.hashed_password) or not user.is_active:
         if user:
-            _login_fails[str(user.id)] = fails + [now]
+            _record_login_fail(str(user.id))
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Incorrect username or password",
             headers={"WWW-Authenticate": "Bearer"},
         )
-    _login_fails.pop(str(user.id), None)
+    _clear_login_fails(str(user.id))
 
     user.last_login_at = datetime.now(timezone.utc)
     db.commit()

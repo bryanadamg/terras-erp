@@ -11,6 +11,7 @@ from sqlalchemy import text
 from sqlalchemy.exc import DBAPIError
 from starlette.concurrency import run_in_threadpool
 import asyncio
+import fcntl
 import os
 import json
 import time
@@ -57,30 +58,89 @@ async def lifespan(app: FastAPI):
     await manager.initialize()
     # Warm the booking-netting cache off the request path (see warm_booking_cache).
     stock.warm_booking_cache()
-    # Start the recurring-backup scheduler and (re)register its job from whatever
-    # schedule is persisted in Postgres — the in-process AsyncIOScheduler has no
-    # memory of "next run" across a redeploy, so this has to happen on every boot.
-    backup_scheduler.start()
-    try:
-        session = db_manager.session_factory()
-        try:
-            schedule = backup_schedule_service.get_or_create_schedule(session)
-            backup_scheduler.reschedule(schedule)
-        finally:
-            session.close()
-    except Exception:
-        logging.exception("Failed to initialize the scheduled backup job")
-    # Drain any live events that never reached Redis — from a crash mid-publish or
-    # a bus outage — and keep the delivery buffer trimmed.
-    relay_task = asyncio.create_task(_event_relay_loop())
-    # Resend feedback reports that couldn't reach GitHub when they were written.
-    feedback_task = asyncio.create_task(_feedback_retry_loop())
+    # Backups, the event relay and feedback retries must run once per server, not once
+    # per uvicorn worker — so only the worker holding the leader lock runs them.
+    leader_task = asyncio.create_task(_leader_loop())
     yield
     # Shutdown: Close Redis connections
-    relay_task.cancel()
-    feedback_task.cancel()
+    leader_task.cancel()
+    for task in _leader_tasks:
+        task.cancel()
     await manager.stop()
     backup_scheduler.shutdown()
+
+
+# One uvicorn worker per container holds this flock and runs the background jobs. The
+# OS drops the lock when that process dies, and uvicorn restarts dead workers, so a
+# survivor (or the replacement) picks it up on its next try.
+# ponytail: flock only spans one container; use a Postgres advisory lock if the api is
+# ever scaled across containers or hosts.
+LEADER_LOCK_PATH = "/tmp/terras-erp-leader.lock"
+LEADER_RETRY_SECONDS = 10
+BACKUP_SCHEDULE_SYNC_SECONDS = 60
+_leader_lock_file = None
+_leader_tasks: list[asyncio.Task] = []
+
+
+def _try_lead() -> bool:
+    global _leader_lock_file
+    f = open(LEADER_LOCK_PATH, "a")
+    try:
+        fcntl.flock(f, fcntl.LOCK_EX | fcntl.LOCK_NB)
+    except OSError:
+        f.close()
+        return False
+    _leader_lock_file = f  # kept open for the process's life: closing it releases the lock
+    return True
+
+
+async def _leader_loop():
+    while _leader_lock_file is None:
+        try:
+            if _try_lead():
+                logger.info("Worker %d runs the background jobs (backups, event relay, feedback retry)", os.getpid())
+                backup_scheduler.start()
+                _leader_tasks.extend([
+                    # Drain any live events that never reached Redis — from a crash
+                    # mid-publish or a bus outage — and keep the delivery buffer trimmed.
+                    asyncio.create_task(_event_relay_loop()),
+                    # Resend feedback reports that couldn't reach GitHub when written.
+                    asyncio.create_task(_feedback_retry_loop()),
+                    asyncio.create_task(_backup_schedule_sync_loop()),
+                ])
+                return
+        except Exception:
+            logger.exception("Leader election attempt failed")
+        await asyncio.sleep(LEADER_RETRY_SECONDS)
+
+
+def _load_backup_schedule():
+    session = db_manager.session_factory()
+    try:
+        return backup_schedule_service.get_or_create_schedule(session)
+    finally:
+        session.close()
+
+
+async def _backup_schedule_sync_loop():
+    # The in-process scheduler has no memory of "next run" across a redeploy, so the
+    # job is registered from the row in Postgres on every boot. An admin's edit lands
+    # on whichever worker served it — immediate when that is the leader, otherwise
+    # picked up here within a minute.
+    applied = None
+    while True:
+        try:
+            schedule = await run_in_threadpool(_load_backup_schedule)
+            key = (schedule.enabled, schedule.frequency, schedule.hour, schedule.minute,
+                   schedule.day_of_week, schedule.timezone)
+            if key != applied:
+                backup_scheduler.reschedule(schedule)
+                applied = key
+        except asyncio.CancelledError:
+            raise
+        except Exception:
+            logger.exception("Failed to sync the scheduled backup job")
+        await asyncio.sleep(BACKUP_SCHEDULE_SYNC_SECONDS)
 
 
 # How often the relay looks for events stuck unpublished. Fast enough that a brief

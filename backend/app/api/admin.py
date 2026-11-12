@@ -3,7 +3,7 @@ from fastapi.responses import FileResponse
 from fastapi.concurrency import run_in_threadpool
 from sqlalchemy import text
 from sqlalchemy.orm import Session
-from app.core.db_manager import db_manager
+from app.core.db_manager import db_manager, API_WORKERS, RESTORE_STATE_PATH, read_json_file, write_json_file
 from app.core.scheduler import backup_scheduler
 from app.core.ws_manager import manager as ws_manager
 from app.core.security import verify_password
@@ -86,6 +86,10 @@ def get_current_db(current_user: User = Depends(get_current_admin)):
 def switch_db(profile: ConnectionProfile, current_user: User = Depends(get_current_admin)):
     parsed = urlparse(profile.url)
     safe_target = urlunparse(parsed._replace(netloc=parsed.netloc.replace(f":{parsed.password}@", ":***@") if parsed.password else parsed.netloc))
+    # Only the worker serving this request would swap; the others would keep writing
+    # to the old database.
+    if API_WORKERS > 1:
+        raise HTTPException(status_code=409, detail=f"Switching databases needs a single API worker; this server runs {API_WORKERS}. Set WEB_CONCURRENCY=1 and restart the api container first.")
     res = db_manager.initialize(profile.url)
     if not res.status:
         raise HTTPException(status_code=400, detail=res.message)
@@ -136,9 +140,10 @@ _restore_task: asyncio.Task | None = None
 # Ids of the admins on record when the current restore started. Any admin may watch a
 # restore — including one who neither took the snapshot nor started the restore — but
 # `users`/`role_permissions` are dropped for most of the run, so the answer has to be
-# taken while they still exist. Kept here rather than in the progress state, which
-# `restore_snapshot` rewrites wholesale at its first and last phase.
-_restore_admin_ids: set[str] = set()
+# taken while they still exist. Kept apart from the progress state, which
+# `restore_snapshot` rewrites wholesale at its first and last phase, and in a file
+# rather than memory so the status poll answers from whichever worker it lands on.
+_RESTORE_ADMINS_PATH = RESTORE_STATE_PATH.with_name("terras-erp-restore-admins.json")
 
 
 def _snapshot_admin_ids(db: Session) -> set[str]:
@@ -160,7 +165,7 @@ def restore_status(token: Annotated[str, Depends(oauth2_scheme)], db: Session = 
         raise HTTPException(status_code=401, detail="Could not validate credentials")
 
     subject = str(payload.get("sub") or "")
-    if subject and subject in _restore_admin_ids:
+    if subject and subject in read_json_file(_RESTORE_ADMINS_PATH, []):
         return db_manager.restore_state
 
     try:
@@ -181,7 +186,7 @@ async def restore_db(filename: str, db: Session = Depends(get_db), current_user:
     /snapshots/restore-status. Holding the request open instead would outlive a proxy's
     idle timeout on a large dump, and would leave the browser with one opaque spinner
     for a job that has real phases."""
-    global _restore_task, _restore_admin_ids
+    global _restore_task
     if db_manager.restore_state.get("status") == "running":
         raise HTTPException(status_code=409, detail="A restore is already running")
     if not db_manager.get_snapshot_path(filename).exists():
@@ -189,7 +194,7 @@ async def restore_db(filename: str, db: Session = Depends(get_db), current_user:
 
     user_id = current_user.id
     # Sync session on an async route: keep the blocking reads off the event loop.
-    _restore_admin_ids = await run_in_threadpool(_snapshot_admin_ids, db)
+    write_json_file(_RESTORE_ADMINS_PATH, sorted(await run_in_threadpool(_snapshot_admin_ids, db)))
 
     async def _run() -> None:
         result = await db_manager.restore_snapshot(filename)

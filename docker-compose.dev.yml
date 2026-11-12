@@ -30,6 +30,8 @@ services:
       # Windows/WSL2 bind mounts don't forward inotify events into the container.
       WATCHFILES_FORCE_POLLING: "true"
       PYTHONDONTWRITEBYTECODE: "1"
+      # --reload runs a single process anyway; keep the full-size pool and DB hot-swap.
+      WEB_CONCURRENCY: "1"
     volumes:
       # Mount only source paths — leaving /app itself alone keeps the image's
       # site-packages and the base file's ./static + ./snapshots mounts intact.
