@@ -25,6 +25,7 @@ import SearchableSelect from '@bryanadamg/terras-ui/components/Combobox';
 import { useItemSearch, itemToOption } from '../shared/useEntitySearch';
 import { lotSizeText, lotComboLabel, lotColorLabel, type LotVariantAttr } from '../shared/LotChips';
 import { isRejectGrade } from '../shared/rejectDisplay';
+import { useUser } from '../../context/UserContext';
 import { basePerAlt, altToBase } from '../shared/altUnit';
 import { ExpanderCell, SortableTh, lvZebra, lvThead, lvTh, TableEmpty, EMPTY_DASH, ResizableTable } from '../shared/listViewTheme';
 import { Tabs, TabDef } from '../shared/Tabs';
@@ -124,6 +125,11 @@ export default function BatchesView({ items, locations, categories, workCenters,
   const { formatDate: tzDate } = useTimezone();
   const { confirm } = useConfirm();
   const { companyProfile, attributes = [], sizes = [], uoms = [] } = useData() as any;
+  const { hasPermission } = useUser();
+  const canCreate = hasPermission('lot.create');
+  const canSplit = hasPermission('lot.split');
+  const canDelete = hasPermission('lot.delete');      // delete + write-off dispose
+  const canQcReject = hasPermission('lot.qc_reject'); // reject + reassign dispose
 
   const PAGE_SIZE = 50;
   const [itemFilter, setItemFilter] = useState('');
@@ -351,7 +357,7 @@ export default function BatchesView({ items, locations, categories, workCenters,
 
   const openDispose = (b: Batch) => {
     setDisposeBatch(b);
-    setDisposeMode('writeoff');
+    setDisposeMode(canDelete ? 'writeoff' : 'reassign');
     setDisposeReason('');
     setReassignItemId('');
     setReassignQty(b.remaining != null ? String(Number(b.remaining)) : '');
@@ -1086,7 +1092,7 @@ export default function BatchesView({ items, locations, categories, workCenters,
             />
             <span style={{ display: 'inline-flex', gap: 4, marginLeft: 'auto' }}>
               <ToolbarButton tone="neutral" icon="bi-arrow-clockwise" onClick={fetchBatches}>Refresh</ToolbarButton>
-              <ToolbarButton tone="create" icon="bi-plus" onClick={() => setIsCreateOpen(true)}>New Lot</ToolbarButton>
+              {canCreate && <ToolbarButton tone="create" icon="bi-plus" onClick={() => setIsCreateOpen(true)}>New Lot</ToolbarButton>}
             </span>
           </div>
 
@@ -1143,13 +1149,13 @@ export default function BatchesView({ items, locations, categories, workCenters,
                       <td style={{ ...xpTd(i % 2 === 1), background: expandedRows[b.id] ? rowStateBg('expanded') : undefined }}>{createdCell(b)}</td>
                       <td style={{ ...xpTd(i % 2 === 1), whiteSpace: 'nowrap', textAlign: 'right', background: expandedRows[b.id] ? rowStateBg('expanded') : undefined }} onClick={e => e.stopPropagation()}>
                         <div style={{ display: 'inline-flex', alignItems: 'center', gap: 4, justifyContent: 'flex-end' }}>
-                          {!isRejectGrade(b.quality_status) && (b.remaining ?? 0) > 0 && (
+                          {canSplit && !isRejectGrade(b.quality_status) && (b.remaining ?? 0) > 0 && (
                             <XPActionButton tone="neutral" icon="bi-scissors" title={SPLIT_TITLE} onClick={() => openSplit(b)} />
                           )}
-                          {!isRejectGrade(b.quality_status) && b.quality_status !== 'DISPOSED' && (
+                          {canQcReject && !isRejectGrade(b.quality_status) && b.quality_status !== 'DISPOSED' && (
                             <XPActionButton tone="warning" icon="bi-slash-circle" title={REJECT_TITLE} onClick={() => openReject(b)} />
                           )}
-                          {isRejectGrade(b.quality_status) && (b.remaining ?? 0) > 0 && (
+                          {(canDelete || canQcReject) && isRejectGrade(b.quality_status) && (b.remaining ?? 0) > 0 && (
                             <XPActionButton tone="danger" icon="bi-trash" title={DISPOSE_TITLE} onClick={() => openDispose(b)} />
                           )}
                           <MenuTriggerButton onClick={e => toggle(b.id, e)} />
@@ -1541,8 +1547,8 @@ export default function BatchesView({ items, locations, categories, workCenters,
             {disposeBatch.location_name && <> at {disposeBatch.location_name}</>}
           </div>
           <div className="mb-3" style={{ display: 'flex', gap: 6 }}>
-            {modeBtn('writeoff', 'Write off', 'bi-trash')}
-            {modeBtn('reassign', 'Assign to another item', 'bi-arrow-repeat')}
+            {canDelete && modeBtn('writeoff', 'Write off', 'bi-trash')}
+            {canQcReject && modeBtn('reassign', 'Assign to another item', 'bi-arrow-repeat')}
           </div>
 
           {!reassign && (
@@ -1645,7 +1651,7 @@ export default function BatchesView({ items, locations, categories, workCenters,
             pos={pos}
             items={[
               { key: 'label', label: 'Print Label', icon: 'bi-printer', title: labelTitle, onClick: () => { close(); openBatchLabel(b); } },
-              { key: 'delete', label: 'Delete', icon: 'bi-trash', danger: true, onClick: () => { close(); handleDelete(b); } },
+              { key: 'delete', label: 'Delete', icon: 'bi-trash', danger: true, hidden: !canDelete, onClick: () => { close(); handleDelete(b); } },
             ]}
           />
         );
