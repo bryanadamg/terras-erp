@@ -27,8 +27,11 @@ export default function ManufacturingOrdersPage() {
     // unloaded-only so sidebar entry (already hover-prefetched) costs nothing extra.
     const loadingRef = useRef(loading);
     loadingRef.current = loading;
+    // boms/stockBalance too: the expanded-row grid skeletons until they land, so
+    // arriving with the MO list already loaded must not leave them never fetched.
     useEffect(() => {
-        if (loadingRef.current.manufacturingOrders) fetchData('manufacturing-orders');
+        const l = loadingRef.current;
+        if (l.manufacturingOrders || l.boms || l.stockBalance) fetchData('manufacturing-orders');
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 

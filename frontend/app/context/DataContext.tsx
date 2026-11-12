@@ -772,27 +772,27 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
                 requestTypes.push('audit-logs');
             }
 
-            // Count responses as they land so the app-load bar is measured, not
-            // simulated. Wrapping preserves Promise.all's reject-on-first-error.
-            let tracked = requests;
-            if (!bootTrackedRef.current && requests.length > 0) {
+            // Each response is applied the moment it lands, not after the whole
+            // batch: a page's table used to sit on its skeleton until the slowest
+            // sibling request finished (the MO list waited on /production-runs,
+            // /boms and /stock/balance it never reads). A view that reads a
+            // sibling domain gates on that domain's own `loading` flag instead.
+            const total = requests.length;
+            if (!bootTrackedRef.current && total > 0) {
                 bootTrackedRef.current = true;
                 trackBoot = true;
-                const total = requests.length;
-                let done = 0;
                 setLoadProgress({ done: 0, total });
-                const tick = () => { done += 1; setLoadProgress({ done, total }); };
-                tracked = requests.map(p => p.then(
-                    (r) => { tick(); return r; },
-                    (e) => { tick(); throw e; },
-                ));
             }
-            const responses = await Promise.all(tracked);
+            let done = 0;
+            // A flag can cover several requests (the four dashboard payloads share
+            // `dashboard`, and the view drops a panel whose payload is absent once
+            // the flag reads loaded), so it flips only when the LAST of its
+            // requests in this batch settles.
+            const outstanding: Record<string, number> = {};
+            requestTypes.forEach(t => { const d = LOADING_KEY[t]; if (d) outstanding[d] = (outstanding[d] || 0) + 1; });
             const newMasterData: any = {};
             const failedTypes: string[] = [];
-            const touchedDomains = new Set(requestTypes.map(t => LOADING_KEY[t]).filter(Boolean));
-            for (let i = 0; i < responses.length; i++) {
-                const res = responses[i]; const type = requestTypes[i];
+            const apply = async (res: Response, type: string) => {
                 if (!res.ok) {
                     console.warn(`[DataContext] ${type} fetch failed: HTTP ${res.status} ${res.url}`);
                     // 403 = this user's role simply isn't granted that domain. Read
@@ -802,7 +802,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
                     // load. 401 already logged the user out inside authFetch.
                     // Real failures (500, 404) still report.
                     if (res.status !== 403 && res.status !== 401) failedTypes.push(`${type} (${res.status})`);
-                    continue;
+                    return;
                 }
                 const data = await res.json();
                 switch(type) {
@@ -837,17 +837,24 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
                     case 'purchase-orders': setPurchaseOrders(data.items || []); setPoTotal(data.total || 0); setPoStatusCounts(data.status_counts || {}); break;
                     case 'audit-logs': setAuditLogs(data.items); setAuditTotal(data.total); break;
                 }
-            }
-            if (touchedDomains.size > 0) {
-                setLoadedOnce(prev => {
-                    const next = { ...prev };
-                    touchedDomains.forEach(d => { next[d] = true; });
-                    return next;
-                });
-            }
+            };
+            const results = await Promise.allSettled(requests.map((p, i) => p
+                .then(res => apply(res, requestTypes[i]))
+                // Flag flips AFTER the data setter, success or HTTP failure alike,
+                // so no render ever sees "loaded" over a still-empty list.
+                .finally(() => {
+                    const d = LOADING_KEY[requestTypes[i]];
+                    if (d && --outstanding[d] === 0) setLoadedOnce(prev => (prev[d] ? prev : { ...prev, [d]: true }));
+                    if (trackBoot) setLoadProgress({ done: ++done, total });
+                })));
             if (failedTypes.length > 0) {
                 showToast(`Some data could not be loaded: ${failedTypes.join(', ')}`, 'warning');
             }
+            // A request that never got a response (offline, DNS, bad JSON) goes to
+            // the catch below, as before — and skips the cache write and the
+            // isInitialLoad flip, so the next fetch retries the master set whole.
+            const crashed = results.find((r): r is PromiseRejectedResult => r.status === 'rejected');
+            if (crashed) throw crashed.reason;
             if (Object.keys(newMasterData).length > 0) {
                 const cache = JSON.parse(localStorage.getItem(CACHE_KEY) || '{"data":{}}');
                 localStorage.setItem(CACHE_KEY, JSON.stringify({ timestamp: Date.now(), data: { ...cache.data, ...newMasterData } }));
