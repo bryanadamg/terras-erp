@@ -125,8 +125,9 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
     }
 
     const handleSetActiveTab = (tab: string) => {
-        const route = tab === 'dashboard' ? '/' : `/${tab}`;
-        router.push(route);
+        // Same target the hover prefetch warmed. Pushing '/' landed on the empty
+        // root page, which then redirected to /dashboard — two navigations a click.
+        router.push(prefetchRoute(tab));
         setIsMobileSidebarOpen(false);
     };
 
