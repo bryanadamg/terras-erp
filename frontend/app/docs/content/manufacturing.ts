@@ -226,7 +226,7 @@ export const manufacturingPage: DocPage = {
         },
         {
             heading: 'Weaving Monitor',
-            body: 'Production → Weaving Monitor shows every loom as a card, grouped by work-centre group, with each group\'s running count, below-target and late counts and average efficiency in its header. Filter by group or "running only".',
+            body: 'Production → Weaving Monitor shows every loom as a card, grouped by work-centre group, with each group\'s running count, below-target and late counts and average efficiency in its header. Filter by group or "running only". Export Excel (title bar) downloads the looms the filter shows, one row per run with its efficiency, kg, due date and projected completion.',
             items: [
                 'Loom steps: idle → staged (warp mounted) → Draw-in → Tuning → running. Draw-in and Tuning are confirmed by hand (Undo step reverses a mis-click); Start Run is allowed only after both. Taking the warp off drops the loom back to idle.',
                 'Start Run: pick the WO on that machine (or an MO), lines, rate (g/min/line) and target efficiency %. A loom can run several WOs side by side, one run each. Runs can be paused (paused days are excluded), resumed and stopped; a run stops by itself when its WO is completed or cancelled.',

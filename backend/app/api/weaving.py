@@ -28,6 +28,7 @@ from app.services import (
     beam_service, mo_variant_service,
 )
 from app.core.ws_manager import manager
+from app.services.xlsx_service import xlsx_response
 
 router = APIRouter()
 
@@ -741,6 +742,56 @@ async def weaving_monitor(
         "late_runs": sum(1 for c in run_cards if c["is_late"]),
         "paused_runs": sum(1 for c in run_cards if c["is_paused"]),
     }
+
+
+@router.get("/weaving/monitor/export")
+async def export_weaving_monitor(
+    group_id: Optional[str] = Query(None, description="A GROUP id, or '__ungrouped__' for looms under no group"),
+    running_only: bool = Query(False),
+    db: AsyncSession = Depends(get_async_db),
+    current_user: User = Depends(require_permission("weaving_monitor.export")),
+):
+    """The monitor as an .xlsx: one row per active run (a loom weaving two combos is
+    two rows), plus one blank-run row per idle loom unless `running_only`. Built from
+    the monitor payload itself so the file reads the same numbers as the cards."""
+    data = await weaving_monitor(db=db, current_user=current_user)
+
+    def _in_group(m: dict) -> bool:
+        if not group_id:
+            return True
+        return m["group_id"] is None if group_id == "__ungrouped__" else m["group_id"] == group_id
+
+    def _rows():
+        for m in data["machines"]:
+            if not _in_group(m) or (running_only and not m["active_runs"]):
+                continue
+            loom = [m["group_name"], m["code"], m["name"], m["loom_status"], m["mounted_pcs"], round(m["mounted_kg"], 2)]
+            for r in m["active_runs"] or [None]:
+                if r is None:
+                    yield loom + [None] * 19
+                    continue
+                colour = " ".join(x for x in (r["color_code"], r["color_name"]) if x) or r["color_label"] or r["labdip_variant_code"]
+                yield loom + [
+                    r["mo_code"], r["wo_code"], r["item_code"], r["item_name"],
+                    r["combo_label"], r["size_label"], colour,
+                    "Paused" if r["is_paused"] else "Running", r["start_date"], r["lines"],
+                    r["efficiency_pct"], r["target_efficiency_pct"], r["actual_kg"], r["target_qty"],
+                    r["actual_daily_rate_kg"], r["elapsed_working_days"], r["wo_target_end_date"],
+                    "Not achievable" if r["reality_unreachable"] else r["reality_completion_date"],
+                    r["days_late"] or None,
+                ]
+
+    return xlsx_response(
+        "Weaving Monitor",
+        [
+            "Group", "Machine", "Machine Name", "Loom Status", "Warp Beams", "Warp kg",
+            "MO", "WO", "Item Code", "Item Name", "Combo", "Size", "Colour",
+            "Run", "Started", "Lines", "Efficiency %", "Target %", "Actual kg", "Target kg",
+            "kg/day", "Working Days", "WO Due", "Projected Completion", "Days Late",
+        ],
+        _rows(),
+        f"weaving-monitor_{date.today()}",
+    )
 
 
 @router.get("/weaving/id-holidays")

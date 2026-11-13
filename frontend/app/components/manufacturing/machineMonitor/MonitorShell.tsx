@@ -12,7 +12,7 @@ import { ShellWindow, ShellTitleBar } from '../../shared/shellTheme';
  * alarm badges stay on screen no matter how far down the grid you are.
  */
 export const MonitorShell = ({
-    icon, title, summary, onRefresh, refreshTitle, loading, hasMachines, chipBar, children,
+    icon, title, summary, onRefresh, refreshTitle, loading, hasMachines, chipBar, actions, children,
 }: {
     icon: string;
     title: string;
@@ -22,6 +22,7 @@ export const MonitorShell = ({
     loading: boolean;
     hasMachines: boolean;
     chipBar: React.ReactNode;
+    actions?: React.ReactNode;   // extra title-bar buttons, left of Refresh
     children: React.ReactNode;
 }) => (
     <div className="fade-in" style={{ fontFamily: xpFont }}>
@@ -32,6 +33,7 @@ export const MonitorShell = ({
                 right={
                     <span style={{ display: 'flex', alignItems: 'center', gap: 10, fontWeight: 'normal', fontSize: 11}}>
                         <span className={undefined}>{summary}</span>
+                        {actions}
                         <XPActionButton tone="neutral" icon="bi-arrow-clockwise"
                             title={refreshTitle} onClick={onRefresh} />
                     </span>

@@ -508,6 +508,7 @@ def seed_rbac(db):
             # Weaving Monitor
             ("weaving_monitor.start", "Start Weaving Runs"),
             ("weaving_monitor.stop", "Stop Weaving Runs"),
+            ("weaving_monitor.export", "Export Weaving Monitor Excel"),
             ("weaving_monitor.view", "View Weaving Monitor"),
             # Dyeing Monitor. View only: a dye batch is started and completed from
             # the Dyeing Orders tab under work_order.log, so this grid adds no
@@ -602,7 +603,7 @@ def seed_rbac(db):
                 "manufacturing_order.print", "manufacturing_order.view", "manufacturing_order.close",
                 "work_order.create", "work_order.log", "work_order.edit", "work_order.delete",
                 "work_order.print_card", "work_order.print_label", "work_order.view", "work_order.stage",
-                "weaving_monitor.start", "weaving_monitor.stop", "weaving_monitor.view",
+                "weaving_monitor.start", "weaving_monitor.stop", "weaving_monitor.export", "weaving_monitor.view",
                 "dyeing_monitor.export", "dyeing_monitor.view",
                 "calendar.edit", "calendar.view", "beam.unmount", "beam.view",
                 "dye_recipe.create", "dye_recipe.edit", "dye_recipe.delete", "dye_recipe.print", "dye_recipe.view",

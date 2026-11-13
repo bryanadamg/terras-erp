@@ -320,3 +320,43 @@ def test_patch_payload_cannot_carry_run_lifecycle():
     from app.schemas import WeavingRunUpdate
     data = WeavingRunUpdate(status="DONE", end_date="2026-01-01", lines=4).model_dump(exclude_unset=True)
     assert data == {"lines": 4}
+
+
+def test_monitor_export_is_one_row_per_run_narrowed_like_the_screen(user_factory, client, auth_headers, async_db_session):
+    import io
+    import uuid as _uuid
+    from openpyxl import load_workbook
+    from app.models.weaving import WeavingRun
+    from app.models.routing import WorkCenter
+    from tests.test_dyeing_output_lot import _setup_dyeing_wo
+
+    mo_id, _wo_id, _runs = _setup_dyeing_wo(client, auth_headers, async_db_session, runs=0)
+    tag = _uuid.uuid4().hex[:6].upper()
+
+    async def _seed():
+        typ = WorkCenter(code=f"WVX-T-{tag}", name="Weaving", center_type="WEAVING", node_type="TYPE")
+        async_db_session.add(typ); await async_db_session.flush()
+        grp = WorkCenter(code=f"WVX-G-{tag}", name=f"Grp {tag}", center_type="WEAVING", node_type="GROUP", parent_id=typ.id)
+        async_db_session.add(grp); await async_db_session.flush()
+        busy = WorkCenter(code=f"WVX-A-{tag}", name="Loom A", center_type="WEAVING", node_type="MACHINE", parent_id=grp.id)
+        idle = WorkCenter(code=f"WVX-B-{tag}", name="Loom B", center_type="WEAVING", node_type="MACHINE", parent_id=grp.id)
+        async_db_session.add_all([busy, idle]); await async_db_session.flush()
+        async_db_session.add(WeavingRun(work_center_id=busy.id, mo_id=_uuid.UUID(mo_id), lines=2,
+                                        rate_per_line_g_min=5, target_efficiency_pct=50,
+                                        start_date=date(2026, 3, 2), status="RUNNING"))
+        await async_db_session.flush()
+        return str(grp.id)
+    grp_id = client.portal.call(_seed)
+
+    _, viewer = user_factory(["weaving_monitor.view"], "loom-viewer")
+    assert client.get("/api/weaving/monitor/export", headers=viewer).status_code == 403
+
+    def machines(**q):
+        res = client.get("/api/weaving/monitor/export", params={"group_id": grp_id, **q}, headers=auth_headers)
+        assert res.status_code == 200, res.text
+        rows = list(load_workbook(io.BytesIO(res.content)).active.iter_rows(values_only=True))
+        h = rows[0]
+        return [(r[h.index("Machine")], r[h.index("Run")]) for r in rows[1:]]
+
+    assert sorted(machines()) == [(f"WVX-A-{tag}", "Running"), (f"WVX-B-{tag}", None)]
+    assert machines(running_only="true") == [(f"WVX-A-{tag}", "Running")]
