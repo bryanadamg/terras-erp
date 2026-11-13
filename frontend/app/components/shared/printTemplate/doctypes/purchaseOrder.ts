@@ -15,7 +15,7 @@ export const PURCHASE_ORDER_DOC = 'purchase_order';
 
 export const PO_FIELDS: FieldDef[] = [
     { key: 'po.number', label: 'PO Number', kind: 'text', group: 'Purchase Order' },
-    { key: 'po.barcode', label: 'PO Number barcode (decorative)', kind: 'barcode', group: 'Purchase Order' },
+    { key: 'po.barcode', label: 'PO Number barcode (Code 128)', kind: 'barcode', group: 'Purchase Order' },
     { key: 'po.date', label: 'PO Date', kind: 'date', group: 'Purchase Order' },
     { key: 'po.ssn', label: 'SSN', kind: 'text', group: 'Purchase Order' },
     { key: 'po.status', label: 'Status', kind: 'text', group: 'Purchase Order' },

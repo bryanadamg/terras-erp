@@ -5,7 +5,8 @@
  *
  * Prefix is `ms.`, not `mo.`: `mo.*` belongs to the Kartu Kerja WO fields.
  * Supervisory document — no QR field on purpose (QR codes live on the WO's
- * Kartu Kerja, never on an MO print).
+ * Kartu Kerja, never on an MO print). The barcode is only the MO code, for
+ * scanning into the Manufacturing Orders search.
  *
  * Several fields come in pairs that share one line of the identity grid. Each
  * half resolves empty only when the WHOLE line should drop, so a `hideWhenEmpty`
@@ -23,6 +24,7 @@ export const MO_SHEET_DOC = 'mo_sheet';
 
 export const MS_FIELDS: FieldDef[] = [
     { key: 'ms.code', label: 'No. SPK (MO code)', kind: 'text', mono: true, group: 'Order' },
+    { key: 'ms.barcode', label: 'Barcode (MO code, scan into search)', kind: 'barcode', group: 'Order' },
     { key: 'ms.article', label: 'Article (item)', kind: 'text', group: 'Order' },
     { key: 'ms.item_code', label: 'Item Code', kind: 'text', mono: true, group: 'Order' },
     { key: 'ms.size', label: 'Size / Ukuran', kind: 'text', group: 'Order' },
@@ -96,6 +98,7 @@ export function resolveMoSheetField(key: string, ctx: PrintContext): ResolvedFie
     const customer = mo.so_customer_name || b.customer_name;
     switch (key) {
         case 'ms.code': return txt(mo.code);
+        case 'ms.barcode': return txt(mo.code);
         case 'ms.article': return txt(d.itemName);
         case 'ms.item_code': return txt(mo.item_code);
         case 'ms.size': {

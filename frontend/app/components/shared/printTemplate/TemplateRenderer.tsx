@@ -9,6 +9,7 @@ import { EM_DASH, type PrintContext } from './renderContext';
 import { resolveField, fieldDef } from './fieldRegistry';
 import { rowSource } from './rowSources';
 import { CODE_FONT, PRINT_SERIF_FONT } from '../xpTheme';
+import { makeLotBarcodeDataUrl } from './doctypes/outputLabel';
 
 /**
  * Renders a print layout to JSX.
@@ -120,7 +121,11 @@ function FieldValue({ item, ctx, docType }: {
         const right = item.align === 'right';
         return (
             <div style={{ display: 'flex', justifyContent: right ? 'flex-end' : item.align === 'center' ? 'center' : 'flex-start' }}>
-                <DecorativeBarcode value={resolved.text} height={item.imageHeight ?? 42} />
+                {/* Real Code 128 of the field's text, so a scanner gun typing it into a
+                    list's search box lands on the document. */}
+                <img src={makeLotBarcodeDataUrl(resolved.text)} alt={resolved.text} style={{
+                    display: 'block', height: item.imageHeight ?? 42, maxWidth: '100%', imageRendering: 'pixelated',
+                }} />
             </div>
         );
     }
@@ -173,24 +178,6 @@ function FieldValue({ item, ctx, docType }: {
             {item.prefix && <span style={{ fontWeight: item.prefixBold ? 'bold' : 'normal' }}>{item.prefix}</span>}
             {text}
             {showUnit && <span style={UNIT}>{` ${unit}`}</span>}
-        </div>
-    );
-}
-
-/**
- * Bar strip derived from the value — decoration that reads as "document number",
- * NOT a scannable symbology. Lifted from the old PO print so a ported PO looks the
- * same; anything that must scan uses the `qr` kind.
- */
-function DecorativeBarcode({ value, height }: { value: string; height: number }) {
-    const bars: { w: number; on: boolean }[] = [];
-    for (let i = 0; i < value.length; i++) {
-        const c = value.charCodeAt(i);
-        bars.push({ w: (c % 3) + 1, on: true }, { w: (c % 2) + 1, on: false }, { w: ((c >> 2) % 3) + 1, on: true }, { w: 1, on: false });
-    }
-    return (
-        <div style={{ display: 'flex', alignItems: 'flex-end', height }}>
-            {bars.map((b, i) => <div key={i} style={{ width: b.w * 1.4, height: '100%', background: b.on ? '#000' : 'transparent' }} />)}
         </div>
     );
 }
