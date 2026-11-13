@@ -4000,6 +4000,11 @@ class PickListLineResponse(BaseModel):
     # Resolved at read time, null on a bulk (cartonless) line. See the class docs
     # for why this is not flattened onto the fields above.
     carton_identity: PickListCartonIdentity | None = None
+    # Where the carton is right now (its live balance row), falling back to the
+    # line's source location. The Kartu Picking prints it so the picker can find the box.
+    location_id: UUID | None = None
+    location_code: str | None = None
+    location_path: str | None = None
     class Config:
         from_attributes = True
 

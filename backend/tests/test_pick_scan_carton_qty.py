@@ -45,7 +45,7 @@ def coloured_carton():
     sess.add(StockBalance(item_id=item.id, location_id=loc.id, variant_key=f"c:{color.id}",
                           batch_key=str(carton.id), qty=3))
     sess.commit()
-    yield {"pl": str(pl.id), "code": carton.batch_number}
+    yield {"pl": str(pl.id), "code": carton.batch_number, "loc": loc.code}
 
     sess.query(StockBalance).filter(StockBalance.item_id == item.id).delete(synchronize_session=False)
     sess.query(PickList).filter(PickList.id == pl.id).delete(synchronize_session=False)
@@ -67,3 +67,13 @@ def test_unsuggested_coloured_carton_scans_with_its_qty(coloured_carton, client,
     assert r.status_code == 200, r.text
     (line,) = r.json()["lines"]
     assert line["qty_picked"] == 3
+
+
+def test_picked_carton_carries_its_location(coloured_carton, client, auth_headers):
+    """The Kartu Picking prints where each carton sits, read off its live balance row."""
+    r = client.post(f"/api/pick-lists/{coloured_carton['pl']}/scan",
+                    json={"code": coloured_carton["code"]}, headers=auth_headers)
+    assert r.status_code == 200, r.text
+    (line,) = r.json()["lines"]
+    assert line["location_code"] == coloured_carton["loc"]
+    assert line["location_path"] == "FG"

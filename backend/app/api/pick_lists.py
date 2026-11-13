@@ -138,18 +138,27 @@ async def _decorate_all(db: AsyncSession, pls: list) -> list:
     say what colour went out.
     """
     from app.models.stock_balance import StockBalance
+    from app.models.location import Location
     lines = [l for pl in pls for l in (pl.lines or []) if l.batch_id]
+    # Where the picker walks to: the carton's CURRENT balance location (it may
+    # have been moved since the pick list was suggested), else the line's stored
+    # source location — which is all a bulk line or a shipped carton has.
+    loc_by_batch: dict = {}
     if lines:
         rows = (await db.execute(
-            select(StockBalance.batch_key, StockBalance.variant_key)
+            select(StockBalance.batch_key, StockBalance.variant_key, StockBalance.location_id, StockBalance.qty)
             .filter(StockBalance.batch_key.in_([str(l.batch_id) for l in lines]))
         )).all()
         # A carton can hold rows at more than one location; they are the same box,
         # so any row with a key answers for it and an empty key never displaces one.
         key_by_batch: dict = {}
-        for bk, vk in rows:
+        best_qty: dict = {}
+        for bk, vk, loc_id, qty in rows:
             if vk and not key_by_batch.get(bk):
                 key_by_batch[bk] = vk
+            if qty and qty > 0 and qty > best_qty.get(bk, 0):
+                best_qty[bk] = qty
+                loc_by_batch[bk] = loc_id
         variants = await stock_service.describe_variant_keys(db, set(key_by_batch.values()))
         for l in lines:
             vkey = key_by_batch.get(str(l.batch_id))
@@ -183,6 +192,21 @@ async def _decorate_all(db: AsyncSession, pls: list) -> list:
                     l.alt_qty_line = packing_service.alt_in_line_unit(
                         b.alt_qty, (l.alt_uom, c_factor, c_len),
                         (sol.uom2, sol.uom2_factor, length_uom(sol.uom2, sol.uom2_factor)))
+    all_lines = [l for pl in pls for l in (pl.lines or [])]
+    for l in all_lines:
+        l.location_id = loc_by_batch.get(str(l.batch_id)) if l.batch_id else None
+        l.location_id = l.location_id or l.source_location_id
+    loc_ids = {l.location_id for l in all_lines if l.location_id}
+    if loc_ids:
+        locs = {
+            loc.id: loc for loc in (await db.execute(
+                select(Location).filter(Location.id.in_(loc_ids))
+            )).unique().scalars().all()
+        }
+        for l in all_lines:
+            loc = locs.get(l.location_id)
+            l.location_code = loc.code if loc else None
+            l.location_path = loc.full_path if loc else None
     for pl in pls:
         _decorate(pl)
     return pls
