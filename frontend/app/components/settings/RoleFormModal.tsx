@@ -128,6 +128,7 @@ export default function RoleFormModal({
     const [defaultAvatarId, setDefaultAvatarId] = useState('');
     const [submitting, setSubmitting] = useState(false);
     const [error, setError] = useState('');
+    const [avatarOpen, setAvatarOpen] = useState(false);
 
     useEffect(() => {
         if (!isOpen) return;
@@ -302,8 +303,11 @@ export default function RoleFormModal({
 
             {/* Cosmetic, so it sits last and folded — it used to wedge a full-height
                 picker between the permissions and the scopes they gate. */}
-            <details className="mt-3">
+            {/* display:flex drops the native disclosure marker, so the caret is
+                drawn here — same one the permission sections collapse with. */}
+            <details className="mt-3" onToggle={e => setAvatarOpen(e.currentTarget.open)}>
                 <summary style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <i className={`bi ${avatarOpen ? 'bi-caret-down-fill' : 'bi-caret-right-fill'}`} style={{ fontSize: 10, color: '#5a6472' }} />
                     <PixelAvatarFromRecipe recipe={resolveRecipe(null, SAMPLE_SEEDS[0], defaultAvatarId)} size={24} />
                     <b style={{ fontSize: 12 }}>Default Avatar</b>
                     <span style={{ fontSize: 11, color: '#6b6558' }}>{avatarPins ? (isExecutive ? 'Executive template' : 'Template set') : 'Not set — users seeded from their username'}</span>
