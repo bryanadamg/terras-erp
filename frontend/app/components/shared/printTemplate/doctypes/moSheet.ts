@@ -40,6 +40,8 @@ export const MS_FIELDS: FieldDef[] = [
     { key: 'ms.machine', label: 'No Mesin (BOM machine)', kind: 'text', group: 'Order' },
     { key: 'ms.tolerance', label: 'Toleransi (BOM wastage)', kind: 'text', group: 'Order' },
 
+    { key: 'ms.production_run', label: 'No. Production Run', kind: 'text', mono: true, group: 'Order' },
+
     { key: 'ms.sales_order', label: 'Sales Order (SO-linked orders)', kind: 'text', mono: true, group: 'Customer' },
     { key: 'ms.so_customer', label: 'Customer (beside Sales Order)', kind: 'text', group: 'Customer' },
     { key: 'ms.customer_no_so', label: 'Customer (orders without SO)', kind: 'text', group: 'Customer' },
@@ -104,6 +106,7 @@ export function resolveMoSheetField(key: string, ctx: PrintContext): ResolvedFie
         case 'ms.color': return d.shade.name || d.shade.code ? present(d.shade.name) : EMPTY;
         case 'ms.color_code': return d.shade.name || d.shade.code ? present(d.shade.code) : EMPTY;
         case 'ms.combo': return txt(d.combo);
+        case 'ms.production_run': return txt(mo.production_run_code);
         case 'ms.qty': return mo.qty == null ? EMPTY : { text: String(mo.qty), empty: false };
         case 'ms.status': return txt(mo.status);
         case 'ms.output_location': return txt(d.outputLocation);

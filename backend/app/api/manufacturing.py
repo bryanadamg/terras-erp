@@ -257,6 +257,15 @@ async def load_mo_tree(db: AsyncSession, root_ids: list) -> dict:
     )
     mo_map = {mo.id: mo for mo in result.unique().scalars().all()}
 
+    # The run's code for the SPK print — one small lookup, not the PR relationship
+    # (its bom_entries/manufacturing_orders would ride along).
+    pr_ids = {mo.production_run_id for mo in mo_map.values() if mo.production_run_id}
+    pr_codes = dict((await db.execute(
+        select(ProductionRun.id, ProductionRun.code).where(ProductionRun.id.in_(pr_ids))
+    )).all()) if pr_ids else {}
+    for mo in mo_map.values():
+        mo.production_run_code = pr_codes.get(mo.production_run_id)
+
     # Index children by parent
     children_by_parent: dict = defaultdict(list)
     for mo in mo_map.values():

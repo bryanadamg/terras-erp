@@ -540,6 +540,7 @@ class ManufacturingOrderResponse(ORMResponse):
     so_codes: str | None = None          # SO-less MO: the SO(s) its root MO(s) serve
     parent_mo_id: UUID | None = None
     production_run_id: UUID | None = None
+    production_run_code: str | None = None  # printed on the SPK Produksi
     bom_size_id: UUID | None = None
     bom_size_snapshot: dict | None = None
     is_shared_component: bool = False
@@ -1273,6 +1274,7 @@ class ManufacturingOrderListItem(ORMResponse):
     so_codes: str | None = None          # SO-less MO: the SO(s) its root MO(s) serve
     parent_mo_id: UUID | None = None
     production_run_id: UUID | None = None
+    production_run_code: str | None = None  # printed on the SPK Produksi
     bom_size_id: UUID | None = None
     bom_size_snapshot: dict | None = None
     is_shared_component: bool = False

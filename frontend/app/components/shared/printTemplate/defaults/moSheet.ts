@@ -47,6 +47,7 @@ const BANDS: Band[] = [
             { field: 'ms.combo', label: 'Combo', span: 3, bold: true, hideWhenEmpty: true },
             { field: 'ms.code', label: 'No. SPK', mono: true },
             { field: 'ms.qty', label: 'Jml Order', bold: true },
+            { field: 'ms.production_run', label: 'Production Run', mono: true, span: 3, hideWhenEmpty: true },
             { field: 'ms.sales_order', label: 'Sales Order', mono: true, hideWhenEmpty: true },
             { field: 'ms.so_customer', label: 'Customer', hideWhenEmpty: true },
             { field: 'ms.customer_no_so', label: 'Customer', span: 3, hideWhenEmpty: true },
