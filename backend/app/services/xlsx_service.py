@@ -53,3 +53,22 @@ def xlsx_response(
         media_type=XLSX_MEDIA_TYPE,
         headers={"Content-Disposition": f'attachment; filename="{stem}_{datetime.now():%Y%m%d-%H%M}.xlsx"'},
     )
+
+
+def zone_or_400(tz: str):
+    """The viewer's display timezone, or a 400 for a name the tz database lacks."""
+    from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
+    from fastapi import HTTPException
+    try:
+        return ZoneInfo(tz)
+    except (ZoneInfoNotFoundError, ValueError):
+        raise HTTPException(status_code=400, detail=f"Unknown timezone '{tz}'")
+
+
+def local_cell(dt: Optional[datetime], zone) -> Optional[datetime]:
+    """A timestamp as the viewer's wall-clock time. Excel cells carry no timezone,
+    so a naive value is taken as UTC (the `datetime.utcnow` columns) and converted."""
+    if dt is None:
+        return None
+    from datetime import timezone
+    return (dt if dt.tzinfo else dt.replace(tzinfo=timezone.utc)).astimezone(zone).replace(tzinfo=None)

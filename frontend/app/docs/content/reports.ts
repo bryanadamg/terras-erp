@@ -64,7 +64,7 @@ export const reportsPage: DocPage = {
             ],
             callout: {
                 type: 'tip',
-                text: 'Print (printer icon) prints the current filter and sort, up to 1,000 movements. The title says "N of total" when the list was cut, so narrow the dates if you need it complete. Untick the columns you don\'t want, and your choice is remembered. The layout itself is edited in Administration → Print Layouts.',
+                text: 'Print (printer icon) prints the current filter and sort, up to 1,000 movements. The title says "N of total" when the list was cut, so narrow the dates if you need it complete. Untick the columns you don\'t want, and your choice is remembered. The layout itself is edited in Administration → Print Layouts. Export Excel (green sheet icon) downloads every movement matching the current filter, not just the page, with times in your display timezone.',
             },
         },
         {

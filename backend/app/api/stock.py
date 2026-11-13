@@ -5,7 +5,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy import select, func
 from app.db.session import get_async_db, get_db
 from app.services import stock_service, audit_service, kpi_service, packing_service
-from app.services.xlsx_service import xlsx_response
+from app.services.xlsx_service import xlsx_response, zone_or_400, local_cell
 from app.core.ws_manager import manager
 from app.core.pagination import PageParams, PageWindow
 from app.schemas import StockLedgerResponse, StockBalanceResponse, PaginatedStockBalanceResponse, PaginatedStockLedgerResponse, StockEntryCreate, StockTransferCreate, StockBulkTransferCreate, BookingStockRow, BookingDemandMO, BookingSupplyMO, BookingReservedSO, PaginatedBookingStockResponse
@@ -273,6 +273,59 @@ async def get_stock_ledger(
         total_out=total_out,
         reference_types=reference_types,
     )
+
+
+@router.get("/stock/ledger/export")
+async def export_stock_ledger(
+    start_date: Optional[datetime] = Query(None),
+    end_date: Optional[datetime] = Query(None),
+    search: Optional[str] = Query(None),
+    location_id: Optional[str] = Query(None),
+    category_id: Optional[str] = Query(None),
+    reference_type: Optional[str] = Query(None),
+    direction: Optional[str] = Query(None),
+    sort_by: Optional[str] = Query(None),
+    sort_dir: Optional[str] = Query(None),
+    tz: str = Query("Asia/Jakarta", description="Viewer's display timezone for the Date column"),
+    db: AsyncSession = Depends(get_async_db),
+    current_user: User = Depends(require_permission("stock_ledger.export")),
+):
+    """The Stock Ledger grid as an .xlsx — the whole filtered set, not the page.
+
+    Reuses the list endpoint uncapped so the file can never disagree with the grid.
+    """
+    zone = zone_or_400(tz)
+    data = await get_stock_ledger(
+        start_date=start_date, end_date=end_date, search=search, location_id=location_id,
+        category_id=category_id, reference_type=reference_type, direction=direction,
+        sort_by=sort_by, sort_dir=sort_dir,
+        window=PageWindow(page=1, size=0, offset=0, limit=None),
+        db=db, current_user=current_user,
+    )
+
+    def _row(r: dict) -> list:
+        color = " ".join(x for x in (r["color_code"], r["color_name"]) if x) or r["labdip_variant_code"]
+        attrs = ", ".join(f"{a['name']}: {a['value']}" for a in r["variant_attributes"])
+        return [
+            local_cell(r["created_at"], zone), r["item_code"], r["item_name"], r["item_category_name"], r["location_name"],
+            r["batch_number"], r["vendor_lot"], color or None, attrs or None, r["size_label"],
+            r["reference_type"], r["reference_label"] or r["reference_id"],
+            r["qty_change"], r["item_uom"],
+            r["qty_cones_change"] or None, r["qty_boxes_change"] or None, r["qty_drums_change"] or None,
+        ]
+
+    return xlsx_response(
+        "Stock Ledger",
+        [
+            "Date", "Item Code", "Item Name", "Category", "Location", "Lot", "Supplier Lot",
+            "Color", "Attributes", "Size", "Reference Type", "Reference", "Qty", "UOM",
+            "Cones", "Boxes", "Drums",
+        ],
+        (_row(r) for r in data["items"]),
+        "stock-ledger",
+        footer=["Total In", data["total_in"], "Total Out", data["total_out"]],
+    )
+
 
 @router.post("/stock", status_code=201)
 async def create_stock_entry(

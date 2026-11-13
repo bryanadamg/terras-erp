@@ -138,7 +138,7 @@ export const RESOURCE_ACTIONS: Record<string, PermissionMatrixAction[]> = {
     stock_on_hand: [CREATE, A('adjust', 'Adjust'), A('move', 'Move'), VIEW],
     booking_stock: [VIEW],
     location: [CREATE, EDIT, DELETE, VIEW],
-    stock_ledger: [A('print', 'Print'), VIEW],
+    stock_ledger: [A('print', 'Print'), A('export', 'Export Excel'), VIEW],
 
     // log = record packed cartons on the floor; edit = the order's settings + close.
     packing_order: [CREATE, EDIT, DELETE, A('log', 'Log Packing'), VIEW],

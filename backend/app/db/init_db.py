@@ -547,6 +547,7 @@ def seed_rbac(db):
             ("yarn_lab_dip.view", "View Yarn Lab Dips"),
             # Platform
             ("stock_ledger.print", "Print Stock Ledger"),
+            ("stock_ledger.export", "Export Stock Ledger Excel"),
             ("stock_ledger.view", "View Stock Ledger"),
             # Production Output report — its own grant, so the shop-floor
             # output/reject numbers are never implied by anything else. export is
@@ -588,7 +589,7 @@ def seed_rbac(db):
                 "purchase_order.create", "purchase_order.edit", "purchase_order.delete",
                 "purchase_order.receive_goods", "purchase_order.print", "purchase_order.view", "purchase_order.close",
                 "supplier.create", "supplier.edit", "supplier.delete", "supplier.view",
-                "stock_ledger.print", "stock_ledger.view",
+                "stock_ledger.print", "stock_ledger.export", "stock_ledger.view",
                 "production_output.view", "production_output.export",
             ],
             "Production Manager": [

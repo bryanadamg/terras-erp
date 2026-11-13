@@ -15,6 +15,8 @@ import { xpBevel as sharedXpBevel, xpTitleBar as sharedXpTitleBar, xpToolbar as 
 import { lvThead, SortableTh, lvZebra, Dash, ResizableTable } from '../shared/listViewTheme';
 import { qtyFmt } from '../shared/format';
 import { API_BASE } from '../shared/apiBase';
+import { saveResponse } from '../shared/download';
+import { useToast } from '../shared/Toast';
 
 import { refMeta, shortRef } from './ledgerRef';
 const StockLedgerPrintModal = dynamic(() => import('./StockLedgerPrintModal'), { ssr: false });
@@ -43,9 +45,12 @@ const pkgDelta = (e: any): { n: number; label: string }[] => {
 
 export default function ReportsView(_props: any) {
     const { t } = useLanguage();
-    const { formatDate: tzDate, formatTime: tzTime } = useTimezone();
+    const { formatDate: tzDate, formatTime: tzTime, timezone } = useTimezone();
     const { authFetch, locations = [], categories = [], itemIndex, companyProfile } = useData();
-    const canPrint = useUser().hasPermission('stock_ledger.print');
+    const { hasPermission } = useUser();
+    const canPrint = hasPermission('stock_ledger.print');
+    const canExport = hasPermission('stock_ledger.export');
+    const { showToast } = useToast();
 
     // Filters. Default to the trailing 30 days, not all-time — an unbounded ledger
     // query scans the whole (ever-growing) stock_ledger history for its count/sum
@@ -162,6 +167,23 @@ export default function ReportsView(_props: any) {
         }
     };
 
+    // Whole filtered set, not just the page — the server rebuilds it uncapped.
+    const [exporting, setExporting] = useState(false);
+    const handleExport = async () => {
+        setExporting(true);
+        try {
+            const p = new URLSearchParams();
+            for (const [k, v] of Object.entries(params)) if (v) p.set(k, String(v));
+            if (search) p.set('search', search);
+            p.set('tz', timezone);
+            const res = await authFetch(`${API_BASE}/stock/ledger/export?${p.toString()}`);
+            if (!res.ok) { showToast('Export failed', 'danger'); return; }
+            await saveResponse(res, 'stock-ledger.xlsx');
+        } finally {
+            setExporting(false);
+        }
+    };
+
     // ── Shared row content (mode-agnostic data) ──────────────────────────────
     // Column rules: every cell carries a right divider so the grid reads as a
     // ledger, not a list. The last cell drops it (the table border closes it).
@@ -248,6 +270,7 @@ export default function ReportsView(_props: any) {
             <div style={{ flex: 1 }} />
             {hasFilters && <button className={XP_BTN} style={xpBtn({ fontSize: '10px', padding: '1px 6px' })} onClick={clearFilters} title="Clear filters"><i className="bi bi-x-lg" /></button>}
             <button className={XP_BTN} style={xpBtn({ padding: '1px 6px' })} onClick={refetch} title="Refresh"><i className="bi bi-arrow-clockwise" /></button>
+            {canExport && <button className={XP_BTN} style={xpBtn({ padding: '1px 6px' })} onClick={handleExport} disabled={exporting || !total} title={exporting ? 'Exporting...' : 'Export Excel'}><i className={exporting ? 'bi bi-hourglass-split' : 'bi bi-file-earmark-excel'} /></button>}
             {canPrint && <button className={XP_BTN} style={xpBtn({ padding: '1px 6px' })} onClick={handlePrint} disabled={printLoading} title={printLoading ? 'Loading...' : t('print')}><i className={printLoading ? 'bi bi-hourglass-split' : 'bi bi-printer'} /></button>}
         </div>;
 
