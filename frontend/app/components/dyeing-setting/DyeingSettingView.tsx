@@ -1,5 +1,5 @@
 'use client';
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useEffect } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { useData } from '../../context/DataContext';
 import { useRememberedTab } from '../../hooks/useRememberedTab';
@@ -9,7 +9,6 @@ import DyeingOrdersTab from './DyeingOrdersTab';
 import SettingOrdersTab from './SettingOrdersTab';
 import { xpFont, FORM_SECTION_BLUE, xpInput as xpInputBase, xpBtn as xpBtnBase } from '../shared/xpTheme';
 import { viewShellStyle, PageTitleBar } from '../shared/shellTheme';
-import { API_BASE } from '../shared/apiBase';
 import { useUser } from '../../context/UserContext';
 
 // ── XP Style Constants ─────────────────────────────────────────────────────────
@@ -44,40 +43,11 @@ export default function DyeingSettingView() {
     const visibleKeys = visibleTabs.map(t => t.key);
     const [rememberedTab, setActiveTab] = useRememberedTab<TabKey>('dyeing-setting', visibleKeys[0] ?? 'recipes', visibleKeys);
     const activeTab = visibleKeys.includes(rememberedTab) ? rememberedTab : visibleKeys[0];
-    const [recipes, setRecipes] = useState<any[]>([]);
 
     // Deep-link from Color Library "create recipe for this color": force the recipes
     // tab and hand the color id to DyeRecipeTab, which opens its create panel on it.
     const recipeColorId = searchParams.get('recipe_color_id');
     useEffect(() => { if (recipeColorId) setActiveTab('recipes'); }, [recipeColorId]);
-
-    // ── Fetch recipes ─────────────────────────────────────────────────────────
-    // Lookup feed, NOT a list: DyeingOrdersTab resolves each run's recipe_id out of
-    // this array (and offers it as a picker), so it must be the whole set. `size=0`
-    // is the uncapped contract on /dye-recipes — the paged window belongs to the
-    // Dye Recipes list view only.
-    const fetchRecipes = useCallback(async () => {
-        try {
-            const res = await authFetch(`${API_BASE}/dye-recipes?size=0`);
-            if (res.ok) {
-                const data = await res.json();
-                setRecipes(Array.isArray(data) ? data : (data.items ?? []));
-            }
-        } catch {
-            // silent
-        }
-    }, [authFetch]);
-
-    // Load recipes on mount
-    useEffect(() => { fetchRecipes(); }, [fetchRecipes]);
-
-    // Refresh recipes when switching to dyeing tab
-    const handleTabChange = (tab: TabKey) => {
-        setActiveTab(tab);
-        if (tab === 'dyeing') {
-            fetchRecipes();
-        }
-    };
 
     // ── Render ────────────────────────────────────────────────────────────────
     return (
@@ -86,7 +56,7 @@ export default function DyeingSettingView() {
             <PageTitleBar icon="bi-droplet-fill" title="Dyeing & Setting" />
 
             {/* Tabs bar */}
-            <Tabs tabs={visibleTabs} activeKey={activeTab} onChange={handleTabChange} />
+            <Tabs tabs={visibleTabs} activeKey={activeTab} onChange={setActiveTab} />
 
             {/* Content area */}
             <div style={{
@@ -108,7 +78,6 @@ export default function DyeingSettingView() {
                 {activeTab === 'dyeing' && (
                     <DyeingOrdersTab
                         items={items}
-                        recipes={recipes}
                         authFetch={authFetch}
                     />
                 )}

@@ -53,6 +53,12 @@ export interface EntitySearchResult {
      * resolving its name/code after the result window has moved past it.
      */
     resolve: (id: string) => any | undefined;
+    /**
+     * Fetch rows by id into the resolve cache (`?ids=a,b`) — for a value that was set
+     * without ever being on a result page (a saved record, a server-side match).
+     * Ids already cached are skipped. Only for endpoints that accept `ids`.
+     */
+    ensure: (ids: string[]) => void;
 }
 
 export function useEntitySearch(config: EntitySearchConfig): EntitySearchResult {
@@ -126,7 +132,19 @@ export function useEntitySearch(config: EntitySearchConfig): EntitySearchResult 
 
     const resolve = useCallback((id: string) => cache[String(id)], [cache]);
 
-    return { results, onSearch, resolve };
+    const ensure = useCallback(async (ids: string[]) => {
+        const missing = Array.from(new Set(ids.filter(Boolean).map(String))).filter(id => !cache[id]);
+        if (!missing.length) return;
+        try {
+            const qs = new URLSearchParams({ ...JSON.parse(paramsKey), [pageSizeParam]: '0', ids: missing.join(',') });
+            const res = await authFetch(`${API_BASE}/${path}?${qs.toString()}`);
+            if (!res.ok) return;
+            const data = await res.json();
+            merge(Array.isArray(data) ? data : (data.items ?? []));
+        } catch { /* offline — the label just stays unresolved */ }
+    }, [cache, authFetch, path, paramsKey, pageSizeParam, merge]);
+
+    return { results, onSearch, resolve, ensure };
 }
 
 // --- Picker scopes -------------------------------------------------------------
@@ -144,6 +162,7 @@ const FINISHED_GOODS = { finished_goods: 'true' };
 const RAW_MATERIALS = { raw_materials: 'true' };
 const PURCHASABLE = { purchasable: 'true' };
 const ACTIVE_COMBOS = { status: 'active' };
+const RECIPE_SUMMARY = { view: 'summary' };
 
 /** Every item, unscoped — stock entry, stock-on-hand, and BOM substitutes. */
 export const useItemSearch = (o: PresetOptions = {}) =>
@@ -168,6 +187,16 @@ export const usePurchasableItemSearch = (o: PresetOptions = {}) =>
  */
 export const useComboSearch = (o: PresetOptions = {}) =>
     useEntitySearch({ path: 'combos', params: ACTIVE_COMBOS, pageSizeParam: 'size', idKey: 'attribute_value_id', ...o });
+
+/**
+ * Dye recipes as id/code/name/colour summary rows. Recipes run to ten thousand+
+ * (one per lab dip), so pickers search server-side instead of holding them all.
+ */
+export const useDyeRecipeSearch = (o: PresetOptions = {}) =>
+    useEntitySearch({ path: 'dye-recipes', params: RECIPE_SUMMARY, pageSizeParam: 'size', ...o });
+
+/** SearchableSelect option for a recipe summary row. */
+export const recipeToOption = (r: any) => ({ value: String(r.id), label: r.name, subLabel: r.code });
 
 /** The option shape SearchableSelect wants, for the standard id/name/code item row. */
 export const itemToOption = (it: any) => ({ value: it.id, label: it.name, subLabel: it.code });
