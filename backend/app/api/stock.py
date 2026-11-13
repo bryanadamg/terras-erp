@@ -1,4 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi.responses import ORJSONResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import Session
 from sqlalchemy import select, func
@@ -512,6 +513,7 @@ async def transfer_stock_bulk(
 @router.get("/stock/balance", response_model=list[StockBalanceResponse])
 async def get_stock_balance_api(
     item_ids: Optional[str] = None,
+    lean: bool = Query(False, description="Only item/location/qty/lot/variant per row — the availability feed"),
     db: AsyncSession = Depends(get_async_db),
     current_user: User = Depends(require_any_permission("stock_on_hand.view", "lot.view", "work_order.view", "booking_stock.view", "quarantine.view")),
 ):
@@ -530,6 +532,10 @@ async def get_stock_balance_api(
                 ids.append(_uuid.UUID(raw))
             except ValueError:
                 continue
+    if lean:
+        # Bypasses response_model on purpose: it would pad every row back out with
+        # the 20 display fields this mode exists to leave off.
+        return ORJSONResponse(await stock_service.get_stock_balances_lean(db, item_ids=ids))
     return await stock_service.get_all_stock_balances(db, user=current_user, item_ids=ids)
 
 

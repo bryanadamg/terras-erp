@@ -730,7 +730,9 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
             // inventory and work-orders views do NOT read stockBalance, so fetching the
             // whole table there was wasted work — costly on the low-power ARM backend.
             if (fetchTarget.includes('stock') || fetchTarget.includes('manufacturing') || fetchTarget.includes('production-runs')) {
-                requests.push(authFetch(`${API_BASE}/stock/balance`, { headers }));
+                // lean: the readers here (MO/PR material checks, dashboard total, mobile
+                // stock) only use item/location/qty/lot/variant — the full row is ~25 fields.
+                requests.push(authFetch(`${API_BASE}/stock/balance?lean=true`, { headers }));
                 requestTypes.push('balance');
             }
             
@@ -1062,7 +1064,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
         try {
             const token = localStorage.getItem('access_token');
             const headers = { 'Authorization': `Bearer ${token}` };
-            const res = await authFetch(`${API_BASE}/stock/balance`, { headers, cache: 'no-store' });
+            const res = await authFetch(`${API_BASE}/stock/balance?lean=true`, { headers, cache: 'no-store' });
             if (res.ok) { const d = await res.json(); setStockBalance(d); }
         } catch (e) { reportRefreshError('stock balances', e); }
     }, [currentUser, reportRefreshError]);
