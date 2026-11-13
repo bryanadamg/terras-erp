@@ -157,9 +157,9 @@ export const RESOURCE_ACTIONS: Record<string, PermissionMatrixAction[]> = {
     // taxonomy with no checkbox anywhere that could grant it.
     work_order: [CREATE, A('log', 'Log'), EDIT, DELETE, A('print_card', 'Print Kartu Kerja'), VIEW, A('print_label', 'Print Label'), A('stage', 'Stage')],
     weaving_monitor: [A('start', 'Start'), A('stop', 'Stop'), VIEW],
-    // View only: a dye batch is started and completed from the Dyeing Orders tab
-    // under work_order.log, so this grid owns no lifecycle verbs of its own.
-    dyeing_monitor: [VIEW],
+    // No lifecycle verbs: a dye batch is started and completed from the Dyeing
+    // Orders tab under work_order.log. export takes the grid off as Excel.
+    dyeing_monitor: [A('export', 'Export Excel'), VIEW],
     calendar: [EDIT, VIEW],
     beam: [A('unmount', 'Unmount'), VIEW],
 

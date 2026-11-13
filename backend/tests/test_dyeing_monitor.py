@@ -251,3 +251,43 @@ def test_work_center_no_longer_carries_reel_geometry(client, auth_headers):
     })
     assert res.status_code == 200, res.text
     assert "yards_per_rev" not in res.json()
+
+
+def test_date_range_uses_local_days_and_export_matches(user_factory, client, auth_headers, async_db_session):
+    """A batch closed 23:30 UTC on the 10th is the 11th in Jakarta: the date filter
+    and the Excel file both read the viewer's calendar, not UTC's."""
+    import io
+    import uuid
+    from openpyxl import load_workbook
+    from app.models.dyeing_setting import DyeingRun
+    from app.models.work_order import WorkOrder
+    from tests.test_dyeing_output_lot import _setup_dyeing_wo
+
+    _mo_id, wo_id, (run_id,) = _setup_dyeing_wo(client, auth_headers, async_db_session, runs=1)
+
+    async def _close():
+        run = await async_db_session.get(DyeingRun, uuid.UUID(run_id))
+        run.started_at = datetime(2026, 3, 10, 22, 0, tzinfo=timezone.utc)
+        run.completed_at = datetime(2026, 3, 10, 23, 30, tzinfo=timezone.utc)
+        await async_db_session.flush()
+        return (await async_db_session.get(WorkOrder, uuid.UUID(wo_id))).code
+    wo_code = client.portal.call(_close)
+
+    def ids(day):
+        q = {"search": wo_code, "start_date": day, "end_date": day, "tz": "Asia/Jakarta"}
+        return [r["id"] for r in client.get("/api/dyeing/monitor", params=q, headers=auth_headers).json()["items"]]
+
+    assert ids("2026-03-11") == [run_id]
+    assert ids("2026-03-10") == []
+
+    _, viewer = user_factory(["dyeing_monitor.view"], "dye-viewer")
+    q = {"search": wo_code, "start_date": "2026-03-11", "end_date": "2026-03-11", "tz": "Asia/Jakarta"}
+    assert client.get("/api/dyeing/monitor/export", params=q, headers=viewer).status_code == 403
+
+    res = client.get("/api/dyeing/monitor/export", params=q, headers=auth_headers)
+    assert res.status_code == 200, res.text
+    rows = list(load_workbook(io.BytesIO(res.content)).active.iter_rows(values_only=True))
+    header, body = rows[0], rows[1:]
+    assert len(body) == 1 and body[0][header.index("Work Order")] == wo_code
+    assert body[0][header.index("Status")] == "Completed"
+    assert body[0][header.index("Complete")] == datetime(2026, 3, 11, 6, 30)
