@@ -191,8 +191,8 @@ export default function DispatchView() {
 
     // Staging no longer collects carrier/vehicle/driver/notes up front — it mints
     // the shipment immediately (defaults: next SJ number, today's date, everything
-    // else blank) and drops straight into the print preview, which is now the one
-    // place those loading-deck facts get typed in and saved.
+    // else blank). It does NOT open the print preview: another department prints
+    // the Surat Jalan (and types those loading-deck facts in) from the row's printer button.
     const stageNow = useCallback(async (picks: any[]) => {
         if (!picks.length) return;
         if (new Set(picks.map((p: any) => p.customer_name || '')).size > 1) {
@@ -215,7 +215,6 @@ export default function DispatchView() {
         setStatusFilter('');
         setExpandedId(`shp:${shp.id}`);
         showToast(`Staged ${shp.code} — Surat Jalan ${shp.delivery_note_number}`, 'success');
-        setPrintShp(shp);
     }, [authFetch, refreshAll, sel, showToast]);
 
     const doVerify = async (shp: any, payload: any) => {
