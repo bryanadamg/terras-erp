@@ -1,4 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi.responses import ORJSONResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func, or_
 from sqlalchemy.orm import selectinload, joinedload
@@ -175,6 +176,9 @@ async def _get_next_run_number(db: AsyncSession, model, work_order_id) -> int:
 async def list_dye_recipes(
     active_only: bool = Query(False),
     search: str | None = Query(None, description="Matches recipe code or name"),
+    view: str = Query("full", pattern="^(full|summary)$",
+                      description="summary = id/code/name/colour only, for pickers and label lookups"),
+    ids: str | None = Query(None, description="Comma-separated recipe ids — resolve a picked value's label"),
     window: PageWindow = Depends(PageParams(default_size=50, max_size=500, allow_uncapped=True)),
     db: AsyncSession = Depends(get_async_db),
     current_user: User = Depends(require_any_permission("dye_recipe.view", "dye_order.view", "lab_dip_request.view", "work_order.view")),
@@ -188,8 +192,22 @@ async def list_dye_recipes(
     recipe that happens to be off page 1. Only the Dye Recipes list view takes a
     real page window.
     """
-    q = select(DyeRecipe).options(*_recipe_opts())
+    if view == "summary":
+        q = (select(DyeRecipe.id, DyeRecipe.code, DyeRecipe.name, DyeRecipe.color_id, Color.code, DyeRecipe.is_active)
+             .outerjoin(Color, Color.id == DyeRecipe.color_id))
+    else:
+        q = select(DyeRecipe).options(*_recipe_opts())
     count_q = select(func.count(DyeRecipe.id))
+
+    if ids:
+        id_list = []
+        for raw in ids.split(","):
+            try:
+                id_list.append(uuid.UUID(raw.strip()))
+            except ValueError:
+                continue
+        q = q.filter(DyeRecipe.id.in_(id_list))
+        count_q = count_q.filter(DyeRecipe.id.in_(id_list))
 
     if active_only:
         q = q.filter(DyeRecipe.is_active == True)
@@ -202,6 +220,13 @@ async def list_dye_recipes(
 
     total = (await db.execute(count_q)).scalar_one()
     result = await db.execute(window.apply(q.order_by(DyeRecipe.code)))
+    if view == "summary":
+        # Plain columns, no lines/wash/finishing: a picker over ~10k recipes needs
+        # labels, not bodies. ORJSONResponse skips response_model, which would pad
+        # each row back out with every empty detail field.
+        rows = [{"id": str(i), "code": c, "name": n, "color_id": str(cid) if cid else None,
+                 "color_code": cc, "is_active": a} for i, c, n, cid, cc, a in result.all()]
+        return ORJSONResponse(window.envelope(rows, total))
     recipes = result.scalars().all()
     return window.envelope([_serialize_recipe(r) for r in recipes], total)
 
@@ -330,6 +355,20 @@ async def match_dye_recipe(
     if not best:
         return {"match": None}
     return {"match": _serialize_recipe(best)}
+
+
+@router.get("/dye-recipes/{recipe_id}", response_model=DyeRecipeResponse)
+async def get_dye_recipe(
+    recipe_id: uuid.UUID,
+    db: AsyncSession = Depends(get_async_db),
+    current_user: User = Depends(require_any_permission("dye_recipe.view", "dye_order.view", "lab_dip_request.view", "work_order.view")),
+):
+    """One recipe whole — lines, wash baths, finishing — for the Kartu Celup print,
+    now that pickers only hold the summary rows."""
+    r = (await db.execute(select(DyeRecipe).options(*_recipe_opts()).filter(DyeRecipe.id == recipe_id))).scalars().first()
+    if not r:
+        raise HTTPException(status_code=404, detail="Recipe not found")
+    return _serialize_recipe(r)
 
 
 @router.put("/dye-recipes/{recipe_id}", response_model=DyeRecipeResponse)

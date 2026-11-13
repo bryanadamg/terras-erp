@@ -312,6 +312,12 @@ export default function WorkOrderListView({
     }), []);
     const { sorted: sortedWOs, sort, toggle: toggleSort } = useSortable(filtered, sortCols, { key: 'created', dir: -1 });
 
+    // A scanned WO card QR (the WO's id) in the search box opens that WO.
+    useEffect(() => {
+        const id = woSearch.trim();
+        if (flatWOs.some(w => w.id === id)) setHighlightWOId(id);
+    }, [woSearch, flatWOs]);
+
     useEffect(() => {
         if (!highlightWOId || flatWOs.length === 0) return;
         setExpandedWOId(highlightWOId);

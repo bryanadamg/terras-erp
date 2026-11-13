@@ -15,6 +15,28 @@ on `main`:
 
 ## [Unreleased]
 
+## [1.5.0] - 2026-11-13
+
+### Added
+- Stock Ledger exports to Excel: every movement matching the current filters (not just the page), with times in your display timezone. Needs the new stock_ledger.export permission
+- Dyeing Monitor has a from–to date filter (a batch is dated by its Complete, else Start, else set-up time) and an Excel export of every matching batch, under the new dyeing_monitor.export permission
+- Weaving Monitor exports to Excel, one row per loom run with efficiency, kg, due date and projected completion, following the group / running-only filter, under the new weaving_monitor.export permission
+- The SPK Produksi can print its Production Run number ("No. Production Run" in Print Layouts)
+- SPK Produksi, Material Pull Sheet and SPK Sample can print a scannable barcode of their own number, so scanning it into the Manufacturing Orders, Production Runs or Samples search finds the document. SPK Sample shows it by default; a layout already customised in Print Layouts needs the field added there
+- The Kartu Picking prints each carton's location and sorts the checklist by it, so pickers find boxes faster
+- The dashboard has a live floor plan tab showing running machines and store stock
+
+### Changed
+- Production Output's Per Work Order view filters by status (All, In progress or Completed) instead of a Completed-only tick box
+- Stage on Deck no longer opens the Surat Jalan print, since another department prints it
+- The role editor shows scopes next to their permissions as grouped tables, and the default avatar section folds away
+- The purchase order barcode is a real Code 128 that scans, instead of decorative bars
+- Stock, manufacturing and dyeing pages stay fast as lots and recipes grow: the plant-wide stock feed is slimmer and the dye recipe pickers search on the server
+
+### Fixed
+- Scanning a work card's QR into the Work Orders search opens that work order
+- The Surat Jalan printed a combo twice when it had no colour of its own
+
 ## [1.4.0] - 2026-11-12
 
 ### Added

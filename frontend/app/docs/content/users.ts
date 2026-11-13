@@ -31,7 +31,7 @@ export const usersPage: DocPage = {
                 'pick_list.scan lets a picker confirm cartons on a pick list through QUICK SCAN without any other pick list rights.',
                 'packing_order.log records packed cartons (and saves the sampled weight, locations and machine on the pack screen); packing_order.edit also changes and closes the order. pick_list.create / edit / delete manage pick lists, and shipment.create stages a Surat Jalan on the Dispatch deck.',
                 'quarantine.set_status is the release decision that lets a held lot be packed. It is kept apart from the lot permissions on purpose.',
-                'The Dashboard is open to everyone and shows only the widgets the user’s other permissions cover (stock, sales, manufacturing, samples). stock_ledger.view opens the Stock Ledger report. production_output.view and production_output.export read the Production Output report and download it as Excel.',
+                'The Dashboard is open to everyone and shows only the widgets the user’s other permissions cover (stock, sales, manufacturing, samples). stock_ledger.view opens the Stock Ledger report and stock_ledger.export downloads it as Excel. production_output.view and production_output.export read the Production Output report and download it as Excel.',
                 'color_code.create_recipe shows the Create dyeing recipe shortcut on Colors. Saving the recipe still needs dye_recipe.create.',
                 'system_admin.edit edits Settings → General: the company profile, logo and the per-size quantity formula. Users, roles and backups stay with Administrators.',
                 'print_layout.edit opens Administration → Print Layouts. audit_log.view opens Audit Logs.',

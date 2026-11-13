@@ -1,7 +1,8 @@
 /**
  * Built-in SPK Produksi (MO sheet) layout — a transcription of the hand-built
  * document it replaced in manufacturing/MOPrintModal.tsx. Applies until the client
- * saves their own. No QR anywhere: an MO print is supervisory.
+ * saves their own. No QR anywhere: an MO print is supervisory. The barcode is the
+ * MO code alone, for scanning into the Manufacturing Orders search.
  */
 
 import type { PrintLayout, Band, FieldSpec, GridItem } from '../types';
@@ -33,7 +34,10 @@ const BANDS: Band[] = [
                 f('ms.print_date', { prefix: 'Tanggal: ', color: '#333', align: 'center' }),
                 f('ms.header_meta', { fontSize: 7, color: '#555', align: 'center', hideWhenEmpty: true }),
             ]),
-            { ...f('ms.code', { bold: true, mono: true, align: 'right' }), col: 9, span: 4, row: 1 },
+            stack(9, 4, [
+                f('ms.barcode', { align: 'right', imageHeight: 34, hideWhenEmpty: true }),
+                f('ms.code', { bold: true, mono: true, align: 'right' }),
+            ], { align: 'right' }),
         ],
     },
     {
@@ -47,6 +51,7 @@ const BANDS: Band[] = [
             { field: 'ms.combo', label: 'Combo', span: 3, bold: true, hideWhenEmpty: true },
             { field: 'ms.code', label: 'No. SPK', mono: true },
             { field: 'ms.qty', label: 'Jml Order', bold: true },
+            { field: 'ms.production_run', label: 'Production Run', mono: true, span: 3, hideWhenEmpty: true },
             { field: 'ms.sales_order', label: 'Sales Order', mono: true, hideWhenEmpty: true },
             { field: 'ms.so_customer', label: 'Customer', hideWhenEmpty: true },
             { field: 'ms.customer_no_so', label: 'Customer', span: 3, hideWhenEmpty: true },

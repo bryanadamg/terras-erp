@@ -120,7 +120,8 @@ export default function PermissionsPicker({
 
     const font = xpFont;
 
-    const wrapStyle = { background: '#f7f6f2', border: '1px solid #b0a898', maxHeight: 400, overflowY: 'auto' as const, padding: 6, display: 'flex', flexDirection: 'column' as const, gap: 8 };
+    // No maxHeight: a scroll box inside the modal's own scroll hid whole sections (Warehouse) below the fold.
+    const wrapStyle = { background: '#f7f6f2', border: '1px solid #b0a898', padding: 6, display: 'flex', flexDirection: 'column' as const, gap: 8 };
 
     const linkBtn = (label: string, onClick: () => void, disabled: boolean) => (
         <button

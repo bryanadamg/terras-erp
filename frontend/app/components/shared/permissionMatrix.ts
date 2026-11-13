@@ -138,7 +138,7 @@ export const RESOURCE_ACTIONS: Record<string, PermissionMatrixAction[]> = {
     stock_on_hand: [CREATE, A('adjust', 'Adjust'), A('move', 'Move'), VIEW],
     booking_stock: [VIEW],
     location: [CREATE, EDIT, DELETE, VIEW],
-    stock_ledger: [A('print', 'Print'), VIEW],
+    stock_ledger: [A('print', 'Print'), A('export', 'Export Excel'), VIEW],
 
     // log = record packed cartons on the floor; edit = the order's settings + close.
     packing_order: [CREATE, EDIT, DELETE, A('log', 'Log Packing'), VIEW],
@@ -156,10 +156,10 @@ export const RESOURCE_ACTIONS: Record<string, PermissionMatrixAction[]> = {
     // it was missing from this row, so work_order.create existed in the backend
     // taxonomy with no checkbox anywhere that could grant it.
     work_order: [CREATE, A('log', 'Log'), EDIT, DELETE, A('print_card', 'Print Kartu Kerja'), VIEW, A('print_label', 'Print Label'), A('stage', 'Stage')],
-    weaving_monitor: [A('start', 'Start'), A('stop', 'Stop'), VIEW],
-    // View only: a dye batch is started and completed from the Dyeing Orders tab
-    // under work_order.log, so this grid owns no lifecycle verbs of its own.
-    dyeing_monitor: [VIEW],
+    weaving_monitor: [A('start', 'Start'), A('stop', 'Stop'), A('export', 'Export Excel'), VIEW],
+    // No lifecycle verbs: a dye batch is started and completed from the Dyeing
+    // Orders tab under work_order.log. export takes the grid off as Excel.
+    dyeing_monitor: [A('export', 'Export Excel'), VIEW],
     calendar: [EDIT, VIEW],
     beam: [A('unmount', 'Unmount'), VIEW],
 

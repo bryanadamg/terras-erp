@@ -4,7 +4,7 @@ import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useData } from '../../context/DataContext';
 import { useLanguage } from '../../context/LanguageContext';
 import { useUser } from '../../context/UserContext';
-import { ProgressBar, StatusChip, XPEmptyState, XPActionButton, TableSkeleton, CodeChip, ExpandedRowPanel, WorkCenterChip, familyColor, rowStateBg, xpFont, xpSelect } from '../shared/xpTheme';
+import { ProgressBar, StatusChip, XPEmptyState, XPActionButton, TableSkeleton, CodeChip, ExpandedRowPanel, WorkCenterChip, familyColor, rowStateBg, xpFont, xpSelect, xpInput } from '../shared/xpTheme';
 import { centerTypeOfWC, isMachineWC, isTypeWC } from '../shared/workCenterTree';
 import { ShellWindow, ShellTitleBar, SearchField, FilterChipBar, ToolbarCount, xpToolbar } from '../shared/shellTheme';
 import { lvTd, lvThSticky, lvZebra, ExpanderCell, ResizableTable, LV_EXPANDER_COL_W } from '../shared/listViewTheme';
@@ -16,6 +16,8 @@ import DyeingRateModal from './DyeingRateModal';
 import DyeingWOHistory, { useFmtStamp } from './DyeingWOHistory';
 import { fmtQty, fmtMinutes, orDash } from '../shared/format';
 import { API_BASE } from '../shared/apiBase';
+import { saveResponse } from '../shared/download';
+import { useTimezone } from '../../context/TimezoneContext';
 
 const AMBER = familyColor('amber');
 const COLS = 14;
@@ -63,6 +65,8 @@ export default function DyeingMonitorView() {
     const { showToast } = useToast();
     // Same gate the Dyeing Orders tab uses to start and complete a batch.
     const canSetRate = hasPermission('work_order.log');
+    const canExport = hasPermission('dyeing_monitor.export');
+    const { timezone } = useTimezone();
 
     const [rateRun, setRateRun] = useState<any>(null);
     const [expandedId, setExpandedId] = useState<string | null>(null);
@@ -70,6 +74,9 @@ export default function DyeingMonitorView() {
     const [clockFilter, setClockFilter] = useState<string>('ALL');
     // A vessel, or a GROUP for every vessel under it (resolved server-side).
     const [wcFilter, setWcFilter] = useState<string>('');
+    // Empty = every batch. A batch's date is its Complete, else Start, else set-up stamp.
+    const [startDate, setStartDate] = useState('');
+    const [endDate, setEndDate] = useState('');
     const byName = (a: any, b: any) => String(a.name).localeCompare(String(b.name), undefined, { numeric: true });
     const { wcGroups, wcMachines } = useMemo(() => {
         const dye = (workCenters || []).filter((wc: any) =>
@@ -85,7 +92,7 @@ export default function DyeingMonitorView() {
     // Paged, filtered and searched on the server: every finished batch stays listed,
     // so the set has no bound and neither the rows nor the chip counts can come from one page.
     const {
-        rows: runs, total, meta, loading, page, setPage, searchInput, setSearch, refetch: load,
+        rows: runs, total, meta, loading, page, setPage, search, searchInput, setSearch, refetch: load,
     } = usePaginatedFetch<any>({
         endpoint: `${API_BASE}/dyeing/monitor`,
         authFetch,
@@ -93,8 +100,29 @@ export default function DyeingMonitorView() {
         params: {
             clock: clockFilter === 'ALL' ? undefined : clockFilter,
             work_center_id: wcFilter || undefined,
+            start_date: startDate || undefined,
+            end_date: endDate || undefined,
+            tz: timezone,
         },
     });
+
+    const [exporting, setExporting] = useState(false);
+    const exportExcel = async () => {
+        setExporting(true);
+        try {
+            const p = new URLSearchParams({ tz: timezone });
+            if (clockFilter !== 'ALL') p.set('clock', clockFilter);
+            if (wcFilter) p.set('work_center_id', wcFilter);
+            if (startDate) p.set('start_date', startDate);
+            if (endDate) p.set('end_date', endDate);
+            if (search) p.set('search', search);
+            const res = await authFetch(`${API_BASE}/dyeing/monitor/export?${p.toString()}`);
+            if (!res.ok) { showToast('Export failed', 'danger'); return; }
+            await saveResponse(res, 'dyeing-monitor.xlsx');
+        } finally {
+            setExporting(false);
+        }
+    };
 
     useEffect(() => {
         const unsubscribe = subscribeLiveEvents(['dyeing', 'production'], () => load());
@@ -189,6 +217,9 @@ export default function DyeingMonitorView() {
                 )}
                 {wcMachines.map((wc: any) => <option key={wc.id} value={wc.id}>{wc.name}</option>)}
             </select>
+            <input type="date" style={xpInput({ width: 122 })} value={startDate} onChange={e => setStartDate(e.target.value)} title={t('from')} />
+            <span style={{ fontSize: 11 }}>–</span>
+            <input type="date" style={xpInput({ width: 122 })} value={endDate} onChange={e => setEndDate(e.target.value)} title={t('to')} />
             <FilterChipBar
                 value={clockFilter}
                 onChange={setClockFilter}
@@ -207,6 +238,10 @@ export default function DyeingMonitorView() {
                 </span>
             )}
             <ToolbarCount right>{total}</ToolbarCount>
+            {canExport && (
+                <XPActionButton tone="neutral" icon={exporting ? 'bi-hourglass-split' : 'bi-file-earmark-excel'}
+                    title="Export Excel" onClick={exportExcel} disabled={exporting || !total} />
+            )}
             <XPActionButton tone="neutral" icon="bi-arrow-clockwise" title={t('refresh')} onClick={load} />
         </div>
     );

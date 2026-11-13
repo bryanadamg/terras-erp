@@ -31,12 +31,17 @@ const BANDS: Band[] = [
         borderBottom: '2px solid #000', padding: '0 0 6px',
         items: [
             { ...f('company.logo', { imageHeight: 52, hideWhenEmpty: true }), col: 1, span: 2, row: 1 },
-            stack(3, 10, [
+            stack(3, 7, [
                 f('company.name', { fontSize: 16, bold: true, hideWhenEmpty: true }),
                 f('company.address', { hideWhenEmpty: true }),
                 f('company.phone_fax', { hideWhenEmpty: true }),
                 f('company.email', { prefix: 'Email : ', color: '#0000cc', hideWhenEmpty: true }),
             ]),
+            // The Kode SPK as Code 128, for scanning into the Samples search.
+            stack(10, 3, [
+                f('sr.barcode', { align: 'right', imageHeight: 34, hideWhenEmpty: true }),
+                f('sr.code', { align: 'right', bold: true, hideWhenEmpty: true }),
+            ], { align: 'right' }),
         ],
     },
     {

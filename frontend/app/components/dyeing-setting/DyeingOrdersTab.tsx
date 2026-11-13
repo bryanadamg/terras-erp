@@ -23,6 +23,8 @@ import { isMachineWC } from '../shared/workCenterTree';
 import DoseSheet, { fmtDose, doseUnitFor, type DosePreview } from '../shared/DoseSheet';
 import { speedPresets, presetFor } from '../shared/dyeingSpeed';
 import { API_BASE } from '../shared/apiBase';
+import { useDyeRecipeSearch, recipeToOption } from '../shared/useEntitySearch';
+import SearchableSelect from '@bryanadamg/terras-ui/components/Combobox';
 import DyeRecipePrintView from './DyeRecipePrintView';
 import type { KartuCelupBath } from '../shared/printTemplate/doctypes/dyeRecipe';
 
@@ -92,7 +94,6 @@ interface CompleteForm {
 
 interface DyeingOrdersTabProps {
     items: any[];
-    recipes: any[];
     /** Typed rather than bare `Function` so usePaginatedFetch accepts it. */
     authFetch: (url: string, options?: any) => Promise<Response>;
 }
@@ -178,7 +179,7 @@ const DY_COL_W: (number | string)[] = [
     52,                 // Actions
 ];
 
-export default function DyeingOrdersTab({ items, recipes, authFetch }: DyeingOrdersTabProps) {
+export default function DyeingOrdersTab({ items, authFetch }: DyeingOrdersTabProps) {
     const { formatCustom: tzFmt } = useTimezone();
     const { workCenters, attributes } = useData();
     const { hasPermission } = useUser();
@@ -202,10 +203,23 @@ export default function DyeingOrdersTab({ items, recipes, authFetch }: DyeingOrd
     // the fields that describe the vessel are typed once and every selected order's
     // run takes them (POST /dyeing-runs/bulk).
     const [bulkWos, setBulkWos] = useState<any[] | null>(null);
+    // Recipe picker: server-side search over summary rows (recipes number in the
+    // thousands — one per lab dip), primed only while the run modal is open.
+    const { results: recipeResults, onSearch: onSearchRecipes, resolve: resolveRecipe, ensure: ensureRecipes } =
+        useDyeRecipeSearch({ enabled: !!createWo });
     const [selected, setSelected] = useState<Set<string>>(new Set());
     const [chemRows, setChemRows] = useState<ChemRow[]>([]);
     const [showCompleteModal, setShowCompleteModal] = useState<any | null>(null);
     const [createForm, setCreateForm] = useState<CreateForm>(emptyCreateForm);
+    // The picked recipe may never have been on a search page (an edited run, a
+    // server-side shade match), so fetch its label by id and keep it in the options.
+    useEffect(() => { if (createForm.recipe_id) ensureRecipes([createForm.recipe_id]); },
+        [createForm.recipe_id, ensureRecipes]);
+    const recipeOptions = useMemo(() => {
+        const opts = recipeResults.map(recipeToOption);
+        const picked = createForm.recipe_id && resolveRecipe(createForm.recipe_id);
+        return picked && !opts.some(o => o.value === String(picked.id)) ? [recipeToOption(picked), ...opts] : opts;
+    }, [recipeResults, resolveRecipe, createForm.recipe_id]);
     const [completeForm, setCompleteForm] = useState<CompleteForm>(emptyCompleteForm);
     const [saving, setSaving] = useState(false);
     const [errorMsg, setErrorMsg] = useState<string | null>(null);
@@ -439,10 +453,8 @@ export default function DyeingOrdersTab({ items, recipes, authFetch }: DyeingOrd
      *  they are one shade by construction, so any of them answers the same. */
     /** The recipe a bath's card prints: the first of its orders' current runs that
      *  carries one. Null means nothing in the vessel has a recipe to print. */
-    const bathRecipeOf = (wos: any[]) => {
-        const id = wos.map(w => summarize(runsByWo[String(w.id)] || []).current?.recipe_id).find(Boolean);
-        return id ? recipes.find(r => String(r.id) === String(id)) ?? null : null;
-    };
+    const bathRecipeIdOf = (wos: any[]) =>
+        wos.map(w => summarize(runsByWo[String(w.id)] || []).current?.recipe_id).find(Boolean) ?? null;
 
     /** Print one Kartu Celup for the whole vessel. The load is every order's cloth
      *  summed; the water is the vessel's, counted once (a shared bath carries the
@@ -451,8 +463,13 @@ export default function DyeingOrdersTab({ items, recipes, authFetch }: DyeingOrd
      *  g/L grams: the card prints the rates for the floor to weigh, same rule as the
      *  Kartu Kerja. */
     const handlePrintBath = async (wos: any[]) => {
-        const recipe = bathRecipeOf(wos);
-        if (!recipe) return;
+        const recipeId = bathRecipeIdOf(wos);
+        if (!recipeId) return;
+        // The card prints the recipe whole (lines, wash baths, finishing) — fetched here
+        // rather than held for every recipe in the plant.
+        const rres = await authFetch(`${API_BASE}/dye-recipes/${recipeId}`);
+        if (!rres.ok) return;
+        const recipe = await rres.json();
         const runs = wos.map(w => summarize(runsByWo[String(w.id)] || []).current).filter(Boolean);
         const load = wos.reduce((t, w) => {
             const run = summarize(runsByWo[String(w.id)] || []).current;
@@ -807,9 +824,7 @@ export default function DyeingOrdersTab({ items, recipes, authFetch }: DyeingOrd
                                             </thead>
                                             <tbody>
                                                 {sum.runs.map((run: any, ri: number) => {
-                                                    const recipeName = run.recipe_name
-                                                        ?? recipes.find(r => String(r.id) === String(run.recipe_id))?.name
-                                                        ?? null;
+                                                    const recipeName = run.recipe_name ?? null;
                                                     // Gate the action on the SHADE, not on `status` and not on
                                                     // the close: status is derived from the WO too (backend
                                                     // services/dyeing_run_service), and closing the bath is now
@@ -1006,7 +1021,7 @@ export default function DyeingOrdersTab({ items, recipes, authFetch }: DyeingOrd
                                                     </span>
                                                     <span style={{ marginLeft: 'auto' }} />
                                                     {(() => {
-                                                        const printable = !!bathRecipeOf(bathWos);
+                                                        const printable = !!bathRecipeIdOf(bathWos);
                                                         return (
                                                             <XPActionButton
                                                                 icon="bi-printer"
@@ -1124,7 +1139,6 @@ export default function DyeingOrdersTab({ items, recipes, authFetch }: DyeingOrd
                                             title={cur?.recipe_name || undefined}>
                                             <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'block' }}>
                                                 {cur?.recipe_name
-                                                    ?? recipes.find(r => String(r.id) === String(cur?.recipe_id))?.name
                                                     ?? <span style={{ color: '#bbb' }}>—</span>}
                                             </span>
                                         </td>
@@ -1263,16 +1277,14 @@ export default function DyeingOrdersTab({ items, recipes, authFetch }: DyeingOrd
                         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '4px 12px' }}>
                             <label style={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
                                 <span style={{ fontSize: 10, color: '#444' }}>Recipe</span>
-                                <select
-                                    style={{ ...xpInput, height: 22 }}
+                                <SearchableSelect
+                                    size="sm"
+                                    options={recipeOptions}
                                     value={createForm.recipe_id}
-                                    onChange={e => handleCreateFormChange('recipe_id', e.target.value)}
-                                >
-                                    <option value="">-- select recipe --</option>
-                                    {recipes.map(r => (
-                                        <option key={r.id} value={r.id}>{r.name ?? r.recipe_code ?? `Recipe ${r.id}`}</option>
-                                    ))}
-                                </select>
+                                    onChange={v => handleCreateFormChange('recipe_id', v)}
+                                    onSearch={onSearchRecipes}
+                                    placeholder="-- select recipe --"
+                                />
                             </label>
                             {/* Both are per-ORDER, so a shared bath has no single answer
                                 for either: each run takes its own work order's qty. */}

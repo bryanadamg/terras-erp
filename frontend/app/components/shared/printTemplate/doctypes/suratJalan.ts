@@ -72,6 +72,11 @@ export function resolveSuratJalanField(key: string, ctx: PrintContext): Resolved
 const warna = (g: any) => (g.colorCode && g.colorCode !== g.colorName
     ? `${g.colorName || ''} ( ${g.colorCode} )`.trim() : g.colorName || g.colorCode || '');
 
+// Combo and colour in one cell, blanks dropped. A combo item with no colour of its
+// own falls back to its attribute names for WARNA — i.e. the combo again — so a
+// repeat is printed once.
+const comboWarna = (g: any) => [...new Set([g.combo, warna(g)].filter(Boolean))].join(' / ');
+
 const SJ_LINES: RowSourceDef = {
     id: 'sj_lines',
     label: 'Delivery lines (one per item + colour + PO)',
@@ -84,6 +89,7 @@ const SJ_LINES: RowSourceDef = {
         { field: 'size', label: 'SIZE' },
         { field: 'combo', label: 'COMBO' },
         { field: 'warna', label: 'WARNA' },
+        { field: 'combo_warna', label: 'COMBO / WARNA' },
         { field: 'color_name', label: 'Colour' },
         { field: 'color_code', label: 'Colour Code' },
         { field: 'po_ref', label: 'NO PO' },
@@ -100,6 +106,7 @@ const SJ_LINES: RowSourceDef = {
             size: g.size,
             combo: g.combo,
             warna: warna(g),
+            combo_warna: comboWarna(g),
             color_name: g.colorName,
             color_code: g.colorCode,
             po_ref: g.poRef,
@@ -138,7 +145,7 @@ const SJ_CARTONS: RowSourceDef = {
                 const first = i === 0;
                 const row: Record<string, any> = {
                     _key: `${g.key}:${i}`,
-                    name: first ? [g.itemName, g.size, g.combo, g.colorName].filter(Boolean).join(' ') : '',
+                    name: first ? [...new Set([g.itemName, g.size, g.combo, g.colorName].filter(Boolean))].join(' ') : '',
                     dus: first ? (g.cartons.length ? String(g.cartons.length) : '') : '',
                     total: first ? num(g.qty) : '',
                 };

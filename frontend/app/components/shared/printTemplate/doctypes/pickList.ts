@@ -119,6 +119,8 @@ const PLIST_CARTONS: RowSourceDef = {
     columns: [
         { field: 'no', label: 'No' },
         { field: 'carton', label: 'No. Koli / Carton' },
+        { field: 'location', label: 'Lokasi / Location (full path)' },
+        { field: 'location_code', label: 'Lokasi / Location (code)' },
         { field: 'item_code', label: 'Barang / Item' },
         { field: 'item_name', label: 'Item name' },
         { field: 'size', label: 'Size' },
@@ -135,6 +137,8 @@ const PLIST_CARTONS: RowSourceDef = {
             _key: l.id ?? i,
             no: String(l.package_no ?? i + 1),
             carton: l.batch_number || null,
+            location: l.location_path || l.location_code || null,
+            location_code: l.location_code || null,
             item_code: l.item_code || null,
             item_name: l.item_name || null,
             size: lotSizeText(l),
@@ -166,7 +170,11 @@ export function buildPickListContext({
         try { return tzFormatCustom(iso, { day: '2-digit', month: '2-digit', year: 'numeric' }, 'en-GB').replace(/\//g, '.'); } catch { return ''; }
     };
     const lines: any[] = p.lines || [];
-    const cartons = lines.filter((l: any) => l.batch_id);
+    // Walk order: grouped by where the box sits, so the picker clears one rack
+    // before the next instead of zig-zagging in SO-line order. Stable sort, so
+    // cartons within one location keep the server's package order.
+    const cartons = lines.filter((l: any) => l.batch_id)
+        .sort((a: any, b: any) => (a.location_path || '\uffff').localeCompare(b.location_path || '\uffff'));
     // What actually ships, per item and size — an order running several sizes of
     // one article ships them as separate quantities, so they never sum together.
     // Summed in the alt unit while every line agrees on it; one line without a

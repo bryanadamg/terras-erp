@@ -24,6 +24,7 @@ const OFF = '□';
 
 export const SR_FIELDS: FieldDef[] = [
     { key: 'sr.code', label: 'Kode SPK', kind: 'text', group: 'Sample' },
+    { key: 'sr.barcode', label: 'Barcode (Kode SPK, scan into search)', kind: 'barcode', group: 'Sample' },
     { key: 'sr.request_date', label: 'Tgl Turun SPK', kind: 'date', group: 'Sample' },
     { key: 'sr.project', label: 'Project', kind: 'text', group: 'Sample' },
     { key: 'sr.customer_name', label: 'Nama Customer', kind: 'text', group: 'Sample' },
@@ -86,6 +87,7 @@ export function resolveSampleRequestField(key: string, ctx: PrintContext): Resol
 
     switch (key) {
         case 'sr.code': return txt(s.code);
+        case 'sr.barcode': return txt(s.code);
         case 'sr.request_date': return txt(d.requestDate);
         case 'sr.project': return txt(s.project);
         case 'sr.customer_name': return txt(d.customerName);

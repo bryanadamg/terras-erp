@@ -45,7 +45,10 @@ const BANDS: Band[] = [
                 text('MATERIAL PULL SHEET', { fontSize: 16, bold: true, align: 'center', letterSpacing: 1 }),
                 f('pr.date', { fontSize: 8, color: '#333', align: 'center', prefix: 'Tanggal: ' }),
             ], { stackGap: 2 }),
-            { ...f('pr.code', { fontSize: 8, bold: true, mono: true, align: 'right' }), col: 9, span: 4, row: 1 },
+            stack(9, 4, [
+                f('pr.barcode', { align: 'right', imageHeight: 34, hideWhenEmpty: true }),
+                f('pr.code', { fontSize: 8, bold: true, mono: true, align: 'right' }),
+            ], { align: 'right' }),
         ],
     },
     {

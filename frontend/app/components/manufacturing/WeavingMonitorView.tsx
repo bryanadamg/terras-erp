@@ -15,6 +15,7 @@ import {
 } from './machineMonitor/MonitorParts';
 import { MonitorShell, MonitorGridSkeleton } from './machineMonitor/MonitorShell';
 import { API_BASE } from '../shared/apiBase';
+import { saveResponse } from '../shared/download';
 
 // Measurement accents come from the shared five-family palette (DESIGN.md's one
 // semantic layer) — never a per-view hex.
@@ -50,6 +51,7 @@ export default function WeavingMonitorView() {
     const canManage = hasPermission('calendar.edit');
     // Prep steps are floor dispatch decisions, same gate as starting a run.
     const canPrep = hasPermission('weaving_monitor.start');
+    const canExport = hasPermission('weaving_monitor.export');
 
 
     const [data, setData] = useState<any>(null);
@@ -89,6 +91,22 @@ export default function WeavingMonitorView() {
         const unsubscribe = subscribeLiveEvents(['weaving', 'production'], () => load());
         return unsubscribe;
     }, [subscribeLiveEvents, load]);
+
+    // Server-built from the same payload as the cards, narrowed like the screen.
+    const [exporting, setExporting] = useState(false);
+    const exportExcel = async () => {
+        setExporting(true);
+        try {
+            const p = new URLSearchParams();
+            if (groupFilter) p.set('group_id', groupFilter);
+            if (runningOnly) p.set('running_only', 'true');
+            const res = await authFetch(`${API_BASE}/weaving/monitor/export?${p.toString()}`);
+            if (!res.ok) { showToast('Export failed', 'danger'); return; }
+            await saveResponse(res, 'weaving-monitor.xlsx');
+        } finally {
+            setExporting(false);
+        }
+    };
 
     const closeModal = () => { setSelected(null); load(); };
     const machines: any[] = data?.machines || [];
@@ -520,6 +538,10 @@ export default function WeavingMonitorView() {
                 loading={loading}
                 hasMachines={machines.length > 0}
                 chipBar={chipBar}
+                actions={canExport && machines.length > 0 ? (
+                    <XPActionButton tone="neutral" icon={exporting ? 'bi-hourglass-split' : 'bi-file-earmark-excel'}
+                        title="Export Excel" onClick={exportExcel} disabled={exporting} />
+                ) : null}
             >
                 {body}
             </MonitorShell>

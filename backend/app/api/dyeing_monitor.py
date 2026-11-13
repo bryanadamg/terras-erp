@@ -5,7 +5,7 @@ branch inside `api/weaving.py`: a loom is measured in kg against a calendar of
 working days, a dye batch against the clock the floor stamps by hand -- see the
 header of `services/dyeing_monitor_service.py`.
 """
-from datetime import datetime, timezone
+from datetime import date, datetime, time, timedelta, timezone
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query
@@ -26,6 +26,7 @@ from app.core.pagination import PageParams, PageWindow
 from app.schemas import DyeingRunMonitorUpdate
 from app.services import audit_service, dyeing_monitor_service, mo_variant_service, staging_service, work_center_service
 from app.core.ws_manager import manager
+from app.services.xlsx_service import xlsx_response, zone_or_400, local_cell
 
 router = APIRouter()
 
@@ -135,6 +136,9 @@ async def dyeing_monitor(
     clock: str | None = Query(None, description="PENDING | IN_PROGRESS | COMPLETED | NO_RUN"),
     search: str | None = Query(None),
     work_center_id: UUID | None = Query(None, description="A vessel, or a GROUP/TYPE node for every vessel under it"),
+    start_date: date | None = Query(None, description="Batch date on or after this day (in `tz`)"),
+    end_date: date | None = Query(None, description="Batch date on or before this day (in `tz`)"),
+    tz: str = Query("Asia/Jakarta"),
     window: PageWindow = Depends(PageParams(default_size=50)),
     db: AsyncSession = Depends(get_async_db),
     current_user: User = Depends(require_any_permission("dyeing_monitor.view", "work_order.view")),
@@ -156,6 +160,20 @@ async def dyeing_monitor(
         if work_center_id else None
     )
 
+    # A batch's date is when it last moved: completed, else started, else set up.
+    # The day bounds are the viewer's local midnights, since that is the calendar
+    # they picked the dates on.
+    zone = zone_or_400(tz)
+    since = datetime.combine(start_date, time.min, zone) if start_date else None
+    until = datetime.combine(end_date + timedelta(days=1), time.min, zone) if end_date else None
+
+    def _dated(q, when):
+        if since:
+            q = q.where(when >= since)
+        if until:
+            q = q.where(when < until)
+        return q
+
     def _searched(q):
         if wc_ids:
             q = q.where(WorkOrder.work_center_id.in_(wc_ids))
@@ -167,7 +185,7 @@ async def dyeing_monitor(
             ManufacturingOrder.code.ilike(like), Item.code.ilike(like), Item.name.ilike(like),
         ))
 
-    run_q = _searched(
+    run_q = _dated(_searched(
         select(
             literal("run").label("kind"),
             DyeingRun.id.label("id"),
@@ -198,7 +216,7 @@ async def dyeing_monitor(
             and_(DyeingRun.started_at.isnot(None), DyeingRun.completed_at.is_(None)),
             DyeingRun.completed_at.isnot(None),
         ))
-    )
+    ), func.coalesce(DyeingRun.completed_at, DyeingRun.started_at, DyeingRun.created_at))
 
     # Dyeing WOs closed whose bath was never clocked: no started run, and no run
     # still listed as open above.
@@ -211,7 +229,7 @@ async def dyeing_monitor(
         ))
         .exists()
     )
-    wo_q = _searched(
+    wo_q = _dated(_searched(
         select(
             literal("wo").label("kind"),
             WorkOrder.id.label("id"),
@@ -226,7 +244,7 @@ async def dyeing_monitor(
         .where(func.upper(WorkCenter.center_type).in_(svc.DYEING_CENTER_TYPES))
         .where(WorkOrder.status == "COMPLETED")
         .where(~has_listed_run)
-    )
+    ), func.timezone("UTC", func.coalesce(WorkOrder.actual_end_date, WorkOrder.created_at)))
 
     base = union_all(run_q, wo_q).subquery()
 
@@ -267,6 +285,54 @@ async def dyeing_monitor(
 
     items = [by_key[k] for k in keys if k in by_key]
     return window.envelope(items, total, counts=counts, needs_setup=needs_setup)
+
+
+_CLOCK_LABEL = {svc.CLOCK_WAITING: "Loaded", svc.CLOCK_RUNNING: "Running", svc.CLOCK_DONE: "Completed", CLOCK_NO_RUN: "No bath run"}
+
+
+@router.get("/dyeing/monitor/export")
+async def export_dyeing_monitor(
+    clock: str | None = Query(None),
+    search: str | None = Query(None),
+    work_center_id: UUID | None = Query(None),
+    start_date: date | None = Query(None),
+    end_date: date | None = Query(None),
+    tz: str = Query("Asia/Jakarta"),
+    db: AsyncSession = Depends(get_async_db),
+    current_user: User = Depends(require_permission("dyeing_monitor.export")),
+):
+    """The monitor as an .xlsx — every batch the filters match, not just the page.
+
+    Reuses the list endpoint uncapped so the file can never disagree with the grid.
+    """
+    zone = zone_or_400(tz)
+    data = await dyeing_monitor(
+        clock=clock, search=search, work_center_id=work_center_id,
+        start_date=start_date, end_date=end_date, tz=tz,
+        window=PageWindow(page=1, size=0, offset=0, limit=None),
+        db=db, current_user=current_user,
+    )
+
+    def _row(r: dict) -> list:
+        colour = " ".join(x for x in (r["color_code"], r["color_name"]) if x) or r["color_label"] or r["labdip_variant_code"]
+        return [
+            r["mo_code"], r["wo_code"], r["run_number"], r["item_code"], r["item_name"],
+            r["combo_label"], r["size_label"], colour, r["work_center_code"], _CLOCK_LABEL.get(r["clock"], r["clock"]),
+            r["yards_per_min"], r["lines"], r["rate_yd_per_min"], r["run_minutes"], r["expected_minutes"],
+            r["time_qty"], r["target_qty"], r["item_uom"], r["progress_pct"],
+            local_cell(r["color_matching_at"], zone), local_cell(r["started_at"], zone), local_cell(r["completed_at"], zone),
+        ]
+
+    return xlsx_response(
+        "Dyeing Monitor",
+        [
+            "MO", "Work Order", "Run", "Item Code", "Item Name", "Combo", "Size", "Colour", "Vessel", "Status",
+            "Speed (yd/min)", "Ropes", "Rate (yd/min)", "Run (min)", "Expected (min)",
+            "Output", "Target", "UOM", "Output %", "Color Matching", "Start", "Complete",
+        ],
+        (_row(r) for r in data["items"]),
+        f"dyeing-monitor_{start_date or 'all'}_{end_date or 'now'}",
+    )
 
 
 @router.patch("/dyeing-runs/{run_id}/rate")

@@ -310,3 +310,106 @@ async def get_delivery_outlook(
         "ready_count": sum(1 for r in rows if r["pct"] >= 100),
         "at_risk_count": sum(1 for r in rows if r["short_lines"] > 0),
     }
+
+
+@router.get("/floor")
+async def get_floor(
+    db: AsyncSession = Depends(get_async_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Live shape of the mill for the dashboard's pixel floor plan.
+
+    `types`: every work-center TYPE that has machines, each machine flagged
+    `running`. A machine runs when something is actually being worked on it: an
+    IN_PROGRESS work order, a RUNNING loom run, an IN_PROGRESS dyeing/setting run
+    (their machine is the WO's) or an IN_PROGRESS packing order.
+    `stores`: top-level warehouses holding stock, rolled up from zones/bins,
+    with the TYPEs whose output lands there (the frontend picks a sprite from it).
+    Blocks are permission-gated like /summary; the route is open to all.
+    """
+    from app.models.routing import WorkCenter
+    from app.models.work_order import WorkOrder
+    from app.models.weaving import WeavingRun
+    from app.models.dyeing_setting import DyeingRun, SettingRun
+    from app.models.packing import PackingOrder
+
+    out: dict = {"types": [], "stores": []}
+    see_mfg = can(current_user, *MFG_PERMS)
+    see_stock = can(current_user, *STOCK_PERMS)
+
+    wcs = (await db.execute(select(
+        WorkCenter.id, WorkCenter.code, WorkCenter.name, WorkCenter.center_type,
+        WorkCenter.node_type, WorkCenter.parent_id, WorkCenter.output_location_id,
+    ))).all()
+    by_id = {w.id: w for w in wcs}
+
+    def type_of(w):
+        seen = set()
+        while w is not None and (w.node_type or "").upper() != "TYPE" and w.id not in seen:
+            seen.add(w.id)
+            w = by_id.get(w.parent_id)
+        return w if w is not None and (w.node_type or "").upper() == "TYPE" else None
+
+    if see_mfg:
+        running = set()
+        for q in (
+            select(WorkOrder.work_center_id).where(WorkOrder.status == "IN_PROGRESS"),
+            select(WeavingRun.work_center_id).where(WeavingRun.status == "RUNNING"),
+            select(WorkOrder.work_center_id).join(DyeingRun, DyeingRun.work_order_id == WorkOrder.id)
+                .where(DyeingRun.status == "IN_PROGRESS"),
+            select(WorkOrder.work_center_id).join(SettingRun, SettingRun.work_order_id == WorkOrder.id)
+                .where(SettingRun.status == "IN_PROGRESS"),
+            select(PackingOrder.work_center_id).where(PackingOrder.status == "IN_PROGRESS"),
+        ):
+            running.update(r for r in (await db.execute(q.distinct())).scalars() if r)
+
+        types: dict = {}
+        for w in sorted(wcs, key=lambda w: w.code):
+            if (w.node_type or "").upper() != "MACHINE":
+                continue
+            t = type_of(w)
+            if t is None:
+                continue
+            types.setdefault(t.id, {
+                "id": str(t.id), "code": t.code, "name": t.name, "center_type": t.center_type, "machines": [],
+            })["machines"].append({"id": str(w.id), "code": w.code, "running": w.id in running})
+        out["types"] = sorted(types.values(), key=lambda t: t["code"])
+
+    if see_stock:
+        locs = {l.id: l for l in (await db.execute(
+            select(Location.id, Location.name, Location.system_code, Location.parent_id, Location.is_quarantine)
+        )).all()}
+
+        def root_of(lid):
+            seen = set()
+            loc = locs.get(lid)
+            while loc is not None and loc.parent_id in locs and loc.id not in seen:
+                seen.add(loc.id)
+                loc = locs[loc.parent_id]
+            return loc
+
+        stores: dict = {}
+        rows = (await db.execute(
+            select(StockBalance.location_id, Item.uom, func.count(), func.sum(StockBalance.qty))
+            .join(Item, Item.id == StockBalance.item_id)
+            .where(StockBalance.qty > 0)
+            .group_by(StockBalance.location_id, Item.uom)
+        )).all()
+        for loc_id, uom, lines, qty in rows:
+            root = root_of(loc_id)
+            if root is None:
+                continue
+            s = stores.setdefault(root.id, {
+                "id": str(root.id), "name": root.name, "system_code": root.system_code,
+                "is_quarantine": root.is_quarantine, "lines": 0, "qty_by_uom": {}, "fed_by": [],
+            })
+            s["lines"] += lines
+            s["qty_by_uom"][uom or ""] = s["qty_by_uom"].get(uom or "", 0.0) + float(qty or 0)
+        for w in wcs:
+            if (w.node_type or "").upper() == "TYPE" and w.output_location_id:
+                root = root_of(w.output_location_id)
+                if root is not None and root.id in stores:
+                    stores[root.id]["fed_by"].append(w.center_type)
+        out["stores"] = sorted(stores.values(), key=lambda s: -s["lines"])
+
+    return out

@@ -508,10 +508,12 @@ def seed_rbac(db):
             # Weaving Monitor
             ("weaving_monitor.start", "Start Weaving Runs"),
             ("weaving_monitor.stop", "Stop Weaving Runs"),
+            ("weaving_monitor.export", "Export Weaving Monitor Excel"),
             ("weaving_monitor.view", "View Weaving Monitor"),
             # Dyeing Monitor. View only: a dye batch is started and completed from
             # the Dyeing Orders tab under work_order.log, so this grid adds no
             # lifecycle verbs of its own.
+            ("dyeing_monitor.export", "Export Dyeing Monitor Excel"),
             ("dyeing_monitor.view", "View Dyeing Monitor"),
             # Calender
             ("calendar.edit", "Edit Work Center Calendars"),
@@ -547,6 +549,7 @@ def seed_rbac(db):
             ("yarn_lab_dip.view", "View Yarn Lab Dips"),
             # Platform
             ("stock_ledger.print", "Print Stock Ledger"),
+            ("stock_ledger.export", "Export Stock Ledger Excel"),
             ("stock_ledger.view", "View Stock Ledger"),
             # Production Output report — its own grant, so the shop-floor
             # output/reject numbers are never implied by anything else. export is
@@ -588,7 +591,7 @@ def seed_rbac(db):
                 "purchase_order.create", "purchase_order.edit", "purchase_order.delete",
                 "purchase_order.receive_goods", "purchase_order.print", "purchase_order.view", "purchase_order.close",
                 "supplier.create", "supplier.edit", "supplier.delete", "supplier.view",
-                "stock_ledger.print", "stock_ledger.view",
+                "stock_ledger.print", "stock_ledger.export", "stock_ledger.view",
                 "production_output.view", "production_output.export",
             ],
             "Production Manager": [
@@ -600,8 +603,8 @@ def seed_rbac(db):
                 "manufacturing_order.print", "manufacturing_order.view", "manufacturing_order.close",
                 "work_order.create", "work_order.log", "work_order.edit", "work_order.delete",
                 "work_order.print_card", "work_order.print_label", "work_order.view", "work_order.stage",
-                "weaving_monitor.start", "weaving_monitor.stop", "weaving_monitor.view",
-                "dyeing_monitor.view",
+                "weaving_monitor.start", "weaving_monitor.stop", "weaving_monitor.export", "weaving_monitor.view",
+                "dyeing_monitor.export", "dyeing_monitor.view",
                 "calendar.edit", "calendar.view", "beam.unmount", "beam.view",
                 "dye_recipe.create", "dye_recipe.edit", "dye_recipe.delete", "dye_recipe.print", "dye_recipe.view",
                 "dye_order.view", "setting_order.view",

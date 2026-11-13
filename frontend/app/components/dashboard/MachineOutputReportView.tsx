@@ -30,7 +30,7 @@ import { useUser } from '../../context/UserContext';
 import { useToast } from '../shared/Toast';
 import { saveResponse } from '../shared/download';
 import {
-    xpFont, xpBtn, xpInput, xpSep, TableBlockSkeleton, XPEmptyState,
+    xpFont, xpBtn, xpInput, xpSelect, xpSep, TableBlockSkeleton, XPEmptyState,
     useSortable, WorkCenterChip, StatusChip, ExpandedRowPanel, ProgressBar, rowStateBg, XP_BTN,
 } from '../shared/xpTheme';
 import TreeSelect, { TreeSelectOption } from '../shared/TreeSelect';
@@ -99,7 +99,7 @@ export default function MachineOutputReportView() {
     const [endDate, setEndDate] = useState(() => fmtDate(new Date()));
     const [scope, setScope] = useState('');            // '' | 'grp:<id>' | 'wc:<id>'
     const [mode, setMode] = useState<Mode>('machine');
-    const [completedOnly, setCompletedOnly] = useState(false);
+    const [woStatus, setWoStatus] = useState<'' | 'IN_PROGRESS' | 'COMPLETED'>('');
     const [rejectsOnly, setRejectsOnly] = useState(false);
     const [hideIdle, setHideIdle] = useState(true);
     const [expanded, setExpanded] = useState<string | null>(null);
@@ -141,7 +141,7 @@ export default function MachineOutputReportView() {
                 else if (scope.startsWith('grp:')) p.set('group_id', scope.slice(4));
                 p.set('group_by', mode);
                 p.set('include_idle', hideIdle && mode !== 'wo' ? 'false' : 'true');
-                if (mode === 'wo' && completedOnly) p.set('wo_status', 'COMPLETED');
+                if (mode === 'wo' && woStatus) p.set('wo_status', woStatus);
                 url = `${API_BASE}/reports/machine-output?${p.toString()}`;
             }
 
@@ -157,7 +157,7 @@ export default function MachineOutputReportView() {
         } finally {
             setLoading(false);
         }
-    }, [API_BASE, authFetch, startDate, endDate, scope, mode, isPackingSource, isOperator, isPrep, hideIdle, completedOnly]);
+    }, [API_BASE, authFetch, startDate, endDate, scope, mode, isPackingSource, isOperator, isPrep, hideIdle, woStatus]);
 
     useEffect(() => { fetchReport(); }, [fetchReport]);
     // A logged completion, reject or WO status change broadcasts 'production' — reload
@@ -970,8 +970,12 @@ export default function MachineOutputReportView() {
                             <div style={xpSep} />
                             {isWoMode && (
                                 <label style={{ ...lbl, display: 'flex', alignItems: 'center', gap: 4, whiteSpace: 'nowrap' }}>
-                                    <input type="checkbox" checked={completedOnly} onChange={e => setCompletedOnly(e.target.checked)} />
-                                    Completed WOs only
+                                    Status:
+                                    <select value={woStatus} onChange={e => setWoStatus(e.target.value as typeof woStatus)} style={xpSelect({ width: 110 })}>
+                                        <option value="">All</option>
+                                        <option value="IN_PROGRESS">In progress</option>
+                                        <option value="COMPLETED">Completed</option>
+                                    </select>
                                 </label>
                             )}
                             {isMachineLevel && (

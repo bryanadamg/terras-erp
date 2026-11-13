@@ -436,6 +436,30 @@ async def relocate_batch_stock(db: AsyncSession, *, item_id, batch_id, location_
     return moved
 
 
+async def get_stock_balances_lean(db: AsyncSession, item_ids: list | None = None) -> list[dict]:
+    """The plant-wide availability feed: only what its readers use (MO/PR material
+    checks, the dashboard total, mobile stock) — item, location, qty, lot key and
+    variant. Plain columns, no ORM rows or display joins, so it stays small and quick
+    with tens of thousands of lots on hand. Same rows as get_all_stock_balances
+    minus the packaging-count-only ones (qty 0), which none of those readers count."""
+    from app.models.stock_balance import stock_balance_values
+    attrs = func.array_remove(func.array_agg(stock_balance_values.c.attribute_value_id), None)
+    q = (
+        select(StockBalance.item_id, StockBalance.location_id, StockBalance.qty, StockBalance.batch_key, attrs)
+        .outerjoin(stock_balance_values, stock_balance_values.c.balance_id == StockBalance.id)
+        .filter(StockBalance.qty != 0)
+        .group_by(StockBalance.id)
+    )
+    if item_ids:
+        q = q.filter(StockBalance.item_id.in_(item_ids))
+    return [
+        # str(): asyncpg hands array elements back as its own UUID type, which orjson won't encode
+        {"item_id": str(i), "location_id": str(l), "qty": float(qty), "batch_key": bk,
+         "attribute_value_ids": [str(v) for v in (av or [])]}
+        for i, l, qty, bk, av in (await db.execute(q)).all()
+    ]
+
+
 async def get_all_stock_balances(db: AsyncSession, user=None, item_ids: list | None = None):
     query = select(StockBalance)
     if item_ids:

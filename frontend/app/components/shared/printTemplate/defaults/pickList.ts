@@ -77,15 +77,17 @@ const BANDS: Band[] = [
         hideWhenEmpty: false, hideBlankFooter: true, marginBottom: 10,
         emptyMessage: 'Belum ada koli / no cartons allocated',
         columns: [
-            { field: 'no', label: 'No', width: '7%', align: 'center' },
-            { field: 'carton', label: 'No. Koli / Carton', width: '19%', mono: true },
-            { field: 'item_code', label: 'Barang / Item', width: '13%' },
-            { field: 'size', label: 'Size', width: '7%', align: 'center', emptyText: '' },
-            { field: 'warna', label: 'Warna', width: '11%', emptyText: '' },
-            { field: 'combo', label: 'Combo', width: '8%', emptyText: '' },
+            { field: 'no', label: 'No', width: '5%', align: 'center' },
+            { field: 'carton', label: 'No. Koli / Carton', width: '16%', mono: true },
+            // Where to walk to — the checklist is sorted by it.
+            { field: 'location', label: 'Lokasi / Location', width: '13%', emptyText: '' },
+            { field: 'item_code', label: 'Barang / Item', width: '11%' },
+            { field: 'size', label: 'Size', width: '6%', align: 'center', emptyText: '' },
+            { field: 'warna', label: 'Warna', width: '9%', emptyText: '' },
+            { field: 'combo', label: 'Combo', width: '7%', emptyText: '' },
             { field: 'packaging', label: 'Kemasan / Packaging', width: '8%' },
             {
-                field: 'qty', label: 'Qty', width: '12%', align: 'right', headerAlign: 'center',
+                field: 'qty', label: 'Qty', width: '10%', align: 'right', headerAlign: 'center',
                 footer: { field: 'plist.gross_total_label', bold: true, align: 'right' },
             },
             // The figure the loader and the carrier both check the load against.

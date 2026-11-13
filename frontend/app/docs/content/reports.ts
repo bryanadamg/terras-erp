@@ -64,7 +64,7 @@ export const reportsPage: DocPage = {
             ],
             callout: {
                 type: 'tip',
-                text: 'Print (printer icon) prints the current filter and sort, up to 1,000 movements. The title says "N of total" when the list was cut, so narrow the dates if you need it complete. Untick the columns you don\'t want, and your choice is remembered. The layout itself is edited in Administration → Print Layouts.',
+                text: 'Print (printer icon) prints the current filter and sort, up to 1,000 movements. The title says "N of total" when the list was cut, so narrow the dates if you need it complete. Untick the columns you don\'t want, and your choice is remembered. The layout itself is edited in Administration → Print Layouts. Export Excel (green sheet icon) downloads every movement matching the current filter, not just the page, with times in your display timezone.',
             },
         },
         {
@@ -75,7 +75,7 @@ export const reportsPage: DocPage = {
                 rows: [
                     ['**Per Machine**', 'Machine: type, output, share bar, QC reject, reject %, yield, number of WOs and logs, last log.'],
                     ['**Per Group**', 'Machine group. Each machine counts toward its group, or toward its type when it sits directly under the type. Expanding a row lists its machines.'],
-                    ['**Per Work Order**', 'Work order (the result sheet): item, machine, status, target, hasil (good output), QC reject, reject %. Tick "Completed WOs only" for finished orders.'],
+                    ['**Per Work Order**', 'Work order (the result sheet): item, machine, status, target, hasil (good output), QC reject, reject %. Pick All, In progress or Completed in the Status box to narrow by work order status.'],
                     ['**Packing**', 'Packing order: item, status, target, output, cartons (rejected cartons shown as -N), QC reject.'],
                     ['**Per Packer**', 'The user account that logged the packing: output, cartons, days active, average per day, orders. Logs with only a typed name and no account are labelled as such and counted in the "No account" tile.'],
                 ],

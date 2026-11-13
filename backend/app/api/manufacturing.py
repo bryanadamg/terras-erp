@@ -257,6 +257,15 @@ async def load_mo_tree(db: AsyncSession, root_ids: list) -> dict:
     )
     mo_map = {mo.id: mo for mo in result.unique().scalars().all()}
 
+    # The run's code for the SPK print — one small lookup, not the PR relationship
+    # (its bom_entries/manufacturing_orders would ride along).
+    pr_ids = {mo.production_run_id for mo in mo_map.values() if mo.production_run_id}
+    pr_codes = dict((await db.execute(
+        select(ProductionRun.id, ProductionRun.code).where(ProductionRun.id.in_(pr_ids))
+    )).all()) if pr_ids else {}
+    for mo in mo_map.values():
+        mo.production_run_code = pr_codes.get(mo.production_run_id)
+
     # Index children by parent
     children_by_parent: dict = defaultdict(list)
     for mo in mo_map.values():
@@ -821,11 +830,18 @@ async def list_work_orders_flat(
             conditions.append(WorkOrderModel.work_center_id.in_(wc_subq))
     if search and search.strip():
         like = f"%{search.strip()}%"
-        conditions.append(or_(
+        terms = [
             WorkOrderModel.name.ilike(like),
             WorkOrderModel.code.ilike(like),
             ManufacturingOrder.code.ilike(like),
-        ))
+        ]
+        # A work order card's QR holds the WO's id, so a scanner typing it into
+        # the search box must land on that WO.
+        try:
+            terms.append(WorkOrderModel.id == uuid.UUID(search.strip()))
+        except ValueError:
+            pass
+        conditions.append(or_(*terms))
 
     base_join = select(WorkOrderModel).join(
         ManufacturingOrder, WorkOrderModel.manufacturing_order_id == ManufacturingOrder.id

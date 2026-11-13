@@ -16,6 +16,7 @@ export const PR_PULL_SHEET_DOC = 'pr_pull_sheet';
 
 export const PR_FIELDS: FieldDef[] = [
     { key: 'pr.code', label: 'Production Run No', kind: 'text', group: 'Production Run', mono: true },
+    { key: 'pr.barcode', label: 'Barcode (PR code, scan into search)', kind: 'barcode', group: 'Production Run' },
     { key: 'pr.products', label: 'Production Run (BOM items)', kind: 'text', group: 'Production Run' },
     { key: 'pr.sales_order', label: 'Sales Order (empty without one)', kind: 'text', group: 'Production Run' },
     { key: 'pr.customer', label: 'Customer (from the Sales Order)', kind: 'text', group: 'Production Run' },
@@ -39,6 +40,7 @@ export function resolvePRPullSheetField(key: string, ctx: PrintContext): Resolve
     const hasSO = !!pr.sales_order_id;
     switch (key) {
         case 'pr.code': return txt(pr.code);
+        case 'pr.barcode': return txt(pr.code);
         case 'pr.products': return txt(d.products);
         case 'pr.sales_order': return hasSO ? { text: pr.sales_order_code || '—', empty: false } : txt('');
         case 'pr.customer': return txt(pr.so_customer_name);
