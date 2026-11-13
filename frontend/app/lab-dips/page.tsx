@@ -29,7 +29,6 @@ export default function LabDipsPage() {
         router.replace('/lab-dips');
     }, [rawOpen]); // eslint-disable-line react-hooks/exhaustive-deps
 
-    const [recipes, setRecipes] = useState<any[]>([]);
     const [colors, setColors] = useState<any[]>([]);
     // Finished-goods item picker: shared server-side typeahead (scales past any client cap).
     const { results: items, onSearch: handleItemSearch } = useFinishedGoodsSearch();
@@ -38,18 +37,6 @@ export default function LabDipsPage() {
     // and server-filtered, and the filter state that drives those params lives there.
     // The view also refetches after each mutation below, so these handlers only own the
     // call + the toast.
-    const fetchRecipes = useCallback(async () => {
-        try {
-            // Picker feed, not a list — the approved-recipe select must offer every
-            // recipe, so take the uncapped set (`size=0`) rather than page 1.
-            const res = await authFetch(`${API_BASE}/dye-recipes?size=0`);
-            if (res.ok) {
-                const data = await res.json();
-                setRecipes(Array.isArray(data) ? data : (data.items ?? []));
-            }
-        } catch { /* silent */ }
-    }, [authFetch, API_BASE]);
-
     const fetchColors = useCallback(async () => {
         try {
             // Active colors for the dip picker. Capped; a true 30k library needs a
@@ -62,7 +49,7 @@ export default function LabDipsPage() {
         } catch { /* silent */ }
     }, [authFetch, API_BASE]);
 
-    useEffect(() => { fetchRecipes(); fetchColors(); }, [fetchRecipes, fetchColors]);
+    useEffect(() => { fetchColors(); }, [fetchColors]);
 
     const handleCreate = async (payload: any) => {
         const res = await authFetch(`${API_BASE}/lab-dips`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
@@ -122,7 +109,6 @@ export default function LabDipsPage() {
             customers={customers}
             items={items}
             onSearchItems={handleItemSearch}
-            recipes={recipes}
             attributes={attributes || []}
             colors={colors}
             onCreate={handleCreate}

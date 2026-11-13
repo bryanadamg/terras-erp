@@ -1,5 +1,5 @@
 'use client';
-import React, { useState, useMemo, useRef } from 'react';
+import React, { useState, useMemo, useRef, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useToast } from '../shared/Toast';
 import { useTimezone } from '../../context/TimezoneContext';
@@ -14,6 +14,7 @@ import { SearchField, FilterChipBar, ToolbarCount, ToolbarButton, viewShellStyle
 import RequestDetailPanel, { getStatusStripe } from '../shared/RequestDetailPanel';
 import { lvThead, ExpanderCell, LV_EXPANDER_COL_W, SortableTh, lvTh, lvTdRuled, lvZebra, TableEmpty, lvBtn, lvInput, ResizableTable } from '../shared/listViewTheme';
 import { API_BASE, STATIC_BASE } from '../shared/apiBase';
+import { useDyeRecipeSearch, recipeToOption } from '../shared/useEntitySearch';
 
 // ── XP style constants (consistent with DyeingSettingView) ──────────────────
 const modernFont = 'system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif';
@@ -113,7 +114,7 @@ const emptyForm = () => ({
  * item scope and the yarn `kind` on create) and this view refetches after each one.
  */
 export default function LabDipRequestView({
-    customers, items, onSearchItems, recipes, attributes,
+    customers, items, onSearchItems, attributes,
     onCreate, onEdit, onUpdateStatus, onUpdateItemStatus, onDelete,
     openRequestId, kind = 'FG',
 }: any) {
@@ -306,9 +307,27 @@ export default function LabDipRequestView({
         (items || []).map((it: any) => ({ value: it.id, label: itemLabel(it) })),
     [items]);
 
-    const recipeOptions = useMemo(() =>
-        (recipes || []).map((r: any) => ({ value: r.id, label: r.code ? `${r.code} — ${r.name}` : r.name })),
-    [recipes]);
+    // Approved-recipe picker + labels: server-side search over recipe summaries
+    // (one recipe per lab dip, so thousands) instead of a page-load feed of them all.
+    const { results: recipeResults, onSearch: onSearchRecipes, resolve: resolveRecipe, ensure: ensureRecipes } =
+        useDyeRecipeSearch({ enabled: isModalOpen });
+    const recipeLabelOf = (id: any) => {
+        const r = id ? resolveRecipe(String(id)) : null;
+        return r ? (r.code ? `${r.code} — ${r.name}` : r.name) : undefined;
+    };
+    // Labels the screen shows without a search: the expanded rows' approved recipes
+    // and the one already linked on the form being edited.
+    useEffect(() => {
+        ensureRecipes([
+            ...(labDips || []).filter((r: any) => expandedIds.has(r.id)).map((r: any) => r.approved_recipe_id),
+            form.approved_recipe_id,
+        ]);
+    }, [labDips, expandedIds, form.approved_recipe_id, ensureRecipes]);
+    const recipeOptions = useMemo(() => {
+        const opts = recipeResults.map(recipeToOption);
+        const picked = form.approved_recipe_id && resolveRecipe(String(form.approved_recipe_id));
+        return picked && !opts.some(o => o.value === String(picked.id)) ? [recipeToOption(picked), ...opts] : opts;
+    }, [recipeResults, resolveRecipe, form.approved_recipe_id]);
 
     const customerOptions = useMemo(() =>
         [{ value: '', label: 'No Customer (Internal)' }, ...(customers || []).map((c: any) => ({ value: c.id, label: c.name }))],
@@ -595,7 +614,7 @@ export default function LabDipRequestView({
                                     </tr>
                                     {expandedIds.has(r.id) && (() => {
                                         const fmt = (d: any) => d ? tzDate(d) : '—';
-                                        const recipeLabel = recipeOptions.find((o: any) => o.value === r.approved_recipe_id)?.label;
+                                        const recipeLabel = recipeLabelOf(r.approved_recipe_id);
                                         // Progress/Reject toggle: clicking the active one reverts to PENDING.
                                         // APPROVED/REJECTED are locked — guarded here and on the server. APPROVED's
                                         // one exit is Rejected (revoke), routed through openReject.
@@ -925,7 +944,7 @@ export default function LabDipRequestView({
                     <FormSection title="Approved Recipe & Notes">
                             <div style={{ marginBottom: 8 }}>
                                 <label style={xpLbl()}>Approved Dye Recipe (Optional)</label>
-                                <SearchableSelect options={[{ value: '', label: 'Not yet linked' }, ...recipeOptions]} value={form.approved_recipe_id} onChange={(v: string) => setField('approved_recipe_id', v)} placeholder="Link approved recipe…" />
+                                <SearchableSelect options={[{ value: '', label: 'Not yet linked' }, ...recipeOptions]} value={form.approved_recipe_id ? String(form.approved_recipe_id) : ''} onChange={(v: string) => setField('approved_recipe_id', v)} onSearch={onSearchRecipes} placeholder="Link approved recipe…" />
                             </div>
                             <div>
                                 <label style={xpLbl()}>Notes</label>

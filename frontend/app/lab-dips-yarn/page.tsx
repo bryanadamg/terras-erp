@@ -32,7 +32,6 @@ export default function YarnLabDipsPage() {
         router.replace('/lab-dips-yarn');
     }, [rawOpen]); // eslint-disable-line react-hooks/exhaustive-deps
 
-    const [recipes, setRecipes] = useState<any[]>([]);
     const [colors, setColors] = useState<any[]>([]);
     // Yarn item picker: raw-material-scoped server-side typeahead.
     const { results: items, onSearch: handleItemSearch } = useRawMaterialSearch();
@@ -41,18 +40,6 @@ export default function YarnLabDipsPage() {
     // server-paginated and server-filtered, and the filter state that drives those params
     // lives there. The view also refetches after each mutation below, so these handlers
     // only own the call + the toast.
-    const fetchRecipes = useCallback(async () => {
-        try {
-            // Picker feed, not a list — the approved-recipe select must offer every
-            // recipe, so take the uncapped set (`size=0`) rather than page 1.
-            const res = await authFetch(`${API_BASE}/dye-recipes?size=0`);
-            if (res.ok) {
-                const data = await res.json();
-                setRecipes(Array.isArray(data) ? data : (data.items ?? []));
-            }
-        } catch { /* silent */ }
-    }, [authFetch, API_BASE]);
-
     const fetchColors = useCallback(async () => {
         try {
             // Active colors for the dip picker. Capped; a true 30k library needs a
@@ -65,7 +52,7 @@ export default function YarnLabDipsPage() {
         } catch { /* silent */ }
     }, [authFetch, API_BASE]);
 
-    useEffect(() => { fetchRecipes(); fetchColors(); }, [fetchRecipes, fetchColors]);
+    useEffect(() => { fetchColors(); }, [fetchColors]);
 
     const handleCreate = async (payload: any) => {
         // kind is set once at create; it picks the sequence and is immutable afterwards.
@@ -125,7 +112,6 @@ export default function YarnLabDipsPage() {
             customers={customers}
             items={items}
             onSearchItems={handleItemSearch}
-            recipes={recipes}
             attributes={attributes || []}
             colors={colors}
             onCreate={handleCreate}
