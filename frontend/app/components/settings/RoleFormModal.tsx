@@ -8,6 +8,7 @@ import AvatarPicker from '../shared/AvatarPicker';
 import { PixelAvatarFromRecipe } from '../shared/PixelAvatar';
 import { hasPins, parseRecipe, resolveRecipe, serializeRecipe, setFeature } from '../shared/avatarRecipe';
 import { useData } from '../../context/DataContext';
+import { PermissionChip, PermissionSectionTable, PermissionCountPill } from '../shared/permissionChips';
 
 // Stand-in usernames for the "same dress code, different faces" strip. Fixed, so
 // the preview doesn't reshuffle on every keystroke, and deliberately three: one
@@ -34,6 +35,77 @@ export interface RoleLike {
     allowed_categories?: string[] | null;
     allowed_locations?: string[] | null;
     default_avatar_id?: string | null;
+}
+
+interface ScopeOption { id: string; path: string[] }
+
+/* A scope list as the same section table the permission matrix uses, one row per
+   top-level parent (warehouse / root category) with the rest of the path on the
+   chip — the flat "Raw Material / NYLON FILAMENT RW / ..." chip wall repeated the
+   parent on every chip and hid which ones were on inside a nested scroll box. */
+function ScopePicker({ title, anyLabel, options, selected, onChange }: {
+    title: string;
+    anyLabel: string;
+    options: ScopeOption[];
+    selected: string[];
+    onChange: (ids: string[]) => void;
+}) {
+    const [filter, setFilter] = useState('');
+    const sel = new Set(selected);
+    const q = filter.trim().toLowerCase();
+    const shown = q ? options.filter(o => o.path.join(' / ').toLowerCase().includes(q)) : options;
+
+    // Parents that have children get their own row; childless top-level entries
+    // share one row so a few lone locations don't each cost a line.
+    const parents = new Set(options.filter(o => o.path.length > 1).map(o => o.path[0]));
+    const groups = new Map<string, ScopeOption[]>();
+    for (const o of shown) {
+        const key = parents.has(o.path[0]) ? o.path[0] : '';
+        groups.set(key, [...(groups.get(key) || []), o]);
+    }
+    const toggle = (id: string) => onChange(sel.has(id) ? selected.filter(x => x !== id) : [...selected, id]);
+
+    const rows = Array.from(groups.entries())
+        .sort(([a], [b]) => (a === '' ? -1 : b === '' ? 1 : a.localeCompare(b)))
+        .map(([key, opts]) => ({
+            key: key || '_top',
+            label: key || 'Top level',
+            chips: opts.map(o => (
+                <PermissionChip
+                    key={o.id}
+                    code="edit"
+                    label={key && o.path.length > 1 ? o.path.slice(1).join(' / ') : o.path[0]}
+                    state={sel.has(o.id) ? 'on' : 'off'}
+                    title={o.path.join(' / ')}
+                    onClick={() => toggle(o.id)}
+                />
+            )),
+        }));
+
+    return (
+        <>
+            {options.length > 12 && (
+                <input
+                    style={xpInput({ width: '100%', marginBottom: 4 })}
+                    placeholder="Filter…"
+                    value={filter}
+                    onChange={e => setFilter(e.target.value)}
+                />
+            )}
+            <PermissionSectionTable
+                labelWidth={160}
+                headerActive={selected.length > 0}
+                title={<>{title}<PermissionCountPill granted={selected.length} total={options.length} /></>}
+                right={selected.length
+                    ? <button type="button" onClick={() => onChange([])}
+                        style={{ fontSize: 9, background: 'none', border: 'none', color: '#00006e', textDecoration: 'underline', cursor: 'pointer' }}>
+                        Clear — allow {anyLabel}
+                    </button>
+                    : <span style={{ fontSize: 9, color: '#1a5e2a', fontStyle: 'italic' }}>Unrestricted — {anyLabel}</span>}
+                rows={rows.length ? rows : [{ key: '_none', label: 'No match', chips: null }]}
+            />
+        </>
+    );
 }
 
 export default function RoleFormModal({
@@ -97,32 +169,6 @@ export default function RoleFormModal({
         for (const c of selectedCodes) if (c.startsWith('lot.')) return true;
         return false;
     }, [selectedCodes]);
-
-    const toggleWcType = (t: string) => {
-        setAllowedWcTypes(prev => prev.includes(t) ? prev.filter(x => x !== t) : [...prev, t]);
-    };
-
-    const toggleCategory = (id: string) => {
-        setAllowedCategories(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
-    };
-
-    const toggleLocation = (id: string) => {
-        setAllowedLocations(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
-    };
-
-    /* Scope pickers use the app-wide on/off chip (ToggleChip) rather than bare
-       checkboxes — a wall of checkboxes made a restricted role hard to read
-       back, and a per-view selected state would be a fourth chip look. */
-    const scopeBox = (scroll: boolean, children: React.ReactNode) => (
-        <div style={{
-            display: 'flex', flexWrap: 'wrap', gap: 4,
-            background: '#ffffff',
-            border: '1px solid #b0a898',
-            borderRadius: 0,
-            padding: 6,
-            ...(scroll ? { maxHeight: 160, overflowY: 'auto' as const } : {}),
-        }}>{children}</div>
-    );
 
     // Whether the picked template constrains anything. Also drives the strip's
     // caption: with no pins, the samples ARE the unconstrained seeded faces.
@@ -224,11 +270,48 @@ export default function RoleFormModal({
                 />
             </div>
 
-            <div className="mt-3">
+            {hasWorkOrderPerm && wcTypes.length > 0 && (
+                <div className="mt-3">
+                    <FieldLabel hint="Leave all off to allow this role's Work Order actions on any station. Turn one or more on to restrict.">
+                        Work Order Station Scope
+                    </FieldLabel>
+                    <ScopePicker title="Station types" anyLabel="any station" selected={allowedWcTypes} onChange={setAllowedWcTypes}
+                        options={wcTypes.map(t => ({ id: t, path: [t] }))} />
+                </div>
+            )}
+
+            {hasCategoryScopedPerm && categories.length > 0 && (
+                <div className="mt-3">
+                    <FieldLabel hint="Leave all off to allow Item/Stock actions on any category. Turn one or more on to restrict.">
+                        Item/Stock Category Scope
+                    </FieldLabel>
+                    <ScopePicker title="Categories" anyLabel="any category" selected={allowedCategories} onChange={setAllowedCategories}
+                        options={categories.map((c: any) => ({ id: c.id, path: c.path_names?.length ? c.path_names : [c.name] }))} />
+                </div>
+            )}
+
+            {hasLocationScopedPerm && locations.length > 0 && (
+                <div className="mt-3">
+                    <FieldLabel hint="Leave all off to allow Lot actions at any location. Turn one or more on to restrict.">
+                        Lot Management Location Scope
+                    </FieldLabel>
+                    <ScopePicker title="Locations" anyLabel="any location" selected={allowedLocations} onChange={setAllowedLocations}
+                        options={locations.map((l: any) => ({ id: l.id, path: (l.full_path || l.name).split(' / ') }))} />
+                </div>
+            )}
+
+            {/* Cosmetic, so it sits last and folded — it used to wedge a full-height
+                picker between the permissions and the scopes they gate. */}
+            <details className="mt-3">
+                <summary style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <PixelAvatarFromRecipe recipe={resolveRecipe(null, SAMPLE_SEEDS[0], defaultAvatarId)} size={24} />
+                    <b style={{ fontSize: 12 }}>Default Avatar</b>
+                    <span style={{ fontSize: 11, color: '#6b6558' }}>{avatarPins ? (isExecutive ? 'Executive template' : 'Template set') : 'Not set — users seeded from their username'}</span>
+                </summary>
                 <FieldLabel
                     hint="Applies only to users in this role who haven't saved an avatar of their own; their own choice always wins. Only the pinned slots are stored — every user keeps their own face, so set the slots that must not be left to chance (hat and accessories on an executive role) and leave the rest on Auto."
                 >
-                    Default Avatar
+                    Template
                 </FieldLabel>
                 {/* The one-click answer to "don't put a party hat on a director".
                     Hat and accessories are the two slots that carry the novelty
@@ -261,44 +344,8 @@ export default function RoleFormModal({
                             : 'Nothing pinned, so this role sets no default: each user is seeded from their username.'}
                     </span>
                 </div>
-            </div>
+            </details>
 
-            {hasWorkOrderPerm && wcTypes.length > 0 && (
-                <div className="mt-3">
-                    <FieldLabel hint="Leave all off to allow this role's Work Order actions on any station. Turn one or more on to restrict.">
-                        Work Order Station Scope
-                    </FieldLabel>
-                    {scopeBox(false, wcTypes.map(t => (
-                        <ToggleChip key={t} on={allowedWcTypes.includes(t)} onClick={() => toggleWcType(t)}>{t}</ToggleChip>
-                    )))}
-                </div>
-            )}
-
-            {hasCategoryScopedPerm && categories.length > 0 && (
-                <div className="mt-3">
-                    <FieldLabel hint="Leave all off to allow Item/Stock actions on any category. Turn one or more on to restrict.">
-                        Item/Stock Category Scope
-                    </FieldLabel>
-                    {scopeBox(true, categories.map((c: any) => (
-                        <ToggleChip key={c.id} on={allowedCategories.includes(c.id)} onClick={() => toggleCategory(c.id)}>
-                            {(c.path_names || [c.name]).join(' / ')}
-                        </ToggleChip>
-                    )))}
-                </div>
-            )}
-
-            {hasLocationScopedPerm && locations.length > 0 && (
-                <div className="mt-3">
-                    <FieldLabel hint="Leave all off to allow Lot actions at any location. Turn one or more on to restrict.">
-                        Lot Management Location Scope
-                    </FieldLabel>
-                    {scopeBox(true, locations.map((l: any) => (
-                        <ToggleChip key={l.id} on={allowedLocations.includes(l.id)} onClick={() => toggleLocation(l.id)}>
-                            {l.full_path || l.name}
-                        </ToggleChip>
-                    )))}
-                </div>
-            )}
         </ModalWrapper>
     );
 }
