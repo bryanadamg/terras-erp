@@ -72,3 +72,30 @@ def test_a_ready_order_still_counts_as_open(client, auth_headers, async_db_sessi
 
     after = client.get("/api/dashboard/summary", headers=auth_headers).json()["open_so_count"]
     assert after == before + 1
+
+
+def test_floor_groups_machines_under_their_type_and_gates_by_role(client, auth_headers, user_factory, async_db_session):
+    """A machine under an optional GROUP still lands in its TYPE's room."""
+    import uuid
+    from app.models.routing import WorkCenter
+    tag = uuid.uuid4().hex[:6].upper()
+    t = WorkCenter(id=uuid.uuid4(), code=f"FT-{tag}", name="Floor Type", center_type="WEAVING", node_type="TYPE")
+    g = WorkCenter(id=uuid.uuid4(), code=f"FG-{tag}", name="Floor Group", center_type="WEAVING", node_type="GROUP", parent_id=t.id)
+    m1 = WorkCenter(code=f"FM1-{tag}", name="M1", center_type="WEAVING", node_type="MACHINE", parent_id=g.id)
+    m2 = WorkCenter(code=f"FM2-{tag}", name="M2", center_type="WEAVING", node_type="MACHINE", parent_id=t.id)
+
+    async def _seed():
+        async_db_session.add(t); await async_db_session.flush()
+        async_db_session.add(g); await async_db_session.flush()
+        async_db_session.add_all([m1, m2]); await async_db_session.flush()
+    client.portal.call(_seed)
+
+    body = client.get("/api/dashboard/floor", headers=auth_headers).json()
+    room = next(r for r in body["types"] if r["id"] == str(t.id))
+    assert sorted(m["code"] for m in room["machines"]) == [f"FM1-{tag}", f"FM2-{tag}"]
+    assert not any(m["running"] for m in room["machines"])
+    assert all(r["code"] != f"FG-{tag}" for r in body["types"]), "a GROUP is not a room"
+
+    _, headers = user_factory(["sample_request.view"], "floor-reader")
+    restricted = client.get("/api/dashboard/floor", headers=headers).json()
+    assert restricted == {"types": [], "stores": []}

@@ -13,6 +13,11 @@ interface LanguageContextType {
 const translations = {
     en: {
         'dashboard': 'Dashboard',
+        'dashboard_overview': 'Overview',
+        'dashboard_floor': 'Floor',
+        'floor_running': 'running',
+        'floor_empty': 'No work centers or stock to show yet',
+        'floor_aria': 'Factory floor plan: machines by type and stock by store',
         // Sidebar
         'inventory': 'Inventory',
         'item_inventory': 'Item Inventory',
@@ -428,6 +433,11 @@ const translations = {
     },
     id: {
         'dashboard': 'Dasbor',
+        'dashboard_overview': 'Ringkasan',
+        'dashboard_floor': 'Lantai Produksi',
+        'floor_running': 'jalan',
+        'floor_empty': 'Belum ada work center atau stok untuk ditampilkan',
+        'floor_aria': 'Denah lantai produksi: mesin per jenis dan stok per gudang',
         // Sidebar
         'inventory': 'Inventaris',
         'item_inventory': 'Daftar Barang',
