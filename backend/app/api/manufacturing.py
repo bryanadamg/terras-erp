@@ -821,11 +821,18 @@ async def list_work_orders_flat(
             conditions.append(WorkOrderModel.work_center_id.in_(wc_subq))
     if search and search.strip():
         like = f"%{search.strip()}%"
-        conditions.append(or_(
+        terms = [
             WorkOrderModel.name.ilike(like),
             WorkOrderModel.code.ilike(like),
             ManufacturingOrder.code.ilike(like),
-        ))
+        ]
+        # A work order card's QR holds the WO's id, so a scanner typing it into
+        # the search box must land on that WO.
+        try:
+            terms.append(WorkOrderModel.id == uuid.UUID(search.strip()))
+        except ValueError:
+            pass
+        conditions.append(or_(*terms))
 
     base_join = select(WorkOrderModel).join(
         ManufacturingOrder, WorkOrderModel.manufacturing_order_id == ManufacturingOrder.id
