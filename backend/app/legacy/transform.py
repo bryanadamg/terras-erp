@@ -198,8 +198,9 @@ def build_opening_stock(li: list, mapping: dict, items: list, xw: Crosswalks, sn
     item_of = {lc: it for it in items for lc in it["legacy_codes"]}
     owners: dict[str, set] = defaultdict(set)
     for r in li:
-        if (r.get("Li_sernr") or "").strip():
-            owners[r["Li_sernr"]].add(r["Li_artnr"])
+        serial = (r.get("Li_sernr") or "").strip()
+        if serial:
+            owners[serial].add(r["Li_artnr"])
     dup_serials = {s for s, arts in owners.items() if len(arts) > 1}
     taken = set(snapshot["batch_numbers"])
     rows, rejects = [], []

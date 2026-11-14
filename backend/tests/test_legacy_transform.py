@@ -423,3 +423,8 @@ def test_build_items_ignores_padding_on_legacy_group_and_unit():
 def test_partner_without_a_name_is_not_created():
     xw = Crosswalks(partners={"K9": ("CREATE", "", "CUSTOMER")})
     assert transform.build_partners([{"Adr_nr": "K9", "Adr_name": "  "}], xw) == []
+
+
+def test_serials_that_differ_only_by_padding_still_count_as_shared():
+    rows, _ = _stock([_li("GM01", "Y1", "A2", qty=1), _li("GM01", "FG1", "A2 ", qty=1)])
+    assert sorted(r["batch_number"] for r in rows) == ["A2-FG1", "A2-Y1"]

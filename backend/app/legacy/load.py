@@ -260,7 +260,7 @@ async def _finish_phase(run: Run, phase: str, dry_run: bool):
     counts = dict(run.report[phase])
     if counts["created"]:
         await audit_service.log_activity(run.db, None, "LEGACY_IMPORT", phase, "bulk",
-                                         details=f"Legacy migration: {phase}", changes=counts, commit=False)
+                                         details=f"Legacy migration: {phase}", changes=audit_service.added(counts), commit=False)
     await run.db.commit()
     if counts["created"]:
         try:
@@ -366,7 +366,7 @@ async def load_opening_stock(db: AsyncSession, bundle_dir: str, *, dry_run: bool
         if not dry_run:
             if c["posted"] or c["batches_created"]:
                 await audit_service.log_activity(db, None, "LEGACY_IMPORT", "stock", "bulk",
-                                                 details="Legacy migration: opening stock", changes=dict(c), commit=False)
+                                                 details="Legacy migration: opening stock", changes=audit_service.added(dict(c)), commit=False)
             await db.commit()
             try:
                 from app.core.ws_manager import manager

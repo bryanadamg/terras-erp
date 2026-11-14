@@ -237,3 +237,17 @@ def test_cli_entry_points_import_cleanly():
     for mod in ("app.legacy.load", "app.legacy.snapshot"):
         r = subprocess.run([sys.executable, "-c", f"import {mod}"], capture_output=True, text=True, cwd="/app")
         assert r.returncode == 0, r.stderr[-500:]
+
+
+def test_each_committed_phase_writes_one_audit_row_in_the_changes_format(client, async_db_session, tmp_path):
+    from app.legacy.load import load_masters
+    from app.models.audit import AuditLog
+    tag = uuid.uuid4().hex[:6].upper()
+    client.portal.call(lambda: load_masters(async_db_session, _bundle(tmp_path, tag), dry_run=False))
+
+    async def fetch():
+        return (await async_db_session.execute(
+            select(AuditLog.changes).filter(AuditLog.action == "LEGACY_IMPORT", AuditLog.entity_type == "items")
+            .order_by(AuditLog.timestamp.desc()))).scalars().first()
+    changes = client.portal.call(fetch)
+    assert changes["created"] == [None, 3]
