@@ -13,7 +13,7 @@ from app.models.lab_dip import LabDipRequest, LabDipLine, LabDipItem
 from app.models.item import Item
 from app.models.auth import User
 from app.api.auth import get_current_user, require_permission
-from app.services import audit_service
+from app.services import audit_service, color_service
 from app.core.ws_manager import manager
 from app.core.pagination import PageParams, PageWindow
 from app.schemas import (
@@ -22,18 +22,6 @@ from app.schemas import (
 )
 
 router = APIRouter()
-
-
-async def _color_code_attribute_id(db: AsyncSession) -> uuid.UUID | None:
-    """Return the id of the seeded `Color Code` system attribute (system_role='labdip_color').
-    This is the legacy color-code list the LabDip dropdown reads; mirroring keeps it
-    working during the transition to the Color library. The variant `Colors` attribute
-    (system_role='color') is deliberately left untouched to avoid polluting product
-    variants / recipe-matching with reference-library codes."""
-    result = await db.execute(
-        select(Attribute.id).filter(Attribute.system_role == "labdip_color")
-    )
-    return result.scalars().first()
 
 
 async def _recipe_counts(db: AsyncSession, color_ids: list[uuid.UUID]) -> dict:
@@ -190,18 +178,9 @@ async def create_color(
     if existing.scalars().first():
         raise HTTPException(status_code=400, detail="Color code already exists")
 
-    color = Color(**payload.model_dump())
-    db.add(color)
-    await db.flush()
-
-    # Option-A mirror: create + link a `Color Code` (labdip_color) AttributeValue so the
-    # legacy LabDip color dropdown keeps resolving during the transition to the library.
-    attr_id = await _color_code_attribute_id(db)
-    if attr_id is not None:
-        av = AttributeValue(attribute_id=attr_id, value=payload.name)
-        db.add(av)
-        await db.flush()
-        color.attribute_value_id = av.id
+    # Option-A mirror (inside the service): a `Color Code` (labdip_color) AttributeValue
+    # so the legacy LabDip color dropdown keeps resolving during the transition.
+    color = await color_service.create_color(db, **payload.model_dump())
 
     # Spawned from an approved LabDip dip line: back-link the dip to this new shade
     # (hides the "+ Color" button) and, if the request has an approved recipe with no

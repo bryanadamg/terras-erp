@@ -23,7 +23,7 @@ from app.models.work_order import WorkOrder
 from app.models.routing import WorkCenter
 from app.models.auth import User
 from app.api.auth import get_current_user, require_permission, require_any_permission
-from app.services import audit_service, dyeing_dose_service, dyeing_run_service, work_center_service
+from app.services import audit_service, dye_recipe_service, dyeing_dose_service, dyeing_run_service, work_center_service
 from app.core.ws_manager import manager
 from app.core.pagination import PageParams, PageWindow
 from app.schemas import (
@@ -242,7 +242,10 @@ async def create_dye_recipe(
         raise HTTPException(status_code=400, detail="Recipe code already exists")
     _assert_single_dose_basis(payload.lines)
 
-    recipe = DyeRecipe(
+    bath_texts = await _resolve_step_descriptions(db, payload.wash_baths, "wash_bath")
+    fin_texts = await _resolve_step_descriptions(db, payload.finishing_steps, "finishing_step")
+    recipe = await dye_recipe_service.create_recipe(
+        db,
         code=payload.code,
         name=payload.name,
         color_standard=payload.color_standard,
@@ -251,39 +254,18 @@ async def create_dye_recipe(
         liquor_ratio=payload.liquor_ratio,
         notes=payload.notes,
         is_active=payload.is_active,
+        lines=[dict(item_id=ln.item_id, qty_per_100kg=ln.qty_per_100kg, qty_per_liter=ln.qty_per_liter,
+                    uom_id=ln.uom_id, chemical_type=ln.chemical_type,
+                    sort_order=ln.sort_order if ln.sort_order else i)
+               for i, ln in enumerate(payload.lines)],
+        wash_baths=[dict(bath_number=wb.bath_number, attribute_value_id=wb.attribute_value_id,
+                         description=bath_texts.get(wb.attribute_value_id, wb.description or ""))
+                    for wb in payload.wash_baths],
+        finishing_steps=[dict(attribute_value_id=fs.attribute_value_id,
+                              description=fin_texts.get(fs.attribute_value_id, fs.description or ""),
+                              sort_order=fs.sort_order if fs.sort_order else i)
+                         for i, fs in enumerate(payload.finishing_steps)],
     )
-    db.add(recipe)
-    await db.flush()
-
-    for i, ln in enumerate(payload.lines):
-        line = DyeRecipeLine(
-            recipe_id=recipe.id,
-            item_id=ln.item_id,
-            qty_per_100kg=ln.qty_per_100kg,
-            qty_per_liter=ln.qty_per_liter,
-            uom_id=ln.uom_id,
-            chemical_type=ln.chemical_type,
-            sort_order=ln.sort_order if ln.sort_order else i,
-        )
-        db.add(line)
-
-    bath_texts = await _resolve_step_descriptions(db, payload.wash_baths, "wash_bath")
-    for wb in payload.wash_baths:
-        db.add(DyeRecipeWashBath(
-            recipe_id=recipe.id,
-            bath_number=wb.bath_number,
-            attribute_value_id=wb.attribute_value_id,
-            description=bath_texts.get(wb.attribute_value_id, wb.description or ""),
-        ))
-
-    fin_texts = await _resolve_step_descriptions(db, payload.finishing_steps, "finishing_step")
-    for i, fs in enumerate(payload.finishing_steps):
-        db.add(DyeRecipeFinishing(
-            recipe_id=recipe.id,
-            attribute_value_id=fs.attribute_value_id,
-            description=fin_texts.get(fs.attribute_value_id, fs.description or ""),
-            sort_order=fs.sort_order if fs.sort_order else i,
-        ))
 
     if payload.attribute_value_ids:
         await db.execute(
