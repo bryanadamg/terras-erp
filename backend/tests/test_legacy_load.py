@@ -227,3 +227,13 @@ def test_opening_stock_never_touches_non_legacy_batches(client, async_db_session
     report = client.portal.call(lambda: load_opening_stock(async_db_session, _stock_bundle(tmp_path, tag), dry_run=False))
     assert report["stock"]["rejected"] == 1 and report["stock"]["posted"] == 0
     assert client.portal.call(lambda: _ledger(async_db_session, tag)) == []
+
+
+def test_cli_entry_points_import_cleanly():
+    """`python -m app.legacy.load` / `.snapshot` start in a fresh interpreter, where model
+    import order differs from the running app (a circular import only shows up there)."""
+    import subprocess
+    import sys
+    for mod in ("app.legacy.load", "app.legacy.snapshot"):
+        r = subprocess.run([sys.executable, "-c", f"import {mod}"], capture_output=True, text=True, cwd="/app")
+        assert r.returncode == 0, r.stderr[-500:]

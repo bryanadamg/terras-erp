@@ -23,6 +23,7 @@ from fastapi import HTTPException
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+import app.db.base  # noqa: F401  — registers every model first; a cold `-m` start hits a circular import otherwise
 from app.models.attribute import Attribute, AttributeValue
 from app.models.bom import BOM, BOMLine
 from app.models.category import Category
