@@ -418,3 +418,8 @@ def test_build_items_ignores_padding_on_legacy_group_and_unit():
     art = {"P1": _art("P1", "PADDED", group="RM ", unit=" KG")}
     items, rejects = transform.build_items({"P1"}, art, XW, SNAP3)
     assert rejects == [] and (items[0]["category"], items[0]["uom"]) == ("Raw Material", "kg")
+
+
+def test_partner_without_a_name_is_not_created():
+    xw = Crosswalks(partners={"K9": ("CREATE", "", "CUSTOMER")})
+    assert transform.build_partners([{"Adr_nr": "K9", "Adr_name": "  "}], xw) == []

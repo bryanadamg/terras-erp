@@ -112,6 +112,8 @@ def build_partners(adr: list[dict], xw: Crosswalks) -> list[dict]:
             out.append({"name": terras, "status": "MATCHED", "legacy_code": d["Adr_nr"]})
         elif action == "CREATE":
             g = lambda k: (d.get(k) or "").strip() or None
+            if not g("Adr_name"):
+                continue                                  # nothing to call it; stays in the legacy system
             city = " ".join(filter(None, [g("Adr_plz"), g("Adr_ort")]))
             out.append({"name": g("Adr_name"), "status": "NEW", "legacy_code": d["Adr_nr"],
                         "type": ptype if ptype in ("CUSTOMER", "SUPPLIER") else "CUSTOMER",
