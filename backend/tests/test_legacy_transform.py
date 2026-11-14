@@ -128,3 +128,66 @@ def test_select_items_counts_on_fixture():
                 {"set_artnr_h": "OLD", "set_artnr_u": "OLDC", "set_nr": ""}]
     got = crosswalk.select_items(art, li, set_rows, {"C": "2025-04", "OLD": "2024-01"}, "2025-03")
     assert got == {"A", "B", "C", "DY"}   # stocked, its child, recently moved, recipe child; no lab dip, no unknown, no stale
+
+
+# ---------------------------------------------------------------- Task 3: items
+from app.legacy.crosswalk import Crosswalks
+from app.legacy import transform
+
+XW = Crosswalks(
+    categories={"ACIDDYES": "Dye > ACID DYES", "FG": "Finished Goods", "RM": "Raw Material"},
+    uoms={"KG": "kg", "Yard": "yard"},
+    materials={"NS (NYLON SPANDEX)": "", "P (POLYESTER)": "Polyester"},
+    sizes={"XXL": ("2XL", True), "L": ("L", True), "XL": ("XL", True), "115": ("115", False)},
+    fg_colour={"FG1": ("9649/16 NS", "10346A-1")},
+)
+ART3 = {a["Art_nr"]: a for a in [
+    _art("DYN0006", "LEVASET BORDEAUX", group="ACIDDYES"),
+    _art("0000000070", "TAPE 70", group="FG", unit="Yard"),
+    _art("0000000070 L", "TAPE 70 L", group="FG", unit="Yard", Art_flds00="NS (NYLON SPANDEX)"),
+    _art("0000000070 XL", "TAPE 70 XL", group="FG", unit="Yard"),
+    _art("0000000070 115", "TAPE 70 115", group="FG", unit="Yard"),
+    _art("SOMETHING BRN-1901", "X", group="FG", unit="Yard"),
+    _art("Y1", "YARN", group="RM", Art_flds00="P (POLYESTER)"),
+    _art("Y2", "ODD", group="NOPE"),
+    _art("Y3", "ODD UNIT", group="RM", unit="Unt"),
+    _art("FG1", "9649/16 NS 10346A-1 PNK", group="FG", unit="Yard"),
+]}
+SNAP3 = dict(SNAP, items={"DYN0006": {"name": "LEVASET BORDEAUX B", "uom": "kg", "category": "ACID DYES"}})
+
+
+def test_size_family_collapses_only_crosswalked_suffixes():
+    assert transform.size_family("0000000070 XXL", XW) == ("0000000070", "2XL")
+    assert transform.size_family("0000000070 115", XW) == ("0000000070 115", None)   # numeric not approved
+
+
+def test_size_suffix_only_from_crosswalk():
+    assert transform.size_family("SOMETHING BRN-1901", XW) == ("SOMETHING BRN-1901", None)
+    assert transform.size_family("0000000070 M", XW) == ("0000000070 M", None)       # M not in this crosswalk
+
+
+def test_build_items_marks_existing_codes_matched_and_never_changes_them():
+    items, _ = transform.build_items({"DYN0006"}, ART3, XW, SNAP3)
+    assert items[0]["status"] == "MATCHED" and items[0]["name"] == "LEVASET BORDEAUX B" and items[0]["uom"] == "kg"
+
+
+def test_build_items_collapses_sizes_into_one_base():
+    items, _ = transform.build_items({"0000000070 L", "0000000070 XL"}, ART3, XW, SNAP3, lotted={"0000000070 XL"})
+    assert [(i["code"], i["name"], i["sizes"], i["legacy_codes"]) for i in items] == [
+        ("0000000070", "TAPE 70", ["L", "XL"], ["0000000070 L", "0000000070 XL"])]
+    assert items[0]["lot_tracked"] is True and items[0]["uom"] == "yard" and items[0]["category"] == "Finished Goods"
+    assert items[0]["material"] == "NS (NYLON SPANDEX)"   # blank crosswalk value = create the legacy text as-is
+
+
+def test_build_items_material_and_colour_base():
+    items, _ = transform.build_items({"Y1", "FG1"}, ART3, XW, SNAP3)
+    by = {i["code"]: i for i in items}
+    assert by["Y1"]["material"] == "Polyester" and by["Y1"]["variant_type"] is None
+    assert by["9649/16 NS"]["variant_type"] == "color" and by["9649/16 NS"]["legacy_codes"] == ["FG1"]
+
+
+def test_unmapped_category_or_uom_is_rejected():
+    items, rejects = transform.build_items({"Y2", "Y3"}, ART3, XW, SNAP3)
+    assert items == []
+    assert sorted((r["key"], r["reason"]) for r in rejects) == [
+        ("Y2", "no category crosswalk for group NOPE"), ("Y3", "no uom crosswalk for unit Unt")]
