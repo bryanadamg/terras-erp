@@ -348,3 +348,73 @@ def test_fg_colour_item_stock_lands_on_base_with_colour():
     rows, _ = _stock([_li("GM01", "FG1", "777", qty=4), _li("GM01", "Y1", "", qty=2)])
     assert [(r["item_code"], r["color_code"], r["batch_number"]) for r in rows] == [
         ("9649/16 NS", "14368A-1", "777-FG1"), ("Y1", None, None)]
+
+
+# ------------------------------------------------------------------ Task 6: BOMs
+ART6 = {a["Art_nr"]: a for a in [
+    _art("T70 L", group="FG"), _art("T70 XL", group="FG"), _art("GR", group="RM"), _art("YN", group="RM"),
+    _art("LD", "10346A-1", group="LABDIP"), _art("FGC", group="FG"), _art("OLDFG", group="FG"), _art("P2", group="FG"),
+]}
+IT6 = {"T70 L": {"code": "T70"}, "T70 XL": {"code": "T70"}, "GR": {"code": "GR"}, "YN": {"code": "YN"},
+       "FGC": {"code": "FGC BASE"}, "OLDFG": {"code": "OLDFG"}, "P2": {"code": "P2"}}
+XW6 = Crosswalks(sizes={"L": ("L", True), "XL": ("XL", True)}, fg_colour={"FGC": ("FGC BASE", "10346A-1")})
+
+
+def _boms(edges, prod=()):
+    return transform.build_boms(edges, IT6, XW6, set(prod), ART6)
+
+
+def test_bom_takes_plain_slot_only():
+    boms, rejects = _boms([_edge("P2", "GR", "", 3), _edge("P2", "YN", "2", 1), _edge("P2", "YN", "WEFT", 1)])
+    assert [(b["code"], [l["item_code"] for l in b["lines"]]) for b in boms] == [("LEG-P2", ["GR"])]
+    assert sorted(r["reason"] for r in rejects) == ["alternative slot 2", "alternative slot WEFT"]
+
+
+def test_bom_labdip_child_is_not_a_line():
+    boms, rejects = _boms([_edge("FGC", "GR", "", 1), _edge("FGC", "LD", "", 1)])
+    assert [(b["item_code"], [l["item_code"] for l in b["lines"]]) for b in boms] == [("FGC BASE", ["GR"])]
+    assert rejects == []
+
+
+def test_bom_percentages_derived_from_qty():
+    boms, _ = _boms([_edge("P2", "GR", "", 1), _edge("P2", "YN", "", 2)])
+    lines = boms[0]["lines"]
+    assert [l["percentage"] for l in lines] == [33.33, 66.67] and sum(l["percentage"] for l in lines) == 100.0
+    given = [dict(_edge("P2", "GR", "", 1), set_stckproz=40), dict(_edge("P2", "YN", "", 2), set_stckproz=60)]
+    assert [l["percentage"] for l in _boms(given)[0][0]["lines"]] == [40.0, 60.0]
+
+
+def test_bom_sized_family_is_one_sized_bom():
+    boms, rejects = _boms([_edge("T70 L", "GR", "", 1), _edge("T70 XL", "GR", "", 1.2)])
+    assert [(b["code"], b["item_code"], b["size_mode"], b["sizes"]) for b in boms] == [("LEG-T70", "T70", "sized", ["L", "XL"])]
+    assert rejects == []
+    _, rejects = _boms([_edge("T70 L", "GR", "", 1), _edge("T70 XL", "YN", "", 1)])
+    assert [r["reason"] for r in rejects] == ["size-specific lines"]
+
+
+def test_bom_skipped_when_prod_has_one():
+    boms, _ = _boms([_edge("P2", "GR", "", 1)], prod=["P2"])
+    assert [(b["code"], b["status"]) for b in boms] == [("LEG-P2", "MATCHED")]
+
+
+def test_bom_orphans_rejected():
+    boms, rejects = _boms([_edge("P2", "GR", "", 1), _edge("P2", "MISSING", "", 1), _edge("GHOST", "GR", "", 1)])
+    assert boms == []
+    assert sorted((r["key"], r["reason"]) for r in rejects) == [
+        ("GHOST", "parent not in item master"), ("P2", "component MISSING not migrated")]
+
+
+def test_select_items_follows_the_whole_bom_tree():
+    art = {k: _art(k, group="RM") for k in ["FG", "WIP", "GREIGE", "YARN", "STALE", "STALEC"]}
+    set_rows = [{"set_artnr_h": "FG", "set_artnr_u": "WIP", "set_nr": ""},
+                {"set_artnr_h": "WIP", "set_artnr_u": "GREIGE", "set_nr": ""},
+                {"set_artnr_h": "GREIGE", "set_artnr_u": "YARN", "set_nr": ""},
+                {"set_artnr_h": "STALE", "set_artnr_u": "STALEC", "set_nr": ""}]
+    got = crosswalk.select_items(art, [_li("GJ01", "FG", qty=1)], set_rows, {}, "2025-03")
+    assert got == {"FG", "WIP", "GREIGE", "YARN"}   # a WIP child must bring its own components, all the way down
+
+
+def test_build_items_ignores_padding_on_legacy_group_and_unit():
+    art = {"P1": _art("P1", "PADDED", group="RM ", unit=" KG")}
+    items, rejects = transform.build_items({"P1"}, art, XW, SNAP3)
+    assert rejects == [] and (items[0]["category"], items[0]["uom"]) == ("Raw Material", "kg")

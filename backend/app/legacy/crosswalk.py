@@ -57,11 +57,19 @@ def select_items(art: dict, li: list, set_rows: list, last_move: dict, since: st
     themselves become colours, not items."""
     labdip = {k for k, a in art.items() if a.get("Art_gruppe") == LABDIP}
     active = stocked_codes(li) | {k for k, d in last_move.items() if d >= since}
+    children: dict[str, list[str]] = defaultdict(list)
     need = set(active)
     for e in set_rows:
-        parent = e.get("set_artnr_h")
-        if is_recipe_edge(e) or parent in active:
+        if is_recipe_edge(e):
             need.add(e.get("set_artnr_u"))
+        else:
+            children[e.get("set_artnr_h")].append(e.get("set_artnr_u"))
+    todo = list(active)
+    while todo:                                   # the whole BOM tree under every active item
+        for c in children.get(todo.pop(), ()):
+            if c not in need:
+                need.add(c)
+                todo.append(c)
     return {k for k in need if k in art} - labdip
 
 
@@ -122,7 +130,7 @@ def suggest(work_dir: str, snapshot: dict, since: str, partner_since: str) -> No
 
     # categories
     paths = category_paths(snapshot)
-    gcount = Counter(art[k].get("Art_gruppe") or "" for k in scope)
+    gcount = Counter((art[k].get("Art_gruppe") or "").strip() for k in scope)
     rows = []
     for g, n in gcount.most_common():
         meta = groups.get(g, {})
@@ -133,7 +141,7 @@ def suggest(work_dir: str, snapshot: dict, since: str, partner_since: str) -> No
 
     # units
     uoms = {u.lower(): u for u in snapshot["uoms"]}
-    ucount = Counter(art[k].get("Art_einheit") or "" for k in scope)
+    ucount = Counter((art[k].get("Art_einheit") or "").strip() for k in scope)
     _write_new_rows(os.path.join(out, "uoms.csv"), ["legacy_unit", "item_count", "terras_uom"],
                     [{"legacy_unit": u, "item_count": n, "terras_uom": uoms.get(u.lower(), "")} for u, n in ucount.most_common()],
                     ("legacy_unit",))

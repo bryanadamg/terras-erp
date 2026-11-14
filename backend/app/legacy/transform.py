@@ -56,7 +56,7 @@ def build_items(codes, art: dict, xw: Crosswalks, snapshot: dict, lotted=frozens
             s = snapshot["items"][base]
             items.append(dict(item, status="MATCHED", name=s["name"], uom=s["uom"], category=s["category"]))
             continue
-        group, unit = first.get("Art_gruppe") or "", first.get("Art_einheit") or ""
+        group, unit = (first.get("Art_gruppe") or "").strip(), (first.get("Art_einheit") or "").strip()
         if not xw.categories.get(group):
             rejects += [reject("item", m, f"no category crosswalk for group {group}") for m in members]
             continue
@@ -223,3 +223,142 @@ def build_opening_stock(li: list, mapping: dict, items: list, xw: Crosswalks, sn
                      "location_code": mapping[(wh, b)], "qty": qty, "uom": item["uom"],
                      "batch_number": batch_number_for(art_nr, serial, taken, dup_serials) if serial else None})
     return rows, rejects
+
+
+def _percentages(lines: list[dict]) -> list[float]:
+    """Legacy percentages when every line has one and they total ~100, else derived from qty.
+    Rounded to 2 dp with the rounding remainder on the largest line, so the sum is exactly 100."""
+    given = [l["pct"] for l in lines]
+    if all(p > 0 for p in given) and abs(sum(given) - 100) <= 0.5:
+        raw = given
+    else:
+        total = sum(l["qty"] for l in lines)
+        raw = [l["qty"] / total * 100 for l in lines]
+    scale = 100 / sum(raw)
+    cents = [round(p * scale * 100) for p in raw]
+    cents[cents.index(max(cents))] += 10000 - sum(cents)
+    return [c / 100 for c in cents]
+
+
+def build_boms(set_rows: list, items_by_legacy_code: dict, xw: Crosswalks, snapshot_bom_items: set, art: dict):
+    """One Terras BOM per migrated base item, from the legacy plain-slot edges."""
+    by_parent: dict[str, list[dict]] = defaultdict(list)
+    for e in set_rows:
+        if not is_recipe_edge(e):
+            by_parent[e["set_artnr_h"]].append(e)
+    rejects: list[dict] = []
+    families: dict[str, list[tuple]] = defaultdict(list)    # base code -> [(size, legacy parent, lines)]
+    for parent, edges in sorted(by_parent.items()):
+        if parent not in art:
+            rejects.append(reject("bom", parent, "parent not in item master"))
+            continue
+        if parent not in items_by_legacy_code:
+            continue                                         # parent out of scope (inactive or itself rejected)
+        lines: dict[str, dict] = {}
+        bad = False
+        for e in edges:
+            slot, child = (e.get("set_nr") or "").strip(), e["set_artnr_u"]
+            if slot:
+                rejects.append(reject("bom_line", f"{parent}/{child}", f"alternative slot {slot}"))
+            elif (art.get(child) or {}).get("Art_gruppe") == LABDIP:
+                if parent not in xw.fg_colour:
+                    rejects.append(reject("bom_line", f"{parent}/{child}", "colour edge without an fg_colour row"))
+            elif child not in items_by_legacy_code:
+                rejects.append(reject("bom", parent, f"component {child} not migrated"))
+                bad = True
+            else:
+                code = items_by_legacy_code[child]["code"]
+                line = lines.setdefault(code, {"item_code": code, "qty": 0.0, "pct": 0.0})
+                line["qty"] += e.get("set_stck") or 0
+                line["pct"] += e.get("set_stckproz") or 0
+        if bad or not lines:
+            continue
+        base, size, _ = base_of(parent, xw)
+        families[items_by_legacy_code[parent]["code"]].append((size, parent, list(lines.values())))
+
+    boms = []
+    for base, members in sorted(families.items()):
+        members.sort(key=lambda m: (m[0] is None, m[1]))
+        size0, parent0, lines = members[0]
+        for _, parent, other in members[1:]:
+            if {l["item_code"] for l in other} != {l["item_code"] for l in lines}:
+                rejects.append(reject("bom", parent, "size-specific lines"))
+        sizes = sorted({m[0] for m in members if m[0]})
+        status = "MATCHED" if base in snapshot_bom_items else "NEW"
+        if sum(l["qty"] for l in lines) <= 0 and not all(l["pct"] > 0 for l in lines):
+            rejects.append(reject("bom", parent0, "zero quantity"))
+            continue
+        pcts = _percentages(lines)
+        boms.append({"code": f"LEG-{base}", "item_code": base, "qty": 1, "status": status,
+                     "size_mode": "sized" if sizes else "free", "sizes": sizes, "legacy_parent": parent0,
+                     "lines": [{"item_code": l["item_code"], "qty": l["qty"], "percentage": p} for l, p in zip(lines, pcts)]})
+    return boms, rejects
+
+
+def run(work_dir: str, since: str) -> dict[str, int]:
+    """Write <work>/bundle/*.json and rejects.csv; return counts per file."""
+    import csv
+    import json
+    import os
+
+    from app.legacy.crosswalk import category_paths, load_crosswalks, read_json, read_table, select_items
+
+    art = {a["Art_nr"]: a for a in read_table(work_dir, "ww_art")}
+    li, set_rows = read_table(work_dir, "ww_li"), read_table(work_dir, "ww_set")
+    snapshot = read_json(work_dir, "snapshot.json")
+    xw = load_crosswalks(work_dir)
+
+    scope = select_items(art, li, set_rows, read_json(work_dir, "item_last_move.json"), since)
+    lotted = {r["Li_artnr"] for r in li if (r.get("Li_sernr") or "").strip() and (r.get("Li_stck") or 0) > 0}
+    items, rejects = build_items(scope, art, xw, snapshot, lotted=lotted)
+    by_legacy = {lc: it for it in items for lc in it["legacy_codes"]}
+
+    new_bins, mapping = build_locations(xw, snapshot)
+    partners = build_partners(read_table(work_dir, "ww_adr"), xw)
+    colors = build_colors(art, set_rows, snapshot, xw)
+    recipes, r = build_recipes(art, set_rows, xw)
+    rejects += r
+    for rec in recipes:
+        kept = [l for l in rec["lines"] if l["item_code"] in by_legacy]
+        rejects += [reject("recipe_line", f'{rec["notes"][7:]}/{l["item_code"]}', "component not migrated")
+                    for l in rec["lines"] if l["item_code"] not in by_legacy]
+        rec["lines"] = [dict(l, item_code=by_legacy[l["item_code"]]["code"], sort_order=i) for i, l in enumerate(kept)]
+    boms, r = build_boms(set_rows, by_legacy, xw, set(snapshot["bom_items"]), art)
+    rejects += r
+    stock, r = build_opening_stock(li, mapping, items, xw, snapshot)
+    rejects += r
+
+    known_paths = set(category_paths(snapshot).values())
+    new_items = [i for i in items if i["status"] == "NEW"]
+    categories = sorted({i["category"] for i in new_items} - known_paths)
+    values = {
+        "materials": sorted({i["material"] for i in new_items if i["material"]} - set(snapshot["materials"])),
+        "sizes": sorted({s for i in items for s in i["sizes"]} - set(snapshot["sizes"])),
+        "wash_baths": sorted({w["value"] for rc in recipes for w in rc["wash_baths"]} - set(snapshot["wash_baths"])),
+        "finishing_steps": sorted({f["value"] for rc in recipes for f in rc["finishing"]} - set(snapshot["finishing_steps"])),
+    }
+    bundle = {"items": items, "categories": categories, "values": values, "locations": new_bins,
+              "partners": partners, "colors": colors, "recipes": recipes, "boms": boms, "opening_stock": stock}
+    out = os.path.join(work_dir, "bundle")
+    os.makedirs(out, exist_ok=True)
+    for name, data in bundle.items():
+        with open(os.path.join(out, f"{name}.json"), "w", encoding="utf-8") as f:
+            json.dump(data, f, ensure_ascii=False, indent=0)
+    with open(os.path.join(out, "rejects.csv"), "w", encoding="utf-8", newline="") as f:
+        w = csv.DictWriter(f, fieldnames=["entity", "key", "reason"])
+        w.writeheader()
+        w.writerows(rejects)
+    counts = {k: (sum(len(v) for v in d.values()) if isinstance(d, dict) else len(d)) for k, d in bundle.items()}
+    counts["rejects"] = len(rejects)
+    return counts
+
+
+if __name__ == "__main__":
+    import argparse
+
+    ap = argparse.ArgumentParser()
+    ap.add_argument("work_dir")
+    ap.add_argument("--since", default="2025-03")
+    a = ap.parse_args()
+    for k, v in run(a.work_dir, a.since).items():
+        print(f"  {k}: {v}")
