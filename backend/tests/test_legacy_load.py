@@ -142,3 +142,88 @@ def test_invalid_bom_is_rejected_not_half_written(client, async_db_session, tmp_
     report = client.portal.call(lambda: load_masters(async_db_session, _bundle(tmp_path, tag, boms=bad), dry_run=False))
     assert report["boms"]["rejected"] == 1 and report["boms"]["created"] == 0
     assert client.portal.call(lambda: _acount(async_db_session, BOM, code=f"LEG-F{tag}")) == 0
+
+
+# ------------------------------------------------------------ Task 8: opening stock
+def _seed_stock_masters(client, db, tag):
+    from app.models.item import Item
+    from app.models.location import Location
+
+    async def seed():
+        db.add_all([Item(code=f"S{tag}", name="Stock item", uom="yard", lot_tracked=True),
+                    Location(code=f"L{tag}", name="Legacy bin", location_type="warehouse")])
+        await db.flush()
+    client.portal.call(seed)
+
+
+def _stock_bundle(tmp_path, tag, qty=720.0, batch="B" + "1", **row):
+    r = {"ref": f"GJ01|PIC-2|{tag} XL|{batch}", "legacy_item": f"{tag} XL", "item_code": f"S{tag}", "size": "XL",
+         "color_code": None, "location_code": f"L{tag}", "qty": qty, "uom": "yard", "batch_number": f"{batch}{tag}"}
+    r.update(row)
+    (tmp_path / "opening_stock.json").write_text(json.dumps([r]))
+    return str(tmp_path)
+
+
+async def _ledger(db, tag):
+    from app.models.stock_ledger import StockLedger
+    # one test transaction = one now(), so created_at can't order these; sort by value
+    return sorted((float(q) for q in (await db.execute(
+        select(StockLedger.qty_change).filter(StockLedger.reference_type == "LEGACY_OPENING",
+                                               StockLedger.reference_id.like(f"%{tag}%")))).scalars()), reverse=True)
+
+
+async def _balance(db, tag):
+    from app.models.batch import Batch
+    from app.models.stock_balance import StockBalance
+    b = (await db.execute(select(Batch).filter(Batch.batch_number == f"B1{tag}"))).scalars().one()
+    qty = (await db.execute(select(StockBalance.qty).filter(StockBalance.batch_key == str(b.id)))).scalar()
+    return b, float(qty)
+
+
+def test_opening_stock_posts_through_stock_service(client, async_db_session, tmp_path):
+    from app.legacy.load import load_opening_stock
+    tag = uuid.uuid4().hex[:6].upper()
+    _seed_stock_masters(client, async_db_session, tag)
+    report = client.portal.call(lambda: load_opening_stock(async_db_session, _stock_bundle(tmp_path, tag), dry_run=False))
+    assert report["stock"]["posted"] == 1 and report["stock"]["batches_created"] == 1
+    assert client.portal.call(lambda: _ledger(async_db_session, tag)) == [720.0]
+    batch, qty = client.portal.call(lambda: _balance(async_db_session, tag))
+    assert qty == 720.0 and batch.bom_size_snapshot == {"size_name": "XL"} and batch.created_by == "legacy-migration"
+
+
+def test_opening_stock_dry_run_writes_nothing(client, async_db_session, tmp_path):
+    from app.legacy.load import load_opening_stock
+    tag = uuid.uuid4().hex[:6].upper()
+    _seed_stock_masters(client, async_db_session, tag)
+    report = client.portal.call(lambda: load_opening_stock(async_db_session, _stock_bundle(tmp_path, tag), dry_run=True))
+    assert report["stock"]["posted"] == 1
+    assert client.portal.call(lambda: _ledger(async_db_session, tag)) == []
+
+
+def test_opening_stock_rerun_posts_only_delta(client, async_db_session, tmp_path):
+    from app.legacy.load import load_opening_stock
+    tag = uuid.uuid4().hex[:6].upper()
+    _seed_stock_masters(client, async_db_session, tag)
+    client.portal.call(lambda: load_opening_stock(async_db_session, _stock_bundle(tmp_path, tag), dry_run=False))
+    same = client.portal.call(lambda: load_opening_stock(async_db_session, _stock_bundle(tmp_path, tag), dry_run=False))
+    assert same["stock"]["unchanged"] == 1 and same["stock"]["posted"] == 0
+    client.portal.call(lambda: load_opening_stock(async_db_session, _stock_bundle(tmp_path, tag, qty=700.0), dry_run=False))
+    assert client.portal.call(lambda: _ledger(async_db_session, tag)) == [720.0, -20.0]
+    assert client.portal.call(lambda: _balance(async_db_session, tag))[1] == 700.0
+
+
+def test_opening_stock_never_touches_non_legacy_batches(client, async_db_session, tmp_path):
+    from app.legacy.load import load_opening_stock
+    from app.models.batch import Batch
+    from app.models.item import Item
+    tag = uuid.uuid4().hex[:6].upper()
+    _seed_stock_masters(client, async_db_session, tag)
+
+    async def seed_prod_lot():
+        item_id = (await async_db_session.execute(select(Item.id).filter(Item.code == f"S{tag}"))).scalar()
+        async_db_session.add(Batch(batch_number=f"B1{tag}", item_id=item_id, created_by="operator"))
+        await async_db_session.flush()
+    client.portal.call(seed_prod_lot)
+    report = client.portal.call(lambda: load_opening_stock(async_db_session, _stock_bundle(tmp_path, tag), dry_run=False))
+    assert report["stock"]["rejected"] == 1 and report["stock"]["posted"] == 0
+    assert client.portal.call(lambda: _ledger(async_db_session, tag)) == []

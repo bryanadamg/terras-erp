@@ -12,6 +12,7 @@ key already exists is counted as `matched` (and `differs` when its fields don't
 agree) and skipped. Broadcasts once per entity type after a committed phase,
 and writes one audit row per phase.
 """
+import hashlib
 import json
 import os
 import sys
@@ -282,6 +283,99 @@ async def load_masters(db: AsyncSession, bundle_dir: str, *, dry_run: bool, reje
         if dry_run:
             await db.rollback()
     return run.report
+
+
+LEGACY_REF = "LEGACY_OPENING"
+
+
+def _ref_id(ref: str) -> str:
+    """stock_ledger.reference_id is String(64); a longer legacy key is stored as its digest."""
+    return ref if len(ref) <= 64 else "sha1:" + hashlib.sha1(ref.encode()).hexdigest()
+
+
+async def load_opening_stock(db: AsyncSession, bundle_dir: str, *, dry_run: bool, rejects: list | None = None) -> dict:
+    """Post each legacy balance row as LEGACY_OPENING stock on its own legacy lot.
+
+    Re-runnable: what is posted is the difference between the bundle quantity and
+    everything already posted under the same legacy key, so a later dump posts
+    only deltas. A batch number that belongs to a lot Terras made itself is never
+    reused — that row is rejected instead."""
+    from app.models.batch import Batch
+    from app.models.stock_ledger import StockLedger
+    from app.services import stock_service
+
+    rejects = rejects if rejects is not None else []
+    report = {"stock": Counter(posted=0, unchanged=0, batches_created=0, rejected=0)}
+    c = report["stock"]
+
+    def bad(key, reason):
+        c["rejected"] += 1
+        rejects.append({"entity": "stock", "key": key, "reason": reason})
+
+    items = {code: (i, lt) for code, i, lt in (await db.execute(select(Item.code, Item.id, Item.lot_tracked))).all()}
+    locs = {code: i for code, i in (await db.execute(select(Location.code, Location.id))).all()}
+    colors = {code: i for code, i in (await db.execute(select(Color.code, Color.id))).all()}
+    batches = {b.batch_number: b for b in (await db.execute(select(Batch))).scalars()}
+    posted = {ref: float(q) for ref, q in (await db.execute(
+        select(StockLedger.reference_id, func.sum(StockLedger.qty_change))
+        .filter(StockLedger.reference_type == LEGACY_REF).group_by(StockLedger.reference_id))).all()}
+    try:
+        for row in _read(bundle_dir, "opening_stock"):
+            ref = row["ref"]
+            if row["item_code"] not in items:
+                bad(ref, f"item {row['item_code']} not found")
+                continue
+            if row["location_code"] not in locs:
+                bad(ref, f"location {row['location_code']} not found")
+                continue
+            if row.get("color_code") and row["color_code"] not in colors:
+                bad(ref, f"colour {row['color_code']} not found")
+                continue
+            item_id = items[row["item_code"]][0]
+            batch_id = None
+            if row.get("batch_number"):
+                b = batches.get(row["batch_number"])
+                if b is not None and (b.created_by != "legacy-migration" or b.item_id != item_id):
+                    bad(ref, f"batch number {row['batch_number']} belongs to another lot")
+                    continue
+                if b is None:
+                    b = Batch(batch_number=row["batch_number"], item_id=item_id, created_by="legacy-migration",
+                              notes=f"legacy:{row['legacy_item']}",
+                              bom_size_snapshot={"size_name": row["size"]} if row.get("size") else None)
+                    db.add(b)
+                    await db.flush()
+                    batches[b.batch_number] = b
+                    c["batches_created"] += 1
+                batch_id = b.id
+            rid = _ref_id(ref)
+            delta = float(row["qty"]) - posted.get(rid, 0.0)
+            if abs(delta) < 1e-6:
+                c["unchanged"] += 1
+                continue
+            try:
+                async with db.begin_nested():
+                    await stock_service.add_stock_entry(
+                        db, item_id, locs[row["location_code"]], delta, LEGACY_REF, rid,
+                        batch_id=batch_id, color_id=colors.get(row.get("color_code")) if row.get("color_code") else None)
+            except HTTPException as e:
+                bad(ref, f"stock service refused: {e.detail}")
+                continue
+            posted[rid] = posted.get(rid, 0.0) + delta
+            c["posted"] += 1
+        if not dry_run:
+            if c["posted"] or c["batches_created"]:
+                await audit_service.log_activity(db, None, "LEGACY_IMPORT", "stock", "bulk",
+                                                 details="Legacy migration: opening stock", changes=dict(c), commit=False)
+            await db.commit()
+            try:
+                from app.core.ws_manager import manager
+                await manager.broadcast({"type": "STOCK_UPDATE", "data": {"source": "legacy_import"}})
+            except Exception:
+                pass
+    finally:
+        if dry_run:
+            await db.rollback()
+    return report
 
 
 def _print(report: dict, rejects: list):
