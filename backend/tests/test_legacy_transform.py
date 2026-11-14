@@ -191,3 +191,66 @@ def test_unmapped_category_or_uom_is_rejected():
     assert items == []
     assert sorted((r["key"], r["reason"]) for r in rejects) == [
         ("Y2", "no category crosswalk for group NOPE"), ("Y3", "no uom crosswalk for unit Unt")]
+
+
+# ------------------------------------------------------ Task 4: locations, partners
+SNAP4 = dict(SNAP, locations={
+    "FG": {"name": "Finished Goods", "type": "warehouse", "parent": ""},
+    "FG-GD-FINISH-GOODS-1": {"name": "GD FINISH GOODS 1", "type": "zone", "parent": "FG"},
+    "FG-GD-FINISH-GOODS-1-A1": {"name": "A1", "type": "bin", "parent": "FG-GD-FINISH-GOODS-1"},
+    "GM01": {"name": "GUDANG MATERIAL 1", "type": "warehouse", "parent": ""},
+})
+
+
+def _xw_locs(**locs):
+    return Crosswalks(locations=locs)
+
+
+def test_location_crosswalk_requires_action():
+    xw = Crosswalks(locations={("GM01", ""): ("MAP", "GM01", ""), ("GJ01", "PIC-2"): ("", "", "")})
+    with pytest.raises(ValueError, match="GJ01/PIC-2"):
+        transform.build_locations(xw, SNAP4)
+
+
+def test_create_bin_needs_a_zone_parent():
+    xw = Crosswalks(locations={("GJ01", "PIC-2"): ("CREATE_BIN", "FG-GD-FINISH-GOODS-1-A1", "")})
+    with pytest.raises(ValueError, match="zone"):
+        transform.build_locations(xw, SNAP4)
+
+
+def test_map_target_must_exist():
+    xw = Crosswalks(locations={("GJ01", ""): ("MAP", "NOPE", "")})
+    with pytest.raises(ValueError, match="NOPE"):
+        transform.build_locations(xw, SNAP4)
+
+
+def test_skip_maps_to_none_and_create_bin_defaults_to_legacy_bin_name():
+    xw = Crosswalks(locations={
+        ("GW01", ""): ("SKIP", "", ""),
+        ("GJ01", "GJ01L3-PIC-2"): ("CREATE_BIN", "FG-GD-FINISH-GOODS-1", ""),
+        ("GJ01", "GJ01L3-PIC-3"): ("CREATE_BIN", "FG-GD-FINISH-GOODS-1", "Rak 3"),
+        ("GJ02", "X"): ("CREATE_BIN", "FG-GD-FINISH-GOODS-1", "rak 3"),
+        ("GM01", ""): ("MAP", "GM01", ""),
+    })
+    new, mapping = transform.build_locations(xw, SNAP4)
+    assert new == [
+        {"code": "FG-GD-FINISH-GOODS-1-GJ01L3-PIC-2", "name": "GJ01L3-PIC-2", "parent_code": "FG-GD-FINISH-GOODS-1"},
+        {"code": "FG-GD-FINISH-GOODS-1-RAK-3", "name": "Rak 3", "parent_code": "FG-GD-FINISH-GOODS-1"},
+    ]
+    assert mapping[("GW01", "")] is None
+    assert mapping[("GJ02", "X")] == "FG-GD-FINISH-GOODS-1-RAK-3"
+    assert mapping[("GM01", "")] == "GM01"
+
+
+def test_partner_create_vs_map():
+    adr = [{"Adr_nr": "K1", "Adr_name": "PT. Abadi Jaya"},
+           {"Adr_nr": "K2", "Adr_name": "CV Lama"},
+           {"Adr_nr": "K3", "Adr_name": " Baru Sentosa ", "Adr_str": "Jl. Raya 1", "Adr_plz": "40123", "Adr_ort": "Bandung",
+            "Adr_tel": "022-1", "Adr_fax": "", "Adr_email": "a@b.c", "Adr_parname": "Budi"}]
+    xw = Crosswalks(partners={"K1": ("MAP", "ABADI JAYA", "CUSTOMER"), "K2": ("SKIP", "", "CUSTOMER"),
+                              "K3": ("CREATE", "", "SUPPLIER")})
+    assert transform.build_partners(adr, xw) == [
+        {"name": "ABADI JAYA", "status": "MATCHED", "legacy_code": "K1"},
+        {"name": "Baru Sentosa", "status": "NEW", "legacy_code": "K3", "type": "SUPPLIER",
+         "address": "Jl. Raya 1, 40123 Bandung", "phone": "022-1", "fax": None, "email": "a@b.c", "contact_person": "Budi"},
+    ]

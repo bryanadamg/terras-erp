@@ -8,6 +8,7 @@ reason instead of being guessed. stdlib only.
 """
 from __future__ import annotations
 
+import re
 from collections import defaultdict
 
 from app.legacy.crosswalk import Crosswalks, size_suffix
@@ -69,3 +70,51 @@ def build_items(codes, art: dict, xw: Crosswalks, snapshot: dict, lotted=frozens
             name = base
         items.append(dict(item, status="NEW", name=name, uom=xw.uoms[unit], category=xw.categories[group]))
     return items, rejects
+
+
+def _slug(name: str) -> str:
+    return re.sub(r"\s+", "-", name.strip()).upper()
+
+
+def build_locations(xw: Crosswalks, snapshot: dict):
+    """(bins to create, {(legacy_wh, legacy_bin): Terras location code or None for SKIP})."""
+    locs = snapshot["locations"]
+    new: dict[str, dict] = {}
+    mapping: dict[tuple, str | None] = {}
+    for (wh, b), (action, target, new_name) in sorted(xw.locations.items()):
+        where = f"{wh}/{b}" if b else wh
+        if action == "SKIP":
+            mapping[(wh, b)] = None
+        elif action == "MAP":
+            if target not in locs:
+                raise ValueError(f"locations.csv {where}: MAP target {target!r} is not a Terras location")
+            mapping[(wh, b)] = target
+        elif action == "CREATE_BIN":
+            if (locs.get(target) or {}).get("type") != "zone":
+                raise ValueError(f"locations.csv {where}: CREATE_BIN parent {target!r} must be an existing zone")
+            name = new_name or b or wh
+            code = f"{target}-{_slug(name)}"
+            if len(code) > 64:
+                raise ValueError(f"locations.csv {where}: new bin code {code!r} is longer than 64 characters")
+            new.setdefault(code, {"code": code, "name": name, "parent_code": target})
+            mapping[(wh, b)] = code
+        else:
+            raise ValueError(f"locations.csv {where}: action must be MAP, CREATE_BIN or SKIP (got {action!r})")
+    return list(new.values()), mapping
+
+
+def build_partners(adr: list[dict], xw: Crosswalks) -> list[dict]:
+    out = []
+    for d in adr:
+        action, terras, ptype = xw.partners.get(d["Adr_nr"], ("SKIP", "", ""))
+        if action == "MAP":
+            out.append({"name": terras, "status": "MATCHED", "legacy_code": d["Adr_nr"]})
+        elif action == "CREATE":
+            g = lambda k: (d.get(k) or "").strip() or None
+            city = " ".join(filter(None, [g("Adr_plz"), g("Adr_ort")]))
+            out.append({"name": g("Adr_name"), "status": "NEW", "legacy_code": d["Adr_nr"],
+                        "type": ptype if ptype in ("CUSTOMER", "SUPPLIER") else "CUSTOMER",
+                        "address": ", ".join(filter(None, [g("Adr_str"), city])) or None,
+                        "phone": g("Adr_tel"), "fax": g("Adr_fax"), "email": g("Adr_email"),
+                        "contact_person": g("Adr_parname")})
+    return out
