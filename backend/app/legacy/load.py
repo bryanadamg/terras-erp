@@ -349,8 +349,10 @@ async def load_opening_stock(db: AsyncSession, bundle_dir: str, *, dry_run: bool
                     c["batches_created"] += 1
                 batch_id = b.id
             rid = _ref_id(ref)
-            delta = float(row["qty"]) - posted.get(rid, 0.0)
-            if abs(delta) < 1e-6:
+            # stock_ledger.qty_change is Numeric(14, 4): compare at that precision, or every
+            # re-run would re-post the rounding difference of a 7-decimal legacy quantity.
+            delta = round(round(float(row["qty"]), 4) - posted.get(rid, 0.0), 4)
+            if delta == 0:
                 c["unchanged"] += 1
                 continue
             try:

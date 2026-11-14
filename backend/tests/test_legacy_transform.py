@@ -428,3 +428,8 @@ def test_partner_without_a_name_is_not_created():
 def test_serials_that_differ_only_by_padding_still_count_as_shared():
     rows, _ = _stock([_li("GM01", "Y1", "A2", qty=1), _li("GM01", "FG1", "A2 ", qty=1)])
     assert sorted(r["batch_number"] for r in rows) == ["A2-FG1", "A2-Y1"]
+
+
+def test_stock_qty_is_rounded_to_ledger_precision():
+    rows, _ = _stock([_li("GM01", "Y1", "S1", qty=3043.4782609)])
+    assert rows[0]["qty"] == 3043.4783          # stock_ledger.qty_change is Numeric(14, 4)

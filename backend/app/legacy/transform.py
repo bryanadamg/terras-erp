@@ -223,7 +223,7 @@ def build_opening_stock(li: list, mapping: dict, items: list, xw: Crosswalks, sn
             continue
         _, size, colour = base_of(art_nr, xw)
         rows.append({"ref": ref, "legacy_item": art_nr, "item_code": item["code"], "size": size, "color_code": colour,
-                     "location_code": mapping[(wh, b)], "qty": qty, "uom": item["uom"],
+                     "location_code": mapping[(wh, b)], "qty": round(qty, 4), "uom": item["uom"],
                      "batch_number": batch_number_for(art_nr, serial, taken, dup_serials) if serial else None})
     return rows, rejects
 

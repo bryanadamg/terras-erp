@@ -251,3 +251,13 @@ def test_each_committed_phase_writes_one_audit_row_in_the_changes_format(client,
             .order_by(AuditLog.timestamp.desc()))).scalars().first()
     changes = client.portal.call(fetch)
     assert changes["created"] == [None, 3]
+
+
+def test_opening_stock_rerun_with_extra_decimals_is_unchanged(client, async_db_session, tmp_path):
+    from app.legacy.load import load_opening_stock
+    tag = uuid.uuid4().hex[:6].upper()
+    _seed_stock_masters(client, async_db_session, tag)
+    b = _stock_bundle(tmp_path, tag, qty=3043.4782609)
+    client.portal.call(lambda: load_opening_stock(async_db_session, b, dry_run=False))
+    again = client.portal.call(lambda: load_opening_stock(async_db_session, b, dry_run=False))
+    assert again["stock"]["posted"] == 0 and again["stock"]["unchanged"] == 1
