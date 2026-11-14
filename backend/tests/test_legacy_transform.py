@@ -254,3 +254,97 @@ def test_partner_create_vs_map():
         {"name": "Baru Sentosa", "status": "NEW", "legacy_code": "K3", "type": "SUPPLIER",
          "address": "Jl. Raya 1, 40123 Bandung", "phone": "022-1", "fax": None, "email": "a@b.c", "contact_person": "Budi"},
     ]
+
+
+# ------------------------------------------------ Task 5: colours, recipes, stock
+ART5 = {a["Art_nr"]: a for a in [
+    _art("0000001388", " 10346A-1 ", group="LABDIP", Art_flds11="Cuci dingin", Art_flds12="AIR PANAS SIRKULASI",
+         Art_flds13="Fixing 20 g/l tanacid AB 2g/l ", Art_flds19="Chromafix FRD 20g/l"),
+    _art("0000002785", "14368A-1", group="LABDIP"),
+    _art("LABOLATORI", "OVEN MEMRT UN 55", group="LABDIP"),
+    _art("DYN0006", "LEVASET BORDEAUX B", group="ACIDDYES"), _art("DYN0004", "LEVASET RED G", group="ACIDDYES"),
+    _art("DYN0009", "LEVASET NAVY R", group="ACIDDYES"), _art("CHE0039", "CHROMALEV ACD 01", group="CHEMICAL"),
+    _art("CHE0001", "CHROMALEV LPA", group="CHEMICAL"),
+]}
+
+
+def _edge(p, c, slot, qty):
+    return {"set_artnr_h": p, "set_artnr_u": c, "set_nr": slot, "set_stck": qty, "set_stckproz": 0}
+
+
+SET_1388 = [_edge("0000001388", "CHE0001", "5. Chem 2", 10), _edge("0000001388", "DYN0006", "1. Dyes 1", 9.0),
+            _edge("0000001388", "CHE0039", "4. Chem 1", 10), _edge("0000001388", "DYN0009", "3. Dyes 3", 0.8),
+            _edge("0000001388", "DYN0004", "2. Dyes 2", 2.1), _edge("0000001388", "GONE", "6. Chem 3", 1)]
+XW5 = Crosswalks(wash_finish={"Cuci dingin": ("WASH", "Cuci dingin"), "AIR PANAS SIRKULASI": ("WASH", ""),
+                              "Fixing 20 g/l tanacid AB 2g/l": ("FINISH", "Fixing")},
+                 fg_colour={"FG1": ("9649/16 NS", "14368A-1")})
+
+
+def test_build_colors_from_recipes_and_fg_links():
+    colors = transform.build_colors(ART5, SET_1388, dict(SNAP, colors=["99999-A-1"]), XW5)
+    assert [(c["code"], c["status"], c["legacy_code"]) for c in colors] == [
+        ("10346A-1", "NEW", "0000001388"), ("14368A-1", "NEW", "0000002785")]   # the oven is not a colour
+    assert transform.build_colors(ART5, SET_1388, dict(SNAP, colors=["10346A-1"]), Crosswalks())[0]["status"] == "MATCHED"
+
+
+def test_recipe_lines_follow_slot_order_and_kinds():
+    recipes, rejects = transform.build_recipes(ART5, SET_1388, XW5)
+    r = recipes[0]
+    assert (r["color_code"], r["name"], r["notes"]) == ("10346A-1", "10346A-1", "legacy:0000001388")
+    assert [(l["item_code"], l["chemical_type"], l["sort_order"]) for l in r["lines"]] == [
+        ("DYN0006", "DYE", 0), ("DYN0004", "DYE", 1), ("DYN0009", "DYE", 2), ("CHE0039", "OTHER", 3), ("CHE0001", "OTHER", 4)]
+    assert r["lines"][0]["qty_per_liter"] == 9.0
+    assert rejects == [{"entity": "recipe_line", "key": "0000001388/GONE", "reason": "component not in item master"}]
+
+
+def test_recipe_wash_and_finishing_steps_follow_crosswalk():
+    r = transform.build_recipes(ART5, SET_1388, XW5)[0][0]
+    assert r["wash_baths"] == [{"bath_number": 1, "value": "Cuci dingin"}, {"bath_number": 2, "value": "AIR PANAS SIRKULASI"}]
+    assert r["finishing"] == [{"sort_order": 0, "value": "Fixing"}, {"sort_order": 1, "value": "Chromafix FRD 20g/l"}]
+
+
+def test_batch_number_collisions():
+    assert transform.batch_number_for("A", "123", set(), set()) == "123"
+    assert transform.batch_number_for("A", "123", set(), {"123"}) == "123-A"     # serial shared by two legacy items
+    assert transform.batch_number_for("A", "123", {"123"}, set()) == "123-A"     # already a bie-prod batch
+    long = transform.batch_number_for("X" * 30, "9" * 60, set(), {"9" * 60})
+    assert len(long) <= 64 and long != transform.batch_number_for("Y" * 30, "9" * 60, set(), {"9" * 60})
+
+
+ITEMS5 = [
+    {"code": "0000000070", "uom": "yard", "legacy_codes": ["0000000070 L", "0000000070 XL"]},
+    {"code": "9649/16 NS", "uom": "yard", "legacy_codes": ["FG1"]},
+    {"code": "Y1", "uom": "kg", "legacy_codes": ["Y1"]},
+]
+XW5S = Crosswalks(sizes={"L": ("L", True), "XL": ("XL", True)}, fg_colour={"FG1": ("9649/16 NS", "14368A-1")})
+MAP5 = {("GJ01", "PIC-2"): "FG-A1", ("GW01", ""): None, ("GM01", ""): "GM01"}
+
+
+def _stock(li):
+    return transform.build_opening_stock(li, MAP5, ITEMS5, XW5S, dict(SNAP, batch_numbers=["777"]))
+
+
+def test_nonpositive_balance_rejected():
+    rows, rejects = _stock([_li("GM01", "Y1", "S1", qty=0), _li("GM01", "Y1", "S2", qty=-5)])
+    assert rows == [] and [r["reason"] for r in rejects] == ["non-positive qty", "non-positive qty"]
+
+
+def test_skipped_store_produces_no_stock():
+    rows, rejects = _stock([_li("GW01", "Y1", "S1", qty=3), _li("GM01", "NOPE", "S1", qty=3)])
+    assert rows == []
+    assert [r["reason"] for r in rejects] == ["store already live in Terras", "item not migrated"]
+
+
+def test_sized_item_stock_lands_on_base_with_size():
+    rows, _ = _stock([_li("GJ01", "0000000070 XL", "2602131321130471", "PIC-2", 720),
+                      _li("GJ01", "0000000070 L", "2602131321130471", "PIC-2", 10)])
+    assert [(r["item_code"], r["size"], r["batch_number"], r["location_code"], r["qty"], r["uom"]) for r in rows] == [
+        ("0000000070", "XL", "2602131321130471-0000000070 XL", "FG-A1", 720, "yard"),
+        ("0000000070", "L", "2602131321130471-0000000070 L", "FG-A1", 10, "yard")]
+    assert rows[0]["ref"] == "GJ01|PIC-2|0000000070 XL|2602131321130471"
+
+
+def test_fg_colour_item_stock_lands_on_base_with_colour():
+    rows, _ = _stock([_li("GM01", "FG1", "777", qty=4), _li("GM01", "Y1", "", qty=2)])
+    assert [(r["item_code"], r["color_code"], r["batch_number"]) for r in rows] == [
+        ("9649/16 NS", "14368A-1", "777-FG1"), ("Y1", None, None)]
