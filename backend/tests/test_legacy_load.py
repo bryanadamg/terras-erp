@@ -261,3 +261,13 @@ def test_opening_stock_rerun_with_extra_decimals_is_unchanged(client, async_db_s
     client.portal.call(lambda: load_opening_stock(async_db_session, b, dry_run=False))
     again = client.portal.call(lambda: load_opening_stock(async_db_session, b, dry_run=False))
     assert again["stock"]["posted"] == 0 and again["stock"]["unchanged"] == 1
+
+
+def test_opening_stock_lot_carries_the_size_measurement(client, async_db_session, tmp_path):
+    from app.legacy.load import load_opening_stock
+    tag = uuid.uuid4().hex[:6].upper()
+    _seed_stock_masters(client, async_db_session, tag)
+    client.portal.call(lambda: load_opening_stock(
+        async_db_session, _stock_bundle(tmp_path, tag, size="L", size_measurement=72.0), dry_run=False))
+    batch, _ = client.portal.call(lambda: _balance(async_db_session, tag))
+    assert batch.bom_size_snapshot == {"size_name": "L", "target_measurement": 72.0}

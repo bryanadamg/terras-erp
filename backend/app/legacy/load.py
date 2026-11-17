@@ -342,7 +342,9 @@ async def load_opening_stock(db: AsyncSession, bundle_dir: str, *, dry_run: bool
                 if b is None:
                     b = Batch(batch_number=row["batch_number"], item_id=item_id, created_by="legacy-migration",
                               notes=f"legacy:{row['legacy_item']}",
-                              bom_size_snapshot={"size_name": row["size"]} if row.get("size") else None)
+                              bom_size_snapshot=({"size_name": row["size"], **({"target_measurement": row["size_measurement"]}
+                                                                                     if row.get("size_measurement") else {})}
+                                                 if row.get("size") else None))
                     db.add(b)
                     await db.flush()
                     batches[b.batch_number] = b

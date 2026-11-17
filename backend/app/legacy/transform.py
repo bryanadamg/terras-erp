@@ -12,7 +12,7 @@ import hashlib
 import re
 from collections import defaultdict
 
-from app.legacy.crosswalk import LABDIP, Crosswalks, is_recipe_edge, size_suffix
+from app.legacy.crosswalk import LABDIP, SIZE_ALIASES, Crosswalks, is_recipe_edge, size_suffix
 
 
 def reject(entity: str, key: str, reason: str) -> dict:
@@ -46,22 +46,76 @@ def greige_code(name: str):
     return " ".join(WIP_CBG.sub("", name).split()) + " Greige"
 
 
+CODE_SIZE = re.compile(r"^(S|M|L|XL|XXL|XXXL|[2-5]XL)(\d{2,3})?$")
+
+
+def code_size(code: str, xw: Crosswalks, sizes: set):
+    """(Terras size, target measurement) off a legacy code's last hyphen token —
+    jacquard greige keeps its size only there: -L, -XL, -L72 (size L, 72)."""
+    m = CODE_SIZE.match(code.rsplit("-", 1)[-1]) if "-" in code else None
+    if not m:
+        return None, None
+    size, collapse = xw.sizes.get(m.group(1), (SIZE_ALIASES.get(m.group(1), m.group(1)), True))
+    if not collapse or size not in sizes:
+        return None, None
+    return size, (float(m.group(2)) if m.group(2) else None)
+
+
+def identities(codes, art: dict, xw: Crosswalks, snapshot: dict):
+    """legacy code -> {code, size, measurement, colour}: the Terras item each legacy item
+    folds into, decided once so items, stock and BOMs can't disagree.
+    Greige "WIP CBG x" becomes "x Greige" (sized by its code suffix); a greige that
+    shares that name with others but has no size in its code keeps its legacy code,
+    since folding it in would silently merge two different greige."""
+    sizes = set(snapshot["sizes"])
+    ident = {}
+    for code in codes:
+        base, size, colour = base_of(code, xw)
+        meas = None
+        g = greige_code((art.get(base) or art[code]).get("Art_name"))
+        if g:
+            if not size:
+                size, meas = code_size(code, xw, sizes)
+            base = g
+        ident[code] = {"code": base, "size": size, "measurement": meas, "colour": colour, "greige": bool(g)}
+    by_key: dict[str, list[str]] = defaultdict(list)
+    for code, i in ident.items():
+        by_key[i["code"]].append(code)
+    review = []
+    for key, members in by_key.items():
+        if len(members) > 1 and ident[members[0]]["greige"]:
+            for code in members:
+                if not ident[code]["size"]:
+                    ident[code] = {"code": code, "size": None, "measurement": None, "colour": None, "greige": False}
+                    review.append(reject("item_review", code, f"greige not renamed: shares the name {key} but its code carries no size"))
+    return ident, review
+
+
+def member_of(item: dict, legacy_code: str, xw: Crosswalks) -> dict:
+    """Size / measurement / colour of one legacy item inside its Terras item."""
+    m = (item.get("members") or {}).get(legacy_code)
+    if m is None:
+        _, size, colour = base_of(legacy_code, xw)
+        m = {"size": size, "measurement": None, "colour": colour}
+    return m
+
+
 def build_items(codes, art: dict, xw: Crosswalks, snapshot: dict, lotted=frozenset()):
+    ident, rejects = identities(codes, art, xw, snapshot)
     groups: dict[str, list[str]] = defaultdict(list)
     for code in sorted(codes):
-        base = base_of(code, xw)[0]
-        # Rename before grouping, so legacy duplicates that differ only by spacing merge.
-        base = greige_code((art.get(base) or art[code]).get("Art_name")) or base
-        groups[base].append(code)
+        groups[ident[code]["code"]].append(code)
     size_order = {s: i for i, s in enumerate(snapshot["sizes"])}
-    items, rejects = [], []
+    items = []
     for base, members in sorted(groups.items()):
-        info = [base_of(m, xw) for m in members]
+        info = [(ident[m]["code"], ident[m]["size"], ident[m]["colour"]) for m in members]
         sizes = sorted({s for _, s, _ in info if s}, key=lambda s: (size_order.get(s, 99), s))
         first = art[members[0]]
         flds00 = next((art[m].get("Art_flds00") for m in members if (art[m].get("Art_flds00") or "").strip()), None)
         item = {
             "code": base, "sizes": sizes, "legacy_codes": members,
+            "members": {m: {"size": ident[m]["size"], "measurement": ident[m]["measurement"],
+                            "colour": ident[m]["colour"]} for m in members},
             "lot_tracked": any(m in lotted for m in members),
             "variant_type": "color" if any(c for _, _, c in info) else None,
             "material": (xw.materials.get(flds00) or flds00) if flds00 else None,
@@ -77,7 +131,7 @@ def build_items(codes, art: dict, xw: Crosswalks, snapshot: dict, lotted=frozens
         if not xw.uoms.get(unit):
             rejects += [reject("item", m, f"no uom crosswalk for unit {unit}") for m in members]
             continue
-        if greige_code((art.get(members[0]) or {}).get("Art_name")) == base:
+        if ident[members[0]]["greige"]:
             name = base
         elif base in art:
             name = art[base].get("Art_name") or base
@@ -237,8 +291,10 @@ def build_opening_stock(li: list, mapping: dict, items: list, xw: Crosswalks, sn
         if not item:
             rejects.append(reject("stock", ref, "item not migrated"))
             continue
-        _, size, colour = base_of(art_nr, xw)
-        rows.append({"ref": ref, "legacy_item": art_nr, "item_code": item["code"], "size": size, "color_code": colour,
+        m = member_of(item, art_nr, xw)
+        size, colour = m["size"], m["colour"]
+        rows.append({"ref": ref, "legacy_item": art_nr, "item_code": item["code"], "size": size,
+                     "size_measurement": m["measurement"], "color_code": colour,
                      "location_code": mapping[(wh, b)], "qty": round(qty, 4), "uom": item["uom"],
                      "batch_number": batch_number_for(art_nr, serial, taken, dup_serials) if serial else None})
     return rows, rejects
@@ -292,7 +348,7 @@ def build_boms(set_rows: list, items_by_legacy_code: dict, xw: Crosswalks, snaps
                 line["pct"] += e.get("set_stckproz") or 0
         if bad or not lines:
             continue
-        base, size, _ = base_of(parent, xw)
+        size = member_of(items_by_legacy_code[parent], parent, xw)["size"]
         families[items_by_legacy_code[parent]["code"]].append((size, parent, list(lines.values())))
 
     boms = []

@@ -437,17 +437,45 @@ def test_stock_qty_is_rounded_to_ledger_precision():
 
 def test_wip_cbg_greige_takes_the_terras_greige_name_as_code_and_name():
     art = {a["Art_nr"]: a for a in [
-        _art("WIP-CBG-1298PS12", "WIP CBG  1298/12 PS", group="GreigeLoom"),
-        _art("WIP-CBG-1298PS12-B", "WIP CBG 1298/12 PS ", group="GreigeLoom"),   # same greige, other spacing
+        _art("WIP-CBG-1298PS12", "WIP CBG  1298/12 PS ", group="GreigeLoom"),
         _art("WIP-CSBG-9529NS8", "WIP CSBG 9529/8 NS", group="GreigeLoom"),      # not asked for: unchanged
     ]}
     xw = Crosswalks(categories={"GreigeLoom": "Greige > Greige Loom"}, uoms={"KG": "kg"})
     items, rejects = transform.build_items(set(art), art, xw, SNAP3)
     assert rejects == []
     assert sorted((i["code"], i["name"], i["legacy_codes"]) for i in items) == [
-        ("1298/12 PS Greige", "1298/12 PS Greige", ["WIP-CBG-1298PS12", "WIP-CBG-1298PS12-B"]),
+        ("1298/12 PS Greige", "1298/12 PS Greige", ["WIP-CBG-1298PS12"]),
         ("WIP-CSBG-9529NS8", "WIP CSBG 9529/8 NS", ["WIP-CSBG-9529NS8"]),
     ]
     rows, _ = transform.build_opening_stock([_li("GM01", "WIP-CBG-1298PS12", "L1", qty=12.5)], {("GM01", ""): "GM01"},
                                             items, xw, SNAP3)
     assert rows[0]["item_code"] == "1298/12 PS Greige"
+
+
+GREIGE_XW = Crosswalks(categories={"GreigeJaqu": "Greige > Greige JQ"}, uoms={"KG": "kg"},
+                       sizes={"L": ("L", True), "XL": ("XL", True), "XXL": ("2XL", True)})
+
+
+def test_sized_greige_codes_collapse_into_one_sized_greige_item():
+    art = {a["Art_nr"]: a for a in [
+        _art("WIP-CBG-JC81-0562NS35-BLACK-L72", "WIP CBG JC 81-0562/35 NS BLACK", group="GreigeJaqu"),
+        _art("WIP-CBG-JC81-0562NS35-BLACK-XL", "WIP CBG JC 81-0562/35 NS BLACK", group="GreigeJaqu"),
+        _art("WIP-CBG-JC81-0562NS35-BLCK-XXL", "WIP CBG JC 81-0562/35 NS BLACK", group="GreigeJaqu"),
+    ]}
+    items, rejects = transform.build_items(set(art), art, GREIGE_XW, SNAP3)
+    assert rejects == []
+    assert [(i["code"], i["sizes"], len(i["legacy_codes"])) for i in items] == [("JC 81-0562/35 NS BLACK Greige", ["L", "XL", "2XL"], 3)]
+    rows, _ = transform.build_opening_stock([_li("GG01", "WIP-CBG-JC81-0562NS35-BLACK-L72", "S9", qty=4)],
+                                            {("GG01", ""): "GG01"}, items, GREIGE_XW, SNAP3)
+    assert (rows[0]["item_code"], rows[0]["size"], rows[0]["size_measurement"]) == ("JC 81-0562/35 NS BLACK Greige", "L", 72.0)
+
+
+def test_greige_sharing_a_name_without_a_size_in_its_code_keeps_its_legacy_identity():
+    art = {a["Art_nr"]: a for a in [
+        _art("WIP-CBG-JC5029PL35-65", "WIP CBG JC 5029/35 PL", group="GreigeJaqu"),
+        _art("WIP-CBG-JC5029PL35-75", "WIP CBG JC 5029/35 PL", group="GreigeJaqu"),
+        _art("WIP-CBG-JC5029PL35-L", "WIP CBG JC 5029/35 PL", group="GreigeJaqu"),
+    ]}
+    items, rejects = transform.build_items(set(art), art, GREIGE_XW, SNAP3)
+    assert sorted(i["code"] for i in items) == ["JC 5029/35 PL Greige", "WIP-CBG-JC5029PL35-65", "WIP-CBG-JC5029PL35-75"]
+    assert sorted(r["key"] for r in rejects if r["entity"] == "item_review") == ["WIP-CBG-JC5029PL35-65", "WIP-CBG-JC5029PL35-75"]
