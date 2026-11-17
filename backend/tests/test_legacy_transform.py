@@ -433,3 +433,21 @@ def test_serials_that_differ_only_by_padding_still_count_as_shared():
 def test_stock_qty_is_rounded_to_ledger_precision():
     rows, _ = _stock([_li("GM01", "Y1", "S1", qty=3043.4782609)])
     assert rows[0]["qty"] == 3043.4783          # stock_ledger.qty_change is Numeric(14, 4)
+
+
+def test_wip_cbg_greige_takes_the_terras_greige_name_as_code_and_name():
+    art = {a["Art_nr"]: a for a in [
+        _art("WIP-CBG-1298PS12", "WIP CBG  1298/12 PS", group="GreigeLoom"),
+        _art("WIP-CBG-1298PS12-B", "WIP CBG 1298/12 PS ", group="GreigeLoom"),   # same greige, other spacing
+        _art("WIP-CSBG-9529NS8", "WIP CSBG 9529/8 NS", group="GreigeLoom"),      # not asked for: unchanged
+    ]}
+    xw = Crosswalks(categories={"GreigeLoom": "Greige > Greige Loom"}, uoms={"KG": "kg"})
+    items, rejects = transform.build_items(set(art), art, xw, SNAP3)
+    assert rejects == []
+    assert sorted((i["code"], i["name"], i["legacy_codes"]) for i in items) == [
+        ("1298/12 PS Greige", "1298/12 PS Greige", ["WIP-CBG-1298PS12", "WIP-CBG-1298PS12-B"]),
+        ("WIP-CSBG-9529NS8", "WIP CSBG 9529/8 NS", ["WIP-CSBG-9529NS8"]),
+    ]
+    rows, _ = transform.build_opening_stock([_li("GM01", "WIP-CBG-1298PS12", "L1", qty=12.5)], {("GM01", ""): "GM01"},
+                                            items, xw, SNAP3)
+    assert rows[0]["item_code"] == "1298/12 PS Greige"

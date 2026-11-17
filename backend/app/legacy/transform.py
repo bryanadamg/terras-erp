@@ -35,10 +35,24 @@ def base_of(code: str, xw: Crosswalks):
     return base, size, None
 
 
+WIP_CBG = re.compile(r"^WIP\s+CBG\s+", re.I)
+
+
+def greige_code(name: str):
+    """Legacy greige "WIP CBG 1298/12 PS" is Terras's "1298/12 PS Greige" (client, 2026-11-17).
+    Used as code and name, like prod's own greige items; None for any other name."""
+    if not WIP_CBG.match(name or ""):
+        return None
+    return " ".join(WIP_CBG.sub("", name).split()) + " Greige"
+
+
 def build_items(codes, art: dict, xw: Crosswalks, snapshot: dict, lotted=frozenset()):
     groups: dict[str, list[str]] = defaultdict(list)
     for code in sorted(codes):
-        groups[base_of(code, xw)[0]].append(code)
+        base = base_of(code, xw)[0]
+        # Rename before grouping, so legacy duplicates that differ only by spacing merge.
+        base = greige_code((art.get(base) or art[code]).get("Art_name")) or base
+        groups[base].append(code)
     size_order = {s: i for i, s in enumerate(snapshot["sizes"])}
     items, rejects = [], []
     for base, members in sorted(groups.items()):
@@ -63,7 +77,9 @@ def build_items(codes, art: dict, xw: Crosswalks, snapshot: dict, lotted=frozens
         if not xw.uoms.get(unit):
             rejects += [reject("item", m, f"no uom crosswalk for unit {unit}") for m in members]
             continue
-        if base in art:
+        if greige_code((art.get(members[0]) or {}).get("Art_name")) == base:
+            name = base
+        elif base in art:
             name = art[base].get("Art_name") or base
         elif sizes:
             name = size_suffix(first.get("Art_name") or base)[0]
