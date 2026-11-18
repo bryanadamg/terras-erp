@@ -6,7 +6,7 @@ import CategoriesView from './CategoriesView';
 import UOMLibraryView from './UOMLibraryView';
 import AttributesLibraryView from './AttributesLibraryView';
 import { Tabs } from '../shared/Tabs';
-import { viewShellStyle, PageTitleBar } from '../shared/shellTheme';
+import { viewShellStyle } from '../shared/shellTheme';
 
 interface Props {
     categories: any[];
@@ -60,8 +60,6 @@ export default function ItemMetadataView({
 
     return (
         <div className="fade-in" style={viewShellStyle()}>
-
-            <PageTitleBar icon="bi-tag" title="Attributes" />
 
             <Tabs
                 activeKey={tab}

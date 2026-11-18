@@ -202,42 +202,13 @@ export function ShellWindow({ fill = 'page', className, style, children }: {
 }
 
 /**
- * Page title bar — icon + label, no actions, no bootstrap card chrome. The shape
- * seven page shells (Colors, Color Library, Combo Library, Attributes, Settings,
- * Dyeing & Setting, Lab Dips) each declared by hand, byte-for-byte the same pair
- * of style objects: classic = the blue gradient bar, modern = a pale flat header
- * with a blue icon. That is why the window-focus swap had to touch seven files;
- * with this, the gradient appears in exactly two places in the whole app
- * (`TITLE_TONES` here, and ModalWrapper/PrintModalShell for a window that must
- * NOT dim itself).
- *
- * Use `ShellTitleBar` instead when the bar carries right-side actions or needs
- * the bootstrap card-header look in modern.
+ * Section title bar inside a page (e.g. the Dashboard's panels): icon + title +
+ * right-side actions, tinted by `tone`. Not for a page's own title — the app
+ * header already carries that, so a top-of-page bar would just repeat it.
  */
-export function PageTitleBar({ icon, title, right, style }: {
-    icon: string;                 // bootstrap-icons class, e.g. "bi-palette2"
-    title: React.ReactNode;
-    right?: React.ReactNode;
-    style?: React.CSSProperties;
-}) {
-    // Classic geometry comes from terras-ui's `titleBar`, not a second set of numbers: this
-    // used to carry its own `padding: '6px 12px'` / `fontSize: 13`, which rendered
-    // the seven PageTitleBar pages (Colors, Color/Combo Library, Attributes, Lab
-    // Dips, Dyeing & Setting, Settings) with a visibly taller bar than every
-    // titleBar page next to them. One bar height, app-wide.
-    return <UIWindow.TitleBar icon={<i className={`bi ${icon}`} />} title={title} right={right} style={style} />;
-}
-
-/**
- * Title bar: icon + title (+ optional modern-only subtitle caption) + right-side
- * actions. Classic renders the blue-gradient bar; modern renders a bootstrap
- * card-header with an h5 + optional caption — matches SalesOrderView, PartnersView,
- * SampleRequestView, PackingView, BOMView, and the Settings tabs.
- */
-export function ShellTitleBar({ icon, title, subtitle, right, tone = 'blue' }: {
+export function ShellTitleBar({ icon, title, right, tone = 'blue' }: {
     icon: string;                 // bootstrap-icons class, e.g. "bi-people-fill"
     title: React.ReactNode;
-    subtitle?: React.ReactNode;   // modern-only caption line under the title
     right?: React.ReactNode;      // action button(s) — e.g. "+ Add"
     tone?: ShellTone;             // classic-only bar color; modern keeps the white card-header
 }) {

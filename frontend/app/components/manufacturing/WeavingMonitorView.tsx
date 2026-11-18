@@ -530,8 +530,6 @@ export default function WeavingMonitorView() {
     return (
         <>
             <MonitorShell
-                icon="bi-speedometer2"
-                title={t('weaving_monitor')}
                 summary={summaryText}
                 onRefresh={load}
                 refreshTitle={t('refresh')}

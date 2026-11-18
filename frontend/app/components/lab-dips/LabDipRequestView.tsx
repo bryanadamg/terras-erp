@@ -14,7 +14,7 @@ import { FormSection } from '@bryanadamg/terras-ui/components/FormSection';
 import { useServerSort, ExpandedRowPanel, rowStateBg } from '@bryanadamg/terras-ui/components/Table';
 import { BTN_TONES } from '@bryanadamg/terras-ui/styles';
 import { SKEL_PAGE_ROWS } from '@bryanadamg/terras-ui/components/Skeleton';
-import { SearchField, ToolbarButton, viewShellStyle, PageTitleBar } from '../shared/shellTheme';
+import { SearchField, ToolbarButton, viewShellStyle } from '../shared/shellTheme';
 import { FilterChipBar } from '@bryanadamg/terras-ui/components/FilterChipBar';
 import { Count as ToolbarCount } from '@bryanadamg/terras-ui/components/Window';
 import RequestDetailPanel, { getStatusStripe } from '../shared/RequestDetailPanel';
@@ -473,12 +473,6 @@ export default function LabDipRequestView({
 
     return (
         <div style={viewShellStyle('page', { fontFamily: xpFont})}>
-            {/* Title bar */}
-            <PageTitleBar
-                icon={isYarn ? 'bi-droplet-half' : 'bi-droplet'}
-                title={isYarn ? 'Yarn Lab Dip Requests' : 'Lab Dip Requests'}
-            />
-
             {/* Toolbar */}
             <div style={{ background: 'linear-gradient(to bottom, #f5f4ef, #e0dfd8)', borderBottom: '1px solid #b0a898', padding: '4px 8px', display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' as const, flexShrink: 0 }}>
                 <SearchField value={searchTerm} onChange={setSearchTerm} placeholder="Search code, color standard, article…" width={220} />

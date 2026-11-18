@@ -3,43 +3,38 @@
 import React from 'react';
 import { xpFont, XPActionButton } from '../../shared/xpTheme';
 import { CardGridSkeleton, SkeletonBar } from '@bryanadamg/terras-ui/components/Skeleton';
-import { ShellWindow, ShellTitleBar } from '../../shared/shellTheme';
+import { toolbar as xpToolbar } from '@bryanadamg/terras-ui/styles';
+import { ShellWindow } from '../../shared/shellTheme';
 
 /**
- * The window both machine monitors live in: title bar, summary strip, a chip bar
+ * The window both machine monitors live in: toolbar (summary + actions), a chip bar
  * pinned above the scroll area, and the scrolling grid.
  *
  * The chip bar sits OUTSIDE the scroll region deliberately — the filter and its
  * alarm badges stay on screen no matter how far down the grid you are.
  */
 export const MonitorShell = ({
-    icon, title, summary, onRefresh, refreshTitle, loading, hasMachines, chipBar, actions, children,
+    summary, onRefresh, refreshTitle, loading, hasMachines, chipBar, actions, children,
 }: {
-    icon: string;
-    title: string;
     summary: React.ReactNode;
     onRefresh: () => void;
     refreshTitle: string;
     loading: boolean;
     hasMachines: boolean;
     chipBar: React.ReactNode;
-    actions?: React.ReactNode;   // extra title-bar buttons, left of Refresh
+    actions?: React.ReactNode;   // extra toolbar buttons, left of Refresh
     children: React.ReactNode;
 }) => (
     <div className="fade-in" style={{ fontFamily: xpFont }}>
         <ShellWindow fill="page">
-            <ShellTitleBar
-                icon={icon}
-                title={title}
-                right={
-                    <span style={{ display: 'flex', alignItems: 'center', gap: 10, fontWeight: 'normal', fontSize: 11}}>
-                        <span className={undefined}>{summary}</span>
-                        {actions}
-                        <XPActionButton tone="neutral" icon="bi-arrow-clockwise"
-                            title={refreshTitle} onClick={onRefresh} />
-                    </span>
-                }
-            />
+            <div style={xpToolbar()}>
+                <span>{summary}</span>
+                <span style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 6 }}>
+                    {actions}
+                    <XPActionButton tone="neutral" icon="bi-arrow-clockwise"
+                        title={refreshTitle} onClick={onRefresh} />
+                </span>
+            </div>
             {(loading || hasMachines) && (
                 <div style={{ padding: '6px 8px 0', background: '#ece9d8'}}>
                     {/* Placeholder chips hold the strip's height while loading — without
