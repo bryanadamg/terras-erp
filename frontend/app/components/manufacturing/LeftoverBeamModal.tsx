@@ -4,10 +4,9 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { useData } from '../../context/DataContext';
 import { useToast } from '../shared/Toast';
 import ModalWrapper from '../shared/ModalWrapper';
-import {
-    xpFont, FieldLabel, FormError, ModalFooterActions, XPEmptyState, XPLoading,
-    xpInput as xpInputBase, xpSelect, xpPanel,
-} from '../shared/xpTheme';
+import { xpFont, ModalFooterActions, XPEmptyState, XPLoading, xpSelect, xpPanel } from '../shared/xpTheme';
+import { FieldLabel, FormError } from '@bryanadamg/terras-ui/components/Field';
+import { field as xpInputBase } from '@bryanadamg/terras-ui/styles';
 import LotLabelPrintModal from './LotLabelPrintModal';
 import { API_BASE } from '../shared/apiBase';
 

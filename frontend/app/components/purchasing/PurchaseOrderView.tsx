@@ -10,10 +10,19 @@ import ModalWrapper from '../shared/ModalWrapper';
 import { useTimezone } from '../../context/TimezoneContext';
 import { useData } from '../../context/DataContext';
 import { useUser } from '../../context/UserContext';
-import { useSortable, StatusChip, TableSkeleton, useTableSkeletonMetrics, ProgressBar, useFloatingMenu, MenuTriggerButton, FloatingMenu, FormSection, FieldLabel, ExpandedRowPanel, xpBtn, xpInput as xpInputBase, CodeChip, xpFont, rowStateBg, CHIP_RADIUS, BTN_TONES, XP_BTN, SKEL_PAGE_ROWS } from '../shared/xpTheme';
-import { xpBevel as sharedXpBevel, xpTitleBar as sharedXpTitleBar, xpToolbar as sharedXpToolbar, SearchField, FilterChipBar, ToolbarCount, ToolbarButton } from '../shared/shellTheme';
+import { StatusChip, TableSkeleton, useTableSkeletonMetrics, ProgressBar, useFloatingMenu, MenuTriggerButton, FloatingMenu, xpBtn, CodeChip, xpFont, CHIP_RADIUS, XP_BTN } from '../shared/xpTheme';
+import { useSortable, ExpandedRowPanel, rowStateBg } from '@bryanadamg/terras-ui/components/Table';
+import { FormSection } from '@bryanadamg/terras-ui/components/FormSection';
+import { FieldLabel } from '@bryanadamg/terras-ui/components/Field';
+import { field as xpInputBase, BTN_TONES } from '@bryanadamg/terras-ui/styles';
+import { SKEL_PAGE_ROWS } from '@bryanadamg/terras-ui/components/Skeleton';
+import { SearchField, ToolbarButton } from '../shared/shellTheme';
+import { bevel as sharedXpBevel, titleBar as sharedXpTitleBar, toolbar as sharedXpToolbar } from '@bryanadamg/terras-ui/styles';
+import { FilterChipBar } from '@bryanadamg/terras-ui/components/FilterChipBar';
+import { Count as ToolbarCount } from '@bryanadamg/terras-ui/components/Window';
 import Pager from '../shared/Pager';
-import { lvThead, lvSubTh, lvSubTd, lvSubTable, lvSubCaption, ExpanderCell, SortableTh, lvThSticky, lvTdRuled, lvZebra, ResizableTable } from '../shared/listViewTheme';
+import { lvThead, lvSubTh, lvSubTd, lvSubTable, lvSubCaption, ExpanderCell, lvThSticky, lvTdRuled, lvZebra, ResizableTable } from '../shared/listViewTheme';
+import { SortableTh } from '@bryanadamg/terras-ui/components/Table';
 import { STATIC_BASE } from '../shared/apiBase';
 
 export default function PurchaseOrderView({ items, itemResults, onSearchItems, attributes, purchaseOrders, partners, locations, onCreatePO, onEditPO, onDeletePO, onCreateReceipt, onClosePO, companyProfile }: any) {

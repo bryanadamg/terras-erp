@@ -5,6 +5,7 @@ import { useData } from '../../context/DataContext';
 import { useLanguage } from '../../context/LanguageContext';
 import { API_BASE } from '../shared/apiBase';
 import { XPEmptyState } from '../shared/xpTheme';
+import { layoutRectOf, layoutViewport, uiZoom } from '@bryanadamg/terras-ui/scale';
 
 /**
  * The mill as a pixel-art floor plan: stores stacked on a rail on the left,
@@ -265,8 +266,12 @@ export default function FloorView() {
         if (!floor || !canvas || !width) return;
         const { rooms, belts, H } = layout(floor, t('floor_running'));
         // Fit the whole floor on screen: width-bound unless that would push it below the fold.
-        const availH = window.innerHeight - canvas.getBoundingClientRect().top - 8;
-        const s = Math.min(width / W, availH > 200 ? availH / H : Infinity), dpr = window.devicePixelRatio || 1;
+        // All in layout px (`width` comes from ResizeObserver, which already is). The
+        // bitmap's device-pixel ratio folds in the UI zoom too: a layout px covers
+        // dpr × zoom device pixels, and a larger bitmap downsampled under
+        // `imageRendering: pixelated` drops rows unevenly.
+        const availH = layoutViewport().height - layoutRectOf(canvas).top - 8;
+        const s = Math.min(width / W, availH > 200 ? availH / H : Infinity), dpr = (window.devicePixelRatio || 1) * uiZoom();
         canvas.style.width = `${Math.round(W * s)}px`; canvas.style.height = `${Math.round(H * s)}px`;
         canvas.width = Math.round(W * s * dpr); canvas.height = Math.round(H * s * dpr);
         const big = canvas.getContext('2d')!;

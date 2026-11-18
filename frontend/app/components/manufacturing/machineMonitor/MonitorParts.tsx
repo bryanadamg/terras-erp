@@ -5,7 +5,8 @@ import {
     xpFont, familyColor, ProgressBar, StatusChip, XPActionButton, ToggleChip,
     CHIP_RADIUS, SECTION_RADIUS,
 } from '../../shared/xpTheme';
-import { xpToolbar, FilterChipBar } from '../../shared/shellTheme';
+import { toolbar as xpToolbar } from '@bryanadamg/terras-ui/styles';
+import { FilterChipBar } from '@bryanadamg/terras-ui/components/FilterChipBar';
 import { machineStrip, machineChipStatus } from './machineStatus';
 import { MonitorSection, UNGROUPED } from './useMonitorSections';
 

@@ -1,7 +1,8 @@
 'use client';
 
 import React from 'react';
-import { xpFont, ExpandedRowPanel, ExpandedRowPanelBody } from '../shared/xpTheme';
+import { xpFont } from '../shared/xpTheme';
+import { ExpandedRowPanel, ExpandedRowPanelBody } from '@bryanadamg/terras-ui/components/Table';
 import { describePermission, groupPermissionsBySection, groupPermissionsByResource } from '../shared/permissionMatrix';
 import { PermissionChip, PermissionSectionTable } from '../shared/permissionChips';
 

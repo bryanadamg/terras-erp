@@ -4,7 +4,8 @@ import ModalWrapper from '../shared/ModalWrapper';
 import SearchableSelect from '@bryanadamg/terras-ui/components/Combobox';
 import { useData } from '../../context/DataContext';
 import NettingPlanTable, { useNettingPreview } from './NettingPlanTable';
-import { xpFont, xpInput as _xpInput, xpLabel as _xpLabel, ModalFooterActions, CHIP_RADIUS, BUTTON_RADIUS, XP_BTN, colorLabel } from '../shared/xpTheme';
+import { xpFont, xpLabel as _xpLabel, ModalFooterActions, CHIP_RADIUS, BUTTON_RADIUS, XP_BTN, colorLabel } from '../shared/xpTheme';
+import { field as _xpInput } from '@bryanadamg/terras-ui/styles';
 import {
     QtyFormulaRule,
     DEFAULT_QTY_FORMULA,

@@ -3,7 +3,8 @@
 import { useEffect, useState } from 'react';
 import ModalWrapper from '../shared/ModalWrapper';
 import { useToast } from '../shared/Toast';
-import { xpBtn, XP_BTN, BTN_TONES, CODE_FONT, xpFont, CodeChip, VariantChip, XPActionButton } from '../shared/xpTheme';
+import { xpBtn, XP_BTN, CODE_FONT, xpFont, CodeChip, VariantChip, XPActionButton } from '../shared/xpTheme';
+import { BTN_TONES } from '@bryanadamg/terras-ui/styles';
 import { qtyFmt } from '../shared/format';
 import { altPerUnit } from '../shared/altUnit';
 import { API_BASE } from '../shared/apiBase';

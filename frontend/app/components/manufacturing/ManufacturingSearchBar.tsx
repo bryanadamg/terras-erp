@@ -1,5 +1,6 @@
 import React from 'react';
-import { SearchField, ToolbarCount } from '../shared/shellTheme';
+import { SearchField } from '../shared/shellTheme';
+import { Count as ToolbarCount } from '@bryanadamg/terras-ui/components/Window';
 
 // Shared search bar for the PR / MO list tabs. The field itself is the app-wide
 // SearchField — this component only owns the strip it sits in and the result tally.

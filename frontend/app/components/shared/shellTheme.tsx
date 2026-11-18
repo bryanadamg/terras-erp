@@ -1,33 +1,21 @@
 'use client';
 import React from 'react';
-import { ChipTone, ChipSeg } from './xpTheme';
 import UIButton from '@bryanadamg/terras-ui/components/Button';
 import UIWindow from '@bryanadamg/terras-ui/components/Window';
-import { bevel, titleBar, toolbar } from '@bryanadamg/terras-ui/styles';
+import { bevel } from '@bryanadamg/terras-ui/styles';
 import type { ButtonTone, ShellTone } from '@bryanadamg/terras-ui/types';
-import UIFilterChipBar from '@bryanadamg/terras-ui/components/FilterChipBar';
-import UISegmentedBar from '@bryanadamg/terras-ui/components/SegmentedBar';
 import { SearchField as UISearchField } from '@bryanadamg/terras-ui/components/Field';
-import { segAt as uiSegAt } from '@bryanadamg/terras-ui/styles';
 
 // Shared "classic outer window" chrome — bevel container + colored title bar +
 // toolbar strip. Every dual-theme table/detail view (Sales Orders, Packing,
 // Partners, Sample Requests, BOM, Inventory, Purchase Orders, Stock On-Hand,
 // Settings tabs, …) hand-declared near-identical copies of these three style
 // objects (same `boxShadow: '2px 2px 4px rgba(0,0,0,0.3)'` bevel, same blue
-// title-bar gradient, same toolbar strip) — this is the single source now.
-// Migrate a view's local copy when you touch it; don't hand-roll a new one.
-//
-// The style objects and components below are now thin adapters over terras-ui's
-// `bevel` / `titleBar` / `toolbar` primitives and its `Window` — the package
-// extracted them from this file. They stay exported under their old names so the
-// call sites are untouched.
-
-// `overflow: hidden` is part of the chrome, not a caller concern: the title bar,
-// toolbar and table inside are all square-cornered, so without the clip they poke
-// out of PANEL_RADIUS. It clips at the padding box (radius minus the 2px bevel),
-// which is what makes the bar's corner read as one curve with the frame's.
-export const xpBevel = (extra: React.CSSProperties = {}): React.CSSProperties => bevel(extra);
+// title-bar gradient, same toolbar strip). Those primitives now live in
+// terras-ui: import `bevel` / `titleBar` / `toolbar` from its `styles`, and
+// `FilterChipBar`, `SegmentedBar` and `Window`'s `Count` from its components.
+// Only what adds this app's wiring (bootstrap icons, the --app-vh page height)
+// stays here.
 
 // Title-bar tones. Blue is the default window chrome; the others exist for
 // dashboard-style panel stacks where the bar itself carries the severity of what
@@ -45,15 +33,8 @@ export const TITLE_TONES: Record<ShellTone, { background: string; border: string
     grey:  { background: 'linear-gradient(to bottom, #6a6a6a, #4a4a4a)',        border: '#222222' },
 };
 
-// Blue still dims with the window focus: globals.css points terras-ui's
-// --terras-title-blue at --xp-title-blue.
-export const xpTitleBar = (extra: React.CSSProperties = {}, tone: ShellTone = 'blue'): React.CSSProperties =>
-    titleBar(extra, tone);
-
-export const xpToolbar = (extra: React.CSSProperties = {}): React.CSSProperties => toolbar(extra);
-
 // ── Toolbar contents ─────────────────────────────────────────────────────────
-// `xpToolbar` above is the strip; these three are what goes IN it. Every list
+// terras-ui's `toolbar` style is the strip; these are what goes IN it. Every list
 // view was hand-rolling the same three things with a different look each time:
 // a search box (5 distinct shapes across ~17 views — loose icon + xpInput,
 // bootstrap `input-group`, absolutely-positioned icon + `paddingLeft: 24`, a
@@ -100,18 +81,6 @@ export function SearchField({
             style={style}
         />
     );
-}
-
-/**
- * The "N orders" / "N stations" tally that sits at the end of a list toolbar.
- * `right` pushes it to the far end of the flex row (the common case).
- */
-export function ToolbarCount({ children, right = false, style }: {
-    children: React.ReactNode;
-    right?: boolean;
-    style?: React.CSSProperties;
-}) {
-    return <UIWindow.Count right={right} style={style}>{children}</UIWindow.Count>;
 }
 
 // Toolbar-level labeled action buttons — "Create X" / "New X" / "Print" / "Import"
@@ -161,92 +130,6 @@ export function ToolbarButton({
     );
 }
 
-export type FilterChipOption = {
-    value: string;
-    label?: React.ReactNode;
-    count?: number;
-    /** Selected-fill colour when the value carries its own semantics (In=green, Out=red). */
-    tone?: ChipTone;
-    title?: string;
-    /** Disables just this segment — a per-row/per-value lock, distinct from the bar-level `disabled`. */
-    disabled?: boolean;
-};
-
-/** Segment position for the i-th of `len` members of a flush group. Re-exported
- *  from terras-ui so the two bars below and the package's own segment geometry
- *  can't disagree about which end is which. */
-export const segAt = (i: number, len: number): ChipSeg => uiSegAt(i, len);
-
-/**
- * Status-filter row for a list toolbar — **segmented**: the buttons sit flush
- * against each other as one control, not as loose pills. That is the app-wide
- * shape for "pick one of these" (see also `SegmentedBar` for stateless action
- * groups); don't re-space it per view.
- *
- * Built on `ToggleChip` so a selected filter looks like every other selected
- * thing in the app — the views that hand-rolled this (SO/PO/Samples inline XP
- * gradient, Lab Dips' own `primaryToolbarBtn`, the libraries' `lvPrimaryBtn`,
- * Dispatch's `#d0e4ff` xpBtn, the Calendar's bootstrap-only pair) each had a
- * different "selected" blue. Pass `count` on an option to render "PENDING (4)".
- *
- * `value` takes an array for multi-select bars (the Calendar's status set); the
- * caller does the add/remove in `onChange`.
- *
- * Now a thin adapter over terras-ui's FilterChipBar, which was extracted from
- * this one — identical option shape, identical geometry, and it builds on the
- * same `ToggleChip` this app already gets from the package. The 23 call sites
- * are untouched.
- */
-export function FilterChipBar({ options, value, onChange, disabled, trailing, flat, style }: {
-    /** Plain strings, or `{ value, label, count, tone }` for a tally / coloured fill. */
-    options: (string | FilterChipOption)[];
-    /** Selected value, or the selected set when the bar is multi-select. */
-    value: string | string[] | null;
-    onChange: (v: string) => void;
-    /** Disables every segment — a whole-bar lock (permission, busy, row locked). */
-    disabled?: boolean;
-    /** Extra segment(s) appended after the options, flush with the last one — an
-     * "undo"/clear action that isn't itself a selectable value. */
-    trailing?: React.ReactNode;
-    /** Flat idle face instead of the raised XP gradient — see `ToggleChip`. */
-    flat?: boolean;
-    style?: React.CSSProperties;
-}) {
-    return (
-        <UIFilterChipBar
-            options={options}
-            value={value}
-            onChange={onChange}
-            disabled={disabled}
-            trailing={trailing}
-            flat={flat}
-            style={style}
-        />
-    );
-}
-
-export type SegmentedAction = { key: string; label: React.ReactNode; onClick: () => void; title?: string; disabled?: boolean };
-
-/**
- * The stateless sibling of `FilterChipBar`: a flush group of plain actions with
- * no selected member — the date-range presets ("Today | 7d | 30d | Month") that
- * ReportsView and MachineOutputReportView each hand-rolled twice (once per
- * theme). Same segment geometry, so a preset row and a filter row read as the
- * same control. Also a terras-ui adapter; the package adds a whole-bar and a
- * per-action `disabled` this never had.
- *
- * If a member should stay lit after the click it is a filter, not an action —
- * use `FilterChipBar`.
- */
-export function SegmentedBar({ actions, disabled, style }: {
-    actions: SegmentedAction[];
-    /** Disables every segment. */
-    disabled?: boolean;
-    style?: React.CSSProperties;
-}) {
-    return <UISegmentedBar actions={actions} disabled={disabled} style={style} />;
-}
-
 export type ShellFill = 'page' | 'flex' | false;
 
 // The standing height convention for a top-level list route: fill the viewport
@@ -287,12 +170,12 @@ export const scrollAreaStyle: React.CSSProperties =
  */
 export const viewShellStyle = (
     fill: ShellFill = 'page', extra: React.CSSProperties = {},
-): React.CSSProperties => (xpBevel({ ...fillStyleFor(fill), ...extra }));
+): React.CSSProperties => (bevel({ ...fillStyleFor(fill), ...extra }));
 
 /**
  * Outer-window shell: classic bevel or modern bootstrap card, sized per the
  * standing height convention. Replaces the
- * `style={xpBevel}` block hand-copied at the top of ~20 views.
+ * `style={bevel}` block hand-copied at the top of ~20 views.
  */
 export function ShellWindow({ fill = 'page', className, style, children }: {
     /** 'page' = calc(var(--app-vh) - 80px) for a top-level route. 'flex' = flex:1 when nested
@@ -335,11 +218,11 @@ export function PageTitleBar({ icon, title, right, style }: {
     right?: React.ReactNode;
     style?: React.CSSProperties;
 }) {
-    // Classic geometry comes from `xpTitleBar`, not a second set of numbers: this
+    // Classic geometry comes from terras-ui's `titleBar`, not a second set of numbers: this
     // used to carry its own `padding: '6px 12px'` / `fontSize: 13`, which rendered
     // the seven PageTitleBar pages (Colors, Color/Combo Library, Attributes, Lab
     // Dips, Dyeing & Setting, Settings) with a visibly taller bar than every
-    // xpTitleBar page next to them. One bar height, app-wide.
+    // titleBar page next to them. One bar height, app-wide.
     return <UIWindow.TitleBar icon={<i className={`bi ${icon}`} />} title={title} right={right} style={style} />;
 }
 

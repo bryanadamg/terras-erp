@@ -5,7 +5,9 @@ import { useToast } from '../shared/Toast';
 import { useConfirm } from '../../context/ConfirmContext';
 import { useData } from '../../context/DataContext';
 import { useTimezone, AVAILABLE_TIMEZONES } from '../../context/TimezoneContext';
-import { xpBtn, xpInput, CodeChip, StatusChip, CODE_FONT, FieldLabel, xpFont, CHIP_RADIUS, BTN_TONES, XP_BTN, XPActionButton, ProgressBar } from '../shared/xpTheme';
+import { xpBtn, CodeChip, StatusChip, CODE_FONT, xpFont, CHIP_RADIUS, XP_BTN, XPActionButton, ProgressBar } from '../shared/xpTheme';
+import { field as xpInput, BTN_TONES } from '@bryanadamg/terras-ui/styles';
+import { FieldLabel } from '@bryanadamg/terras-ui/components/Field';
 import {
     xpTableHeader, xpThCell, tdBase,
     settingsStack, settingsActions, settingsHint, SETTINGS_FIELD_GAP,

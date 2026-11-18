@@ -4,7 +4,9 @@ import React, { useState } from 'react';
 import { useUser } from '../../context/UserContext';
 import { useConfirm } from '../../context/ConfirmContext';
 import { XPActionButton } from '../shared/xpTheme';
-import { xpToolbar, SearchField, ToolbarCount } from '../shared/shellTheme';
+import { SearchField } from '../shared/shellTheme';
+import { toolbar as xpToolbar } from '@bryanadamg/terras-ui/styles';
+import { Count as ToolbarCount } from '@bryanadamg/terras-ui/components/Window';
 import {
     ColumnPanes, ColumnPane, ColumnAddBar, ColumnInput, ColumnRenameRow, ColumnRow, ColumnCount,
     ColumnEmpty, ColumnStatusBar,

@@ -29,14 +29,17 @@ import { useData } from '../../context/DataContext';
 import { useUser } from '../../context/UserContext';
 import { useToast } from '../shared/Toast';
 import { saveResponse } from '../shared/download';
-import {
-    xpFont, xpBtn, xpInput, xpSelect, xpSep, TableBlockSkeleton, XPEmptyState,
-    useSortable, WorkCenterChip, StatusChip, ExpandedRowPanel, ProgressBar, rowStateBg, XP_BTN,
-} from '../shared/xpTheme';
+import { xpFont, xpBtn, xpSelect, xpSep, TableBlockSkeleton, XPEmptyState, WorkCenterChip, StatusChip, ProgressBar, XP_BTN } from '../shared/xpTheme';
+import { field as xpInput } from '@bryanadamg/terras-ui/styles';
+import { useSortable, ExpandedRowPanel, rowStateBg } from '@bryanadamg/terras-ui/components/Table';
 import TreeSelect, { TreeSelectOption } from '../shared/TreeSelect';
 import { childrenOfWC, isMachineWC, isTypeWC } from '../shared/workCenterTree';
-import { xpBevel as sharedXpBevel, xpTitleBar as sharedXpTitleBar, xpToolbar as sharedXpToolbar, FilterChipBar, SegmentedBar, pageFillStyle, flexFillStyle } from '../shared/shellTheme';
-import { lvThead, lvSubTh, lvSubTd, lvSubTable, lvSubCaption, ExpanderCell, SortableTh, lvZebra, Dash } from '../shared/listViewTheme';
+import { pageFillStyle, flexFillStyle } from '../shared/shellTheme';
+import { bevel as sharedXpBevel, titleBar as sharedXpTitleBar, toolbar as sharedXpToolbar } from '@bryanadamg/terras-ui/styles';
+import { FilterChipBar } from '@bryanadamg/terras-ui/components/FilterChipBar';
+import { SegmentedBar } from '@bryanadamg/terras-ui/components/SegmentedBar';
+import { lvThead, lvSubTh, lvSubTd, lvSubTable, lvSubCaption, ExpanderCell, lvZebra, Dash } from '../shared/listViewTheme';
+import { SortableTh } from '@bryanadamg/terras-ui/components/Table';
 import { qtyFmt } from '../shared/format';
 import { STATIC_BASE } from '../shared/apiBase';
 

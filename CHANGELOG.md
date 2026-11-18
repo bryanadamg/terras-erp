@@ -15,6 +15,13 @@ on `main`:
 
 ## [Unreleased]
 
+## [1.5.1] - 2026-11-18
+
+### Fixed
+- Packing a lot from Quarantine Packing now fills in the finished good on the new packing order, even when the item isn't on the item picker's first page
+- On a new packing order, picking an alt unit that has a single conversion (e.g. 1 Gross = 144 yard) applies it straight away, and the alt count is filled in from the kg target instead of staying at 0
+- The dashboard floor plan sizes correctly under the UI zoom
+
 ## [1.5.0] - 2026-11-13
 
 ### Added

@@ -1,15 +1,12 @@
 'use client';
 
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
-import {
-    xpFont, CODE_FONT, CHIP_RADIUS, XP_BTN, colorLabel, rowStateBg,
-    CodeChip, StatusChip, ProgressBar, ExpandedRowPanel, XPEmptyState,
-    TableSkeleton, useTableSkeletonMetrics, useSortable, XPActionButton,
-    xpInput as xpInputBase, FORM_SECTION_BLUE, SKEL_PAGE_ROWS } from '../shared/xpTheme';
-import {
-    SortableTh, ExpanderCell, LV_EXPANDER_COL_W, lvThSticky, lvTd, lvZebra,
-    lvSubTable, lvSubTh, lvSubTd, lvSubRow, Dash, lvBtn, lvInput, ResizableTable,
-} from '../shared/listViewTheme';
+import { xpFont, CODE_FONT, CHIP_RADIUS, XP_BTN, colorLabel, CodeChip, StatusChip, ProgressBar, XPEmptyState, TableSkeleton, useTableSkeletonMetrics, XPActionButton, FORM_SECTION_BLUE } from '../shared/xpTheme';
+import { rowStateBg, ExpandedRowPanel, useSortable } from '@bryanadamg/terras-ui/components/Table';
+import { field as xpInputBase } from '@bryanadamg/terras-ui/styles';
+import { SKEL_PAGE_ROWS } from '@bryanadamg/terras-ui/components/Skeleton';
+import { ExpanderCell, lvThSticky, lvTd, lvZebra, lvSubTable, lvSubTh, lvSubTd, lvSubRow, Dash, lvBtn, lvInput, ResizableTable } from '../shared/listViewTheme';
+import { SortableTh, EXPANDER_COL_W as LV_EXPANDER_COL_W } from '@bryanadamg/terras-ui/components/Table';
 import { SearchField } from '../shared/shellTheme';
 import { getChipStyle } from '../manufacturing/WorkOrderPanel';
 import VariantChips from '../shared/VariantChips';

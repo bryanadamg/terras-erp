@@ -2,7 +2,8 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { Html5QrcodeScanner } from 'html5-qrcode';
-import { StatusChip, xpFont as XP_FONT, CHIP_RADIUS, xpInput as xpInputBase } from '../shared/xpTheme';
+import { StatusChip, xpFont as XP_FONT, CHIP_RADIUS } from '../shared/xpTheme';
+import { field as xpInputBase } from '@bryanadamg/terras-ui/styles';
 import { MOBILE_BG, MobilePanel, MobileScreenBar, MobileButton, MobileNotice, MobileSearchField } from './mobileTheme';
 import { API_BASE } from '../shared/apiBase';
 import { isBeamItemRecord } from '../shared/beamItem';

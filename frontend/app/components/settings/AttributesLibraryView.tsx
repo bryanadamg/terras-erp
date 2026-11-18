@@ -2,9 +2,12 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { useConfirm } from '../../context/ConfirmContext';
 import ModalWrapper from '../shared/ModalWrapper';
-import { FormSection, Chip, XPActionButton, XP_BTN } from '../shared/xpTheme';
+import { Chip, XPActionButton, XP_BTN } from '../shared/xpTheme';
+import { FormSection } from '@bryanadamg/terras-ui/components/FormSection';
 import { lvInput, lvBtn, lvPrimaryBtn, lvLabel, lvSep } from '../shared/listViewTheme';
-import { ToolbarButton, SearchField, ToolbarCount, xpToolbar } from '../shared/shellTheme';
+import { ToolbarButton, SearchField } from '../shared/shellTheme';
+import { Count as ToolbarCount } from '@bryanadamg/terras-ui/components/Window';
+import { toolbar as xpToolbar } from '@bryanadamg/terras-ui/styles';
 import { ColumnPanes, ColumnPane, ColumnRow, ColumnEmpty, DetailPane, DetailHeader, DetailRow, BROWSER_TONES } from '../shared/columnBrowser';
 
 // Attributes with a dedicated management home are hidden here so they are not

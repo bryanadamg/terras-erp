@@ -5,7 +5,10 @@ import ModalWrapper from '../shared/ModalWrapper';
 import { useData } from '../../context/DataContext';
 import { useLanguage } from '../../context/LanguageContext';
 import { useToast } from '../shared/Toast';
-import { xpFont, xpInput, FormSection, FieldLabel, XPActionButton, familyColor } from '../shared/xpTheme';
+import { xpFont, XPActionButton, familyColor } from '../shared/xpTheme';
+import { field as xpInput } from '@bryanadamg/terras-ui/styles';
+import { FormSection } from '@bryanadamg/terras-ui/components/FormSection';
+import { FieldLabel } from '@bryanadamg/terras-ui/components/Field';
 import { speedPresets } from '../shared/dyeingSpeed';
 
 const AMBER = familyColor('amber');

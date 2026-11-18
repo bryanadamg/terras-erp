@@ -1,7 +1,8 @@
 'use client';
 
 import React from 'react';
-import { xpFont, XPActionButton, CardGridSkeleton, SkeletonBar } from '../../shared/xpTheme';
+import { xpFont, XPActionButton } from '../../shared/xpTheme';
+import { CardGridSkeleton, SkeletonBar } from '@bryanadamg/terras-ui/components/Skeleton';
 import { ShellWindow, ShellTitleBar } from '../../shared/shellTheme';
 
 /**

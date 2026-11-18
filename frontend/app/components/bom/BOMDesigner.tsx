@@ -6,7 +6,8 @@ import BOMAutomatorModal from './BOMAutomatorModal';
 import BOMConfirmModal, { BOMPlan, BOMPlanNode, BOMPlanLine } from './BOMConfirmModal';
 import SearchableSelect from '@bryanadamg/terras-ui/components/Combobox';
 import { useToast } from '../shared/Toast';
-import { CodeChip, CODE_FONT, xpFont, CHIP_RADIUS, BUTTON_RADIUS, xpInput as xpInputBase, xpBtn as xpBtnBase, BTN_TONES, LegendPanel, XP_BTN } from '../shared/xpTheme';
+import { CodeChip, CODE_FONT, xpFont, CHIP_RADIUS, BUTTON_RADIUS, xpBtn as xpBtnBase, LegendPanel, XP_BTN } from '../shared/xpTheme';
+import { field as xpInputBase, BTN_TONES } from '@bryanadamg/terras-ui/styles';
 import { API_BASE } from '../shared/apiBase';
 import { isBeamItemRecord } from '../shared/beamItem';
 

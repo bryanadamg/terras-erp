@@ -7,14 +7,13 @@ import { useTimezone } from '../../context/TimezoneContext';
 import Pager from '../shared/Pager';
 import ModalWrapper from '../shared/ModalWrapper';
 import { API_BASE } from '../shared/apiBase';
-import {
-    CodeChip, xpFont, CODE_FONT, StatusChip, XP_BTN, CHIP_RADIUS, colorLabel, rowStateBg,
-    ProgressBar, ExpandedRowPanel, XPEmptyState, TableSkeleton, useTableSkeletonMetrics,
-    useSortable, XPActionButton, xpInput as xpInputBase, SKEL_PAGE_ROWS } from '../shared/xpTheme';
+import { CodeChip, xpFont, CODE_FONT, StatusChip, XP_BTN, CHIP_RADIUS, colorLabel, ProgressBar, XPEmptyState, TableSkeleton, useTableSkeletonMetrics, XPActionButton } from '../shared/xpTheme';
+import { rowStateBg, ExpandedRowPanel, useSortable } from '@bryanadamg/terras-ui/components/Table';
+import { field as xpInputBase } from '@bryanadamg/terras-ui/styles';
+import { SKEL_PAGE_ROWS } from '@bryanadamg/terras-ui/components/Skeleton';
 import { orDash, fmtQtyFixed } from '../shared/format';
-import {
-    SortableTh, ExpanderCell, LV_EXPANDER_COL_W, lvThSticky, lvTd, lvZebra,
-    lvSubTable, lvSubTh, lvSubTd, lvSubRow, Dash, lvBtn, lvInput, ResizableTable } from '../shared/listViewTheme';
+import { ExpanderCell, lvThSticky, lvTd, lvZebra, lvSubTable, lvSubTh, lvSubTd, lvSubRow, Dash, lvBtn, lvInput, ResizableTable } from '../shared/listViewTheme';
+import { SortableTh, EXPANDER_COL_W as LV_EXPANDER_COL_W } from '@bryanadamg/terras-ui/components/Table';
 import { SearchField } from '../shared/shellTheme';
 import { getChipStyle } from '../manufacturing/WorkOrderPanel';
 import VariantChips from '../shared/VariantChips';

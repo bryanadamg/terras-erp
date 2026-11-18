@@ -3,7 +3,9 @@
 import { useState, useEffect } from 'react';
 import { useToast } from '../shared/Toast';
 import { useUser } from '../../context/UserContext';
-import { xpBtn, xpInput, FieldLabel, BTN_TONES, XP_BTN } from '../shared/xpTheme';
+import { xpBtn, XP_BTN } from '../shared/xpTheme';
+import { field as xpInput, BTN_TONES } from '@bryanadamg/terras-ui/styles';
+import { FieldLabel } from '@bryanadamg/terras-ui/components/Field';
 import { settingsActions, settingsCol, settingsColumns, settingsGrid, settingsStack } from './settingsStyles';
 import SettingsPanel from './SettingsPanel';
 import AvatarPicker from '../shared/AvatarPicker';

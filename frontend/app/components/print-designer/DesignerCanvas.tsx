@@ -212,9 +212,12 @@ export default function DesignerCanvas({
         // Anchored on the pointerdown, not on the first move: taking it from the first
         // move loses however far the pointer travelled to produce that event, which is
         // the same few pixels of offset this whole conversion exists to remove.
+        // eslint-disable-next-line no-restricted-syntax -- localPoint converts to sheet layout px
         const origin = localPoint(start.clientX, start.clientY, paperRef.current!, zoom);
         const move = (e: PointerEvent) => {
+            // eslint-disable-next-line no-restricted-syntax -- localPoint converts to sheet layout px
             const here = localPoint(e.clientX, e.clientY, paperRef.current!, zoom);
+            // eslint-disable-next-line no-restricted-syntax -- raw client coords passed through for hit-testing against other rects
             onMove(here.x - origin.x, here.y - origin.y, e.clientX, e.clientY);
         };
         const up = () => finish();
@@ -501,6 +504,7 @@ export default function DesignerCanvas({
         const guide = guideRef.current!;
         guide.style.display = 'block';
         guide.style.top = '0px';
+        // eslint-disable-next-line no-restricted-syntax -- the sheet is ui-scale-exempt (zoom 1); dividing by the designer zoom gives layout px
         guide.style.height = `${paperRef.current!.getBoundingClientRect().height / zoom}px`;
 
         if (kind === 'kvlabel') {

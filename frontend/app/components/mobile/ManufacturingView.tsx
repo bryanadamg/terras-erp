@@ -4,7 +4,7 @@ import { useState, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { useToast } from '../shared/Toast';
 import { STATUS_COLORS, StatusChip, CodeChip, xpFont as XP_FONT, statusColor, familyColor } from '../shared/xpTheme';
-import { ToolbarCount } from '../shared/shellTheme';
+import { Count as ToolbarCount } from '@bryanadamg/terras-ui/components/Window';
 import { API_BASE } from '../shared/apiBase';
 import {
     MOBILE_BG, MobilePanel, MobileToolbar, MobileSearchField, MobileFilterBar,

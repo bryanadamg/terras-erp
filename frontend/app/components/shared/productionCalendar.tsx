@@ -2,9 +2,8 @@
 
 import React, { useEffect, useState, useMemo } from 'react';
 import { useLanguage } from '../../context/LanguageContext';
-import {
-    xpFont, familyColor, FormSection, SectionTitle, XPActionButton, WeekdayToggle, WEEKDAY_LABELS,
-} from './xpTheme';
+import { xpFont, familyColor, SectionTitle, XPActionButton, WeekdayToggle, WEEKDAY_LABELS } from './xpTheme';
+import { FormSection } from '@bryanadamg/terras-ui/components/FormSection';
 
 /**
  * Production-calendar editor, shared by the two places a machine calendar is set:

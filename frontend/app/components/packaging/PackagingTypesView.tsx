@@ -4,7 +4,8 @@ import { useConfirm } from '../../context/ConfirmContext';
 import { useUser } from '../../context/UserContext';
 import ModalWrapper from '../shared/ModalWrapper';
 import { StatusChip, CodeChip, XP_BTN, useFloatingMenu, MenuTriggerButton, FloatingMenu } from '../shared/xpTheme';
-import { SearchField, ToolbarCount, ToolbarButton, viewShellStyle, PageTitleBar } from '../shared/shellTheme';
+import { SearchField, ToolbarButton, viewShellStyle, PageTitleBar } from '../shared/shellTheme';
+import { Count as ToolbarCount } from '@bryanadamg/terras-ui/components/Window';
 import {
     LV_XP_FONT, lvInput, lvBtn, lvPrimaryBtn, lvLabel, lvTh, lvTd, lvSep, lvRow, lvThead, TableEmpty,
 } from '../shared/listViewTheme';

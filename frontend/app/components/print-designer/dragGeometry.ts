@@ -1,3 +1,4 @@
+/* eslint-disable no-restricted-syntax -- this module is the screen-to-sheet-layout conversion for the ui-scale-exempt designer sheet */
 /**
  * Pure pixel-math helpers for the designer canvas's drag interactions. No React,
  * no layout mutation — just "given these measured rects and this pointer

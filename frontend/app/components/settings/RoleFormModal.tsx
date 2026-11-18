@@ -2,7 +2,9 @@
 
 import React, { useEffect, useMemo, useState } from 'react';
 import ModalWrapper from '../shared/ModalWrapper';
-import { xpInput, FieldLabel, FormError, ToggleChip, ModalFooterActions } from '../shared/xpTheme';
+import { ToggleChip, ModalFooterActions } from '../shared/xpTheme';
+import { field as xpInput } from '@bryanadamg/terras-ui/styles';
+import { FieldLabel, FormError } from '@bryanadamg/terras-ui/components/Field';
 import PermissionsPicker, { PermissionOption } from './PermissionsPicker';
 import AvatarPicker from '../shared/AvatarPicker';
 import { PixelAvatarFromRecipe } from '../shared/PixelAvatar';

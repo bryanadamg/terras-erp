@@ -9,7 +9,8 @@
  */
 
 import { useUser } from '../../context/UserContext';
-import { xpBtn, BTN_TONES, XP_BTN } from '../shared/xpTheme';
+import { xpBtn, XP_BTN } from '../shared/xpTheme';
+import { BTN_TONES } from '@bryanadamg/terras-ui/styles';
 import { QtyFormulaEditorFields, useQtyFormulaEditor } from '../shared/QtyFormulaEditor';
 import SettingsPanel from './SettingsPanel';
 import { settingsActions, settingsHint } from './settingsStyles';

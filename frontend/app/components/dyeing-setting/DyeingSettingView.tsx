@@ -7,7 +7,8 @@ import { Tabs, TabDef } from '../shared/Tabs';
 import DyeRecipeTab from './DyeRecipeTab';
 import DyeingOrdersTab from './DyeingOrdersTab';
 import SettingOrdersTab from './SettingOrdersTab';
-import { xpFont, FORM_SECTION_BLUE, xpInput as xpInputBase, xpBtn as xpBtnBase } from '../shared/xpTheme';
+import { xpFont, FORM_SECTION_BLUE, xpBtn as xpBtnBase } from '../shared/xpTheme';
+import { field as xpInputBase } from '@bryanadamg/terras-ui/styles';
 import { viewShellStyle, PageTitleBar } from '../shared/shellTheme';
 import { useUser } from '../../context/UserContext';
 

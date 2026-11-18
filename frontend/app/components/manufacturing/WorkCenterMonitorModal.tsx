@@ -19,12 +19,11 @@ import { useUser } from '../../context/UserContext';
 import { useData } from '../../context/DataContext';
 import { useTimezone } from '../../context/TimezoneContext';
 import { useToast } from '../shared/Toast';
-import {
-    xpFont, familyColor, StatusChip, XPActionButton, PanelSkeleton, XPEmptyState,
-    ExpandedRowPanel, ExpandedRowPanelBody, FormSection, FieldLabel, ProgressBar,
-    xpSelect, xpPanel, SectionTitle, CodeChip, Chip, statusTint, CHIP_RADIUS,
-    LegendPanel,
-} from '../shared/xpTheme';
+import { xpFont, familyColor, StatusChip, XPActionButton, XPEmptyState, ProgressBar, xpSelect, xpPanel, SectionTitle, CodeChip, Chip, statusTint, CHIP_RADIUS, LegendPanel } from '../shared/xpTheme';
+import { PanelSkeleton } from '@bryanadamg/terras-ui/components/Skeleton';
+import { ExpandedRowPanel, ExpandedRowPanelBody } from '@bryanadamg/terras-ui/components/Table';
+import { FormSection } from '@bryanadamg/terras-ui/components/FormSection';
+import { FieldLabel } from '@bryanadamg/terras-ui/components/Field';
 import { SearchField } from '../shared/shellTheme';
 import { lvInput, lvTh, lvTd, lvRow } from '../shared/listViewTheme';
 import { Tabs, TabDef } from '../shared/Tabs';

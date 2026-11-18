@@ -9,9 +9,16 @@ import { useUser } from '../../context/UserContext';
 import { useTimezone } from '../../context/TimezoneContext';
 import { useToast } from '../shared/Toast';
 import { useConfirm } from '../../context/ConfirmContext';
-import { XPStatusBar, XPEmptyState, TableSkeleton, useTableSkeletonMetrics, StatusChip, useFloatingMenu, MenuTriggerButton, FloatingMenu, FormSection, SectionTitle, FieldLabel, XPActionButton, LegendPanel, ExpandedRowPanel, ProgressBar, CodeChip, Chip, CODE_FONT, rowStateBg, CHIP_RADIUS, BTN_TONES, XP_BTN, SKEL_PAGE_ROWS } from '../shared/xpTheme';
-import { LV_XP_FONT, lvBtn, lvInput, lvTd, lvRow, lvSubTh, lvSubTd, lvSubRow, ExpanderCell, RowCheckbox, lvThSticky, lvPickerRow, lvSubTable, ResizableTable } from '../shared/listViewTheme';
-import { ShellWindow, ShellTitleBar, xpToolbar, ToolbarButton, SearchField } from '../shared/shellTheme';
+import { XPStatusBar, XPEmptyState, TableSkeleton, useTableSkeletonMetrics, StatusChip, useFloatingMenu, MenuTriggerButton, FloatingMenu, SectionTitle, XPActionButton, LegendPanel, ProgressBar, CodeChip, Chip, CODE_FONT, CHIP_RADIUS, XP_BTN } from '../shared/xpTheme';
+import { FormSection } from '@bryanadamg/terras-ui/components/FormSection';
+import { FieldLabel } from '@bryanadamg/terras-ui/components/Field';
+import { ExpandedRowPanel, rowStateBg } from '@bryanadamg/terras-ui/components/Table';
+import { BTN_TONES } from '@bryanadamg/terras-ui/styles';
+import { SKEL_PAGE_ROWS } from '@bryanadamg/terras-ui/components/Skeleton';
+import { LV_XP_FONT, lvBtn, lvInput, lvTd, lvRow, lvSubTh, lvSubTd, lvSubRow, ExpanderCell, lvThSticky, lvPickerRow, lvSubTable, ResizableTable } from '../shared/listViewTheme';
+import { RowCheckbox } from '@bryanadamg/terras-ui/components/Table';
+import { ShellWindow, ShellTitleBar, ToolbarButton, SearchField } from '../shared/shellTheme';
+import { toolbar as xpToolbar } from '@bryanadamg/terras-ui/styles';
 import Pager from '../shared/Pager';
 import ModalWrapper from '../shared/ModalWrapper';
 import SearchableSelect from '@bryanadamg/terras-ui/components/Combobox';
@@ -1171,7 +1178,28 @@ function PackingOrderForm({ locPickerTreeOptions, machineOptions, defaultSourceL
     const onFactorPick = (factorVal: number | null, toUom: string) => {
         setUom2Factor(factorVal);
         setUom2LengthUom(toUom);
-        applyAlt(qty2, factorVal, toUom, altPerCarton);
+        // A target already stated in kg (typed, or taken off the held lots) is
+        // restated as the count, rather than leaving it at 0 for the planner to
+        // work out by hand. Unsnapped so the kilos it round-trips back to stay put.
+        let q = qty2;
+        if (num(qty2) <= 0 && num(qtyTarget) > 0) {
+            const f = basePerAlt({ factor: factorVal, lengthUom: toUom, itemUom: selectedItem?.uom, ...weightSpec });
+            const alt = f ? baseToAlt(num(qtyTarget), f, false) : null;
+            if (alt) { q = String(alt); setQty2(q); }
+        }
+        applyAlt(q, factorVal, toUom, altPerCarton);
+    };
+    // A unit with a single conversion on the UOM master has nothing to choose
+    // between — apply it straight away instead of waiting for the chip to be clicked.
+    const onUom2Pick = (name: string) => {
+        setUom2(name);
+        const factors = (uoms || []).find((u: any) => u.name === name)?.factors || [];
+        if (factors.length === 1) {
+            onFactorPick(parseFloat(factors[0].value), factors[0].to_uom_name || 'Yard');
+        } else {
+            setUom2Factor(null);
+            setUom2LengthUom('');
+        }
     };
     const onAltPerCartonChange = (val: string) => {
         setAltPerCarton(val);
@@ -1373,10 +1401,17 @@ function PackingOrderForm({ locPickerTreeOptions, machineOptions, defaultSourceL
     }, [uoms, uom2, uom2Factor, uom2LengthUom]);
 
 
-    const fgOptions = useMemo(
-        () => (fgResults || []).map((i: any) => ({ value: String(i.id), label: i.name, subLabel: i.code })),
-        [fgResults]
-    );
+    const fgOptions = useMemo(() => {
+        const opts = (fgResults || []).map((i: any) => ({ value: String(i.id), label: i.name, subLabel: i.code }));
+        // Keep a pre-filled item (Quarantine Packing → Pack) labelled even when the
+        // search page doesn't contain it — otherwise the field reads empty although
+        // the item is set and its lots are already listed below.
+        const pre = initialValues?.item_id ? String(initialValues.item_id) : '';
+        if (pre && pre === itemId && !opts.some((o: any) => o.value === pre) && (initialValues.item_name || initialValues.item_code)) {
+            opts.unshift({ value: pre, label: initialValues.item_name || initialValues.item_code, subLabel: initialValues.item_code || undefined });
+        }
+        return opts;
+    }, [fgResults, initialValues, itemId]);
 
 
     const submit = async () => {
@@ -1614,7 +1649,7 @@ function PackingOrderForm({ locPickerTreeOptions, machineOptions, defaultSourceL
                                     style={{ ...xpInput, flex: 1, minWidth: 0, borderRight: 'none', textAlign: 'right' }}
                                     placeholder="0" value={qty2} onChange={e => onQty2Change(e.target.value)} />
                                 <select style={{ ...xpSelect, flexShrink: 0, width: 90 }} value={uom2}
-                                    onChange={e => { setUom2(e.target.value); setUom2Factor(null); setUom2LengthUom(''); }}>
+                                    onChange={e => onUom2Pick(e.target.value)}>
                                     <option value="">— none —</option>
                                     {(uoms || []).map((u: any) => <option key={u.id} value={u.name}>{u.name}</option>)}
                                 </select>

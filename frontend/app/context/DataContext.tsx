@@ -5,7 +5,7 @@ import { usePathname } from 'next/navigation';
 import { useUser } from './UserContext';
 import { useToast } from '../components/shared/Toast';
 import { usePageState, useDebouncedSearch } from './usePaginatedList';
-import type { SortState } from '../components/shared/xpTheme';
+import { type SortState } from '@bryanadamg/terras-ui/components/Table';
 import { API_BASE } from '../components/shared/apiBase';
 
 

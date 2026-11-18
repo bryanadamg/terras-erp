@@ -2,7 +2,9 @@ import React, { useState } from 'react';
 import { useToast } from '../shared/Toast';
 import { useLanguage } from '../../context/LanguageContext';
 import { useUser } from '../../context/UserContext';
-import { ShellWindow, ShellTitleBar, SearchField, ToolbarCount, xpToolbar } from '../shared/shellTheme';
+import { ShellWindow, ShellTitleBar, SearchField } from '../shared/shellTheme';
+import { Count as ToolbarCount } from '@bryanadamg/terras-ui/components/Window';
+import { toolbar as xpToolbar } from '@bryanadamg/terras-ui/styles';
 import { XPActionButton } from '../shared/xpTheme';
 import {
   ColumnPanes, ColumnPane, ColumnAddBar, ColumnInput, ColumnRenameRow, ColumnRow, ColumnCount,
