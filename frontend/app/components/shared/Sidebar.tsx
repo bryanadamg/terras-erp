@@ -21,6 +21,20 @@ interface SidebarProps {
 export const SIDEBAR_BG = '#d6dff7';
 const NAV_COLOR = '#003080';
 
+// Rail ↔ open, for erp's own slot content: the package keeps one layout and
+// slides it (its "glide"), so these do the same — text widens and fades rather
+// than mounting into a 44px box and wrapping for a frame.
+const GLIDE = '0.12s';
+const glideText = (shown: boolean, maxWidth: number): React.CSSProperties => ({
+  display: 'inline-block',
+  maxWidth: shown ? maxWidth : 0,
+  opacity: shown ? 1 : 0,
+  overflow: 'hidden',
+  whiteSpace: 'nowrap',
+  verticalAlign: 'bottom',
+  transition: `max-width ${GLIDE}, opacity ${GLIDE}, margin-left ${GLIDE}`,
+});
+
 function readPinned(): boolean {
   if (typeof window === 'undefined') return false;
   return document.documentElement.hasAttribute('data-sidebar-pinned');
@@ -135,13 +149,13 @@ export default function Sidebar({ activeTab, setActiveTab, onTabHover, appName, 
       label: navLabel(t, section),
       // erp's band reads "<i/> LABEL": an inline icon and a space, not the
       // package's 5px flex gap. Rebuilt here (nbsp, so it isn't collapsed, and
-      // the gap cancelled) so the label sits where it always has. On the rail
-      // the icon stands alone, where the nbsp would pull it off-centre.
-      icon: expanded ? (
+      // the gap cancelled) so the label sits where it always has. One version in
+      // both states — swapping it as the rail opened made the icon jump.
+      icon: (
         <span style={{ marginRight: -5 }}>
           <i className={`bi ${section.icon}`} />{'\u00a0'}
         </span>
-      ) : <i className={`bi ${section.icon}`} />,
+      ),
       right: <i className="bi bi-chevron-right" style={{ fontSize: 9, opacity: 0.7 }} aria-hidden="true" />,
       active: activeTab === `sections-${section.key}`,
       onClick: () => setActiveTab(navKey),
@@ -206,24 +220,26 @@ export default function Sidebar({ activeTab, setActiveTab, onTabHover, appName, 
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              gap: 6,
               letterSpacing: '0.5px',
+              whiteSpace: 'nowrap',
+              overflow: 'hidden',
             }}
           >
-            <i className="bi bi-qr-code-scan" />{collapsed ? null : ' QUICK SCAN'}
+            <i className="bi bi-qr-code-scan" />
+            <span style={{ ...glideText(!collapsed, 120), marginLeft: collapsed ? 0 : 6 }}>QUICK SCAN</span>
           </button>
         )}
         items={[navItem('dashboard', t('dashboard') || 'Dashboard', 'bi-house-door')]}
         sections={sections}
         // Rides at the end of the nav list, so the footer holds nothing but the
         // user card.
-        navEnd={({ collapsed }) => (collapsed ? null : (
-          <div style={{ padding: '10px 8px 12px', textAlign: 'center' }}>
-            <small style={{ fontSize: 9, color: '#6070a0', fontFamily: xpFont }}>
+        navEnd={({ collapsed }) => (
+          <div style={{ padding: '10px 8px 12px', textAlign: 'center', whiteSpace: 'nowrap', overflow: 'hidden' }}>
+            <small style={{ fontSize: 9, color: '#6070a0', fontFamily: xpFont, opacity: collapsed ? 0 : 1, transition: `opacity ${GLIDE}` }}>
               {t('powered_by') || 'Powered by'} Terras ERP
             </small>
           </div>
-        ))}
+        )}
         // On the rail the card keeps only its face (no spine, name, role or
         // gear), and takes a tooltip there since nothing else names it.
         footer={({ collapsed }) => (
@@ -262,15 +278,18 @@ export default function Sidebar({ activeTab, setActiveTab, onTabHover, appName, 
             }}
           >
             {/* Accent spine — the coloured edge of the ID card. */}
-            {collapsed ? null : <div style={{
-              width: 3,
+            {/* One layout in both states: the spine and padding slide to zero
+                on the rail, where the face alone fills the 32px inside. */}
+            <div style={{
+              width: collapsed ? 0 : 3,
               flexShrink: 0,
               background: 'linear-gradient(to bottom, #4a7ddb, #003080)',
-            }} />}
+              transition: `width ${GLIDE}`,
+            }} />
             <div style={{
               display: 'flex', alignItems: 'center', gap: 7, minWidth: 0, flex: 1,
               padding: collapsed ? 1 : '5px 7px',
-              justifyContent: collapsed ? 'center' : undefined,
+              transition: `padding ${GLIDE}`,
             }}>
               {/* Photo frame */}
               <div style={{
@@ -292,8 +311,10 @@ export default function Sidebar({ activeTab, setActiveTab, onTabHover, appName, 
                   size={24}
                 />
               </div>
-              {collapsed ? null : <>
-              <div style={{ minWidth: 0, flex: 1, display: 'flex', flexDirection: 'column', gap: 1 }}>
+              <div style={{
+                minWidth: 0, flex: 1, display: 'flex', flexDirection: 'column', gap: 1,
+                opacity: collapsed ? 0 : 1, transition: `opacity ${GLIDE}`,
+              }}>
                 <span
                   data-testid="username-display"
                   style={{
@@ -333,9 +354,10 @@ export default function Sidebar({ activeTab, setActiveTab, onTabHover, appName, 
                   fontSize: 11,
                   flexShrink: 0,
                   color: hovered === 'settings' ? '#003080' : '#7b86a8',
+                  opacity: collapsed ? 0 : 1,
+                  transition: `opacity ${GLIDE}`,
                 }}
               />
-              </>}
             </div>
           </button>
         )}
