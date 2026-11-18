@@ -59,7 +59,7 @@ export default function Sidebar({ activeTab, setActiveTab, onTabHover, appName, 
   // the width rule in globals.css reads it.
   const wrapperRef = useRef<HTMLDivElement>(null);
 
-  // The boot script already settled stored choice vs touch default onto <html>.
+  // The boot script already settled the stored choice (default: pinned) onto <html>.
   const [pinned, setPinned] = useState(readPinned);
   // Drawn width, as the package reports it (pinned, or hover-opened). The
   // `is-rail` class off it is what globals.css sizes the shell from.
@@ -181,6 +181,11 @@ export default function Sidebar({ activeTab, setActiveTab, onTabHover, appName, 
         onApproach={(p) => wrapperRef.current?.style.setProperty('--rail-approach', String(p))}
         collapsed={!pinned}
         onToggleCollapsed={togglePinned}
+        // The band's pin: tilted outline = not pinned (hover rail), upright and
+        // filled = pinned. Same metaphor as a pinned tab or note.
+        pinIcon={({ pinned: isPinned }) => (
+          <i className={`bi ${isPinned ? 'bi-pin-fill' : 'bi-pin-angle'}`} style={{ fontSize: 11 }} aria-hidden="true" />
+        )}
         onExpandedChange={setExpanded}
         // The `.sidebar` wrapper owns the width (globals.css animates it from
         // `is-rail`); the package fills it in both states.
