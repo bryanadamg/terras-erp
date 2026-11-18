@@ -1373,10 +1373,17 @@ function PackingOrderForm({ locPickerTreeOptions, machineOptions, defaultSourceL
     }, [uoms, uom2, uom2Factor, uom2LengthUom]);
 
 
-    const fgOptions = useMemo(
-        () => (fgResults || []).map((i: any) => ({ value: String(i.id), label: i.name, subLabel: i.code })),
-        [fgResults]
-    );
+    const fgOptions = useMemo(() => {
+        const opts = (fgResults || []).map((i: any) => ({ value: String(i.id), label: i.name, subLabel: i.code }));
+        // Keep a pre-filled item (Quarantine Packing → Pack) labelled even when the
+        // search page doesn't contain it — otherwise the field reads empty although
+        // the item is set and its lots are already listed below.
+        const pre = initialValues?.item_id ? String(initialValues.item_id) : '';
+        if (pre && pre === itemId && !opts.some((o: any) => o.value === pre) && (initialValues.item_name || initialValues.item_code)) {
+            opts.unshift({ value: pre, label: initialValues.item_name || initialValues.item_code, subLabel: initialValues.item_code || undefined });
+        }
+        return opts;
+    }, [fgResults, initialValues, itemId]);
 
 
     const submit = async () => {

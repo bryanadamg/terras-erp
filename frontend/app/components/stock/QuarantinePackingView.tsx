@@ -328,6 +328,10 @@ export default function QuarantinePackingView() {
         if (g.size_label) params.set('size_label', g.size_label);
         if (g.color_id) params.set('color_id', g.color_id);
         if (g.combo_value_id) params.set('combo_value_id', g.combo_value_id);
+        // Code + name too: the item picker can only label an item it has, and a
+        // hand-made (no-MO) lot's item is rarely on the picker's first page.
+        if (g.item_code) params.set('item_code', g.item_code);
+        if (g.item_name) params.set('item_name', g.item_name);
         router.push(`/packing?${params.toString()}`);
     }, [router, showToast]);
 

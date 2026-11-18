@@ -17,6 +17,8 @@ export default function PackingPage() {
             consumedRef.current = token;
             setInitialCreateState({
                 item_id: itemId,
+                item_code: searchParams.get('item_code') || '',
+                item_name: searchParams.get('item_name') || '',
                 source_location_id: searchParams.get('source_location_id') || '',
                 sales_order_id: searchParams.get('sales_order_id') || '',
                 sales_order_line_id: searchParams.get('sales_order_line_id') || '',
