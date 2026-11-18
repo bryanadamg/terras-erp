@@ -16,7 +16,7 @@ import { progressToneColor } from '@bryanadamg/terras-ui/components/ProgressBar'
 import { SKEL_PAGE_ROWS } from '@bryanadamg/terras-ui/components/Skeleton';
 import { LV_XP_FONT, lvBtn, lvInput, lvTd, lvLabel, lvRow, lvSubTh, lvSubTd, lvSubRow, ExpanderCell, lvThSticky, lvSubTable, RowCheckboxCell, ResizableTable } from '../shared/listViewTheme';
 import { CHECK_COL_W as LV_CHECK_COL_W, SortableTh } from '@bryanadamg/terras-ui/components/Table';
-import { ShellWindow, ShellTitleBar, SearchField } from '../shared/shellTheme';
+import { ShellWindow, SearchField } from '../shared/shellTheme';
 import { toolbar as xpToolbar } from '@bryanadamg/terras-ui/styles';
 import { FilterChipBar } from '@bryanadamg/terras-ui/components/FilterChipBar';
 import { Count as ToolbarCount } from '@bryanadamg/terras-ui/components/Window';
@@ -476,10 +476,6 @@ export default function PickListView() {
 
     return (
         <ShellWindow fill="page" className="fade-in" style={{ fontFamily: xpFont }}>
-            <ShellTitleBar
-                icon="bi-clipboard-check"
-                title="Pick Lists & Dispatch"
-            />
             {/* No "New Pick List" button: a list is only ever created from a scored
                 order on the board, so the Pick action lives on the row that says
                 whether the order can be picked at all. */}

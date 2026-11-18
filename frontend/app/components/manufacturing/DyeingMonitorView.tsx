@@ -8,7 +8,7 @@ import { ProgressBar, StatusChip, XPEmptyState, XPActionButton, TableSkeleton, C
 import { ExpandedRowPanel, rowStateBg } from '@bryanadamg/terras-ui/components/Table';
 import { field as xpInput } from '@bryanadamg/terras-ui/styles';
 import { centerTypeOfWC, isMachineWC, isTypeWC } from '../shared/workCenterTree';
-import { ShellWindow, ShellTitleBar, SearchField } from '../shared/shellTheme';
+import { ShellWindow, SearchField } from '../shared/shellTheme';
 import { FilterChipBar } from '@bryanadamg/terras-ui/components/FilterChipBar';
 import { Count as ToolbarCount } from '@bryanadamg/terras-ui/components/Window';
 import { toolbar as xpToolbar } from '@bryanadamg/terras-ui/styles';
@@ -255,7 +255,6 @@ export default function DyeingMonitorView() {
     return (
         <>
             <ShellWindow fill="page" className="fade-in">
-                <ShellTitleBar icon="bi-droplet-half" title={t('dyeing_monitor')} />
                 {Toolbar}
                 <div style={{ flex: 1, minHeight: 0, overflow: 'auto', background: '#ffffff' }}>
                     <ResizableTable defaults={COL_W}

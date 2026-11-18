@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo, memo, useRef } from 'react';
 import { useLanguage } from '../../context/LanguageContext';
 import { useTimezone } from '../../context/TimezoneContext';
 import { useUser } from '../../context/UserContext';
-import { ShellWindow, ShellTitleBar } from '../shared/shellTheme';
+import { ShellWindow } from '../shared/shellTheme';
 import { toolbar as sharedXpToolbar } from '@bryanadamg/terras-ui/styles';
 import { lvTh, lvRow, LV_XP_FONT, LV_MODERN_FONT, lvThead, ResizableTable } from '../shared/listViewTheme';
 import { StatusChip, xpFont, xpBtn, TableSkeleton, useTableSkeletonMetrics, CHIP_RADIUS, XP_BTN } from '../shared/xpTheme';
@@ -126,13 +126,6 @@ export default function AuditLogsView({ auditLogs, currentPage, totalItems, page
 
   return (
       <ShellWindow fill="page" className="fade-in">
-          <ShellTitleBar
-              icon="bi-shield-check"
-              title="System Audit Logs"
-              subtitle={undefined}
-              right={undefined}
-          />
-
           {(
               <div style={xpToolbar}>
                   <button className={XP_BTN} style={xpBtn()} onClick={handleRefresh} disabled={refreshing} title="Refresh">

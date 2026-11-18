@@ -7,7 +7,7 @@ import { usePaginatedFetch } from '../../context/usePaginatedList';
 import { useUser } from '../../context/UserContext';
 import { useTimezone } from '../../context/TimezoneContext';
 import { useToast } from '../shared/Toast';
-import { ShellWindow, ShellTitleBar, SearchField } from '../shared/shellTheme';
+import { ShellWindow, SearchField } from '../shared/shellTheme';
 import { toolbar as sharedXpToolbar } from '@bryanadamg/terras-ui/styles';
 import { Count as ToolbarCount } from '@bryanadamg/terras-ui/components/Window';
 import { FilterChipBar, type FilterChipOption } from '@bryanadamg/terras-ui/components/FilterChipBar';
@@ -879,6 +879,8 @@ export default function QuarantinePackingView() {
             <ToolbarCount right>
                 {total.toLocaleString()} MO group{total === 1 ? '' : 's'}
             </ToolbarCount>
+            <i className="bi bi-info-circle" style={{ color: '#666', fontSize: 12 }}
+                title="Stock held in quarantine, grouped by MO. Only lots set to OK can be packed." />
         </div>
     );
 
@@ -1073,11 +1075,6 @@ export default function QuarantinePackingView() {
 
     return (
         <ShellWindow fill="page" className="fade-in">
-            <ShellTitleBar
-                icon="bi-shield-exclamation"
-                title="Quarantine Packing"
-                subtitle="Stock held in quarantine, grouped by MO. Only lots set to OK can be packed."
-            />
             {toolbar}
             {error && (
                 <div style={{

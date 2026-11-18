@@ -14,7 +14,7 @@ import { useData } from '../../context/DataContext';
 import { usePaginatedFetch } from '../../context/usePaginatedList';
 import { lvBtn, lvInput, lvTh, lvTd, lvLabel, lvThead, LV_STICKY_THEAD, lvZebra, ResizableTable } from '../shared/listViewTheme';
 import { useRowSelection, RowCheckbox, SelectAllCheckbox } from '@bryanadamg/terras-ui/components/Table';
-import { ShellWindow, ShellTitleBar, SearchField, ToolbarButton } from '../shared/shellTheme';
+import { ShellWindow, SearchField, ToolbarButton } from '../shared/shellTheme';
 import { toolbar as xpToolbar } from '@bryanadamg/terras-ui/styles';
 import { Count as ToolbarCount } from '@bryanadamg/terras-ui/components/Window';
 import { API_BASE } from '../shared/apiBase';
@@ -179,12 +179,6 @@ export default function PartnersView({ type }: PartnersViewProps) {
 
     return (
         <ShellWindow fill="page" className="fade-in">
-            <ShellTitleBar
-                icon="bi-people-fill"
-                title={`${typeLabel} Management`}
-                subtitle={`Maintain your network of ${typeLabel.toLowerCase()}s`}
-            />
-
                 {/* ── Secondary toolbar: search + count + actions ── */}
                 <div
                     style={xpToolbar()}

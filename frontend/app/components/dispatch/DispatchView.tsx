@@ -13,7 +13,7 @@ import { ExpandedRowPanel, rowStateBg } from '@bryanadamg/terras-ui/components/T
 import { SKEL_PAGE_ROWS } from '@bryanadamg/terras-ui/components/Skeleton';
 import { LV_XP_FONT, lvBtn, lvInput, lvTd, lvLabel, lvRow, lvSubTh, lvSubTd, lvSubTable, EMPTY_DASH, lvTh, lvThead, ResizableTable } from '../shared/listViewTheme';
 import { useRowSelection, RowCheckbox, SelectAllCheckbox, CHECK_COL_W as LV_CHECK_COL_W } from '@bryanadamg/terras-ui/components/Table';
-import { ShellWindow, ShellTitleBar, SearchField } from '../shared/shellTheme';
+import { ShellWindow, SearchField } from '../shared/shellTheme';
 import { FilterChipBar } from '@bryanadamg/terras-ui/components/FilterChipBar';
 import { Count as ToolbarCount } from '@bryanadamg/terras-ui/components/Window';
 import { toolbar as xpToolbar } from '@bryanadamg/terras-ui/styles';
@@ -468,7 +468,6 @@ export default function DispatchView() {
 
     return (
         <ShellWindow fill="page" className="fade-in" style={{ fontFamily: xpFont }}>
-            <ShellTitleBar icon="bi-truck" title="Dispatch & Loading Deck" />
             {body}
 
             <XPStatusBar right={`${deck.length} waiting · ${total} shipment(s)`}>

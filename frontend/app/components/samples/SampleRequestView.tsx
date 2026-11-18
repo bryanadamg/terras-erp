@@ -17,7 +17,7 @@ import { FormSection } from '@bryanadamg/terras-ui/components/FormSection';
 import { rowStateBg, expandedRowFrame } from '@bryanadamg/terras-ui/components/Table';
 import { field as xpInputBase, BTN_TONES } from '@bryanadamg/terras-ui/styles';
 import { SKEL_PAGE_ROWS } from '@bryanadamg/terras-ui/components/Skeleton';
-import { ShellWindow, ShellTitleBar, SearchField, ToolbarButton } from '../shared/shellTheme';
+import { ShellWindow, SearchField, ToolbarButton } from '../shared/shellTheme';
 import { toolbar as xpToolbar } from '@bryanadamg/terras-ui/styles';
 import { FilterChipBar } from '@bryanadamg/terras-ui/components/FilterChipBar';
 import { Count as ToolbarCount } from '@bryanadamg/terras-ui/components/Window';
@@ -1074,12 +1074,6 @@ export default function SampleRequestView({ samples, customers, onCreateSample, 
 
        {/* ── Outer shell ── */}
        <ShellWindow fill="page" className="fade-in">
-           <ShellTitleBar
-               icon="bi-eyedropper"
-               title={t('sample_requests')}
-               subtitle="Track prototype and sample approval workflow"
-           />
-
            {/* ── Secondary toolbar: search + status filters + count ── */}
            <div style={xpToolbar()}>
                    <SearchField value={searchTerm} onChange={setSearchTerm} placeholder="Search code, article, project…" width={200} />
