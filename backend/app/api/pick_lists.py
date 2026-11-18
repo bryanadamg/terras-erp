@@ -563,7 +563,7 @@ async def _suggest_lines(db: AsyncSession, pl: PickList, so: SalesOrder) -> list
 
 async def _ready_carton_index(db: AsyncSession) -> dict:
     """Every unallocated, in-stock carton keyed by (item_id, variant_key), FIFO,
-    as `(qty, size name, uom2, uom2_factor)` — a line only counts cartons of its
+    as `(qty, size name, uom2, uom2_factor, batch_id)` — a line only counts cartons of its
     own size as ready, and claims ones in its own selling unit first.
 
     One query for the whole plant instead of per-SO-line lookups: the readiness
@@ -594,7 +594,7 @@ async def _ready_carton_index(db: AsyncSession) -> dict:
             continue
         seen.add(batch.id)
         size = sizes.get(str(batch.id), (None, None))[1]
-        index.setdefault((str(batch.item_id), bal.variant_key), []).append((float(bal.qty), size, uom2, factor))
+        index.setdefault((str(batch.item_id), bal.variant_key), []).append((float(bal.qty), size, uom2, factor, batch.id))
     return index
 
 
@@ -697,6 +697,10 @@ async def list_pickable_orders(
     }
 
     index = await _ready_carton_index(db)
+    # Cartons "Allocate from stock" pinned to a line belong to that line alone —
+    # without this the due-date walk below hands them to an older order and the
+    # one they were allocated to reads 0 ready (same claim `_suggest_cartons` makes).
+    pinned = await packing_service.pinned_carton_ids(db)
     line_sizes = await packing_service.line_size_names(db, [l.id for so in so_rows for l in so.lines])
     today = datetime.utcnow().date()
 
@@ -746,15 +750,18 @@ async def list_pickable_orders(
             # one may overshoot the outstanding qty rather than be split.
             covered = 0.0
             want_size = line_sizes.get(str(line.id))
-            # Same claim order as `_suggest_cartons`: cartons in the line's own
-            # selling unit first, FIFO within each group (sorted() is stable).
-            order = sorted(range(len(pool or [])), key=lambda j: not packing_service.same_alt_unit(
-                pool[j][2], pool[j][3], line.uom2, line.uom2_factor))
+            # Same claim order as `_suggest_cartons`: cartons pinned to this line,
+            # then ones in its own selling unit, FIFO within each group (sorted() is stable).
+            order = sorted(range(len(pool or [])), key=lambda j: (
+                pinned.get(pool[j][4]) != line.id,
+                not packing_service.same_alt_unit(pool[j][2], pool[j][3], line.uom2, line.uom2_factor)))
             chosen = []
             for j in order:
                 if covered >= rem - 1e-6:
                     break
-                qty, size, _u, _f = pool[j]
+                qty, size, _u, _f, bid = pool[j]
+                if pinned.get(bid) not in (None, line.id):
+                    continue  # allocated to another order's line
                 if packing_service.sizes_conflict(want_size, size):
                     continue  # another size — left for the line that orders it
                 covered += qty
