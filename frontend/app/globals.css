@@ -141,6 +141,8 @@ body,
 .ui-style-classic {
   --terras-title-blue: var(--xp-title-blue);
   --terras-title-blue-border: var(--xp-title-blue-border);
+  /* terras-ui's Sidebar brand block: flat, dims with the header. */
+  --terras-title-flat: var(--xp-title-flat);
 }
 /* A window must not dim itself: a dialog's own title bar stays active. Its
    body is a .ui-style-classic again, so page chrome nested inside still dims. */
@@ -698,9 +700,9 @@ body,
 /* The nav list below the header is what actually scrolls. Bar hidden; wheel/touch
    still scroll. The ::-webkit rule covers older Safari, and its classic prefix
    outranks the global XP scrollbar rule. */
-.sidebar, .sidebar-nav { scrollbar-width: none; }
+.sidebar, .sidebar nav { scrollbar-width: none; }
 .ui-style-classic .sidebar::-webkit-scrollbar,
-.ui-style-classic .sidebar-nav::-webkit-scrollbar { display: none; }
+.ui-style-classic .sidebar nav::-webkit-scrollbar { display: none; }
 
 .sidebar-header {
   height: 64px;
