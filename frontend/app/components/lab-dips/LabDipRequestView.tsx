@@ -18,7 +18,8 @@ import { SearchField, ToolbarButton, viewShellStyle, PageTitleBar } from '../sha
 import { FilterChipBar } from '@bryanadamg/terras-ui/components/FilterChipBar';
 import { Count as ToolbarCount } from '@bryanadamg/terras-ui/components/Window';
 import RequestDetailPanel, { getStatusStripe } from '../shared/RequestDetailPanel';
-import { lvThead, ExpanderCell, LV_EXPANDER_COL_W, SortableTh, lvTh, lvTdRuled, lvZebra, TableEmpty, lvBtn, lvInput, ResizableTable } from '../shared/listViewTheme';
+import { lvThead, ExpanderCell, lvTh, lvTdRuled, lvZebra, TableEmpty, lvBtn, lvInput, ResizableTable } from '../shared/listViewTheme';
+import { EXPANDER_COL_W as LV_EXPANDER_COL_W, SortableTh } from '@bryanadamg/terras-ui/components/Table';
 import { API_BASE, STATIC_BASE } from '../shared/apiBase';
 import { useDyeRecipeSearch, recipeToOption } from '../shared/useEntitySearch';
 

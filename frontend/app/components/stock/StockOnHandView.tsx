@@ -18,7 +18,8 @@ import Pager from '../shared/Pager';
 import TreeSelect, { buildLocationFilterTree, buildLocationPickerTree, buildCategoryTree, locationAncestorNames } from '../shared/TreeSelect';
 import { lotColorLabel } from '../shared/LotChips';
 import { formatAlt, altPerUnit } from '../shared/altUnit';
-import { useRowSelection, RowCheckbox, SelectAllCheckbox, SortableTh, lvThSticky, lvZebra, Dash, ResizableTable } from '../shared/listViewTheme';
+import { lvThSticky, lvZebra, Dash, ResizableTable } from '../shared/listViewTheme';
+import { useRowSelection, RowCheckbox, SelectAllCheckbox, SortableTh } from '@bryanadamg/terras-ui/components/Table';
 
 const STOCK_PAGE_SIZE = 50;
 

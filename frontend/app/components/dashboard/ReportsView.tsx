@@ -16,7 +16,8 @@ import { SearchField, pageFillStyle, flexFillStyle } from '../shared/shellTheme'
 import { bevel as sharedXpBevel, titleBar as sharedXpTitleBar, toolbar as sharedXpToolbar } from '@bryanadamg/terras-ui/styles';
 import { FilterChipBar, type FilterChipOption } from '@bryanadamg/terras-ui/components/FilterChipBar';
 import { SegmentedBar } from '@bryanadamg/terras-ui/components/SegmentedBar';
-import { lvThead, SortableTh, lvZebra, Dash, ResizableTable } from '../shared/listViewTheme';
+import { lvThead, lvZebra, Dash, ResizableTable } from '../shared/listViewTheme';
+import { SortableTh } from '@bryanadamg/terras-ui/components/Table';
 import { qtyFmt } from '../shared/format';
 import { API_BASE } from '../shared/apiBase';
 import { saveResponse } from '../shared/download';

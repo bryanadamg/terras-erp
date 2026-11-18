@@ -38,7 +38,8 @@ import { pageFillStyle, flexFillStyle } from '../shared/shellTheme';
 import { bevel as sharedXpBevel, titleBar as sharedXpTitleBar, toolbar as sharedXpToolbar } from '@bryanadamg/terras-ui/styles';
 import { FilterChipBar } from '@bryanadamg/terras-ui/components/FilterChipBar';
 import { SegmentedBar } from '@bryanadamg/terras-ui/components/SegmentedBar';
-import { lvThead, lvSubTh, lvSubTd, lvSubTable, lvSubCaption, ExpanderCell, SortableTh, lvZebra, Dash } from '../shared/listViewTheme';
+import { lvThead, lvSubTh, lvSubTd, lvSubTable, lvSubCaption, ExpanderCell, lvZebra, Dash } from '../shared/listViewTheme';
+import { SortableTh } from '@bryanadamg/terras-ui/components/Table';
 import { qtyFmt } from '../shared/format';
 import { STATIC_BASE } from '../shared/apiBase';
 

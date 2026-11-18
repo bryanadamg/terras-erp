@@ -28,7 +28,8 @@ import { toolbar as xpToolbar } from '@bryanadamg/terras-ui/styles';
 import { FilterChipBar } from '@bryanadamg/terras-ui/components/FilterChipBar';
 import { Count as ToolbarCount } from '@bryanadamg/terras-ui/components/Window';
 import { useRouter } from 'next/navigation';
-import { lvThead, SortableTh, lvThSticky, lvTdRuled, lvZebra, ResizableTable } from '../shared/listViewTheme';
+import { lvThead, lvThSticky, lvTdRuled, lvZebra, ResizableTable } from '../shared/listViewTheme';
+import { SortableTh } from '@bryanadamg/terras-ui/components/Table';
 import { API_BASE } from '../shared/apiBase';
 
 // One width per column, in render order, and the ONLY place they are declared —

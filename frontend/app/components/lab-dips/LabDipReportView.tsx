@@ -8,10 +8,8 @@ import { useToast } from '../shared/Toast';
 import { ShellWindow, ShellTitleBar, ToolbarButton } from '../shared/shellTheme';
 import { toolbar as sharedXpToolbar } from '@bryanadamg/terras-ui/styles';
 import { API_BASE } from '../shared/apiBase';
-import {
-    lvTh, lvThead, lvRow, lvBtn, lvInput, lvLabel, lvSep, LvSectionCaption, LV_XP_FONT, LV_MODERN_FONT,
-    SortableTh,
-} from '../shared/listViewTheme';
+import { lvTh, lvThead, lvRow, lvBtn, lvInput, lvLabel, lvSep, LvSectionCaption, LV_XP_FONT, LV_MODERN_FONT } from '../shared/listViewTheme';
+import { SortableTh } from '@bryanadamg/terras-ui/components/Table';
 import { StatusChip, TableBlockSkeleton, XPStatusBar, XPEmptyState, familyColor, familyTint, xpPanel, type StatusFamily, XP_BTN } from '../shared/xpTheme';
 import { useSortable } from '@bryanadamg/terras-ui/components/Table';
 

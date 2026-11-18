@@ -8,7 +8,8 @@ import ModalWrapper from '../shared/ModalWrapper';
 import { LotChips, LotChip } from '../shared/LotChips';
 import { CodeChip, xpFont, xpBtn as xpBtnBase, XP_BTN } from '../shared/xpTheme';
 import { field as xpInputBase, BTN_TONES } from '@bryanadamg/terras-ui/styles';
-import { RowCheckbox, lvPickerRow } from '../shared/listViewTheme';
+import { lvPickerRow } from '../shared/listViewTheme';
+import { RowCheckbox } from '@bryanadamg/terras-ui/components/Table';
 import { API_BASE } from '../shared/apiBase';
 import BeamPrepModal, { BeamPrep, BeamPrepBeam } from './BeamPrepModal';
 

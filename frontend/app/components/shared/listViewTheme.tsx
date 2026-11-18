@@ -3,7 +3,6 @@ import React from 'react';
 import { xpFont, modernFont, BUTTON_RADIUS, xpBtn } from './xpTheme';
 import { BTN_TONES } from '@bryanadamg/terras-ui/styles';
 import {
-    CHECK_COL_W, EXPANDER_COL_W,
     RowCheckboxCell as UIRowCheckboxCell, ExpanderCell as UIExpanderCell,
 } from '@bryanadamg/terras-ui/components/Table';
 import type { BtnTone } from './xpTheme';
@@ -222,45 +221,6 @@ export function TableEmpty({ colSpan, message, icon, tdStyle }: {
     );
 }
 
-// ── Sortable column header ────────────────────────────────────────────────────
-// `useSortable`/`useServerSort` give the state and `SortMark` the arrow, but the
-// header cell itself was hand-written 45 times across 6 lists — each repeating
-// `cursor: 'pointer'` + `title="Sort"` + `onClick={() => toggleSort(key)}` +
-// `<SortMark/>`, and only some of them adding `userSelect: 'none'` (without it a
-// double-click on the label selects the text instead of sorting twice).
-//
-// `style`/`className` stay per-call because the header chrome is still
-// per-table (see lvTh); this owns only the sort behaviour and its affordances.
-//
-// A null/absent `colKey` renders a plain, inert header — so a table whose
-// columns come from a config array (weaving output report, work-order list,
-// booking stock) keeps ONE component call instead of branching the whole cell on
-// `c.sortKey ? <th sortable> : <th>`.
-// Extracted into terras-ui's Table module as-is: pointer, no text selection (a
-// double-click would select the label instead of sorting twice), the "Sort"
-// title, aria-sort and the arrow.
-export { SortableTh } from '@bryanadamg/terras-ui/components/Table';
-
-// ── Row multi-select ──────────────────────────────────────────────────────────
-// The checkbox half of a bulk-action list. Six views grew their own copy of this
-// and drifted on all three axes: the state shape (`Set<id>` / `Record<key,row>`),
-// the "all selected" test (`size === rows.length`, which is wrong the moment a
-// selection outlives a page), and the checkbox chrome (bare input vs
-// `form-check-input`, 28/32/40px columns).
-//
-// `useRowSelection` keeps the ROW OBJECT, not just its id, because every bulk
-// action downstream needs the row (print a WO card, move a stock line) and a
-// selection that survives paging can no longer look it up in the visible page.
-// Select-all is deliberately page-scoped — ticking 4000 filtered rows in one
-// click is never what the user meant — while individually selected rows on other
-// pages stay selected.
-// Extracted into terras-ui's Table module from here: the hook, the two boxes
-// (the header box owns the indeterminate ref-poke) and the hover ring, now
-// chrome.css `.terras-check` (was `.lv-check`).
-export const LV_CHECK_COL_W = CHECK_COL_W;
-export type { RowSelection } from '@bryanadamg/terras-ui/components/Table';
-export { useRowSelection, RowCheckbox, SelectAllCheckbox } from '@bryanadamg/terras-ui/components/Table';
-
 // Row of a checkbox PICKER list — the lot pickers in the WO completion, WO
 // staging and packing-log modals, which are `<label>` stacks rather than tables.
 // Three files had byte-identical copies of this style object. Deliberately a
@@ -292,8 +252,8 @@ export function RowCheckboxCell({ tdStyle, ...rest }: React.ComponentProps<typeo
 //
 // COLUMN ORDER IS FIXED. A list's leading control columns are, in this order:
 //
-//     [ checkbox (LV_CHECK_COL_W, only if the list has bulk actions) ]
-//     [ chevron  (LV_EXPANDER_COL_W, only if the row expands)        ]
+//     [ checkbox (terras-ui CHECK_COL_W, only if the list has bulk actions) ]
+//     [ chevron  (terras-ui EXPANDER_COL_W, only if the row expands) ]
 //     [ first data column — the row's code/identity                  ]
 //
 // The chevron gets its OWN column; never park it inside a data cell. Four
@@ -303,7 +263,6 @@ export function RowCheckboxCell({ tdStyle, ...rest }: React.ComponentProps<typeo
 // place. Pair `ExpanderCell` with `rowStateBg('expanded')` on the row —
 // the two halves of the same convention. `ExpandToggle` on its own is for a
 // non-table disclosure, not for smuggling the glyph back into a data cell.
-export const LV_EXPANDER_COL_W = EXPANDER_COL_W;
 
 /** The dedicated chevron column, over terras-ui's ExpanderCell (extracted from
  *  here). Puts back what the package can't know: the bootstrap chevron (it ships

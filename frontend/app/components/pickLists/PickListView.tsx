@@ -14,7 +14,8 @@ import { XPStatusBar, XPEmptyState, TableSkeleton, useTableSkeletonMetrics, Stat
 import { ExpandedRowPanel, rowStateBg, useSortable } from '@bryanadamg/terras-ui/components/Table';
 import { progressToneColor } from '@bryanadamg/terras-ui/components/ProgressBar';
 import { SKEL_PAGE_ROWS } from '@bryanadamg/terras-ui/components/Skeleton';
-import { LV_XP_FONT, lvBtn, lvInput, lvTd, lvLabel, lvRow, lvSubTh, lvSubTd, lvSubRow, ExpanderCell, lvThSticky, lvSubTable, RowCheckboxCell, LV_CHECK_COL_W, SortableTh, ResizableTable } from '../shared/listViewTheme';
+import { LV_XP_FONT, lvBtn, lvInput, lvTd, lvLabel, lvRow, lvSubTh, lvSubTd, lvSubRow, ExpanderCell, lvThSticky, lvSubTable, RowCheckboxCell, ResizableTable } from '../shared/listViewTheme';
+import { CHECK_COL_W as LV_CHECK_COL_W, SortableTh } from '@bryanadamg/terras-ui/components/Table';
 import { ShellWindow, ShellTitleBar, SearchField } from '../shared/shellTheme';
 import { toolbar as xpToolbar } from '@bryanadamg/terras-ui/styles';
 import { FilterChipBar } from '@bryanadamg/terras-ui/components/FilterChipBar';

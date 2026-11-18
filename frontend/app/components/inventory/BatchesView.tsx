@@ -32,7 +32,8 @@ import { lotSizeText, lotComboLabel, lotColorLabel, type LotVariantAttr } from '
 import { isRejectGrade } from '../shared/rejectDisplay';
 import { useUser } from '../../context/UserContext';
 import { basePerAlt, altToBase } from '../shared/altUnit';
-import { ExpanderCell, SortableTh, lvZebra, lvThead, lvTh, TableEmpty, EMPTY_DASH, ResizableTable } from '../shared/listViewTheme';
+import { ExpanderCell, lvZebra, lvThead, lvTh, TableEmpty, EMPTY_DASH, ResizableTable } from '../shared/listViewTheme';
+import { SortableTh } from '@bryanadamg/terras-ui/components/Table';
 import { Tabs, TabDef } from '../shared/Tabs';
 import { rejectGradeLabel } from '../shared/rejectDisplay';
 

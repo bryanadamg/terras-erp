@@ -19,7 +19,8 @@ import { SearchField, ToolbarButton, pageFillStyle } from '../shared/shellTheme'
 import { bevel as sharedXpBevel, titleBar as sharedXpTitleBar, toolbar as sharedXpToolbar } from '@bryanadamg/terras-ui/styles';
 import TreeSelect, { buildCategoryTree, buildLocationPickerTree } from '../shared/TreeSelect';
 import { Tabs, TabDef } from '../shared/Tabs';
-import { lvThead, useRowSelection, RowCheckbox, SelectAllCheckbox, LV_CHECK_COL_W, LV_EXPANDER_COL_W, ExpanderCell, SortableTh, lvThSticky, lvTdRuled, lvZebra, lvSubTable, lvSubTh, lvSubTd, lvSubRow, Dash, ResizableTable } from '../shared/listViewTheme';
+import { lvThead, ExpanderCell, lvThSticky, lvTdRuled, lvZebra, lvSubTable, lvSubTh, lvSubTd, lvSubRow, Dash, ResizableTable } from '../shared/listViewTheme';
+import { useRowSelection, RowCheckbox, SelectAllCheckbox, CHECK_COL_W as LV_CHECK_COL_W, EXPANDER_COL_W as LV_EXPANDER_COL_W, SortableTh } from '@bryanadamg/terras-ui/components/Table';
 import AuditChanges, { hasAuditChanges } from '../shared/AuditChanges';
 
 // XP-style category badge colours derived from category name

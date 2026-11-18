@@ -11,7 +11,8 @@ import { workCenterChipStyle, xpFont, colorHexFor, CodeChip, CODE_FONT, TableSke
 import { expandedRowFrame, rowStateBg } from '@bryanadamg/terras-ui/components/Table';
 import { SKEL_PAGE_ROWS } from '@bryanadamg/terras-ui/components/Skeleton';
 import Pager from '../shared/Pager';
-import { lvThead, LV_STICKY_THEAD, ExpanderCell, useRowSelection, RowCheckbox, SelectAllCheckbox, LV_CHECK_COL_W, LV_EXPANDER_COL_W, lvZebra, TableEmpty, Dash, lvSubTable, lvSubTd, lvSubRow, lvThBanded, ResizableTable } from '../shared/listViewTheme';
+import { lvThead, LV_STICKY_THEAD, ExpanderCell, lvZebra, TableEmpty, Dash, lvSubTable, lvSubTd, lvSubRow, lvThBanded, ResizableTable } from '../shared/listViewTheme';
+import { useRowSelection, RowCheckbox, SelectAllCheckbox, CHECK_COL_W as LV_CHECK_COL_W, EXPANDER_COL_W as LV_EXPANDER_COL_W } from '@bryanadamg/terras-ui/components/Table';
 import { ToolbarButton, SearchField, viewShellStyle } from '../shared/shellTheme';
 import { FilterChipBar } from '@bryanadamg/terras-ui/components/FilterChipBar';
 import { toolbar as xpToolbar, titleBar as xpTitleBar } from '@bryanadamg/terras-ui/styles';

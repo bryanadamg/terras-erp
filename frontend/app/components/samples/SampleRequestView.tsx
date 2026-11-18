@@ -26,7 +26,8 @@ import RequestDetailPanel, { getStatusStripe } from '../shared/RequestDetailPane
 import { Tabs } from '../shared/Tabs';
 import { STATIC_BASE, API_BASE } from '../shared/apiBase';
 import { SAMPLE_PAGE_SIZE } from '../../context/DataContext';
-import { lvThead, LV_STICKY_THEAD, ExpanderCell, LV_EXPANDER_COL_W, lvTh, lvTdRuled, lvZebra, ResizableTable } from '../shared/listViewTheme';
+import { lvThead, LV_STICKY_THEAD, ExpanderCell, lvTh, lvTdRuled, lvZebra, ResizableTable } from '../shared/listViewTheme';
+import { EXPANDER_COL_W as LV_EXPANDER_COL_W } from '@bryanadamg/terras-ui/components/Table';
 
 // Request classification, chosen at create time. Values are the `Sample Category`
 // system attribute (system_role='sample_category') — New Sample / Re Sample / Yardage
