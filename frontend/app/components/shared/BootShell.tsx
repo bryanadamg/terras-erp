@@ -51,6 +51,7 @@ const navWidth = (i: number) => NAV_WIDTHS[i % NAV_WIDTHS.length];
 function NavRow({ i, sub }: { i: number; sub?: boolean }) {
     return (
         <div
+            className="boot-row"
             style={{
                 display: 'flex', alignItems: 'center', gap: 5,
                 padding: sub ? '4px 8px 4px 22px' : '5px 8px 5px 14px',
@@ -61,7 +62,7 @@ function NavRow({ i, sub }: { i: number; sub?: boolean }) {
             }}
         >
             <SkeletonBar width={14} height={11} />
-            <SkeletonBar width={navWidth(i)} height={8} />
+            <div className="boot-label"><SkeletonBar width={navWidth(i)} height={8} /></div>
         </div>
     );
 }
@@ -69,13 +70,17 @@ function NavRow({ i, sub }: { i: number; sub?: boolean }) {
 /** Placeholder for `<Sidebar>` — same class, palette and brand block. */
 export function BootSidebar({ appName = 'Terras ERP' }: { appName?: string }) {
     return (
+        // `is-boot`: globals.css draws it as the 44px rail unless <html> carries
+        // data-sidebar-pinned (set before paint by SIDEBAR_PIN_BOOT), hiding the
+        // `boot-label` bars and centring what's left, as the real rail does.
         <div
-            className="sidebar"
+            className="sidebar is-boot"
             style={{ background: SIDEBAR_BG, display: 'flex', flexDirection: 'column' }}
         >
             {/* Same brand block as Sidebar.tsx: real height var, real colors, the
                 actual icon asset (a static file, so it needs no auth to draw). */}
             <div
+                className="boot-brand"
                 style={{
                     background: 'var(--xp-title-flat)',
                     padding: '0 10px',
@@ -112,6 +117,7 @@ export function BootSidebar({ appName = 'Terras ERP' }: { appName?: string }) {
                 {NAV_SECTIONS.map((section, s) => (
                     <React.Fragment key={section.key}>
                         <div
+                            className="boot-row"
                             style={{
                                 background: 'linear-gradient(to right, #0058e6, #003080)',
                                 padding: '4px 8px',
@@ -121,7 +127,7 @@ export function BootSidebar({ appName = 'Terras ERP' }: { appName?: string }) {
                                 height: 20,
                             }}
                         >
-                            <SkeletonBar width={72} height={7} />
+                            <div className="boot-label"><SkeletonBar width={72} height={7} /></div>
                         </div>
                         {section.items.map((item, i) => (
                             <NavRow key={item.tab} i={s + i + 1} sub />
@@ -142,7 +148,7 @@ export function BootSidebar({ appName = 'Terras ERP' }: { appName?: string }) {
                 }}
             >
                 <SkeletonBar width={30} height={30} />
-                <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 4 }}>
+                <div className="boot-label-block" style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 4 }}>
                     <SkeletonBar width="70%" height={8} />
                     <SkeletonBar width="40%" height={7} />
                 </div>

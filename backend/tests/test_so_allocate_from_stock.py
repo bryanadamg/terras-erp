@@ -185,3 +185,20 @@ def test_offered_carton_states_the_length_of_one_alt_unit(client, auth_headers, 
 
     [c] = _offered(client, auth_headers, _so(client, auth_headers, item, 13))["cartons"]
     assert (c["alt_qty"], c["alt_uom"], c["alt_factor"], c["alt_factor_uom"]) == (2, "Pic", 36, "yard")
+
+
+def test_pick_board_counts_a_pinned_carton_only_for_its_own_order(client, auth_headers, async_db_session):
+    """SO-2026-11-00003: a newer order allocated the only carton, but the board's
+    due-date walk handed it to an older open order and the newer one read 0 ready."""
+    item, (a,) = _seed(client, auth_headers, async_db_session, [20])
+    older = _so(client, auth_headers, item, 20)
+    newer = client.post("/api/sales-orders", json={
+        "po_number": f"PO-AL-{uuid.uuid4().hex[:6]}", "customer_name": "Acme",
+        "order_date": "2026-02-04T00:00:00",
+        "lines": [{"item_id": item["id"], "qty": 20, "due_date": "2026-04-01T00:00:00", "attribute_value_ids": []}],
+    }, headers=auth_headers).json()
+    assert _allocate(client, auth_headers, newer, [a]).status_code == 200
+
+    board = {o["po_number"]: o for o in client.get("/api/pick-lists/pickable-orders", headers=auth_headers).json()}
+    assert board[newer["po_number"]]["cartons_ready"] == 1
+    assert board[older["po_number"]]["cartons_ready"] == 0

@@ -118,18 +118,20 @@ body {
    ============================================================ */
 :root {
   /* The never-dimmed pair: what a window's own title bar paints with. */
-  --xp-title-blue-active: linear-gradient(to right, #0058e6 0%, #08a5ff 100%);
-  --xp-title-blue-border-active: #003080;
+  /* Flat cobalt, not the XP blue→cyan fade (retro-modern pass): the band keeps
+     its place and its inset highlight, it just stops being glossy. */
+  --xp-title-blue-active: #2350d8;
+  --xp-title-blue-border-active: #122f86;
   --xp-title-blue: var(--xp-title-blue-active);
   --xp-title-blue-border: var(--xp-title-blue-border-active);
   /* Flat left-end of the title gradient, for the sidebar brand block: it sits to
      the LEFT of the header, so re-running the gradient there would end bright at
      the seam and restart dark in the header. Flat = an invisible join. Declared
      as a var so the brand dims with the header when the window loses focus. */
-  --xp-title-flat: #0058e6;
+  --xp-title-flat: #2350d8;
 }
 body.window-chrome-inactive {
-  --xp-title-blue: linear-gradient(to right, #7a96b8 0%, #a8bcd4 100%);
+  --xp-title-blue: #7a96b8;
   --xp-title-blue-border: #6a819b;
   --xp-title-flat: #7a96b8;
 }
@@ -141,6 +143,8 @@ body,
 .ui-style-classic {
   --terras-title-blue: var(--xp-title-blue);
   --terras-title-blue-border: var(--xp-title-blue-border);
+  /* terras-ui's Sidebar brand block: flat, dims with the header. */
+  --terras-title-flat: var(--xp-title-flat);
 }
 /* A window must not dim itself: a dialog's own title bar stays active. Its
    body is a .ui-style-classic again, so page chrome nested inside still dims. */
@@ -189,8 +193,15 @@ body,
 }
 
 /* Classic Header (Top Bar) */
+/* Dot-matrix on the band's right half, the login's CityMatrix echoed in the
+   chrome. Three layers, top first: the band colour fading out left to right,
+   the dot grid it uncovers, the band colour under both. Plain colours only
+   (--xp-title-flat), so it dims with the window like the rest of the band. */
 .classic-header {
-  background: var(--xp-title-blue) !important;
+  background:
+    linear-gradient(to right, var(--xp-title-flat) 40%, transparent 100%),
+    radial-gradient(circle, rgba(255, 255, 255, 0.22) 0.9px, transparent 1.3px) 0 0 / 5px 5px,
+    var(--xp-title-flat) !important;
   color: white !important;
   height: var(--app-header-h) !important;
   padding: 0 5px !important;
@@ -698,9 +709,9 @@ body,
 /* The nav list below the header is what actually scrolls. Bar hidden; wheel/touch
    still scroll. The ::-webkit rule covers older Safari, and its classic prefix
    outranks the global XP scrollbar rule. */
-.sidebar, .sidebar-nav { scrollbar-width: none; }
+.sidebar, .sidebar nav { scrollbar-width: none; }
 .ui-style-classic .sidebar::-webkit-scrollbar,
-.ui-style-classic .sidebar-nav::-webkit-scrollbar { display: none; }
+.ui-style-classic .sidebar nav::-webkit-scrollbar { display: none; }
 
 .sidebar-header {
   height: 64px;
@@ -1464,4 +1475,93 @@ textarea {
 @media (prefers-reduced-motion: reduce) {
   .read-dot { transition: none; }
   .read-dot:hover { transform: none; }
+}
+
+/* ── Inset shell (desktop) ──────────────────────────────────────────────────
+   The sidebar and the main view are two cards on a darker desk, an 8px gutter
+   around and between them. The sidebar is terras-ui's hover rail (Sidebar.tsx):
+   44px at rest, 200px while hover-opened or pinned; the main card's left edge
+   follows it, so the page resizes with the sidebar rather than sliding under it.
+   Screen only, so print keeps the flat layout its own block sets up, and only
+   above the 768px line where the mobile rules (and MobileShell) take over. */
+@media screen and (min-width: 769px) {
+  .ui-style-classic.app-container {
+    --shell-gap: 8px;
+    /* What a page-filled view loses to the shell: both gutters plus the main
+       card's top and bottom border. shellTheme's pageFillStyle subtracts it. */
+    --shell-inset: calc(2 * var(--shell-gap) + 2px);
+    --sidebar-width: 200px;
+    display: flow-root;
+    min-height: var(--app-vh);
+    background: color-mix(in srgb, var(--win-bg) 84%, #000);
+  }
+  /* Rail width: the live sidebar says so with `is-rail`; while booting, the
+     placeholder follows the pin flag SIDEBAR_PIN_BOOT put on <html>. */
+  .ui-style-classic.app-container:has(> .sidebar.is-rail),
+  html:not([data-sidebar-pinned]) .ui-style-classic.app-container:has(> .sidebar.is-boot) {
+    --sidebar-width: 44px;
+  }
+  .ui-style-classic .sidebar {
+    top: var(--shell-gap);
+    left: var(--shell-gap);
+    /* --rail-approach (0..1, Sidebar.tsx) grows the rail toward an approaching
+       cursor by up to 20px. Only the sidebar widens — the main card's margin
+       reads --sidebar-width alone — so it grows over the gutter and the card's
+       padding, never shifting the table. */
+    width: calc(var(--sidebar-width) + var(--rail-approach, 0) * 20px);
+    height: calc(var(--app-vh) - 2 * var(--shell-gap));
+    border: 1px solid #718bb7;
+    border-radius: var(--terras-radius, 8px);
+    overflow: hidden;
+    transition: width 0.12s;
+  }
+  /* The main card is the scroll container (its overflow-y-auto utility), so the
+     sticky app header stays inside the card's rounded top. */
+  .ui-style-classic .main-content {
+    margin: var(--shell-gap) var(--shell-gap) var(--shell-gap)
+            calc(var(--sidebar-width) + 2 * var(--shell-gap)) !important;
+    width: auto !important;
+    height: calc(var(--app-vh) - 2 * var(--shell-gap));
+    border: 1px solid var(--terras-win-border-dark, #808080);
+    border-radius: var(--terras-radius, 8px);
+    transition: margin-left 0.12s;
+  }
+  /* Boot rail: the placeholder shows what the live rail shows — icons only. */
+  html:not([data-sidebar-pinned]) .sidebar.is-boot .boot-label,
+  html:not([data-sidebar-pinned]) .sidebar.is-boot .boot-label-block {
+    display: none !important;
+  }
+  html:not([data-sidebar-pinned]) .sidebar.is-boot .boot-row {
+    justify-content: center;
+    padding-left: 0 !important;
+    padding-right: 0 !important;
+  }
+  html:not([data-sidebar-pinned]) .sidebar.is-boot .boot-brand {
+    justify-content: center;
+    padding: 0 4px !important;
+  }
+}
+.boot-label { display: contents; }
+@media (prefers-reduced-motion: reduce) {
+  .ui-style-classic .sidebar,
+  .ui-style-classic .main-content { transition: none; }
+}
+
+/* ── Data face ───────────────────────────────────────────────────────────────
+   JetBrains Mono (layout.tsx) for figures. terras-ui's window counts and pager
+   ranges read --terras-font-data; erp's own code cells read CODE_FONT. */
+.ui-style-classic {
+  --terras-font-data: var(--font-data), "Cascadia Mono", Consolas, monospace;
+}
+/* Quantity columns: there is no shared quantity style to switch — erp writes
+   ~450 right-aligned cells inline across 58 views — so this targets the
+   convention itself. A right-aligned body cell is a number column; buttons in
+   one (an action column) keep their own face. !important beats the inline
+   fontFamily most cells carry. Both spellings: the server renders
+   `text-align:right`, the browser serialises `text-align: right`. */
+@media screen {
+  .ui-style-classic .main-content td:is([style*="text-align:right"], [style*="text-align: right"]):not(:has(button, input, select)):not([data-print-template] td) {
+    font-family: var(--terras-font-data) !important;
+    font-variant-numeric: tabular-nums;
+  }
 }

@@ -25,6 +25,7 @@ import MainLayout from './components/shared/MainLayout';
 import GlobalTooltip from './components/shared/GlobalTooltip';
 import SWRegister from './components/shared/SWRegister';
 import { bootScript } from '@bryanadamg/terras-ui/scale';
+import { SIDEBAR_PIN_BOOT } from './components/shared/sidebarPin';
 import localFont from 'next/font/local';
 
 // Brand face, used only for the "Terras" wordmark (login screen, docs header).
@@ -51,6 +52,20 @@ const displayFont = localFont({
   variable: '--font-display',
 });
 
+// Data face — figures, document codes, quantity columns and window readouts
+// (globals.css --terras-font-data, typography CODE_FONT). Vendored like the
+// brand face, for the same reason: no fonts.gstatic.com at build time. Latin
+// subset only, from @fontsource/jetbrains-mono 5.1.1 (SIL Open Font License
+// 1.1). Preloaded, unlike the wordmark: every list view renders it.
+const dataFont = localFont({
+  src: [
+    { path: './fonts/JetBrainsMono-Regular-latin.woff2', weight: '400', style: 'normal' },
+    { path: './fonts/JetBrainsMono-Bold-latin.woff2', weight: '700', style: 'normal' },
+  ],
+  display: 'swap',
+  variable: '--font-data',
+});
+
 export const metadata = {
   title: 'Terras ERP',
   description: 'Next-generation modular manufacturing system',
@@ -74,7 +89,7 @@ export default function RootLayout({
   return (
     // suppressHydrationWarning: the boot script below stamps data-ui-scale on
     // <html> before React hydrates, which the server markup can't know about.
-    <html lang="en" className={displayFont.variable} suppressHydrationWarning>
+    <html lang="en" className={`${displayFont.variable} ${dataFont.variable}`} suppressHydrationWarning>
       <head>
         <meta name="viewport" content="width=device-width, initial-scale=1" />
         {/* Standard counterpart to appleWebApp.capable above — Next's metadata API doesn't emit this one yet */}
@@ -85,6 +100,9 @@ export default function RootLayout({
             that module and scale.css agree on, so the list can't drift from the
             one the picker offers. */}
         <script dangerouslySetInnerHTML={{ __html: bootScript }} />
+        {/* Sidebar pinned vs hover rail, onto <html> before first paint so the
+            boot placeholder already has the right width (sidebarPin.ts). */}
+        <script dangerouslySetInnerHTML={{ __html: SIDEBAR_PIN_BOOT }} />
       </head>
       <body>
         <SWRegister />

@@ -15,7 +15,12 @@ export const modernFont = 'system-ui, -apple-system, "Segoe UI", Roboto, "Helvet
 // to pick between `'Courier New', monospace` and a bare `monospace` per file, which
 // resolve to different faces on Windows — the same MO code rendered two widths on
 // two pages. Always import this; never hand-write a mono stack.
-export const CODE_FONT = "'Courier New', Consolas, monospace";
+// Document codes and figures on screen: the vendored data face (layout.tsx).
+export const CODE_FONT = "var(--font-data), 'Courier New', Consolas, monospace";
+
+// Printed documents keep Courier New: a surat jalan's look is the customer's
+// paperwork, not the app's chrome, so the screen restyle stops at the printer.
+export const PRINT_CODE_FONT = "'Courier New', Consolas, monospace";
 
 // Printed documents (Kartu Kerja, MO/PO/SO prints, labels) are deliberately NOT
 // classic/modern themed — paper doesn't have a theme — but every print modal used to

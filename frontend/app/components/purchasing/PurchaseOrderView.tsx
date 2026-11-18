@@ -810,7 +810,7 @@ export default function PurchaseOrderView({ items, itemResults, onSearchItems, a
            <div>
                {/* vertical scroll must live on the same element as overflow-x,
                    otherwise sticky headers bind to the inner wrapper and never stick */}
-               <div className="table-responsive" style={{ height: 'calc(var(--app-vh) - 160px)', overflowY: 'auto' }}>
+               <div className="table-responsive" style={{ height: 'calc(var(--app-vh) - 160px - var(--shell-inset, 0px))', overflowY: 'auto' }}>
                    <ResizableTable 
                        style={{ width: '100%', borderCollapse: 'collapse', background: '#fff' }}
                    >
