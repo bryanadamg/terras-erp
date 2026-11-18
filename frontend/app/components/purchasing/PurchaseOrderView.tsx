@@ -17,7 +17,7 @@ import { FieldLabel } from '@bryanadamg/terras-ui/components/Field';
 import { field as xpInputBase, BTN_TONES } from '@bryanadamg/terras-ui/styles';
 import { SKEL_PAGE_ROWS } from '@bryanadamg/terras-ui/components/Skeleton';
 import { SearchField, ToolbarButton } from '../shared/shellTheme';
-import { bevel as sharedXpBevel, titleBar as sharedXpTitleBar, toolbar as sharedXpToolbar } from '@bryanadamg/terras-ui/styles';
+import { bevel as sharedXpBevel, toolbar as sharedXpToolbar } from '@bryanadamg/terras-ui/styles';
 import { FilterChipBar } from '@bryanadamg/terras-ui/components/FilterChipBar';
 import { Count as ToolbarCount } from '@bryanadamg/terras-ui/components/Window';
 import Pager from '../shared/Pager';
@@ -117,7 +117,6 @@ export default function PurchaseOrderView({ items, itemResults, onSearchItems, a
 
   // ── XP shared inline styles ──────────────────────────────────────────────
   const xpBevel: React.CSSProperties = sharedXpBevel();
-  const xpTitleBar: React.CSSProperties = sharedXpTitleBar({ flexWrap: 'wrap' as const, gap: '4px' });
   const xpToolbar: React.CSSProperties = sharedXpToolbar();
 
   // Local wrapper keeps this form's inset-shadow input treatment while sourcing
@@ -776,14 +775,6 @@ export default function PurchaseOrderView({ items, itemResults, onSearchItems, a
        <div
            style={xpBevel}
        >
-           {/* ── Title bar ── */}
-           <div style={xpTitleBar}>
-                   <span>
-                       <i className="bi bi-truck" style={{ marginRight: 6 }}></i>
-                       {t('purchase_orders')}
-                   </span>
-               </div>
-
            {/* ── Secondary toolbar: search + status filters + count + actions ── */}
            <div
                style={xpToolbar}

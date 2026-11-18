@@ -8,7 +8,8 @@ import { xpFont, xpBtn, TableSkeleton, useTableSkeletonMetrics, CodeChip, CODE_F
 import { useSortable, ExpandedRowPanel, expandedRowFrame, rowStateBg } from '@bryanadamg/terras-ui/components/Table';
 import { SKEL_PAGE_ROWS } from '@bryanadamg/terras-ui/components/Skeleton';
 import { SearchField, pageFillStyle } from '../shared/shellTheme';
-import { bevel as sharedXpBevel, titleBar as sharedXpTitleBar, toolbar as sharedXpToolbar } from '@bryanadamg/terras-ui/styles';
+import { bevel as sharedXpBevel, toolbar as sharedXpToolbar } from '@bryanadamg/terras-ui/styles';
+import { Count as ToolbarCount } from '@bryanadamg/terras-ui/components/Window';
 import Pager from '../shared/Pager';
 import { lvThead, lvSubTh, lvSubTd, lvSubTable, lvSubRow, lvSubCaption, ExpanderCell, lvThSticky, lvZebra, TableEmpty, ResizableTable } from '../shared/listViewTheme';
 import { EXPANDER_COL_W as LV_EXPANDER_COL_W, SortableTh } from '@bryanadamg/terras-ui/components/Table';
@@ -196,7 +197,6 @@ export default function BookingStockView() {
     );
 
     const xpBevel: React.CSSProperties = sharedXpBevel();
-    const xpTitleBar: React.CSSProperties = sharedXpTitleBar();
     const xpToolbar: React.CSSProperties = sharedXpToolbar({ gap: '6px' });
     const xpTableHeader: React.CSSProperties = lvThSticky({ borderRight: '1px solid #b0aa9c' });
     const xpSep: React.CSSProperties = { width: '1px', height: '20px', background: '#a0988c', margin: '0 2px', flexShrink: 0 };
@@ -208,14 +208,6 @@ export default function BookingStockView() {
     return (
         <div className={'fade-in'} style={pageFillStyle}>
             <div style={{ ...xpBevel, display: 'flex', flexDirection: 'column', flex: 1 }} className={undefined}>
-                <div style={xpTitleBar} className={undefined}>
-                    <span className={undefined}>
-                        <i className={'bi bi-bookmark-check'} style={{ marginRight: 6 }} />
-                        {t('booking_stock') || 'Booking Stock'}
-                    </span>
-                    <span style={{ fontSize: '10px', opacity: 0.85 }} className={undefined}>{total} items</span>
-                </div>
-
                 <div style={xpToolbar} className={undefined}>
                     <SearchField value={searchInput} onChange={setSearch} placeholder="Search item..." width={200} />
                     <div style={xpSep} />
@@ -236,6 +228,7 @@ export default function BookingStockView() {
                         <span><i className={'bi bi-square-fill'} style={{ color: HEALTH.tight.color, ...({ marginRight: 3 }) }} />Tight</span>
                         <span><i className={'bi bi-square-fill'} style={{ color: HEALTH.ok.color, ...({ marginRight: 3 }) }} />OK</span>
                     </span>
+                    <ToolbarCount>{total} items</ToolbarCount>
                 </div>
 
 

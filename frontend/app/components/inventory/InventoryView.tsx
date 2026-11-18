@@ -16,7 +16,7 @@ import { FieldLabel } from '@bryanadamg/terras-ui/components/Field';
 import { field as xpInputBase, BTN_TONES } from '@bryanadamg/terras-ui/styles';
 import { SKEL_PAGE_ROWS } from '@bryanadamg/terras-ui/components/Skeleton';
 import { SearchField, ToolbarButton, pageFillStyle } from '../shared/shellTheme';
-import { bevel as sharedXpBevel, titleBar as sharedXpTitleBar, toolbar as sharedXpToolbar } from '@bryanadamg/terras-ui/styles';
+import { bevel as sharedXpBevel, toolbar as sharedXpToolbar } from '@bryanadamg/terras-ui/styles';
 import TreeSelect, { buildCategoryTree, buildLocationPickerTree } from '../shared/TreeSelect';
 import { Tabs, TabDef } from '../shared/Tabs';
 import { lvThead, ExpanderCell, lvThSticky, lvTdRuled, lvZebra, lvSubTable, lvSubTh, lvSubTd, lvSubRow, Dash, ResizableTable } from '../shared/listViewTheme';
@@ -728,7 +728,6 @@ export default function InventoryView({
 
   // ── XP shared inline styles ──────────────────────────────────────────────
   const xpBevel: React.CSSProperties = sharedXpBevel();
-  const xpTitleBar: React.CSSProperties = sharedXpTitleBar();
   const xpToolbar: React.CSSProperties = sharedXpToolbar();
 
   const xpInput: React.CSSProperties = xpInputBase({ boxShadow: 'inset 1px 1px 0 rgba(0,0,0,0.1)' });
@@ -741,13 +740,6 @@ export default function InventoryView({
       padding: '2px 4px',
   };
 
-  const xpSep: React.CSSProperties = {
-      width: '1px',
-      height: '20px',
-      background: '#a0988c',
-      margin: '0 2px',
-      flexShrink: 0,
-  };
 
   const xpTableHeader: React.CSSProperties = lvThead();
 
@@ -1079,43 +1071,6 @@ export default function InventoryView({
         <div
           style={{ ...xpBevel, ...pageFillStyle }}
         >
-          {/* ── Title bar ── */}
-          <div style={xpTitleBar}>
-              {/* Left: title + selection info */}
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <span>
-                  <i className="bi bi-box-seam" style={{ marginRight: '6px' }}></i>
-                  {forcedCategory ? t('sample_masters') : t('item_inventory')}
-                </span>
-                {sel.count > 0 && (
-                  <span style={{ fontSize: '10px', color: '#cce8ff', fontWeight: 'normal' }}>
-                    — {sel.count} selected
-                  </span>
-                )}
-              </div>
-              {/* Right: action buttons */}
-              <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                {canDelete && sel.count > 0 && (
-                  <>
-                    <button
-                      className={XP_BTN}
-                      style={xpBtn({ ...BTN_TONES.danger })}
-                      onClick={handleBulkDelete}
-                    >
-                      <i className="bi bi-trash"></i> Delete ({sel.count})
-                    </button>
-                    <button
-                      style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#cce8ff', textDecoration: 'underline', fontFamily: xpFont, fontSize: '10px', padding: 0 }}
-                      onClick={sel.clear}
-                    >
-                      Clear
-                    </button>
-                    <div style={xpSep}></div>
-                  </>
-                )}
-              </div>
-            </div>
-
           {/* ── Category quick-filter tabs ── */}
           {!forcedCategory && (
               <Tabs<string> tabs={categoryTabs} activeKey={categoryL1 || 'ALL'} onChange={handleCategoryTabChange} />
@@ -1139,6 +1094,28 @@ export default function InventoryView({
                     Clear
                   </button>
                 </>
+              )}
+              {sel.count > 0 && (
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <span style={{ fontFamily: xpFont, fontSize: '11px', color: '#333' }}>{sel.count} selected</span>
+                  {canDelete && (
+                    <>
+                      <button
+                        className={XP_BTN}
+                        style={xpBtn({ ...BTN_TONES.danger })}
+                        onClick={handleBulkDelete}
+                      >
+                        <i className="bi bi-trash"></i> Delete ({sel.count})
+                      </button>
+                      <button
+                        style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#003ea6', textDecoration: 'underline', fontFamily: xpFont, fontSize: '11px', padding: 0 }}
+                        onClick={sel.clear}
+                      >
+                        Clear
+                      </button>
+                    </>
+                  )}
+                </div>
               )}
               <div style={{ marginLeft: 'auto', fontFamily: xpFont, fontSize: '10px', color: '#555555' }}>
                 {filteredItems.length} item{filteredItems.length !== 1 ? 's' : ''} on page

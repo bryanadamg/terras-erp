@@ -15,7 +15,7 @@ import { lvThead, LV_STICKY_THEAD, ExpanderCell, lvZebra, TableEmpty, Dash, lvSu
 import { useRowSelection, RowCheckbox, SelectAllCheckbox, CHECK_COL_W as LV_CHECK_COL_W, EXPANDER_COL_W as LV_EXPANDER_COL_W } from '@bryanadamg/terras-ui/components/Table';
 import { ToolbarButton, SearchField, viewShellStyle } from '../shared/shellTheme';
 import { FilterChipBar } from '@bryanadamg/terras-ui/components/FilterChipBar';
-import { toolbar as xpToolbar, titleBar as xpTitleBar } from '@bryanadamg/terras-ui/styles';
+import { toolbar as xpToolbar } from '@bryanadamg/terras-ui/styles';
 import { STATIC_BASE } from '../shared/apiBase';
 import { matchSubBOM } from '../shared/bomMatch';
 
@@ -793,11 +793,6 @@ export default function BOMView({
             {/* BOM List */}
             <div className="col-12">
                 <div style={viewShellStyle()}>
-                    {/* Title bar */}
-                    <div style={xpTitleBar({ justifyContent: 'flex-start' })}>
-                        <span><i className="bi bi-diagram-3-fill" style={{ marginRight: '6px' }} />{t('active_boms')}</span>
-                    </div>
-
                     {/* Toolbar: search + filter + selection + create */}
                     <div style={xpToolbar()}>
                         <SearchField value={bomSearch} onChange={v => onBomSearch?.(v)} placeholder="Search BOMs..." width={200} />
