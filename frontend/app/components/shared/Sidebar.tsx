@@ -40,6 +40,10 @@ export default function Sidebar({ activeTab, setActiveTab, onTabHover, appName, 
   const { t } = useLanguage();
   const { currentUser, hasPermission } = useUser();
   const navRef = useRef<HTMLElement>(null);
+  // Proximity growth is written straight onto the wrapper as --rail-approach,
+  // not through state: it changes on every pointer move in the zone and only
+  // the width rule in globals.css reads it.
+  const wrapperRef = useRef<HTMLDivElement>(null);
 
   // The boot script already settled stored choice vs touch default onto <html>.
   const [pinned, setPinned] = useState(readPinned);
@@ -148,16 +152,19 @@ export default function Sidebar({ activeTab, setActiveTab, onTabHover, appName, 
 
   return (
     <div
+      ref={wrapperRef}
       className={`sidebar${expanded ? '' : ' is-rail'}${isOpen ? ' mobile-open' : ''}`}
       style={{ background: SIDEBAR_BG, display: 'flex' }}
     >
       <TerrasSidebar
         expandOnHover
-        // Starts opening as the cursor heads for the rail, from up to 32px out
-        // (the gutter, the card edge and the page's own padding), so it is
-        // already widening on arrival. Slowing into the table's first column
-        // beside it does not count — the package checks the cursor's heading.
-        approachDistance={32}
+        // From 48px out the rail grows toward the cursor, in step with how close
+        // it is (--rail-approach, up to 20px, over the gutter — the table does
+        // not move), and opens outright once it meets it. A cursor heading for
+        // it at speed opens it at once; one slowing into the table's first
+        // column beside it only sees the small growth.
+        approachDistance={48}
+        onApproach={(p) => wrapperRef.current?.style.setProperty('--rail-approach', String(p))}
         collapsed={!pinned}
         onToggleCollapsed={togglePinned}
         onExpandedChange={setExpanded}

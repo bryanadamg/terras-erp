@@ -1495,7 +1495,11 @@ textarea {
   .ui-style-classic .sidebar {
     top: var(--shell-gap);
     left: var(--shell-gap);
-    width: var(--sidebar-width);
+    /* --rail-approach (0..1, Sidebar.tsx) grows the rail toward an approaching
+       cursor by up to 20px. Only the sidebar widens — the main card's margin
+       reads --sidebar-width alone — so it grows over the gutter and the card's
+       padding, never shifting the table. */
+    width: calc(var(--sidebar-width) + var(--rail-approach, 0) * 20px);
     height: calc(var(--app-vh) - 2 * var(--shell-gap));
     border: 1px solid #718bb7;
     border-radius: var(--terras-radius, 8px);
