@@ -153,6 +153,11 @@ export default function Sidebar({ activeTab, setActiveTab, onTabHover, appName, 
     >
       <TerrasSidebar
         expandOnHover
+        // Starts opening as the cursor heads for the rail, from up to 32px out
+        // (the gutter, the card edge and the page's own padding), so it is
+        // already widening on arrival. Slowing into the table's first column
+        // beside it does not count — the package checks the cursor's heading.
+        approachDistance={32}
         collapsed={!pinned}
         onToggleCollapsed={togglePinned}
         onExpandedChange={setExpanded}
