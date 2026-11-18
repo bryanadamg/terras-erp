@@ -2,7 +2,7 @@
 
 import { useState, useMemo } from 'react';
 import { CodeChip, CODE_FONT, xpFont as XP_FONT } from '../shared/xpTheme';
-import { ToolbarCount } from '../shared/shellTheme';
+import { Count as ToolbarCount } from '@bryanadamg/terras-ui/components/Window';
 import { MOBILE_BG, MobilePanel, MobileToolbar, MobileSearchField, MobileEmpty, mobileCard, mobileInset } from './mobileTheme';
 
 interface StockEntry {

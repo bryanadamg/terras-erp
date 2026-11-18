@@ -5,20 +5,16 @@ import { layoutRectOf } from '@bryanadamg/terras-ui/scale';
 import { xpFont, modernFont, CODE_FONT, PRINT_FONT, PRINT_SERIF_FONT } from './typography';
 import { FloatingLayer, POPOUT_DELAY, TIP_DELAY, Tooltip, TooltipSurface, useHoverAnchor, isClipped } from '@bryanadamg/terras-ui/components/Tooltip';
 import UIToggleChip from '@bryanadamg/terras-ui/components/ToggleChip';
-import UIProgressBar, { progressToneColor as uiProgressToneColor } from '@bryanadamg/terras-ui/components/ProgressBar';
-import { field as uiField, button as uiButton, BTN_TONES as UI_BTN_TONES } from '@bryanadamg/terras-ui/styles';
+import UIProgressBar from '@bryanadamg/terras-ui/components/ProgressBar';
+import { field as uiField, button as uiButton } from '@bryanadamg/terras-ui/styles';
 import UIButton from '@bryanadamg/terras-ui/components/Button';
 import UIActionButton from '@bryanadamg/terras-ui/components/ActionButton';
 import UIEmptyState from '@bryanadamg/terras-ui/components/EmptyState';
-// Extracted into terras-ui from this file with the same values; imported, not
-// just re-exported, because this file's own TableSkeletons still draw with them.
-import { FieldLabel, FormError } from '@bryanadamg/terras-ui/components/Field';
 import {
-    SkeletonBar, ListSkeleton, PanelSkeleton, CardGridSkeleton, SKEL_PAGE_ROWS,
+    SKEL_PAGE_ROWS,
     TableSkeleton as UITableSkeleton, TableBlockSkeleton as UITableBlockSkeleton,
 } from '@bryanadamg/terras-ui/components/Skeleton';
 import UIChip from '@bryanadamg/terras-ui/components/Chip';
-import FormSection from '@bryanadamg/terras-ui/components/FormSection';
 import {
     useFloatingMenu as useUIFloatingMenu, FloatingMenu as UIFloatingMenu, MenuTriggerButton as UIMenuTriggerButton,
     type FloatingMenuState,
@@ -954,13 +950,6 @@ export function LocationChip({
 // slot; everything else is a straight pass-through and the ~20 call sites are
 // untouched.
 
-/** The solid colour a `ProgressBar` segment paints, for a legend or key that sits
- *  beside one. Exported so a caller names the bar's own colour instead of
- *  hand-copying a hex that then drifts when the palette moves. Returns the
- *  `var(--terras-progress-*)` reference rather than a raw hex — usable anywhere a
- *  CSS colour is, which is every current caller. */
-export const progressToneColor = (tone: StatusFamily) => uiProgressToneColor(tone);
-
 /** Both the bar's own `title` and the marker's go through here. The bar carries
  *  long, multi-line explanations (MO step lists, receiving breakdowns) — exactly
  *  the content the OS tooltip renders worst — so it gets the themed surface with
@@ -1005,8 +994,6 @@ export function ProgressBar(props: {
 // almost never the answer.
 export type BtnTone = 'default' | 'primary' | 'success' | 'danger';
 
-export const BTN_TONES: Record<BtnTone, React.CSSProperties> = UI_BTN_TONES;
-
 // The raised XP button face as a style object, for call sites that keep their own
 // `<button>`. terras-ui's `button()` primitive — the face its <Button> paints.
 export const xpBtn = (extra: React.CSSProperties = {}): React.CSSProperties => uiButton({
@@ -1021,16 +1008,6 @@ export const xpBtn = (extra: React.CSSProperties = {}): React.CSSProperties => u
     ...extra,
 });
 
-// The recessed field face — blue-gray border over a white well, against the
-// raised bevel a button wears. Delegated to terras-ui's `field()`, which mirrors
-// this one value for value (same Tahoma, 11px, #7f9db9, 3px radius, 1px 6px
-// padding, 20px tall); it reads them from --terras-* tokens, so a palette move
-// lands here too. Still a STYLE, not the package's `<Input>` component: call
-// sites spread it onto their own native input inside their own theme branch, and
-// swapping them to a component is a different job from deduping the face.
-export const xpInput = (extra: React.CSSProperties = {}): React.CSSProperties =>
-    uiField(extra);
-
 export const xpLabel = (extra: React.CSSProperties = {}): React.CSSProperties => ({
     fontFamily: xpFont, fontSize: '11px', display: 'block', marginBottom: 2,
     ...extra,
@@ -1039,7 +1016,7 @@ export const xpLabel = (extra: React.CSSProperties = {}): React.CSSProperties =>
 // 22px, not the input's 20px: the native dropdown arrow clips on Windows without
 // the extra 2px.
 export const xpSelect = (extra: React.CSSProperties = {}): React.CSSProperties =>
-    xpInput({ height: '22px', ...extra });
+    uiField({ height: '22px', ...extra });
 
 export const xpSep: React.CSSProperties = {
     width: '1px', height: '20px', background: '#a0988c', margin: '0 2px', flexShrink: 0,
@@ -1111,21 +1088,6 @@ export const FORM_SECTION_BLUE = '#3a6fc4';
 // CHIP_RADIUS/BUTTON_RADIUS. The box must clip (`overflow: hidden`) or the square
 // header bar pokes out of the rounded corners.
 export const SECTION_RADIUS = 6;
-
-// Groups related fields in a create/edit form under a labeled section.
-// THE standard section chrome for every sectioned create/edit panel (Colors, Lab Dip,
-// Sample Request, Inventory, …). Classic: raised bevel box with a flat blue header
-// bar (white text). Modern: the same flat blue bar over a bordered white card.
-// Do not hand-roll per-page group boxes — use this so all forms stay identical.
-// `style` / `bodyStyle` exist for callers that own their own vertical rhythm
-// (a gap-spaced stack passes `marginBottom: 0`) or that put a full-bleed table
-// where the 10px form padding would inset it (`bodyStyle={{ padding: 0 }}`).
-// They are overrides on this one chrome — not a licence to re-declare the box.
-// Extracted into terras-ui's FormSection: the same box and flat blue header bar
-// (solid in both themes — a left-to-right fade washed a long title out by its
-// right edge), and a plain block header, so a bare or `SectionTitle` title lays
-// out exactly as it did here.
-export { FormSection };
 
 // Fieldset-style panel with a floating legend notched into its top border — the
 // grouping chrome used inside *operator log modals* (WO completion, packing),
@@ -1264,30 +1226,6 @@ export function SectionTitle({ icon, children, right }: { icon: string; children
     );
 }
 
-// Field label with optional muted/italic helper caption below it — keeps the
-// instruction text visually lighter than the label so a form of many fields
-// doesn't read as one dense block of same-weight text.
-//
-// `hint` renders; `title` hovers. A caption earns its line only when the reader
-// needs it every time (an empty-means-X rule they choose on, a figure they are
-// correcting); the explanation of WHY a field works the way it does is read once
-// and then costs a line forever, so it goes in `title` and the global tooltip
-// layer renders it. A form of ten fields with ten captions reads as prose, which
-// is the state this prop exists to get out of.
-export { FieldLabel };
-
-/**
- * Validation / submit-failure banner for a form or modal body. Three files had
- * byte-identical copies of this div (RoleFormModal, UserFormModal, and the color
- * variant modal, whose copy had already drifted to a different modern palette and
- * lost xpFont in classic) — which is the whole reason it lives here now. Renders
- * nothing for an empty message, so call sites need no `&&` guard.
- *
- * Not for status callouts (a "late" badge, a scanner error): those carry icons and
- * their own reds. This is specifically "what you just submitted was rejected".
- */
-export { FormError };
-
 // ── Loading / empty states ───────────────────────────────────────────────────
 
 /**
@@ -1320,7 +1258,7 @@ export function XPLoading({ label = 'Loading...', fullScreen = false }: { label?
 //
 // A shimmering stand-in that carries the shape of what is coming beats a centred
 // marquee that says only "something is happening". Not list-only: see the
-// non-list skeletons further down (CardGridSkeleton / TableBlockSkeleton /
+// non-list skeletons (TableBlockSkeleton below; terras-ui's CardGridSkeleton /
 // PanelSkeleton) for grids, whole-table swaps and detail panes.
 //
 // XPLoading survives only where there is genuinely no shape to promise — a
@@ -1328,9 +1266,6 @@ export function XPLoading({ label = 'Loading...', fullScreen = false }: { label?
 // (ScanDispatcher resolving a scanned code) — and for in-button spinners, which
 // are Bootstrap's and stay as they are. Shimmer: terras-ui's `.terras-skel` (BootShell's
 // pre-hydration bars still use the identical globals.css `.xp-skel`).
-
-/** One shimmering placeholder bar. */
-export { SkeletonBar };
 
 /**
  * Placeholder rows for a table body. Emits real <tr>/<td> so the bars land in
@@ -1347,21 +1282,6 @@ export { SkeletonBar };
  * anyone adds a column — and a skeleton one column short leaves a blank strip
  * where the last column should be.
  */
-/**
- * Row count for a page-height list when `fillHeight` is unknown.
- *
- * Unknown means one thing in practice: this is the server-rendered frame, before
- * any effect has run, so there is no panel to measure. Deliberately more rows
- * than a tall panel holds — the surplus scrolls, and a scrollbar on a loading
- * list reads as "plenty coming", where a skeleton that stops half way down reads
- * as "this table ends here". It is corrected to the measured count the moment
- * the page hydrates.
- *
- * Panel-sized lists (dashboard tiles) pass their own literal instead; 30 rows in
- * a 250px panel is the same mistake in the other direction.
- */
-export { SKEL_PAGE_ROWS };
-
 // Every list here is zebra-striped, so the skeleton stripes too — terras-ui's own
 // tables are ruled, so there it's opt-in.
 const SKEL_STRIPE = '#f5f3ee';
@@ -1400,15 +1320,6 @@ export function TableSkeleton({ tdStyle, ...rest }: {
 // stable shape to promise, keep XPLoading.
 
 /**
- * Stand-in for a card grid — same `auto-fill / minmax` track as the real grid,
- * so cards land in the same columns at every viewport width.
- *
- * `count` is how many placeholder cards to draw: enough to fill the fold, not
- * the real count (unknown while loading).
- */
-export { CardGridSkeleton };
-
-/**
  * Stand-in for a whole table *including* its header — for the views where the
  * loader replaces the `<table>` element itself, so there is no live `<thead>`
  * for TableSkeleton to sit under.
@@ -1433,13 +1344,6 @@ export function TableBlockSkeleton(props: {
         </div>
     );
 }
-
-/**
- * Stand-in for a detail pane: an optional section caption over label/value
- * rows. For drill-in panels and modal tabs, where what arrives is a block of
- * fields rather than rows or cards.
- */
-export { PanelSkeleton };
 
 // Measured row heights, keyed by table. Module-level so a remount reuses the
 // value; sessionStorage so a reload does too. Column counts are NOT cached —
@@ -1573,9 +1477,6 @@ export function useTableSkeletonMetrics(
     return { rowHeight: height, cols, fillHeight };
 }
 
-/** Placeholder rows for a non-table list pane (the dyeing/setting WO rails). */
-export { ListSkeleton };
-
 // ── Status bar (classic Windows bottom strip) ───────────────────────────────
 
 export function XPStatusBar({ children, right, style }: { children: React.ReactNode; right?: React.ReactNode; style?: React.CSSProperties }) {
@@ -1594,15 +1495,6 @@ export function XPStatusBar({ children, right, style }: { children: React.ReactN
         </div>
     );
 }
-
-// ── Client-side table sorting ────────────────────────────────────────────────
-// Extracted into terras-ui's Table module unchanged — same compare (numeric
-// strings as numbers, empties last both ways), same asc → desc → off cycle — so
-// these are re-exports and the call sites keep importing from xpTheme.
-// `useSortable` only for a view holding the whole set; windowed lists use
-// `useServerSort` and sort on the server.
-export type { SortState } from '@bryanadamg/terras-ui/components/Table';
-export { nextSortState, useServerSort, useSortable, SortMark } from '@bryanadamg/terras-ui/components/Table';
 
 export function XPEmptyState({ message, icon = 'bi-inbox', children }: { message: string; icon?: string; children?: React.ReactNode }) {
     // terras-ui's EmptyState was extracted from this one. Its icon slot sets
@@ -1682,14 +1574,3 @@ export function FloatingMenu({ pos, items, minWidth }: { pos: FloatingMenuState;
         />
     );
 }
-
-// ── Expanded-row panel + row-state grounds ──────────────────────────────────
-// Extracted into terras-ui's Table module: the same 4px selection-blue rail and
-// 2px rules, painted as inset box-shadow (a border would feed the colSpan cell's
-// min-content width back into auto layout and shove the row above sideways), and
-// the same three row grounds — expanded / selected / highlighted, never mixed up.
-// rowStateBg now returns a `var(--terras-row-state-*)`, which `.ui-style-classic`
-// sets to the old literals: it resolves under MainLayout's .app-container and
-// ModalWrapper's body, which is where every list row lives.
-export type { RowState } from '@bryanadamg/terras-ui/components/Table';
-export { rowStateBg, expandedRowFrame, ExpandedRowPanel, ExpandedRowPanelBody } from '@bryanadamg/terras-ui/components/Table';

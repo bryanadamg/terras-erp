@@ -15,7 +15,8 @@ import { useTimezone } from '../../context/TimezoneContext';
 import { isContainerWC, isMachineWC, isTypeWC, machinesUnderWC, woHasStaging, woScanStages } from '../shared/workCenterTree';
 import SearchableSelect from '@bryanadamg/terras-ui/components/Combobox';
 import TreeSelect, { buildLocationPickerTree } from '../shared/TreeSelect';
-import { STATUS_COLORS as STATUS_BORDER, workCenterChipStyle, useFloatingMenu, MenuTriggerButton, FloatingMenu, XPActionButton, ProgressBar, CodeChip, CODE_FONT, xpFont, StatusChip, CHIP_RADIUS, XP_BTN, xpBtn, BTN_TONES, xpInput as xpInputBase, LocationChip } from '../shared/xpTheme';
+import { STATUS_COLORS as STATUS_BORDER, workCenterChipStyle, useFloatingMenu, MenuTriggerButton, FloatingMenu, XPActionButton, ProgressBar, CodeChip, CODE_FONT, xpFont, StatusChip, CHIP_RADIUS, XP_BTN, xpBtn, LocationChip } from '../shared/xpTheme';
+import { BTN_TONES, field as xpInputBase } from '@bryanadamg/terras-ui/styles';
 
 const xpInput: React.CSSProperties = xpInputBase({ padding: '0 4px' });
 

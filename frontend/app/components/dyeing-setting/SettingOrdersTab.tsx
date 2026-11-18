@@ -7,10 +7,10 @@ import { useTimezone } from '../../context/TimezoneContext';
 import Pager from '../shared/Pager';
 import ModalWrapper from '../shared/ModalWrapper';
 import { API_BASE } from '../shared/apiBase';
-import {
-    CodeChip, xpFont, CODE_FONT, StatusChip, XP_BTN, CHIP_RADIUS, colorLabel, rowStateBg,
-    ProgressBar, ExpandedRowPanel, XPEmptyState, TableSkeleton, useTableSkeletonMetrics,
-    useSortable, XPActionButton, xpInput as xpInputBase, SKEL_PAGE_ROWS } from '../shared/xpTheme';
+import { CodeChip, xpFont, CODE_FONT, StatusChip, XP_BTN, CHIP_RADIUS, colorLabel, ProgressBar, XPEmptyState, TableSkeleton, useTableSkeletonMetrics, XPActionButton } from '../shared/xpTheme';
+import { rowStateBg, ExpandedRowPanel, useSortable } from '@bryanadamg/terras-ui/components/Table';
+import { field as xpInputBase } from '@bryanadamg/terras-ui/styles';
+import { SKEL_PAGE_ROWS } from '@bryanadamg/terras-ui/components/Skeleton';
 import { orDash, fmtQtyFixed } from '../shared/format';
 import {
     SortableTh, ExpanderCell, LV_EXPANDER_COL_W, lvThSticky, lvTd, lvZebra,

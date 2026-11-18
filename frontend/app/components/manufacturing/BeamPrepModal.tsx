@@ -16,7 +16,8 @@ import ModalWrapper from '../shared/ModalWrapper';
 import { useData } from '../../context/DataContext';
 import { useLanguage } from '../../context/LanguageContext';
 import { useToast } from '../shared/Toast';
-import { xpFont, xpInput as xpInputBase, xpBtn as xpBtnBase, BTN_TONES, XP_BTN } from '../shared/xpTheme';
+import { xpFont, xpBtn as xpBtnBase, XP_BTN } from '../shared/xpTheme';
+import { field as xpInputBase, BTN_TONES } from '@bryanadamg/terras-ui/styles';
 import { lvTh, lvTd } from '../shared/listViewTheme';
 import { API_BASE } from '../shared/apiBase';
 

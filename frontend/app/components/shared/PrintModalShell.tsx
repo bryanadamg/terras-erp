@@ -5,7 +5,8 @@ import { useIsMobile } from '../../hooks/useIsMobile';
 import { useUser } from '../../context/UserContext';
 import { MODAL_Z, MODAL_REPOSITION_EVENT, useInactiveChromeWhileOpen, WindowCloseButton } from './ModalWrapper';
 import { toLayoutPx } from '@bryanadamg/terras-ui/scale';
-import { xpFont, XP_BTN, xpBtn, BTN_TONES, WINDOW_RADIUS, WINDOW_RADIUS_INNER } from './xpTheme';
+import { xpFont, XP_BTN, xpBtn, WINDOW_RADIUS, WINDOW_RADIUS_INNER } from './xpTheme';
+import { BTN_TONES } from '@bryanadamg/terras-ui/styles';
 
 interface PrintModalShellProps {
     title: React.ReactNode;

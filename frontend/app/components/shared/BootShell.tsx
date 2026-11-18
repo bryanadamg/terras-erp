@@ -1,7 +1,8 @@
 'use client';
 
 import React from 'react';
-import { SkeletonBar, BUTTON_RADIUS } from './xpTheme';
+import { BUTTON_RADIUS } from './xpTheme';
+import { SkeletonBar } from '@bryanadamg/terras-ui/components/Skeleton';
 import { SIDEBAR_BG } from './Sidebar';
 import { NAV_SECTIONS } from './navConfig';
 

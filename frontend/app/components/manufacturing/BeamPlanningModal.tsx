@@ -3,7 +3,8 @@ import React, { useState, useMemo } from 'react';
 import { useData } from '../../context/DataContext';
 import ModalWrapper from '../shared/ModalWrapper';
 import SearchableSelect from '@bryanadamg/terras-ui/components/Combobox';
-import { xpFont, CHIP_RADIUS, BUTTON_RADIUS, XP_BTN, xpInput as xpInputBase } from '../shared/xpTheme';
+import { xpFont, CHIP_RADIUS, BUTTON_RADIUS, XP_BTN } from '../shared/xpTheme';
+import { field as xpInputBase } from '@bryanadamg/terras-ui/styles';
 import { API_BASE } from '../shared/apiBase';
 
 const xpInput: React.CSSProperties = xpInputBase({ padding: '0 4px' });

@@ -18,7 +18,8 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useData } from '../../context/DataContext';
 import { useToast } from './Toast';
-import { xpInput, FieldLabel } from './xpTheme';
+import { field as xpInput } from '@bryanadamg/terras-ui/styles';
+import { FieldLabel } from '@bryanadamg/terras-ui/components/Field';
 import { API_BASE } from './apiBase';
 import {
     DEFAULT_QTY_FORMULA,

@@ -1,6 +1,7 @@
 import React, { memo } from 'react';
 import ModalWrapper from '../shared/ModalWrapper';
-import { CodeChip, xpFont, CHIP_RADIUS, xpBtn as xpBtnBase, BTN_TONES } from '../shared/xpTheme';
+import { CodeChip, xpFont, CHIP_RADIUS, xpBtn as xpBtnBase } from '../shared/xpTheme';
+import { BTN_TONES } from '@bryanadamg/terras-ui/styles';
 
 /**
  * Save-time confirmation for the BOM Designer.

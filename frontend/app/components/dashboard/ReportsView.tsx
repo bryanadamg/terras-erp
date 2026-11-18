@@ -5,13 +5,17 @@ import { useTimezone } from '../../context/TimezoneContext';
 import { useData } from '../../context/DataContext';
 import { useUser } from '../../context/UserContext';
 import { usePaginatedFetch } from '../../context/usePaginatedList';
-import {
-    xpFont, xpBtn, xpInput, xpSelect, xpSep, CODE_FONT,
-    TableSkeleton, useTableSkeletonMetrics, XPEmptyState, useServerSort, CodeChip, Chip, REF_TONES, XP_BTN, SKEL_PAGE_ROWS } from '../shared/xpTheme';
+import { xpFont, xpBtn, xpSelect, xpSep, CODE_FONT, TableSkeleton, useTableSkeletonMetrics, XPEmptyState, CodeChip, Chip, REF_TONES, XP_BTN } from '../shared/xpTheme';
+import { field as xpInput } from '@bryanadamg/terras-ui/styles';
+import { useServerSort } from '@bryanadamg/terras-ui/components/Table';
+import { SKEL_PAGE_ROWS } from '@bryanadamg/terras-ui/components/Skeleton';
 import { LotChips, lotSizeLabel, lotColorLabel } from '../shared/LotChips';
 import TreeSelect, { buildLocationFilterTree, expandLocationFilterValue, buildCategoryTree, expandCategoryFilterValue, locationAncestorNames } from '../shared/TreeSelect';
 import Pager from '../shared/Pager';
-import { xpBevel as sharedXpBevel, xpTitleBar as sharedXpTitleBar, xpToolbar as sharedXpToolbar, SearchField, FilterChipBar, SegmentedBar, FilterChipOption, pageFillStyle, flexFillStyle } from '../shared/shellTheme';
+import { SearchField, pageFillStyle, flexFillStyle } from '../shared/shellTheme';
+import { bevel as sharedXpBevel, titleBar as sharedXpTitleBar, toolbar as sharedXpToolbar } from '@bryanadamg/terras-ui/styles';
+import { FilterChipBar, type FilterChipOption } from '@bryanadamg/terras-ui/components/FilterChipBar';
+import { SegmentedBar } from '@bryanadamg/terras-ui/components/SegmentedBar';
 import { lvThead, SortableTh, lvZebra, Dash, ResizableTable } from '../shared/listViewTheme';
 import { qtyFmt } from '../shared/format';
 import { API_BASE } from '../shared/apiBase';

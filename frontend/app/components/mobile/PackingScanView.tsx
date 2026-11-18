@@ -2,7 +2,8 @@
 
 import { Fragment, useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { Html5QrcodeScanner } from 'html5-qrcode';
-import { StatusChip, xpFont as XP_FONT, xpInput as xpInputBase } from '../shared/xpTheme';
+import { StatusChip, xpFont as XP_FONT } from '../shared/xpTheme';
+import { field as xpInputBase } from '@bryanadamg/terras-ui/styles';
 import { toNum } from '../shared/format';
 import { MOBILE_BG, MobilePanel, MobileScreenBar, MobileButton, MobileNotice } from './mobileTheme';
 import { LotChips } from '../shared/LotChips';

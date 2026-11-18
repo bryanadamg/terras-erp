@@ -1,8 +1,9 @@
 'use client';
 import React, { useState } from 'react';
-import { xpFont, rowStateBg, XP_BTN } from './xpTheme';
+import { xpFont, XP_BTN } from './xpTheme';
+import { rowStateBg } from '@bryanadamg/terras-ui/components/Table';
 import { lvInput, lvBtn, lvZebra } from './listViewTheme';
-import { xpToolbar } from './shellTheme';
+import { toolbar as xpToolbar } from '@bryanadamg/terras-ui/styles';
 
 // ── Column browser ───────────────────────────────────────────────────────────
 // Two layouts share this chrome:

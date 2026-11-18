@@ -12,8 +12,13 @@ import LotLabelPrintModal from '../manufacturing/LotLabelPrintModal';
 import PackedUnitLabelPrintModal from '../packing/PackedUnitLabelPrintModal';
 import { useData } from '../../context/DataContext';
 import { useRememberedTab } from '../../hooks/useRememberedTab';
-import { useFloatingMenu, MenuTriggerButton, FloatingMenu, useSortable, XPActionButton, ExpandedRowPanel, StatusChip, CODE_FONT, xpFont, TableSkeleton, useTableSkeletonMetrics, rowStateBg, CHIP_RADIUS, OriginChip, VariantChip, xpBtn as xpBtnBase, xpInput as xpInputBase, BTN_TONES, XP_BTN, SKEL_PAGE_ROWS } from '../shared/xpTheme';
-import { xpBevel as sharedXpBevel, xpTitleBar as sharedXpTitleBar, FilterChipBar, ToolbarButton, SearchField, pageFillStyle } from '../shared/shellTheme';
+import { useFloatingMenu, MenuTriggerButton, FloatingMenu, XPActionButton, StatusChip, CODE_FONT, xpFont, TableSkeleton, useTableSkeletonMetrics, CHIP_RADIUS, OriginChip, VariantChip, xpBtn as xpBtnBase, XP_BTN } from '../shared/xpTheme';
+import { useSortable, ExpandedRowPanel, rowStateBg } from '@bryanadamg/terras-ui/components/Table';
+import { field as xpInputBase, BTN_TONES } from '@bryanadamg/terras-ui/styles';
+import { SKEL_PAGE_ROWS } from '@bryanadamg/terras-ui/components/Skeleton';
+import { ToolbarButton, SearchField, pageFillStyle } from '../shared/shellTheme';
+import { bevel as sharedXpBevel, titleBar as sharedXpTitleBar } from '@bryanadamg/terras-ui/styles';
+import { FilterChipBar } from '@bryanadamg/terras-ui/components/FilterChipBar';
 
 const LOT_STATUS_FILTERS = [
   { value: 'active', label: 'Active' },

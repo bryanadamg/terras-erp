@@ -3,10 +3,9 @@
 import { useState, useEffect, useCallback } from 'react';
 import ModalWrapper from '../shared/ModalWrapper';
 import { useLanguage } from '../../context/LanguageContext';
-import {
-    xpFont, familyColor, FormSection, FieldLabel, XPActionButton,
-    SectionTitle as SecTitle, ModalFooterActions,
-} from '../shared/xpTheme';
+import { xpFont, familyColor, XPActionButton, SectionTitle as SecTitle, ModalFooterActions } from '../shared/xpTheme';
+import { FormSection } from '@bryanadamg/terras-ui/components/FormSection';
+import { FieldLabel } from '@bryanadamg/terras-ui/components/Field';
 import { lvInput, lvTh, lvTd, lvRow, LV_STICKY_THEAD } from '../shared/listViewTheme';
 import {
     WorkingDaysSection, HolidayCalendarSection, useNationalHolidays,

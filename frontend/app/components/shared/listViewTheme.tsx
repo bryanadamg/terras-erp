@@ -1,6 +1,7 @@
 'use client';
 import React from 'react';
-import { xpFont, modernFont, BUTTON_RADIUS, BTN_TONES, xpBtn } from './xpTheme';
+import { xpFont, modernFont, BUTTON_RADIUS, xpBtn } from './xpTheme';
+import { BTN_TONES } from '@bryanadamg/terras-ui/styles';
 import {
     CHECK_COL_W, EXPANDER_COL_W,
     RowCheckboxCell as UIRowCheckboxCell, ExpanderCell as UIExpanderCell,

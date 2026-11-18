@@ -7,10 +7,14 @@ import ModalWrapper from '../shared/ModalWrapper';
 import { useToast } from '../shared/Toast';
 import { useLanguage } from '../../context/LanguageContext';
 import { useData } from '../../context/DataContext';
-import { workCenterChipStyle, xpFont, colorHexFor, expandedRowFrame, CodeChip, CODE_FONT, TableSkeleton, useTableSkeletonMetrics, rowStateBg, CHIP_RADIUS, VariantChip, BUTTON_RADIUS, XP_BTN, XPActionButton, useFloatingMenu, MenuTriggerButton, FloatingMenu, SKEL_PAGE_ROWS } from '../shared/xpTheme';
+import { workCenterChipStyle, xpFont, colorHexFor, CodeChip, CODE_FONT, TableSkeleton, useTableSkeletonMetrics, CHIP_RADIUS, VariantChip, BUTTON_RADIUS, XP_BTN, XPActionButton, useFloatingMenu, MenuTriggerButton, FloatingMenu } from '../shared/xpTheme';
+import { expandedRowFrame, rowStateBg } from '@bryanadamg/terras-ui/components/Table';
+import { SKEL_PAGE_ROWS } from '@bryanadamg/terras-ui/components/Skeleton';
 import Pager from '../shared/Pager';
 import { lvThead, LV_STICKY_THEAD, ExpanderCell, useRowSelection, RowCheckbox, SelectAllCheckbox, LV_CHECK_COL_W, LV_EXPANDER_COL_W, lvZebra, TableEmpty, Dash, lvSubTable, lvSubTd, lvSubRow, lvThBanded, ResizableTable } from '../shared/listViewTheme';
-import { FilterChipBar, xpToolbar, ToolbarButton, SearchField, xpTitleBar, viewShellStyle } from '../shared/shellTheme';
+import { ToolbarButton, SearchField, viewShellStyle } from '../shared/shellTheme';
+import { FilterChipBar } from '@bryanadamg/terras-ui/components/FilterChipBar';
+import { toolbar as xpToolbar, titleBar as xpTitleBar } from '@bryanadamg/terras-ui/styles';
 import { STATIC_BASE } from '../shared/apiBase';
 import { matchSubBOM } from '../shared/bomMatch';
 

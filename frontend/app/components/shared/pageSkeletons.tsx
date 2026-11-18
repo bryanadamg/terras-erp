@@ -1,8 +1,10 @@
 'use client';
 
 import React from 'react';
-import { TableBlockSkeleton, SkeletonBar } from './xpTheme';
-import { xpTitleBar, xpToolbar, viewShellStyle, scrollAreaStyle } from './shellTheme';
+import { TableBlockSkeleton } from './xpTheme';
+import { SkeletonBar } from '@bryanadamg/terras-ui/components/Skeleton';
+import { viewShellStyle, scrollAreaStyle } from './shellTheme';
+import { titleBar as xpTitleBar, toolbar as xpToolbar } from '@bryanadamg/terras-ui/styles';
 
 /**
  * The generic list silhouette, for the one case where no route may draw

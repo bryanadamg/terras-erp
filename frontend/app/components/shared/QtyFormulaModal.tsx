@@ -12,7 +12,8 @@
  */
 
 import ModalWrapper from './ModalWrapper';
-import { xpBtn, BTN_TONES, XP_BTN } from './xpTheme';
+import { xpBtn, XP_BTN } from './xpTheme';
+import { BTN_TONES } from '@bryanadamg/terras-ui/styles';
 import { QtyFormulaRule } from './qtyFormula';
 import { QtyFormulaEditorFields, useQtyFormulaEditor } from './QtyFormulaEditor';
 

@@ -4,7 +4,8 @@ import React, { useState } from 'react';
 import ModalWrapper from '../shared/ModalWrapper';
 import { Tabs } from '../shared/Tabs';
 import { useLanguage } from '../../context/LanguageContext';
-import { xpFont, modernFont, CODE_FONT, FormSection, CHIP_RADIUS, XP_BTN } from '../shared/xpTheme';
+import { xpFont, modernFont, CODE_FONT, CHIP_RADIUS, XP_BTN } from '../shared/xpTheme';
+import { FormSection } from '@bryanadamg/terras-ui/components/FormSection';
 import { lvBtn } from '../shared/listViewTheme';
 import { EPS, HEALTH, TERM } from './bookingStockTheme';
 

@@ -2,10 +2,9 @@
 
 import React from 'react';
 import { xpFont as XP_FONT, BUTTON_RADIUS, XP_BTN } from '../shared/xpTheme';
-import {
-    xpBevel, xpTitleBar, xpToolbar, ShellTone,
-    SearchField, FilterChipBar, FilterChipOption,
-} from '../shared/shellTheme';
+import { ShellTone, SearchField } from '../shared/shellTheme';
+import { bevel as xpBevel, titleBar as xpTitleBar, toolbar as xpToolbar } from '@bryanadamg/terras-ui/styles';
+import { FilterChipBar, type FilterChipOption } from '@bryanadamg/terras-ui/components/FilterChipBar';
 
 // Mobile chrome, built on the SAME classic primitives the desktop views use
 // (`xpBevel` / `xpTitleBar` / `xpToolbar` / `SearchField` / `FilterChipBar`), so a

@@ -1,7 +1,8 @@
 'use client';
 
 import React from 'react';
-import { FormSection, SectionTitle } from '../shared/xpTheme';
+import { SectionTitle } from '../shared/xpTheme';
+import { FormSection } from '@bryanadamg/terras-ui/components/FormSection';
 
 /**
  * One group inside the Settings window.

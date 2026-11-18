@@ -6,11 +6,10 @@ import { useData } from '../../context/DataContext';
 import { useTimezone } from '../../context/TimezoneContext';
 import { useToast } from '../shared/Toast';
 import { useConfirm } from '../../context/ConfirmContext';
-import { ShellWindow, ShellTitleBar, xpToolbar, ToolbarButton } from '../shared/shellTheme';
-import {
-    PanelSkeleton, XPActionButton, Chip, familyTint, xpFont,
-    useFloatingMenu, FloatingMenu,
-} from '../shared/xpTheme';
+import { ShellWindow, ShellTitleBar, ToolbarButton } from '../shared/shellTheme';
+import { toolbar as xpToolbar } from '@bryanadamg/terras-ui/styles';
+import { XPActionButton, Chip, familyTint, xpFont, useFloatingMenu, FloatingMenu } from '../shared/xpTheme';
+import { PanelSkeleton } from '@bryanadamg/terras-ui/components/Skeleton';
 
 import TemplateRenderer from '../shared/printTemplate/TemplateRenderer';
 import { buildPrintContext } from '../shared/printTemplate/renderContext';

@@ -1,9 +1,15 @@
 import { useState, useMemo, useRef, useEffect } from 'react';
 import { useLanguage } from '../../context/LanguageContext';
 import { useUser } from '../../context/UserContext';
-import { useServerSort, TableSkeleton, useTableSkeletonMetrics, XPActionButton, FormSection, FieldLabel, CodeChip, CODE_FONT, xpFont, rowStateBg, VariantChip, Chip, REF_TONES, statusTint, xpInput as xpInputBase, xpBtn as xpBtnBase, BTN_TONES, XP_BTN, SKEL_PAGE_ROWS } from '../shared/xpTheme';
+import { TableSkeleton, useTableSkeletonMetrics, XPActionButton, CodeChip, CODE_FONT, xpFont, VariantChip, Chip, REF_TONES, statusTint, xpBtn as xpBtnBase, XP_BTN } from '../shared/xpTheme';
+import { useServerSort, rowStateBg } from '@bryanadamg/terras-ui/components/Table';
+import { FormSection } from '@bryanadamg/terras-ui/components/FormSection';
+import { FieldLabel } from '@bryanadamg/terras-ui/components/Field';
+import { field as xpInputBase, BTN_TONES } from '@bryanadamg/terras-ui/styles';
+import { SKEL_PAGE_ROWS } from '@bryanadamg/terras-ui/components/Skeleton';
 import { usePaginatedFetch } from '../../context/usePaginatedList';
-import { xpBevel as sharedXpBevel, xpTitleBar as sharedXpTitleBar, xpToolbar as sharedXpToolbar, SearchField, ToolbarButton, pageFillStyle, flexFillStyle } from '../shared/shellTheme';
+import { SearchField, ToolbarButton, pageFillStyle, flexFillStyle } from '../shared/shellTheme';
+import { bevel as sharedXpBevel, titleBar as sharedXpTitleBar, toolbar as sharedXpToolbar } from '@bryanadamg/terras-ui/styles';
 import { useToast } from '../shared/Toast';
 import { saveResponse } from '../shared/download';
 import SearchableSelect from '@bryanadamg/terras-ui/components/Combobox';

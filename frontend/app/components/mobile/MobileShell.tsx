@@ -4,7 +4,7 @@ import { useRouter, usePathname } from 'next/navigation';
 import { useUser } from '../../context/UserContext';
 import { useLanguage } from '../../context/LanguageContext';
 import { xpFont as XP_FONT, modernFont, BUTTON_RADIUS } from '../shared/xpTheme';
-import { xpToolbar } from '../shared/shellTheme';
+import { toolbar as xpToolbar } from '@bryanadamg/terras-ui/styles';
 import { routeTitle } from '../shared/navConfig';
 import { MOBILE_BG } from './mobileTheme';
 import AppLoadBar from '../shared/AppLoadBar';

@@ -1,7 +1,8 @@
 'use client';
 
 import React from 'react';
-import { xpFont, ExpandedRowPanel, ExpandedRowPanelBody, CHIP_RADIUS } from '../shared/xpTheme';
+import { xpFont, CHIP_RADIUS } from '../shared/xpTheme';
+import { ExpandedRowPanel, ExpandedRowPanelBody } from '@bryanadamg/terras-ui/components/Table';
 import { PermissionSectionTable, PermissionSectionRow } from '../shared/permissionChips';
 
 /** Tint per scope kind — matches the collapsed-row chip colors so the two views read as the same object. */

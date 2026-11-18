@@ -3,8 +3,12 @@ import React, { useState } from 'react';
 import { useConfirm } from '../../context/ConfirmContext';
 import ModalWrapper from '../shared/ModalWrapper';
 import { lvInput, lvBtn, lvPrimaryBtn, lvLabel, lvSep } from '../shared/listViewTheme';
-import { Chip, XPActionButton, XP_BTN, FormSection, FormError } from '../shared/xpTheme';
-import { ToolbarButton, SearchField, ToolbarCount, xpToolbar } from '../shared/shellTheme';
+import { Chip, XPActionButton, XP_BTN } from '../shared/xpTheme';
+import { FormSection } from '@bryanadamg/terras-ui/components/FormSection';
+import { FormError } from '@bryanadamg/terras-ui/components/Field';
+import { ToolbarButton, SearchField } from '../shared/shellTheme';
+import { Count as ToolbarCount } from '@bryanadamg/terras-ui/components/Window';
+import { toolbar as xpToolbar } from '@bryanadamg/terras-ui/styles';
 import {
     ColumnPanes, ColumnPane, ColumnRow, ColumnEmpty, DetailPane, DetailHeader, DetailCaption, DetailRow, BROWSER_TONES,
 } from '../shared/columnBrowser';

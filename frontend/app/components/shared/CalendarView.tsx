@@ -1,7 +1,9 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useData } from '../../context/DataContext';
 import { statusColor, statusTint, xpFont, CHIP_RADIUS } from './xpTheme';
-import { xpBevel as sharedXpBevel, SearchField, FilterChipBar } from './shellTheme';
+import { SearchField } from './shellTheme';
+import { bevel as sharedXpBevel } from '@bryanadamg/terras-ui/styles';
+import { FilterChipBar } from '@bryanadamg/terras-ui/components/FilterChipBar';
 import { lvThead } from './listViewTheme';
 import { API_BASE } from './apiBase';
 
