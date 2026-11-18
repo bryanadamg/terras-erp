@@ -17,7 +17,7 @@ import { nextSortState, StatusChip, statusTint, familyTint, familyColor, TableSk
 import { qtyFmt } from '../shared/format';
 import { useComboSearch, useFinishedGoodsSearch } from '../shared/useEntitySearch';
 import Pager from '../shared/Pager';
-import { Tooltip } from '../shared/Tooltip';
+import { Tooltip } from '@bryanadamg/terras-ui/components/Tooltip';
 import { ShellWindow, ShellTitleBar, xpToolbar, SearchField, FilterChipBar, ToolbarCount, ToolbarButton } from '../shared/shellTheme';
 import { useRouter } from 'next/navigation';
 import { lvThead, SortableTh, lvThSticky, lvTdRuled, lvZebra, ResizableTable } from '../shared/listViewTheme';

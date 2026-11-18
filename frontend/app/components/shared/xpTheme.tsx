@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { layoutRectOf } from '@bryanadamg/terras-ui/scale';
 import { xpFont, modernFont, CODE_FONT, PRINT_FONT, PRINT_SERIF_FONT } from './typography';
-import { FloatingLayer, POPOUT_DELAY, TIP_DELAY, Tooltip, TooltipSurface, useHoverAnchor, isClipped } from './Tooltip';
+import { FloatingLayer, POPOUT_DELAY, TIP_DELAY, Tooltip, TooltipSurface, useHoverAnchor, isClipped } from '@bryanadamg/terras-ui/components/Tooltip';
 import UIToggleChip from '@bryanadamg/terras-ui/components/ToggleChip';
 import UIProgressBar, { progressToneColor as uiProgressToneColor } from '@bryanadamg/terras-ui/components/ProgressBar';
 import { field as uiField, button as uiButton, BTN_TONES as UI_BTN_TONES } from '@bryanadamg/terras-ui/styles';

@@ -7,7 +7,7 @@ import {
     xpFont, ProgressBar, StatusChip, XPStatusBar, familyColor, familyTint, statusColor, type StatusFamily,
     CodeChip, CODE_FONT, SkeletonBar, ListSkeleton, TableSkeleton, useTableSkeletonMetrics, XPEmptyState,
 } from '../shared/xpTheme';
-import { Tooltip } from '../shared/Tooltip';
+import { Tooltip } from '@bryanadamg/terras-ui/components/Tooltip';
 import { ShellWindow, ShellTitleBar } from '../shared/shellTheme';
 import { lvTd, lvRow, lvThSticky, TableEmpty } from '../shared/listViewTheme';
 
