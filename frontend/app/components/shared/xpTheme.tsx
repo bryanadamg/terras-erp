@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { layoutRectOf } from '@bryanadamg/terras-ui/scale';
-import { xpFont, modernFont, CODE_FONT, PRINT_FONT, PRINT_SERIF_FONT } from './typography';
+import { xpFont, modernFont, CODE_FONT, PRINT_CODE_FONT, PRINT_FONT, PRINT_SERIF_FONT } from './typography';
 import { FloatingLayer, POPOUT_DELAY, TIP_DELAY, Tooltip, TooltipSurface, useHoverAnchor, isClipped } from '@bryanadamg/terras-ui/components/Tooltip';
 import UIToggleChip from '@bryanadamg/terras-ui/components/ToggleChip';
 import UIProgressBar from '@bryanadamg/terras-ui/components/ProgressBar';
@@ -29,7 +29,7 @@ import {
 // The font stacks live in ./typography so Tooltip (which this file imports) can
 // use them without an import cycle. Re-exported here: every existing
 // `import { xpFont } from '../shared/xpTheme'` still resolves to the same const.
-export { xpFont, modernFont, CODE_FONT, PRINT_FONT, PRINT_SERIF_FONT } from './typography';
+export { xpFont, modernFont, CODE_FONT, PRINT_CODE_FONT, PRINT_FONT, PRINT_SERIF_FONT } from './typography';
 
 // Flattened text of whatever a chip renders, so a chip can tell whether a `title`
 // actually says anything its own label doesn't. Walks elements rather than reading

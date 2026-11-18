@@ -118,18 +118,20 @@ body {
    ============================================================ */
 :root {
   /* The never-dimmed pair: what a window's own title bar paints with. */
-  --xp-title-blue-active: linear-gradient(to right, #0058e6 0%, #08a5ff 100%);
-  --xp-title-blue-border-active: #003080;
+  /* Flat cobalt, not the XP blue→cyan fade (retro-modern pass): the band keeps
+     its place and its inset highlight, it just stops being glossy. */
+  --xp-title-blue-active: #2350d8;
+  --xp-title-blue-border-active: #122f86;
   --xp-title-blue: var(--xp-title-blue-active);
   --xp-title-blue-border: var(--xp-title-blue-border-active);
   /* Flat left-end of the title gradient, for the sidebar brand block: it sits to
      the LEFT of the header, so re-running the gradient there would end bright at
      the seam and restart dark in the header. Flat = an invisible join. Declared
      as a var so the brand dims with the header when the window loses focus. */
-  --xp-title-flat: #0058e6;
+  --xp-title-flat: #2350d8;
 }
 body.window-chrome-inactive {
-  --xp-title-blue: linear-gradient(to right, #7a96b8 0%, #a8bcd4 100%);
+  --xp-title-blue: #7a96b8;
   --xp-title-blue-border: #6a819b;
   --xp-title-flat: #7a96b8;
 }
@@ -191,8 +193,15 @@ body,
 }
 
 /* Classic Header (Top Bar) */
+/* Dot-matrix on the band's right half, the login's CityMatrix echoed in the
+   chrome. Three layers, top first: the band colour fading out left to right,
+   the dot grid it uncovers, the band colour under both. Plain colours only
+   (--xp-title-flat), so it dims with the window like the rest of the band. */
 .classic-header {
-  background: var(--xp-title-blue) !important;
+  background:
+    linear-gradient(to right, var(--xp-title-flat) 40%, transparent 100%),
+    radial-gradient(circle, rgba(255, 255, 255, 0.22) 0.9px, transparent 1.3px) 0 0 / 5px 5px,
+    var(--xp-title-flat) !important;
   color: white !important;
   height: var(--app-header-h) !important;
   padding: 0 5px !important;
@@ -1536,4 +1545,23 @@ textarea {
 @media (prefers-reduced-motion: reduce) {
   .ui-style-classic .sidebar,
   .ui-style-classic .main-content { transition: none; }
+}
+
+/* ── Data face ───────────────────────────────────────────────────────────────
+   JetBrains Mono (layout.tsx) for figures. terras-ui's window counts and pager
+   ranges read --terras-font-data; erp's own code cells read CODE_FONT. */
+.ui-style-classic {
+  --terras-font-data: var(--font-data), "Cascadia Mono", Consolas, monospace;
+}
+/* Quantity columns: there is no shared quantity style to switch — erp writes
+   ~450 right-aligned cells inline across 58 views — so this targets the
+   convention itself. A right-aligned body cell is a number column; buttons in
+   one (an action column) keep their own face. !important beats the inline
+   fontFamily most cells carry. Both spellings: the server renders
+   `text-align:right`, the browser serialises `text-align: right`. */
+@media screen {
+  .ui-style-classic .main-content td:is([style*="text-align:right"], [style*="text-align: right"]):not(:has(button, input, select)):not([data-print-template] td) {
+    font-family: var(--terras-font-data) !important;
+    font-variant-numeric: tabular-nums;
+  }
 }

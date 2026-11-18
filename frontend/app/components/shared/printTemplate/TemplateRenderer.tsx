@@ -8,7 +8,7 @@ import type {
 import { EM_DASH, type PrintContext } from './renderContext';
 import { resolveField, fieldDef } from './fieldRegistry';
 import { rowSource } from './rowSources';
-import { CODE_FONT, PRINT_SERIF_FONT } from '../xpTheme';
+import { PRINT_CODE_FONT as CODE_FONT, PRINT_SERIF_FONT } from '../xpTheme';
 import { makeLotBarcodeDataUrl } from './doctypes/outputLabel';
 
 /**
@@ -731,8 +731,11 @@ function BandView(props: {
 export default function TemplateRenderer({
     layout, ctx, docType, bandOverrides, selectedId, onSelect,
 }: Props) {
+    // data-print-template: the paperwork keeps its own faces, so the screen's
+    // data-font rule for number cells (globals.css) skips it — including in the
+    // print designer, where this preview must match the printout.
     return (
-        <div style={{
+        <div data-print-template="" style={{
             fontFamily: layout.fontFamily ?? 'Arial, sans-serif',
             color: '#000',
             lineHeight: 1.3,
