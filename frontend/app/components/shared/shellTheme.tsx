@@ -145,9 +145,9 @@ export type ShellFill = 'page' | 'flex' | false;
 // ShellWindow; `pageFillStyle`/`flexFillStyle` let those keep their own JSX while
 // still reading the convention from one place.
 export const pageFillStyle: React.CSSProperties =
-    // `--shell-inset`: the height the inset shell's gutters and card border take
-    // on desktop (globals.css); unset (0) on phones and in print.
-    { display: 'flex', flexDirection: 'column', height: 'calc(var(--app-vh) - 80px - var(--shell-inset, 0px))', minHeight: 0 };
+    // `--page-fill-h`: the desktop inset shell's exact page height (globals.css).
+    // Unset on phones and in print, which keep the old rough allowance.
+    { display: 'flex', flexDirection: 'column', height: 'var(--page-fill-h, calc(var(--app-vh) - 80px))', minHeight: 0 };
 
 export const flexFillStyle: React.CSSProperties =
     { display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0 };
@@ -180,7 +180,7 @@ export const viewShellStyle = (
  * `style={bevel}` block hand-copied at the top of ~20 views.
  */
 export function ShellWindow({ fill = 'page', className, style, children }: {
-    /** 'page' = calc(var(--app-vh) - 80px) for a top-level route. 'flex' = flex:1 when nested
+    /** 'page' = fills the page body down to its bottom gutter, for a top-level route. 'flex' = flex:1 when nested
      *  under an already-sized parent. false = caller manages its own sizing. */
     fill?: ShellFill;
     className?: string;

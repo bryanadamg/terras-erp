@@ -757,10 +757,10 @@ body,
 }
 
 /* The page content under the app header. Carries the gutter that .main-content
-   used to, so the header above it can run edge to edge. Vertical rhythm stays on
-   the element's own py-3 utility. */
+   used to, so the header above it can run edge to edge. One gutter on all four
+   sides, so the page window sits in an even frame. */
 .page-body {
-  padding: 16px var(--content-pad) var(--content-pad);
+  padding: var(--content-pad);
 }
 
 /* Column browser (shared/columnBrowser.tsx — Locations, Categories): panes stack vertically on narrow
@@ -1487,9 +1487,12 @@ textarea {
 @media screen and (min-width: 769px) {
   .ui-style-classic.app-container {
     --shell-gap: 8px;
-    /* What a page-filled view loses to the shell: both gutters plus the main
-       card's top and bottom border. shellTheme's pageFillStyle subtracts it. */
-    --shell-inset: calc(2 * var(--shell-gap) + 2px);
+    /* Height of a page-filled window (shellTheme's pageFillStyle): the viewport
+       minus exactly the chrome around it — both shell gaps, the main card's 1px
+       top + bottom border, the app header and .page-body's top + bottom gutter.
+       Built from the same vars that draw that chrome, so the window reaches the
+       bottom gutter instead of stopping short of it. */
+    --page-fill-h: calc(var(--app-vh) - 2 * var(--shell-gap) - 2px - var(--app-header-h) - 2 * var(--content-pad));
     --sidebar-width: 200px;
     /* Motion. Opening eases out past the target by a few px and settles (it
        lands, rather than stopping dead); closing starts slowly, holding on for a
