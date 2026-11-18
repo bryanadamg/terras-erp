@@ -1178,7 +1178,28 @@ function PackingOrderForm({ locPickerTreeOptions, machineOptions, defaultSourceL
     const onFactorPick = (factorVal: number | null, toUom: string) => {
         setUom2Factor(factorVal);
         setUom2LengthUom(toUom);
-        applyAlt(qty2, factorVal, toUom, altPerCarton);
+        // A target already stated in kg (typed, or taken off the held lots) is
+        // restated as the count, rather than leaving it at 0 for the planner to
+        // work out by hand. Unsnapped so the kilos it round-trips back to stay put.
+        let q = qty2;
+        if (num(qty2) <= 0 && num(qtyTarget) > 0) {
+            const f = basePerAlt({ factor: factorVal, lengthUom: toUom, itemUom: selectedItem?.uom, ...weightSpec });
+            const alt = f ? baseToAlt(num(qtyTarget), f, false) : null;
+            if (alt) { q = String(alt); setQty2(q); }
+        }
+        applyAlt(q, factorVal, toUom, altPerCarton);
+    };
+    // A unit with a single conversion on the UOM master has nothing to choose
+    // between — apply it straight away instead of waiting for the chip to be clicked.
+    const onUom2Pick = (name: string) => {
+        setUom2(name);
+        const factors = (uoms || []).find((u: any) => u.name === name)?.factors || [];
+        if (factors.length === 1) {
+            onFactorPick(parseFloat(factors[0].value), factors[0].to_uom_name || 'Yard');
+        } else {
+            setUom2Factor(null);
+            setUom2LengthUom('');
+        }
     };
     const onAltPerCartonChange = (val: string) => {
         setAltPerCarton(val);
@@ -1628,7 +1649,7 @@ function PackingOrderForm({ locPickerTreeOptions, machineOptions, defaultSourceL
                                     style={{ ...xpInput, flex: 1, minWidth: 0, borderRight: 'none', textAlign: 'right' }}
                                     placeholder="0" value={qty2} onChange={e => onQty2Change(e.target.value)} />
                                 <select style={{ ...xpSelect, flexShrink: 0, width: 90 }} value={uom2}
-                                    onChange={e => { setUom2(e.target.value); setUom2Factor(null); setUom2LengthUom(''); }}>
+                                    onChange={e => onUom2Pick(e.target.value)}>
                                     <option value="">— none —</option>
                                     {(uoms || []).map((u: any) => <option key={u.id} value={u.name}>{u.name}</option>)}
                                 </select>
