@@ -1467,3 +1467,69 @@ textarea {
   .read-dot { transition: none; }
   .read-dot:hover { transform: none; }
 }
+
+/* ── Inset shell (desktop) ──────────────────────────────────────────────────
+   The sidebar and the main view are two cards on a darker desk, an 8px gutter
+   around and between them. The sidebar is terras-ui's hover rail (Sidebar.tsx):
+   44px at rest, 200px while hover-opened or pinned; the main card's left edge
+   follows it, so the page resizes with the sidebar rather than sliding under it.
+   Screen only, so print keeps the flat layout its own block sets up, and only
+   above the 768px line where the mobile rules (and MobileShell) take over. */
+@media screen and (min-width: 769px) {
+  .ui-style-classic.app-container {
+    --shell-gap: 8px;
+    /* What a page-filled view loses to the shell: both gutters plus the main
+       card's top and bottom border. shellTheme's pageFillStyle subtracts it. */
+    --shell-inset: calc(2 * var(--shell-gap) + 2px);
+    --sidebar-width: 200px;
+    display: flow-root;
+    min-height: var(--app-vh);
+    background: color-mix(in srgb, var(--win-bg) 84%, #000);
+  }
+  /* Rail width: the live sidebar says so with `is-rail`; while booting, the
+     placeholder follows the pin flag SIDEBAR_PIN_BOOT put on <html>. */
+  .ui-style-classic.app-container:has(> .sidebar.is-rail),
+  html:not([data-sidebar-pinned]) .ui-style-classic.app-container:has(> .sidebar.is-boot) {
+    --sidebar-width: 44px;
+  }
+  .ui-style-classic .sidebar {
+    top: var(--shell-gap);
+    left: var(--shell-gap);
+    width: var(--sidebar-width);
+    height: calc(var(--app-vh) - 2 * var(--shell-gap));
+    border: 1px solid #718bb7;
+    border-radius: var(--terras-radius, 8px);
+    overflow: hidden;
+    transition: width 0.12s;
+  }
+  /* The main card is the scroll container (its overflow-y-auto utility), so the
+     sticky app header stays inside the card's rounded top. */
+  .ui-style-classic .main-content {
+    margin: var(--shell-gap) var(--shell-gap) var(--shell-gap)
+            calc(var(--sidebar-width) + 2 * var(--shell-gap)) !important;
+    width: auto !important;
+    height: calc(var(--app-vh) - 2 * var(--shell-gap));
+    border: 1px solid var(--terras-win-border-dark, #808080);
+    border-radius: var(--terras-radius, 8px);
+    transition: margin-left 0.12s;
+  }
+  /* Boot rail: the placeholder shows what the live rail shows — icons only. */
+  html:not([data-sidebar-pinned]) .sidebar.is-boot .boot-label,
+  html:not([data-sidebar-pinned]) .sidebar.is-boot .boot-label-block {
+    display: none !important;
+  }
+  html:not([data-sidebar-pinned]) .sidebar.is-boot .boot-row {
+    justify-content: center;
+    padding-left: 0 !important;
+    padding-right: 0 !important;
+  }
+  html:not([data-sidebar-pinned]) .sidebar.is-boot .boot-brand {
+    justify-content: center;
+    padding: 0 4px !important;
+  }
+}
+.boot-label { display: contents; }
+@media (prefers-reduced-motion: reduce) {
+  .ui-style-classic .sidebar,
+  .ui-style-classic .main-content { transition: none; }
+}

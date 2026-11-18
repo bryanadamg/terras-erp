@@ -25,6 +25,7 @@ import MainLayout from './components/shared/MainLayout';
 import GlobalTooltip from './components/shared/GlobalTooltip';
 import SWRegister from './components/shared/SWRegister';
 import { bootScript } from '@bryanadamg/terras-ui/scale';
+import { SIDEBAR_PIN_BOOT } from './components/shared/sidebarPin';
 import localFont from 'next/font/local';
 
 // Brand face, used only for the "Terras" wordmark (login screen, docs header).
@@ -85,6 +86,9 @@ export default function RootLayout({
             that module and scale.css agree on, so the list can't drift from the
             one the picker offers. */}
         <script dangerouslySetInnerHTML={{ __html: bootScript }} />
+        {/* Sidebar pinned vs hover rail, onto <html> before first paint so the
+            boot placeholder already has the right width (sidebarPin.ts). */}
+        <script dangerouslySetInnerHTML={{ __html: SIDEBAR_PIN_BOOT }} />
       </head>
       <body>
         <SWRegister />

@@ -1,10 +1,11 @@
-import { useState, useRef, useLayoutEffect } from 'react';
+import { useState, useRef, useLayoutEffect, useEffect } from 'react';
 import TerrasSidebar from '@bryanadamg/terras-ui/components/Sidebar';
 import { useLanguage } from '../../context/LanguageContext';
 import { useUser } from '../../context/UserContext';
 import { NAV_SECTIONS, navLabel, leafPermissions } from './navConfig';
 import { xpFont, BUTTON_RADIUS, XP_BTN, CHIP_RADIUS } from './xpTheme';
 import PixelAvatar from './PixelAvatar';
+import { SIDEBAR_PIN_KEY } from './sidebarPin';
 
 interface SidebarProps {
   activeTab: string;
@@ -20,6 +21,11 @@ interface SidebarProps {
 export const SIDEBAR_BG = '#d6dff7';
 const NAV_COLOR = '#003080';
 
+function readPinned(): boolean {
+  if (typeof window === 'undefined') return false;
+  return document.documentElement.hasAttribute('data-sidebar-pinned');
+}
+
 /**
  * erp's nav on terras-ui's Sidebar, the same component sku and crm use. This
  * file keeps what is erp's: the nav tree, permissions, i18n, the hover
@@ -34,6 +40,19 @@ export default function Sidebar({ activeTab, setActiveTab, onTabHover, appName, 
   const { t } = useLanguage();
   const { currentUser, hasPermission } = useUser();
   const navRef = useRef<HTMLElement>(null);
+
+  // The boot script already settled stored choice vs touch default onto <html>.
+  const [pinned, setPinned] = useState(readPinned);
+  // Drawn width, as the package reports it (pinned, or hover-opened). The
+  // `is-rail` class off it is what globals.css sizes the shell from.
+  const [expanded, setExpanded] = useState(pinned);
+  useEffect(() => {
+    document.documentElement.toggleAttribute('data-sidebar-pinned', pinned);
+  }, [pinned]);
+  const togglePinned = () => setPinned((p) => {
+    try { localStorage.setItem(SIDEBAR_PIN_KEY, p ? '0' : '1'); } catch {}
+    return !p;
+  });
 
   // Persist scroll position
   useLayoutEffect(() => {
@@ -112,13 +131,13 @@ export default function Sidebar({ activeTab, setActiveTab, onTabHover, appName, 
       label: navLabel(t, section),
       // erp's band reads "<i/> LABEL": an inline icon and a space, not the
       // package's 5px flex gap. Rebuilt here (nbsp, so it isn't collapsed, and
-      // the gap cancelled) so the label sits where it always has. Revisit when
-      // the rail collapses: the nbsp would pull the lone icon off-centre.
-      icon: (
+      // the gap cancelled) so the label sits where it always has. On the rail
+      // the icon stands alone, where the nbsp would pull it off-centre.
+      icon: expanded ? (
         <span style={{ marginRight: -5 }}>
-          <i className={`bi ${section.icon}`} />{' '}
+          <i className={`bi ${section.icon}`} />{'\u00a0'}
         </span>
-      ),
+      ) : <i className={`bi ${section.icon}`} />,
       right: <i className="bi bi-chevron-right" style={{ fontSize: 9, opacity: 0.7 }} aria-hidden="true" />,
       active: activeTab === `sections-${section.key}`,
       onClick: () => setActiveTab(navKey),
@@ -128,9 +147,19 @@ export default function Sidebar({ activeTab, setActiveTab, onTabHover, appName, 
   });
 
   return (
-    <div className={`sidebar ${isOpen ? 'mobile-open' : ''}`} style={{ background: SIDEBAR_BG, display: 'flex' }}>
+    <div
+      className={`sidebar${expanded ? '' : ' is-rail'}${isOpen ? ' mobile-open' : ''}`}
+      style={{ background: SIDEBAR_BG, display: 'flex' }}
+    >
       <TerrasSidebar
+        expandOnHover
+        collapsed={!pinned}
+        onToggleCollapsed={togglePinned}
+        onExpandedChange={setExpanded}
+        // The `.sidebar` wrapper owns the width (globals.css animates it from
+        // `is-rail`); the package fills it in both states.
         width="100%"
+        collapsedWidth="100%"
         // The `.sidebar` wrapper draws the right edge (globals.css); a second
         // one here would double it.
         style={{ borderRight: 'none' }}
@@ -145,11 +174,12 @@ export default function Sidebar({ activeTab, setActiveTab, onTabHover, appName, 
         }
         navRef={navRef}
         onNavScroll={handleScroll}
-        top={
+        top={({ collapsed }) => (
           <button
             className={XP_BTN}
             onClick={() => setActiveTab('scanner')}
             {...H('scanner')}
+            title={collapsed ? 'Quick Scan' : undefined}
             style={{
               width: '100%',
               padding: '6px 0',
@@ -168,21 +198,23 @@ export default function Sidebar({ activeTab, setActiveTab, onTabHover, appName, 
               letterSpacing: '0.5px',
             }}
           >
-            <i className="bi bi-qr-code-scan" /> QUICK SCAN
+            <i className="bi bi-qr-code-scan" />{collapsed ? null : ' QUICK SCAN'}
           </button>
-        }
+        )}
         items={[navItem('dashboard', t('dashboard') || 'Dashboard', 'bi-house-door')]}
         sections={sections}
         // Rides at the end of the nav list, so the footer holds nothing but the
         // user card.
-        navEnd={
+        navEnd={({ collapsed }) => (collapsed ? null : (
           <div style={{ padding: '10px 8px 12px', textAlign: 'center' }}>
             <small style={{ fontSize: 9, color: '#6070a0', fontFamily: xpFont }}>
               {t('powered_by') || 'Powered by'} Terras ERP
             </small>
           </div>
-        }
-        footer={
+        ))}
+        // On the rail the card keeps only its face (no spine, name, role or
+        // gear), and takes a tooltip there since nothing else names it.
+        footer={({ collapsed }) => (
           // Sole entry point to Settings — open to every user; the page itself
           // gates its admin-only tabs (Database & Backups, Access Control) via
           // hasPermission('admin.access').
@@ -194,7 +226,8 @@ export default function Sidebar({ activeTab, setActiveTab, onTabHover, appName, 
             /* The card already shows name + role + a gear; a "Settings" title on
                top would double up, and stack with GlobalTooltip's clip-echo for
                the name/role spans. Same opt-out as the login ID card. */
-            data-no-tip
+            data-no-tip={collapsed ? undefined : true}
+            title={collapsed ? `${currentUser?.full_name || currentUser?.username || ''} — Settings` : undefined}
             style={{
               width: '100%',
               padding: 0,
@@ -217,12 +250,16 @@ export default function Sidebar({ activeTab, setActiveTab, onTabHover, appName, 
             }}
           >
             {/* Accent spine — the coloured edge of the ID card. */}
-            <div style={{
+            {collapsed ? null : <div style={{
               width: 3,
               flexShrink: 0,
               background: 'linear-gradient(to bottom, #4a7ddb, #003080)',
-            }} />
-            <div style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '5px 7px', minWidth: 0, flex: 1 }}>
+            }} />}
+            <div style={{
+              display: 'flex', alignItems: 'center', gap: 7, minWidth: 0, flex: 1,
+              padding: collapsed ? 1 : '5px 7px',
+              justifyContent: collapsed ? 'center' : undefined,
+            }}>
               {/* Photo frame */}
               <div style={{
                 width: 30,
@@ -243,6 +280,7 @@ export default function Sidebar({ activeTab, setActiveTab, onTabHover, appName, 
                   size={24}
                 />
               </div>
+              {collapsed ? null : <>
               <div style={{ minWidth: 0, flex: 1, display: 'flex', flexDirection: 'column', gap: 1 }}>
                 <span
                   data-testid="username-display"
@@ -285,9 +323,10 @@ export default function Sidebar({ activeTab, setActiveTab, onTabHover, appName, 
                   color: hovered === 'settings' ? '#003080' : '#7b86a8',
                 }}
               />
+              </>}
             </div>
           </button>
-        }
+        )}
       />
     </div>
   );

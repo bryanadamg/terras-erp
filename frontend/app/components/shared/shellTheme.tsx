@@ -145,7 +145,9 @@ export type ShellFill = 'page' | 'flex' | false;
 // ShellWindow; `pageFillStyle`/`flexFillStyle` let those keep their own JSX while
 // still reading the convention from one place.
 export const pageFillStyle: React.CSSProperties =
-    { display: 'flex', flexDirection: 'column', height: 'calc(var(--app-vh) - 80px)', minHeight: 0 };
+    // `--shell-inset`: the height the inset shell's gutters and card border take
+    // on desktop (globals.css); unset (0) on phones and in print.
+    { display: 'flex', flexDirection: 'column', height: 'calc(var(--app-vh) - 80px - var(--shell-inset, 0px))', minHeight: 0 };
 
 export const flexFillStyle: React.CSSProperties =
     { display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0 };
