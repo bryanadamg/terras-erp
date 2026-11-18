@@ -15,6 +15,18 @@ on `main`:
 
 ## [Unreleased]
 
+## [1.6.0] - 2026-11-18
+
+### Added
+- The sidebar can collapse to a slim rail that opens as the cursor heads toward it, with the page resizing alongside. It starts pinned open; a pin icon switches to the hover rail, and the choice is remembered per browser
+
+### Changed
+- A refreshed look: a flat cobalt title band with a dot-matrix header, and codes, counts and number columns in JetBrains Mono. Printed documents are unchanged
+- Quick Scan stays pinned above the sidebar menu instead of scrolling away with it
+
+### Fixed
+- An order covered by "Allocate from stock" now shows under To Pick → Ready to pick. Its allocated cartons were being counted toward older orders for the same item, leaving it at 0 cartons ready
+
 ## [1.5.1] - 2026-11-18
 
 ### Fixed
