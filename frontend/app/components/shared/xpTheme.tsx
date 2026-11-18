@@ -144,7 +144,7 @@ export function CodeChip({ code, tier = 1, tone = 'default', link = false, title
                             // screen-wide line; an exceptionally long code (a BOM code
                             // with a full variant suffix, say) instead ran the popout
                             // straight off the viewport edge. Cap and let it wrap.
-                            maxWidth: 'min(480px, 90vw)', whiteSpace: 'normal', wordBreak: 'break-word', overflow: 'visible', textOverflow: 'clip',
+                            maxWidth: 'min(480px, calc(var(--app-vw) * 90 / 100))', whiteSpace: 'normal', wordBreak: 'break-word', overflow: 'visible', textOverflow: 'clip',
                             // A tier-2/plain code has no fill of its own, so the
                             // popout has to supply one or it reads as text printed
                             // over the row underneath it.

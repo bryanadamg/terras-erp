@@ -386,6 +386,7 @@ export function useColumnWidths(defaults?: (number | string)[]): ColumnWidths {
      *  by it again — writing a rect straight into one shrank every real column to 80%
      *  of itself and dumped the rest into the filler, which read as the table
      *  collapsing the moment a border was grabbed. See terras-ui/scale. */
+    /* eslint-disable no-restricted-syntax -- column resize: hit-tests compare screen px against screen px, and every width written goes through toLayoutPx */
     const measure = (cells: HTMLTableCellElement[]): number[] => {
         let prev = cells[0].getBoundingClientRect().left;
         return cells.map(c => {
@@ -483,6 +484,7 @@ export function useColumnWidths(defaults?: (number | string)[]): ColumnWidths {
         reset,
     };
 }
+/* eslint-enable no-restricted-syntax */
 
 /** A `<table>` whose columns the user can drag, and the way to opt a grid in:
  *  swap the tag, keep the style, keep the children. It owns the `<colgroup>`, so

@@ -2,6 +2,18 @@
   "extends": "next/core-web-vitals",
   "rules": {
     "react/no-unescaped-entities": "off",
-    "@next/next/no-img-element": "off"
+    "@next/next/no-img-element": "off",
+    "no-restricted-properties": ["error",
+      { "object": "window", "property": "innerHeight", "message": "Screen px under the UI zoom. Use layoutViewport() from @bryanadamg/terras-ui/scale." },
+      { "object": "window", "property": "innerWidth", "message": "Screen px under the UI zoom. Use layoutViewport() from @bryanadamg/terras-ui/scale." },
+      { "object": "window", "property": "scrollX", "message": "Screen px under the UI zoom. Use layoutScroll() from @bryanadamg/terras-ui/scale." },
+      { "object": "window", "property": "scrollY", "message": "Screen px under the UI zoom. Use layoutScroll() from @bryanadamg/terras-ui/scale." }
+    ],
+    "no-restricted-syntax": ["error",
+      { "selector": "MemberExpression[property.name='getBoundingClientRect']", "message": "Screen px under the UI zoom. Use layoutRectOf() from @bryanadamg/terras-ui/scale, or disable with a reason if both sides of the math are screen px." },
+      { "selector": "MemberExpression[property.name=/^(clientX|clientY|pageX|pageY|movementX|movementY)$/]", "message": "Screen px under the UI zoom. Convert with toLayoutPx() from @bryanadamg/terras-ui/scale before it reaches a style, or disable with a reason if it is only compared against other screen px." },
+      { "selector": "Literal[value=/\\d(vh|vw|dvh|svh|lvh)\\b/]", "message": "Raw viewport units ignore the UI zoom. Use calc(var(--app-vh) * N / 100) (or --app-dvh / --app-vw)." },
+      { "selector": "TemplateElement[value.raw=/\\d(vh|vw|dvh|svh|lvh)\\b/]", "message": "Raw viewport units ignore the UI zoom. Use calc(var(--app-vh) * N / 100) (or --app-dvh / --app-vw)." }
+    ]
   }
 }

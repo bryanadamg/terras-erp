@@ -79,13 +79,16 @@ export default function PrintModalShell({
         if (!floating || !panelRef.current) return;
         if ((e.target as HTMLElement).closest('button')) return;
         e.preventDefault();
+        // eslint-disable-next-line no-restricted-syntax -- start point only; the delta is converted with toLayoutPx below
         const startX = e.clientX, startY = e.clientY;
         const base = { ...dragOffset.current };
         const el = panelRef.current;
         const onMove = (ev: PointerEvent) => {
             // Screen-px pointer delta → layout-px transform. See uiScale.ts.
             dragOffset.current = {
+                // eslint-disable-next-line no-restricted-syntax -- converted with toLayoutPx
                 x: base.x + toLayoutPx(ev.clientX - startX),
+                // eslint-disable-next-line no-restricted-syntax -- converted with toLayoutPx
                 y: base.y + toLayoutPx(ev.clientY - startY),
             };
             el.style.transform = `translate(calc(-50% + ${dragOffset.current.x}px), ${dragOffset.current.y}px)`;

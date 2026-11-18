@@ -119,7 +119,7 @@ export default function LoginPage() {
     // Same token and fallback LoginScreen paints, so the form lands on it with
     // nothing changing colour — and a token holder about to be redirected still
     // never sees the form.
-    if (booting) return <div style={{ minHeight: cssVar('app-vh', '100dvh'), background: LOGIN_BG }} />;
+    if (booting) return <div style={{ minHeight: cssVar('app-vh'), background: LOGIN_BG }} />;
 
     return (
         <LoginScreen

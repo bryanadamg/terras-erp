@@ -479,6 +479,7 @@ export default function PrintDesignerView() {
      * sheet is `ui-scale-exempt`, so its millimetres are true 96dpi CSS pixels.
      */
     const fitZoom = () => {
+        // eslint-disable-next-line no-restricted-syntax -- screen px on both sides of the fit ratio (see doc comment above)
         const pane = canvasPaneRef.current?.getBoundingClientRect();
         if (!pane) return;
         const padding = 40;   // the pane's own padding, both sides
