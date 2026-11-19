@@ -1284,7 +1284,7 @@ export function XPLoading({ label = 'Loading...', fullScreen = false }: { label?
  */
 // Every list here is zebra-striped, so the skeleton stripes too — terras-ui's own
 // tables are ruled, so there it's opt-in.
-const SKEL_STRIPE = '#f5f3ee';
+const SKEL_STRIPE = 'var(--terras-row-stripe, #f9f8f4)';
 
 // Extracted into terras-ui's TableSkeleton. The cell style keeps this app's
 // defaults: a caller with no `tdStyle` gets the classic list cell, and one whose

@@ -190,7 +190,7 @@ export default function NettingPlanTable({
                                 {divider}
                                 <tr style={{
                                     borderBottom: '1px solid #c0bdb5',
-                                    background: i % 2 ? ('#f5f3ee') : 'transparent',
+                                    background: i % 2 ? 'var(--terras-row-stripe, #f9f8f4)' : 'transparent',
                                     opacity: dim ? 0.65 : 1,
                                 }}>
                                     <td style={{ padding: `4px 6px 4px ${8 + indentOf(n) * 16}px` }}>
