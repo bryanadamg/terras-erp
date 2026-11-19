@@ -15,6 +15,15 @@ on `main`:
 
 ## [Unreleased]
 
+## [1.8.0] - 2026-11-19
+
+### Changed
+- A lighter sidebar: a near-white menu with flat blue section bands, a softer hover, and a blue bar marking the current page. Title bars, the header and primary buttons use the same refreshed blue
+- Striped lists use a softer stripe
+
+### Fixed
+- Pick Cartons no longer comes up empty for a sales order whose BOM has several sizes
+
 ## [1.7.0] - 2026-11-19
 
 ### Changed
