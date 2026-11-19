@@ -15,7 +15,7 @@ import { NAV_SECTIONS } from './navConfig';
  * the full-screen → full-app jump, and there is no layout shift because this
  * reuses MainLayout's own class names (`app-container`, `sidebar`,
  * `main-content`, `app-header`, `page-body`) and the same shell primitives a
- * real list route wears (`viewShellStyle` / `xpTitleBar` / `xpToolbar`), which
+ * real list route wears (`viewShellStyle` / `xpToolbar`), which
  * is also why both themes and the <768px off-canvas sidebar rules apply to it
  * for free.
  *

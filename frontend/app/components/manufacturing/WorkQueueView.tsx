@@ -6,7 +6,7 @@ import { useData } from '../../context/DataContext';
 import { useUser } from '../../context/UserContext';
 import { useTimezone } from '../../context/TimezoneContext';
 import { usePaginatedFetch } from '../../context/usePaginatedList';
-import { ShellWindow, ShellTitleBar, SearchField } from '../shared/shellTheme';
+import { ShellWindow, SearchField } from '../shared/shellTheme';
 import { FilterChipBar } from '@bryanadamg/terras-ui/components/FilterChipBar';
 import { Count as ToolbarCount } from '@bryanadamg/terras-ui/components/Window';
 import { toolbar as xpToolbar } from '@bryanadamg/terras-ui/styles';
@@ -313,6 +313,8 @@ export default function WorkQueueView() {
             <ToolbarCount right>
                 {startable} startable · {blocked} blocked · {unreleasedCount} need a work order · {total} shown
             </ToolbarCount>
+            <i className="bi bi-info-circle" style={{ color: '#666', fontSize: 12 }}
+                title="Orders ready to start at each work centre. Material is allocated in scheduled order, so two orders never claim the same stock." />
         </div>
     );
 
@@ -570,11 +572,6 @@ export default function WorkQueueView() {
 
     return (
         <ShellWindow fill="page" className="fade-in">
-            <ShellTitleBar
-                icon="bi-list-ol"
-                title="Work Queue"
-                subtitle="Orders ready to start at each work centre. Material is allocated in scheduled order, so two orders never claim the same stock."
-            />
             {Toolbar}
             {Object.keys(counts).length > 0 && VerdictBar}
             {UndatedNotice}

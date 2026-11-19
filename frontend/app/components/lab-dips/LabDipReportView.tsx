@@ -5,7 +5,7 @@ import { useData } from '../../context/DataContext';
 import { useTimezone } from '../../context/TimezoneContext';
 import { isoDate } from '../shared/format';
 import { useToast } from '../shared/Toast';
-import { ShellWindow, ShellTitleBar, ToolbarButton } from '../shared/shellTheme';
+import { ShellWindow, ToolbarButton } from '../shared/shellTheme';
 import { toolbar as sharedXpToolbar } from '@bryanadamg/terras-ui/styles';
 import { API_BASE } from '../shared/apiBase';
 import { lvTh, lvThead, lvRow, lvBtn, lvInput, lvLabel, lvSep, LvSectionCaption, LV_XP_FONT, LV_MODERN_FONT } from '../shared/listViewTheme';
@@ -356,12 +356,6 @@ export default function LabDipReportView() {
 
     return (
         <ShellWindow fill="page" className="fade-in">
-            <ShellTitleBar
-                icon="bi-clipboard-data"
-                title="Lab Dip Report"
-                subtitle="Attempt counts per variant over a date range — dips, rejections and approvals are event counts, so a re-dipped variant contributes more than one."
-                right={<span style={{ fontFamily: LV_XP_FONT, fontSize: 11, color: '#fff'}}>{rangeLabel}</span>}
-            />
             <Filters />
             <KpiTiles />
             {/* Column counts match SummaryTable (6) and VariantTable (9) so the

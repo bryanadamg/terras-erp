@@ -14,7 +14,7 @@ import { field as xpInput } from '@bryanadamg/terras-ui/styles';
 import { useManufacturingHelpers } from './useManufacturingHelpers';
 import ProductionRunsTab from './ProductionRunsTab';
 import ManufacturingOrdersTab from './ManufacturingOrdersTab';
-import { pageFillStyle, viewShellStyle, PageTitleBar } from '../shared/shellTheme';
+import { pageFillStyle, viewShellStyle } from '../shared/shellTheme';
 import { API_BASE } from '../shared/apiBase';
 
 export default function ManufacturingView({
@@ -504,22 +504,6 @@ export default function ManufacturingView({
               <div
                   style={viewShellStyle()}
               >
-
-                  {/* ── Title bar ──
-                      Kept to the title alone. The Calendar/List picker moved down to
-                      the tab's own toolbar, beside its search field, where the rest of
-                      the app puts its filters (SearchField -> filters -> count ->
-                      actions) — and where it can only be shown on the tab it actually
-                      drives. Up here it also rendered over Production Runs, which reads
-                      no viewMode, so clicking Calendar there changed nothing.
-
-                      The Scanner button is gone as redundant: /scanner is reachable from
-                      the sidebar's QUICK SCAN on every page, so a per-page copy of it is
-                      just chrome in the ribbon. */}
-                  <PageTitleBar
-                      icon={activeTab === 'manufacturing-orders' ? 'bi-list-task' : 'bi-collection-play'}
-                      title={activeTab === 'manufacturing-orders' ? (t('manufacturing_orders') || 'Manufacturing Orders') : 'Production Runs'}
-                  />
 
                   {/* ── Body ── */}
                   <div style={{ background: '#ece9d8', flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', minHeight: 0 }}>

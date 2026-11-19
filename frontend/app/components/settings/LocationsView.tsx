@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useToast } from '../shared/Toast';
 import { useLanguage } from '../../context/LanguageContext';
 import { useUser } from '../../context/UserContext';
-import { ShellWindow, ShellTitleBar, SearchField } from '../shared/shellTheme';
+import { ShellWindow, SearchField } from '../shared/shellTheme';
 import { Count as ToolbarCount } from '@bryanadamg/terras-ui/components/Window';
 import { toolbar as xpToolbar } from '@bryanadamg/terras-ui/styles';
 import { XPActionButton } from '../shared/xpTheme';
@@ -287,7 +287,6 @@ export default function LocationsView({
 
   return (
     <ShellWindow fill="page" className="fade-in">
-      <ShellTitleBar icon="bi-geo-alt-fill" title={t('locations')} />
       <div style={xpToolbar({ flexShrink: 0, padding: '4px 8px' })}>
         <SearchField value={searchTerm} onChange={setSearchTerm} placeholder="Search code or name…" width={240} />
         <ToolbarCount right>

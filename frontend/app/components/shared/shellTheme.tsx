@@ -145,9 +145,9 @@ export type ShellFill = 'page' | 'flex' | false;
 // ShellWindow; `pageFillStyle`/`flexFillStyle` let those keep their own JSX while
 // still reading the convention from one place.
 export const pageFillStyle: React.CSSProperties =
-    // `--shell-inset`: the height the inset shell's gutters and card border take
-    // on desktop (globals.css); unset (0) on phones and in print.
-    { display: 'flex', flexDirection: 'column', height: 'calc(var(--app-vh) - 80px - var(--shell-inset, 0px))', minHeight: 0 };
+    // `--page-fill-h`: the desktop inset shell's exact page height (globals.css).
+    // Unset on phones and in print, which keep the old rough allowance.
+    { display: 'flex', flexDirection: 'column', height: 'var(--page-fill-h, calc(var(--app-vh) - 80px))', minHeight: 0 };
 
 export const flexFillStyle: React.CSSProperties =
     { display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0 };
@@ -180,7 +180,7 @@ export const viewShellStyle = (
  * `style={bevel}` block hand-copied at the top of ~20 views.
  */
 export function ShellWindow({ fill = 'page', className, style, children }: {
-    /** 'page' = calc(var(--app-vh) - 80px) for a top-level route. 'flex' = flex:1 when nested
+    /** 'page' = fills the page body down to its bottom gutter, for a top-level route. 'flex' = flex:1 when nested
      *  under an already-sized parent. false = caller manages its own sizing. */
     fill?: ShellFill;
     className?: string;
@@ -202,42 +202,13 @@ export function ShellWindow({ fill = 'page', className, style, children }: {
 }
 
 /**
- * Page title bar — icon + label, no actions, no bootstrap card chrome. The shape
- * seven page shells (Colors, Color Library, Combo Library, Attributes, Settings,
- * Dyeing & Setting, Lab Dips) each declared by hand, byte-for-byte the same pair
- * of style objects: classic = the blue gradient bar, modern = a pale flat header
- * with a blue icon. That is why the window-focus swap had to touch seven files;
- * with this, the gradient appears in exactly two places in the whole app
- * (`TITLE_TONES` here, and ModalWrapper/PrintModalShell for a window that must
- * NOT dim itself).
- *
- * Use `ShellTitleBar` instead when the bar carries right-side actions or needs
- * the bootstrap card-header look in modern.
+ * Section title bar inside a page (e.g. the Dashboard's panels): icon + title +
+ * right-side actions, tinted by `tone`. Not for a page's own title — the app
+ * header already carries that, so a top-of-page bar would just repeat it.
  */
-export function PageTitleBar({ icon, title, right, style }: {
-    icon: string;                 // bootstrap-icons class, e.g. "bi-palette2"
-    title: React.ReactNode;
-    right?: React.ReactNode;
-    style?: React.CSSProperties;
-}) {
-    // Classic geometry comes from terras-ui's `titleBar`, not a second set of numbers: this
-    // used to carry its own `padding: '6px 12px'` / `fontSize: 13`, which rendered
-    // the seven PageTitleBar pages (Colors, Color/Combo Library, Attributes, Lab
-    // Dips, Dyeing & Setting, Settings) with a visibly taller bar than every
-    // titleBar page next to them. One bar height, app-wide.
-    return <UIWindow.TitleBar icon={<i className={`bi ${icon}`} />} title={title} right={right} style={style} />;
-}
-
-/**
- * Title bar: icon + title (+ optional modern-only subtitle caption) + right-side
- * actions. Classic renders the blue-gradient bar; modern renders a bootstrap
- * card-header with an h5 + optional caption — matches SalesOrderView, PartnersView,
- * SampleRequestView, PackingView, BOMView, and the Settings tabs.
- */
-export function ShellTitleBar({ icon, title, subtitle, right, tone = 'blue' }: {
+export function ShellTitleBar({ icon, title, right, tone = 'blue' }: {
     icon: string;                 // bootstrap-icons class, e.g. "bi-people-fill"
     title: React.ReactNode;
-    subtitle?: React.ReactNode;   // modern-only caption line under the title
     right?: React.ReactNode;      // action button(s) — e.g. "+ Add"
     tone?: ShellTone;             // classic-only bar color; modern keeps the white card-header
 }) {

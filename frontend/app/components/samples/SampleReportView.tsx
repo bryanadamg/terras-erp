@@ -5,7 +5,7 @@ import { useData } from '../../context/DataContext';
 import { isoDate } from '../shared/format';
 import { useTimezone } from '../../context/TimezoneContext';
 import { useToast } from '../shared/Toast';
-import { ShellWindow, ShellTitleBar, ToolbarButton } from '../shared/shellTheme';
+import { ShellWindow, ToolbarButton } from '../shared/shellTheme';
 import { toolbar as sharedXpToolbar } from '@bryanadamg/terras-ui/styles';
 import { API_BASE } from '../shared/apiBase';
 import { lvTh, lvThead, lvRow, lvBtn, lvInput, lvLabel, lvSep, LvSectionCaption, LV_XP_FONT, LV_MODERN_FONT } from '../shared/listViewTheme';
@@ -357,12 +357,6 @@ export default function SampleReportView() {
 
     return (
         <ShellWindow fill="page" className="fade-in">
-            <ShellTitleBar
-                icon="bi-clipboard-data"
-                title="Sample Development Report"
-                subtitle="Attempt counts per variant over a date range — processes, rejections and approvals are event counts, so a remade variant contributes more than one."
-                right={<span style={{ fontFamily: LV_XP_FONT, fontSize: 11, color: '#fff'}}>{rangeLabel}</span>}
-            />
             <Filters />
             <KpiTiles />
             {/* Column counts match SummaryTable (7) and VariantTable (9) so the

@@ -16,8 +16,8 @@ import { FormSection } from '@bryanadamg/terras-ui/components/FormSection';
 import { FieldLabel } from '@bryanadamg/terras-ui/components/Field';
 import { field as xpInputBase, BTN_TONES } from '@bryanadamg/terras-ui/styles';
 import { SKEL_PAGE_ROWS } from '@bryanadamg/terras-ui/components/Skeleton';
-import { SearchField, ToolbarButton } from '../shared/shellTheme';
-import { bevel as sharedXpBevel, titleBar as sharedXpTitleBar, toolbar as sharedXpToolbar } from '@bryanadamg/terras-ui/styles';
+import { SearchField, ToolbarButton, viewShellStyle } from '../shared/shellTheme';
+import { toolbar as sharedXpToolbar } from '@bryanadamg/terras-ui/styles';
 import { FilterChipBar } from '@bryanadamg/terras-ui/components/FilterChipBar';
 import { Count as ToolbarCount } from '@bryanadamg/terras-ui/components/Window';
 import Pager from '../shared/Pager';
@@ -116,8 +116,6 @@ export default function PurchaseOrderView({ items, itemResults, onSearchItems, a
   };
 
   // ── XP shared inline styles ──────────────────────────────────────────────
-  const xpBevel: React.CSSProperties = sharedXpBevel();
-  const xpTitleBar: React.CSSProperties = sharedXpTitleBar({ flexWrap: 'wrap' as const, gap: '4px' });
   const xpToolbar: React.CSSProperties = sharedXpToolbar();
 
   // Local wrapper keeps this form's inset-shadow input treatment while sourcing
@@ -774,16 +772,8 @@ export default function PurchaseOrderView({ items, itemResults, onSearchItems, a
 
        {/* ── Outer shell ── */}
        <div
-           style={xpBevel}
+           style={viewShellStyle('page')}
        >
-           {/* ── Title bar ── */}
-           <div style={xpTitleBar}>
-                   <span>
-                       <i className="bi bi-truck" style={{ marginRight: 6 }}></i>
-                       {t('purchase_orders')}
-                   </span>
-               </div>
-
            {/* ── Secondary toolbar: search + status filters + count + actions ── */}
            <div
                style={xpToolbar}
@@ -807,10 +797,10 @@ export default function PurchaseOrderView({ items, itemResults, onSearchItems, a
            </div>
 
            {/* ── Table ── */}
-           <div>
+           <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }}>
                {/* vertical scroll must live on the same element as overflow-x,
                    otherwise sticky headers bind to the inner wrapper and never stick */}
-               <div className="table-responsive" style={{ height: 'calc(var(--app-vh) - 160px - var(--shell-inset, 0px))', overflowY: 'auto' }}>
+               <div className="table-responsive" style={{ flex: 1, minHeight: 0, overflowY: 'auto' }}>
                    <ResizableTable 
                        style={{ width: '100%', borderCollapse: 'collapse', background: '#fff' }}
                    >

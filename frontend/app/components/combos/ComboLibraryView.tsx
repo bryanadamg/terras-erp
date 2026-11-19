@@ -6,7 +6,7 @@ import { useDebouncedCommit } from '../../context/usePaginatedList';
 import ModalWrapper from '../shared/ModalWrapper';
 import { StatusChip, CodeChip, SwatchBox, CODE_FONT, TableSkeleton, useTableSkeletonMetrics, XP_BTN, useFloatingMenu, MenuTriggerButton, FloatingMenu } from '../shared/xpTheme';
 import { SKEL_PAGE_ROWS } from '@bryanadamg/terras-ui/components/Skeleton';
-import { SearchField, ToolbarButton, viewShellStyle, PageTitleBar } from '../shared/shellTheme';
+import { SearchField, ToolbarButton, viewShellStyle } from '../shared/shellTheme';
 import { FilterChipBar } from '@bryanadamg/terras-ui/components/FilterChipBar';
 import { Count as ToolbarCount } from '@bryanadamg/terras-ui/components/Window';
 import {
@@ -170,11 +170,6 @@ export default function ComboLibraryView({
         <div style={embedded
             ? { display: 'flex', flexDirection: 'column', height: '100%', minHeight: 0, fontFamily: LV_XP_FONT, background: '#fff' }
             : viewShellStyle('page', { fontFamily: LV_XP_FONT })}>
-
-            {/* Title bar (hidden when embedded under a tab shell) */}
-            {!embedded && (
-            <PageTitleBar icon="bi-grid-3x3-gap" title="Combo Library" />
-            )}
 
             {/* Toolbar */}
             <div style={{ background: 'linear-gradient(to bottom, #f5f4ef, #e0dfd8)', borderBottom: '1px solid #b0a898', padding: '4px 8px', display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap', flexShrink: 0 }}>

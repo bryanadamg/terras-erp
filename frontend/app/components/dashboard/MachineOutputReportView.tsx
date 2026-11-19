@@ -35,7 +35,7 @@ import { useSortable, ExpandedRowPanel, rowStateBg } from '@bryanadamg/terras-ui
 import TreeSelect, { TreeSelectOption } from '../shared/TreeSelect';
 import { childrenOfWC, isMachineWC, isTypeWC } from '../shared/workCenterTree';
 import { pageFillStyle, flexFillStyle } from '../shared/shellTheme';
-import { bevel as sharedXpBevel, titleBar as sharedXpTitleBar, toolbar as sharedXpToolbar } from '@bryanadamg/terras-ui/styles';
+import { bevel as sharedXpBevel, toolbar as sharedXpToolbar } from '@bryanadamg/terras-ui/styles';
 import { FilterChipBar } from '@bryanadamg/terras-ui/components/FilterChipBar';
 import { SegmentedBar } from '@bryanadamg/terras-ui/components/SegmentedBar';
 import { lvThead, lvSubTh, lvSubTd, lvSubTable, lvSubCaption, ExpanderCell, lvZebra, Dash } from '../shared/listViewTheme';
@@ -255,7 +255,6 @@ export default function MachineOutputReportView() {
         setStartDate(start); setEndDate(end);
     };
 
-    const periodLabel = `${startDate || 'All time'} → ${endDate || 'now'}`;
     const maxOutput = useMemo(() => Math.max(1, ...visibleRows.map((r: any) => r.qty_good || 0)), [visibleRows]);
 
     // ── Cell fragments shared by both themes ─────────────────────────────────
@@ -950,11 +949,6 @@ export default function MachineOutputReportView() {
             <div style={sharedXpBevel(flexFillStyle)}
             >
                 <>
-                        <div style={sharedXpTitleBar()}>
-                            <span><i className="bi bi-clipboard-data" style={{ marginRight: 6 }} />Production Output &amp; QC Reject</span>
-                            <span style={{ fontSize: '10px', opacity: 0.85 }}>{periodLabel}</span>
-                        </div>
-
                         {/* Line 1: scope + mode */}
                         <div style={toolbarTop}>
                             <span style={lbl}>Work center:</span>

@@ -28,8 +28,8 @@ import { rejectTitle } from '../shared/rejectDisplay';
 import SearchableSelect from '@bryanadamg/terras-ui/components/Combobox';
 import VariantChips from '../shared/VariantChips';
 import { Tabs, TabDef } from '../shared/Tabs';
-import { SearchField, pageFillStyle, viewShellStyle } from '../shared/shellTheme';
-import { titleBar as xpTitleBar } from '@bryanadamg/terras-ui/styles';
+import { SearchField, ToolbarButton, pageFillStyle, viewShellStyle } from '../shared/shellTheme';
+import { Count as ToolbarCount } from '@bryanadamg/terras-ui/components/Window';
 
 const STATUSES = ['PENDING', 'IN_PROGRESS', 'COMPLETED', 'CANCELLED'];
 
@@ -676,10 +676,6 @@ export default function WorkOrderListView({
 
     const containerStyle: React.CSSProperties = viewShellStyle('page', { fontFamily: xpFont });
 
-    const titleBarStyle: React.CSSProperties = xpTitleBar({
-        justifyContent: 'flex-start', gap: 8,
-    });
-
     const filterBarStyle: React.CSSProperties = {
         background: '#d4d0c8', borderBottom: '1px solid #808080',
         padding: '4px 8px', display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap',
@@ -696,26 +692,6 @@ export default function WorkOrderListView({
         <div className="row g-4 fade-in">
             <div className="col-12">
                 <div style={containerStyle}>
-
-                    {/* Title bar */}
-                    <div style={titleBarStyle}>
-                        <i className="bi bi-list-task" style={{ color: '#fff', fontSize: 14 }}></i>
-                        <span style={{ fontWeight: 'bold', fontSize: 12, color: '#fff', textShadow: '1px 1px 1px rgba(0,0,0,0.4)'}}>
-                            Work Orders
-                        </span>
-                        <span style={{ fontSize: 10, color: '#cce0ff', marginLeft: 4 }}>
-                            {filtered.length} of {flatWOs.length} steps
-                        </span>
-                        {canPrintCard && sel.count > 0 && (
-                            <button
-                                onClick={() => setBulkPrintOpen(true)}
-                                style={{ fontFamily: xpFont, fontSize: 10, padding: '1px 8px', background: 'linear-gradient(to bottom,#b0e8b0,#70c870)', border: '1px solid #0a3e0a', cursor: 'pointer', color: '#004000', marginLeft: 8 }}
-                            >
-                                {''}
-                                Print Selected ({sel.count})
-                            </button>
-                        )}
-                    </div>
 
                     {/* Tabs */}
                     <Tabs<WOTabKey> tabs={WO_TABS} activeKey={activeTab as WOTabKey} onChange={onTabChange} />
@@ -767,6 +743,14 @@ export default function WorkOrderListView({
                         {loading && (
                             <span style={{ fontSize: 10, color: '#666', marginLeft: 4 }}>Loading...</span>
                         )}
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginLeft: 'auto' }}>
+                            {canPrintCard && sel.count > 0 && (
+                                <ToolbarButton tone="neutral" icon="bi-printer" onClick={() => setBulkPrintOpen(true)}>
+                                    Print Selected ({sel.count})
+                                </ToolbarButton>
+                            )}
+                            <ToolbarCount>{filtered.length} of {flatWOs.length} steps</ToolbarCount>
+                        </div>
                     </div>
 
                     {/* Table */}

@@ -24,7 +24,10 @@ const NAV_COLOR = '#003080';
 // Rail ↔ open, for erp's own slot content: the package keeps one layout and
 // slides it (its "glide"), so these do the same — text widens and fades rather
 // than mounting into a 44px box and wrapping for a frame.
-const GLIDE = '0.12s';
+// The shell's motion curve (globals.css --terras-sidebar-motion: a soft
+// overshoot opening, a slow-then-quick release closing), shared with the
+// package's own glide so Quick Scan and the ID card move with the rail.
+const GLIDE = 'var(--terras-sidebar-motion, 0.12s)';
 const glideText = (shown: boolean, maxWidth: number): React.CSSProperties => ({
   display: 'inline-block',
   maxWidth: shown ? maxWidth : 0,

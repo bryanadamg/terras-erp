@@ -9,7 +9,7 @@ import { usePaginatedFetch } from '../context/usePaginatedList';
 import { useToast } from '../components/shared/Toast';
 import { useUser } from '../context/UserContext';
 import { Tabs } from '../components/shared/Tabs';
-import { PageTitleBar, viewShellStyle } from '../components/shared/shellTheme';
+import { viewShellStyle } from '../components/shared/shellTheme';
 import { API_BASE } from '../components/shared/apiBase';
 
 const PAGE_SIZE = 50;
@@ -169,8 +169,6 @@ export default function ColorsPage() {
 
     return (
         <div style={viewShellStyle()}>
-
-            <PageTitleBar icon="bi-palette2" title="Colors" />
 
             <Tabs
                 activeKey={tab}

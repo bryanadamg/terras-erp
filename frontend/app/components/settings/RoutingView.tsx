@@ -5,7 +5,7 @@ import { useLanguage } from '../../context/LanguageContext';
 import { useUser } from '../../context/UserContext';
 import { useRememberedTab } from '../../hooks/useRememberedTab';
 import TreeSelect, { buildLocationPickerTree, TreeSelectOption } from '../shared/TreeSelect';
-import { ShellWindow, ShellTitleBar, SearchField, ToolbarButton } from '../shared/shellTheme';
+import { ShellWindow, SearchField, ToolbarButton } from '../shared/shellTheme';
 import { Count as ToolbarCount } from '@bryanadamg/terras-ui/components/Window';
 import { Tabs, TabDef } from '../shared/Tabs';
 import Pager from '../shared/Pager';
@@ -631,11 +631,6 @@ export default function RoutingView({ workCenters, operations, locations, onCrea
   return (
       <>
       <ShellWindow fill="page" className="fade-in">
-          <ShellTitleBar
-              icon="bi-signpost-split-fill"
-              title={t('routing')}
-              subtitle="Work centers and standard operations used across manufacturing routings"
-          />
           <Tabs tabs={TABS} activeKey={activeTab} onChange={(key) => setActiveTab(key)} />
           <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', background: '#ece9d8'}}>
               <div style={{ display: activeTab === 'work_centers' ? 'flex' : 'none', flex: 1, minHeight: 0, flexDirection: 'column' }}>

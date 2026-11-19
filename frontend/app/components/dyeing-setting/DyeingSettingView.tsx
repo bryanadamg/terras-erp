@@ -9,7 +9,7 @@ import DyeingOrdersTab from './DyeingOrdersTab';
 import SettingOrdersTab from './SettingOrdersTab';
 import { xpFont, FORM_SECTION_BLUE, xpBtn as xpBtnBase } from '../shared/xpTheme';
 import { field as xpInputBase } from '@bryanadamg/terras-ui/styles';
-import { viewShellStyle, PageTitleBar } from '../shared/shellTheme';
+import { viewShellStyle } from '../shared/shellTheme';
 import { useUser } from '../../context/UserContext';
 
 // ── XP Style Constants ─────────────────────────────────────────────────────────
@@ -53,9 +53,6 @@ export default function DyeingSettingView() {
     // ── Render ────────────────────────────────────────────────────────────────
     return (
         <div style={viewShellStyle('page', { fontFamily: xpFont })}>
-            {/* Title bar */}
-            <PageTitleBar icon="bi-droplet-fill" title="Dyeing & Setting" />
-
             {/* Tabs bar */}
             <Tabs tabs={visibleTabs} activeKey={activeTab} onChange={setActiveTab} />
 

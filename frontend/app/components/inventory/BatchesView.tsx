@@ -17,7 +17,7 @@ import { useSortable, ExpandedRowPanel, rowStateBg } from '@bryanadamg/terras-ui
 import { field as xpInputBase, BTN_TONES } from '@bryanadamg/terras-ui/styles';
 import { SKEL_PAGE_ROWS } from '@bryanadamg/terras-ui/components/Skeleton';
 import { ToolbarButton, SearchField, pageFillStyle } from '../shared/shellTheme';
-import { bevel as sharedXpBevel, titleBar as sharedXpTitleBar } from '@bryanadamg/terras-ui/styles';
+import { bevel as sharedXpBevel } from '@bryanadamg/terras-ui/styles';
 import { FilterChipBar } from '@bryanadamg/terras-ui/components/FilterChipBar';
 
 const LOT_STATUS_FILTERS = [
@@ -1029,7 +1029,6 @@ export default function BatchesView({ items, locations, categories, workCenters,
   // ── Styles ────────────────────────────────────────────────────────────────
   const xpBevel: React.CSSProperties = sharedXpBevel();
 
-  const xpTitleBar: React.CSSProperties = sharedXpTitleBar();
 
   const xpBtn = (extra: React.CSSProperties = {}): React.CSSProperties =>
     xpBtnBase(extra);
@@ -1058,10 +1057,6 @@ export default function BatchesView({ items, locations, categories, workCenters,
   return (
     <div className="fade-in" style={pageFillStyle}>
       <div style={{ ...xpBevel, display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0 }}>
-          {/* ── Title bar ── */}
-          <div style={xpTitleBar}>
-            <span>Lot Management</span>
-          </div>
           {/* ── Lot type tabs — classifies by the process that produced the lot ── */}
           <Tabs<string> tabs={lotTypeTabs} activeKey={lotTypeTab} onChange={handleLotTypeTabChange} />
           {/* ── Filter/search bar + actions ── */}

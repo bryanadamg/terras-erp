@@ -12,7 +12,7 @@ import { StatusChip, useFloatingMenu, MenuTriggerButton, FloatingMenu, XPActionB
 import { FormSection } from '@bryanadamg/terras-ui/components/FormSection';
 import { FormError } from '@bryanadamg/terras-ui/components/Field';
 import { SKEL_PAGE_ROWS } from '@bryanadamg/terras-ui/components/Skeleton';
-import { SearchField, ToolbarButton, viewShellStyle, PageTitleBar } from '../shared/shellTheme';
+import { SearchField, ToolbarButton, viewShellStyle } from '../shared/shellTheme';
 import { FilterChipBar } from '@bryanadamg/terras-ui/components/FilterChipBar';
 import {
     LV_XP_FONT, lvInput, lvBtn, lvPrimaryBtn, lvLabel, lvTh, lvTd, lvSep, lvRow, lvThead, TableEmpty, ResizableTable } from '../shared/listViewTheme';
@@ -52,7 +52,7 @@ interface Props {
     onEdit: (id: string, payload: any) => Promise<{ ok: boolean; error?: string }>;
     onDelete: (id: string) => void;
     prefill?: { source_lab_dip_line_id: string; values: Record<string, string> } | null;
-    embedded?: boolean;   // when tabbed under the Colors shell, drop own title + outer frame
+    embedded?: boolean;   // when tabbed under the Colors shell, drop own outer frame
     colorVariantValues?: any[];   // `Colors` (system_role='color') attribute values, for the variant link picker
 }
 
@@ -212,11 +212,6 @@ export default function ColorLibraryView({
         <div style={embedded
             ? { display: 'flex', flexDirection: 'column', height: '100%', minHeight: 0, fontFamily: LV_XP_FONT, background: '#fff' }
             : viewShellStyle('page', { fontFamily: LV_XP_FONT })}>
-
-            {/* Title bar (hidden when embedded under the Colors tab shell) */}
-            {!embedded && (
-            <PageTitleBar icon="bi-palette2" title="Color Library" />
-            )}
 
             {/* Toolbar */}
             <div style={{ background: 'linear-gradient(to bottom, #f5f4ef, #e0dfd8)', borderBottom: '1px solid #b0a898', padding: '4px 8px', display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap', flexShrink: 0 }}>

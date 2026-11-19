@@ -13,7 +13,7 @@ import { LotChips, lotSizeLabel, lotColorLabel } from '../shared/LotChips';
 import TreeSelect, { buildLocationFilterTree, expandLocationFilterValue, buildCategoryTree, expandCategoryFilterValue, locationAncestorNames } from '../shared/TreeSelect';
 import Pager from '../shared/Pager';
 import { SearchField, pageFillStyle, flexFillStyle } from '../shared/shellTheme';
-import { bevel as sharedXpBevel, titleBar as sharedXpTitleBar, toolbar as sharedXpToolbar } from '@bryanadamg/terras-ui/styles';
+import { bevel as sharedXpBevel, toolbar as sharedXpToolbar } from '@bryanadamg/terras-ui/styles';
 import { FilterChipBar, type FilterChipOption } from '@bryanadamg/terras-ui/components/FilterChipBar';
 import { SegmentedBar } from '@bryanadamg/terras-ui/components/SegmentedBar';
 import { lvThead, lvZebra, Dash, ResizableTable } from '../shared/listViewTheme';
@@ -224,7 +224,6 @@ export default function ReportsView(_props: any) {
     // range + actions. Only the lower row draws the separator so the pair
     // reads as one band (classic only — modern nests both rows inside the
     // card-header instead).
-    const titleBar: React.CSSProperties = sharedXpTitleBar();
     const toolbar: React.CSSProperties = sharedXpToolbar({ padding: '4px 6px', gap: '5px', flexWrap: 'nowrap', overflowX: 'auto' });
     const toolbarTop: React.CSSProperties = { ...toolbar, borderBottom: 'none', paddingBottom: 0 };
     const th: React.CSSProperties = {
@@ -383,10 +382,6 @@ export default function ReportsView(_props: any) {
         <>
         <div className={'fade-in print-container'} style={pageFillStyle}>
             <div style={sharedXpBevel(flexFillStyle)}>
-                <div style={titleBar} className="no-print">
-                        <span><i className="bi bi-journal-text" style={{ marginRight: 6 }} />{t('stock_ledger')}</span>
-                        <span style={{ fontSize: '10px', opacity: 0.85 }}>{total.toLocaleString()} movements</span>
-                    </div>
                 {toolbarRow1}
                 {toolbarRow2}
 

@@ -9,7 +9,8 @@ import { field as xpInputBase, BTN_TONES } from '@bryanadamg/terras-ui/styles';
 import { SKEL_PAGE_ROWS } from '@bryanadamg/terras-ui/components/Skeleton';
 import { usePaginatedFetch } from '../../context/usePaginatedList';
 import { SearchField, ToolbarButton, pageFillStyle, flexFillStyle } from '../shared/shellTheme';
-import { bevel as sharedXpBevel, titleBar as sharedXpTitleBar, toolbar as sharedXpToolbar } from '@bryanadamg/terras-ui/styles';
+import { bevel as sharedXpBevel, toolbar as sharedXpToolbar } from '@bryanadamg/terras-ui/styles';
+import { Count as ToolbarCount } from '@bryanadamg/terras-ui/components/Window';
 import { useToast } from '../shared/Toast';
 import { saveResponse } from '../shared/download';
 import SearchableSelect from '@bryanadamg/terras-ui/components/Combobox';
@@ -593,7 +594,6 @@ export default function StockOnHandView({ locations, attributes, categories, ite
 
     // ── XP style helpers ─────────────────────────────────────────────────────
     const xpBevel: React.CSSProperties = sharedXpBevel();
-    const xpTitleBar: React.CSSProperties = sharedXpTitleBar();
     const xpToolbar: React.CSSProperties = sharedXpToolbar({ gap: '6px' });
     const xpInput: React.CSSProperties = xpInputBase({ boxShadow: 'inset 1px 1px 0 rgba(0,0,0,0.1)' });
     const xpSelect: React.CSSProperties = { ...xpInput, height: '22px' };
@@ -1294,11 +1294,10 @@ export default function StockOnHandView({ locations, attributes, categories, ite
                 style={{ ...xpBevel, ...flexFillStyle }}
                 className={undefined}
             >
-                <div style={xpTitleBar} className={undefined}>
-                    <span><i className="bi bi-boxes" style={{ marginRight: 6 }} />{t('stock_on_hand') || 'Stock On-Hand'}</span>
-                    <span style={{ fontSize: '10px', opacity: 0.85 }} className={undefined}>{total} records</span>
+                <div style={xpToolbar}>
+                    {toolbarControls}
+                    <ToolbarCount right={!canEntry}>{total} records</ToolbarCount>
                 </div>
-                <div style={xpToolbar}>{toolbarControls}</div>
                 <div style={{ flex: 1, overflow: 'auto', background: '#ffffff', minHeight: 0 }} className={undefined}>
                     <ResizableTable style={{ width: '100%', minWidth: TABLE_MIN_WIDTH, borderCollapse: 'collapse', tableLayout: 'fixed' }} className={undefined}>
                         <thead className={undefined}>

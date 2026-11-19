@@ -17,7 +17,7 @@ import { BTN_TONES } from '@bryanadamg/terras-ui/styles';
 import { SKEL_PAGE_ROWS } from '@bryanadamg/terras-ui/components/Skeleton';
 import { LV_XP_FONT, lvBtn, lvInput, lvTd, lvRow, lvSubTh, lvSubTd, lvSubRow, ExpanderCell, lvThSticky, lvPickerRow, lvSubTable, ResizableTable } from '../shared/listViewTheme';
 import { RowCheckbox } from '@bryanadamg/terras-ui/components/Table';
-import { ShellWindow, ShellTitleBar, ToolbarButton, SearchField } from '../shared/shellTheme';
+import { ShellWindow, ToolbarButton, SearchField } from '../shared/shellTheme';
 import { toolbar as xpToolbar } from '@bryanadamg/terras-ui/styles';
 import Pager from '../shared/Pager';
 import ModalWrapper from '../shared/ModalWrapper';
@@ -719,10 +719,6 @@ export default function PackingOrderView({ initialCreateState, onClearInitialSta
 
     return (
         <ShellWindow fill="page" className="fade-in" style={{ fontFamily: xpFont }}>
-            <ShellTitleBar
-                icon="bi-box2"
-                title="Packing Orders"
-            />
             <div style={xpToolbar()}>
                 <ToolbarButton tone="neutral" icon="bi-arrow-clockwise" onClick={loadAll}>Refresh</ToolbarButton>
                 <SearchField value={searchInput} onChange={setSearch} placeholder="Search code, item, colour, SO, customer…" width={260} style={{ marginLeft: 6 }} />

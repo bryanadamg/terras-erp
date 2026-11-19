@@ -4,7 +4,7 @@ import { useEffect, useRef } from 'react';
 import { useUser } from '../../context/UserContext';
 import { useRememberedTab } from '../../hooks/useRememberedTab';
 import { Tabs, TabDef } from '../shared/Tabs';
-import { PageTitleBar, ShellWindow, scrollAreaStyle } from '../shared/shellTheme';
+import { ShellWindow, scrollAreaStyle } from '../shared/shellTheme';
 import SettingsGeneralTab from './SettingsGeneralTab';
 import SettingsAccountTab from './SettingsAccountTab';
 import SettingsDatabaseTab from './SettingsDatabaseTab';
@@ -47,9 +47,6 @@ export default function SettingsView({
                 place each time. Hand-rolling the frame is also how this file ended up
                 on `borderRadius: 9`, one off the shell tier every other view uses. */}
             <ShellWindow fill="page" style={undefined}>
-                {/* Title bar */}
-                <PageTitleBar icon="bi-sliders" title="Settings" />
-
                 {/* Tabs bar */}
                 <Tabs tabs={tabs} activeKey={activeTab} onChange={(key) => setActiveTab(key)} />
 

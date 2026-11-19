@@ -26,7 +26,7 @@ export const MODAL_REPOSITION_EVENT = UIModal.REPOSITION_EVENT;
 // SAME blue gradient, so a modal read as part of the page it floated over.
 // The signal is one class on <body>; the dimming itself is CSS custom properties
 // (--xp-title-blue / --xp-title-blue-border in globals.css) read by the shared
-// chrome primitives — `PageTitleBar`/`xpTitleBar`/`TITLE_TONES` in shellTheme.tsx
+// chrome primitives — `ShellTitleBar`/`xpTitleBar`/`TITLE_TONES` in shellTheme.tsx
 // and `.classic-header` — so no view declares the gradient and none had to change.
 // terras-ui's title bars read --terras-title-blue, which globals.css bridges onto
 // the same pair. A window must not dim itself: globals.css pins every

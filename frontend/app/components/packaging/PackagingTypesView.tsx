@@ -4,7 +4,7 @@ import { useConfirm } from '../../context/ConfirmContext';
 import { useUser } from '../../context/UserContext';
 import ModalWrapper from '../shared/ModalWrapper';
 import { StatusChip, CodeChip, XP_BTN, useFloatingMenu, MenuTriggerButton, FloatingMenu } from '../shared/xpTheme';
-import { SearchField, ToolbarButton, viewShellStyle, PageTitleBar } from '../shared/shellTheme';
+import { SearchField, ToolbarButton, viewShellStyle } from '../shared/shellTheme';
 import { Count as ToolbarCount } from '@bryanadamg/terras-ui/components/Window';
 import {
     LV_XP_FONT, lvInput, lvBtn, lvPrimaryBtn, lvLabel, lvTh, lvTd, lvSep, lvRow, lvThead, TableEmpty,
@@ -102,8 +102,6 @@ export default function PackagingTypesView({ types, loading, onCreate, onEdit, o
 
     return (
         <div style={viewShellStyle('page', { fontFamily: LV_XP_FONT })}>
-            <PageTitleBar icon="bi-box2" title="Packaging Types" />
-
             <div style={{ background: 'linear-gradient(to bottom, #f5f4ef, #e0dfd8)', borderBottom: '1px solid #b0a898', padding: '4px 8px', display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap', flexShrink: 0 }}>
                 <SearchField value={search} onChange={setSearch} placeholder="Search code or name…" width={240} />
                 <ToolbarCount right>

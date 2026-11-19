@@ -23,7 +23,7 @@ import { qtyFmt } from '../shared/format';
 import { useComboSearch, useFinishedGoodsSearch } from '../shared/useEntitySearch';
 import Pager from '../shared/Pager';
 import { Tooltip } from '@bryanadamg/terras-ui/components/Tooltip';
-import { ShellWindow, ShellTitleBar, SearchField, ToolbarButton } from '../shared/shellTheme';
+import { ShellWindow, SearchField, ToolbarButton } from '../shared/shellTheme';
 import { toolbar as xpToolbar } from '@bryanadamg/terras-ui/styles';
 import { FilterChipBar } from '@bryanadamg/terras-ui/components/FilterChipBar';
 import { Count as ToolbarCount } from '@bryanadamg/terras-ui/components/Window';
@@ -2095,12 +2095,6 @@ In stock ${fmtQty(f.baseAvailable)}${bu} · Shipped ${fmtQty(f.baseShipped)}${bu
 
        {/* ── Outer shell ── */}
        <ShellWindow fill="page" className="fade-in">
-           <ShellTitleBar
-               icon="bi-receipt-cutoff"
-               title={t('sales_orders')}
-               subtitle="Manage incoming customer orders"
-           />
-
            {/* ── Secondary toolbar: search + status filters + count + actions ── */}
            <div
                style={xpToolbar()}

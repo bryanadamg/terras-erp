@@ -6,7 +6,7 @@ import { useData } from '../../context/DataContext';
 import { useTimezone } from '../../context/TimezoneContext';
 import { useToast } from '../shared/Toast';
 import { useConfirm } from '../../context/ConfirmContext';
-import { ShellWindow, ShellTitleBar, ToolbarButton } from '../shared/shellTheme';
+import { ShellWindow, ToolbarButton } from '../shared/shellTheme';
 import { toolbar as xpToolbar } from '@bryanadamg/terras-ui/styles';
 import { XPActionButton, Chip, familyTint, xpFont, useFloatingMenu, FloatingMenu } from '../shared/xpTheme';
 import { PanelSkeleton } from '@bryanadamg/terras-ui/components/Skeleton';
@@ -457,7 +457,6 @@ export default function PrintDesignerView() {
     if (!draft) {
         return (
             <ShellWindow>
-                <ShellTitleBar icon="bi-printer" title="Print Layout Designer" />
                 <div style={{ padding: 24 }}>No editable document types are registered.</div>
             </ShellWindow>
         );
@@ -496,12 +495,12 @@ export default function PrintDesignerView() {
     const paneBg = '#ece9d8';
     const paneBorder = '1px solid #b0a898';
 
-    // Header and zoom-strip actions come from the shared primitives — this view used
+    // Toolbar and zoom-strip actions come from the shared primitives — this view used
     // to hand-roll both, which is how it ended up with `borderRadius: 0` buttons next
     // to the app's BUTTON_RADIUS ones and a modern `btn-secondary` where every other
     // toolbar uses an outline.
     //
-    // ToolbarButton for the header: labeled document actions, the same vocabulary as
+    // ToolbarButton for the toolbar's document actions: labeled, the same vocabulary as
     // every list toolbar ("create" is its green CTA tone, which Save wants). The zoom
     // strip takes XPActionButton instead — the compact flat one — because those are
     // dense repeated controls, not document actions.
@@ -512,54 +511,7 @@ export default function PrintDesignerView() {
         // there) — exempting the whole window left the toolbar, band list and
         // inspector rendering 20% larger than the chrome around them.
         <ShellWindow>
-            <ShellTitleBar
-                icon="bi-printer"
-                title="Print Layout Designer"
-                subtitle="Choose which fields appear on each printed document, and how they are sized and placed."
-                right={
-                    <span style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
-                        <ToolbarButton icon="bi-arrow-90deg-left"
-                            onClick={undo} disabled={past.current.length === 0}
-                        >
-                            Undo
-                        </ToolbarButton>
-                        <ToolbarButton icon="bi-arrow-90deg-right"
-                            onClick={redo} disabled={future.current.length === 0}
-                        >
-                            Redo
-                        </ToolbarButton>
-                        {dirty && (
-                            <ToolbarButton icon="bi-arrow-counterclockwise" onClick={revertDraft}>
-                                Revert
-                            </ToolbarButton>
-                        )}
-                        {/* Prints the draft, so it needs no save first — that is the point. */}
-                        <ToolbarButton icon="bi-printer" printable
-                            onClick={() => setTestPrinting(true)}
-                            disabled={!hasSample || testPrinting}
-                        >
-                            Test print
-                        </ToolbarButton>
-                        <ToolbarButton tone="danger" icon="bi-trash"
-                            onClick={reset} disabled={!customised}
-                        >
-                            Reset to default
-                        </ToolbarButton>
-                        {/* Dirty state also sits in the status bar, but that is the far corner
-                            from Save — the one place the state actually changes what you do. */}
-                        {dirty && (
-                            <Chip tone={familyTint('amber')}>Unsaved</Chip>
-                        )}
-                        <ToolbarButton tone="create" icon="bi-check-lg"
-                            onClick={save} disabled={!dirty || saving}
-                        >
-                            {saving ? 'Saving...' : 'Save layout'}
-                        </ToolbarButton>
-                    </span>
-                }
-            />
-
-            {/* Toolbar: which document, which work order to preview with */}
+            {/* Toolbar: which document, which work order to preview with, document actions */}
             <div style={xpToolbar()} className={undefined}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
                     <span style={{ fontFamily: xpFont, fontSize: 11, fontWeight: 'bold' }}>Document:</span>
@@ -606,6 +558,46 @@ export default function PrintDesignerView() {
                             />
                         )}
                     </div>
+
+                    <span style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+                        <ToolbarButton icon="bi-arrow-90deg-left"
+                            onClick={undo} disabled={past.current.length === 0}
+                        >
+                            Undo
+                        </ToolbarButton>
+                        <ToolbarButton icon="bi-arrow-90deg-right"
+                            onClick={redo} disabled={future.current.length === 0}
+                        >
+                            Redo
+                        </ToolbarButton>
+                        {dirty && (
+                            <ToolbarButton icon="bi-arrow-counterclockwise" onClick={revertDraft}>
+                                Revert
+                            </ToolbarButton>
+                        )}
+                        {/* Prints the draft, so it needs no save first — that is the point. */}
+                        <ToolbarButton icon="bi-printer" printable
+                            onClick={() => setTestPrinting(true)}
+                            disabled={!hasSample || testPrinting}
+                        >
+                            Test print
+                        </ToolbarButton>
+                        <ToolbarButton tone="danger" icon="bi-trash"
+                            onClick={reset} disabled={!customised}
+                        >
+                            Reset to default
+                        </ToolbarButton>
+                        {/* Dirty state also sits in the status bar, but that is the far corner
+                            from Save — the one place the state actually changes what you do. */}
+                        {dirty && (
+                            <Chip tone={familyTint('amber')}>Unsaved</Chip>
+                        )}
+                        <ToolbarButton tone="create" icon="bi-check-lg"
+                            onClick={save} disabled={!dirty || saving}
+                        >
+                            {saving ? 'Saving...' : 'Save layout'}
+                        </ToolbarButton>
+                    </span>
                 </div>
                 {isKartu && !loadingSamples && matchingSamples.length === 0 && previewPool.length > 0 && (
                     <div style={{
