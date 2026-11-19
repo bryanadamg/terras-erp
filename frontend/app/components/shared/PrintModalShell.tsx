@@ -3,7 +3,7 @@ import React, { useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { useIsMobile } from '../../hooks/useIsMobile';
 import { useUser } from '../../context/UserContext';
-import { MODAL_Z, MODAL_REPOSITION_EVENT, useInactiveChromeWhileOpen, WindowCloseButton } from './ModalWrapper';
+import { MODAL_Z, MODAL_REPOSITION_EVENT, WindowCloseButton } from './ModalWrapper';
 import { toLayoutPx } from '@bryanadamg/terras-ui/scale';
 import { xpFont, XP_BTN, xpBtn, WINDOW_RADIUS, WINDOW_RADIUS_INNER } from './xpTheme';
 import { BTN_TONES } from '@bryanadamg/terras-ui/styles';
@@ -64,10 +64,6 @@ export default function PrintModalShell({
         router.push(`/print-designer?${qs.toString()}`);
     };
     const floating = modeless && !isMobile;
-
-    // Mounted == open for this shell, so the page chrome behind it is inactive
-    // for its whole life (same signal ModalWrapper uses).
-    useInactiveChromeWhileOpen(true);
 
     const panelRef = useRef<HTMLDivElement>(null);
     const dragOffset = useRef({ x: 0, y: 0 });

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useId } from 'react';
+import React, { useId } from 'react';
 import UIModal from '@bryanadamg/terras-ui/components/Modal';
 import UIWindowCloseButton from '@bryanadamg/terras-ui/components/WindowCloseButton';
 import type { ShellTone } from '@bryanadamg/terras-ui/types';
@@ -18,38 +18,6 @@ export { MODAL_Z };
 // resize/scroll event) — anything anchoring a portaled overlay to the panel
 // (e.g. SearchableSelect, TreeSelect dropdowns) must listen for this to stay glued.
 export const MODAL_REPOSITION_EVENT = UIModal.REPOSITION_EVENT;
-
-// ── Window focus: the page chrome behind an open window goes "inactive" ──────
-// XP's own answer to "which window am I typing in": the focused window keeps the
-// saturated blue title bar, everything behind it desaturates. Without it the app
-// header, the list panel's title bar and the dialog's title bar all painted the
-// SAME blue gradient, so a modal read as part of the page it floated over.
-// The signal is one class on <body>; the dimming itself is CSS custom properties
-// (--xp-title-blue / --xp-title-blue-border in globals.css) read by the shared
-// chrome primitives — `ShellTitleBar`/`xpTitleBar`/`TITLE_TONES` in shellTheme.tsx
-// and `.classic-header` — so no view declares the gradient and none had to change.
-// terras-ui's title bars read --terras-title-blue, which globals.css bridges onto
-// the same pair. A window must not dim itself: globals.css pins every
-// [role="dialog"] back to the active blue.
-const CHROME_INACTIVE_CLASS = 'window-chrome-inactive';
-let openWindowCount = 0;
-
-/**
- * Marks the page chrome inactive while `active` is true. Refcounted, so nested
- * windows (levels 1-3) and print dialogs stack without the first one to close
- * un-dimming the page under the others.
- */
-export function useInactiveChromeWhileOpen(active: boolean) {
-    useEffect(() => {
-        if (!active || typeof document === 'undefined') return;
-        openWindowCount += 1;
-        document.body.classList.add(CHROME_INACTIVE_CLASS);
-        return () => {
-            openWindowCount = Math.max(0, openWindowCount - 1);
-            if (openWindowCount === 0) document.body.classList.remove(CHROME_INACTIVE_CLASS);
-        };
-    }, [active]);
-}
 
 /**
  * The window close button — one face for every window title bar (ModalWrapper's
@@ -108,8 +76,7 @@ const VARIANT_TONE: Record<NonNullable<ModalWrapperProps['variant']>, ShellTone>
 // Window title-bar gradients, exported because chrome OUTSIDE a window sometimes
 // has to match one: the weaving monitor's loom card paints its status strip with
 // the same gradient the machine window opens with, so the window reads as that
-// tile zoomed in. Read off the same tokens the window's title bar paints from;
-// blue is the never-dimmed one, because the window it matches never dims.
+// tile zoomed in. Read off the same tokens the window's title bar paints from.
 export const xpTitleGradients: Record<string, string> = Object.fromEntries(
     Object.entries(VARIANT_TONE).map(([variant, tone]) =>
         [variant, tone === 'blue' ? 'var(--xp-title-blue-active)' : `var(--terras-title-${tone})`]),
@@ -123,7 +90,7 @@ const xpSizeWidths: Record<string, number> = { sm: 340, md: 480, lg: 640, xl: 82
  * backdrop and the modeless drag. Kept as a local module so the ~45 call sites
  * keep their `isOpen`/`size`/`variant`/`banner` props and stay untouched.
  *
- * What stays here is app-side: the window-focus dimming, the size scale, the
+ * What stays here is app-side: the size scale, the
  * `.ui-style-classic` body that Bootstrap's control overrides key off, and the
  * `banner` strip, which sits outside the scrolling body so its background reaches
  * both frame edges.
@@ -133,8 +100,6 @@ export default function ModalWrapper({
     level = 1, size = 'md', variant = 'primary', modeless = false, bodyScroll = true
 }: ModalWrapperProps) {
     const titleId = useId();
-
-    useInactiveChromeWhileOpen(isOpen);
 
     if (!isOpen) return null;
 
