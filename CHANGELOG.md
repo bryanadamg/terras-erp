@@ -15,6 +15,16 @@ on `main`:
 
 ## [Unreleased]
 
+## [1.7.0] - 2026-11-19
+
+### Changed
+- The collapsible sidebar opens and closes more smoothly: it eases open as the cursor approaches and lets go slowly when it moves away
+- Pages no longer repeat their name in a title bar under the header, leaving more room for the list. Record counts and bulk actions (Items, Work Orders, Stock on Hand and others) now sit in the toolbar
+
+### Fixed
+- The page area has an even margin on all four sides and fills down to the bottom of the window
+- The Purchase Orders table now takes its height from the page like the other lists, so it no longer cuts off short or overflows
+
 ## [1.6.0] - 2026-11-18
 
 ### Added
