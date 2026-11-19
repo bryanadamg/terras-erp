@@ -198,7 +198,10 @@ class BOMSize(Base):
     measurement_max: Mapped[Optional[float]] = mapped_column(Numeric(8, 2), nullable=True)
 
     bom = relationship("BOM", back_populates="sizes")
-    size = relationship("Size", foreign_keys=[size_id])
+    # Joined, so `size_name` never lazy-loads: every `selectinload(BOM.sizes)` path
+    # (pick-list suggest, packing, SO lines) reads it, and a lazy load on an
+    # AsyncSession 500s (MissingGreenlet) — SO-2026-11-00003's empty Pick Cartons.
+    size = relationship("Size", foreign_keys=[size_id], lazy="joined")
 
     @property
     def size_name(self) -> Optional[str]:
