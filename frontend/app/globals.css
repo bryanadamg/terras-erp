@@ -118,17 +118,18 @@ body {
    ============================================================ */
 :root {
   /* The never-dimmed pair: what a window's own title bar paints with. */
-  /* Flat cobalt, not the XP blue→cyan fade (retro-modern pass): the band keeps
-     its place and its inset highlight, it just stops being glossy. */
-  --xp-title-blue-active: #2350d8;
-  --xp-title-blue-border-active: #122f86;
+  /* Flat accent, not the XP blue→cyan fade (retro-modern pass): the band keeps
+     its place and its inset highlight, it just stops being glossy. The colour is
+     terras-ui's accent, so a palette bump in the package carries through. */
+  --xp-title-blue-active: var(--terras-accent, #1f4fd1);
+  --xp-title-blue-border-active: var(--terras-accent-deep, #10276b);
   --xp-title-blue: var(--xp-title-blue-active);
   --xp-title-blue-border: var(--xp-title-blue-border-active);
   /* Flat left-end of the title gradient, for the sidebar brand block: it sits to
      the LEFT of the header, so re-running the gradient there would end bright at
      the seam and restart dark in the header. Flat = an invisible join. Declared
      as a var so the brand dims with the header when the window loses focus. */
-  --xp-title-flat: #2350d8;
+  --xp-title-flat: var(--xp-title-blue-active);
 }
 body.window-chrome-inactive {
   --xp-title-blue: #7a96b8;

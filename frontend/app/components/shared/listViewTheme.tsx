@@ -142,7 +142,7 @@ export const lvSubRow = (
     { zebra = false, fill }: { zebra?: boolean; fill?: string } = {},
 ): React.CSSProperties | undefined => {
     if (fill) return { background: fill };
-    if (zebra) return { background: idx % 2 === 0 ? '#fff' : ('#f7f5f0') };
+    if (zebra) return { background: idx % 2 === 0 ? 'var(--terras-table-bg, #fff)' : 'var(--terras-row-stripe-sub, #fbfaf7)' };
     return undefined;
 };
 
@@ -167,9 +167,11 @@ export const lvSep = (): React.CSSProperties =>
 // several states (selected / expanded / QC-tinted / stripe) and so cannot take
 // `lvRow` wholesale. ~24 rows wrote this ternary inline, and they had drifted:
 // the lot list striped bluish `#f0f0f8` and sales orders used `#fafafa` in modern
-// where every other list used `#f8fafc`.
+// where every other list used `#f8fafc`. Both grounds are terras-ui tokens
+// (`--terras-table-bg` / `--terras-row-stripe`), so a palette change restripes
+// every list; the literals are the fallback.
 export const lvZebra = (idx: number): string =>
-    idx % 2 === 0 ? '#fff' : ('#f5f3ee');
+    idx % 2 === 0 ? 'var(--terras-table-bg, #fff)' : 'var(--terras-row-stripe, #f9f8f4)';
 
 // Row background stripe (zebra), dual-theme + border.
 export const lvRow = (idx: number): React.CSSProperties => ({
