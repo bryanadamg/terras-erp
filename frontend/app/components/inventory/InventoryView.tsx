@@ -567,7 +567,10 @@ export default function InventoryView({
           code: editingItem.code,
           name: editingItem.name,
           uom: editingItem.uom,
-          category_id: effectiveFormCategoryId,
+          // undefined (omitted) rather than null: the backend now clears on an
+          // explicit null, and the category cascade can be empty before
+          // categories load — that must not wipe the item's category.
+          category_id: effectiveFormCategoryId ?? undefined,
           attribute_ids: editingItem.attribute_ids || [],
           variant_type: editingItem.variant_type || null,
           packaging_factor_ids: editingItem.packaging_factor_ids || [],
