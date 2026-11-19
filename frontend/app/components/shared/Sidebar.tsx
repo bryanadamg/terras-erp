@@ -17,9 +17,9 @@ interface SidebarProps {
 
 // Exported so BootShell (the pre-auth skeleton reusing this same layout) can
 // paint the identical colors instead of drifting out of sync with a second
-// hand-rolled palette. terras-ui's `--terras-sidebar-bg` holds the same value.
-export const SIDEBAR_BG = '#d6dff7';
-const NAV_COLOR = '#003080';
+// hand-rolled palette. Read from terras-ui's tokens so a palette bump follows.
+export const SIDEBAR_BG = 'var(--terras-sidebar-bg, #f6f8fc)';
+const NAV_COLOR = 'var(--terras-sidebar-active-color, #10276b)';
 
 // Rail ↔ open, for erp's own slot content: the package keeps one layout and
 // slides it (its "glide"), so these do the same — text widens and fades rather

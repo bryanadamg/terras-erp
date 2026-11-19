@@ -19,10 +19,10 @@ import LiveFeedIndicator from '../shared/LiveFeedIndicator';
 // This used to be a navy `#1a1a2e -> #3a3a5e` bar over grey tabs, which belonged
 // to no other screen in the app.
 const HEADER_GRAD  = 'var(--xp-title-blue)';   // shared with desktop chrome; dims while a window is open
-const SIDEBAR_BG   = '#d6dff7';   // Sidebar.tsx SIDEBAR_BG
-const NAV_COLOR    = '#003080';   // Sidebar.tsx ACTIVE_COLOR / NAV_COLOR
-const NAV_RULE     = '#c0ccee';   // Sidebar.tsx nav item borderBottom
-const ACTIVE_GRAD  = 'linear-gradient(to bottom, #0058e6, #003080)'; // sidebar section header
+const SIDEBAR_BG   = 'var(--terras-sidebar-bg, #f6f8fc)';
+const NAV_COLOR    = 'var(--terras-sidebar-active-color, #10276b)';
+const NAV_RULE     = 'var(--terras-sidebar-item-border, #e3e8f1)';
+const ACTIVE_GRAD  = 'var(--terras-sidebar-section-bg, #1f4fd1)'; // sidebar section band
 
 const TABS = [
     { id: 'home',       label: 'Home',       icon: 'bi-house-fill',    route: '/dashboard'     },
