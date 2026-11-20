@@ -234,6 +234,15 @@ export default function PurchaseOrderView({ items, itemResults, onSearchItems, a
       }));
   };
 
+  // Same for the unit price — blank stays blank (no price) rather than 0.
+  const handleLinePriceChange = (index: number, val: string) => {
+      const unit_price = val === '' ? '' : parseFloat(val) || 0;
+      setNewPO(prev => ({
+          ...prev,
+          lines: prev.lines.map((l: any, i: number) => (i === index ? { ...l, unit_price } : l)),
+      }));
+  };
+
   const handleValueChange = (valId: string, attrId: string) => {
       const attr = attributes.find((a: any) => a.id === attrId);
       if (!attr) return;
@@ -614,7 +623,14 @@ export default function PurchaseOrderView({ items, itemResults, onSearchItems, a
                                    {(line.attribute_value_ids||[]).length>0 && <div style={{color:'#666',fontSize:'10px',fontStyle:'italic'}}>{(line.attribute_value_ids||[]).map(getAttributeValueName).join(', ')}</div>}
                                </div>
                                <div style={{display:'flex',alignItems:'center',gap:6}}>
-                                   {line.unit_price != null && line.unit_price !== '' && <span style={{color:'#555',fontSize:'10px'}}>@ Rp {Number(line.unit_price).toLocaleString('en-US', {minimumFractionDigits:2, maximumFractionDigits:2})}</span>}
+                                   <span style={{color:'#555',fontSize:'10px'}}>@ Rp</span>
+                                   <input type="number" min="0" step="0.01"
+                                       style={xpInput({width:90, textAlign:'right'})}
+                                       placeholder="0.00"
+                                       value={line.unit_price ?? ''}
+                                       onChange={e => handleLinePriceChange(idx, e.target.value)}
+                                       title="Unit price (Rp)"
+                                   />
                                    <span style={{fontWeight:'bold'}}>×</span>
                                    <input type="number" min="0" step="any"
                                        style={xpInput({width:70, textAlign:'right'})}
