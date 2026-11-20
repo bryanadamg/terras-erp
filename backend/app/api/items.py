@@ -9,7 +9,8 @@ from app.schemas import ItemCreate, ItemResponse, StockEntryCreate, ItemUpdate, 
 from app.models.location import Location
 from app.models.category import Category
 from app.models.auth import User
-from app.api.auth import get_current_user, require_permission, category_scope_ok
+from app.api.auth import get_current_user, require_permission
+from app.services.item_service import category_scope_allows
 from sqlalchemy import select
 from app.core.pagination import PageParams, PageWindow
 from app.core.ws_manager import manager
@@ -101,7 +102,7 @@ async def create_item_api(payload: ItemCreate, db: AsyncSession = Depends(get_as
     if db_item:
         raise HTTPException(status_code=400, detail="Item already exists")
 
-    if not category_scope_ok(current_user, payload.category_id):
+    if not await category_scope_allows(db, current_user, payload.category_id):
         raise HTTPException(status_code=403, detail="Not authorized for this category")
 
     item = await item_service.create_item(
@@ -191,9 +192,9 @@ async def get_items_api(
 async def update_item_api(item_id: str, payload: ItemUpdate, db: AsyncSession = Depends(get_async_db), current_user: User = Depends(require_permission('item.edit'))):
     from app.models.item import Item as _Item
     existing = (await db.execute(select(_Item.category_id).filter(_Item.id == item_id))).first()
-    if existing and not category_scope_ok(current_user, existing[0]):
+    if existing and not await category_scope_allows(db, current_user, existing[0]):
         raise HTTPException(status_code=403, detail="Not authorized for this category")
-    if payload.category_id and not category_scope_ok(current_user, payload.category_id):
+    if payload.category_id and not await category_scope_allows(db, current_user, payload.category_id):
         raise HTTPException(status_code=403, detail="Not authorized for the target category")
 
     data = payload.model_dump(exclude_unset=True)
@@ -303,7 +304,7 @@ async def delete_item(item_id: str, db: AsyncSession = Depends(get_async_db), cu
     if not item:
         raise HTTPException(status_code=404, detail="Item not found")
 
-    if not category_scope_ok(current_user, item.category_id):
+    if not await category_scope_allows(db, current_user, item.category_id):
         raise HTTPException(status_code=403, detail="Not authorized for this category")
 
     item_code = item.code

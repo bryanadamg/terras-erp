@@ -571,7 +571,7 @@ export default function ProductionRunModal({
             modeless
             onClose={onClose}
             title={<><i className="bi bi-collection-play me-1"></i> NEW PRODUCTION RUN</>}
-            variant="success"
+            variant="primary"
             size="xxl"
             footer={
                 <ModalFooterActions

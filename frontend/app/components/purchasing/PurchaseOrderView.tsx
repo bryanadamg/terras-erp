@@ -6,6 +6,7 @@ import { useLanguage } from '../../context/LanguageContext';
 import SearchableSelect from '@bryanadamg/terras-ui/components/Combobox';
 import TreeSelect, { buildLocationPickerTree } from '../shared/TreeSelect';
 const PurchaseOrderPrintModal = dynamic(() => import('./PurchaseOrderPrintModal'), { ssr: false });
+const PurchaseReportPrintModal = dynamic(() => import('./PurchaseReportPrintModal'), { ssr: false });
 import ModalWrapper from '../shared/ModalWrapper';
 import { useTimezone } from '../../context/TimezoneContext';
 import { useData } from '../../context/DataContext';
@@ -24,20 +25,23 @@ import Pager from '../shared/Pager';
 import { lvThead, lvSubTh, lvSubTd, lvSubTable, lvSubCaption, ExpanderCell, lvThSticky, lvTdRuled, lvZebra, ResizableTable } from '../shared/listViewTheme';
 import { SortableTh } from '@bryanadamg/terras-ui/components/Table';
 import { STATIC_BASE } from '../shared/apiBase';
+import { fmtMoney } from '../shared/format';
+import { API_BASE } from '../shared/apiBase';
+import { saveResponse } from '../shared/download';
 
-export default function PurchaseOrderView({ items, itemResults, onSearchItems, attributes, purchaseOrders, partners, locations, onCreatePO, onEditPO, onDeletePO, onCreateReceipt, onClosePO, companyProfile }: any) {
+export default function PurchaseOrderView({ items, itemResults, onSearchItems, attributes, purchaseOrders, partners, locations, onCreatePO, onEditPO, onDeletePO, onCreateReceipt, onClosePO, onVoidReceipt, companyProfile }: any) {
   const { showToast } = useToast();
   const { t } = useLanguage();
   // Search / status / page all live in DataContext, which owns the server fetch —
   // `/purchase-orders` is paginated + filtered server-side, so `purchaseOrders`
   // is ONE page, never the whole table.
   const {
-      itemIndex, loading: dataLoading, poStatusCounts,
+      itemIndex, loading: dataLoading, poStatusCounts, authFetch,
       // aliased: `poTotal` is already this file's per-order money total helper
       pagination: { poPage, setPoPage, poTotal: poRowTotal, pageSize: poPageSize },
       filters: { poSearch: searchTerm, setPoSearch: setSearchTerm, poStatusFilter: statusFilter, setPoStatusFilter: setStatusFilter },
   } = useData();
-  const { formatDate: tzDate } = useTimezone();
+  const { formatDate: tzDate, timezone } = useTimezone();
   const { hasPermission, hasAnyPermission } = useUser();
   const canManage = hasAnyPermission('purchase_order.create', 'purchase_order.edit', 'purchase_order.delete', 'purchase_order.close');
   const [isCreateOpen, setIsCreateOpen] = useState(false);
@@ -52,6 +56,8 @@ export default function PurchaseOrderView({ items, itemResults, onSearchItems, a
   const [receiptLineCones, setReceiptLineCones] = useState<Record<string, number | ''>>({});
   const [receiptLineDrums, setReceiptLineDrums] = useState<Record<string, number | ''>>({});
   const [receiptLineLots, setReceiptLineLots] = useState<Record<string, string>>({});
+  // Per-line warehouse override; blank = the receipt's Receiving Warehouse.
+  const [receiptLineLocs, setReceiptLineLocs] = useState<Record<string, string>>({});
   const [receiptDate, setReceiptDate] = useState('');
   const [receiptNotes, setReceiptNotes] = useState('');
   const [receiptLocationId, setReceiptLocationId] = useState('');
@@ -61,6 +67,35 @@ export default function PurchaseOrderView({ items, itemResults, onSearchItems, a
 
   // Expanded rows for order-line + receipt detail
   const [expandedRows, setExpandedRows] = useState<Record<string, boolean>>({});
+
+  // List print / export: every line of every PO matching the current search +
+  // status filter (not just this page), via the Purchase Report's PO-lines feed.
+  const [listPrint, setListPrint] = useState<{ rows: any[]; amount: number } | null>(null);
+  const [listBusy, setListBusy] = useState(false);
+  const listParams = () => {
+      const p = new URLSearchParams();
+      if (searchTerm.trim()) p.set('search', searchTerm.trim());
+      if (statusFilter && statusFilter !== 'ALL') p.set('status', statusFilter);
+      return p;
+  };
+  const handleListExport = async () => {
+      setListBusy(true);
+      try {
+          const p = listParams(); p.set('tz', timezone);
+          const res = await authFetch(`${API_BASE}/purchase-orders/report/lines/export?${p.toString()}`);
+          if (!res.ok) { showToast('Export failed', 'error'); return; }
+          await saveResponse(res, 'purchase-order-lines.xlsx');
+      } finally { setListBusy(false); }
+  };
+  const handleListPrint = async () => {
+      setListBusy(true);
+      try {
+          const res = await authFetch(`${API_BASE}/purchase-orders/report/lines?${listParams().toString()}`);
+          if (!res.ok) { showToast('Could not load orders to print', 'error'); return; }
+          const body = await res.json();
+          setListPrint({ rows: body.items || [], amount: body.amount || 0 });
+      } finally { setListBusy(false); }
+  };
 
   // Floating "more actions" menu (Edit / Close PO / Print / Delete)
   const { openId: openMenuId, pos: menuPos, toggle: toggleMenu, close: closeMenu } = useFloatingMenu();
@@ -72,6 +107,7 @@ export default function PurchaseOrderView({ items, itemResults, onSearchItems, a
     setReceiptLineCones({});
     setReceiptLineDrums({});
     setReceiptLineLots({});
+    setReceiptLineLocs({});
     setReceiptDate(new Date().toISOString().split('T')[0]);
     setReceiptNotes('');
     setReceiptLocationId(po.target_location_id || '');
@@ -96,10 +132,11 @@ export default function PurchaseOrderView({ items, itemResults, onSearchItems, a
           qty_cones: catType === 'raw' ? numOrNull(receiptLineCones[po_line_id]) : null,
           qty_drums: (catType === 'chemical' || catType === 'dye') ? numOrNull(receiptLineDrums[po_line_id]) : null,
           vendor_lot: (receiptLineLots[po_line_id] || '').trim() || null,
+          location_id: receiptLineLocs[po_line_id] || null,
         };
       });
     if (lines.length === 0) { showToast('Enter qty for at least one line', 'error'); return; }
-    if (!receiptLocationId) { showToast('Select a receiving warehouse', 'error'); return; }
+    if (!receiptLocationId && lines.some(l => !l.location_id)) { showToast('Select a receiving warehouse', 'error'); return; }
     onCreateReceipt(
       receiptTarget.id,
       {
@@ -156,6 +193,7 @@ export default function PurchaseOrderView({ items, itemResults, onSearchItems, a
       payment_term: '',
       category: '',
       vat_percent: 11 as number,
+      prices_include_vat: false,
       discount: 0 as number,
       notes: '',
       lines: [] as any[],
@@ -234,6 +272,15 @@ export default function PurchaseOrderView({ items, itemResults, onSearchItems, a
       }));
   };
 
+  // Same for the unit price — blank stays blank (no price) rather than 0.
+  const handleLinePriceChange = (index: number, val: string) => {
+      const unit_price = val === '' ? '' : parseFloat(val) || 0;
+      setNewPO(prev => ({
+          ...prev,
+          lines: prev.lines.map((l: any, i: number) => (i === index ? { ...l, unit_price } : l)),
+      }));
+  };
+
   const handleValueChange = (valId: string, attrId: string) => {
       const attr = attributes.find((a: any) => a.id === attrId);
       if (!attr) return;
@@ -256,6 +303,7 @@ export default function PurchaseOrderView({ items, itemResults, onSearchItems, a
           payment_term: po.payment_term || '',
           category: po.category || '',
           vat_percent: po.vat_percent != null ? Number(po.vat_percent) : 11,
+          prices_include_vat: !!po.prices_include_vat,
           discount: po.discount != null ? Number(po.discount) : 0,
           notes: po.notes || '',
           lines: (po.lines || []).map((l: any) => ({
@@ -280,6 +328,7 @@ export default function PurchaseOrderView({ items, itemResults, onSearchItems, a
           target_location_id: newPO.target_location_id || null,
           order_date: newPO.order_date || null,
           vat_percent: vatEnabled ? (Number(newPO.vat_percent) || 0) : null,
+          prices_include_vat: vatEnabled && newPO.prices_include_vat,
           discount: Number(newPO.discount) || 0,
           lines: newPO.lines.map((line: any) => ({
               ...line,
@@ -382,6 +431,7 @@ export default function PurchaseOrderView({ items, itemResults, onSearchItems, a
   };
 
   const suppliers = partners.filter((p: any) => p.type === 'SUPPLIER' && p.active);
+  const getLocationName = (id: string | null) => (id ? (locations || []).find((l: any) => l.id === id)?.name || '' : '');
   const getSupplierName = (id: string) => partners.find((p: any) => p.id === id)?.name || id;
 
   const STATUS_FILTERS = ['ALL', 'DRAFT', 'RECEIVING', 'RECEIVED'];
@@ -460,6 +510,13 @@ export default function PurchaseOrderView({ items, itemResults, onSearchItems, a
            />
        )}
 
+       {listPrint && (
+           <PurchaseReportPrintModal kind="lines" rows={listPrint.rows} amount={listPrint.amount}
+               periodLabel="All dates"
+               filtersSummary={[searchTerm.trim() && `Search: "${searchTerm.trim()}"`, statusFilter !== 'ALL' && `Status: ${statusFilter}`].filter(Boolean).join(' · ')}
+               onClose={() => setListPrint(null)} />
+       )}
+
        <CodeConfigModal
            isOpen={isConfigOpen}
            onClose={() => setIsConfigOpen(false)}
@@ -475,7 +532,7 @@ export default function PurchaseOrderView({ items, itemResults, onSearchItems, a
            modeless
            onClose={closeModal}
            title={<><i className={`bi ${editingPOId ? 'bi-pencil' : 'bi-cart-plus'}`} style={{marginRight:6}}></i>{editingPOId ? 'Edit Purchase Order' : 'Create Purchase Order'}</>}
-           variant="success"
+           variant="primary"
            size="xl"
            footer={<>
                    <button type="button" className={XP_BTN} style={xpBtn()} onClick={closeModal}>{t('cancel')}</button>
@@ -545,16 +602,26 @@ export default function PurchaseOrderView({ items, itemResults, onSearchItems, a
                            <FieldLabel right={
                                <label style={{display:'flex',alignItems:'center',gap:4,fontWeight:'normal',cursor:'pointer',fontSize:'10px',color:'#555'}}>
                                    <input type="checkbox" checked={vatEnabled} onChange={e => setVatEnabled(e.target.checked)} />
-                                   Include
+                                   Apply
                                </label>
                            }>VAT %</FieldLabel>
                            <input type="number" className="form-control" disabled={!vatEnabled} style={xpInput({opacity:vatEnabled?1:0.5})} value={newPO.vat_percent} onChange={e => setNewPO({...newPO, vat_percent: parseFloat(e.target.value) || 0})} />
                        </div>
                        <div className="col-md-3">
+                           <FieldLabel>Price Entry</FieldLabel>
+                           <select className="form-select form-select-sm" disabled={!vatEnabled} style={xpInput({height:'22px',borderRadius:0,width:'100%',opacity:vatEnabled?1:0.5})}
+                               value={newPO.prices_include_vat ? 'incl' : 'excl'}
+                               onChange={e => setNewPO({...newPO, prices_include_vat: e.target.value === 'incl'})}
+                               title="Whether the line prices you type already include VAT">
+                               <option value="excl">Price + VAT</option>
+                               <option value="incl">Price includes VAT</option>
+                           </select>
+                       </div>
+                       <div className="col-md-3">
                            <FieldLabel>Discount (Rp)</FieldLabel>
                            <input type="number" className="form-control" style={xpInput()} value={newPO.discount} onChange={e => setNewPO({...newPO, discount: parseFloat(e.target.value) || 0})} />
                        </div>
-                       <div className="col-md-6">
+                       <div className="col-md-3">
                            <FieldLabel>Notes</FieldLabel>
                            <input className="form-control" style={xpInput()} placeholder="Optional notes printed on the PO" value={newPO.notes} onChange={e => setNewPO({...newPO, notes: e.target.value})} />
                        </div>
@@ -614,7 +681,19 @@ export default function PurchaseOrderView({ items, itemResults, onSearchItems, a
                                    {(line.attribute_value_ids||[]).length>0 && <div style={{color:'#666',fontSize:'10px',fontStyle:'italic'}}>{(line.attribute_value_ids||[]).map(getAttributeValueName).join(', ')}</div>}
                                </div>
                                <div style={{display:'flex',alignItems:'center',gap:6}}>
-                                   {line.unit_price != null && line.unit_price !== '' && <span style={{color:'#555',fontSize:'10px'}}>@ Rp {Number(line.unit_price).toLocaleString('en-US', {minimumFractionDigits:2, maximumFractionDigits:2})}</span>}
+                                   <span style={{color:'#555',fontSize:'10px'}}>@ Rp</span>
+                                   <input type="number" min="0" step="0.01"
+                                       style={xpInput({width:90, textAlign:'right'})}
+                                       placeholder="0.00"
+                                       value={line.unit_price ?? ''}
+                                       onChange={e => handleLinePriceChange(idx, e.target.value)}
+                                       title="Unit price (Rp)"
+                                   />
+                                   {vatEnabled && newPO.prices_include_vat && line.unit_price !== '' && line.unit_price != null && (
+                                       <span style={{color:'#777',fontSize:'9px'}} title="Price before VAT">
+                                           (excl. {fmtMoney(Number(line.unit_price) / (1 + (Number(newPO.vat_percent) || 0) / 100))})
+                                       </span>
+                                   )}
                                    <span style={{fontWeight:'bold'}}>×</span>
                                    <input type="number" min="0" step="any"
                                        style={xpInput({width:70, textAlign:'right'})}
@@ -641,7 +720,7 @@ export default function PurchaseOrderView({ items, itemResults, onSearchItems, a
            modeless
            onClose={() => setReceiptTarget(null)}
            title={<><i className="bi bi-box-arrow-in-down" style={{marginRight:6}}></i>Receive Goods — {receiptTarget?.po_number}</>}
-           variant="success"
+           variant="primary"
            size="xl"
            footer={<>
                    <button type="button" className={XP_BTN} style={xpBtn()} onClick={() => setReceiptTarget(null)}>Cancel</button>
@@ -682,7 +761,7 @@ export default function PurchaseOrderView({ items, itemResults, onSearchItems, a
                    <table style={{width:'100%',borderCollapse:'collapse',fontFamily:xpFont,fontSize:'11px'}}>
                        <thead>
                            <tr style={{background:'linear-gradient(to bottom,#ffffff,#d4d0c8)',borderBottom:'2px solid #808080',fontSize:'10px',fontWeight:'bold'}}>
-                               <th style={xpThCell}>Item</th>
+                               <th style={xpThCell}>Item / Warehouse</th>
                                <th style={{...xpThCell,textAlign:'right' as const}}>Ordered</th>
                                <th style={{...xpThCell,textAlign:'right' as const}}>Rcvd So Far</th>
                                <th style={{...xpThCell,textAlign:'right' as const}}>This Receipt</th>
@@ -695,9 +774,13 @@ export default function PurchaseOrderView({ items, itemResults, onSearchItems, a
                        <tbody>
                            {receiptTarget.lines.map((line: any, idx: number) => (
                                <tr key={line.id} style={{background:lvZebra(idx),borderBottom:'1px solid #d0cdc8'}}>
-                                   <td style={tdBase}>
+                                   <td style={{...tdBase,minWidth:200}}>
                                        <div style={{fontWeight:'bold'}}>{line.item_name || getItemName(line.item_id)}</div>
-                                       <div style={{fontSize:'10px',color:'#666'}}>{line.item_code || getItemCode(line.item_id)}</div>
+                                       <div style={{fontSize:'10px',color:'#666',marginBottom:3}}>{line.item_code || getItemCode(line.item_id)}</div>
+                                       {/* per-line warehouse; blank = the receipt's Receiving Warehouse */}
+                                       <TreeSelect options={locPickerTreeOptions} value={receiptLineLocs[line.id] || ''}
+                                           onChange={(val) => setReceiptLineLocs(prev => ({ ...prev, [line.id]: val }))}
+                                           allowEmpty emptyLabel="Same as receipt" placeholder="Same as receipt" size="sm" style={{ width: '100%' }} />
                                    </td>
                                    <td style={{...tdBase,textAlign:'right' as const}}>{line.qty}</td>
                                    <td style={{...tdBase,textAlign:'right' as const}}>{line.qty_received || 0}</td>
@@ -789,8 +872,19 @@ export default function PurchaseOrderView({ items, itemResults, onSearchItems, a
                <ToolbarCount>
                    {poRowTotal} order{poRowTotal !== 1 ? 's' : ''}
                </ToolbarCount>
+               <div style={{ marginLeft: 'auto' }} />
+               {hasPermission('purchase_order.export') && (
+                   <button className={XP_BTN} style={xpBtn({ padding: '1px 6px' })} onClick={handleListExport} disabled={listBusy || !poRowTotal} title="Export Excel (every line of the orders matching the filter)">
+                       <i className={listBusy ? 'bi bi-hourglass-split' : 'bi bi-file-earmark-excel'} />
+                   </button>
+               )}
+               {hasPermission('purchase_order.print') && (
+                   <button className={XP_BTN} style={xpBtn({ padding: '1px 6px' })} onClick={handleListPrint} disabled={listBusy || !poRowTotal} title="Print the orders matching the filter">
+                       <i className="bi bi-printer" />
+                   </button>
+               )}
                {canManage && (
-                   <ToolbarButton tone="create" icon="bi-plus-lg" style={{ marginLeft: 'auto' }} onClick={() => setIsCreateOpen(true)}>
+                   <ToolbarButton tone="create" icon="bi-plus-lg" onClick={() => setIsCreateOpen(true)}>
                        {t('create')}
                    </ToolbarButton>
                )}
@@ -889,9 +983,10 @@ export default function PurchaseOrderView({ items, itemResults, onSearchItems, a
                                            <ExpandedRowPanel style={{ padding: '6px 16px 8px 20px', fontFamily: xpFont, fontSize: '11px' }}>
                                            <div style={{ marginBottom: 10 }}>
                                                <div style={lvSubCaption()}>Order Lines</div>
-                                               <table style={{ ...lvSubTable(), maxWidth: 560 }}>
+                                               <table style={{ ...lvSubTable(), maxWidth: 640 }}>
                                                    <thead>
                                                        <tr>
+                                                           <th style={subTh}>Code</th>
                                                            <th style={subTh}>Item</th>
                                                            <th style={{ ...subTh, textAlign: 'right' }}>Received</th>
                                                            <th style={{ ...subTh, textAlign: 'right' }}>Ordered</th>
@@ -903,6 +998,7 @@ export default function PurchaseOrderView({ items, itemResults, onSearchItems, a
                                                            const full = (line.qty_received || 0) >= line.qty;
                                                            return (
                                                                <tr key={line.id}>
+                                                                   <td style={subTd}>{line.item_code || getItemCode(line.item_id)}</td>
                                                                    <td style={{ ...subTd, fontWeight: 600 }}>{line.item_name || getItemName(line.item_id)}</td>
                                                                    <td style={{ ...subTd, textAlign: 'right', fontWeight: 'bold' }}>{line.qty_received || 0}</td>
                                                                    <td style={{ ...subTd, textAlign: 'right' }}>{line.qty}</td>
@@ -929,6 +1025,7 @@ export default function PurchaseOrderView({ items, itemResults, onSearchItems, a
                                                const hasDrums = allLines.some((l: any) => l.qty_drums != null);
                                                const hasLots = allLines.some((l: any) => l.vendor_lot);
                                                const hasNotes = allLines.some((l: any) => l._receipt.notes);
+                                               const canVoid = hasPermission('purchase_order.receive_goods');
                                                const numR = { textAlign: 'right' as const };
                                                return (
                                                    <div>
@@ -941,12 +1038,14 @@ export default function PurchaseOrderView({ items, itemResults, onSearchItems, a
                                                                    <th style={subTh}>Date</th>
                                                                    {hasDn && <th style={subTh}>DN</th>}
                                                                    <th style={subTh}>Item</th>
+                                                                   <th style={subTh}>Warehouse</th>
                                                                    <th style={{ ...subTh, ...numR }}>Received</th>
                                                                    {hasBoxes && <th style={{ ...subTh, ...numR }}>Boxes</th>}
                                                                    {hasCones && <th style={{ ...subTh, ...numR }}>Cones</th>}
                                                                    {hasDrums && <th style={{ ...subTh, ...numR }}>Drums</th>}
                                                                    {hasLots && <th style={subTh}>Supplier Lot</th>}
                                                                    {hasNotes && <th style={subTh}>Notes</th>}
+                                                                   {canVoid && <th style={subTh}></th>}
                                                                </tr>
                                                            </thead>
                                                            <tbody>
@@ -964,7 +1063,11 @@ export default function PurchaseOrderView({ items, itemResults, onSearchItems, a
                                                                                )}
                                                                            </td>
                                                                        )}
-                                                                       <td style={{ ...subTd, fontWeight: 600 }}>{rl.item_name || getItemName(rl.item_id)}</td>
+                                                                       <td style={{ ...subTd, fontWeight: 600 }}>
+                                                                           {rl.item_name || getItemName(rl.item_id)}
+                                                                           <span style={{ marginLeft: 6, color: '#888', fontWeight: 'normal', fontSize: '10px' }}>{rl.item_code || getItemCode(rl.item_id)}</span>
+                                                                       </td>
+                                                                       <td style={subTd}>{getLocationName(rl.location_id || rl._receipt.location_id)}</td>
                                                                        <td style={{ ...subTd, ...numR, fontWeight: 'bold' }}>
                                                                            {rl.qty_received}
                                                                            <span style={{ marginLeft: 3, color: '#888', fontSize: '9px', textTransform: 'uppercase' }}>{rl.item_uom || getItemUom(rl.item_id)}</span>
@@ -974,6 +1077,18 @@ export default function PurchaseOrderView({ items, itemResults, onSearchItems, a
                                                                        {hasDrums && <td style={{ ...subTd, ...numR }}>{rl.qty_drums != null ? rl.qty_drums : <span style={{ color: '#bbb' }}>—</span>}</td>}
                                                                        {hasLots && <td style={subTd}>{rl.vendor_lot || <span style={{ color: '#bbb' }}>—</span>}</td>}
                                                                        {hasNotes && <td style={{ ...subTd, fontStyle: 'italic', color: '#666' }}>{rl._receipt.notes || ''}</td>}
+                                                                       {canVoid && (
+                                                                           <td style={subTd}>
+                                                                               {/* one button per delivery, on its first line */}
+                                                                               {rl._receipt.lines[0]?.id === rl.id && (
+                                                                                   <button type="button" className={XP_BTN} style={xpBtn({ padding: '0 5px', fontSize: '10px' })}
+                                                                                       title="Void this delivery (wrong entry) — stock comes back out and it can be received again"
+                                                                                       onClick={() => onVoidReceipt(rl._receipt.id)}>
+                                                                                       <i className="bi bi-arrow-counterclockwise" style={{ color: '#c00000', marginRight: 3 }} />Void
+                                                                                   </button>
+                                                                               )}
+                                                                           </td>
+                                                                       )}
                                                                    </tr>
                                                                ))}
                                                            </tbody>

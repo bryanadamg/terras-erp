@@ -31,6 +31,7 @@ import { useRouter } from 'next/navigation';
 import { lvThead, lvThSticky, lvTdRuled, lvZebra, ResizableTable } from '../shared/listViewTheme';
 import { SortableTh } from '@bryanadamg/terras-ui/components/Table';
 import { API_BASE } from '../shared/apiBase';
+import { saveResponse } from '../shared/download';
 
 // One width per column, in render order, and the ONLY place they are declared —
 // the <colgroup> below feeds them to both themes at once (the modern one used to
@@ -107,6 +108,7 @@ export default function SalesOrderView({ items, attributes, boms, salesOrders, p
   } = useData();
   const { hasPermission, hasAnyPermission } = useUser();
   const canPrint = hasPermission('sales_order.print');
+  const canExport = hasPermission('sales_order.export');
   // The SO-side shortcut; the run itself is still saved under production_run.create.
   const canCreatePR = hasPermission('sales_order.create_pr') && hasPermission('production_run.create');
   const canManage = hasAnyPermission('sales_order.create', 'sales_order.edit', 'sales_order.delete', 'sales_order.close');
@@ -399,7 +401,12 @@ export default function SalesOrderView({ items, attributes, boms, salesOrders, p
       // shop-floor context lives. When the pick IS made here it still rides along
       // — one item can own several attribute-less BOMs (a root per shade) and
       // nothing else tells them apart — the PR pre-fill just no longer needs it.
+      // The form's line list reads `size_display` (the server's name for a saved
+      // line), so a freshly added line needs it too or its size never shows.
+      const sizeOpt = getSizeOptions(newLine.item_id, newLine.bom_id, newLine.attribute_value_ids)
+          .find((o: any) => o.value === (newLine.size_token || (newLine.bom_size_id ? `bs:${newLine.bom_size_id}` : '')));
       setNewSO({ ...newSO, lines: [...newSO.lines, { ...newLine,
+          size_display: sizeOpt?.token ? sizeOpt.name : '',
           bom_id: newLine.bom_id || null,
           size_id: newLine.size_id || null,
           size_label: newLine.size_label || null,
@@ -843,6 +850,7 @@ export default function SalesOrderView({ items, attributes, boms, salesOrders, p
               // `size_display` is the server's resolution of either shape, so it
               // rehydrates a legacy bom_size_id line as the same token.
               size_token: String(l.size_display || '').trim().toLowerCase(),
+              size_display: l.size_display || '',
               size_id: l.size_id || '',
               size_label: l.size_id ? '' : (l.size_label || l.size_display || ''),
               bom_size_id: l.bom_size_id || '',
@@ -935,7 +943,7 @@ export default function SalesOrderView({ items, attributes, boms, salesOrders, p
   const getItemCode = (id: string, embedded?: string) => resolveItem(id)?.code || embedded || itemIndex?.[String(id)]?.code || id;
   const isSample = (id: string) => resolveItem(id)?.category === 'Sample';
 
-  const { formatDate: tzDate, formatCustom: tzFmt } = useTimezone();
+  const { formatDate: tzDate, formatCustom: tzFmt, timezone } = useTimezone();
 
   const formatDate = (date: string | null) => {
       if (!date) return '—';
@@ -1323,6 +1331,17 @@ In stock ${fmtQty(f.baseAvailable)}${bu} · Shipped ${fmtQty(f.baseShipped)}${bu
               showToast('Failed to load orders for printing', 'danger');
           }
       } finally { setPrintLoading(false); }
+  };
+
+  // Excel: every line of every order matching the screen's filters and sort.
+  const [exporting, setExporting] = useState(false);
+  const handleExport = async () => {
+      setExporting(true);
+      try {
+          const res = await authFetch(`${API_BASE}/sales-orders/export?${soQuery(1, { uncapped: true })}&tz=${encodeURIComponent(timezone)}`);
+          if (!res.ok) { showToast('Export failed', 'danger'); return; }
+          await saveResponse(res, 'sales-orders.xlsx');
+      } finally { setExporting(false); }
   };
 
   return (
@@ -2108,6 +2127,11 @@ In stock ${fmtQty(f.baseAvailable)}${bu} · Shipped ${fmtQty(f.baseShipped)}${bu
                    {soTotal} order{soTotal !== 1 ? 's' : ''}
                </ToolbarCount>
                <div style={{ display: 'flex', gap: 4, marginLeft: 'auto' }} className={undefined}>
+                   {canExport && (
+                   <ToolbarButton tone="neutral" icon="bi-file-earmark-excel" disabled={exporting || !soTotal} onClick={handleExport}>
+                       {exporting ? 'Exporting…' : 'Export Excel'}
+                   </ToolbarButton>
+                   )}
                    {canPrint && (
                    <ToolbarButton tone="neutral" icon="bi-printer" printable disabled={printLoading} onClick={handleOpenTablePrint}>
                        {printLoading ? 'Loading…' : 'Print Table'}

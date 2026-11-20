@@ -162,19 +162,30 @@ export function buildPurchaseOrderContext({
         for (const a of attributes) { const v = a.values?.find((x: any) => x.id === vid); if (v) return v.value; }
         return '';
     };
-    const lines = (p.lines || []).map((l: any) => ({
-        ...l,
-        itemName: l.item_name || itemIndex?.[String(l.item_id)]?.name || l.item_id,
-        uom: l.item_uom || itemIndex?.[String(l.item_id)]?.uom || '',
-        attrs: (l.attribute_value_ids || []).map(attrName).filter(Boolean),
-        lineTotal: (Number(l.qty) || 0) * (Number(l.unit_price) || 0),
-        deadline: dmy(l.due_date),
-    }));
-    const subtotal = lines.reduce((s: number, l: any) => s + l.lineTotal, 0);
     const hasVat = p.vat_percent != null;
     const vatPercent = Number(p.vat_percent) || 0;
     const discount = Number(p.discount) || 0;
-    const vat = hasVat ? (subtotal - discount) * vatPercent / 100 : 0;
+    // VAT-inclusive prices: each line prints its pre-VAT price, and the VAT is
+    // backed out of the gross total so Total is exactly Σ qty × quoted price.
+    const inclusive = hasVat && !!p.prices_include_vat;
+    const net = (n: number) => (inclusive ? n / (1 + vatPercent / 100) : n);
+    const lines = (p.lines || []).map((l: any) => ({
+        ...l,
+        unit_price: l.unit_price != null ? net(Number(l.unit_price)) : null,
+        itemName: l.item_name || itemIndex?.[String(l.item_id)]?.name || l.item_id,
+        uom: l.item_uom || itemIndex?.[String(l.item_id)]?.uom || '',
+        attrs: (l.attribute_value_ids || []).map(attrName).filter(Boolean),
+        lineTotal: net((Number(l.qty) || 0) * (Number(l.unit_price) || 0)),
+        grossTotal: (Number(l.qty) || 0) * (Number(l.unit_price) || 0),
+        deadline: dmy(l.due_date),
+    }));
+    let subtotal = lines.reduce((s: number, l: any) => s + l.lineTotal, 0);
+    let vat = hasVat ? (subtotal - discount) * vatPercent / 100 : 0;
+    if (inclusive) {
+        const total = lines.reduce((s: number, l: any) => s + l.grossTotal, 0) - discount;
+        vat = Math.round(total * vatPercent / (100 + vatPercent) * 100) / 100;
+        subtotal = total - vat + discount;
+    }
 
     return {
         workOrder: null,

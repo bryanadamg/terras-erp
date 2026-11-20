@@ -15,6 +15,32 @@ on `main`:
 
 ## [Unreleased]
 
+## [1.9.0] - 2026-11-20
+
+### Added
+- Purchase Report (under Procurement): every goods receipt or every purchase order line, filtered by supplier, warehouse, category and a from–to date, with the price per item, Excel export and print — e.g. everything received into the Raw Material store this month
+- The Purchase Orders list can be exported to Excel and printed, covering every order that matches the current search and status
+- A purchase order can take prices that already include VAT: the pre-VAT price and the VAT are worked out from the gross, so the total stays exactly quantity × quoted price
+- Receive Goods lets each line go to its own warehouse
+- A wrongly entered goods receipt can be voided from the order's receipt history: its stock comes back out and the delivery can be received again correctly
+- Stock transfers take a note, shown on the Stock Ledger and found by its search
+- A wrong transfer can be reversed from the Stock Ledger, sending the stock back so it can be moved again correctly
+- Booking Stock can be filtered by item category and exported to Excel
+- Sales Orders can be exported to Excel, one row per order line
+- New permissions for these exports: purchase order, booking stock and sales order Export Excel
+
+### Changed
+- A role's category access is set per top-level category and covers everything under it. It now also limits what the role sees in Items, Stock On-Hand, Stock Ledger and Booking Stock, not only what it can change
+- The unit price of a line already on a purchase order can be edited, and the VAT checkbox now reads "Apply"
+- Dialogs take the refreshed look: a light body, a framed window, a ghost close box and blue section bands. Create/edit purchase order, Receive Goods, new manufacturing order and new production run use the standard blue title band
+- The header's scan, feedback and language controls are lighter outline buttons on the title band
+- The page behind an open dialog no longer dims its sidebar and header
+
+### Fixed
+- Purchase orders show the item code on their order lines and receipt history
+- The sales order form shows each line's size again when creating or editing an order
+- Editing an item can clear its variant type and other fields back to none
+
 ## [1.8.0] - 2026-11-19
 
 ### Changed

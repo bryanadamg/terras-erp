@@ -116,11 +116,11 @@ export const PERMISSION_MATRIX: PermissionMatrixSection[] = [
 // Per-resource action lists (order matches the spreadsheet's column order for
 // that row). Resources not listed here fall back to CREATE/EDIT/DELETE/VIEW.
 export const RESOURCE_ACTIONS: Record<string, PermissionMatrixAction[]> = {
-    sales_order: [CREATE, EDIT, DELETE, A('create_pr', 'Create PR'), A('print', 'Print'), VIEW, A('close', 'Closed SO')],
+    sales_order: [CREATE, EDIT, DELETE, A('create_pr', 'Create PR'), A('print', 'Print'), A('export', 'Export Excel'), VIEW, A('close', 'Closed SO')],
     customer: [A('create', 'Add'), EDIT, DELETE, VIEW],
     supplier: [A('create', 'Add'), EDIT, DELETE, VIEW],
     sample_request: [CREATE, EDIT, DELETE, A('update_status', 'Update Status'), A('print', 'Print'), VIEW],
-    purchase_order: [CREATE, EDIT, DELETE, A('receive_goods', 'Received Good'), A('print', 'Print'), VIEW, A('close', 'Closed PO')],
+    purchase_order: [CREATE, EDIT, DELETE, A('receive_goods', 'Received Good'), A('print', 'Print'), A('export', 'Export Excel'), VIEW, A('close', 'Closed PO')],
 
     item: [CREATE, EDIT, DELETE, A('import', 'Import'), VIEW],
     attribute: [CREATE, EDIT, DELETE, VIEW],
@@ -136,7 +136,7 @@ export const RESOURCE_ACTIONS: Record<string, PermissionMatrixAction[]> = {
     // rather than being folded into an edit right.
     quarantine: [A('set_status', 'Set Status'), VIEW],
     stock_on_hand: [CREATE, A('adjust', 'Adjust'), A('move', 'Move'), VIEW],
-    booking_stock: [VIEW],
+    booking_stock: [A('export', 'Export Excel'), VIEW],
     location: [CREATE, EDIT, DELETE, VIEW],
     stock_ledger: [A('print', 'Print'), A('export', 'Export Excel'), VIEW],
 

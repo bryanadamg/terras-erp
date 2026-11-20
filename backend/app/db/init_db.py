@@ -370,6 +370,7 @@ def seed_rbac(db):
             ("sales_order.delete", "Delete Sales Orders"),
             ("sales_order.create_pr", "Create Production Run from Sales Order"),
             ("sales_order.print", "Print Sales Orders"),
+            ("sales_order.export", "Export Sales Orders Excel"),
             ("sales_order.view", "View Sales Orders"),
             ("sales_order.close", "Close Sales Orders"),
             # Customer
@@ -395,6 +396,7 @@ def seed_rbac(db):
             ("purchase_order.delete", "Delete Purchase Orders"),
             ("purchase_order.receive_goods", "Receive Goods against Purchase Orders"),
             ("purchase_order.print", "Print Purchase Orders"),
+            ("purchase_order.export", "Export Purchase Orders / Purchase Report Excel"),
             ("purchase_order.view", "View Purchase Orders"),
             ("purchase_order.close", "Close Purchase Orders"),
             # Item Inventory (scoped by Role.allowed_categories)
@@ -468,6 +470,7 @@ def seed_rbac(db):
             ("stock_on_hand.view", "View Stock On Hand"),
             # Booking Stock
             ("booking_stock.view", "View Booking Stock"),
+            ("booking_stock.export", "Export Booking Stock Excel"),
             # Location
             ("location.create", "Create Locations"),
             ("location.edit", "Edit Locations"),
@@ -586,10 +589,10 @@ def seed_rbac(db):
                 "lot.create", "lot.split", "lot.delete", "lot.qc_reject", "lot.view",
                 "quarantine.view", "quarantine.set_status",
                 "stock_on_hand.create", "stock_on_hand.adjust", "stock_on_hand.move", "stock_on_hand.view",
-                "booking_stock.view",
+                "booking_stock.view", "booking_stock.export",
                 "location.create", "location.edit", "location.delete", "location.view",
                 "purchase_order.create", "purchase_order.edit", "purchase_order.delete",
-                "purchase_order.receive_goods", "purchase_order.print", "purchase_order.view", "purchase_order.close",
+                "purchase_order.receive_goods", "purchase_order.print", "purchase_order.export", "purchase_order.view", "purchase_order.close",
                 "supplier.create", "supplier.edit", "supplier.delete", "supplier.view",
                 "stock_ledger.print", "stock_ledger.export", "stock_ledger.view",
                 "production_output.view", "production_output.export",

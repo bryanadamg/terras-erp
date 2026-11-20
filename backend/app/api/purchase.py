@@ -13,13 +13,16 @@ from app.models.attribute import AttributeValue
 from app.models.item import Item
 from app.models.batch import Batch
 from app.models.partner import Partner
+from app.models.location import Location
+from app.models.category import Category
+from app.services.xlsx_service import xlsx_response, zone_or_400, local_cell
 from app.api.auth import get_current_user, require_permission
 from app.models.auth import User
 from app.services import stock_service, audit_service, kpi_service
 from app.core.ws_manager import manager
 from app.core.pagination import PageParams, PageWindow
 from typing import Optional
-from datetime import datetime
+from datetime import datetime, date
 import uuid
 
 router = APIRouter(prefix="/purchase-orders", tags=["purchase"])
@@ -70,6 +73,7 @@ async def create_purchase_order(
         payment_term=payload.payment_term,
         category=payload.category,
         vat_percent=payload.vat_percent,
+        prices_include_vat=payload.prices_include_vat,
         discount=payload.discount,
         notes=payload.notes,
     )
@@ -137,6 +141,7 @@ async def update_purchase_order(
     po.payment_term = payload.payment_term
     po.category = payload.category
     po.vat_percent = payload.vat_percent
+    po.prices_include_vat = payload.prices_include_vat
     po.discount = payload.discount
     po.notes = payload.notes
 
@@ -209,10 +214,16 @@ async def create_goods_receipt(
         raise HTTPException(status_code=404, detail="PO not found")
     if po.status == "CANCELLED":
         raise HTTPException(status_code=400, detail="Cannot receive a cancelled PO")
-    # Receiving warehouse: per-receipt choice wins, else fall back to the PO's target location
+    # Receiving warehouse: per-receipt choice wins, else fall back to the PO's target
+    # location. A line may name its own warehouse, which beats both.
     recv_location_id = payload.location_id or po.target_location_id
-    if not recv_location_id:
+    if not recv_location_id and any(not rl.location_id for rl in payload.lines):
         raise HTTPException(status_code=400, detail="Select a receiving warehouse for this receipt")
+    line_loc_ids = {rl.location_id for rl in payload.lines if rl.location_id}
+    if line_loc_ids:
+        found = set((await db.execute(select(Location.id).filter(Location.id.in_(line_loc_ids)))).scalars().all())
+        if found != line_loc_ids:
+            raise HTTPException(status_code=404, detail="Receiving location not found")
 
     line_map = {line.id: line for line in po.lines}
 
@@ -273,8 +284,10 @@ async def create_goods_receipt(
                 await db.flush()
                 batch_id = b.id
 
+        line_location_id = rl.location_id or recv_location_id
         gr_line = GoodsReceiptLine(
             receipt_id=gr.id,
+            location_id=rl.location_id if rl.location_id and rl.location_id != recv_location_id else None,
             po_line_id=po_line.id,
             item_id=po_line.item_id,
             qty_received=rl.qty_received,
@@ -288,7 +301,7 @@ async def create_goods_receipt(
         await stock_service.add_stock_entry(
             db,
             item_id=po_line.item_id,
-            location_id=recv_location_id,
+            location_id=line_location_id,
             attribute_value_ids=[str(v.id) for v in po_line.attribute_values],
             qty_change=rl.qty_received,
             reference_type="Goods Receipt",
@@ -328,6 +341,71 @@ async def create_goods_receipt(
         .filter(GoodsReceipt.id == gr.id)
     )
     return final.scalars().first()
+
+
+@router.delete("/receipts/{receipt_id}")
+async def void_goods_receipt(
+    receipt_id: uuid.UUID,
+    db: AsyncSession = Depends(get_async_db),
+    current_user: User = Depends(require_permission('purchase_order.receive_goods')),
+):
+    """Undo a wrongly entered receipt: take its stock back out of every warehouse it
+    went to, give the qty back to the PO lines, and drop the receipt so it can be
+    received again correctly. The negative-stock guard refuses it once any of that
+    stock has already been used or moved."""
+    gr = (await db.execute(
+        select(GoodsReceipt).options(selectinload(GoodsReceipt.lines)).filter(GoodsReceipt.id == receipt_id)
+    )).scalars().first()
+    if not gr:
+        raise HTTPException(status_code=404, detail="Goods receipt not found")
+    po = (await db.execute(
+        select(PurchaseOrder)
+        .options(selectinload(PurchaseOrder.lines).selectinload(PurchaseOrderLine.attribute_values))
+        .filter(PurchaseOrder.id == gr.po_id)
+    )).scalars().first()
+    line_map = {line.id: line for line in po.lines}
+
+    for ln in gr.lines:
+        po_line = line_map.get(ln.po_line_id)
+        await stock_service.add_stock_entry(
+            db,
+            item_id=ln.item_id,
+            location_id=ln.location_id or gr.location_id,
+            attribute_value_ids=[str(v.id) for v in po_line.attribute_values] if po_line else [],
+            qty_change=-float(ln.qty_received),
+            reference_type="Receipt Void",
+            reference_id=po.po_number,
+            batch_id=ln.batch_id,
+            cones_change=-(ln.qty_cones or 0),
+            boxes_change=-(ln.qty_boxes or 0),
+            drums_change=-(ln.qty_drums or 0),
+        )
+        if po_line:
+            po_line.qty_received = max(0.0, float(po_line.qty_received or 0) - float(ln.qty_received))
+
+    await db.delete(gr)
+    if all(float(line.qty_received or 0) <= 0 for line in po.lines):
+        po.status = "DRAFT"
+    elif all(float(line.qty_received or 0) >= float(line.qty) for line in po.lines):
+        po.status = "RECEIVED"
+    else:
+        po.status = "RECEIVING"
+
+    await audit_service.log_activity(
+        db,
+        user_id=current_user.id,
+        action="DELETE",
+        entity_type="GoodsReceipt",
+        entity_id=str(receipt_id),
+        details=f"Voided goods receipt on PO {po.po_number}",
+        changes={"lines": [{"item_id": str(ln.item_id), "qty": float(ln.qty_received)} for ln in gr.lines]},
+        commit=False,
+    )
+    await db.commit()
+
+    await manager.broadcast({"type": "STOCK_UPDATE"})
+    await kpi_service.invalidate_and_broadcast(db, {"type": "KPI_UPDATE"})
+    return {"status": "success"}
 
 
 @router.post("/receipts/{receipt_id}/delivery-note", response_model=GoodsReceiptResponse)
@@ -375,6 +453,193 @@ async def upload_delivery_note(
         .filter(GoodsReceipt.id == receipt_id)
     )
     return final.scalars().first()
+
+
+# ── Purchase report: PO lines and goods received, flat and filterable ─────────
+
+def _ids(csv: Optional[str]) -> list[uuid.UUID]:
+    out = []
+    for x in (csv or "").split(","):
+        x = x.strip()
+        if x:
+            try:
+                out.append(uuid.UUID(x))
+            except ValueError:
+                raise HTTPException(status_code=400, detail=f"Bad id '{x}'")
+    return out
+
+
+def _day_end(d: Optional[date]) -> Optional[datetime]:
+    return datetime.combine(d, datetime.max.time()) if d else None
+
+
+async def _variant_names(db: AsyncSession, po_line_ids: set) -> dict:
+    if not po_line_ids:
+        return {}
+    out: dict = {}
+    for lid, val in (await db.execute(
+        select(purchase_order_line_values.c.purchase_order_line_id, AttributeValue.value)
+        .join(AttributeValue, AttributeValue.id == purchase_order_line_values.c.attribute_value_id)
+        .where(purchase_order_line_values.c.purchase_order_line_id.in_(po_line_ids))
+    )).all():
+        out.setdefault(lid, []).append(val)
+    return {k: ", ".join(sorted(v)) for k, v in out.items()}
+
+
+def _net_price(price, po_vat, incl) -> Optional[float]:
+    """Unit price before VAT — the entered price unless the PO took VAT-inclusive prices."""
+    if price is None:
+        return None
+    price = float(price)
+    if incl and po_vat is not None:
+        return round(price / (1 + float(po_vat) / 100), 2)
+    return price
+
+
+async def purchase_report_rows(
+    db: AsyncSession, kind: str, date_from: Optional[date], date_to: Optional[date],
+    supplier_id: Optional[uuid.UUID], search: Optional[str], status: Optional[str],
+    location_id: Optional[str], category_id: Optional[str],
+) -> list[dict]:
+    if kind not in ("lines", "receipts"):
+        raise HTTPException(status_code=404, detail="Unknown report")
+    cats = _ids(category_id)
+    term = f"%{search.strip()}%" if search and search.strip() else None
+
+    if kind == "lines":
+        q = (
+            select(PurchaseOrderLine, PurchaseOrder, Partner.name, Item, Category.name)
+            .join(PurchaseOrder, PurchaseOrder.id == PurchaseOrderLine.purchase_order_id)
+            .join(Item, Item.id == PurchaseOrderLine.item_id)
+            .outerjoin(Partner, Partner.id == PurchaseOrder.supplier_id)
+            .outerjoin(Category, Category.id == Item.category_id)
+        )
+        if date_from:
+            q = q.where(PurchaseOrder.order_date >= datetime.combine(date_from, datetime.min.time()))
+        if date_to:
+            q = q.where(PurchaseOrder.order_date <= _day_end(date_to))
+        if status:
+            q = q.where(PurchaseOrder.status.in_([x.strip() for x in status.split(",") if x.strip()]))
+        rows = []
+        if supplier_id:
+            q = q.where(PurchaseOrder.supplier_id == supplier_id)
+        if cats:
+            q = q.where(Item.category_id.in_(cats))
+        if term:
+            q = q.where(or_(Item.code.ilike(term), Item.name.ilike(term), PurchaseOrder.po_number.ilike(term), Partner.name.ilike(term)))
+        res = (await db.execute(q.order_by(PurchaseOrder.order_date.desc(), PurchaseOrder.po_number, Item.code))).all()
+        variants = await _variant_names(db, {r[0].id for r in res})
+        for line, po, sup, item, cat in res:
+            price = float(line.unit_price) if line.unit_price is not None else None
+            rows.append({
+                "date": po.order_date, "po_number": po.po_number, "po_id": po.id, "status": po.status,
+                "supplier": sup, "item_code": item.code, "item_name": item.name, "category": cat,
+                "variant": variants.get(line.id), "uom": item.uom,
+                "qty": float(line.qty), "qty_received": float(line.qty_received or 0),
+                "unit_price": price,
+                "unit_price_excl_vat": _net_price(price, po.vat_percent, po.prices_include_vat),
+                "prices_include_vat": bool(po.prices_include_vat and po.vat_percent is not None),
+                "amount": round(float(line.qty) * price, 2) if price is not None else None,
+                "due_date": line.due_date,
+            })
+        return rows
+
+    line_loc = func.coalesce(GoodsReceiptLine.location_id, GoodsReceipt.location_id)
+    q = (
+        select(GoodsReceiptLine, GoodsReceipt, PurchaseOrder, PurchaseOrderLine.unit_price, PurchaseOrderLine.id,
+               Partner.name, Item, Category.name, Location.name, Batch.batch_number, Batch.vendor_lot)
+        .join(GoodsReceipt, GoodsReceipt.id == GoodsReceiptLine.receipt_id)
+        .join(PurchaseOrder, PurchaseOrder.id == GoodsReceipt.po_id)
+        .join(PurchaseOrderLine, PurchaseOrderLine.id == GoodsReceiptLine.po_line_id)
+        .join(Item, Item.id == GoodsReceiptLine.item_id)
+        .outerjoin(Partner, Partner.id == PurchaseOrder.supplier_id)
+        .outerjoin(Category, Category.id == Item.category_id)
+        .outerjoin(Location, Location.id == line_loc)
+        .outerjoin(Batch, Batch.id == GoodsReceiptLine.batch_id)
+    )
+    if date_from:
+        q = q.where(GoodsReceipt.receipt_date >= datetime.combine(date_from, datetime.min.time()))
+    if date_to:
+        q = q.where(GoodsReceipt.receipt_date <= _day_end(date_to))
+    if supplier_id:
+        q = q.where(PurchaseOrder.supplier_id == supplier_id)
+    locs = _ids(location_id)
+    if locs:
+        q = q.where(line_loc.in_(locs))
+    if cats:
+        q = q.where(Item.category_id.in_(cats))
+    if term:
+        q = q.where(or_(Item.code.ilike(term), Item.name.ilike(term), PurchaseOrder.po_number.ilike(term),
+                        Partner.name.ilike(term), GoodsReceipt.delivery_note_number.ilike(term)))
+    res = (await db.execute(q.order_by(GoodsReceipt.receipt_date.desc(), PurchaseOrder.po_number, Item.code))).all()
+    variants = await _variant_names(db, {r[4] for r in res})
+    rows = []
+    for ln, gr, po, price, po_line_id, sup, item, cat, loc, lot, vlot in res:
+        price = float(price) if price is not None else None
+        rows.append({
+            "date": gr.receipt_date, "po_number": po.po_number, "po_id": po.id, "supplier": sup,
+            "delivery_note": gr.delivery_note_number, "item_code": item.code, "item_name": item.name,
+            "category": cat, "variant": variants.get(po_line_id), "warehouse": loc, "uom": item.uom,
+            "qty": float(ln.qty_received), "boxes": ln.qty_boxes, "cones": ln.qty_cones, "drums": ln.qty_drums,
+            "lot": lot, "supplier_lot": vlot,
+            "unit_price": price,
+            "unit_price_excl_vat": _net_price(price, po.vat_percent, po.prices_include_vat),
+            "amount": round(float(ln.qty_received) * price, 2) if price is not None else None,
+            "notes": gr.notes,
+        })
+    return rows
+
+
+@router.get("/report/{kind}")
+async def purchase_report(
+    kind: str,
+    date_from: Optional[date] = None,
+    date_to: Optional[date] = None,
+    supplier_id: Optional[uuid.UUID] = None,
+    search: Optional[str] = None,
+    status: Optional[str] = None,
+    location_id: Optional[str] = None,
+    category_id: Optional[str] = None,
+    db: AsyncSession = Depends(get_async_db),
+    current_user: User = Depends(require_permission("purchase_order.view")),
+):
+    """`lines` = every PO line (what was ordered, at what price); `receipts` = every
+    goods-receipt line (what came in, when, into which warehouse)."""
+    rows = await purchase_report_rows(db, kind, date_from, date_to, supplier_id, search, status, location_id, category_id)
+    return {"items": rows, "total": len(rows), "amount": round(sum(r["amount"] or 0 for r in rows), 2)}
+
+
+@router.get("/report/{kind}/export")
+async def export_purchase_report(
+    kind: str,
+    date_from: Optional[date] = None,
+    date_to: Optional[date] = None,
+    supplier_id: Optional[uuid.UUID] = None,
+    search: Optional[str] = None,
+    status: Optional[str] = None,
+    location_id: Optional[str] = None,
+    category_id: Optional[str] = None,
+    tz: str = "Asia/Jakarta",
+    db: AsyncSession = Depends(get_async_db),
+    current_user: User = Depends(require_permission("purchase_order.export")),
+):
+    zone = zone_or_400(tz)
+    rows = await purchase_report_rows(db, kind, date_from, date_to, supplier_id, search, status, location_id, category_id)
+    total = round(sum(r["amount"] or 0 for r in rows), 2)
+    if kind == "lines":
+        header = ["Order Date", "PO Number", "Status", "Supplier", "Item Code", "Item Name", "Category", "Variant",
+                  "Qty Ordered", "Qty Received", "UOM", "Unit Price", "Unit Price excl. VAT", "Amount", "Expected By"]
+        body = ([local_cell(r["date"], zone), r["po_number"], r["status"], r["supplier"], r["item_code"], r["item_name"],
+                 r["category"], r["variant"], r["qty"], r["qty_received"], r["uom"], r["unit_price"],
+                 r["unit_price_excl_vat"], r["amount"], r["due_date"]] for r in rows)
+        return xlsx_response("PO Lines", header, body, "purchase-order-lines", footer=["Total"] + [None] * 12 + [total])
+    header = ["Receipt Date", "PO Number", "Supplier", "Delivery Note", "Item Code", "Item Name", "Category", "Variant",
+              "Warehouse", "Qty", "UOM", "Boxes", "Cones", "Drums", "Lot", "Supplier Lot",
+              "Unit Price", "Unit Price excl. VAT", "Amount", "Notes"]
+    body = ([local_cell(r["date"], zone), r["po_number"], r["supplier"], r["delivery_note"], r["item_code"], r["item_name"],
+             r["category"], r["variant"], r["warehouse"], r["qty"], r["uom"], r["boxes"], r["cones"], r["drums"],
+             r["lot"], r["supplier_lot"], r["unit_price"], r["unit_price_excl_vat"], r["amount"], r["notes"]] for r in rows)
+    return xlsx_response("Goods Received", header, body, "goods-received", footer=["Total"] + [None] * 17 + [total])
 
 
 @router.get("", response_model=PaginatedPurchaseOrderResponse)

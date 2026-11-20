@@ -8,6 +8,7 @@ import { API_BASE } from './apiBase';
 import { useData } from '../../context/DataContext';
 import { useUser } from '../../context/UserContext';
 import { useLanguage } from '../../context/LanguageContext';
+import { HeaderButton } from '@bryanadamg/terras-ui/components/HeaderButton';
 
 // Header button that opens terras-ui's shared FeedbackDialog; the dialog's
 // report posts to /feedback, which files a GitHub issue. Anonymous unless the
@@ -65,9 +66,7 @@ export default function FeedbackButton() {
 
     return (
         <>
-            <button data-testid="feedback-btn" className="btn btn-sm btn-light" onClick={() => setOpen(true)} title={t('send_feedback')}>
-                <i className="bi bi-chat-square-text"></i>
-            </button>
+            <HeaderButton data-testid="feedback-btn" onClick={() => setOpen(true)} title={t('send_feedback')} icon={<i className="bi bi-chat-square-text"></i>} />
             {open && (
                 <FeedbackDialog
                     onClose={() => setOpen(false)}

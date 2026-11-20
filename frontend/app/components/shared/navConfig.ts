@@ -49,6 +49,7 @@ export const NAV_SECTIONS: NavSection[] = [
         items: [
             { tab: 'purchase-orders', label: 'Purchase Orders', i18nKey: 'purchase_orders', icon: 'bi-bag', permission: 'purchase_order.view' },
             { tab: 'suppliers', label: 'Suppliers', i18nKey: 'suppliers', icon: 'bi-truck', permission: 'supplier.view' },
+            { tab: 'purchase-report', label: 'Purchase Report', icon: 'bi-clipboard-data', permission: 'purchase_order.view' },
         ],
     },
     {

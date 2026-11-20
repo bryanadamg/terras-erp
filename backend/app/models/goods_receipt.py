@@ -38,6 +38,9 @@ class GoodsReceiptLine(Base):
     qty_cones: Mapped[int | None] = mapped_column(Integer, nullable=True)  # raw material packaging
     qty_drums: Mapped[int | None] = mapped_column(Integer, nullable=True)  # chemical/dye packaging
     batch_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), ForeignKey("batches.id"), nullable=True)
+    # Where THIS line was put away — set when the line went to a different
+    # warehouse than the receipt's; null = the receipt's location_id.
+    location_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), ForeignKey("locations.id"), nullable=True)
 
     item = relationship("Item")
     batch = relationship("Batch")

@@ -152,14 +152,6 @@ def wo_scope_ok(user: User, center_type: str | None) -> bool:
         return True
     return center_type in allowed
 
-def category_scope_ok(user: User, category_id) -> bool:
-    """Role.allowed_categories restricts item.*/stock_on_hand.* actions to matching
-    Category ids. None/empty list = unrestricted. No category context is never restricted."""
-    allowed = user.role.allowed_categories if user.role else None
-    if not allowed or not category_id:
-        return True
-    return str(category_id) in allowed
-
 def require_any_permission(*codes: str):
     """Dependency factory: 403s unless the current user has at least one of `codes`."""
     def _dependency(current_user: Annotated[User, Depends(get_current_user)]) -> User:

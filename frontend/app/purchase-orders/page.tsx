@@ -71,6 +71,24 @@ export default function PurchaseOrdersPage() {
         }
     };
 
+    const handleVoidReceipt = async (receiptId: string) => {
+        const confirmed = await confirm({
+            title: 'Void Goods Receipt',
+            message: 'Take this delivery\'s stock back out and return its quantities to the PO, so it can be received again correctly? This fails if any of the stock has already been used or moved.',
+            confirmText: 'Void Receipt',
+            variant: 'danger'
+        });
+        if (!confirmed) return;
+        const res = await authFetch(`${API_BASE}/purchase-orders/receipts/${receiptId}`, { method: 'DELETE' });
+        if (res.ok) {
+            showToast('Receipt voided — receive it again with the right figures', 'success');
+            await refreshPurchaseOrders();
+        } else {
+            const err = await res.json().catch(() => ({}));
+            showToast(err.detail || 'Failed to void receipt', 'error');
+        }
+    };
+
     const handleDeletePO = async (id: string) => {
         const confirmed = await confirm({
             title: 'Delete Purchase Order',
@@ -96,6 +114,7 @@ export default function PurchaseOrdersPage() {
                 onEditPO={handleEditPO}
                 onCreateReceipt={handleCreateReceipt}
                 onClosePO={handleClosePO}
+                onVoidReceipt={handleVoidReceipt}
                 onDeletePO={handleDeletePO}
                 companyProfile={companyProfile}
             />

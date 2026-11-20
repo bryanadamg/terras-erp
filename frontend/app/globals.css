@@ -101,23 +101,7 @@ body {
 }
 
 /* UI Style: Classic (Windows XP) */
-/* ============================================================
-   Window focus — active vs inactive chrome.
-   The app header, every list panel's title bar and every dialog's
-   title bar used to paint the SAME blue gradient, so a modal read
-   as part of the page behind it. XP's own answer: only the focused
-   window keeps the saturated blue, the chrome behind desaturates.
-   ModalWrapper refcounts open windows and puts
-   `.window-chrome-inactive` on <body> (see useInactiveChromeWhileOpen);
-   everything that heads page chrome reads these two properties, so the
-   swap needs no per-call-site change. Dialog title bars deliberately
-   hardcode their gradient instead — a window must not dim itself.
-   Custom properties are substituted where they are USED, so page chrome
-   must reference --xp-title-blue directly; aliasing it into another
-   property on :root would freeze the active value.
-   ============================================================ */
 :root {
-  /* The never-dimmed pair: what a window's own title bar paints with. */
   /* Flat accent, not the XP blue→cyan fade (retro-modern pass): the band keeps
      its place and its inset highlight, it just stops being glossy. The colour is
      terras-ui's accent, so a palette bump in the package carries through. */
@@ -127,31 +111,18 @@ body {
   --xp-title-blue-border: var(--xp-title-blue-border-active);
   /* Flat left-end of the title gradient, for the sidebar brand block: it sits to
      the LEFT of the header, so re-running the gradient there would end bright at
-     the seam and restart dark in the header. Flat = an invisible join. Declared
-     as a var so the brand dims with the header when the window loses focus. */
+     the seam and restart dark in the header. Flat = an invisible join. */
   --xp-title-flat: var(--xp-title-blue-active);
-}
-body.window-chrome-inactive {
-  --xp-title-blue: #7a96b8;
-  --xp-title-blue-border: #6a819b;
-  --xp-title-flat: #7a96b8;
 }
 /* terras-ui's title bars (Window.TitleBar, Modal, `titleBar`) read
    --terras-title-blue, which terras-ui/css sets to a literal on
-   .ui-style-classic. Re-point it at the dimmable pair on <body> and on the
-   theme root (both below :root, so it re-resolves when the class flips). */
+   .ui-style-classic. Re-point it at the erp pair so both chromes match. */
 body,
 .ui-style-classic {
   --terras-title-blue: var(--xp-title-blue);
   --terras-title-blue-border: var(--xp-title-blue-border);
-  /* terras-ui's Sidebar brand block: flat, dims with the header. */
+  /* terras-ui's Sidebar brand block: flat, matches the header. */
   --terras-title-flat: var(--xp-title-flat);
-}
-/* A window must not dim itself: a dialog's own title bar stays active. Its
-   body is a .ui-style-classic again, so page chrome nested inside still dims. */
-[role="dialog"] {
-  --terras-title-blue: var(--xp-title-blue-active);
-  --terras-title-blue-border: var(--xp-title-blue-border-active);
 }
 
 .ui-style-classic {
@@ -186,6 +157,13 @@ body,
   background-color: var(--win-bg) !important;
 }
 
+/* ModalWrapper's body re-applies `.ui-style-classic` for the Bootstrap control
+   overrides, which would also repaint it with the page's beige above. Let
+   terras-ui's Modal body colour (--terras-modal-bg) show through instead. */
+.ui-style-classic.modal-body-classic {
+  background-color: transparent !important;
+}
+
 /* Sidebar base (classic theme) — visual handled by inline styles in Sidebar.tsx */
 .ui-style-classic .sidebar {
   border-right: 1px solid #718bb7;
@@ -197,7 +175,7 @@ body,
 /* Dot-matrix on the band's right half, the login's CityMatrix echoed in the
    chrome. Three layers, top first: the band colour fading out left to right,
    the dot grid it uncovers, the band colour under both. Plain colours only
-   (--xp-title-flat), so it dims with the window like the rest of the band. */
+   (--xp-title-flat). */
 .classic-header {
   background:
     linear-gradient(to right, var(--xp-title-flat) 40%, transparent 100%),
@@ -217,71 +195,10 @@ body,
   text-shadow: 1px 1px 1px rgba(0,0,0,0.3);
 }
 
-.classic-header .btn-light, 
-.classic-header .btn-sm {
-  background: linear-gradient(to bottom, #ffffff 0%, #ebeadb 100%) !important;
-  border: 1px solid #707070 !important;
-  border-radius: 3px !important;
-  color: #00309c !important;
-  height: 22px !important;
-  padding: 0 8px !important;
-  display: flex !important;
-  align-items: center !important;
-  font-size: 10px !important;
-  font-weight: bold !important;
-  box-shadow: 1px 1px 0 rgba(0,0,0,0.1) !important;
-}
-
-.classic-header .btn-light:hover, 
-.classic-header .btn-sm:hover {
-  background: #ffffff !important;
-  border-color: #00309c !important;
-}
-
-.classic-header .btn-light:active, 
-.classic-header .btn-sm:active {
-  background: #dadada !important;
-  box-shadow: inset 1px 1px 2px rgba(0,0,0,0.2) !important;
-}
-
-/* The header's logout control is terras-ui's `LogoutButton` (MainLayout.tsx),
-   which carries this face inline — flat #ff4d4d over one #800000 border, 22px
-   against the 10px caps label, hover #cc0000 — off its own --terras-logout-*
-   tokens. The `.classic-header .btn-outline-danger` rules that painted it here
-   went with it: the control is flat chrome in the title band. */
-
-.classic-header .form-select-sm {
-  background-color: white !important;
-  border: 1px solid #7f9db9 !important;
-  height: 22px !important;
-  font-size: 10px !important;
-  color: black !important;
-  padding: 0 4px !important;
-  border-radius: 3px !important;
-}
-
-/* Header controls: one rounded XP-chrome shape for every control.
-   Extra .ui-style-classic prefix outranks the generic `.ui-style-classic .btn-light
-   { border-radius: 0 }` block further down, which squared off only some of them. */
-.ui-style-classic .classic-header .btn,
-.ui-style-classic .classic-header .form-select-sm {
-  border-radius: 3px !important;
-  height: 22px !important;
-  box-shadow: 1px 1px 0 rgba(0,0,0,0.1) !important;
-}
-
-.ui-style-classic .classic-header .btn:active {
-  box-shadow: inset 1px 1px 2px rgba(0,0,0,0.2) !important;
-}
-
-.classic-header .vr {
-  background-color: rgba(255,255,255,0.4) !important;
-  height: 20px !important;
-}
-
-.classic-header .dropdown-toggle::after {
-  color: #00309c !important;
-}
+/* The header's QR / Feedback buttons and the language select are terras-ui's
+   ghost `HeaderButton` / `HeaderSelect` and the logout control is its
+   `LogoutButton` (MainLayout.tsx) — each carries its own face off the
+   --terras-header-btn-* / --terras-logout-* tokens, so nothing here paints them. */
 
 .ui-style-classic .nav-link {
   padding: 6px 15px;
@@ -314,24 +231,6 @@ body,
 }
 
 /* ── TOP BAR: Enhanced XP Classic ── */
-
-/* 10. User dropdown toggle button */
-.classic-header .dropdown .btn {
-  border-radius: 3px !important;
-  background: linear-gradient(to bottom, #ffffff 0%, #d4d0c8 100%) !important;
-  border: 1px solid #707070 !important;
-  color: #000000 !important;
-  height: 22px !important;
-  padding: 0 8px !important;
-  font-size: 10px !important;
-}
-.classic-header .dropdown .btn:hover {
-  background: #ffffff !important;
-  border-color: #00309c !important;
-}
-.classic-header .dropdown .btn .text-primary {
-  color: #00309c !important;
-}
 
 /* 11. Dropdown menu (XP popup) */
 .ui-style-classic .dropdown-menu {

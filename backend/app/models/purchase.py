@@ -1,5 +1,5 @@
 import uuid
-from sqlalchemy import String, ForeignKey, Numeric, DateTime, Text, Table, Column
+from sqlalchemy import String, ForeignKey, Numeric, DateTime, Text, Table, Column, Boolean
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.db.base import Base
@@ -40,6 +40,10 @@ class PurchaseOrder(Base):
     category: Mapped[str | None] = mapped_column(String(64), nullable=True)
     vat_percent: Mapped[float | None] = mapped_column(Numeric(6, 2), nullable=True, default=11)
     discount: Mapped[float | None] = mapped_column(Numeric(14, 2), nullable=True, default=0)
+    # True = line unit prices were entered VAT-inclusive (gross). The pre-VAT price
+    # and the VAT are backed out of the gross on print, so the total stays exactly
+    # qty × the price the supplier quoted — no rounding drift.
+    prices_include_vat: Mapped[bool] = mapped_column(Boolean, default=False, server_default="false")
 
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
 

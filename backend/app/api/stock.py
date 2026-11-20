@@ -10,8 +10,9 @@ from app.core.ws_manager import manager
 from app.core.pagination import PageParams, PageWindow
 from app.schemas import StockLedgerResponse, StockBalanceResponse, PaginatedStockBalanceResponse, PaginatedStockLedgerResponse, StockEntryCreate, StockTransferCreate, StockBulkTransferCreate, BookingStockRow, BookingDemandMO, BookingSupplyMO, BookingReservedSO, PaginatedBookingStockResponse
 from app.models.auth import User
-from app.api.auth import get_current_user, require_permission, require_any_permission, get_current_admin, category_scope_ok
+from app.api.auth import get_current_user, require_permission, require_any_permission, get_current_admin
 from app.models.item import Item
+from app.services.item_service import category_scope_allows, category_scope_ids, category_scope_clause
 from app.models.location import Location
 from app.models.stock_balance import StockBalance
 from app.models.audit import AuditLog
@@ -101,6 +102,9 @@ async def get_stock_ledger(
             conditions.append(StockLedger.item_id.in_(
                 select(Item.id).where(Item.category_id.in_(cat_ids))
             ))
+    scope = category_scope_clause(Item.category_id, await category_scope_ids(db, current_user))
+    if scope is not None:
+        conditions.append(StockLedger.item_id.in_(select(Item.id).where(scope)))
     if reference_type:
         conditions.append(StockLedger.reference_type == reference_type)
     if direction == "in":
@@ -116,7 +120,7 @@ async def get_stock_ledger(
         for tok in search.split():
             term = f"%{tok}%"
             item_sub = select(Item.id).where(or_(Item.name.ilike(term), Item.code.ilike(term)))
-            conditions.append(or_(StockLedger.reference_id.ilike(term), StockLedger.item_id.in_(item_sub)))
+            conditions.append(or_(StockLedger.reference_id.ilike(term), StockLedger.notes.ilike(term), StockLedger.item_id.in_(item_sub)))
 
     total = (await db.execute(
         select(func.count(StockLedger.id)).where(*conditions)
@@ -230,6 +234,30 @@ async def get_stock_ledger(
         )).all():
             labdip_map[bid] = code
 
+    # Transfers already undone (their group id is a reversal's reference_id), and
+    # reversal rows labelled with the route of the transfer they undid.
+    group_ids = {str(r.transfer_group_id) for r in rows if r.transfer_group_id}
+    rev_ref_ids = {r.reference_id for r in rows if r.reference_type == "Transfer Reversal"}
+    reversed_groups: set[str] = set()
+    if group_ids:
+        reversed_groups = set((await db.execute(
+            select(StockLedger.reference_id).where(
+                StockLedger.reference_type == "Transfer Reversal", StockLedger.reference_id.in_(group_ids),
+            )
+        )).scalars().all())
+    if rev_ref_ids:
+        valid = []
+        for x in rev_ref_ids:
+            try:
+                valid.append(_uuid.UUID(x))
+            except ValueError:
+                pass
+        for gid, route in (await db.execute(
+            select(StockLedger.transfer_group_id, StockLedger.reference_id)
+            .where(StockLedger.transfer_group_id.in_(valid)).distinct()
+        )).all() if valid else []:
+            ref_label_map[str(gid)] = route
+
     items = []
     for r in rows:
         nm, cd, uom, cat_id, cat_name = item_map.get(r.item_id, ("", "", "", None, None))
@@ -252,6 +280,9 @@ async def get_stock_ledger(
             "reference_type": r.reference_type,
             "reference_id": r.reference_id,
             "reference_label": ref_label_map.get(r.reference_id),
+            "notes": r.notes,
+            "transfer_group_id": r.transfer_group_id,
+            "reversed": r.transfer_group_id is not None and str(r.transfer_group_id) in reversed_groups,
             "batch_id": r.batch_id,
             "batch_number": r.batch.batch_number if r.batch else None,
             "vendor_lot": r.batch.vendor_lot if r.batch else None,
@@ -312,6 +343,7 @@ async def export_stock_ledger(
             r["reference_type"], r["reference_label"] or r["reference_id"],
             r["qty_change"], r["item_uom"],
             r["qty_cones_change"] or None, r["qty_boxes_change"] or None, r["qty_drums_change"] or None,
+            r["notes"],
         ]
 
     return xlsx_response(
@@ -319,7 +351,7 @@ async def export_stock_ledger(
         [
             "Date", "Item Code", "Item Name", "Category", "Location", "Lot", "Supplier Lot",
             "Color", "Attributes", "Size", "Reference Type", "Reference", "Qty", "UOM",
-            "Cones", "Boxes", "Drums",
+            "Cones", "Boxes", "Drums", "Notes",
         ],
         (_row(r) for r in data["items"]),
         "stock-ledger",
@@ -338,7 +370,7 @@ async def create_stock_entry(
     if not item:
         raise HTTPException(status_code=404, detail=f"Item '{payload.item_code}' not found")
 
-    if not category_scope_ok(current_user, item.category_id):
+    if not await category_scope_allows(db, current_user, item.category_id):
         raise HTTPException(status_code=403, detail="Not authorized for this category")
 
     loc_result = await db.execute(select(Location).filter(Location.code == payload.location_code))
@@ -408,7 +440,7 @@ async def transfer_stock(
     if not item:
         raise HTTPException(status_code=404, detail="Item not found")
 
-    if not category_scope_ok(current_user, item.category_id):
+    if not await category_scope_allows(db, current_user, item.category_id):
         raise HTTPException(status_code=403, detail="Not authorized for this category")
 
     loc_result = await db.execute(
@@ -427,19 +459,21 @@ async def transfer_stock(
     c = payload.qty_cones or 0
     b = payload.qty_boxes or 0
     d = payload.qty_drums or 0
+    note = (payload.notes or "").strip() or None
+    group = _uuid.uuid4()
 
     # OUT first — per-batch negative stock guard blocks over-transfer
     await stock_service.add_stock_entry(
         db, item_id=item.id, location_id=payload.from_location_id,
         qty_change=-payload.qty, reference_type="Transfer", reference_id=ref,
         attribute_value_ids=attrs, batch_id=payload.batch_id, color_id=payload.color_id,
-        cones_change=-c, boxes_change=-b, drums_change=-d,
+        cones_change=-c, boxes_change=-b, drums_change=-d, notes=note, transfer_group_id=group,
     )
     await stock_service.add_stock_entry(
         db, item_id=item.id, location_id=payload.to_location_id,
         qty_change=payload.qty, reference_type="Transfer", reference_id=ref,
         attribute_value_ids=attrs, batch_id=payload.batch_id, color_id=payload.color_id,
-        cones_change=c, boxes_change=b, drums_change=d,
+        cones_change=c, boxes_change=b, drums_change=d, notes=note, transfer_group_id=group,
     )
     await db.commit()
 
@@ -456,6 +490,60 @@ async def transfer_stock(
     await kpi_service.invalidate_and_broadcast(db, {"type": "KPI_UPDATE"})
 
     return {"status": "success", "message": "Transfer recorded"}
+
+
+@router.post("/stock/transfer/{group_id}/reverse", status_code=201)
+async def reverse_transfer(
+    group_id: _uuid.UUID,
+    db: AsyncSession = Depends(get_async_db),
+    current_user: User = Depends(require_permission('stock_on_hand.move')),
+):
+    """Undo a transfer entered by mistake: every leg is posted back in reverse
+    (the goods leave the destination and return to the source), so the operator can
+    then move it again correctly. Refused once the moved stock has been used."""
+    from app.models.stock_ledger import StockLedger
+    from sqlalchemy.orm import selectinload
+    legs = (await db.execute(
+        select(StockLedger).options(selectinload(StockLedger.attribute_values))
+        .where(StockLedger.transfer_group_id == group_id)
+    )).scalars().all()
+    if not legs:
+        raise HTTPException(status_code=404, detail="Transfer not found")
+    already = (await db.execute(
+        select(func.count()).select_from(StockLedger).where(
+            StockLedger.reference_type == "Transfer Reversal", StockLedger.reference_id == str(group_id),
+        )
+    )).scalar()
+    if already:
+        raise HTTPException(status_code=400, detail="This transfer was already reversed")
+    item = (await db.execute(select(Item).filter(Item.id == legs[0].item_id))).scalars().first()
+    if item and not await category_scope_allows(db, current_user, item.category_id):
+        raise HTTPException(status_code=403, detail="Not authorized for this category")
+
+    # Take the goods out of the destination before putting them back at the source,
+    # so the negative-stock guard sees the destination as it really stands.
+    for leg in sorted(legs, key=lambda e: float(e.qty_change) < 0):
+        await stock_service.add_stock_entry(
+            db, item_id=leg.item_id, location_id=leg.location_id,
+            qty_change=-float(leg.qty_change), reference_type="Transfer Reversal", reference_id=str(group_id),
+            attribute_value_ids=[str(v.id) for v in leg.attribute_values], batch_id=leg.batch_id, color_id=leg.color_id,
+            cones_change=-(leg.qty_cones_change or 0), boxes_change=-(leg.qty_boxes_change or 0),
+            drums_change=-(leg.qty_drums_change or 0), notes=f"Reversal of {leg.reference_id}",
+        )
+    await db.commit()
+
+    await audit_service.log_activity(
+        db=db,
+        user_id=current_user.id,
+        action="TRANSFER",
+        entity_type="StockEntry",
+        entity_id=str(legs[0].item_id),
+        details=f"Reversed transfer {legs[0].reference_id}",
+        changes={"transfer_group_id": str(group_id)},
+    )
+    await manager.broadcast({"type": "STOCK_UPDATE"})
+    await kpi_service.invalidate_and_broadcast(db, {"type": "KPI_UPDATE"})
+    return {"status": "success", "message": "Transfer reversed"}
 
 
 @router.post("/stock/transfer/bulk", status_code=201)
@@ -494,12 +582,13 @@ async def transfer_stock_bulk(
             raise HTTPException(status_code=404, detail=f"Line {idx} ({item.code}): source location not found")
         if ln.from_location_id == payload.to_location_id:
             raise HTTPException(status_code=400, detail=f"Line {idx} ({item.code}): already at the destination location")
-        if not category_scope_ok(current_user, item.category_id):
+        if not await category_scope_allows(db, current_user, item.category_id):
             raise HTTPException(status_code=403, detail=f"Line {idx} ({item.code}): not authorized for this category")
         if item.lot_tracked and not ln.batch_id:
             raise HTTPException(status_code=400, detail=f"Line {idx}: item {item.code} is lot-tracked — select a lot to transfer")
 
     dest_code = locs[payload.to_location_id].code
+    note = (payload.notes or "").strip() or None
     for ln in payload.lines:
         item = items[ln.item_id]
         attrs = [str(u) for u in ln.attribute_value_ids]
@@ -507,18 +596,19 @@ async def transfer_stock_bulk(
         c = ln.qty_cones or 0
         b = ln.qty_boxes or 0
         d = ln.qty_drums or 0
+        group = _uuid.uuid4()
         # OUT first — per-batch negative stock guard blocks over-transfer
         await stock_service.add_stock_entry(
             db, item_id=item.id, location_id=ln.from_location_id,
             qty_change=-ln.qty, reference_type="Transfer", reference_id=ref,
             attribute_value_ids=attrs, batch_id=ln.batch_id, color_id=ln.color_id,
-            cones_change=-c, boxes_change=-b, drums_change=-d,
+            cones_change=-c, boxes_change=-b, drums_change=-d, notes=note, transfer_group_id=group,
         )
         await stock_service.add_stock_entry(
             db, item_id=item.id, location_id=payload.to_location_id,
             qty_change=ln.qty, reference_type="Transfer", reference_id=ref,
             attribute_value_ids=attrs, batch_id=ln.batch_id, color_id=ln.color_id,
-            cones_change=c, boxes_change=b, drums_change=d,
+            cones_change=c, boxes_change=b, drums_change=d, notes=note, transfer_group_id=group,
         )
     await db.commit()
 
@@ -696,6 +786,9 @@ async def get_stock_balance_paginated(
         cat_ids = [x for x in category_id.split(",") if x]
         if cat_ids:
             conditions.append(Item.category_id.in_(cat_ids))
+    scope = category_scope_clause(Item.category_id, await category_scope_ids(db, current_user))
+    if scope is not None:
+        conditions.append(scope)
     if mo_code:
         conditions.append(ManufacturingOrder.code == mo_code)
     if wo_code:
@@ -1260,17 +1353,9 @@ async def _compute_booking_rows(db: AsyncSession) -> list:
     return rows
 
 
-@router.get("/stock/availability", response_model=PaginatedBookingStockResponse)
-async def get_stock_availability(
-    location_id: Optional[str] = Query(None, description="Restrict to a single location"),
-    search: Optional[str] = Query(None, description="Matches item code or name"),
-    window: PageWindow = Depends(PageParams(default_size=50)),
-    db: AsyncSession = Depends(get_async_db),
-    current_user: User = Depends(require_any_permission("booking_stock.view", "stock_on_hand.view", "production_run.view")),
-):
-    """Booking-stock / material-availability view. See _compute_booking_rows for the
-    netting logic. The ``location_id`` query param is retained for API compatibility
-    but no longer scopes the result (netting is plant-wide/location-agnostic)."""
+async def _booking_rows_filtered(db: AsyncSession, search: Optional[str], category_id: Optional[str], user=None) -> list:
+    """The cached booking rows narrowed by search and item category, each stamped
+    with its item's category name, shortfalls first."""
     now = time.monotonic()
     if _booking_cache["rows"] is None:
         # Cold cache (first load / after restart): must compute synchronously.
@@ -1285,17 +1370,82 @@ async def get_stock_availability(
     if search:
         term = search.strip().lower()
         rows = [r for r in rows if term in r.item_code.lower() or term in r.item_name.lower()]
-    else:
-        rows = list(rows)  # copy before sorting — never mutate the cached list in place
+
+    from app.models.category import Category
+    item_cat: dict = {}
+    item_ids = {r.item_id for r in rows}
+    if item_ids:
+        for iid, cid, cname in (await db.execute(
+            select(Item.id, Item.category_id, Category.name)
+            .outerjoin(Category, Category.id == Item.category_id)
+            .where(Item.id.in_(item_ids))
+        )).all():
+            item_cat[iid] = (cid, cname)
+    cats = {c.strip() for c in (category_id or "").split(",") if c.strip()}
+    if cats:
+        rows = [r for r in rows if str(item_cat.get(r.item_id, (None,))[0]) in cats]
+    scope = await category_scope_ids(db, user)
+    if scope is not None:
+        rows = [r for r in rows if item_cat.get(r.item_id, (None,))[0] in scope or item_cat.get(r.item_id, (None,))[0] is None]
+    # Copies — never mutate the cached rows in place.
+    rows = [r.model_copy(update={"category_name": item_cat.get(r.item_id, (None, None))[1]}) for r in rows]
 
     # Shortfalls first (most actionable), then by item code.
     rows.sort(key=lambda r: (r.qty_net_free >= 0, r.item_code, r.size_label or ""))
+    return rows
+
+
+@router.get("/stock/availability", response_model=PaginatedBookingStockResponse)
+async def get_stock_availability(
+    location_id: Optional[str] = Query(None, description="Restrict to a single location"),
+    search: Optional[str] = Query(None, description="Matches item code or name"),
+    category_id: Optional[str] = Query(None, description="Item category id, or comma-separated ids (a category plus its descendants)"),
+    window: PageWindow = Depends(PageParams(default_size=50)),
+    db: AsyncSession = Depends(get_async_db),
+    current_user: User = Depends(require_any_permission("booking_stock.view", "stock_on_hand.view", "production_run.view")),
+):
+    """Booking-stock / material-availability view. See _compute_booking_rows for the
+    netting logic. The ``location_id`` query param is retained for API compatibility
+    but no longer scopes the result (netting is plant-wide/location-agnostic)."""
+    rows = await _booking_rows_filtered(db, search, category_id, current_user)
     total = len(rows)
     # The page window is applied to an in-memory list here, not a select, so this
     # slices by hand instead of window.apply(). Uncapped (size=0) pins offset to 0,
     # so an open-ended slice is the whole set.
     end = None if window.limit is None else window.offset + window.limit
     return window.envelope(rows[window.offset:end], total)
+
+
+@router.get("/stock/availability/export")
+async def export_stock_availability(
+    search: Optional[str] = Query(None),
+    category_id: Optional[str] = Query(None),
+    db: AsyncSession = Depends(get_async_db),
+    current_user: User = Depends(require_permission("booking_stock.export")),
+):
+    """Booking Stock as an .xlsx — the whole filtered set, not the page."""
+    rows = await _booking_rows_filtered(db, search, category_id, current_user)
+    variant = await stock_service.describe_variant_keys(
+        db, {stock_service._generate_variant_key([str(v) for v in r.attribute_value_ids], None) for r in rows}
+    )
+
+    def _variant(r) -> Optional[str]:
+        info = variant.get(stock_service._generate_variant_key([str(v) for v in r.attribute_value_ids], None), {})
+        return ", ".join(a["value"] for a in info.get("variant_attributes", [])) or None
+
+    return xlsx_response(
+        "Booking Stock",
+        ["Item Code", "Item Name", "Category", "Variant", "Size", "UOM", "On Hand", "Required", "Incoming",
+         "Reserved", "Net Free", "Demand MOs", "Supply MOs", "Reserved Sales Orders"],
+        ([
+            r.item_code, r.item_name, r.category_name, _variant(r), r.size_label, r.uom,
+            r.qty_on_hand, r.qty_required, r.qty_incoming, r.qty_reserved, r.qty_net_free,
+            ", ".join(m.mo_code for m in r.demand_mos) or None,
+            ", ".join(m.mo_code for m in r.supply_mos) or None,
+            ", ".join(s.so_number for s in r.reserved_sos) or None,
+        ] for r in rows),
+        "booking-stock",
+    )
 
 
 @router.post("/stock/balances/rebuild")

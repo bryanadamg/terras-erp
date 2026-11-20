@@ -37,6 +37,35 @@ async def get_descendant_category_ids(db: AsyncSession, category_id: uuid.UUID) 
     return ids
 
 
+async def category_scope_ids(db: AsyncSession, user) -> set[uuid.UUID] | None:
+    """Item categories the user's role may see and act on: each picked category
+    (normally a top-level one) plus everything under it. None = unrestricted."""
+    allowed = user.role.allowed_categories if user is not None and user.role else None
+    if not allowed:
+        return None
+    ids: set[uuid.UUID] = set()
+    for cid in allowed:
+        try:
+            ids.update(await get_descendant_category_ids(db, uuid.UUID(str(cid))))
+        except ValueError:
+            continue
+    return ids
+
+
+async def category_scope_allows(db: AsyncSession, user, category_id) -> bool:
+    """Whether the role's category scope covers `category_id`. An item without a
+    category is never restricted."""
+    if not category_id:
+        return True
+    ids = await category_scope_ids(db, user)
+    return ids is None or uuid.UUID(str(category_id)) in ids
+
+
+def category_scope_clause(column, ids: set[uuid.UUID] | None):
+    """SQL filter for a category column under a scope (uncategorised rows pass)."""
+    return None if ids is None else or_(column.is_(None), column.in_(ids))
+
+
 async def create_item(
     db: AsyncSession,
     code: str,
@@ -125,20 +154,31 @@ async def update_item(
     attribute_ids = data.pop("attribute_ids", None)
     packaging_factor_ids = data.pop("packaging_factor_ids", None)
 
+    # The API passes only fields the client sent (exclude_unset), so an explicit
+    # null means "clear it" — honour it on every nullable column (variant type,
+    # default locations, min stock, weight, lineage). NOT NULL columns keep the
+    # old skip so a stray null can't 500 the update.
     for key, value in data.items():
-        if value is not None:
-            setattr(item, key, value)
+        if value is None and not Item.__table__.c[key].nullable:
+            continue
+        setattr(item, key, value)
 
     if attribute_ids is not None:
         result = await db.execute(select(Attribute).filter(Attribute.id.in_(attribute_ids)))
         attrs = result.scalars().all()
         item.attributes = attrs
 
-    # Keep combo-type FGs bound to the Combo attribute (see create_item).
-    if data.get("variant_type") == "combo":
+    # Keep combo-type FGs bound to the Combo attribute (see create_item), and
+    # unbind it when the type moves off combo — otherwise the SO picker still
+    # offers combos for an item now marked Color/None.
+    if "variant_type" in data:
         combo = (await db.execute(select(Attribute).filter(Attribute.system_role == "combo"))).scalars().first()
-        if combo and combo.id not in [a.id for a in item.attributes]:
-            item.attributes = list(item.attributes) + [combo]
+        if combo:
+            bound = combo.id in [a.id for a in item.attributes]
+            if data["variant_type"] == "combo" and not bound:
+                item.attributes = list(item.attributes) + [combo]
+            elif data["variant_type"] != "combo" and bound:
+                item.attributes = [a for a in item.attributes if a.id != combo.id]
 
     if packaging_factor_ids is not None:
         result = await db.execute(select(UOMFactor).filter(UOMFactor.id.in_(packaging_factor_ids)))
@@ -174,6 +214,10 @@ async def get_items(
     category_ids: list[uuid.UUID] | None = None,
 ) -> tuple[list[Item], int]:
     query = select(Item)
+
+    scope = category_scope_clause(Item.category_id, await category_scope_ids(db, user))
+    if scope is not None:
+        query = query.filter(scope)
 
     if search:
         search_filter = f"%{search}%"

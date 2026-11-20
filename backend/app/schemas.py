@@ -760,6 +760,7 @@ class BookingStockRow(BaseModel):
     size_label: str | None = None
     location_id: UUID | None = None        # null = plant-wide (location-agnostic netting)
     location_name: str = "Plant-wide"
+    category_name: str | None = None
     qty_on_hand: float       # current physical balance
     qty_required: float      # outstanding demand from ongoing MOs
     qty_incoming: float       # scheduled receipts from in-flight production MOs
@@ -1478,6 +1479,7 @@ class StockTransferCreate(BaseModel):
     qty_cones: int | None = None
     qty_boxes: int | None = None
     qty_drums: int | None = None
+    notes: str | None = None
 
 # Multi-row move: the operator ticks several on-hand rows and sends them to ONE
 # destination in a single transaction. Each line keeps its own source location,
@@ -1495,6 +1497,7 @@ class StockBulkTransferLine(BaseModel):
 
 class StockBulkTransferCreate(BaseModel):
     to_location_id: UUID
+    notes: str | None = None
     lines: list[StockBulkTransferLine]
 
 class StockLedgerResponse(BaseModel):
@@ -1515,6 +1518,9 @@ class StockLedgerResponse(BaseModel):
     reference_type: str
     reference_id: str
     reference_label: str | None = None
+    notes: str | None = None
+    transfer_group_id: UUID | None = None
+    reversed: bool = False
     batch_id: UUID | None = None
     batch_number: str | None = None
     vendor_lot: str | None = None
@@ -1785,6 +1791,7 @@ class PurchaseOrderCreate(BaseModel):
     payment_term: str | None = None
     category: str | None = None
     vat_percent: float | None = 11
+    prices_include_vat: bool = False
     discount: float | None = 0
     notes: str | None = None
     lines: list[PurchaseOrderLineCreate]
@@ -1799,6 +1806,7 @@ class GoodsReceiptLineCreate(BaseModel):
     qty_drums: int | None = None  # chemical/dye packaging
     batch_id: UUID | None = None
     vendor_lot: str | None = None  # supplier's lot number; same supplier+item+lot merges into the existing internal lot, else one is auto-generated
+    location_id: UUID | None = None  # this line's warehouse; falls back to the receipt's
 
 class GoodsReceiptCreate(BaseModel):
     receipt_date: datetime | None = None
@@ -1822,6 +1830,7 @@ class GoodsReceiptLineResponse(BaseModel):
     batch_id: UUID | None = None
     vendor_lot: str | None = None    # supplier's lot reference
     internal_lot: str | None = None  # system-generated internal batch number
+    location_id: UUID | None = None  # null = the receipt's location_id
     class Config:
         from_attributes = True
 
