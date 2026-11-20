@@ -26,7 +26,7 @@ import { SortableTh } from '@bryanadamg/terras-ui/components/Table';
 import { STATIC_BASE } from '../shared/apiBase';
 import { fmtMoney } from '../shared/format';
 
-export default function PurchaseOrderView({ items, itemResults, onSearchItems, attributes, purchaseOrders, partners, locations, onCreatePO, onEditPO, onDeletePO, onCreateReceipt, onClosePO, companyProfile }: any) {
+export default function PurchaseOrderView({ items, itemResults, onSearchItems, attributes, purchaseOrders, partners, locations, onCreatePO, onEditPO, onDeletePO, onCreateReceipt, onClosePO, onVoidReceipt, companyProfile }: any) {
   const { showToast } = useToast();
   const { t } = useLanguage();
   // Search / status / page all live in DataContext, which owns the server fetch —
@@ -977,6 +977,7 @@ export default function PurchaseOrderView({ items, itemResults, onSearchItems, a
                                                const hasDrums = allLines.some((l: any) => l.qty_drums != null);
                                                const hasLots = allLines.some((l: any) => l.vendor_lot);
                                                const hasNotes = allLines.some((l: any) => l._receipt.notes);
+                                               const canVoid = hasPermission('purchase_order.receive_goods');
                                                const numR = { textAlign: 'right' as const };
                                                return (
                                                    <div>
@@ -996,6 +997,7 @@ export default function PurchaseOrderView({ items, itemResults, onSearchItems, a
                                                                    {hasDrums && <th style={{ ...subTh, ...numR }}>Drums</th>}
                                                                    {hasLots && <th style={subTh}>Supplier Lot</th>}
                                                                    {hasNotes && <th style={subTh}>Notes</th>}
+                                                                   {canVoid && <th style={subTh}></th>}
                                                                </tr>
                                                            </thead>
                                                            <tbody>
@@ -1027,6 +1029,18 @@ export default function PurchaseOrderView({ items, itemResults, onSearchItems, a
                                                                        {hasDrums && <td style={{ ...subTd, ...numR }}>{rl.qty_drums != null ? rl.qty_drums : <span style={{ color: '#bbb' }}>—</span>}</td>}
                                                                        {hasLots && <td style={subTd}>{rl.vendor_lot || <span style={{ color: '#bbb' }}>—</span>}</td>}
                                                                        {hasNotes && <td style={{ ...subTd, fontStyle: 'italic', color: '#666' }}>{rl._receipt.notes || ''}</td>}
+                                                                       {canVoid && (
+                                                                           <td style={subTd}>
+                                                                               {/* one button per delivery, on its first line */}
+                                                                               {rl._receipt.lines[0]?.id === rl.id && (
+                                                                                   <button type="button" className={XP_BTN} style={xpBtn({ padding: '0 5px', fontSize: '10px' })}
+                                                                                       title="Void this delivery (wrong entry) — stock comes back out and it can be received again"
+                                                                                       onClick={() => onVoidReceipt(rl._receipt.id)}>
+                                                                                       <i className="bi bi-arrow-counterclockwise" style={{ color: '#c00000', marginRight: 3 }} />Void
+                                                                                   </button>
+                                                                               )}
+                                                                           </td>
+                                                                       )}
                                                                    </tr>
                                                                ))}
                                                            </tbody>

@@ -29,6 +29,7 @@ const REF_META: Record<string, RefMeta> = {
     'Beam Leftover':          { label: 'Beam Leftover',       tone: T.purple },
     'Beam Leftover Variance': { label: 'Beam Variance',       tone: T.purple },
     'Goods Receipt':          { label: 'Goods Receipt',       tone: T.green },
+    'Receipt Void':           { label: 'Receipt Void',        tone: T.red },
     'Purchase Order':         { label: 'Purchase Order',      tone: T.teal },
     'PACKING':                { label: 'Packing',             tone: T.teal },
     'PACKING_MATERIAL':       { label: 'Packing Material',    tone: T.teal },

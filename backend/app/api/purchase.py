@@ -341,6 +341,71 @@ async def create_goods_receipt(
     return final.scalars().first()
 
 
+@router.delete("/receipts/{receipt_id}")
+async def void_goods_receipt(
+    receipt_id: uuid.UUID,
+    db: AsyncSession = Depends(get_async_db),
+    current_user: User = Depends(require_permission('purchase_order.receive_goods')),
+):
+    """Undo a wrongly entered receipt: take its stock back out of every warehouse it
+    went to, give the qty back to the PO lines, and drop the receipt so it can be
+    received again correctly. The negative-stock guard refuses it once any of that
+    stock has already been used or moved."""
+    gr = (await db.execute(
+        select(GoodsReceipt).options(selectinload(GoodsReceipt.lines)).filter(GoodsReceipt.id == receipt_id)
+    )).scalars().first()
+    if not gr:
+        raise HTTPException(status_code=404, detail="Goods receipt not found")
+    po = (await db.execute(
+        select(PurchaseOrder)
+        .options(selectinload(PurchaseOrder.lines).selectinload(PurchaseOrderLine.attribute_values))
+        .filter(PurchaseOrder.id == gr.po_id)
+    )).scalars().first()
+    line_map = {line.id: line for line in po.lines}
+
+    for ln in gr.lines:
+        po_line = line_map.get(ln.po_line_id)
+        await stock_service.add_stock_entry(
+            db,
+            item_id=ln.item_id,
+            location_id=ln.location_id or gr.location_id,
+            attribute_value_ids=[str(v.id) for v in po_line.attribute_values] if po_line else [],
+            qty_change=-float(ln.qty_received),
+            reference_type="Receipt Void",
+            reference_id=po.po_number,
+            batch_id=ln.batch_id,
+            cones_change=-(ln.qty_cones or 0),
+            boxes_change=-(ln.qty_boxes or 0),
+            drums_change=-(ln.qty_drums or 0),
+        )
+        if po_line:
+            po_line.qty_received = max(0.0, float(po_line.qty_received or 0) - float(ln.qty_received))
+
+    await db.delete(gr)
+    if all(float(line.qty_received or 0) <= 0 for line in po.lines):
+        po.status = "DRAFT"
+    elif all(float(line.qty_received or 0) >= float(line.qty) for line in po.lines):
+        po.status = "RECEIVED"
+    else:
+        po.status = "RECEIVING"
+
+    await audit_service.log_activity(
+        db,
+        user_id=current_user.id,
+        action="DELETE",
+        entity_type="GoodsReceipt",
+        entity_id=str(receipt_id),
+        details=f"Voided goods receipt on PO {po.po_number}",
+        changes={"lines": [{"item_id": str(ln.item_id), "qty": float(ln.qty_received)} for ln in gr.lines]},
+        commit=False,
+    )
+    await db.commit()
+
+    await manager.broadcast({"type": "STOCK_UPDATE"})
+    await kpi_service.invalidate_and_broadcast(db, {"type": "KPI_UPDATE"})
+    return {"status": "success"}
+
+
 @router.post("/receipts/{receipt_id}/delivery-note", response_model=GoodsReceiptResponse)
 async def upload_delivery_note(
     receipt_id: uuid.UUID,

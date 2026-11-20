@@ -1,4 +1,4 @@
-"""Goods receipts: per-line receiving warehouse."""
+"""Goods receipts: per-line receiving warehouse, voiding a wrong receipt."""
 import uuid
 
 import pytest
@@ -65,3 +65,34 @@ def test_receipt_line_can_go_to_its_own_warehouse(real_refs, client, auth_header
     assert by_line[l1["id"]]["location_id"] == locs[1]
     assert _on_hand(client, auth_headers, items[0]["id"]) == {locs[0]: 4}
     assert _on_hand(client, auth_headers, items[1]["id"]) == {locs[1]: 6}
+
+
+def test_void_receipt_takes_stock_back_and_reopens_the_po(real_refs, client, auth_headers):
+    po, locs, items = _seed_po(client, auth_headers, real_refs, n_lines=1)
+    (line,) = po["lines"]
+    gr = client.post(f"/api/purchase-orders/{po['id']}/receipts", json={
+        "lines": [{"po_line_id": line["id"], "qty_received": 10, "location_id": locs[1]}],
+    }, headers=auth_headers).json()
+    assert _on_hand(client, auth_headers, items[0]["id"]) == {locs[1]: 10}
+
+    r = client.delete(f"/api/purchase-orders/receipts/{gr['id']}", headers=auth_headers)
+    assert r.status_code == 200, r.text
+    assert _on_hand(client, auth_headers, items[0]["id"]).get(locs[1], 0) == 0
+    after = next(p for p in client.get("/api/purchase-orders", headers=auth_headers).json()["items"] if p["id"] == po["id"])
+    assert after["status"] == "DRAFT"
+    assert after["receipts"] == []
+    assert float(after["lines"][0]["qty_received"]) == 0
+
+
+def test_void_receipt_refused_once_stock_is_used(real_refs, client, auth_headers):
+    po, locs, items = _seed_po(client, auth_headers, real_refs, n_lines=1)
+    (line,) = po["lines"]
+    gr = client.post(f"/api/purchase-orders/{po['id']}/receipts", json={
+        "lines": [{"po_line_id": line["id"], "qty_received": 10}],
+    }, headers=auth_headers).json()
+    r = client.post("/api/stock/transfer", json={
+        "item_id": items[0]["id"], "from_location_id": locs[0], "to_location_id": locs[1], "qty": 4,
+    }, headers=auth_headers)
+    assert r.status_code == 201, r.text
+    r = client.delete(f"/api/purchase-orders/receipts/{gr['id']}", headers=auth_headers)
+    assert r.status_code == 400, r.text
