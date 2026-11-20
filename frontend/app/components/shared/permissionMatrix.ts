@@ -136,7 +136,7 @@ export const RESOURCE_ACTIONS: Record<string, PermissionMatrixAction[]> = {
     // rather than being folded into an edit right.
     quarantine: [A('set_status', 'Set Status'), VIEW],
     stock_on_hand: [CREATE, A('adjust', 'Adjust'), A('move', 'Move'), VIEW],
-    booking_stock: [VIEW],
+    booking_stock: [A('export', 'Export Excel'), VIEW],
     location: [CREATE, EDIT, DELETE, VIEW],
     stock_ledger: [A('print', 'Print'), A('export', 'Export Excel'), VIEW],
 

@@ -17,6 +17,10 @@ import { EPS, HEALTH, healthOf, TERM } from './bookingStockTheme';
 import BookingStockInfoModal from './BookingStockInfoModal';
 import { STATIC_BASE } from '../shared/apiBase';
 import { qtyFmt } from '../shared/format';
+import TreeSelect, { buildCategoryTree, expandCategoryFilterValue } from '../shared/TreeSelect';
+import { useUser } from '../../context/UserContext';
+import { useToast } from '../shared/Toast';
+import { saveResponse } from '../shared/download';
 
 // Booking Stock: per-item material availability across all ongoing MOs.
 //   net_free = on_hand + incoming - required
@@ -49,7 +53,12 @@ type Row = {
 
 export default function BookingStockView() {
     const { t } = useLanguage();
-    const { authFetch, attributes = [] } = useData();
+    const { authFetch, attributes = [], categories = [] } = useData();
+    const canExport = useUser().hasPermission('booking_stock.export');
+    const { showToast } = useToast();
+    const [categoryFilter, setCategoryFilter] = useState('');
+    const catTree = useMemo(() => buildCategoryTree(categories || []), [categories]);
+    const categoryParam = categoryFilter ? expandCategoryFilterValue(categories, categoryFilter).join(',') : '';
 
     const API_BASE = useMemo(() => {
         return STATIC_BASE.replace(/\/api$/, '') + '/api';
@@ -69,7 +78,23 @@ export default function BookingStockView() {
         endpoint: `${API_BASE}/stock/availability`,
         authFetch,
         pageSize: PAGE_SIZE,
+        params: { category_id: categoryParam },
     });
+
+    const [exporting, setExporting] = useState(false);
+    const handleExport = async () => {
+        setExporting(true);
+        try {
+            const p = new URLSearchParams();
+            if (searchInput.trim()) p.set('search', searchInput.trim());
+            if (categoryParam) p.set('category_id', categoryParam);
+            const res = await authFetch(`${API_BASE}/stock/availability/export?${p.toString()}`);
+            if (!res.ok) { showToast('Export failed', 'danger'); return; }
+            await saveResponse(res, 'booking-stock.xlsx');
+        } finally {
+            setExporting(false);
+        }
+    };
 
     const getAttrValueName = useCallback((valId: string) => {
         for (const attr of attributes) {
@@ -210,6 +235,8 @@ export default function BookingStockView() {
             <div style={{ ...xpBevel, display: 'flex', flexDirection: 'column', flex: 1 }} className={undefined}>
                 <div style={xpToolbar} className={undefined}>
                     <SearchField value={searchInput} onChange={setSearch} placeholder="Search item..." width={200} />
+                    <TreeSelect options={catTree} value={categoryFilter} onChange={setCategoryFilter}
+                        allowEmpty emptyLabel="All Categories" style={{ width: 170 }} />
                     <div style={xpSep} />
                     <button style={xpBtn()} className={XP_BTN} onClick={fetchAvailability} title={'Refresh'}>
                         <i className={'bi bi-arrow-clockwise'} style={{ marginRight: 4 }} />Refresh
@@ -222,6 +249,11 @@ export default function BookingStockView() {
                         <i className={'bi bi-info-circle'} style={{ marginRight: 4 }} />
                         {t('how_calculated') || 'How is this calculated?'}
                     </button>
+                    {canExport && (
+                        <button style={xpBtn()} className={XP_BTN} onClick={handleExport} disabled={exporting || !total} title="Export Excel (every row matching the filter)">
+                            <i className={exporting ? 'bi bi-hourglass-split' : 'bi bi-file-earmark-excel'} style={{ marginRight: 4 }} />Export
+                        </button>
+                    )}
                     {/* Legend */}
                     <span style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 10, fontFamily: xpFont, fontSize: '10px', color: '#555' }} className={undefined}>
                         <span><i className={'bi bi-square-fill'} style={{ color: HEALTH.short.color, ...({ marginRight: 3 }) }} />Shortfall</span>

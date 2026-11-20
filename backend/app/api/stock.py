@@ -1346,17 +1346,9 @@ async def _compute_booking_rows(db: AsyncSession) -> list:
     return rows
 
 
-@router.get("/stock/availability", response_model=PaginatedBookingStockResponse)
-async def get_stock_availability(
-    location_id: Optional[str] = Query(None, description="Restrict to a single location"),
-    search: Optional[str] = Query(None, description="Matches item code or name"),
-    window: PageWindow = Depends(PageParams(default_size=50)),
-    db: AsyncSession = Depends(get_async_db),
-    current_user: User = Depends(require_any_permission("booking_stock.view", "stock_on_hand.view", "production_run.view")),
-):
-    """Booking-stock / material-availability view. See _compute_booking_rows for the
-    netting logic. The ``location_id`` query param is retained for API compatibility
-    but no longer scopes the result (netting is plant-wide/location-agnostic)."""
+async def _booking_rows_filtered(db: AsyncSession, search: Optional[str], category_id: Optional[str]) -> list:
+    """The cached booking rows narrowed by search and item category, each stamped
+    with its item's category name, shortfalls first."""
     now = time.monotonic()
     if _booking_cache["rows"] is None:
         # Cold cache (first load / after restart): must compute synchronously.
@@ -1371,17 +1363,79 @@ async def get_stock_availability(
     if search:
         term = search.strip().lower()
         rows = [r for r in rows if term in r.item_code.lower() or term in r.item_name.lower()]
-    else:
-        rows = list(rows)  # copy before sorting — never mutate the cached list in place
+
+    from app.models.category import Category
+    item_cat: dict = {}
+    item_ids = {r.item_id for r in rows}
+    if item_ids:
+        for iid, cid, cname in (await db.execute(
+            select(Item.id, Item.category_id, Category.name)
+            .outerjoin(Category, Category.id == Item.category_id)
+            .where(Item.id.in_(item_ids))
+        )).all():
+            item_cat[iid] = (cid, cname)
+    cats = {c.strip() for c in (category_id or "").split(",") if c.strip()}
+    if cats:
+        rows = [r for r in rows if str(item_cat.get(r.item_id, (None,))[0]) in cats]
+    # Copies — never mutate the cached rows in place.
+    rows = [r.model_copy(update={"category_name": item_cat.get(r.item_id, (None, None))[1]}) for r in rows]
 
     # Shortfalls first (most actionable), then by item code.
     rows.sort(key=lambda r: (r.qty_net_free >= 0, r.item_code, r.size_label or ""))
+    return rows
+
+
+@router.get("/stock/availability", response_model=PaginatedBookingStockResponse)
+async def get_stock_availability(
+    location_id: Optional[str] = Query(None, description="Restrict to a single location"),
+    search: Optional[str] = Query(None, description="Matches item code or name"),
+    category_id: Optional[str] = Query(None, description="Item category id, or comma-separated ids (a category plus its descendants)"),
+    window: PageWindow = Depends(PageParams(default_size=50)),
+    db: AsyncSession = Depends(get_async_db),
+    current_user: User = Depends(require_any_permission("booking_stock.view", "stock_on_hand.view", "production_run.view")),
+):
+    """Booking-stock / material-availability view. See _compute_booking_rows for the
+    netting logic. The ``location_id`` query param is retained for API compatibility
+    but no longer scopes the result (netting is plant-wide/location-agnostic)."""
+    rows = await _booking_rows_filtered(db, search, category_id)
     total = len(rows)
     # The page window is applied to an in-memory list here, not a select, so this
     # slices by hand instead of window.apply(). Uncapped (size=0) pins offset to 0,
     # so an open-ended slice is the whole set.
     end = None if window.limit is None else window.offset + window.limit
     return window.envelope(rows[window.offset:end], total)
+
+
+@router.get("/stock/availability/export")
+async def export_stock_availability(
+    search: Optional[str] = Query(None),
+    category_id: Optional[str] = Query(None),
+    db: AsyncSession = Depends(get_async_db),
+    current_user: User = Depends(require_permission("booking_stock.export")),
+):
+    """Booking Stock as an .xlsx — the whole filtered set, not the page."""
+    rows = await _booking_rows_filtered(db, search, category_id)
+    variant = await stock_service.describe_variant_keys(
+        db, {stock_service._generate_variant_key([str(v) for v in r.attribute_value_ids], None) for r in rows}
+    )
+
+    def _variant(r) -> Optional[str]:
+        info = variant.get(stock_service._generate_variant_key([str(v) for v in r.attribute_value_ids], None), {})
+        return ", ".join(a["value"] for a in info.get("variant_attributes", [])) or None
+
+    return xlsx_response(
+        "Booking Stock",
+        ["Item Code", "Item Name", "Category", "Variant", "Size", "UOM", "On Hand", "Required", "Incoming",
+         "Reserved", "Net Free", "Demand MOs", "Supply MOs", "Reserved Sales Orders"],
+        ([
+            r.item_code, r.item_name, r.category_name, _variant(r), r.size_label, r.uom,
+            r.qty_on_hand, r.qty_required, r.qty_incoming, r.qty_reserved, r.qty_net_free,
+            ", ".join(m.mo_code for m in r.demand_mos) or None,
+            ", ".join(m.mo_code for m in r.supply_mos) or None,
+            ", ".join(s.so_number for s in r.reserved_sos) or None,
+        ] for r in rows),
+        "booking-stock",
+    )
 
 
 @router.post("/stock/balances/rebuild")

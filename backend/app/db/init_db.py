@@ -469,6 +469,7 @@ def seed_rbac(db):
             ("stock_on_hand.view", "View Stock On Hand"),
             # Booking Stock
             ("booking_stock.view", "View Booking Stock"),
+            ("booking_stock.export", "Export Booking Stock Excel"),
             # Location
             ("location.create", "Create Locations"),
             ("location.edit", "Edit Locations"),
@@ -587,7 +588,7 @@ def seed_rbac(db):
                 "lot.create", "lot.split", "lot.delete", "lot.qc_reject", "lot.view",
                 "quarantine.view", "quarantine.set_status",
                 "stock_on_hand.create", "stock_on_hand.adjust", "stock_on_hand.move", "stock_on_hand.view",
-                "booking_stock.view",
+                "booking_stock.view", "booking_stock.export",
                 "location.create", "location.edit", "location.delete", "location.view",
                 "purchase_order.create", "purchase_order.edit", "purchase_order.delete",
                 "purchase_order.receive_goods", "purchase_order.print", "purchase_order.export", "purchase_order.view", "purchase_order.close",

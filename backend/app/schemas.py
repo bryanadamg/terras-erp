@@ -760,6 +760,7 @@ class BookingStockRow(BaseModel):
     size_label: str | None = None
     location_id: UUID | None = None        # null = plant-wide (location-agnostic netting)
     location_name: str = "Plant-wide"
+    category_name: str | None = None
     qty_on_hand: float       # current physical balance
     qty_required: float      # outstanding demand from ongoing MOs
     qty_incoming: float       # scheduled receipts from in-flight production MOs
