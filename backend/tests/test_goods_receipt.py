@@ -96,3 +96,31 @@ def test_void_receipt_refused_once_stock_is_used(real_refs, client, auth_headers
     assert r.status_code == 201, r.text
     r = client.delete(f"/api/purchase-orders/receipts/{gr['id']}", headers=auth_headers)
     assert r.status_code == 400, r.text
+
+
+def test_purchase_report_lines_and_receipts(real_refs, client, auth_headers):
+    from openpyxl import load_workbook
+    import io
+    sup_id, locs, _ = real_refs
+    po, locs, items = _seed_po(client, auth_headers, real_refs)
+    l0, l1 = po["lines"]
+    client.post(f"/api/purchase-orders/{po['id']}/receipts", json={
+        "location_id": locs[0],
+        "lines": [
+            {"po_line_id": l0["id"], "qty_received": 4},
+            {"po_line_id": l1["id"], "qty_received": 6, "location_id": locs[1]},
+        ],
+    }, headers=auth_headers)
+
+    lines = client.get("/api/purchase-orders/report/lines", params={"supplier_id": sup_id}, headers=auth_headers).json()
+    assert {r["item_code"] for r in lines["items"]} == {it["code"] for it in items}
+    assert lines["amount"] == 20
+
+    rec = client.get("/api/purchase-orders/report/receipts",
+                     params={"supplier_id": sup_id, "location_id": locs[1]}, headers=auth_headers).json()
+    assert [(r["item_code"], r["qty"], r["warehouse"]) for r in rec["items"]] == [(items[1]["code"], 6, f"GR1-{real_refs[2]}")]
+
+    x = client.get("/api/purchase-orders/report/receipts/export", params={"supplier_id": sup_id}, headers=auth_headers)
+    assert x.status_code == 200, x.text
+    ws = load_workbook(io.BytesIO(x.content)).active
+    assert ws["A1"].value == "Receipt Date" and ws.max_row == 1 + 2 + 2  # header, 2 rows, blank + footer

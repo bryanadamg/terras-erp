@@ -44,6 +44,8 @@ import { BOM_SHEET_DOC, BS_FIELDS, BS_ROW_SOURCES, resolveBomSheetField, buildBo
 import { BOM_SHEET_DEFAULT } from '../defaults/bomSheet';
 import { MO_SHEET_DOC, MS_FIELDS, MS_ROW_SOURCES, resolveMoSheetField, buildMoSheetContext } from './moSheet';
 import { MO_SHEET_DEFAULT } from '../defaults/moSheet';
+import { PO_LINES_REPORT_DOC, GOODS_RECEIVED_REPORT_DOC, PRP_FIELDS, PRP_LINES_ROW_SOURCES, PRP_RECEIPT_ROW_SOURCES, resolvePurchaseReportField, buildPurchaseReportContext } from './purchaseReport';
+import { PO_LINES_REPORT_DEFAULT, GOODS_RECEIVED_REPORT_DEFAULT } from '../defaults/purchaseReport';
 
 /** What the designer has on hand to build a preview context from a sample record. */
 export interface SampleEnv {
@@ -416,6 +418,30 @@ export const DOC_MODULES: DocTypeModule[] = [
             }),
         },
     },
+    ...([
+        [PO_LINES_REPORT_DOC, 'Purchase Report — PO lines', 'lines', PRP_LINES_ROW_SOURCES, PO_LINES_REPORT_DEFAULT],
+        [GOODS_RECEIVED_REPORT_DOC, 'Purchase Report — goods received', 'receipts', PRP_RECEIPT_ROW_SOURCES, GOODS_RECEIVED_REPORT_DEFAULT],
+    ] as const).map(([docType, label, kind, rowSources, defaultLayout]): DocTypeModule => ({
+        docType,
+        label,
+        fieldPrefix: 'prp.',
+        fields: PRP_FIELDS,
+        resolve: resolvePurchaseReportField,
+        rowSources: [...rowSources],
+        defaultLayout,
+        sample: {
+            noun: 'rows',
+            list: `/purchase-orders/report/${kind}`,
+            // A report prints a filtered set: the preview is one synthetic record.
+            extract: body => [{ id: 'recent', rows: (body.items || []).slice(0, 50), amount: body.amount || 0 }],
+            label: x => `Latest ${x.rows.length} rows`,
+            build: (x, env) => buildPurchaseReportContext({
+                rows: x.rows, amount: x.amount, periodLabel: 'All time → now',
+                formatDate: iso => env.tzFormatCustom(iso, { year: 'numeric', month: 'numeric', day: 'numeric' }),
+                companyProfile: env.companyProfile, companyName: env.companyName, companyLogoUrl: env.companyLogoUrl,
+            }),
+        },
+    })),
 ];
 
 export const DOC_MODULE_BY_TYPE: Record<string, DocTypeModule> =

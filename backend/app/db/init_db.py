@@ -395,6 +395,7 @@ def seed_rbac(db):
             ("purchase_order.delete", "Delete Purchase Orders"),
             ("purchase_order.receive_goods", "Receive Goods against Purchase Orders"),
             ("purchase_order.print", "Print Purchase Orders"),
+            ("purchase_order.export", "Export Purchase Orders / Purchase Report Excel"),
             ("purchase_order.view", "View Purchase Orders"),
             ("purchase_order.close", "Close Purchase Orders"),
             # Item Inventory (scoped by Role.allowed_categories)
@@ -589,7 +590,7 @@ def seed_rbac(db):
                 "booking_stock.view",
                 "location.create", "location.edit", "location.delete", "location.view",
                 "purchase_order.create", "purchase_order.edit", "purchase_order.delete",
-                "purchase_order.receive_goods", "purchase_order.print", "purchase_order.view", "purchase_order.close",
+                "purchase_order.receive_goods", "purchase_order.print", "purchase_order.export", "purchase_order.view", "purchase_order.close",
                 "supplier.create", "supplier.edit", "supplier.delete", "supplier.view",
                 "stock_ledger.print", "stock_ledger.export", "stock_ledger.view",
                 "production_output.view", "production_output.export",

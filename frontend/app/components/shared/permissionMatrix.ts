@@ -120,7 +120,7 @@ export const RESOURCE_ACTIONS: Record<string, PermissionMatrixAction[]> = {
     customer: [A('create', 'Add'), EDIT, DELETE, VIEW],
     supplier: [A('create', 'Add'), EDIT, DELETE, VIEW],
     sample_request: [CREATE, EDIT, DELETE, A('update_status', 'Update Status'), A('print', 'Print'), VIEW],
-    purchase_order: [CREATE, EDIT, DELETE, A('receive_goods', 'Received Good'), A('print', 'Print'), VIEW, A('close', 'Closed PO')],
+    purchase_order: [CREATE, EDIT, DELETE, A('receive_goods', 'Received Good'), A('print', 'Print'), A('export', 'Export Excel'), VIEW, A('close', 'Closed PO')],
 
     item: [CREATE, EDIT, DELETE, A('import', 'Import'), VIEW],
     attribute: [CREATE, EDIT, DELETE, VIEW],

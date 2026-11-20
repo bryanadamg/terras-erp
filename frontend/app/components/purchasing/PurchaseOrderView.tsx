@@ -6,6 +6,7 @@ import { useLanguage } from '../../context/LanguageContext';
 import SearchableSelect from '@bryanadamg/terras-ui/components/Combobox';
 import TreeSelect, { buildLocationPickerTree } from '../shared/TreeSelect';
 const PurchaseOrderPrintModal = dynamic(() => import('./PurchaseOrderPrintModal'), { ssr: false });
+const PurchaseReportPrintModal = dynamic(() => import('./PurchaseReportPrintModal'), { ssr: false });
 import ModalWrapper from '../shared/ModalWrapper';
 import { useTimezone } from '../../context/TimezoneContext';
 import { useData } from '../../context/DataContext';
@@ -25,6 +26,8 @@ import { lvThead, lvSubTh, lvSubTd, lvSubTable, lvSubCaption, ExpanderCell, lvTh
 import { SortableTh } from '@bryanadamg/terras-ui/components/Table';
 import { STATIC_BASE } from '../shared/apiBase';
 import { fmtMoney } from '../shared/format';
+import { API_BASE } from '../shared/apiBase';
+import { saveResponse } from '../shared/download';
 
 export default function PurchaseOrderView({ items, itemResults, onSearchItems, attributes, purchaseOrders, partners, locations, onCreatePO, onEditPO, onDeletePO, onCreateReceipt, onClosePO, onVoidReceipt, companyProfile }: any) {
   const { showToast } = useToast();
@@ -33,12 +36,12 @@ export default function PurchaseOrderView({ items, itemResults, onSearchItems, a
   // `/purchase-orders` is paginated + filtered server-side, so `purchaseOrders`
   // is ONE page, never the whole table.
   const {
-      itemIndex, loading: dataLoading, poStatusCounts,
+      itemIndex, loading: dataLoading, poStatusCounts, authFetch,
       // aliased: `poTotal` is already this file's per-order money total helper
       pagination: { poPage, setPoPage, poTotal: poRowTotal, pageSize: poPageSize },
       filters: { poSearch: searchTerm, setPoSearch: setSearchTerm, poStatusFilter: statusFilter, setPoStatusFilter: setStatusFilter },
   } = useData();
-  const { formatDate: tzDate } = useTimezone();
+  const { formatDate: tzDate, timezone } = useTimezone();
   const { hasPermission, hasAnyPermission } = useUser();
   const canManage = hasAnyPermission('purchase_order.create', 'purchase_order.edit', 'purchase_order.delete', 'purchase_order.close');
   const [isCreateOpen, setIsCreateOpen] = useState(false);
@@ -64,6 +67,35 @@ export default function PurchaseOrderView({ items, itemResults, onSearchItems, a
 
   // Expanded rows for order-line + receipt detail
   const [expandedRows, setExpandedRows] = useState<Record<string, boolean>>({});
+
+  // List print / export: every line of every PO matching the current search +
+  // status filter (not just this page), via the Purchase Report's PO-lines feed.
+  const [listPrint, setListPrint] = useState<{ rows: any[]; amount: number } | null>(null);
+  const [listBusy, setListBusy] = useState(false);
+  const listParams = () => {
+      const p = new URLSearchParams();
+      if (searchTerm.trim()) p.set('search', searchTerm.trim());
+      if (statusFilter && statusFilter !== 'ALL') p.set('status', statusFilter);
+      return p;
+  };
+  const handleListExport = async () => {
+      setListBusy(true);
+      try {
+          const p = listParams(); p.set('tz', timezone);
+          const res = await authFetch(`${API_BASE}/purchase-orders/report/lines/export?${p.toString()}`);
+          if (!res.ok) { showToast('Export failed', 'error'); return; }
+          await saveResponse(res, 'purchase-order-lines.xlsx');
+      } finally { setListBusy(false); }
+  };
+  const handleListPrint = async () => {
+      setListBusy(true);
+      try {
+          const res = await authFetch(`${API_BASE}/purchase-orders/report/lines?${listParams().toString()}`);
+          if (!res.ok) { showToast('Could not load orders to print', 'error'); return; }
+          const body = await res.json();
+          setListPrint({ rows: body.items || [], amount: body.amount || 0 });
+      } finally { setListBusy(false); }
+  };
 
   // Floating "more actions" menu (Edit / Close PO / Print / Delete)
   const { openId: openMenuId, pos: menuPos, toggle: toggleMenu, close: closeMenu } = useFloatingMenu();
@@ -478,6 +510,13 @@ export default function PurchaseOrderView({ items, itemResults, onSearchItems, a
            />
        )}
 
+       {listPrint && (
+           <PurchaseReportPrintModal kind="lines" rows={listPrint.rows} amount={listPrint.amount}
+               periodLabel="All dates"
+               filtersSummary={[searchTerm.trim() && `Search: "${searchTerm.trim()}"`, statusFilter !== 'ALL' && `Status: ${statusFilter}`].filter(Boolean).join(' · ')}
+               onClose={() => setListPrint(null)} />
+       )}
+
        <CodeConfigModal
            isOpen={isConfigOpen}
            onClose={() => setIsConfigOpen(false)}
@@ -835,8 +874,19 @@ export default function PurchaseOrderView({ items, itemResults, onSearchItems, a
                <ToolbarCount>
                    {poRowTotal} order{poRowTotal !== 1 ? 's' : ''}
                </ToolbarCount>
+               <div style={{ marginLeft: 'auto' }} />
+               {hasPermission('purchase_order.export') && (
+                   <button className={XP_BTN} style={xpBtn({ padding: '1px 6px' })} onClick={handleListExport} disabled={listBusy || !poRowTotal} title="Export Excel (every line of the orders matching the filter)">
+                       <i className={listBusy ? 'bi bi-hourglass-split' : 'bi bi-file-earmark-excel'} />
+                   </button>
+               )}
+               {hasPermission('purchase_order.print') && (
+                   <button className={XP_BTN} style={xpBtn({ padding: '1px 6px' })} onClick={handleListPrint} disabled={listBusy || !poRowTotal} title="Print the orders matching the filter">
+                       <i className="bi bi-printer" />
+                   </button>
+               )}
                {canManage && (
-                   <ToolbarButton tone="create" icon="bi-plus-lg" style={{ marginLeft: 'auto' }} onClick={() => setIsCreateOpen(true)}>
+                   <ToolbarButton tone="create" icon="bi-plus-lg" onClick={() => setIsCreateOpen(true)}>
                        {t('create')}
                    </ToolbarButton>
                )}
