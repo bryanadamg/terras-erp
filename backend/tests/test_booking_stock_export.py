@@ -6,8 +6,11 @@ import pytest
 
 
 @pytest.fixture
-def booking_rows(client, auth_headers):
+def booking_rows(client, auth_headers, monkeypatch):
     from app.api import stock as stock_api
+    # A STOCK_UPDATE from a parallel xdist worker (via Redis) marks the cache stale and the
+    # background refresh would swap these pinned rows for real-DB rows mid-test.
+    monkeypatch.setattr(stock_api, "_spawn_booking_refresh", lambda: None)
     from app.schemas import BookingStockRow
     sfx = uuid.uuid4().hex[:6].upper()
     client.post("/api/uoms", json={"name": "kg"}, headers=auth_headers)
