@@ -761,8 +761,7 @@ export default function PurchaseOrderView({ items, itemResults, onSearchItems, a
                    <table style={{width:'100%',borderCollapse:'collapse',fontFamily:xpFont,fontSize:'11px'}}>
                        <thead>
                            <tr style={{background:'linear-gradient(to bottom,#ffffff,#d4d0c8)',borderBottom:'2px solid #808080',fontSize:'10px',fontWeight:'bold'}}>
-                               <th style={xpThCell}>Item</th>
-                               <th style={xpThCell}>Warehouse</th>
+                               <th style={xpThCell}>Item / Warehouse</th>
                                <th style={{...xpThCell,textAlign:'right' as const}}>Ordered</th>
                                <th style={{...xpThCell,textAlign:'right' as const}}>Rcvd So Far</th>
                                <th style={{...xpThCell,textAlign:'right' as const}}>This Receipt</th>
@@ -775,11 +774,10 @@ export default function PurchaseOrderView({ items, itemResults, onSearchItems, a
                        <tbody>
                            {receiptTarget.lines.map((line: any, idx: number) => (
                                <tr key={line.id} style={{background:lvZebra(idx),borderBottom:'1px solid #d0cdc8'}}>
-                                   <td style={tdBase}>
+                                   <td style={{...tdBase,minWidth:200}}>
                                        <div style={{fontWeight:'bold'}}>{line.item_name || getItemName(line.item_id)}</div>
-                                       <div style={{fontSize:'10px',color:'#666'}}>{line.item_code || getItemCode(line.item_id)}</div>
-                                   </td>
-                                   <td style={{...tdBase,minWidth:150}}>
+                                       <div style={{fontSize:'10px',color:'#666',marginBottom:3}}>{line.item_code || getItemCode(line.item_id)}</div>
+                                       {/* per-line warehouse; blank = the receipt's Receiving Warehouse */}
                                        <TreeSelect options={locPickerTreeOptions} value={receiptLineLocs[line.id] || ''}
                                            onChange={(val) => setReceiptLineLocs(prev => ({ ...prev, [line.id]: val }))}
                                            allowEmpty emptyLabel="Same as receipt" placeholder="Same as receipt" size="sm" style={{ width: '100%' }} />
