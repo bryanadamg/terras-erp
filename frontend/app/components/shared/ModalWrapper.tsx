@@ -123,7 +123,7 @@ export default function ModalWrapper({
                 // `.row > *` rule injects gutter padding/margin — neutralize it.
                 padding: 0,
             }}
-            bodyStyle={{ padding: 0, overflow: 'hidden', display: 'flex', flexDirection: 'column', background: 'none' }}
+            bodyStyle={{ padding: 0, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}
             title={
                 <span id={titleId} style={{ display: 'block', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                     {title}
@@ -148,10 +148,9 @@ export default function ModalWrapper({
 
             {/* Body — ui-style-classic triggers CSS overrides for Bootstrap controls */}
             <div
-                className="ui-style-classic"
+                className="ui-style-classic modal-body-classic"
                 style={{
                     padding: '12px 14px', overflowY: bodyScroll ? 'auto' : 'hidden',
-                    background: 'linear-gradient(to bottom, #f1efe5 0%, #e5e2d3 100%)',
                     flex: 1, minHeight: 0,
                 }}
             >
