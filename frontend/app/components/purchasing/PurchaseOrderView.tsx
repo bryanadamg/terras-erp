@@ -889,9 +889,10 @@ export default function PurchaseOrderView({ items, itemResults, onSearchItems, a
                                            <ExpandedRowPanel style={{ padding: '6px 16px 8px 20px', fontFamily: xpFont, fontSize: '11px' }}>
                                            <div style={{ marginBottom: 10 }}>
                                                <div style={lvSubCaption()}>Order Lines</div>
-                                               <table style={{ ...lvSubTable(), maxWidth: 560 }}>
+                                               <table style={{ ...lvSubTable(), maxWidth: 640 }}>
                                                    <thead>
                                                        <tr>
+                                                           <th style={subTh}>Code</th>
                                                            <th style={subTh}>Item</th>
                                                            <th style={{ ...subTh, textAlign: 'right' }}>Received</th>
                                                            <th style={{ ...subTh, textAlign: 'right' }}>Ordered</th>
@@ -903,6 +904,7 @@ export default function PurchaseOrderView({ items, itemResults, onSearchItems, a
                                                            const full = (line.qty_received || 0) >= line.qty;
                                                            return (
                                                                <tr key={line.id}>
+                                                                   <td style={subTd}>{line.item_code || getItemCode(line.item_id)}</td>
                                                                    <td style={{ ...subTd, fontWeight: 600 }}>{line.item_name || getItemName(line.item_id)}</td>
                                                                    <td style={{ ...subTd, textAlign: 'right', fontWeight: 'bold' }}>{line.qty_received || 0}</td>
                                                                    <td style={{ ...subTd, textAlign: 'right' }}>{line.qty}</td>
@@ -964,7 +966,10 @@ export default function PurchaseOrderView({ items, itemResults, onSearchItems, a
                                                                                )}
                                                                            </td>
                                                                        )}
-                                                                       <td style={{ ...subTd, fontWeight: 600 }}>{rl.item_name || getItemName(rl.item_id)}</td>
+                                                                       <td style={{ ...subTd, fontWeight: 600 }}>
+                                                                           {rl.item_name || getItemName(rl.item_id)}
+                                                                           <span style={{ marginLeft: 6, color: '#888', fontWeight: 'normal', fontSize: '10px' }}>{rl.item_code || getItemCode(rl.item_id)}</span>
+                                                                       </td>
                                                                        <td style={{ ...subTd, ...numR, fontWeight: 'bold' }}>
                                                                            {rl.qty_received}
                                                                            <span style={{ marginLeft: 3, color: '#888', fontSize: '9px', textTransform: 'uppercase' }}>{rl.item_uom || getItemUom(rl.item_id)}</span>
