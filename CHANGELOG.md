@@ -15,6 +15,11 @@ on `main`:
 
 ## [Unreleased]
 
+## [1.9.1] - 2026-11-20
+
+### Changed
+- List tables take their header and grid lines from the shared terras-ui styles, and the column a list is sorted by is now underlined
+
 ## [1.9.0] - 2026-11-20
 
 ### Added
