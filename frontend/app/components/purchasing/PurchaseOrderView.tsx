@@ -53,6 +53,8 @@ export default function PurchaseOrderView({ items, itemResults, onSearchItems, a
   const [receiptLineCones, setReceiptLineCones] = useState<Record<string, number | ''>>({});
   const [receiptLineDrums, setReceiptLineDrums] = useState<Record<string, number | ''>>({});
   const [receiptLineLots, setReceiptLineLots] = useState<Record<string, string>>({});
+  // Per-line warehouse override; blank = the receipt's Receiving Warehouse.
+  const [receiptLineLocs, setReceiptLineLocs] = useState<Record<string, string>>({});
   const [receiptDate, setReceiptDate] = useState('');
   const [receiptNotes, setReceiptNotes] = useState('');
   const [receiptLocationId, setReceiptLocationId] = useState('');
@@ -73,6 +75,7 @@ export default function PurchaseOrderView({ items, itemResults, onSearchItems, a
     setReceiptLineCones({});
     setReceiptLineDrums({});
     setReceiptLineLots({});
+    setReceiptLineLocs({});
     setReceiptDate(new Date().toISOString().split('T')[0]);
     setReceiptNotes('');
     setReceiptLocationId(po.target_location_id || '');
@@ -97,10 +100,11 @@ export default function PurchaseOrderView({ items, itemResults, onSearchItems, a
           qty_cones: catType === 'raw' ? numOrNull(receiptLineCones[po_line_id]) : null,
           qty_drums: (catType === 'chemical' || catType === 'dye') ? numOrNull(receiptLineDrums[po_line_id]) : null,
           vendor_lot: (receiptLineLots[po_line_id] || '').trim() || null,
+          location_id: receiptLineLocs[po_line_id] || null,
         };
       });
     if (lines.length === 0) { showToast('Enter qty for at least one line', 'error'); return; }
-    if (!receiptLocationId) { showToast('Select a receiving warehouse', 'error'); return; }
+    if (!receiptLocationId && lines.some(l => !l.location_id)) { showToast('Select a receiving warehouse', 'error'); return; }
     onCreateReceipt(
       receiptTarget.id,
       {
@@ -395,6 +399,7 @@ export default function PurchaseOrderView({ items, itemResults, onSearchItems, a
   };
 
   const suppliers = partners.filter((p: any) => p.type === 'SUPPLIER' && p.active);
+  const getLocationName = (id: string | null) => (id ? (locations || []).find((l: any) => l.id === id)?.name || '' : '');
   const getSupplierName = (id: string) => partners.find((p: any) => p.id === id)?.name || id;
 
   const STATUS_FILTERS = ['ALL', 'DRAFT', 'RECEIVING', 'RECEIVED'];
@@ -718,6 +723,7 @@ export default function PurchaseOrderView({ items, itemResults, onSearchItems, a
                        <thead>
                            <tr style={{background:'linear-gradient(to bottom,#ffffff,#d4d0c8)',borderBottom:'2px solid #808080',fontSize:'10px',fontWeight:'bold'}}>
                                <th style={xpThCell}>Item</th>
+                               <th style={xpThCell}>Warehouse</th>
                                <th style={{...xpThCell,textAlign:'right' as const}}>Ordered</th>
                                <th style={{...xpThCell,textAlign:'right' as const}}>Rcvd So Far</th>
                                <th style={{...xpThCell,textAlign:'right' as const}}>This Receipt</th>
@@ -733,6 +739,11 @@ export default function PurchaseOrderView({ items, itemResults, onSearchItems, a
                                    <td style={tdBase}>
                                        <div style={{fontWeight:'bold'}}>{line.item_name || getItemName(line.item_id)}</div>
                                        <div style={{fontSize:'10px',color:'#666'}}>{line.item_code || getItemCode(line.item_id)}</div>
+                                   </td>
+                                   <td style={{...tdBase,minWidth:150}}>
+                                       <TreeSelect options={locPickerTreeOptions} value={receiptLineLocs[line.id] || ''}
+                                           onChange={(val) => setReceiptLineLocs(prev => ({ ...prev, [line.id]: val }))}
+                                           allowEmpty emptyLabel="Same as receipt" placeholder="Same as receipt" size="sm" style={{ width: '100%' }} />
                                    </td>
                                    <td style={{...tdBase,textAlign:'right' as const}}>{line.qty}</td>
                                    <td style={{...tdBase,textAlign:'right' as const}}>{line.qty_received || 0}</td>
@@ -978,6 +989,7 @@ export default function PurchaseOrderView({ items, itemResults, onSearchItems, a
                                                                    <th style={subTh}>Date</th>
                                                                    {hasDn && <th style={subTh}>DN</th>}
                                                                    <th style={subTh}>Item</th>
+                                                                   <th style={subTh}>Warehouse</th>
                                                                    <th style={{ ...subTh, ...numR }}>Received</th>
                                                                    {hasBoxes && <th style={{ ...subTh, ...numR }}>Boxes</th>}
                                                                    {hasCones && <th style={{ ...subTh, ...numR }}>Cones</th>}
@@ -1005,6 +1017,7 @@ export default function PurchaseOrderView({ items, itemResults, onSearchItems, a
                                                                            {rl.item_name || getItemName(rl.item_id)}
                                                                            <span style={{ marginLeft: 6, color: '#888', fontWeight: 'normal', fontSize: '10px' }}>{rl.item_code || getItemCode(rl.item_id)}</span>
                                                                        </td>
+                                                                       <td style={subTd}>{getLocationName(rl.location_id || rl._receipt.location_id)}</td>
                                                                        <td style={{ ...subTd, ...numR, fontWeight: 'bold' }}>
                                                                            {rl.qty_received}
                                                                            <span style={{ marginLeft: 3, color: '#888', fontSize: '9px', textTransform: 'uppercase' }}>{rl.item_uom || getItemUom(rl.item_id)}</span>

@@ -13,6 +13,7 @@ from app.models.attribute import AttributeValue
 from app.models.item import Item
 from app.models.batch import Batch
 from app.models.partner import Partner
+from app.models.location import Location
 from app.api.auth import get_current_user, require_permission
 from app.models.auth import User
 from app.services import stock_service, audit_service, kpi_service
@@ -211,10 +212,16 @@ async def create_goods_receipt(
         raise HTTPException(status_code=404, detail="PO not found")
     if po.status == "CANCELLED":
         raise HTTPException(status_code=400, detail="Cannot receive a cancelled PO")
-    # Receiving warehouse: per-receipt choice wins, else fall back to the PO's target location
+    # Receiving warehouse: per-receipt choice wins, else fall back to the PO's target
+    # location. A line may name its own warehouse, which beats both.
     recv_location_id = payload.location_id or po.target_location_id
-    if not recv_location_id:
+    if not recv_location_id and any(not rl.location_id for rl in payload.lines):
         raise HTTPException(status_code=400, detail="Select a receiving warehouse for this receipt")
+    line_loc_ids = {rl.location_id for rl in payload.lines if rl.location_id}
+    if line_loc_ids:
+        found = set((await db.execute(select(Location.id).filter(Location.id.in_(line_loc_ids)))).scalars().all())
+        if found != line_loc_ids:
+            raise HTTPException(status_code=404, detail="Receiving location not found")
 
     line_map = {line.id: line for line in po.lines}
 
@@ -275,8 +282,10 @@ async def create_goods_receipt(
                 await db.flush()
                 batch_id = b.id
 
+        line_location_id = rl.location_id or recv_location_id
         gr_line = GoodsReceiptLine(
             receipt_id=gr.id,
+            location_id=rl.location_id if rl.location_id and rl.location_id != recv_location_id else None,
             po_line_id=po_line.id,
             item_id=po_line.item_id,
             qty_received=rl.qty_received,
@@ -290,7 +299,7 @@ async def create_goods_receipt(
         await stock_service.add_stock_entry(
             db,
             item_id=po_line.item_id,
-            location_id=recv_location_id,
+            location_id=line_location_id,
             attribute_value_ids=[str(v.id) for v in po_line.attribute_values],
             qty_change=rl.qty_received,
             reference_type="Goods Receipt",

@@ -1800,6 +1800,7 @@ class GoodsReceiptLineCreate(BaseModel):
     qty_drums: int | None = None  # chemical/dye packaging
     batch_id: UUID | None = None
     vendor_lot: str | None = None  # supplier's lot number; same supplier+item+lot merges into the existing internal lot, else one is auto-generated
+    location_id: UUID | None = None  # this line's warehouse; falls back to the receipt's
 
 class GoodsReceiptCreate(BaseModel):
     receipt_date: datetime | None = None
@@ -1823,6 +1824,7 @@ class GoodsReceiptLineResponse(BaseModel):
     batch_id: UUID | None = None
     vendor_lot: str | None = None    # supplier's lot reference
     internal_lot: str | None = None  # system-generated internal batch number
+    location_id: UUID | None = None  # null = the receipt's location_id
     class Config:
         from_attributes = True
 
