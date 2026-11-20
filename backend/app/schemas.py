@@ -1785,6 +1785,7 @@ class PurchaseOrderCreate(BaseModel):
     payment_term: str | None = None
     category: str | None = None
     vat_percent: float | None = 11
+    prices_include_vat: bool = False
     discount: float | None = 0
     notes: str | None = None
     lines: list[PurchaseOrderLineCreate]

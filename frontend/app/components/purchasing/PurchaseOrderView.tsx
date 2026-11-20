@@ -24,6 +24,7 @@ import Pager from '../shared/Pager';
 import { lvThead, lvSubTh, lvSubTd, lvSubTable, lvSubCaption, ExpanderCell, lvThSticky, lvTdRuled, lvZebra, ResizableTable } from '../shared/listViewTheme';
 import { SortableTh } from '@bryanadamg/terras-ui/components/Table';
 import { STATIC_BASE } from '../shared/apiBase';
+import { fmtMoney } from '../shared/format';
 
 export default function PurchaseOrderView({ items, itemResults, onSearchItems, attributes, purchaseOrders, partners, locations, onCreatePO, onEditPO, onDeletePO, onCreateReceipt, onClosePO, companyProfile }: any) {
   const { showToast } = useToast();
@@ -156,6 +157,7 @@ export default function PurchaseOrderView({ items, itemResults, onSearchItems, a
       payment_term: '',
       category: '',
       vat_percent: 11 as number,
+      prices_include_vat: false,
       discount: 0 as number,
       notes: '',
       lines: [] as any[],
@@ -265,6 +267,7 @@ export default function PurchaseOrderView({ items, itemResults, onSearchItems, a
           payment_term: po.payment_term || '',
           category: po.category || '',
           vat_percent: po.vat_percent != null ? Number(po.vat_percent) : 11,
+          prices_include_vat: !!po.prices_include_vat,
           discount: po.discount != null ? Number(po.discount) : 0,
           notes: po.notes || '',
           lines: (po.lines || []).map((l: any) => ({
@@ -289,6 +292,7 @@ export default function PurchaseOrderView({ items, itemResults, onSearchItems, a
           target_location_id: newPO.target_location_id || null,
           order_date: newPO.order_date || null,
           vat_percent: vatEnabled ? (Number(newPO.vat_percent) || 0) : null,
+          prices_include_vat: vatEnabled && newPO.prices_include_vat,
           discount: Number(newPO.discount) || 0,
           lines: newPO.lines.map((line: any) => ({
               ...line,
@@ -554,16 +558,26 @@ export default function PurchaseOrderView({ items, itemResults, onSearchItems, a
                            <FieldLabel right={
                                <label style={{display:'flex',alignItems:'center',gap:4,fontWeight:'normal',cursor:'pointer',fontSize:'10px',color:'#555'}}>
                                    <input type="checkbox" checked={vatEnabled} onChange={e => setVatEnabled(e.target.checked)} />
-                                   Include
+                                   Apply
                                </label>
                            }>VAT %</FieldLabel>
                            <input type="number" className="form-control" disabled={!vatEnabled} style={xpInput({opacity:vatEnabled?1:0.5})} value={newPO.vat_percent} onChange={e => setNewPO({...newPO, vat_percent: parseFloat(e.target.value) || 0})} />
                        </div>
                        <div className="col-md-3">
+                           <FieldLabel>Price Entry</FieldLabel>
+                           <select className="form-select form-select-sm" disabled={!vatEnabled} style={xpInput({height:'22px',borderRadius:0,width:'100%',opacity:vatEnabled?1:0.5})}
+                               value={newPO.prices_include_vat ? 'incl' : 'excl'}
+                               onChange={e => setNewPO({...newPO, prices_include_vat: e.target.value === 'incl'})}
+                               title="Whether the line prices you type already include VAT">
+                               <option value="excl">Price + VAT</option>
+                               <option value="incl">Price includes VAT</option>
+                           </select>
+                       </div>
+                       <div className="col-md-3">
                            <FieldLabel>Discount (Rp)</FieldLabel>
                            <input type="number" className="form-control" style={xpInput()} value={newPO.discount} onChange={e => setNewPO({...newPO, discount: parseFloat(e.target.value) || 0})} />
                        </div>
-                       <div className="col-md-6">
+                       <div className="col-md-3">
                            <FieldLabel>Notes</FieldLabel>
                            <input className="form-control" style={xpInput()} placeholder="Optional notes printed on the PO" value={newPO.notes} onChange={e => setNewPO({...newPO, notes: e.target.value})} />
                        </div>
@@ -631,6 +645,11 @@ export default function PurchaseOrderView({ items, itemResults, onSearchItems, a
                                        onChange={e => handleLinePriceChange(idx, e.target.value)}
                                        title="Unit price (Rp)"
                                    />
+                                   {vatEnabled && newPO.prices_include_vat && line.unit_price !== '' && line.unit_price != null && (
+                                       <span style={{color:'#777',fontSize:'9px'}} title="Price before VAT">
+                                           (excl. {fmtMoney(Number(line.unit_price) / (1 + (Number(newPO.vat_percent) || 0) / 100))})
+                                       </span>
+                                   )}
                                    <span style={{fontWeight:'bold'}}>×</span>
                                    <input type="number" min="0" step="any"
                                        style={xpInput({width:70, textAlign:'right'})}

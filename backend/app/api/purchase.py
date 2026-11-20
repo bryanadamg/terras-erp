@@ -70,6 +70,7 @@ async def create_purchase_order(
         payment_term=payload.payment_term,
         category=payload.category,
         vat_percent=payload.vat_percent,
+        prices_include_vat=payload.prices_include_vat,
         discount=payload.discount,
         notes=payload.notes,
     )
@@ -137,6 +138,7 @@ async def update_purchase_order(
     po.payment_term = payload.payment_term
     po.category = payload.category
     po.vat_percent = payload.vat_percent
+    po.prices_include_vat = payload.prices_include_vat
     po.discount = payload.discount
     po.notes = payload.notes
 

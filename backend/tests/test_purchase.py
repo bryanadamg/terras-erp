@@ -47,6 +47,7 @@ def test_purchase_order_crud(client, auth_headers):
                 "supplier_id": supplier_id,
                 "target_location_id": location_id,
                 "order_date": "2026-03-16T00:00:00",
+                "prices_include_vat": True,
                 "lines": [
                     {
                         "item_id": item_id,
@@ -63,6 +64,7 @@ def test_purchase_order_crud(client, auth_headers):
         po_data = resp.json()
         assert "id" in po_data
         assert po_data["po_number"] == po_number
+        assert po_data["prices_include_vat"] is True
         assert "status" in po_data
         assert len(po_data["lines"]) >= 1
         po_id = po_data["id"]
