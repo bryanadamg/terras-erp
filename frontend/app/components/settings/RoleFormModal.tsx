@@ -285,11 +285,15 @@ export default function RoleFormModal({
 
             {hasCategoryScopedPerm && categories.length > 0 && (
                 <div className="mt-3">
-                    <FieldLabel hint="Leave all off to allow Item/Stock actions on any category. Turn one or more on to restrict.">
+                    <FieldLabel hint="Leave all off for every category. Turn on one or more top-level categories to limit this role to them and everything under them — Items, Stock On-Hand, Stock Ledger and Booking Stock show and change only those.">
                         Item/Stock Category Scope
                     </FieldLabel>
                     <ScopePicker title="Categories" anyLabel="any category" selected={allowedCategories} onChange={setAllowedCategories}
-                        options={categories.map((c: any) => ({ id: c.id, path: c.path_names?.length ? c.path_names : [c.name] }))} />
+                        options={categories
+                            // Level 1 only — a pick covers its sub-categories. A deeper one
+                            // already saved on the role stays listed so it can be switched off.
+                            .filter((c: any) => !c.parent_id || allowedCategories.includes(c.id))
+                            .map((c: any) => ({ id: c.id, path: c.path_names?.length ? c.path_names : [c.name] }))} />
                 </div>
             )}
 

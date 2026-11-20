@@ -10,8 +10,9 @@ from app.core.ws_manager import manager
 from app.core.pagination import PageParams, PageWindow
 from app.schemas import StockLedgerResponse, StockBalanceResponse, PaginatedStockBalanceResponse, PaginatedStockLedgerResponse, StockEntryCreate, StockTransferCreate, StockBulkTransferCreate, BookingStockRow, BookingDemandMO, BookingSupplyMO, BookingReservedSO, PaginatedBookingStockResponse
 from app.models.auth import User
-from app.api.auth import get_current_user, require_permission, require_any_permission, get_current_admin, category_scope_ok
+from app.api.auth import get_current_user, require_permission, require_any_permission, get_current_admin
 from app.models.item import Item
+from app.services.item_service import category_scope_allows, category_scope_ids, category_scope_clause
 from app.models.location import Location
 from app.models.stock_balance import StockBalance
 from app.models.audit import AuditLog
@@ -101,6 +102,9 @@ async def get_stock_ledger(
             conditions.append(StockLedger.item_id.in_(
                 select(Item.id).where(Item.category_id.in_(cat_ids))
             ))
+    scope = category_scope_clause(Item.category_id, await category_scope_ids(db, current_user))
+    if scope is not None:
+        conditions.append(StockLedger.item_id.in_(select(Item.id).where(scope)))
     if reference_type:
         conditions.append(StockLedger.reference_type == reference_type)
     if direction == "in":
@@ -366,7 +370,7 @@ async def create_stock_entry(
     if not item:
         raise HTTPException(status_code=404, detail=f"Item '{payload.item_code}' not found")
 
-    if not category_scope_ok(current_user, item.category_id):
+    if not await category_scope_allows(db, current_user, item.category_id):
         raise HTTPException(status_code=403, detail="Not authorized for this category")
 
     loc_result = await db.execute(select(Location).filter(Location.code == payload.location_code))
@@ -436,7 +440,7 @@ async def transfer_stock(
     if not item:
         raise HTTPException(status_code=404, detail="Item not found")
 
-    if not category_scope_ok(current_user, item.category_id):
+    if not await category_scope_allows(db, current_user, item.category_id):
         raise HTTPException(status_code=403, detail="Not authorized for this category")
 
     loc_result = await db.execute(
@@ -513,7 +517,7 @@ async def reverse_transfer(
     if already:
         raise HTTPException(status_code=400, detail="This transfer was already reversed")
     item = (await db.execute(select(Item).filter(Item.id == legs[0].item_id))).scalars().first()
-    if item and not category_scope_ok(current_user, item.category_id):
+    if item and not await category_scope_allows(db, current_user, item.category_id):
         raise HTTPException(status_code=403, detail="Not authorized for this category")
 
     # Take the goods out of the destination before putting them back at the source,
@@ -578,7 +582,7 @@ async def transfer_stock_bulk(
             raise HTTPException(status_code=404, detail=f"Line {idx} ({item.code}): source location not found")
         if ln.from_location_id == payload.to_location_id:
             raise HTTPException(status_code=400, detail=f"Line {idx} ({item.code}): already at the destination location")
-        if not category_scope_ok(current_user, item.category_id):
+        if not await category_scope_allows(db, current_user, item.category_id):
             raise HTTPException(status_code=403, detail=f"Line {idx} ({item.code}): not authorized for this category")
         if item.lot_tracked and not ln.batch_id:
             raise HTTPException(status_code=400, detail=f"Line {idx}: item {item.code} is lot-tracked — select a lot to transfer")
@@ -782,6 +786,9 @@ async def get_stock_balance_paginated(
         cat_ids = [x for x in category_id.split(",") if x]
         if cat_ids:
             conditions.append(Item.category_id.in_(cat_ids))
+    scope = category_scope_clause(Item.category_id, await category_scope_ids(db, current_user))
+    if scope is not None:
+        conditions.append(scope)
     if mo_code:
         conditions.append(ManufacturingOrder.code == mo_code)
     if wo_code:
@@ -1346,7 +1353,7 @@ async def _compute_booking_rows(db: AsyncSession) -> list:
     return rows
 
 
-async def _booking_rows_filtered(db: AsyncSession, search: Optional[str], category_id: Optional[str]) -> list:
+async def _booking_rows_filtered(db: AsyncSession, search: Optional[str], category_id: Optional[str], user=None) -> list:
     """The cached booking rows narrowed by search and item category, each stamped
     with its item's category name, shortfalls first."""
     now = time.monotonic()
@@ -1377,6 +1384,9 @@ async def _booking_rows_filtered(db: AsyncSession, search: Optional[str], catego
     cats = {c.strip() for c in (category_id or "").split(",") if c.strip()}
     if cats:
         rows = [r for r in rows if str(item_cat.get(r.item_id, (None,))[0]) in cats]
+    scope = await category_scope_ids(db, user)
+    if scope is not None:
+        rows = [r for r in rows if item_cat.get(r.item_id, (None,))[0] in scope or item_cat.get(r.item_id, (None,))[0] is None]
     # Copies — never mutate the cached rows in place.
     rows = [r.model_copy(update={"category_name": item_cat.get(r.item_id, (None, None))[1]}) for r in rows]
 
@@ -1397,7 +1407,7 @@ async def get_stock_availability(
     """Booking-stock / material-availability view. See _compute_booking_rows for the
     netting logic. The ``location_id`` query param is retained for API compatibility
     but no longer scopes the result (netting is plant-wide/location-agnostic)."""
-    rows = await _booking_rows_filtered(db, search, category_id)
+    rows = await _booking_rows_filtered(db, search, category_id, current_user)
     total = len(rows)
     # The page window is applied to an in-memory list here, not a select, so this
     # slices by hand instead of window.apply(). Uncapped (size=0) pins offset to 0,
@@ -1414,7 +1424,7 @@ async def export_stock_availability(
     current_user: User = Depends(require_permission("booking_stock.export")),
 ):
     """Booking Stock as an .xlsx — the whole filtered set, not the page."""
-    rows = await _booking_rows_filtered(db, search, category_id)
+    rows = await _booking_rows_filtered(db, search, category_id, current_user)
     variant = await stock_service.describe_variant_keys(
         db, {stock_service._generate_variant_key([str(v) for v in r.attribute_value_ids], None) for r in rows}
     )
