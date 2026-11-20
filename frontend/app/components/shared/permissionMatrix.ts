@@ -116,7 +116,7 @@ export const PERMISSION_MATRIX: PermissionMatrixSection[] = [
 // Per-resource action lists (order matches the spreadsheet's column order for
 // that row). Resources not listed here fall back to CREATE/EDIT/DELETE/VIEW.
 export const RESOURCE_ACTIONS: Record<string, PermissionMatrixAction[]> = {
-    sales_order: [CREATE, EDIT, DELETE, A('create_pr', 'Create PR'), A('print', 'Print'), VIEW, A('close', 'Closed SO')],
+    sales_order: [CREATE, EDIT, DELETE, A('create_pr', 'Create PR'), A('print', 'Print'), A('export', 'Export Excel'), VIEW, A('close', 'Closed SO')],
     customer: [A('create', 'Add'), EDIT, DELETE, VIEW],
     supplier: [A('create', 'Add'), EDIT, DELETE, VIEW],
     sample_request: [CREATE, EDIT, DELETE, A('update_status', 'Update Status'), A('print', 'Print'), VIEW],

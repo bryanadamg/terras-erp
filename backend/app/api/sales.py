@@ -473,6 +473,60 @@ async def get_sales_orders(
     return window.envelope(orders, total, status_counts=status_counts)
 
 
+@router.get("/export")
+async def export_sales_orders(
+    status: Optional[str] = None,
+    search: Optional[str] = None,
+    customer: Optional[str] = None,
+    sort_by: Optional[str] = None,
+    sort_dir: str = "asc",
+    tz: str = "Asia/Jakarta",
+    db: AsyncSession = Depends(get_async_db),
+    current_user: User = Depends(require_permission("sales_order.export")),
+):
+    """The Sales Orders list as an .xlsx, one row per order line — every order
+    matching the screen's filters and sort, not just the page. Reuses the list
+    endpoint uncapped so the file can never disagree with the grid."""
+    from app.services.xlsx_service import xlsx_response, zone_or_400, local_cell
+    zone = zone_or_400(tz)
+    data = await get_sales_orders(
+        status=status, search=search, customer=customer, sort_by=sort_by, sort_dir=sort_dir,
+        window=PageWindow(page=1, size=0, offset=0, limit=None), db=db, current_user=current_user,
+    )
+
+    def _variant(line) -> Optional[str]:
+        attrs = [a.get("value") for a in (getattr(line, "variant_attributes", None) or [])
+                 if a.get("system_role") not in ("color", "labdip_color")]
+        return ", ".join(a for a in attrs if a) or None
+
+    def _day(dt):
+        return local_cell(dt, zone).date() if dt else None
+
+    rows = []
+    for so in data["items"]:
+        for line in so.lines:
+            color = " ".join(x for x in (getattr(line, "color_code", None), getattr(line, "color_name", None)) if x) or line.labdip_variant_code
+            size = " ".join(x for x in (getattr(line, "size_display", None), getattr(line, "size_measurement", None)) if x)
+            rows.append([
+                _day(so.order_date), so.po_number, so.customer_po_ref, so.customer_name, so.status,
+                line.item_code, line.item_name, color or None, _variant(line), size or None,
+                float(line.qty),
+                float(line.qty_kg) if line.qty_kg is not None else None,
+                float(line.qty2) if line.qty2 is not None else None, line.uom2,
+                _day(line.due_date), _day(line.internal_confirmation_date),
+                getattr(line, "qty_made", None), getattr(line, "qty_packed", None), getattr(line, "qty_dispatched", None),
+                line.ket_stock,
+            ])
+    return xlsx_response(
+        "Sales Orders",
+        ["Order Date", "SO Number", "Customer PO Ref", "Customer", "Status", "Item Code", "Item Name",
+         "Color", "Variant", "Size", "Qty (Yd)", "Qty (kg)", "Alt Qty", "Alt Unit",
+         "Del. Request", "Del. Confirmation", "Made", "Packed", "Shipped", "Stock Notes"],
+        rows,
+        "sales-orders",
+    )
+
+
 @router.get("/{so_id}/reservations", response_model=SOReservationSummary)
 async def get_so_reservations(
     so_id: uuid.UUID,

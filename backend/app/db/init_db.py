@@ -370,6 +370,7 @@ def seed_rbac(db):
             ("sales_order.delete", "Delete Sales Orders"),
             ("sales_order.create_pr", "Create Production Run from Sales Order"),
             ("sales_order.print", "Print Sales Orders"),
+            ("sales_order.export", "Export Sales Orders Excel"),
             ("sales_order.view", "View Sales Orders"),
             ("sales_order.close", "Close Sales Orders"),
             # Customer
