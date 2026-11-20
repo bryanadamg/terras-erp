@@ -22,6 +22,7 @@ import { qtyFmt } from '../shared/format';
 import { API_BASE } from '../shared/apiBase';
 import { saveResponse } from '../shared/download';
 import { useToast } from '../shared/Toast';
+import { useConfirm } from '../../context/ConfirmContext';
 
 import { refMeta, shortRef } from './ledgerRef';
 const StockLedgerPrintModal = dynamic(() => import('./StockLedgerPrintModal'), { ssr: false });
@@ -55,6 +56,8 @@ export default function ReportsView(_props: any) {
     const { hasPermission } = useUser();
     const canPrint = hasPermission('stock_ledger.print');
     const canExport = hasPermission('stock_ledger.export');
+    const canReverse = hasPermission('stock_on_hand.move');
+    const { confirm } = useConfirm();
     const { showToast } = useToast();
 
     // Filters. Default to the trailing 30 days, not all-time — an unbounded ledger
@@ -286,6 +289,25 @@ export default function ReportsView(_props: any) {
         { label: 'Net', value: `${net > 0 ? '+' : ''}${fmtQty(net)}`, color: net >= 0 ? '#1a5e1a' : '#c00000', cls: net >= 0 ? 'text-success' : 'text-danger' },
     ];
 
+    // Undo a wrong transfer: both legs post back, then it can be moved again correctly.
+    const reverseTransfer = async (e: any) => {
+        const ok = await confirm({
+            title: 'Reverse Transfer',
+            message: `Send ${fmtQty(Math.abs(e.qty_change))} ${e.item_uom || ''} of ${getItemName(e)} back (${e.reference_id})? Do the transfer again afterwards with the right details.`,
+            confirmText: 'Reverse',
+            variant: 'warning',
+        });
+        if (!ok) return;
+        const res = await authFetch(`${API_BASE}/stock/transfer/${e.transfer_group_id}/reverse`, { method: 'POST' });
+        if (!res.ok) {
+            const err = await res.json().catch(() => ({}));
+            showToast(err.detail || 'Reverse failed', 'danger');
+            return;
+        }
+        showToast('Transfer reversed', 'success');
+        refetch();
+    };
+
     // ── Row rendering — one function, per-cell ternaries ─────────────────────
     const renderRow = (e: any, i: number) => {
         const rm = refMeta(e.reference_type);
@@ -343,6 +365,13 @@ export default function ReportsView(_props: any) {
                 <td style={{ ...xpCell, borderRight: 'none', whiteSpace: 'nowrap' }}>
                     <Chip tone={rm.tone} size="xs">{rm.label}</Chip>
                     <span style={{ fontSize: '10px', color: '#999', marginLeft: 4 }} title={e.reference_id}>#{e.reference_label || shortRef(e.reference_id)}</span>
+                    {e.reversed && <Chip tone={refMeta('Transfer Reversal').tone} size="xs" style={{ marginLeft: 4 }}>reversed</Chip>}
+                    {canReverse && e.transfer_group_id && !e.reversed && e.qty_change > 0 && (
+                        <button className={XP_BTN} style={xpBtn({ padding: '0 5px', fontSize: '10px', marginLeft: 4 })}
+                            title="Reverse this transfer (entered by mistake)" onClick={() => reverseTransfer(e)}>
+                            <i className="bi bi-arrow-counterclockwise" style={{ marginRight: 2 }} />Reverse
+                        </button>
+                    )}
                     {e.notes && (
                         <div title={e.notes} style={{ fontSize: '10px', color: '#555', fontStyle: 'italic', whiteSpace: 'normal', marginTop: 2, maxWidth: 260 }}>
                             <i className="bi bi-chat-left-text" style={{ marginRight: 3 }} />{e.notes}

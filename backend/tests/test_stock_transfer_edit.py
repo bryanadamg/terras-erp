@@ -1,4 +1,4 @@
-"""Stock transfers: an operator note that lands on the ledger."""
+"""Stock transfers: an operator note on the ledger, and reversing a wrong move."""
 import uuid
 
 from tests.test_goods_receipt import real_refs  # noqa: F401  (fixture)
@@ -28,3 +28,38 @@ def test_transfer_note_shows_on_both_ledger_legs(real_refs, client, auth_headers
     legs = _ledger(client, auth_headers, item)
     assert len(legs) == 2
     assert {e["notes"] for e in legs} == {"re-weigh"}
+
+
+def _on_hand(client, h, item_id):
+    rows = client.get("/api/stock/balance", headers=h).json()
+    return {r["location_id"]: float(r["qty"]) for r in rows if r["item_id"] == item_id and float(r["qty"])}
+
+
+def test_reverse_transfer_puts_the_stock_back_once(real_refs, client, auth_headers):
+    _, (a, b), _ = real_refs
+    item = _seed_stock(client, auth_headers, a)
+    client.post("/api/stock/transfer", json={
+        "item_id": item["id"], "from_location_id": a, "to_location_id": b, "qty": 3,
+    }, headers=auth_headers)
+    assert _on_hand(client, auth_headers, item["id"]) == {a: 7, b: 3}
+    group = _ledger(client, auth_headers, item)[0]["transfer_group_id"]
+    assert group
+
+    r = client.post(f"/api/stock/transfer/{group}/reverse", headers=auth_headers)
+    assert r.status_code == 201, r.text
+    assert _on_hand(client, auth_headers, item["id"]) == {a: 10}
+    assert all(e["reversed"] for e in _ledger(client, auth_headers, item))
+    assert client.post(f"/api/stock/transfer/{group}/reverse", headers=auth_headers).status_code == 400
+
+
+def test_reverse_refused_when_moved_stock_was_used(real_refs, client, auth_headers):
+    _, (a, b), _ = real_refs
+    item = _seed_stock(client, auth_headers, a)
+    client.post("/api/stock/transfer", json={
+        "item_id": item["id"], "from_location_id": a, "to_location_id": b, "qty": 3,
+    }, headers=auth_headers)
+    group = _ledger(client, auth_headers, item)[0]["transfer_group_id"]
+    client.post("/api/stock/transfer", json={
+        "item_id": item["id"], "from_location_id": b, "to_location_id": a, "qty": 2,
+    }, headers=auth_headers)
+    assert client.post(f"/api/stock/transfer/{group}/reverse", headers=auth_headers).status_code == 400

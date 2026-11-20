@@ -1518,6 +1518,8 @@ class StockLedgerResponse(BaseModel):
     reference_id: str
     reference_label: str | None = None
     notes: str | None = None
+    transfer_group_id: UUID | None = None
+    reversed: bool = False
     batch_id: UUID | None = None
     batch_number: str | None = None
     vendor_lot: str | None = None

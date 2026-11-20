@@ -230,6 +230,30 @@ async def get_stock_ledger(
         )).all():
             labdip_map[bid] = code
 
+    # Transfers already undone (their group id is a reversal's reference_id), and
+    # reversal rows labelled with the route of the transfer they undid.
+    group_ids = {str(r.transfer_group_id) for r in rows if r.transfer_group_id}
+    rev_ref_ids = {r.reference_id for r in rows if r.reference_type == "Transfer Reversal"}
+    reversed_groups: set[str] = set()
+    if group_ids:
+        reversed_groups = set((await db.execute(
+            select(StockLedger.reference_id).where(
+                StockLedger.reference_type == "Transfer Reversal", StockLedger.reference_id.in_(group_ids),
+            )
+        )).scalars().all())
+    if rev_ref_ids:
+        valid = []
+        for x in rev_ref_ids:
+            try:
+                valid.append(_uuid.UUID(x))
+            except ValueError:
+                pass
+        for gid, route in (await db.execute(
+            select(StockLedger.transfer_group_id, StockLedger.reference_id)
+            .where(StockLedger.transfer_group_id.in_(valid)).distinct()
+        )).all() if valid else []:
+            ref_label_map[str(gid)] = route
+
     items = []
     for r in rows:
         nm, cd, uom, cat_id, cat_name = item_map.get(r.item_id, ("", "", "", None, None))
@@ -253,6 +277,8 @@ async def get_stock_ledger(
             "reference_id": r.reference_id,
             "reference_label": ref_label_map.get(r.reference_id),
             "notes": r.notes,
+            "transfer_group_id": r.transfer_group_id,
+            "reversed": r.transfer_group_id is not None and str(r.transfer_group_id) in reversed_groups,
             "batch_id": r.batch_id,
             "batch_number": r.batch.batch_number if r.batch else None,
             "vendor_lot": r.batch.vendor_lot if r.batch else None,
@@ -430,19 +456,20 @@ async def transfer_stock(
     b = payload.qty_boxes or 0
     d = payload.qty_drums or 0
     note = (payload.notes or "").strip() or None
+    group = _uuid.uuid4()
 
     # OUT first — per-batch negative stock guard blocks over-transfer
     await stock_service.add_stock_entry(
         db, item_id=item.id, location_id=payload.from_location_id,
         qty_change=-payload.qty, reference_type="Transfer", reference_id=ref,
         attribute_value_ids=attrs, batch_id=payload.batch_id, color_id=payload.color_id,
-        cones_change=-c, boxes_change=-b, drums_change=-d, notes=note,
+        cones_change=-c, boxes_change=-b, drums_change=-d, notes=note, transfer_group_id=group,
     )
     await stock_service.add_stock_entry(
         db, item_id=item.id, location_id=payload.to_location_id,
         qty_change=payload.qty, reference_type="Transfer", reference_id=ref,
         attribute_value_ids=attrs, batch_id=payload.batch_id, color_id=payload.color_id,
-        cones_change=c, boxes_change=b, drums_change=d, notes=note,
+        cones_change=c, boxes_change=b, drums_change=d, notes=note, transfer_group_id=group,
     )
     await db.commit()
 
@@ -459,6 +486,60 @@ async def transfer_stock(
     await kpi_service.invalidate_and_broadcast(db, {"type": "KPI_UPDATE"})
 
     return {"status": "success", "message": "Transfer recorded"}
+
+
+@router.post("/stock/transfer/{group_id}/reverse", status_code=201)
+async def reverse_transfer(
+    group_id: _uuid.UUID,
+    db: AsyncSession = Depends(get_async_db),
+    current_user: User = Depends(require_permission('stock_on_hand.move')),
+):
+    """Undo a transfer entered by mistake: every leg is posted back in reverse
+    (the goods leave the destination and return to the source), so the operator can
+    then move it again correctly. Refused once the moved stock has been used."""
+    from app.models.stock_ledger import StockLedger
+    from sqlalchemy.orm import selectinload
+    legs = (await db.execute(
+        select(StockLedger).options(selectinload(StockLedger.attribute_values))
+        .where(StockLedger.transfer_group_id == group_id)
+    )).scalars().all()
+    if not legs:
+        raise HTTPException(status_code=404, detail="Transfer not found")
+    already = (await db.execute(
+        select(func.count()).select_from(StockLedger).where(
+            StockLedger.reference_type == "Transfer Reversal", StockLedger.reference_id == str(group_id),
+        )
+    )).scalar()
+    if already:
+        raise HTTPException(status_code=400, detail="This transfer was already reversed")
+    item = (await db.execute(select(Item).filter(Item.id == legs[0].item_id))).scalars().first()
+    if item and not category_scope_ok(current_user, item.category_id):
+        raise HTTPException(status_code=403, detail="Not authorized for this category")
+
+    # Take the goods out of the destination before putting them back at the source,
+    # so the negative-stock guard sees the destination as it really stands.
+    for leg in sorted(legs, key=lambda e: float(e.qty_change) < 0):
+        await stock_service.add_stock_entry(
+            db, item_id=leg.item_id, location_id=leg.location_id,
+            qty_change=-float(leg.qty_change), reference_type="Transfer Reversal", reference_id=str(group_id),
+            attribute_value_ids=[str(v.id) for v in leg.attribute_values], batch_id=leg.batch_id, color_id=leg.color_id,
+            cones_change=-(leg.qty_cones_change or 0), boxes_change=-(leg.qty_boxes_change or 0),
+            drums_change=-(leg.qty_drums_change or 0), notes=f"Reversal of {leg.reference_id}",
+        )
+    await db.commit()
+
+    await audit_service.log_activity(
+        db=db,
+        user_id=current_user.id,
+        action="TRANSFER",
+        entity_type="StockEntry",
+        entity_id=str(legs[0].item_id),
+        details=f"Reversed transfer {legs[0].reference_id}",
+        changes={"transfer_group_id": str(group_id)},
+    )
+    await manager.broadcast({"type": "STOCK_UPDATE"})
+    await kpi_service.invalidate_and_broadcast(db, {"type": "KPI_UPDATE"})
+    return {"status": "success", "message": "Transfer reversed"}
 
 
 @router.post("/stock/transfer/bulk", status_code=201)
@@ -511,18 +592,19 @@ async def transfer_stock_bulk(
         c = ln.qty_cones or 0
         b = ln.qty_boxes or 0
         d = ln.qty_drums or 0
+        group = _uuid.uuid4()
         # OUT first — per-batch negative stock guard blocks over-transfer
         await stock_service.add_stock_entry(
             db, item_id=item.id, location_id=ln.from_location_id,
             qty_change=-ln.qty, reference_type="Transfer", reference_id=ref,
             attribute_value_ids=attrs, batch_id=ln.batch_id, color_id=ln.color_id,
-            cones_change=-c, boxes_change=-b, drums_change=-d, notes=note,
+            cones_change=-c, boxes_change=-b, drums_change=-d, notes=note, transfer_group_id=group,
         )
         await stock_service.add_stock_entry(
             db, item_id=item.id, location_id=payload.to_location_id,
             qty_change=ln.qty, reference_type="Transfer", reference_id=ref,
             attribute_value_ids=attrs, batch_id=ln.batch_id, color_id=ln.color_id,
-            cones_change=c, boxes_change=b, drums_change=d, notes=note,
+            cones_change=c, boxes_change=b, drums_change=d, notes=note, transfer_group_id=group,
         )
     await db.commit()
 

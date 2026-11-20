@@ -42,6 +42,9 @@ class StockLedger(Base):
     reference_id: Mapped[str] = mapped_column(String(64))
     # Free-text remark typed by the operator (e.g. why a transfer was made).
     notes: Mapped[str | None] = mapped_column(Text, nullable=True)
+    # Shared by the OUT and IN legs of one transfer (line), so the move can be
+    # reversed as a unit. Null for every other movement and for old transfers.
+    transfer_group_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), nullable=True, index=True)
 
     batch_id: Mapped[uuid.UUID | None] = mapped_column(
         UUID(as_uuid=True), ForeignKey("batches.id", ondelete="SET NULL"), nullable=True, index=True

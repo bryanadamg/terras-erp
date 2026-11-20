@@ -269,6 +269,7 @@ async def add_stock_entry(
     drums_change: int = 0,
     color_id=None,
     notes: str | None = None,
+    transfer_group_id=None,
 ):
     batch_key = str(batch_id) if batch_id else ""
     cones_change = int(cones_change or 0)
@@ -324,7 +325,7 @@ async def add_stock_entry(
                 await add_stock_entry(
                     db, item_id, location_id, -take, reference_type, reference_id,
                     attribute_value_ids=attribute_value_ids, batch_id=bid, color_id=color_id,
-                    notes=notes,
+                    notes=notes, transfer_group_id=transfer_group_id,
                 )
                 spill -= take
                 if spill <= 1e-9:
@@ -366,6 +367,7 @@ async def add_stock_entry(
         qty_boxes_change=boxes_change or None,
         qty_drums_change=drums_change or None,
         notes=notes or None,
+        transfer_group_id=transfer_group_id,
     )
 
     if attribute_value_ids:

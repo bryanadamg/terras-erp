@@ -35,6 +35,7 @@ const REF_META: Record<string, RefMeta> = {
     'PACKING_MATERIAL':       { label: 'Packing Material',    tone: T.teal },
     'PICKING':                { label: 'Picking / Dispatch',  tone: T.teal },
     'Transfer':               { label: 'Transfer',            tone: T.amber },
+    'Transfer Reversal':      { label: 'Transfer Reversal',   tone: T.red },
     'Split':                  { label: 'Lot Split',           tone: T.amber },
     'Lot Reassign':           { label: 'Lot Reassign',        tone: T.amber },
     'QC_REJECT':              { label: 'QC Reject',           tone: T.red },
