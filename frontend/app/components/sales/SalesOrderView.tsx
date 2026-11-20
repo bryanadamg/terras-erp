@@ -399,7 +399,12 @@ export default function SalesOrderView({ items, attributes, boms, salesOrders, p
       // shop-floor context lives. When the pick IS made here it still rides along
       // — one item can own several attribute-less BOMs (a root per shade) and
       // nothing else tells them apart — the PR pre-fill just no longer needs it.
+      // The form's line list reads `size_display` (the server's name for a saved
+      // line), so a freshly added line needs it too or its size never shows.
+      const sizeOpt = getSizeOptions(newLine.item_id, newLine.bom_id, newLine.attribute_value_ids)
+          .find((o: any) => o.value === (newLine.size_token || (newLine.bom_size_id ? `bs:${newLine.bom_size_id}` : '')));
       setNewSO({ ...newSO, lines: [...newSO.lines, { ...newLine,
+          size_display: sizeOpt?.token ? sizeOpt.name : '',
           bom_id: newLine.bom_id || null,
           size_id: newLine.size_id || null,
           size_label: newLine.size_label || null,
@@ -843,6 +848,7 @@ export default function SalesOrderView({ items, attributes, boms, salesOrders, p
               // `size_display` is the server's resolution of either shape, so it
               // rehydrates a legacy bom_size_id line as the same token.
               size_token: String(l.size_display || '').trim().toLowerCase(),
+              size_display: l.size_display || '',
               size_id: l.size_id || '',
               size_label: l.size_id ? '' : (l.size_label || l.size_display || ''),
               bom_size_id: l.bom_size_id || '',
