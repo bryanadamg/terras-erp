@@ -343,6 +343,11 @@ export default function ReportsView(_props: any) {
                 <td style={{ ...xpCell, borderRight: 'none', whiteSpace: 'nowrap' }}>
                     <Chip tone={rm.tone} size="xs">{rm.label}</Chip>
                     <span style={{ fontSize: '10px', color: '#999', marginLeft: 4 }} title={e.reference_id}>#{e.reference_label || shortRef(e.reference_id)}</span>
+                    {e.notes && (
+                        <div title={e.notes} style={{ fontSize: '10px', color: '#555', fontStyle: 'italic', whiteSpace: 'normal', marginTop: 2, maxWidth: 260 }}>
+                            <i className="bi bi-chat-left-text" style={{ marginRight: 3 }} />{e.notes}
+                        </div>
+                    )}
                 </td>
             </tr>;
     };

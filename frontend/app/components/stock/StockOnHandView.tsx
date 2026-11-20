@@ -83,12 +83,14 @@ export default function StockOnHandView({ locations, attributes, categories, ite
     const [transferCones, setTransferCones] = useState('');
     const [transferBoxes, setTransferBoxes] = useState('');
     const [transferDrums, setTransferDrums] = useState('');
+    const [transferNotes, setTransferNotes] = useState('');
     const [transferring, setTransferring] = useState(false);
 
     // Multi-select + combined move. The selection itself is `sel` (useRowSelection),
     // declared further down where pageRows exists to scope select-all to.
     const [bulkOpen, setBulkOpen] = useState(false);
     const [bulkToLoc, setBulkToLoc] = useState('');
+    const [bulkNotes, setBulkNotes] = useState('');
     const [bulkQty, setBulkQty] = useState<Record<string, string>>({});
     const [bulkMoving, setBulkMoving] = useState(false);
 
@@ -149,6 +151,7 @@ export default function StockOnHandView({ locations, attributes, categories, ite
         setTransferCones(bal.qty_cones ? String(bal.qty_cones) : '');
         setTransferBoxes(bal.qty_boxes ? String(bal.qty_boxes) : '');
         setTransferDrums(bal.qty_drums ? String(bal.qty_drums) : '');
+        setTransferNotes('');
     };
 
     const handleTransfer = async () => {
@@ -172,6 +175,7 @@ export default function StockOnHandView({ locations, attributes, categories, ite
                     qty_cones: transferCones ? parseInt(transferCones, 10) : null,
                     qty_boxes: transferBoxes ? parseInt(transferBoxes, 10) : null,
                     qty_drums: transferDrums ? parseInt(transferDrums, 10) : null,
+                    notes: transferNotes.trim() || null,
                 }),
             });
             if (!res.ok) {
@@ -193,6 +197,7 @@ export default function StockOnHandView({ locations, attributes, categories, ite
         for (const [k, bal] of sel.entries) qtys[k] = String(bal.qty);
         setBulkQty(qtys);
         setBulkToLoc('');
+        setBulkNotes('');
         setBulkOpen(true);
     };
 
@@ -231,7 +236,7 @@ export default function StockOnHandView({ locations, attributes, categories, ite
             const res = await authFetch(`${apiBase}/stock/transfer/bulk`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ to_location_id: bulkToLoc, lines }),
+                body: JSON.stringify({ to_location_id: bulkToLoc, notes: bulkNotes.trim() || null, lines }),
             });
             if (!res.ok) {
                 const err = await res.json().catch(() => ({}));
@@ -884,6 +889,16 @@ export default function StockOnHandView({ locations, attributes, categories, ite
                             onChange={e => setTransferQty(e.target.value)}
                         />
                     </div>
+                    <div style={{ marginTop: 8 }}>
+                        <FieldLabel hint="Shown on the Stock Ledger next to this transfer.">Note</FieldLabel>
+                        <input
+                            type="text" maxLength={500}
+                            style={{ ...xpInput, width: '100%' }}
+                            placeholder="e.g. Moved for re-weighing"
+                            value={transferNotes}
+                            onChange={e => setTransferNotes(e.target.value)}
+                        />
+                    </div>
                 </FormSection>
                 <FormSection title="Packaging to move">
                     <FieldLabel hint="Optional — how many of each container moves with the quantity above.">Containers</FieldLabel>
@@ -924,6 +939,11 @@ export default function StockOnHandView({ locations, attributes, categories, ite
                         style={{ width: '100%' }}
                         size="sm"
                     />
+                    <div style={{ marginTop: 8 }}>
+                        <FieldLabel hint="Shown on the Stock Ledger next to every row of this move.">Note</FieldLabel>
+                        <input type="text" maxLength={500} style={{ ...xpInput, width: '100%' }}
+                            value={bulkNotes} onChange={e => setBulkNotes(e.target.value)} />
+                    </div>
                 </FormSection>
                 <FormSection title="Rows to move">
                     <div style={{ maxHeight: 320, overflowY: 'auto' }}>

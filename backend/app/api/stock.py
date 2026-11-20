@@ -116,7 +116,7 @@ async def get_stock_ledger(
         for tok in search.split():
             term = f"%{tok}%"
             item_sub = select(Item.id).where(or_(Item.name.ilike(term), Item.code.ilike(term)))
-            conditions.append(or_(StockLedger.reference_id.ilike(term), StockLedger.item_id.in_(item_sub)))
+            conditions.append(or_(StockLedger.reference_id.ilike(term), StockLedger.notes.ilike(term), StockLedger.item_id.in_(item_sub)))
 
     total = (await db.execute(
         select(func.count(StockLedger.id)).where(*conditions)
@@ -252,6 +252,7 @@ async def get_stock_ledger(
             "reference_type": r.reference_type,
             "reference_id": r.reference_id,
             "reference_label": ref_label_map.get(r.reference_id),
+            "notes": r.notes,
             "batch_id": r.batch_id,
             "batch_number": r.batch.batch_number if r.batch else None,
             "vendor_lot": r.batch.vendor_lot if r.batch else None,
@@ -312,6 +313,7 @@ async def export_stock_ledger(
             r["reference_type"], r["reference_label"] or r["reference_id"],
             r["qty_change"], r["item_uom"],
             r["qty_cones_change"] or None, r["qty_boxes_change"] or None, r["qty_drums_change"] or None,
+            r["notes"],
         ]
 
     return xlsx_response(
@@ -319,7 +321,7 @@ async def export_stock_ledger(
         [
             "Date", "Item Code", "Item Name", "Category", "Location", "Lot", "Supplier Lot",
             "Color", "Attributes", "Size", "Reference Type", "Reference", "Qty", "UOM",
-            "Cones", "Boxes", "Drums",
+            "Cones", "Boxes", "Drums", "Notes",
         ],
         (_row(r) for r in data["items"]),
         "stock-ledger",
@@ -427,19 +429,20 @@ async def transfer_stock(
     c = payload.qty_cones or 0
     b = payload.qty_boxes or 0
     d = payload.qty_drums or 0
+    note = (payload.notes or "").strip() or None
 
     # OUT first — per-batch negative stock guard blocks over-transfer
     await stock_service.add_stock_entry(
         db, item_id=item.id, location_id=payload.from_location_id,
         qty_change=-payload.qty, reference_type="Transfer", reference_id=ref,
         attribute_value_ids=attrs, batch_id=payload.batch_id, color_id=payload.color_id,
-        cones_change=-c, boxes_change=-b, drums_change=-d,
+        cones_change=-c, boxes_change=-b, drums_change=-d, notes=note,
     )
     await stock_service.add_stock_entry(
         db, item_id=item.id, location_id=payload.to_location_id,
         qty_change=payload.qty, reference_type="Transfer", reference_id=ref,
         attribute_value_ids=attrs, batch_id=payload.batch_id, color_id=payload.color_id,
-        cones_change=c, boxes_change=b, drums_change=d,
+        cones_change=c, boxes_change=b, drums_change=d, notes=note,
     )
     await db.commit()
 
@@ -500,6 +503,7 @@ async def transfer_stock_bulk(
             raise HTTPException(status_code=400, detail=f"Line {idx}: item {item.code} is lot-tracked — select a lot to transfer")
 
     dest_code = locs[payload.to_location_id].code
+    note = (payload.notes or "").strip() or None
     for ln in payload.lines:
         item = items[ln.item_id]
         attrs = [str(u) for u in ln.attribute_value_ids]
@@ -512,13 +516,13 @@ async def transfer_stock_bulk(
             db, item_id=item.id, location_id=ln.from_location_id,
             qty_change=-ln.qty, reference_type="Transfer", reference_id=ref,
             attribute_value_ids=attrs, batch_id=ln.batch_id, color_id=ln.color_id,
-            cones_change=-c, boxes_change=-b, drums_change=-d,
+            cones_change=-c, boxes_change=-b, drums_change=-d, notes=note,
         )
         await stock_service.add_stock_entry(
             db, item_id=item.id, location_id=payload.to_location_id,
             qty_change=ln.qty, reference_type="Transfer", reference_id=ref,
             attribute_value_ids=attrs, batch_id=ln.batch_id, color_id=ln.color_id,
-            cones_change=c, boxes_change=b, drums_change=d,
+            cones_change=c, boxes_change=b, drums_change=d, notes=note,
         )
     await db.commit()
 
