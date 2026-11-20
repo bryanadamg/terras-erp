@@ -532,7 +532,7 @@ export default function PurchaseOrderView({ items, itemResults, onSearchItems, a
            modeless
            onClose={closeModal}
            title={<><i className={`bi ${editingPOId ? 'bi-pencil' : 'bi-cart-plus'}`} style={{marginRight:6}}></i>{editingPOId ? 'Edit Purchase Order' : 'Create Purchase Order'}</>}
-           variant="success"
+           variant="primary"
            size="xl"
            footer={<>
                    <button type="button" className={XP_BTN} style={xpBtn()} onClick={closeModal}>{t('cancel')}</button>
@@ -720,7 +720,7 @@ export default function PurchaseOrderView({ items, itemResults, onSearchItems, a
            modeless
            onClose={() => setReceiptTarget(null)}
            title={<><i className="bi bi-box-arrow-in-down" style={{marginRight:6}}></i>Receive Goods — {receiptTarget?.po_number}</>}
-           variant="success"
+           variant="primary"
            size="xl"
            footer={<>
                    <button type="button" className={XP_BTN} style={xpBtn()} onClick={() => setReceiptTarget(null)}>Cancel</button>

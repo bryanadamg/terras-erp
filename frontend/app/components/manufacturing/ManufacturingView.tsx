@@ -341,7 +341,7 @@ export default function ManufacturingView({
               modeless
               onClose={() => setIsCreateOpen(false)}
               title={<><i className="bi bi-gear-wide-connected me-1"></i> NEW MANUFACTURING ORDER</>}
-              variant="success"
+              variant="primary"
               size="xxl"
               footer={
                   <ModalFooterActions
