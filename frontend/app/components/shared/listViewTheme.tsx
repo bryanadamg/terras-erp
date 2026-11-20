@@ -51,16 +51,19 @@ export const lvPrimaryBtn = (extra: React.CSSProperties = {}): React.CSSProperti
 
 export const lvLabel = (): React.CSSProperties => ({ fontFamily: LV_XP_FONT, fontSize: 11, color: '#000', display: 'block', marginBottom: 2 });
 
+// Header and body rules read terras-ui's table tokens (Porcelain under
+// `.ui-style-classic`); each fallback is the literal these used to hard-code, so
+// a view outside the classic scope paints exactly what it did.
 export const lvTh = (): React.CSSProperties => ({
-    padding: '2px 6px', borderRight: '1px solid #9090a0', textAlign: 'left', whiteSpace: 'nowrap',
-    fontFamily: LV_XP_FONT, fontSize: 11, fontWeight: 'bold', color: '#000',
+    padding: '2px 6px', borderRight: '1px solid var(--terras-table-head-line, #9090a0)', textAlign: 'left', whiteSpace: 'nowrap',
+    fontFamily: LV_XP_FONT, fontSize: 11, fontWeight: 'bold', color: 'var(--terras-table-head-text, #000)',
 });
 
 // Table header-row style. The classic bevel gradient + modern flat band were being
 // hand-written at every `<thead>`; `sticky` keeps the header pinned when the table
 // body is its own scroll region.
 export const lvThead = (sticky = false): React.CSSProperties => ({
-    ...({ background: 'linear-gradient(to bottom, #f0ede4, #d8d4c8)', borderBottom: '1px solid #9090a0' }),
+    ...({ background: 'var(--terras-table-head, linear-gradient(to bottom, #f0ede4, #d8d4c8))', borderBottom: '1px solid var(--terras-table-head-line, #9090a0)' }),
     ...(sticky ? { position: 'sticky' as const, top: 0, zIndex: 1 } : {}),
 });
 
@@ -84,13 +87,13 @@ export const lvThSticky = (extra: React.CSSProperties = {}): React.CSSProperties
     ({ ...lvThBanded(), position: 'sticky', top: 0, zIndex: 5, ...extra });
 
 export const lvTd = (): React.CSSProperties => ({
-    padding: '4px 6px', borderRight: '1px solid #c0bdb5', verticalAlign: 'middle', fontFamily: LV_XP_FONT, fontSize: 11,
+    padding: '4px 6px', borderRight: '1px solid var(--terras-table-line, #c0bdb5)', verticalAlign: 'middle', fontFamily: LV_XP_FONT, fontSize: 11,
 });
 
 // Body cell with a horizontal rule under it, for lists that separate rows on the
 // cell instead of on the row (they don't use `lvRow`).
 export const lvTdRuled = (extra: React.CSSProperties = {}): React.CSSProperties =>
-    ({ ...lvTd(), borderBottom: '1px solid #d0cdc8', ...extra });
+    ({ ...lvTd(), borderBottom: '1px solid var(--terras-table-line, #d0cdc8)', ...extra });
 
 // ── Sub-tables (mini-tables inside an expanded row) ───────────────────────────
 // A different job from lvTh/lvTd, which dress the *main* list. A table nested

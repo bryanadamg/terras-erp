@@ -545,6 +545,15 @@ body,
   color: inherit;
 }
 
+/* ── Sorted column: terras-ui's accent underline on the header that SortableTh
+   marks with aria-sort. Views here hand-roll their tables (no .terras-table), so
+   the package's own rule never matches them. No fallback on purpose: outside
+   classic the token is absent, the declaration is invalid and computes to none. */
+th[aria-sort='ascending'],
+th[aria-sort='descending'] {
+  box-shadow: inset 0 -2px 0 var(--terras-table-sort-mark);
+}
+
 /* ── Classic: sticky table headers ──
    top: 0 — inside an overflow wrapper (.table-responsive etc.) any larger offset
    permanently shifts the header down and leaves a blank ghost row. */
