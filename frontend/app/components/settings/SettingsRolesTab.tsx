@@ -190,8 +190,8 @@ export default function SettingsRolesTab({
                 ><i className="bi bi-plus-lg" style={{ marginRight: 4 }}></i>Add Role</button>
             }
         >
-            <div style={{ padding: 6, borderBottom: '1px solid #d6d3c6', background: '#f4f2ea' }}>
-                <SearchField value={search} onChange={setSearch} placeholder="Search roles…" grow width={600} />
+            <div style={{ flexShrink: 0, padding: 6, borderBottom: '1px solid #d6d3c6', background: '#f4f2ea' }}>
+                <div style={{ display: 'flex' }}><SearchField value={search} onChange={setSearch} placeholder="Search roles…" grow width={600} /></div>
             </div>
             <div style={{ flex: 1, overflow: 'auto' }}>
                 {visibleRoles.map(r => {
@@ -360,7 +360,7 @@ function RoleDetail({ role, roles, allPermissions, members, candidates, onAssign
                             aria-label="Assign a user to this role"
                             value=""
                             onChange={e => { if (e.target.value) onAssign(e.target.value); }}
-                            style={field({ fontSize: 11, padding: '1px 4px' })}
+                            style={field({ fontSize: 11, padding: '1px 4px', width: 240 })}
                         >
                             <option value="">+ Assign user…</option>
                             {candidates.map(u => (

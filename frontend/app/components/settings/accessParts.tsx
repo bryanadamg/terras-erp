@@ -19,11 +19,10 @@ export interface SectionCoverage { section: string; granted: number; total: numb
 /** Granted-of-total per permission-matrix section, in matrix order. */
 export function sectionCoverage(granted: { code: string }[], allPermissions: PermissionOption[]): SectionCoverage[] {
     const grantedBy = new Map(groupPermissionsBySection(granted).map(s => [s.section, s.permissions.length]));
-    return groupPermissionsBySection(allPermissions).map(s => ({
-        section: s.section,
-        granted: grantedBy.get(s.section) || 0,
-        total: s.permissions.length,
-    }));
+    return groupPermissionsBySection(allPermissions)
+        .map(s => ({ section: s.section, granted: grantedBy.get(s.section) || 0, total: s.permissions.length }))
+        // "Other" is codes outside the matrix (admin.access …) — only worth a pill when granted.
+        .filter(c => c.section !== 'Other' || c.granted > 0);
 }
 
 const heat = (f: number) => f <= 0 ? '#fff' : f >= 1 ? '#1c4a96' : f >= 0.6 ? '#4a7bd0' : f >= 0.3 ? '#8fb0e6' : '#cbdaf3';

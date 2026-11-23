@@ -191,8 +191,8 @@ export default function SettingsUsersTab({
                 ><i className="bi bi-person-plus" style={{ marginRight: 4 }}></i>Add User</button>
             }
         >
-            <div style={{ padding: 6, borderBottom: '1px solid #d6d3c6', background: '#f4f2ea', display: 'flex', flexDirection: 'column', gap: 6 }}>
-                <SearchField value={search} onChange={setSearch} placeholder="Search username or name…" grow width={600} />
+            <div style={{ flexShrink: 0, padding: 6, borderBottom: '1px solid #d6d3c6', background: '#f4f2ea', display: 'flex', flexDirection: 'column', gap: 6 }}>
+                <div style={{ display: 'flex' }}><SearchField value={search} onChange={setSearch} placeholder="Search username or name…" grow width={600} /></div>
                 <FilterChipBar
                     options={[
                         { value: 'all', label: 'All', count: counts.all },
