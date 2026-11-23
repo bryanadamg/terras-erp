@@ -22,6 +22,7 @@ import { Tabs, TabDef } from '../shared/Tabs';
 import { lvThead, ExpanderCell, lvThSticky, lvTdRuled, lvZebra, lvSubTable, lvSubTh, lvSubTd, lvSubRow, Dash, ResizableTable } from '../shared/listViewTheme';
 import { useRowSelection, RowCheckbox, SelectAllCheckbox, CHECK_COL_W as LV_CHECK_COL_W, EXPANDER_COL_W as LV_EXPANDER_COL_W, SortableTh } from '@bryanadamg/terras-ui/components/Table';
 import AuditChanges, { hasAuditChanges } from '../shared/AuditChanges';
+import { TintCard } from '../shared/RequestDetailPanel';
 
 // XP-style category badge colours derived from category name
 function getCategoryTabIcon(name: string): string {
@@ -849,22 +850,23 @@ export default function InventoryView({
                     <div style={{ display: 'flex', flexDirection: 'column' as const, gap: 4 }}>
                       {(() => {
                         const factors = (uoms || []).flatMap((u: any) => (u.factors || []).filter((f: any) => f.to_uom_name === newItem.uom));
-                        if (!newItem.uom) return <span style={{ fontSize: '10px', color: '#aaa', fontStyle: 'italic' }}>Select a UoM first</span>;
-                        if (factors.length === 0) return <span style={{ fontSize: '10px', color: '#aaa', fontStyle: 'italic' }}>No packaging units defined for this UoM</span>;
+                        if (!newItem.uom) return <span style={{ fontSize: '10px', color: 'var(--terras-win-text-3, #aaa)', fontStyle: 'italic' }}>Select a UoM first</span>;
+                        if (factors.length === 0) return <span style={{ fontSize: '10px', color: 'var(--terras-win-text-3, #aaa)', fontStyle: 'italic' }}>No packaging units defined for this UoM</span>;
                         return factors.map((f: any) => {
                           const active = newItem.packaging_factor_ids.includes(String(f.id));
                           return (
                             <div key={f.id} style={{ display: 'grid', gridTemplateColumns: '56px 1fr', alignItems: 'center' }}>
-                              <span style={{ fontFamily: xpFont, fontSize: '11px', color: '#000' }}>{f.from_uom_name}</span>
+                              <span style={{ fontFamily: xpFont, fontSize: '11px', color: 'var(--terras-win-text, #000)' }}>{f.from_uom_name}</span>
                               <div>
                                 <button type="button"
                                   style={{
                                     fontFamily: xpFont, fontSize: '10px',
                                     padding: '0 5px', height: '18px', cursor: 'pointer',
-                                    borderRadius: 0, border: '1px solid',
-                                    borderColor: active ? '#1a3a7a #0a2a5a #0a2a5a #1a3a7a' : '#dfdfdf #808080 #808080 #dfdfdf',
-                                    background: active ? 'linear-gradient(to bottom, #316ac5, #1a4a8a)' : 'linear-gradient(to bottom, #ffffff, #d4d0c8)',
-                                    color: active ? '#fff' : '#000',
+                                    borderRadius: CHIP_RADIUS,
+                                    border: '1px solid var(--terras-chip-blue-border)',
+                                    background: active ? 'var(--terras-chip-blue-bg)' : 'var(--terras-table-bg, #fff)',
+                                    color: 'var(--terras-chip-blue-text)',
+                                    fontWeight: active ? 'bold' : 'normal',
                                   }}
                                   onClick={() => setNewItem(prev => ({
                                     ...prev,
@@ -924,12 +926,12 @@ export default function InventoryView({
                           onChange={e => setNewItem({ ...newItem, lot_tracked: e.target.checked })}
                       />
                       <label
-                          style={{ fontFamily: xpFont, fontSize: '11px', fontWeight: 'bold', color: '#2b2822', cursor: 'pointer', margin: 0 }}
+                          style={{ fontFamily: xpFont, fontSize: '11px', fontWeight: 'bold', color: 'var(--terras-win-text, #2b2822)', cursor: 'pointer', margin: 0 }}
                           htmlFor="new-lot-tracked"
                       >Lot tracked</label>
                   </div>
                   <div
-                      style={{ fontFamily: xpFont, fontSize: 10, color: '#938c76', fontStyle: 'italic', margin: '1px 0 3px 20px' }}
+                      style={{ fontFamily: xpFont, fontSize: 10, color: 'var(--terras-win-text-3, #938c76)', fontStyle: 'italic', margin: '1px 0 3px 20px' }}
                   >Every receipt, production output and transfer requires a lot number</div>
               </div>
 
@@ -943,12 +945,12 @@ export default function InventoryView({
                           onChange={e => setNewItem({ ...newItem, is_decoupling_point: e.target.checked })}
                       />
                       <label
-                          style={{ fontFamily: xpFont, fontSize: '11px', fontWeight: 'bold', color: '#2b2822', cursor: 'pointer', margin: 0 }}
+                          style={{ fontFamily: xpFont, fontSize: '11px', fontWeight: 'bold', color: 'var(--terras-win-text, #2b2822)', cursor: 'pointer', margin: 0 }}
                           htmlFor="new-decoupling-point"
                       >Make-to-stock (decoupling point)</label>
                   </div>
                   <div
-                      style={{ fontFamily: xpFont, fontSize: 10, color: '#938c76', fontStyle: 'italic', margin: '1px 0 3px 20px' }}
+                      style={{ fontFamily: xpFont, fontSize: 10, color: 'var(--terras-win-text-3, #938c76)', fontStyle: 'italic', margin: '1px 0 3px 20px' }}
                   >Never auto-planned inside a parent order — demand is pooled and produced on its own standalone order</div>
               </div>
 
@@ -1011,7 +1013,7 @@ export default function InventoryView({
 
               {newItem.source_sample_id && (
                   <div className="mb-3">
-                      <div style={{ border: '1px solid #7f9db9', background: '#dce4f5', padding: '4px 8px', fontFamily: xpFont, fontSize: '11px', color: '#0d2a6e' }}>
+                      <div style={{ border: '1px solid var(--terras-chip-blue-border)', background: 'var(--terras-chip-blue-bg)', borderRadius: CHIP_RADIUS, padding: '4px 8px', fontFamily: xpFont, fontSize: '11px', color: 'var(--terras-chip-blue-text, #0d2a6e)' }}>
                               ↖ Derived from sample: <strong>{newItem.source_sample_code}{newItem.source_color_name ? ` · ${newItem.source_color_name}` : ''}</strong>
                           </div>
                   </div>
@@ -1019,8 +1021,7 @@ export default function InventoryView({
 
               {isRawMaterialCategory && (
                   <div className="mb-0">
-                      <div style={{ border: '1px solid #aca899', borderRadius: 3, padding: '10px 8px 8px', background: '#f5f4ee', position: 'relative', marginTop: 4 }}>
-                              <span style={{ position: 'absolute', top: -8, left: 8, background: '#f5f4ee', padding: '0 4px', fontFamily: xpFont, fontSize: '10px', color: '#444' }}>Also Create Beam Item</span>
+                      <TintCard title="Also Create Beam Item" style={{ marginTop: 4 }} bodyStyle={{ padding: 8 }}>
                               <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: createBeam ? 8 : 0 }}>
                                   <input
                                       type="checkbox"
@@ -1029,7 +1030,7 @@ export default function InventoryView({
                                       onChange={e => { setCreateBeam(e.target.checked); setBeamNameManuallyEdited(false); }}
                                       style={{ cursor: 'pointer' }}
                                   />
-                                  <label htmlFor="create-beam-check" style={{ fontFamily: xpFont, fontSize: '11px', color: '#000', cursor: 'pointer', margin: 0 }}>
+                                  <label htmlFor="create-beam-check" style={{ fontFamily: xpFont, fontSize: '11px', color: 'var(--terras-win-text, #000)', cursor: 'pointer', margin: 0 }}>
                                       Create beam item <strong>BEAM-{newItem.code || '...'}</strong>
                                   </label>
                               </div>
@@ -1037,18 +1038,18 @@ export default function InventoryView({
                                   <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
                                       <div style={{ display: 'flex', gap: 6, alignItems: 'flex-end' }}>
                                           <div style={{ flex: 1 }}>
-                                              <label style={{ fontFamily: xpFont, fontSize: '10px', color: '#555', display: 'block', marginBottom: 2 }}>Beam Name</label>
+                                              <label style={{ fontFamily: xpFont, fontSize: '10px', color: 'var(--terras-win-text-3, #555)', display: 'block', marginBottom: 2 }}>Beam Name</label>
                                               <input
-                                                  style={{ fontFamily: xpFont, fontSize: '11px', border: '1px solid #7f9db9', boxShadow: 'inset 1px 1px 0 rgba(0,0,0,0.15)', padding: '2px 4px', background: '#fff', color: '#000', width: '100%' }}
+                                                  style={{ fontFamily: xpFont, fontSize: '11px', border: '1px solid #7f9db9', boxShadow: 'inset 1px 1px 0 rgba(0,0,0,0.15)', padding: '2px 4px', background: 'var(--terras-table-bg, #fff)', color: 'var(--terras-win-text, #000)', width: '100%' }}
                                                   value={beamName}
                                                   onChange={e => { setBeamNameManuallyEdited(true); setBeamName(e.target.value); }}
                                                   placeholder={`Beam - ${newItem.name}`}
                                               />
                                           </div>
                                           <div style={{ width: 80 }}>
-                                              <label style={{ fontFamily: xpFont, fontSize: '10px', color: '#555', display: 'block', marginBottom: 2 }}>UOM</label>
+                                              <label style={{ fontFamily: xpFont, fontSize: '10px', color: 'var(--terras-win-text-3, #555)', display: 'block', marginBottom: 2 }}>UOM</label>
                                               <select
-                                                  style={{ fontFamily: xpFont, fontSize: '11px', border: '1px solid #7f9db9', padding: '2px 4px', background: '#fff', color: '#000', width: '100%' }}
+                                                  style={{ fontFamily: xpFont, fontSize: '11px', border: '1px solid #7f9db9', padding: '2px 4px', background: 'var(--terras-table-bg, #fff)', color: 'var(--terras-win-text, #000)', width: '100%' }}
                                                   value={beamUom}
                                                   onChange={e => setBeamUom(e.target.value)}
                                               >
@@ -1057,12 +1058,12 @@ export default function InventoryView({
                                               </select>
                                           </div>
                                       </div>
-                                      <div style={{ fontFamily: xpFont, fontSize: '9px', color: '#888' }}>
+                                      <div style={{ fontFamily: xpFont, fontSize: '9px', color: 'var(--terras-win-text-3, #888)' }}>
                                           Code: BEAM-{newItem.code || '...'} · Category: Beam (WIP) · BOM defined manually in BOM Designer
                                       </div>
                                   </div>
                               )}
-                          </div>
+                          </TintCard>
                   </div>
               )}
           </form>
