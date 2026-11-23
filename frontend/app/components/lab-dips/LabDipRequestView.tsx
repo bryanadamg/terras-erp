@@ -475,7 +475,7 @@ export default function LabDipRequestView({
         <div style={viewShellStyle('page', { fontFamily: xpFont})}>
             {/* Toolbar */}
             <div style={{ background: 'linear-gradient(to bottom, #f5f4ef, #e0dfd8)', borderBottom: '1px solid #b0a898', padding: '4px 8px', display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' as const, flexShrink: 0 }}>
-                <SearchField value={searchTerm} onChange={setSearchTerm} placeholder="Search code, color standard, article…" width={220} />
+                <SearchField value={searchTerm} onChange={setSearchTerm} placeholder="Search code, colour, item, variant…" width={220} />
                 <span style={{ width: 1, height: 20, background: '#a0988c', margin: '0 2px' }} />
                 <FilterChipBar options={STATUS_FILTERS} value={statusFilter} onChange={setStatusFilter} />
                 <span style={{ width: 1, height: 20, background: '#a0988c', margin: '0 2px' }} />

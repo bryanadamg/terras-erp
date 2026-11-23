@@ -1,3 +1,4 @@
+import re
 import shutil
 import uuid as uuid_lib
 from pathlib import Path
@@ -235,17 +236,44 @@ def _labdip_conditions(
 
     Built once so all three see the same filtered set — a count computed over
     different filters than the rows makes the pager disagree with the table.
-    `search` mirrors the view's old client-side matcher exactly: code, color
-    standard, customer article code.
+    `search` matches the request (code, color standard, customer article), its
+    colours (dip colour names, Color Library code/name/Pantone of the request, its
+    dips or an approved variant), its items (code/name), and a variant code such as
+    "00006-B" or the approved "00006-B-5".
     """
     conds = [LabDipRequest.kind == kind_v]
     if search and search.strip():
-        like = f"%{search.strip().lower()}%"
-        conds.append(or_(
+        term = search.strip().lower()
+        like = f"%{term}%"
+        color_hit = or_(func.lower(Color.code).like(like), func.lower(Color.name).like(like),
+                        func.lower(Color.pantone_ref).like(like))
+        item_hit = or_(func.lower(ItemModel.code).like(like), func.lower(ItemModel.name).like(like))
+        line = LabDipLine.lab_dip_request_id == LabDipRequest.id
+        litem = LabDipItem.lab_dip_request_id == LabDipRequest.id
+        matches = [
             func.lower(LabDipRequest.code).like(like),
             func.lower(LabDipRequest.color_standard).like(like),
             func.lower(LabDipRequest.customer_article_code).like(like),
-        ))
+            select(LabDipLine.id).where(line, func.lower(LabDipLine.color_name).like(like)).correlate(LabDipRequest).exists(),
+            select(Color.id).where(Color.id == LabDipRequest.color_id, color_hit).correlate(LabDipRequest).exists(),
+            select(Color.id).join(LabDipLine, LabDipLine.color_id == Color.id).where(line, color_hit).correlate(LabDipRequest).exists(),
+            select(Color.id).join(LabDipItem, LabDipItem.approved_color_id == Color.id).where(litem, color_hit).correlate(LabDipRequest).exists(),
+            select(ItemModel.id).where(ItemModel.id == LabDipRequest.base_item_id, item_hit).correlate(LabDipRequest).exists(),
+            select(ItemModel.id).join(LabDipItem, LabDipItem.item_id == ItemModel.id).where(litem, item_hit).correlate(LabDipRequest).exists(),
+            select(LabDipItem.id).where(litem, func.lower(LabDipItem.locked_variant_code).like(like)).correlate(LabDipRequest).exists(),
+        ]
+        # Derived variant codes ("00006-B", yarn "Y00006-B") aren't stored: split the
+        # term into the request number and variant letter and match those instead.
+        m = re.match(r"^(y?)(\d+)-([a-z]+)", term)
+        if m and (m.group(1) == "y") == (kind_v == "YARN"):
+            seq = 0
+            for ch in m.group(3):
+                seq = seq * 26 + (ord(ch) - 96)
+            matches.append(and_(
+                LabDipRequest.code.like(f"%-{m.group(2)}"),
+                select(LabDipItem.id).where(litem, LabDipItem.variant_seq == seq - 1).correlate(LabDipRequest).exists(),
+            ))
+        conds.append(or_(*matches))
     if status and status != "ALL":
         conds.append(LabDipRequest.status == status)
     # The date inputs emit yyyy-mm-dd against a timestamp column, so the upper
