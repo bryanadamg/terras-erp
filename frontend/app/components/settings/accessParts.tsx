@@ -159,6 +159,17 @@ export function relativeTime(iso?: string | null, now = Date.now()): string {
     return mo < 12 ? `${mo} mo ago` : `${Math.round(mo / 12)}y ago`;
 }
 
+interface Permission { id: string; code: string; description: string }
+
+/** Role-inherited plus direct grants, each once, direct ones flagged `_direct`. */
+export function effectivePermissionList(rolePermissions: Permission[], directPermissions: Permission[]) {
+    const directIds = new Set(directPermissions.map(p => p.id));
+    return [
+        ...rolePermissions.filter(p => !directIds.has(p.id)).map(p => ({ ...p, _direct: false })),
+        ...directPermissions.map(p => ({ ...p, _direct: true })),
+    ];
+}
+
 /** Jaccard overlap between two permission sets (0..1) and the shared count. */
 export function permissionOverlap(a: { id: string }[], b: { id: string }[]): { shared: number; score: number } {
     const bIds = new Set(b.map(p => p.id));

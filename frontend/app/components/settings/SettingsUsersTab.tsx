@@ -12,14 +12,13 @@ import { DetailGrid, Detail } from '@bryanadamg/terras-ui/components/DetailGrid'
 import SettingsPanel from './SettingsPanel';
 import PixelAvatar from '../shared/PixelAvatar';
 import UserFormModal, { UserFormPayload } from './UserFormModal';
-import { effectivePermissionList } from './EffectivePermissions';
 import PermissionBreakdown from './PermissionBreakdown';
 import ScopeBreakdown from './ScopeBreakdown';
 import { useData } from '../../context/DataContext';
 import { API_BASE } from '../shared/apiBase';
 import {
     MasterDetail, ListRow, DetailSection, Callout, CoveragePills, Flag,
-    sectionCoverage, isAdminPerms, relativeTime,
+    sectionCoverage, isAdminPerms, relativeTime, effectivePermissionList,
 } from './accessParts';
 
 type StatusFilter = 'all' | 'active' | 'inactive' | 'attention';
