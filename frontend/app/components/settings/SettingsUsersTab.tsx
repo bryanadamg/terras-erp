@@ -9,7 +9,6 @@ import { xpBtn, xpFont, XP_BTN, StatusChip, XPEmptyState } from '../shared/xpThe
 import { SearchField } from '../shared/shellTheme';
 import { FilterChipBar } from '@bryanadamg/terras-ui/components/FilterChipBar';
 import { DetailGrid, Detail } from '@bryanadamg/terras-ui/components/DetailGrid';
-import SettingsPanel from './SettingsPanel';
 import PixelAvatar from '../shared/PixelAvatar';
 import UserFormModal, { UserFormPayload } from './UserFormModal';
 import PermissionBreakdown from './PermissionBreakdown';
@@ -177,20 +176,7 @@ export default function SettingsUsersTab({
     const openEdit = (u: User) => { setFormUser(u); setFormMode('edit'); };
 
     const list = (
-        <SettingsPanel
-            icon="bi-people-fill"
-            title="Users"
-            flush
-            fill
-            right={
-                <button
-                    type="button"
-                    style={xpBtn({ padding: '1px 8px' })}
-                    className={XP_BTN}
-                    onClick={() => { setFormUser(undefined); setFormMode('create'); }}
-                ><i className="bi bi-person-plus" style={{ marginRight: 4 }}></i>Add User</button>
-            }
-        >
+        <>
             <div style={{ flexShrink: 0, padding: 6, borderBottom: '1px solid #d6d3c6', background: '#f4f2ea', display: 'flex', flexDirection: 'column', gap: 6 }}>
                 <div style={{ display: 'flex' }}><SearchField value={search} onChange={setSearch} placeholder="Search username or name…" grow width={600} /></div>
                 <FilterChipBar
@@ -237,12 +223,20 @@ export default function SettingsUsersTab({
             <div style={{ padding: '3px 8px', borderTop: '1px solid #d6d3c6', background: '#f4f2ea', fontFamily: xpFont, fontSize: 10, color: '#666' }}>
                 {filteredUsers.length} of {users.length} user{users.length !== 1 ? 's' : ''}
             </div>
-        </SettingsPanel>
+        </>
     );
 
     return (
         <>
             <MasterDetail
+                icon="bi-people-fill"
+                title="Users"
+                right={<button
+                    type="button"
+                    style={xpBtn({ padding: '1px 8px' })}
+                    className={XP_BTN}
+                    onClick={() => { setFormUser(undefined); setFormMode('create'); }}
+                ><i className="bi bi-person-plus" style={{ marginRight: 4 }}></i>Add User</button>}
                 list={list}
                 detail={user ? (
                     <UserDetail
@@ -257,9 +251,7 @@ export default function SettingsUsersTab({
                         onCreateRole={() => onCreateRoleFrom(user)}
                     />
                 ) : (
-                    <SettingsPanel icon="bi-person" title="User" fill>
-                        <XPEmptyState message="Pick a user on the left, or add one." icon="bi-people" />
-                    </SettingsPanel>
+                    <XPEmptyState message="Pick a user on the left, or add one." icon="bi-people" />
                 )}
             />
 
@@ -295,7 +287,7 @@ function UserDetail({ user, isSelf, allPermissions, lastLoginExact, onEdit, onSe
     const btn = (extraStyle = {}) => xpBtn({ padding: '1px 8px', ...extraStyle });
 
     return (
-        <SettingsPanel icon="bi-person-badge" title="User" fill>
+        <>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 14, fontFamily: xpFont }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
                     <div style={{ border: '1px solid', borderColor: '#fff #888 #888 #fff', background: '#e0dcd4', padding: 2, opacity: user.is_active ? 1 : 0.5 }}>
@@ -366,6 +358,6 @@ function UserDetail({ user, isSelf, allPermissions, lastLoginExact, onEdit, onSe
                     <ScopeBreakdown role={user.role} />
                 </DetailSection>
             </div>
-        </SettingsPanel>
+        </>
     );
 }

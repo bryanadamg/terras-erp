@@ -4,6 +4,7 @@ import React from 'react';
 import { xpFont, CHIP_RADIUS, familyTint } from '../shared/xpTheme';
 import { groupPermissionsBySection } from '../shared/permissionMatrix';
 import { PermissionOption } from './PermissionsPicker';
+import SettingsPanel from './SettingsPanel';
 
 /**
  * Building blocks for the Settings list/detail screens (Access Control's users
@@ -62,16 +63,42 @@ export function CoveragePills({ coverage }: { coverage: SectionCoverage[] }) {
     );
 }
 
-/** List pane beside a detail pane; both scroll on their own. */
-export function MasterDetail({ list, detail, listWidth = 'minmax(260px, 330px)' }: {
-    list: React.ReactNode; detail: React.ReactNode; listWidth?: string;
+/**
+ * One panel: a list (or section menu) as a strip down its left edge, the selected
+ * item's detail beside it. List and detail were separate boxes, which read as
+ * three unrelated panels when the detail was short; the list only picks what the
+ * panel shows, so it belongs inside the same frame. Both halves scroll on their own.
+ */
+export function MasterDetail({ icon, title, right, list, detail, listWidth = 320 }: {
+    icon: string;
+    title: React.ReactNode;
+    right?: React.ReactNode;
+    list: React.ReactNode;
+    detail: React.ReactNode;
+    listWidth?: number;
 }) {
-    // ponytail: fixed two-column grid, no phone stacking — these are desktop admin screens.
+    // ponytail: fixed two-column layout, no phone stacking — these are desktop admin screens.
     return (
-        <div style={{ flex: 1, minHeight: 0, height: '100%', display: 'grid', gridTemplateColumns: `${listWidth} minmax(0, 1fr)`, gap: 12 }}>
-            <div style={{ minHeight: 0 }}>{list}</div>
-            <div style={{ minHeight: 0 }}>{detail}</div>
-        </div>
+        <SettingsPanel
+            icon={icon}
+            // Fixed header height: a header with a button and one without would
+            // otherwise shift the body a few px when the title/actions change.
+            title={<span style={{ display: 'inline-flex', alignItems: 'center', minHeight: 22 }}>{title}</span>}
+            right={right}
+            flush
+            fill
+        >
+            <div style={{ flex: 1, minHeight: 0, display: 'flex' }}>
+                <div style={{
+                    width: listWidth, flexShrink: 0, minHeight: 0, display: 'flex', flexDirection: 'column',
+                    background: '#f4f2ea', borderRight: '1px solid #d6d3c6',
+                }}>{list}</div>
+                <div style={{
+                    flex: 1, minWidth: 0, overflow: 'auto', padding: '12px 16px',
+                    display: 'flex', flexDirection: 'column', gap: 14,
+                }}>{detail}</div>
+            </div>
+        </SettingsPanel>
     );
 }
 

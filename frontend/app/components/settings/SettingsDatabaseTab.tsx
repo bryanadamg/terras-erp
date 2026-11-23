@@ -11,8 +11,7 @@ import { FieldLabel } from '@bryanadamg/terras-ui/components/Field';
 import {
     settingsActions, settingsHint, SETTINGS_FIELD_GAP,
 } from './settingsStyles';
-import SettingsPanel from './SettingsPanel';
-import { ListRow, DetailSection, Flag, StatusDot, relativeTime } from './settingsParts';
+import { MasterDetail, ListRow, DetailSection, Flag, StatusDot, relativeTime } from './settingsParts';
 import { useRememberedTab } from '../../hooks/useRememberedTab';
 import ModalWrapper from '../shared/ModalWrapper';
 import { API_BASE } from '../shared/apiBase';
@@ -913,22 +912,13 @@ export default function SettingsDatabaseTab() {
 
     return (
         <div style={{ height: '100%', minHeight: 0, display: 'flex', flexDirection: 'column' }}>
-            {/* One panel: the menu only picks what the panel shows, so it lives
-                inside the same frame as a strip down its left edge. */}
-            <SettingsPanel
+            <MasterDetail
                 icon={current.icon}
-                // Fixed header height: sections with a header button (Refresh) and
-                // without one would otherwise shift the body a few px on every switch.
-                title={<span style={{ display: 'inline-flex', alignItems: 'center', minHeight: 22 }}>{current.title}</span>}
+                title={current.title}
                 right={current.right}
-                flush
-                fill
-            >
-                <div style={{ flex: 1, minHeight: 0, display: 'flex' }}>
-                    <nav aria-label="Database sections" style={{
-                        width: 190, flexShrink: 0, overflow: 'auto',
-                        background: '#f4f2ea', borderRight: '1px solid #d6d3c6',
-                    }}>
+                listWidth={190}
+                list={
+                    <nav aria-label="Database sections" style={{ overflow: 'auto' }}>
                         {nav.map(n => (
                             <ListRow key={n.key} selected={section === n.key} onClick={() => setSection(n.key)}>
                                 <i className={`bi ${n.icon}`} style={n.key === 'danger' && section !== 'danger' ? { color: '#8e0000' } : undefined} />
@@ -937,11 +927,9 @@ export default function SettingsDatabaseTab() {
                             </ListRow>
                         ))}
                     </nav>
-                    <div style={{ flex: 1, minWidth: 0, overflow: 'auto', padding: '12px 16px', display: 'flex', flexDirection: 'column', gap: 14 }}>
-                        {current.body}
-                    </div>
-                </div>
-            </SettingsPanel>
+                }
+                detail={current.body}
+            />
 
             <ModalWrapper
                 isOpen={showWipeModal}

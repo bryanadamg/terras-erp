@@ -8,7 +8,6 @@ import { useConfirm } from '../../context/ConfirmContext';
 import { xpBtn, xpFont, XP_BTN, CodeChip, XPEmptyState } from '../shared/xpTheme';
 import { field } from '@bryanadamg/terras-ui/styles';
 import { SearchField } from '../shared/shellTheme';
-import SettingsPanel from './SettingsPanel';
 import PermissionBreakdown from './PermissionBreakdown';
 import RoleFormModal, { RoleFormPayload, RoleLike } from './RoleFormModal';
 import ScopeBreakdown from './ScopeBreakdown';
@@ -176,20 +175,7 @@ export default function SettingsRolesTab({
     };
 
     const list = (
-        <SettingsPanel
-            icon="bi-diagram-3"
-            title="Roles"
-            flush
-            fill
-            right={
-                <button
-                    type="button"
-                    style={xpBtn({ padding: '1px 8px' })}
-                    className={XP_BTN}
-                    onClick={() => { setFormRole(undefined); setFormMode('create'); }}
-                ><i className="bi bi-plus-lg" style={{ marginRight: 4 }}></i>Add Role</button>
-            }
-        >
+        <>
             <div style={{ flexShrink: 0, padding: 6, borderBottom: '1px solid #d6d3c6', background: '#f4f2ea' }}>
                 <div style={{ display: 'flex' }}><SearchField value={search} onChange={setSearch} placeholder="Search roles…" grow width={600} /></div>
             </div>
@@ -222,12 +208,20 @@ export default function SettingsRolesTab({
                     </div>
                 )}
             </div>
-        </SettingsPanel>
+        </>
     );
 
     return (
         <>
             <MasterDetail
+                icon="bi-diagram-3"
+                title="Roles"
+                right={<button
+                    type="button"
+                    style={xpBtn({ padding: '1px 8px' })}
+                    className={XP_BTN}
+                    onClick={() => { setFormRole(undefined); setFormMode('create'); }}
+                ><i className="bi bi-plus-lg" style={{ marginRight: 4 }}></i>Add Role</button>}
                 list={list}
                 detail={role ? (
                     <RoleDetail
@@ -243,9 +237,7 @@ export default function SettingsRolesTab({
                         onSelectRole={onSelect}
                     />
                 ) : (
-                    <SettingsPanel icon="bi-diagram-3" title="Role" fill>
-                        <XPEmptyState message="Pick a role on the left, or add one." icon="bi-diagram-3" />
-                    </SettingsPanel>
+                    <XPEmptyState message="Pick a role on the left, or add one." icon="bi-diagram-3" />
                 )}
             />
 
@@ -291,7 +283,7 @@ function RoleDetail({ role, roles, allPermissions, members, candidates, onAssign
     }, [role, roles, admin]);
 
     return (
-        <SettingsPanel icon="bi-shield-lock" title="Role" fill>
+        <>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 14, fontFamily: xpFont }}>
                 <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12 }}>
                     <div style={{ flex: 1, minWidth: 0 }}>
@@ -393,6 +385,6 @@ function RoleDetail({ role, roles, allPermissions, members, candidates, onAssign
                     </div>
                 </DetailSection>
             </div>
-        </SettingsPanel>
+        </>
     );
 }
