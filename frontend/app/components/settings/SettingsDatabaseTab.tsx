@@ -10,10 +10,11 @@ import { field as xpInput, BTN_TONES } from '@bryanadamg/terras-ui/styles';
 import { FieldLabel } from '@bryanadamg/terras-ui/components/Field';
 import {
     xpTableHeader, xpThCell, tdBase,
-    settingsStack, settingsActions, settingsHint, SETTINGS_FIELD_GAP,
-    settingsCol, settingsColumns,
+    settingsActions, settingsHint, SETTINGS_FIELD_GAP,
 } from './settingsStyles';
 import SettingsPanel from './SettingsPanel';
+import { MasterDetail, ListRow, DetailSection, Flag, StatusDot, relativeTime } from './accessParts';
+import { useRememberedTab } from '../../hooks/useRememberedTab';
 import ModalWrapper from '../shared/ModalWrapper';
 import { lvZebra } from '../shared/listViewTheme';
 import { API_BASE } from '../shared/apiBase';
@@ -48,6 +49,28 @@ const pad2 = (n: number) => String(n).padStart(2, '0');
 
 type PingState = { ok: boolean; latency_ms: number | null } | null;
 
+type DbSection = 'overview' | 'backups' | 'events' | 'connection' | 'danger';
+const DB_SECTIONS: DbSection[] = ['overview', 'backups', 'events', 'connection', 'danger'];
+
+/** Overview card that jumps to its section. */
+function SummaryCard({ icon, title, headline, sub, onClick }: {
+    icon: string; title: string; headline: React.ReactNode; sub: React.ReactNode; onClick: () => void;
+}) {
+    return (
+        <button type="button" onClick={onClick} className="access-list-row" style={{
+            textAlign: 'left', border: '1px solid #c8c4b6', background: '#faf9f4', padding: '10px 12px', cursor: 'pointer',
+            display: 'flex', flexDirection: 'column', gap: 5, fontFamily: xpFont, fontSize: 11, color: '#333',
+        }}>
+            <span style={{ fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: 6 }}>
+                <i className={`bi ${icon}`} />{title}
+                <i className="bi bi-chevron-right" style={{ marginLeft: 'auto', fontSize: 10, color: '#888' }} />
+            </span>
+            <span style={{ fontSize: 14, display: 'flex', alignItems: 'center', gap: 6 }}>{headline}</span>
+            <span style={{ fontSize: 10, color: '#666' }}>{sub}</span>
+        </button>
+    );
+}
+
 const fmtMs = (ms: number | null | undefined) => (ms == null ? '—' : `${ms} ms`);
 
 function fmtUptime(seconds: number | null | undefined): string {
@@ -58,18 +81,19 @@ function fmtUptime(seconds: number | null | undefined): string {
     return `${Math.round(seconds)}s`;
 }
 
-/** One number from the live-event bus. Same card shell as StatusTile, but these
- *  are counters rather than up/down states, so there is no status dot to show —
- *  `warn` tints the ones where any value above zero is worth a look. */
+/** One number from the live-event bus. Counters, not up/down states, so no status
+ *  dot — `warn` tints the ones where any value above zero is worth a look, and a
+ *  plain zero greys out so a quiet system reads as quiet instead of twelve "0"s. */
 function EventStat({ label, value, warn }: { label: string; value: number | string | null | undefined; warn?: boolean;
 }) {
+    const idle = value === 0 || value == null || value === '—';
     return (
         <div style={{
-            background: '#fff', border: '1px solid #b0a898', padding: '6px 8px',
+            background: warn ? '#fff8e1' : '#fff', border: `1px solid ${warn ? '#e0c080' : '#d6d3c6'}`, padding: '6px 8px',
         }}>
             <div style={{
                 fontFamily: xpFont, fontSize: 14,
-                fontWeight: 700, color: warn ? '#c62828' : ('#333'),
+                fontWeight: idle ? 400 : 700, color: warn ? '#8a5300' : idle ? '#aaa' : '#333',
             }}>
                 {value ?? '—'}
             </div>
@@ -106,6 +130,7 @@ export default function SettingsDatabaseTab() {
     const { confirm } = useConfirm();
     const { formatDateTime: tzDateTime } = useTimezone();
     const { wsStatus, authFetch } = useData();
+    const [section, setSection] = useRememberedTab<DbSection>('settings.database', 'overview', DB_SECTIONS);
 
     const [currentDbUrl, setCurrentDbUrl] = useState('');
     const [newDbUrl, setNewDbUrl] = useState('');
@@ -496,353 +521,418 @@ export default function SettingsDatabaseTab() {
         </button>
     );
 
-    return (
-        <div style={settingsStack}>
-            <SettingsPanel icon="bi-activity" title="System Status" right={refreshButton}>
-                {/* Five tiles: auto-fit shares the row evenly instead of leaving
-                    a 2-tile orphan row at intermediate widths. */}
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: 8 }}>
-                    <StatusTile label="WebSocket" icon="bi-broadcast"
-                        ok={wsStatus === 'open' ? true : wsStatus === 'closed' ? false : null}
-                        detail={wsStatus === 'connecting' ? 'Connecting…' : 'Live event feed'} />
-                    <StatusTile label="Backend API" icon="bi-hdd-network"
-                        ok={beOnline}
-                        detail={beOnline === false ? 'Unreachable' : 'REST API'} />
-                    <StatusTile label="Database" icon="bi-database"
-                        ok={dbPing?.ok ?? (beOnline === false ? false : null)}
-                        detail={dbPing?.ok ? `${dbPing.latency_ms} ms` : 'PostgreSQL'} />
-                    <StatusTile label="Redis" icon="bi-lightning-charge"
-                        ok={redisPing?.ok ?? (beOnline === false ? false : null)}
-                        detail={redisPing?.ok ? `${redisPing.latency_ms} ms` : 'Event bus'} />
-                    <StatusTile label="DB Storage" icon="bi-hdd-stack"
-                        ok={dbSizeBytes != null ? true : null}
-                        detail={prettyBytes(dbSizeBytes)} />
-                </div>
-                {statusCheckedAt && (
-                    <div style={{ ...settingsHint(), marginTop: 6, textAlign: 'right' }}>
-                        Last checked {statusCheckedAt.toLocaleTimeString()}
+    const wsOk = wsStatus === 'open' ? true : wsStatus === 'closed' ? false : null;
+    const services = [
+        { label: 'WebSocket', icon: 'bi-broadcast', ok: wsOk, detail: wsStatus === 'connecting' ? 'Connecting…' : 'Live event feed' },
+        { label: 'Backend API', icon: 'bi-hdd-network', ok: beOnline, detail: beOnline === false ? 'Unreachable' : 'REST API' },
+        { label: 'Database', icon: 'bi-database', ok: dbPing?.ok ?? (beOnline === false ? false : null), detail: dbPing?.ok ? `${dbPing.latency_ms} ms` : 'PostgreSQL' },
+        { label: 'Redis', icon: 'bi-lightning-charge', ok: redisPing?.ok ?? (beOnline === false ? false : null), detail: redisPing?.ok ? `${redisPing.latency_ms} ms` : 'Event bus' },
+        { label: 'DB Storage', icon: 'bi-hdd-stack', ok: dbSizeBytes != null ? true : null, detail: prettyBytes(dbSizeBytes) },
+    ];
+    const anyDown = services.some(sv => sv.ok === false);
+    const allUp = services.every(sv => sv.ok === true);
+    const eventIssues = eventStats
+        ? [eventStats.unpublished_backlog, eventStats.publish?.failures, eventStats.connections?.closed_backpressure].filter(v => (v ?? 0) > 0).length
+        : 0;
+    const backupFailed = schedule?.last_run_status === 'failed';
+    const scheduleText = !schedule?.enabled ? 'Automatic backups off'
+        : `${schedule.frequency === 'weekly' ? `Weekly, ${DAY_NAMES[schedule.day_of_week ?? 0]}` : 'Daily'} at ${pad2(schedule.hour)}:${pad2(schedule.minute)}`;
+    // "erp:***@db:5432/erp" → "db:5432/erp": the host is what tells two databases apart.
+    const dbTarget = currentDbUrl.split('@').pop() || currentDbUrl;
+
+    const nav: { key: DbSection; icon: string; label: string; badge?: React.ReactNode }[] = [
+        { key: 'overview', icon: 'bi-speedometer2', label: 'Overview', badge: <StatusDot ok={anyDown ? false : allUp ? true : null} /> },
+        {
+            key: 'backups', icon: 'bi-clock-history', label: 'Backups',
+            badge: backupFailed ? <Flag tone="red">FAILED</Flag> : <Flag tone={schedule?.enabled ? 'green' : 'gray'}>{schedule?.enabled ? 'ON' : 'OFF'}</Flag>,
+        },
+        { key: 'events', icon: 'bi-broadcast-pin', label: 'Live events', badge: eventIssues > 0 ? <Flag tone="amber">{eventIssues}</Flag> : undefined },
+        { key: 'connection', icon: 'bi-database-fill-gear', label: 'Connection' },
+        { key: 'danger', icon: 'bi-exclamation-octagon-fill', label: 'Danger zone' },
+    ];
+
+    const eventGroups = eventStats ? [
+        { title: 'Connections', stats: [
+            <EventStat key="c" label="Connected clients" value={eventStats.connections?.current} />,
+            <EventStat key="r" label="Rejected handshakes" value={eventStats.connections?.rejected} />,
+            <EventStat key="d" label="Dropped (slow client)" value={eventStats.connections?.closed_backpressure}
+                warn={(eventStats.connections?.closed_backpressure ?? 0) > 0} />,
+        ] },
+        { title: 'Publishing', stats: [
+            <EventStat key="p" label="Events published" value={eventStats.publish?.published} />,
+            <EventStat key="f" label="Publish failures" value={eventStats.publish?.failures}
+                warn={(eventStats.publish?.failures ?? 0) > 0} />,
+            <EventStat key="b" label="Unpublished backlog" value={eventStats.unpublished_backlog}
+                warn={(eventStats.unpublished_backlog ?? 0) > 0} />,
+            <EventStat key="rl" label="Relayed after failure" value={eventStats.publish?.relayed} />,
+            <EventStat key="t" label="Publish time" value={fmtMs(eventStats.publish?.time?.avg_ms)} />,
+        ] },
+        { title: 'Delivery', stats: [
+            <EventStat key="dl" label="Events delivered" value={eventStats.delivery?.delivered} />,
+            <EventStat key="lag" label="Delivery lag" value={fmtMs(eventStats.delivery?.lag?.avg_ms)} />,
+            <EventStat key="rp" label="Resumes replayed" value={eventStats.resume?.events_replayed} />,
+            <EventStat key="rs" label="Full resyncs" value={eventStats.resume?.resync_required} />,
+        ] },
+    ] : [];
+
+    const sectionBody: Record<DbSection, React.ReactNode> = {
+        overview: (
+            <SettingsPanel icon="bi-speedometer2" title="Overview" right={refreshButton}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: 10 }}>
+                        <SummaryCard
+                            icon="bi-clock-history" title="Backups" onClick={() => setSection('backups')}
+                            headline={<>{scheduleText}{backupFailed && <Flag tone="red" title={schedule?.last_run_error || undefined}>Last run failed</Flag>}</>}
+                            sub={snapshots[0] ? `Last snapshot ${relativeTime(snapshots[0].created_at)} · ${snapshots.length} snapshot${snapshots.length !== 1 ? 's' : ''}` : 'No snapshots yet'}
+                        />
+                        <SummaryCard
+                            icon="bi-activity" title="System health" onClick={() => setSection('events')}
+                            headline={<><StatusDot ok={anyDown ? false : allUp ? true : null} />{anyDown ? 'A service is down' : allUp ? 'All systems online' : 'Checking…'}</>}
+                            sub={`${eventIssues ? `${eventIssues} live-event issue${eventIssues !== 1 ? 's' : ''}` : 'No live-event issues'} · ${prettyBytes(dbSizeBytes)} stored`}
+                        />
+                        <SummaryCard
+                            icon="bi-database-fill-gear" title="Connection" onClick={() => setSection('connection')}
+                            headline={<span style={{ fontFamily: CODE_FONT, fontSize: 12 }}>{dbTarget || '—'}</span>}
+                            sub={`${dbProfiles.length} saved profile${dbProfiles.length !== 1 ? 's' : ''}`}
+                        />
                     </div>
+                    <DetailSection title="Services">
+                        {/* auto-fit shares the row evenly instead of leaving a 2-tile orphan row. */}
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: 8 }}>
+                            {services.map(sv => <StatusTile key={sv.label} {...sv} />)}
+                        </div>
+                    </DetailSection>
+                    {statusCheckedAt && <div style={settingsHint()}>Last checked {statusCheckedAt.toLocaleTimeString()} · refreshes every 30s</div>}
+                </div>
+            </SettingsPanel>
+        ),
+        backups: (
+            <>
+            <SettingsPanel icon="bi-clock-history" title="Scheduled Backups">
+                <form onSubmit={handleSaveSchedule}>
+                    {/* One field per row, not `settingsGrid`'s auto-fit columns.
+                        This panel is the narrow column of the band, so auto-fit
+                        landed on two or three tracks depending on the viewport and
+                        left the last row half-empty — six fields that each read as
+                        a different width and sat in a different place per screen.
+                        A stack also keeps Keep Last's hint under its own field. */}
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: SETTINGS_FIELD_GAP }}>
+                        <div>
+                            <FieldLabel>Enabled</FieldLabel>
+                            {<label style={{ display: 'flex', alignItems: 'center', gap: 6, fontFamily: xpFont, fontSize: 11 }}>
+                                    <input type="checkbox" checked={scheduleForm.enabled} onChange={e => setScheduleForm({ ...scheduleForm, enabled: e.target.checked })} />
+                                    Run automatic backups
+                                </label>}
+                        </div>
+                        <div>
+                            <FieldLabel>Frequency</FieldLabel>
+                            <select
+                                style={xpInput({ height: 'auto', padding: '2px 4px', width: '100%' })}
+                                value={scheduleForm.frequency}
+                                onChange={e => setScheduleForm({ ...scheduleForm, frequency: e.target.value })}
+                            >
+                                <option value="daily">Daily</option>
+                                <option value="weekly">Weekly</option>
+                            </select>
+                        </div>
+                        {scheduleForm.frequency === 'weekly' && (
+                            <div>
+                                <FieldLabel>Day of Week</FieldLabel>
+                                <select
+                                    style={xpInput({ height: 'auto', padding: '2px 4px', width: '100%' })}
+                                    value={scheduleForm.day_of_week}
+                                    onChange={e => setScheduleForm({ ...scheduleForm, day_of_week: Number(e.target.value) })}
+                                >
+                                    {DAY_NAMES.map((d, i) => <option key={i} value={i}>{d}</option>)}
+                                </select>
+                            </div>
+                        )}
+                        <div>
+                            <FieldLabel>Time</FieldLabel>
+                            <input
+                                type="time"
+                                style={xpInput({ width: '100%' })}
+                                value={`${pad2(scheduleForm.hour)}:${pad2(scheduleForm.minute)}`}
+                                onChange={e => {
+                                    const [h, m] = e.target.value.split(':').map(Number);
+                                    if (!Number.isNaN(h) && !Number.isNaN(m)) setScheduleForm({ ...scheduleForm, hour: h, minute: m });
+                                }}
+                            />
+                        </div>
+                        <div>
+                            <FieldLabel>Timezone</FieldLabel>
+                            <select
+                                style={xpInput({ height: 'auto', padding: '2px 4px', width: '100%' })}
+                                value={scheduleForm.timezone}
+                                onChange={e => setScheduleForm({ ...scheduleForm, timezone: e.target.value })}
+                            >
+                                {AVAILABLE_TIMEZONES.map(z => <option key={z} value={z}>{z.replace(/_/g, ' ')}</option>)}
+                            </select>
+                        </div>
+                        <div>
+                            <FieldLabel>Keep Last</FieldLabel>
+                            <input
+                                type="number"
+                                min={1}
+                                style={xpInput({ width: '100%' })}
+                                value={scheduleForm.retain_count}
+                                onChange={e => setScheduleForm({ ...scheduleForm, retain_count: Math.max(1, Number(e.target.value)) })}
+                            />
+                            <div style={settingsHint()}>Oldest scheduled snapshots beyond this count are pruned automatically. Manual snapshots are never deleted.</div>
+                        </div>
+                    </div>
+
+                    {schedule && (
+                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12, alignItems: 'center', marginTop: SETTINGS_FIELD_GAP }}>
+                            {schedule.last_run_at && (
+                                <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                                    <StatusChip status={schedule.last_run_status === 'failed' ? 'FAILED' : 'SUCCESS'} title={schedule.last_run_error || undefined} />
+                                    <span style={settingsHint()}>Last run {tzDateTime(schedule.last_run_at)}</span>
+                                </span>
+                            )}
+                            {schedule.next_run_at && (
+                                <span style={settingsHint()}>Next run {tzDateTime(schedule.next_run_at)}</span>
+                            )}
+                        </div>
+                    )}
+
+                    <div style={settingsActions()}>
+                        <button
+                            type="button"
+                            style={xpBtn({ padding: '3px 14px' })}
+                            className={XP_BTN}
+                            onClick={handleRunNow}
+                            disabled={isRunningNow || isScheduleLoading}
+                        >
+                            {isRunningNow ? <span className="spinner-border spinner-border-sm" style={{ marginRight: 4 }}></span> : <i className="bi bi-play-fill" style={{ marginRight: 4 }}></i>}
+                            Run Now
+                        </button>
+                        <button
+                            type="submit"
+                            style={xpBtn({ ...BTN_TONES.primary, padding: '3px 14px', display: 'flex', alignItems: 'center', gap: 4 })}
+                            className={XP_BTN}
+                            disabled={isSavingSchedule}
+                        >
+                            <i className="bi bi-save" style={{ marginRight: 4 }}></i>
+                            Save Schedule
+                        </button>
+                    </div>
+                </form>
+            </SettingsPanel>
+            <SettingsPanel
+                icon="bi-camera-fill"
+                title="Snapshots"
+                flush
+                right={
+                    <span style={{ display: 'flex', gap: 4 }}>
+                        <label
+                            style={xpBtn({ padding: '1px 8px', marginBottom: 0 })}
+                        >
+                            <i className="bi bi-cloud-upload" style={{ marginRight: 4 }}></i>Upload
+                            <input type="file" hidden onChange={handleUploadSnapshot} disabled={isSnapshotLoading} />
+                        </label>
+                        <button
+                            type="button"
+                            style={xpBtn({ padding: '1px 8px' })}
+                            className={XP_BTN}
+                            onClick={handleCreateSnapshot}
+                            disabled={isSnapshotLoading}
+                        >
+                            {isSnapshotLoading ? <span className="spinner-border spinner-border-sm" style={{ marginRight: 4 }}></span> : <i className="bi bi-plus-lg" style={{ marginRight: 4 }}></i>}
+                            New Snapshot
+                        </button>
+                    </span>
+                }
+            >
+                <div className="table-responsive">
+                        <table
+                            style={{ width: '100%', borderCollapse: 'collapse' as const, background: '#fff' }}
+                        >
+                            <thead style={xpTableHeader}>
+                                <tr>
+                                    <th style={{ ...xpThCell }}>Snapshot Filename</th>
+                                    <th style={xpThCell}>Origin</th>
+                                    <th style={xpThCell}>Created At</th>
+                                    <th style={xpThCell}>Size</th>
+                                    <th style={{ ...xpThCell, textAlign: 'right' as const, borderRight: 'none' }}>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {snapshots.map((s, i) => (
+                                    <tr
+                                        key={i}
+                                        style={{ background: lvZebra(i), borderBottom: '1px solid #c0bdb5' }}
+                                    >
+                                        <td style={tdBase}><CodeChip code={s.name} /></td>
+                                        <td style={tdBase}><StatusChip status={(s.label || 'manual').toUpperCase()} /></td>
+                                        <td style={tdBase}>{tzDateTime(s.created_at)}</td>
+                                        <td style={tdBase}>{(s.size / 1024 / 1024).toFixed(2)} MB</td>
+                                        <td style={{ ...tdBase, borderRight: 'none', textAlign: 'right' as const }}>
+                                            <div style={{ display: 'flex', gap: 4, justifyContent: 'flex-end' }}>
+                                                <XPActionButton tone="primary" icon="bi-download" title="Export/Download"
+                                                    onClick={() => handleDownloadSnapshot(s.name)}
+                                                />
+                                                <XPActionButton tone="success" icon="bi-arrow-counterclockwise" title="Restore/Rollback"
+                                                    onClick={() => handleRestoreSnapshot(s.name)}
+                                                    disabled={isSnapshotLoading}
+                                                />
+                                                <XPActionButton tone="danger" icon="bi-trash" title="Delete snapshot file"
+                                                    onClick={() => handleDeleteSnapshot(s.name)}
+                                                    disabled={isSnapshotLoading}
+                                                />
+                                            </div>
+                                        </td>
+                                    </tr>
+                                ))}
+                                {snapshots.length === 0 && (
+                                    <tr>
+                                        <td
+                                            colSpan={5}
+                                            style={{ ...tdBase, borderRight: 'none', textAlign: 'center', padding: '20px 8px', color: '#888', fontStyle: 'italic' }}
+                                        >No snapshots found. Create one to begin.</td>
+                                    </tr>
+                                )}
+                            </tbody>
+                        </table>
+                    </div>
+            </SettingsPanel>
+            </>
+        ),
+        events: (
+            <SettingsPanel icon="bi-broadcast-pin" title="Live Events" right={refreshButton}>
+                {/* Counters reset when the API process restarts — they answer "is the
+                    feed healthy right now", not "how much has ever happened". Backlog
+                    is the one to watch: above zero for more than a few seconds means
+                    events aren't reaching the bus. */}
+                {eventStats ? (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                        {eventGroups.map(g => (
+                            <DetailSection key={g.title} title={g.title}>
+                                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))', gap: 6 }}>{g.stats}</div>
+                            </DetailSection>
+                        ))}
+                        <div style={settingsHint()}>
+                            Since the API last restarted ({fmtUptime(eventStats.uptime_seconds)} ago). Amber means something went wrong; grey zeros are normal on a quiet system.
+                        </div>
+                    </div>
+                ) : (
+                    <div style={settingsHint()}>Live-event counters are unavailable — the API did not answer /health/events.</div>
                 )}
             </SettingsPanel>
-
-            {eventStats && (
-                <SettingsPanel icon="bi-broadcast-pin" title="Live Event Feed">
-                    {/* Counters reset when the API process restarts — they answer
-                        "is the feed healthy right now", not "how much has ever
-                        happened". Backlog is the one to watch: anything above zero
-                        for more than a few seconds means events aren't reaching the
-                        bus. */}
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: 8 }}>
-                        <EventStat label="Connected clients" value={eventStats.connections?.current} />
-                        <EventStat label="Events published" value={eventStats.publish?.published} />
-                        <EventStat label="Events delivered" value={eventStats.delivery?.delivered} />
-                        <EventStat label="Unpublished backlog" value={eventStats.unpublished_backlog}
-                            warn={(eventStats.unpublished_backlog ?? 0) > 0} />
-                        <EventStat label="Publish failures" value={eventStats.publish?.failures}
-                            warn={(eventStats.publish?.failures ?? 0) > 0} />
-                        <EventStat label="Relayed after failure" value={eventStats.publish?.relayed} />
-                        <EventStat label="Dropped (slow client)" value={eventStats.connections?.closed_backpressure}
-                            warn={(eventStats.connections?.closed_backpressure ?? 0) > 0} />
-                        <EventStat label="Rejected handshakes" value={eventStats.connections?.rejected} />
-                        <EventStat label="Resumes replayed" value={eventStats.resume?.events_replayed} />
-                        <EventStat label="Full resyncs" value={eventStats.resume?.resync_required} />
-                        <EventStat label="Publish time" value={fmtMs(eventStats.publish?.time?.avg_ms)} />
-                        <EventStat label="Delivery lag" value={fmtMs(eventStats.delivery?.lag?.avg_ms)} />
-                    </div>
-                    <div style={{ ...settingsHint(), marginTop: 6 }}>
-                        Since the API last restarted ({fmtUptime(eventStats.uptime_seconds)} ago).
-                    </div>
-                </SettingsPanel>
-            )}
-
-            {/* System Status above and Danger Zone below stay full-bleed — five
-                live cards genuinely use the width, and a destructive action wants
-                its own band. In between, the schedule form is the narrow column and
-                the two things that grow — the connection panel's URL fields and the
-                snapshot list — share the wider one. */}
-            <div style={settingsColumns}>
-                <div style={settingsCol(420, 1)}>
-                    <SettingsPanel icon="bi-clock-history" title="Scheduled Backups">
-                        <form onSubmit={handleSaveSchedule}>
-                            {/* One field per row, not `settingsGrid`'s auto-fit columns.
-                                This panel is the narrow column of the band, so auto-fit
-                                landed on two or three tracks depending on the viewport and
-                                left the last row half-empty — six fields that each read as
-                                a different width and sat in a different place per screen.
-                                A stack also keeps Keep Last's hint under its own field. */}
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: SETTINGS_FIELD_GAP }}>
-                                <div>
-                                    <FieldLabel>Enabled</FieldLabel>
-                                    {<label style={{ display: 'flex', alignItems: 'center', gap: 6, fontFamily: xpFont, fontSize: 11 }}>
-                                            <input type="checkbox" checked={scheduleForm.enabled} onChange={e => setScheduleForm({ ...scheduleForm, enabled: e.target.checked })} />
-                                            Run automatic backups
-                                        </label>}
-                                </div>
-                                <div>
-                                    <FieldLabel>Frequency</FieldLabel>
-                                    <select
-                                        style={xpInput({ height: 'auto', padding: '2px 4px', width: '100%' })}
-                                        value={scheduleForm.frequency}
-                                        onChange={e => setScheduleForm({ ...scheduleForm, frequency: e.target.value })}
-                                    >
-                                        <option value="daily">Daily</option>
-                                        <option value="weekly">Weekly</option>
-                                    </select>
-                                </div>
-                                {scheduleForm.frequency === 'weekly' && (
-                                    <div>
-                                        <FieldLabel>Day of Week</FieldLabel>
-                                        <select
-                                            style={xpInput({ height: 'auto', padding: '2px 4px', width: '100%' })}
-                                            value={scheduleForm.day_of_week}
-                                            onChange={e => setScheduleForm({ ...scheduleForm, day_of_week: Number(e.target.value) })}
-                                        >
-                                            {DAY_NAMES.map((d, i) => <option key={i} value={i}>{d}</option>)}
-                                        </select>
-                                    </div>
-                                )}
-                                <div>
-                                    <FieldLabel>Time</FieldLabel>
-                                    <input
-                                        type="time"
-                                        style={xpInput({ width: '100%' })}
-                                        value={`${pad2(scheduleForm.hour)}:${pad2(scheduleForm.minute)}`}
-                                        onChange={e => {
-                                            const [h, m] = e.target.value.split(':').map(Number);
-                                            if (!Number.isNaN(h) && !Number.isNaN(m)) setScheduleForm({ ...scheduleForm, hour: h, minute: m });
-                                        }}
-                                    />
-                                </div>
-                                <div>
-                                    <FieldLabel>Timezone</FieldLabel>
-                                    <select
-                                        style={xpInput({ height: 'auto', padding: '2px 4px', width: '100%' })}
-                                        value={scheduleForm.timezone}
-                                        onChange={e => setScheduleForm({ ...scheduleForm, timezone: e.target.value })}
-                                    >
-                                        {AVAILABLE_TIMEZONES.map(z => <option key={z} value={z}>{z.replace(/_/g, ' ')}</option>)}
-                                    </select>
-                                </div>
-                                <div>
-                                    <FieldLabel>Keep Last</FieldLabel>
-                                    <input
-                                        type="number"
-                                        min={1}
-                                        style={xpInput({ width: '100%' })}
-                                        value={scheduleForm.retain_count}
-                                        onChange={e => setScheduleForm({ ...scheduleForm, retain_count: Math.max(1, Number(e.target.value)) })}
-                                    />
-                                    <div style={settingsHint()}>Oldest scheduled snapshots beyond this count are pruned automatically. Manual snapshots are never deleted.</div>
-                                </div>
-                            </div>
-
-                            {schedule && (
-                                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12, alignItems: 'center', marginTop: SETTINGS_FIELD_GAP }}>
-                                    {schedule.last_run_at && (
-                                        <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                                            <StatusChip status={schedule.last_run_status === 'failed' ? 'FAILED' : 'SUCCESS'} title={schedule.last_run_error || undefined} />
-                                            <span style={settingsHint()}>Last run {tzDateTime(schedule.last_run_at)}</span>
-                                        </span>
-                                    )}
-                                    {schedule.next_run_at && (
-                                        <span style={settingsHint()}>Next run {tzDateTime(schedule.next_run_at)}</span>
-                                    )}
-                                </div>
-                            )}
-
-                            <div style={settingsActions()}>
-                                <button
-                                    type="button"
-                                    style={xpBtn({ padding: '3px 14px' })}
-                                    className={XP_BTN}
-                                    onClick={handleRunNow}
-                                    disabled={isRunningNow || isScheduleLoading}
-                                >
-                                    {isRunningNow ? <span className="spinner-border spinner-border-sm" style={{ marginRight: 4 }}></span> : <i className="bi bi-play-fill" style={{ marginRight: 4 }}></i>}
-                                    Run Now
-                                </button>
-                                <button
-                                    type="submit"
-                                    style={xpBtn({ ...BTN_TONES.primary, padding: '3px 14px', display: 'flex', alignItems: 'center', gap: 4 })}
-                                    className={XP_BTN}
-                                    disabled={isSavingSchedule}
-                                >
-                                    <i className="bi bi-save" style={{ marginRight: 4 }}></i>
-                                    Save Schedule
-                                </button>
-                            </div>
-                        </form>
-                    </SettingsPanel>
-                </div>
-
-                <div style={settingsCol(560, 1)}>
-                    <SettingsPanel
-                        icon="bi-database-fill-gear"
-                        title={<span data-testid="db-infrastructure-header">Database Infrastructure</span>}
-                        right="Admin only"
-                    >
-                        <div style={{ marginBottom: SETTINGS_FIELD_GAP }}>
-                            <FieldLabel>Current Connection</FieldLabel>
-                            {<div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                                    <span style={{ borderRadius: CHIP_RADIUS, background: '#e0dfd8', border: '1px solid #b0a898', padding: '1px 6px', fontFamily: xpFont, fontSize: '11px', color: '#333' }}>
-                                        <i className="bi bi-link-45deg"></i>
-                                    </span>
-                                    <input style={xpInput({ flex: 1, fontFamily: CODE_FONT, background: '#f0ede6', boxShadow: 'inset 1px 1px 0 rgba(0,0,0,0.1)' })} value={currentDbUrl} readOnly />
-                                </div>}
-                        </div>
-
-                        {/* Stacked, not a 7/5 split. This panel now shares its row with
-                            the snapshot list, so there is no width left to split: a
-                            connection URL and a profile list side by side both end in an
-                            ellipsis. Reading order is the action, then the shortcut into it. */}
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: SETTINGS_FIELD_GAP }}>
-                            <div>
-                                <FieldLabel>Switch to New Database</FieldLabel>
-                                {<div style={{ display: 'flex', gap: 4 }}>
-                                        <input
-                                            style={xpInput({ flex: 1, fontFamily: CODE_FONT, boxShadow: 'inset 1px 1px 0 rgba(0,0,0,0.1)' })}
-                                            placeholder="postgresql+psycopg2://user:pass@host:port/db"
-                                            value={newDbUrl}
-                                            onChange={e => setNewDbUrl(e.target.value)}
-                                        />
-                                        <button
-                                            className={XP_BTN}
-                                            style={xpBtn({ background: 'linear-gradient(to bottom, #006e8e, #004a5e)', borderColor: '#004a5e #001a2e #001a2e #004a5e', color: '#ffffff', whiteSpace: 'nowrap' })}
-                                            onClick={() => handleSwitchDatabase(newDbUrl)}
-                                            disabled={!newDbUrl || isDbLoading}
-                                        >
-                                            {isDbLoading ? <span className="spinner-border spinner-border-sm"></span> : 'Switch Connection'}
-                                        </button>
-                                    </div>}
-                                <div style={{ ...settingsHint(), color: '#8b0000' }}>
-                                    <i className="bi bi-exclamation-triangle-fill" style={{ marginRight: 4 }}></i>
-                                    Switching databases changes the entire data context.
-                                </div>
-                            </div>
-                            <div>
-                                <FieldLabel>Saved Profiles</FieldLabel>
-                                {<div style={{ border: '1px solid #b0a898', background: '#ffffff', maxHeight: 118, overflowY: 'auto' as const }}>
-                                        {dbProfiles.map((p, i) => (
-                                            <button
-                                                key={i}
-                                                style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%', padding: '3px 8px', background: 'none', border: 'none', borderBottom: '1px solid #e0dfd8', cursor: 'pointer', fontFamily: xpFont, fontSize: '11px', textAlign: 'left' as const }}
-                                                onClick={() => setNewDbUrl(p.url)}
-                                            >
-                                                <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' as const, maxWidth: '90%' }}>{p.name}: {p.url}</span>
-                                                <i className="bi bi-arrow-right-short"></i>
-                                            </button>
-                                        ))}
-                                        {dbProfiles.length === 0 && (
-                                            <div style={{ ...settingsHint(), padding: 8, margin: 0, textAlign: 'center', fontStyle: 'italic' }}>No saved profiles</div>
-                                        )}
-                                    </div>}
-                            </div>
-                        </div>
-                    </SettingsPanel>
-
-                    <SettingsPanel
-                        icon="bi-camera-fill"
-                        title="Snapshots"
-                        flush
-                        right={
-                            <span style={{ display: 'flex', gap: 4 }}>
-                                <label
-                                    style={xpBtn({ padding: '1px 8px', marginBottom: 0 })}
-                                >
-                                    <i className="bi bi-cloud-upload" style={{ marginRight: 4 }}></i>Upload
-                                    <input type="file" hidden onChange={handleUploadSnapshot} disabled={isSnapshotLoading} />
-                                </label>
-                                <button
-                                    type="button"
-                                    style={xpBtn({ padding: '1px 8px' })}
-                                    className={XP_BTN}
-                                    onClick={handleCreateSnapshot}
-                                    disabled={isSnapshotLoading}
-                                >
-                                    {isSnapshotLoading ? <span className="spinner-border spinner-border-sm" style={{ marginRight: 4 }}></span> : <i className="bi bi-plus-lg" style={{ marginRight: 4 }}></i>}
-                                    New Snapshot
-                                </button>
+        ),
+        connection: (
+            <SettingsPanel
+                icon="bi-database-fill-gear"
+                title={<span data-testid="db-infrastructure-header">Database Infrastructure</span>}
+                right="Admin only"
+            >
+                <div style={{ marginBottom: SETTINGS_FIELD_GAP }}>
+                    <FieldLabel>Current Connection</FieldLabel>
+                    {<div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                            <span style={{ borderRadius: CHIP_RADIUS, background: '#e0dfd8', border: '1px solid #b0a898', padding: '1px 6px', fontFamily: xpFont, fontSize: '11px', color: '#333' }}>
+                                <i className="bi bi-link-45deg"></i>
                             </span>
-                        }
-                    >
-                        <div className="table-responsive">
-                                <table
-                                    style={{ width: '100%', borderCollapse: 'collapse' as const, background: '#fff' }}
-                                >
-                                    <thead style={xpTableHeader}>
-                                        <tr>
-                                            <th style={{ ...xpThCell }}>Snapshot Filename</th>
-                                            <th style={xpThCell}>Origin</th>
-                                            <th style={xpThCell}>Created At</th>
-                                            <th style={xpThCell}>Size</th>
-                                            <th style={{ ...xpThCell, textAlign: 'right' as const, borderRight: 'none' }}>Actions</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        {snapshots.map((s, i) => (
-                                            <tr
-                                                key={i}
-                                                style={{ background: lvZebra(i), borderBottom: '1px solid #c0bdb5' }}
-                                            >
-                                                <td style={tdBase}><CodeChip code={s.name} /></td>
-                                                <td style={tdBase}><StatusChip status={(s.label || 'manual').toUpperCase()} /></td>
-                                                <td style={tdBase}>{tzDateTime(s.created_at)}</td>
-                                                <td style={tdBase}>{(s.size / 1024 / 1024).toFixed(2)} MB</td>
-                                                <td style={{ ...tdBase, borderRight: 'none', textAlign: 'right' as const }}>
-                                                    <div style={{ display: 'flex', gap: 4, justifyContent: 'flex-end' }}>
-                                                        <XPActionButton tone="primary" icon="bi-download" title="Export/Download"
-                                                            onClick={() => handleDownloadSnapshot(s.name)}
-                                                        />
-                                                        <XPActionButton tone="success" icon="bi-arrow-counterclockwise" title="Restore/Rollback"
-                                                            onClick={() => handleRestoreSnapshot(s.name)}
-                                                            disabled={isSnapshotLoading}
-                                                        />
-                                                        <XPActionButton tone="danger" icon="bi-trash" title="Delete snapshot file"
-                                                            onClick={() => handleDeleteSnapshot(s.name)}
-                                                            disabled={isSnapshotLoading}
-                                                        />
-                                                    </div>
-                                                </td>
-                                            </tr>
-                                        ))}
-                                        {snapshots.length === 0 && (
-                                            <tr>
-                                                <td
-                                                    colSpan={5}
-                                                    style={{ ...tdBase, borderRight: 'none', textAlign: 'center', padding: '20px 8px', color: '#888', fontStyle: 'italic' }}
-                                                >No snapshots found. Create one to begin.</td>
-                                            </tr>
-                                        )}
-                                    </tbody>
-                                </table>
-                            </div>
-                    </SettingsPanel>
+                            <input style={xpInput({ flex: 1, fontFamily: CODE_FONT, background: '#f0ede6', boxShadow: 'inset 1px 1px 0 rgba(0,0,0,0.1)' })} value={currentDbUrl} readOnly />
+                        </div>}
                 </div>
-            </div>
 
-            <SettingsPanel icon="bi-exclamation-octagon-fill" title="Danger Zone">
-                {/* Severity is carried by the copy and the button, not by a red
-                    window bar — the panel is a peer of the others, its action
-                    is not. */}
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 12 }}>
-                    <div style={{ flex: '1 1 340px', minWidth: 0 }}>
-                            <div style={{ fontFamily: xpFont, fontSize: 12, fontWeight: 'bold', color: '#333' }}>
-                                Wipe &amp; Reset Database
-                            </div>
-                            <div style={{ ...settingsHint(), color: '#8b0000' }}>
-                                <i className="bi bi-exclamation-triangle-fill" style={{ marginRight: 4 }}></i>
-                                Permanently deletes every row in the current database, then rebuilds it blank (migrations + seed data). Use this before importing a snapshot from another environment. Cannot be undone.
-                            </div>
+                {/* Stacked, not a 7/5 split. This panel now shares its row with
+                    the snapshot list, so there is no width left to split: a
+                    connection URL and a profile list side by side both end in an
+                    ellipsis. Reading order is the action, then the shortcut into it. */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: SETTINGS_FIELD_GAP }}>
+                    <div>
+                        <FieldLabel>Switch to New Database</FieldLabel>
+                        {<div style={{ display: 'flex', gap: 4 }}>
+                                <input
+                                    style={xpInput({ flex: 1, fontFamily: CODE_FONT, boxShadow: 'inset 1px 1px 0 rgba(0,0,0,0.1)' })}
+                                    placeholder="postgresql+psycopg2://user:pass@host:port/db"
+                                    value={newDbUrl}
+                                    onChange={e => setNewDbUrl(e.target.value)}
+                                />
+                                <button
+                                    className={XP_BTN}
+                                    style={xpBtn({ background: 'linear-gradient(to bottom, #006e8e, #004a5e)', borderColor: '#004a5e #001a2e #001a2e #004a5e', color: '#ffffff', whiteSpace: 'nowrap' })}
+                                    onClick={() => handleSwitchDatabase(newDbUrl)}
+                                    disabled={!newDbUrl || isDbLoading}
+                                >
+                                    {isDbLoading ? <span className="spinner-border spinner-border-sm"></span> : 'Switch Connection'}
+                                </button>
+                            </div>}
+                        <div style={{ ...settingsHint(), color: '#8b0000' }}>
+                            <i className="bi bi-exclamation-triangle-fill" style={{ marginRight: 4 }}></i>
+                            Switching databases changes the entire data context.
                         </div>
-                        {<button
-                                className={XP_BTN}
-                                style={xpBtn({ ...BTN_TONES.danger })}
-                                onClick={() => setShowWipeModal(true)}
-                            >
-                                <i className="bi bi-trash3-fill" style={{ marginRight: 4 }}></i>Wipe Database
-                            </button>}
+                    </div>
+                    <div>
+                        <FieldLabel>Saved Profiles</FieldLabel>
+                        {<div style={{ border: '1px solid #b0a898', background: '#ffffff', maxHeight: 118, overflowY: 'auto' as const }}>
+                                {dbProfiles.map((p, i) => (
+                                    <button
+                                        key={i}
+                                        style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%', padding: '3px 8px', background: 'none', border: 'none', borderBottom: '1px solid #e0dfd8', cursor: 'pointer', fontFamily: xpFont, fontSize: '11px', textAlign: 'left' as const }}
+                                        onClick={() => setNewDbUrl(p.url)}
+                                    >
+                                        <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' as const, maxWidth: '90%' }}>{p.name}: {p.url}</span>
+                                        <i className="bi bi-arrow-right-short"></i>
+                                    </button>
+                                ))}
+                                {dbProfiles.length === 0 && (
+                                    <div style={{ ...settingsHint(), padding: 8, margin: 0, textAlign: 'center', fontStyle: 'italic' }}>No saved profiles</div>
+                                )}
+                            </div>}
+                    </div>
                 </div>
             </SettingsPanel>
+        ),
+        danger: (
+        <SettingsPanel icon="bi-exclamation-octagon-fill" title="Danger Zone">
+            {/* Severity is carried by the copy and the button, not by a red
+                window bar — the panel is a peer of the others, its action
+                is not. */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 12 }}>
+                <div style={{ flex: '1 1 340px', minWidth: 0 }}>
+                        <div style={{ fontFamily: xpFont, fontSize: 12, fontWeight: 'bold', color: '#333' }}>
+                            Wipe &amp; Reset Database
+                        </div>
+                        <div style={{ ...settingsHint(), color: '#8b0000' }}>
+                            <i className="bi bi-exclamation-triangle-fill" style={{ marginRight: 4 }}></i>
+                            Permanently deletes every row in the current database, then rebuilds it blank (migrations + seed data). Use this before importing a snapshot from another environment. Cannot be undone.
+                        </div>
+                    </div>
+                    {<button
+                            className={XP_BTN}
+                            style={xpBtn({ ...BTN_TONES.danger })}
+                            onClick={() => setShowWipeModal(true)}
+                        >
+                            <i className="bi bi-trash3-fill" style={{ marginRight: 4 }}></i>Wipe Database
+                        </button>}
+            </div>
+        </SettingsPanel>
+        ),
+    };
+
+    return (
+        <div style={{ height: '100%', minHeight: 0, display: 'flex', flexDirection: 'column' }}>
+            <MasterDetail
+                listWidth="200px"
+                list={
+                    <SettingsPanel icon="bi-database-fill-gear" title="Database" flush fill>
+                        {nav.map(n => (
+                            <ListRow key={n.key} selected={section === n.key} onClick={() => setSection(n.key)}>
+                                <i className={`bi ${n.icon}`} style={n.key === 'danger' && section !== 'danger' ? { color: '#8e0000' } : undefined} />
+                                <span style={{ flex: 1, ...(n.key === 'danger' && section !== 'danger' ? { color: '#8e0000' } : null) }}>{n.label}</span>
+                                {n.badge}
+                            </ListRow>
+                        ))}
+                    </SettingsPanel>
+                }
+                detail={
+                    <div style={{ height: '100%', overflow: 'auto', display: 'flex', flexDirection: 'column', gap: 12 }}>
+                        {sectionBody[section]}
+                    </div>
+                }
+            />
 
             <ModalWrapper
                 isOpen={showWipeModal}

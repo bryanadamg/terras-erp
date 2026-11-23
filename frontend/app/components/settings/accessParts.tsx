@@ -63,10 +63,12 @@ export function CoveragePills({ coverage }: { coverage: SectionCoverage[] }) {
 }
 
 /** List pane beside a detail pane; both scroll on their own. */
-export function MasterDetail({ list, detail }: { list: React.ReactNode; detail: React.ReactNode }) {
-    // ponytail: fixed two-column grid, no phone stacking — Access Control is a desktop admin screen.
+export function MasterDetail({ list, detail, listWidth = 'minmax(260px, 330px)' }: {
+    list: React.ReactNode; detail: React.ReactNode; listWidth?: string;
+}) {
+    // ponytail: fixed two-column grid, no phone stacking — these are desktop admin screens.
     return (
-        <div style={{ flex: 1, minHeight: 0, display: 'grid', gridTemplateColumns: 'minmax(260px, 330px) minmax(0, 1fr)', gap: 12 }}>
+        <div style={{ flex: 1, minHeight: 0, height: '100%', display: 'grid', gridTemplateColumns: `${listWidth} minmax(0, 1fr)`, gap: 12 }}>
             <div style={{ minHeight: 0 }}>{list}</div>
             <div style={{ minHeight: 0 }}>{detail}</div>
         </div>
@@ -130,7 +132,7 @@ export function Callout({ tone, icon, children, action }: {
 
 /** Small tinted label — list-row flags ("No role", "Inactive"). */
 export function Flag({ tone, icon, children, title }: {
-    tone: 'amber' | 'gray' | 'blue'; icon?: string; children: React.ReactNode; title?: string;
+    tone: 'amber' | 'gray' | 'blue' | 'green' | 'red'; icon?: string; children: React.ReactNode; title?: string;
 }) {
     const t = familyTint(tone);
     return (
@@ -142,6 +144,14 @@ export function Flag({ tone, icon, children, title }: {
             {icon && <i className={`bi ${icon}`} />}{children}
         </span>
     );
+}
+
+/** Green/red/grey status dot; null = still checking. */
+export function StatusDot({ ok }: { ok: boolean | null }) {
+    return <span style={{
+        width: 8, height: 8, borderRadius: '50%', flexShrink: 0, display: 'inline-block',
+        background: ok === null ? '#aaa' : ok ? '#4caf50' : '#e53935',
+    }} />;
 }
 
 /** "3h ago" / "2 mo ago"; exact time goes in a title beside it. */

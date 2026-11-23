@@ -70,13 +70,14 @@ export default function SettingsView({
                         <SettingsAccountTab />
                     </div>
 
+                    {/* Database and Access Control are full height: their nav/list and
+                        detail panes scroll on their own. */}
                     {isAdmin && (
                         <>
-                            <div style={{ display: activeTab === 'database' ? 'block' : 'none' }}>
+                            <div style={{ display: activeTab === 'database' ? 'block' : 'none', height: '100%' }}>
                                 <SettingsDatabaseTab />
                             </div>
 
-                            {/* Full height: Access Control's list and detail panes scroll on their own. */}
                             <div style={{ display: activeTab === 'access' ? 'block' : 'none', height: '100%' }}>
                                 <SettingsAccessTab />
                             </div>
