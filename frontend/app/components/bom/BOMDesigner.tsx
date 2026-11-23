@@ -6,7 +6,9 @@ import BOMAutomatorModal from './BOMAutomatorModal';
 import BOMConfirmModal, { BOMPlan, BOMPlanNode, BOMPlanLine } from './BOMConfirmModal';
 import SearchableSelect from '@bryanadamg/terras-ui/components/Combobox';
 import { useToast } from '../shared/Toast';
-import { CodeChip, CODE_FONT, xpFont, CHIP_RADIUS, BUTTON_RADIUS, xpBtn as xpBtnBase, LegendPanel, XP_BTN } from '../shared/xpTheme';
+import { CodeChip, CODE_FONT, xpFont, CHIP_RADIUS, BUTTON_RADIUS, xpBtn as xpBtnBase, XP_BTN } from '../shared/xpTheme';
+import { FormSection } from '@bryanadamg/terras-ui/components/FormSection';
+import { TINT, tintTitle } from '../shared/RequestDetailPanel';
 import { field as xpInputBase, BTN_TONES } from '@bryanadamg/terras-ui/styles';
 import { API_BASE } from '../shared/apiBase';
 import { isBeamItemRecord } from '../shared/beamItem';
@@ -98,17 +100,33 @@ const xpLabel: React.CSSProperties = {
     display: 'block', marginBottom: 2,
 };
 
+// Inner well (component list, routing steps): a flat ruled box, not the XP 2px inset.
 const xpInset: React.CSSProperties = {
-    border: '2px inset #aaa', background: 'white',
+    border: '1px solid var(--terras-table-line, #d6d3ce)', background: 'var(--terras-table-bg, #fff)',
     overflowY: 'auto', padding: 2,
 };
 
-const xpBadge = (color = '#316ac5'): React.CSSProperties => ({
-    background: color, color: 'white',
-    fontSize: 9, fontWeight: 'bold',
-    padding: '1px 5px', borderRadius: 1,
-    fontFamily: xpFont, whiteSpace: 'nowrap',
-});
+// Status badge as a theme chip tint. Callers still pass the historical hex as the key;
+// it maps onto a chip family (purple = shared recipe, which has no family of its own).
+const BADGE_FAMILY: Record<string, string> = { '#2a7a2a': 'green', '#a02020': 'red', '#316ac5': 'blue' };
+const xpBadge = (color = '#316ac5'): React.CSSProperties => {
+    const f = BADGE_FAMILY[color];
+    const tone = f
+        ? { background: `var(--terras-chip-${f}-bg)`, border: `1px solid var(--terras-chip-${f}-border)`, color: `var(--terras-chip-${f}-text)` }
+        : { background: '#efe8f8', border: '1px solid #6a4b9a', color: '#3a2a55' };
+    return { ...tone, fontSize: 9, fontWeight: 'bold', padding: '0 4px', borderRadius: CHIP_RADIUS, fontFamily: xpFont, whiteSpace: 'nowrap' };
+};
+
+// Designer sections: the tinted FormSection card used across the BOM and request
+// panels, in place of the notched-legend groupbox. Children keep their own
+// '0 8px 8px' padding, so the body only adds the top inset.
+function Section({ title, style, children }: { title: React.ReactNode; style?: React.CSSProperties; children: React.ReactNode }) {
+    return (
+        <FormSection title={tintTitle(title)} style={{ ...TINT, margin: 0, display: 'flex', flexDirection: 'column', ...style }} bodyStyle={{ padding: '8px 0 0', flex: 1 }}>
+            {children}
+        </FormSection>
+    );
+}
 
 // --- Tree View Component ---
 // The BOM an item already has, when that BOM is the one shared across combos.
@@ -131,20 +149,19 @@ const TreeView = memo(({
     return (
         <div className="tree-node" data-testid={`tree-node-${node.item_code}`}>
             <div
+                className={isSelected ? undefined : 'bom-tree-hover'}
                 style={{
                     display: 'flex', alignItems: 'center', gap: 4,
-                    padding: '3px 4px',
-                    paddingLeft: `${level * 14 + 4}px`,
+                    padding: '3px 6px',
+                    paddingLeft: `${level * 14 + 6}px`,
                     cursor: 'pointer',
-                    background: isSelected ? '#316ac5' : 'transparent',
-                    color: isSelected ? 'white' : '#000',
-                    borderBottom: '1px solid #e8e4d8',
+                    background: isSelected ? 'var(--terras-row-selected, #316ac5)' : undefined,
+                    color: isSelected ? 'var(--terras-on-solid, #fff)' : 'var(--terras-win-text, #000)',
+                    borderBottom: '1px solid var(--terras-table-line, #e8e4d8)',
                     fontFamily: xpFont, fontSize: 11,
                 }}
                 onClick={() => onSelect(node.id)}
                 data-testid={`tree-node-clickable-${node.item_code}`}
-                onMouseEnter={e => { if (!isSelected) (e.currentTarget as HTMLElement).style.background = '#d0e4f8'; }}
-                onMouseLeave={e => { if (!isSelected) (e.currentTarget as HTMLElement).style.background = 'transparent'; }}
             >
                 <span style={{ fontSize: 12 }}><i className={`bi ${level === 0 ? 'bi-box-seam' : 'bi-nut'}`} /></span>
                 <span style={{ flex: 1, fontWeight: level === 0 ? 'bold' : 'normal', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
@@ -1287,28 +1304,16 @@ export default function BOMDesigner({
                 onClose={() => setIsConfirmOpen(false)}
             />
 
-            <div style={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
+            <div style={{ display: 'flex', flex: 1, overflow: 'hidden', background: 'var(--terras-table-bg, #fff)' }}>
 
                 {/* ===== LEFT PANEL: Tree ===== */}
-                <div style={{ width: 220, flexShrink: 0, borderRight: '2px solid #aca899', display: 'flex', flexDirection: 'column', background: '#ddd9c8' }}>
-                    {/* Sub-titlebar */}
-                    <div style={{
-                        background: 'linear-gradient(to bottom, #4a78c8, #2a54a8)',
-                        padding: '3px 8px',
-                        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                        flexShrink: 0,
-                    }}>
-                        <span style={{ color: 'white', fontSize: 11, fontWeight: 'bold' }}><i className="bi bi-diagram-3" style={{ marginRight: 4 }} />Structure</span>
-                        <span style={{
-                            background: 'rgba(255,255,255,0.2)', color: 'white',
-                            fontSize: 9, padding: '0 5px', borderRadius: CHIP_RADIUS,
-                        }}>
-                            {nodeCount} nodes
-                        </span>
-                    </div>
-
-                    {/* Tree list */}
-                    <div style={{ ...xpInset, flex: 1, margin: 4, marginBottom: 0 }}>
+                <div style={{ width: 220, flexShrink: 0, display: 'flex', flexDirection: 'column', gap: 8, padding: '10px 0 10px 10px' }}>
+                    <FormSection
+                        title={tintTitle(<><i className="bi bi-diagram-3" style={{ marginRight: 4 }} />Structure</>)}
+                        right={<span style={{ fontSize: 9, color: 'var(--terras-chip-blue-text, #0d2a6e)' }}>{nodeCount} nodes</span>}
+                        style={{ ...TINT, margin: 0, flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }}
+                        bodyStyle={{ padding: 0, flex: 1, minHeight: 0, overflowY: 'auto' }}
+                    >
                         <TreeView
                             node={rootBOM}
                             level={0}
@@ -1318,10 +1323,10 @@ export default function BOMDesigner({
                             hasExistingBOM={hasExistingBOM}
                             sharedBomFor={sharedBomFor}
                         />
-                    </div>
+                    </FormSection>
 
                     {/* Automate button */}
-                    <div style={{ padding: 4 }}>
+                    <div>
                         <button
                             data-testid="automate-levels-btn"
                             className={XP_BTN}
@@ -1339,15 +1344,14 @@ export default function BOMDesigner({
                         <>
                             {/* Node title strip */}
                             <div style={{
-                                background: 'linear-gradient(to bottom, #e8e4d8, #dddad0)',
-                                borderBottom: '1px solid #aca899',
-                                padding: '5px 10px',
+                                borderBottom: '1px solid var(--terras-table-line, #d6d3ce)',
+                                padding: '8px 10px 6px',
                                 display: 'flex', alignItems: 'center', gap: 8,
                                 flexShrink: 0,
                             }}>
-                                <span style={{ fontSize: 16, color: '#000080' }}><i className={`bi ${selectedNodeId === 'root' ? 'bi-box-seam' : 'bi-nut'}`} /></span>
+                                <span style={{ fontSize: 16, color: 'var(--terras-chip-blue-text, #0d2a6e)' }}><i className={`bi ${selectedNodeId === 'root' ? 'bi-box-seam' : 'bi-nut'}`} /></span>
                                 <div style={{ flex: 1 }}>
-                                    <div style={{ fontWeight: 'bold', fontSize: 12, color: '#000080' }}>
+                                    <div style={{ fontWeight: 'bold', fontSize: 12, color: 'var(--terras-chip-blue-text, #0d2a6e)' }}>
                                         {getItemName(selectedNode.item_code) || 'Select an item'}
                                     </div>
                                     <CodeChip code={selectedNode.item_code || '—'} tier={2} style={{ display: 'block' }} />
@@ -1392,7 +1396,7 @@ export default function BOMDesigner({
                             }}>
 
                                 {/* BOM Header groupbox */}
-                                <LegendPanel title="BOM Header">
+                                <Section title="BOM Header">
                                     <div style={{ padding: '0 8px 8px' }}>
                                     {/* Row 1: Code + Item + Batch + Tolerance */}
                                     <div style={{ display: 'flex', gap: 6, marginBottom: 6, flexWrap: 'wrap' }}>
@@ -1573,14 +1577,14 @@ export default function BOMDesigner({
                                         </div>
                                     )}
                                     </div>
-                                </LegendPanel>
+                                </Section>
 
                                 {/* Sizes + Detail Teknis + Measurements row */}
                                 {(
                                     <div style={{ display: 'flex', gap: 10 }}>
 
                                         {/* Left: Size Measurements */}
-                                        <LegendPanel
+                                        <Section
                                             title="Measurements (cm)"
                                             style={{ flexShrink: 0 }}
                                         >
@@ -1759,10 +1763,10 @@ export default function BOMDesigner({
                                                 </div>
                                             )}
                                             </div>
-                                        </LegendPanel>
+                                        </Section>
 
                                         {/* Detail Teknis */}
-                                        <LegendPanel title="Detail Teknis" style={{ flexShrink: 0 }}>
+                                        <Section title="Detail Teknis" style={{ flexShrink: 0 }}>
                                             <div style={{ padding: '0 8px 8px' }}>
                                             <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
 
@@ -1884,10 +1888,10 @@ export default function BOMDesigner({
 
                                             </div>
                                             </div>
-                                        </LegendPanel>
+                                        </Section>
 
                                         {/* Bahan Keluar Dari Mesin */}
-                                        <LegendPanel title="Bahan Keluar Dari Mesin" style={{ flex: 1 }}>
+                                        <Section title="Bahan Keluar Dari Mesin" style={{ flex: 1 }}>
                                             <div style={{ padding: '0 8px 8px' }}>
                                             <div style={{ display: 'grid', gridTemplateColumns: '1fr 60px', gap: '4px 6px', alignItems: 'center' }}>
                                                 <label style={{ ...xpLabel, marginBottom: 0 }}>Lebar</label>
@@ -1927,10 +1931,10 @@ export default function BOMDesigner({
                                                 </div>
                                             </div>
                                             </div>
-                                        </LegendPanel>
+                                        </Section>
 
                                         {/* Bahan Dari Celup / Setting */}
-                                        <LegendPanel title="Bahan Dari Celup / Setting" style={{ flex: 1 }}>
+                                        <Section title="Bahan Dari Celup / Setting" style={{ flex: 1 }}>
                                             <div style={{ padding: '0 8px 8px' }}>
                                             <div style={{ display: 'grid', gridTemplateColumns: '1fr 60px', gap: '4px 6px', alignItems: 'center' }}>
                                                 <label style={{ ...xpLabel, marginBottom: 0 }}>Lebar</label>
@@ -1970,7 +1974,7 @@ export default function BOMDesigner({
                                                 </div>
                                             </div>
                                             </div>
-                                        </LegendPanel>
+                                        </Section>
 
                                     </div>
                                 )}
@@ -1980,7 +1984,7 @@ export default function BOMDesigner({
 
                                     {/* Components */}
                                     <div style={{ flex: 1 }}>
-                                        <LegendPanel title="Components">
+                                        <Section title="Components">
                                             <div style={{ padding: '0 8px 8px' }}>
                                             <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: 6, marginBottom: 4 }}>
                                                 {inheritFields && (
@@ -2252,12 +2256,12 @@ export default function BOMDesigner({
                                                 );
                                             })()}
                                             </div>
-                                        </LegendPanel>
+                                        </Section>
                                     </div>
 
                                     {/* Routing Steps */}
                                     <div style={{ width: 240, flexShrink: 0 }}>
-                                        <LegendPanel title="Routing Steps">
+                                        <Section title="Routing Steps">
                                             <div style={{ padding: '0 8px 8px' }}>
                                             {/* Existing steps list */}
                                             <div style={{ ...xpInset, marginBottom: 6, padding: 0, minHeight: 40 }}>
@@ -2364,7 +2368,7 @@ export default function BOMDesigner({
                                                 >+ Add Step</button>
                                             </div>
                                             </div>
-                                        </LegendPanel>
+                                        </Section>
                                     </div>
 
                                 </div>
