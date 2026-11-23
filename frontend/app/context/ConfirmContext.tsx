@@ -47,15 +47,24 @@ export function ConfirmProvider({ children }: { children: React.ReactNode }) {
     return (
         <ConfirmContext.Provider value={{ confirm }}>
             {children}
-            <ConfirmModal 
-                isOpen={isOpen}
-                onClose={handleCancel}
-                onConfirm={handleConfirm}
-                title={options.title || 'Confirm'}
-                message={options.message}
-                confirmText={options.confirmText}
-                variant={options.variant}
-            />
+            {/* This provider sits above MainLayout, so the dialog renders outside the
+                `.app-container.ui-style-classic` that carries the theme tokens — its red
+                title bar and danger button then resolve to nothing (beige bar, white-on-
+                white button). Re-enter the theme scope here. Classic is the only style
+                (ThemeContext), and ThemeProvider is below this one, so it is named directly.
+                display:contents: the wrapper only scopes tokens — no box, so the class's
+                own background never paints. */}
+            <div className="ui-style-classic" style={{ display: 'contents' }}>
+                <ConfirmModal
+                    isOpen={isOpen}
+                    onClose={handleCancel}
+                    onConfirm={handleConfirm}
+                    title={options.title || 'Confirm'}
+                    message={options.message}
+                    confirmText={options.confirmText}
+                    variant={options.variant}
+                />
+            </div>
         </ConfirmContext.Provider>
     );
 }
