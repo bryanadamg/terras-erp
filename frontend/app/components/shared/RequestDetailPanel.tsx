@@ -62,13 +62,29 @@ interface Props {
 // Cards nested in a list row take a tinted header instead of the solid form blue:
 // solid bars stacked under the list's own chrome read too heavy. The header reads its
 // ground from this var, so overriding it on the card restyles just that bar.
-const TINT = { '--terras-form-section-blue': 'var(--terras-chip-blue-bg, #dce4f5)' } as React.CSSProperties;
+export const TINT = { '--terras-form-section-blue': 'var(--terras-chip-blue-bg, #dce4f5)' } as React.CSSProperties;
 const CARD: React.CSSProperties = { ...TINT, margin: 0, minWidth: 0, display: 'flex', flexDirection: 'column' };
 // Label beside value, two pairs per line — scans faster than label-over-value here.
-const FIELD_GRID: React.CSSProperties = { margin: 0, display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: '4px 20px', fontFamily: 'var(--terras-font-classic)' };
 const FIELD_LABEL: React.CSSProperties = { width: 110, flexShrink: 0, fontSize: 'var(--terras-fs-sm, 10px)', fontWeight: 'bold', color: 'var(--terras-win-text-2, #333)' };
 const FIELD_VALUE: React.CSSProperties = { margin: 0, minWidth: 0, fontSize: 'var(--terras-fs-base, 11px)', color: 'var(--terras-win-text, #000)', whiteSpace: 'pre-wrap', overflowWrap: 'anywhere' };
-const tintTitle = (t: React.ReactNode) => <span style={{ color: 'var(--terras-chip-blue-text, #0d2a6e)' }}>{t}</span>;
+export const tintTitle = (t: React.ReactNode) => <span style={{ color: 'var(--terras-chip-blue-text, #0d2a6e)' }}>{t}</span>;
+
+/** Label beside value, `columns` pairs per line; '—' / empty renders as a muted dash. */
+export function FieldList({ fields, columns = 2, labelWidth = 110 }: { fields: DetailField[]; columns?: number; labelWidth?: number }) {
+    return (
+        <dl style={{ margin: 0, display: 'grid', gridTemplateColumns: `repeat(${columns}, minmax(0, 1fr))`, gap: '4px 20px', fontFamily: 'var(--terras-font-classic)' }}>
+            {fields.map((f, fi) => {
+                const empty = f.value == null || f.value === '' || f.value === '—';
+                return (
+                    <div key={fi} style={{ display: 'flex', gap: 8, alignItems: 'baseline', minWidth: 0, ...(f.full ? { gridColumn: '1 / -1' } : {}) }}>
+                        <dt style={{ ...FIELD_LABEL, width: labelWidth }}>{f.label}</dt>
+                        <dd style={{ ...FIELD_VALUE, ...(empty ? { color: 'var(--terras-win-text-3, #666)' } : {}) }}>{empty ? '—' : f.value}</dd>
+                    </div>
+                );
+            })}
+        </dl>
+    );
+}
 
 export default function RequestDetailPanel({
     leftTitle, leftWidth = '56%', columns, rows, emptyText = 'No rows.', sections, minHeight = 160, height,
@@ -124,17 +140,7 @@ export default function RequestDetailPanel({
             <div style={{ flex: 1, minWidth: 0, minHeight: 0, display: 'flex', flexDirection: 'column', gap: 8, ...(fixed ? { overflowY: 'auto', maxHeight: '100%' } : {}) }}>
                 {sections.map((sec, si) => (
                     <FormSection key={si} title={tintTitle(sec.title)} style={{ ...TINT, margin: 0, flexShrink: 0 }} bodyStyle={{ padding: '6px 10px' }}>
-                        <dl style={FIELD_GRID}>
-                            {sec.fields.map((f, fi) => {
-                                const empty = f.value == null || f.value === '' || f.value === '—';
-                                return (
-                                    <div key={fi} style={{ display: 'flex', gap: 8, alignItems: 'baseline', minWidth: 0, ...(f.full ? { gridColumn: '1 / -1' } : {}) }}>
-                                        <dt style={FIELD_LABEL}>{f.label}</dt>
-                                        <dd style={{ ...FIELD_VALUE, ...(empty ? { color: 'var(--terras-win-text-3, #666)' } : {}) }}>{empty ? '—' : f.value}</dd>
-                                    </div>
-                                );
-                            })}
-                        </dl>
+                        <FieldList fields={sec.fields} />
                     </FormSection>
                 ))}
             </div>

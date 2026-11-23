@@ -1494,3 +1494,6 @@ textarea {
     font-variant-numeric: tabular-nums;
   }
 }
+
+/* BOM expanded-row tree: hover on selectable (sub-assembly) nodes only. */
+.bom-tree-hover:hover { background: var(--terras-row-hover, #e8f0fc); }
