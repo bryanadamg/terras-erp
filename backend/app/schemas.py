@@ -442,6 +442,13 @@ class BatchDispose(BaseModel):
     reason: str | None = None
 
 
+class BatchSizeChange(BaseModel):
+    """Re-label a lot's size in place — same item, same stock, different size
+    (a dyed lot that came out of its size range). None clears it to unsized."""
+    size_id: Optional[UUID] = None
+    reason: Optional[str] = None
+
+
 class BatchReassign(BaseModel):
     """Recycle a rejected lot into a different item instead of scrapping it: the
     physical goods are fine for another product (a rejected warp beam re-warped
