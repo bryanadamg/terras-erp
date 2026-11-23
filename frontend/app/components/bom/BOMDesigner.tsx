@@ -8,7 +8,7 @@ import SearchableSelect from '@bryanadamg/terras-ui/components/Combobox';
 import { useToast } from '../shared/Toast';
 import { CodeChip, CODE_FONT, xpFont, CHIP_RADIUS, BUTTON_RADIUS, xpBtn as xpBtnBase, XP_BTN } from '../shared/xpTheme';
 import { FormSection } from '@bryanadamg/terras-ui/components/FormSection';
-import { TINT, tintTitle } from '../shared/RequestDetailPanel';
+import { TINT, tintTitle, TintCard } from '../shared/RequestDetailPanel';
 import { field as xpInputBase, BTN_TONES } from '@bryanadamg/terras-ui/styles';
 import { API_BASE } from '../shared/apiBase';
 import { isBeamItemRecord } from '../shared/beamItem';
@@ -116,17 +116,6 @@ const xpBadge = (color = '#316ac5'): React.CSSProperties => {
         : { background: '#efe8f8', border: '1px solid #6a4b9a', color: '#3a2a55' };
     return { ...tone, fontSize: 9, fontWeight: 'bold', padding: '0 4px', borderRadius: CHIP_RADIUS, fontFamily: xpFont, whiteSpace: 'nowrap' };
 };
-
-// Designer sections: the tinted FormSection card used across the BOM and request
-// panels, in place of the notched-legend groupbox. Children keep their own
-// '0 8px 8px' padding, so the body only adds the top inset.
-function Section({ title, style, children }: { title: React.ReactNode; style?: React.CSSProperties; children: React.ReactNode }) {
-    return (
-        <FormSection title={tintTitle(title)} style={{ ...TINT, margin: 0, display: 'flex', flexDirection: 'column', ...style }} bodyStyle={{ padding: '8px 0 0', flex: 1 }}>
-            {children}
-        </FormSection>
-    );
-}
 
 // --- Tree View Component ---
 // The BOM an item already has, when that BOM is the one shared across combos.
@@ -1396,7 +1385,7 @@ export default function BOMDesigner({
                             }}>
 
                                 {/* BOM Header groupbox */}
-                                <Section title="BOM Header">
+                                <TintCard title="BOM Header">
                                     <div style={{ padding: '0 8px 8px' }}>
                                     {/* Row 1: Code + Item + Batch + Tolerance */}
                                     <div style={{ display: 'flex', gap: 6, marginBottom: 6, flexWrap: 'wrap' }}>
@@ -1577,14 +1566,14 @@ export default function BOMDesigner({
                                         </div>
                                     )}
                                     </div>
-                                </Section>
+                                </TintCard>
 
                                 {/* Sizes + Detail Teknis + Measurements row */}
                                 {(
                                     <div style={{ display: 'flex', gap: 10 }}>
 
                                         {/* Left: Size Measurements */}
-                                        <Section
+                                        <TintCard
                                             title="Measurements (cm)"
                                             style={{ flexShrink: 0 }}
                                         >
@@ -1763,10 +1752,10 @@ export default function BOMDesigner({
                                                 </div>
                                             )}
                                             </div>
-                                        </Section>
+                                        </TintCard>
 
                                         {/* Detail Teknis */}
-                                        <Section title="Detail Teknis" style={{ flexShrink: 0 }}>
+                                        <TintCard title="Detail Teknis" style={{ flexShrink: 0 }}>
                                             <div style={{ padding: '0 8px 8px' }}>
                                             <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
 
@@ -1888,10 +1877,10 @@ export default function BOMDesigner({
 
                                             </div>
                                             </div>
-                                        </Section>
+                                        </TintCard>
 
                                         {/* Bahan Keluar Dari Mesin */}
-                                        <Section title="Bahan Keluar Dari Mesin" style={{ flex: 1 }}>
+                                        <TintCard title="Bahan Keluar Dari Mesin" style={{ flex: 1 }}>
                                             <div style={{ padding: '0 8px 8px' }}>
                                             <div style={{ display: 'grid', gridTemplateColumns: '1fr 60px', gap: '4px 6px', alignItems: 'center' }}>
                                                 <label style={{ ...xpLabel, marginBottom: 0 }}>Lebar</label>
@@ -1931,10 +1920,10 @@ export default function BOMDesigner({
                                                 </div>
                                             </div>
                                             </div>
-                                        </Section>
+                                        </TintCard>
 
                                         {/* Bahan Dari Celup / Setting */}
-                                        <Section title="Bahan Dari Celup / Setting" style={{ flex: 1 }}>
+                                        <TintCard title="Bahan Dari Celup / Setting" style={{ flex: 1 }}>
                                             <div style={{ padding: '0 8px 8px' }}>
                                             <div style={{ display: 'grid', gridTemplateColumns: '1fr 60px', gap: '4px 6px', alignItems: 'center' }}>
                                                 <label style={{ ...xpLabel, marginBottom: 0 }}>Lebar</label>
@@ -1974,7 +1963,7 @@ export default function BOMDesigner({
                                                 </div>
                                             </div>
                                             </div>
-                                        </Section>
+                                        </TintCard>
 
                                     </div>
                                 )}
@@ -1984,7 +1973,7 @@ export default function BOMDesigner({
 
                                     {/* Components */}
                                     <div style={{ flex: 1 }}>
-                                        <Section title="Components">
+                                        <TintCard title="Components">
                                             <div style={{ padding: '0 8px 8px' }}>
                                             <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: 6, marginBottom: 4 }}>
                                                 {inheritFields && (
@@ -2256,12 +2245,12 @@ export default function BOMDesigner({
                                                 );
                                             })()}
                                             </div>
-                                        </Section>
+                                        </TintCard>
                                     </div>
 
                                     {/* Routing Steps */}
                                     <div style={{ width: 240, flexShrink: 0 }}>
-                                        <Section title="Routing Steps">
+                                        <TintCard title="Routing Steps">
                                             <div style={{ padding: '0 8px 8px' }}>
                                             {/* Existing steps list */}
                                             <div style={{ ...xpInset, marginBottom: 6, padding: 0, minHeight: 40 }}>
@@ -2368,7 +2357,7 @@ export default function BOMDesigner({
                                                 >+ Add Step</button>
                                             </div>
                                             </div>
-                                        </Section>
+                                        </TintCard>
                                     </div>
 
                                 </div>

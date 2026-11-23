@@ -2,7 +2,8 @@ import React, { useState, useEffect, useCallback, memo } from 'react';
 import { useLanguage } from '../../context/LanguageContext';
 import { useData } from '../../context/DataContext';
 import ModalWrapper from '../shared/ModalWrapper';
-import { CODE_FONT, xpFont, CHIP_RADIUS, xpBtn as xpBtnBase, LegendPanel, XP_BTN } from '../shared/xpTheme';
+import { CODE_FONT, xpFont, CHIP_RADIUS, xpBtn as xpBtnBase, XP_BTN, ToggleChip } from '../shared/xpTheme';
+import { TintCard } from '../shared/RequestDetailPanel';
 import { field as xpInputBase, BTN_TONES } from '@bryanadamg/terras-ui/styles';
 import { API_BASE } from '../shared/apiBase';
 
@@ -44,17 +45,21 @@ const xpBtn: React.CSSProperties = xpBtnBase({ whiteSpace: 'nowrap', minWidth: 6
 
 const xpBtnPrimary: React.CSSProperties = xpBtnBase({ ...BTN_TONES.primary, minWidth: 80 });
 
-const xpBtnDanger: React.CSSProperties = xpBtnBase({ ...BTN_TONES.danger, minWidth: 'auto', padding: '1px 6px', fontSize: 10 });
 
 const xpInput: React.CSSProperties = xpInputBase({ borderTopColor: '#5a7fa8', padding: '0 4px', width: '100%' });
 
-const LEVEL_BADGE_COLORS = ['#316ac5', '#2a7a2a', '#b46a00', '#7a2a7a', '#7a4a00'];
+// Small themed chip (pattern index, {CODE} token).
+const chip = (f: 'gray' | 'amber'): React.CSSProperties => ({
+    background: `var(--terras-chip-${f}-bg)`, border: `1px solid var(--terras-chip-${f}-border)`, color: `var(--terras-chip-${f}-text)`,
+    borderRadius: CHIP_RADIUS, padding: '0 4px', fontSize: 10, fontWeight: 'bold',
+});
+const muted = 'var(--terras-win-text-3, #666)';
 
 // Memoized Sub-component for the Preview
 const BranchingPreview = memo(({ levels }: { levels: string[][] }) => (
     <div style={{
-        border: '2px inset #aaa',
-        background: 'white',
+        border: '1px solid var(--terras-table-line, #d6d3ce)',
+        background: 'var(--terras-table-bg, #fff)',
         padding: '6px',
         fontFamily: CODE_FONT,
         fontSize: 10,
@@ -63,10 +68,10 @@ const BranchingPreview = memo(({ levels }: { levels: string[][] }) => (
         overflowY: 'auto',
         flex: 1,
     }}>
-        <div style={{ color: '#000080', fontWeight: 'bold' }}><i className="bi bi-box-seam" style={{ marginRight: 4 }} />{DUMMY_CODE}</div>
+        <div style={{ color: 'var(--terras-chip-blue-text, #0d2a6e)', fontWeight: 'bold' }}><i className="bi bi-box-seam" style={{ marginRight: 4 }} />{DUMMY_CODE}</div>
         {levels.map((lvl, lIdx) => (
             lvl.map((p, pIdx) => (
-                <div key={`${lIdx}-${pIdx}`} style={{ paddingLeft: `${(lIdx + 1) * 14}px`, color: lIdx === 0 ? '#333' : '#555' }}>
+                <div key={`${lIdx}-${pIdx}`} style={{ paddingLeft: `${(lIdx + 1) * 14}px`, color: lIdx === 0 ? 'var(--terras-win-text, #333)' : 'var(--terras-win-text-2, #555)' }}>
                     {lIdx === 0 ? '├─ ' : '│ ├─ '}{p.replace('{CODE}', DUMMY_CODE) || '...'}
                 </div>
             ))
@@ -97,35 +102,23 @@ const LevelCard = memo(({
     onPatternChange: (lIdx: number, pIdx: number, val: string) => void;
     onInheritChange: (lIdx: number, value: boolean) => void;
 }) => {
-    const badgeColor = LEVEL_BADGE_COLORS[lIdx % LEVEL_BADGE_COLORS.length];
-
     return (
-        <LegendPanel title={`Level ${lIdx + 1}`} style={{ marginBottom: 6 }}>
-            <div style={{ padding: '0 8px 8px' }}>
-            {/* Card header row */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 6 }}>
-                <span style={{
-                    background: badgeColor, color: 'white',
-                    fontSize: 9, fontWeight: 'bold', padding: '1px 6px',
-                    borderRadius: CHIP_RADIUS, fontFamily: xpFont,
-                }}>L{lIdx + 1}</span>
-                <span style={{ flex: 1, fontSize: 10, color: '#555', fontFamily: xpFont }}>
-                    Processing Level
-                </span>
-                <button className={XP_BTN} style={xpBtnDanger} onClick={() => onRemoveLevel(lIdx)}>
-                    X Remove
+        <TintCard
+            title={`Level ${lIdx + 1} · Processing`}
+            right={
+                <button type="button" title={`Remove level ${lIdx + 1}`} onClick={() => onRemoveLevel(lIdx)}
+                    style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', fontSize: 10, color: 'var(--terras-status-red, #a01a1a)', display: 'inline-flex', alignItems: 'center', gap: 3 }}>
+                    <i className="bi bi-trash" />Remove
                 </button>
-            </div>
+            }
+        >
+            <div style={{ padding: '0 8px 8px' }}>
 
             {/* Pattern rows */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
                 {lvl.map((pattern, pIdx) => (
                     <div key={pIdx} style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
-                        <span style={{ borderRadius: CHIP_RADIUS,
-                            background: '#ddd', border: '1px solid #aaa',
-                            padding: '1px 5px', fontSize: 10, minWidth: 18,
-                            textAlign: 'center', fontFamily: xpFont,
-                        }}>{pIdx + 1}</span>
+                        <span style={{ ...chip('gray'), minWidth: 18, textAlign: 'center' }}>{pIdx + 1}</span>
                         <input
                             type="text"
                             style={{ ...xpInput, flex: 1 }}
@@ -144,7 +137,7 @@ const LevelCard = memo(({
             <button
                 style={{
                     background: 'none', border: 'none',
-                    color: '#0000aa', fontSize: 10, cursor: 'pointer',
+                    color: 'var(--terras-win-blue, #0000aa)', fontSize: 10, cursor: 'pointer',
                     padding: '4px 0 0', fontFamily: xpFont,
                     textDecoration: 'underline',
                 }}
@@ -157,8 +150,8 @@ const LevelCard = memo(({
             <label
                 style={{
                     display: 'flex', alignItems: 'center', gap: 4,
-                    marginTop: 6, paddingTop: 5, borderTop: '1px solid #e0ddd4',
-                    fontSize: 10, color: attributeSummary ? '#333' : '#999',
+                    marginTop: 6, paddingTop: 5, borderTop: '1px solid var(--terras-table-line, #e0ddd4)',
+                    fontSize: 10, color: attributeSummary ? 'var(--terras-win-text-2, #333)' : muted,
                     cursor: attributeSummary ? 'pointer' : 'default',
                     fontFamily: xpFont,
                 }}
@@ -175,11 +168,11 @@ const LevelCard = memo(({
                 />
                 Inherit attributes from root
                 {attributeSummary && (
-                    <span style={{ color: '#000080', fontWeight: 'bold' }}>({attributeSummary})</span>
+                    <span style={{ color: 'var(--terras-chip-blue-text, #0d2a6e)', fontWeight: 'bold' }}>({attributeSummary})</span>
                 )}
             </label>
             </div>
-        </LegendPanel>
+        </TintCard>
     );
 });
 LevelCard.displayName = 'LevelCard';
@@ -283,8 +276,7 @@ const BOMAutomatorModal = memo(({ isOpen, onClose, onApply, rootAttributeSummary
         localStorage.setItem(LAST_PROFILE_KEY, profile.id);
     }, [applyProfile]);
 
-    const handleDeleteProfile = useCallback(async (e: React.MouseEvent, id: string) => {
-        e.stopPropagation();
+    const handleDeleteProfile = useCallback(async (id: string) => {
         await authFetch(`${API_BASE}/bom-automator-profiles/${id}`, { method: 'DELETE' });
         setProfiles(prev => prev.filter(p => p.id !== id));
         // Drop the remembered pointer if it named this profile — the levels currently
@@ -343,38 +335,21 @@ const BOMAutomatorModal = memo(({ isOpen, onClose, onApply, rootAttributeSummary
                     minHeight: 0,
                 }}>
                     {/* Left: config + levels (scrollable) */}
-                    <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 6, minHeight: 0, paddingRight: 4, paddingTop: 10 }}>
+                    <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 6, minHeight: 0, paddingRight: 4 }}>
 
                         {/* Saved Profiles */}
-                        <LegendPanel title="Saved Profiles" style={{ marginBottom: 6 }}>
+                        <TintCard title="Saved Profiles">
                             <div style={{ padding: '0 8px 8px' }}>
                             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 3, marginBottom: 6, minHeight: 20 }}>
                                 {profiles.length === 0 && (
-                                    <span style={{ fontSize: 10, color: '#888', fontStyle: 'italic' }}>No saved configurations — showing the built-in template.</span>
+                                    <span style={{ fontSize: 10, color: muted, fontStyle: 'italic' }}>No saved configurations — showing the built-in template.</span>
                                 )}
                                 {profiles.map(p => (
-                                    <div key={p.id} style={{ display: 'flex', border: '1px solid #aaa' }}>
-                                        {/* The loaded profile reads as pressed — on open that is the
-                                            remembered/default one, so it is clear where the levels came from. */}
-                                        <button
-                                            className={XP_BTN}
-                                            style={{
-                                                ...xpBtn, minWidth: 'auto', borderRight: 'none', fontSize: 10, padding: '1px 8px',
-                                                ...(p.id === activeProfileId ? {
-                                                    background: 'linear-gradient(to bottom, #b4d0f8, #7aacf0)',
-                                                    borderTopColor: '#c8e0ff', borderLeftColor: '#c8e0ff',
-                                                    fontWeight: 'bold', color: '#00007a',
-                                                } : {}),
-                                            }}
-                                            onClick={() => handleLoadProfile(p)}
-                                        >
-                                            {p.name}
-                                        </button>
-                                        <button
-                                            className={XP_BTN}
-                                            style={{ ...xpBtnDanger, borderLeft: 'none', borderTopLeftRadius: 0, borderBottomLeftRadius: 0 }}
-                                            onClick={(e) => handleDeleteProfile(e, p.id)}
-                                        >X</button>
+                                    // The loaded profile reads as pressed — on open that is the
+                                    // remembered/default one, so it is clear where the levels came from.
+                                    <div key={p.id} style={{ display: 'inline-flex' }}>
+                                        <ToggleChip on={p.id === activeProfileId} onClick={() => handleLoadProfile(p)} seg="first" flat title={`Load profile ${p.name}`}>{p.name}</ToggleChip>
+                                        <ToggleChip on={false} onClick={() => handleDeleteProfile(p.id)} seg="last" flat tone="red" toneIdle title={`Delete profile ${p.name}`}>×</ToggleChip>
                                     </div>
                                 ))}
                             </div>
@@ -397,14 +372,14 @@ const BOMAutomatorModal = memo(({ isOpen, onClose, onApply, rootAttributeSummary
                                 </button>
                             </div>
                             </div>
-                        </LegendPanel>
+                        </TintCard>
 
                         {/* Level Cards */}
-                        <div style={{ fontSize: 10, fontWeight: 'bold', color: '#000080', marginBottom: 2 }}>
+                        <div style={{ fontSize: 10, fontWeight: 'bold', textTransform: 'uppercase', letterSpacing: '0.4px', color: 'var(--terras-chip-blue-text, #0d2a6e)', marginTop: 4 }}>
                             Processing Levels
                         </div>
-                        <div style={{ fontSize: 10, color: '#555', marginBottom: 4 }}>
-                            Use <code style={{ background: '#f0e8a0', padding: '0 3px', border: '1px solid #d0c860' }}>{'{CODE}'}</code> as a placeholder — replaced with the parent item code on generation.
+                        <div style={{ fontSize: 10, color: 'var(--terras-win-text-2, #555)', marginBottom: 2 }}>
+                            Use <code style={{ ...chip('amber'), fontFamily: CODE_FONT }}>{'{CODE}'}</code> as a placeholder — replaced with the parent item code on generation.
                         </div>
 
                         {levels.map((lvl, lIdx) => (
@@ -427,7 +402,7 @@ const BOMAutomatorModal = memo(({ isOpen, onClose, onApply, rootAttributeSummary
                             style={{
                                 ...xpBtn, width: '100%',
                                 borderStyle: 'dashed',
-                                borderColor: '#888',
+                                borderColor: 'var(--terras-win-border-soft, #888)',
                                 fontSize: 10, textAlign: 'center',
                             }}
                             onClick={addLevel}
@@ -437,30 +412,26 @@ const BOMAutomatorModal = memo(({ isOpen, onClose, onApply, rootAttributeSummary
                     </div>
 
                     {/* Right: preview panel */}
-                    <div style={{ width: 220, flexShrink: 0, display: 'flex', flexDirection: 'column', gap: 6, paddingTop: 10 }}>
+                    <div style={{ width: 220, flexShrink: 0, display: 'flex', flexDirection: 'column', gap: 8 }}>
 
-                        <LegendPanel title="Structure Preview" style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
+                        <TintCard title="Structure Preview" style={{ flex: 1 }} bodyStyle={{ display: 'flex', flexDirection: 'column' }}>
                             <div style={{ padding: '0 8px 8px', flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0 }}>
-                                <div style={{ fontSize: 10, color: '#555', marginBottom: 6 }}>
+                                <div style={{ fontSize: 10, color: 'var(--terras-win-text-2, #555)', marginBottom: 6 }}>
                                     Preview with code: <strong>{DUMMY_CODE}</strong>
                                 </div>
                                 <BranchingPreview levels={levels} />
                             </div>
-                        </LegendPanel>
+                        </TintCard>
 
-                        <LegendPanel
-                            title="Tip"
-                            style={{ background: '#fffbe6', borderColor: '#d4b000' }}
-                            legendStyle={{ background: '#fffbe6', color: '#806000', borderColor: '#d4b000' }}
-                        >
-                            <div style={{ padding: '0 8px 8px', fontSize: 10, color: '#555', lineHeight: 1.6 }}>
+                        <TintCard title={<><i className="bi bi-lightbulb" style={{ marginRight: 4 }} />Tip</>} tone="amber">
+                            <div style={{ padding: '0 8px 8px', fontSize: 10, color: 'var(--terras-win-text-2, #555)', lineHeight: 1.6 }}>
                                 Each level becomes a child BOM node. Branching items at the same level are created as siblings under the parent.
                                 <div style={{ marginTop: 6 }}>
                                     Children are generated with <strong>no attribute values</strong> unless you tick
                                     &quot;Inherit attributes from root&quot; on that level.
                                 </div>
                             </div>
-                        </LegendPanel>
+                        </TintCard>
                     </div>
                 </div>
             </div>

@@ -77,6 +77,32 @@ const FIELD_LABEL: React.CSSProperties = { width: 110, flexShrink: 0, fontSize: 
 const FIELD_VALUE: React.CSSProperties = { margin: 0, minWidth: 0, fontSize: 'var(--terras-fs-base, 11px)', color: 'var(--terras-win-text, #000)', whiteSpace: 'pre-wrap', overflowWrap: 'anywhere' };
 export const tintTitle = (t: React.ReactNode) => <span style={{ color: 'var(--terras-chip-blue-text, #0d2a6e)' }}>{t}</span>;
 
+/**
+ * Tinted FormSection card — the modern section box for nested panels and dialogs
+ * (BOM designer/automator). `tone` picks the chip family for header, edge and title;
+ * `bodyStyle` defaults to a top inset only, for children that pad themselves.
+ */
+export function TintCard({ title, right, tone = 'blue', style, bodyStyle, children }: {
+    title: React.ReactNode; right?: React.ReactNode; tone?: 'blue' | 'amber' | 'green' | 'red' | 'gray';
+    style?: React.CSSProperties; bodyStyle?: React.CSSProperties; children: React.ReactNode;
+}) {
+    const toneVars = tone === 'blue' ? TINT : {
+        ...TINT,
+        '--terras-form-section-blue': `var(--terras-chip-${tone}-bg)`,
+        '--terras-form-section-border': `color-mix(in srgb, var(--terras-chip-${tone}-border) 40%, var(--terras-table-bg, #fff))`,
+    } as React.CSSProperties;
+    return (
+        <FormSection
+            title={<span style={{ color: `var(--terras-chip-${tone}-text)` }}>{title}</span>}
+            right={right}
+            style={{ ...toneVars, margin: 0, display: 'flex', flexDirection: 'column', ...style }}
+            bodyStyle={{ padding: '8px 0 0', flex: 1, ...bodyStyle }}
+        >
+            {children}
+        </FormSection>
+    );
+}
+
 /** Label beside value, `columns` pairs per line; '—' / empty renders as a muted dash. */
 export function FieldList({ fields, columns = 2, labelWidth = 110 }: { fields: DetailField[]; columns?: number; labelWidth?: number }) {
     return (
