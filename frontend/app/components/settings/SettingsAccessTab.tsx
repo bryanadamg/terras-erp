@@ -26,6 +26,7 @@ export default function SettingsAccessTab() {
     const [allPermissions, setAllPermissions] = useState<any[]>([]);
     const [sub, setSub] = useRememberedTab<AccessSub>('settings.access', 'users', ['users', 'roles']);
     const [roleId, setRoleId] = useState<string | null>(null);
+    const [userId, setUserId] = useState<string | null>(null);
 
     const loadAuthData = useCallback(() => {
         const authHeaders = { 'Authorization': `Bearer ${localStorage.getItem('access_token')}` };
@@ -39,6 +40,8 @@ export default function SettingsAccessTab() {
     }, []);
 
     useEffect(() => { loadAuthData(); }, [loadAuthData]);
+
+    const openRole = (id: string) => { setRoleId(id); setSub('roles'); };
 
     return (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 10, height: '100%', minHeight: 0 }}>
@@ -64,8 +67,9 @@ export default function SettingsAccessTab() {
                 <SettingsUsersTab
                     roles={roles}
                     allPermissions={allPermissions}
-                    roleFilter={null}
-                    onClearRoleFilter={() => {}}
+                    selectedId={userId}
+                    onSelect={setUserId}
+                    onOpenRole={openRole}
                 />
             )}
         </div>
