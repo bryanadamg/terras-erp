@@ -18,6 +18,7 @@ import { SearchField, ToolbarButton, viewShellStyle } from '../shared/shellTheme
 import { FilterChipBar } from '@bryanadamg/terras-ui/components/FilterChipBar';
 import { Count as ToolbarCount } from '@bryanadamg/terras-ui/components/Window';
 import RequestDetailPanel, { getStatusStripe } from '../shared/RequestDetailPanel';
+import OverflowRow from '../shared/OverflowRow';
 import { lvThead, ExpanderCell, lvTh, lvTdRuled, lvZebra, TableEmpty, lvBtn, lvInput, ResizableTable } from '../shared/listViewTheme';
 import { EXPANDER_COL_W as LV_EXPANDER_COL_W, SortableTh } from '@bryanadamg/terras-ui/components/Table';
 import { API_BASE, STATIC_BASE } from '../shared/apiBase';
@@ -563,32 +564,27 @@ export default function LabDipRequestView({
                                             {(() => {
                                                 const its = r.items || [];
                                                 if (!its.length) return <span style={{ fontSize: 9, color: '#888', fontStyle: 'italic' }}>—</span>;
-                                                // Every variant on its own line, up to MAX — the row expands anyway, so hiding
-                                                // a second item behind "+1 more" only costs a click. Past MAX, the overflow
-                                                // link opens the row's variant table. The request number is already in the
-                                                // Request Code column, so only the variant letter is shown here.
-                                                const MAX = 3;
-                                                const shown = its.length > MAX ? its.slice(0, MAX - 1) : its;
-                                                const hidden = its.length - shown.length;
+                                                // All variants on one line, as many as the column fits; the rest collapse to
+                                                // "+n more" (hover lists them, click opens the row). The request number is
+                                                // already in the Request Code column, so only the variant letter is shown.
                                                 return (
-                                                    <div style={{ display: 'flex', flexDirection: 'column' as const, gap: 2 }}>
-                                                        {shown.map((it: any) => {
+                                                    <OverflowRow
+                                                        onMore={() => { if (!expandedIds.has(r.id)) toggleExpand(r.id); }}
+                                                        items={its.map((it: any) => {
                                                             const code = it.variant_code || `${seqPart(r.code)}-${variantLetter(it.variant_seq ?? 0)}`;
-                                                            return (
-                                                                <div key={it.id} title={code} style={{ display: 'flex', alignItems: 'center', gap: 4, minWidth: 0 }}>
-                                                                    <span style={{ ...variantBadge(), fontSize: 9, padding: '0 5px' }}>{splitVariantCode(code).variant}</span>
-                                                                    <span style={{ fontWeight: 'bold', fontSize: 11, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' as const }}>{it.item_name || it.item_code || '—'}</span>
-                                                                </div>
-                                                            );
+                                                            const name = it.item_name || it.item_code || '—';
+                                                            return {
+                                                                key: it.id,
+                                                                label: `${code}  ${name}`,
+                                                                node: (
+                                                                    <span title={code} style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                                                                        <span style={{ ...variantBadge(), fontSize: 9, padding: '0 5px' }}>{splitVariantCode(code).variant}</span>
+                                                                        <span style={{ fontWeight: 'bold', fontSize: 11 }}>{name}</span>
+                                                                    </span>
+                                                                ),
+                                                            };
                                                         })}
-                                                        {hidden > 0 && (
-                                                            <button type="button" title="Show all variants"
-                                                                onClick={e => { e.stopPropagation(); if (!expandedIds.has(r.id)) toggleExpand(r.id); }}
-                                                                style={{ alignSelf: 'flex-start', background: 'none', border: 'none', padding: 0, cursor: 'pointer', fontSize: 10, color: 'var(--terras-win-blue, #0054e3)', textDecoration: 'underline', textUnderlineOffset: 2 }}>
-                                                                +{hidden} more
-                                                            </button>
-                                                        )}
-                                                    </div>
+                                                    />
                                                 );
                                             })()}
                                         </td>
