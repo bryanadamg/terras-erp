@@ -19,6 +19,12 @@ import { API_BASE } from '../shared/apiBase';
 import { isBeamItemRecord } from '../shared/beamItem';
 import { useUser } from '../../context/UserContext';
 
+// Small in-row action (Sub / Clear on a material line): an outlined theme chip.
+const rowChipBtn = (f: 'blue' | 'red'): React.CSSProperties => ({
+    fontFamily: xpFont, fontSize: 9, padding: '0 5px', cursor: 'pointer', borderRadius: CHIP_RADIUS,
+    background: 'var(--terras-table-bg, #fff)', border: `1px solid var(--terras-chip-${f}-border)`, color: `var(--terras-chip-${f}-text)`,
+});
+
 
 const xpInput: React.CSSProperties = xpInputBase({ padding: '0 4px', width: '100%', boxSizing: 'border-box' });
 const xpLabel: React.CSSProperties = {
@@ -498,7 +504,7 @@ export default function WOCompletionModal({ mo, onClose, onSaved, workOrder }: W
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
 
                         {/* Product info + progress */}
-                        <div style={{ border: '1px solid #aca899', padding: '8px 10px', background: '#f5f4ee', display: 'flex', flexDirection: 'column', gap: 5 }}>
+                        <div style={{ border: '1px solid var(--terras-table-line, #d6d3ce)', padding: '8px 10px', background: 'var(--terras-toolbar-bg, #f5f4ef)', display: 'flex', flexDirection: 'column', gap: 5 }}>
                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
                                 <span style={{ fontSize: 11, fontWeight: 'bold', color: '#000080' }}>{mo.item_name || mo.item_code}</span>
                                 <span style={{ fontSize: 10, color: '#555' }}>{mo.code}</span>
@@ -684,7 +690,7 @@ export default function WOCompletionModal({ mo, onClose, onSaved, workOrder }: W
                                                                     <span style={{ borderRadius: CHIP_RADIUS,
                                                                         fontSize: 9, fontWeight: 'bold', color: drawByBatch[b.id] ? '#0a3e0a' : '#777',
                                                                         background: drawByBatch[b.id] ? '#d0f0d0' : '#eceae2',
-                                                                        border: '1px solid #aca899', padding: '0 4px',
+                                                                        border: '1px solid var(--terras-table-line, #d6d3ce)', padding: '0 4px',
                                                                     }}>
                                                                         take {(drawByBatch[b.id] || 0).toFixed(2)}
                                                                     </span>
@@ -794,11 +800,11 @@ export default function WOCompletionModal({ mo, onClose, onSaved, workOrder }: W
                                 <div style={{ padding: '4px 8px 8px' }}>
                                     <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 10 }}>
                                         <thead>
-                                            <tr style={{ background: '#dddbd0' }}>
-                                                <th style={{ padding: '2px 6px', textAlign: 'left', borderBottom: '1px solid #aca899' }}>Material</th>
-                                                <th style={{ padding: '2px 6px', textAlign: 'right', borderBottom: '1px solid #aca899', width: 80 }}>Planned</th>
-                                                <th style={{ padding: '2px 6px', textAlign: 'right', borderBottom: '1px solid #aca899', width: 90 }}>Actual</th>
-                                                <th style={{ padding: '2px 6px', textAlign: 'right', borderBottom: '1px solid #aca899', width: 70 }}>Variance</th>
+                                            <tr style={{ background: 'var(--terras-toolbar-bg, #f5f4ef)' }}>
+                                                <th style={{ padding: '2px 6px', textAlign: 'left', borderBottom: '1px solid var(--terras-table-line, #d6d3ce)' }}>Material</th>
+                                                <th style={{ padding: '2px 6px', textAlign: 'right', borderBottom: '1px solid var(--terras-table-line, #d6d3ce)', width: 80 }}>Planned</th>
+                                                <th style={{ padding: '2px 6px', textAlign: 'right', borderBottom: '1px solid var(--terras-table-line, #d6d3ce)', width: 90 }}>Actual</th>
+                                                <th style={{ padding: '2px 6px', textAlign: 'right', borderBottom: '1px solid var(--terras-table-line, #d6d3ce)', width: 70 }}>Variance</th>
                                             </tr>
                                         </thead>
                                         <tbody>
@@ -810,7 +816,7 @@ export default function WOCompletionModal({ mo, onClose, onSaved, workOrder }: W
                                                 const isPickingThis = subPickerIdx === idx;
                                                 return (
                                                     <React.Fragment key={idx}>
-                                                        <tr style={{ background: idx % 2 === 0 ? '#fff' : '#f5f4ee' }}>
+                                                        <tr style={{ background: idx % 2 === 0 ? 'var(--terras-table-bg, #fff)' : 'var(--terras-row-stripe-sub, #fbfaf7)' }}>
                                                             <td style={{ padding: '2px 6px' }}>
                                                                 <div style={{ display: 'flex', alignItems: 'center', gap: 4, flexWrap: 'wrap' }}>
                                                                     <span style={{ fontWeight: 500 }}>{row.item_code}</span>
@@ -828,7 +834,7 @@ export default function WOCompletionModal({ mo, onClose, onSaved, workOrder }: W
                                                                     <button
                                                                         type="button"
                                                                         onClick={() => setSubPickerIdx(isPickingThis ? null : idx)}
-                                                                        style={{ fontFamily: xpFont, fontSize: 9, padding: '0 5px', cursor: 'pointer', background: isPickingThis ? '#c8d8f0' : 'linear-gradient(to bottom,#fff,#d4d0c8)', border: '1px solid #808080', color: '#000040' }}
+                                                                        style={{ ...rowChipBtn('blue'), ...(isPickingThis ? { background: 'var(--terras-chip-blue-bg)' } : {}) }}
                                                                     >
                                                                         {isPickingThis ? 'Cancel' : 'Sub'}
                                                                     </button>
@@ -846,7 +852,7 @@ export default function WOCompletionModal({ mo, onClose, onSaved, workOrder }: W
                                                                                 } : r));
                                                                                 if (isPickingThis) setSubPickerIdx(null);
                                                                             }}
-                                                                            style={{ fontFamily: xpFont, fontSize: 9, padding: '0 5px', cursor: 'pointer', background: 'linear-gradient(to bottom,#fff,#d4d0c8)', border: '1px solid #808080', color: '#900' }}
+                                                                            style={rowChipBtn('red')}
                                                                         >
                                                                             Clear
                                                                         </button>
@@ -989,19 +995,19 @@ export default function WOCompletionModal({ mo, onClose, onSaved, workOrder }: W
                                 <div style={{ maxHeight: 140, overflowY: 'auto' }}>
                                     <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 10, fontFamily: xpFont }}>
                                         <thead style={LV_STICKY_THEAD}>
-                                            <tr style={{ background: '#dddbd0' }}>
-                                                <th style={{ padding: '2px 6px', textAlign: 'right', borderBottom: '1px solid #aca899' }}>Qty</th>
-                                                <th style={{ padding: '2px 6px', textAlign: 'left', borderBottom: '1px solid #aca899' }}>Pkg</th>
-                                                <th style={{ padding: '2px 6px', textAlign: 'left', borderBottom: '1px solid #aca899' }}>Operator</th>
-                                                <th style={{ padding: '2px 6px', textAlign: 'left', borderBottom: '1px solid #aca899' }}>Machine</th>
-                                                <th style={{ padding: '2px 6px', textAlign: 'left', borderBottom: '1px solid #aca899' }}>Items Used</th>
-                                                <th style={{ padding: '2px 6px', textAlign: 'left', borderBottom: '1px solid #aca899' }}>Time</th>
-                                                <th style={{ padding: '2px 4px', borderBottom: '1px solid #aca899', width: 42 }}></th>
+                                            <tr style={{ background: 'var(--terras-toolbar-bg, #f5f4ef)' }}>
+                                                <th style={{ padding: '2px 6px', textAlign: 'right', borderBottom: '1px solid var(--terras-table-line, #d6d3ce)' }}>Qty</th>
+                                                <th style={{ padding: '2px 6px', textAlign: 'left', borderBottom: '1px solid var(--terras-table-line, #d6d3ce)' }}>Pkg</th>
+                                                <th style={{ padding: '2px 6px', textAlign: 'left', borderBottom: '1px solid var(--terras-table-line, #d6d3ce)' }}>Operator</th>
+                                                <th style={{ padding: '2px 6px', textAlign: 'left', borderBottom: '1px solid var(--terras-table-line, #d6d3ce)' }}>Machine</th>
+                                                <th style={{ padding: '2px 6px', textAlign: 'left', borderBottom: '1px solid var(--terras-table-line, #d6d3ce)' }}>Items Used</th>
+                                                <th style={{ padding: '2px 6px', textAlign: 'left', borderBottom: '1px solid var(--terras-table-line, #d6d3ce)' }}>Time</th>
+                                                <th style={{ padding: '2px 4px', borderBottom: '1px solid var(--terras-table-line, #d6d3ce)', width: 42 }}></th>
                                             </tr>
                                         </thead>
                                         <tbody>
                                             {completions.map((c: any, i: number) => (
-                                                <tr key={c.id} style={{ background: c.rejected ? '#fbe4e4' : i % 2 === 0 ? '#fff' : '#f5f4ee' }}>
+                                                <tr key={c.id} style={{ background: c.rejected ? '#fbe4e4' : i % 2 === 0 ? 'var(--terras-table-bg, #fff)' : 'var(--terras-row-stripe-sub, #fbfaf7)' }}>
                                                     <td
                                                         style={{ padding: '2px 6px', textAlign: 'right', fontWeight: 'bold', textDecoration: c.rejected ? 'line-through' : 'none', color: c.rejected ? '#900' : undefined }}
                                                         title={c.output_batch_number ? `Lot ${c.output_batch_number}` : undefined}

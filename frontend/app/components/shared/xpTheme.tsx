@@ -19,6 +19,7 @@ import {
     useFloatingMenu as useUIFloatingMenu, FloatingMenu as UIFloatingMenu, MenuTriggerButton as UIMenuTriggerButton,
     type FloatingMenuState,
 } from '@bryanadamg/terras-ui/components/Menu';
+import { TintCard } from './RequestDetailPanel';
 
 /**
  * Shared Windows XP "classic" theme primitives.
@@ -1089,49 +1090,23 @@ export const FORM_SECTION_BLUE = '#3a6fc4';
 // header bar pokes out of the rounded corners.
 export const SECTION_RADIUS = 6;
 
-// Fieldset-style panel with a floating legend notched into its top border — the
-// grouping chrome used inside *operator log modals* (WO completion, packing),
-// where FormSection's solid blue header bar would read as a page-level section
-// and compete with the modal's own title bar. Was hand-rolled three times inside
-// WOCompletionModal before this; `right` holds an optional action (e.g. "Print
-// All Bag Labels") pinned to the legend line. `legendStyle` overrides the legend
-// span itself (background must match a `style` background override, e.g. a
-// tinted "Tip" box, or the default beige patch shows through behind the label).
-export function LegendPanel({ title, right, children, style, legendStyle }: {
+// Section box inside *operator log modals* (WO completion, packing, work-center
+// monitor). Once a fieldset with a legend notched into its border; now the same
+// tinted card as the BOM and request panels (TintCard), so every nested section in
+// the app reads alike. The tint keeps it subordinate to the modal's own solid title
+// bar, which was the reason these never used a solid-blue FormSection. `right`
+// holds an optional action (e.g. "Print All Bag Labels") in the header bar; `tone`
+// picks another chip family (red for a reject panel, amber for a tip).
+export function LegendPanel({ title, right, children, style, tone }: {
     title: React.ReactNode;
     right?: React.ReactNode;
     children: React.ReactNode;
     style?: React.CSSProperties;
-    legendStyle?: React.CSSProperties;
+    tone?: 'blue' | 'amber' | 'green' | 'red' | 'gray';
 }) {
-    return (
-        <div style={{ border: '1px solid #aca899', borderRadius: SECTION_RADIUS, background: '#f5f4ee', position: 'relative', paddingTop: 10, ...style }}>
-            {/* One flex row for legend + right, both vertically centered on the same
-                band — two independently-tuned absolute offsets drifted apart (the
-                legend's own fix left `right` still straddling the border a
-                different amount, so it visibly cut through whatever sat there). */}
-            <div style={{
-                position: 'absolute', top: -10, left: 0, right: 0, height: 16,
-                display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                padding: '0 6px', pointerEvents: 'none',
-            }}>
-                {/* Own border + background (not just a colour-matched patch masking
-                    the panel border) so the label reads as a distinct chip instead
-                    of the panel's 1px border visibly cutting through the glyphs'
-                    ascenders. */}
-                <span style={{
-                    pointerEvents: 'auto', background: '#fff', border: '1px solid #aca899',
-                    borderRadius: 2, padding: '1px 5px', lineHeight: 1.3,
-                    fontFamily: xpFont, fontSize: 10, fontWeight: 'bold', color: '#000080',
-                    ...legendStyle,
-                }}>
-                    {title}
-                </span>
-                {right && <span style={{ pointerEvents: 'auto' }}>{right}</span>}
-            </div>
-            {children}
-        </div>
-    );
+    // Children pad their own sides/bottom (historically '0 8px 8px' under the notch),
+    // so the body adds only a small top inset under the header bar.
+    return <TintCard title={title} right={right} tone={tone} style={style} bodyStyle={{ padding: '6px 0 0' }}>{children}</TintCard>;
 }
 
 // Selected-chip tones. Blue is the default; the others exist for filters whose
