@@ -67,6 +67,9 @@ interface Props {
 export const TINT = {
     '--terras-form-section-blue': 'var(--terras-chip-blue-bg, #dce4f5)',
     '--terras-form-section-border': 'color-mix(in srgb, var(--terras-chip-blue-border, #3a5faa) 40%, var(--terras-table-bg, #fff))',
+    // FormSection's XP bevel (inset white highlight + 1px drop) shows as a white frame
+    // inside the tinted header's corners — a flat card doesn't want it.
+    boxShadow: 'none',
 } as React.CSSProperties;
 const CARD: React.CSSProperties = { ...TINT, margin: 0, minWidth: 0, display: 'flex', flexDirection: 'column' };
 // Label beside value, two pairs per line — scans faster than label-over-value here.
