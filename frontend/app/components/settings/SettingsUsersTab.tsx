@@ -48,13 +48,15 @@ function attention(user: User): { tone: 'amber' | 'gray'; icon: string; label: s
 }
 
 export default function SettingsUsersTab({
-    roles, allPermissions, selectedId, onSelect, onOpenRole,
+    roles, allPermissions, selectedId, onSelect, onOpenRole, onCreateRoleFrom,
 }: {
     roles: any[];
     allPermissions: any[];
     selectedId: string | null;
     onSelect: (userId: string) => void;
     onOpenRole: (roleId: string) => void;
+    /** Opens the new-role form prefilled with this user's effective permissions. */
+    onCreateRoleFrom: (user: User) => void;
 }) {
     const { formatCustom: tzFmt } = useTimezone();
     const { authFetch } = useData();
@@ -253,6 +255,7 @@ export default function SettingsUsersTab({
                         onSetActive={active => setUserActive(user, active)}
                         onRemoveRedundant={() => removeRedundant(user)}
                         onOpenRole={onOpenRole}
+                        onCreateRole={() => onCreateRoleFrom(user)}
                     />
                 ) : (
                     <SettingsPanel icon="bi-person" title="User" fill>
@@ -274,7 +277,7 @@ export default function SettingsUsersTab({
     );
 }
 
-function UserDetail({ user, isSelf, allPermissions, lastLoginExact, onEdit, onSetActive, onRemoveRedundant, onOpenRole }: {
+function UserDetail({ user, isSelf, allPermissions, lastLoginExact, onEdit, onSetActive, onRemoveRedundant, onOpenRole, onCreateRole }: {
     user: User;
     isSelf: boolean;
     allPermissions: any[];
@@ -283,6 +286,7 @@ function UserDetail({ user, isSelf, allPermissions, lastLoginExact, onEdit, onSe
     onSetActive: (active: boolean) => void;
     onRemoveRedundant: () => void;
     onOpenRole: (roleId: string) => void;
+    onCreateRole: () => void;
 }) {
     const rolePerms = user.role?.permissions || [];
     const direct = user.permissions || [];
@@ -336,7 +340,7 @@ function UserDetail({ user, isSelf, allPermissions, lastLoginExact, onEdit, onSe
                     </Callout>
                 )}
                 {user.role && extra.length >= MANY_DIRECT && (
-                    <Callout tone="amber" icon="bi-shuffle">
+                    <Callout tone="amber" icon="bi-shuffle" action={<button type="button" className={XP_BTN} style={btn()} onClick={onCreateRole}>Create role from user</button>}>
                         <b>{extra.length} permissions granted directly</b> on top of {user.role.name}. If anyone else needs the same set, make it a role.
                     </Callout>
                 )}

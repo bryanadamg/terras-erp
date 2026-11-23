@@ -6,7 +6,7 @@ import SettingsRolesTab from './SettingsRolesTab';
 import SettingsUsersTab from './SettingsUsersTab';
 import { RoleLike } from './RoleFormModal';
 import { useData } from '../../context/DataContext';
-import { useUser } from '../../context/UserContext';
+import { useUser, User } from '../../context/UserContext';
 import { useRememberedTab } from '../../hooks/useRememberedTab';
 import { API_BASE } from '../shared/apiBase';
 
@@ -27,6 +27,7 @@ export default function SettingsAccessTab() {
     const [sub, setSub] = useRememberedTab<AccessSub>('settings.access', 'users', ['users', 'roles']);
     const [roleId, setRoleId] = useState<string | null>(null);
     const [userId, setUserId] = useState<string | null>(null);
+    const [roleDraft, setRoleDraft] = useState<RoleLike | null>(null);
 
     const loadAuthData = useCallback(() => {
         const authHeaders = { 'Authorization': `Bearer ${localStorage.getItem('access_token')}` };
@@ -42,6 +43,14 @@ export default function SettingsAccessTab() {
     useEffect(() => { loadAuthData(); }, [loadAuthData]);
 
     const openRole = (id: string) => { setRoleId(id); setSub('roles'); };
+
+    // Role + direct grants become a new role; scope carries over from the old role.
+    const createRoleFrom = (u: User) => {
+        const base = roles.find(r => r.id === u.role?.id);
+        const byId = new Map([...(base?.permissions || []), ...(u.permissions || [])].map(p => [p.id, p]));
+        setRoleDraft({ ...base, id: '', name: `${u.full_name || u.username}'s access`, description: null, permissions: [...byId.values()] });
+        setSub('roles');
+    };
 
     return (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 10, height: '100%', minHeight: 0 }}>
@@ -62,6 +71,8 @@ export default function SettingsAccessTab() {
                     reload={loadAuthData}
                     selectedId={roleId}
                     onSelect={setRoleId}
+                    draft={roleDraft}
+                    onDraftOpened={() => setRoleDraft(null)}
                 />
             ) : (
                 <SettingsUsersTab
@@ -70,6 +81,7 @@ export default function SettingsAccessTab() {
                     selectedId={userId}
                     onSelect={setUserId}
                     onOpenRole={openRole}
+                    onCreateRoleFrom={createRoleFrom}
                 />
             )}
         </div>

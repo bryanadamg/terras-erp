@@ -1,11 +1,12 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useToast } from '../shared/Toast';
 import { useUser } from '../../context/UserContext';
 import { useData } from '../../context/DataContext';
 import { useConfirm } from '../../context/ConfirmContext';
 import { xpBtn, xpFont, XP_BTN, CodeChip, XPEmptyState } from '../shared/xpTheme';
+import { field } from '@bryanadamg/terras-ui/styles';
 import { SearchField } from '../shared/shellTheme';
 import SettingsPanel from './SettingsPanel';
 import PermissionBreakdown from './PermissionBreakdown';
@@ -22,17 +23,20 @@ const hasScope = (r: RoleLike) =>
     !!(r.allowed_work_center_types?.length || r.allowed_categories?.length || r.allowed_locations?.length);
 
 export default function SettingsRolesTab({
-    roles, allPermissions, reload, selectedId, onSelect,
+    roles, allPermissions, reload, selectedId, onSelect, draft, onDraftOpened,
 }: {
     roles: RoleLike[];
     allPermissions: any[];
     reload: () => void;
     selectedId: string | null;
     onSelect: (roleId: string) => void;
+    /** A role to open in the create form ("Create role from user"). */
+    draft?: RoleLike | null;
+    onDraftOpened?: () => void;
 }) {
     const { showToast } = useToast();
     const { confirm } = useConfirm();
-    const { users } = useUser();
+    const { users, refreshUsers } = useUser();
     const { authFetch } = useData();
 
     const [formMode, setFormMode] = useState<'create' | 'edit' | null>(null);
@@ -40,6 +44,14 @@ export default function SettingsRolesTab({
     const [search, setSearch] = useState('');
 
     const authHeaders = () => ({ 'Authorization': `Bearer ${localStorage.getItem('access_token')}` });
+
+    useEffect(() => {
+        if (!draft) return;
+        setFormRole(draft);
+        setFormMode('create');
+        onDraftOpened?.();
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [draft]);
 
     const membersByRole = useMemo(() => {
         const m = new Map<string, typeof users>();
@@ -130,6 +142,38 @@ export default function SettingsRolesTab({
     };
 
     const openEdit = (r: RoleLike) => { setFormRole(r); setFormMode('edit'); };
+    // Create form prefilled from an existing role; a blank id keeps it a new role.
+    const openDuplicate = (r: RoleLike) => { setFormRole({ ...r, id: '', name: `${r.name} (copy)` }); setFormMode('create'); };
+
+    const assignUser = async (r: RoleLike, userId: string) => {
+        const u = users.find(x => x.id === userId);
+        if (!u) return;
+        if (u.role) {
+            const ok = await confirm({
+                title: 'Change Role',
+                message: `Move "${u.username}" from ${u.role.name} to ${r.name}? A user has one role.`,
+                confirmText: 'Move',
+            });
+            if (!ok) return;
+        }
+        try {
+            const res = await authFetch(`${API_BASE}/users/${u.id}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json', ...authHeaders() },
+                body: JSON.stringify({ role_id: r.id }),
+            });
+            if (res.ok) {
+                showToast(`${u.username} now has the ${r.name} role`, 'success');
+                refreshUsers();
+            } else {
+                const err = await res.json();
+                showToast(`Failed: ${err.detail}`, 'danger');
+            }
+        } catch (e) {
+            console.error(e);
+            showToast('Error assigning role', 'danger');
+        }
+    };
 
     const list = (
         <SettingsPanel
@@ -191,6 +235,9 @@ export default function SettingsRolesTab({
                         roles={roles}
                         allPermissions={allPermissions}
                         members={membersByRole.get(role.id) || []}
+                        candidates={users.filter(u => u.is_active && u.role?.id !== role.id)}
+                        onAssign={userId => assignUser(role, userId)}
+                        onDuplicate={() => openDuplicate(role)}
                         onEdit={() => openEdit(role)}
                         onDelete={() => deleteRole(role)}
                         onSelectRole={onSelect}
@@ -214,11 +261,15 @@ export default function SettingsRolesTab({
     );
 }
 
-function RoleDetail({ role, roles, allPermissions, members, onEdit, onDelete, onSelectRole }: {
+function RoleDetail({ role, roles, allPermissions, members, candidates, onAssign, onDuplicate, onEdit, onDelete, onSelectRole }: {
     role: RoleLike;
     roles: RoleLike[];
     allPermissions: any[];
     members: ReturnType<typeof useUser>['users'];
+    /** Active users not on this role, for "Assign user". */
+    candidates: ReturnType<typeof useUser>['users'];
+    onAssign: (userId: string) => void;
+    onDuplicate: () => void;
     onEdit: () => void;
     onDelete: () => void;
     onSelectRole: (id: string) => void;
@@ -260,6 +311,9 @@ function RoleDetail({ role, roles, allPermissions, members, onEdit, onDelete, on
                         <button type="button" className={XP_BTN} style={xpBtn({ padding: '2px 8px' })} onClick={onEdit}>
                             <i className="bi bi-pencil-square" style={{ marginRight: 4 }} />Edit
                         </button>
+                        <button type="button" className={XP_BTN} style={xpBtn({ padding: '2px 8px' })} onClick={onDuplicate} title="New role starting from this one's permissions and scope">
+                            <i className="bi bi-copy" style={{ marginRight: 4 }} />Duplicate
+                        </button>
                         <button
                             type="button"
                             className={XP_BTN}
@@ -299,7 +353,24 @@ function RoleDetail({ role, roles, allPermissions, members, onEdit, onDelete, on
                     <ScopeBreakdown role={role} />
                 </DetailSection>
 
-                <DetailSection title={`Members (${members.length})`}>
+                <DetailSection
+                    title={`Members (${members.length})`}
+                    right={candidates.length > 0 && (
+                        <select
+                            aria-label="Assign a user to this role"
+                            value=""
+                            onChange={e => { if (e.target.value) onAssign(e.target.value); }}
+                            style={field({ fontSize: 11, padding: '1px 4px' })}
+                        >
+                            <option value="">+ Assign user…</option>
+                            {candidates.map(u => (
+                                <option key={u.id} value={u.id}>
+                                    {u.username} — {u.full_name}{u.role ? ` (${u.role.name})` : ''}
+                                </option>
+                            ))}
+                        </select>
+                    )}
+                >
                     <div style={{ border: '1px solid #c8c4b6' }}>
                         {members.map((u, i) => (
                             <div key={u.id} style={{
