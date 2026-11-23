@@ -719,10 +719,15 @@ export default function LabDipRequestView({
 
                                         const sections = [
                                             { title: 'Identity', fields: [
+                                                { label: 'Request Status', value: canUpdateStatus ? (
+                                                    <select style={{ ...xpInput(), width: 140 }} value={r.status} onChange={e => doUpdateStatus(r.id, e.target.value)}>
+                                                        {REQUEST_STATUSES.map(s => <option key={s} value={s}>{s}</option>)}
+                                                    </select>
+                                                ) : <StatusChip status={r.status} /> },
+                                                { label: 'Request Date', value: fmt(r.request_date) },
                                                 { label: 'Customer', value: r.customer_id ? getCustomerName(r.customer_id) : 'Internal' },
                                                 { label: 'Season / Project', value: r.season || '—' },
                                                 { label: 'Request Type', value: r.request_type || '—' },
-                                                { label: 'Request Date', value: fmt(r.request_date) },
                                             ]},
                                             { title: colorsAttrName, fields: [
                                                 { label: colorsAttrName, value: (() => {
@@ -741,15 +746,6 @@ export default function LabDipRequestView({
                                             ]},
                                         ];
 
-                                        const rightHeader = (
-                                            <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' as const }}>
-                                                <span style={{ fontSize: 10, fontWeight: 'bold', color: 'var(--terras-win-text-2, #333)' }}>Request Status</span>
-                                                <select style={{ ...xpInput(), width: 140 }} value={r.status} disabled={!canUpdateStatus} onChange={e => doUpdateStatus(r.id, e.target.value)}>
-                                                    {REQUEST_STATUSES.map(s => <option key={s} value={s}>{s}</option>)}
-                                                </select>
-                                            </div>
-                                        );
-
                                         return (
                                         <tr>
                                             <td colSpan={10} style={{ padding: 0 }}>
@@ -761,7 +757,6 @@ export default function LabDipRequestView({
                                                         rows={rows}
                                                         emptyText="No items on this request."
                                                         sections={sections}
-                                                        rightHeader={rightHeader}
                                                         minHeight={170}
                                                     />
                                                 </ExpandedRowPanel>

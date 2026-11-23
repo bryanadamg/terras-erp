@@ -8,7 +8,7 @@ import { DetailGrid, Detail } from '@bryanadamg/terras-ui/components/DetailGrid'
 // Shared expanded-row detail panel for request-style pages (Sample Requests,
 // Lab Dip Requests). Two cards side by side on the panel's own ground:
 //   LEFT  — the request's variants/colors as a terras-ui Table
-//   RIGHT — an optional control strip + grouped DetailGrid sections
+//   RIGHT — grouped DetailGrid sections
 // Built only from terras-ui parts and tokens, so it follows the active theme.
 // Cards size to their content — a one-variant request no longer leaves a void.
 // ─────────────────────────────────────────────────────────────────────────────
@@ -56,7 +56,6 @@ interface Props {
     rows: DetailRow[];
     emptyText?: string;
     sections: DetailSection[];
-    rightHeader?: React.ReactNode;          // optional control strip above the sections
     minHeight?: number;                     // default 160 (ignored when `height` is set)
     height?: number;                        // fixed panel height; panes scroll internally past it
 }
@@ -69,7 +68,7 @@ const CARD: React.CSSProperties = { ...TINT, margin: 0, minWidth: 0, display: 'f
 const tintTitle = (t: React.ReactNode) => <span style={{ color: 'var(--terras-chip-blue-text, #0d2a6e)' }}>{t}</span>;
 
 export default function RequestDetailPanel({
-    leftTitle, leftWidth = '56%', columns, rows, emptyText = 'No rows.', sections, rightHeader, minHeight = 160, height,
+    leftTitle, leftWidth = '56%', columns, rows, emptyText = 'No rows.', sections, minHeight = 160, height,
 }: Props) {
     // A fixed height clamps the panel and lets each card scroll its own overflow;
     // otherwise it grows with content (minHeight floor). min-width: 0 on the cards
@@ -117,7 +116,6 @@ export default function RequestDetailPanel({
             </FormSection>
 
             <div style={{ flex: 1, minWidth: 0, minHeight: 0, display: 'flex', flexDirection: 'column', gap: 8, ...(fixed ? { overflowY: 'auto' } : {}) }}>
-                {rightHeader}
                 {sections.map((sec, si) => (
                     <FormSection key={si} title={tintTitle(sec.title)} style={{ ...TINT, margin: 0 }} bodyStyle={{ padding: 0 }}>
                         <DetailGrid>
