@@ -16,6 +16,7 @@ import ProductionRunsTab from './ProductionRunsTab';
 import ManufacturingOrdersTab from './ManufacturingOrdersTab';
 import { pageFillStyle, viewShellStyle } from '../shared/shellTheme';
 import { API_BASE } from '../shared/apiBase';
+import { TintCard } from '../shared/RequestDetailPanel';
 
 export default function ManufacturingView({
     items,
@@ -362,7 +363,7 @@ export default function ManufacturingView({
                   <div style={{
                       width: 380, minWidth: 380, flexShrink: 0,
                       paddingRight: 20,
-                      borderRight: '1px solid #aca899',
+                      borderRight: '1px solid var(--terras-table-line, #d6d3ce)',
                   }}>
                       {/* Variant context badge */}
                       {(() => {
@@ -371,10 +372,7 @@ export default function ManufacturingView({
                           const sizeLabel = bom && newWO.bom_size_id ? getBomSizeLabel(bom.id, newWO.bom_size_id) : '';
                           if (!attrNames.length && !sizeLabel) return null;
                           return (
-                              <div className="mb-2 px-2 py-1 rounded" style={{ background: '#f6f8ff', border: '1px solid #c8d8f8' }}>
-                                  <div style={{ fontFamily: xpFont, fontSize: 9, letterSpacing: '0.04em', textTransform: 'uppercase', color: '#888', marginBottom: 4 }}>
-                                      <i className="bi bi-tag-fill me-1 text-primary opacity-75"></i>Product Variant
-                                  </div>
+                              <TintCard title={<><i className="bi bi-tag-fill me-1"></i>Product Variant</>} style={{ marginBottom: 8 }} bodyStyle={{ padding: 8 }}>
                                   <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap', alignItems: 'center' }}>
                                       {attrNames.map((name: string, i: number) => {
                                           const hex = colorHexFor(name);
@@ -388,12 +386,12 @@ export default function ManufacturingView({
                                           <VariantChip kind="size" size="sm" title={`Size: ${sizeLabel}`}>{sizeLabel}</VariantChip>
                                       )}
                                   </div>
-                              </div>
+                              </TintCard>
                           );
                       })()}
 
                       {/* MO Details */}
-                      <div style={{ fontSize: 9, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase' as const, color: '#888', borderBottom: '1px solid #c0bdb5', paddingBottom: 2, marginBottom: 8 }}>MO Details</div>
+                      <div style={{ fontSize: 9, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase' as const, color: 'var(--terras-win-text-3, #888)', borderBottom: '1px solid var(--terras-table-line, #d6d3ce)', paddingBottom: 2, marginBottom: 8 }}>MO Details</div>
 
                       <div className="mb-2">
                           <label style={xpLabel()}>MO Reference Code</label>
@@ -431,7 +429,7 @@ export default function ManufacturingView({
                       </div>
 
                       {/* Schedule */}
-                      <div style={{ fontSize: 9, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase' as const, color: '#888', borderBottom: '1px solid #c0bdb5', paddingBottom: 2, marginBottom: 8, marginTop: 14 }}>Schedule</div>
+                      <div style={{ fontSize: 9, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase' as const, color: 'var(--terras-win-text-3, #888)', borderBottom: '1px solid var(--terras-table-line, #d6d3ce)', paddingBottom: 2, marginBottom: 8, marginTop: 14 }}>Schedule</div>
                       <div className="row g-2 mb-2">
                           <div className="col-6">
                               <label style={xpLabel()}>Start Date</label>
@@ -448,7 +446,7 @@ export default function ManufacturingView({
                           item master default / BOM-line override, resolved at staging. */}
 
                       {/* Nested toggle — clean */}
-                      <div style={{ marginTop: 14, paddingTop: 10, borderTop: '1px solid #aca899' }}>
+                      <div style={{ marginTop: 14, paddingTop: 10, borderTop: '1px solid var(--terras-table-line, #d6d3ce)' }}>
                           <label style={{ display: 'flex', gap: 8, alignItems: 'flex-start', cursor: 'pointer', margin: 0 }}>
                               <input
                                   type="checkbox"
@@ -457,11 +455,11 @@ export default function ManufacturingView({
                                   style={{ marginTop: 2, cursor: 'pointer', flexShrink: 0 }}
                               />
                               <div>
-                                  <div style={{ fontSize: 11, fontWeight: 600, color: '#000084'}}>
+                                  <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--terras-chip-blue-text, #0d2a6e)' }}>
                                       <i className="bi bi-diagram-3-fill me-1"></i>
                                       Create child MOs for nested BOMs
                                   </div>
-                                  <div style={{ fontSize: 9, color: '#888', marginTop: 2 }}>
+                                  <div style={{ fontSize: 9, color: 'var(--terras-win-text-3, #888)', marginTop: 2 }}>
                                       Auto-generates sub-assembly orders for all nested recipes
                                   </div>
                               </div>
@@ -486,7 +484,7 @@ export default function ManufacturingView({
                           <div style={{
                               display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
                               height: '100%', minHeight: 280, gap: 10,
-                              color: '#888',
+                              color: 'var(--terras-win-text-3, #888)',
                           }}>
                               <i className="bi bi-diagram-3" style={{ fontSize: 40, opacity: 0.35 }}></i>
                               <div style={{ fontSize: 12, textAlign: 'center', maxWidth: 200 }}>
